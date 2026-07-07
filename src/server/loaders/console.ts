@@ -31,7 +31,7 @@ export const getProfilePageData = cache(async () => {
     githubIdentity: { columns: { identityData: true } },
     discordIdentity: { columns: { identityData: true } },
     linkedinIdentity: { columns: { identityData: true } },
-  }).catch(() => redirect("/api/auth"));
+  }).catch(() => redirect("/auth"));
 
   const [, assignedRoleRows, verification] = await Promise.all([
     !user.profile?.viewedConsole
@@ -92,7 +92,7 @@ export const getOAuthPageData = cache(async () => {
       },
       orderBy: { createdAt: "asc" },
     },
-  }).catch(() => redirect("/api/auth"));
+  }).catch(() => redirect("/auth"));
 
   const clientId = profile?.oauthRegistration?.clientId ?? null;
   const reportWebhookUrl = profile?.oauthRegistration?.reportWebhookUrl ?? null;

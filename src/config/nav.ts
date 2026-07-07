@@ -1,0 +1,259 @@
+import type { ResolvedPermissions } from "~/server/actions/permissions";
+import type * as icons from "./icons";
+
+export type NavIcon = keyof typeof icons;
+
+export interface NavItem {
+  label: string;
+  href: string;
+  icon: NavIcon;
+  description?: string;
+}
+
+export interface ConsoleItem extends NavItem {
+  /**
+   * The permission flag that reveals this item, or "credentialsAccess" for the
+   * Credentials page, which is visible to anyone with role-granted credentials
+   * (resolved server-side via `canSeeCredentialsPage`).
+   */
+  permission: keyof ResolvedPermissions | "credentialsAccess";
+}
+
+export interface SwitcherEntry {
+  label: string;
+  href: string;
+  icon?: NavIcon;
+  description?: string;
+  external?: true;
+}
+
+/** Left-aligned navbar links. Every entry is publicly accessible. */
+export const PUBLIC_LINKS: NavItem[] = [
+  {
+    label: "Community",
+    href: "/community",
+    icon: "UsersIcon",
+    description: "Meet the members and leadership of DevDogs.",
+  },
+  {
+    label: "Events",
+    href: "/events",
+    icon: "CalendarDotsIcon",
+    description: "Upcoming meetings, workshops, and events hosted by DevDogs.",
+  },
+  {
+    label: "Partners",
+    href: "/partners",
+    icon: "HandshakeIcon",
+    description: "Organizations and sponsors that partner with DevDogs.",
+  },
+  {
+    label: "Docs",
+    href: "/docs",
+    icon: "BookOpenIcon",
+    description: "Documentation for DevDogs projects.",
+  },
+];
+
+/** Public pages indexed by search but not shown in the navbar. */
+export const SEARCH_ONLY_PAGES: NavItem[] = [
+  {
+    label: "Home",
+    href: "/",
+    icon: "HouseIcon",
+    description:
+      "DevDogs is a club at UGA devoted to bettering our community through open-source software.",
+  },
+  {
+    label: "Privacy Policy",
+    href: "/legal/privacy",
+    icon: "ScalesIcon",
+    description: "How DevDogs collects, uses, and protects your data.",
+  },
+];
+
+/**
+ * Items in the Console dropdown. Each is gated by the permission that the
+ * page itself enforces server-side — keep these in sync with the page loaders.
+ */
+export const CONSOLE_ITEMS: ConsoleItem[] = [
+  {
+    label: "Moderation",
+    href: "/console/moderation",
+    icon: "ShieldIcon",
+    permission: "canModerate",
+    description:
+      "Review content reports filed against community profiles and resolve them with the appropriate action.",
+  },
+  {
+    label: "Feedback",
+    href: "/console/feedback",
+    icon: "ChatCircleIcon",
+    permission: "canManageFeedback",
+    description:
+      "Review and respond to feedback submissions from members across all topics.",
+  },
+  {
+    label: "Credentials",
+    href: "/console/credentials",
+    icon: "KeyIcon",
+    permission: "credentialsAccess",
+    description:
+      "Shared accounts and secrets used for testing integrations, visible only to roles you grant access to.",
+  },
+  {
+    label: "Audit Log",
+    href: "/console/audit-log",
+    icon: "FileTextIcon",
+    permission: "canViewAuditLog",
+    description:
+      "A record of moderation actions and content reports filed across all production OAuth clients.",
+  },
+  {
+    label: "Verification",
+    href: "/console/verification",
+    icon: "SealCheckIcon",
+    permission: "canManageVerification",
+    description:
+      "Upload the UGA Involvement Network roster to verify member profiles and unlock community page visibility.",
+  },
+  {
+    label: "Permissions",
+    href: "/console/permissions",
+    icon: "LockIcon",
+    permission: "canManageRoles",
+    description:
+      "Every member starts with no permissions; Root has all permissions and can only change hands via transfer.",
+  },
+];
+
+/** Signed-in-only pages, listed inside the profile popover. */
+export const PROFILE_ITEMS: NavItem[] = [
+  {
+    label: "Account",
+    href: "/account",
+    icon: "UserIcon",
+    description:
+      "Manage your profile information, connected accounts, and verification status.",
+  },
+  {
+    label: "OAuth Client",
+    href: "/tools/oauth",
+    icon: "KeyIcon",
+    description:
+      "Set up a local OAuth client to test DevDogs sign-in from your own project.",
+  },
+  {
+    label: "Reporting API",
+    href: "/tools/moderation",
+    icon: "SirenIcon",
+    description:
+      "Wire up content moderation reporting for your project, then test the full flow with sandboxed test accounts.",
+  },
+  {
+    label: "Feedback API",
+    href: "/tools/feedback",
+    icon: "ChatCircleIcon",
+    description:
+      "Configure feedback topics and test the feedback submission flow with sandboxed test accounts.",
+  },
+  {
+    label: "Docs Preview",
+    href: "/tools/docs",
+    icon: "BookOpenIcon",
+    description: "Preview local documentation files as they will appear here.",
+  },
+];
+
+/** Primary call-to-action in the app switcher. */
+export const SWITCHER_PRIMARY: SwitcherEntry = {
+  label: "Join DevDogs",
+  href: "/join",
+};
+
+/** Other DevDogs projects, shown in the app switcher. */
+export const SWITCHER_PROJECTS: SwitcherEntry[] = [
+  {
+    label: "Community Resource Forum",
+    href: "https://forum.devdogsuga.org",
+    icon: "GlobeIcon",
+    description: "This year's flagship project, live in production.",
+    external: true,
+  },
+  {
+    label: "GitHub Organization",
+    href: "https://github.com/DevDogs-UGA",
+    icon: "GithubLogoIcon",
+    description: "All DevDogs repositories, open source and open to PRs.",
+    external: true,
+  },
+];
+
+/** External listings and forms, shown in the app switcher. */
+export const SWITCHER_LINKS: SwitcherEntry[] = [
+  {
+    label: "UGA Involvement Network Listing",
+    href: "https://uga.campuslabs.com/engage/organization/devdogs",
+    external: true,
+  },
+  {
+    label: "Google GDG on Campus: UGA Listing",
+    href: "https://gdg.community.dev/gdg-on-campus-university-of-georgia-athens-united-states/",
+    external: true,
+  },
+  {
+    label: "Focus Lead Interest Form",
+    href: "https://docs.google.com/forms/d/e/1FAIpQLSfH6BQCUm96Q9rUu-WKVeG6qzM4tRrXzfwxj_Np8XJoZtlZJQ/viewform",
+    external: true,
+  },
+  {
+    label: "A-Team Interest Form",
+    href: "https://forms.gle/7DFteDC9iGu5rVCL7",
+    external: true,
+  },
+];
+
+/** Social channels, shown in the app switcher, mobile sheet, and footer. */
+export const SOCIAL_LINKS: SwitcherEntry[] = [
+  {
+    label: "Instagram",
+    href: "https://instagram.com/DevDogs_UGA",
+    icon: "InstagramLogoIcon",
+    external: true,
+  },
+  {
+    label: "LinkedIn",
+    href: "https://linkedin.com/company/DevDogs-UGA",
+    icon: "LinkedinLogoIcon",
+    external: true,
+  },
+  {
+    label: "GitHub",
+    href: "https://github.com/DevDogs-UGA",
+    icon: "GithubLogoIcon",
+    external: true,
+  },
+  {
+    label: "Email",
+    href: "mailto:devdogs@uga.edu",
+    icon: "EnvelopeSimpleIcon",
+    external: true,
+  },
+];
+
+/**
+ * Filters CONSOLE_ITEMS down to what the caller may see. `credentialsAccess`
+ * must be resolved by the caller (via `canSeeCredentialsPage`) since it goes
+ * beyond the flat permission flags.
+ */
+export function visibleConsoleItems(
+  permissions: ResolvedPermissions | null,
+  credentialsAccess = false,
+): ConsoleItem[] {
+  if (!permissions) return [];
+  return CONSOLE_ITEMS.filter((item) =>
+    item.permission === "credentialsAccess"
+      ? credentialsAccess
+      : permissions[item.permission],
+  );
+}

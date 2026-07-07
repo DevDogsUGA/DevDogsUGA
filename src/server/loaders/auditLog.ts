@@ -35,7 +35,7 @@ export type AuditLogPageData = {
 
 export const getAuditLogPageData = cache(
   async (page: number): Promise<AuditLogPageData> => {
-    const userId = await expectSession().catch(() => redirect("/api/auth"));
+    const userId = await expectSession().catch(() => redirect("/auth"));
     const canView = await canUserViewAuditLog(userId);
     if (!canView) redirect("/");
 

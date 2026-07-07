@@ -1,19 +1,19 @@
-import { pgEnum, pgTable, uuid, varchar, integer, text, timestamp, date, doublePrecision, boolean, jsonb, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy, pgView, pgMaterializedView } from "drizzle-orm/pg-core"
+import { pgEnum, pgTable, uuid, varchar, text, integer, timestamp, date, doublePrecision, boolean, jsonb, customType, uniqueIndex, index, foreignKey, primaryKey, unique, check, pgPolicy, pgView, pgMaterializedView } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected after each `drizzle-kit pull` (see db:pull in package.json)
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
 
-export const graduationSemester = pgEnum("graduationSemester", ["spring", "summer", "fall"])
-export const credentialType = pgEnum("credentialType", ["email_password", "totp", "email_password_totp"])
-export const roleType = pgEnum("roleType", ["default", "root", "custom"])
 export const contentAction = pgEnum("contentAction", ["quarantine", "no_action"])
-export const filerAction = pgEnum("filerAction", ["warn", "suspend", "no_action"])
-export const reportStatus = pgEnum("reportStatus", ["unverified", "pending", "resolved", "dismissed"])
-export const subjectAction = pgEnum("subjectAction", ["warn", "suspend", "ban", "no_action"])
-export const oauthRegistrationType = pgEnum("oauthRegistrationType", ["development", "production"])
+export const credentialType = pgEnum("credentialType", ["email_password", "totp", "email_password_totp"])
 export const feedbackSeverity = pgEnum("feedbackSeverity", ["low", "medium", "high"])
 export const feedbackStatus = pgEnum("feedbackStatus", ["open", "in_review", "resolved", "dismissed"])
 export const feedbackType = pgEnum("feedbackType", ["bug_report", "feature_request", "design_feedback", "performance", "content_issue", "other"])
+export const filerAction = pgEnum("filerAction", ["warn", "suspend", "no_action"])
+export const graduationSemester = pgEnum("graduationSemester", ["spring", "summer", "fall"])
+export const oauthRegistrationType = pgEnum("oauthRegistrationType", ["development", "production"])
+export const reportStatus = pgEnum("reportStatus", ["unverified", "pending", "resolved", "dismissed"])
+export const roleType = pgEnum("roleType", ["default", "root", "custom"])
+export const subjectAction = pgEnum("subjectAction", ["warn", "suspend", "ban", "no_action"])
 
 
 export const contentReports = pgTable.withRLS("contentReports", {
@@ -90,6 +90,52 @@ export const credentials = pgTable.withRLS("credentials", {
 	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
 
 	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+]);
+
+export const docsBranches = pgTable.withRLS("docsBranches", {
+	id: uuid().defaultRandom().primaryKey(),
+	repoId: uuid().notNull().references(() => docsRepos.id, { onDelete: "cascade" } ),
+	name: text().notNull(),
+	lastSyncedCommit: text(),
+	lastSyncedAt: timestamp({ withTimezone: true }),
+}, (table) => [
+	uniqueIndex("docsBranches_repo_name_idx").using("btree", table.repoId.asc().nullsLast(), table.name.asc().nullsLast()),
+
+	pgPolicy("docsBranches_public_read", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
+]);
+
+export const docsPages = pgTable.withRLS("docsPages", {
+	id: uuid().defaultRandom().primaryKey(),
+	branchId: uuid().notNull().references(() => docsBranches.id, { onDelete: "cascade" } ),
+	path: text().notNull(),
+	blobSha: text().notNull(),
+	title: text().notNull(),
+	description: text(),
+	frontmatter: jsonb().default({}).notNull(),
+	headings: jsonb().default([]).notNull(),
+	content: text().notNull(),
+	plainText: text().notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	search: customType({ dataType: () => 'tsvector' })().generatedAlwaysAs(sql`((setweight(to_tsvector('english'::regconfig, COALESCE(title, ''::text)), 'A'::"char") || setweight(to_tsvector('english'::regconfig, COALESCE(description, ''::text)), 'B'::"char")) || setweight(to_tsvector('english'::regconfig, "plainText"), 'C'::"char"))`),
+}, (table) => [
+	uniqueIndex("docsPages_branch_path_idx").using("btree", table.branchId.asc().nullsLast(), table.path.asc().nullsLast()),
+	index("docsPages_search_idx").using("gin", table.search.asc().nullsLast()),
+
+	pgPolicy("docsPages_public_read", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
+]);
+
+export const docsRepos = pgTable.withRLS("docsRepos", {
+	id: uuid().defaultRandom().primaryKey(),
+	slug: text().notNull(),
+	name: text().notNull(),
+	description: text(),
+	defaultBranch: text().default("main").notNull(),
+	sortOrder: integer().default(0).notNull(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	uniqueIndex("docsRepos_slug_idx").using("btree", table.slug.asc().nullsLast()),
+
+	pgPolicy("docsRepos_public_read", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 ]);
 
 export const feedbackTopics = pgTable.withRLS("feedbackTopics", {
@@ -210,6 +256,7 @@ export const profile = pgTable.withRLS("profile", {
 	userId: uuid().primaryKey().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	preferredName: varchar({ length: 255 }).notNull(),
 	bio: varchar({ length: 127 }),
+	roleDescription: varchar({ length: 127 }),
 	pronouns: text().array(),
 	graduationSemester: graduationSemester(),
 	graduationYear: integer(),
@@ -221,7 +268,6 @@ export const profile = pgTable.withRLS("profile", {
 	involvementFirstName: text(),
 	involvementLastName: text(),
 	involvementImportedAt: timestamp(),
-	roleDescription: varchar({ length: 127 }),
 }, (table) => [
 
 	pgPolicy("crud_authenticated_policy_delete", { as: "restrictive", for: "delete", to: ["authenticated"], using: sql`false` }),
@@ -347,7 +393,13 @@ export const roles = pgTable.withRLS("roles", {
 	title: varchar({ length: 64 }).notNull(),
 	description: text().default("").notNull(),
 	rank: doublePrecision(),
+	roleType: roleType().default("custom").notNull(),
 	color: varchar({ length: 7 }),
+	discordRoleId: text(),
+	discordSyncedName: text(),
+	discordSyncedColor: integer(),
+	showOnProfile: boolean().default(true).notNull(),
+	isLeadership: boolean().default(false).notNull(),
 	canModerate: boolean(),
 	canManageRoles: boolean(),
 	canManageSuspensions: boolean(),
@@ -356,12 +408,6 @@ export const roles = pgTable.withRLS("roles", {
 	canCreateCredentials: boolean(),
 	canManageVerification: boolean(),
 	createdAt: timestamp().default(sql`now()`).notNull(),
-	roleType: roleType().default("custom").notNull(),
-	showOnProfile: boolean().default(true).notNull(),
-	isLeadership: boolean().default(false).notNull(),
-	discordRoleId: text(),
-	discordSyncedName: text(),
-	discordSyncedColor: integer(),
 }, (table) => [
 	unique("roles_discordRoleId_key").on(table.discordRoleId),	unique("roles_rank_key").on(table.rank),	unique("roles_title_key").on(table.title),
 	pgPolicy("crud_authenticated_policy_delete", { as: "restrictive", for: "delete", to: ["authenticated"], using: sql`false` }),
@@ -376,6 +422,7 @@ check("roles_custom_requires_rank", sql`(("roleType" = 'custom'::"roleType") = (
 export const siteFeedback = pgTable.withRLS("siteFeedback", {
 	id: uuid().defaultRandom().primaryKey(),
 	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	clientId: uuid().references(() => oauthClients.id, { onDelete: "set null" } ),
 	type: feedbackType().notNull(),
 	severity: feedbackSeverity(),
 	title: varchar({ length: 100 }).notNull(),
@@ -386,7 +433,6 @@ export const siteFeedback = pgTable.withRLS("siteFeedback", {
 	adminNote: text(),
 	createdAt: timestamp().default(sql`now()`).notNull(),
 	updatedAt: timestamp().default(sql`now()`).notNull(),
-	clientId: uuid().references(() => oauthClients.id, { onDelete: "set null" } ),
 	topicId: uuid(),
 }, (table) => [
 	foreignKey({

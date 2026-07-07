@@ -20,8 +20,8 @@ import {
 } from "~/ui/dialog";
 import { highlightMatches } from "~/server/search/match";
 import type { SearchEntry } from "~/server/search/types";
-import { iconMap } from "~/ui/icon-map";
-import { useSiteSearch } from "./search/useSiteSearch";
+import * as icons from "~/config/icons";
+import { useSiteSearch } from "../hooks/useSiteSearch";
 
 function SearchResultItem({
   entry,
@@ -32,7 +32,7 @@ function SearchResultItem({
   query: string;
   onSelect: () => void;
 }) {
-  const Icon = iconMap[entry.icon];
+  const Icon = icons[entry.icon];
 
   return (
     <CommandItem value={entry.id} onSelect={onSelect} className="gap-2.5">

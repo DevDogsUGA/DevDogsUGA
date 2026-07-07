@@ -10,7 +10,7 @@ import jobApplication from "~/assets/job-application.gif";
 import staticGif from "~/assets/static.gif";
 import EventCard from "./EventCard";
 import MonthCalendar from "./MonthCalendar";
-import type { CalendarEvent, EventType } from "~/app/(public)/homeData";
+import type { CalendarEvent, EventType } from "~/app/(navbar)/homeData";
 import { parseISO } from "date-fns";
 
 const gifMap: Record<EventType | "default", StaticImageData> = {

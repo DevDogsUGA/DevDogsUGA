@@ -8,12 +8,10 @@ import {
   Hanken_Grotesk,
 } from "next/font/google";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
-import { FullscreenNavProvider } from "~/components/Navigation/FullscreenNav";
 import AnimationInit from "~/ui/animation-init";
 import NavigationProgress from "~/ui/navigation-progress";
 import QueryProvider from "~/ui/query-provider";
 import Toaster from "~/components/Toaster";
-import Script from "next/script";
 import { cn } from "~/lib/cn";
 
 export const metadata: Metadata = {
@@ -23,7 +21,7 @@ export const metadata: Metadata = {
   applicationName: "DevDogs",
 };
 
-const geist = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-sans" });
+const sans = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-sans" });
 
 const display = Alan_Sans({
   subsets: ["latin"],
@@ -46,21 +44,19 @@ export default function RootLayout({
         display.variable,
         mono.variable,
         "font-sans",
-        geist.variable,
+        sans.variable,
       )}
+      suppressHydrationWarning
     >
       <body className="bg-black text-mauve-950">
-        <Script strategy="beforeInteractive" src="/sidebar.js" />
         <NavigationProgress />
-        <FullscreenNavProvider>
-          <TooltipProvider>
-            <QueryProvider>
-              <AnimationInit />
-              <Toaster />
-              {children}
-            </QueryProvider>
-          </TooltipProvider>
-        </FullscreenNavProvider>
+        <TooltipProvider>
+          <QueryProvider>
+            <AnimationInit />
+            <Toaster />
+            {children}
+          </QueryProvider>
+        </TooltipProvider>
       </body>
     </html>
   );

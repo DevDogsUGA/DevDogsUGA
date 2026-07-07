@@ -12,6 +12,6 @@ export const docs = z
   .array()
   .default([
     { slug: "DevDogs-Website", name: "DevDogs Website", description: "What" },
-    { slug: "Community-Resource-Forum", name: "Community Resource Forum" },
-    { slug: "Optimal-Schedule-Builder", name: "Optimal Schedule Builder" },
+    //{ slug: "Community-Resource-Forum", name: "Community Resource Forum" },
+    //{ slug: "Optimal-Schedule-Builder", name: "Optimal Schedule Builder" },
   ]);

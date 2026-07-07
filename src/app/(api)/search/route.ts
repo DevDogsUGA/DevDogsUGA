@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { expectSession } from "~/server/auth";
 import { getCallerContext } from "~/server/actions/permissions";
 import { getAccessibleCredentials } from "~/server/actions/credentials";
-import { getFullDocsSearchIndex } from "~/server/manifest/docs";
+import { getFullDocsSearchIndex } from "~/manifest/docs";
 import {
   buildAppSearchEntries,
   flattenDocsToSearchEntries,
-} from "~/server/manifest/adapters/search";
+} from "~/manifest/adapters/search";
 import { matchEntries } from "~/server/search/match";
 
 export async function GET(request: Request) {

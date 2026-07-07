@@ -18,7 +18,7 @@ export type CredentialsPageData = {
 
 export const getCredentialsPageData = cache(
   async (): Promise<CredentialsPageData> => {
-    const userId = await expectSession().catch(() => redirect("/api/auth"));
+    const userId = await expectSession().catch(() => redirect("/auth"));
 
     const [credentialsList, canCreate, roleRows] = await Promise.all([
       getAccessibleCredentials(userId),

@@ -16,7 +16,7 @@ export async function authenticate(
   callbackPath: string,
 ): Promise<never> {
   if (provider !== "google") {
-    await expectSession().catch(() => redirect("/api/auth"));
+    await expectSession().catch(() => redirect("/auth"));
   }
 
   switch (provider) {

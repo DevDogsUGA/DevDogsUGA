@@ -48,6 +48,7 @@ export const relations = defineRelations({ ...supabase, ...schema, resolvedUserP
     resolvedPermissions: r.one.resolvedUserPermissions({
       from: r.usersInAuth.id,
       to: r.resolvedUserPermissions.userId,
+      optional: false,
     }),
     userSuspensions: r.many.userSuspensions({
       from: r.usersInAuth.id,
@@ -258,6 +259,30 @@ export const relations = defineRelations({ ...supabase, ...schema, resolvedUserP
     user: r.one.usersInAuth({
       from: r.userSuspensions.userId,
       to: r.usersInAuth.id,
+      optional: false,
+    }),
+  },
+  docsRepos: {
+    branches: r.many.docsBranches({
+      from: r.docsRepos.id,
+      to: r.docsBranches.repoId,
+    }),
+  },
+  docsBranches: {
+    repo: r.one.docsRepos({
+      from: r.docsBranches.repoId,
+      to: r.docsRepos.id,
+      optional: false,
+    }),
+    pages: r.many.docsPages({
+      from: r.docsBranches.id,
+      to: r.docsPages.branchId,
+    }),
+  },
+  docsPages: {
+    branch: r.one.docsBranches({
+      from: r.docsPages.branchId,
+      to: r.docsBranches.id,
       optional: false,
     }),
   },

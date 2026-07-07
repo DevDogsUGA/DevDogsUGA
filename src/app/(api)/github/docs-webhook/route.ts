@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { env } from "~/env";
-import { revalidateDocPaths } from "~/server/docs/revalidate";
+import { db } from "~/server/db";
+import { isTrackedBranch, removeBranch, syncBranch } from "~/server/docs/sync";
+
+// Syncs run inline; incremental blob diffing keeps them small, but allow
+// headroom for a large first sync of a new branch.
+export const maxDuration = 300;
 
 const enc = new TextEncoder();
 
@@ -29,12 +34,23 @@ async function verifySignature(
 
 interface PushEvent {
   ref: string;
+  forced?: boolean;
   repository: { name: string };
   commits: {
     added: string[];
     modified: string[];
     removed: string[];
   }[];
+}
+
+interface BranchEvent {
+  ref: string;
+  ref_type: string;
+  repository: { name: string };
+}
+
+async function getTrackedRepo(slug: string) {
+  return db.query.docsRepos.findFirst({ where: { slug } });
 }
 
 export async function POST(request: Request) {
@@ -46,32 +62,64 @@ export async function POST(request: Request) {
   }
 
   const event = request.headers.get("x-github-event");
-  if (event !== "push") {
-    return NextResponse.json({ ok: true, skipped: true });
-  }
 
-  let payload: PushEvent;
+  let payload: unknown;
   try {
-    payload = JSON.parse(body) as PushEvent;
+    payload = JSON.parse(body);
   } catch {
     return new NextResponse("Bad Request", { status: 400 });
   }
 
-  const repo = payload.repository.name;
-  // ref is "refs/heads/<branch>"
-  const branch = payload.ref.replace(/^refs\/heads\//, "");
+  if (event === "push") {
+    const push = payload as PushEvent;
+    const repoSlug = push.repository.name;
+    const branch = push.ref.replace(/^refs\/heads\//, "");
 
-  const added: string[] = [];
-  const modified: string[] = [];
-  const removed: string[] = [];
+    const repo = await getTrackedRepo(repoSlug);
+    if (!repo || !isTrackedBranch(branch, repo.defaultBranch)) {
+      return NextResponse.json({ ok: true, skipped: "untracked" });
+    }
 
-  for (const commit of payload.commits) {
-    added.push(...commit.added);
-    modified.push(...commit.modified);
-    removed.push(...commit.removed);
+    // The commit list is only a cheap filter — the sync itself diffs by blob
+    // sha, so a forced push (empty/unreliable commit list) still syncs fully.
+    const docsTouched =
+      push.forced ||
+      push.commits.some((commit) =>
+        [...commit.added, ...commit.modified, ...commit.removed].some((path) =>
+          path.startsWith("docs/"),
+        ),
+      );
+    if (!docsTouched) {
+      return NextResponse.json({ ok: true, skipped: "no-docs-changes" });
+    }
+
+    const result = await syncBranch(repoSlug, branch);
+    return NextResponse.json({ ok: true, repo: repoSlug, branch, ...result });
   }
 
-  revalidateDocPaths(repo, branch, added, modified, removed);
+  if (event === "create" || event === "delete") {
+    const change = payload as BranchEvent;
+    if (change.ref_type !== "branch") {
+      return NextResponse.json({ ok: true, skipped: "not-a-branch" });
+    }
 
-  return NextResponse.json({ ok: true, repo, branch });
+    const repoSlug = change.repository.name;
+    const repo = await getTrackedRepo(repoSlug);
+    if (!repo || !isTrackedBranch(change.ref, repo.defaultBranch)) {
+      return NextResponse.json({ ok: true, skipped: "untracked" });
+    }
+
+    const result =
+      event === "create"
+        ? await syncBranch(repoSlug, change.ref)
+        : await removeBranch(repoSlug, change.ref);
+    return NextResponse.json({
+      ok: true,
+      repo: repoSlug,
+      branch: change.ref,
+      ...result,
+    });
+  }
+
+  return NextResponse.json({ ok: true, skipped: "unhandled-event" });
 }

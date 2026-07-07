@@ -1,19 +1,15 @@
-import { pgSchema, pgTable, uuid, bigint, bigserial, text, integer, varchar, pgEnum, customType, timestamp, jsonb, json, boolean, inet, smallint, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy, doublePrecision, numeric } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, text, integer, varchar, bigint, bigserial, timestamp, pgEnum, jsonb, json, customType, boolean, inet, smallint, index, uniqueIndex, foreignKey, primaryKey, unique, check, doublePrecision, numeric } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 export const auth = pgSchema("auth");
 export const extensions = pgSchema("extensions");
 export const graphql = pgSchema("graphql");
 export const graphqlPublic = pgSchema("graphql_public");
-export const net = pgSchema("net");
 export const pgbouncer = pgSchema("pgbouncer");
 export const realtime = pgSchema("realtime");
 export const storage = pgSchema("storage");
-export const supabaseFunctions = pgSchema("supabase_functions");
 export const supabaseMigrations = pgSchema("supabase_migrations");
 export const vault = pgSchema("vault");
-export const requestStatusInNet = net.enum("request_status", ["PENDING", "SUCCESS", "ERROR"])
-export const buckettypeInStorage = storage.enum("buckettype", ["STANDARD", "ANALYTICS", "VECTOR"])
 export const factorTypeInAuth = auth.enum("factor_type", ["totp", "webauthn", "phone"])
 export const factorStatusInAuth = auth.enum("factor_status", ["unverified", "verified"])
 export const aalLevelInAuth = auth.enum("aal_level", ["aal1", "aal2", "aal3"])
@@ -23,6 +19,9 @@ export const oauthRegistrationTypeInAuth = auth.enum("oauth_registration_type", 
 export const oauthAuthorizationStatusInAuth = auth.enum("oauth_authorization_status", ["pending", "approved", "denied", "expired"])
 export const oauthResponseTypeInAuth = auth.enum("oauth_response_type", ["code"])
 export const oauthClientTypeInAuth = auth.enum("oauth_client_type", ["public", "confidential"])
+export const buckettypeInStorage = storage.enum("buckettype", ["STANDARD", "ANALYTICS", "VECTOR"])
+export const equalityOpInRealtime = realtime.enum("equality_op", ["eq", "neq", "lt", "lte", "gt", "gte", "in", "like", "ilike", "is", "match", "imatch", "isdistinct"])
+export const actionInRealtime = realtime.enum("action", ["INSERT", "UPDATE", "DELETE", "TRUNCATE", "ERROR"])
 
 
 export const auditLogEntriesInAuth = auth.table.withRLS("audit_log_entries", {
@@ -60,6 +59,7 @@ export const customOauthProvidersInAuth = auth.table("custom_oauth_providers", {
 	jwksUri: text("jwks_uri"),
 	createdAt: timestamp("created_at", { withTimezone: true }).default(sql`now()`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true }).default(sql`now()`).notNull(),
+	customClaimsAllowlist: text("custom_claims_allowlist").array().default([]).notNull(),
 }, (table) => [
 	index("custom_oauth_providers_created_at_idx").using("btree", table.createdAt.asc().nullsLast()),
 	index("custom_oauth_providers_enabled_idx").using("btree", table.enabled.asc().nullsLast()),
@@ -368,6 +368,10 @@ export const usersInAuth = auth.table.withRLS("users", {
 	uniqueIndex("confirmation_token_idx").using("btree", table.confirmationToken.asc().nullsLast()).where(sql`((confirmation_token)::text !~ '^[0-9 ]*$'::text)`),
 	uniqueIndex("email_change_token_current_idx").using("btree", table.emailChangeTokenCurrent.asc().nullsLast()).where(sql`((email_change_token_current)::text !~ '^[0-9 ]*$'::text)`),
 	uniqueIndex("email_change_token_new_idx").using("btree", table.emailChangeTokenNew.asc().nullsLast()).where(sql`((email_change_token_new)::text !~ '^[0-9 ]*$'::text)`),
+	index("idx_users_created_at_desc").using("btree", table.createdAt.desc().nullsFirst()),
+	index("idx_users_email").using("btree", table.email.asc().nullsLast()),
+	index("idx_users_last_sign_in_at_desc").using("btree", table.lastSignInAt.desc().nullsFirst()),
+	index("idx_users_name").using("btree", sql`(raw_user_meta_data ->> 'name'::text)`).where(sql`((raw_user_meta_data ->> 'name'::text) IS NOT NULL)`),
 	uniqueIndex("reauthentication_token_idx").using("btree", table.reauthenticationToken.asc().nullsLast()).where(sql`((reauthentication_token)::text !~ '^[0-9 ]*$'::text)`),
 	uniqueIndex("recovery_token_idx").using("btree", table.recoveryToken.asc().nullsLast()).where(sql`((recovery_token)::text !~ '^[0-9 ]*$'::text)`),
 	uniqueIndex("users_email_partial_key").using("btree", table.email.asc().nullsLast()).where(sql`(is_sso_user = false)`),
@@ -408,27 +412,39 @@ export const webauthnCredentialsInAuth = auth.table("webauthn_credentials", {
 	index("webauthn_credentials_user_id_idx").using("btree", table.userId.asc().nullsLast()),
 ]);
 
-export const httpResponseInNet = net.table("_http_response", {
-	id: bigint({ mode: 'number' }),
-	statusCode: integer("status_code"),
-	contentType: text("content_type"),
-	headers: jsonb(),
-	content: text(),
-	timedOut: boolean("timed_out"),
-	errorMsg: text("error_msg"),
-	created: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+export const messagesInRealtime = realtime.table.withRLS("messages", {
+	topic: text().notNull(),
+	extension: text().notNull(),
+	payload: jsonb(),
+	event: text(),
+	private: boolean().default(false),
+	updatedAt: timestamp("updated_at").default(sql`now()`).notNull(),
+	insertedAt: timestamp("inserted_at").default(sql`now()`).notNull(),
+	id: uuid().defaultRandom().notNull(),
+	binaryPayload: customType({ dataType: () => 'bytea' })("binary_payload"),
 }, (table) => [
-	index("_http_response_created_idx").using("btree", table.created.asc().nullsLast()),
-]);
+	primaryKey({ columns: [table.id, table.insertedAt], name: "messages_pkey"}),
+check("messages_payload_exclusive", sql`((payload IS NULL) OR (binary_payload IS NULL))) NOT VALI`),]);
 
-export const httpRequestQueueInNet = net.table("http_request_queue", {
-	id: bigserial({ mode: 'number' }).notNull(),
-	method: customType({ dataType: () => 'net.http_method' })().notNull(),
-	url: text().notNull(),
-	headers: jsonb(),
-	body: customType({ dataType: () => 'bytea' })(),
-	timeoutMilliseconds: integer("timeout_milliseconds").notNull(),
+export const schemaMigrationsInRealtime = realtime.table("schema_migrations", {
+	version: bigint({ mode: 'number' }).primaryKey(),
+	insertedAt: timestamp("inserted_at", { precision: 0 }),
 });
+
+export const subscriptionInRealtime = realtime.table("subscription", {
+	id: bigint({ mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+	subscriptionId: uuid("subscription_id").notNull(),
+	entity: customType({ dataType: () => 'regclass' })().notNull(),
+	filters: customType({ dataType: () => 'realtime.user_defined_filter' })().array().default([]).notNull(),
+	claims: jsonb().notNull(),
+	claimsRole: customType({ dataType: () => 'regrole' })("claims_role").notNull().generatedAlwaysAs(sql`realtime.to_regrole((claims ->> 'role'::text))`),
+	createdAt: timestamp("created_at").default(sql`timezone('utc'::text, now())`).notNull(),
+	actionFilter: text("action_filter").default("*"),
+	selectedColumns: text("selected_columns").array(),
+}, (table) => [
+	index("ix_realtime_subscription_entity").using("btree", table.entity.asc().nullsLast()),
+	uniqueIndex("subscription_subscription_id_entity_filters_action_filter_selec").using("btree", table.subscriptionId.asc().nullsLast(), table.entity.asc().nullsLast(), table.filters.asc().nullsLast(), table.actionFilter.asc().nullsLast(), sql`COALESCE(selected_columns, '{}'::text[])`),
+check("subscription_action_filter_check", sql`(action_filter = ANY (ARRAY['*'::text, 'INSERT'::text, 'UPDATE'::text, 'DELETE'::text]))`),]);
 
 export const bucketsInStorage = storage.table.withRLS("buckets", {
 	id: text().primaryKey(),
@@ -465,35 +481,6 @@ export const bucketsVectorsInStorage = storage.table.withRLS("buckets_vectors", 
 	updatedAt: timestamp("updated_at", { withTimezone: true }).default(sql`now()`).notNull(),
 });
 
-export const icebergNamespacesInStorage = storage.table.withRLS("iceberg_namespaces", {
-	id: uuid().defaultRandom().primaryKey(),
-	bucketName: text("bucket_name").notNull(),
-	name: text().notNull(),
-	createdAt: timestamp("created_at", { withTimezone: true }).default(sql`now()`).notNull(),
-	updatedAt: timestamp("updated_at", { withTimezone: true }).default(sql`now()`).notNull(),
-	metadata: jsonb().default({}).notNull(),
-	catalogId: uuid("catalog_id").notNull().references(() => bucketsAnalyticsInStorage.id, { onDelete: "cascade" } ),
-}, (table) => [
-	uniqueIndex("idx_iceberg_namespaces_bucket_id").using("btree", table.catalogId.asc().nullsLast(), table.name.asc().nullsLast()),
-]);
-
-export const icebergTablesInStorage = storage.table.withRLS("iceberg_tables", {
-	id: uuid().defaultRandom().primaryKey(),
-	namespaceId: uuid("namespace_id").notNull().references(() => icebergNamespacesInStorage.id, { onDelete: "cascade" } ),
-	bucketName: text("bucket_name").notNull(),
-	name: text().notNull(),
-	location: text().notNull(),
-	createdAt: timestamp("created_at", { withTimezone: true }).default(sql`now()`).notNull(),
-	updatedAt: timestamp("updated_at", { withTimezone: true }).default(sql`now()`).notNull(),
-	remoteTableId: text("remote_table_id"),
-	shardKey: text("shard_key"),
-	shardId: text("shard_id"),
-	catalogId: uuid("catalog_id").notNull().references(() => bucketsAnalyticsInStorage.id, { onDelete: "cascade" } ),
-}, (table) => [
-	uniqueIndex("idx_iceberg_tables_location").using("btree", table.location.asc().nullsLast()),
-	uniqueIndex("idx_iceberg_tables_namespace_id").using("btree", table.catalogId.asc().nullsLast(), table.namespaceId.asc().nullsLast(), table.name.asc().nullsLast()),
-]);
-
 export const migrationsInStorage = storage.table.withRLS("migrations", {
 	id: integer().primaryKey(),
 	name: varchar({ length: 100 }).notNull(),
@@ -520,12 +507,6 @@ export const objectsInStorage = storage.table.withRLS("objects", {
 	index("idx_objects_bucket_id_name").using("btree", table.bucketId.asc().nullsLast(), table.name.asc().nullsLast()),
 	index("idx_objects_bucket_id_name_lower").using("btree", table.bucketId.asc().nullsLast(), sql`lower(name)`),
 	index("name_prefix_search").using("btree", table.name.asc().nullsLast().op("text_pattern_ops")),
-
-	pgPolicy("avatar_delete_policy", { for: "delete", to: ["authenticated"], using: sql`((bucket_id = 'avatars'::text) AND (name = (auth.uid())::text))` }),
-
-	pgPolicy("avatar_insert_policy", { for: "insert", to: ["authenticated"], withCheck: sql`((bucket_id = 'avatars'::text) AND (name = (auth.uid())::text) AND (path_tokens = ARRAY[(auth.uid())::text]))` }),
-
-	pgPolicy("avatar_update_policy", { for: "update", to: ["authenticated"], using: sql`((bucket_id = 'avatars'::text) AND (name = (auth.uid())::text) AND (path_tokens = ARRAY[(auth.uid())::text]))`, withCheck: sql`((bucket_id = 'avatars'::text) AND (name = (auth.uid())::text) AND (path_tokens = ARRAY[(auth.uid())::text]))` }),
 ]);
 
 export const s3MultipartUploadsInStorage = storage.table.withRLS("s3_multipart_uploads", {
@@ -569,22 +550,6 @@ export const vectorIndexesInStorage = storage.table.withRLS("vector_indexes", {
 }, (table) => [
 	uniqueIndex("vector_indexes_name_bucket_id_idx").using("btree", table.name.asc().nullsLast(), table.bucketId.asc().nullsLast()),
 ]);
-
-export const hooksInSupabaseFunctions = supabaseFunctions.table("hooks", {
-	id: bigserial({ mode: 'number' }).primaryKey(),
-	hookTableId: integer("hook_table_id").notNull(),
-	hookName: text("hook_name").notNull(),
-	createdAt: timestamp("created_at", { withTimezone: true }).default(sql`now()`).notNull(),
-	requestId: bigint("request_id", { mode: 'number' }),
-}, (table) => [
-	index("supabase_functions_hooks_h_table_id_h_name_idx").using("btree", table.hookTableId.asc().nullsLast(), table.hookName.asc().nullsLast()),
-	index("supabase_functions_hooks_request_id_idx").using("btree", table.requestId.asc().nullsLast()),
-]);
-
-export const migrationsInSupabaseFunctions = supabaseFunctions.table("migrations", {
-	version: text().primaryKey(),
-	insertedAt: timestamp("inserted_at", { withTimezone: true }).default(sql`now()`).notNull(),
-});
 
 export const schemaMigrationsInSupabaseMigrations = supabaseMigrations.table("schema_migrations", {
 	version: text().primaryKey(),

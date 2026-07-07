@@ -28,7 +28,7 @@ export type ProductionReport = {
 };
 
 export const getModerationPageData = cache(async () => {
-  const userId = await expectSession().catch(() => redirect("/api/auth"));
+  const userId = await expectSession().catch(() => redirect("/auth"));
   const canModerate = await canUserModerate(userId);
 
   const { profile, githubIdentity, testAccounts } = await expectUserWith({
@@ -46,7 +46,7 @@ export const getModerationPageData = cache(async () => {
         user: { columns: { id: true } },
       },
     },
-  }).catch(() => redirect("/api/auth"));
+  }).catch(() => redirect("/auth"));
 
   const clientId = profile?.oauthRegistration?.clientId ?? null;
   const hasGithub = githubIdentity !== null;
@@ -192,7 +192,7 @@ export const getModerationPageData = cache(async () => {
 });
 
 export const getReportDetailData = cache(async (reportId: string) => {
-  const userId = await expectSession().catch(() => redirect("/api/auth"));
+  const userId = await expectSession().catch(() => redirect("/auth"));
 
   const report = await db.query.contentReports.findFirst({
     where: { id: reportId },
@@ -259,7 +259,7 @@ export const getReportDetailData = cache(async (reportId: string) => {
 });
 
 export const getUserModerationData = cache(async (targetUserId: string) => {
-  const callerUserId = await expectSession().catch(() => redirect("/api/auth"));
+  const callerUserId = await expectSession().catch(() => redirect("/auth"));
 
   const productionRole = await db
     .select({ id: moderatorRoles.id })

@@ -57,7 +57,7 @@ export type PermissionsPageData = {
 
 export const getPermissionsPageData = cache(
   async (): Promise<PermissionsPageData> => {
-    const userId = await expectSession().catch(() => redirect("/api/auth"));
+    const userId = await expectSession().catch(() => redirect("/auth"));
     const ctx = await getCallerContext(userId);
     if (!ctx.resolvedPermissions.canManageRoles) redirect("/");
 

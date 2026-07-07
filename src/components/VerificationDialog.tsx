@@ -1,7 +1,7 @@
 "use client";
 
 import { XIcon } from "@phosphor-icons/react/ssr";
-import { useVerification } from "~/components/Navigation/VerificationProvider";
+import { useVerification } from "~/components/TopNav/NavUserProvider";
 import VerificationChecklist from "~/components/VerificationChecklist";
 import {
   Dialog,

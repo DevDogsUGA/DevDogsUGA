@@ -11,7 +11,7 @@ import { db } from "~/server/db";
 import { feedbackTopics, profiles, siteFeedback } from '~/server/db/schema';
 
 export const getFeedbackPageData = cache(async (filters: FeedbackFilters) => {
-  const userId = await expectSession().catch(() => redirect("/api/auth"));
+  const userId = await expectSession().catch(() => redirect("/auth"));
   const canManage = await canUserManageFeedback(userId);
   if (!canManage) redirect("/");
 
@@ -109,7 +109,7 @@ export const getFeedbackTestingPageData = cache(async () => {
       },
       orderBy: { createdAt: "asc" },
     },
-  }).catch(() => redirect("/api/auth"));
+  }).catch(() => redirect("/auth"));
 
   const clientId = profile?.oauthRegistration?.clientId ?? null;
   const hasGithub = githubIdentity !== null;

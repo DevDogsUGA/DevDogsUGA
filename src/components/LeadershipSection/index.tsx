@@ -4,7 +4,7 @@ import SectionBackground, {
   type EdgeType,
 } from "~/ui/section-background";
 import LeaderCluster from "./LeaderCluster";
-import { execBoard } from "~/app/(public)/homeData";
+import { execBoard } from "~/app/(navbar)/homeData";
 
 const LEADERSHIP_BLOBS: BlobDef[] = [
   { cx: "20%", cy: "28%", rx: "50%", ry: "55%", fill: "#fde68a" }, // amber

@@ -2,7 +2,7 @@
 
 import { SealCheckIcon, ShieldWarningIcon } from "@phosphor-icons/react/ssr";
 import FormButton from "~/components/FormButton";
-import { useVerification } from "~/components/Navigation/VerificationProvider";
+import { useVerification } from "~/components/TopNav/NavUserProvider";
 
 export default function VerificationStatusField() {
   const ctx = useVerification();

@@ -1,5 +1,4 @@
-import type { TOCItem } from "~/lib/toc";
-import type { DocHeading } from "~/server/manifest/types";
+import type { DocHeading, TOCItem } from "~/lib/toc";
 import InlineTableOfContents from "~/components/InlineTableOfContents";
 import TableOfContents from "~/components/TableOfContents";
 import MDXContent from "./MDXContent";

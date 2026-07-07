@@ -39,6 +39,7 @@ export const env = createEnv({
       local: z.string().default(""),
       vercel: z.string().min(20),
     }),
+    GITHUB_DEFAULT_BRANCH: z.string().default("main"),
     // Derived (.env.supabase)
     API_URL: z.string(),
     DB_URL: z.string(),
@@ -86,6 +87,7 @@ export const env = createEnv({
     DISCORD_PUBLIC_KEY: process.env.DISCORD_PUBLIC_KEY,
     DISCORD_TOKEN: process.env.DISCORD_TOKEN,
     EDGE_CONFIG: process.env.EDGE_CONFIG,
+    GITHUB_DEFAULT_BRANCH: process.env.GITHUB_DEFAULT_BRANCH,
     GITHUB_ORG: process.env.GITHUB_ORG,
     GITHUB_TOKEN: process.env.GITHUB_TOKEN,
     GITHUB_WEBHOOK_SECRET: process.env.GITHUB_WEBHOOK_SECRET,

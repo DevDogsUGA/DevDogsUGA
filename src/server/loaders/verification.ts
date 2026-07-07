@@ -7,7 +7,7 @@ import { db } from "~/server/db";
 import { profileWithVerification, profiles } from '~/server/db/schema';
 
 export const getVerificationPageData = cache(async () => {
-  const userId = await expectSession().catch(() => redirect("/api/auth"));
+  const userId = await expectSession().catch(() => redirect("/auth"));
   if (!(await canUserManageVerification(userId))) notFound();
 });
 
