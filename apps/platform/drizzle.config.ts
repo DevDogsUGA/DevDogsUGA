@@ -5,7 +5,7 @@ import { type Config } from "drizzle-kit";
 export default {
   out: "./src/server/db/schema/generated",
   dialect: "postgresql",
-  schemaFilter: ["public"],
+  schemaFilter: ["platform"],
   dbCredentials: {
     url: process.env.DB_URL!,
   },

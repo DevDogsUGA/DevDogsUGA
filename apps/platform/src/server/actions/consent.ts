@@ -19,8 +19,9 @@ const denySchema = zfd.formData({
 });
 
 export async function approveAuthorization(
+  // Only uses client.auth.* (schema-independent), so accept any schema.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: SupabaseClient<any, "public", "public", any, any>,
+  client: SupabaseClient<any, any, any, any, any>,
   authorizationId: string,
 ): Promise<never> {
   const { data: authorizationDetails, error: authorizationDetailsError } =

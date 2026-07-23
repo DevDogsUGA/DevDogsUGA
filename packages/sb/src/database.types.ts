@@ -32,7 +32,7 @@ export type Database = {
       [_ in never]: never
     }
   }
-  public: {
+  platform: {
     Tables: {
       contentReports: {
         Row: {
@@ -49,7 +49,7 @@ export type Database = {
           reportedUserId: string
           reporterUserId: string
           resolvedAt: string | null
-          status: Database["public"]["Enums"]["reportStatus"]
+          status: Database["platform"]["Enums"]["reportStatus"]
           verifyAttempts: number
         }
         Insert: {
@@ -66,7 +66,7 @@ export type Database = {
           reportedUserId: string
           reporterUserId: string
           resolvedAt?: string | null
-          status?: Database["public"]["Enums"]["reportStatus"]
+          status?: Database["platform"]["Enums"]["reportStatus"]
           verifyAttempts?: number
         }
         Update: {
@@ -83,7 +83,7 @@ export type Database = {
           reportedUserId?: string
           reporterUserId?: string
           resolvedAt?: string | null
-          status?: Database["public"]["Enums"]["reportStatus"]
+          status?: Database["platform"]["Enums"]["reportStatus"]
           verifyAttempts?: number
         }
         Relationships: [
@@ -143,7 +143,7 @@ export type Database = {
           name: string
           passwordSecretId: string | null
           totpSecretId: string | null
-          type: Database["public"]["Enums"]["credentialType"]
+          type: Database["platform"]["Enums"]["credentialType"]
         }
         Insert: {
           createdAt?: string
@@ -154,7 +154,7 @@ export type Database = {
           name: string
           passwordSecretId?: string | null
           totpSecretId?: string | null
-          type: Database["public"]["Enums"]["credentialType"]
+          type: Database["platform"]["Enums"]["credentialType"]
         }
         Update: {
           createdAt?: string
@@ -165,7 +165,122 @@ export type Database = {
           name?: string
           passwordSecretId?: string | null
           totpSecretId?: string | null
-          type?: Database["public"]["Enums"]["credentialType"]
+          type?: Database["platform"]["Enums"]["credentialType"]
+        }
+        Relationships: []
+      }
+      docsBranches: {
+        Row: {
+          id: string
+          lastSyncedAt: string | null
+          lastSyncedCommit: string | null
+          name: string
+          repoId: string
+        }
+        Insert: {
+          id?: string
+          lastSyncedAt?: string | null
+          lastSyncedCommit?: string | null
+          name: string
+          repoId: string
+        }
+        Update: {
+          id?: string
+          lastSyncedAt?: string | null
+          lastSyncedCommit?: string | null
+          name?: string
+          repoId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "docsBranches_repoId_fkey"
+            columns: ["repoId"]
+            isOneToOne: false
+            referencedRelation: "docsRepos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      docsPages: {
+        Row: {
+          blobSha: string
+          branchId: string
+          content: string
+          description: string | null
+          frontmatter: Json
+          headings: Json
+          id: string
+          path: string
+          plainText: string
+          search: unknown
+          title: string
+          updatedAt: string
+        }
+        Insert: {
+          blobSha: string
+          branchId: string
+          content: string
+          description?: string | null
+          frontmatter?: Json
+          headings?: Json
+          id?: string
+          path: string
+          plainText: string
+          search?: unknown
+          title: string
+          updatedAt?: string
+        }
+        Update: {
+          blobSha?: string
+          branchId?: string
+          content?: string
+          description?: string | null
+          frontmatter?: Json
+          headings?: Json
+          id?: string
+          path?: string
+          plainText?: string
+          search?: unknown
+          title?: string
+          updatedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "docsPages_branchId_fkey"
+            columns: ["branchId"]
+            isOneToOne: false
+            referencedRelation: "docsBranches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      docsRepos: {
+        Row: {
+          createdAt: string
+          defaultBranch: string
+          description: string | null
+          id: string
+          name: string
+          slug: string
+          sortOrder: number
+        }
+        Insert: {
+          createdAt?: string
+          defaultBranch?: string
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+          sortOrder?: number
+        }
+        Update: {
+          createdAt?: string
+          defaultBranch?: string
+          description?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          sortOrder?: number
         }
         Relationships: []
       }
@@ -249,21 +364,21 @@ export type Database = {
           clientId: string
           reportWebhookSecretId: string | null
           reportWebhookUrl: string | null
-          type: Database["public"]["Enums"]["oauthRegistrationType"]
+          type: Database["platform"]["Enums"]["oauthRegistrationType"]
           userId: string
         }
         Insert: {
           clientId: string
           reportWebhookSecretId?: string | null
           reportWebhookUrl?: string | null
-          type?: Database["public"]["Enums"]["oauthRegistrationType"]
+          type?: Database["platform"]["Enums"]["oauthRegistrationType"]
           userId: string
         }
         Update: {
           clientId?: string
           reportWebhookSecretId?: string | null
           reportWebhookUrl?: string | null
-          type?: Database["public"]["Enums"]["oauthRegistrationType"]
+          type?: Database["platform"]["Enums"]["oauthRegistrationType"]
           userId?: string
         }
         Relationships: []
@@ -334,7 +449,7 @@ export type Database = {
         Row: {
           bio: string | null
           graduationSemester:
-            | Database["public"]["Enums"]["graduationSemester"]
+            | Database["platform"]["Enums"]["graduationSemester"]
             | null
           graduationYear: number | null
           involvementFirstName: string | null
@@ -353,7 +468,7 @@ export type Database = {
         Insert: {
           bio?: string | null
           graduationSemester?:
-            | Database["public"]["Enums"]["graduationSemester"]
+            | Database["platform"]["Enums"]["graduationSemester"]
             | null
           graduationYear?: number | null
           involvementFirstName?: string | null
@@ -372,7 +487,7 @@ export type Database = {
         Update: {
           bio?: string | null
           graduationSemester?:
-            | Database["public"]["Enums"]["graduationSemester"]
+            | Database["platform"]["Enums"]["graduationSemester"]
             | null
           graduationYear?: number | null
           involvementFirstName?: string | null
@@ -522,44 +637,44 @@ export type Database = {
       reportResolutions: {
         Row: {
           appliedGlobally: boolean
-          contentAction: Database["public"]["Enums"]["contentAction"]
+          contentAction: Database["platform"]["Enums"]["contentAction"]
           createdAt: string
-          filerAction: Database["public"]["Enums"]["filerAction"]
+          filerAction: Database["platform"]["Enums"]["filerAction"]
           id: string
           moderatorNote: string | null
           moderatorUserId: string
           nextRetryAt: string | null
           notifiedAt: string | null
           reportId: string
-          subjectAction: Database["public"]["Enums"]["subjectAction"]
+          subjectAction: Database["platform"]["Enums"]["subjectAction"]
           webhookAttempts: number
         }
         Insert: {
           appliedGlobally?: boolean
-          contentAction: Database["public"]["Enums"]["contentAction"]
+          contentAction: Database["platform"]["Enums"]["contentAction"]
           createdAt?: string
-          filerAction: Database["public"]["Enums"]["filerAction"]
+          filerAction: Database["platform"]["Enums"]["filerAction"]
           id?: string
           moderatorNote?: string | null
           moderatorUserId: string
           nextRetryAt?: string | null
           notifiedAt?: string | null
           reportId: string
-          subjectAction: Database["public"]["Enums"]["subjectAction"]
+          subjectAction: Database["platform"]["Enums"]["subjectAction"]
           webhookAttempts?: number
         }
         Update: {
           appliedGlobally?: boolean
-          contentAction?: Database["public"]["Enums"]["contentAction"]
+          contentAction?: Database["platform"]["Enums"]["contentAction"]
           createdAt?: string
-          filerAction?: Database["public"]["Enums"]["filerAction"]
+          filerAction?: Database["platform"]["Enums"]["filerAction"]
           id?: string
           moderatorNote?: string | null
           moderatorUserId?: string
           nextRetryAt?: string | null
           notifiedAt?: string | null
           reportId?: string
-          subjectAction?: Database["public"]["Enums"]["subjectAction"]
+          subjectAction?: Database["platform"]["Enums"]["subjectAction"]
           webhookAttempts?: number
         }
         Relationships: [
@@ -590,7 +705,7 @@ export type Database = {
           id: string
           isLeadership: boolean
           rank: number | null
-          roleType: Database["public"]["Enums"]["roleType"]
+          roleType: Database["platform"]["Enums"]["roleType"]
           showOnProfile: boolean
           title: string
         }
@@ -611,7 +726,7 @@ export type Database = {
           id?: string
           isLeadership?: boolean
           rank?: number | null
-          roleType?: Database["public"]["Enums"]["roleType"]
+          roleType?: Database["platform"]["Enums"]["roleType"]
           showOnProfile?: boolean
           title: string
         }
@@ -632,7 +747,7 @@ export type Database = {
           id?: string
           isLeadership?: boolean
           rank?: number | null
-          roleType?: Database["public"]["Enums"]["roleType"]
+          roleType?: Database["platform"]["Enums"]["roleType"]
           showOnProfile?: boolean
           title?: string
         }
@@ -647,11 +762,11 @@ export type Database = {
           createdAt: string
           description: string
           id: string
-          severity: Database["public"]["Enums"]["feedbackSeverity"] | null
-          status: Database["public"]["Enums"]["feedbackStatus"]
+          severity: Database["platform"]["Enums"]["feedbackSeverity"] | null
+          status: Database["platform"]["Enums"]["feedbackStatus"]
           title: string
           topicId: string | null
-          type: Database["public"]["Enums"]["feedbackType"]
+          type: Database["platform"]["Enums"]["feedbackType"]
           updatedAt: string
           userId: string
         }
@@ -663,11 +778,11 @@ export type Database = {
           createdAt?: string
           description: string
           id?: string
-          severity?: Database["public"]["Enums"]["feedbackSeverity"] | null
-          status?: Database["public"]["Enums"]["feedbackStatus"]
+          severity?: Database["platform"]["Enums"]["feedbackSeverity"] | null
+          status?: Database["platform"]["Enums"]["feedbackStatus"]
           title: string
           topicId?: string | null
-          type: Database["public"]["Enums"]["feedbackType"]
+          type: Database["platform"]["Enums"]["feedbackType"]
           updatedAt?: string
           userId: string
         }
@@ -679,11 +794,11 @@ export type Database = {
           createdAt?: string
           description?: string
           id?: string
-          severity?: Database["public"]["Enums"]["feedbackSeverity"] | null
-          status?: Database["public"]["Enums"]["feedbackStatus"]
+          severity?: Database["platform"]["Enums"]["feedbackSeverity"] | null
+          status?: Database["platform"]["Enums"]["feedbackStatus"]
           title?: string
           topicId?: string | null
-          type?: Database["public"]["Enums"]["feedbackType"]
+          type?: Database["platform"]["Enums"]["feedbackType"]
           updatedAt?: string
           userId?: string
         }
@@ -816,6 +931,23 @@ export type Database = {
       reportStatus: "unverified" | "pending" | "resolved" | "dismissed"
       roleType: "default" | "root" | "custom"
       subjectAction: "warn" | "suspend" | "ban" | "no_action"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+  public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1489,7 +1621,7 @@ export const Constants = {
   graphql_public: {
     Enums: {},
   },
-  public: {
+  platform: {
     Enums: {
       contentAction: ["quarantine", "no_action"],
       credentialType: ["email_password", "totp", "email_password_totp"],
@@ -1510,6 +1642,9 @@ export const Constants = {
       roleType: ["default", "root", "custom"],
       subjectAction: ["warn", "suspend", "ban", "no_action"],
     },
+  },
+  public: {
+    Enums: {},
   },
   storage: {
     Enums: {

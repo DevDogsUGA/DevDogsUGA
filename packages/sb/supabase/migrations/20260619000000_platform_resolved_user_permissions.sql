@@ -1,7 +1,7 @@
-CREATE MATERIALIZED VIEW "resolvedUserPermissions" AS
+CREATE MATERIALIZED VIEW "platform"."resolvedUserPermissions" AS
 WITH root_holders AS (
   SELECT ur."userId"
-  FROM "userRoles" ur
+  FROM "platform"."userRoles" ur
   WHERE ur."roleId" = '00000000-0000-0000-0000-000000000002'::uuid
 ),
 user_custom_roles AS (
@@ -16,8 +16,8 @@ user_custom_roles AS (
     r."canManageFeedback",
     r."canCreateCredentials",
     r."canManageVerification"
-  FROM "userRoles" ur
-  INNER JOIN roles r ON r.id = ur."roleId" AND r."roleType" = 'custom'
+  FROM "platform"."userRoles" ur
+  INNER JOIN "platform"."roles" r ON r.id = ur."roleId" AND r."roleType" = 'custom'
 ),
 first_non_null AS (
   SELECT
@@ -35,7 +35,7 @@ first_non_null AS (
   GROUP BY ucr."userId"
 ),
 all_users AS (
-  SELECT DISTINCT "userId" FROM "userRoles"
+  SELECT DISTINCT "userId" FROM "platform"."userRoles"
 )
 SELECT
   au."userId",
@@ -53,6 +53,6 @@ LEFT JOIN root_holders rh ON rh."userId" = au."userId"
 LEFT JOIN first_non_null fnn ON fnn."userId" = au."userId";
 
 CREATE UNIQUE INDEX "resolvedUserPermissions_userId_idx"
-  ON "resolvedUserPermissions" ("userId");
+  ON "platform"."resolvedUserPermissions" ("userId");
 
-REFRESH MATERIALIZED VIEW "resolvedUserPermissions";
+REFRESH MATERIALIZED VIEW "platform"."resolvedUserPermissions";

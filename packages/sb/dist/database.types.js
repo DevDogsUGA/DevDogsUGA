@@ -2,7 +2,7 @@ export const Constants = {
     graphql_public: {
         Enums: {},
     },
-    public: {
+    platform: {
         Enums: {
             contentAction: ["quarantine", "no_action"],
             credentialType: ["email_password", "totp", "email_password_totp"],
@@ -23,6 +23,9 @@ export const Constants = {
             roleType: ["default", "root", "custom"],
             subjectAction: ["warn", "suspend", "ban", "no_action"],
         },
+    },
+    public: {
+        Enums: {},
     },
     storage: {
         Enums: {

@@ -1,5 +1,6 @@
-import { pgMaterializedView, uuid, boolean, doublePrecision } from "drizzle-orm/pg-core";
+import { uuid, boolean, doublePrecision } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { platform } from "./generated/schema";
 
 export * from "./generated/schema";
 // The DB table is named "profile" but the codebase uses "profiles" as the variable name.
@@ -8,7 +9,10 @@ export { profile as profiles } from "./generated/schema";
 export const MEMBER_ROLE_ID = "00000000-0000-0000-0000-000000000001";
 export const ROOT_ROLE_ID = "00000000-0000-0000-0000-000000000002";
 
-export const resolvedUserPermissions = pgMaterializedView("resolvedUserPermissions", {
+// Lives in the `platform` schema so refreshMaterializedView targets
+// platform."resolvedUserPermissions". The SELECT body below is only for
+// drizzle's awareness (migrations are managed via Supabase SQL, not push).
+export const resolvedUserPermissions = platform.materializedView("resolvedUserPermissions", {
   userId: uuid().notNull(),
   canModerate: boolean().notNull(),
   canManageRoles: boolean().notNull(),

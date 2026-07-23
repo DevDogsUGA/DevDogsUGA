@@ -28,13 +28,13 @@
     "new-migration": "supabase migration new",
     "push-migrations": "node bin/with-env.js supabase db push && pnpm generate-types",
     "reset-remote-database": "node bin/with-env.js supabase db reset --linked && pnpm generate-types && pnpm seed-buckets",
-    "generate-types": "node bin/with-env.js sh -c 'supabase gen types --linked > src/database.types.ts'",
+    "generate-types": "node bin/with-env.js sh -c 'supabase gen types --linked > src/database.types.ts' && pnpm build",
     "seed-buckets": "node bin/with-env.js supabase seed buckets --yes",
     "start-local-stack": "node bin/with-env.js sh -c 'supabase start && supabase status -o env > ../../.env.supabase' && pnpm seed-buckets:local",
     "stop-local-stack": "supabase stop",
-    "reset-local-database": "node bin/with-env.js --local sh -c 'supabase db reset && supabase gen types --local > src/database.types.ts' && pnpm seed-buckets:local",
+    "reset-local-database": "node bin/with-env.js --local sh -c 'supabase db reset && supabase gen types --local > src/database.types.ts' && pnpm build && pnpm seed-buckets:local",
     "seed-buckets:local": "node bin/with-env.js --local supabase seed buckets --yes",
-    "generate-types:local": "node bin/with-env.js --local sh -c 'supabase gen types --local > src/database.types.ts'"
+    "generate-types:local": "node bin/with-env.js --local sh -c 'supabase gen types --local > src/database.types.ts' && pnpm build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

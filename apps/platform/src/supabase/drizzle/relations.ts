@@ -111,6 +111,26 @@ export const relations = defineRelations(schema, (r) => ({
 			to: r.usersInAuth.id
 		}),
 	},
+	icebergNamespacesInStorage: {
+		bucketsAnalyticsInStorage: r.one.bucketsAnalyticsInStorage({
+			from: r.icebergNamespacesInStorage.catalogId,
+			to: r.bucketsAnalyticsInStorage.id,
+			alias: "icebergNamespacesInStorage_catalogId_bucketsAnalyticsInStorage_id"
+		}),
+		bucketsAnalyticsInStorages: r.many.bucketsAnalyticsInStorage({
+			alias: "bucketsAnalyticsInStorage_id_icebergNamespacesInStorage_id_via_icebergTablesInStorage"
+		}),
+	},
+	bucketsAnalyticsInStorage: {
+		icebergNamespacesInStoragesCatalogId: r.many.icebergNamespacesInStorage({
+			alias: "icebergNamespacesInStorage_catalogId_bucketsAnalyticsInStorage_id"
+		}),
+		icebergNamespacesInStoragesViaIcebergTablesInStorage: r.many.icebergNamespacesInStorage({
+			from: r.bucketsAnalyticsInStorage.id.through(r.icebergTablesInStorage.catalogId),
+			to: r.icebergNamespacesInStorage.id.through(r.icebergTablesInStorage.namespaceId),
+			alias: "bucketsAnalyticsInStorage_id_icebergNamespacesInStorage_id_via_icebergTablesInStorage"
+		}),
+	},
 	objectsInStorage: {
 		bucketsInStorage: r.one.bucketsInStorage({
 			from: r.objectsInStorage.bucketId,

@@ -2,7 +2,7 @@
 -- dependency: a push webhook syncs docs/**/*.md into these tables, and all
 -- reads (pages, sidebar tree, full-text search) come from here.
 
-create table "public"."docsRepos" (
+create table "platform"."docsRepos" (
     "id" uuid not null default gen_random_uuid(),
     "slug" text not null,
     "name" text not null,
@@ -12,13 +12,13 @@ create table "public"."docsRepos" (
     "createdAt" timestamp with time zone not null default now()
 );
 
-alter table "public"."docsRepos" enable row level security;
+alter table "platform"."docsRepos" enable row level security;
 
-create unique index "docsRepos_pkey" on public."docsRepos" using btree (id);
-alter table "public"."docsRepos" add constraint "docsRepos_pkey" primary key using index "docsRepos_pkey";
-create unique index "docsRepos_slug_idx" on public."docsRepos" using btree (slug);
+create unique index "docsRepos_pkey" on platform."docsRepos" using btree (id);
+alter table "platform"."docsRepos" add constraint "docsRepos_pkey" primary key using index "docsRepos_pkey";
+create unique index "docsRepos_slug_idx" on platform."docsRepos" using btree (slug);
 
-create table "public"."docsBranches" (
+create table "platform"."docsBranches" (
     "id" uuid not null default gen_random_uuid(),
     "repoId" uuid not null,
     -- Branch names may contain "/" (e.g. docs/preview-x); URL resolution
@@ -28,15 +28,15 @@ create table "public"."docsBranches" (
     "lastSyncedAt" timestamp with time zone
 );
 
-alter table "public"."docsBranches" enable row level security;
+alter table "platform"."docsBranches" enable row level security;
 
-create unique index "docsBranches_pkey" on public."docsBranches" using btree (id);
-alter table "public"."docsBranches" add constraint "docsBranches_pkey" primary key using index "docsBranches_pkey";
-create unique index "docsBranches_repo_name_idx" on public."docsBranches" using btree ("repoId", "name");
-alter table "public"."docsBranches" add constraint "docsBranches_repoId_fkey"
-    foreign key ("repoId") references public."docsRepos"(id) on delete cascade;
+create unique index "docsBranches_pkey" on platform."docsBranches" using btree (id);
+alter table "platform"."docsBranches" add constraint "docsBranches_pkey" primary key using index "docsBranches_pkey";
+create unique index "docsBranches_repo_name_idx" on platform."docsBranches" using btree ("repoId", "name");
+alter table "platform"."docsBranches" add constraint "docsBranches_repoId_fkey"
+    foreign key ("repoId") references platform."docsRepos"(id) on delete cascade;
 
-create table "public"."docsPages" (
+create table "platform"."docsPages" (
     "id" uuid not null default gen_random_uuid(),
     "branchId" uuid not null,
     -- Slash-joined slug below the repo's docs/ directory, ".md" stripped.
@@ -60,24 +60,24 @@ create table "public"."docsPages" (
     ) stored
 );
 
-alter table "public"."docsPages" enable row level security;
+alter table "platform"."docsPages" enable row level security;
 
-create unique index "docsPages_pkey" on public."docsPages" using btree (id);
-alter table "public"."docsPages" add constraint "docsPages_pkey" primary key using index "docsPages_pkey";
-create unique index "docsPages_branch_path_idx" on public."docsPages" using btree ("branchId", "path");
-create index "docsPages_search_idx" on public."docsPages" using gin ("search");
-alter table "public"."docsPages" add constraint "docsPages_branchId_fkey"
-    foreign key ("branchId") references public."docsBranches"(id) on delete cascade;
+create unique index "docsPages_pkey" on platform."docsPages" using btree (id);
+alter table "platform"."docsPages" add constraint "docsPages_pkey" primary key using index "docsPages_pkey";
+create unique index "docsPages_branch_path_idx" on platform."docsPages" using btree ("branchId", "path");
+create index "docsPages_search_idx" on platform."docsPages" using gin ("search");
+alter table "platform"."docsPages" add constraint "docsPages_branchId_fkey"
+    foreign key ("branchId") references platform."docsBranches"(id) on delete cascade;
 
 -- Docs are public content: anyone may read. There are intentionally no write
 -- policies — ingestion happens over the server's direct DB connection.
-create policy "docsRepos_public_read" on public."docsRepos"
+create policy "docsRepos_public_read" on platform."docsRepos"
     for select to anon, authenticated using (true);
-create policy "docsBranches_public_read" on public."docsBranches"
+create policy "docsBranches_public_read" on platform."docsBranches"
     for select to anon, authenticated using (true);
-create policy "docsPages_public_read" on public."docsPages"
+create policy "docsPages_public_read" on platform."docsPages"
     for select to anon, authenticated using (true);
 
 -- Seed the tracked repositories (previously the Edge Config "docs" key).
-insert into public."docsRepos" ("slug", "name", "description", "defaultBranch", "sortOrder")
+insert into platform."docsRepos" ("slug", "name", "description", "defaultBranch", "sortOrder")
 values ('DevDogs-Website', 'DevDogs Website', 'The devdogsuga.org web platform.', 'main', 0);

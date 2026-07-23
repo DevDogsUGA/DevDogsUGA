@@ -5,7 +5,7 @@ import { type Config } from "drizzle-kit";
 export default {
   out: "./src/supabase/drizzle",
   dialect: "postgresql",
-  schemaFilter: ["*", "!public", "!_*"],
+  schemaFilter: ["*", "!platform", "!public", "!_*"],
   dbCredentials: {
     url: process.env.DB_URL!,
   },

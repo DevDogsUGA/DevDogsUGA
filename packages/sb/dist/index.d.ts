@@ -16,7 +16,7 @@ interface ClientOptions<S extends DatabaseSchema> {
  * Browser (anon) client, scoped to `schema` as its default. Memoized by
  * `@supabase/ssr` on its arguments, so repeated calls return one instance.
  */
-export declare function createBrowserClient<S extends DatabaseSchema>(opts: ClientOptions<S>): import("@supabase/supabase-js").SupabaseClient<Database, S, S extends "graphql_public" | "public" | "storage" ? S : "public", Omit<Database, "__InternalSupabase">[S extends "graphql_public" | "public" | "storage" ? S : "public"] extends {
+export declare function createBrowserClient<S extends DatabaseSchema>(opts: ClientOptions<S>): import("@supabase/supabase-js").SupabaseClient<Database, S, S extends "platform" | "storage" | "graphql_public" | "public" ? S : "public", Omit<Database, "__InternalSupabase">[S extends "platform" | "storage" | "graphql_public" | "public" ? S : "public"] extends {
     Tables: Record<string, {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;
@@ -61,7 +61,7 @@ export declare function createBrowserClient<S extends DatabaseSchema>(opts: Clie
             from: string;
         };
     }>;
-} ? Omit<Database, "__InternalSupabase">[S extends "graphql_public" | "public" | "storage" ? S : "public"] : never, S extends "graphql_public" | "public" | "storage" ? {
+} ? Omit<Database, "__InternalSupabase">[S extends "platform" | "storage" | "graphql_public" | "public" ? S : "public"] : never, S extends "platform" | "storage" | "graphql_public" | "public" ? {
     PostgrestVersion: "12";
 } : S extends {
     PostgrestVersion: string;
@@ -72,7 +72,7 @@ export declare function createBrowserClient<S extends DatabaseSchema>(opts: Clie
  */
 export declare function createServerClient<S extends DatabaseSchema>(opts: ClientOptions<S> & {
     cookies: CookieMethodsServer;
-}): import("@supabase/supabase-js").SupabaseClient<Database, S, S extends "graphql_public" | "public" | "storage" ? S : "public", Omit<Database, "__InternalSupabase">[S extends "graphql_public" | "public" | "storage" ? S : "public"] extends {
+}): import("@supabase/supabase-js").SupabaseClient<Database, S, S extends "platform" | "storage" | "graphql_public" | "public" ? S : "public", Omit<Database, "__InternalSupabase">[S extends "platform" | "storage" | "graphql_public" | "public" ? S : "public"] extends {
     Tables: Record<string, {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;
@@ -117,7 +117,7 @@ export declare function createServerClient<S extends DatabaseSchema>(opts: Clien
             from: string;
         };
     }>;
-} ? Omit<Database, "__InternalSupabase">[S extends "graphql_public" | "public" | "storage" ? S : "public"] : never, S extends "graphql_public" | "public" | "storage" ? {
+} ? Omit<Database, "__InternalSupabase">[S extends "platform" | "storage" | "graphql_public" | "public" ? S : "public"] : never, S extends "platform" | "storage" | "graphql_public" | "public" ? {
     PostgrestVersion: "12";
 } : S extends {
     PostgrestVersion: string;
@@ -126,7 +126,7 @@ export declare function createServerClient<S extends DatabaseSchema>(opts: Clien
  * Service-role admin client. Bypasses RLS — server-only, never ship to the
  * browser. Session auto-refresh/persistence are disabled.
  */
-export declare function createAdminClient<S extends DatabaseSchema>(opts: ClientOptions<S>): import("@supabase/supabase-js").SupabaseClient<Database, S, S extends "graphql_public" | "public" | "storage" ? S : "public", Omit<Database, "__InternalSupabase">[S extends "graphql_public" | "public" | "storage" ? S : "public"] extends {
+export declare function createAdminClient<S extends DatabaseSchema>(opts: ClientOptions<S>): import("@supabase/supabase-js").SupabaseClient<Database, S, S extends "platform" | "storage" | "graphql_public" | "public" ? S : "public", Omit<Database, "__InternalSupabase">[S extends "platform" | "storage" | "graphql_public" | "public" ? S : "public"] extends {
     Tables: Record<string, {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;
@@ -171,7 +171,7 @@ export declare function createAdminClient<S extends DatabaseSchema>(opts: Client
             from: string;
         };
     }>;
-} ? Omit<Database, "__InternalSupabase">[S extends "graphql_public" | "public" | "storage" ? S : "public"] : never, S extends "graphql_public" | "public" | "storage" ? {
+} ? Omit<Database, "__InternalSupabase">[S extends "platform" | "storage" | "graphql_public" | "public" ? S : "public"] : never, S extends "platform" | "storage" | "graphql_public" | "public" ? {
     PostgrestVersion: "12";
 } : S extends {
     PostgrestVersion: string;
