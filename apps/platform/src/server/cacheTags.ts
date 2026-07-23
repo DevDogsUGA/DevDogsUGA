@@ -4,8 +4,12 @@
  * re-renders the pages it touched.
  */
 
-export function docsReposTag() {
-  return "docs:repos";
+/**
+ * The derived project list (immediate subfolders of docs/, with metadata from
+ * each project's index page). Revalidated by any default-branch content change.
+ */
+export function docsProjectsTag() {
+  return "docs:projects";
 }
 
 export function docsBranchesTag(repo: string) {

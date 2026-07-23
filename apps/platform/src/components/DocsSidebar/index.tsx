@@ -16,15 +16,15 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "~/ui
 import Tree from "./Tree";
 
 export interface DocsSidebarProps {
-  repos: { slug: string; name: string }[];
-  repo: string;
+  projects: { slug: string; name: string }[];
+  project: string;
   branches: string[];
   defaultBranch: string;
   treesByBranch: Record<string, DocsTreeNode[]>;
 }
 
 function SidebarContent(props: DocsSidebarProps) {
-  const { repos, repo, branches, defaultBranch, treesByBranch } = props;
+  const { projects, project, branches, defaultBranch, treesByBranch } = props;
   const router = useRouter();
   const pathname = usePathname();
 
@@ -32,7 +32,7 @@ function SidebarContent(props: DocsSidebarProps) {
     const slug = pathname
       .split("/")
       .filter(Boolean)
-      .slice(2) // drop "docs" and the repo segment
+      .slice(2) // drop "docs" and the project segment
       .map(decodeURIComponent);
     const resolved = resolveDocsSlug(slug, branches, defaultBranch);
     return { branch: resolved.branch, activePath: resolved.path.join("/") };
@@ -40,7 +40,7 @@ function SidebarContent(props: DocsSidebarProps) {
 
   const tree = treesByBranch[branch] ?? [];
 
-  function onRepoChange(slug: string) {
+  function onProjectChange(slug: string) {
     router.push(`/docs/${encodeURIComponent(slug)}`);
   }
 
@@ -51,21 +51,21 @@ function SidebarContent(props: DocsSidebarProps) {
       activePath && treeContainsPath(nextTree, activePath)
         ? activePath.split("/")
         : [];
-    router.push(docsHref(repo, nextBranch, path, defaultBranch));
+    router.push(docsHref(project, nextBranch, path, defaultBranch));
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        {repos.length > 1 && (
-          <Select value={repo} onValueChange={onRepoChange}>
-            <SelectTrigger aria-label="Repository" className="w-full">
+        {projects.length > 1 && (
+          <Select value={project} onValueChange={onProjectChange}>
+            <SelectTrigger aria-label="Project" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {repos.map((r) => (
-                <SelectItem key={r.slug} value={r.slug}>
-                  {r.name}
+              {projects.map((p) => (
+                <SelectItem key={p.slug} value={p.slug}>
+                  {p.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -93,7 +93,7 @@ function SidebarContent(props: DocsSidebarProps) {
 
       <Tree
         nodes={tree}
-        ctx={{ repo, branch, defaultBranch, activePath }}
+        ctx={{ project, branch, defaultBranch, activePath }}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import { toTitleCase } from "~/server/docs/parse";
-import { docsHref } from "~/lib/docsSlug";
+import { docsHref, splitProjectPath } from "~/lib/docsSlug";
 import { escapeHtml } from "./match";
 import type { SearchEntry } from "./types";
 
@@ -15,9 +15,8 @@ const HEADLINE_OPTIONS = `StartSel=${START}, StopSel=${STOP}, MaxWords=18, MinWo
 interface DocsHit {
   title: string;
   description: string | null;
+  /** The stored path relative to docs/, project prefix included. */
   path: string;
-  repo: string;
-  repoName: string;
   defaultBranch: string;
   snippet: string;
 }
@@ -45,8 +44,6 @@ export async function searchDocs(
         p."description",
         p."path",
         p."plainText",
-        r."slug" as "repo",
-        r."name" as "repoName",
         r."defaultBranch",
         ts_rank(p."search", websearch_to_tsquery('english', ${query})) as "rank"
       from "docsPages" p
@@ -62,8 +59,6 @@ export async function searchDocs(
       "title",
       "description",
       "path",
-      "repo",
-      "repoName",
       "defaultBranch",
       ts_headline(
         'english',
@@ -75,23 +70,22 @@ export async function searchDocs(
     order by "rank" desc
   `);
 
-  return (rows as unknown as DocsHit[]).map((hit) => ({
-    id: `docs:${hit.repo}:${hit.path}`,
-    title: hit.title,
-    description: hit.description ?? undefined,
-    url: docsHref(
-      hit.repo,
-      hit.defaultBranch,
-      hit.path.split("/"),
-      hit.defaultBranch,
-    ),
-    icon: "BookOpenIcon",
-    breadcrumbs: [
-      "Docs",
-      hit.repoName,
-      ...hit.path.split("/").slice(0, -1).map(toTitleCase),
-    ],
-    group: "docs",
-    snippet: toSnippetHtml(hit.snippet),
-  }));
+  return (rows as unknown as DocsHit[]).map((hit) => {
+    const { project, path } = splitProjectPath(hit.path);
+    const relSegments = path ? path.split("/") : [];
+    return {
+      id: `docs:${hit.path}`,
+      title: hit.title,
+      description: hit.description ?? undefined,
+      url: docsHref(project, hit.defaultBranch, relSegments, hit.defaultBranch),
+      icon: "BookOpenIcon" as const,
+      breadcrumbs: [
+        "Docs",
+        toTitleCase(project),
+        ...relSegments.slice(0, -1).map(toTitleCase),
+      ],
+      group: "docs" as const,
+      snippet: toSnippetHtml(hit.snippet),
+    };
+  });
 }

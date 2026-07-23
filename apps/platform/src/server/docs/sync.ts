@@ -2,7 +2,12 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 import { db } from "~/server/db";
 import { docsBranches, docsPages } from "~/server/db/schema";
-import { docsBranchesTag, docsPageTag, docsTreeTag } from "../cacheTags";
+import {
+  docsBranchesTag,
+  docsPageTag,
+  docsProjectsTag,
+  docsTreeTag,
+} from "../cacheTags";
 import { getBlob, getBranchHead, getDocsTree } from "./github";
 import { parseDocFile } from "./parse";
 
@@ -181,6 +186,14 @@ export async function syncBranch(
   }
   if (!existingBranch) {
     revalidateTag(docsBranchesTag(repoSlug), "max");
+  }
+  // Projects (and their index-page metadata) are derived from the default
+  // branch, so any change there can add/remove a project or restyle its card.
+  if (
+    branchName === repo.defaultBranch &&
+    (parsed.length > 0 || removedPaths.length > 0)
+  ) {
+    revalidateTag(docsProjectsTag(), "max");
   }
 
   return {

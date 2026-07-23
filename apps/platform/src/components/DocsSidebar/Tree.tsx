@@ -12,7 +12,7 @@ import {
 } from "~/ui/collapsible";
 
 interface TreeContext {
-  repo: string;
+  project: string;
   branch: string;
   defaultBranch: string;
   activePath: string;
@@ -63,7 +63,7 @@ function Nodes({ nodes, ctx }: { nodes: DocsTreeNode[]; ctx: TreeContext }) {
           <li key={node.path}>
             <Link
               href={docsHref(
-                ctx.repo,
+                ctx.project,
                 ctx.branch,
                 node.path.split("/"),
                 ctx.defaultBranch,
