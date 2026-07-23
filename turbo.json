@@ -2,23 +2,20 @@
   "$schema": "https://v2-8-3.turborepo.dev/schema.json",
   "globalPassThroughEnv": [
     "BASE_URL",
+    "SCHEDULE_BUILDER_URL",
+    "DEPLOY_ENV",
     "VERCEL_ENV",
     "VERCEL_URL",
     "VERCEL_PROJECT_PRODUCTION_URL"
   ],
   "tasks": {
-    "db:generate": {
-      "dependsOn": [],
-      "outputs": ["migrations/ddl.sql"]
-    },
-    "docker:ready": {
-      "cache": false
-    },
     "build": {
-      "dependsOn": [],
-      "outputs": [".next/**", "dist/**"],
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", ".open-next/**", "dist/**", "build/**"],
       "env": [
         "BASE_URL",
+        "SCHEDULE_BUILDER_URL",
+        "DEPLOY_ENV",
         "CRON_SECRET",
         "DEVDOGS_EPOCH",
         "GITHUB_CLIENT_ID",
@@ -32,24 +29,34 @@
         "DISCORD_TOKEN",
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
-        "MYSQL_USER",
-        "MYSQL_PASSWORD",
-        "MYSQL_HOST",
-        "MYSQL_PORT",
-        "MYSQL_DATABASE",
         "S3_PORT",
         "S3_REGION",
         "S3_ACCESS_KEY_ID",
         "S3_SECRET_ACCESS_KEY",
         "SHARED_AUTH_CLIENT_ID",
-        "SHARED_AUTH_CLIENT_SECRET"
+        "SHARED_AUTH_CLIENT_SECRET",
+        "NEXT_PUBLIC_AUTH_MODE"
       ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "deploy": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "lint": {
+      "dependsOn": []
     },
     "lint:fix": {
       "dependsOn": []
     },
-    "typecheck": {
-      "dependsOn": []
+    "generate-types": {
+      "cache": false
     }
   }
 }

@@ -11,6 +11,5 @@ onlyBuiltDependencies:
   - supabase
   - unrs-resolver
 packages:
-  - .
+  - apps/*
   - packages/*
-ignoreWorkspaceRootCheck: true

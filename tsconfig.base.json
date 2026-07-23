@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    /* Base Options: */
+    /* Base Options */
     "esModuleInterop": true,
     "skipLibCheck": true,
     "target": "es2025",
@@ -13,31 +13,11 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "checkJs": true,
-    /* Bundled projects */
+    /* Modules */
     "lib": ["dom", "dom.iterable", "ES2025"],
     "noEmit": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "jsx": "react-jsx",
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "incremental": true,
-    /* Path Aliases */
-    "paths": {
-      "~/*": ["./src/*"]
-    }
-  },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.cjs",
-    "**/*.js",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
-  ],
-  "exclude": ["node_modules", "packages", "src/_deprecated"]
+    "incremental": true
+  }
 }
