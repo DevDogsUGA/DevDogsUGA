@@ -1,7 +1,6 @@
 import { type Config } from "drizzle-kit";
-import { loadEnvConfig } from "@next/env";
 
-loadEnvConfig(process.cwd());
+// DB_URL is provided by the `with-env` wrapper (see package.json db:* scripts).
 
 export default {
   out: "./src/supabase/drizzle",

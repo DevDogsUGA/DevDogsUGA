@@ -38,6 +38,9 @@ importers:
       '@devdogsuga/feedback-client':
         specifier: workspace:*
         version: link:../../packages/feedback-client
+      '@devdogsuga/sb':
+        specifier: workspace:*
+        version: link:../../packages/sb
       '@discordjs/builders':
         specifier: ^1.14.1
         version: 1.14.1
@@ -407,6 +410,37 @@ importers:
         version: 25.9.3
       typescript:
         specifier: '*'
+        version: 6.0.3
+
+  packages/sb:
+    dependencies:
+      '@supabase/ssr':
+        specifier: ^0.12.0
+        version: 0.12.0(@supabase/supabase-js@2.108.2)
+      '@supabase/supabase-js':
+        specifier: ^2.108.2
+        version: 2.108.2
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+      dotenv-expand:
+        specifier: ^11.0.6
+        version: 11.0.7
+    devDependencies:
+      '@types/node':
+        specifier: ^25.9.3
+        version: 25.9.3
+      dotenv-cli:
+        specifier: ^11.0.0
+        version: 11.0.0
+      supabase:
+        specifier: ^2.107.0
+        version: 2.107.0
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
+      typescript:
+        specifier: ^6.0.3
         version: 6.0.3
 
 packages:
@@ -3223,6 +3257,10 @@ packages:
   dotenv-cli@11.0.0:
     resolution: {integrity: sha512-r5pA8idbk7GFWuHEU7trSTflWcdBpQEK+Aw17UrSHjS6CReuhrrPcyC3zcQBPQvhArRHnBo/h6eLH1fkCvNlww==}
     hasBin: true
+
+  dotenv-expand@11.0.7:
+    resolution: {integrity: sha512-zIHwmZPRshsCdpMDyVsqGmgyP0yT8GAgXUnkdAoJisxvf33k7yO6OuoKmcTGuXPWSsm8Oh88nZicRLA9Y0rUeA==}
+    engines: {node: '>=12'}
 
   dotenv-expand@12.0.3:
     resolution: {integrity: sha512-uc47g4b+4k/M/SeaW1y4OApx+mtLWl92l5LMPP0GNXctZqELk+YGgOPIIC5elYmUH4OuoK3JLhuRUYegeySiFA==}
@@ -8643,6 +8681,10 @@ snapshots:
       dotenv: 17.4.2
       dotenv-expand: 12.0.3
       minimist: 1.2.8
+
+  dotenv-expand@11.0.7:
+    dependencies:
+      dotenv: 16.6.1
 
   dotenv-expand@12.0.3:
     dependencies:
