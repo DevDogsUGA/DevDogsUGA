@@ -54,13 +54,21 @@ function SearchResultItem({
             __html: highlightMatches(entry.title, query),
           }}
         />
-        {entry.description && (
+        {entry.snippet ? (
           <div
-            className="min-w-0 truncate text-xs text-muted-foreground [&_mark]:bg-transparent [&_mark]:font-medium [&_mark]:text-popover-foreground [&_mark]:underline"
-            dangerouslySetInnerHTML={{
-              __html: highlightMatches(entry.description, query),
-            }}
+            className="line-clamp-2 min-w-0 text-xs text-muted-foreground [&_mark]:bg-transparent [&_mark]:font-medium [&_mark]:text-popover-foreground [&_mark]:underline"
+            // Server-built: HTML-escaped before sentinel → <mark> replacement.
+            dangerouslySetInnerHTML={{ __html: entry.snippet }}
           />
+        ) : (
+          entry.description && (
+            <div
+              className="min-w-0 truncate text-xs text-muted-foreground [&_mark]:bg-transparent [&_mark]:font-medium [&_mark]:text-popover-foreground [&_mark]:underline"
+              dangerouslySetInnerHTML={{
+                __html: highlightMatches(entry.description, query),
+              }}
+            />
+          )
         )}
       </div>
     </CommandItem>
@@ -80,6 +88,8 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
 
   const results = data !== "empty" ? data : [];
   const hasResults = results.length > 0;
+  const pageResults = results.filter((entry) => entry.group !== "docs");
+  const docsResults = results.filter((entry) => entry.group === "docs");
 
   function handleSelect(url: string) {
     onOpenChange(false);
@@ -112,9 +122,21 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
             {!isLoading && search.trim() && !hasResults && (
               <CommandEmpty>No results found.</CommandEmpty>
             )}
-            {hasResults && (
-              <CommandGroup>
-                {results.map((entry) => (
+            {pageResults.length > 0 && (
+              <CommandGroup heading="Pages">
+                {pageResults.map((entry) => (
+                  <SearchResultItem
+                    key={entry.id}
+                    entry={entry}
+                    query={search}
+                    onSelect={() => handleSelect(entry.url)}
+                  />
+                ))}
+              </CommandGroup>
+            )}
+            {docsResults.length > 0 && (
+              <CommandGroup heading="Docs">
+                {docsResults.map((entry) => (
                   <SearchResultItem
                     key={entry.id}
                     entry={entry}

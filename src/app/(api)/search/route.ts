@@ -1,41 +1,40 @@
 import { NextResponse } from "next/server";
-import { expectSession } from "~/server/auth";
+import { canSeeCredentialsPage } from "~/server/actions/credentials";
 import { getCallerContext } from "~/server/actions/permissions";
-import { getAccessibleCredentials } from "~/server/actions/credentials";
-import { getFullDocsSearchIndex } from "~/manifest/docs";
-import {
-  buildAppSearchEntries,
-  flattenDocsToSearchEntries,
-} from "~/manifest/adapters/search";
+import { expectSession } from "~/server/auth";
+import { buildAppSearchEntries } from "~/server/search/appEntries";
+import { searchDocs } from "~/server/search/docsSearch";
 import { matchEntries } from "~/server/search/match";
 
 export async function GET(request: Request) {
-  const query = new URL(request.url).searchParams.get("query") ?? "";
+  const query = (
+    new URL(request.url).searchParams.get("query") ?? ""
+  ).trim();
+  if (!query) return NextResponse.json([]);
 
   const userId = await expectSession().catch(() => null);
-  const [ctx, docsPages] = await Promise.all([
-    userId
-      ? Promise.all([
-          getCallerContext(userId),
-          getAccessibleCredentials(userId),
-        ])
-          .then(([{ resolvedPermissions }, credentials]) => ({
-            permissions: resolvedPermissions,
-            credentials: credentials.map(({ id, name, description }) => ({
-              id,
-              name,
-              description,
-            })),
-          }))
-          .catch(() => null)
-      : Promise.resolve(null),
-    getFullDocsSearchIndex(),
+  const [permissions, credentialsAccess] = userId
+    ? await Promise.all([
+        getCallerContext(userId)
+          .then((ctx) => ctx.resolvedPermissions)
+          .catch(() => null),
+        canSeeCredentialsPage(userId).catch(() => false),
+      ])
+    : [null, false];
+
+  const appEntries = buildAppSearchEntries(
+    permissions,
+    credentialsAccess,
+    userId !== null,
+  );
+
+  const [pages, docs] = await Promise.all([
+    matchEntries(appEntries, query, 8),
+    searchDocs(query, 10).catch((error) => {
+      console.error("[search] docs full-text search failed", error);
+      return [];
+    }),
   ]);
 
-  const appEntries = buildAppSearchEntries(ctx);
-  const docsEntries = flattenDocsToSearchEntries(docsPages);
-
-  return NextResponse.json(
-    matchEntries([...appEntries, ...docsEntries], query),
-  );
+  return NextResponse.json([...pages, ...docs]);
 }

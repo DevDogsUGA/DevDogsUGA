@@ -58,15 +58,14 @@ export async function getDocsTree(
     return walkTree(repo, docsEntry.sha, "");
   }
 
-  return docs.data.tree
-    .filter(
-      (entry): entry is { path: string; sha: string; type: string } =>
-        entry.type === "blob" &&
-        typeof entry.path === "string" &&
-        typeof entry.sha === "string" &&
-        entry.path.endsWith(".md"),
-    )
-    .map((entry) => ({ path: entry.path, blobSha: entry.sha }));
+  return docs.data.tree.flatMap((entry) =>
+    entry.type === "blob" &&
+    typeof entry.path === "string" &&
+    typeof entry.sha === "string" &&
+    entry.path.endsWith(".md")
+      ? [{ path: entry.path, blobSha: entry.sha }]
+      : [],
+  );
 }
 
 /** Last-resort listing for absurdly large docs trees: one request per directory. */

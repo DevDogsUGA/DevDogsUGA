@@ -24,7 +24,7 @@ export function useSiteSearch(): {
     setIsLoading(true);
     const controller = new AbortController();
     const timeout = setTimeout(() => {
-      fetch(`/api/search?query=${encodeURIComponent(trimmed)}`, {
+      fetch(`/search?query=${encodeURIComponent(trimmed)}`, {
         signal: controller.signal,
       })
         .then((res) => res.json() as Promise<SearchEntry[]>)

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import LeaderHoverCard, { type LeaderHoverCardProps } from "./LeaderHoverCard";
-import { computeClusterLayout } from "~/app/(navbar)/clusterLayout";
+import { computeClusterLayout } from "~/app/(site)/clusterLayout";
 
 const CONTAINER_W = 920;
 const CONTAINER_H = 660;

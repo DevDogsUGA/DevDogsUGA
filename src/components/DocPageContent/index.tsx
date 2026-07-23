@@ -1,10 +1,12 @@
-import type { DocHeading, TOCItem } from "~/lib/toc";
+import DocsMarkdown from "~/components/DocsMarkdown";
 import InlineTableOfContents from "~/components/InlineTableOfContents";
 import TableOfContents from "~/components/TableOfContents";
-import MDXContent from "./MDXContent";
+import type { DocHeading, TOCItem } from "~/lib/toc";
+import { parseDocFile } from "~/server/docs/parse";
 
 interface Props {
   source: string;
+  /** Pre-extracted headings (as stored with published pages); derived from source when omitted. */
   headings?: DocHeading[];
   breadcrumbs?: string[];
   githubUrl?: string;
@@ -12,18 +14,21 @@ interface Props {
 
 export default async function DocPageContent({
   source,
-  headings = [],
+  headings,
   breadcrumbs,
   githubUrl,
 }: Props) {
-  const toc: TOCItem[] = headings.map((h) => ({
+  const resolvedHeadings =
+    headings ?? parseDocFile(source, "untitled").headings;
+
+  const toc: TOCItem[] = resolvedHeadings.map((h) => ({
     title: h.title,
     url: `#${h.id}`,
     depth: h.depth,
   }));
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col">
+    <div className="flex min-w-0 flex-1 flex-col">
       <div className="flex min-w-0 flex-1">
         <div className="min-w-0 flex-1 overflow-auto px-6 py-10 lg:px-10">
           <InlineTableOfContents items={toc} />
@@ -56,7 +61,7 @@ export default async function DocPageContent({
           ) : null}
 
           <article className="prose prose-invert mx-auto max-w-3xl">
-            <MDXContent source={source} />
+            <DocsMarkdown source={source} />
           </article>
         </div>
 
@@ -68,6 +73,6 @@ export default async function DocPageContent({
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }

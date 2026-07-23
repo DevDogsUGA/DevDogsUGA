@@ -5,7 +5,7 @@ import SectionBackground, {
 } from "~/ui/section-background";
 import LinkButton from "~/ui/link-button";
 import EventsGrid from "./EventsGrid";
-import { calendarEvents } from "~/app/(navbar)/homeData";
+import { calendarEvents } from "~/app/(site)/homeData";
 
 const EVENTS_BLOBS: BlobDef[] = [
   { cx: "25%", cy: "30%", rx: "55%", ry: "50%", fill: "#fecdd3" }, // rose

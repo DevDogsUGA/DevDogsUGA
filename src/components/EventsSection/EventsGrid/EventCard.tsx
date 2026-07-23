@@ -1,6 +1,6 @@
 import { ArrowUpRightIcon, ClockIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
-import type { CalendarEvent, EventType } from "~/app/(navbar)/homeData";
-import { formatEventTime } from "~/app/(navbar)/homeData";
+import type { CalendarEvent, EventType } from "~/app/(site)/homeData";
+import { formatEventTime } from "~/app/(site)/homeData";
 
 const eventBadge: Record<
   EventType,

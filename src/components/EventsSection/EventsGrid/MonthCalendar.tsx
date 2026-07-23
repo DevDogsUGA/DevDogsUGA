@@ -16,8 +16,8 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowUpRightIcon, CalendarDotsIcon, CaretRightIcon, ClockIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
 import { parseISO } from "date-fns";
-import type { CalendarEvent, EventType } from "~/app/(navbar)/homeData";
-import { formatEventTime } from "~/app/(navbar)/homeData";
+import type { CalendarEvent, EventType } from "~/app/(site)/homeData";
+import { formatEventTime } from "~/app/(site)/homeData";
 
 const dotColor: Record<EventType, string> = {
   hackathon: "bg-cyan-500",
