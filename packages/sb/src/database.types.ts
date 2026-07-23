@@ -953,6 +953,704 @@ export type Database = {
       [_ in never]: never
     }
   }
+  schedule_builder: {
+    Tables: {
+      buildings: {
+        Row: {
+          address: string | null
+          description: string
+          id: number
+          latitude: number | null
+          longitude: number | null
+        }
+        Insert: {
+          address?: string | null
+          description: string
+          id: number
+          latitude?: number | null
+          longitude?: number | null
+        }
+        Update: {
+          address?: string | null
+          description?: string
+          id?: number
+          latitude?: number | null
+          longitude?: number | null
+        }
+        Relationships: []
+      }
+      campuses: {
+        Row: {
+          abbr: string
+          description: string
+          id: number
+        }
+        Insert: {
+          abbr: string
+          description: string
+          id?: number
+        }
+        Update: {
+          abbr?: string
+          description?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      colleges: {
+        Row: {
+          description: string
+          id: number
+        }
+        Insert: {
+          description: string
+          id?: number
+        }
+        Update: {
+          description?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      courseDetails: {
+        Row: {
+          corequisite: string | null
+          courseId: number
+          description: string | null
+          equivalentCourses: string | null
+          gradingSystem: string | null
+          id: number
+          lastFetched: string
+          prerequisites: Json | null
+          semesterOffered: string | null
+        }
+        Insert: {
+          corequisite?: string | null
+          courseId: number
+          description?: string | null
+          equivalentCourses?: string | null
+          gradingSystem?: string | null
+          id?: number
+          lastFetched: string
+          prerequisites?: Json | null
+          semesterOffered?: string | null
+        }
+        Update: {
+          corequisite?: string | null
+          courseId?: number
+          description?: string | null
+          equivalentCourses?: string | null
+          gradingSystem?: string | null
+          id?: number
+          lastFetched?: string
+          prerequisites?: Json | null
+          semesterOffered?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courseDetails_courseId_courses_id_fkey"
+            columns: ["courseId"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courseDetails_courseId_courses_id_fkey"
+            columns: ["courseId"]
+            isOneToOne: false
+            referencedRelation: "offeringSearch"
+            referencedColumns: ["courseId"]
+          },
+        ]
+      }
+      courses: {
+        Row: {
+          abbr: string
+          abbrTitle: string
+          collegeId: number
+          courseNumber: string
+          departmentId: number | null
+          honors: boolean
+          id: number
+          maxCreditHours: number
+          minBillingCreditHours: number
+          minCreditHours: number
+          subjectId: number
+          title: string
+        }
+        Insert: {
+          abbr: string
+          abbrTitle: string
+          collegeId: number
+          courseNumber: string
+          departmentId?: number | null
+          honors?: boolean
+          id?: number
+          maxCreditHours: number
+          minBillingCreditHours: number
+          minCreditHours: number
+          subjectId: number
+          title: string
+        }
+        Update: {
+          abbr?: string
+          abbrTitle?: string
+          collegeId?: number
+          courseNumber?: string
+          departmentId?: number | null
+          honors?: boolean
+          id?: number
+          maxCreditHours?: number
+          minBillingCreditHours?: number
+          minCreditHours?: number
+          subjectId?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courses_collegeId_colleges_id_fkey"
+            columns: ["collegeId"]
+            isOneToOne: false
+            referencedRelation: "colleges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_departmentId_departments_id_fkey"
+            columns: ["departmentId"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_subjectId_subjects_id_fkey"
+            columns: ["subjectId"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      departments: {
+        Row: {
+          collegeId: number
+          description: string
+          id: number
+        }
+        Insert: {
+          collegeId: number
+          description: string
+          id?: number
+        }
+        Update: {
+          collegeId?: number
+          description?: string
+          id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "departments_collegeId_colleges_id_fkey"
+            columns: ["collegeId"]
+            isOneToOne: false
+            referencedRelation: "colleges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructors: {
+        Row: {
+          averageRating: number
+          difficultyRating: number
+          firstName: string
+          id: number
+          lastName: string
+          totalReviews: number
+          wouldTakeAgainRating: number
+        }
+        Insert: {
+          averageRating?: number
+          difficultyRating?: number
+          firstName: string
+          id?: number
+          lastName: string
+          totalReviews?: number
+          wouldTakeAgainRating?: number
+        }
+        Update: {
+          averageRating?: number
+          difficultyRating?: number
+          firstName?: string
+          id?: number
+          lastName?: string
+          totalReviews?: number
+          wouldTakeAgainRating?: number
+        }
+        Relationships: []
+      }
+      meetings: {
+        Row: {
+          buildingId: number | null
+          endDate: string | null
+          endTime: string | null
+          friday: boolean
+          id: number
+          locationStatus: Database["schedule_builder"]["Enums"]["locationStatus"]
+          monday: boolean
+          offeringCrn: number
+          room: string | null
+          saturday: boolean
+          startDate: string | null
+          startTime: string | null
+          sunday: boolean
+          thursday: boolean
+          tuesday: boolean
+          wednesday: boolean
+        }
+        Insert: {
+          buildingId?: number | null
+          endDate?: string | null
+          endTime?: string | null
+          friday?: boolean
+          id?: number
+          locationStatus?: Database["schedule_builder"]["Enums"]["locationStatus"]
+          monday?: boolean
+          offeringCrn: number
+          room?: string | null
+          saturday?: boolean
+          startDate?: string | null
+          startTime?: string | null
+          sunday?: boolean
+          thursday?: boolean
+          tuesday?: boolean
+          wednesday?: boolean
+        }
+        Update: {
+          buildingId?: number | null
+          endDate?: string | null
+          endTime?: string | null
+          friday?: boolean
+          id?: number
+          locationStatus?: Database["schedule_builder"]["Enums"]["locationStatus"]
+          monday?: boolean
+          offeringCrn?: number
+          room?: string | null
+          saturday?: boolean
+          startDate?: string | null
+          startTime?: string | null
+          sunday?: boolean
+          thursday?: boolean
+          tuesday?: boolean
+          wednesday?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_buildingId_buildings_id_fkey"
+            columns: ["buildingId"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_offeringCrn_offerings_crn_fkey"
+            columns: ["offeringCrn"]
+            isOneToOne: false
+            referencedRelation: "offerings"
+            referencedColumns: ["crn"]
+          },
+          {
+            foreignKeyName: "meetings_offeringCrn_offerings_crn_fkey"
+            columns: ["offeringCrn"]
+            isOneToOne: false
+            referencedRelation: "offeringSearch"
+            referencedColumns: ["crn"]
+          },
+        ]
+      }
+      offerings: {
+        Row: {
+          academicPeriod: number
+          active: boolean
+          actualEnrollment: number
+          campusId: number
+          courseId: number
+          crn: number
+          crossListingId: string | null
+          instructorId: number | null
+          maximumEnrollment: number
+          minimumEnrollment: number
+          partOfTerm: string
+          scheduleTypeId: number
+          seatsAvailable: number
+        }
+        Insert: {
+          academicPeriod: number
+          active: boolean
+          actualEnrollment: number
+          campusId: number
+          courseId: number
+          crn: number
+          crossListingId?: string | null
+          instructorId?: number | null
+          maximumEnrollment: number
+          minimumEnrollment?: number
+          partOfTerm: string
+          scheduleTypeId: number
+          seatsAvailable: number
+        }
+        Update: {
+          academicPeriod?: number
+          active?: boolean
+          actualEnrollment?: number
+          campusId?: number
+          courseId?: number
+          crn?: number
+          crossListingId?: string | null
+          instructorId?: number | null
+          maximumEnrollment?: number
+          minimumEnrollment?: number
+          partOfTerm?: string
+          scheduleTypeId?: number
+          seatsAvailable?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offerings_academicPeriod_terms_academicPeriod_fkey"
+            columns: ["academicPeriod"]
+            isOneToOne: false
+            referencedRelation: "availableTerms"
+            referencedColumns: ["academicPeriod"]
+          },
+          {
+            foreignKeyName: "offerings_academicPeriod_terms_academicPeriod_fkey"
+            columns: ["academicPeriod"]
+            isOneToOne: false
+            referencedRelation: "terms"
+            referencedColumns: ["academicPeriod"]
+          },
+          {
+            foreignKeyName: "offerings_campusId_campuses_id_fkey"
+            columns: ["campusId"]
+            isOneToOne: false
+            referencedRelation: "campuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offerings_courseId_courses_id_fkey"
+            columns: ["courseId"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offerings_courseId_courses_id_fkey"
+            columns: ["courseId"]
+            isOneToOne: false
+            referencedRelation: "offeringSearch"
+            referencedColumns: ["courseId"]
+          },
+          {
+            foreignKeyName: "offerings_instructorId_instructors_id_fkey"
+            columns: ["instructorId"]
+            isOneToOne: false
+            referencedRelation: "instructors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offerings_instructorId_instructors_id_fkey"
+            columns: ["instructorId"]
+            isOneToOne: false
+            referencedRelation: "offeringSearch"
+            referencedColumns: ["instructorId"]
+          },
+          {
+            foreignKeyName: "offerings_scheduleTypeId_scheduleTypes_id_fkey"
+            columns: ["scheduleTypeId"]
+            isOneToOne: false
+            referencedRelation: "scheduleTypes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partsOfTerm: {
+        Row: {
+          academicPeriod: number
+          censusDate: string
+          classesBegin: string
+          classesEnd: string
+          code: string
+          description: string
+          dropAddEnds: string
+          finalsEnd: string | null
+          withdrawalDeadline: string
+        }
+        Insert: {
+          academicPeriod: number
+          censusDate: string
+          classesBegin: string
+          classesEnd: string
+          code: string
+          description: string
+          dropAddEnds: string
+          finalsEnd?: string | null
+          withdrawalDeadline: string
+        }
+        Update: {
+          academicPeriod?: number
+          censusDate?: string
+          classesBegin?: string
+          classesEnd?: string
+          code?: string
+          description?: string
+          dropAddEnds?: string
+          finalsEnd?: string | null
+          withdrawalDeadline?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partsOfTerm_academicPeriod_terms_academicPeriod_fkey"
+            columns: ["academicPeriod"]
+            isOneToOne: false
+            referencedRelation: "availableTerms"
+            referencedColumns: ["academicPeriod"]
+          },
+          {
+            foreignKeyName: "partsOfTerm_academicPeriod_terms_academicPeriod_fkey"
+            columns: ["academicPeriod"]
+            isOneToOne: false
+            referencedRelation: "terms"
+            referencedColumns: ["academicPeriod"]
+          },
+        ]
+      }
+      scheduleTypes: {
+        Row: {
+          abbr: string
+          description: string
+          id: number
+        }
+        Insert: {
+          abbr: string
+          description: string
+          id?: number
+        }
+        Update: {
+          abbr?: string
+          description?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      subjects: {
+        Row: {
+          abbr: string
+          description: string
+          id: number
+        }
+        Insert: {
+          abbr: string
+          description: string
+          id?: number
+        }
+        Update: {
+          abbr?: string
+          description?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      terms: {
+        Row: {
+          academicPeriod: number
+          description: string
+        }
+        Insert: {
+          academicPeriod: number
+          description: string
+        }
+        Update: {
+          academicPeriod?: number
+          description?: string
+        }
+        Relationships: []
+      }
+      userPlanDraftCourses: {
+        Row: {
+          academicPeriod: number
+          courseId: number
+          excludedCrns: number[]
+          id: string
+          userId: string
+        }
+        Insert: {
+          academicPeriod: number
+          courseId: number
+          excludedCrns?: number[]
+          id?: string
+          userId: string
+        }
+        Update: {
+          academicPeriod?: number
+          courseId?: number
+          excludedCrns?: number[]
+          id?: string
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "userPlanDraftCourses_courseId_courses_id_fkey"
+            columns: ["courseId"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "userPlanDraftCourses_courseId_courses_id_fkey"
+            columns: ["courseId"]
+            isOneToOne: false
+            referencedRelation: "offeringSearch"
+            referencedColumns: ["courseId"]
+          },
+        ]
+      }
+      userPlanDrafts: {
+        Row: {
+          academicPeriod: number
+          gapDay: string | null
+          inputCampus: string | null
+          maxCreditHours: number
+          minCreditHours: number
+          prefEndTime: string | null
+          prefStartTime: string | null
+          showFilledClasses: boolean
+          userId: string
+          walking: boolean
+        }
+        Insert: {
+          academicPeriod: number
+          gapDay?: string | null
+          inputCampus?: string | null
+          maxCreditHours?: number
+          minCreditHours?: number
+          prefEndTime?: string | null
+          prefStartTime?: string | null
+          showFilledClasses?: boolean
+          userId: string
+          walking?: boolean
+        }
+        Update: {
+          academicPeriod?: number
+          gapDay?: string | null
+          inputCampus?: string | null
+          maxCreditHours?: number
+          minCreditHours?: number
+          prefEndTime?: string | null
+          prefStartTime?: string | null
+          showFilledClasses?: boolean
+          userId?: string
+          walking?: boolean
+        }
+        Relationships: []
+      }
+      userPreferences: {
+        Row: {
+          currentAcademicPeriod: number | null
+          userId: string
+        }
+        Insert: {
+          currentAcademicPeriod?: number | null
+          userId: string
+        }
+        Update: {
+          currentAcademicPeriod?: number | null
+          userId?: string
+        }
+        Relationships: []
+      }
+      userSavedPlans: {
+        Row: {
+          academicPeriod: number
+          createdAt: string
+          crns: number[]
+          id: string
+          pinned: boolean
+          title: string
+          updatedAt: string
+          userId: string
+        }
+        Insert: {
+          academicPeriod: number
+          createdAt?: string
+          crns: number[]
+          id?: string
+          pinned?: boolean
+          title: string
+          updatedAt?: string
+          userId: string
+        }
+        Update: {
+          academicPeriod?: number
+          createdAt?: string
+          crns?: number[]
+          id?: string
+          pinned?: boolean
+          title?: string
+          updatedAt?: string
+          userId?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      availableTerms: {
+        Row: {
+          academicPeriod: number | null
+          description: string | null
+        }
+        Relationships: []
+      }
+      offeringSearch: {
+        Row: {
+          abbr: string | null
+          academicPeriod: number | null
+          active: boolean | null
+          courseId: number | null
+          courseNumber: string | null
+          crn: number | null
+          firstName: string | null
+          instructorId: number | null
+          lastName: string | null
+          maxCreditHours: number | null
+          search_vector: unknown
+          seatsAvailable: number | null
+          title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offerings_academicPeriod_terms_academicPeriod_fkey"
+            columns: ["academicPeriod"]
+            isOneToOne: false
+            referencedRelation: "availableTerms"
+            referencedColumns: ["academicPeriod"]
+          },
+          {
+            foreignKeyName: "offerings_academicPeriod_terms_academicPeriod_fkey"
+            columns: ["academicPeriod"]
+            isOneToOne: false
+            referencedRelation: "terms"
+            referencedColumns: ["academicPeriod"]
+          },
+        ]
+      }
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      locationStatus: "TBA" | "NCRR" | "RESERVED"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   storage: {
     Tables: {
       buckets: {
@@ -1645,6 +2343,11 @@ export const Constants = {
   },
   public: {
     Enums: {},
+  },
+  schedule_builder: {
+    Enums: {
+      locationStatus: ["TBA", "NCRR", "RESERVED"],
+    },
   },
   storage: {
     Enums: {

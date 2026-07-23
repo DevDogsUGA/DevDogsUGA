@@ -27,6 +27,11 @@ export const Constants = {
     public: {
         Enums: {},
     },
+    schedule_builder: {
+        Enums: {
+            locationStatus: ["TBA", "NCRR", "RESERVED"],
+        },
+    },
     storage: {
         Enums: {
             buckettype: ["STANDARD", "ANALYTICS", "VECTOR"],

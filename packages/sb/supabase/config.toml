@@ -3,7 +3,7 @@ project_id = "DevDogs-Website"
 [api]
 enabled = true
 port = "env(SB_API_PORT)"
-schemas = ["public", "graphql_public", "storage", "platform"]
+schemas = ["public", "graphql_public", "storage", "platform", "schedule_builder"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
@@ -48,7 +48,10 @@ allowed_mime_types = ["image/jpeg","image/png","image/webp","image/gif","applica
 [auth]
 enabled = true
 site_url = "env(BASE_URL)"
-additional_redirect_urls = ["env(BASE_URL)/api/auth/callback"]
+additional_redirect_urls = [
+  "env(BASE_URL)/api/auth/callback",
+  "env(SCHEDULE_BUILDER_URL)/api/auth/callback",
+]
 enable_manual_linking = true
 
 # [auth.hook.custom_access_token]
