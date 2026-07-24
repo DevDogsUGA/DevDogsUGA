@@ -1,5 +1,5 @@
 import { unauthorized } from "next/navigation";
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 import { env } from "~/env";
 import { reconcileMembership } from "~/server/discord/reconcile";
 
@@ -13,12 +13,19 @@ import { reconcileMembership } from "~/server/discord/reconcile";
  *
  * Auth: `Authorization: Bearer <CRON_SECRET>` (same pattern as
  * sync-leaderboard). The check is skipped when running locally (no
- * VERCEL_ENV set).
+ * DEPLOY_ENV set).
  */
 export async function GET(request: Request) {
+  // Force request-time execution. Under Cache Components, Next would
+  // otherwise statically prerender this GET handler at build time and run its
+  // external I/O during the build (fetch rejects once the prerender completes).
+  // connection() marks the route dynamic, which is the correct behavior for a
+  // cron endpoint that must run per-request.
+  await connection();
+
   if (
-    process.env.VERCEL_ENV &&
-    process.env.VERCEL_ENV !== "development" &&
+    process.env.DEPLOY_ENV &&
+    process.env.DEPLOY_ENV !== "development" &&
     request.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`
   ) {
     unauthorized();

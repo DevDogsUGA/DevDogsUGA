@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "next build",
-    "dev": "with-env next dev",
-    "dev:local": "with-env --local next dev",
+    "dev": "dotenvx run --quiet -f ../../.env -- next dev",
+    "dev:local": "dotenvx run --quiet -f ../../.env.generated -f ../../.env -- next dev",
     "start": "next start",
     "preview": "next build && next start",
     "lint": "eslint src",
@@ -14,13 +14,13 @@
     "typecheck": "tsc --noEmit",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
-    "db:pull": "with-env drizzle-kit pull --config drizzle-introspection.config.ts && with-env drizzle-kit pull --config drizzle.config.ts && tsx scripts/post-pull.ts",
-    "db:pull:local": "with-env --local drizzle-kit pull --config drizzle-introspection.config.ts && with-env --local drizzle-kit pull --config drizzle.config.ts && tsx scripts/post-pull.ts",
-    "db:seed-roles": "with-env tsx scripts/seed-builtin-roles.ts",
-    "db:seed-roles:local": "with-env --local tsx scripts/seed-builtin-roles.ts",
+    "db:pull": "dotenvx run --quiet -f ../../.env -- drizzle-kit pull --config drizzle-introspection.config.ts && dotenvx run --quiet -f ../../.env -- drizzle-kit pull --config drizzle.config.ts && tsx scripts/post-pull.ts",
+    "db:pull:local": "dotenvx run --quiet -f ../../.env.generated -f ../../.env -- drizzle-kit pull --config drizzle-introspection.config.ts && dotenvx run --quiet -f ../../.env.generated -f ../../.env -- drizzle-kit pull --config drizzle.config.ts && tsx scripts/post-pull.ts",
+    "db:seed-roles": "dotenvx run --quiet -f ../../.env -- tsx scripts/seed-builtin-roles.ts",
+    "db:seed-roles:local": "dotenvx run --quiet -f ../../.env.generated -f ../../.env -- tsx scripts/seed-builtin-roles.ts",
     "cf:build": "opennextjs-cloudflare build",
-    "cf:preview": "with-env --local opennextjs-cloudflare preview",
-    "cf:deploy": "with-env opennextjs-cloudflare deploy",
+    "cf:preview": "dotenvx run --quiet -f ../../.env.generated -f ../../.env -- opennextjs-cloudflare preview",
+    "cf:deploy": "dotenvx run --quiet -f ../../.env -- opennextjs-cloudflare deploy",
     "docs:preview": "docs-preview"
   },
   "dependencies": {
@@ -35,6 +35,7 @@
     "@floating-ui/react": "^0.27.19",
     "@octokit/graphql": "^9.0.3",
     "@octokit/rest": "^22.0.1",
+    "@opentelemetry/api": "^1.9.1",
     "@paralleldrive/cuid2": "^3.3.0",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-alert-dialog": "^1.1.17",
@@ -104,7 +105,6 @@
     "@eslint/eslintrc": "^3.3.5",
     "@next/env": "^16.2.9",
     "@opennextjs/cloudflare": "^1.20.2",
-    "wrangler": "^4.42.0",
     "@supabase/auth-js": "^2.108.2",
     "@tailwindcss/postcss": "^4.3.1",
     "@types/hast": "^3.0.4",
@@ -125,6 +125,7 @@
     "tailwindcss": "^4.3.1",
     "tsx": "^4.22.4",
     "typescript-eslint": "^8.61.1",
-    "unist-util-visit": "^5.1.0"
+    "unist-util-visit": "^5.1.0",
+    "wrangler": "^4.42.0"
   }
 }

@@ -1,5 +1,6 @@
 import "~/styles/globals.css";
 
+import { Suspense } from "react";
 import { type Metadata } from "next";
 import {
   Alan_Sans,
@@ -49,10 +50,18 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="bg-black text-mauve-950">
-        <NavigationProgress />
+        {/* NavigationProgress and AnimationInit read usePathname(), which is
+            dynamic under Cache Components and must sit inside a <Suspense>
+            boundary. Both render null, so the prerendered shell shows nothing
+            for them until they hydrate. */}
+        <Suspense>
+          <NavigationProgress />
+        </Suspense>
         <TooltipProvider>
           <QueryProvider>
-            <AnimationInit />
+            <Suspense>
+              <AnimationInit />
+            </Suspense>
             <Toaster />
             {children}
           </QueryProvider>

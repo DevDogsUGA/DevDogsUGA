@@ -9,6 +9,12 @@ import {
 
 export async function generateStaticParams() {
   const projects = await getDocsProjects();
+  // Cache Components rejects an empty generateStaticParams return. When no docs
+  // projects exist yet (e.g. a fresh/empty database at build time) emit a single
+  // placeholder so the build can complete; the route notFound()s it at request
+  // time. Once any project is synced, real slugs are returned and the
+  // placeholder is never emitted.
+  if (projects.length === 0) return [{ project: "__placeholder__" }];
   return projects.map((project) => ({ project: project.slug }));
 }
 

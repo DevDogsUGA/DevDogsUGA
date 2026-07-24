@@ -105,6 +105,11 @@ export async function generateStaticParams() {
     };
     collect(tree);
   }
+  // See [project]/page.tsx — Cache Components rejects an empty return, so emit a
+  // placeholder when no docs pages exist yet (fresh/empty DB at build). The
+  // route notFound()s it; real params replace it once docs are synced.
+  if (params.length === 0)
+    return [{ project: "__placeholder__", slug: ["index"] }];
   return params;
 }
 

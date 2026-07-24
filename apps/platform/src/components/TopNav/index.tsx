@@ -4,7 +4,7 @@ import { ListIcon } from "@phosphor-icons/react/ssr";
 import { Suspense } from "react";
 import devdog from "~/assets/devdog.png";
 import AppSwitcherButton from "./AppSwitcherButton";
-import NavLinks from "./NavLinks";
+import NavLinks, { NavLinksFallback } from "./NavLinks";
 import SearchButton from "./SearchButton";
 import { TopNavConsole, TopNavMobile, TopNavProfile } from "./TopNavUser";
 import UserClusterSkeleton from "./UserClusterSkeleton";
@@ -22,7 +22,9 @@ export default function TopNav() {
           </span>
         </Link>
 
-        <NavLinks />
+        <Suspense fallback={<NavLinksFallback />}>
+          <NavLinks />
+        </Suspense>
 
         <div className="ml-auto flex items-center gap-1.5">
           <Suspense>
