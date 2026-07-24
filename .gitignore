@@ -38,11 +38,10 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env files
-# do not commit any .env files to git, except for .env.example templates
-# (root + per-app). Never commit .env / .env.local / .env.supabase.
+# There is a single root .env for the whole monorepo. Never commit any .env
+# file (.env, .env.generated, .env.local, ...); only .env.example is tracked.
 .env*
 !.env.example
-!**/.env.example
 
 # vercel
 .vercel

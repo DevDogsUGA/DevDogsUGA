@@ -2,17 +2,17 @@
   "name": "@devdogsuga/study-group-finder",
   "version": "0.1.0",
   "private": true,
-  "comment": "Turborepo task wrapper for the Flutter app. The real toolchain is Flutter/Dart; these scripts shell out to it via the with-env bin so the Flutter build reads the shared root .env. Requires the Flutter SDK on PATH.",
+  "comment": "Turborepo task wrapper for the Flutter app. The real toolchain is Flutter/Dart; these scripts shell out to it via `dotenvx run` so the Flutter build reads the shared root .env. Requires the Flutter SDK on PATH.",
   "dependencies": {
     "@devdogsuga/sb": "workspace:*"
   },
   "scripts": {
-    "build": "with-env sh -c 'flutter build web --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",
-    "dev": "with-env sh -c 'flutter run --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",
-    "dev:local": "with-env --local sh -c 'flutter run --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",
+    "build": "dotenvx run --quiet -f ../../.env -- sh -c 'flutter build web --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",
+    "dev": "dotenvx run --quiet -f ../../.env -- sh -c 'flutter run --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",
+    "dev:local": "dotenvx run --quiet -f ../../.env.generated -f ../../.env -- sh -c 'flutter run --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",
     "test": "flutter test",
     "lint": "flutter analyze",
-    "generate-types": "with-env sh -c 'SUPABASE_URL=$API_URL SUPABASE_API_KEY=$SECRET_KEY dart run supadart'",
-    "generate-types:local": "with-env --local sh -c 'SUPABASE_URL=$API_URL SUPABASE_API_KEY=$SECRET_KEY dart run supadart'"
+    "generate-types": "dotenvx run --quiet -f ../../.env -- sh -c 'SUPABASE_URL=$API_URL SUPABASE_API_KEY=$SECRET_KEY dart run supadart'",
+    "generate-types:local": "dotenvx run --quiet -f ../../.env.generated -f ../../.env -- sh -c 'SUPABASE_URL=$API_URL SUPABASE_API_KEY=$SECRET_KEY dart run supadart'"
   }
 }

@@ -5,20 +5,20 @@
   "type": "module",
   "scripts": {
     "build": "next build",
-    "dev": "with-env next dev",
-    "dev:local": "with-env --local next dev",
+    "dev": "dotenvx run --quiet -f ../../.env -- next dev",
+    "dev:local": "dotenvx run --quiet -f ../../.env.generated -f ../../.env -- next dev",
     "start": "next start",
     "lint": "eslint src",
     "lint:fix": "eslint --fix src",
     "typecheck": "tsc --noEmit",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx}\" --cache",
-    "db:generate": "with-env drizzle-kit generate --config drizzle-migrations.config.ts",
-    "db:pull": "with-env drizzle-kit pull --config drizzle-introspection.config.ts",
-    "db:pull:local": "with-env --local drizzle-kit pull --config drizzle-introspection.config.ts",
+    "db:generate": "dotenvx run --quiet -f ../../.env -- drizzle-kit generate --config drizzle-migrations.config.ts",
+    "db:pull": "dotenvx run --quiet -f ../../.env -- drizzle-kit pull --config drizzle-introspection.config.ts",
+    "db:pull:local": "dotenvx run --quiet -f ../../.env.generated -f ../../.env -- drizzle-kit pull --config drizzle-introspection.config.ts",
     "cf:build": "opennextjs-cloudflare build",
-    "cf:preview": "with-env --local opennextjs-cloudflare preview",
-    "cf:deploy": "with-env opennextjs-cloudflare deploy"
+    "cf:preview": "dotenvx run --quiet -f ../../.env.generated -f ../../.env -- opennextjs-cloudflare preview",
+    "cf:deploy": "dotenvx run --quiet -f ../../.env -- opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@devdogsuga/feedback-client": "workspace:*",

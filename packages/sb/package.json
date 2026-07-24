@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "bin": {
-    "with-env": "./bin/with-env.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -20,31 +17,31 @@
       "default": "./dist/schemas.js"
     }
   },
-  "files": ["dist", "bin", "supabase"],
+  "files": [
+    "dist",
+    "supabase"
+  ],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "link-remote-project": "node bin/with-env.js sh -c 'supabase link --project-ref $PROJECT_REF'",
+    "link-remote-project": "dotenvx run --quiet -f ../../.env -- sh -c 'supabase link --project-ref $PROJECT_REF'",
     "new-migration": "supabase migration new",
-    "push-migrations": "node bin/with-env.js supabase db push && pnpm generate-types",
-    "reset-remote-database": "node bin/with-env.js supabase db reset --linked && pnpm generate-types && pnpm seed-buckets",
-    "generate-types": "node bin/with-env.js sh -c 'supabase gen types --linked > src/database.types.ts' && pnpm build",
-    "seed-buckets": "node bin/with-env.js supabase seed buckets --yes",
-    "start-local-stack": "node bin/with-env.js sh -c 'supabase start && supabase status -o env > ../../.env.supabase' && pnpm seed-buckets:local",
-    "stop-local-stack": "supabase stop",
-    "reset-local-database": "node bin/with-env.js --local sh -c 'supabase db reset && supabase gen types --local > src/database.types.ts' && pnpm build && pnpm seed-buckets:local",
-    "seed-buckets:local": "node bin/with-env.js --local supabase seed buckets --yes",
-    "generate-types:local": "node bin/with-env.js --local sh -c 'supabase gen types --local > src/database.types.ts' && pnpm build"
+    "push-migrations": "dotenvx run --quiet -f ../../.env -- supabase db push && pnpm generate-types",
+    "reset-remote-database": "dotenvx run --quiet -f ../../.env -- supabase db reset --linked && pnpm generate-types && pnpm seed-buckets",
+    "generate-types": "dotenvx run --quiet -f ../../.env -- sh -c 'supabase gen types --linked > src/database.types.ts' && pnpm build",
+    "seed-buckets": "dotenvx run --quiet -f ../../.env -- supabase seed buckets --yes",
+    "start-local-stack": "dotenvx run --quiet -f ../../.env -- sh -c 'supabase start && supabase status -o env > ../../.env.generated' && pnpm seed-buckets:local",
+    "stop-local-stack": "dotenvx run --quiet -f ../../.env -- supabase stop",
+    "reset-local-database": "dotenvx run --quiet -f ../../.env.generated -f ../../.env -- sh -c 'supabase db reset && supabase gen types --local > src/database.types.ts' && pnpm build && pnpm seed-buckets:local",
+    "seed-buckets:local": "dotenvx run --quiet -f ../../.env.generated -f ../../.env -- supabase seed buckets --yes",
+    "generate-types:local": "dotenvx run --quiet -f ../../.env.generated -f ../../.env -- sh -c 'supabase gen types --local > src/database.types.ts' && pnpm build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
-    "@supabase/supabase-js": "^2.108.2",
-    "dotenv": "^16.4.5",
-    "dotenv-expand": "^11.0.6"
+    "@supabase/supabase-js": "^2.108.2"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
-    "dotenv-cli": "^11.0.0",
     "supabase": "^2.107.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"

@@ -8,9 +8,9 @@ importers:
 
   .:
     devDependencies:
-      dotenv-cli:
-        specifier: ^11.0.0
-        version: 11.0.0
+      '@dotenvx/dotenvx':
+        specifier: ^2.17.2
+        version: 2.17.2
       prettier:
         specifier: ^3.8.4
         version: 3.8.4
@@ -65,6 +65,9 @@ importers:
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1
+      '@opentelemetry/api':
+        specifier: ^1.9.1
+        version: 1.9.1
       '@paralleldrive/cuid2':
         specifier: ^3.3.0
         version: 3.3.0
@@ -142,7 +145,7 @@ importers:
         version: 4.4.0
       drizzle-orm:
         specifier: 1.0.0-rc.3
-        version: 1.0.0-rc.3(postgres@3.4.9)(zod@4.4.3)
+        version: 1.0.0-rc.3(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3)
       github-slugger:
         specifier: ^2.0.0
         version: 2.0.0
@@ -160,7 +163,7 @@ importers:
         version: 12.40.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       next:
         specifier: ^16.2.9
-        version: 16.2.9(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 16.2.9(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -266,7 +269,7 @@ importers:
         version: 16.2.9
       '@opennextjs/cloudflare':
         specifier: ^1.20.2
-        version: 1.20.2(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(wrangler@4.113.0)
+        version: 1.20.2(next@16.2.9(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(wrangler@4.113.0)
       '@supabase/auth-js':
         specifier: ^2.108.2
         version: 2.108.2
@@ -395,7 +398,7 @@ importers:
         version: 4.4.0
       drizzle-orm:
         specifier: 1.0.0-rc.3
-        version: 1.0.0-rc.3(postgres@3.4.9)(zod@4.4.3)
+        version: 1.0.0-rc.3(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3)
       match-sorter:
         specifier: ^8.3.0
         version: 8.3.0
@@ -404,7 +407,7 @@ importers:
         version: 12.40.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       next:
         specifier: ^16.2.9
-        version: 16.2.9(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 16.2.9(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       papaparse:
         specifier: ^5.5.3
         version: 5.5.3
@@ -432,7 +435,7 @@ importers:
         version: link:../../packages/docs-preview
       '@opennextjs/cloudflare':
         specifier: ^1.20.2
-        version: 1.20.2(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(wrangler@4.113.0)
+        version: 1.20.2(next@16.2.9(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(wrangler@4.113.0)
       '@types/node':
         specifier: ^25.9.3
         version: 25.9.3
@@ -559,19 +562,10 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.108.2
         version: 2.108.2
-      dotenv:
-        specifier: ^16.4.5
-        version: 16.6.1
-      dotenv-expand:
-        specifier: ^11.0.6
-        version: 11.0.7
     devDependencies:
       '@types/node':
         specifier: ^25.9.3
         version: 25.9.3
-      dotenv-cli:
-        specifier: ^11.0.0
-        version: 11.0.0
       supabase:
         specifier: ^2.107.0
         version: 2.107.0
@@ -1070,8 +1064,18 @@ packages:
     resolution: {integrity: sha512-/BITOC9dmS/edY2zQwZNicQ059O6RKabtQfyEafV0nGtfYRNHYy1DIPiYVcov40+tob9hfmBnbR963dS+EQ1DQ==}
     hasBin: true
 
+  '@dotenvx/dotenvx@2.17.2':
+    resolution: {integrity: sha512-7+bOjESo1xDXnNoE5jTIJQBft44zUD/KX113phJSgASYsKIXrZmy+1rHlSxIzvaxGTaLbLtuo26LIVECXZPt9g==}
+    hasBin: true
+
   '@dotenvx/primitives@0.8.0':
     resolution: {integrity: sha512-VYJy0uhFm9zTJ1TxBaW/pA8bjbOM/OttaNMwZ1RHG4JKyRG7DhSdiqD1ipQoAyoD22olUtxbP78W9xY3Wd11bg==}
+
+  '@dotenvx/primitives@2.1.0':
+    resolution: {integrity: sha512-GIpMSSgjZk4URRCtAw12vBmobnw3VeSKL+p7/y8ypWvTHFW+StAMZvq4wCjdX+QKuw4alXu0IMGW6QPhKo6ufg==}
+
+  '@dotenvx/tooling@1.0.3':
+    resolution: {integrity: sha512-Gd6qQol/ICb4MPRWpiIH56y+pR9AVB7kPBkbhrLSGLtAiF4Qgy+k651/f2pze0Xbm3H5XewbPfIm4y9K+ic30Q==}
 
   '@drizzle-team/brocli@0.11.0':
     resolution: {integrity: sha512-hD3pekGiPg0WPCCGAZmusBBJsDqGUR66Y452YgQsZOnkdQ7ViEPKuyP4huUGEZQefp8g34RRodXYmJ2TbCH+tg==}
@@ -2164,6 +2168,10 @@ packages:
     peerDependenciesMeta:
       rclone.js:
         optional: true
+
+  '@opentelemetry/api@1.9.1':
+    resolution: {integrity: sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q==}
+    engines: {node: '>=8.0.0'}
 
   '@otplib/core@13.4.1':
     resolution: {integrity: sha512-KIXgK1hNtWJEBMTastbe1bpmuais+3f+ATeO8TkMs2rNkfGO1FbQy8+/UWVEu3TR/iTJerU0idkPudaPmLP2BA==}
@@ -4266,18 +4274,6 @@ packages:
   dot-prop@6.0.1:
     resolution: {integrity: sha512-tE7ztYzXHIeyvc7N+hR3oi7FIbf/NIjVP9hmAt3yMXzrQ072/fpjGLx2GxNxGxUl5V73MEqYzioOMoVhGMJ5cA==}
     engines: {node: '>=10'}
-
-  dotenv-cli@11.0.0:
-    resolution: {integrity: sha512-r5pA8idbk7GFWuHEU7trSTflWcdBpQEK+Aw17UrSHjS6CReuhrrPcyC3zcQBPQvhArRHnBo/h6eLH1fkCvNlww==}
-    hasBin: true
-
-  dotenv-expand@11.0.7:
-    resolution: {integrity: sha512-zIHwmZPRshsCdpMDyVsqGmgyP0yT8GAgXUnkdAoJisxvf33k7yO6OuoKmcTGuXPWSsm8Oh88nZicRLA9Y0rUeA==}
-    engines: {node: '>=12'}
-
-  dotenv-expand@12.0.3:
-    resolution: {integrity: sha512-uc47g4b+4k/M/SeaW1y4OApx+mtLWl92l5LMPP0GNXctZqELk+YGgOPIIC5elYmUH4OuoK3JLhuRUYegeySiFA==}
-    engines: {node: '>=12'}
 
   dotenv@16.6.1:
     resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
@@ -7182,6 +7178,10 @@ packages:
     resolution: {integrity: sha512-Yw0hUB6UA3o4YUgKy3oSe9a4cxoaZ9sBfYDw+JSxo6Id0KoJGoxzPA24qqUXYKBWABs/zDSGTz9kww7t3F0XGw==}
     engines: {node: '>=18.19'}
 
+  yocto-spinner@1.2.2:
+    resolution: {integrity: sha512-DODGl1wJjA/s5pnJFKau9lIYHT81lnhob1i3e1TjxZRxEhWRKl74nTbWE6H5KlkViQQTo/Z29YFdxzTZAMY3ng==}
+    engines: {node: '>=18.19'}
+
   yoctocolors@2.1.2:
     resolution: {integrity: sha512-CzhO+pFNo8ajLM2d2IW/R93ipy99LWjtwblvC1RsoSUMZgyLbYFr221TnSNT7GjGdYui6P459mw9JH/g/zW2ug==}
     engines: {node: '>=18'}
@@ -8109,7 +8109,17 @@ snapshots:
       which: 4.0.0
       yocto-spinner: 1.2.0
 
+  '@dotenvx/dotenvx@2.17.2':
+    dependencies:
+      '@dotenvx/primitives': 2.1.0
+      '@dotenvx/tooling': 1.0.3
+      yocto-spinner: 1.2.2
+
   '@dotenvx/primitives@0.8.0': {}
+
+  '@dotenvx/primitives@2.1.0': {}
+
+  '@dotenvx/tooling@1.0.3': {}
 
   '@drizzle-team/brocli@0.11.0': {}
 
@@ -8854,7 +8864,7 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 27.0.0
 
-  '@opennextjs/aws@4.1.0(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))':
+  '@opennextjs/aws@4.1.0(next@16.2.9(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))':
     dependencies:
       '@ast-grep/napi': 0.40.5
       '@aws-sdk/client-cloudfront': 3.984.0
@@ -8870,30 +8880,32 @@ snapshots:
       cookie: 1.1.1
       esbuild: 0.25.4
       express: 5.2.1
-      next: 16.2.9(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      next: 16.2.9(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       path-to-regexp: 6.3.0
       urlpattern-polyfill: 10.1.0
       yaml: 2.9.0
     transitivePeerDependencies:
       - supports-color
 
-  '@opennextjs/cloudflare@1.20.2(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(wrangler@4.113.0)':
+  '@opennextjs/cloudflare@1.20.2(next@16.2.9(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(wrangler@4.113.0)':
     dependencies:
       '@ast-grep/napi': 0.40.5
       '@dotenvx/dotenvx': 1.31.0
-      '@opennextjs/aws': 4.1.0(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))
+      '@opennextjs/aws': 4.1.0(next@16.2.9(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))
       ci-info: 4.4.0
       cloudflare: 4.5.0
       comment-json: 4.6.2
       enquirer: 2.4.1
       glob: 12.0.0
-      next: 16.2.9(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      next: 16.2.9(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       ts-tqdm: 0.8.6
       wrangler: 4.113.0
       yargs: 18.0.0
     transitivePeerDependencies:
       - encoding
       - supports-color
+
+  '@opentelemetry/api@1.9.1': {}
 
   '@otplib/core@13.4.1': {}
 
@@ -11035,21 +11047,6 @@ snapshots:
     dependencies:
       is-obj: 2.0.0
 
-  dotenv-cli@11.0.0:
-    dependencies:
-      cross-spawn: 7.0.6
-      dotenv: 17.4.2
-      dotenv-expand: 12.0.3
-      minimist: 1.2.8
-
-  dotenv-expand@11.0.7:
-    dependencies:
-      dotenv: 16.6.1
-
-  dotenv-expand@12.0.3:
-    dependencies:
-      dotenv: 16.6.1
-
   dotenv@16.6.1: {}
 
   dotenv@17.4.2: {}
@@ -11062,8 +11059,9 @@ snapshots:
       get-tsconfig: 4.14.0
       jiti: 2.7.0
 
-  drizzle-orm@1.0.0-rc.3(postgres@3.4.9)(zod@4.4.3):
+  drizzle-orm@1.0.0-rc.3(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3):
     optionalDependencies:
+      '@opentelemetry/api': 1.9.1
       postgres: 3.4.9
       zod: 4.4.3
 
@@ -13056,7 +13054,7 @@ snapshots:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
-  next@16.2.9(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
+  next@16.2.9(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
       '@next/env': 16.2.9
       '@swc/helpers': 0.5.15
@@ -13075,6 +13073,7 @@ snapshots:
       '@next/swc-linux-x64-musl': 16.2.9
       '@next/swc-win32-arm64-msvc': 16.2.9
       '@next/swc-win32-x64-msvc': 16.2.9
+      '@opentelemetry/api': 1.9.1
       sharp: 0.34.5
     transitivePeerDependencies:
       - '@babel/core'
@@ -14688,6 +14687,10 @@ snapshots:
   yocto-queue@0.1.0: {}
 
   yocto-spinner@1.2.0:
+    dependencies:
+      yoctocolors: 2.1.2
+
+  yocto-spinner@1.2.2:
     dependencies:
       yoctocolors: 2.1.2
 

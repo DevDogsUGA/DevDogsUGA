@@ -1,6 +1,6 @@
 import { type Config } from "drizzle-kit";
 
-// DB_URL is provided by the `with-env` wrapper (see package.json db:* scripts).
+// DB_URL is provided by dotenvx (see package.json db:* scripts).
 
 export default {
   out: "./src/server/db/schema/generated",

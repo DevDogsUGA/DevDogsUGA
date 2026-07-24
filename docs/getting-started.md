@@ -39,13 +39,15 @@ pnpm dev --filter @devdogsuga/platform          # or @devdogsuga/schedule-builde
 ## Running against a local Supabase stack (optional, needs Docker)
 
 ```bash
-pnpm sb start-local-stack        # starts Docker Supabase, writes .env.supabase, seeds buckets
+pnpm sb start-local-stack        # starts Docker Supabase, writes .env.generated, seeds buckets
 pnpm sb reset-local-database     # replays all migrations + regenerates types
 pnpm dev:local --filter @devdogsuga/platform
 ```
 
 Contributors share the one remote dev database; the local stack is the offline /
-isolated escape hatch. Never commit `.env`, `.env.local`, or `.env.supabase`.
+isolated escape hatch. There's a single root `.env` for the whole monorepo —
+never commit it. `.env`, `.env.generated`, and `.env.local` are all gitignored;
+only `.env.example` is tracked.
 
 ## Local docs preview
 
