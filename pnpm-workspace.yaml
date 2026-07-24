@@ -1,15 +1,14 @@
 allowBuilds:
-  argon2: true
-  bcrypt: true
   esbuild: true
   sharp: true
   unrs-resolver: true
+  workerd: true
 onlyBuiltDependencies:
-  - bcrypt
   - esbuild
   - sharp
   - supabase
   - unrs-resolver
+  - workerd
 packages:
   - apps/*
   - packages/*

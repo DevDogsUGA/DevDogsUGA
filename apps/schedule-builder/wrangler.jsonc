@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "devdogs-schedule-builder",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-03-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // Daily registrar/RMP scrape (replaces the vercel.json cron). See
+  // cloudflare/scheduled.ts. NOTE: the scrapers are long-running — validate
+  // them against Workers CPU/wall-time limits and consider Queues/Workflows or
+  // chunked runs before relying on a single scheduled invocation.
+  "triggers": {
+    "crons": ["5 14 * * *"]
+  }
+}

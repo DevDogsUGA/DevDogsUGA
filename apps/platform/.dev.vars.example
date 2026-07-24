@@ -1,0 +1,4 @@
+# Cloudflare local dev vars for `wrangler dev` / `opennextjs-cloudflare preview`.
+# Copy to .dev.vars (gitignored). Mirror the server env the app needs at runtime
+# (Supabase creds + app secrets). For production, use `wrangler secret put`.
+NEXTJS_ENV=development

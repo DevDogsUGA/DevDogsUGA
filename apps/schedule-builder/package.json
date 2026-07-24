@@ -15,7 +15,10 @@
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx}\" --cache",
     "db:generate": "with-env drizzle-kit generate --config drizzle-migrations.config.ts",
     "db:pull": "with-env drizzle-kit pull --config drizzle-introspection.config.ts",
-    "db:pull:local": "with-env --local drizzle-kit pull --config drizzle-introspection.config.ts"
+    "db:pull:local": "with-env --local drizzle-kit pull --config drizzle-introspection.config.ts",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "with-env --local opennextjs-cloudflare preview",
+    "cf:deploy": "with-env opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@devdogsuga/feedback-client": "workspace:*",
@@ -51,7 +54,9 @@
   },
   "devDependencies": {
     "@devdogsuga/docs-preview": "workspace:*",
+    "@opennextjs/cloudflare": "^1.20.2",
     "@types/node": "^25.9.3",
+    "wrangler": "^4.42.0",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
