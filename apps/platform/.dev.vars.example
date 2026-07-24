@@ -1,4 +1,17 @@
 # Cloudflare local dev vars for `wrangler dev` / `opennextjs-cloudflare preview`.
-# Copy to .dev.vars (gitignored). Mirror the server env the app needs at runtime
-# (Supabase creds + app secrets). For production, use `wrangler secret put`.
+# Copy to .dev.vars (gitignored). Mirror the server env the worker needs at
+# runtime (Supabase creds + app secrets). For deployed environments, set
+# non-secret values as wrangler `vars` and secrets via `wrangler secret put`.
 NEXTJS_ENV=development
+
+# Deploy environment: "development" | "preview" | "production". Drives env.ts
+# switchEnvironment() (replaces the old VERCEL_ENV). Set to "production" in
+# wrangler.jsonc `vars` for the deployed worker.
+DEPLOY_ENV=development
+
+# The worker's own public origin. The cron scheduled() handler fetches its
+# CRON_SECRET-guarded routes here, so it must be an absolute URL.
+BASE_URL=http://localhost:3000
+
+# Shared secret guarding the /api/cron/* and /api/github/* routes the crons hit.
+CRON_SECRET=

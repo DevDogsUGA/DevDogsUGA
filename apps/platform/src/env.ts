@@ -1,9 +1,9 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
-function switchEnvironment<T, R>(opt: { local: T; vercel: R }) {
-  return process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "development"
-    ? opt.vercel
+function switchEnvironment<T, R>(opt: { local: T; deployed: R }) {
+  return process.env.DEPLOY_ENV && process.env.DEPLOY_ENV !== "development"
+    ? opt.deployed
     : opt.local;
 }
 
@@ -16,14 +16,11 @@ export const env = createEnv({
     // User-specified (.env)
     BASE_URL: switchEnvironment({
       local: z.url().default(`http://localhost:${process.env.PORT ?? 3000}`),
-      vercel: z
-        .string()
-        .transform((str) => "https://" + str)
-        .pipe(z.url()),
+      deployed: z.url(),
     }),
     CRON_SECRET: switchEnvironment({
       local: z.string().default(""),
-      vercel: z.string().min(32),
+      deployed: z.string().min(32),
     }),
     DEVDOGS_EPOCH: z.coerce.date().default(new Date(2024, 7, 22)),
     DISCORD_GUILD_ID: z.string(),
@@ -33,9 +30,9 @@ export const env = createEnv({
     GITHUB_TOKEN: z.string(),
     GITHUB_WEBHOOK_SECRET: switchEnvironment({
       local: z.string().default(""),
-      vercel: z.string().min(20),
+      deployed: z.string().min(20),
     }),
-    // Derived (.env.supabase)
+    // Derived (.env / .env.generated)
     API_URL: z.string(),
     DB_URL: z.string(),
     // FUNCTIONS_URL: z.string(),
@@ -71,11 +68,7 @@ export const env = createEnv({
    */
   runtimeEnv: {
     // User-specified (.env)
-    BASE_URL:
-      process.env.BASE_URL ??
-      (process.env.VERCEL_ENV === "production"
-        ? process.env.VERCEL_PROJECT_PRODUCTION_URL
-        : process.env.VERCEL_URL),
+    BASE_URL: process.env.BASE_URL,
     CRON_SECRET: process.env.CRON_SECRET,
     DEVDOGS_EPOCH: process.env.DEVDOGS_EPOCH,
     DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID,
@@ -84,7 +77,7 @@ export const env = createEnv({
     GITHUB_ORG: process.env.GITHUB_ORG,
     GITHUB_TOKEN: process.env.GITHUB_TOKEN,
     GITHUB_WEBHOOK_SECRET: process.env.GITHUB_WEBHOOK_SECRET,
-    // Derived (.env.local)
+    // Derived (.env / .env.generated)
     API_URL: process.env.API_URL,
     DB_URL: process.env.DB_URL,
     // FUNCTIONS_URL: process.env.FUNCTIONS_URL,

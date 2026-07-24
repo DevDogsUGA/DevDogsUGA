@@ -1,9 +1,9 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import * as z from "zod";
 
-function switchEnvironment<T, R>(opt: { local: T; vercel: R }) {
-  return process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "development"
-    ? opt.vercel
+function switchEnvironment<T, R>(opt: { local: T; deployed: R }) {
+  return process.env.DEPLOY_ENV && process.env.DEPLOY_ENV !== "development"
+    ? opt.deployed
     : opt.local;
 }
 
@@ -11,9 +11,9 @@ export const env = createEnv({
   server: {
     CRON_SECRET: switchEnvironment({
       local: z.string().default(""),
-      vercel: z.string().min(32),
+      deployed: z.string().min(32),
     }),
-    // Derived (.env.supabase)
+    // Derived (.env / .env.generated)
     API_URL: z.string(),
     DB_URL: z.string(),
     // FUNCTIONS_URL: z.string(),
@@ -44,11 +44,11 @@ export const env = createEnv({
     // (dev default), "google" = shared Google provider (production default).
     NEXT_PUBLIC_AUTH_MODE: z
       .enum(["devdogs", "google"])
-      .default(switchEnvironment({ local: "devdogs", vercel: "google" })),
+      .default(switchEnvironment({ local: "devdogs", deployed: "google" })),
   },
   runtimeEnv: {
     CRON_SECRET: process.env.CRON_SECRET,
-    // Derived (.env.local)
+    // Derived (.env / .env.generated)
     API_URL: process.env.API_URL,
     DB_URL: process.env.DB_URL,
     // FUNCTIONS_URL: process.env.FUNCTIONS_URL,
@@ -72,4 +72,14 @@ export const env = createEnv({
     // Built-ins
     NODE_ENV: process.env.NODE_ENV,
   },
+  /**
+   * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation —
+   * used by CI and Cloudflare/Docker builds that run without secrets.
+   */
+  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
+  /**
+   * Treat empty strings as undefined so `SOME_VAR=''` fails a required var
+   * instead of silently passing.
+   */
+  emptyStringAsUndefined: true,
 });

@@ -12,7 +12,7 @@ const MARQUEE_TEXT_CLS =
   "py-4 font-display text-base font-bold tracking-widest uppercase";
 
 export default async function HomePage() {
-  if (process.env.VERCEL_ENV === "production") return <UnderConstruction />;
+  if (process.env.DEPLOY_ENV === "production") return <UnderConstruction />;
 
   return (
     <main className="flex flex-col gap-4 bg-black py-4 md:gap-6 md:py-6">

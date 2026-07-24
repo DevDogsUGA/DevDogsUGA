@@ -1,12 +1,21 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "devdogs-schedule-builder",
-  "main": ".open-next/worker.js",
+  // Custom entry composes the OpenNext `fetch` handler with the cron
+  // `scheduled` handler (see cloudflare/worker.ts + cloudflare/scheduled.ts).
+  "main": "cloudflare/worker.ts",
   "compatibility_date": "2025-03-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
+  },
+  // Non-secret runtime vars. DEPLOY_ENV drives env.ts switchEnvironment()
+  // (replaces the old Vercel VERCEL_ENV); override per-environment as needed.
+  // Secrets (CRON_SECRET, BASE_URL, Supabase creds, …) come from
+  // `wrangler secret put` / .dev.vars — see .dev.vars.example.
+  "vars": {
+    "DEPLOY_ENV": "production"
   },
   // Daily registrar/RMP scrape (replaces the vercel.json cron). See
   // cloudflare/scheduled.ts. NOTE: the scrapers are long-running — validate

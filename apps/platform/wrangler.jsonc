@@ -1,17 +1,24 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "devdogs-platform",
-  "main": ".open-next/worker.js",
+  // Custom entry composes the OpenNext `fetch` handler with the cron
+  // `scheduled` handler (see cloudflare/worker.ts + cloudflare/scheduled.ts).
+  "main": "cloudflare/worker.ts",
   "compatibility_date": "2025-03-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
-  // Cron triggers replace the old vercel.json crons. The scheduled() handler in
-  // cloudflare/scheduled.ts routes each cron to its existing CRON_SECRET-guarded
-  // /api route. Point `main` at a custom worker that re-exports the OpenNext
-  // handler + this scheduled() once the deploy is validated end-to-end.
+  // Non-secret runtime vars. DEPLOY_ENV drives env.ts switchEnvironment()
+  // (replaces the old Vercel VERCEL_ENV); override per-environment as needed.
+  // Secrets (CRON_SECRET, BASE_URL, Supabase creds, …) come from
+  // `wrangler secret put` / .dev.vars — see .dev.vars.example.
+  "vars": {
+    "DEPLOY_ENV": "production"
+  },
+  // Cron triggers replace the old vercel.json crons. cloudflare/scheduled.ts
+  // routes each cron to its existing CRON_SECRET-guarded /api route.
   "triggers": {
     "crons": ["0 0 * * *", "* * * * *", "*/10 * * * *"]
   }

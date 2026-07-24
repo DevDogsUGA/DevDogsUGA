@@ -1,15 +1,16 @@
 /**
- * Cloudflare cron dispatcher (replaces vercel.json crons). Intended to be
- * composed with the OpenNext-generated worker: a thin custom entry re-exports
- * the OpenNext `fetch` handler and adds this `scheduled` handler, with wrangler
- * `main` pointing at that entry. Kept standalone until the Cloudflare deploy is
- * validated end-to-end.
+ * Cloudflare cron dispatcher (replaces vercel.json crons). Composed into the
+ * deployed worker by cloudflare/worker.ts, which re-exports the OpenNext
+ * `fetch` handler and wires this `scheduled` handler; wrangler `main` points at
+ * that entry and `triggers.crons` fires these schedules.
  *
- * Each cron hits the existing CRON_SECRET-guarded route, so no route logic
- * changes — the schedules mirror the former vercel.json entries.
+ * Each cron hits the existing CRON_SECRET-guarded route on the worker's own
+ * public origin (`env.BASE_URL`), so no route logic changes — the schedules
+ * mirror the former vercel.json entries.
  */
-interface Env {
+export interface CronEnv {
   CRON_SECRET: string;
+  BASE_URL: string;
 }
 
 const CRON_ROUTES: Record<string, string> = {
@@ -20,12 +21,11 @@ const CRON_ROUTES: Record<string, string> = {
 
 export async function scheduled(
   event: { cron: string },
-  env: Env,
-  baseUrl: string,
+  env: CronEnv,
 ): Promise<void> {
   const path = CRON_ROUTES[event.cron];
   if (!path) return;
-  await fetch(`${baseUrl}${path}`, {
+  await fetch(`${env.BASE_URL}${path}`, {
     headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
   });
 }
