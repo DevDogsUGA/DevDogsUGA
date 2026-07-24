@@ -3,7 +3,7 @@ project_id = "DevDogs-Website"
 [api]
 enabled = true
 port = "env(SB_API_PORT)"
-schemas = ["public", "graphql_public", "storage", "platform", "schedule_builder"]
+schemas = ["public", "graphql_public", "storage", "platform", "schedule_builder", "study_group_finder"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 

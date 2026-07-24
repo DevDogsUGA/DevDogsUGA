@@ -1,0 +1,9 @@
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+.packages
+pubspec.lock
+# Generated Dart models (regenerated via `pnpm ... generate-types`)
+lib/generated/

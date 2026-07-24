@@ -470,6 +470,12 @@ importers:
         specifier: ^4.42.0
         version: 4.113.0
 
+  apps/study-group-finder:
+    dependencies:
+      '@devdogsuga/sb':
+        specifier: workspace:*
+        version: link:../../packages/sb
+
   packages/docs-preview:
     dependencies:
       chokidar:

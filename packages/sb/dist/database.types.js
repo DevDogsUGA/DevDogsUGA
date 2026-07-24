@@ -37,4 +37,7 @@ export const Constants = {
             buckettype: ["STANDARD", "ANALYTICS", "VECTOR"],
         },
     },
+    study_group_finder: {
+        Enums: {},
+    },
 };

@@ -1,0 +1,11 @@
+# supadart config — generates Dart models from the shared Supabase schema
+# (`supabase gen types` has no Dart target). Run via `pnpm --filter
+# @devdogsuga/study-group-finder generate-types` (wraps with-env so DB_URL /
+# keys come from the root .env).
+#
+# NOTE: verify supadart's schema-selection support against the installed
+# version — if it can't filter to one schema, generate all and export only the
+# study_group_finder models from lib/generated.
+output: lib/generated/
+mode: supabase
+seperated: true

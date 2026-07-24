@@ -55,6 +55,9 @@
     "lint:fix": {
       "dependsOn": []
     },
+    "test": {
+      "dependsOn": ["^build"]
+    },
     "generate-types": {
       "cache": false
     }

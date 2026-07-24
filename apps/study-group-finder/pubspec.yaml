@@ -1,0 +1,25 @@
+name: study_group_finder
+description: DevDogs Study Group Finder (Flutter) — shares the DevDogs Supabase
+  project, owning the study_group_finder schema.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: ^2.8.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  # Dart model generation from the shared Supabase schema (no official Dart
+  # target in `supabase gen types`). Run via `pnpm --filter
+  # @devdogsuga/study-group-finder generate-types`.
+  supadart: ^2.0.0
+
+flutter:
+  uses-material-design: true

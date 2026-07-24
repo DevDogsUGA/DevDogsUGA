@@ -2210,6 +2210,23 @@ export type Database = {
             [_ in never]: never;
         };
     };
+    study_group_finder: {
+        Tables: {
+            [_ in never]: never;
+        };
+        Views: {
+            [_ in never]: never;
+        };
+        Functions: {
+            [_ in never]: never;
+        };
+        Enums: {
+            [_ in never]: never;
+        };
+        CompositeTypes: {
+            [_ in never]: never;
+        };
+    };
 };
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
@@ -2291,6 +2308,9 @@ export declare const Constants: {
         readonly Enums: {
             readonly buckettype: readonly ["STANDARD", "ANALYTICS", "VECTOR"];
         };
+    };
+    readonly study_group_finder: {
+        readonly Enums: {};
     };
 };
 export {};
