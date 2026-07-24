@@ -1,74 +1,57 @@
 # Getting Started
 
+This is a pnpm + Turborepo monorepo (`apps/*` + `packages/*`) on a single shared
+Supabase project, each app owning its own Postgres schema. See the repo README
+for the full layout and script reference.
+
 ## Prerequisites
 
-- [Node.js](https://nodejs.org) 18 or later
-- [pnpm](https://pnpm.io) 9 or later
-- [Docker](https://www.docker.com) (for the local Supabase instance)
+- [Node.js](https://nodejs.org) 20 or later (`.nvmrc`)
+- [pnpm](https://pnpm.io) via `corepack enable` (version pinned in the root
+  `package.json`)
+- [Docker](https://www.docker.com) — only for the optional local Supabase stack
+- The [Flutter SDK](https://docs.flutter.dev) — only for `apps/study-group-finder`
 
 ## Installation
 
-1. **Clone the repo**
+```bash
+git clone https://github.com/DevDogs-UGA/DevDogs-Website.git
+cd DevDogs-Website
+corepack enable && pnpm install
+pnpm setup          # checks prereqs and seeds .env from .env.example
+```
 
-   ```bash
-   git clone https://github.com/DevDogs-UGA/DevDogs-Website.git
-   cd DevDogs-Website
-   ```
+## Running (remote-first)
 
-2. **Install dependencies**
+By default the apps and the Supabase CLI target the **linked remote** Supabase
+project. Fill in the "Remote Supabase project" section of `.env`, then:
 
-   ```bash
-   pnpm install
-   ```
+```bash
+pnpm sb link-remote-project      # one-time — links the CLI to PROJECT_REF
+pnpm sb generate-types           # regenerate the shared Database types
+pnpm dev --filter @devdogsuga/platform          # or @devdogsuga/schedule-builder
+```
 
-3. **Start the local Supabase instance and dev server**
+> **`DB_URL` note:** use the **Session pooler** connection string (port 5432),
+> not the Transaction pooler (6543) — the transaction pooler doesn't support the
+> prepared statements `drizzle-kit` uses and hangs instead of erroring.
 
-   ```bash
-   pnpm dev
-   ```
+## Running against a local Supabase stack (optional, needs Docker)
 
-   This starts Supabase locally, runs database migrations, and launches the Next.js dev server at `http://localhost:3000`.
+```bash
+pnpm sb start-local-stack        # starts Docker Supabase, writes .env.supabase, seeds buckets
+pnpm sb reset-local-database     # replays all migrations + regenerates types
+pnpm dev:local --filter @devdogsuga/platform
+```
 
-## Remote Supabase (optional)
-
-By default, `pnpm dev` runs against a local Supabase instance via Docker. To
-connect to a remote/cloud Supabase project instead (e.g. no Docker, or
-testing against shared data):
-
-1. **Copy the remote env template**
-
-   ```bash
-   cp .env.remote.example .env.remote
-   ```
-
-2. **Fill in `.env.remote`** with credentials from the target project's
-   [Supabase dashboard](https://supabase.com/dashboard) (Project Settings >
-   API, Database, and Storage > S3 Connection). See `.env.remote.example`
-   for details on each variable.
-
-   > **Note:** For `DB_URL`, copy the **Session pooler** connection string,
-   > not the Transaction pooler (the dashboard's default). The transaction
-   > pooler doesn't support the prepared statements `drizzle-kit` uses and
-   > will cause `pnpm db:push:remote` to hang indefinitely.
-
-3. **Run the dev server against the remote project**
-
-   ```bash
-   pnpm dev:remote
-   ```
-
-   This skips Docker/local Supabase and does not push any schema changes —
-   it just points the dev server at the remote project.
-
-`.env.remote` is gitignored — never commit it. Use `pnpm dev` to go back to
-the default local workflow.
+Contributors share the one remote dev database; the local stack is the offline /
+isolated escape hatch. Never commit `.env`, `.env.local`, or `.env.supabase`.
 
 ## Local docs preview
 
-To preview documentation changes before pushing:
-
 ```bash
-pnpm docs:preview
+pnpm --filter @devdogsuga/platform docs:preview
 ```
 
-Then visit `/tools/testing/docs` on the running dev server. The page auto-refreshes when you save any file in `docs/`, and renders identically to the live docs site.
+Then visit the docs preview route on the running dev server. It auto-refreshes
+when you save any file in `docs/` and renders like the live docs site.

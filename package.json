@@ -12,7 +12,11 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore",
     "sb": "pnpm --filter @devdogsuga/sb run",
+    "setup": "tsx scripts/setup.ts",
     "sync-upstream": "git fetch && git branch | grep -Po '\\Kfeature/.*' | xargs -i sh -c 'git checkout {} && git pull upstream main && git push upstream {}'"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "devDependencies": {
     "dotenv-cli": "^11.0.0",

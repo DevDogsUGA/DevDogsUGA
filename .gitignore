@@ -66,7 +66,9 @@ volumes/
 **/volumes/
 
 # ide configurations
-.vscode
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .claude
 .idea
 .mcp.json

@@ -1,78 +1,104 @@
-# Notice!
+# DevDogs Monorepo
 
-As of 10/2/24, public development of the DevDogs Website has been discontinued to streamline development efforts and enforce greater quality control. Points awarded from completed contributions will not disappear.
+A pnpm + Turborepo monorepo for DevDogs, backed by a single shared Supabase
+project where **each app owns its own Postgres schema**.
 
-From this point on, only Standing Leaders and vetted members outside of DevDogs' Standing Leadership are permitted to contribute. If this is of interest to you, please reach out to the current Technical Officer.
+## Layout
 
-## Welcome to the DevDogs Open-Source Website!
-
-We’re excited to have you here! If you’re interested in contributing to our project, please request to join the web development team [here](https://github.com/orgs/DevDogs-UGA/teams/24-25-website-contributors) and join our [Discord server](https://linktr.ee/devdogs).
-
-This project is built using [Next.js](https://nextjs.org/) and was bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
-
-## Technologies We Use
-
-- **Next.js / Node.js**
-- **React.js**
-- **Custom CSS**
-- **Firebase**
-- **Tailwind CSS**
-
-### Contributor Requirements
-
-To contribute to this website, you should have a basic understanding of JavaScript, HTML, CSS, and React.js.
-
-## Getting Started
-
-1. **Join the Team**: Request to join the current year's Website Contributor team on our GitHub Organization. [2024-2025](https://github.com/orgs/DevDogs-UGA/teams/24-25-website-contributors)
-2. **Review Issues**: Check the Issues tab to see what work needs to be done. If you have recommendations, post them in our web-development Discord channel!
-3. **Fork the Repository**: Create a fork of this repository to work on your own copy of the code. Assign yourself an issue to work on.
-4. **Clone the Repository**: Use Git or GitHub Desktop to clone your forked repository to your local machine.
-5. **Set Up the Environment**: Run `npm install` to install the latest packages and dependencies.
-6. **Work on the Issue**: Complete the tasks associated with your assigned issue.
-7. **Push Changes**: Push your local changes to your forked GitHub repository.
-8. **Create a Pull Request**: Once your work is complete, submit a pull request (PR) to the original repository. Be sure to document your changes thoroughly and include any relevant screenshots.
-
-**Important**: Always sync your forked repository with the original before starting any new coding session, and pull the latest changes to your local machine.
-
-## Code Quality
-
-We maintain code quality using ESLint and Prettier. Please ensure your code follows our guidelines by running the following commands before submitting your pull request:
-
-- To automatically fix issues: `npx eslint --fix src`
-- To format your code: `npx prettier --write src`
-
-## Important Notes
-
-- **Design Consistency**: Refer to our [Figma](https://www.figma.com/design/mJZGzkMqu6JHfIzPl5zCkU/Website-Design?node-id=0-1&t=6ph7juLn0PV5AIhQ-1) file for consistent styling across the website.
-- **Resources**: Images and key links mentioned in the Figma can be found in our Google Drive [Website Assets](https://drive.google.com/drive/folders/1Z9QpqmCFKjZYrDLGBTeS77htRj1zP4gy?usp=sharing) folder.
-- **Branding Guidelines**: DevDogs' logos, color palettes, fonts, and other key components of the DevDogs brand and their acceptable use can be found [here](https://drive.google.com/file/d/1_SQ3bJ5-1ss60MYbrtnG81Ot5F_NcR-R/view?usp=sharing).
-- **Colors**: Use the `color.css` file for color references throughout the website.
-
-## How to Run Locally
-
-To run the development server on your local machine, navigate to your project folder in the terminal and use one of the following commands:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+apps/
+  platform/            Next.js — the main DevDogs site + OAuth server   → schema: platform
+  schedule-builder/    Next.js — course schedule builder                → schema: schedule_builder
+  study-group-finder/  Flutter — study group finder (scaffold)          → schema: study_group_finder
+packages/
+  sb/                  @devdogsuga/sb — shared Supabase: config.toml, SQL migrations,
+                       generated Database types, client factories, and the `with-env` bin
+  feedback-client/     @devdogsuga/feedback-client
+  reports-client/      @devdogsuga/reports-client
+  oauth-setup/         @devdogsuga/oauth-setup
+  docs-preview/        @devdogsuga/docs-preview
+docs/                  Rendered on the platform site (per-project subfolders)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Schema-per-app is an **organizational** boundary — all schemas share one
+PostgREST endpoint and anon key, so **Row-Level Security is what isolates
+data**. The only credential that bypasses RLS is the service role
+(`SECRET_KEY`).
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## Quickstart
 
-## Learn More on Next.js
+```bash
+git clone https://github.com/DevDogs-UGA/DevDogs-Website.git
+cd DevDogs-Website
+corepack enable && pnpm install
+pnpm setup                       # checks prereqs, seeds .env from .env.example
+# edit .env — add your remote Supabase creds (see the file's comments)
+pnpm sb link-remote-project      # one-time
+pnpm sb generate-types           # regenerate the shared Database types
+pnpm dev --filter @devdogsuga/platform
+```
 
-Here are some resources:
+Prereqs: Node ≥ 20 (`.nvmrc`), pnpm via corepack. Docker only for the local
+Supabase stack; the Flutter SDK only for `apps/study-group-finder`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [Learn Tailwind CSS](<[https://nextjs.org/learn](https://tailwindcss.com/)>) - documentation for Tailwind CSS.
+## Environment & the `with-env` bin
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+**Remote-first**: `pnpm dev` and `pnpm sb <cmd>` target the linked remote
+Supabase project by default. The local Docker stack is opt-in
+(`pnpm sb start-local-stack`, then the `:local` / `dev:local` script variants).
+
+Env is loaded by `@devdogsuga/sb`'s `with-env` bin (first-wins order):
+
+| File | Holds | Loaded |
+|---|---|---|
+| `apps/<app>/.env.local` | app-specific overrides (secrets, `NEXT_PUBLIC_AUTH_MODE`, `OAUTH_*`) | always, first |
+| root `.env.supabase` | local-stack creds (generated by `start-local-stack`) | only with `--local` |
+| root `.env` | shared Supabase creds + everything `config.toml` reads (ports, auth providers, `BASE_URL`) | always, last |
+
+Copy `.env.example` (root and each app) to `.env` / `.env.local`.
+
+## Scripts
+
+**Root** (`pnpm <script>`)
+
+| Script | Does |
+|---|---|
+| `setup` | Onboarding: check prereqs, seed `.env` |
+| `dev` / `build` / `typecheck` / `lint` | `turbo run …` across the workspace |
+| `format:write` / `format:check` | Prettier over the repo |
+| `sb <cmd>` | Proxy to `@devdogsuga/sb` (see below) |
+
+**Supabase** (`pnpm sb <cmd>`) — remote-first; `:local` variants use the Docker stack
+
+| Command | Does |
+|---|---|
+| `link-remote-project` | One-time: link the CLI to the remote project (`PROJECT_REF`) |
+| `new-migration <name>` | Create a new SQL migration |
+| `push-migrations` | Apply migrations to the remote DB + regenerate types |
+| `reset-remote-database` | **Destructive**: wipe + replay migrations on remote (interactive) |
+| `generate-types` | Regenerate `Database` types from the linked DB + rebuild the package |
+| `start-local-stack` / `stop-local-stack` | Bring the local Docker stack up/down |
+| `reset-local-database` | Wipe + replay migrations on the local stack |
+
+**Per Next.js app** (`pnpm --filter @devdogsuga/<app> <script>`)
+
+| Script | Does |
+|---|---|
+| `dev` / `dev:local` | `next dev` against remote / local Supabase |
+| `build` | `next build` |
+| `typecheck` / `lint` | `tsc --noEmit` / `eslint src` |
+| `db:pull` / `db:pull:local` | Regenerate drizzle schema from the DB |
+| `cf:build` / `cf:preview` / `cf:deploy` | OpenNext → Cloudflare build / preview / deploy |
+| `db:seed-roles` (platform) | Seed built-in roles |
+| `db:generate` (schedule-builder) | Draft a SQL migration from the drizzle schema |
+
+**Flutter app** (`pnpm --filter @devdogsuga/study-group-finder <script>`):
+`dev` / `dev:local` / `build` / `test` / `lint` / `generate-types` — shell out
+to Flutter via `with-env`. See `apps/study-group-finder/README.md`.
+
+## Docs & deployment
+
+- Docs live in root `docs/` (per-project subfolders) and render on the platform
+  site; see `docs/getting-started.md` and `docs/database.md`.
+- Both Next apps deploy to Cloudflare Workers via OpenNext (`cf:*` scripts +
+  each app's `wrangler.jsonc`). Deploy wiring is in progress.
