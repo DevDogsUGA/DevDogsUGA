@@ -3,7 +3,13 @@ project_id = "DevDogs-Website"
 [api]
 enabled = true
 port = "env(SB_API_PORT)"
-schemas = ["public", "graphql_public", "storage", "platform", "schedule_builder", "study_group_finder"]
+# `study_group_finder` is deliberately FIRST so it is PostgREST's default REST
+# profile (the schema served at /rest/v1/ when no Accept-Profile header is sent).
+# This lets the Flutter app's supadart codegen — which can't select a schema and
+# only ever reads the default — generate `study_group_finder` models directly.
+# Safe because every app's Supabase client sets its `db.schema` explicitly, so
+# nothing relies on the default; `public` is intentionally empty. Do not reorder.
+schemas = ["study_group_finder", "public", "graphql_public", "storage", "platform", "schedule_builder"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 

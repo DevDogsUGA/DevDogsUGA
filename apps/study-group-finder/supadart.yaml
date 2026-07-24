@@ -1,11 +1,21 @@
 # supadart config — generates Dart models from the shared Supabase schema
 # (`supabase gen types` has no Dart target). Run via `pnpm --filter
-# @devdogsuga/study-group-finder generate-types` (wraps with-env so DB_URL /
-# keys come from the root .env).
+# @devdogsuga/study-group-finder generate-types` (wraps with-env so the DB URL
+# and secret key come from the shared root .env).
 #
-# NOTE: verify supadart's schema-selection support against the installed
-# version — if it can't filter to one schema, generate all and export only the
-# study_group_finder models from lib/generated.
+# supadart can only read PostgREST's *default* schema — it fetches the OpenAPI
+# spec from `<url>/rest/v1/` with no `Accept-Profile` header and exposes no
+# schema option. That's fine here: `[api] schemas` in config.toml lists
+# `study_group_finder` FIRST, making it the default REST profile, so supadart
+# reads exactly this app's schema. (Nothing else relies on the default — every
+# Supabase client sets its `db.schema` explicitly.)
+#
+# supadart reads SUPABASE_URL / SUPABASE_API_KEY from the environment; the
+# generate-types script maps the monorepo's API_URL / SECRET_KEY onto those.
+# The SECRET (service) key is required — supadart 401s on the publishable/anon
+# key when fetching the OpenAPI spec.
+#
+# The schema is currently empty, so this is a no-op until tables are added.
+
 output: lib/generated/
-mode: supabase
-seperated: true
+separated: true

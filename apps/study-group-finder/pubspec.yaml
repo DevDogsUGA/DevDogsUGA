@@ -19,7 +19,7 @@ dev_dependencies:
   # Dart model generation from the shared Supabase schema (no official Dart
   # target in `supabase gen types`). Run via `pnpm --filter
   # @devdogsuga/study-group-finder generate-types`.
-  supadart: ^2.0.0
+  supadart: ^1.9.3
 
 flutter:
   uses-material-design: true

@@ -33,8 +33,21 @@ server) in dev, `google` in production — selected by `AUTH_MODE`.
 [supadart](https://pub.dev/packages/supadart) generator (`supadart.yaml`):
 
 ```bash
-pnpm --filter @devdogsuga/study-group-finder generate-types
+pnpm --filter @devdogsuga/study-group-finder generate-types        # remote
+pnpm --filter @devdogsuga/study-group-finder generate-types:local  # local stack
 ```
+
+supadart can only read PostgREST's **default** schema (it reads `/rest/v1/`
+without an `Accept-Profile` header and has no schema option). To make that work,
+`packages/sb/supabase/config.toml` lists `study_group_finder` **first** in
+`[api] schemas`, so it *is* the default REST profile and supadart reads exactly
+this app's schema — no per-run config juggling. Nothing else depends on the
+default (every Supabase client sets its `db.schema` explicitly).
+
+`generate-types` maps the monorepo's `API_URL`/`SECRET_KEY` onto the
+`SUPABASE_URL`/`SUPABASE_API_KEY` supadart expects (the **secret** key is
+required — supadart 401s on the publishable key when fetching the spec). The
+schema is currently empty, so this is a no-op until tables are added.
 
 ## Turborepo
 

@@ -14,7 +14,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
     url: supabaseUrl,
-    anonKey: supabasePublishableKey,
+    publishableKey: supabasePublishableKey,
     postgrestOptions: const PostgrestClientOptions(schema: 'study_group_finder'),
   );
   runApp(const StudyGroupFinderApp());
