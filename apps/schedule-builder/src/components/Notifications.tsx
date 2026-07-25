@@ -19,10 +19,10 @@ const MobileDisplay = {
   Content: ({ children }: PropsWithChildren) => {
     return (
       <Dialog.Portal>
-        <Dialog.Overlay className="data-[state=open]:animate-fadeInOverlay fixed left-0 top-0 z-[999] flex h-[100lvh] w-[100lvw] flex-col justify-end bg-black/40">
+        <Dialog.Overlay className="data-[state=open]:animate-fadeInOverlay fixed top-0 left-0 z-[999] flex h-[100lvh] w-[100lvw] flex-col justify-end bg-black/40">
           <Dialog.Content
             aria-describedby={undefined}
-            className="shadow-x border-red-700/60 data-[state=open]:animate-slideUp flex h-[60dvh] w-screen flex-col overflow-hidden rounded-t-xl border-2 border-b-0 bg-zinc-100 focus:outline-none"
+            className="shadow-x data-[state=open]:animate-slideUp flex h-[60dvh] w-screen flex-col overflow-hidden rounded-t-xl border-2 border-b-0 border-red-700/60 bg-zinc-100 focus:outline-none"
           >
             <Dialog.Title className="sr-only">Notifications</Dialog.Title>
             {children}
@@ -43,7 +43,7 @@ const DesktopDisplay = {
           align="end"
           sideOffset={8}
           alignOffset={-8}
-          className="border-red-700/60 data-[state=open]:animate-slideUpAndFadeIn relative z-[9999] flex h-96 w-80 flex-col overflow-hidden rounded-md border-2 bg-zinc-100 shadow-xl"
+          className="data-[state=open]:animate-slideUpAndFadeIn relative z-[9999] flex h-96 w-80 flex-col overflow-hidden rounded-md border-2 border-red-700/60 bg-zinc-100 shadow-xl"
         >
           {children}
         </Popover.Content>
@@ -116,16 +116,16 @@ export default function Notifications({ initialItems, closeAction }: Props) {
 
   return (
     <Root>
-      <Trigger className="border-red-700/30 hover:border-red-700/60 hover:bg-red-600/10 data-[state=open]:border-red-700/60 data-[state=open]:bg-red-600/10 group relative cursor-default rounded-full border-2 p-1 text-lg text-black transition-colors sm:p-1.5 sm:text-xl">
+      <Trigger className="group relative cursor-default rounded-full border-2 border-red-700/30 p-1 text-lg text-black transition-colors hover:border-red-700/60 hover:bg-red-600/10 data-[state=open]:border-red-700/60 data-[state=open]:bg-red-600/10 sm:p-1.5 sm:text-xl">
         <PiBellFill className="hidden sm:block" />
         <PiBellBold className="sm:hidden" />
         {items.length > 0 && (
-          <span className="bg-red-700 absolute -right-px -top-px size-2 rounded-full transition-transform group-data-[state=open]:scale-0 sm:-right-0.5 sm:-top-0.5 sm:size-2.5" />
+          <span className="absolute -top-px -right-px size-2 rounded-full bg-red-700 transition-transform group-data-[state=open]:scale-0 sm:-top-0.5 sm:-right-0.5 sm:size-2.5" />
         )}
       </Trigger>
       <Content>
         {items.length === 0 || items.every((item) => item.closed === true) ? (
-          <p className="text-stone-600 flex flex-1 flex-col items-center justify-center gap-3">
+          <p className="flex flex-1 flex-col items-center justify-center gap-3 text-stone-600">
             <PiTrayDuotone className="text-3xl" />
             <span className="text-xs font-semibold">No new notifications</span>
           </p>
@@ -137,11 +137,11 @@ export default function Notifications({ initialItems, closeAction }: Props) {
           >
             {items.map(({ id, content }) => (
               <Accordion.Item key={id} value={id}>
-                <Accordion.Content className="border-red-700/30 data-[state=closed]:animate-collapse -mt-0.5 overflow-hidden border-b-2">
-                  <div className="flex items-start gap-2 px-4 pb-4 pt-[1.125rem]">
+                <Accordion.Content className="data-[state=closed]:animate-collapse -mt-0.5 overflow-hidden border-b-2 border-red-700/30">
+                  <div className="flex items-start gap-2 px-4 pt-[1.125rem] pb-4">
                     <div className="flex-1">{content}</div>
                     <button
-                      className="text-stone-600 hover:bg-pink-100 rounded-full p-0.5 transition-colors hover:text-black"
+                      className="rounded-full p-0.5 text-stone-600 transition-colors hover:bg-pink-100 hover:text-black"
                       onClick={() => close(id)}
                     >
                       <PiXBold />

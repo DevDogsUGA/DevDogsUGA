@@ -1,0 +1,36 @@
+{
+  "name": "@devdogsuga/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint": "./eslint/index.js",
+    "./vitest/node": {
+      "types": "./vitest/node.d.ts",
+      "default": "./vitest/node.js"
+    },
+    "./vitest/react": {
+      "types": "./vitest/react.d.ts",
+      "default": "./vitest/react.js"
+    },
+    "./vitest/setup-react": "./vitest/setup-react.js"
+  },
+  "files": [
+    "eslint",
+    "tsconfig",
+    "vitest"
+  ],
+  "peerDependencies": {
+    "eslint": "^9.39.0"
+  },
+  "dependencies": {
+    "@testing-library/jest-dom": "catalog:",
+    "@vitejs/plugin-react": "^6.0.4",
+    "eslint-config-next": "^16.2.11",
+    "eslint-plugin-drizzle": "^0.2.3",
+    "typescript-eslint": "^8.65.0"
+  },
+  "devDependencies": {
+    "vitest": "catalog:"
+  }
+}

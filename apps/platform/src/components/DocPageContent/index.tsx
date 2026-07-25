@@ -37,7 +37,7 @@ export default async function DocPageContent({
             <div className="mb-4 flex items-center justify-between gap-4">
               {breadcrumbs && breadcrumbs.length > 0 && (
                 <nav aria-label="Breadcrumb">
-                  <ol className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
+                  <ol className="text-muted-foreground flex flex-wrap items-center gap-1 text-sm">
                     {breadcrumbs.map((crumb, i) => (
                       <li key={i} className="flex items-center gap-1">
                         {i > 0 && <span aria-hidden>/</span>}
@@ -52,7 +52,7 @@ export default async function DocPageContent({
                   href={githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground shrink-0 text-sm transition-colors"
                 >
                   Edit on GitHub
                 </a>

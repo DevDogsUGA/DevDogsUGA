@@ -1,0 +1,6 @@
+# format:check / format:write pass .gitignore as an --ignore-path too, so build
+# output (dist, .next, .open-next, build, .turbo, coverage, drizzle-generated)
+# is already excluded there. Only list files that are generated but still
+# tracked — .gitignore structurally cannot express those.
+**/src/database.types.ts
+**/src/supabase/drizzle/

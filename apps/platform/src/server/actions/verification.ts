@@ -3,7 +3,7 @@
 import { eq, sql } from "drizzle-orm";
 import Papa from "papaparse";
 import { db } from "~/server/db";
-import { profiles } from '~/server/db/schema';
+import { profiles } from "~/server/db/schema";
 import { usersInAuth } from "~/supabase/drizzle/schema";
 import { expectSession } from "~/server/auth";
 import { supabaseAdmin } from "~/supabase/admin";

@@ -32,7 +32,10 @@ export async function POST(request: Request) {
     where: { slug: parsed.data.repo },
   });
   if (!repo) {
-    return NextResponse.json({ ok: false, error: "unknown-repo" }, { status: 404 });
+    return NextResponse.json(
+      { ok: false, error: "unknown-repo" },
+      { status: 404 },
+    );
   }
 
   const branch = parsed.data.branch ?? repo.defaultBranch;

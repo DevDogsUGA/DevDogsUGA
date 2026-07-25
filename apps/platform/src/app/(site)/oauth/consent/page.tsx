@@ -29,7 +29,7 @@ export default async function ConsentPage({ searchParams }: Props) {
   if (oauthRegistration.type === "production") {
     await expectSession().catch(() => {
       const callbackPath = `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`;
-      redirect(`/api/auth?callbackPath=${encodeURIComponent(callbackPath)}`);
+      redirect(`/auth?callbackPath=${encodeURIComponent(callbackPath)}`);
     });
 
     return await approveAuthorization(
@@ -62,7 +62,7 @@ export default async function ConsentPage({ searchParams }: Props) {
     },
   }).catch(() => {
     const callbackPath = `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`;
-    redirect(`/api/auth?callbackPath=${encodeURIComponent(callbackPath)}`);
+    redirect(`/auth?callbackPath=${encodeURIComponent(callbackPath)}`);
   });
 
   const testAccounts = user.testAccounts.map(

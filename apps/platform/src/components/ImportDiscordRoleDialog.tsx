@@ -125,7 +125,7 @@ export default function ImportDiscordRoleDialog({
         ...Object.fromEntries(
           PERMISSION_KEYS.map((k) => [k, permissions[k] ? true : null]),
         ),
-      } as ImportRoleInput);
+      });
       setOpen(false);
       router.refresh();
     } catch (err) {
@@ -166,155 +166,155 @@ export default function ImportDiscordRoleDialog({
             </DialogClose>
           </DialogHeader>
 
-            {/* Discord role */}
-            <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
-              Discord role *
-              <select
-                value={selectedId}
-                onChange={(e) => handleSelect(e.target.value)}
-                disabled={loading}
-                required
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/40"
-              >
-                <option value="">
-                  {loading ? "Loading…" : "Select a Discord role…"}
-                </option>
-                {discordRoles.map((r) => {
-                  const canManage = canManageDiscordRolePosition(
-                    callerCapability,
-                    r.position,
-                  );
-                  return (
-                    <option key={r.id} value={r.id} disabled={!canManage}>
-                      {r.name}
-                      {canManage ? "" : " (above your Discord roles)"}
-                    </option>
-                  );
-                })}
-              </select>
-            </label>
+          {/* Discord role */}
+          <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
+            Discord role *
+            <select
+              value={selectedId}
+              onChange={(e) => handleSelect(e.target.value)}
+              disabled={loading}
+              required
+              className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/40"
+            >
+              <option value="">
+                {loading ? "Loading…" : "Select a Discord role…"}
+              </option>
+              {discordRoles.map((r) => {
+                const canManage = canManageDiscordRolePosition(
+                  callerCapability,
+                  r.position,
+                );
+                return (
+                  <option key={r.id} value={r.id} disabled={!canManage}>
+                    {r.name}
+                    {canManage ? "" : " (above your Discord roles)"}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
 
-            {selected && (
-              <div className="flex items-center gap-2 text-xs text-white/60">
-                <span
-                  className="h-3 w-3 shrink-0 rounded-full"
-                  style={{ backgroundColor: selected.color ?? "#818cf8" }}
-                  aria-hidden
-                />
-                Name and color are taken from this Discord role and will stay in
-                sync going forward.
-              </div>
-            )}
-
-            {/* Description */}
-            <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
-              Description
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
-                placeholder="Optional — briefly describe this role"
-                className="resize-none rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/40"
+          {selected && (
+            <div className="flex items-center gap-2 text-xs text-white/60">
+              <span
+                className="h-3 w-3 shrink-0 rounded-full"
+                style={{ backgroundColor: selected.color ?? "#818cf8" }}
+                aria-hidden
               />
-            </label>
-
-            {/* Rank */}
-            <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
-              Rank *
-              <input
-                type="number"
-                value={rank}
-                onChange={(e) => setRank(Number(e.target.value))}
-                min={1}
-                step={1}
-                required
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/40"
-              />
-            </label>
-
-            {/* Display */}
-            <fieldset className="flex flex-col gap-2">
-              <legend className="mb-1 text-xs font-medium text-white/70">
-                Display
-              </legend>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
-                <input
-                  type="checkbox"
-                  checked={showOnProfile}
-                  onChange={(e) => setShowOnProfile(e.target.checked)}
-                  className="accent-indigo-400"
-                />
-                Show this role on members&apos; profiles
-              </label>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
-                <input
-                  type="checkbox"
-                  checked={isLeadership}
-                  onChange={(e) => setIsLeadership(e.target.checked)}
-                  className="accent-indigo-400"
-                />
-                Leadership role (homepage + Role Description field)
-              </label>
-            </fieldset>
-
-            {/* Permissions */}
-            <fieldset>
-              <legend className="mb-2 text-xs font-medium text-white/70">
-                Permissions
-              </legend>
-              <p className="mb-2 text-xs text-white/40">
-                Pre-filled based on this Discord role&apos;s current permissions
-                — freely editable, with no further connection to Discord.
-              </p>
-              <div className="grid grid-cols-1 gap-y-2 @sm:grid-cols-2">
-                {PERMISSION_KEYS.map((key) => {
-                  const callerHas = callerPermissions[key];
-                  return (
-                    <label
-                      key={key}
-                      className={[
-                        "flex cursor-pointer items-center gap-2 text-xs",
-                        callerHas
-                          ? "text-white/80"
-                          : "cursor-not-allowed text-white/30",
-                      ].join(" ")}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!permissions[key]}
-                        disabled={!callerHas}
-                        onChange={(e) =>
-                          setPermissions((p) => ({
-                            ...p,
-                            [key]: e.target.checked,
-                          }))
-                        }
-                        className="accent-indigo-400"
-                      />
-                      {PERMISSION_LABELS[key]}
-                    </label>
-                  );
-                })}
-              </div>
-            </fieldset>
-
-            {error && <p className="text-xs text-rose-400">{error}</p>}
-
-            <div className="flex justify-end gap-3">
-              <DialogClose asChild>
-                <button
-                  type="button"
-                  className="rounded-lg border border-white/20 px-4 py-1.5 text-sm text-white/70 transition hover:bg-white/10"
-                >
-                  Cancel
-                </button>
-              </DialogClose>
-              <FormButton theme="black" type="submit" disabled={submitting}>
-                Import
-              </FormButton>
+              Name and color are taken from this Discord role and will stay in
+              sync going forward.
             </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+          )}
+
+          {/* Description */}
+          <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
+            Description
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              placeholder="Optional — briefly describe this role"
+              className="resize-none rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/40"
+            />
+          </label>
+
+          {/* Rank */}
+          <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
+            Rank *
+            <input
+              type="number"
+              value={rank}
+              onChange={(e) => setRank(Number(e.target.value))}
+              min={1}
+              step={1}
+              required
+              className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/40"
+            />
+          </label>
+
+          {/* Display */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-xs font-medium text-white/70">
+              Display
+            </legend>
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
+              <input
+                type="checkbox"
+                checked={showOnProfile}
+                onChange={(e) => setShowOnProfile(e.target.checked)}
+                className="accent-indigo-400"
+              />
+              Show this role on members&apos; profiles
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
+              <input
+                type="checkbox"
+                checked={isLeadership}
+                onChange={(e) => setIsLeadership(e.target.checked)}
+                className="accent-indigo-400"
+              />
+              Leadership role (homepage + Role Description field)
+            </label>
+          </fieldset>
+
+          {/* Permissions */}
+          <fieldset>
+            <legend className="mb-2 text-xs font-medium text-white/70">
+              Permissions
+            </legend>
+            <p className="mb-2 text-xs text-white/40">
+              Pre-filled based on this Discord role&apos;s current permissions —
+              freely editable, with no further connection to Discord.
+            </p>
+            <div className="grid grid-cols-1 gap-y-2 @sm:grid-cols-2">
+              {PERMISSION_KEYS.map((key) => {
+                const callerHas = callerPermissions[key];
+                return (
+                  <label
+                    key={key}
+                    className={[
+                      "flex cursor-pointer items-center gap-2 text-xs",
+                      callerHas
+                        ? "text-white/80"
+                        : "cursor-not-allowed text-white/30",
+                    ].join(" ")}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!permissions[key]}
+                      disabled={!callerHas}
+                      onChange={(e) =>
+                        setPermissions((p) => ({
+                          ...p,
+                          [key]: e.target.checked,
+                        }))
+                      }
+                      className="accent-indigo-400"
+                    />
+                    {PERMISSION_LABELS[key]}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {error && <p className="text-xs text-rose-400">{error}</p>}
+
+          <div className="flex justify-end gap-3">
+            <DialogClose asChild>
+              <button
+                type="button"
+                className="rounded-lg border border-white/20 px-4 py-1.5 text-sm text-white/70 transition hover:bg-white/10"
+              >
+                Cancel
+              </button>
+            </DialogClose>
+            <FormButton theme="black" type="submit" disabled={submitting}>
+              Import
+            </FormButton>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

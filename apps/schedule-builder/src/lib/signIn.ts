@@ -13,7 +13,7 @@ export default async function signIn() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: `${window.location.origin}/api/auth/callback`,
+      redirectTo: `${window.location.origin}/auth/callback`,
     },
   });
 

@@ -10,9 +10,7 @@ export function useInstructors() {
         .select("firstName, lastName")
         .order("lastName");
       if (error) throw error;
-      return (data ?? []).map(
-        (r) => `${r.firstName as string} ${r.lastName as string}`,
-      );
+      return (data ?? []).map((r) => `${r.firstName} ${r.lastName}`);
     },
   });
 }

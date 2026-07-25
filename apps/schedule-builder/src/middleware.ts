@@ -3,7 +3,7 @@ import { updateSession } from "~/supabase/middleware";
 
 const PUBLIC_PATHS = [
   "/",
-  "/api/auth/callback",
+  "/auth/callback",
   "/courses",
   "/plans",
   "/generate-schedule",

@@ -9,8 +9,7 @@ function getAvatarUrl(user: User): string | undefined {
 }
 
 function getInitials(user: User): string {
-  const name: unknown =
-    user.user_metadata.full_name ?? user.user_metadata.name;
+  const name: unknown = user.user_metadata.full_name ?? user.user_metadata.name;
   if (typeof name === "string" && name.trim()) {
     return name
       .trim()
@@ -28,15 +27,15 @@ interface UserAvatarProps {
   className?: string;
 }
 
-export function UserAvatar({ user}: UserAvatarProps) {
+export function UserAvatar({ user }: UserAvatarProps) {
   return (
-    <Avatar.Root className="overflow-hidden relative block rounded-full size-[1em]">
+    <Avatar.Root className="relative block size-[1em] overflow-hidden rounded-full">
       <Avatar.Image
         className="size-full rounded-full object-cover"
         src={getAvatarUrl(user)}
         alt={user.email ?? "User avatar"}
       />
-      <Avatar.Fallback className="flex size-full items-center justify-center inset-ring-2 inset-ring-red-900 bg-red-800 text-sm font-semibold text-white">
+      <Avatar.Fallback className="flex size-full items-center justify-center bg-red-800 text-sm font-semibold text-white inset-ring-2 inset-ring-red-900">
         {getInitials(user)}
       </Avatar.Fallback>
     </Avatar.Root>

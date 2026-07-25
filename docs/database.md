@@ -5,6 +5,7 @@
 SQL migration files are the source of truth. The Drizzle TypeScript schema (`src/server/db/schema/generated/`) is generated from the live database and never edited by hand. The only hand-maintained schema file is `src/server/db/relations.ts`, which defines Drizzle relational query structure on top of the generated types.
 
 This means:
+
 - **To change the schema**, write SQL — not TypeScript.
 - **The TypeScript types follow** from the SQL, not the other way around.
 - **RLS policies, triggers, functions, and storage policies** all live in migration files alongside table DDL, with no workarounds needed.
@@ -63,18 +64,18 @@ There is no Drizzle workaround layer — write SQL and it works.
 
 ## Scripts reference
 
-| Script | What it does |
-|---|---|
-| `pnpm db:migration:new <name>` | Create a new empty migration file in `supabase/migrations/` |
-| `pnpm db:migrate` | Apply pending migrations → regenerate TS types → seed built-in roles |
-| `pnpm db:reset` | Wipe local DB, replay all migrations from scratch → regenerate TS types → seed roles |
-| `pnpm db:pull` | Regenerate TS types from the current DB state without applying migrations |
-| `pnpm db:seed-roles` | Seed the built-in Member and Root roles (idempotent) |
-| `pnpm db:push:remote` | Push pending migrations to the linked production Supabase project |
-| `pnpm sb:start` | Start local Supabase, export credentials to `.env.local`, seed storage buckets |
-| `pnpm sb:stop` | Stop local Supabase |
-| `pnpm sb:restart` | Stop and restart local Supabase |
-| `pnpm dev` | Full local dev startup: start Supabase → apply migrations → start Next.js |
+| Script                         | What it does                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| `pnpm db:migration:new <name>` | Create a new empty migration file in `supabase/migrations/`                          |
+| `pnpm db:migrate`              | Apply pending migrations → regenerate TS types → seed built-in roles                 |
+| `pnpm db:reset`                | Wipe local DB, replay all migrations from scratch → regenerate TS types → seed roles |
+| `pnpm db:pull`                 | Regenerate TS types from the current DB state without applying migrations            |
+| `pnpm db:seed-roles`           | Seed the built-in Member and Root roles (idempotent)                                 |
+| `pnpm db:push:remote`          | Push pending migrations to the linked production Supabase project                    |
+| `pnpm sb:start`                | Start local Supabase, export credentials to `.env.local`, seed storage buckets       |
+| `pnpm sb:stop`                 | Stop local Supabase                                                                  |
+| `pnpm sb:restart`              | Stop and restart local Supabase                                                      |
+| `pnpm dev`                     | Full local dev startup: start Supabase → apply migrations → start Next.js            |
 
 ## Multi-contributor workflow
 
@@ -85,10 +86,12 @@ Database migrations have ordering constraints that code changes don't. Follow th
 **One migration per PR.** A PR should produce at most one migration file covering all schema changes for that feature. This keeps the history readable and reduces the surface area for conflicts.
 
 **Rebase before generating.** Before running `pnpm db:migration:new`:
+
 ```
 git fetch && git rebase origin/main
 pnpm db:reset   # re-apply all existing migrations on a clean slate
 ```
+
 Then apply your schema changes on top and generate the file. The migration will be generated against the latest baseline rather than a stale one.
 
 **CI verifies with `pnpm db:reset`.** Every PR should run `pnpm db:reset` in CI to confirm all migrations replay cleanly in order. This catches conflicts before merge, not after.
@@ -109,9 +112,9 @@ This runs `supabase db push`, which applies only the migrations that haven't yet
 
 ## Drizzle config files
 
-| File | Purpose |
-|---|---|
-| `drizzle.config.ts` | Public schema — used for `drizzle-kit pull` (generates `src/server/db/schema/generated/`) |
+| File                              | Purpose                                                                                   |
+| --------------------------------- | ----------------------------------------------------------------------------------------- |
+| `drizzle.config.ts`               | Public schema — used for `drizzle-kit pull` (generates `src/server/db/schema/generated/`) |
 | `drizzle-introspection.config.ts` | Non-public schemas (`auth`, `storage`, etc.) — generates `src/supabase/drizzle/schema.ts` |
 
 Both configs point at the local DB URL and are only used with `drizzle-kit pull`. Neither is used for migrations.

@@ -17,8 +17,8 @@
   --fd-muted: #64748b;
   --fd-border: #cbd5e1;
   --fd-radius: 0.5rem;
-  --fd-font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    sans-serif;
+  --fd-font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 .feedback-dialog__overlay {

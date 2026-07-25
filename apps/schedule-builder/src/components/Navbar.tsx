@@ -47,7 +47,7 @@ export function Navbar() {
           <TermSelector />
         </div>
 
-        <ul className="grid grid-flow-col auto-cols-fr">
+        <ul className="grid auto-cols-fr grid-flow-col">
           <NavigationLink href="/courses">
             <PiChalkboardTeacherDuotone className="text-2xl" />
             <span className="text-xs leading-none font-medium tracking-[.0125em]">
@@ -82,18 +82,6 @@ export function Navbar() {
                     sideOffset={-4}
                     alignOffset={4}
                   >
-                    <Dropdown.Item asChild>
-                      <Link
-                        href="#"
-                        className="flex items-center gap-3 py-1 pr-6 pl-3 transition-colors hover:bg-gray-200"
-                      >
-                        <PiUsersThreeBold />
-                        Start an Organization
-                      </Link>
-                    </Dropdown.Item>
-
-                    <Dropdown.Separator className="mx-2 my-1.5 h-px bg-gray-400" />
-
                     <button
                       className="flex items-center gap-3 py-1 pr-6 pl-3 text-red-700 transition-colors hover:bg-red-100 hover:text-red-800"
                       type="button"

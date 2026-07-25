@@ -38,19 +38,19 @@ pnpm devdogs-oauth-setup
 devdogs-oauth-setup [--base-url <url>]
 ```
 
-| Flag | Description |
-| --- | --- |
+| Flag               | Description                                             |
+| ------------------ | ------------------------------------------------------- |
 | `--base-url <url>` | DevDogs API URL (default: `https://api.devdogsuga.org`) |
-| `--help`, `-h` | Print usage |
+| `--help`, `-h`     | Print usage                                             |
 
 The wizard reads from `process.env`, so credentials can come from any source — shell exports, `direnv`, a `.env` file loaded by your shell, etc. Credentials are saved back to `.env.local` on completion so subsequent runs are instant.
 
-| Variable | Description |
-| --- | --- |
-| `OAUTH_BASE_URL` | DevDogs API URL |
+| Variable              | Description                                                   |
+| --------------------- | ------------------------------------------------------------- |
+| `OAUTH_BASE_URL`      | DevDogs API URL                                               |
 | `OAUTH_PROVIDER_NAME` | Display name shown on the sign-in button (default: `DevDogs`) |
-| `OAUTH_CLIENT_ID` | OAuth client ID |
-| `OAUTH_CLIENT_SECRET` | OAuth client secret |
+| `OAUTH_CLIENT_ID`     | OAuth client ID                                               |
+| `OAUTH_CLIENT_SECRET` | OAuth client secret                                           |
 
 ## Wizard walkthrough
 
@@ -76,7 +76,7 @@ Once the wizard completes:
 
    ```toml
    [auth]
-   additional_redirect_urls = ["http://localhost:<port>/api/auth/callback"]
+   additional_redirect_urls = ["http://localhost:<port>/auth/callback"]
    ```
 
 3. **Trigger sign-in** from your app:
@@ -84,7 +84,7 @@ Once the wizard completes:
    ```typescript
    await supabase.auth.signInWithOAuth({
      provider: "custom:devdogs",
-     options: { redirectTo: `${origin}/api/auth/callback` },
+     options: { redirectTo: `${origin}/auth/callback` },
    });
    ```
 

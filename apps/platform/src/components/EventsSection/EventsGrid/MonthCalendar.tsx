@@ -1,5 +1,11 @@
 "use client";
 
+/* eslint-disable react-hooks/refs --
+   This animated calendar popover deliberately reads imperative state
+   (hover direction, initial position, mouse-vs-keyboard open) from refs during
+   render to drive the open/close motion. Moving it to state would re-render and
+   fight the animation. */
+
 import { useEffect, useRef, useState } from "react";
 import {
   autoUpdate,
@@ -14,7 +20,13 @@ import {
   useRole,
 } from "@floating-ui/react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowUpRightIcon, CalendarDotsIcon, CaretRightIcon, ClockIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
+import {
+  ArrowUpRightIcon,
+  CalendarDotsIcon,
+  CaretRightIcon,
+  ClockIcon,
+  MapPinIcon,
+} from "@phosphor-icons/react/ssr";
 import { parseISO } from "date-fns";
 import type { CalendarEvent, EventType } from "~/app/(site)/homeData";
 import { formatEventTime } from "~/app/(site)/homeData";
@@ -281,7 +293,10 @@ export default function MonthCalendar({ events, onEventTypeHover }: Props) {
   for (let i = 0; i < firstDayOfWeek; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
+  // Imperative animation state, read once per render (see the file-level note).
   const dir = enterDir.current;
+  const openedByMouseNow = openedByMouse.current;
+  const approxPos = approxInitialPos.current;
 
   return (
     <>
@@ -378,8 +393,8 @@ export default function MonthCalendar({ events, onEventTypeHover }: Props) {
             <FloatingFocusManager
               context={context}
               modal={false}
-              initialFocus={openedByMouse.current ? -1 : 0}
-              returnFocus={!openedByMouse.current}
+              initialFocus={openedByMouseNow ? -1 : 0}
+              returnFocus={!openedByMouseNow}
             >
               <motion.div
                 ref={refs.setFloating}
@@ -393,14 +408,14 @@ export default function MonthCalendar({ events, onEventTypeHover }: Props) {
                   outline: "none",
                 }}
                 initial={{
-                  x: approxInitialPos.current.x,
-                  y: approxInitialPos.current.y,
+                  x: approxPos.x,
+                  y: approxPos.y,
                   opacity: 0,
                   scale: 0.97,
                 }}
                 animate={{
-                  x: x ?? approxInitialPos.current.x,
-                  y: y ?? approxInitialPos.current.y,
+                  x: x ?? approxPos.x,
+                  y: y ?? approxPos.y,
                   opacity: isPositioned ? 1 : 0,
                   scale: isPositioned ? 1 : 0.97,
                 }}

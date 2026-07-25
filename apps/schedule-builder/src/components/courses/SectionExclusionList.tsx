@@ -25,12 +25,14 @@ export function SectionExclusionList({
               type="checkbox"
               checked={included}
               onChange={() => onToggle(o.crn)}
-              className="form-checkbox border-stone-300 text-red-700 focus:ring-red-700 size-5 rounded"
+              className="form-checkbox size-5 rounded border-stone-300 text-red-700 focus:ring-red-700"
             />
             <span className="flex-1 text-sm">
               <span className="font-medium">CRN {o.crn}</span> — {instructor}
             </span>
-            <span className="text-xs text-neutral-400">{o.seatsAvailable} seats</span>
+            <span className="text-xs text-neutral-400">
+              {o.seatsAvailable} seats
+            </span>
           </label>
         );
       })}

@@ -38,7 +38,7 @@ export default function TableOfContents({ items }: Props) {
 
   return (
     <nav aria-label="Table of contents">
-      <p className="mb-2 text-sm text-muted-foreground">On this page</p>
+      <p className="text-muted-foreground mb-2 text-sm">On this page</p>
       <ul className="flex flex-col gap-1 text-sm">
         {items.map((item) => {
           const id = item.url.slice(1);
@@ -47,7 +47,7 @@ export default function TableOfContents({ items }: Props) {
               <a
                 href={item.url}
                 className={cn(
-                  "block py-1 text-foreground/80 transition-colors hover:text-foreground",
+                  "text-foreground/80 hover:text-foreground block py-1 transition-colors",
                   activeId === id && "text-primary font-medium",
                   item.depth > 2 && "pl-3",
                   item.depth > 3 && "pl-6",

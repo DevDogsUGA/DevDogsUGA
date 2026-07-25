@@ -38,7 +38,7 @@ export default function SavedPlan({ plan, onPin, onDelete }: PlanDisplayProps) {
 
   return (
     <div
-      className="relative z-10 flex w-[70vw] cursor-pointer flex-row items-center gap-4 rounded-xl border-b-8 border-red-700 bg-white px-7 py-4 ring-2 ring-black hover:mt-1 hover:border-b-4 hover:border-red-700 hover:bg-neutral-100 [&:active:not(:has(input:hover,button:hover))]:border-b-0 [&:active:not(:has(input:hover,button:hover))]:border-t-4"
+      className="relative z-10 flex w-[70vw] cursor-pointer flex-row items-center gap-4 rounded-xl border-b-8 border-red-700 bg-white px-7 py-4 ring-2 ring-black hover:mt-1 hover:border-b-4 hover:border-red-700 hover:bg-neutral-100 [&:active:not(:has(input:hover,button:hover))]:border-t-4 [&:active:not(:has(input:hover,button:hover))]:border-b-0"
       onClick={goToPlan}
       role="link"
     >
@@ -57,20 +57,17 @@ export default function SavedPlan({ plan, onPin, onDelete }: PlanDisplayProps) {
       {/* Pin button (gives a saved plan priority over others*/}
       <button type="button" className="cursor-default" onClick={handlePin}>
         {plan.pinned ? (
-          <PiHeartFill className="text-red-600 size-8 transition" />
+          <PiHeartFill className="size-8 text-red-600 transition" />
         ) : (
-          <PiHeartBold className="hover:text-red-600 m-0.5 size-7 transition-[color,width,height,margin] hover:m-0 hover:size-8" />
+          <PiHeartBold className="m-0.5 size-7 transition-[color,width,height,margin] hover:m-0 hover:size-8 hover:text-red-600" />
         )}
       </button>
 
       <button
         type="button"
-        className="hover:bg-red-600/15 cursor-default rounded-md p-0.5 transition-colors"
+        className="cursor-default rounded-md p-0.5 transition-colors hover:bg-red-600/15"
       >
-        <PiTrashBold
-          className="text-red-600 size-7"
-          onClick={handleDelete}
-        />
+        <PiTrashBold className="size-7 text-red-600" onClick={handleDelete} />
       </button>
     </div>
   );

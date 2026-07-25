@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { PiCaretDownBold, PiCheckBold, PiCircleNotchBold, PiMinusBold, PiSparkleBold, PiXBold } from "react-icons/pi";
+import {
+  PiCaretDownBold,
+  PiCheckBold,
+  PiCircleNotchBold,
+  PiMinusBold,
+  PiSparkleBold,
+  PiXBold,
+} from "react-icons/pi";
 import Combobox from "~/components/ui/Combobox";
 import { SectionExclusionList } from "~/components/courses/SectionExclusionList";
 import { useOfferingsByCourse } from "~/hooks/queries/useOfferingsByCourse";
@@ -10,8 +17,12 @@ import { useTerm } from "~/components/providers/TermProvider";
 import { useDraftPrefs } from "~/hooks/data/useDraftPrefs";
 import { useDraftCourses } from "~/hooks/data/useDraftCourses";
 import { useSavedPlans } from "~/hooks/data/useSavedPlans";
-import { getRecommendedSchedules } from "~/app/actions/generate-schedule";
-import { campusOptions, gapDayOptions, timeOptions } from "~/lib/scheduleFilterOptions";
+import { getRecommendedSchedules } from "~/server/actions/generate-schedule";
+import {
+  campusOptions,
+  gapDayOptions,
+  timeOptions,
+} from "~/lib/scheduleFilterOptions";
 import { type DraftCourse } from "~/lib/localStorage/types";
 
 type CourseSelection = {
@@ -41,9 +52,11 @@ function TriStateCheckbox({
         onChange={onChange}
         className="peer sr-only"
       />
-      <span className="border-stone-300 peer-focus-visible:ring-red-700 flex size-5 shrink-0 items-center justify-center rounded border-2 bg-white transition-colors peer-checked:border-red-700 peer-checked:bg-red-700 peer-focus-visible:ring-2 peer-focus-visible:ring-offset-1">
+      <span className="flex size-5 shrink-0 items-center justify-center rounded border-2 border-stone-300 bg-white transition-colors peer-checked:border-red-700 peer-checked:bg-red-700 peer-focus-visible:ring-2 peer-focus-visible:ring-red-700 peer-focus-visible:ring-offset-1">
         {state === "checked" && <PiCheckBold className="size-3.5 text-white" />}
-        {state === "indeterminate" && <PiMinusBold className="size-3.5 text-white" />}
+        {state === "indeterminate" && (
+          <PiMinusBold className="size-3.5 text-white" />
+        )}
       </span>
     </span>
   );
@@ -65,16 +78,27 @@ function CourseOfferingsSection({
   onToggleSection: (crn: number) => void;
 }) {
   const info = course.courses[0];
-  const { data: offerings = [] } = useOfferingsByCourse(course.courseId, academicPeriod);
+  const { data: offerings = [] } = useOfferingsByCourse(
+    course.courseId,
+    academicPeriod,
+  );
   const [open, setOpen] = useState(false);
 
-  const hasExclusions = included && offerings.length > 0 && tempExcludedCrns.size > 0;
-  const allExcluded = included && offerings.length > 0 && tempExcludedCrns.size === offerings.length;
+  const hasExclusions =
+    included && offerings.length > 0 && tempExcludedCrns.size > 0;
+  const allExcluded =
+    included &&
+    offerings.length > 0 &&
+    tempExcludedCrns.size === offerings.length;
   const checkboxState: "checked" | "indeterminate" | "unchecked" =
-    !included || allExcluded ? "unchecked" : hasExclusions ? "indeterminate" : "checked";
+    !included || allExcluded
+      ? "unchecked"
+      : hasExclusions
+        ? "indeterminate"
+        : "checked";
 
   return (
-    <div className="border-pink-100 border-b pb-3 last:border-b-0 last:pb-0">
+    <div className="border-b border-pink-100 pb-3 last:border-b-0 last:pb-0">
       <div className="flex items-center gap-3">
         <TriStateCheckbox
           state={checkboxState}
@@ -87,7 +111,9 @@ function CourseOfferingsSection({
         >
           <span className="flex-1 text-left font-bold">
             {info?.abbr} {info?.courseNumber}
-            {info?.title ? <span className="font-normal"> — {info.title}</span> : null}
+            {info?.title ? (
+              <span className="font-normal"> — {info.title}</span>
+            ) : null}
           </span>
           {offerings.length > 0 && (
             <PiCaretDownBold
@@ -114,7 +140,9 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
   const { academicPeriod } = useTerm();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [selections, setSelections] = useState<Record<string, CourseSelection>>({});
+  const [selections, setSelections] = useState<Record<string, CourseSelection>>(
+    {},
+  );
 
   const { draftPrefs, setPref, isLoading: prefsLoading } = useDraftPrefs();
   const { draftCourses, isLoading: coursesLoading } = useDraftCourses();
@@ -143,6 +171,9 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
 
   // Seed per-course selection state from saved draft courses
   useEffect(() => {
+    // Intentional: seed selection entries for any newly added draft courses,
+    // preserving existing selections (returns `prev` unchanged when none added).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelections((prev) => {
       let changed = false;
       const next = { ...prev };
@@ -166,17 +197,27 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
 
       const wasIncluded = current.included;
       const hasExclusions = current.tempExcludedCrns.size > 0;
-      const allExcluded = allCrns.length > 0 && current.tempExcludedCrns.size === allCrns.length;
+      const allExcluded =
+        allCrns.length > 0 && current.tempExcludedCrns.size === allCrns.length;
 
       if (!wasIncluded || allExcluded) {
-        return { ...prev, [id]: { included: true, tempExcludedCrns: new Set() } };
+        return {
+          ...prev,
+          [id]: { included: true, tempExcludedCrns: new Set() },
+        };
       }
 
       if (hasExclusions) {
-        return { ...prev, [id]: { included: true, tempExcludedCrns: new Set() } };
+        return {
+          ...prev,
+          [id]: { included: true, tempExcludedCrns: new Set() },
+        };
       }
 
-      return { ...prev, [id]: { included: false, tempExcludedCrns: new Set() } };
+      return {
+        ...prev,
+        [id]: { included: false, tempExcludedCrns: new Set() },
+      };
     });
   }
 
@@ -255,24 +296,33 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-pink-50 flex max-h-[90vh] w-full max-w-3xl flex-col rounded-xl shadow-xl">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-xl bg-pink-50 shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-4">
           <h2 className="text-lg font-bold">Create New Plan</h2>
-          <button onClick={onClose} className="text-neutral-400 hover:text-black">
+          <button
+            onClick={onClose}
+            className="text-neutral-400 hover:text-black"
+          >
             <PiXBold size={20} />
           </button>
         </div>
 
         {/* Body */}
-        <fieldset disabled={isPending} className="flex flex-col gap-8 overflow-y-auto px-6 py-4">
+        <fieldset
+          disabled={isPending}
+          className="flex flex-col gap-8 overflow-y-auto px-6 py-4"
+        >
           {/* Your Courses */}
           <section className="flex flex-col gap-3">
             <h3 className="text-base font-bold">Your Courses</h3>
             {bodyLoading ? (
               <div className="flex flex-col gap-2">
                 {[0, 1, 2].map((i) => (
-                  <div key={i} className="h-8 w-full animate-pulse rounded bg-neutral-200" />
+                  <div
+                    key={i}
+                    className="h-8 w-full animate-pulse rounded bg-neutral-200"
+                  />
                 ))}
               </div>
             ) : draftCourses.length === 0 ? (
@@ -294,7 +344,9 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                     tempExcludedCrns={
                       selections[course.id]?.tempExcludedCrns ?? new Set()
                     }
-                    onToggleCourse={(allCrns) => toggleCourse(course.id, allCrns)}
+                    onToggleCourse={(allCrns) =>
+                      toggleCourse(course.id, allCrns)
+                    }
                     onToggleSection={(crn) => toggleSection(course.id, crn)}
                   />
                 ))}
@@ -308,7 +360,10 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
             {bodyLoading ? (
               <div className="flex flex-col gap-3">
                 {[0, 1, 2, 3].map((i) => (
-                  <div key={i} className="h-9 w-full animate-pulse rounded bg-neutral-200" />
+                  <div
+                    key={i}
+                    className="h-9 w-full animate-pulse rounded bg-neutral-200"
+                  />
                 ))}
               </div>
             ) : (
@@ -323,9 +378,7 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                     required
                     searchPlaceholder="Search Start Times"
                     displayText={(s) =>
-                      s
-                        ? startTimeOptions[s as keyof typeof startTimeOptions]
-                        : "Select a Start Time"
+                      s ? startTimeOptions[s] : "Select a Start Time"
                     }
                   />
                 </label>
@@ -340,19 +393,19 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                     required
                     searchPlaceholder="Search End Times"
                     displayText={(s) =>
-                      s
-                        ? endTimeOptions[s as keyof typeof endTimeOptions]
-                        : "Select an End Time"
+                      s ? endTimeOptions[s] : "Select an End Time"
                     }
                   />
                 </label>
 
-                <label className="border-stone-400/40 col-span-2 flex items-center justify-center gap-4 border-b-2 pb-4 text-neutral-700 not-disabled:hover:text-black has-disabled:cursor-not-allowed has-disabled:opacity-60 sm:pb-6">
+                <label className="col-span-2 flex items-center justify-center gap-4 border-b-2 border-stone-400/40 pb-4 text-neutral-700 not-disabled:hover:text-black has-disabled:cursor-not-allowed has-disabled:opacity-60 sm:pb-6">
                   <input
-                    className="form-checkbox border-stone-300 text-red-700 not-disabled:hover:border-stone-400 focus:ring-red-700 size-6 rounded-md border-2"
+                    className="form-checkbox size-6 rounded-md border-2 border-stone-300 text-red-700 not-disabled:hover:border-stone-400 focus:ring-red-700"
                     type="checkbox"
                     checked={walking}
-                    onChange={(e) => setPref("walking", e.currentTarget.checked)}
+                    onChange={(e) =>
+                      setPref("walking", e.currentTarget.checked)
+                    }
                   />
                   <span className="text-left leading-tight text-balance">
                     Walking Distance Between Classes
@@ -367,7 +420,7 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                     required
                     searchPlaceholder="Search Campuses"
                     displayText={(s) =>
-                      s ? campusOptions[s as keyof typeof campusOptions] : "Select a Campus"
+                      s ? campusOptions[s] : "Select a Campus"
                     }
                     onChange={(v) => v && setPref("inputCampus", v)}
                   />
@@ -376,23 +429,29 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                 <label className="col-span-2 grid grid-cols-subgrid items-center">
                   <span className="pl-3 text-right font-bold">Gap Day</span>
                   <Combobox
-                    value={(gapDay ?? undefined) as keyof typeof gapDayOptions | undefined}
+                    value={
+                      (gapDay ?? undefined) as
+                        | keyof typeof gapDayOptions
+                        | undefined
+                    }
                     options={gapDayOptions}
                     preserveOrdering
                     searchPlaceholder="Search Gap Days"
                     displayText={(s) =>
-                      s ? gapDayOptions[s as keyof typeof gapDayOptions] : "Select a Gap Day"
+                      s ? gapDayOptions[s] : "Select a Gap Day"
                     }
                     onChange={(v) => setPref("gapDay", v ?? null)}
                   />
                 </label>
 
-                <label className="border-stone-400/40 col-span-2 flex items-center justify-center gap-4 border-b-2 pb-4 text-neutral-700 not-disabled:hover:text-black has-disabled:cursor-not-allowed has-disabled:opacity-60 sm:pb-6">
+                <label className="col-span-2 flex items-center justify-center gap-4 border-b-2 border-stone-400/40 pb-4 text-neutral-700 not-disabled:hover:text-black has-disabled:cursor-not-allowed has-disabled:opacity-60 sm:pb-6">
                   <input
-                    className="form-checkbox border-stone-300 text-red-700 not-disabled:hover:border-stone-400 focus:ring-red-700 size-6 rounded-md border-2"
+                    className="form-checkbox size-6 rounded-md border-2 border-stone-300 text-red-700 not-disabled:hover:border-stone-400 focus:ring-red-700"
                     type="checkbox"
                     checked={showFilledClasses}
-                    onChange={(e) => setPref("showFilledClasses", e.currentTarget.checked)}
+                    onChange={(e) =>
+                      setPref("showFilledClasses", e.currentTarget.checked)
+                    }
                   />
                   <span className="text-left leading-tight text-balance">
                     Include Waitlisted Course Sections
@@ -400,9 +459,11 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                 </label>
 
                 <label className="col-span-2 grid grid-cols-subgrid items-center">
-                  <span className="pl-3 text-right font-bold">Min Credit Hours</span>
+                  <span className="pl-3 text-right font-bold">
+                    Min Credit Hours
+                  </span>
                   <input
-                    className="border-stone-300 not-disabled:hover:border-stone-400 flex w-full items-center gap-6 rounded-md border-2 bg-white px-3 py-1.5 transition-[box-shadow,border-color] not-disabled:hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex w-full items-center gap-6 rounded-md border-2 border-stone-300 bg-white px-3 py-1.5 transition-[box-shadow,border-color] not-disabled:hover:border-stone-400 not-disabled:hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                     min={0}
                     max={maxCreditHours}
                     onChange={(e) =>
@@ -415,9 +476,11 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                 </label>
 
                 <label className="col-span-2 grid grid-cols-subgrid items-center">
-                  <span className="pl-3 text-right font-bold">Max Credit Hours</span>
+                  <span className="pl-3 text-right font-bold">
+                    Max Credit Hours
+                  </span>
                   <input
-                    className="border-stone-300 not-disabled:hover:border-stone-400 flex w-full items-center gap-6 rounded-md border-2 bg-white px-3 py-1.5 transition-[box-shadow,border-color] not-disabled:hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex w-full items-center gap-6 rounded-md border-2 border-stone-300 bg-white px-3 py-1.5 transition-[box-shadow,border-color] not-disabled:hover:border-stone-400 not-disabled:hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                     min={minCreditHours}
                     max={18}
                     onChange={(e) =>
@@ -446,7 +509,7 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
           <button
             onClick={handleGenerate}
             disabled={isPending || bodyLoading}
-            className="bg-red-700 group relative rounded-md border-2 border-red-800 px-6 py-2 font-medium text-white transition-[background-color,border-color,box-shadow] not-disabled:hover:border-red-950 not-disabled:hover:bg-red-800 not-disabled:hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+            className="group relative rounded-md border-2 border-red-800 bg-red-700 px-6 py-2 font-medium text-white transition-[background-color,border-color,box-shadow] not-disabled:hover:border-red-950 not-disabled:hover:bg-red-800 not-disabled:hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span className="flex items-center gap-2 transition-opacity group-disabled:opacity-0">
               <PiSparkleBold />

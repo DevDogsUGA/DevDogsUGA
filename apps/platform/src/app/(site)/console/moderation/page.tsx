@@ -7,7 +7,11 @@ export default async function ModerationDashboard() {
 
   if (!data.canModerate) redirect("/");
 
-  const { pendingReports: pending, resolvedReports: resolved, clientNames } = data;
+  const {
+    pendingReports: pending,
+    resolvedReports: resolved,
+    clientNames,
+  } = data;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
@@ -35,7 +39,9 @@ export default async function ModerationDashboard() {
                 >
                   <div className="flex flex-col gap-0.5">
                     <span className="font-mono text-sm text-mauve-700">
-                      {report.contentTypeLabel ? `${report.contentTypeLabel}: ` : ""}
+                      {report.contentTypeLabel
+                        ? `${report.contentTypeLabel}: `
+                        : ""}
                       {report.contentId}
                     </span>
                     <span className="text-xs text-mauve-500">
@@ -73,7 +79,9 @@ export default async function ModerationDashboard() {
                   className="shadow-block-sm flex items-center justify-between border border-black bg-mauve-50 px-4 py-2.5 text-sm text-mauve-500 transition-[translate,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:text-mauve-800"
                 >
                   <span className="font-mono">
-                    {report.contentTypeLabel ? `${report.contentTypeLabel}: ` : ""}
+                    {report.contentTypeLabel
+                      ? `${report.contentTypeLabel}: `
+                      : ""}
                     {report.contentId}
                   </span>
                   <span className="text-mauve-500 capitalize">

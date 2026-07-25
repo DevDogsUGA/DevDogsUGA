@@ -33,7 +33,11 @@ export default function SaveableField({
   const shortcut = useSaveShortcut(onSave, canSave);
 
   return (
-    <div className={className} onFocus={shortcut.onFocus} onBlur={shortcut.onBlur}>
+    <div
+      className={className}
+      onFocus={shortcut.onFocus}
+      onBlur={shortcut.onBlur}
+    >
       {children}
       <InlineSave
         show={canSave}

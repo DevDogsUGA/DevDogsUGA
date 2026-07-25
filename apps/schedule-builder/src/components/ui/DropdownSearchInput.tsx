@@ -33,6 +33,8 @@ export const DropdownSearchInput = ({
 
   useEffect(() => {
     if (selectedItem !== undefined) {
+      // Intentional: mirror the controlled `selectedItem` prop into the query.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery(selectedItem);
     }
   }, [selectedItem]);
@@ -88,6 +90,8 @@ export const DropdownSearchInput = ({
   //This useEffect is to handle clearing the input when the form is submitted or cleared
   useEffect(() => {
     if (clearState && query !== "") {
+      // Intentional: clear the input when the parent form raises `clearState`.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery("");
     }
   }, [clearState, query]);
@@ -104,7 +108,7 @@ export const DropdownSearchInput = ({
           onChange={handleQuery}
           onClick={() => setIsOpen((prev) => !prev)}
           placeholder={placeholder}
-          className={`hover:border-stone-400 w-full rounded-md border-2 p-2 outline-none ${className}`}
+          className={`w-full rounded-md border-2 p-2 outline-none hover:border-stone-400 ${className}`}
           autoComplete="off"
           onKeyDown={handleKeyPress}
         />

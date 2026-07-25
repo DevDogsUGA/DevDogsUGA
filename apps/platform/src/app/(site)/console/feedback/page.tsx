@@ -5,6 +5,7 @@ import PageHeader from "~/components/PageHeader";
 import { TableSkeleton } from "~/components/Skeletons";
 import type { FeedbackFilters } from "~/server/actions/feedback";
 import { getFeedbackPageData } from "~/server/loaders/feedback";
+import { emptyToUndefined } from "~/lib/blank";
 
 async function FeedbackData({ filters }: { filters: FeedbackFilters }) {
   const { items } = await getFeedbackPageData(filters);
@@ -25,9 +26,9 @@ export default async function FeedbackPage({
   const params = await searchParams;
   const filters: FeedbackFilters = {
     tab: params.tab === "archive" ? "archive" : "inbox",
-    type: params.type || undefined,
-    severity: params.severity || undefined,
-    search: params.search || undefined,
+    type: emptyToUndefined(params.type),
+    severity: emptyToUndefined(params.severity),
+    search: emptyToUndefined(params.search),
   };
 
   return (

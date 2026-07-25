@@ -1,4 +1,8 @@
-import { ArrowUpRightIcon, ClockIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
+import {
+  ArrowUpRightIcon,
+  ClockIcon,
+  MapPinIcon,
+} from "@phosphor-icons/react/ssr";
 import type { CalendarEvent, EventType } from "~/app/(site)/homeData";
 import { formatEventTime } from "~/app/(site)/homeData";
 

@@ -11,8 +11,13 @@ export default function NavigationProgress() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [animKey, setAnimKey] = useState(0);
   const phaseRef = useRef<Phase>("idle");
-  phaseRef.current = phase;
   const doneTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Mirror the latest phase into a ref (after commit) so the pathname effect can
+  // read it without taking `phase` as a dependency.
+  useEffect(() => {
+    phaseRef.current = phase;
+  });
 
   useEffect(() => {
     if (phaseRef.current === "idle") return;

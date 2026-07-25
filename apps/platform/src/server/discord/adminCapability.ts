@@ -36,7 +36,7 @@ export async function getDiscordSyncCapability(
       .get(Routes.guildMember(env.DISCORD_GUILD_ID, discordUserId))
       .catch((err) => {
         if (err instanceof DiscordAPIError && err.status === 404)
-          return { roles: [] } as Pick<APIGuildMember, "roles">;
+          return { roles: [] };
         throw err;
       }) as Promise<Pick<APIGuildMember, "roles">>,
     guildRoles ? Promise.resolve(guildRoles) : fetchGuildRoles(),

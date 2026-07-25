@@ -81,7 +81,7 @@ export function ToastProvider({ children }: React.PropsWithChildren) {
         ))}
       </AnimatePresence>
 
-      <Toast.Viewport className="fixed bottom-0 right-0 z-[2147483647] m-0 flex w-[32rem] max-w-[100vw] list-none flex-col justify-end gap-2.5 p-6 outline-none" />
+      <Toast.Viewport className="fixed right-0 bottom-0 z-[2147483647] m-0 flex w-[32rem] max-w-[100vw] list-none flex-col justify-end gap-2.5 p-6 outline-none" />
     </Toast.Provider>
   );
 }

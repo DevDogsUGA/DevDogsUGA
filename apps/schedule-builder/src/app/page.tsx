@@ -21,26 +21,24 @@ export default function Home() {
       >
         <div className="flex flex-col items-center px-6 py-8 min-[480px]:px-12 sm:px-16 md:max-w-[80%]">
           <div className="flex w-full flex-col items-center gap-8 rounded-3xl">
-            <div className="flex translate-y-2 justify-center text-nowrap text-5xl md:translate-y-5 md:text-6xl lg:text-7xl 2xl:text-8xl">
-              <h2 className="font-extrabold text-slate-800">
-                Bulldog Planner
-              </h2>
+            <div className="flex translate-y-2 justify-center text-5xl text-nowrap md:translate-y-5 md:text-6xl lg:text-7xl 2xl:text-8xl">
+              <h2 className="font-extrabold text-slate-800">Bulldog Planner</h2>
             </div>
             {/* Hero Section */}
-            <div className="flex w-full flex-col items-center gap-8 pl-10 pr-10 sm:gap-0 sm:pl-0 sm:pr-0">
+            <div className="flex w-full flex-col items-center gap-8 pr-10 pl-10 sm:gap-0 sm:pr-0 sm:pl-0">
               <div className="flex w-full items-center justify-center sm:gap-16">
                 <div className="flex translate-x-5 flex-col items-start">
                   <div className="flex items-center">
-                    <div className="border-red-700 mr-4 h-20 border-l-4"></div>
+                    <div className="mr-4 h-20 border-l-4 border-red-700"></div>
                     <div className="flex h-20 flex-col justify-center text-nowrap">
-                      <span className="text-red-700 text-nowrap text-left text-2xl font-bold leading-tight sm:text-3xl xl:text-4xl">
+                      <span className="text-left text-2xl leading-tight font-bold text-nowrap text-red-700 sm:text-3xl xl:text-4xl">
                         An Optimized
                         <br />
                         Schedule Builder
                       </span>
                     </div>
                   </div>
-                  <span className="text-red-700 mt-5 text-left font-medium sm:text-lg xl:text-2xl">
+                  <span className="mt-5 text-left font-medium text-red-700 sm:text-lg xl:text-2xl">
                     For Students, By Students
                   </span>
                 </div>
@@ -53,16 +51,16 @@ export default function Home() {
                 />
               </div>
               {/* Ready and Start Now Button */}
-              <div className="flex w-full min-w-[350px] max-w-lg -translate-y-0 items-center justify-center text-xl font-bold md:-translate-y-5 xl:-translate-y-3 xl:text-2xl">
-                <p className="bg-pink-100 -mr-8 w-1/2 cursor-default rounded-l-full bg-[#F8E6EA] px-6 py-4 text-left text-neutral-600/40 sm:py-5">
+              <div className="flex w-full max-w-lg min-w-[350px] -translate-y-0 items-center justify-center text-xl font-bold md:-translate-y-5 xl:-translate-y-3 xl:text-2xl">
+                <p className="-mr-8 w-1/2 cursor-default rounded-l-full bg-[#F8E6EA] bg-pink-100 px-6 py-4 text-left text-neutral-600/40 sm:py-5">
                   Ready?
                 </p>
                 <Link
-                  className="bg-red-700 flex w-3/5 items-center text-nowrap rounded-full px-6 py-4 pl-8 pr-1.5 text-white shadow-md sm:py-5"
+                  className="flex w-3/5 items-center rounded-full bg-red-700 px-6 py-4 pr-1.5 pl-8 text-nowrap text-white shadow-md sm:py-5"
                   href="/create"
                 >
                   Start Now!{" "}
-                  <span className="-my-2 ml-auto mr-3 flex size-12 items-center justify-center rounded-full border-2 border-red-900 bg-white pt-0.5 text-[1.5rem] leading-none">
+                  <span className="-my-2 mr-3 ml-auto flex size-12 items-center justify-center rounded-full border-2 border-red-900 bg-white pt-0.5 text-[1.5rem] leading-none">
                     🚀
                   </span>
                 </Link>

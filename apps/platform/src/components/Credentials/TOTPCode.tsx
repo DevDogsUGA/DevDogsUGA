@@ -45,6 +45,8 @@ export default function TOTPCode({ credentialId }: Props) {
       rafRef.current = requestAnimationFrame(tick);
     };
 
+    // Async fetch; setOtp runs after the await, then the ring animation starts.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchOTP().then(() => {
       if (alive) rafRef.current = requestAnimationFrame(tick);
     });

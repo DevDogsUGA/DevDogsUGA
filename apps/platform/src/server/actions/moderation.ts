@@ -10,7 +10,7 @@ import {
   reportReasons,
   reportResolutions,
   userSuspensions,
-} from '~/server/db/schema';
+} from "~/server/db/schema";
 import { expectSession } from "~/server/auth";
 import { supabaseAdmin } from "~/supabase/admin";
 import { deliverWebhook, type WebhookPayload } from "~/server/reports/webhook";
@@ -346,12 +346,19 @@ export async function getUnverifiedReports(
 
   const [reasonRows, contentTypeRows] = await Promise.all([
     db
-      .select({ id: reportReasons.id, title: reportReasons.title, description: reportReasons.description })
+      .select({
+        id: reportReasons.id,
+        title: reportReasons.title,
+        description: reportReasons.description,
+      })
       .from(reportReasons)
       .where(inArray(reportReasons.id, reasonIds)),
     contentTypeIds.length > 0
       ? db
-          .select({ id: reportContentTypes.id, label: reportContentTypes.label })
+          .select({
+            id: reportContentTypes.id,
+            label: reportContentTypes.label,
+          })
           .from(reportContentTypes)
           .where(inArray(reportContentTypes.id, contentTypeIds))
       : Promise.resolve([]),
@@ -362,7 +369,9 @@ export async function getUnverifiedReports(
 
   return rows.map((r) => {
     const reason = reasonMap.get(r.reasonId);
-    const contentType = r.contentTypeId ? contentTypeMap.get(r.contentTypeId) : undefined;
+    const contentType = r.contentTypeId
+      ? contentTypeMap.get(r.contentTypeId)
+      : undefined;
     return {
       id: r.id,
       reporterUserId: r.reporterUserId,
@@ -372,9 +381,15 @@ export async function getUnverifiedReports(
       contentUrl: r.contentUrl ?? null,
       description: r.description ?? null,
       reason: reason
-        ? { id: reason.id, title: reason.title, description: reason.description ?? null }
+        ? {
+            id: reason.id,
+            title: reason.title,
+            description: reason.description ?? null,
+          }
         : null,
-      contentType: contentType ? { id: contentType.id, label: contentType.label } : null,
+      contentType: contentType
+        ? { id: contentType.id, label: contentType.label }
+        : null,
     };
   });
 }
@@ -397,7 +412,7 @@ export async function ackVerifyWebhook(
     where: { id: reportId },
   });
 
-  if (!report || report.status !== "unverified") return;
+  if (report?.status !== "unverified") return;
 
   const reg = await db.query.oauthRegistrations.findFirst({
     columns: { userId: true },

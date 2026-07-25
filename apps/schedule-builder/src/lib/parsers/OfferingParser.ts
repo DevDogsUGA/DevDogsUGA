@@ -26,7 +26,7 @@ export class OfferingCollector {
       row["SCHEDULE_OFFERING.COURSE_REFERENCE_NUMBER"] ?? "",
       10,
     );
-    const academicPeriod = parseInt(row["ACADEMIC_PERIOD"] ?? "", 10);
+    const academicPeriod = parseInt(row.ACADEMIC_PERIOD ?? "", 10);
     const partOfTerm = row["SSBSECT.SSBSECT_PTRM_CODE"];
     if (isNaN(crn) || isNaN(academicPeriod) || !partOfTerm) return;
 

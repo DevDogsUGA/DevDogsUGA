@@ -92,6 +92,8 @@ export const DropdownTagInput = ({
   //This useEffect is to handle clearing the input when the form is submitted or cleared
   useEffect(() => {
     if (clearState && query !== "") {
+      // Intentional: clear the input when the parent form raises `clearState`.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery("");
     }
   }, [clearState, query]);
@@ -100,25 +102,25 @@ export const DropdownTagInput = ({
     // CONTAINER FOR ENTIRE COMPONENT
     <div className="relative min-w-full">
       <div
-        className={`hover:border-stone-400 rounded-md border-2 ${className} lg:flex`}
+        className={`rounded-md border-2 hover:border-stone-400 ${className} lg:flex`}
       >
         {/* //CONTAINER FOR TAGS */}
         <div
-          className={`border-stone-400 rounded-md bg-white ${className} no-scrollbar flex-shrink-1 flex items-center gap-7 overflow-x-scroll border-none lg:gap-4 ${tags.length !== 0 ? "px-2 py-1" : ""} ${tags.length === 1 ? "min-w-fit" : ""} lg:max-w-28`}
+          className={`rounded-md border-stone-400 bg-white ${className} no-scrollbar flex flex-shrink-1 items-center gap-7 overflow-x-scroll border-none lg:gap-4 ${tags.length !== 0 ? "px-2 py-1" : ""} ${tags.length === 1 ? "min-w-fit" : ""} lg:max-w-28`}
         >
           {/* INDIVIDUAL TAGS */}
           {tags.length !== 0 &&
             tags.map((index, key) => (
               <div
                 key={key}
-                className="bg-red-700 relative h-6 rounded-l-md px-2 lg:mr-3"
+                className="relative h-6 rounded-l-md bg-red-700 px-2 lg:mr-3"
               >
                 {index}
                 {/* REMOVE BUTTON */}
                 <button
                   type="button"
                   title="Remove Tag"
-                  className="bg-red-700 absolute -right-5 z-10 h-6 w-6 rounded-r-md"
+                  className="absolute -right-5 z-10 h-6 w-6 rounded-r-md bg-red-700"
                   onClick={(e) => removeTag(e, key)}
                 >
                   <Image

@@ -8,7 +8,7 @@ import {
   resolvedUserPermissions,
   roles,
   userRoles,
-} from '~/server/db/schema';
+} from "~/server/db/schema";
 import { refreshUserPermissions } from "~/server/db/refreshPermissions";
 import { expectSession } from "~/server/auth";
 import { supabaseAdmin } from "~/supabase/admin";
@@ -354,7 +354,7 @@ export async function updateRole(
       await pushRoleToDiscord({
         id: roleId,
         title: data.title !== undefined ? data.title.trim() : target.title,
-        color: data.color !== undefined ? data.color : target.color,
+        color: data.color ?? target.color,
         discordRoleId: target.discordRoleId,
       });
     } catch (err) {

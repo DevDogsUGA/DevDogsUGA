@@ -1,10 +1,12 @@
 name: CI
 
-# PR validation only — no deploys. Runs on PRs opened by organization members
-# (fork PRs from non-members are skipped; `pull_request` never exposes secrets
-# to fork code).
+# PR validation (and cache-warming pushes to main) — no deploys. Jobs run for
+# PRs opened by organization members (fork PRs from non-members are skipped;
+# `pull_request` never exposes secrets to fork code) and for pushes to main.
 on:
   pull_request:
+  push:
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -16,9 +18,11 @@ env:
   TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
 jobs:
-  # Lint / typecheck / build only the packages affected by the PR.
+  # Lint + typecheck + test + build for the JS/TS packages affected by the change.
   validate:
-    if: contains(fromJSON('["MEMBER", "OWNER", "COLLABORATOR"]'), github.event.pull_request.author_association)
+    if: >-
+      github.event_name == 'push' ||
+      contains(fromJSON('["MEMBER", "OWNER", "COLLABORATOR"]'), github.event.pull_request.author_association)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,19 +33,42 @@ jobs:
         run: corepack enable
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Flutter isn't installed here — the study-group-finder app is validated
-      # in the `flutter` job below.
-      - name: Typecheck + build affected
-        run: pnpm turbo run typecheck build --affected --filter='!@devdogsuga/study-group-finder'
-      # TODO: add `lint` once the eslint-plugin-react / eslint 10 incompatibility
-      # is resolved (downgrade eslint to ^9.39.x).
+      # in the `flutter` job below. Turbo runs the four tasks in parallel and
+      # shares the remote cache, so lint + test add little over typecheck+build.
+      - name: Lint + typecheck + test + build (affected)
+        run: >-
+          pnpm turbo run lint typecheck test build
+          --affected --filter='!@devdogsuga/study-group-finder'
 
-  # Flutter app — only when it (or a shared dep) is affected.
-  flutter:
-    if: contains(fromJSON('["MEMBER", "OWNER", "COLLABORATOR"]'), github.event.pull_request.author_association)
+  # Repo-wide formatting check — fast, no build needed.
+  format:
+    if: >-
+      github.event_name == 'push' ||
+      contains(fromJSON('["MEMBER", "OWNER", "COLLABORATOR"]'), github.event.pull_request.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Prettier check
+        run: pnpm format:check
+
+  # Playwright E2E for the Next apps, only when one is affected. Runs against the
+  # local Supabase stack (never remote — test accounts are backed by real
+  # auth.users). Heavier than the other jobs; it Docker-boots Supabase.
+  e2e:
+    if: >-
+      github.event_name == 'push' ||
+      contains(fromJSON('["MEMBER", "OWNER", "COLLABORATOR"]'), github.event.pull_request.author_association)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +78,67 @@ jobs:
         run: corepack enable
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Is a Next app affected?
+        id: affected
+        run: |
+          if pnpm turbo run test:e2e --affected \
+              --filter='@devdogsuga/platform' --filter='@devdogsuga/schedule-builder' \
+              --dry-run=json | grep -qE '"@devdogsuga/(platform|schedule-builder)"'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      # `with-env`-wrapped scripts load a root .env; provide one from a secret so
+      # the local Supabase stack and `dev:local` web server can boot in CI.
+      - name: Write CI env file
+        if: steps.affected.outputs.run == 'true'
+        run: printf '%s' "${{ secrets.CI_DOTENV }}" > .env
+      - name: Cache Playwright browsers
+        if: steps.affected.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install Playwright (chromium)
+        if: steps.affected.outputs.run == 'true'
+        run: pnpm --filter @devdogsuga/platform exec playwright install --with-deps chromium
+      - name: Start local Supabase stack
+        if: steps.affected.outputs.run == 'true'
+        run: pnpm sb start-local-stack
+      - name: Run E2E (affected)
+        if: steps.affected.outputs.run == 'true'
+        run: >-
+          pnpm turbo run test:e2e --affected
+          --filter='@devdogsuga/platform' --filter='@devdogsuga/schedule-builder'
+      - name: Upload Playwright report
+        if: failure() && steps.affected.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/*/playwright-report
+          retention-days: 7
+      - name: Stop local Supabase stack
+        if: always() && steps.affected.outputs.run == 'true'
+        run: pnpm sb stop-local-stack || true
+
+  # Flutter app — only when it (or a shared dep) is affected.
+  flutter:
+    if: >-
+      github.event_name == 'push' ||
+      contains(fromJSON('["MEMBER", "OWNER", "COLLABORATOR"]'), github.event.pull_request.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Is study-group-finder affected?
@@ -66,6 +153,7 @@ jobs:
         if: steps.affected.outputs.run == 'true'
         with:
           channel: stable
+          cache: true
       - name: Analyze + test
         if: steps.affected.outputs.run == 'true'
         working-directory: apps/study-group-finder

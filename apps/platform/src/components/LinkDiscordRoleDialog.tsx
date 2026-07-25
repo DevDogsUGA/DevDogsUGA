@@ -119,10 +119,7 @@ export default function LinkDiscordRoleDialog({
         className="max-w-md border-white/20 bg-mauve-900 p-0 shadow-2xl"
         showCloseButton={false}
       >
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-5 px-5 py-6"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-5 py-6">
           <DialogHeader className="flex-row items-center justify-between">
             <DialogTitle className="text-base font-semibold text-white">
               Link &ldquo;{role.title}&rdquo; to Discord
@@ -132,109 +129,109 @@ export default function LinkDiscordRoleDialog({
             </DialogClose>
           </DialogHeader>
 
-            <fieldset className="flex flex-col gap-2">
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
-                <input
-                  type="radio"
-                  name="mode"
-                  checked={mode === "existing"}
-                  onChange={() => setMode("existing")}
-                  className="accent-indigo-400"
-                />
-                Link to an existing Discord role
-              </label>
-              {mode === "existing" && (
-                <select
-                  value={selectedId}
-                  onChange={(e) => setSelectedId(e.target.value)}
-                  disabled={loading}
-                  className="ml-5 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/40"
-                >
-                  <option value="">
-                    {loading ? "Loading…" : "Select a Discord role…"}
-                  </option>
-                  {discordRoles.map((r) => {
-                    const canManage = canManageDiscordRolePosition(
-                      callerCapability,
-                      r.position,
-                    );
-                    return (
-                      <option key={r.id} value={r.id} disabled={!canManage}>
-                        {r.name}
-                        {canManage ? "" : " (above your Discord roles)"}
-                      </option>
-                    );
-                  })}
-                </select>
-              )}
-
-              <label
-                className={[
-                  "flex items-center gap-2 text-xs",
-                  canCreateNew
-                    ? "cursor-pointer text-white/80"
-                    : "cursor-not-allowed text-white/30",
-                ].join(" ")}
-                title={
-                  canCreateNew
-                    ? undefined
-                    : "Your Discord account doesn't have permission to create Discord roles."
-                }
+          <fieldset className="flex flex-col gap-2">
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
+              <input
+                type="radio"
+                name="mode"
+                checked={mode === "existing"}
+                onChange={() => setMode("existing")}
+                className="accent-indigo-400"
+              />
+              Link to an existing Discord role
+            </label>
+            {mode === "existing" && (
+              <select
+                value={selectedId}
+                onChange={(e) => setSelectedId(e.target.value)}
+                disabled={loading}
+                className="ml-5 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/40"
               >
-                <input
-                  type="radio"
-                  name="mode"
-                  checked={mode === "new"}
-                  onChange={() => setMode("new")}
-                  disabled={!canCreateNew}
-                  className="accent-indigo-400"
-                />
-                Create a new Discord role from this role
-              </label>
-            </fieldset>
+                <option value="">
+                  {loading ? "Loading…" : "Select a Discord role…"}
+                </option>
+                {discordRoles.map((r) => {
+                  const canManage = canManageDiscordRolePosition(
+                    callerCapability,
+                    r.position,
+                  );
+                  return (
+                    <option key={r.id} value={r.id} disabled={!canManage}>
+                      {r.name}
+                      {canManage ? "" : " (above your Discord roles)"}
+                    </option>
+                  );
+                })}
+              </select>
+            )}
 
-            <p className="text-xs text-white/60">
-              Name and color will sync with Discord going forward, and only
-              members with a linked Discord account can be assigned this role.
-              {memberCount !== null && memberCount > 0 && (
-                <>
-                  {" "}
-                  <strong className="text-amber-300">
-                    {memberCount} member{memberCount === 1 ? "" : "s"} without a
-                    linked Discord account currently{" "}
-                    {memberCount === 1 ? "has" : "have"} this role and will lose
-                    it.
-                  </strong>
-                </>
-              )}
-            </p>
+            <label
+              className={[
+                "flex items-center gap-2 text-xs",
+                canCreateNew
+                  ? "cursor-pointer text-white/80"
+                  : "cursor-not-allowed text-white/30",
+              ].join(" ")}
+              title={
+                canCreateNew
+                  ? undefined
+                  : "Your Discord account doesn't have permission to create Discord roles."
+              }
+            >
+              <input
+                type="radio"
+                name="mode"
+                checked={mode === "new"}
+                onChange={() => setMode("new")}
+                disabled={!canCreateNew}
+                className="accent-indigo-400"
+              />
+              Create a new Discord role from this role
+            </label>
+          </fieldset>
 
-            {error && <p className="text-xs text-rose-400">{error}</p>}
+          <p className="text-xs text-white/60">
+            Name and color will sync with Discord going forward, and only
+            members with a linked Discord account can be assigned this role.
+            {memberCount !== null && memberCount > 0 && (
+              <>
+                {" "}
+                <strong className="text-amber-300">
+                  {memberCount} member{memberCount === 1 ? "" : "s"} without a
+                  linked Discord account currently{" "}
+                  {memberCount === 1 ? "has" : "have"} this role and will lose
+                  it.
+                </strong>
+              </>
+            )}
+          </p>
 
-            <div className="flex justify-end gap-3">
-              <DialogClose asChild>
-                <button
-                  type="button"
-                  className="rounded-lg border border-white/20 px-4 py-1.5 text-sm text-white/70 transition hover:bg-white/10"
-                >
-                  Cancel
-                </button>
-              </DialogClose>
-              <FormButton
-                theme="black"
-                type="submit"
-                disabled={
-                  submitting ||
-                  loading ||
-                  (mode === "existing" && !selectedId) ||
-                  (mode === "new" && !canCreateNew)
-                }
+          {error && <p className="text-xs text-rose-400">{error}</p>}
+
+          <div className="flex justify-end gap-3">
+            <DialogClose asChild>
+              <button
+                type="button"
+                className="rounded-lg border border-white/20 px-4 py-1.5 text-sm text-white/70 transition hover:bg-white/10"
               >
-                Link
-              </FormButton>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+                Cancel
+              </button>
+            </DialogClose>
+            <FormButton
+              theme="black"
+              type="submit"
+              disabled={
+                submitting ||
+                loading ||
+                (mode === "existing" && !selectedId) ||
+                (mode === "new" && !canCreateNew)
+              }
+            >
+              Link
+            </FormButton>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

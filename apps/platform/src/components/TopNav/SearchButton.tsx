@@ -9,6 +9,8 @@ export default function SearchButton() {
   const [ctrl, setCtrl] = useState("Ctrl");
 
   useEffect(() => {
+    // Platform check for the shortcut hint, once mounted (navigator is client-only).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (/mac|iphone|ipad/i.test(navigator.platform)) setCtrl("⌘");
 
     function onKeyDown(event: KeyboardEvent) {

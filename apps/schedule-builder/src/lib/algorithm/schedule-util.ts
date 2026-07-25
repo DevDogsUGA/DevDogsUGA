@@ -1,5 +1,10 @@
-import type { AlgorithmSection, DayOfWeek, HConstraints, SConstraints } from "./types";
-import { Schedule } from "./schedule";
+import type {
+  AlgorithmSection,
+  DayOfWeek,
+  HConstraints,
+  SConstraints,
+} from "./types";
+import { type Schedule } from "./schedule";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -170,7 +175,11 @@ export function computeOverallObjectiveExtended(
     sConstraintCount++;
   }
   if (soft.prefStartTime != null) {
-    sConstraintScore += normalizeValue(computeStartTime(schedule), TIME_MIN, TIME_MAX);
+    sConstraintScore += normalizeValue(
+      computeStartTime(schedule),
+      TIME_MIN,
+      TIME_MAX,
+    );
     sConstraintCount++;
   }
   if (soft.prefEndTime != null) {

@@ -9,8 +9,18 @@ import {
   AlertDialogTitle,
 } from "~/ui/alert-dialog";
 import { usePathname, useRouter } from "next/navigation";
-import { useActionState, useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUpIcon, ArrowClockwiseIcon, XIcon } from "@phosphor-icons/react/ssr";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import {
+  ArrowUpIcon,
+  ArrowClockwiseIcon,
+  XIcon,
+} from "@phosphor-icons/react/ssr";
 import oauthAction from "~/server/actions/oauth";
 import type { getOAuthPageData } from "~/server/loaders/console";
 import ConfirmDestructiveAction from "~/ui/confirm-destructive-action";
@@ -50,6 +60,8 @@ export default function OAuthCredentialsField({
   const [prefillOpen, setPrefillOpen] = useState(false);
 
   useEffect(() => {
+    // Intentional: open the prefill UI when a redirect URI arrives via props.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (prefillRedirectUri) setPrefillOpen(true);
   }, [prefillRedirectUri]);
 
@@ -81,86 +93,84 @@ export default function OAuthCredentialsField({
     <>
       <AlertDialog open={prefillOpen} onOpenChange={handlePrefillOpenChange}>
         <AlertDialogContent>
-            <div className="flex flex-col gap-6 rounded-xl border border-mauve-700 bg-mauve-900 px-4 py-6 text-mauve-300 shadow-xl shadow-black/40">
-              {prefillStatus === "no-client" && (
-                <>
-                  <AlertDialogTitle className="text-lg font-semibold text-white">
-                    OAuth not enabled
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Enable your OAuth client first, then revisit this page to
-                    register your redirect URI.
-                  </AlertDialogDescription>
-                  <div className="flex justify-end">
-                    <AlertDialogCancel className="rounded-sm border border-mauve-600 bg-mauve-800 px-4 py-1 text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-900">
-                      Got it
-                    </AlertDialogCancel>
-                  </div>
-                </>
-              )}
+          <div className="flex flex-col gap-6 rounded-xl border border-mauve-700 bg-mauve-900 px-4 py-6 text-mauve-300 shadow-xl shadow-black/40">
+            {prefillStatus === "no-client" && (
+              <>
+                <AlertDialogTitle className="text-lg font-semibold text-white">
+                  OAuth not enabled
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Enable your OAuth client first, then revisit this page to
+                  register your redirect URI.
+                </AlertDialogDescription>
+                <div className="flex justify-end">
+                  <AlertDialogCancel className="rounded-sm border border-mauve-600 bg-mauve-800 px-4 py-1 text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-900">
+                    Got it
+                  </AlertDialogCancel>
+                </div>
+              </>
+            )}
 
-              {prefillStatus === "already-added" && (
-                <>
-                  <AlertDialogTitle className="text-lg font-semibold text-white">
-                    Already registered
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    <Input.Text>{prefillRedirectUri}</Input.Text>{" "}
-                    is already in your redirect URIs. You&rsquo;re all set.
-                  </AlertDialogDescription>
-                  <div className="flex justify-end">
-                    <AlertDialogCancel className="rounded-sm border border-mauve-600 bg-mauve-800 px-4 py-1 text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-900">
-                      Close
-                    </AlertDialogCancel>
-                  </div>
-                </>
-              )}
+            {prefillStatus === "already-added" && (
+              <>
+                <AlertDialogTitle className="text-lg font-semibold text-white">
+                  Already registered
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  <Input.Text>{prefillRedirectUri}</Input.Text> is already in
+                  your redirect URIs. You&rsquo;re all set.
+                </AlertDialogDescription>
+                <div className="flex justify-end">
+                  <AlertDialogCancel className="rounded-sm border border-mauve-600 bg-mauve-800 px-4 py-1 text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-900">
+                    Close
+                  </AlertDialogCancel>
+                </div>
+              </>
+            )}
 
-              {prefillStatus === "at-limit" && (
-                <>
-                  <AlertDialogTitle className="text-lg font-semibold text-white">
-                    Redirect URI limit reached
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    You&rsquo;ve already registered 5 redirect URIs. Remove one
-                    before adding{" "}
-                    <Input.Text>{prefillRedirectUri}</Input.Text>.
-                  </AlertDialogDescription>
-                  <div className="flex justify-end">
-                    <AlertDialogCancel className="rounded-sm border border-mauve-600 bg-mauve-800 px-4 py-1 text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-900">
-                      Got it
-                    </AlertDialogCancel>
-                  </div>
-                </>
-              )}
+            {prefillStatus === "at-limit" && (
+              <>
+                <AlertDialogTitle className="text-lg font-semibold text-white">
+                  Redirect URI limit reached
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  You&rsquo;ve already registered 5 redirect URIs. Remove one
+                  before adding <Input.Text>{prefillRedirectUri}</Input.Text>.
+                </AlertDialogDescription>
+                <div className="flex justify-end">
+                  <AlertDialogCancel className="rounded-sm border border-mauve-600 bg-mauve-800 px-4 py-1 text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-900">
+                    Got it
+                  </AlertDialogCancel>
+                </div>
+              </>
+            )}
 
-              {prefillStatus === "ready" && (
-                <>
-                  <AlertDialogTitle className="text-lg font-semibold text-white">
-                    Register redirect URI?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Add{" "}
-                    <Input.Text>{prefillRedirectUri}</Input.Text>{" "}
-                    as a redirect URI for your DevDogs OAuth client?
-                  </AlertDialogDescription>
-                  <div className="flex items-center justify-end gap-4">
-                    <AlertDialogCancel className="rounded-sm border border-mauve-600 bg-mauve-800 px-4 py-1 text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-900">
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction asChild>
-                      <button
-                        className="rounded-sm border-2 border-cyan-400 bg-cyan-400 px-4 py-1 font-medium text-black transition hover:bg-cyan-950 hover:text-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 outline-none"
-                        onClick={handlePrefillConfirm}
-                        disabled={isPending}
-                      >
-                        Add
-                      </button>
-                    </AlertDialogAction>
-                  </div>
-                </>
-              )}
-            </div>
+            {prefillStatus === "ready" && (
+              <>
+                <AlertDialogTitle className="text-lg font-semibold text-white">
+                  Register redirect URI?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Add <Input.Text>{prefillRedirectUri}</Input.Text> as a
+                  redirect URI for your DevDogs OAuth client?
+                </AlertDialogDescription>
+                <div className="flex items-center justify-end gap-4">
+                  <AlertDialogCancel className="rounded-sm border border-mauve-600 bg-mauve-800 px-4 py-1 text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-900">
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction asChild>
+                    <button
+                      className="rounded-sm border-2 border-cyan-400 bg-cyan-400 px-4 py-1 font-medium text-black transition outline-none hover:bg-cyan-950 hover:text-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2"
+                      onClick={handlePrefillConfirm}
+                      disabled={isPending}
+                    >
+                      Add
+                    </button>
+                  </AlertDialogAction>
+                </div>
+              </>
+            )}
+          </div>
         </AlertDialogContent>
       </AlertDialog>
 
@@ -246,8 +256,8 @@ export default function OAuthCredentialsField({
         <div className="mt-4 flex flex-col gap-1.5 pb-1">
           <h4 className="font-medium text-white">Redirect URIs</h4>
           <p className="max-w-prose pb-1.5 text-xs text-balance text-mauve-400 sm:text-left">
-            Up to 5 redirect URIs. OAuth clients are for local testing only — only{" "}
-            <Input.Text>localhost</Input.Text> addresses are accepted.
+            Up to 5 redirect URIs. OAuth clients are for local testing only —
+            only <Input.Text>localhost</Input.Text> addresses are accepted.
           </p>
 
           <ul className="flex flex-col gap-3 pb-1.5 empty:hidden">

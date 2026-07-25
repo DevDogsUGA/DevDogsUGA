@@ -1,9 +1,21 @@
 {
-  "$schema": "https://v2-8-3.turborepo.dev/schema.json",
+  "$schema": "https://turborepo.com/schema.json",
+  // Root-level files that every package's tasks depend on but that live
+  // outside any package, so turbo cannot reach them through the task graph:
+  // the tsconfig every package extends, and the shared eslint/vitest presets
+  // from @devdogsuga/config (which exposes no task of its own to depend on).
+  "globalDependencies": [
+    "tsconfig.base.json",
+    "packages/config/eslint/**",
+    "packages/config/tsconfig/**",
+    "packages/config/vitest/**"
+  ],
   "globalPassThroughEnv": [
     "BASE_URL",
     "SCHEDULE_BUILDER_URL",
     "DEPLOY_ENV",
+    "SKIP_ENV_VALIDATION",
+    "CI",
     "VERCEL_ENV",
     "VERCEL_URL",
     "VERCEL_PROJECT_PRODUCTION_URL"
@@ -11,7 +23,27 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", ".open-next/**", "dist/**", "build/**"],
+      // `.next/cache` is Next's local incremental-compiler cache: large,
+      // machine-specific, and rebuilt on demand. Caching it as a build output
+      // bloats the turbo cache without making restores any more correct.
+      // `*.tsbuildinfo` must be cached alongside `dist`: tsconfig.base.json
+      // sets `incremental`, and the build-info file lives at the package root
+      // rather than inside `dist`. If it survives while `dist` does not, tsc
+      // considers the output current and emits nothing — the build "succeeds"
+      // with no `dist`, and consumers fail to resolve the package's types.
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        ".open-next/**",
+        "dist/**",
+        "build/**",
+        "*.tsbuildinfo"
+      ],
+      // BASE_URL, SCHEDULE_BUILDER_URL and DEPLOY_ENV appear here *and* in
+      // globalPassThroughEnv above; that pairing is deliberate, not a
+      // duplicate. Passthrough makes them readable by every task under strict
+      // env mode; listing them here additionally folds them into the build
+      // hash, which they need since their values are baked into the output.
       "env": [
         "BASE_URL",
         "SCHEDULE_BUILDER_URL",
@@ -49,14 +81,27 @@
     "typecheck": {
       "dependsOn": ["^build"]
     },
+    // The shared eslint config is type-aware (recommendedTypeChecked +
+    // projectService), so linting resolves types across package boundaries.
+    // Without the workspace deps' `dist/*.d.ts` on disk those types collapse
+    // to `any` and the no-unsafe-* rules fire in the hundreds — so lint needs
+    // its dependencies built, exactly like typecheck does.
     "lint": {
-      "dependsOn": []
+      "dependsOn": ["^build"]
     },
     "lint:fix": {
-      "dependsOn": []
+      "dependsOn": ["^build"]
     },
     "test": {
       "dependsOn": ["^build"]
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "cache": false
     },
     "generate-types": {
       "cache": false

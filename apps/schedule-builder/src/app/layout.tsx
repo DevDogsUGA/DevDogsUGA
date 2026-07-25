@@ -40,12 +40,14 @@ export default async function RootLayout({
       lang="en"
       className={`${sans.variable} ${display.variable} ${mono.variable}`}
     >
-      <body className="bg-pink-50 flex min-h-screen flex-col">
+      <body className="flex min-h-screen flex-col bg-pink-50">
         <QueryProvider>
           <SessionProvider>
             <TermProvider initialTerms={initialTerms}>
               <ToastProvider>
-                <main className="relative flex flex-1 flex-col">{children}</main>
+                <main className="relative flex flex-1 flex-col">
+                  {children}
+                </main>
                 <Footer />
               </ToastProvider>
             </TermProvider>

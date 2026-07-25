@@ -21,7 +21,9 @@ export function useDraftCourses() {
       if (user) {
         const { data, error } = await supabase
           .from("userPlanDraftCourses")
-          .select("id, courseId, excludedCrns, courses(abbr, courseNumber, title)")
+          .select(
+            "id, courseId, excludedCrns, courses(abbr, courseNumber, title)",
+          )
           .eq("academicPeriod", academicPeriod!);
         if (error) throw error;
         return (data ?? []) as unknown as DraftCourse[];
@@ -29,12 +31,14 @@ export function useDraftCourses() {
       const map = readLocal(LOCAL_KEYS.draftCourses, LocalDraftCoursesMap);
       const flat = map[String(academicPeriod)] ?? [];
       // Normalize flat local shape → DraftCourse shape (embedded courses array)
-      return flat.map(({ id, courseId, excludedCrns, abbr, courseNumber, title }) => ({
-        id,
-        courseId,
-        excludedCrns,
-        courses: [{ abbr, courseNumber, title }],
-      }));
+      return flat.map(
+        ({ id, courseId, excludedCrns, abbr, courseNumber, title }) => ({
+          id,
+          courseId,
+          excludedCrns,
+          courses: [{ abbr, courseNumber, title }],
+        }),
+      );
     },
   });
 
@@ -80,10 +84,10 @@ export function useDraftCourses() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["draft-courses", academicPeriod],
       });
-      queryClient.invalidateQueries({ queryKey: ["term-course-counts"] });
+      void queryClient.invalidateQueries({ queryKey: ["term-course-counts"] });
     },
   });
 
@@ -105,10 +109,10 @@ export function useDraftCourses() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["draft-courses", academicPeriod],
       });
-      queryClient.invalidateQueries({ queryKey: ["term-course-counts"] });
+      void queryClient.invalidateQueries({ queryKey: ["term-course-counts"] });
     },
   });
 

@@ -6,11 +6,11 @@ const page = () => {
     // PAGE CONTAINER
     <>
       <Navbar />
-      <div className="min-w-screen flex min-h-screen items-center justify-center overflow-x-hidden pb-32">
+      <div className="flex min-h-screen min-w-screen items-center justify-center overflow-x-hidden pb-32">
         {/* MODAL CONTAINER */}
-        <main className="lg:mx-34 sm:border-pink-100 sm:bg-pink-50 flex w-full flex-col rounded-lg sm:my-20 sm:flex-row sm:border-4 sm:shadow-2xl lg:max-w-5xl">
+        <main className="flex w-full flex-col rounded-lg sm:my-20 sm:flex-row sm:border-4 sm:border-pink-100 sm:bg-pink-50 sm:shadow-2xl lg:mx-34 lg:max-w-5xl">
           {/* LEFT SECTION */}
-          <div className="flex min-w-min justify-center sm:w-2/5 sm:p-8 sm:pb-60 sm:pt-32 md:px-12">
+          <div className="flex min-w-min justify-center sm:w-2/5 sm:p-8 sm:pt-32 sm:pb-60 md:px-12">
             <Image
               className="absolute"
               width={400}
@@ -19,7 +19,7 @@ const page = () => {
               alt={"paws overlay"}
               draggable="false"
             />
-            <h1 className="text-stone-800 z-10 text-7xl font-bold">
+            <h1 className="z-10 text-7xl font-bold text-stone-800">
               Let&apos;s Get <br />
               You <br /> Started!
             </h1>

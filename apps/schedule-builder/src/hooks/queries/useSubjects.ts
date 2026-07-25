@@ -10,7 +10,7 @@ export function useSubjects() {
         .select("abbr")
         .order("abbr");
       if (error) throw error;
-      return data.map((r) => r.abbr as string);
+      return data.map((r) => r.abbr);
     },
   });
 }

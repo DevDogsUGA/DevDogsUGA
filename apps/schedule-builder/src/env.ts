@@ -67,7 +67,8 @@ export const env = createEnv({
     OAUTH_USERINFO_URL: process.env.OAUTH_USERINFO_URL,
     // Client-side Supabase (mirrored from API_URL / PUBLISHABLE_KEY by sb:start)
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_AUTH_MODE: process.env.NEXT_PUBLIC_AUTH_MODE,
     // Built-ins
     NODE_ENV: process.env.NODE_ENV,

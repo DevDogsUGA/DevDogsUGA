@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import type { APIRole } from "discord-api-types/v10";
 import { expectSession } from "~/server/auth";
 import { db } from "~/server/db";
-import { profiles, roles } from '~/server/db/schema';
+import { profiles, roles } from "~/server/db/schema";
 import {
   getCallerContext,
   getRootHolderId,

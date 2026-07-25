@@ -35,7 +35,7 @@ import { PencilSimpleIcon, PlusIcon } from "@phosphor-icons/react/ssr";
 import { useProfileLinks } from "~/hooks/useProfileLinks";
 import { useSaveShortcut } from "~/hooks/useSaveShortcut";
 import { useUnsavedChangesWarning } from "~/hooks/useUnsavedChangesWarning";
-import type { profileLinks } from '~/server/db/schema';
+import type { profileLinks } from "~/server/db/schema";
 import DropTarget from "~/ui/drop-target";
 import InlineSave from "~/ui/inline-save";
 import LinkCard from "./LinkCard";
@@ -345,9 +345,12 @@ export default function ProfileLinks({ initialLinks }: Props) {
       .map((l) => ({ ...l, _isPreview: false as const })),
   ];
 
-  // Keep a ref so handleDragEnd always reads the latest list without needing it as a dep
+  // Keep a ref so handleDragEnd always reads the latest list without needing it
+  // as a dep (updated after commit, not during render).
   const displayLinksRef = useRef(displayLinks);
-  displayLinksRef.current = displayLinks;
+  useEffect(() => {
+    displayLinksRef.current = displayLinks;
+  });
 
   const multipleItems = displayLinks.length > 1;
   // Exclude preview from sortable items while submission is pending (frozen state)
@@ -539,6 +542,7 @@ export default function ProfileLinks({ initialLinks }: Props) {
               disabled={sortableItems.length <= 1}
             >
               <AnimatePresence initial={false}>
+                {/* eslint-disable-next-line react-hooks/refs -- consume-once entrance-animation flag (read/cleared during render) */}
                 {displayLinks.map((link) => {
                   if (link._isPreview) {
                     return (
@@ -553,6 +557,9 @@ export default function ProfileLinks({ initialLinks }: Props) {
                     );
                   }
 
+                  // Consume-once animation flag: this newly added link animates
+                  // in on its first render only, so we read and clear the ref
+                  // here during render (a deliberate imperative one-shot).
                   const isJustAdded = justAddedIdRef.current === link.id;
                   if (isJustAdded) justAddedIdRef.current = null;
 

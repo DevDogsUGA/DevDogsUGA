@@ -8,9 +8,10 @@ import {
   credentials,
   roles,
   userRoles,
-} from '~/server/db/schema';
+} from "~/server/db/schema";
 import { expectSession } from "~/server/auth";
 import { supabaseAdmin } from "~/supabase/admin";
+import { blankToNull } from "~/lib/blank";
 
 import { canUserCreateCredentials } from "~/server/actions/permissions";
 
@@ -156,9 +157,9 @@ export async function createCredential(
     .insert(credentials)
     .values({
       name: name.trim(),
-      description: description?.trim() || null,
+      description: blankToNull(description),
       type,
-      email: email?.trim() || null,
+      email: blankToNull(email),
       passwordSecretId,
       totpSecretId,
       createdBy: userId,
@@ -338,7 +339,7 @@ export async function getAccessibleCredentials(
     id: row.id,
     name: row.name,
     description: row.description,
-    type: row.type as CredentialType,
+    type: row.type,
     email: row.email,
     hasPassword: row.passwordSecretId !== null,
     hasTotp: row.totpSecretId !== null,

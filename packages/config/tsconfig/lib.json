@@ -1,0 +1,32 @@
+{
+  // Shared preset for the workspace's emitting Node libraries (docs-preview,
+  // feedback-client, oauth-setup, reports-client). Inherits the repo-wide
+  // target/strictness from tsconfig.base.json and layers on the two things
+  // those packages need that the Next apps don't: Node resolution and real
+  // emit.
+  //
+  // Consumers extend this by relative path rather than by the
+  // "@devdogsuga/config/..." specifier: tsc resolves package specifiers in
+  // `extends`, but vitest's oxc transform does not, and it reads these configs
+  // too ("Failed to load tsconfig ... Tsconfig not found").
+  //
+  // outDir/rootDir/include/exclude are deliberately NOT here — TypeScript
+  // resolves relative paths against the config file that declares them, so a
+  // path set here would point inside packages/config. Each package keeps its
+  // own; everything else is inherited.
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["ES2025"],
+    "noEmit": false,
+    "declaration": true,
+    // Off, unlike the base config. docs-preview, feedback-client and
+    // reports-client have no `"type": "module"`, so nodenext classifies their
+    // ESM-looking sources as CommonJS and tsc transpiles them down on emit.
+    // verbatimModuleSyntax forbids exactly that, so enabling it here would
+    // require migrating those three to ESM first — a change to their published
+    // module format, not a tsconfig cleanup.
+    "verbatimModuleSyntax": false
+  }
+}

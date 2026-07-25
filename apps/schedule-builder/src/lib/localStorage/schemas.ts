@@ -19,7 +19,9 @@ export const LocalDraftPrefs = z.object({
 
 export type LocalDraftPrefs = z.infer<typeof LocalDraftPrefs>;
 
-export const LocalDraftPrefsMap = z.record(z.string(), LocalDraftPrefs).catch({});
+export const LocalDraftPrefsMap = z
+  .record(z.string(), LocalDraftPrefs)
+  .catch({});
 
 export type LocalDraftPrefsMap = z.infer<typeof LocalDraftPrefsMap>;
 

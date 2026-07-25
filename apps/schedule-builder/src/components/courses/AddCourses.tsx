@@ -2,7 +2,7 @@
 
 import type { Course } from "~/types/course";
 import Link from "next/link";
-import { ReadonlyURLSearchParams, useRouter } from "next/navigation";
+import { type ReadonlyURLSearchParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PiPlusBold } from "react-icons/pi";
 import * as z from "zod";
@@ -138,28 +138,28 @@ export function AddCourses({ onAddCourse, searchParams }: Props) {
         <Link
           href={subjectView.href}
           data-active={state.view === "subject"}
-          className="bg-pink-100 data-[active=true]:bg-red-700 w-1/3 rounded-bl-none rounded-br-none rounded-tl-lg rounded-tr-lg px-4 py-2 text-left font-bold capitalize text-[#CFBEBE] duration-150 data-[active=true]:text-white"
+          className="w-1/3 rounded-tl-lg rounded-tr-lg rounded-br-none rounded-bl-none bg-pink-100 px-4 py-2 text-left font-bold text-[#CFBEBE] capitalize duration-150 data-[active=true]:bg-red-700 data-[active=true]:text-white"
         >
           By Subject
         </Link>
         <Link
           href={instructorView.href}
           data-active={state.view === "instructor"}
-          className="bg-pink-100 data-[active=true]:bg-red-700 w-1/3 rounded-bl-none rounded-br-none rounded-tl-lg rounded-tr-lg px-4 py-2 text-left font-bold capitalize text-[#CFBEBE] duration-150 data-[active=true]:text-white"
+          className="w-1/3 rounded-tl-lg rounded-tr-lg rounded-br-none rounded-bl-none bg-pink-100 px-4 py-2 text-left font-bold text-[#CFBEBE] capitalize duration-150 data-[active=true]:bg-red-700 data-[active=true]:text-white"
         >
           By Instructor
         </Link>
         <Link
           href={crnView.href}
           data-active={state.view === "crn"}
-          className="bg-pink-100 data-[active=true]:bg-red-700 w-1/3 rounded-bl-none rounded-br-none rounded-tl-lg rounded-tr-lg px-4 py-2 text-left font-bold capitalize text-[#CFBEBE] duration-150 data-[active=true]:text-white"
+          className="w-1/3 rounded-tl-lg rounded-tr-lg rounded-br-none rounded-bl-none bg-pink-100 px-4 py-2 text-left font-bold text-[#CFBEBE] capitalize duration-150 data-[active=true]:bg-red-700 data-[active=true]:text-white"
         >
           By CRN
         </Link>
       </nav>
 
       <form
-        className="border-pink-100 bg-pink-50 flex flex-col gap-16 border-4 px-8 py-10"
+        className="flex flex-col gap-16 border-4 border-pink-100 bg-pink-50 px-8 py-10"
         onSubmit={handleSubmit}
       >
         {state.view === "subject" && <SearchBySubject {...subjectView} />}
@@ -169,7 +169,7 @@ export function AddCourses({ onAddCourse, searchParams }: Props) {
         {state.view === "crn" && <SearchByCRN {...crnView} />}
 
         <button
-          className="bg-red-700 flex items-center gap-2 self-end rounded-md border-2 border-red-800 px-6 py-2 font-medium text-white transition-[background-color,border-color,box-shadow] disabled:cursor-not-allowed disabled:opacity-60 not-disabled:hover:border-red-950 not-disabled:hover:bg-red-800 not-disabled:hover:shadow-md"
+          className="flex items-center gap-2 self-end rounded-md border-2 border-red-800 bg-red-700 px-6 py-2 font-medium text-white transition-[background-color,border-color,box-shadow] not-disabled:hover:border-red-950 not-disabled:hover:bg-red-800 not-disabled:hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
           disabled={course === null}
           type="submit"
         >

@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { authenticate, expectUserWith } from "../auth";
 import { unlinkProfile } from "../auth/providers/github";
 import { db } from "../db";
-import { oauthRegistrations } from '../db/schema';
+import { oauthRegistrations } from "../db/schema";
 import { supabaseAdmin } from "../../supabase/admin";
 
 export default async function unlinkGithubProfile() {

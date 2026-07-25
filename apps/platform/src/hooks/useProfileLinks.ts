@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import addProfileLink from "~/server/actions/profileLinks";
 import { createClient } from "~/supabase/client";
-import type { profileLinks } from '~/server/db/schema';
+import type { profileLinks } from "~/server/db/schema";
 import { toast } from "~/lib/toast";
 
 type ProfileLink = typeof profileLinks.$inferSelect;

@@ -85,7 +85,7 @@ export default function CreateRoleDialog({
       ...Object.fromEntries(
         PERMISSION_KEYS.map((k) => [k, permissions[k] ? true : null]),
       ),
-    } as CreateRoleInput);
+    });
 
     setOpen(false);
   }
@@ -103,10 +103,7 @@ export default function CreateRoleDialog({
         className="max-w-md border-white/20 bg-mauve-900 p-0 shadow-2xl"
         showCloseButton={false}
       >
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-5 px-5 py-6"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-5 py-6">
           <DialogHeader className="flex-row items-center justify-between">
             <DialogTitle className="text-base font-semibold text-white">
               New Role
@@ -116,134 +113,134 @@ export default function CreateRoleDialog({
             </DialogClose>
           </DialogHeader>
 
-            {/* Title */}
-            <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
-              Title *
+          {/* Title */}
+          <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
+            Title *
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              placeholder="e.g. Social Media Manager"
+              className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/40"
+            />
+          </label>
+
+          {/* Description */}
+          <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
+            Description
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              placeholder="Optional — briefly describe this role"
+              className="resize-none rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/40"
+            />
+          </label>
+
+          {/* Color + Rank */}
+          <div className="flex gap-4">
+            <label className="flex items-center gap-3 text-xs font-medium text-white/70">
+              Color
               <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="h-7 w-10 cursor-pointer rounded border border-white/20 bg-transparent p-0.5"
+              />
+            </label>
+            <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-white/70">
+              Rank *
+              <input
+                type="number"
+                value={rank}
+                onChange={(e) => setRank(Number(e.target.value))}
+                min={1}
+                step={1}
                 required
-                placeholder="e.g. Social Media Manager"
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/40"
+                className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/40"
               />
             </label>
+          </div>
 
-            {/* Description */}
-            <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
-              Description
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
-                placeholder="Optional — briefly describe this role"
-                className="resize-none rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/40"
+          {/* Display */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-xs font-medium text-white/70">
+              Display
+            </legend>
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
+              <input
+                type="checkbox"
+                checked={showOnProfile}
+                onChange={(e) => setShowOnProfile(e.target.checked)}
+                className="accent-indigo-400"
               />
+              Show this role on members&apos; profiles
             </label>
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
+              <input
+                type="checkbox"
+                checked={isLeadership}
+                onChange={(e) => setIsLeadership(e.target.checked)}
+                className="accent-indigo-400"
+              />
+              Leadership role (homepage + Role Description field)
+            </label>
+          </fieldset>
 
-            {/* Color + Rank */}
-            <div className="flex gap-4">
-              <label className="flex items-center gap-3 text-xs font-medium text-white/70">
-                Color
-                <input
-                  type="color"
-                  value={color}
-                  onChange={(e) => setColor(e.target.value)}
-                  className="h-7 w-10 cursor-pointer rounded border border-white/20 bg-transparent p-0.5"
-                />
-              </label>
-              <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-white/70">
-                Rank *
-                <input
-                  type="number"
-                  value={rank}
-                  onChange={(e) => setRank(Number(e.target.value))}
-                  min={1}
-                  step={1}
-                  required
-                  className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/40"
-                />
-              </label>
+          {/* Permissions */}
+          <fieldset>
+            <legend className="mb-2 text-xs font-medium text-white/70">
+              Permissions
+            </legend>
+            <div className="grid grid-cols-1 gap-y-2 @sm:grid-cols-2">
+              {PERMISSION_KEYS.map((key) => {
+                const callerHas = callerPermissions[key];
+                return (
+                  <label
+                    key={key}
+                    className={[
+                      "flex cursor-pointer items-center gap-2 text-xs",
+                      callerHas
+                        ? "text-white/80"
+                        : "cursor-not-allowed text-white/30",
+                    ].join(" ")}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!permissions[key]}
+                      disabled={!callerHas}
+                      onChange={(e) =>
+                        setPermissions((p) => ({
+                          ...p,
+                          [key]: e.target.checked,
+                        }))
+                      }
+                      className="accent-indigo-400"
+                    />
+                    {PERMISSION_LABELS[key]}
+                  </label>
+                );
+              })}
             </div>
+          </fieldset>
 
-            {/* Display */}
-            <fieldset className="flex flex-col gap-2">
-              <legend className="mb-1 text-xs font-medium text-white/70">
-                Display
-              </legend>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
-                <input
-                  type="checkbox"
-                  checked={showOnProfile}
-                  onChange={(e) => setShowOnProfile(e.target.checked)}
-                  className="accent-indigo-400"
-                />
-                Show this role on members&apos; profiles
-              </label>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
-                <input
-                  type="checkbox"
-                  checked={isLeadership}
-                  onChange={(e) => setIsLeadership(e.target.checked)}
-                  className="accent-indigo-400"
-                />
-                Leadership role (homepage + Role Description field)
-              </label>
-            </fieldset>
+          {error && <p className="text-xs text-rose-400">{error}</p>}
 
-            {/* Permissions */}
-            <fieldset>
-              <legend className="mb-2 text-xs font-medium text-white/70">
-                Permissions
-              </legend>
-              <div className="grid grid-cols-1 gap-y-2 @sm:grid-cols-2">
-                {PERMISSION_KEYS.map((key) => {
-                  const callerHas = callerPermissions[key];
-                  return (
-                    <label
-                      key={key}
-                      className={[
-                        "flex cursor-pointer items-center gap-2 text-xs",
-                        callerHas
-                          ? "text-white/80"
-                          : "cursor-not-allowed text-white/30",
-                      ].join(" ")}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!permissions[key]}
-                        disabled={!callerHas}
-                        onChange={(e) =>
-                          setPermissions((p) => ({
-                            ...p,
-                            [key]: e.target.checked,
-                          }))
-                        }
-                        className="accent-indigo-400"
-                      />
-                      {PERMISSION_LABELS[key]}
-                    </label>
-                  );
-                })}
-              </div>
-            </fieldset>
-
-            {error && <p className="text-xs text-rose-400">{error}</p>}
-
-            <div className="flex justify-end gap-3">
-              <DialogClose asChild>
-                <button
-                  type="button"
-                  className="rounded-lg border border-white/20 px-4 py-1.5 text-sm text-white/70 transition hover:bg-white/10"
-                >
-                  Cancel
-                </button>
-              </DialogClose>
-              <FormButton theme="black" type="submit" disabled={isPending}>
-                Create
-              </FormButton>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+          <div className="flex justify-end gap-3">
+            <DialogClose asChild>
+              <button
+                type="button"
+                className="rounded-lg border border-white/20 px-4 py-1.5 text-sm text-white/70 transition hover:bg-white/10"
+              >
+                Cancel
+              </button>
+            </DialogClose>
+            <FormButton theme="black" type="submit" disabled={isPending}>
+              Create
+            </FormButton>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

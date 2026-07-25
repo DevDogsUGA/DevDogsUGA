@@ -9,7 +9,7 @@ import {
 } from "~/server/discord/memberSync";
 import { reconcileRoleDefinitions } from "~/server/discord/reconcile";
 
-const CALLBACK_URL = new URL("/api/auth/callback", env.BASE_URL).toString();
+const CALLBACK_URL = new URL("/auth/callback", env.BASE_URL).toString();
 
 export async function requestAuthorization(
   callbackPath: string,

@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { canUserManageVerification } from "~/server/actions/permissions";
 import { expectSession } from "~/server/auth";
 import { db } from "~/server/db";
-import { profileWithVerification, profiles } from '~/server/db/schema';
+import { profileWithVerification, type profiles } from "~/server/db/schema";
 
 export const getVerificationPageData = cache(async () => {
   const userId = await expectSession().catch(() => redirect("/auth"));

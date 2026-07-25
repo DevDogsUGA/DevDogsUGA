@@ -28,11 +28,11 @@ When you save a markdown file, the preview page refreshes automatically within a
 
 The preview routes mirror the live docs URL structure:
 
-| Preview URL | Local file |
-| --- | --- |
-| `/tools/testing/docs` | `README.md` |
+| Preview URL                                | Local file                |
+| ------------------------------------------ | ------------------------- |
+| `/tools/testing/docs`                      | `README.md`               |
 | `/tools/testing/docs/docs/getting-started` | `docs/getting-started.md` |
-| `/tools/testing/docs/CONTRIBUTING` | `CONTRIBUTING.md` |
+| `/tools/testing/docs/CONTRIBUTING`         | `CONTRIBUTING.md`         |
 
 > [!NOTE]
 > The preview tool is only available when `pnpm docs:preview` is running locally. In production (Vercel), the tool returns a 404 for all paths, which is expected.

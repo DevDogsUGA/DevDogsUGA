@@ -6,7 +6,10 @@ import { useTerm } from "~/components/providers/TermProvider";
 import { useSession } from "~/components/providers/SessionProvider";
 import { supabase } from "~/supabase/client";
 import { LOCAL_KEYS } from "~/lib/localStorage/keys";
-import { LocalDraftCoursesMap, LocalSavedPlans } from "~/lib/localStorage/schemas";
+import {
+  LocalDraftCoursesMap,
+  LocalSavedPlans,
+} from "~/lib/localStorage/schemas";
 import { readLocal } from "~/lib/localStorage/storage";
 import * as Select from "@radix-ui/react-select";
 import { PiCaretUpDownBold } from "react-icons/pi";

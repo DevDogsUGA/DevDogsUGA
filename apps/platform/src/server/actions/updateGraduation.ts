@@ -3,7 +3,7 @@
 import { eq } from "drizzle-orm";
 import { authenticate, expectSession } from "../auth";
 import { db } from "../db";
-import { profiles } from '../db/schema';
+import { profiles } from "../db/schema";
 
 type Semester = "spring" | "summer" | "fall";
 

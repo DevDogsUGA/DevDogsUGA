@@ -30,7 +30,9 @@ export default function ReportListItem({
     <Link
       href={`/console/moderation/${id}`}
       className={`shadow-block-sm flex items-center justify-between border border-black bg-white text-sm transition-[translate,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 ${
-        isCompact ? "px-4 py-2.5 text-mauve-500 hover:text-mauve-800" : "px-4 py-3"
+        isCompact
+          ? "px-4 py-2.5 text-mauve-500 hover:text-mauve-800"
+          : "px-4 py-3"
       }`}
     >
       <div className="flex flex-col gap-0.5">

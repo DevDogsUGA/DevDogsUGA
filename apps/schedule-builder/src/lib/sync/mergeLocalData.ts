@@ -10,7 +10,10 @@ import { readLocal, clearLocal } from "~/lib/localStorage/storage";
 
 export async function runLocalDataMerge(userId: string): Promise<void> {
   const localPrefs = readLocal(LOCAL_KEYS.preferences, LocalPreferences);
-  const localDraftPrefsMap = readLocal(LOCAL_KEYS.draftPrefs, LocalDraftPrefsMap);
+  const localDraftPrefsMap = readLocal(
+    LOCAL_KEYS.draftPrefs,
+    LocalDraftPrefsMap,
+  );
   const localDraftCoursesMap = readLocal(
     LOCAL_KEYS.draftCourses,
     LocalDraftCoursesMap,
@@ -50,7 +53,7 @@ async function mergePreferences(
       .eq("userId", userId)
       .maybeSingle();
 
-    if (!data || data.currentAcademicPeriod === null) {
+    if (data?.currentAcademicPeriod == null) {
       await supabase
         .from("userPreferences")
         .upsert({ userId, currentAcademicPeriod: local.currentAcademicPeriod });

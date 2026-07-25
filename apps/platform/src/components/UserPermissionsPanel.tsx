@@ -34,8 +34,10 @@ export default function UserPermissionsPanel({ userId }: Props) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Data-fetch on userId change: flag loading, then populate on resolve.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    getUserResolvedPermissions(userId)
+    void getUserResolvedPermissions(userId)
       .then(setData)
       .finally(() => setLoading(false));
   }, [userId]);
@@ -94,7 +96,10 @@ export default function UserPermissionsPanel({ userId }: Props) {
                 aria-hidden
               />
             ) : (
-              <XIcon className="h-3.5 w-3.5 shrink-0 text-white/30" aria-hidden />
+              <XIcon
+                className="h-3.5 w-3.5 shrink-0 text-white/30"
+                aria-hidden
+              />
             )}
             <span
               className={data.resolved[key] ? "text-white/80" : "text-white/40"}

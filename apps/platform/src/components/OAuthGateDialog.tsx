@@ -38,6 +38,8 @@ export default function OAuthGateDialog({
   const open = clientId === null;
 
   useEffect(() => {
+    // Read the portal container from the layout DOM once, after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setContainer(document.getElementById("main-content"));
   }, []);
 
@@ -45,6 +47,9 @@ export default function OAuthGateDialog({
     if (!open || !container) return;
 
     const previousOverflow = container.style.overflow;
+    // Deliberate DOM side effect: lock scroll on the portal container while the
+    // gate is open, restoring it on cleanup.
+    // eslint-disable-next-line react-hooks/immutability
     container.style.overflow = "hidden";
 
     return () => {
@@ -55,7 +60,13 @@ export default function OAuthGateDialog({
   if (!open || !container) return null;
 
   return (
-    <Dialog open onOpenChange={() => {}} modal={false}>
+    <Dialog
+      open
+      onOpenChange={() => {
+        /* Gate is force-open; closing is driven by successful OAuth setup. */
+      }}
+      modal={false}
+    >
       <DialogPortal container={container}>
         <div
           className="absolute inset-0 z-50 bg-mauve-950/65 backdrop-blur-sm"

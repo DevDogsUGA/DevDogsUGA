@@ -36,10 +36,10 @@ function SearchResultItem({
 
   return (
     <CommandItem value={entry.id} onSelect={onSelect} className="gap-2.5">
-      {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
+      {Icon && <Icon className="text-muted-foreground size-4 shrink-0" />}
       <div className="flex min-w-0 flex-col">
         {entry.breadcrumbs.length > 0 && (
-          <div className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+          <div className="text-muted-foreground inline-flex items-center gap-0.5 text-xs">
             {entry.breadcrumbs.map((b, i) => (
               <Fragment key={i}>
                 {i > 0 && <CaretRightIcon className="size-3" />}
@@ -56,14 +56,14 @@ function SearchResultItem({
         />
         {entry.snippet ? (
           <div
-            className="line-clamp-2 min-w-0 text-xs text-muted-foreground [&_mark]:bg-transparent [&_mark]:font-medium [&_mark]:text-popover-foreground [&_mark]:underline"
+            className="text-muted-foreground [&_mark]:text-popover-foreground line-clamp-2 min-w-0 text-xs [&_mark]:bg-transparent [&_mark]:font-medium [&_mark]:underline"
             // Server-built: HTML-escaped before sentinel → <mark> replacement.
             dangerouslySetInnerHTML={{ __html: entry.snippet }}
           />
         ) : (
           entry.description && (
             <div
-              className="min-w-0 truncate text-xs text-muted-foreground [&_mark]:bg-transparent [&_mark]:font-medium [&_mark]:text-popover-foreground [&_mark]:underline"
+              className="text-muted-foreground [&_mark]:text-popover-foreground min-w-0 truncate text-xs [&_mark]:bg-transparent [&_mark]:font-medium [&_mark]:underline"
               dangerouslySetInnerHTML={{
                 __html: highlightMatches(entry.description, query),
               }}
@@ -102,7 +102,10 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
         <DialogTitle>Search</DialogTitle>
         <DialogDescription>Search pages, docs, and settings</DialogDescription>
       </DialogHeader>
-      <DialogContent className="top-1/3 translate-y-0 overflow-hidden rounded-xl p-0" showCloseButton={false}>
+      <DialogContent
+        className="top-1/3 translate-y-0 overflow-hidden rounded-xl p-0"
+        showCloseButton={false}
+      >
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Search pages, docs, and settings..."
@@ -110,7 +113,7 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
             onValueChange={setSearch}
           />
           {showLocalPreviewAlert && (
-            <div className="flex items-start gap-2 px-4 py-3 text-sm text-muted-foreground">
+            <div className="text-muted-foreground flex items-start gap-2 px-4 py-3 text-sm">
               <WarningIcon className="size-4 shrink-0 translate-y-0.5" />
               <p>
                 Local preview files aren&apos;t searchable. Results below only

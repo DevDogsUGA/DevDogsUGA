@@ -12,7 +12,7 @@ export default function RouteMap() {
           <h1 className="text-4xl font-bold md:text-6xl">Route Map Page</h1>
         </div>
         <div>
-          <button className="bg-red-700 rounded-lg px-4 py-2 font-semibold text-white">
+          <button className="rounded-lg bg-red-700 px-4 py-2 font-semibold text-white">
             <Link href={"/"}>Return Home</Link>
           </button>
         </div>

@@ -16,10 +16,10 @@ See the [Next.js `"use cache"` reference](https://nextjs.org/docs/app/api-refere
 All cache tag strings are defined as top-level functions in `src/server/manifest/cache-tags.ts`:
 
 ```ts
-docsFileSearchTag({ repo, branch, slug })  // per-file doc entries
-docsTreeTag({ repo, branch })              // per-branch file tree
-docsBranchesTag({ repo })                  // per-repo branch list
-docsSearchIndexTag({ repo })               // per-repo search index
+docsFileSearchTag({ repo, branch, slug }); // per-file doc entries
+docsTreeTag({ repo, branch }); // per-branch file tree
+docsBranchesTag({ repo }); // per-repo branch list
+docsSearchIndexTag({ repo }); // per-repo search index
 ```
 
 Both `cacheTag()` (in `"use cache"` functions) and `revalidateTag()` (in the webhook handler) import from this module. A typo or rename becomes a compile-time error.

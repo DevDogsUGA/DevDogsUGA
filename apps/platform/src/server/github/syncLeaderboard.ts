@@ -3,10 +3,7 @@ import { addWeeks, compareAsc, isAfter, parseISO } from "date-fns";
 import { sql } from "drizzle-orm";
 import { env } from "~/env";
 import { db } from "../db";
-import {
-  leaderboardProfiles,
-  points as pointsTable,
-} from '../db/schema';
+import { leaderboardProfiles, points as pointsTable } from "../db/schema";
 import {
   type ClosedIssuesResult,
   type ProjectFields,

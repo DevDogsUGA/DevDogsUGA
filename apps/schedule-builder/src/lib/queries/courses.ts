@@ -53,10 +53,22 @@ export async function getCoursesBySubject(
       endTime: schema.meetings.endTime,
     })
     .from(schema.courses)
-    .innerJoin(schema.subjects, eq(schema.courses.subjectId, schema.subjects.id))
-    .leftJoin(schema.offerings, eq(schema.offerings.courseId, schema.courses.id))
-    .leftJoin(schema.instructors, eq(schema.offerings.instructorId, schema.instructors.id))
-    .leftJoin(schema.meetings, eq(schema.meetings.offeringCrn, schema.offerings.crn))
+    .innerJoin(
+      schema.subjects,
+      eq(schema.courses.subjectId, schema.subjects.id),
+    )
+    .leftJoin(
+      schema.offerings,
+      eq(schema.offerings.courseId, schema.courses.id),
+    )
+    .leftJoin(
+      schema.instructors,
+      eq(schema.offerings.instructorId, schema.instructors.id),
+    )
+    .leftJoin(
+      schema.meetings,
+      eq(schema.meetings.offeringCrn, schema.offerings.crn),
+    )
     .where(eq(schema.subjects.abbr, subjectAbbr));
 
   // Group flat join results by course
@@ -157,7 +169,10 @@ export async function getCourseDetailsByCrn(
     })
     .from(schema.offerings)
     .innerJoin(schema.courses, eq(schema.offerings.courseId, schema.courses.id))
-    .innerJoin(schema.subjects, eq(schema.courses.subjectId, schema.subjects.id))
+    .innerJoin(
+      schema.subjects,
+      eq(schema.courses.subjectId, schema.subjects.id),
+    )
     .where(eq(schema.offerings.crn, crn))
     .limit(1);
 

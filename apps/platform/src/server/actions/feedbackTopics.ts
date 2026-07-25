@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { expectUserWith } from "~/server/auth";
 import { db } from "~/server/db";
-import { feedbackTopics } from '~/server/db/schema';
+import { feedbackTopics } from "~/server/db/schema";
 import { FEEDBACK_TOPIC_TEMPLATES } from "~/server/actions/feedbackTopicsData";
 
 /**

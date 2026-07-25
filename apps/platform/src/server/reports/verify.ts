@@ -73,9 +73,7 @@ export async function verifyPendingReports(): Promise<void> {
     )
     .limit(BATCH_SIZE - reports.length);
 
-  await Promise.allSettled(
-    [...reports, ...overdue].map(deliverVerifyWebhook),
-  );
+  await Promise.allSettled([...reports, ...overdue].map(deliverVerifyWebhook));
 }
 
 async function deliverVerifyWebhook(

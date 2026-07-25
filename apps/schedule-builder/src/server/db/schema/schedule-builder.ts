@@ -275,30 +275,32 @@ export const availableTerms = scheduleBuilder.view("availableTerms").as((qb) =>
 
 // ─── Full-text search ─────────────────────────────────────────────────────────
 
-export const offeringSearch = scheduleBuilder.materializedView("offeringSearch").as((qb) =>
-  qb
-    .select({
-      crn: offerings.crn,
-      academicPeriod: offerings.academicPeriod,
-      seatsAvailable: offerings.seatsAvailable,
-      active: offerings.active,
-      courseId: courses.id.as("courseId"),
-      abbr: courses.abbr,
-      courseNumber: courses.courseNumber,
-      title: courses.title,
-      maxCreditHours: courses.maxCreditHours,
-      instructorId: instructors.id.as("instructorId"),
-      firstName: instructors.firstName,
-      lastName: instructors.lastName,
-      searchVector: sql<string>`to_tsvector('english',
+export const offeringSearch = scheduleBuilder
+  .materializedView("offeringSearch")
+  .as((qb) =>
+    qb
+      .select({
+        crn: offerings.crn,
+        academicPeriod: offerings.academicPeriod,
+        seatsAvailable: offerings.seatsAvailable,
+        active: offerings.active,
+        courseId: courses.id.as("courseId"),
+        abbr: courses.abbr,
+        courseNumber: courses.courseNumber,
+        title: courses.title,
+        maxCreditHours: courses.maxCreditHours,
+        instructorId: instructors.id.as("instructorId"),
+        firstName: instructors.firstName,
+        lastName: instructors.lastName,
+        searchVector: sql<string>`to_tsvector('english',
         coalesce(${courses.title}, '') || ' ' ||
         coalesce(${courses.abbr}, '') || ' ' ||
         coalesce(${courses.courseNumber}, '') || ' ' ||
         coalesce(${instructors.lastName}, '') || ' ' ||
         coalesce(${instructors.firstName}, '')
       )`.as("search_vector"),
-    })
-    .from(offerings)
-    .innerJoin(courses, eq(courses.id, offerings.courseId))
-    .leftJoin(instructors, eq(instructors.id, offerings.instructorId)),
-);
+      })
+      .from(offerings)
+      .innerJoin(courses, eq(courses.id, offerings.courseId))
+      .leftJoin(instructors, eq(instructors.id, offerings.instructorId)),
+  );

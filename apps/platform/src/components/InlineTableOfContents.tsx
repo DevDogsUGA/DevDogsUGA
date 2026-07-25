@@ -14,11 +14,11 @@ export default function InlineTableOfContents({ items }: Props) {
 
   return (
     <details
-      className="mb-6 rounded-lg border border-border bg-card p-3 xl:hidden"
+      className="border-border bg-card mb-6 rounded-lg border p-3 xl:hidden"
       open={open}
       onToggle={(e) => setOpen(e.currentTarget.open)}
     >
-      <summary className="cursor-pointer text-sm font-medium text-foreground select-none">
+      <summary className="text-foreground cursor-pointer text-sm font-medium select-none">
         On this page
       </summary>
       <ul className="mt-2 flex flex-col gap-1 text-sm">
@@ -26,7 +26,7 @@ export default function InlineTableOfContents({ items }: Props) {
           <li key={item.url}>
             <a
               href={item.url}
-              className="block py-0.5 text-muted-foreground transition-colors hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground block py-0.5 transition-colors"
               style={{ paddingLeft: `${(item.depth - 2) * 12}px` }}
               onClick={() => setOpen(false)}
             >

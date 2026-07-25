@@ -187,7 +187,7 @@ function CourseInfo({
 
   return (
     <div
-      className={`fixed inset-0 z-40 flex items-center justify-center bg-white bg-opacity-50`}
+      className={`bg-opacity-50 fixed inset-0 z-40 flex items-center justify-center bg-white`}
     >
       <div
         className={`relative flex flex-col rounded-lg bg-white ${outerBorder}`}

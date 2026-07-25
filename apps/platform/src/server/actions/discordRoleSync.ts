@@ -2,7 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { db } from "~/server/db";
-import { roles } from '~/server/db/schema';
+import { roles } from "~/server/db/schema";
 import { requireManageRoles, requirePermissionGuard } from "./permissions";
 import { requireCustomRole, requireRankGuard } from "./permissionGuards";
 import {

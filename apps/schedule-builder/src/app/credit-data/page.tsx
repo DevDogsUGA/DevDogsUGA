@@ -12,19 +12,19 @@ export default function CreditData() {
           <h1 className="text-4xl font-bold md:text-6xl">Past Credit Data</h1>
         </div>
         <div>
-          <button className="bg-red-700 rounded-lg px-4 py-2 font-semibold text-white">
+          <button className="rounded-lg bg-red-700 px-4 py-2 font-semibold text-white">
             <Link href={"/generate-schedule"}>Generate Schedules</Link>
           </button>
         </div>
         <br></br>
         <div>
-          <button className="bg-red-700 rounded-lg px-4 py-2 font-semibold text-white">
+          <button className="rounded-lg bg-red-700 px-4 py-2 font-semibold text-white">
             <Link href={"/manual-entry"}>Manual Entry</Link>
           </button>
         </div>
         <br></br>
         <div>
-          <button className="bg-red-700 rounded-lg px-4 py-2 font-semibold text-white">
+          <button className="rounded-lg bg-red-700 px-4 py-2 font-semibold text-white">
             <Link href={"/"}>Go Back Home</Link>
           </button>
         </div>

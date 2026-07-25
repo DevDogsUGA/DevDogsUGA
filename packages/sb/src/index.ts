@@ -12,8 +12,16 @@ import type { Database } from "./database.types";
 export type { Database };
 export { SCHEMAS, type AppKey, type SchemaName } from "./schemas";
 
-/** Any schema exposed by the shared Supabase project's generated types. */
-export type DatabaseSchema = keyof Database & string;
+/**
+ * Any schema exposed by the shared Supabase project's generated types.
+ *
+ * `Database` carries a generated `__InternalSupabase` key (PostgREST version
+ * metadata) that is not a real schema; the supabase-js/ssr client generics
+ * constrain their schema parameter with the same `Omit`, so stripping it here
+ * keeps `S` assignable to them.
+ */
+export type DatabaseSchema = keyof Omit<Database, "__InternalSupabase"> &
+  string;
 
 interface ClientOptions<S extends DatabaseSchema> {
   /** Supabase API URL (e.g. `env.API_URL` / `env.NEXT_PUBLIC_SUPABASE_URL`). */
@@ -63,5 +71,9 @@ export function createAdminClient<S extends DatabaseSchema>(
   // supabase-js types the options' schema slot with a conditional that TS
   // can't collapse against a generic `S`; the runtime schema is correct
   // (db.schema === opts.schema) and the return type stays scoped to `S`.
-  return supabaseCreateClient<Database, S>(opts.url, opts.key, options as never);
+  return supabaseCreateClient<Database, S>(
+    opts.url,
+    opts.key,
+    options as never,
+  );
 }

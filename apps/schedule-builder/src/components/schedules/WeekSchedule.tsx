@@ -188,7 +188,7 @@ export default function WeekSchedule({ weekData }: WeekScheduleProps) {
   return (
     <div className="relative z-0 mx-auto w-screen max-w-[1800px] overflow-x-hidden px-4">
       <button
-        className="absolute left-0 top-0 z-10 flex h-full w-8 rotate-180 items-center justify-between rounded-r-lg border-l-2 border-pink-900 bg-pink-50 py-4 text-center font-bold text-pink-900 transition-[left] [writing-mode:vertical-lr] 2xl:hidden [&:not([data-scroll-target])]:-left-8"
+        className="absolute top-0 left-0 z-10 flex h-full w-8 rotate-180 items-center justify-between rounded-r-lg border-l-2 border-pink-900 bg-pink-50 py-4 text-center font-bold text-pink-900 transition-[left] [writing-mode:vertical-lr] 2xl:hidden [&:not([data-scroll-target])]:-left-8"
         data-scroll-target={prev}
         onClick={scrollLeft}
         type="button"
@@ -240,7 +240,7 @@ export default function WeekSchedule({ weekData }: WeekScheduleProps) {
       </section>
 
       <button
-        className="absolute right-0 top-0 z-10 flex h-full w-8 items-center justify-between rounded-r-lg border-l-2 border-pink-900 bg-pink-50 py-4 text-center font-bold text-pink-900 transition-[right] [writing-mode:vertical-rl] 2xl:hidden [&:not([data-scroll-target])]:-right-8"
+        className="absolute top-0 right-0 z-10 flex h-full w-8 items-center justify-between rounded-r-lg border-l-2 border-pink-900 bg-pink-50 py-4 text-center font-bold text-pink-900 transition-[right] [writing-mode:vertical-rl] 2xl:hidden [&:not([data-scroll-target])]:-right-8"
         data-scroll-target={next}
         onClick={scrollRight}
         type="button"

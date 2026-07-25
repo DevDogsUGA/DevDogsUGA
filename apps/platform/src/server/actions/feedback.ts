@@ -5,7 +5,7 @@ import { z } from "zod";
 import { zfd } from "zod-form-data";
 import { expectSession, expectUserWith } from "~/server/auth";
 import { db } from "~/server/db";
-import { feedbackTopics, profiles, siteFeedback } from '~/server/db/schema';
+import { feedbackTopics, profiles, siteFeedback } from "~/server/db/schema";
 import { supabaseAdmin } from "~/supabase/admin";
 import { env } from "~/env";
 import { canUserManageFeedback } from "~/server/actions/permissions";
@@ -92,7 +92,7 @@ export async function updateTestFeedbackStatus(
     where: { id: feedbackId },
   });
 
-  if (!row || row.clientId !== clientId || !testUserIds.includes(row.userId)) {
+  if (row?.clientId !== clientId || !testUserIds.includes(row.userId)) {
     throw new Error("Unauthorized");
   }
 
@@ -170,8 +170,8 @@ export async function getFeedbackDetail(
     .leftJoin(
       feedbackTopics,
       and(
-        eq(feedbackTopics.clientId, siteFeedback.clientId!),
-        eq(feedbackTopics.id, siteFeedback.topicId!),
+        eq(feedbackTopics.clientId, siteFeedback.clientId),
+        eq(feedbackTopics.id, siteFeedback.topicId),
       ),
     )
     .where(eq(siteFeedback.id, feedbackId));

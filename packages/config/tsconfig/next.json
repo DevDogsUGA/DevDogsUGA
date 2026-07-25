@@ -1,0 +1,14 @@
+{
+  // Shared preset for the Next apps (platform, schedule-builder).
+  //
+  // Extended by relative path, not by package specifier — see lib.json.
+  //
+  // Only the path-independent settings live here. `paths`, `include`, and
+  // `exclude` resolve against the config file that declares them, so hoisting
+  // them would rebase "~/*" onto packages/config; they stay in each app.
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "plugins": [{ "name": "next" }]
+  }
+}

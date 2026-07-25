@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  type PropsWithChildren,
-  useContext,
-} from "react";
+import { createContext, type PropsWithChildren, useContext } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "~/supabase/client";
 import { useCurrentAcademicPeriod } from "~/hooks/data/usePreferences";
@@ -33,28 +29,27 @@ export function TermProvider({
         .select("academicPeriod, description");
       if (error) throw error;
       return (data ?? []).map((r) => ({
-        academicPeriod: r.academicPeriod as number,
-        description: r.description as string,
+        academicPeriod: r.academicPeriod!,
+        description: r.description!,
       }));
     },
     initialData: initialTerms,
     staleTime: Infinity,
   });
 
-  const {
-    academicPeriod: savedPeriod,
-    setCurrentAcademicPeriod,
-  } = useCurrentAcademicPeriod();
+  const { academicPeriod: savedPeriod, setCurrentAcademicPeriod } =
+    useCurrentAcademicPeriod();
 
   // Fall back to the latest available term if no preference is saved yet
-  const academicPeriod = savedPeriod ?? availableTerms[0]?.academicPeriod ?? null;
+  const academicPeriod =
+    savedPeriod ?? availableTerms[0]?.academicPeriod ?? null;
 
   function setAcademicPeriod(period: number) {
     setCurrentAcademicPeriod(period);
-    queryClient.invalidateQueries({ queryKey: ["draft-courses"] });
-    queryClient.invalidateQueries({ queryKey: ["draft-prefs"] });
-    queryClient.invalidateQueries({ queryKey: ["plans"] });
-    queryClient.invalidateQueries({ queryKey: ["offering-search"] });
+    void queryClient.invalidateQueries({ queryKey: ["draft-courses"] });
+    void queryClient.invalidateQueries({ queryKey: ["draft-prefs"] });
+    void queryClient.invalidateQueries({ queryKey: ["plans"] });
+    void queryClient.invalidateQueries({ queryKey: ["offering-search"] });
   }
 
   return (

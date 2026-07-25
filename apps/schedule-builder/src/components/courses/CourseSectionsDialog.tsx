@@ -12,13 +12,21 @@ export function CourseSectionsDialog({
   initialExcludedCrns,
   onClose,
 }: {
-  course: { courseId: number; abbr: string; courseNumber: string; title: string };
+  course: {
+    courseId: number;
+    abbr: string;
+    courseNumber: string;
+    title: string;
+  };
   initialExcludedCrns?: number[];
   onClose: () => void;
 }) {
   const isEditing = initialExcludedCrns !== undefined;
   const { academicPeriod } = useTerm();
-  const { data: offerings = [] } = useOfferingsByCourse(course.courseId, academicPeriod!);
+  const { data: offerings = [] } = useOfferingsByCourse(
+    course.courseId,
+    academicPeriod!,
+  );
   const [excludedCrns, setExcludedCrns] = useState<Set<number>>(
     new Set(initialExcludedCrns),
   );
@@ -38,7 +46,7 @@ export function CourseSectionsDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-pink-50 w-full max-w-lg rounded-xl shadow-xl">
+      <div className="w-full max-w-lg rounded-xl bg-pink-50 shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-4">
           <div>
@@ -47,7 +55,10 @@ export function CourseSectionsDialog({
             </h2>
             <p className="text-sm text-neutral-600">{course.title}</p>
           </div>
-          <button onClick={onClose} className="text-neutral-400 hover:text-black">
+          <button
+            onClick={onClose}
+            className="text-neutral-400 hover:text-black"
+          >
             <PiXBold size={20} />
           </button>
         </div>
@@ -86,9 +97,13 @@ export function CourseSectionsDialog({
               )
             }
             disabled={upsertCourse.isPending}
-            className="bg-red-700 rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 hover:bg-red-800"
+            className="rounded-md bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60"
           >
-            {upsertCourse.isPending ? "Saving…" : isEditing ? "Save Changes" : "Add Course"}
+            {upsertCourse.isPending
+              ? "Saving…"
+              : isEditing
+                ? "Save Changes"
+                : "Add Course"}
           </button>
         </div>
       </div>

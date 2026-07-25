@@ -4,10 +4,10 @@ import { redirect } from "next/navigation";
 import z from "zod";
 import { env } from "~/env";
 import { db } from "~/server/db";
-import { leaderboardProfiles } from '~/server/db/schema';
+import { leaderboardProfiles } from "~/server/db/schema";
 import { createSupabaseServerClient } from "~/supabase/server";
 
-const CALLBACK_URL = new URL("/api/auth/callback", env.BASE_URL).toString();
+const CALLBACK_URL = new URL("/auth/callback", env.BASE_URL).toString();
 
 export async function requestAuthorization(
   callbackPath: string,

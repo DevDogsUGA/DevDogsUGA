@@ -30,7 +30,10 @@ interface ConnectedAccountFieldProps {
   displayPrefix?: string;
 }
 
-const VISIBILITY_KEY: Record<Provider, "showGithub" | "showDiscord" | "showLinkedin"> = {
+const VISIBILITY_KEY: Record<
+  Provider,
+  "showGithub" | "showDiscord" | "showLinkedin"
+> = {
   github: "showGithub",
   discord: "showDiscord",
   linkedin: "showLinkedin",
@@ -64,7 +67,9 @@ export default function ConnectedAccountField({
           />
           <Input
             className="max-w-sm"
-            defaultValue={displayPrefix ? displayPrefix + accountName : accountName}
+            defaultValue={
+              displayPrefix ? displayPrefix + accountName : accountName
+            }
             readOnly
             disabled
             type="text"

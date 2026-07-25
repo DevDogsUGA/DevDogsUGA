@@ -83,6 +83,9 @@ function VerificationRoot({
     try {
       if (!sessionStorage.getItem("devdogs:verificationDialogSeen")) {
         sessionStorage.setItem("devdogs:verificationDialogSeen", "1");
+        // Intentional: auto-open the checklist once per session when the
+        // hydrated data reveals the user is unverified.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDialogOpen(true);
       }
     } catch {

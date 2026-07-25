@@ -12,16 +12,28 @@
 .shadow-inner-scroll-y {
   background:
     /* Shadow covers */
-    linear-gradient(white 30%, rgba(255,255,255,0)),
-    linear-gradient(rgba(255,255,255,0), white 70%) 0 100%,
-    
+    linear-gradient(white 30%, rgba(255, 255, 255, 0)),
+    linear-gradient(rgba(255, 255, 255, 0), white 70%) 0 100%,
     /* Shadows */
-    radial-gradient(farthest-side at 50% 0, color-mix(in oklab, var(--color-stone-500) 40%, transparent), transparent),
-    radial-gradient(farthest-side at 50% 100%, color-mix(in oklab, var(--color-stone-500) 40%, transparent), transparent) 0 100%;
+    radial-gradient(
+        farthest-side at 50% 0,
+        color-mix(in oklab, var(--color-stone-500) 40%, transparent),
+        transparent
+      ),
+    radial-gradient(
+        farthest-side at 50% 100%,
+        color-mix(in oklab, var(--color-stone-500) 40%, transparent),
+        transparent
+      )
+      0 100%;
   background-repeat: no-repeat;
   background-color: white;
-  background-size: 100% 3.75rem, 100% 3.75rem, 100% 1.25rem, 100% 1.25rem;
-  
+  background-size:
+    100% 3.75rem,
+    100% 3.75rem,
+    100% 1.25rem,
+    100% 1.25rem;
+
   /* Opera doesn't support this in the shorthand */
   background-attachment: local, local, scroll, scroll;
 }

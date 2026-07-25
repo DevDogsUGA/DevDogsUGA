@@ -64,6 +64,7 @@ The sidebar documentation section and the local preview sidebar both use `DocTre
 - **Local preview**: `fetchTree()` from the local preview server
 
 **References:**
+
 - [Next.js PPR](https://nextjs.org/docs/app/building-your-application/rendering/partial-prerendering)
 - [Next.js Cache Components](https://nextjs.org/docs/app/api-reference/config/next-config-js/cacheComponents)
 - [React Suspense](https://react.dev/reference/react/Suspense)

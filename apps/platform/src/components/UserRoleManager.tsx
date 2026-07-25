@@ -1,7 +1,12 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
-import { MagnifyingGlassIcon, XIcon, CaretDownIcon, SpinnerGapIcon } from "@phosphor-icons/react/ssr";
+import { useCallback, useRef, useState, useTransition } from "react";
+import {
+  MagnifyingGlassIcon,
+  XIcon,
+  CaretDownIcon,
+  SpinnerGapIcon,
+} from "@phosphor-icons/react/ssr";
 import { useRouter } from "next/navigation";
 import {
   searchUsers,
@@ -26,13 +31,14 @@ function useDebounce<T extends (...args: Parameters<T>) => void>(
   fn: T,
   delay: number,
 ) {
-  let timer: ReturnType<typeof setTimeout>;
+  // Ref so the pending timer survives re-renders (a plain `let` would reset
+  // every render, defeating the debounce).
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   return useCallback(
     (...args: Parameters<T>) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => fn(...args), delay);
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => fn(...args), delay);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [fn, delay],
   );
 }

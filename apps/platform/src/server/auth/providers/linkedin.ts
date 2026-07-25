@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "~/supabase/server";
 import { env } from "~/env";
 
-const CALLBACK_URL = new URL("/api/auth/callback", env.BASE_URL).toString();
+const CALLBACK_URL = new URL("/auth/callback", env.BASE_URL).toString();
 
 export async function requestAuthorization(
   callbackPath: string,

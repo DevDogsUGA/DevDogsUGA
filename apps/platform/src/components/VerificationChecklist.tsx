@@ -1,7 +1,12 @@
 import * as Tooltip from "@radix-ui/react-tooltip";
 import Link from "next/link";
 import type { PropsWithChildren } from "react";
-import { ArrowRightIcon, CheckIcon, InfoIcon, XIcon } from "@phosphor-icons/react/ssr";
+import {
+  ArrowRightIcon,
+  CheckIcon,
+  InfoIcon,
+  XIcon,
+} from "@phosphor-icons/react/ssr";
 import SyncPreferredNameButton from "~/components/SyncPreferredNameButton";
 
 interface VerificationStatus {

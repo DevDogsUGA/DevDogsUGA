@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 import { env } from "~/env";
 
 /** Returns 401 Response if the request is missing the correct cron secret, null otherwise. */

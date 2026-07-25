@@ -6,7 +6,7 @@ import * as z from "zod";
 import * as zfd from "zod-form-data";
 import { authenticate, expectSession } from "../auth";
 import { db } from "../db";
-import { profileLinks } from '../db/schema';
+import { profileLinks } from "../db/schema";
 
 export type AddLinkResult = {
   link?: typeof profileLinks.$inferSelect;

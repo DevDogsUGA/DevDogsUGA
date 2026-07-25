@@ -2,7 +2,11 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
-import { PencilSimpleIcon, PlusCircleIcon, TrashIcon } from "@phosphor-icons/react/ssr";
+import {
+  PencilSimpleIcon,
+  PlusCircleIcon,
+  TrashIcon,
+} from "@phosphor-icons/react/ssr";
 import {
   deleteTestAccount,
   type TestAccount,

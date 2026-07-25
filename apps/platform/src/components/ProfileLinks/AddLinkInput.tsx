@@ -28,7 +28,9 @@ export default function AddLinkInput({
   urlInputRef,
 }: AddLinkInputProps) {
   const split = isValidLinkUrl(urlValue);
-  const [focusedField, setFocusedField] = useState<"title" | "url" | null>(null);
+  const [focusedField, setFocusedField] = useState<"title" | "url" | null>(
+    null,
+  );
 
   const iconSlot = `shrink-0 overflow-hidden transition-[width] duration-200 ease-in-out ${
     split ? "w-[26px]" : "w-0"

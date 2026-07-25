@@ -12,7 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "~/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "~/ui/sheet";
 import Tree from "./Tree";
 
 export interface DocsSidebarProps {
@@ -91,10 +97,7 @@ function SidebarContent(props: DocsSidebarProps) {
         )}
       </div>
 
-      <Tree
-        nodes={tree}
-        ctx={{ project, branch, defaultBranch, activePath }}
-      />
+      <Tree nodes={tree} ctx={{ project, branch, defaultBranch, activePath }} />
     </div>
   );
 }
@@ -105,6 +108,7 @@ export default function DocsSidebar(props: DocsSidebarProps) {
 
   // Close the mobile sheet when navigation completes.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMobileOpen(false);
   }, [pathname]);
 

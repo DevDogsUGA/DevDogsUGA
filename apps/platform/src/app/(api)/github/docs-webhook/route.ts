@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     // The commit list is only a cheap filter — the sync itself diffs by blob
     // sha, so a forced push (empty/unreliable commit list) still syncs fully.
     const docsTouched =
-      push.forced ||
+      push.forced === true ||
       push.commits.some((commit) =>
         [...commit.added, ...commit.modified, ...commit.removed].some((path) =>
           path.startsWith("docs/"),

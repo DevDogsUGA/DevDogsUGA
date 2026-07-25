@@ -44,12 +44,14 @@ Pass the user's current DevDogs access token alongside the form values:
 
 ```ts
 await client.submitFeedback(accessToken, {
-  type: "bug_report",        // "bug_report" | "feature_request" | "design_feedback" | "performance" | "content_issue" | "other"
-  topic: "Search",           // must match a configured topic label
-  severity: "medium",        // "low" | "medium" | "high" — only meaningful for bug_report
+  type: "bug_report", // "bug_report" | "feature_request" | "design_feedback" | "performance" | "content_issue" | "other"
+  topic: "Search", // must match a configured topic label
+  severity: "medium", // "low" | "medium" | "high" — only meaningful for bug_report
   title: "Results disappear on mobile",
-  description: "When I tap the search bar on iOS Safari, the result list collapses immediately.",
-  browserMetadata: {         // optional — collect with navigator/screen/window
+  description:
+    "When I tap the search bar on iOS Safari, the result list collapses immediately.",
+  browserMetadata: {
+    // optional — collect with navigator/screen/window
     userAgent: navigator.userAgent,
     platform: navigator.platform,
     screenWidth: screen.width,
@@ -110,18 +112,18 @@ When `topics` is not provided, the dialog fetches them automatically via `client
 
 ### Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `open` | `boolean` | — | Controlled open state. |
-| `onOpenChange` | `(open: boolean) => void` | — | Called when the dialog requests a state change. |
-| `title` | `string` | `"Submit Feedback"` | Dialog heading. |
-| `topics` | `string[]` | — | Static topic list. If omitted, fetched from the API via `client`. |
-| `client` | `FeedbackClient` | — | SDK instance. Required for the default submit/fetch transport. |
-| `getAccessToken` | `() => Promise<string>` | — | Returns the user's current DevDogs access token. Required with `client`. |
-| `onSubmit` | `(values: FeedbackFormValues) => Promise<void>` | — | Overrides the default submit transport (e.g. to call a server action). |
-| `collectBrowserMetadata` | `boolean` | `true` | Collect and include `navigator`/`screen`/`window` metadata with submissions. |
-| `theme` | `Partial<FeedbackDialogTheme>` | — | CSS custom-property overrides (see [Theming](#theming)). |
-| `classNames` | `Partial<Record<FeedbackDialogPart, string>>` | — | Additional class names applied to individual parts. |
+| Prop                     | Type                                            | Default             | Description                                                                  |
+| ------------------------ | ----------------------------------------------- | ------------------- | ---------------------------------------------------------------------------- |
+| `open`                   | `boolean`                                       | —                   | Controlled open state.                                                       |
+| `onOpenChange`           | `(open: boolean) => void`                       | —                   | Called when the dialog requests a state change.                              |
+| `title`                  | `string`                                        | `"Submit Feedback"` | Dialog heading.                                                              |
+| `topics`                 | `string[]`                                      | —                   | Static topic list. If omitted, fetched from the API via `client`.            |
+| `client`                 | `FeedbackClient`                                | —                   | SDK instance. Required for the default submit/fetch transport.               |
+| `getAccessToken`         | `() => Promise<string>`                         | —                   | Returns the user's current DevDogs access token. Required with `client`.     |
+| `onSubmit`               | `(values: FeedbackFormValues) => Promise<void>` | —                   | Overrides the default submit transport (e.g. to call a server action).       |
+| `collectBrowserMetadata` | `boolean`                                       | `true`              | Collect and include `navigator`/`screen`/`window` metadata with submissions. |
+| `theme`                  | `Partial<FeedbackDialogTheme>`                  | —                   | CSS custom-property overrides (see [Theming](#theming)).                     |
+| `classNames`             | `Partial<Record<FeedbackDialogPart, string>>`   | —                   | Additional class names applied to individual parts.                          |
 
 ### Theming
 
@@ -145,16 +147,16 @@ The component is styled via CSS custom properties defined on a `.feedback-dialog
 
 Available theme keys:
 
-| Key | Default | Description |
-| --- | --- | --- |
-| `background` | `#ffffff` | Dialog surface color. |
-| `foreground` | `#0f172a` | Primary text color. |
-| `muted` | `#64748b` | Secondary/placeholder text color. |
-| `border` | `#cbd5e1` | Input and container border color. |
-| `accent` | `#06b6d4` | Submit button and focus-ring color. |
-| `accentForeground` | `#083344` | Text on top of `accent`. |
-| `radius` | `0.5rem` | Border radius applied to the container and inputs. |
-| `fontFamily` | system-ui stack | Font applied to the dialog root. |
+| Key                | Default         | Description                                        |
+| ------------------ | --------------- | -------------------------------------------------- |
+| `background`       | `#ffffff`       | Dialog surface color.                              |
+| `foreground`       | `#0f172a`       | Primary text color.                                |
+| `muted`            | `#64748b`       | Secondary/placeholder text color.                  |
+| `border`           | `#cbd5e1`       | Input and container border color.                  |
+| `accent`           | `#06b6d4`       | Submit button and focus-ring color.                |
+| `accentForeground` | `#083344`       | Text on top of `accent`.                           |
+| `radius`           | `0.5rem`        | Border radius applied to the container and inputs. |
+| `fontFamily`       | system-ui stack | Font applied to the dialog root.                   |
 
 ### Per-part class names
 
@@ -192,7 +194,7 @@ import { submitFeedback } from "~/server/actions/feedback";
     }
     await submitFeedback(fd);
   }}
-/>
+/>;
 ```
 
 ## REST API
@@ -204,6 +206,7 @@ For non-React integrations or when you want full control over the HTTP layer.
 Returns the topic labels configured for the given client. No authentication required.
 
 **Response:**
+
 ```json
 { "topics": ["Homepage", "Search", "Checkout"] }
 ```
@@ -215,6 +218,7 @@ Returns `404` if the `clientId` is not registered.
 Submits a new feedback entry. Requires a valid DevDogs Bearer token in the `Authorization` header.
 
 **Request body (JSON):**
+
 ```json
 {
   "type": "bug_report",

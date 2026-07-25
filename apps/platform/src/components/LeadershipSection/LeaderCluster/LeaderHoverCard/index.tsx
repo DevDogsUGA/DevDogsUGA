@@ -154,7 +154,7 @@ export default function LeaderHoverCard(props: LeaderHoverCardProps) {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="fixed inset-x-0 bottom-0 top-auto max-h-[85dvh] overflow-y-auto border-t-2 border-black bg-white md:hidden">
+        <DialogContent className="fixed inset-x-0 top-auto bottom-0 max-h-[85dvh] overflow-y-auto border-t-2 border-black bg-white md:hidden">
           <DialogTitle className="sr-only">{props.name}</DialogTitle>
           <MobileContent profile={props} />
         </DialogContent>

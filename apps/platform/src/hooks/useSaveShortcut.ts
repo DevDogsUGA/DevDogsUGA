@@ -7,7 +7,10 @@ import { useEffect, useRef, useState, type FocusEvent } from "react";
 export function useSaveShortcut(onSave: () => void, enabled: boolean) {
   const [focused, setFocused] = useState(false);
   const onSaveRef = useRef(onSave);
-  onSaveRef.current = onSave;
+  // Keep the latest callback in a ref (updated after commit, not during render).
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  });
 
   useEffect(() => {
     if (!focused || !enabled) return;
@@ -27,7 +30,7 @@ export function useSaveShortcut(onSave: () => void, enabled: boolean) {
     focused,
     onFocus: () => setFocused(true),
     onBlur: (e: FocusEvent<HTMLElement>) => {
-      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+      if (!e.currentTarget.contains(e.relatedTarget)) {
         setFocused(false);
       }
     },

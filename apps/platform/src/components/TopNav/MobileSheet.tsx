@@ -70,6 +70,7 @@ export default function MobileSheet({
 
   // Close when navigation completes (covers back/forward too).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpen(false);
   }, [pathname]);
 
@@ -97,7 +98,11 @@ export default function MobileSheet({
         <SheetSection items={PUBLIC_LINKS} onNavigate={close} />
 
         {consoleItems.length > 0 && (
-          <SheetSection title="Console" items={consoleItems} onNavigate={close} />
+          <SheetSection
+            title="Console"
+            items={consoleItems}
+            onNavigate={close}
+          />
         )}
 
         {signedIn && (
@@ -110,7 +115,10 @@ export default function MobileSheet({
             onClick={close}
             className="flex items-center gap-2.5 rounded-sm px-2 py-2 text-sm font-medium text-mauve-200 transition-colors hover:bg-mauve-800 hover:text-white"
           >
-            <DotsNineIcon weight="bold" className="size-4.5 shrink-0 text-mauve-400" />
+            <DotsNineIcon
+              weight="bold"
+              className="size-4.5 shrink-0 text-mauve-400"
+            />
             More from DevDogs
           </button>
         </AppSwitcherTrigger>

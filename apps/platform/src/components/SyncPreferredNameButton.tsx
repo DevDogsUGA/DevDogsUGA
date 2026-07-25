@@ -1,7 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { SpinnerGapIcon, ArrowCounterClockwiseIcon } from "@phosphor-icons/react/ssr";
+import {
+  SpinnerGapIcon,
+  ArrowCounterClockwiseIcon,
+} from "@phosphor-icons/react/ssr";
 import { useProfileIdentity } from "~/hooks/useProfileIdentity";
 
 interface Props {

@@ -4,7 +4,12 @@ import Image from "next/image";
 import * as HoverCard from "@radix-ui/react-hover-card";
 import type { LeaderProfile } from ".";
 import Link from "next/link";
-import { ArrowSquareOutIcon, GithubLogoIcon, LinkedinLogoIcon, EnvelopeIcon } from "@phosphor-icons/react/ssr";
+import {
+  ArrowSquareOutIcon,
+  GithubLogoIcon,
+  LinkedinLogoIcon,
+  EnvelopeIcon,
+} from "@phosphor-icons/react/ssr";
 
 interface Props {
   profile: LeaderProfile;

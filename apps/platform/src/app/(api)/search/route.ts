@@ -7,9 +7,7 @@ import { searchDocs } from "~/server/search/docsSearch";
 import { matchEntries } from "~/server/search/match";
 
 export async function GET(request: Request) {
-  const query = (
-    new URL(request.url).searchParams.get("query") ?? ""
-  ).trim();
+  const query = (new URL(request.url).searchParams.get("query") ?? "").trim();
   if (!query) return NextResponse.json([]);
 
   const userId = await expectSession().catch(() => null);
@@ -28,13 +26,11 @@ export async function GET(request: Request) {
     userId !== null,
   );
 
-  const [pages, docs] = await Promise.all([
-    matchEntries(appEntries, query, 8),
-    searchDocs(query, 10).catch((error) => {
-      console.error("[search] docs full-text search failed", error);
-      return [];
-    }),
-  ]);
+  const pages = matchEntries(appEntries, query, 8);
+  const docs = await searchDocs(query, 10).catch((error) => {
+    console.error("[search] docs full-text search failed", error);
+    return [];
+  });
 
   return NextResponse.json([...pages, ...docs]);
 }

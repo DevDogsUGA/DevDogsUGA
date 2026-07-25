@@ -8,7 +8,13 @@ interface ContentType {
   label: string;
 }
 
-const DEFAULT_CONTENT_TYPES = ["Post", "Comment", "Profile", "Resource", "Message"];
+const DEFAULT_CONTENT_TYPES = [
+  "Post",
+  "Comment",
+  "Profile",
+  "Resource",
+  "Message",
+];
 
 interface Props {
   clientId: string;
@@ -31,6 +37,8 @@ export default function ReportContentTypesField({ clientId }: Props) {
   }
 
   useEffect(() => {
+    // Async fetch on clientId change; setState runs after the await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchContentTypes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
@@ -45,7 +53,11 @@ export default function ReportContentTypesField({ clientId }: Props) {
         label: trimmed,
       });
       if (err) {
-        setError(err.code === "23505" ? "A content type with that label already exists." : err.message);
+        setError(
+          err.code === "23505"
+            ? "A content type with that label already exists."
+            : err.message,
+        );
         return;
       }
       setLabel("");
@@ -64,13 +76,20 @@ export default function ReportContentTypesField({ clientId }: Props) {
   function handleLoadDefaults() {
     setError(null);
     startTransition(async () => {
-      const existing = new Set(contentTypes.map((ct) => ct.label.toLowerCase()));
+      const existing = new Set(
+        contentTypes.map((ct) => ct.label.toLowerCase()),
+      );
       const toInsert = DEFAULT_CONTENT_TYPES.filter(
         (l) => !existing.has(l.toLowerCase()),
       ).map((l) => ({ clientId, label: l }));
       if (toInsert.length > 0) {
-        const { error: err } = await supabase.from("reportContentTypes").insert(toInsert);
-        if (err) { setError(err.message); return; }
+        const { error: err } = await supabase
+          .from("reportContentTypes")
+          .insert(toInsert);
+        if (err) {
+          setError(err.message);
+          return;
+        }
       }
       await fetchContentTypes();
     });
@@ -107,7 +126,9 @@ export default function ReportContentTypesField({ clientId }: Props) {
           type="text"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleAdd();
+          }}
           placeholder="New content type"
           maxLength={100}
           className="rounded-sm border border-mauve-600 bg-mauve-800 px-2 py-1.5 text-sm text-white outline-none placeholder:text-mauve-500 focus:border-white"

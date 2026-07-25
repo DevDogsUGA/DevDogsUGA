@@ -1,12 +1,8 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../packages/config/tsconfig/next.json",
   "compilerOptions": {
-    "jsx": "react-jsx",
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    /* Path aliases stay local: TypeScript resolves them against the config
+       file that declares them, so a hoisted "~/*" would point at the preset. */
     "paths": {
       "~/*": ["./src/*"]
     }
@@ -20,5 +16,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "cloudflare/worker.ts"]
+  "exclude": ["node_modules", "cloudflare/worker.ts", "eslint.config.js"]
 }

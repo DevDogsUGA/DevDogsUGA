@@ -35,10 +35,10 @@ export class CourseCollector {
       minBillingCreditHours: parseFloat(
         row["SCHEDULE_OFFERING.MIN_BILLING"] ?? "0",
       ),
-      honors: row["Has_Honors"] === "HONORS",
+      honors: row.Has_Honors === "HONORS",
       subjectAbbr,
       collegeDescription,
-      departmentDescription: row["SCHEDULE_OFFERING.DEPARTMENT_DESC"] || null,
+      departmentDescription: row["SCHEDULE_OFFERING.DEPARTMENT_DESC"] ?? null,
     });
   }
 

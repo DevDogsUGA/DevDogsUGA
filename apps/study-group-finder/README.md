@@ -40,7 +40,7 @@ pnpm --filter @devdogsuga/study-group-finder generate-types:local  # local stack
 supadart can only read PostgREST's **default** schema (it reads `/rest/v1/`
 without an `Accept-Profile` header and has no schema option). To make that work,
 `packages/sb/supabase/config.toml` lists `study_group_finder` **first** in
-`[api] schemas`, so it *is* the default REST profile and supadart reads exactly
+`[api] schemas`, so it _is_ the default REST profile and supadart reads exactly
 this app's schema — no per-run config juggling. Nothing else depends on the
 default (every Supabase client sets its `db.schema` explicitly).
 

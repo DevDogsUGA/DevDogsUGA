@@ -2,7 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "~/supabase/client";
 import type { OfferingSearchRow } from "~/types/course";
 
-export function useOfferingsByCourse(courseId: number, academicPeriod: number | undefined) {
+export function useOfferingsByCourse(
+  courseId: number,
+  academicPeriod: number | undefined,
+) {
   return useQuery<OfferingSearchRow[]>({
     queryKey: ["offerings-by-course", courseId, academicPeriod],
     enabled: !!academicPeriod,

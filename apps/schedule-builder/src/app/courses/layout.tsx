@@ -22,7 +22,7 @@ export default function Layout({ children }: PropsWithChildren) {
               Add Courses
             </h1>
             <div className="h-full min-w-full">
-              <div className="border-pink-100 bg-pink-50 flex flex-col gap-16 border-4 px-8 py-10">
+              <div className="flex flex-col gap-16 border-4 border-pink-100 bg-pink-50 px-8 py-10">
                 {children}
               </div>
             </div>
@@ -32,7 +32,7 @@ export default function Layout({ children }: PropsWithChildren) {
             <h1 className="p-2 pl-1 text-center text-3xl font-black md:text-left">
               Courses
             </h1>
-            <div className="border-pink-100 relative flex-1 border-4 bg-white">
+            <div className="relative flex-1 border-4 border-pink-100 bg-white">
               <div className="shadow-inner-scroll-y absolute inset-0 flex flex-col gap-2 overflow-x-hidden overflow-y-scroll px-2 py-3">
                 {isLoading ? (
                   <>

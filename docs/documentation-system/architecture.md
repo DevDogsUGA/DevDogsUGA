@@ -6,13 +6,13 @@ This page describes the technical design of the DevDogs documentation system —
 
 All documentation pages use a single shared component: `DocPageContent` (`src/components/DocPageContent/`). It accepts raw markdown source and pre-computed headings, then renders using [Fumadocs UI](https://fumadocs.vercel.app) with the following plugins:
 
-| Plugin | Purpose |
-| --- | --- |
-| `remark-gfm` | GitHub Flavored Markdown (tables, task lists, strikethrough) |
-| `remark-heading` | Heading ID generation for anchor links |
-| `remark-admonition` | `> [!NOTE]` / `> [!WARNING]` / `> [!TIP]` callouts |
-| `remark-code-tab` | Code tab blocks |
-| `rehype-code` | Shiki syntax highlighting with dual light/dark themes |
+| Plugin              | Purpose                                                      |
+| ------------------- | ------------------------------------------------------------ |
+| `remark-gfm`        | GitHub Flavored Markdown (tables, task lists, strikethrough) |
+| `remark-heading`    | Heading ID generation for anchor links                       |
+| `remark-admonition` | `> [!NOTE]` / `> [!WARNING]` / `> [!TIP]` callouts           |
+| `remark-code-tab`   | Code tab blocks                                              |
+| `rehype-code`       | Shiki syntax highlighting with dual light/dark themes        |
 
 `DocPageContent` is a pure renderer — it does not parse headings. Heading data (id, title, depth) comes from the cached manifest, ensuring the table of contents, search index, and sidebar tree all derive from the same source.
 
@@ -35,12 +35,12 @@ Only files under the `docs/` directory of a repository are served. Branch names 
 
 The docs system uses Next.js [Cache Components](https://nextjs.org/docs/app/api-reference/config/next-config-js/cacheComponents) (`"use cache"` directive) for granular, per-file caching. Four independently cached layers compose at read time:
 
-| Layer | Function | Cache tag | TTL |
-| --- | --- | --- | --- |
-| Per-file entries | `getDocFileEntries()` | `docs-search-{repo}-{branch}-{slug}` | `cacheLife("days")` |
-| Per-branch tree | `getDocTreeCached()` | `docs-tree-{repo}-{branch}` | `cacheLife("days")` |
-| Per-repo branches | `getDocBranchesCached()` | `docs-branches-{repo}` | `cacheLife("days")` |
-| Per-repo search index | `getDocsSearchIndex()` | `docs-search-index-{repo}` | `cacheLife("days")` |
+| Layer                 | Function                 | Cache tag                            | TTL                 |
+| --------------------- | ------------------------ | ------------------------------------ | ------------------- |
+| Per-file entries      | `getDocFileEntries()`    | `docs-search-{repo}-{branch}-{slug}` | `cacheLife("days")` |
+| Per-branch tree       | `getDocTreeCached()`     | `docs-tree-{repo}-{branch}`          | `cacheLife("days")` |
+| Per-repo branches     | `getDocBranchesCached()` | `docs-branches-{repo}`               | `cacheLife("days")` |
+| Per-repo search index | `getDocsSearchIndex()`   | `docs-search-index-{repo}`           | `cacheLife("days")` |
 
 All cache tag strings are defined in `src/server/manifest/cache-tags.ts` and shared between `cacheTag()` and `revalidateTag()` call sites — a typo becomes a compile-time error rather than a silent cache miss.
 
@@ -49,6 +49,7 @@ The per-file layer caches each markdown file's parsed headings, title, descripti
 Doc pages themselves use `"use cache"` at the page level, caching the entire rendered RSC payload. See the [caching overview](../caching) for the full picture.
 
 **References:**
+
 - [Next.js `"use cache"` directive](https://nextjs.org/docs/app/api-reference/directives/use-cache)
 - [Next.js `cacheTag`](https://nextjs.org/docs/app/api-reference/functions/cacheTag)
 - [Next.js `cacheLife`](https://nextjs.org/docs/app/api-reference/functions/cacheLife)
@@ -61,12 +62,12 @@ When a push is made to a repository, GitHub sends a webhook to `POST /api/github
 2. Parses the push event to extract the repo name, branch, and changed file paths.
 3. Calls `revalidateTag()` for the affected cache tags.
 
-| Event | Tags invalidated |
-| --- | --- |
-| Any push | `docsBranchesTag`, `docsSearchIndexTag` |
-| File added/removed under `docs/` | `docsTreeTag`, `docsSearchIndexTag` |
-| File modified under `docs/` | `docsFileSearchTag`, `docsSearchIndexTag` |
-| `meta.json` changed | `docsTreeTag`, `docsSearchIndexTag` |
+| Event                            | Tags invalidated                          |
+| -------------------------------- | ----------------------------------------- |
+| Any push                         | `docsBranchesTag`, `docsSearchIndexTag`   |
+| File added/removed under `docs/` | `docsTreeTag`, `docsSearchIndexTag`       |
+| File modified under `docs/`      | `docsFileSearchTag`, `docsSearchIndexTag` |
+| `meta.json` changed              | `docsTreeTag`, `docsSearchIndexTag`       |
 
 ### Registering the webhook
 
@@ -89,13 +90,13 @@ Generate a secret with `openssl rand -hex 32`.
 
 Documentation server code is consolidated in `src/server/docs/`:
 
-| File | Responsibility |
-| --- | --- |
-| `github.ts` | Raw GitHub API calls (branches, tree, file content) |
-| `tree.ts` | Tree processing: meta.json parsing, ordering |
-| `utils.ts` | Shared string utilities (`toTitleCase`, `stripExt`) |
-| `actions.ts` | Server actions for sidebar (branch list, tree nodes, branch resolution) |
-| `revalidate.ts` | Webhook-based cache invalidation |
+| File            | Responsibility                                                          |
+| --------------- | ----------------------------------------------------------------------- |
+| `github.ts`     | Raw GitHub API calls (branches, tree, file content)                     |
+| `tree.ts`       | Tree processing: meta.json parsing, ordering                            |
+| `utils.ts`      | Shared string utilities (`toTitleCase`, `stripExt`)                     |
+| `actions.ts`    | Server actions for sidebar (branch list, tree nodes, branch resolution) |
+| `revalidate.ts` | Webhook-based cache invalidation                                        |
 
 The `"use cache"` functions live in `src/server/manifest/docs-cache.ts` and compose the functions above.
 

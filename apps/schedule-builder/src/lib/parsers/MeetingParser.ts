@@ -31,9 +31,9 @@ export class MeetingCollector {
     );
     if (isNaN(crn)) return;
 
-    const timeRaw = row["Time"] ?? "";
+    const timeRaw = row.Time ?? "";
     const [startRaw, endRaw] = timeRaw.split(/\s*-\s*/);
-    const buildingRaw = row["Building"] ?? "";
+    const buildingRaw = row.Building ?? "";
     const buildingId = parseInt(buildingRaw, 10);
 
     this.pending.push({
@@ -55,7 +55,7 @@ export class MeetingCollector {
           : buildingRaw === "NCRR"
             ? "NCRR"
             : "RESERVED",
-      room: row["Room"] ?? "",
+      room: row.Room ?? "",
       buildingId: isNaN(buildingId) ? null : buildingId,
     });
   }

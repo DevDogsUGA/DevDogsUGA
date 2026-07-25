@@ -54,7 +54,9 @@ export async function TopNavMobile() {
   return (
     <MobileSheet
       consoleItems={
-        user ? visibleConsoleItems(user.permissions, user.credentialsAccess) : []
+        user
+          ? visibleConsoleItems(user.permissions, user.credentialsAccess)
+          : []
       }
       profileItems={PROFILE_ITEMS}
       signedIn={user !== null}

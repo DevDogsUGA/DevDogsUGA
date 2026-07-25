@@ -25,7 +25,7 @@ export async function detectAvailableTerms(): Promise<AvailableTerm[]> {
       skipEmptyLines: true,
     }).data;
 
-    const academicPeriod = parseInt(rows[0]?.["ACADEMIC_PERIOD"] ?? "", 10);
+    const academicPeriod = parseInt(rows[0]?.ACADEMIC_PERIOD ?? "", 10);
     if (isNaN(academicPeriod)) continue;
 
     results.push({

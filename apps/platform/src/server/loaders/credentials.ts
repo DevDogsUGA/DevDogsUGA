@@ -8,7 +8,7 @@ import {
 } from "~/server/actions/credentials";
 import { asc } from "drizzle-orm";
 import { db } from "~/server/db";
-import { roles } from '~/server/db/schema';
+import { roles } from "~/server/db/schema";
 
 export type CredentialsPageData = {
   credentials: CredentialRow[];

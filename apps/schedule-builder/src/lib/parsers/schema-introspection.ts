@@ -65,7 +65,7 @@ export function detectTarget(table: PgTable): TargetInfo {
 
   // Priority 4: serial-PK-only — plain INSERT, no natural dedup key
   const info: TargetInfo = {
-    target: [] as unknown as PgColumn,
+    target: [],
     uniqueKeys: [],
     isSerialOnly: true,
   };

@@ -42,7 +42,7 @@ export function extractStructure(markdown: string): StructureResult {
       continue;
     }
 
-    const headingMatch = line.match(/^(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/);
+    const headingMatch = /^(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(line);
     if (headingMatch) {
       if (currentContent.length > 0) {
         const text = currentContent.join("\n").trim();

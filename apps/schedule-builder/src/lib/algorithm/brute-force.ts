@@ -41,7 +41,8 @@ export function dataPreSoftFilter(
     }
   }
 
-  if (output.length === 0) throw new Error("All requested courses are invalid.");
+  if (output.length === 0)
+    throw new Error("All requested courses are invalid.");
   return output;
 }
 
@@ -51,7 +52,10 @@ function getValidSections(
 ): AlgorithmSection[] {
   return course.sections.filter((section) =>
     section.classes.every((cls) => {
-      if (constraints.prefStartTime && cls.startTime < constraints.prefStartTime)
+      if (
+        constraints.prefStartTime &&
+        cls.startTime < constraints.prefStartTime
+      )
         return false;
       if (constraints.prefEndTime && cls.startTime > constraints.prefEndTime)
         return false;
@@ -64,9 +68,7 @@ function getValidSections(
 
 // ─── Schedule generation ──────────────────────────────────────────────────────
 
-export function generateValidSchedules(
-  courses: AlgorithmCourse[],
-): Schedule[] {
+export function generateValidSchedules(courses: AlgorithmCourse[]): Schedule[] {
   const valid: Schedule[] = [];
   generateRecursive([], [...courses], valid);
   return valid;

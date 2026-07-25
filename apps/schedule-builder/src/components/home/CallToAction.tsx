@@ -5,8 +5,8 @@ export function CallToAction() {
   return (
     <div className="flex">
       {/* Left side label */}
-      <div className="OuterRingAnimation bg-pink-50 relative left-8 flex items-center rounded-full px-6 py-2">
-        <span className="text-stone-500 w-32 p-2 text-left md:w-40">
+      <div className="OuterRingAnimation relative left-8 flex items-center rounded-full bg-pink-50 px-6 py-2">
+        <span className="w-32 p-2 text-left text-stone-500 md:w-40">
           Ready?
         </span>
       </div>
@@ -14,7 +14,7 @@ export function CallToAction() {
       {/* Right side button */}
       <Link
         href="/manual-entry"
-        className="OuterRingAnimation trasition bg-red-700 relative right-8 flex items-center rounded-full px-6 py-2 text-white duration-300 ease-in-out hover:bg-[#8b0923]"
+        className="OuterRingAnimation trasition relative right-8 flex items-center rounded-full bg-red-700 px-6 py-2 text-white duration-300 ease-in-out hover:bg-[#8b0923]"
       >
         <span className="mr-2 w-24 text-left font-bold md:w-40 md:p-2">
           Get Started
@@ -26,7 +26,7 @@ export function CallToAction() {
             viewBox="0 0 24 24"
             strokeWidth={2}
             stroke="currentColor"
-            className="text-orange-300 h-4 w-4"
+            className="h-4 w-4 text-orange-300"
           >
             <path
               strokeLinecap="round"

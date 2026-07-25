@@ -13,7 +13,7 @@ export default function PastCredits() {
         <div className="space-y-4">
           <h1 className="text-4xl font-bold md:text-6xl">Past Credits Page</h1>
           <div>
-            <button className="bg-red-700 rounded-lg px-4 py-2 font-semibold text-white">
+            <button className="rounded-lg bg-red-700 px-4 py-2 font-semibold text-white">
               <Link href={"/questionnaire"}>Questionnaire</Link>
             </button>
           </div>

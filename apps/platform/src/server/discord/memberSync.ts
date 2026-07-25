@@ -4,7 +4,7 @@ import { Routes, type APIGuildMember } from "discord-api-types/v10";
 import { asBot } from "./api";
 import { env } from "~/env";
 import { db } from "~/server/db";
-import { roles, userRoles } from '~/server/db/schema';
+import { roles, userRoles } from "~/server/db/schema";
 import { refreshUserPermissions } from "~/server/db/refreshPermissions";
 import { identitiesInAuth } from "~/supabase/drizzle/schema";
 

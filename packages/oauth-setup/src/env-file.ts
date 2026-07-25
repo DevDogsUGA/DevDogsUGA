@@ -20,7 +20,11 @@ export function upsertEnvLocal(
     const match = /^([A-Za-z_][A-Za-z0-9_]*)=/.exec(line);
     if (!match) return line;
 
+    // The regex has exactly one capture group, so a match always fills it;
+    // noUncheckedIndexedAccess can't see that, hence the explicit guard.
     const key = match[1];
+    if (key === undefined) return line;
+
     const value = remaining.get(key);
     if (value === undefined) return line;
 

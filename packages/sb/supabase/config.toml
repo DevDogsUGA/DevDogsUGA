@@ -1,26 +1,37 @@
 project_id = "DevDogs-Website"
 
+# Ports are literals, not "env(...)": `supabase seed` validates config.toml
+# against a typed schema that only interpolates env() into *string* fields, so
+# an env() in any numeric field makes it exit 1 (silently, under the with-env
+# wrapper). Everything else in this file may still use env().
 [api]
 enabled = true
-port = "env(SB_API_PORT)"
+port = 54321
 # `study_group_finder` is deliberately FIRST so it is PostgREST's default REST
 # profile (the schema served at /rest/v1/ when no Accept-Profile header is sent).
 # This lets the Flutter app's supadart codegen — which can't select a schema and
 # only ever reads the default — generate `study_group_finder` models directly.
 # Safe because every app's Supabase client sets its `db.schema` explicitly, so
 # nothing relies on the default; `public` is intentionally empty. Do not reorder.
-schemas = ["study_group_finder", "public", "graphql_public", "storage", "platform", "schedule_builder"]
+schemas = [
+  "study_group_finder",
+  "public",
+  "graphql_public",
+  "storage",
+  "platform",
+  "schedule_builder",
+]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
-port = "env(SB_DB_PORT)"
-shadow_port = "env(SB_DB_SHADOW_PORT)"
+port = 54322
+shadow_port = 54320
 major_version = 17
 
 [db.pooler]
 enabled = false
-port = "env(SB_DB_POOLER_PORT)"
+port = 54329
 pool_mode = "transaction"
 default_pool_size = 20
 max_client_conn = 100
@@ -30,12 +41,12 @@ enabled = false
 
 [studio]
 enabled = true
-port = "env(SB_STUDIO_PORT)"
+port = 54323
 api_url = "http://127.0.0.1"
 
-[inbucket]
+[local_smtp]
 enabled = true
-port = "env(SB_INBUCKET_PORT)"
+port = 54324
 
 [storage]
 enabled = true
@@ -49,14 +60,20 @@ allowed_mime_types = ["image/webp"]
 [storage.buckets.feedback-attachments]
 public = false
 file_size_limit = "5MiB"
-allowed_mime_types = ["image/jpeg","image/png","image/webp","image/gif","application/pdf"]
+allowed_mime_types = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "application/pdf",
+]
 
 [auth]
 enabled = true
 site_url = "env(BASE_URL)"
 additional_redirect_urls = [
-  "env(BASE_URL)/api/auth/callback",
-  "env(SCHEDULE_BUILDER_URL)/api/auth/callback",
+  "env(BASE_URL)/auth/callback",
+  "env(SCHEDULE_BUILDER_URL)/auth/callback",
 ]
 enable_manual_linking = true
 

@@ -8,7 +8,13 @@ import {
   type InputHTMLAttributes,
   type PropsWithChildren,
 } from "react";
-import { CheckIcon, CopyIcon, SpinnerGapIcon, LockIcon, XIcon } from "@phosphor-icons/react/ssr";
+import {
+  CheckIcon,
+  CopyIcon,
+  SpinnerGapIcon,
+  LockIcon,
+  XIcon,
+} from "@phosphor-icons/react/ssr";
 
 interface InputProps extends Omit<
   InputHTMLAttributes<HTMLInputElement>,

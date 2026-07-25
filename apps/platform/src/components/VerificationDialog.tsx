@@ -29,7 +29,7 @@ export default function VerificationDialog({ open, onOpenChange }: Props) {
       >
         {/* rose gradient blobs */}
         <span className="pointer-events-none absolute -top-10 -left-6 h-32 w-32 rounded-full bg-rose-400/20 blur-3xl" />
-        <span className="pointer-events-none absolute -right-8 top-1/3 h-28 w-28 rounded-full bg-rose-500/15 blur-3xl" />
+        <span className="pointer-events-none absolute top-1/3 -right-8 h-28 w-28 rounded-full bg-rose-500/15 blur-3xl" />
         <span className="pointer-events-none absolute -bottom-8 left-1/3 h-24 w-24 rounded-full bg-rose-300/10 blur-3xl" />
 
         <div className="relative flex items-start justify-between gap-4">
@@ -38,10 +38,10 @@ export default function VerificationDialog({ open, onOpenChange }: Props) {
               Welcome back!
             </DialogTitle>
             <DialogDescription className="text-sm text-mauve-400">
-              Your profile is still a work in progress. Complete the steps
-              below to appear on the{" "}
-              <span className="text-mauve-300">DevDogs community page</span>{" "}
-              and unlock full access to club tools and resources.
+              Your profile is still a work in progress. Complete the steps below
+              to appear on the{" "}
+              <span className="text-mauve-300">DevDogs community page</span> and
+              unlock full access to club tools and resources.
             </DialogDescription>
           </DialogHeader>
           <DialogClose

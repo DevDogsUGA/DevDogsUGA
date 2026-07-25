@@ -1,7 +1,7 @@
 "use client";
 
 import type { Course } from "~/types/course";
-import { ReadonlyURLSearchParams } from "next/navigation";
+import { type ReadonlyURLSearchParams } from "next/navigation";
 import { PiCaretDownBold } from "react-icons/pi";
 import { AddCourses } from "./AddCourses";
 import RegisteredClass from "./RegisteredClass";
@@ -47,7 +47,7 @@ export default function CourseDisplay({
         </h1>
         <div className="relative">
           {/* Container for course list */}
-          <div className="no-scrollbar border-pink-100 relative flex flex-1 flex-col overflow-x-hidden overflow-y-scroll scroll-smooth border-4 bg-white py-4">
+          <div className="no-scrollbar relative flex flex-1 flex-col overflow-x-hidden overflow-y-scroll scroll-smooth border-4 border-pink-100 bg-white py-4">
             {/*Course item */}
             {courses.map((course) => (
               <RegisteredClass
@@ -60,7 +60,7 @@ export default function CourseDisplay({
             ))}
           </div>
           {/* Styling div to add spacing and hold down arrow notification in case there is more items */}
-          <div className="border-pink-100 absolute bottom-0 left-0 flex h-6 w-full justify-center border-4 border-t-0 bg-white">
+          <div className="absolute bottom-0 left-0 flex h-6 w-full justify-center border-4 border-t-0 border-pink-100 bg-white">
             {courses.length > 5 && (
               <PiCaretDownBold className="size-30 h-auto w-auto animate-bounce" />
             )}

@@ -16,6 +16,8 @@ export function useSiteSearch(): {
   useEffect(() => {
     const trimmed = search.trim();
     if (!trimmed) {
+      // Debounced fetch effect: reset to empty when the query is cleared.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setData("empty");
       setIsLoading(false);
       return;

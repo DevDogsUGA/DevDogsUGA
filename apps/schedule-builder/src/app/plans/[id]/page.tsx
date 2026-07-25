@@ -13,7 +13,7 @@ export default async function SchedulePage({ params }: Props) {
   // Render the schedule
   return (
     <div
-      className="relative -mb-[3.625rem] -mt-[3.625rem] min-h-screen bg-cover bg-fixed bg-bottom bg-no-repeat pt-2"
+      className="relative -mt-[3.625rem] -mb-[3.625rem] min-h-screen bg-cover bg-fixed bg-bottom bg-no-repeat pt-2"
       style={{
         backgroundImage: `url(${background.src})`,
       }}

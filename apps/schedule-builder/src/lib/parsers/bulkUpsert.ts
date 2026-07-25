@@ -11,6 +11,20 @@ const CHUNK_SIZE = 1000;
 type AnyRow = Record<string, unknown>;
 type AnyPgTable = PgTable & { $inferInsert: AnyRow };
 
+// Minimal structural view of the Drizzle insert builder. The table type here is
+// dynamic (resolved at runtime from introspection), which Drizzle's generics
+// can't express, so we describe just the fluent methods this file uses. `values`
+// is both awaitable (plain INSERT) and chainable (upsert), matching Drizzle.
+type ValuesResult = Promise<unknown> & {
+  onConflictDoUpdate: (config: {
+    target: unknown;
+    set: Record<string, unknown>;
+  }) => { returning: (cols: Record<string, PgColumn>) => Promise<AnyRow[]> };
+};
+type InsertableTx = {
+  insert: (table: PgTable) => { values: (rows: AnyRow[]) => ValuesResult };
+};
+
 function chunk<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let i = 0; i < items.length; i += size)
@@ -35,12 +49,11 @@ export async function bulkUpsert<T extends AnyPgTable>(
   if (rows.length === 0) return [];
 
   const { target, uniqueKeys, isSerialOnly } = detectTarget(table);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const txAny = tx as any;
+  const txTyped = tx as unknown as InsertableTx;
 
   if (isSerialOnly) {
     for (const part of chunk(rows, CHUNK_SIZE)) {
-      await txAny.insert(table).values(part);
+      await txTyped.insert(table).values(part);
     }
     return [];
   }
@@ -48,22 +61,21 @@ export async function bulkUpsert<T extends AnyPgTable>(
   const allCols = getColumns(table) as Record<string, PgColumn>;
 
   const setCols: string[] =
-    options?.set !== undefined
-      ? options.set
-      : (() => {
-          const excludedKeys = new Set<string>(uniqueKeys);
-          for (const uc of getTableConfig(table).uniqueConstraints) {
-            for (const ucCol of uc.columns) {
-              const k = Object.entries(allCols).find(
-                ([, c]) => c.name === ucCol.name,
-              )?.[0];
-              if (k) excludedKeys.add(k);
-            }
-          }
-          return Object.keys(allCols).filter(
-            (k) => !allCols[k]!.primary && !excludedKeys.has(k),
-          );
-        })();
+    options?.set ??
+    (() => {
+      const excludedKeys = new Set<string>(uniqueKeys);
+      for (const uc of getTableConfig(table).uniqueConstraints) {
+        for (const ucCol of uc.columns) {
+          const k = Object.entries(allCols).find(
+            ([, c]) => c.name === ucCol.name,
+          )?.[0];
+          if (k) excludedKeys.add(k);
+        }
+      }
+      return Object.keys(allCols).filter(
+        (k) => !allCols[k]!.primary && !excludedKeys.has(k),
+      );
+    })();
 
   // No-op fallback when setCols is empty: update the first unique key with its
   // own EXCLUDED value so the RETURNING clause still fires and returns the id.
@@ -84,11 +96,11 @@ export async function bulkUpsert<T extends AnyPgTable>(
 
   const results: AnyRow[] = [];
   for (const part of chunk(rows, CHUNK_SIZE)) {
-    const returned = (await txAny
+    const returned = await txTyped
       .insert(table)
       .values(part)
       .onConflictDoUpdate({ target, set })
-      .returning(returning)) as AnyRow[];
+      .returning(returning);
     results.push(...returned);
   }
   return results;

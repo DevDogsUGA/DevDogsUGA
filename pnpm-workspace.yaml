@@ -3,6 +3,155 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   workerd: true
+# Single source of truth for every dependency used by more than one workspace
+# package. Packages reference these with "catalog:" instead of a literal range,
+# so a shared version can only ever be bumped here. Deps used by exactly one
+# package stay as literal ranges in that package's package.json.
+catalog:
+  # --- Framework / runtime ---
+  next: ^16.2.11
+  react: ^19.2.8
+  react-dom: ^19.2.8
+
+  # --- Supabase ---
+  "@supabase/ssr": ^0.12.3
+  "@supabase/supabase-js": ^2.110.8
+
+  # --- Radix ---
+  # Kept on one release train even where a package is currently used by only
+  # one app: mixing trains duplicates the shared internals (dismissable-layer,
+  # popper, portal) in the bundle.
+  "@radix-ui/react-accordion": ^1.2.20
+  "@radix-ui/react-alert-dialog": ^1.1.23
+  "@radix-ui/react-avatar": ^1.2.6
+  "@radix-ui/react-collapsible": ^1.1.20
+  "@radix-ui/react-dialog": ^1.1.23
+  "@radix-ui/react-dropdown-menu": ^2.1.24
+  "@radix-ui/react-hover-card": ^1.1.23
+  "@radix-ui/react-popover": ^1.1.23
+  "@radix-ui/react-select": ^2.3.7
+  "@radix-ui/react-toast": ^1.2.23
+  "@radix-ui/react-tooltip": ^1.2.16
+  radix-ui: ^1.6.7
+
+  # --- Data ---
+  # drizzle-orm/-kit stay pinned exact on the 1.0.0-rc line; the `latest`
+  # dist-tag still points at 0.45.x, so a range here would silently downgrade.
+  drizzle-kit: 1.0.0-rc.3
+  drizzle-orm: 1.0.0-rc.3
+  postgres: ^3.4.9
+  zod: 4.4.3
+  "@tanstack/react-query": ^5.101.4
+  "@tanstack/react-query-devtools": ^5.101.4
+
+  # --- App libraries ---
+  "@t3-oss/env-nextjs": ^0.13.11
+  date-fns: ^4.4.0
+  motion: ^12.42.2
+  papaparse: ^5.5.4
+
+  # --- Styling ---
+  "@tailwindcss/forms": ^0.5.11
+  "@tailwindcss/postcss": ^4.3.3
+  postcss: ^8.5.23
+  tailwindcss: ^4.3.3
+
+  # --- Toolchain ---
+  # eslint is held at 9.x on purpose: eslint-plugin-react (via
+  # eslint-config-next) is not compatible with eslint 10.
+  # typescript is held at 6.x on purpose: typescript-eslint peer-requires
+  # ">=4.8.4 <6.1.0", so TS 7 breaks linting in every package.
+  "@opennextjs/cloudflare": ^1.20.2
+  eslint: ^9.39.5
+  supabase: ^2.109.1
+  tsx: ^4.23.1
+  typescript: ^6.0.3
+  wrangler: ^4.114.0
+
+  # --- Testing ---
+  "@playwright/test": ^1.62.0
+  "@testing-library/jest-dom": ^7.0.0
+  "@testing-library/react": ^16.3.2
+  "@testing-library/user-event": ^14.6.1
+  "@vitest/coverage-v8": ^4.1.10
+  jsdom: ^29.1.1
+  vitest: ^4.1.10
+
+  # --- Types ---
+  "@types/node": ^26.1.1
+  "@types/papaparse": ^5.5.2
+  "@types/react": ^19.2.17
+  "@types/react-dom": ^19.2.3
+minimumReleaseAgeExclude:
+  - "@playwright/test@1.62.0"
+  - playwright-core@1.62.0
+  - playwright@1.62.0
+  - "@dotenvx/dotenvx@2.18.0"
+  - "@radix-ui/react-accessible-icon@1.1.15"
+  - "@radix-ui/react-accordion@1.2.20"
+  - "@radix-ui/react-alert-dialog@1.1.23"
+  - "@radix-ui/react-arrow@1.1.15"
+  - "@radix-ui/react-aspect-ratio@1.1.15"
+  - "@radix-ui/react-avatar@1.2.6"
+  - "@radix-ui/react-checkbox@1.3.11"
+  - "@radix-ui/react-collapsible@1.1.20"
+  - "@radix-ui/react-collection@1.1.15"
+  - "@radix-ui/react-compose-refs@1.1.5"
+  - "@radix-ui/react-context-menu@2.3.7"
+  - "@radix-ui/react-context@1.2.2"
+  - "@radix-ui/react-dialog@1.1.23"
+  - "@radix-ui/react-direction@1.1.4"
+  - "@radix-ui/react-dismissable-layer@1.1.19"
+  - "@radix-ui/react-dropdown-menu@2.1.24"
+  - "@radix-ui/react-focus-guards@1.1.6"
+  - "@radix-ui/react-focus-scope@1.1.16"
+  - "@radix-ui/react-form@0.1.16"
+  - "@radix-ui/react-hover-card@1.1.23"
+  - "@radix-ui/react-id@1.1.4"
+  - "@radix-ui/react-label@2.1.15"
+  - "@radix-ui/react-menu@2.1.24"
+  - "@radix-ui/react-menubar@1.1.24"
+  - "@radix-ui/react-navigation-menu@1.2.22"
+  - "@radix-ui/react-one-time-password-field@0.1.16"
+  - "@radix-ui/react-password-toggle-field@0.1.11"
+  - "@radix-ui/react-popover@1.1.23"
+  - "@radix-ui/react-popper@1.3.7"
+  - "@radix-ui/react-portal@1.1.17"
+  - "@radix-ui/react-presence@1.1.10"
+  - "@radix-ui/react-primitive@2.1.10"
+  - "@radix-ui/react-progress@1.1.16"
+  - "@radix-ui/react-radio-group@1.4.7"
+  - "@radix-ui/react-roving-focus@1.1.19"
+  - "@radix-ui/react-scroll-area@1.2.18"
+  - "@radix-ui/react-select@2.3.7"
+  - "@radix-ui/react-separator@1.1.15"
+  - "@radix-ui/react-slider@1.4.7"
+  - "@radix-ui/react-slot@1.3.3"
+  - "@radix-ui/react-switch@1.3.7"
+  - "@radix-ui/react-tabs@1.1.21"
+  - "@radix-ui/react-toast@1.2.23"
+  - "@radix-ui/react-toggle-group@1.1.19"
+  - "@radix-ui/react-toggle@1.1.18"
+  - "@radix-ui/react-toolbar@1.1.19"
+  - "@radix-ui/react-tooltip@1.2.16"
+  - "@radix-ui/react-use-callback-ref@1.1.4"
+  - "@radix-ui/react-use-controllable-state@1.2.6"
+  - "@radix-ui/react-use-effect-event@0.0.5"
+  - "@radix-ui/react-use-escape-keydown@1.1.5"
+  - "@radix-ui/react-use-is-hydrated@0.1.3"
+  - "@radix-ui/react-use-layout-effect@1.1.4"
+  - "@radix-ui/react-use-previous@1.1.4"
+  - "@radix-ui/react-use-rect@1.1.4"
+  - "@radix-ui/react-use-size@1.1.4"
+  - "@radix-ui/react-visually-hidden@1.2.11"
+  - "@turbo/darwin-64@2.10.7"
+  - "@turbo/darwin-arm64@2.10.7"
+  - "@turbo/linux-64@2.10.7"
+  - "@turbo/linux-arm64@2.10.7"
+  - "@turbo/windows-64@2.10.7"
+  - "@turbo/windows-arm64@2.10.7"
+  - radix-ui@1.6.7
+  - turbo@2.10.7
 onlyBuiltDependencies:
   - esbuild
   - sharp
@@ -12,3 +161,10 @@ onlyBuiltDependencies:
 packages:
   - apps/*
   - packages/*
+
+# Run package.json scripts through pnpm's built-in JS shell (@yarnpkg/shell)
+# instead of the platform shell. It implements the POSIX subset these scripts
+# need — $VAR, ${VAR:-default}, &&, >, and KEY=VALUE prefixes — identically on
+# Windows and POSIX, so no script needs an `sh -c` wrapper. Note it also globs
+# unquoted [...] patterns; keep such arguments quoted.
+shellEmulator: true

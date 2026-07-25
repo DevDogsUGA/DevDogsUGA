@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { type z } from "zod";
 
 const PREFIX = "osb:";
 
@@ -13,9 +13,16 @@ export function readLocal<T>(key: string, schema: z.ZodType<T>): T {
   }
 }
 
-export function writeLocal<T>(key: string, schema: z.ZodType<T>, value: T): void {
+export function writeLocal<T>(
+  key: string,
+  schema: z.ZodType<T>,
+  value: T,
+): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(PREFIX + key, JSON.stringify(schema.parse(value)));
+  window.localStorage.setItem(
+    PREFIX + key,
+    JSON.stringify(schema.parse(value)),
+  );
 }
 
 export function clearLocal(key: string): void {

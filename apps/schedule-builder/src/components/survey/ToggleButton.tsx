@@ -29,6 +29,9 @@ const ToggleButton = ({
 
   useEffect(() => {
     if (clearState) {
+      // Intentional: reset to the untoggled state when the parent survey raises
+      // its `clearState` reset signal.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setToggled(false);
     }
   }, [clearState]);

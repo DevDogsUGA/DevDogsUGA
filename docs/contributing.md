@@ -11,35 +11,51 @@ Thanks for helping improve the DevDogs Website!
 ## Code style
 
 - TypeScript everywhere — avoid `any`.
-- Run `pnpm check` before pushing (lints, typechecks, and formats).
+- Before pushing, run the same checks CI runs:
+
+  ```bash
+  pnpm lint         # ESLint (turbo, all packages)
+  pnpm typecheck    # tsc --noEmit
+  pnpm test         # Vitest (+ flutter test)
+  pnpm format:check # Prettier
+  ```
+
+  `pnpm lint:fix` and `pnpm format:write` auto-fix most issues.
+
 - Prefer editing existing files over creating new ones.
+
+## Testing
+
+Unit and component tests use **Vitest**; the two Next apps also have **Playwright**
+E2E smoke tests. Shared Vitest/ESLint config lives in `packages/config`.
+
+```bash
+pnpm test                              # all unit/component tests
+pnpm --filter @devdogsuga/platform test:watch   # watch a single package
+```
+
+E2E runs against the **local** Supabase stack (never remote — test accounts are
+backed by real `auth.users`):
+
+```bash
+pnpm sb start-local-stack              # boots Supabase, writes .env.generated
+pnpm --filter @devdogsuga/platform test:e2e
+```
+
+Add tests next to the code they cover (`*.test.ts`/`*.test.tsx`); E2E specs live
+in each app's `e2e/` directory.
 
 ## Database changes
 
-Schema lives in `src/server/db/schema/`. After editing, run:
+Database tooling is per-app plus the shared `@devdogsuga/sb` package. See
+[Getting Started](./getting-started.md) and the root README for the full
+workflow; common commands:
 
 ```bash
-pnpm db:push
+pnpm sb new-migration <name>           # create a migration
+pnpm sb push-migrations                # apply + regenerate types (remote)
+pnpm --filter @devdogsuga/platform db:pull   # refresh Drizzle schema from the DB
 ```
-
-This pulls the introspected schema, pushes migrations, and regenerates Supabase types.
-
-### Remote Supabase
-
-If you've set up `.env.remote` (see
-[Getting Started](./getting-started.md#remote-supabase-optional)), use:
-
-```bash
-pnpm db:push:remote
-```
-
-instead of `pnpm db:push` to push schema changes and regenerate types
-against the **remote** database.
-
-> **Warning:** This applies schema changes directly to whatever database
-> `.env.remote`'s `DB_URL` points to. Double-check `.env.remote` before
-> running this — never point it at a production database. `drizzle-kit
-> push` shows a diff and prompts for confirmation before applying changes.
 
 ## Documentation
 

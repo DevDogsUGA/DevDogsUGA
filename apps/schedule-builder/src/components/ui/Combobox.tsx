@@ -285,15 +285,19 @@ export default function Combobox<T extends Record<string, ReactNode>>({
   }, [options]);
 
   /**
-   * Reset the option filter when the popover is closed.
+   * Open/close the popover, resetting the filter and highlight on close.
+   * Handled here (rather than in an effect) so state updates stay in the event.
    */
-  useEffect(() => {
-    if (!open) {
-      setFilter("");
-      setHighlighted(values[0]);
-      setOpen(false);
-    }
-  }, [open, values]);
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      if (!next) {
+        setFilter("");
+        setHighlighted(values[0]);
+      }
+    },
+    [values],
+  );
 
   /**
    * When `highlighted` changes, we make sure that the popover
@@ -348,23 +352,32 @@ export default function Combobox<T extends Record<string, ReactNode>>({
       onChange?.(selection);
     } else {
       onChange?.(selection[0]);
+      // Intentional: auto-close the single-select popover after a selection is
+      // made through any path (checkbox, Enter key). Restructuring into each
+      // handler would miss the keyboard path, so we sync on the value change.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(false);
     }
   }, [values]);
 
   useEffect(() => {
+    // Intentional: reset the keyboard highlight to the first result whenever the
+    // filtered list changes, while still allowing hover/keyboard to move it.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHighlighted(filteredOptions[0]?.value);
   }, [filteredOptions]);
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root open={open} onOpenChange={handleOpenChange}>
       <select
         className="hidden"
-        onChange={() => {}}
+        onChange={() => {
+          /* Controlled via `value`; selection is driven by the popover. */
+        }}
         name={name}
         ref={selectRef}
         required={required}
-        multiple={multiple || undefined}
+        multiple={multiple}
         tabIndex={-1}
         value={multiple ? values.map(String) : String(values[0])}
       >
@@ -378,7 +391,7 @@ export default function Combobox<T extends Record<string, ReactNode>>({
         asChild
       >
         <button
-          className="border-stone-300 [&:not(:disabled):hover]:border-stone-400 flex w-full cursor-default items-center gap-6 rounded-md border-2 bg-white px-3 py-1.5 transition-[box-shadow,border-color] disabled:cursor-not-allowed disabled:opacity-60 data-[state=open]:pointer-events-none [&:not(:disabled):hover]:shadow-sm"
+          className="flex w-full cursor-default items-center gap-6 rounded-md border-2 border-stone-300 bg-white px-3 py-1.5 transition-[box-shadow,border-color] disabled:cursor-not-allowed disabled:opacity-60 data-[state=open]:pointer-events-none [&:not(:disabled):hover]:border-stone-400 [&:not(:disabled):hover]:shadow-sm"
           suppressHydrationWarning
         >
           <span className="flex-1 text-left text-neutral-600 peer-has-[option:checked]:hidden">
@@ -389,7 +402,7 @@ export default function Combobox<T extends Record<string, ReactNode>>({
       </Popover.Trigger>
 
       <Popover.Portal>
-        <Popover.Content className="border-stone-400 -mt-(--radix-popover-trigger-height) flex max-h-56 w-(--radix-popover-trigger-width) max-w-[calc(100dvw-1rem)] flex-col gap-1 rounded-md border-2 bg-white px-1 py-1 shadow-lg">
+        <Popover.Content className="-mt-(--radix-popover-trigger-height) flex max-h-56 w-(--radix-popover-trigger-width) max-w-[calc(100dvw-1rem)] flex-col gap-1 rounded-md border-2 border-stone-400 bg-white px-1 py-1 shadow-lg">
           <label className="peer flex w-full items-center gap-2 rounded-sm bg-neutral-100 px-2 py-1">
             <PiMagnifyingGlass className="text-neutral-700" />
             <input
@@ -408,7 +421,7 @@ export default function Combobox<T extends Record<string, ReactNode>>({
             <div className="peer contents">
               {filteredOptions.map(({ value, content }) => (
                 <label
-                  className="data-highlighted:bg-stone-300 flex snap-start items-center gap-2 rounded-sm py-1 pr-2 has-checked:font-medium"
+                  className="flex snap-start items-center gap-2 rounded-sm py-1 pr-2 has-checked:font-medium data-highlighted:bg-stone-300"
                   data-highlighted={highlighted === value || undefined}
                   key={String(value)}
                   onMouseEnter={() => setHighlighted(value)}

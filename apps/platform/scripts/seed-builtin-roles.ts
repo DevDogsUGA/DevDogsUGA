@@ -9,7 +9,7 @@ import {
   profiles,
   roles,
   userRoles,
-} from '~/server/db/schema';
+} from "~/server/db/schema";
 import { usersInAuth } from "~/supabase/drizzle/schema";
 
 const ALL_FALSE = {

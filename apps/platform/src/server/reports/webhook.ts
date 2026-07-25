@@ -1,7 +1,7 @@
 import { createHmac } from "crypto";
 import { and, eq, isNull, lt } from "drizzle-orm";
 import { db } from "~/server/db";
-import { reportContentTypes, reportResolutions } from '~/server/db/schema';
+import { reportContentTypes, reportResolutions } from "~/server/db/schema";
 import { supabaseAdmin } from "~/supabase/admin";
 
 /** Maximum number of delivery attempts before giving up. */

@@ -52,9 +52,8 @@ export default async function DocsProjectPage({
       </h1>
       <p className="mt-2 text-mauve-300">
         This project hasn&rsquo;t published any documentation. Add markdown
-        files under its{" "}
-        <code className="font-mono">docs/{projectSlug}/</code> directory to get
-        started.
+        files under its <code className="font-mono">docs/{projectSlug}/</code>{" "}
+        directory to get started.
       </p>
     </div>
   );

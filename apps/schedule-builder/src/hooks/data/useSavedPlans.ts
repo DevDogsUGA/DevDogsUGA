@@ -25,7 +25,7 @@ export function useSavedPlans() {
           .eq("academicPeriod", academicPeriod!)
           .order("pinned", { ascending: false });
         if (error) throw error;
-        return (data ?? []) as SavedPlan[];
+        return data ?? [];
       }
       const all = readLocal(LOCAL_KEYS.savedPlans, LocalSavedPlans);
       return all
@@ -66,8 +66,10 @@ export function useSavedPlans() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["plans", academicPeriod] });
-      queryClient.invalidateQueries({ queryKey: ["term-plan-counts"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["plans", academicPeriod],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["term-plan-counts"] });
     },
   });
 
@@ -107,11 +109,12 @@ export function useSavedPlans() {
     },
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey: ["plans", academicPeriod] });
-      const prev = queryClient.getQueryData<SavedPlan[]>(["plans", academicPeriod]);
+      const prev = queryClient.getQueryData<SavedPlan[]>([
+        "plans",
+        academicPeriod,
+      ]);
       queryClient.setQueryData<SavedPlan[]>(["plans", academicPeriod], (old) =>
-        (old ?? []).map((p) =>
-          p.id === patch.id ? { ...p, ...patch } : p,
-        ),
+        (old ?? []).map((p) => (p.id === patch.id ? { ...p, ...patch } : p)),
       );
       return { prev };
     },
@@ -139,8 +142,10 @@ export function useSavedPlans() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["plans", academicPeriod] });
-      queryClient.invalidateQueries({ queryKey: ["term-plan-counts"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["plans", academicPeriod],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["term-plan-counts"] });
     },
   });
 

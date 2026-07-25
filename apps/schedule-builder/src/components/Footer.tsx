@@ -8,7 +8,7 @@ export function Footer() {
         <div className="flex w-1/5 flex-col justify-start gap-x-4 gap-y-4 text-xl sm:flex-row sm:gap-y-0 sm:text-base">
           <a
             rel="noopener"
-            className="col-span-2 flex items-center justify-center text-nowrap text-center hover:text-slate-900"
+            className="col-span-2 flex items-center justify-center text-center text-nowrap hover:text-slate-900"
             href="https://devdogs.uga.edu/"
             target="_blank"
           >
@@ -56,7 +56,7 @@ export function Footer() {
           <a
             title="Instagram"
             rel="noopener"
-            className="flex items-center justify-end justify-center px-2 text-4xl text-neutral-500 hover:text-slate-900 sm:text-2xl"
+            className="flex items-center justify-center justify-end px-2 text-4xl text-neutral-500 hover:text-slate-900 sm:text-2xl"
             href="https://www.instagram.com/devdogs_uga/"
             target="_blank"
           >
@@ -65,7 +65,7 @@ export function Footer() {
           <a
             title="LinkedIn"
             rel="noopener"
-            className="flex items-center justify-start justify-center px-2 text-4xl text-neutral-500 hover:text-slate-900 sm:text-2xl dark:text-white dark:hover:text-slate-300"
+            className="flex items-center justify-center justify-start px-2 text-4xl text-neutral-500 hover:text-slate-900 sm:text-2xl dark:text-white dark:hover:text-slate-300"
             href="https://www.linkedin.com/company/devdogs-uga/"
             target="_blank"
           >

@@ -6,7 +6,7 @@ import { zfd } from "zod-form-data";
 import { supabaseAdmin } from "~/supabase/admin";
 import { authenticate, expectSession, expectUserWith } from "../auth";
 import { db } from "../db";
-import { oauthTestAccounts } from '../db/schema';
+import { oauthTestAccounts } from "../db/schema";
 
 const MAX_TEST_ACCOUNTS = 5;
 
@@ -16,7 +16,7 @@ function getInitials(displayName: string): string {
       .trim()
       .split(/\s+/)
       .slice(0, 3)
-      .map((word) => word.match(/[a-z]/i)?.[0]?.toLowerCase() ?? "")
+      .map((word) => /[a-z]/i.exec(word)?.[0]?.toLowerCase() ?? "")
       .join("") || "t"
   );
 }

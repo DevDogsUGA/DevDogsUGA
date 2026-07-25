@@ -1,6 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { GithubLogoIcon, InstagramLogoIcon, LinkedinLogoIcon } from "@phosphor-icons/react/ssr";
+import {
+  GithubLogoIcon,
+  InstagramLogoIcon,
+  LinkedinLogoIcon,
+} from "@phosphor-icons/react/ssr";
 import devdog from "~/assets/devdog.png";
 
 export default function Footer() {

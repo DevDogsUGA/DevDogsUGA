@@ -36,9 +36,7 @@ export function resolveDocsSlug(
       return {
         branch,
         path:
-          joined === branch
-            ? []
-            : joined.slice(branch.length + 1).split("/"),
+          joined === branch ? [] : joined.slice(branch.length + 1).split("/"),
         redundantBranchPrefix: branch === defaultBranch,
       };
     }

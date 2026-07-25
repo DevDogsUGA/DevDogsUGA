@@ -9,7 +9,7 @@ export class BuildingCollector extends LookupCollector<
     super(
       buildings,
       (row: Row) => {
-        const id = parseInt(row["Building"] ?? "", 10);
+        const id = parseInt(row.Building ?? "", 10);
         if (isNaN(id)) return null;
         return { id, description: row["MEETING_TIME.BUILDING_DESC"] ?? "" };
       },

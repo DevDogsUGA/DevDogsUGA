@@ -57,6 +57,9 @@ const Timeselector = ({
   //Use state to handle reseting the input and meridian button
   useEffect(() => {
     if (clearState) {
+      // Intentional: reset the input + meridian when the parent survey raises
+      // its `clearState` reset signal.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setValue("");
       setMeridian("AM");
     }
@@ -71,7 +74,7 @@ const Timeselector = ({
         onChange={handleChange}
         onKeyDown={handleKeyPress}
         maxLength={5}
-        className={`hover:border-stone-400 w-full rounded-md border-2 px-12 py-2 outline-0 ${className}`}
+        className={`w-full rounded-md border-2 px-12 py-2 outline-0 hover:border-stone-400 ${className}`}
       />
       {/* READONLY INPUT TO CAPTURE CURRENT FORMATTED VALUE W/MERIDIAN TO SEND TO FORMDATA  */}
       <input
@@ -88,7 +91,7 @@ const Timeselector = ({
         alt="time icon"
         width={20}
         height={20}
-        className="absolute left-4 top-3"
+        className="absolute top-3 left-4"
         draggable="false"
       />
       {/* MERIDIAN TOGGLE BUTTON */}

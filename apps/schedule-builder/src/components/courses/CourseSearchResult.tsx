@@ -21,9 +21,7 @@ export function CourseSearchResult({ course }: { course: CourseGroup }) {
     ...new Set(
       course.offerings
         .map((o) =>
-          o.lastName
-            ? `${o.firstName ?? ""} ${o.lastName}`.trim()
-            : null,
+          o.lastName ? `${o.firstName ?? ""} ${o.lastName}`.trim() : null,
         )
         .filter(Boolean),
     ),
@@ -31,7 +29,7 @@ export function CourseSearchResult({ course }: { course: CourseGroup }) {
 
   return (
     <>
-      <div className="border-pink-100 flex items-center justify-between rounded-sm border bg-white px-4 py-3">
+      <div className="flex items-center justify-between rounded-sm border border-pink-100 bg-white px-4 py-3">
         <div className="flex flex-col">
           <span className="font-bold">
             {course.abbr} {course.courseNumber}

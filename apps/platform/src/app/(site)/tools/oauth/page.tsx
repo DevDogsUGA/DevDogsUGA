@@ -41,7 +41,10 @@ export default async function OAuthPage({ searchParams }: Props) {
             label="Client ID"
             description="Copy these into your project's environment variables to enable DevDogs sign-in locally."
           >
-            <OAuthCredentialsField {...data} prefillRedirectUri={prefillRedirectUri} />
+            <OAuthCredentialsField
+              {...data}
+              prefillRedirectUri={prefillRedirectUri}
+            />
           </Field>
         </ConsoleCard.Content>
       </ConsoleCard.Root>

@@ -76,7 +76,9 @@ export default async function UserModerationPage({
                 >
                   <div className="flex flex-col gap-0.5">
                     <span className="font-mono text-xs text-mauve-700">
-                      {report.contentType?.label ? `${report.contentType.label}: ` : ""}
+                      {report.contentType?.label
+                        ? `${report.contentType.label}: `
+                        : ""}
                       {report.contentId}
                     </span>
                     <span className="text-xs text-mauve-500">

@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { ArrowRightIcon, FlameIcon, GithubLogoIcon } from "@phosphor-icons/react/ssr";
+import {
+  ArrowRightIcon,
+  FlameIcon,
+  GithubLogoIcon,
+} from "@phosphor-icons/react/ssr";
 import { expectUserWith } from "~/server/auth";
 import linkGithubProfile from "~/server/actions/linkGithubProfile";
 

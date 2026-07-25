@@ -10,11 +10,26 @@ interface Reason {
 }
 
 const DEFAULT_REASONS: Array<{ title: string; description: string }> = [
-  { title: "Harassment", description: "Targeted harassment or bullying of a community member" },
-  { title: "Spam", description: "Unsolicited promotional content or repetitive posts" },
-  { title: "Misinformation", description: "False or misleading information presented as fact" },
-  { title: "Inappropriate Content", description: "Content that violates community guidelines" },
-  { title: "Impersonation", description: "Pretending to be another person or organization" },
+  {
+    title: "Harassment",
+    description: "Targeted harassment or bullying of a community member",
+  },
+  {
+    title: "Spam",
+    description: "Unsolicited promotional content or repetitive posts",
+  },
+  {
+    title: "Misinformation",
+    description: "False or misleading information presented as fact",
+  },
+  {
+    title: "Inappropriate Content",
+    description: "Content that violates community guidelines",
+  },
+  {
+    title: "Impersonation",
+    description: "Pretending to be another person or organization",
+  },
   { title: "Other", description: "Another reason not listed above" },
 ];
 
@@ -40,6 +55,8 @@ export default function ReportReasonsField({ clientId }: Props) {
   }
 
   useEffect(() => {
+    // Async fetch on clientId change; setState runs after the await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchReasons();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
@@ -55,7 +72,11 @@ export default function ReportReasonsField({ clientId }: Props) {
         description: description.trim() || null,
       });
       if (err) {
-        setError(err.code === "23505" ? "A reason with that title already exists." : err.message);
+        setError(
+          err.code === "23505"
+            ? "A reason with that title already exists."
+            : err.message,
+        );
         return;
       }
       setTitle("");
@@ -80,8 +101,13 @@ export default function ReportReasonsField({ clientId }: Props) {
         (r) => !existing.has(r.title.toLowerCase()),
       ).map((r) => ({ clientId, title: r.title, description: r.description }));
       if (toInsert.length > 0) {
-        const { error: err } = await supabase.from("reportReasons").insert(toInsert);
-        if (err) { setError(err.message); return; }
+        const { error: err } = await supabase
+          .from("reportReasons")
+          .insert(toInsert);
+        if (err) {
+          setError(err.message);
+          return;
+        }
       }
       await fetchReasons();
     });
@@ -99,9 +125,13 @@ export default function ReportReasonsField({ clientId }: Props) {
               className="flex items-start justify-between gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2"
             >
               <div className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium text-white">{reason.title}</span>
+                <span className="text-sm font-medium text-white">
+                  {reason.title}
+                </span>
                 {reason.description && (
-                  <span className="text-xs text-mauve-400">{reason.description}</span>
+                  <span className="text-xs text-mauve-400">
+                    {reason.description}
+                  </span>
                 )}
               </div>
               <button
@@ -123,7 +153,9 @@ export default function ReportReasonsField({ clientId }: Props) {
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleAdd();
+          }}
           placeholder="Reason title"
           maxLength={100}
           className="max-w-sm rounded-sm border border-mauve-600 bg-mauve-800 px-2 py-1.5 text-sm text-white outline-none placeholder:text-mauve-500 focus:border-white"

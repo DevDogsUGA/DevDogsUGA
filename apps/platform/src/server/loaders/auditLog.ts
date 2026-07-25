@@ -10,7 +10,7 @@ import {
   profiles,
   reportContentTypes,
   reportReasons,
-} from '~/server/db/schema';
+} from "~/server/db/schema";
 
 export const PAGE_SIZE = 50;
 
@@ -71,7 +71,10 @@ export const getAuditLogPageData = cache(
       )
       .innerJoin(profiles, eq(profiles.userId, oauthRegistrations.userId))
       .leftJoin(reportReasons, eq(contentReports.reasonId, reportReasons.id))
-      .leftJoin(reportContentTypes, eq(contentReports.contentTypeId, reportContentTypes.id))
+      .leftJoin(
+        reportContentTypes,
+        eq(contentReports.contentTypeId, reportContentTypes.id),
+      )
       .where(eq(oauthRegistrations.type, "production"))
       .orderBy(desc(contentReports.createdAt))
       .limit(PAGE_SIZE)

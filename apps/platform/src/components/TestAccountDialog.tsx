@@ -98,9 +98,7 @@ export default function TestAccountDialog({
           )}
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-white">
-              Display Name
-            </span>
+            <span className="text-sm font-medium text-white">Display Name</span>
             <input
               className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-2 text-sm text-white transition-colors outline-none focus:border-white"
               name="displayName"

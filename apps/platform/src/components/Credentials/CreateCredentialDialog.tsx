@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState, useTransition } from "react";
 import { PlusIcon, XIcon } from "@phosphor-icons/react/ssr";
 import FormButton from "~/components/FormButton";
+import { emptyToUndefined } from "~/lib/blank";
 import {
   createCredential,
   type CredentialType,
@@ -82,11 +83,11 @@ export default function CreateCredentialDialog({ allRoles }: Props) {
         try {
           await createCredential({
             name,
-            description: description || undefined,
+            description: emptyToUndefined(description),
             type,
-            email: email || undefined,
-            password: password || undefined,
-            totpSecret: totpSecret || undefined,
+            email: emptyToUndefined(email),
+            password: emptyToUndefined(password),
+            totpSecret: emptyToUndefined(totpSecret),
             roleIds,
           });
           setOpen(false);
@@ -116,10 +117,7 @@ export default function CreateCredentialDialog({ allRoles }: Props) {
         className="max-w-lg border-mauve-700 bg-mauve-900 p-0 shadow-xl shadow-black/40"
         showCloseButton={false}
       >
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-5 px-5 py-6"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-5 py-6">
           <DialogHeader className="flex-row items-center justify-between">
             <DialogTitle className="text-lg font-semibold text-white">
               New Credential Set
@@ -129,144 +127,144 @@ export default function CreateCredentialDialog({ allRoles }: Props) {
             </DialogClose>
           </DialogHeader>
 
-            {/* Name */}
+          {/* Name */}
+          <label className="flex flex-col gap-1 text-sm font-medium text-white">
+            Name *
+            <input
+              ref={nameRef}
+              type="text"
+              required
+              placeholder="e.g. Figma Org Account"
+              className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-1.5 font-normal text-white transition-colors outline-none placeholder:text-mauve-500 focus:border-white"
+            />
+          </label>
+
+          {/* Description */}
+          <label className="flex flex-col gap-1 text-sm font-medium text-white">
+            Description
+            <textarea
+              ref={descriptionRef}
+              rows={2}
+              placeholder="Optional — describe what this account is used for"
+              className="resize-none rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-1.5 font-normal text-white transition-colors outline-none placeholder:text-mauve-500 focus:border-white"
+            />
+          </label>
+
+          {/* Type */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-medium text-white">Type *</legend>
+            <div className="flex flex-wrap gap-3">
+              {(
+                [
+                  ["email_password", "Email / Password"],
+                  ["email_password_totp", "Email / Password + 2FA"],
+                  ["totp", "2FA only"],
+                ] as [CredentialType, string][]
+              ).map(([value, label]) => (
+                <label
+                  key={value}
+                  className="flex cursor-pointer items-center gap-1.5 text-sm text-mauve-200"
+                >
+                  <input
+                    type="radio"
+                    name="type"
+                    value={value}
+                    checked={type === value}
+                    onChange={() => setType(value)}
+                    className="accent-cyan-400"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          {/* Email */}
+          {hasEmail && (
             <label className="flex flex-col gap-1 text-sm font-medium text-white">
-              Name *
+              Email
               <input
-                ref={nameRef}
-                type="text"
-                required
-                placeholder="e.g. Figma Org Account"
+                ref={emailRef}
+                type="email"
+                placeholder="shared@example.com"
                 className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-1.5 font-normal text-white transition-colors outline-none placeholder:text-mauve-500 focus:border-white"
               />
             </label>
+          )}
 
-            {/* Description */}
+          {/* Password */}
+          {hasPassword && (
             <label className="flex flex-col gap-1 text-sm font-medium text-white">
-              Description
-              <textarea
-                ref={descriptionRef}
-                rows={2}
-                placeholder="Optional — describe what this account is used for"
-                className="resize-none rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-1.5 font-normal text-white transition-colors outline-none placeholder:text-mauve-500 focus:border-white"
+              Password *
+              <input
+                ref={passwordRef}
+                type="password"
+                autoComplete="new-password"
+                required={hasPassword}
+                className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-1.5 font-mono font-normal text-white transition-colors outline-none placeholder:text-mauve-500 focus:border-white"
               />
             </label>
+          )}
 
-            {/* Type */}
-            <fieldset className="flex flex-col gap-2">
-              <legend className="text-sm font-medium text-white">Type *</legend>
-              <div className="flex flex-wrap gap-3">
-                {(
-                  [
-                    ["email_password", "Email / Password"],
-                    ["email_password_totp", "Email / Password + 2FA"],
-                    ["totp", "2FA only"],
-                  ] as [CredentialType, string][]
-                ).map(([value, label]) => (
-                  <label
-                    key={value}
-                    className="flex cursor-pointer items-center gap-1.5 text-sm text-mauve-200"
-                  >
-                    <input
-                      type="radio"
-                      name="type"
-                      value={value}
-                      checked={type === value}
-                      onChange={() => setType(value)}
-                      className="accent-cyan-400"
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+          {/* TOTP secret */}
+          {hasTotp && (
+            <label className="flex flex-col gap-1 text-sm font-medium text-white">
+              TOTP Secret (Base32) *
+              <input
+                ref={totpRef}
+                type="text"
+                required={hasTotp}
+                placeholder="JBSWY3DPEHPK3PXP…"
+                spellCheck={false}
+                autoComplete="off"
+                className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-1.5 font-mono font-normal tracking-wider text-white transition-colors outline-none placeholder:text-mauve-500 focus:border-white"
+              />
+              <span className="text-xs font-normal text-mauve-400">
+                The Base32 secret shown by the service when enabling 2FA.
+              </span>
+            </label>
+          )}
 
-            {/* Email */}
-            {hasEmail && (
-              <label className="flex flex-col gap-1 text-sm font-medium text-white">
-                Email
-                <input
-                  ref={emailRef}
-                  type="email"
-                  placeholder="shared@example.com"
-                  className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-1.5 font-normal text-white transition-colors outline-none placeholder:text-mauve-500 focus:border-white"
-                />
-              </label>
-            )}
-
-            {/* Password */}
-            {hasPassword && (
-              <label className="flex flex-col gap-1 text-sm font-medium text-white">
-                Password *
-                <input
-                  ref={passwordRef}
-                  type="password"
-                  autoComplete="new-password"
-                  required={hasPassword}
-                  className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-1.5 font-mono font-normal text-white transition-colors outline-none placeholder:text-mauve-500 focus:border-white"
-                />
-              </label>
-            )}
-
-            {/* TOTP secret */}
-            {hasTotp && (
-              <label className="flex flex-col gap-1 text-sm font-medium text-white">
-                TOTP Secret (Base32) *
-                <input
-                  ref={totpRef}
-                  type="text"
-                  required={hasTotp}
-                  placeholder="JBSWY3DPEHPK3PXP…"
-                  spellCheck={false}
-                  autoComplete="off"
-                  className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-1.5 font-mono font-normal tracking-wider text-white transition-colors outline-none placeholder:text-mauve-500 focus:border-white"
-                />
-                <span className="text-xs font-normal text-mauve-400">
-                  The Base32 secret shown by the service when enabling 2FA.
-                </span>
-              </label>
-            )}
-
-            {/* Roles */}
-            <fieldset className="flex flex-col gap-2">
-              <legend className="text-sm font-medium text-white">
-                Visible to roles *
-              </legend>
-              <div className="flex flex-wrap gap-x-4 gap-y-2">
-                {allRoles.map((role) => (
-                  <label
-                    key={role.id}
-                    className="flex cursor-pointer items-center gap-1.5 text-sm text-mauve-200"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedRoles.has(role.id)}
-                      onChange={() => toggleRole(role.id)}
-                      className="accent-cyan-400"
-                    />
-                    {role.title}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            {error && <p className="text-sm text-rose-400">{error}</p>}
-
-            <div className="flex justify-end gap-3 pt-1">
-              <DialogClose asChild>
-                <button
-                  type="button"
-                  className="rounded-sm border border-mauve-600 bg-mauve-800 px-4 py-1.5 text-sm font-medium text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-900"
+          {/* Roles */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-medium text-white">
+              Visible to roles *
+            </legend>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {allRoles.map((role) => (
+                <label
+                  key={role.id}
+                  className="flex cursor-pointer items-center gap-1.5 text-sm text-mauve-200"
                 >
-                  Cancel
-                </button>
-              </DialogClose>
-              <FormButton theme="black" type="submit" disabled={isPending}>
-                Create
-              </FormButton>
+                  <input
+                    type="checkbox"
+                    checked={selectedRoles.has(role.id)}
+                    onChange={() => toggleRole(role.id)}
+                    className="accent-cyan-400"
+                  />
+                  {role.title}
+                </label>
+              ))}
             </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </fieldset>
+
+          {error && <p className="text-sm text-rose-400">{error}</p>}
+
+          <div className="flex justify-end gap-3 pt-1">
+            <DialogClose asChild>
+              <button
+                type="button"
+                className="rounded-sm border border-mauve-600 bg-mauve-800 px-4 py-1.5 text-sm font-medium text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-900"
+              >
+                Cancel
+              </button>
+            </DialogClose>
+            <FormButton theme="black" type="submit" disabled={isPending}>
+              Create
+            </FormButton>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

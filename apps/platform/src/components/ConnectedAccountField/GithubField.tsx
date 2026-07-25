@@ -17,7 +17,11 @@ function getIdentityUserName(identityData: unknown): string | undefined {
     : undefined;
 }
 
-export default function GithubField({ id, githubIdentity, profile }: ProfileData) {
+export default function GithubField({
+  id,
+  githubIdentity,
+  profile,
+}: ProfileData) {
   return (
     <ConnectedAccountField
       userId={id}

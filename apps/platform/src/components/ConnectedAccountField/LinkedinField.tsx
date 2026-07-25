@@ -18,14 +18,19 @@ function getIdentityName(identityData: unknown): string | undefined {
       ? identityData.given_name
       : "";
   const family =
-    "family_name" in identityData && typeof identityData.family_name === "string"
+    "family_name" in identityData &&
+    typeof identityData.family_name === "string"
       ? identityData.family_name
       : "";
   const full = [given, family].filter(Boolean).join(" ");
   return full || undefined;
 }
 
-export default function LinkedinField({ id, linkedinIdentity, profile }: ProfileData) {
+export default function LinkedinField({
+  id,
+  linkedinIdentity,
+  profile,
+}: ProfileData) {
   return (
     <ConnectedAccountField
       userId={id}

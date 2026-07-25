@@ -8,7 +8,7 @@ import type {
 } from "~/server/actions/feedback";
 import { expectSession, expectUserWith } from "~/server/auth";
 import { db } from "~/server/db";
-import { feedbackTopics, profiles, siteFeedback } from '~/server/db/schema';
+import { feedbackTopics, profiles, siteFeedback } from "~/server/db/schema";
 
 export const getFeedbackPageData = cache(async (filters: FeedbackFilters) => {
   const userId = await expectSession().catch(() => redirect("/auth"));
@@ -65,8 +65,8 @@ export const getFeedbackPageData = cache(async (filters: FeedbackFilters) => {
     .leftJoin(
       feedbackTopics,
       and(
-        eq(feedbackTopics.clientId, siteFeedback.clientId!),
-        eq(feedbackTopics.id, siteFeedback.topicId!),
+        eq(feedbackTopics.clientId, siteFeedback.clientId),
+        eq(feedbackTopics.id, siteFeedback.topicId),
       ),
     )
     .where(and(...conditions))
@@ -150,8 +150,8 @@ export const getFeedbackTestingPageData = cache(async () => {
       .leftJoin(
         feedbackTopics,
         and(
-          eq(feedbackTopics.clientId, siteFeedback.clientId!),
-          eq(feedbackTopics.id, siteFeedback.topicId!),
+          eq(feedbackTopics.clientId, siteFeedback.clientId),
+          eq(feedbackTopics.id, siteFeedback.topicId),
         ),
       )
       .where(

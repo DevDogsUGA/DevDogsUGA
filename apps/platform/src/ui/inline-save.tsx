@@ -2,7 +2,10 @@
 
 import { motion } from "motion/react";
 import { useState, type ReactNode } from "react";
-import { SpinnerGapIcon, ArrowCounterClockwiseIcon } from "@phosphor-icons/react/ssr";
+import {
+  SpinnerGapIcon,
+  ArrowCounterClockwiseIcon,
+} from "@phosphor-icons/react/ssr";
 
 interface InlineSaveProps {
   show: boolean;
@@ -141,7 +144,7 @@ export default function InlineSave({
       <div className="flex min-h-0 flex-col justify-end overflow-hidden">
         <div className="flex max-w-sm items-center justify-between gap-2 pt-2.5 text-xs leading-tight text-balance text-mauve-600">
           {left}
-          {(meta || secondaryMeta !== undefined) && (
+          {(Boolean(meta) || secondaryMeta !== undefined) && (
             <div className="flex flex-col *:h-lh *:truncate *:transition-[height] *:data-hidden:h-0">
               <span data-hidden={!meta || undefined}>{meta}</span>
               <span data-hidden={!secondaryMeta || undefined}>

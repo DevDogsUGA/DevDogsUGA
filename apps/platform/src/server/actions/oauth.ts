@@ -4,13 +4,13 @@ import { randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
 import { authenticate, expectUserWith } from "../auth";
 import { db } from "../db";
-import { oauthRegistrations } from '../db/schema';
+import { oauthRegistrations } from "../db/schema";
 import { supabaseAdmin } from "../../supabase/admin";
 
 const MAX_REDIRECT_URIS = 5;
 
 const DEFAULT_REDIRECT_URIS = [
-  "http://localhost:3000/api/auth", // Community Resource Forum
+  "http://localhost:3000/auth", // Community Resource Forum
 ];
 
 export type OAuthState = {

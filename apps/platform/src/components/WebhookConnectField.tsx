@@ -27,9 +27,14 @@ export default function WebhookConnectField({ clientId }: Props) {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inFlight = useRef<Set<string>>(new Set());
   const urlRef = useRef(url);
-  urlRef.current = url;
+  // Mirror the latest url into a ref for the async pollers (after commit).
+  useEffect(() => {
+    urlRef.current = url;
+  });
 
   useEffect(() => {
+    // Restore the saved local server URL from localStorage after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUrl(localStorage.getItem(STORAGE_KEY) ?? "");
   }, []);
 
@@ -117,11 +122,15 @@ export default function WebhookConnectField({ clientId }: Props) {
       });
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       setState("connected");
-      pollRef.current = setInterval(() => { void poll(); }, POLL_INTERVAL_MS);
+      pollRef.current = setInterval(() => {
+        void poll();
+      }, POLL_INTERVAL_MS);
     } catch (e) {
       setState("error");
       setConnectError(
-        e instanceof Error ? e.message : "Failed to connect. Check the URL and CORS settings.",
+        e instanceof Error
+          ? e.message
+          : "Failed to connect. Check the URL and CORS settings.",
       );
     }
   }
@@ -161,7 +170,9 @@ export default function WebhookConnectField({ clientId }: Props) {
             type="button"
             className="text-sm text-nowrap"
             disabled={!url.trim() || state === "connecting"}
-            onClick={() => { void handleConnect(); }}
+            onClick={() => {
+              void handleConnect();
+            }}
           >
             {state === "connecting" ? "Connecting…" : "Connect"}
           </FormButton>
@@ -176,9 +187,10 @@ export default function WebhookConnectField({ clientId }: Props) {
       {connectError && <p className="text-xs text-rose-400">{connectError}</p>}
 
       <p className="max-w-md text-xs text-mauve-400">
-        Clicking Connect sends a <code className="text-mauve-200">report.ping</code> to
-        verify the URL is reachable. While connected, unverified reports from your test
-        accounts are delivered directly from your browser — no ngrok needed. Your server
+        Clicking Connect sends a{" "}
+        <code className="text-mauve-200">report.ping</code> to verify the URL is
+        reachable. While connected, unverified reports from your test accounts
+        are delivered directly from your browser — no ngrok needed. Your server
         must allow CORS from this origin.
       </p>
     </div>

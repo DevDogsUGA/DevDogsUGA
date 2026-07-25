@@ -134,7 +134,8 @@ async function main(): Promise<void> {
 
   // ── Step 1: DevDogs API base URL ───────────────────────────────────────────
 
-  let baseUrl = args.baseUrl ?? process.env[ENV_KEYS.baseUrl] ?? DEFAULT_API_URL;
+  let baseUrl =
+    args.baseUrl ?? process.env[ENV_KEYS.baseUrl] ?? DEFAULT_API_URL;
 
   if (!args.baseUrl) {
     baseUrl = unwrap(
@@ -167,7 +168,8 @@ async function main(): Promise<void> {
 
   // ── Step 3: OAuth client credentials ───────────────────────────────────────
 
-  let clientId: string | undefined = process.env[ENV_KEYS.clientId] || undefined;
+  let clientId: string | undefined =
+    process.env[ENV_KEYS.clientId] || undefined;
   let clientSecret: string | undefined =
     process.env[ENV_KEYS.clientSecret] || undefined;
 
@@ -298,7 +300,8 @@ async function main(): Promise<void> {
 
   const alreadyRegistered = unwrap(
     await confirm({
-      message: "Have you already registered your Supabase callback URL with DevDogs?",
+      message:
+        "Have you already registered your Supabase callback URL with DevDogs?",
       initialValue: false,
     }),
   );
@@ -325,13 +328,13 @@ async function main(): Promise<void> {
 
   nextSteps.push(
     `${step++}. Make sure your project's supabase/config.toml allows your app callback:`,
-    `   additional_redirect_urls = ["http://localhost:<port>/api/auth/callback"]`,
+    `   additional_redirect_urls = ["http://localhost:<port>/auth/callback"]`,
     ``,
     `${step++}. Trigger sign-in from your app:`,
     ``,
     `   await supabase.auth.signInWithOAuth({`,
     `     provider: "${identifier}",`,
-    `     options: { redirectTo: \`\${origin}/api/auth/callback\` },`,
+    `     options: { redirectTo: \`\${origin}/auth/callback\` },`,
     `   });`,
   );
 

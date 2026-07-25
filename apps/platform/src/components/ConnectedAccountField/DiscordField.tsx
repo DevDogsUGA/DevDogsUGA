@@ -17,7 +17,11 @@ function getIdentityUserName(identityData: unknown): string | undefined {
     : undefined;
 }
 
-export default function DiscordField({ id, discordIdentity, profile }: ProfileData) {
+export default function DiscordField({
+  id,
+  discordIdentity,
+  profile,
+}: ProfileData) {
   return (
     <ConnectedAccountField
       userId={id}

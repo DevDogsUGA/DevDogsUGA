@@ -44,7 +44,7 @@ export function ScheduleViewNavBar() {
         scrollDirection === "down" ? "-translate-y-[130%]" : "translate-y-0"
       }`}
     >
-      <div className="flex h-[4.5rem] w-full items-center justify-between rounded-none border border-[#F8E6EA] border-opacity-40 bg-[#F8E6EA] bg-opacity-80 shadow-lg shadow-black/[0.03] backdrop-blur-[0.5rem] sm:mx-auto sm:h-[4rem] sm:w-[36rem] sm:rounded-full md:h-[4rem] md:w-[45rem] lg:w-[60rem] xl:w-[80rem]">
+      <div className="border-opacity-40 bg-opacity-80 flex h-[4.5rem] w-full items-center justify-between rounded-none border border-[#F8E6EA] bg-[#F8E6EA] shadow-lg shadow-black/[0.03] backdrop-blur-[0.5rem] sm:mx-auto sm:h-[4rem] sm:w-[36rem] sm:rounded-full md:h-[4rem] md:w-[45rem] lg:w-[60rem] xl:w-[80rem]">
         {/* Logo and Title */}
         <div className="flex items-center space-x-2 pl-8">
           <Link href="/" className="flex items-center gap-3">
@@ -83,17 +83,17 @@ export function ScheduleViewNavBar() {
         {/* Desktop Menu */}
         <div className="mr-8 hidden flex-nowrap items-center justify-around gap-8 text-[20px] font-bold sm:flex">
           <Link href="/">
-            <button className="hover:bg-red-700/50 rounded-full px-2 py-1 transition duration-300 ease-in-out md:px-4">
+            <button className="rounded-full px-2 py-1 transition duration-300 ease-in-out hover:bg-red-700/50 md:px-4">
               Modify
             </button>
           </Link>
           <Link href="/">
-            <button className="hover:bg-red-700/50 rounded-full px-2 py-1 transition duration-300 ease-in-out md:px-4">
+            <button className="rounded-full px-2 py-1 transition duration-300 ease-in-out hover:bg-red-700/50 md:px-4">
               Shuffle
             </button>
           </Link>
           <Link href="/">
-            <button className="hover:bg-red-700/50 rounded-full px-2 py-1 transition duration-300 ease-in-out md:px-4">
+            <button className="rounded-full px-2 py-1 transition duration-300 ease-in-out hover:bg-red-700/50 md:px-4">
               List View
             </button>
           </Link>
@@ -101,19 +101,19 @@ export function ScheduleViewNavBar() {
 
         {/* Mobile Dropdown */}
         {isDropdownOpen && (
-          <div className="absolute left-0 top-[4.5rem] z-[998] w-full flex-col items-center justify-start rounded-none bg-[#F8E6EA] shadow-lg sm:hidden">
+          <div className="absolute top-[4.5rem] left-0 z-[998] w-full flex-col items-center justify-start rounded-none bg-[#F8E6EA] shadow-lg sm:hidden">
             <Link href="/">
-              <button className="hover:bg-red-700/50 block w-full px-4 py-3 text-left text-[1.2rem] font-bold transition duration-300 ease-in-out">
+              <button className="block w-full px-4 py-3 text-left text-[1.2rem] font-bold transition duration-300 ease-in-out hover:bg-red-700/50">
                 Modify
               </button>
             </Link>
             <Link href="/">
-              <button className="hover:bg-red-700/50 block w-full px-4 py-3 text-left text-[1.2rem] font-bold transition duration-300 ease-in-out">
+              <button className="block w-full px-4 py-3 text-left text-[1.2rem] font-bold transition duration-300 ease-in-out hover:bg-red-700/50">
                 Shuffle
               </button>
             </Link>
             <Link href="/">
-              <button className="hover:bg-red-700/50 block w-full px-4 py-3 text-left text-[1.2rem] font-bold transition duration-300 ease-in-out">
+              <button className="block w-full px-4 py-3 text-left text-[1.2rem] font-bold transition duration-300 ease-in-out hover:bg-red-700/50">
                 List View
               </button>
             </Link>

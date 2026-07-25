@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { PiCursorClick, PiPlusCircleBold, PiTrashBold, PiXCircleBold } from "react-icons/pi";
+import {
+  PiCursorClick,
+  PiPlusCircleBold,
+  PiTrashBold,
+  PiXCircleBold,
+} from "react-icons/pi";
 import { CourseSectionsDialog } from "./CourseSectionsDialog";
 import { type DraftCourse } from "~/lib/localStorage/types";
 
@@ -18,7 +23,7 @@ export function SavedCourseItem({
   const info = course.courses[0];
 
   return (
-    <div className="group hover:border-stone-500 hover:bg-stone-500/15 relative rounded-sm border border-transparent transition-[border-color,box-shadow,background-color] hover:shadow-sm">
+    <div className="group relative rounded-sm border border-transparent transition-[border-color,box-shadow,background-color] hover:border-stone-500 hover:bg-stone-500/15 hover:shadow-sm">
       <button
         type="button"
         onClick={() => setDialogOpen(true)}

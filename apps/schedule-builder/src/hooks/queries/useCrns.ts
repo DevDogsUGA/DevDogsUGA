@@ -10,7 +10,7 @@ export function useCrns() {
         .select("crn")
         .order("crn");
       if (error) throw error;
-      return (data ?? []).map((r) => r.crn as number);
+      return (data ?? []).map((r) => r.crn);
     },
   });
 }

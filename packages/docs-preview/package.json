@@ -20,16 +20,22 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "chokidar": "^4",
     "ws": "^8"
   },
   "devDependencies": {
-    "@types/node": "*",
-    "@types/react": "*",
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
     "@types/ws": "^8",
-    "typescript": "*"
+    "@vitest/coverage-v8": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

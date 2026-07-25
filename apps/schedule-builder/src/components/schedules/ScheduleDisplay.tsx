@@ -12,14 +12,18 @@ import {
   PiXBold,
 } from "react-icons/pi";
 import { useSavedPlan } from "~/hooks/data/useSavedPlans";
-import { getPlanOfferings } from "~/app/actions/get-plan-offerings";
+import { getPlanOfferings } from "~/server/actions/get-plan-offerings";
 
 interface Props {
   id: string;
 }
 
 export default function ScheduleDisplay({ id }: Props) {
-  const { plan: currentPlan, savedPlans: allPlans, updatePlan } = useSavedPlan(id);
+  const {
+    plan: currentPlan,
+    savedPlans: allPlans,
+    updatePlan,
+  } = useSavedPlan(id);
   const currentPlanIndex = allPlans.findIndex((p) => p.id === id);
 
   const { data: weekData } = useQuery({
@@ -59,17 +63,19 @@ export default function ScheduleDisplay({ id }: Props) {
 
   return (
     <div className="mx-auto min-h-screen w-full">
-      <div className="z-1 bg-pink-50 ml-auto mr-auto flex h-[85vh] w-[90vw] flex-col rounded-lg border-2 border-black pt-2">
+      <div className="z-1 mr-auto ml-auto flex h-[85vh] w-[90vw] flex-col rounded-lg border-2 border-black bg-pink-50 pt-2">
         <div className="flex flex-row items-center justify-between px-12 py-2">
           <button
             type="button"
             className="cursor-default"
-            onClick={() => updatePlan.mutate({ id, pinned: !currentPlan.pinned })}
+            onClick={() =>
+              updatePlan.mutate({ id, pinned: !currentPlan.pinned })
+            }
           >
             {currentPlan.pinned ? (
-              <PiHeartFill className="text-red-600 size-8 transition" />
+              <PiHeartFill className="size-8 text-red-600 transition" />
             ) : (
-              <PiHeartBold className="hover:text-red-600 m-0.5 size-7 transition-[color,width,height,margin] hover:m-0 hover:size-8" />
+              <PiHeartBold className="m-0.5 size-7 transition-[color,width,height,margin] hover:m-0 hover:size-8 hover:text-red-600" />
             )}
           </button>
 
@@ -85,7 +91,7 @@ export default function ScheduleDisplay({ id }: Props) {
             )}
 
             <input
-              className="rounded-sm border-2 border-white pb-px pt-0.5 text-center text-xl font-semibold hover:border-gray-500 focus:border-gray-300"
+              className="rounded-sm border-2 border-white pt-0.5 pb-px text-center text-xl font-semibold hover:border-gray-500 focus:border-gray-300"
               defaultValue={currentPlan.title}
               key={currentPlan.id}
               maxLength={32}
@@ -104,7 +110,7 @@ export default function ScheduleDisplay({ id }: Props) {
             )}
           </div>
 
-          <Link href="/plans" className="hover:text-red-700 transition-colors">
+          <Link href="/plans" className="transition-colors hover:text-red-700">
             <PiXBold className="size-7" />
           </Link>
         </div>

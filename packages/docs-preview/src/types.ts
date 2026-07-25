@@ -4,8 +4,21 @@
  */
 
 export type DocTreeNode =
-  | { type: "page"; id: string; name: string; url: string; icon: string; restrictVisibility: false }
-  | { type: "folder"; id: string; name: string | null; children: DocTreeNode[]; defaultOpen?: boolean };
+  | {
+      type: "page";
+      id: string;
+      name: string;
+      url: string;
+      icon: string;
+      restrictVisibility: false;
+    }
+  | {
+      type: "folder";
+      id: string;
+      name: string | null;
+      children: DocTreeNode[];
+      defaultOpen?: boolean;
+    };
 
 export interface GitInfo {
   branch: string;

@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  type PropsWithChildren,
-  useEffect,
-} from "react";
+import { type PropsWithChildren, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Session } from "@supabase/supabase-js";
 import { supabase } from "~/supabase/client";
@@ -22,11 +19,9 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    supabase.auth
+    void supabase.auth
       .getSession()
-      .then(({ data }) =>
-        queryClient.setQueryData(["session"], data.session),
-      );
+      .then(({ data }) => queryClient.setQueryData(["session"], data.session));
 
     const { data: sub } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -37,10 +32,10 @@ export function SessionProvider({ children }: PropsWithChildren) {
         }
 
         if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-          queryClient.invalidateQueries({ queryKey: ["preferences"] });
-          queryClient.invalidateQueries({ queryKey: ["draft-prefs"] });
-          queryClient.invalidateQueries({ queryKey: ["draft-courses"] });
-          queryClient.invalidateQueries({ queryKey: ["plans"] });
+          void queryClient.invalidateQueries({ queryKey: ["preferences"] });
+          void queryClient.invalidateQueries({ queryKey: ["draft-prefs"] });
+          void queryClient.invalidateQueries({ queryKey: ["draft-courses"] });
+          void queryClient.invalidateQueries({ queryKey: ["plans"] });
         }
       },
     );

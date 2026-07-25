@@ -13,7 +13,7 @@ import {
   reportContentTypes,
   reportCorroborations,
   reportReasons,
-} from '~/server/db/schema';
+} from "~/server/db/schema";
 import { supabaseAdmin } from "~/supabase/admin";
 
 export type ProductionReport = {
@@ -146,7 +146,10 @@ export const getModerationPageData = cache(async () => {
           eq(contentReports.id, corroborationSq.reportId),
         )
         .leftJoin(reportReasons, eq(contentReports.reasonId, reportReasons.id))
-        .leftJoin(reportContentTypes, eq(contentReports.contentTypeId, reportContentTypes.id))
+        .leftJoin(
+          reportContentTypes,
+          eq(contentReports.contentTypeId, reportContentTypes.id),
+        )
         .where(inArray(contentReports.clientId, clientIds))
         .orderBy(desc(sql`COALESCE(${corroborationSq.corroborationCount}, 0)`));
 
