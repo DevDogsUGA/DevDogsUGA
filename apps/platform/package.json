@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "next build",
-    "dev": "pnpm -w run with-env next dev",
-    "dev:local": "pnpm -w run with-env --local next dev",
+    "dev": "with-env next dev",
+    "dev:local": "with-env --local next dev",
     "start": "next start",
     "preview": "next build && next start",
     "lint": "eslint src",
@@ -18,13 +18,13 @@
     "test:e2e": "playwright test",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
-    "db:pull": "pnpm -w run with-env drizzle-kit pull --config drizzle-introspection.config.ts && pnpm -w run with-env drizzle-kit pull --config drizzle.config.ts && tsx scripts/post-pull.ts",
-    "db:pull:local": "pnpm -w run with-env --local drizzle-kit pull --config drizzle-introspection.config.ts && pnpm -w run with-env --local drizzle-kit pull --config drizzle.config.ts && tsx scripts/post-pull.ts",
-    "db:seed-roles": "pnpm -w run with-env tsx scripts/seed-builtin-roles.ts",
-    "db:seed-roles:local": "pnpm -w run with-env --local tsx scripts/seed-builtin-roles.ts",
+    "db:pull": "with-env drizzle-kit pull --config drizzle-introspection.config.ts && with-env drizzle-kit pull --config drizzle.config.ts && tsx scripts/post-pull.ts",
+    "db:pull:local": "with-env --local drizzle-kit pull --config drizzle-introspection.config.ts && with-env --local drizzle-kit pull --config drizzle.config.ts && tsx scripts/post-pull.ts",
+    "db:seed-roles": "with-env tsx scripts/seed-builtin-roles.ts",
+    "db:seed-roles:local": "with-env --local tsx scripts/seed-builtin-roles.ts",
     "cf:build": "opennextjs-cloudflare build",
-    "cf:preview": "pnpm -w run with-env --local opennextjs-cloudflare preview",
-    "cf:deploy": "pnpm -w run with-env opennextjs-cloudflare deploy",
+    "cf:preview": "with-env --local opennextjs-cloudflare preview",
+    "cf:deploy": "with-env opennextjs-cloudflare deploy",
     "docs:preview": "docs-preview"
   },
   "dependencies": {
@@ -107,6 +107,7 @@
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/docs-preview": "workspace:*",
+    "@devdogsuga/with-env": "workspace:*",
     "@next/env": "^16.2.11",
     "@opennextjs/cloudflare": "catalog:",
     "@playwright/test": "catalog:",

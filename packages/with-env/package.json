@@ -1,0 +1,28 @@
+{
+  "name": "@devdogsuga/with-env",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Runs a command with the monorepo's root .env loaded",
+  "bin": {
+    "with-env": "./bin/with-env.mjs"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@dotenvx/dotenvx": "^2.18.0",
+    "@yarnpkg/fslib": "^3.1.5",
+    "@yarnpkg/shell": "^4.1.3",
+    "tsx": "catalog:"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

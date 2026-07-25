@@ -17,6 +17,7 @@ packages/
   reports-client/      @devdogsuga/reports-client
   oauth-setup/         @devdogsuga/oauth-setup
   docs-preview/        @devdogsuga/docs-preview
+  with-env/            @devdogsuga/with-env — the `with-env` bin used by every script
 docs/                  Rendered on the platform site (per-project subfolders)
 ```
 
@@ -49,19 +50,19 @@ Supabase project by default. The local Docker stack is opt-in
 
 There is a **single** root `.env` for the whole monorepo — no per-app env
 files. It is loaded by [dotenvx](https://dotenvx.com) through one shared
-helper, the root `with-env` script. Workspace scripts never call `dotenvx`
-directly; they wrap their command in it:
+helper, the `with-env` bin from `@devdogsuga/with-env`. Workspace scripts never
+call `dotenvx` directly; they wrap their command in it:
 
 ```jsonc
-"dev": "pnpm -w run with-env next dev",          // root .env
-"dev:local": "pnpm -w run with-env --local next dev", // .env.generated, then .env
+"dev": "with-env next dev",                    // root .env
+"dev:local": "with-env --local next dev",      // .env.generated, then .env
 ```
 
-`--local` layers `.env.generated` on top; when more than one file is loaded
-the first one wins. The helper (`scripts/with-env.ts`) resolves the env files
-from the repo root, then runs your command back in the calling package's
-directory (with that package's `node_modules/.bin` on `PATH`), so scripts stay
-location-independent.
+`--local` layers `.env.generated` on top; when more than one file is loaded the
+first one wins. The helper (`packages/with-env`) finds the env files by walking
+up to the workspace root, so it works from any package. Add
+`"@devdogsuga/with-env": "workspace:*"` to a package's devDependencies to get
+the bin on its `PATH`.
 
 ### Cross-platform scripts
 
@@ -72,7 +73,7 @@ Windows and POSIX. No script needs an `sh -c` wrapper — write shell syntax
 directly:
 
 ```jsonc
-"generate-types": "pnpm -w run with-env supabase gen types --linked > src/database.types.ts"
+"generate-types": "with-env supabase gen types --linked > src/database.types.ts"
 ```
 
 One ordering rule matters: a `$VAR` in the _outer_ script is expanded **before**
@@ -83,7 +84,7 @@ and pass it to `with-env -c`, which defers expansion until after the env is
 loaded:
 
 ```jsonc
-"link-remote-project": "pnpm -w run with-env -c 'supabase link --project-ref $PROJECT_REF'"
+"link-remote-project": "with-env -c 'supabase link --project-ref $PROJECT_REF'"
 ```
 
 `-c` evaluates the string with `@yarnpkg/shell` (the same JS shell backing
@@ -105,14 +106,19 @@ Copy `.env.example` to `.env` (or run `pnpm setup`), then fill it in.
 
 **Root** (`pnpm <script>`)
 
-| Script                                 | Does                                    |
-| -------------------------------------- | --------------------------------------- |
-| `setup`                                | Onboarding: check prereqs, seed `.env`  |
-| `dev` / `build` / `typecheck` / `lint` | `turbo run …` across the workspace      |
-| `format:write` / `format:check`        | Prettier over the repo                  |
-| `sb <cmd>`                             | Proxy to `@devdogsuga/sb` (see below)   |
-| `with-env [--local] <cmd>`             | Run `<cmd>` with the root `.env` loaded |
-| `with-env [--local] -c '<cmd>'`        | Same, but `$VAR` resolves from `.env`   |
+| Script                                 | Does                                   |
+| -------------------------------------- | -------------------------------------- |
+| `setup`                                | Onboarding: check prereqs, seed `.env` |
+| `dev` / `build` / `typecheck` / `lint` | `turbo run …` across the workspace     |
+| `format:write` / `format:check`        | Prettier over the repo                 |
+| `sb <cmd>`                             | Proxy to `@devdogsuga/sb` (see below)  |
+
+**In any package's scripts** (via `@devdogsuga/with-env`)
+
+| Command                         | Does                                    |
+| ------------------------------- | --------------------------------------- |
+| `with-env [--local] <cmd>`      | Run `<cmd>` with the root `.env` loaded |
+| `with-env [--local] -c '<cmd>'` | Same, but `$VAR` resolves from `.env`   |
 
 **Supabase** (`pnpm sb <cmd>`) — remote-first; `:local` variants use the Docker stack
 
