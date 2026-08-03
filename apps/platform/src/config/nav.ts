@@ -144,24 +144,18 @@ export const PROFILE_ITEMS: NavItem[] = [
       "Set up a local OAuth client to test DevDogs sign-in from your own project.",
   },
   {
-    label: "Reporting API",
+    label: "Moderation",
     href: "/tools/moderation",
     icon: "SirenIcon",
     description:
-      "Wire up content moderation reporting for your project, then test the full flow with sandboxed test accounts.",
+      "Configure the report reasons available to each DevDogs application.",
   },
   {
-    label: "Feedback API",
+    label: "Feedback",
     href: "/tools/feedback",
     icon: "ChatCircleIcon",
     description:
-      "Configure feedback topics and test the feedback submission flow with sandboxed test accounts.",
-  },
-  {
-    label: "Docs Preview",
-    href: "/tools/docs",
-    icon: "BookOpenIcon",
-    description: "Preview local documentation files as they will appear here.",
+      "Configure the feedback topics available to each DevDogs application.",
   },
 ];
 

@@ -4,22 +4,16 @@ import { redirect } from "next/navigation";
 import { canUserViewAuditLog } from "~/server/actions/permissions";
 import { expectSession } from "~/server/auth";
 import { db } from "~/server/db";
-import {
-  contentReports,
-  oauthRegistrations,
-  profiles,
-  reportContentTypes,
-  reportReasons,
-} from "~/server/db/schema";
+import { apps, reportReasons, reports } from "~/server/db/schema";
 
 export const PAGE_SIZE = 50;
 
 export type AuditLogEntry = {
   id: string;
-  clientId: string;
-  clientOwnerName: string;
-  contentId: string;
-  contentTypeLabel: string | null;
+  appId: string;
+  appName: string;
+  contentType: string;
+  contentRef: string;
   reasonTitle: string | null;
   status: string;
   createdAt: string;
@@ -41,51 +35,39 @@ export const getAuditLogPageData = cache(
 
     const offset = (page - 1) * PAGE_SIZE;
 
-    const [countRow] = await db
-      .select({ value: count() })
-      .from(contentReports)
-      .innerJoin(
-        oauthRegistrations,
-        eq(oauthRegistrations.clientId, contentReports.clientId),
-      )
-      .where(eq(oauthRegistrations.type, "production"));
+    // Previously restricted to reports filed against `production`-type OAuth
+    // registrations, which was how "real" was distinguished from "a developer
+    // testing". Testing no longer happens on this instance at all, so every
+    // report here is real and the log covers all of them.
+    const [countRow] = await db.select({ value: count() }).from(reports);
 
     const totalCount = countRow?.value ?? 0;
 
     const rows = await db
       .select({
-        id: contentReports.id,
-        clientId: contentReports.clientId,
-        clientOwnerName: profiles.preferredName,
-        contentId: contentReports.contentId,
+        id: reports.id,
+        appId: reports.appId,
+        appName: apps.displayName,
+        contentType: reports.contentType,
+        contentRef: reports.contentRef,
         reasonTitle: reportReasons.title,
-        contentTypeLabel: reportContentTypes.label,
-        status: contentReports.status,
-        createdAt: contentReports.createdAt,
-        resolvedAt: contentReports.resolvedAt,
+        status: reports.status,
+        createdAt: reports.createdAt,
+        resolvedAt: reports.resolvedAt,
       })
-      .from(contentReports)
-      .innerJoin(
-        oauthRegistrations,
-        eq(oauthRegistrations.clientId, contentReports.clientId),
-      )
-      .innerJoin(profiles, eq(profiles.userId, oauthRegistrations.userId))
-      .leftJoin(reportReasons, eq(contentReports.reasonId, reportReasons.id))
-      .leftJoin(
-        reportContentTypes,
-        eq(contentReports.contentTypeId, reportContentTypes.id),
-      )
-      .where(eq(oauthRegistrations.type, "production"))
-      .orderBy(desc(contentReports.createdAt))
+      .from(reports)
+      .innerJoin(apps, eq(apps.id, reports.appId))
+      .leftJoin(reportReasons, eq(reports.reasonId, reportReasons.id))
+      .orderBy(desc(reports.createdAt))
       .limit(PAGE_SIZE)
       .offset(offset);
 
     const entries: AuditLogEntry[] = rows.map((r) => ({
       id: r.id,
-      clientId: r.clientId,
-      clientOwnerName: r.clientOwnerName,
-      contentId: r.contentId,
-      contentTypeLabel: r.contentTypeLabel ?? null,
+      appId: r.appId,
+      appName: r.appName,
+      contentType: r.contentType,
+      contentRef: r.contentRef,
       reasonTitle: r.reasonTitle ?? null,
       status: r.status,
       createdAt: r.createdAt.toISOString(),

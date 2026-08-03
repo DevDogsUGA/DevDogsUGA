@@ -78,6 +78,8 @@ export default function AppSwitcher() {
 
         <LinkButton
           href={SWITCHER_PRIMARY.href}
+          // /join starts an OAuth handshake, not a page — never prefetch.
+          prefetch={false}
           className="hover:shadow-block-md flex items-center justify-center gap-5 rounded-sm border border-black bg-cyan-400 px-12 py-3 text-xl font-extrabold tracking-wide text-black shadow-none transition-[translate,box-shadow] hover:-translate-x-1 hover:-translate-y-1"
         >
           {SWITCHER_PRIMARY.label} <ArrowRightIcon />

@@ -1,16 +1,10 @@
-import { count, eq, inArray } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import type { DevReport } from "~/components/OAuthReports";
 import type { TestAccount } from "~/server/actions/testAccounts";
 import { expectUserWith } from "~/server/auth";
 import { db } from "~/server/db";
-import {
-  profiles,
-  reportCorroborations,
-  roles,
-  userRoles,
-} from "~/server/db/schema";
+import { profiles, roles, userRoles } from "~/server/db/schema";
 import {
   getInvolvementFullName,
   getVerificationStatus,
@@ -77,7 +71,7 @@ export const getOAuthPageData = cache(async () => {
     profile: {
       with: {
         oauthRegistration: {
-          columns: { clientId: true, reportWebhookUrl: true },
+          columns: { clientId: true },
           with: {},
         },
       },
@@ -95,61 +89,11 @@ export const getOAuthPageData = cache(async () => {
   }).catch(() => redirect("/auth"));
 
   const clientId = profile?.oauthRegistration?.clientId ?? null;
-  const reportWebhookUrl = profile?.oauthRegistration?.reportWebhookUrl ?? null;
 
   const redirectUris: string[] = [];
   if (clientId) {
     const { data } = await supabaseAdmin.auth.admin.oauth.getClient(clientId);
     if (data) redirectUris.push(...data.redirect_uris);
-  }
-
-  let devReports: DevReport[] = [];
-  if (clientId && testAccounts.length > 0) {
-    const testUserIds = testAccounts.map((ta) => ta.user.id);
-
-    const rows = await db.query.contentReports.findMany({
-      where: { clientId, status: "pending" },
-      orderBy: { createdAt: "desc" },
-      with: {
-        reason: { columns: { title: true } },
-        contentType: { columns: { label: true } },
-      },
-    });
-
-    const testReports = rows.filter((r) =>
-      testUserIds.includes(r.reporterUserId),
-    );
-    const reportIds = testReports.map((r) => r.id);
-
-    const corroborationCounts: Record<string, number> =
-      reportIds.length > 0
-        ? Object.fromEntries(
-            (
-              await db
-                .select({
-                  reportId: reportCorroborations.reportId,
-                  c: count(reportCorroborations.id),
-                })
-                .from(reportCorroborations)
-                .where(inArray(reportCorroborations.reportId, reportIds))
-                .groupBy(reportCorroborations.reportId)
-            ).map(({ reportId, c }) => [reportId, c]),
-          )
-        : {};
-
-    devReports = testReports.map((r) => ({
-      id: r.id,
-      contentId: r.contentId,
-      contentTypeLabel: r.contentType?.label ?? null,
-      contentSnapshot: r.contentSnapshot,
-      contentUrl: r.contentUrl ?? null,
-      reasonTitle: r.reason?.title ?? null,
-      description: r.description ?? null,
-      reporterUserId: r.reporterUserId,
-      reportedUserId: r.reportedUserId,
-      createdAt: r.createdAt.toISOString(),
-      corroborationCount: corroborationCounts[r.id] ?? 0,
-    }));
   }
 
   const mappedTestAccounts: TestAccount[] = testAccounts.map(
@@ -170,8 +114,6 @@ export const getOAuthPageData = cache(async () => {
     clientId,
     redirectUris,
     hasGithub: githubIdentity !== null,
-    reportWebhookUrl,
     testAccounts: mappedTestAccounts,
-    devReports,
   };
 });

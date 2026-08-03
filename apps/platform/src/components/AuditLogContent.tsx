@@ -55,13 +55,10 @@ export default function AuditLogContent({
                   <div className="flex items-start justify-between gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm">
                     <div className="flex min-w-0 flex-col gap-0.5">
                       <span className="truncate font-mono text-xs text-white/80">
-                        {entry.contentTypeLabel
-                          ? `${entry.contentTypeLabel}: `
-                          : ""}
-                        {entry.contentId}
+                        {entry.contentType}: {entry.contentRef}
                       </span>
                       <span className="text-xs text-mauve-400">
-                        {entry.clientOwnerName}
+                        {entry.appName}
                         {" · "}
                         {entry.reasonTitle ?? "Unknown reason"}
                         {" · "}
