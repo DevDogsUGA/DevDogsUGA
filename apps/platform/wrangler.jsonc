@@ -4,22 +4,51 @@
   // Custom entry composes the OpenNext `fetch` handler with the cron
   // `scheduled` handler (see cloudflare/worker.ts + cloudflare/scheduled.ts).
   "main": "cloudflare/worker.ts",
-  "compatibility_date": "2025-03-01",
+  // Matches the `workerd` version pinned in the lockfile (1.20260722.x), which
+  // is how the OpenNext adapter derives its own default. Keeping it at the
+  // installed runtime's date rather than today's avoids `preview` warning that
+  // the local workerd predates the configured date. Bump this alongside
+  // wrangler; the adapter warns once it is more than six months stale.
+  "compatibility_date": "2026-07-22",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Backing store for the incremental cache. The binding name is fixed by the
+  // OpenNext adapter. Without it the adapter falls back to its "dummy" cache,
+  // which uploads nothing on deploy and throws on every read — every
+  // prerendered route is then re-rendered per request. See
+  // packages/config/opennext/cloudflare.js.
+  //
+  // Created automatically on first deploy. Each worker gets its own bucket so
+  // storage and operation metrics stay attributable per app.
+  //
+  // TODO: add an R2 object lifecycle rule (delete after ~30 days). Cache keys
+  // include the build id, so every deploy writes a fresh copy and nothing ever
+  // removes the previous one.
+  "r2_buckets": [
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "devdogs-platform-cache"
+    }
+  ],
   // Non-secret runtime vars. DEPLOY_ENV drives env.ts switchEnvironment()
   // (replaces the old Vercel VERCEL_ENV); override per-environment as needed.
   // Secrets (CRON_SECRET, BASE_URL, Supabase creds, …) come from
   // `wrangler secret put` / .dev.vars — see .dev.vars.example.
+  //
+  // Setting it here is necessary but NOT sufficient: the API route guards read
+  // it at request time, but env.ts picks its schemas and the site pages resolve
+  // their under-construction gate while `next build` runs, long before this
+  // value exists. That is why cf:build and cf:deploy set DEPLOY_ENV for the
+  // build too — the two must agree.
   "vars": {
     "DEPLOY_ENV": "production"
   },
   // Cron triggers replace the old vercel.json crons. cloudflare/scheduled.ts
   // routes each cron to its existing CRON_SECRET-guarded /api route.
   "triggers": {
-    "crons": ["0 0 * * *", "* * * * *", "*/10 * * * *"]
+    "crons": ["0 0 * * *", "*/10 * * * *"]
   }
 }

@@ -1,5 +1,6 @@
-import { defineCloudflareConfig } from "@opennextjs/cloudflare";
+import { defineDevDogsCloudflareConfig } from "@devdogsuga/config/opennext/cloudflare";
 
-// Default OpenNext -> Cloudflare config. Add caching/queue overrides here as
-// the deployment matures (R2 incremental cache, D1 tag cache, etc.).
-export default defineCloudflareConfig();
+// Shared across every Next.js app in the repo — see the factory for why an
+// incremental cache is mandatory rather than an optimisation, and for the
+// per-app wrangler bindings it expects.
+export default defineDevDogsCloudflareConfig();

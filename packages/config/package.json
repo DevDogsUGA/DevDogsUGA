@@ -5,6 +5,10 @@
   "type": "module",
   "exports": {
     "./eslint": "./eslint/index.js",
+    "./opennext/cloudflare": {
+      "types": "./opennext/cloudflare.d.ts",
+      "default": "./opennext/cloudflare.js"
+    },
     "./vitest/node": {
       "types": "./vitest/node.d.ts",
       "default": "./vitest/node.js"
@@ -17,10 +21,12 @@
   },
   "files": [
     "eslint",
+    "opennext",
     "tsconfig",
     "vitest"
   ],
   "peerDependencies": {
+    "@opennextjs/cloudflare": "catalog:",
     "eslint": "^9.39.0"
   },
   "dependencies": {
