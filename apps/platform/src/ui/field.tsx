@@ -27,16 +27,19 @@ export default function Field({
     </div>
   );
 
+  // scroll-mt clears the h-16 sticky TopNav when search jumps to #id.
+  const className = "flex scroll-mt-20 flex-col gap-2.5";
+
   if (htmlFor) {
     return (
-      <label id={id} className="flex flex-col gap-2.5" htmlFor={htmlFor}>
+      <label id={id} className={className} htmlFor={htmlFor}>
         {header}
         {children}
       </label>
     );
   }
   return (
-    <div id={id} className="flex flex-col gap-2.5">
+    <div id={id} className={className}>
       {header}
       {children}
     </div>

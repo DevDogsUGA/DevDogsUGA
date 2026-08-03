@@ -1,8 +1,8 @@
 "use client";
 
 import { Fragment } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { CaretRightIcon, WarningIcon } from "@phosphor-icons/react/ssr";
+import { useRouter } from "next/navigation";
+import { CaretRightIcon } from "@phosphor-icons/react/ssr";
 import {
   Command,
   CommandEmpty,
@@ -82,10 +82,7 @@ interface Props {
 
 export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
   const router = useRouter();
-  const pathname = usePathname();
   const { search, setSearch, data, isLoading } = useSiteSearch();
-  const showLocalPreviewAlert = pathname.startsWith("/tools/docs");
-
   const results = data !== "empty" ? data : [];
   const hasResults = results.length > 0;
   const pageResults = results.filter((entry) => entry.group !== "docs");
@@ -112,15 +109,6 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
             value={search}
             onValueChange={setSearch}
           />
-          {showLocalPreviewAlert && (
-            <div className="text-muted-foreground flex items-start gap-2 px-4 py-3 text-sm">
-              <WarningIcon className="size-4 shrink-0 translate-y-0.5" />
-              <p>
-                Local preview files aren&apos;t searchable. Results below only
-                cover content already published on GitHub.
-              </p>
-            </div>
-          )}
           <CommandList>
             {!isLoading && search.trim() && !hasResults && (
               <CommandEmpty>No results found.</CommandEmpty>

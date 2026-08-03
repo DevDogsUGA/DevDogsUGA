@@ -8,6 +8,12 @@ export interface SearchEntry {
   icon: NavIcon;
   breadcrumbs: string[];
   group: "pages" | "docs";
+  /**
+   * Disqualifies the entry when every query token matched only a breadcrumb.
+   * Set on section/field entries, whose breadcrumbs are their parent page's —
+   * without it, "account" would return all thirteen fields on /account.
+   */
+  matchOwnTextOnly?: true;
   /** Pre-escaped HTML with <mark> highlights, from docs full-text search. */
   snippet?: string;
 }

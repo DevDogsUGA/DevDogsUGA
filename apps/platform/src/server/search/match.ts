@@ -19,6 +19,9 @@ export function escapeHtml(text: string): string {
  * title, description, or a breadcrumb. Results are scored per-token (title
  * exact > title starts-with > title contains > breadcrumb contains >
  * description contains) and sorted descending.
+ *
+ * Entries flagged `matchOwnTextOnly` additionally need at least one token to
+ * land outside their breadcrumbs — see the flag's note in ./types.
  */
 export function matchEntries(
   entries: SearchEntry[],
@@ -39,6 +42,7 @@ export function matchEntries(
 
     let score = 0;
     let qualifies = true;
+    let matchedOwnText = false;
 
     for (const token of tokens) {
       let tokenScore = 0;
@@ -52,8 +56,11 @@ export function matchEntries(
         qualifies = false;
         break;
       }
+      if (tokenScore !== 10) matchedOwnText = true;
       score += tokenScore;
     }
+
+    if (entry.matchOwnTextOnly && !matchedOwnText) qualifies = false;
 
     if (qualifies) scored.push({ entry, score });
   }

@@ -8,7 +8,8 @@ function Root({
   return (
     <section
       {...props}
-      className={`w-full rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-4 shadow-lg shadow-black/30 ${className ?? ""}`}
+      // scroll-mt clears the h-16 sticky TopNav when search jumps to #id.
+      className={`w-full scroll-mt-20 rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-4 shadow-lg shadow-black/30 ${className ?? ""}`}
     >
       {children}
     </section>
