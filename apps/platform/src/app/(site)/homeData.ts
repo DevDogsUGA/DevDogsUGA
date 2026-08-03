@@ -22,105 +22,64 @@ export interface CalendarEvent {
   rsvpUrl?: string;
 }
 
-function iso(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${year}-${pad(month + 1)}-${pad(day)}T${pad(hour)}:${pad(minute)}:00-04:00`;
+/**
+ * Events happen in Athens, GA. Every date here is formatted in that zone rather
+ * than the ambient one, so the server and the browser produce identical text —
+ * `toLocaleTimeString()` would render the server's zone during SSR and the
+ * visitor's on hydration, which React resolves by discarding the server HTML.
+ */
+export const EVENT_TZ = "America/New_York";
+
+export interface CalendarMonth {
+  year: number;
+  /** 0-indexed, matching `Date#getMonth`. */
+  month: number;
+  /** Day of the month in {@link EVENT_TZ}, for the "today" highlight. */
+  today: number;
+  /** The instant this frame was generated, for "is this event still upcoming?". */
+  now: string;
+  events: CalendarEvent[];
 }
 
-function generateMonthEvents(year: number, month: number): CalendarEvent[] {
-  const events: CalendarEvent[] = [];
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+// Intl formatters rather than @date-fns/tz: TZDate's constructor runs
+// `new Date()` on every construction (see date/mini.js), and these run inside
+// client components during the prerender, where a clock read cannot be covered
+// by "use cache" and silently drops the whole page out of the static shell.
+// Intl.DateTimeFormat with an explicit timeZone is pure — same output on the
+// server and in the browser, no clock involved.
+const DAY_FORMAT = new Intl.DateTimeFormat("en-US", {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  timeZone: EVENT_TZ,
+});
 
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dow = new Date(year, month, d).getDay();
-
-    if (dow === 1) {
-      events.push({
-        id: `hackathon-${year}-${month}-${d}`,
-        type: "hackathon",
-        title: "Hackathon Presentations",
-        description:
-          "Teams present the features they shipped during the sprint. See real progress, give feedback, and celebrate wins.",
-        location: "Boyd GSRC 303",
-        start: iso(year, month, d, 18, 30),
-        end: iso(year, month, d, 19, 0),
-      });
-      events.push({
-        id: `workshop-${year}-${month}-${d}`,
-        type: "workshop",
-        title: "Weekly Workshop",
-        description:
-          "A hands-on session covering a technical concept directly relevant to the current project — taught by members, for members.",
-        location: "Boyd GSRC 303",
-        start: iso(year, month, d, 19, 0),
-        end: iso(year, month, d, 20, 0),
-      });
-    }
-
-    if (dow === 4) {
-      events.push({
-        id: `devhours-${year}-${month}-${d}`,
-        type: "devhours",
-        title: "Dev / Office Hours",
-        description:
-          "Optional open work session. Bring your laptop, get unblocked, pair with teammates, or just ship.",
-        location: "Boyd GSRC 303",
-        start: iso(year, month, d, 18, 30),
-        end: iso(year, month, d, 20, 0),
-      });
-    }
-  }
-
-  // Career placeholder — first Tuesday of next month at noon
-  const nextMonth = month === 11 ? 0 : month + 1;
-  const nextYear = month === 11 ? year + 1 : year;
-  for (let d = 1; d <= 7; d++) {
-    if (new Date(nextYear, nextMonth, d).getDay() === 2) {
-      events.push({
-        id: `career-${nextYear}-${nextMonth}-${d}`,
-        type: "career",
-        title: "Employer Event",
-        description:
-          "Network with recruiters and engineers from companies actively hiring DevDogs members.",
-        location: "Boyd GSRC 303",
-        start: iso(nextYear, nextMonth, d, 17, 0),
-        end: iso(nextYear, nextMonth, d, 19, 0),
-      });
-      break;
-    }
-  }
-
-  return events;
-}
-
-export const calendarEvents: CalendarEvent[] = generateMonthEvents(
-  new Date().getFullYear(),
-  new Date().getMonth(),
-);
+const TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: EVENT_TZ,
+});
 
 export function formatEventTime(start: string, end: string): string {
   const s = new Date(start);
   const e = new Date(end);
-  const day = s.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-  const startTime = s.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  const endTime = e.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  return `${day} · ${startTime} – ${endTime}`;
+  return `${DAY_FORMAT.format(s)} · ${TIME_FORMAT.format(s)} – ${TIME_FORMAT.format(e)}`;
+}
+
+/**
+ * The calendar date an event falls on, in {@link EVENT_TZ}.
+ *
+ * Read straight off the ISO string, whose date part is already Athens
+ * wall-clock time (see `iso()` in calendarMonth.ts). Parsing it into a `Date`
+ * and asking for `getDate()` would answer in the *ambient* zone instead, which
+ * files a 20:00 event under the next day once the server runs in UTC.
+ */
+export function eventLocalDay(startIso: string): {
+  month: number;
+  day: number;
+} {
+  const [, month, day] = startIso.slice(0, 10).split("-").map(Number);
+  return { month: month! - 1, day: day! };
 }
 
 export const execBoard: LeaderHoverCardProps[] = [

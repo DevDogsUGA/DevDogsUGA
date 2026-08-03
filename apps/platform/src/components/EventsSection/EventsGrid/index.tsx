@@ -10,8 +10,11 @@ import jobApplication from "~/assets/job-application.gif";
 import staticGif from "~/assets/static.gif";
 import EventCard from "./EventCard";
 import MonthCalendar from "./MonthCalendar";
-import type { CalendarEvent, EventType } from "~/app/(site)/homeData";
-import { parseISO } from "date-fns";
+import type {
+  CalendarEvent,
+  CalendarMonth,
+  EventType,
+} from "~/app/(site)/homeData";
 
 const gifMap: Record<EventType | "default", StaticImageData> = {
   default: staticGif,
@@ -28,21 +31,30 @@ const EVENT_TYPES: EventType[] = [
   "career",
 ];
 
+/**
+ * `nowMs` is passed in rather than read from the clock: this renders on the
+ * server during the prerender and again in the browser on hydration, and the
+ * two must pick the same event. A clock read here would also drop the homepage
+ * out of its prerendered shell — see getCalendarMonth().
+ */
 function nextOrLatest(
   events: CalendarEvent[],
   type: EventType,
+  nowMs: number,
 ): CalendarEvent | undefined {
   const ofType = events.filter((e) => e.type === type);
-  const now = new Date();
-  const upcoming = ofType.filter((e) => parseISO(e.start) >= now);
+  const upcoming = ofType.filter((e) => Date.parse(e.start) >= nowMs);
   return upcoming[0] ?? ofType[ofType.length - 1];
 }
 
 interface Props {
-  events: CalendarEvent[];
+  month: CalendarMonth;
 }
 
-export default function EventsGrid({ events }: Props) {
+export default function EventsGrid({ month }: Props) {
+  const { events } = month;
+  const nowMs = Date.parse(month.now);
+
   const [hoveredEventType, setHoveredEventType] = useState<EventType | null>(
     null,
   );
@@ -57,7 +69,7 @@ export default function EventsGrid({ events }: Props) {
         className="row-span-full flex flex-col gap-[inherit] lg:col-span-2"
         data-animate="fade-up"
       >
-        <MonthCalendar events={events} onEventTypeHover={setHoveredEventType} />
+        <MonthCalendar month={month} onEventTypeHover={setHoveredEventType} />
         <div
           className="shadow-block-md relative grow overflow-hidden rounded-sm border-2 border-black"
           data-animate="fade-up"
@@ -80,7 +92,7 @@ export default function EventsGrid({ events }: Props) {
 
       <div className="col-span-3 row-span-2 grid grid-cols-2 grid-rows-subgrid gap-1">
         {EVENT_TYPES.map((type) => {
-          const event = nextOrLatest(events, type);
+          const event = nextOrLatest(events, type, nowMs);
           if (!event) return null;
           return (
             <div className="aspect-square" key={type} data-animate="fade-up">

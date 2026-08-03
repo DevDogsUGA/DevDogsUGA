@@ -5,7 +5,7 @@ import SectionBackground, {
 } from "~/ui/section-background";
 import LinkButton from "~/ui/link-button";
 import EventsGrid from "./EventsGrid";
-import { calendarEvents } from "~/app/(site)/homeData";
+import { getCalendarMonth } from "~/app/(site)/calendarMonth";
 
 const EVENTS_BLOBS: BlobDef[] = [
   { cx: "25%", cy: "30%", rx: "55%", ry: "50%", fill: "#fecdd3" }, // rose
@@ -27,6 +27,8 @@ interface Props {
 }
 
 export default function EventsSection({ topEdge, bottomEdge }: Props) {
+  const month = getCalendarMonth();
+
   return (
     <div className="mx-4 overflow-hidden rounded-xl md:mx-6">
       <section
@@ -51,7 +53,7 @@ export default function EventsSection({ topEdge, bottomEdge }: Props) {
             </p>
           </div>
 
-          <EventsGrid events={calendarEvents} />
+          <EventsGrid month={month} />
 
           <div className="mt-6 flex justify-end">
             <LinkButton

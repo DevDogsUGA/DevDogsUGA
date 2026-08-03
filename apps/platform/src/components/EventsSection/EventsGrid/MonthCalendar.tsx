@@ -6,6 +6,13 @@
    render to drive the open/close motion. Moving it to state would re-render and
    fight the animation. */
 
+/* eslint-disable @typescript-eslint/unbound-method --
+   `refs.setFloating` (below) is a stable, already-bound setter from
+   @floating-ui/react and is documented to be passed straight to `ref`. The rule
+   cannot see that. The alternatives are worse: wrapping it in an arrow gives the
+   ref a new identity every render, so React detaches and reattaches it each
+   time, which fights `autoUpdate` and the open/close animation. */
+
 import { useEffect, useRef, useState } from "react";
 import {
   autoUpdate,
@@ -27,9 +34,12 @@ import {
   ClockIcon,
   MapPinIcon,
 } from "@phosphor-icons/react/ssr";
-import { parseISO } from "date-fns";
-import type { CalendarEvent, EventType } from "~/app/(site)/homeData";
-import { formatEventTime } from "~/app/(site)/homeData";
+import type {
+  CalendarEvent,
+  CalendarMonth,
+  EventType,
+} from "~/app/(site)/homeData";
+import { eventLocalDay, formatEventTime } from "~/app/(site)/homeData";
 
 const dotColor: Record<EventType, string> = {
   hackathon: "bg-cyan-500",
@@ -164,18 +174,26 @@ function MultiEventMenu({
 }
 
 interface Props {
-  events: CalendarEvent[];
+  month: CalendarMonth;
   onEventTypeHover: (type: EventType | null) => void;
 }
 
-export default function MonthCalendar({ events, onEventTypeHover }: Props) {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const monthName = now.toLocaleString("en-US", { month: "long" });
+export default function MonthCalendar({
+  month: frame,
+  onEventTypeHover,
+}: Props) {
+  // The year/month/today the grid draws are resolved server-side (see
+  // getCalendarMonth) rather than read from the clock here. A client
+  // component's SSR pass cannot sit inside a `"use cache"` scope, so any clock
+  // read here would silently drop the whole homepage out of the prerendered
+  // shell — and would let SSR and hydration disagree about what month it is.
+  const { events, year, month, today } = frame;
+  // Built from components, so this is the same string in any time zone.
+  const monthName = new Date(year, month, 1).toLocaleString("en-US", {
+    month: "long",
+  });
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfWeek = new Date(year, month, 1).getDay();
-  const today = now.getDate();
 
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<{
@@ -283,10 +301,12 @@ export default function MonthCalendar({ events, onEventTypeHover }: Props) {
 
   const eventsByDay = new Map<number, CalendarEvent[]>();
   for (const event of events) {
-    const d = parseISO(event.start).getDate();
-    const eventMonth = parseISO(event.start).getMonth();
+    // Bucketed by the event's own zone, not the ambient one — an evening event
+    // is already the next day in UTC, so parsing locally would file it under a
+    // different square on the server than in the browser.
+    const { month: eventMonth, day } = eventLocalDay(event.start);
     if (eventMonth !== month) continue;
-    eventsByDay.set(d, [...(eventsByDay.get(d) ?? []), event]);
+    eventsByDay.set(day, [...(eventsByDay.get(day) ?? []), event]);
   }
 
   const cells: (number | null)[] = [];
