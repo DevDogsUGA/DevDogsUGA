@@ -1,7 +1,7 @@
 "use client";
 
 import { MagnifyingGlassIcon } from "@phosphor-icons/react/ssr";
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import DevDogsSearchDialog from "~/components/DevDogsSearchDialog";
 
 export default function SearchButton() {
@@ -49,12 +49,7 @@ export default function SearchButton() {
         <MagnifyingGlassIcon className="size-4.5" />
       </button>
 
-      {/* The dialog reads usePathname()/useSearchParams(), dynamic under Cache
-          Components, so it must render inside a <Suspense> boundary. It renders
-          nothing until opened, so a null fallback has no visual effect. */}
-      <Suspense fallback={null}>
-        <DevDogsSearchDialog open={open} onOpenChange={setOpen} />
-      </Suspense>
+      <DevDogsSearchDialog open={open} onOpenChange={setOpen} />
     </>
   );
 }

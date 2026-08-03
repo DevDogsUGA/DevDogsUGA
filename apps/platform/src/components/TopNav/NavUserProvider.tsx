@@ -57,6 +57,25 @@ type Setter = (
 
 const SetterContext = createContext<Setter>(() => undefined);
 
+/**
+ * Whether the hydrator is pushing data the provider already holds.
+ *
+ * `NavUserHydrator` sits at the root of the tree, so every `setNavUser` call
+ * re-renders the whole app. Its props arrive from a streamed server component
+ * and are fresh object identities on every RSC payload — including the ones
+ * the router refetches on its own, without anything having changed. Comparing
+ * by value lets React bail out of those renders instead of replaying the page.
+ *
+ * `JSON.stringify` is enough here: both sides are plain data produced by the
+ * same server code, so key order is stable, and `Date` columns serialise
+ * deterministically.
+ */
+function sameData(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null) return false;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 export function useNavUser(): NavUserClientData | null {
   return useContext(NavUserContext);
 }
@@ -126,8 +145,8 @@ export default function NavUserProvider({ children }: { children: ReactNode }) {
   );
 
   const setter: Setter = useCallback((nav, ver) => {
-    setNavUser(nav);
-    setVerification(ver);
+    setNavUser((prev) => (sameData(prev, nav) ? prev : nav));
+    setVerification((prev) => (sameData(prev, ver) ? prev : ver));
   }, []);
 
   return (
