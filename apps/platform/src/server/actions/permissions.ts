@@ -9,7 +9,6 @@ import {
   roles,
   userRoles,
 } from "~/server/db/schema";
-import { refreshUserPermissions } from "~/server/db/refreshPermissions";
 import { expectSession } from "~/server/auth";
 import { supabaseAdmin } from "~/supabase/admin";
 import { identitiesInAuth } from "~/supabase/drizzle/schema";
@@ -233,6 +232,11 @@ export async function requirePermissionGuard(
 }
 
 // ── Role CRUD ─────────────────────────────────────────────────────────────────
+//
+// None of the mutations below refresh `resolvedUserPermissions` by hand. The
+// view is maintained by triggers on `roles` and `userRoles` (migration
+// 20260728000000), so every writer gets it — including the ones that never go
+// through this file, like a dashboard edit or a restored dump.
 
 export type CreateRoleInput = {
   title: string;
@@ -344,8 +348,6 @@ export async function updateRole(
     })
     .where(eq(roles.id, roleId));
 
-  await refreshUserPermissions();
-
   if (
     target.discordRoleId !== null &&
     (data.title !== undefined || data.color !== undefined)
@@ -377,7 +379,6 @@ export async function deleteRole(roleId: string): Promise<void> {
 
   requireRankGuard(requireCustomRole(target), ctx.minRank);
   await db.delete(roles).where(eq(roles.id, roleId));
-  await refreshUserPermissions();
 }
 
 /**
@@ -401,7 +402,6 @@ export async function reorderRole(
   requireRankGuard(newRank, ctx.minRank);
 
   await db.update(roles).set({ rank: newRank }).where(eq(roles.id, roleId));
-  await refreshUserPermissions();
 }
 
 // ── User role assignment ───────────────────────────────────────────────────────
@@ -450,7 +450,6 @@ export async function assignRoleToUser(
         .onConflictDoNothing();
       await pushMemberRoleChange(discordUserId, target.discordRoleId!, "add");
     });
-    await refreshUserPermissions();
     return;
   }
 
@@ -458,7 +457,6 @@ export async function assignRoleToUser(
     .insert(userRoles)
     .values({ userId: targetUserId, roleId })
     .onConflictDoNothing();
-  await refreshUserPermissions();
 }
 
 export async function removeRoleFromUser(
@@ -497,7 +495,6 @@ export async function removeRoleFromUser(
     .where(
       and(eq(userRoles.userId, targetUserId), eq(userRoles.roleId, roleId)),
     );
-  await refreshUserPermissions();
 
   if (target.discordRoleId !== null) {
     const discordUserId = await getDiscordUserId(targetUserId);
@@ -699,5 +696,4 @@ export async function transferRootRole(targetUserId: string): Promise<void> {
     .update(userRoles)
     .set({ userId: targetUserId })
     .where(eq(userRoles.roleId, ROOT_ROLE_ID));
-  await refreshUserPermissions();
 }

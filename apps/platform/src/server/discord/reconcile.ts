@@ -13,7 +13,6 @@ import { fetchGuildRoles } from "./roleSync";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { roles, userRoles } from "~/server/db/schema";
-import { refreshUserPermissions } from "~/server/db/refreshPermissions";
 import { identitiesInAuth } from "~/supabase/drizzle/schema";
 
 type FieldSync<T> =
@@ -221,10 +220,6 @@ export async function reconcileMembership(): Promise<{
     await db
       .delete(userRoles)
       .where(and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId)));
-  }
-
-  if (toInsert.length > 0 || toDelete.length > 0) {
-    await refreshUserPermissions();
   }
 
   return { changes: toInsert.length + toDelete.length, errors };
