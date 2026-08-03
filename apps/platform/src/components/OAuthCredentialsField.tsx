@@ -43,9 +43,6 @@ export default function OAuthCredentialsField({
       clientId: initialClientId,
       clientSecret: null,
       redirectUris: initialRedirectUris,
-      reportApiKey: null,
-      webhookSecret: null,
-      reportWebhookUrl: null,
     });
 
   const prevIsPendingRef = useRef(false);

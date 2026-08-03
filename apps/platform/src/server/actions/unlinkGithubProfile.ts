@@ -10,7 +10,7 @@ import { supabaseAdmin } from "../../supabase/admin";
 export default async function unlinkGithubProfile() {
   const user = await expectUserWith({
     profile: { with: { oauthRegistration: true } },
-  }).catch(() => authenticate("google", "/console/profile"));
+  }).catch(() => authenticate("google", "/account"));
 
   const clientId = user.profile.oauthRegistration?.clientId;
   if (clientId) {

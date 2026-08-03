@@ -1,6 +1,5 @@
 "use server";
 
-import { randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
 import { authenticate, expectUserWith } from "../auth";
 import { db } from "../db";
@@ -17,13 +16,6 @@ export type OAuthState = {
   clientId: string | null;
   clientSecret: string | null;
   redirectUris: string[];
-  /**
-   * Set once after `generate-report-key` or `regenerate-webhook-secret`.
-   * Cleared on the next action. The client must copy it immediately.
-   */
-  reportApiKey: string | null;
-  webhookSecret: string | null;
-  reportWebhookUrl: string | null;
 };
 
 export default async function oauthAction(
@@ -68,9 +60,6 @@ export default async function oauthAction(
           clientId: null,
           clientSecret: null,
           redirectUris: [],
-          reportApiKey: null,
-          webhookSecret: null,
-          reportWebhookUrl: null,
         };
       }
 
@@ -98,9 +87,6 @@ export default async function oauthAction(
         clientId: data.client_id,
         clientSecret: data.client_secret ?? null,
         redirectUris: data.redirect_uris,
-        reportApiKey: null,
-        webhookSecret: null,
-        reportWebhookUrl: null,
       };
     }
 
@@ -169,99 +155,6 @@ export default async function oauthAction(
         redirect_uris: updated,
       });
       return { ...prev, redirectUris: updated };
-    }
-
-    case "set-webhook-url": {
-      if (!clientId) throw new Error("No OAuth client exists");
-
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string
-      const url = formData.get("webhookUrl")?.toString().trim() ?? "";
-
-      if (url) {
-        let parsed: URL;
-        try {
-          parsed = new URL(url);
-        } catch {
-          throw new Error("Invalid webhook URL");
-        }
-        if (parsed.protocol !== "https:") {
-          throw new Error("Webhook URL must use HTTPS");
-        }
-      }
-
-      await db
-        .update(oauthRegistrations)
-        .set({ reportWebhookUrl: url || null })
-        .where(eq(oauthRegistrations.clientId, clientId));
-
-      return {
-        ...prev,
-        reportWebhookUrl: url || null,
-        reportApiKey: null,
-        webhookSecret: null,
-      };
-    }
-
-    case "regenerate-webhook-secret": {
-      if (!clientId) throw new Error("No OAuth client exists");
-
-      const rawSecret = randomBytes(32).toString("hex");
-
-      // Store the secret encrypted in Supabase Vault.
-      // The `vault` schema is not in the generated Supabase types.
-      /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-      const admin = supabaseAdmin as any;
-
-      // Fetch existing secret ID so we can update rather than insert when
-      // the developer regenerates.
-      const registration = await db.query.oauthRegistrations.findFirst({
-        columns: { reportWebhookSecretId: true },
-        where: { clientId },
-      });
-
-      let secretId: string;
-      if (registration?.reportWebhookSecretId) {
-        // Update existing Vault secret in place
-        const { data, error } = await admin
-          .schema("vault")
-          .from("secrets")
-          .update({ secret: rawSecret })
-          .eq("id", registration.reportWebhookSecretId)
-          .select("id")
-          .single();
-        /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-        if (error || !data)
-          throw new Error(
-            `Failed to update webhook secret: ${String((error as { message?: string } | null)?.message)}`,
-          );
-        secretId = (data as { id: string }).id;
-      } else {
-        // Insert new Vault secret
-        /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-        const { data, error } = await admin
-          .schema("vault")
-          .from("secrets")
-          .insert({ secret: rawSecret, name: `webhook_secret_${clientId}` })
-          .select("id")
-          .single();
-        /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-        if (error || !data)
-          throw new Error(
-            `Failed to store webhook secret: ${String((error as { message?: string } | null)?.message)}`,
-          );
-        secretId = (data as { id: string }).id;
-      }
-
-      await db
-        .update(oauthRegistrations)
-        .set({ reportWebhookSecretId: secretId })
-        .where(eq(oauthRegistrations.clientId, clientId));
-
-      return {
-        ...prev,
-        webhookSecret: rawSecret,
-        reportApiKey: null,
-      };
     }
 
     default:

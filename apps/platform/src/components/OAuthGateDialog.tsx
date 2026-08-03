@@ -26,9 +26,6 @@ export default function OAuthGateDialog({
     clientId: initialClientId,
     clientSecret: null,
     redirectUris: [],
-    reportApiKey: null,
-    webhookSecret: null,
-    reportWebhookUrl: null,
   });
 
   // Portal into the layout's scroll container so the overlay covers every
