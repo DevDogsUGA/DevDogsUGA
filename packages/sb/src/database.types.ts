@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -39,72 +34,80 @@ export type Database = {
   }
   platform: {
     Tables: {
-      contentReports: {
+      apps: {
         Row: {
-          clientId: string
-          contentId: string
-          contentSnapshot: string
-          contentTypeId: string | null
-          contentUrl: string | null
+          contentActioner: string | null
+          contentResolver: string | null
           createdAt: string
-          description: string | null
+          displayName: string
           id: string
-          nextVerifyAt: string | null
-          reasonId: string
-          reportedUserId: string
-          reporterUserId: string
-          resolvedAt: string | null
-          status: Database["platform"]["Enums"]["reportStatus"]
-          verifyAttempts: number
+          schemaName: string
+          slug: string
         }
         Insert: {
-          clientId: string
-          contentId: string
-          contentSnapshot: string
-          contentTypeId?: string | null
-          contentUrl?: string | null
+          contentActioner?: string | null
+          contentResolver?: string | null
           createdAt?: string
-          description?: string | null
+          displayName: string
           id?: string
-          nextVerifyAt?: string | null
-          reasonId: string
-          reportedUserId: string
-          reporterUserId: string
-          resolvedAt?: string | null
-          status?: Database["platform"]["Enums"]["reportStatus"]
-          verifyAttempts?: number
+          schemaName: string
+          slug: string
         }
         Update: {
-          clientId?: string
-          contentId?: string
-          contentSnapshot?: string
-          contentTypeId?: string | null
-          contentUrl?: string | null
+          contentActioner?: string | null
+          contentResolver?: string | null
           createdAt?: string
-          description?: string | null
+          displayName?: string
           id?: string
-          nextVerifyAt?: string | null
-          reasonId?: string
-          reportedUserId?: string
-          reporterUserId?: string
-          resolvedAt?: string | null
-          status?: Database["platform"]["Enums"]["reportStatus"]
-          verifyAttempts?: number
+          schemaName?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      contentTypes: {
+        Row: {
+          appId: string
+          authorColumn: string | null
+          contentType: string | null
+          createdAt: string
+          id: string
+          label: string | null
+          snapshotColumns: string[] | null
+          tableName: string
+          urlTemplate: string | null
+          visibility: Database["platform"]["Enums"]["contentVisibility"] | null
+        }
+        Insert: {
+          appId: string
+          authorColumn?: string | null
+          contentType?: string | null
+          createdAt?: string
+          id?: string
+          label?: string | null
+          snapshotColumns?: string[] | null
+          tableName: string
+          urlTemplate?: string | null
+          visibility?: Database["platform"]["Enums"]["contentVisibility"] | null
+        }
+        Update: {
+          appId?: string
+          authorColumn?: string | null
+          contentType?: string | null
+          createdAt?: string
+          id?: string
+          label?: string | null
+          snapshotColumns?: string[] | null
+          tableName?: string
+          urlTemplate?: string | null
+          visibility?: Database["platform"]["Enums"]["contentVisibility"] | null
         }
         Relationships: [
           {
-            foreignKeyName: "contentReports_clientId_contentTypeId_fkey"
-            columns: ["clientId", "contentTypeId"]
+            foreignKeyName: "contentTypes_appId_fkey"
+            columns: ["appId"]
             isOneToOne: false
-            referencedRelation: "reportContentTypes"
-            referencedColumns: ["clientId", "id"]
-          },
-          {
-            foreignKeyName: "contentReports_clientId_reasonId_fkey"
-            columns: ["clientId", "reasonId"]
-            isOneToOne: false
-            referencedRelation: "reportReasons"
-            referencedColumns: ["clientId", "id"]
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -174,46 +177,9 @@ export type Database = {
         }
         Relationships: []
       }
-      docsBranches: {
-        Row: {
-          id: string
-          lastSyncedAt: string | null
-          lastSyncedCommit: string | null
-          name: string
-          repoId: string
-        }
-        Insert: {
-          id?: string
-          lastSyncedAt?: string | null
-          lastSyncedCommit?: string | null
-          name: string
-          repoId: string
-        }
-        Update: {
-          id?: string
-          lastSyncedAt?: string | null
-          lastSyncedCommit?: string | null
-          name?: string
-          repoId?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "docsBranches_repoId_fkey"
-            columns: ["repoId"]
-            isOneToOne: false
-            referencedRelation: "docsRepos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       docsPages: {
         Row: {
-          blobSha: string
-          branchId: string
-          content: string
           description: string | null
-          frontmatter: Json
-          headings: Json
           id: string
           path: string
           plainText: string
@@ -222,12 +188,7 @@ export type Database = {
           updatedAt: string
         }
         Insert: {
-          blobSha: string
-          branchId: string
-          content: string
           description?: string | null
-          frontmatter?: Json
-          headings?: Json
           id?: string
           path: string
           plainText: string
@@ -236,12 +197,7 @@ export type Database = {
           updatedAt?: string
         }
         Update: {
-          blobSha?: string
-          branchId?: string
-          content?: string
           description?: string | null
-          frontmatter?: Json
-          headings?: Json
           id?: string
           path?: string
           plainText?: string
@@ -249,64 +205,115 @@ export type Database = {
           title?: string
           updatedAt?: string
         }
+        Relationships: []
+      }
+      feedback: {
+        Row: {
+          adminNote: string | null
+          appId: string
+          attachmentPaths: string[] | null
+          browserMetadata: Json | null
+          createdAt: string
+          description: string
+          id: string
+          severity: Database["platform"]["Enums"]["feedbackSeverity"] | null
+          status: Database["platform"]["Enums"]["feedbackStatus"]
+          title: string
+          topicId: string | null
+          type: Database["platform"]["Enums"]["feedbackType"]
+          updatedAt: string
+          userId: string
+        }
+        Insert: {
+          adminNote?: string | null
+          appId: string
+          attachmentPaths?: string[] | null
+          browserMetadata?: Json | null
+          createdAt?: string
+          description: string
+          id?: string
+          severity?: Database["platform"]["Enums"]["feedbackSeverity"] | null
+          status?: Database["platform"]["Enums"]["feedbackStatus"]
+          title: string
+          topicId?: string | null
+          type: Database["platform"]["Enums"]["feedbackType"]
+          updatedAt?: string
+          userId: string
+        }
+        Update: {
+          adminNote?: string | null
+          appId?: string
+          attachmentPaths?: string[] | null
+          browserMetadata?: Json | null
+          createdAt?: string
+          description?: string
+          id?: string
+          severity?: Database["platform"]["Enums"]["feedbackSeverity"] | null
+          status?: Database["platform"]["Enums"]["feedbackStatus"]
+          title?: string
+          topicId?: string | null
+          type?: Database["platform"]["Enums"]["feedbackType"]
+          updatedAt?: string
+          userId?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "docsPages_branchId_fkey"
-            columns: ["branchId"]
+            foreignKeyName: "feedback_appId_fkey"
+            columns: ["appId"]
             isOneToOne: false
-            referencedRelation: "docsBranches"
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_appId_topicId_fkey"
+            columns: ["appId", "topicId"]
+            isOneToOne: false
+            referencedRelation: "feedbackTopics"
+            referencedColumns: ["appId", "id"]
+          },
+        ]
+      }
+      feedbackTopics: {
+        Row: {
+          appId: string
+          createdAt: string
+          id: string
+          label: string
+        }
+        Insert: {
+          appId: string
+          createdAt?: string
+          id?: string
+          label: string
+        }
+        Update: {
+          appId?: string
+          createdAt?: string
+          id?: string
+          label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedbackTopics_appId_fkey"
+            columns: ["appId"]
+            isOneToOne: false
+            referencedRelation: "apps"
             referencedColumns: ["id"]
           },
         ]
       }
-      docsRepos: {
+      instance: {
         Row: {
-          createdAt: string
-          defaultBranch: string
-          description: string | null
-          id: string
-          name: string
-          slug: string
-          sortOrder: number
+          environment: Database["platform"]["Enums"]["deployEnv"]
+          id: boolean
         }
         Insert: {
-          createdAt?: string
-          defaultBranch?: string
-          description?: string | null
-          id?: string
-          name: string
-          slug: string
-          sortOrder?: number
+          environment?: Database["platform"]["Enums"]["deployEnv"]
+          id?: boolean
         }
         Update: {
-          createdAt?: string
-          defaultBranch?: string
-          description?: string | null
-          id?: string
-          name?: string
-          slug?: string
-          sortOrder?: number
-        }
-        Relationships: []
-      }
-      feedbackTopics: {
-        Row: {
-          clientId: string
-          createdAt: string
-          id: string
-          label: string
-        }
-        Insert: {
-          clientId: string
-          createdAt?: string
-          id?: string
-          label: string
-        }
-        Update: {
-          clientId?: string
-          createdAt?: string
-          id?: string
-          label?: string
+          environment?: Database["platform"]["Enums"]["deployEnv"]
+          id?: boolean
         }
         Relationships: []
       }
@@ -340,49 +347,19 @@ export type Database = {
         }
         Relationships: []
       }
-      moderatorRoles: {
-        Row: {
-          clientId: string
-          createdAt: string
-          grantedByUserId: string
-          id: string
-          userId: string
-        }
-        Insert: {
-          clientId: string
-          createdAt?: string
-          grantedByUserId: string
-          id?: string
-          userId: string
-        }
-        Update: {
-          clientId?: string
-          createdAt?: string
-          grantedByUserId?: string
-          id?: string
-          userId?: string
-        }
-        Relationships: []
-      }
       oauthRegistrations: {
         Row: {
           clientId: string
-          reportWebhookSecretId: string | null
-          reportWebhookUrl: string | null
           type: Database["platform"]["Enums"]["oauthRegistrationType"]
           userId: string
         }
         Insert: {
           clientId: string
-          reportWebhookSecretId?: string | null
-          reportWebhookUrl?: string | null
           type?: Database["platform"]["Enums"]["oauthRegistrationType"]
           userId: string
         }
         Update: {
           clientId?: string
-          reportWebhookSecretId?: string | null
-          reportWebhookUrl?: string | null
           type?: Database["platform"]["Enums"]["oauthRegistrationType"]
           userId?: string
         }
@@ -552,27 +529,6 @@ export type Database = {
           },
         ]
       }
-      reportContentTypes: {
-        Row: {
-          clientId: string
-          createdAt: string
-          id: string
-          label: string
-        }
-        Insert: {
-          clientId: string
-          createdAt?: string
-          id?: string
-          label: string
-        }
-        Update: {
-          clientId?: string
-          createdAt?: string
-          id?: string
-          label?: string
-        }
-        Relationships: []
-      }
       reportCorroborations: {
         Row: {
           createdAt: string
@@ -607,37 +563,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "reportCorroborations_reportId_contentReports_id_fkey"
+            foreignKeyName: "reportCorroborations_reportId_fkey"
             columns: ["reportId"]
             isOneToOne: false
-            referencedRelation: "contentReports"
+            referencedRelation: "reports"
             referencedColumns: ["id"]
           },
         ]
       }
       reportReasons: {
         Row: {
-          clientId: string
+          appId: string
           createdAt: string
           description: string | null
           id: string
           title: string
         }
         Insert: {
-          clientId: string
+          appId: string
           createdAt?: string
           description?: string | null
           id?: string
           title: string
         }
         Update: {
-          clientId?: string
+          appId?: string
           createdAt?: string
           description?: string | null
           id?: string
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "reportReasons_appId_fkey"
+            columns: ["appId"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reportResolutions: {
         Row: {
@@ -648,11 +612,8 @@ export type Database = {
           id: string
           moderatorNote: string | null
           moderatorUserId: string
-          nextRetryAt: string | null
-          notifiedAt: string | null
           reportId: string
           subjectAction: Database["platform"]["Enums"]["subjectAction"]
-          webhookAttempts: number
         }
         Insert: {
           appliedGlobally?: boolean
@@ -662,11 +623,8 @@ export type Database = {
           id?: string
           moderatorNote?: string | null
           moderatorUserId: string
-          nextRetryAt?: string | null
-          notifiedAt?: string | null
           reportId: string
           subjectAction: Database["platform"]["Enums"]["subjectAction"]
-          webhookAttempts?: number
         }
         Update: {
           appliedGlobally?: boolean
@@ -676,19 +634,79 @@ export type Database = {
           id?: string
           moderatorNote?: string | null
           moderatorUserId?: string
-          nextRetryAt?: string | null
-          notifiedAt?: string | null
           reportId?: string
           subjectAction?: Database["platform"]["Enums"]["subjectAction"]
-          webhookAttempts?: number
         }
         Relationships: [
           {
-            foreignKeyName: "reportResolutions_reportId_contentReports_id_fkey"
+            foreignKeyName: "reportResolutions_reportId_fkey"
             columns: ["reportId"]
             isOneToOne: true
-            referencedRelation: "contentReports"
+            referencedRelation: "reports"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          appId: string
+          contentRef: string
+          contentSnapshot: string
+          contentType: string
+          contentUrl: string | null
+          createdAt: string
+          description: string | null
+          id: string
+          reasonId: string
+          reportedUserId: string
+          reporterUserId: string
+          resolvedAt: string | null
+          status: Database["platform"]["Enums"]["reportStatus"]
+        }
+        Insert: {
+          appId: string
+          contentRef: string
+          contentSnapshot: string
+          contentType: string
+          contentUrl?: string | null
+          createdAt?: string
+          description?: string | null
+          id?: string
+          reasonId: string
+          reportedUserId: string
+          reporterUserId: string
+          resolvedAt?: string | null
+          status?: Database["platform"]["Enums"]["reportStatus"]
+        }
+        Update: {
+          appId?: string
+          contentRef?: string
+          contentSnapshot?: string
+          contentType?: string
+          contentUrl?: string | null
+          createdAt?: string
+          description?: string | null
+          id?: string
+          reasonId?: string
+          reportedUserId?: string
+          reporterUserId?: string
+          resolvedAt?: string | null
+          status?: Database["platform"]["Enums"]["reportStatus"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_appId_fkey"
+            columns: ["appId"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_appId_reasonId_fkey"
+            columns: ["appId", "reasonId"]
+            isOneToOne: false
+            referencedRelation: "reportReasons"
+            referencedColumns: ["appId", "id"]
           },
         ]
       }
@@ -757,65 +775,6 @@ export type Database = {
           title?: string
         }
         Relationships: []
-      }
-      siteFeedback: {
-        Row: {
-          adminNote: string | null
-          attachmentPaths: string[] | null
-          browserMetadata: Json | null
-          clientId: string | null
-          createdAt: string
-          description: string
-          id: string
-          severity: Database["platform"]["Enums"]["feedbackSeverity"] | null
-          status: Database["platform"]["Enums"]["feedbackStatus"]
-          title: string
-          topicId: string | null
-          type: Database["platform"]["Enums"]["feedbackType"]
-          updatedAt: string
-          userId: string
-        }
-        Insert: {
-          adminNote?: string | null
-          attachmentPaths?: string[] | null
-          browserMetadata?: Json | null
-          clientId?: string | null
-          createdAt?: string
-          description: string
-          id?: string
-          severity?: Database["platform"]["Enums"]["feedbackSeverity"] | null
-          status?: Database["platform"]["Enums"]["feedbackStatus"]
-          title: string
-          topicId?: string | null
-          type: Database["platform"]["Enums"]["feedbackType"]
-          updatedAt?: string
-          userId: string
-        }
-        Update: {
-          adminNote?: string | null
-          attachmentPaths?: string[] | null
-          browserMetadata?: Json | null
-          clientId?: string | null
-          createdAt?: string
-          description?: string
-          id?: string
-          severity?: Database["platform"]["Enums"]["feedbackSeverity"] | null
-          status?: Database["platform"]["Enums"]["feedbackStatus"]
-          title?: string
-          topicId?: string | null
-          type?: Database["platform"]["Enums"]["feedbackType"]
-          updatedAt?: string
-          userId?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "siteFeedback_clientId_topicId_fkey"
-            columns: ["clientId", "topicId"]
-            isOneToOne: false
-            referencedRelation: "feedbackTopics"
-            referencedColumns: ["clientId", "id"]
-          },
-        ]
       }
       userRoles: {
         Row: {
@@ -916,11 +875,114 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      apply_content_action: {
+        Args: {
+          action: Database["platform"]["Enums"]["contentAction"]
+          app_slug: string
+          content_ref: string
+          content_type: string
+          resolution_id: string
+        }
+        Returns: undefined
+      }
+      claim_root: { Args: never; Returns: undefined }
+      conformance_check: { Args: { app_slug: string }; Returns: Json }
+      content_types: {
+        Args: never
+        Returns: {
+          appId: string
+          appSlug: string
+          authorColumn: string
+          contentType: string
+          label: string
+          quarantineColumn: string
+          refColumn: string
+          schemaName: string
+          snapshotColumns: string[]
+          tableName: string
+          urlTemplate: string
+          visibility: Database["platform"]["Enums"]["contentVisibility"]
+        }[]
+      }
+      dismiss_report: {
+        Args: { moderator_note?: string; report_id: string }
+        Returns: Json
+      }
+      dismiss_report_as: {
+        Args: { actor: string; moderator_note?: string; report_id: string }
+        Returns: Json
+      }
+      file_report: {
+        Args: {
+          app_slug: string
+          content_ref: string
+          content_type: string
+          description?: string
+          reason_id: string
+        }
+        Returns: Json
+      }
+      has_permission: { Args: { perm: string; uid: string }; Returns: boolean }
+      inspect_content: {
+        Args: { app_slug: string; content_ref: string; content_type: string }
+        Returns: Json
+      }
+      is_production: { Args: never; Returns: boolean }
+      is_suspended: { Args: { uid: string }; Returns: boolean }
+      is_test_identity: { Args: { uid: string }; Returns: boolean }
+      list_content_types: { Args: { app_slug?: string }; Returns: Json }
+      list_feedback_topics: { Args: { app_slug: string }; Returns: Json }
+      list_report_reasons: { Args: { app_slug: string }; Returns: Json }
+      my_reports: { Args: { app_slug?: string }; Returns: Json }
+      report_outcomes: {
+        Args: { app_slug?: string; since?: string }
+        Returns: Json
+      }
+      resolve_content: {
+        Args: { app_slug: string; content_ref: string; content_type: string }
+        Returns: Json
+      }
+      resolve_report: {
+        Args: {
+          apply_globally?: boolean
+          content_action: Database["platform"]["Enums"]["contentAction"]
+          filer_action: Database["platform"]["Enums"]["filerAction"]
+          moderator_note?: string
+          report_id: string
+          subject_action: Database["platform"]["Enums"]["subjectAction"]
+        }
+        Returns: Json
+      }
+      resolve_report_as: {
+        Args: {
+          actor: string
+          apply_globally?: boolean
+          content_action: Database["platform"]["Enums"]["contentAction"]
+          filer_action: Database["platform"]["Enums"]["filerAction"]
+          moderator_note?: string
+          report_id: string
+          subject_action: Database["platform"]["Enums"]["subjectAction"]
+        }
+        Returns: Json
+      }
+      submit_feedback: {
+        Args: {
+          app_slug: string
+          browser_metadata?: Json
+          description: string
+          feedback_type: Database["platform"]["Enums"]["feedbackType"]
+          severity?: Database["platform"]["Enums"]["feedbackSeverity"]
+          title: string
+          topic_id?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       contentAction: "quarantine" | "no_action"
+      contentVisibility: "public" | "restricted"
       credentialType: "email_password" | "totp" | "email_password_totp"
+      deployEnv: "local" | "test" | "production"
       feedbackSeverity: "low" | "medium" | "high"
       feedbackStatus: "open" | "in_review" | "resolved" | "dismissed"
       feedbackType:
@@ -933,7 +995,7 @@ export type Database = {
       filerAction: "warn" | "suspend" | "no_action"
       graduationSemester: "spring" | "summer" | "fall"
       oauthRegistrationType: "development" | "production"
-      reportStatus: "unverified" | "pending" | "resolved" | "dismissed"
+      reportStatus: "open" | "resolved" | "dismissed"
       roleType: "default" | "root" | "custom"
       subjectAction: "warn" | "suspend" | "ban" | "no_action"
     }
@@ -944,6 +1006,108 @@ export type Database = {
   public: {
     Tables: {
       [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+  sandbox: {
+    Tables: {
+      comments: {
+        Row: {
+          authorUserId: string
+          body: string
+          createdAt: string
+          id: string
+          postId: string
+          quarantinedBy: string | null
+        }
+        Insert: {
+          authorUserId: string
+          body: string
+          createdAt?: string
+          id?: string
+          postId: string
+          quarantinedBy?: string | null
+        }
+        Update: {
+          authorUserId?: string
+          body?: string
+          createdAt?: string
+          id?: string
+          postId?: string
+          quarantinedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_postId_fkey"
+            columns: ["postId"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          authorUserId: string
+          body: string
+          createdAt: string
+          id: string
+          quarantinedBy: string | null
+          title: string
+        }
+        Insert: {
+          authorUserId: string
+          body: string
+          createdAt?: string
+          id?: string
+          quarantinedBy?: string | null
+          title: string
+        }
+        Update: {
+          authorUserId?: string
+          body?: string
+          createdAt?: string
+          id?: string
+          quarantinedBy?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          bio: string | null
+          createdAt: string
+          handle: string
+          id: string
+          userId: string
+        }
+        Insert: {
+          bio?: string | null
+          createdAt?: string
+          handle: string
+          id?: string
+          userId: string
+        }
+        Update: {
+          bio?: string | null
+          createdAt?: string
+          handle?: string
+          id?: string
+          userId?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1751,6 +1915,101 @@ export type Database = {
         }
         Relationships: []
       }
+      iceberg_namespaces: {
+        Row: {
+          bucket_name: string
+          catalog_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          bucket_name: string
+          catalog_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          bucket_name?: string
+          catalog_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iceberg_namespaces_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "buckets_analytics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iceberg_tables: {
+        Row: {
+          bucket_name: string
+          catalog_id: string
+          created_at: string
+          id: string
+          location: string
+          name: string
+          namespace_id: string
+          remote_table_id: string | null
+          shard_id: string | null
+          shard_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          bucket_name: string
+          catalog_id: string
+          created_at?: string
+          id?: string
+          location: string
+          name: string
+          namespace_id: string
+          remote_table_id?: string | null
+          shard_id?: string | null
+          shard_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bucket_name?: string
+          catalog_id?: string
+          created_at?: string
+          id?: string
+          location?: string
+          name?: string
+          namespace_id?: string
+          remote_table_id?: string | null
+          shard_id?: string | null
+          shard_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iceberg_tables_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "buckets_analytics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iceberg_tables_namespace_id_fkey"
+            columns: ["namespace_id"]
+            isOneToOne: false
+            referencedRelation: "iceberg_namespaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       migrations: {
         Row: {
           executed_at: string | null
@@ -2249,7 +2508,9 @@ export const Constants = {
   platform: {
     Enums: {
       contentAction: ["quarantine", "no_action"],
+      contentVisibility: ["public", "restricted"],
       credentialType: ["email_password", "totp", "email_password_totp"],
+      deployEnv: ["local", "test", "production"],
       feedbackSeverity: ["low", "medium", "high"],
       feedbackStatus: ["open", "in_review", "resolved", "dismissed"],
       feedbackType: [
@@ -2263,12 +2524,15 @@ export const Constants = {
       filerAction: ["warn", "suspend", "no_action"],
       graduationSemester: ["spring", "summer", "fall"],
       oauthRegistrationType: ["development", "production"],
-      reportStatus: ["unverified", "pending", "resolved", "dismissed"],
+      reportStatus: ["open", "resolved", "dismissed"],
       roleType: ["default", "root", "custom"],
       subjectAction: ["warn", "suspend", "ban", "no_action"],
     },
   },
   public: {
+    Enums: {},
+  },
+  sandbox: {
     Enums: {},
   },
   schedule_builder: {
@@ -2285,3 +2549,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

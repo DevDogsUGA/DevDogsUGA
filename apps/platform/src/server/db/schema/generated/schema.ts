@@ -3,13 +3,13 @@ import {
   pgTable,
   uuid,
   varchar,
-  text,
-  integer,
-  pgEnum,
-  date,
-  timestamp,
-  doublePrecision,
   boolean,
+  text,
+  pgEnum,
+  integer,
+  timestamp,
+  date,
+  doublePrecision,
   jsonb,
   customType,
   uniqueIndex,
@@ -51,12 +51,6 @@ export const filerActionInPlatform = platform.enum("filerAction", [
   "suspend",
   "no_action",
 ]);
-export const reportStatusInPlatform = platform.enum("reportStatus", [
-  "unverified",
-  "pending",
-  "resolved",
-  "dismissed",
-]);
 export const subjectActionInPlatform = platform.enum("subjectAction", [
   "warn",
   "suspend",
@@ -86,84 +80,127 @@ export const feedbackTypeInPlatform = platform.enum("feedbackType", [
   "content_issue",
   "other",
 ]);
+export const deployEnvInPlatform = platform.enum("deployEnv", [
+  "local",
+  "test",
+  "production",
+]);
+export const reportStatusInPlatform = platform.enum("reportStatus", [
+  "open",
+  "resolved",
+  "dismissed",
+]);
+export const contentVisibilityInPlatform = platform.enum("contentVisibility", [
+  "public",
+  "restricted",
+]);
 
-export const contentReportsInPlatform = platform.table.withRLS(
-  "contentReports",
+export const appsInPlatform = platform.table.withRLS(
+  "apps",
   {
     id: uuid().defaultRandom().primaryKey(),
-    clientId: uuid()
-      .notNull()
-      .references(() => oauthClients.id, { onDelete: "cascade" }),
-    reporterUserId: uuid()
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    reportedUserId: uuid()
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    contentId: text().notNull(),
-    contentSnapshot: varchar({ length: 5000 }).notNull(),
-    contentUrl: text(),
-    description: varchar({ length: 1000 }),
-    status: reportStatusInPlatform().default("unverified").notNull(),
+    slug: text().notNull(),
+    schemaName: text().notNull(),
+    displayName: text().notNull(),
+    contentResolver: text(),
+    contentActioner: text(),
     createdAt: timestamp()
       .default(sql`now()`)
       .notNull(),
-    resolvedAt: timestamp(),
-    reasonId: uuid().notNull(),
-    contentTypeId: uuid(),
-    verifyAttempts: integer().default(0).notNull(),
-    nextVerifyAt: timestamp(),
   },
   (table) => [
-    foreignKey({
-      columns: [table.clientId, table.contentTypeId],
-      foreignColumns: [
-        reportContentTypesInPlatform.clientId,
-        reportContentTypesInPlatform.id,
-      ],
-      name: "contentReports_clientId_contentTypeId_fkey",
-    }).onDelete("restrict"),
-    foreignKey({
-      columns: [table.clientId, table.reasonId],
-      foreignColumns: [
-        reportReasonsInPlatform.clientId,
-        reportReasonsInPlatform.id,
-      ],
-      name: "contentReports_clientId_reasonId_fkey",
-    }).onDelete("restrict"),
-    uniqueIndex("contentReports_client_content_idx").using(
-      "btree",
-      table.clientId.asc().nullsLast(),
-      table.contentId.asc().nullsLast(),
-    ),
-
-    pgPolicy("crud_authenticated_policy_delete", {
+    unique("apps_schemaName_key").on(table.schemaName),
+    unique("apps_slug_key").on(table.slug),
+    pgPolicy("no_client_delete", {
       as: "restrictive",
       for: "delete",
-      to: ["authenticated"],
+      to: ["anon", "authenticated"],
       using: sql`false`,
     }),
 
-    pgPolicy("crud_authenticated_policy_select", {
-      for: "select",
-      to: ["authenticated"],
-      using: sql`((( SELECT auth.uid() AS uid) = "reporterUserId") OR (EXISTS ( SELECT 1
-   FROM platform."moderatorRoles" mr
-  WHERE ((mr."userId" = ( SELECT auth.uid() AS uid)) AND (mr."clientId" = "contentReports"."clientId")))))`,
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
     }),
 
-    pgPolicy("crud_authenticated_policy_update", {
+    pgPolicy("no_client_update", {
       as: "restrictive",
       for: "update",
-      to: ["authenticated"],
+      to: ["anon", "authenticated"],
       using: sql`false`,
       withCheck: sql`false`,
     }),
 
-    pgPolicy("reporter_insert", {
-      for: "insert",
+    pgPolicy("public_select", {
+      for: "select",
+      to: ["anon", "authenticated"],
+      using: sql`true`,
+    }),
+  ],
+);
+
+export const contentTypesInPlatform = platform.table.withRLS(
+  "contentTypes",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    appId: uuid()
+      .notNull()
+      .references(() => appsInPlatform.id, { onDelete: "cascade" }),
+    tableName: text().notNull(),
+    contentType: text(),
+    label: text(),
+    authorColumn: text(),
+    snapshotColumns: text().array(),
+    urlTemplate: text(),
+    visibility: contentVisibilityInPlatform(),
+    createdAt: timestamp()
+      .default(sql`now()`)
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("contentTypes_app_type_idx")
+      .using(
+        "btree",
+        table.appId.asc().nullsLast(),
+        table.contentType.asc().nullsLast(),
+      )
+      .where(sql`("contentType" IS NOT NULL)`),
+    unique("contentTypes_app_table_key").on(table.appId, table.tableName),
+    pgPolicy("authenticated_select", {
+      for: "select",
       to: ["authenticated"],
-      withCheck: sql`(( SELECT auth.uid() AS uid) = "reporterUserId")`,
+      using: sql`true`,
+    }),
+
+    pgPolicy("deny_test_identities", {
+      as: "restrictive",
+      to: ["authenticated"],
+      using: sql`(NOT platform.is_test_identity(( SELECT auth.uid() AS uid)))`,
+      withCheck: sql`(NOT platform.is_test_identity(( SELECT auth.uid() AS uid)))`,
+    }),
+
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
+      as: "restrictive",
+      for: "update",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+      withCheck: sql`false`,
     }),
   ],
 );
@@ -254,46 +291,13 @@ export const credentialsInPlatform = platform.table.withRLS(
   ],
 );
 
-export const docsBranchesInPlatform = platform.table.withRLS(
-  "docsBranches",
-  {
-    id: uuid().defaultRandom().primaryKey(),
-    repoId: uuid()
-      .notNull()
-      .references(() => docsReposInPlatform.id, { onDelete: "cascade" }),
-    name: text().notNull(),
-    lastSyncedCommit: text(),
-    lastSyncedAt: timestamp({ withTimezone: true }),
-  },
-  (table) => [
-    uniqueIndex("docsBranches_repo_name_idx").using(
-      "btree",
-      table.repoId.asc().nullsLast(),
-      table.name.asc().nullsLast(),
-    ),
-
-    pgPolicy("docsBranches_public_read", {
-      for: "select",
-      to: ["anon", "authenticated"],
-      using: sql`true`,
-    }),
-  ],
-);
-
 export const docsPagesInPlatform = platform.table.withRLS(
   "docsPages",
   {
     id: uuid().defaultRandom().primaryKey(),
-    branchId: uuid()
-      .notNull()
-      .references(() => docsBranchesInPlatform.id, { onDelete: "cascade" }),
     path: text().notNull(),
-    blobSha: text().notNull(),
     title: text().notNull(),
     description: text(),
-    frontmatter: jsonb().default({}).notNull(),
-    headings: jsonb().default([]).notNull(),
-    content: text().notNull(),
     plainText: text().notNull(),
     updatedAt: timestamp({ withTimezone: true })
       .default(sql`now()`)
@@ -303,9 +307,8 @@ export const docsPagesInPlatform = platform.table.withRLS(
     ),
   },
   (table) => [
-    uniqueIndex("docsPages_branch_path_idx").using(
+    uniqueIndex("docsPages_path_idx").using(
       "btree",
-      table.branchId.asc().nullsLast(),
       table.path.asc().nullsLast(),
     ),
     index("docsPages_search_idx").using("gin", table.search.asc().nullsLast()),
@@ -318,29 +321,67 @@ export const docsPagesInPlatform = platform.table.withRLS(
   ],
 );
 
-export const docsReposInPlatform = platform.table.withRLS(
-  "docsRepos",
+export const feedbackInPlatform = platform.table.withRLS(
+  "feedback",
   {
     id: uuid().defaultRandom().primaryKey(),
-    slug: text().notNull(),
-    name: text().notNull(),
-    description: text(),
-    defaultBranch: text().default("main").notNull(),
-    sortOrder: integer().default(0).notNull(),
-    createdAt: timestamp({ withTimezone: true })
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: feedbackTypeInPlatform().notNull(),
+    severity: feedbackSeverityInPlatform(),
+    title: varchar({ length: 100 }).notNull(),
+    description: text().notNull(),
+    status: feedbackStatusInPlatform().default("open").notNull(),
+    browserMetadata: jsonb(),
+    attachmentPaths: text().array(),
+    adminNote: text(),
+    createdAt: timestamp()
       .default(sql`now()`)
       .notNull(),
+    updatedAt: timestamp()
+      .default(sql`now()`)
+      .notNull(),
+    topicId: uuid(),
+    appId: uuid()
+      .notNull()
+      .references(() => appsInPlatform.id, { onDelete: "cascade" }),
   },
   (table) => [
-    uniqueIndex("docsRepos_slug_idx").using(
-      "btree",
-      table.slug.asc().nullsLast(),
-    ),
+    foreignKey({
+      columns: [table.appId, table.topicId],
+      foreignColumns: [
+        feedbackTopicsInPlatform.appId,
+        feedbackTopicsInPlatform.id,
+      ],
+      name: "feedback_appId_topicId_fkey",
+    }).onDelete("restrict"),
 
-    pgPolicy("docsRepos_public_read", {
-      for: "select",
+    pgPolicy("crud_authenticated_policy_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("manager_update", {
+      for: "update",
+      to: ["authenticated"],
+      using: sql`platform.has_permission(( SELECT auth.uid() AS uid), 'canManageFeedback'::text)`,
+      withCheck: sql`platform.has_permission(( SELECT auth.uid() AS uid), 'canManageFeedback'::text)`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
       to: ["anon", "authenticated"],
-      using: sql`true`,
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("own_or_manager_select", {
+      for: "select",
+      to: ["authenticated"],
+      using: sql`((( SELECT auth.uid() AS uid) = "userId") OR platform.has_permission(( SELECT auth.uid() AS uid), 'canManageFeedback'::text))`,
     }),
   ],
 );
@@ -349,23 +390,23 @@ export const feedbackTopicsInPlatform = platform.table.withRLS(
   "feedbackTopics",
   {
     id: uuid().defaultRandom().primaryKey(),
-    clientId: uuid()
+    appId: uuid()
       .notNull()
-      .references(() => oauthClients.id, { onDelete: "cascade" }),
+      .references(() => appsInPlatform.id, { onDelete: "cascade" }),
     label: varchar({ length: 50 }).notNull(),
     createdAt: timestamp()
       .default(sql`now()`)
       .notNull(),
   },
   (table) => [
-    uniqueIndex("feedbackTopics_client_id_idx").using(
+    uniqueIndex("feedbackTopics_app_id_idx").using(
       "btree",
-      table.clientId.asc().nullsLast(),
+      table.appId.asc().nullsLast(),
       table.id.asc().nullsLast(),
     ),
-    uniqueIndex("feedbackTopics_client_label_idx").using(
+    uniqueIndex("feedbackTopics_app_label_idx").using(
       "btree",
-      table.clientId.asc().nullsLast(),
+      table.appId.asc().nullsLast(),
       table.label.asc().nullsLast(),
     ),
 
@@ -375,28 +416,69 @@ export const feedbackTopicsInPlatform = platform.table.withRLS(
       using: sql`true`,
     }),
 
-    pgPolicy("crud_public_policy_update", {
+    pgPolicy("deny_test_identities", {
+      as: "restrictive",
+      to: ["authenticated"],
+      using: sql`(NOT platform.is_test_identity(( SELECT auth.uid() AS uid)))`,
+      withCheck: sql`(NOT platform.is_test_identity(( SELECT auth.uid() AS uid)))`,
+    }),
+
+    pgPolicy("manager_delete", {
+      for: "delete",
+      to: ["authenticated"],
+      using: sql`platform.has_permission(( SELECT auth.uid() AS uid), 'canManageFeedback'::text)`,
+    }),
+
+    pgPolicy("manager_insert", {
+      for: "insert",
+      to: ["authenticated"],
+      withCheck: sql`platform.has_permission(( SELECT auth.uid() AS uid), 'canManageFeedback'::text)`,
+    }),
+
+    pgPolicy("manager_update", {
+      for: "update",
+      to: ["authenticated"],
+      using: sql`platform.has_permission(( SELECT auth.uid() AS uid), 'canManageFeedback'::text)`,
+      withCheck: sql`platform.has_permission(( SELECT auth.uid() AS uid), 'canManageFeedback'::text)`,
+    }),
+  ],
+);
+
+export const instanceInPlatform = platform.table.withRLS(
+  "instance",
+  {
+    id: boolean().default(true).primaryKey(),
+    environment: deployEnvInPlatform().default("production").notNull(),
+  },
+  (table) => [
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
       as: "restrictive",
       for: "update",
+      to: ["anon", "authenticated"],
       using: sql`false`,
       withCheck: sql`false`,
     }),
 
-    pgPolicy("owner_delete", {
-      for: "delete",
-      to: ["authenticated"],
-      using: sql`(auth.uid() = ( SELECT "oauthRegistrations"."userId"
-   FROM platform."oauthRegistrations"
-  WHERE ("oauthRegistrations"."clientId" = "feedbackTopics"."clientId")))`,
+    pgPolicy("public_select", {
+      for: "select",
+      to: ["anon", "authenticated"],
+      using: sql`true`,
     }),
-
-    pgPolicy("owner_insert", {
-      for: "insert",
-      to: ["authenticated"],
-      withCheck: sql`(auth.uid() = ( SELECT "oauthRegistrations"."userId"
-   FROM platform."oauthRegistrations"
-  WHERE ("oauthRegistrations"."clientId" = "feedbackTopics"."clientId")))`,
-    }),
+    check("instance_singleton", sql`id`),
   ],
 );
 
@@ -441,60 +523,6 @@ export const leaderboardProfilesInPlatform = platform.table.withRLS(
   ],
 );
 
-export const moderatorRolesInPlatform = platform.table.withRLS(
-  "moderatorRoles",
-  {
-    id: uuid().defaultRandom().primaryKey(),
-    userId: uuid()
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    clientId: uuid()
-      .notNull()
-      .references(() => oauthClients.id, { onDelete: "cascade" }),
-    grantedByUserId: uuid()
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
-    createdAt: timestamp()
-      .default(sql`now()`)
-      .notNull(),
-  },
-  (table) => [
-    uniqueIndex("moderatorRoles_user_client_idx").using(
-      "btree",
-      table.userId.asc().nullsLast(),
-      table.clientId.asc().nullsLast(),
-    ),
-
-    pgPolicy("crud_authenticated_policy_delete", {
-      as: "restrictive",
-      for: "delete",
-      to: ["authenticated"],
-      using: sql`false`,
-    }),
-
-    pgPolicy("crud_authenticated_policy_insert", {
-      as: "restrictive",
-      for: "insert",
-      to: ["authenticated"],
-      withCheck: sql`false`,
-    }),
-
-    pgPolicy("crud_authenticated_policy_select", {
-      for: "select",
-      to: ["authenticated"],
-      using: sql`(( SELECT auth.uid() AS uid) = "userId")`,
-    }),
-
-    pgPolicy("crud_authenticated_policy_update", {
-      as: "restrictive",
-      for: "update",
-      to: ["authenticated"],
-      using: sql`false`,
-      withCheck: sql`false`,
-    }),
-  ],
-);
-
 export const oauthRegistrationsInPlatform = platform.table.withRLS(
   "oauthRegistrations",
   {
@@ -511,8 +539,6 @@ export const oauthRegistrationsInPlatform = platform.table.withRLS(
         onUpdate: "cascade",
       }),
     type: oauthRegistrationTypeInPlatform().default("development").notNull(),
-    reportWebhookUrl: text(),
-    reportWebhookSecretId: uuid(),
   },
   (table) => [
     unique("oauthRegistrations_userId_key").on(table.userId),
@@ -738,71 +764,23 @@ export const profileLinksInPlatform = platform.table.withRLS(
   ],
 );
 
-export const reportContentTypesInPlatform = platform.table.withRLS(
-  "reportContentTypes",
-  {
-    id: uuid().defaultRandom().primaryKey(),
-    clientId: uuid()
-      .notNull()
-      .references(() => oauthClients.id, { onDelete: "cascade" }),
-    label: varchar({ length: 100 }).notNull(),
-    createdAt: timestamp()
-      .default(sql`now()`)
-      .notNull(),
-  },
-  (table) => [
-    uniqueIndex("reportContentTypes_client_id_idx").using(
-      "btree",
-      table.clientId.asc().nullsLast(),
-      table.id.asc().nullsLast(),
-    ),
-    uniqueIndex("reportContentTypes_client_label_idx").using(
-      "btree",
-      table.clientId.asc().nullsLast(),
-      table.label.asc().nullsLast(),
-    ),
-
-    pgPolicy("authenticated_select", {
-      for: "select",
-      to: ["authenticated"],
-      using: sql`true`,
-    }),
-
-    pgPolicy("owner_delete", {
-      for: "delete",
-      to: ["authenticated"],
-      using: sql`(auth.uid() = ( SELECT "oauthRegistrations"."userId"
-   FROM platform."oauthRegistrations"
-  WHERE ("oauthRegistrations"."clientId" = "reportContentTypes"."clientId")))`,
-    }),
-
-    pgPolicy("owner_insert", {
-      for: "insert",
-      to: ["authenticated"],
-      withCheck: sql`(auth.uid() = ( SELECT "oauthRegistrations"."userId"
-   FROM platform."oauthRegistrations"
-  WHERE ("oauthRegistrations"."clientId" = "reportContentTypes"."clientId")))`,
-    }),
-  ],
-);
-
 export const reportCorroborationsInPlatform = platform.table.withRLS(
   "reportCorroborations",
   {
     id: uuid().defaultRandom().primaryKey(),
     reportId: uuid()
       .notNull()
-      .references(() => contentReportsInPlatform.id, { onDelete: "cascade" }),
+      .references(() => reportsInPlatform.id, { onDelete: "cascade" }),
     reporterUserId: uuid()
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    reasonId: uuid()
+      .notNull()
+      .references(() => reportReasonsInPlatform.id, { onDelete: "restrict" }),
     description: varchar({ length: 1000 }),
     createdAt: timestamp()
       .default(sql`now()`)
       .notNull(),
-    reasonId: uuid()
-      .notNull()
-      .references(() => reportReasonsInPlatform.id, { onDelete: "restrict" }),
   },
   (table) => [
     uniqueIndex("reportCorroborations_report_reporter_idx").using(
@@ -811,32 +789,30 @@ export const reportCorroborationsInPlatform = platform.table.withRLS(
       table.reporterUserId.asc().nullsLast(),
     ),
 
-    pgPolicy("corroborator_insert", {
-      for: "insert",
-      to: ["authenticated"],
-      withCheck: sql`(( SELECT auth.uid() AS uid) = "reporterUserId")`,
-    }),
-
-    pgPolicy("corroborator_select", {
+    pgPolicy("corroborator_or_moderator_select", {
       for: "select",
       to: ["authenticated"],
-      using: sql`((( SELECT auth.uid() AS uid) = "reporterUserId") OR (EXISTS ( SELECT 1
-   FROM (platform."contentReports" cr
-     JOIN platform."moderatorRoles" mr ON ((mr."clientId" = cr."clientId")))
-  WHERE ((cr.id = "reportCorroborations"."reportId") AND (mr."userId" = ( SELECT auth.uid() AS uid))))))`,
+      using: sql`((( SELECT auth.uid() AS uid) = "reporterUserId") OR platform.has_permission(( SELECT auth.uid() AS uid), 'canModerate'::text))`,
     }),
 
-    pgPolicy("crud_authenticated_policy_delete", {
+    pgPolicy("no_client_delete", {
       as: "restrictive",
       for: "delete",
-      to: ["authenticated"],
+      to: ["anon", "authenticated"],
       using: sql`false`,
     }),
 
-    pgPolicy("crud_authenticated_policy_update", {
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
       as: "restrictive",
       for: "update",
-      to: ["authenticated"],
+      to: ["anon", "authenticated"],
       using: sql`false`,
       withCheck: sql`false`,
     }),
@@ -847,9 +823,9 @@ export const reportReasonsInPlatform = platform.table.withRLS(
   "reportReasons",
   {
     id: uuid().defaultRandom().primaryKey(),
-    clientId: uuid()
+    appId: uuid()
       .notNull()
-      .references(() => oauthClients.id, { onDelete: "cascade" }),
+      .references(() => appsInPlatform.id, { onDelete: "cascade" }),
     title: varchar({ length: 100 }).notNull(),
     description: text(),
     createdAt: timestamp()
@@ -857,14 +833,14 @@ export const reportReasonsInPlatform = platform.table.withRLS(
       .notNull(),
   },
   (table) => [
-    uniqueIndex("reportReasons_client_id_idx").using(
+    uniqueIndex("reportReasons_app_id_idx").using(
       "btree",
-      table.clientId.asc().nullsLast(),
+      table.appId.asc().nullsLast(),
       table.id.asc().nullsLast(),
     ),
-    uniqueIndex("reportReasons_client_title_idx").using(
+    uniqueIndex("reportReasons_app_title_idx").using(
       "btree",
-      table.clientId.asc().nullsLast(),
+      table.appId.asc().nullsLast(),
       table.title.asc().nullsLast(),
     ),
 
@@ -874,20 +850,30 @@ export const reportReasonsInPlatform = platform.table.withRLS(
       using: sql`true`,
     }),
 
-    pgPolicy("owner_delete", {
-      for: "delete",
+    pgPolicy("deny_test_identities", {
+      as: "restrictive",
       to: ["authenticated"],
-      using: sql`(auth.uid() = ( SELECT "oauthRegistrations"."userId"
-   FROM platform."oauthRegistrations"
-  WHERE ("oauthRegistrations"."clientId" = "reportReasons"."clientId")))`,
+      using: sql`(NOT platform.is_test_identity(( SELECT auth.uid() AS uid)))`,
+      withCheck: sql`(NOT platform.is_test_identity(( SELECT auth.uid() AS uid)))`,
     }),
 
-    pgPolicy("owner_insert", {
+    pgPolicy("moderator_delete", {
+      for: "delete",
+      to: ["authenticated"],
+      using: sql`platform.has_permission(( SELECT auth.uid() AS uid), 'canModerate'::text)`,
+    }),
+
+    pgPolicy("moderator_insert", {
       for: "insert",
       to: ["authenticated"],
-      withCheck: sql`(auth.uid() = ( SELECT "oauthRegistrations"."userId"
-   FROM platform."oauthRegistrations"
-  WHERE ("oauthRegistrations"."clientId" = "reportReasons"."clientId")))`,
+      withCheck: sql`platform.has_permission(( SELECT auth.uid() AS uid), 'canModerate'::text)`,
+    }),
+
+    pgPolicy("moderator_update", {
+      for: "update",
+      to: ["authenticated"],
+      using: sql`platform.has_permission(( SELECT auth.uid() AS uid), 'canModerate'::text)`,
+      withCheck: sql`platform.has_permission(( SELECT auth.uid() AS uid), 'canModerate'::text)`,
     }),
   ],
 );
@@ -898,7 +884,7 @@ export const reportResolutionsInPlatform = platform.table.withRLS(
     id: uuid().defaultRandom().primaryKey(),
     reportId: uuid()
       .notNull()
-      .references(() => contentReportsInPlatform.id, { onDelete: "cascade" }),
+      .references(() => reportsInPlatform.id, { onDelete: "cascade" }),
     moderatorUserId: uuid()
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
@@ -907,45 +893,114 @@ export const reportResolutionsInPlatform = platform.table.withRLS(
     contentAction: contentActionInPlatform().notNull(),
     appliedGlobally: boolean().default(false).notNull(),
     moderatorNote: text(),
-    webhookAttempts: integer().default(0).notNull(),
-    nextRetryAt: timestamp(),
-    notifiedAt: timestamp(),
     createdAt: timestamp()
       .default(sql`now()`)
       .notNull(),
   },
   (table) => [
     unique("reportResolutions_reportId_key").on(table.reportId),
-    pgPolicy("crud_authenticated_policy_delete", {
+    pgPolicy("no_client_delete", {
       as: "restrictive",
       for: "delete",
-      to: ["authenticated"],
+      to: ["anon", "authenticated"],
       using: sql`false`,
     }),
 
-    pgPolicy("crud_authenticated_policy_insert", {
+    pgPolicy("no_client_insert", {
       as: "restrictive",
       for: "insert",
-      to: ["authenticated"],
+      to: ["anon", "authenticated"],
       withCheck: sql`false`,
     }),
 
-    pgPolicy("crud_authenticated_policy_select", {
+    pgPolicy("no_client_update", {
+      as: "restrictive",
+      for: "update",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("reporter_or_moderator_select", {
       for: "select",
       to: ["authenticated"],
       using: sql`(EXISTS ( SELECT 1
-   FROM platform."contentReports" cr
-  WHERE ((cr.id = "reportResolutions"."reportId") AND ((cr."reporterUserId" = ( SELECT auth.uid() AS uid)) OR (EXISTS ( SELECT 1
-           FROM platform."moderatorRoles" mr
-          WHERE ((mr."userId" = ( SELECT auth.uid() AS uid)) AND (mr."clientId" = cr."clientId"))))))))`,
+   FROM platform.reports r
+  WHERE ((r.id = "reportResolutions"."reportId") AND ((r."reporterUserId" = ( SELECT auth.uid() AS uid)) OR platform.has_permission(( SELECT auth.uid() AS uid), 'canModerate'::text)))))`,
+    }),
+  ],
+);
+
+export const reportsInPlatform = platform.table.withRLS(
+  "reports",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    appId: uuid()
+      .notNull()
+      .references(() => appsInPlatform.id, { onDelete: "cascade" }),
+    reporterUserId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    reportedUserId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    contentType: text().notNull(),
+    contentRef: text().notNull(),
+    contentSnapshot: varchar({ length: 5000 }).notNull(),
+    contentUrl: text(),
+    description: varchar({ length: 1000 }),
+    reasonId: uuid().notNull(),
+    status: reportStatusInPlatform().default("open").notNull(),
+    createdAt: timestamp()
+      .default(sql`now()`)
+      .notNull(),
+    resolvedAt: timestamp(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.appId, table.reasonId],
+      foreignColumns: [
+        reportReasonsInPlatform.appId,
+        reportReasonsInPlatform.id,
+      ],
+      name: "reports_appId_reasonId_fkey",
+    }).onDelete("restrict"),
+    uniqueIndex("reports_open_content_idx")
+      .using(
+        "btree",
+        table.appId.asc().nullsLast(),
+        table.contentType.asc().nullsLast(),
+        table.contentRef.asc().nullsLast(),
+      )
+      .where(sql`(status = 'open'::platform."reportStatus")`),
+    index("reports_status_idx").using("btree", table.status.asc().nullsLast()),
+
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
     }),
 
-    pgPolicy("crud_authenticated_policy_update", {
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
       as: "restrictive",
       for: "update",
-      to: ["authenticated"],
+      to: ["anon", "authenticated"],
       using: sql`false`,
       withCheck: sql`false`,
+    }),
+
+    pgPolicy("reporter_or_moderator_select", {
+      for: "select",
+      to: ["authenticated"],
+      using: sql`((( SELECT auth.uid() AS uid) = "reporterUserId") OR platform.has_permission(( SELECT auth.uid() AS uid), 'canModerate'::text))`,
     }),
   ],
 );
@@ -1006,86 +1061,16 @@ export const rolesInPlatform = platform.table.withRLS(
       using: sql`false`,
       withCheck: sql`false`,
     }),
+
+    pgPolicy("deny_test_identities", {
+      as: "restrictive",
+      to: ["authenticated"],
+      using: sql`(NOT platform.is_test_identity(( SELECT auth.uid() AS uid)))`,
+      withCheck: sql`(NOT platform.is_test_identity(( SELECT auth.uid() AS uid)))`,
+    }),
     check(
       "roles_custom_requires_rank",
       sql`(("roleType" = 'custom'::platform."roleType") = (rank IS NOT NULL))`,
-    ),
-  ],
-);
-
-export const siteFeedbackInPlatform = platform.table.withRLS(
-  "siteFeedback",
-  {
-    id: uuid().defaultRandom().primaryKey(),
-    userId: uuid()
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    type: feedbackTypeInPlatform().notNull(),
-    severity: feedbackSeverityInPlatform(),
-    title: varchar({ length: 100 }).notNull(),
-    description: text().notNull(),
-    status: feedbackStatusInPlatform().default("open").notNull(),
-    browserMetadata: jsonb(),
-    attachmentPaths: text().array(),
-    adminNote: text(),
-    createdAt: timestamp()
-      .default(sql`now()`)
-      .notNull(),
-    updatedAt: timestamp()
-      .default(sql`now()`)
-      .notNull(),
-    clientId: uuid().references(() => oauthClients.id, {
-      onDelete: "set null",
-    }),
-    topicId: uuid(),
-  },
-  (table) => [
-    foreignKey({
-      columns: [table.clientId, table.topicId],
-      foreignColumns: [
-        feedbackTopicsInPlatform.clientId,
-        feedbackTopicsInPlatform.id,
-      ],
-      name: "siteFeedback_clientId_topicId_fkey",
-    }).onDelete("restrict"),
-
-    pgPolicy("crud_authenticated_policy_delete", {
-      as: "restrictive",
-      for: "delete",
-      to: ["authenticated"],
-      using: sql`false`,
-    }),
-
-    pgPolicy("crud_authenticated_policy_insert", {
-      for: "insert",
-      to: ["authenticated"],
-      withCheck: sql`(( SELECT auth.uid() AS uid) = "userId")`,
-    }),
-
-    pgPolicy("crud_authenticated_policy_select", {
-      for: "select",
-      to: ["authenticated"],
-      using: sql`((( SELECT auth.uid() AS uid) = "userId") OR (EXISTS ( SELECT 1
-   FROM (platform."userRoles" ur
-     JOIN platform.roles r ON ((r.id = ur."roleId")))
-  WHERE ((ur."userId" = ( SELECT auth.uid() AS uid)) AND (r."canManageFeedback" = true)))))`,
-    }),
-
-    pgPolicy("crud_authenticated_policy_update", {
-      for: "update",
-      to: ["authenticated"],
-      using: sql`(EXISTS ( SELECT 1
-   FROM (platform."userRoles" ur
-     JOIN platform.roles r ON ((r.id = ur."roleId")))
-  WHERE ((ur."userId" = ( SELECT auth.uid() AS uid)) AND (r."canManageFeedback" = true))))`,
-      withCheck: sql`(EXISTS ( SELECT 1
-   FROM (platform."userRoles" ur
-     JOIN platform.roles r ON ((r.id = ur."roleId")))
-  WHERE ((ur."userId" = ( SELECT auth.uid() AS uid)) AND (r."canManageFeedback" = true))))`,
-    }),
-    check(
-      "siteFeedback_topic_xor_clientId",
-      sql`(("clientId" IS NULL) = ("topicId" IS NULL))`,
     ),
   ],
 );
@@ -1221,32 +1206,33 @@ export { credentialTypeInPlatform as credentialType };
 export { roleTypeInPlatform as roleType };
 export { contentActionInPlatform as contentAction };
 export { filerActionInPlatform as filerAction };
-export { reportStatusInPlatform as reportStatus };
 export { subjectActionInPlatform as subjectAction };
 export { oauthRegistrationTypeInPlatform as oauthRegistrationType };
 export { feedbackSeverityInPlatform as feedbackSeverity };
 export { feedbackStatusInPlatform as feedbackStatus };
 export { feedbackTypeInPlatform as feedbackType };
-export { contentReportsInPlatform as contentReports };
+export { deployEnvInPlatform as deployEnv };
+export { reportStatusInPlatform as reportStatus };
+export { contentVisibilityInPlatform as contentVisibility };
+export { appsInPlatform as apps };
+export { contentTypesInPlatform as contentTypes };
 export { credentialRolesInPlatform as credentialRoles };
 export { credentialsInPlatform as credentials };
-export { docsBranchesInPlatform as docsBranches };
 export { docsPagesInPlatform as docsPages };
-export { docsReposInPlatform as docsRepos };
+export { feedbackInPlatform as feedback };
 export { feedbackTopicsInPlatform as feedbackTopics };
+export { instanceInPlatform as instance };
 export { leaderboardProfilesInPlatform as leaderboardProfiles };
-export { moderatorRolesInPlatform as moderatorRoles };
 export { oauthRegistrationsInPlatform as oauthRegistrations };
 export { oauthTestAccountsInPlatform as oauthTestAccounts };
 export { pointsInPlatform as points };
 export { profileInPlatform as profile };
 export { profileLinksInPlatform as profileLinks };
-export { reportContentTypesInPlatform as reportContentTypes };
 export { reportCorroborationsInPlatform as reportCorroborations };
 export { reportReasonsInPlatform as reportReasons };
 export { reportResolutionsInPlatform as reportResolutions };
+export { reportsInPlatform as reports };
 export { rolesInPlatform as roles };
-export { siteFeedbackInPlatform as siteFeedback };
 export { userRolesInPlatform as userRoles };
 export { userSuspensionsInPlatform as userSuspensions };
 export { profileWithVerificationInPlatform as profileWithVerification };

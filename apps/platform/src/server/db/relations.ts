@@ -99,30 +99,41 @@ export const relations = defineRelations(
         from: r.oauthRegistrations.clientId,
         to: r.oauthAuthorizationsInAuth.clientId,
       }),
-      contentReports: r.many.contentReports({
-        from: r.oauthRegistrations.clientId,
-        to: r.contentReports.clientId,
+    },
+    apps: {
+      reports: r.many.reports({
+        from: r.apps.id,
+        to: r.reports.appId,
       }),
-      moderatorRoles: r.many.moderatorRoles({
-        from: r.oauthRegistrations.clientId,
-        to: r.moderatorRoles.clientId,
+      reportReasons: r.many.reportReasons({
+        from: r.apps.id,
+        to: r.reportReasons.appId,
       }),
       feedbackTopics: r.many.feedbackTopics({
-        from: r.oauthRegistrations.clientId,
-        to: r.feedbackTopics.clientId,
+        from: r.apps.id,
+        to: r.feedbackTopics.appId,
+      }),
+      feedback: r.many.feedback({
+        from: r.apps.id,
+        to: r.feedback.appId,
       }),
     },
     feedbackTopics: {
-      oauthRegistration: r.one.oauthRegistrations({
-        from: r.feedbackTopics.clientId,
-        to: r.oauthRegistrations.clientId,
+      app: r.one.apps({
+        from: r.feedbackTopics.appId,
+        to: r.apps.id,
         optional: false,
       }),
     },
-    siteFeedback: {
-      oauthRegistration: r.one.oauthRegistrations({
-        from: r.siteFeedback.clientId,
-        to: r.oauthRegistrations.clientId,
+    feedback: {
+      app: r.one.apps({
+        from: r.feedback.appId,
+        to: r.apps.id,
+        optional: false,
+      }),
+      topic: r.one.feedbackTopics({
+        from: r.feedback.topicId,
+        to: r.feedbackTopics.id,
         optional: true,
       }),
     },
@@ -146,43 +157,38 @@ export const relations = defineRelations(
         optional: false,
       }),
     },
-    contentReports: {
+    reports: {
       resolution: r.one.reportResolutions({
-        from: r.contentReports.id,
+        from: r.reports.id,
         to: r.reportResolutions.reportId,
         optional: true,
       }),
       corroborations: r.many.reportCorroborations({
-        from: r.contentReports.id,
+        from: r.reports.id,
         to: r.reportCorroborations.reportId,
       }),
-      oauthRegistration: r.one.oauthRegistrations({
-        from: r.contentReports.clientId,
-        to: r.oauthRegistrations.clientId,
+      app: r.one.apps({
+        from: r.reports.appId,
+        to: r.apps.id,
         optional: false,
       }),
       reason: r.one.reportReasons({
-        from: r.contentReports.reasonId,
+        from: r.reports.reasonId,
         to: r.reportReasons.id,
         optional: false,
       }),
-      contentType: r.one.reportContentTypes({
-        from: r.contentReports.contentTypeId,
-        to: r.reportContentTypes.id,
-        optional: true,
-      }),
     },
     reportResolutions: {
-      report: r.one.contentReports({
+      report: r.one.reports({
         from: r.reportResolutions.reportId,
-        to: r.contentReports.id,
+        to: r.reports.id,
         optional: false,
       }),
     },
     reportCorroborations: {
-      report: r.one.contentReports({
+      report: r.one.reports({
         from: r.reportCorroborations.reportId,
-        to: r.contentReports.id,
+        to: r.reports.id,
         optional: false,
       }),
       reason: r.one.reportReasons({
@@ -192,23 +198,9 @@ export const relations = defineRelations(
       }),
     },
     reportReasons: {
-      oauthRegistration: r.one.oauthRegistrations({
-        from: r.reportReasons.clientId,
-        to: r.oauthRegistrations.clientId,
-        optional: false,
-      }),
-    },
-    reportContentTypes: {
-      oauthRegistration: r.one.oauthRegistrations({
-        from: r.reportContentTypes.clientId,
-        to: r.oauthRegistrations.clientId,
-        optional: false,
-      }),
-    },
-    moderatorRoles: {
-      user: r.one.usersInAuth({
-        from: r.moderatorRoles.userId,
-        to: r.usersInAuth.id,
+      app: r.one.apps({
+        from: r.reportReasons.appId,
+        to: r.apps.id,
         optional: false,
       }),
     },
@@ -263,30 +255,6 @@ export const relations = defineRelations(
       user: r.one.usersInAuth({
         from: r.userSuspensions.userId,
         to: r.usersInAuth.id,
-        optional: false,
-      }),
-    },
-    docsRepos: {
-      branches: r.many.docsBranches({
-        from: r.docsRepos.id,
-        to: r.docsBranches.repoId,
-      }),
-    },
-    docsBranches: {
-      repo: r.one.docsRepos({
-        from: r.docsBranches.repoId,
-        to: r.docsRepos.id,
-        optional: false,
-      }),
-      pages: r.many.docsPages({
-        from: r.docsBranches.id,
-        to: r.docsPages.branchId,
-      }),
-    },
-    docsPages: {
-      branch: r.one.docsBranches({
-        from: r.docsPages.branchId,
-        to: r.docsBranches.id,
         optional: false,
       }),
     },
