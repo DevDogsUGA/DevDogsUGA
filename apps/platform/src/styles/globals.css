@@ -1,11 +1,19 @@
 @import "tailwindcss";
-@import "@devdogsuga/feedback-client/react/styles.css";
+@import "@devdogsuga/moderation/react/styles.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 @plugin "@tailwindcss/typography";
-@plugin "@tailwindcss/forms";
+/* Opt-in only. The default strategy also emits a base layer that restyles every
+   bare input/select/textarea (white background, gray border, square corners,
+   .5rem/.75rem padding, blue focus ring), which fights any shadcn component
+   that renders a raw control — cmdk's <input type="text"> inside CommandInput
+   was rendering as a white box inside the search dialog's pill. Everything that
+   wants these styles asks for them with `form-input` / `form-textarea`. */
+@plugin "@tailwindcss/forms" {
+  strategy: class;
+}
 
 @theme {
   --color-background: var(--color-mauve-950);

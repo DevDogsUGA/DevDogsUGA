@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -7,7 +8,25 @@ import {
 } from "@phosphor-icons/react/ssr";
 import devdog from "~/assets/devdog.png";
 
-export default function Footer() {
+/**
+ * `"use cache"` is required, not an optimisation. This renders in the site
+ * layout, above the page's own <Suspense> boundary, and the copyright line
+ * reads the clock. Outside a cache scope that read would postpone the layout
+ * shell itself — every route on the site would prerender to nothing but the
+ * <html> wrapper. Inside one, the year resolves at prerender time and is baked
+ * into the static output, which also means it refreshes on each deploy rather
+ * than per request. See docs/platform/caching.md.
+ *
+ * `cacheLife("max")` is required for the same reason. A route's revalidate
+ * window is the *minimum* across its cache entries, so leaving this on the
+ * default 15m profile pulled every route on the site down to 15m — including
+ * the docs pages, whose own `cacheLife("max")` had earned them 30d. Nothing
+ * here can go stale between deploys, so "max" is accurate as well as harmless.
+ */
+export default async function Footer() {
+  "use cache";
+  cacheLife("max");
+
   return (
     <footer
       className="relative overflow-hidden border-t-2 border-t-mauve-700 bg-mauve-950 px-8 py-10 text-sm text-mauve-400"
@@ -41,7 +60,11 @@ export default function Footer() {
               <figure className="size-[1.5em]">
                 <Image alt="Home" src={devdog} />
               </figure>
-              <h1 className="font-display font-semibold text-white">DevDogs</h1>
+              {/* Not a heading: this renders on every page now, and the site's
+                  one <h1> belongs to the page content. Matches TopNav. */}
+              <span className="font-display font-semibold text-white">
+                DevDogs
+              </span>
             </Link>
 
             <p className="text-center text-balance lg:text-left">
@@ -78,7 +101,12 @@ export default function Footer() {
                 </li>
 
                 <li>
-                  <Link href="/join" className="hover:underline">
+                  {/* Starts an OAuth handshake, not a page — never prefetch. */}
+                  <Link
+                    href="/join"
+                    prefetch={false}
+                    className="hover:underline"
+                  >
                     Join Us
                   </Link>
                 </li>

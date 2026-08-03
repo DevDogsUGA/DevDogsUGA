@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import HeroSection from "~/components/HeroSection";
 import SectionMarquee, { MarqueeItem } from "~/components/SectionMarquee";
 import MissionSection from "~/components/MissionSection";
@@ -6,12 +7,41 @@ import EventsSection from "~/components/EventsSection";
 import PartnersSection from "~/components/PartnersSection";
 import LeadershipSection from "~/components/LeadershipSection";
 import StatCard from "~/ui/stat-card";
+import StreakCTA from "~/components/ProjectsSection/StreakCTA";
 import UnderConstruction from "~/components/UnderConstruction";
 
 const MARQUEE_TEXT_CLS =
   "py-4 font-display text-base font-bold tracking-widest uppercase";
 
-export default async function HomePage() {
+/**
+ * The page itself stays uncached so it can construct `<StreakCTA />`, the one
+ * genuinely per-visitor thing on the homepage. Everything else lives in the
+ * cached {@link HomeSections} below.
+ *
+ * Passing the element down rather than rendering it inside the cached body is
+ * the whole trick: an element created out here renders outside the cache
+ * boundary, so its `cookies()` read is legal and it streams into the Suspense
+ * that ProjectsSection puts around it. Rendering it inside would fail the build
+ * with "used `cookies()` inside \"use cache\"".
+ */
+export default function HomePage() {
+  return <HomeSections streakCta={<StreakCTA />} />;
+}
+
+/**
+ * `"use cache"` is what puts the homepage in the prerendered shell. Under Cache
+ * Components everything is dynamic by default, so without it the static output
+ * was the nav chrome and nothing else — 7.9 KB of shell — and every visit
+ * re-rendered the entire marketing page on the server. Every section here is
+ * static copy or reads the cached calendar frame, so caching is accurate.
+ */
+async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
+  "use cache";
+
+  // Build-time, not request-time: this page is prerendered, so whatever
+  // DEPLOY_ENV holds during `next build` decides which branch ships. That is
+  // why cf:build and cf:deploy set it for the build and not just for the
+  // Worker's runtime vars.
   if (process.env.DEPLOY_ENV === "production") return <UnderConstruction />;
 
   return (
@@ -68,7 +98,7 @@ export default async function HomePage() {
         <MarqueeItem>Community Impact</MarqueeItem>
       </SectionMarquee>
 
-      <ProjectsSection topEdge="fs" bottomEdge="bs" />
+      <ProjectsSection topEdge="fs" bottomEdge="bs" streakCta={streakCta} />
 
       <SectionMarquee
         slope="bs"

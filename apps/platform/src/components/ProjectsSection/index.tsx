@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import Image from "next/image";
 import ibm from "~/assets/ibm.gif";
 import SectionBackground, {
@@ -6,7 +6,6 @@ import SectionBackground, {
   type EdgeType,
 } from "~/ui/section-background";
 import ProjectCard from "./ProjectCard";
-import StreakCTA from "./StreakCTA";
 
 const PROJECTS_BLOBS: BlobDef[] = [
   { cx: "20%", cy: "30%", rx: "55%", ry: "50%", fill: "#a7f3d0" }, // emerald
@@ -41,9 +40,21 @@ function RotatedImage() {
 interface Props {
   topEdge: EdgeType;
   bottomEdge: EdgeType;
+  /**
+   * The streak call-to-action, which reads the visitor's session and so cannot
+   * be prerendered. It is passed in rather than rendered here because this
+   * section renders inside the homepage's `"use cache"` scope, and `cookies()`
+   * is an error anywhere inside one. Created by an uncached caller, the element
+   * renders outside the cache boundary and streams into the Suspense below.
+   */
+  streakCta: ReactNode;
 }
 
-export default function ProjectsSection({ topEdge, bottomEdge }: Props) {
+export default function ProjectsSection({
+  topEdge,
+  bottomEdge,
+  streakCta,
+}: Props) {
   return (
     <div className="mx-4 overflow-hidden rounded-xl md:mx-6">
       <section
@@ -112,9 +123,7 @@ export default function ProjectsSection({ topEdge, bottomEdge }: Props) {
           </div>
 
           <div className="flex flex-col items-center gap-4 text-center">
-            <Suspense fallback={null}>
-              <StreakCTA />
-            </Suspense>
+            <Suspense fallback={null}>{streakCta}</Suspense>
           </div>
         </div>
       </section>

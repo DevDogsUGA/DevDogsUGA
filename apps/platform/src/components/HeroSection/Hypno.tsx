@@ -32,16 +32,17 @@ export default function Hypno() {
           aspectRatio: "1/1",
         }}
       >
-        <style jsx>{`
-          path {
-            fill: none;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            vector-effect: non-scaling-stroke;
-          }
-        `}</style>
-        <g className="*:stroke-purple-300/75">
+        {/* Inherited presentation attributes rather than <style jsx>: styled-jsx
+            only injects its rules after hydration, so the paths defaulted to
+            fill:black and covered the section background on the first paint.
+            vector-effect does not inherit, hence the child variant. */}
+        <g
+          fill="none"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="*:stroke-purple-300/75 *:[vector-effect:non-scaling-stroke]"
+        >
           <path d="M282.7,282.7c375.79,0,680.43,304.64,680.43,680.43" />
           <path d="M129.78,481.99c362.98-97.26,736.09,118.15,833.35,481.13" />
           <path d="M33.65,714.07c325.44-187.89,741.58-76.39,929.48,249.05" />

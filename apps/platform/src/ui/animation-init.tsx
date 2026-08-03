@@ -5,9 +5,22 @@ import { usePathname } from "next/navigation";
 
 /**
  * Wires up IntersectionObserver for all [data-animate] elements.
- * Re-runs on navigation so elements added by the incoming page are observed.
  * Elements with [data-animate-stagger] have their [data-animate] children animated
  * in sequentially with an 80ms stagger between each.
+ *
+ * Registration is driven by a MutationObserver rather than a single pass at
+ * mount. That is not belt-and-braces: `[data-animate]` starts at `opacity: 0`
+ * in globals.css and only ever becomes visible when this file adds
+ * `.is-visible`, so an element this never observes is invisible *permanently*,
+ * not merely un-animated.
+ *
+ * A one-shot `querySelectorAll` made that outcome a race. This component sits
+ * in the root layout inside its own <Suspense> (it reads `usePathname`, which
+ * Cache Components treats as dynamic), so it hydrates independently of the page
+ * body — and under PPR the body arrives as streamed dynamic holes. Anything
+ * that landed after this effect ran, or that React re-created afterwards on a
+ * route refresh, was never observed and stayed blank. Watching for nodes
+ * instead of sampling them once removes the ordering dependency entirely.
  */
 export default function AnimationInit() {
   const pathname = usePathname();
@@ -19,11 +32,6 @@ export default function AnimationInit() {
       rootMargin: "0px 0px -40px 0px",
     };
 
-    // Regular elements NOT inside a stagger container
-    const regularElements = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-animate]"),
-    ).filter((el) => !el.closest("[data-animate-stagger]"));
-
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting) {
@@ -32,13 +40,6 @@ export default function AnimationInit() {
         }
       }
     }, OBS_OPTIONS);
-
-    regularElements.forEach((el) => observer.observe(el));
-
-    // Stagger containers — add children in sequence
-    const staggerParents = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-animate-stagger]"),
-    );
 
     const staggerObserver = new IntersectionObserver((entries) => {
       for (const entry of entries) {
@@ -55,9 +56,53 @@ export default function AnimationInit() {
       }
     }, OBS_OPTIONS);
 
-    staggerParents.forEach((el) => staggerObserver.observe(el));
+    // Re-observing an element is a no-op, but tracking what we have already
+    // seen keeps the MutationObserver callback cheap on busy subtrees.
+    const seen = new WeakSet<Element>();
+
+    function register(el: Element) {
+      if (seen.has(el)) return;
+      seen.add(el);
+
+      if (el.hasAttribute("data-animate-stagger")) {
+        staggerObserver.observe(el);
+        return;
+      }
+      // Children of a stagger container are driven by their parent rather than
+      // observed individually.
+      if (el.closest("[data-animate-stagger]")) return;
+      observer.observe(el);
+    }
+
+    function registerTree(root: Element | Document) {
+      if (
+        root instanceof Element &&
+        (root.hasAttribute("data-animate") ||
+          root.hasAttribute("data-animate-stagger"))
+      ) {
+        register(root);
+      }
+      root
+        .querySelectorAll("[data-animate], [data-animate-stagger]")
+        .forEach(register);
+    }
+
+    registerTree(document);
+
+    const mutations = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            registerTree(node as Element);
+          }
+        }
+      }
+    });
+
+    mutations.observe(document.body, { childList: true, subtree: true });
 
     return () => {
+      mutations.disconnect();
       observer.disconnect();
       staggerObserver.disconnect();
     };

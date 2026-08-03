@@ -56,6 +56,8 @@ export default function LeadershipSection({ topEdge, bottomEdge }: Props) {
             member pool.{" "}
             <Link
               href="/join"
+              // Starts an OAuth handshake, not a page — never prefetch.
+              prefetch={false}
               className="font-semibold text-amber-700 hover:underline"
             >
               Get involved

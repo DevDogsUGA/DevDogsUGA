@@ -9,7 +9,6 @@ import {
   Hanken_Grotesk,
 } from "next/font/google";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
-import AnimationInit from "~/ui/animation-init";
 import NavigationProgress from "~/ui/navigation-progress";
 import QueryProvider from "~/ui/query-provider";
 import Toaster from "~/components/Toaster";
@@ -50,18 +49,20 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="bg-black text-mauve-950">
-        {/* NavigationProgress and AnimationInit read usePathname(), which is
-            dynamic under Cache Components and must sit inside a <Suspense>
-            boundary. Both render null, so the prerendered shell shows nothing
-            for them until they hydrate. */}
+        {/* NavigationProgress reads usePathname(), which is dynamic under
+            Cache Components and must sit inside a <Suspense> boundary. It
+            renders null, so the prerendered shell shows nothing for it until
+            it hydrates.
+
+            AnimationInit deliberately does NOT live here. It mutates the
+            `class` attribute of [data-animate] elements, which React owns, so
+            it has to run after the page body has hydrated — see
+            (site)/layout.tsx. */}
         <Suspense>
           <NavigationProgress />
         </Suspense>
         <TooltipProvider>
           <QueryProvider>
-            <Suspense>
-              <AnimationInit />
-            </Suspense>
             <Toaster />
             {children}
           </QueryProvider>
