@@ -7,11 +7,7 @@ export default async function ModerationDashboard() {
 
   if (!data.canModerate) redirect("/");
 
-  const {
-    pendingReports: pending,
-    resolvedReports: resolved,
-    clientNames,
-  } = data;
+  const { openReports: open, resolvedReports: resolved, appNames } = data;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
@@ -19,19 +15,19 @@ export default async function ModerationDashboard() {
 
       <section>
         <h2 className="mb-3 text-lg font-semibold text-mauve-800">
-          Pending Reports{" "}
-          {pending.length > 0 && (
+          Open Reports{" "}
+          {open.length > 0 && (
             <span className="ml-1 rounded-sm bg-rose-600 px-2 py-0.5 text-sm font-normal text-white">
-              {pending.length}
+              {open.length}
             </span>
           )}
         </h2>
 
-        {pending.length === 0 ? (
-          <p className="text-mauve-400">No pending reports.</p>
+        {open.length === 0 ? (
+          <p className="text-mauve-400">No open reports.</p>
         ) : (
           <ul className="flex flex-col gap-3">
-            {pending.map((report) => (
+            {open.map((report) => (
               <li key={report.id}>
                 <Link
                   href={`/console/moderation/${report.id}`}
@@ -39,13 +35,10 @@ export default async function ModerationDashboard() {
                 >
                   <div className="flex flex-col gap-0.5">
                     <span className="font-mono text-sm text-mauve-700">
-                      {report.contentTypeLabel
-                        ? `${report.contentTypeLabel}: `
-                        : ""}
-                      {report.contentId}
+                      {report.contentType}: {report.contentRef}
                     </span>
                     <span className="text-xs text-mauve-500">
-                      {clientNames[report.clientId] ?? report.clientId} &middot;{" "}
+                      {appNames[report.appId] ?? report.appId} &middot;{" "}
                       {report.reasonTitle ?? "Unknown reason"} &middot;{" "}
                       {new Date(report.createdAt).toLocaleDateString()}
                     </span>
@@ -79,10 +72,7 @@ export default async function ModerationDashboard() {
                   className="shadow-block-sm flex items-center justify-between border border-black bg-mauve-50 px-4 py-2.5 text-sm text-mauve-500 transition-[translate,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:text-mauve-800"
                 >
                   <span className="font-mono">
-                    {report.contentTypeLabel
-                      ? `${report.contentTypeLabel}: `
-                      : ""}
-                    {report.contentId}
+                    {report.contentType}: {report.contentRef}
                   </span>
                   <span className="text-mauve-500 capitalize">
                     {report.status}

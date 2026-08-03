@@ -12,6 +12,14 @@ export const SCHEMAS = {
   platform: "platform",
   scheduleBuilder: "schedule_builder",
   studyGroupFinder: "study_group_finder",
+  /**
+   * Fixture content for the contributor tooling and the persona suite, not a
+   * real app. It is listed here because it is a registered app in
+   * `platform."apps"` and is reachable through the same endpoint as any other;
+   * every table in it is denied on production by a restrictive
+   * `platform.is_production()` policy.
+   */
+  sandbox: "sandbox",
 } as const;
 
 export type AppKey = keyof typeof SCHEMAS;

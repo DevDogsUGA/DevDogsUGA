@@ -1,7 +1,8 @@
 {
-  "name": "@devdogsuga/feedback-client",
+  "name": "@devdogsuga/moderation",
   "version": "0.1.0",
-  "description": "Client SDK for the DevDogs feedback API",
+  "private": true,
+  "description": "Typed wrappers and React dialogs for the DevDogs reporting and feedback RPCs",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -26,6 +27,7 @@
   "scripts": {
     "build": "tsc && mkdir -p dist/react && cp src/react/styles.css dist/react/styles.css",
     "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

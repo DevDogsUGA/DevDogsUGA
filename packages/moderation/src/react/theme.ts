@@ -1,10 +1,10 @@
 /**
- * CSS custom-property overrides for `<FeedbackDialog>`. Each key maps to a
- * `--fd-*` custom property (see `styles.css`), applied as inline styles on
+ * CSS custom-property overrides for `<FeedbackDialog>` and `<ReportDialog>`. Each key maps to a
+ * `--dd-*` custom property (see `styles.css`), applied as inline styles on
  * the dialog's root element so they take precedence over the shipped
  * defaults without requiring the host app to use Tailwind.
  */
-export interface FeedbackDialogTheme {
+export interface DialogTheme {
   /** Primary action color (submit button, focus rings). */
   accent: string;
   /** Text/icon color on top of `accent`. */
@@ -24,7 +24,7 @@ export interface FeedbackDialogTheme {
 }
 
 /** Light, neutral defaults baked into the shipped `styles.css`. */
-export const defaultTheme: FeedbackDialogTheme = {
+export const defaultTheme: DialogTheme = {
   accent: "#06b6d4",
   accentForeground: "#083344",
   background: "#ffffff",

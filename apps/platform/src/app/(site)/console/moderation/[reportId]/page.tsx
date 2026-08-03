@@ -11,6 +11,7 @@ export default async function ReportDetail({
   const {
     report,
     corroborationCount,
+    quarantinable,
     reporterName,
     reportedName,
     suspension,
@@ -47,14 +48,12 @@ export default async function ReportDetail({
       <section className="shadow-block-sm relative mb-6 border border-black bg-white p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-semibold">Content</h2>
-          {report.contentType?.label && (
-            <span className="rounded-sm bg-mauve-100 px-2 py-0.5 text-xs text-mauve-600">
-              {report.contentType.label}
-            </span>
-          )}
+          <span className="rounded-sm bg-mauve-100 px-2 py-0.5 text-xs text-mauve-600">
+            {report.contentType}
+          </span>
         </div>
         <p className="mb-1 font-mono text-xs text-mauve-400">
-          ID: {report.contentId}
+          ID: {report.contentRef}
         </p>
         {report.contentUrl && (
           <a
@@ -152,7 +151,7 @@ export default async function ReportDetail({
           )}
         </section>
       ) : (
-        <ReportActionForm reportId={reportId} />
+        <ReportActionForm reportId={reportId} quarantinable={quarantinable} />
       )}
     </main>
   );

@@ -1,96 +1,94 @@
 import AccentBlobs from "~/ui/accent-blobs";
 import { ConsoleCard } from "~/ui/card";
 import Field from "~/ui/field";
-import OAuthGateDialog from "~/components/OAuthGateDialog";
-import OAuthReports from "~/components/OAuthReports";
 import PageHeader from "~/components/PageHeader";
-import ReportContentTypesField from "~/components/ReportContentTypesField";
-import ReportReasonsField from "~/components/ReportReasonsField";
-import WebhookConnectField from "~/components/WebhookConnectField";
-import { getModerationPageData } from "~/server/loaders/moderation";
+import InstanceTarget from "~/components/InstanceTarget";
+import TargetField from "~/components/InstanceTarget/TargetField";
+import ContentTypesPanel from "~/components/InstanceTarget/ContentTypesPanel";
+import ReportReasonsPanel from "~/components/InstanceTarget/ReportReasonsPanel";
+import ReportsPanel from "~/components/InstanceTarget/ReportsPanel";
 
-export default async function ReportingAPIPage() {
-  const data = await getModerationPageData();
-
+/**
+ * Moderation tooling for a contributor's own instance.
+ *
+ * Everything below runs in the browser against a Supabase project you nominate
+ * — your local stack, or your own test project — never against this one. It
+ * works because the contract is a set of `platform` RPCs plus the RLS around
+ * them, so a tool needs nothing but a URL, a publishable key and a session;
+ * there is no server-side loader to replicate.
+ *
+ * That inversion is deliberate. The forum lives in its own repository, and a
+ * forum contributor should not have to clone and boot this monorepo just to get
+ * a moderation queue. Running the console locally is still supported, and is
+ * the better path when working on the console itself.
+ *
+ * The page stays server-rendered so its anchors remain static for search;
+ * `<InstanceTarget>` is the client boundary.
+ */
+export default function ModerationToolsPage() {
   return (
     <div className="relative isolate mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 @sm:px-6">
       <AccentBlobs accent="rose" />
 
       <PageHeader
-        title="Moderation API"
-        description="Configure report reasons and content types for your client, then test the full flow with sandboxed test accounts."
+        title="Moderation"
+        description="Point these tools at your own Supabase instance to configure reporting and work its moderation queue."
         accent="rose"
       />
 
-      <OAuthGateDialog
-        key={data.clientId ?? "disabled"}
-        clientId={data.clientId}
-        hasGithub={data.hasGithub}
-      />
+      <InstanceTarget>
+        <ConsoleCard.Root id="instance">
+          <ConsoleCard.Header title="Target Instance" />
+          <ConsoleCard.Content>
+            <Field
+              id="instance-target"
+              label="Target Instance"
+              description="The Supabase project these tools act on. Production instances are refused."
+            >
+              <TargetField />
+            </Field>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
 
-      {data.clientId && (
-        <>
-          <ConsoleCard.Root id="reasons">
-            <ConsoleCard.Header title="Report Reasons" />
-            <ConsoleCard.Content>
-              <Field
-                id="report-reasons"
-                label="Reasons"
-                description="The reasons a user can select when filing a content report. Added directly to your client via your session."
-              >
-                <ReportReasonsField clientId={data.clientId} />
-              </Field>
-            </ConsoleCard.Content>
-          </ConsoleCard.Root>
+        <ConsoleCard.Root id="reasons">
+          <ConsoleCard.Header title="Report Reasons" />
+          <ConsoleCard.Content>
+            <Field
+              id="report-reasons"
+              label="Report Reasons"
+              description="The reasons a user can select when filing a content report against an app."
+            >
+              <ReportReasonsPanel />
+            </Field>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
 
-          <ConsoleCard.Root id="content-types">
-            <ConsoleCard.Header title="Content Types" />
-            <ConsoleCard.Content>
-              <Field
-                id="report-content-types"
-                label="Content Types"
-                description="Optional labels that describe the kind of content being reported (e.g. Post, Comment). Leave empty to omit from reports."
-              >
-                <ReportContentTypesField clientId={data.clientId} />
-              </Field>
-            </ConsoleCard.Content>
-          </ConsoleCard.Root>
+        <ConsoleCard.Root id="content-types">
+          <ConsoleCard.Header title="Content Types" />
+          <ConsoleCard.Content>
+            <Field
+              id="content-types-list"
+              label="Content Types"
+              description="What the catalog detected in each app's schema, and whether the integration holds up."
+            >
+              <ContentTypesPanel />
+            </Field>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
 
-          <ConsoleCard.Root id="webhook">
-            <ConsoleCard.Header title="Local Webhook" />
-            <ConsoleCard.Content>
-              <Field
-                id="webhook-url"
-                label="Webhook URL"
-                description="Enter your local server's webhook endpoint and click Connect. Your server must accept CORS requests from this origin."
-              >
-                <WebhookConnectField clientId={data.clientId} />
-              </Field>
-            </ConsoleCard.Content>
-          </ConsoleCard.Root>
-
-          <ConsoleCard.Root id="test-reports">
-            <ConsoleCard.Header title="Test Reports" />
-            <ConsoleCard.Content>
-              <Field
-                id="test-reports-list"
-                label="Test Reports"
-                description="Reports filed by your test accounts that have been verified and are awaiting moderation."
-              >
-                {data.devReports.length > 0 && (
-                  <p className="mb-3 text-sm">
-                    <span className="rounded-sm bg-rose-600 px-2 py-0.5 text-sm font-medium text-white">
-                      {data.devReports.length}
-                    </span>{" "}
-                    pending
-                  </p>
-                )}
-                <OAuthReports reports={data.devReports} />
-              </Field>
-            </ConsoleCard.Content>
-          </ConsoleCard.Root>
-        </>
-      )}
+        <ConsoleCard.Root id="queue">
+          <ConsoleCard.Header title="Report Queue" />
+          <ConsoleCard.Content>
+            <Field
+              id="report-queue"
+              label="Report Queue"
+              description="Reports filed on the target instance, and the same resolution form production moderation uses."
+            >
+              <ReportsPanel />
+            </Field>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
+      </InstanceTarget>
     </div>
   );
 }

@@ -76,10 +76,7 @@ export default async function UserModerationPage({
                 >
                   <div className="flex flex-col gap-0.5">
                     <span className="font-mono text-xs text-mauve-700">
-                      {report.contentType?.label
-                        ? `${report.contentType.label}: `
-                        : ""}
-                      {report.contentId}
+                      {report.contentType}: {report.contentRef}
                     </span>
                     <span className="text-xs text-mauve-500">
                       {report.reason?.title ?? "Unknown reason"} &middot;{" "}
@@ -89,7 +86,7 @@ export default async function UserModerationPage({
                   <div className="flex items-center gap-2">
                     <span
                       className={`rounded-sm px-2 py-0.5 text-xs capitalize ${
-                        report.status === "pending"
+                        report.status === "open"
                           ? "bg-yellow-100 text-yellow-700"
                           : report.status === "resolved"
                             ? "bg-green-100 text-green-700"

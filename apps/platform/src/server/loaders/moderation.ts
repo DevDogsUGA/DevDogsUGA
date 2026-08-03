@@ -1,208 +1,120 @@
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { count, desc, eq, sql } from "drizzle-orm";
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
-import type { DevReport } from "~/components/OAuthReports";
-import { canUserModerate } from "~/server/actions/permissions";
-import { expectSession, expectUserWith } from "~/server/auth";
+import {
+  canUserManageSuspensions,
+  canUserModerate,
+} from "~/server/actions/permissions";
+import { expectSession } from "~/server/auth";
 import { db } from "~/server/db";
 import {
-  contentReports,
-  moderatorRoles,
-  oauthRegistrations,
-  profiles,
-  reportContentTypes,
+  apps,
   reportCorroborations,
   reportReasons,
+  reports,
+  userSuspensions,
 } from "~/server/db/schema";
 import { supabaseAdmin } from "~/supabase/admin";
 
-export type ProductionReport = {
+export type ReportListEntry = {
   id: string;
-  clientId: string;
-  contentId: string;
-  contentTypeLabel: string | null;
+  appId: string;
+  contentType: string;
+  contentRef: string;
   reasonTitle: string | null;
   status: string;
   createdAt: string;
   corroborationCount: number;
 };
 
+/**
+ * The moderation queue.
+ *
+ * Scoped by `canModerate` alone. Moderation is centralised, so there is no
+ * per-app grant to intersect with and a moderator sees every app's reports.
+ */
 export const getModerationPageData = cache(async () => {
   const userId = await expectSession().catch(() => redirect("/auth"));
   const canModerate = await canUserModerate(userId);
 
-  const { profile, githubIdentity, testAccounts } = await expectUserWith({
-    profile: {
-      with: {
-        oauthRegistration: {
-          columns: { clientId: true },
-        },
-      },
-    },
-    githubIdentity: { columns: { id: true } },
-    testAccounts: {
-      columns: { createdAt: true },
-      with: {
-        user: { columns: { id: true } },
-      },
-    },
-  }).catch(() => redirect("/auth"));
-
-  const clientId = profile?.oauthRegistration?.clientId ?? null;
-  const hasGithub = githubIdentity !== null;
-
-  // Testing mode: load dev reports (reports filed by test accounts)
-  let devReports: DevReport[] = [];
-  if (clientId && testAccounts.length > 0) {
-    const testUserIds = testAccounts.map((ta) => ta.user.id);
-
-    const rows = await db.query.contentReports.findMany({
-      where: { clientId, status: "pending" },
-      orderBy: { createdAt: "desc" },
-      with: {
-        reason: { columns: { title: true } },
-        contentType: { columns: { label: true } },
-      },
-    });
-
-    const testReports = rows.filter((r) =>
-      testUserIds.includes(r.reporterUserId),
-    );
-    const reportIds = testReports.map((r) => r.id);
-
-    const corroborationCounts: Record<string, number> =
-      reportIds.length > 0
-        ? Object.fromEntries(
-            (
-              await db
-                .select({
-                  reportId: reportCorroborations.reportId,
-                  c: count(reportCorroborations.id),
-                })
-                .from(reportCorroborations)
-                .where(inArray(reportCorroborations.reportId, reportIds))
-                .groupBy(reportCorroborations.reportId)
-            ).map(({ reportId, c }) => [reportId, c]),
-          )
-        : {};
-
-    devReports = testReports.map((r) => ({
-      id: r.id,
-      contentId: r.contentId,
-      contentTypeLabel: r.contentType?.label ?? null,
-      contentSnapshot: r.contentSnapshot,
-      contentUrl: r.contentUrl ?? null,
-      reasonTitle: r.reason?.title ?? null,
-      description: r.description ?? null,
-      reporterUserId: r.reporterUserId,
-      reportedUserId: r.reportedUserId,
-      createdAt: r.createdAt.toISOString(),
-      corroborationCount: corroborationCounts[r.id] ?? 0,
-    }));
+  if (!canModerate) {
+    return {
+      userId,
+      canModerate,
+      openReports: [] as ReportListEntry[],
+      resolvedReports: [] as ReportListEntry[],
+      appNames: {} as Record<string, string>,
+    };
   }
 
-  // Production mode: load all reports for moderated clients
-  let pendingReports: ProductionReport[] = [];
-  let resolvedReports: ProductionReport[] = [];
-  let clientNames: Record<string, string> = {};
+  const corroborationSq = db
+    .select({
+      reportId: reportCorroborations.reportId,
+      corroborationCount: count(reportCorroborations.id).as(
+        "corroborationCount",
+      ),
+    })
+    .from(reportCorroborations)
+    .groupBy(reportCorroborations.reportId)
+    .as("corroborations");
 
-  if (canModerate) {
-    const grants = await db.query.moderatorRoles.findMany({
-      columns: { clientId: true },
-      where: { userId },
-    });
+  const rows = await db
+    .select({
+      id: reports.id,
+      appId: reports.appId,
+      contentType: reports.contentType,
+      contentRef: reports.contentRef,
+      reasonTitle: reportReasons.title,
+      status: reports.status,
+      createdAt: reports.createdAt,
+      corroborationCount:
+        sql<number>`COALESCE(${corroborationSq.corroborationCount}, 0)`.as(
+          "corroborationCount",
+        ),
+    })
+    .from(reports)
+    .leftJoin(corroborationSq, eq(reports.id, corroborationSq.reportId))
+    .leftJoin(reportReasons, eq(reports.reasonId, reportReasons.id))
+    .orderBy(desc(sql`COALESCE(${corroborationSq.corroborationCount}, 0)`));
 
-    if (grants.length > 0) {
-      const clientIds = grants.map((g) => g.clientId);
+  const appRows = await db
+    .select({ id: apps.id, displayName: apps.displayName })
+    .from(apps);
+  const appNames = Object.fromEntries(
+    appRows.map((a) => [a.id, a.displayName]),
+  );
 
-      const corroborationSq = db
-        .select({
-          reportId: reportCorroborations.reportId,
-          corroborationCount: count(reportCorroborations.id).as(
-            "corroborationCount",
-          ),
-        })
-        .from(reportCorroborations)
-        .groupBy(reportCorroborations.reportId)
-        .as("corroborations");
-
-      const reports = await db
-        .select({
-          id: contentReports.id,
-          clientId: contentReports.clientId,
-          contentId: contentReports.contentId,
-          reasonTitle: reportReasons.title,
-          contentTypeLabel: reportContentTypes.label,
-          status: contentReports.status,
-          createdAt: contentReports.createdAt,
-          corroborationCount:
-            sql<number>`COALESCE(${corroborationSq.corroborationCount}, 0)`.as(
-              "corroborationCount",
-            ),
-        })
-        .from(contentReports)
-        .leftJoin(
-          corroborationSq,
-          eq(contentReports.id, corroborationSq.reportId),
-        )
-        .leftJoin(reportReasons, eq(contentReports.reasonId, reportReasons.id))
-        .leftJoin(
-          reportContentTypes,
-          eq(contentReports.contentTypeId, reportContentTypes.id),
-        )
-        .where(inArray(contentReports.clientId, clientIds))
-        .orderBy(desc(sql`COALESCE(${corroborationSq.corroborationCount}, 0)`));
-
-      const registrationRows = await db
-        .select({
-          clientId: oauthRegistrations.clientId,
-          preferredName: profiles.preferredName,
-        })
-        .from(oauthRegistrations)
-        .innerJoin(profiles, eq(profiles.userId, oauthRegistrations.userId))
-        .where(inArray(oauthRegistrations.clientId, clientIds));
-
-      clientNames = Object.fromEntries(
-        registrationRows.map((r) => [r.clientId, r.preferredName]),
-      );
-
-      const mapped = reports.map((r) => ({
-        id: r.id,
-        clientId: r.clientId,
-        contentId: r.contentId,
-        contentTypeLabel: r.contentTypeLabel ?? null,
-        reasonTitle: r.reasonTitle ?? null,
-        status: r.status,
-        createdAt: r.createdAt.toISOString(),
-        corroborationCount: r.corroborationCount,
-      }));
-
-      pendingReports = mapped.filter((r) => r.status === "pending");
-      resolvedReports = mapped.filter((r) => r.status !== "pending");
-    }
-  }
+  const mapped: ReportListEntry[] = rows.map((r) => ({
+    id: r.id,
+    appId: r.appId,
+    contentType: r.contentType,
+    contentRef: r.contentRef,
+    reasonTitle: r.reasonTitle ?? null,
+    status: r.status,
+    createdAt: r.createdAt.toISOString(),
+    corroborationCount: r.corroborationCount,
+  }));
 
   return {
     userId,
-    clientId,
-    hasGithub,
     canModerate,
-    devReports,
-    pendingReports,
-    resolvedReports,
-    clientNames,
+    openReports: mapped.filter((r) => r.status === "open"),
+    resolvedReports: mapped.filter((r) => r.status !== "open"),
+    appNames,
   };
 });
 
 export const getReportDetailData = cache(async (reportId: string) => {
   const userId = await expectSession().catch(() => redirect("/auth"));
 
-  const report = await db.query.contentReports.findFirst({
+  if (!(await canUserModerate(userId))) redirect("/");
+
+  const report = await db.query.reports.findFirst({
     where: { id: reportId },
     with: {
       resolution: true,
       reason: { columns: { title: true } },
-      contentType: { columns: { label: true } },
+      app: { columns: { displayName: true, slug: true } },
       corroborations: {
         columns: { reporterUserId: true, description: true },
       },
@@ -211,12 +123,16 @@ export const getReportDetailData = cache(async (reportId: string) => {
 
   if (!report) notFound();
 
-  const canModerate = await db.query.moderatorRoles.findFirst({
-    columns: { id: true },
-    where: { userId, clientId: report.clientId },
-  });
-
-  if (!canModerate) redirect("/");
+  // Not every reportable type can be quarantined -- a profile is reportable, but
+  // the remedy is suspending its owner rather than hiding a row. Resolving with
+  // "quarantine" against such a type raises inside the transaction, so the
+  // console asks first and stops offering the option rather than relying on that
+  // backstop.
+  //
+  // False is also the honest answer when the type has been dropped since the
+  // report was filed: content_types() returns no row, and the frozen snapshot on
+  // the report is all that is left to act on.
+  const quarantinable = await isQuarantinable(report.appId, report.contentType);
 
   const [corroborationRow] = await db
     .select({ value: count() })
@@ -254,6 +170,7 @@ export const getReportDetailData = cache(async (reportId: string) => {
   return {
     report,
     corroborationCount,
+    quarantinable,
     reporterName: getDisplayName(reporterData),
     reportedName: getDisplayName(reportedData),
     suspension,
@@ -261,25 +178,30 @@ export const getReportDetailData = cache(async (reportId: string) => {
   };
 });
 
+/**
+ * Whether a content type's table carries the foreign key to
+ * `platform."reportResolutions"` that quarantine writes to.
+ *
+ * Derived from the catalog on every call rather than cached: the answer is a
+ * property of the schema, so a migration that adds or drops the column changes
+ * it with nothing to invalidate.
+ */
+async function isQuarantinable(
+  appId: string,
+  contentType: string,
+): Promise<boolean> {
+  const rows = await db.execute<{ quarantinable: boolean }>(
+    sql`select "quarantineColumn" is not null as "quarantinable"
+        from "platform".content_types()
+        where "appId" = ${appId}::uuid and "contentType" = ${contentType}`,
+  );
+  return rows[0]?.quarantinable ?? false;
+}
+
 export const getUserModerationData = cache(async (targetUserId: string) => {
   const callerUserId = await expectSession().catch(() => redirect("/auth"));
 
-  const productionRole = await db
-    .select({ id: moderatorRoles.id })
-    .from(moderatorRoles)
-    .innerJoin(
-      oauthRegistrations,
-      eq(oauthRegistrations.clientId, moderatorRoles.clientId),
-    )
-    .where(
-      and(
-        eq(moderatorRoles.userId, callerUserId),
-        eq(oauthRegistrations.type, "production"),
-      ),
-    )
-    .limit(1);
-
-  if (productionRole.length === 0) redirect("/");
+  if (!(await canUserManageSuspensions(callerUserId))) redirect("/");
 
   const { data: userData } =
     await supabaseAdmin.auth.admin.getUserById(targetUserId);
@@ -310,7 +232,7 @@ export const getUserModerationData = cache(async (targetUserId: string) => {
     where: { userId: targetUserId, service: "global" },
   });
 
-  const reports = await db.query.contentReports.findMany({
+  const userReports = await db.query.reports.findMany({
     where: { reportedUserId: targetUserId },
     with: {
       resolution: {
@@ -322,10 +244,17 @@ export const getUserModerationData = cache(async (targetUserId: string) => {
         },
       },
       reason: { columns: { title: true } },
-      contentType: { columns: { label: true } },
     },
     orderBy: { createdAt: "desc" },
   });
 
-  return { targetUserId, displayName, isBanned, suspension, reports };
+  return {
+    targetUserId,
+    displayName,
+    isBanned,
+    suspension,
+    reports: userReports,
+  };
 });
+
+export { userSuspensions };

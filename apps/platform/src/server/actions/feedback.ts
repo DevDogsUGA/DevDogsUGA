@@ -3,12 +3,13 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { zfd } from "zod-form-data";
-import { expectSession, expectUserWith } from "~/server/auth";
+import { expectSession } from "~/server/auth";
 import { db } from "~/server/db";
-import { feedbackTopics, profiles, siteFeedback } from "~/server/db/schema";
+import { feedback, feedbackTopics, profiles } from "~/server/db/schema";
 import { supabaseAdmin } from "~/supabase/admin";
 import { env } from "~/env";
 import { canUserManageFeedback } from "~/server/actions/permissions";
+import { PLATFORM_APP_SLUG, getAppIdBySlug } from "~/server/loaders/apps";
 const submitFeedbackSchema = zfd.formData({
   type: zfd.text(
     z.enum([
@@ -21,6 +22,7 @@ const submitFeedbackSchema = zfd.formData({
     ]),
   ),
   severity: zfd.text(z.enum(["low", "medium", "high"]).optional()),
+  topicId: zfd.text(z.uuid().optional()),
   title: zfd.text(z.string().min(1).max(100)),
   description: zfd.text(z.string().min(10)),
   browserMetadata: zfd.text(z.string().optional()),
@@ -44,17 +46,36 @@ export async function submitFeedback(
       })
     : undefined;
 
+  const appId = await getAppIdBySlug(PLATFORM_APP_SLUG);
+
+  if (parsed.topicId) {
+    const topic = await db.query.feedbackTopics.findFirst({
+      columns: { id: true },
+      where: { id: parsed.topicId, appId },
+    });
+    if (!topic) throw new Error("Unknown feedback topic");
+  }
+
   const [row] = await db
-    .insert(siteFeedback)
+    .insert(feedback)
     .values({
       userId,
+      // First-party feedback is no longer a special case with a null app: the
+      // site is a registered app like any other, so there is one shape and one
+      // code path rather than two.
+      appId,
       type: parsed.type,
+      // Verified against this app's own topics rather than trusted: the
+      // composite foreign key on "feedback" would reject a topic belonging to
+      // another app anyway, but as a constraint violation rather than as
+      // something the dialog can show a user.
+      topicId: parsed.topicId ?? null,
       severity: parsed.severity ?? null,
       title: parsed.title,
       description: parsed.description,
       browserMetadata: browserMetadata ?? null,
     })
-    .returning({ id: siteFeedback.id });
+    .returning({ id: feedback.id });
 
   return { id: row!.id };
 }
@@ -67,39 +88,9 @@ export async function updateFeedbackStatus(
   if (!(await canUserManageFeedback(userId))) throw new Error("Unauthorized");
 
   await db
-    .update(siteFeedback)
+    .update(feedback)
     .set({ status, updatedAt: new Date() })
-    .where(eq(siteFeedback.id, feedbackId));
-}
-
-export async function updateTestFeedbackStatus(
-  feedbackId: string,
-  status: "open" | "in_review" | "resolved" | "dismissed",
-): Promise<void> {
-  const caller = await expectUserWith({
-    profile: {
-      with: { oauthRegistration: { columns: { clientId: true } } },
-    },
-    testAccounts: { columns: { testUserId: true } },
-  });
-
-  const clientId = caller.profile?.oauthRegistration?.clientId;
-  const testUserIds = caller.testAccounts.map((ta) => ta.testUserId);
-  if (!clientId) throw new Error("Unauthorized");
-
-  const row = await db.query.siteFeedback.findFirst({
-    columns: { clientId: true, userId: true },
-    where: { id: feedbackId },
-  });
-
-  if (row?.clientId !== clientId || !testUserIds.includes(row.userId)) {
-    throw new Error("Unauthorized");
-  }
-
-  await db
-    .update(siteFeedback)
-    .set({ status, updatedAt: new Date() })
-    .where(eq(siteFeedback.id, feedbackId));
+    .where(eq(feedback.id, feedbackId));
 }
 
 export async function updateFeedbackAdminNote(
@@ -110,9 +101,9 @@ export async function updateFeedbackAdminNote(
   if (!(await canUserManageFeedback(userId))) throw new Error("Unauthorized");
 
   await db
-    .update(siteFeedback)
+    .update(feedback)
     .set({ adminNote: adminNote || null, updatedAt: new Date() })
-    .where(eq(siteFeedback.id, feedbackId));
+    .where(eq(feedback.id, feedbackId));
 }
 
 export type FeedbackDetail = {
@@ -149,32 +140,32 @@ export async function getFeedbackDetail(
 
   const [row] = await db
     .select({
-      id: siteFeedback.id,
-      type: siteFeedback.type,
-      severity: siteFeedback.severity,
-      topicId: siteFeedback.topicId,
+      id: feedback.id,
+      type: feedback.type,
+      severity: feedback.severity,
+      topicId: feedback.topicId,
       topicLabel: feedbackTopics.label,
-      title: siteFeedback.title,
-      description: siteFeedback.description,
-      status: siteFeedback.status,
-      browserMetadata: siteFeedback.browserMetadata,
-      attachmentPaths: siteFeedback.attachmentPaths,
-      adminNote: siteFeedback.adminNote,
-      createdAt: siteFeedback.createdAt,
-      updatedAt: siteFeedback.updatedAt,
-      userId: siteFeedback.userId,
+      title: feedback.title,
+      description: feedback.description,
+      status: feedback.status,
+      browserMetadata: feedback.browserMetadata,
+      attachmentPaths: feedback.attachmentPaths,
+      adminNote: feedback.adminNote,
+      createdAt: feedback.createdAt,
+      updatedAt: feedback.updatedAt,
+      userId: feedback.userId,
       preferredName: profiles.preferredName,
     })
-    .from(siteFeedback)
-    .innerJoin(profiles, eq(profiles.userId, siteFeedback.userId))
+    .from(feedback)
+    .innerJoin(profiles, eq(profiles.userId, feedback.userId))
     .leftJoin(
       feedbackTopics,
       and(
-        eq(feedbackTopics.clientId, siteFeedback.clientId),
-        eq(feedbackTopics.id, siteFeedback.topicId),
+        eq(feedbackTopics.appId, feedback.appId),
+        eq(feedbackTopics.id, feedback.topicId),
       ),
     )
-    .where(eq(siteFeedback.id, feedbackId));
+    .where(eq(feedback.id, feedbackId));
 
   if (!row) throw new Error("Feedback not found");
 
