@@ -119,19 +119,21 @@ export async function GET(req: NextRequest) {
     },
   );
 
-  // Ensure indexes and refresh the materialized search view after each scrape
+  // Ensure indexes and refresh the materialized search view after each scrape.
+  // These must be schema-qualified: the postgres-js connection uses the default
+  // search_path ("$user", public), which does not include `schedule_builder`.
   await db.execute(sql`
     CREATE UNIQUE INDEX IF NOT EXISTS "offeringSearch_crn_idx"
-      ON "offeringSearch" (crn)
+      ON "schedule_builder"."offeringSearch" (crn)
   `);
 
   await db.execute(sql`
     CREATE INDEX IF NOT EXISTS "offeringSearch_fts_idx"
-      ON "offeringSearch" USING gin (search_vector)
+      ON "schedule_builder"."offeringSearch" USING gin (search_vector)
   `);
 
   await db.execute(
-    sql`REFRESH MATERIALIZED VIEW CONCURRENTLY "offeringSearch"`,
+    sql`REFRESH MATERIALIZED VIEW CONCURRENTLY "schedule_builder"."offeringSearch"`,
   );
 
   return NextResponse.json({
