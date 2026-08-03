@@ -434,9 +434,12 @@ export type Database = {
             | Database["platform"]["Enums"]["graduationSemester"]
             | null
           graduationYear: number | null
+          identitySourcedAt: string | null
           involvementFirstName: string | null
           involvementImportedAt: string | null
           involvementLastName: string | null
+          legalFirstName: string | null
+          legalLastName: string | null
           preferredName: string
           pronouns: string[] | null
           roleDescription: string | null
@@ -444,6 +447,7 @@ export type Database = {
           showEmail: boolean
           showGithub: boolean
           showLinkedin: boolean
+          ugaEmail: string | null
           userId: string
           viewedConsole: boolean
         }
@@ -453,9 +457,12 @@ export type Database = {
             | Database["platform"]["Enums"]["graduationSemester"]
             | null
           graduationYear?: number | null
+          identitySourcedAt?: string | null
           involvementFirstName?: string | null
           involvementImportedAt?: string | null
           involvementLastName?: string | null
+          legalFirstName?: string | null
+          legalLastName?: string | null
           preferredName: string
           pronouns?: string[] | null
           roleDescription?: string | null
@@ -463,6 +470,7 @@ export type Database = {
           showEmail?: boolean
           showGithub?: boolean
           showLinkedin?: boolean
+          ugaEmail?: string | null
           userId: string
           viewedConsole?: boolean
         }
@@ -472,9 +480,12 @@ export type Database = {
             | Database["platform"]["Enums"]["graduationSemester"]
             | null
           graduationYear?: number | null
+          identitySourcedAt?: string | null
           involvementFirstName?: string | null
           involvementImportedAt?: string | null
           involvementLastName?: string | null
+          legalFirstName?: string | null
+          legalLastName?: string | null
           preferredName?: string
           pronouns?: string[] | null
           roleDescription?: string | null
@@ -482,6 +493,7 @@ export type Database = {
           showEmail?: boolean
           showGithub?: boolean
           showLinkedin?: boolean
+          ugaEmail?: string | null
           userId?: string
           viewedConsole?: boolean
         }

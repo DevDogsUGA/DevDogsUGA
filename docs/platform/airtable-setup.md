@@ -54,14 +54,22 @@ push-only rules exist to prevent.
 
 ### The addition
 
+> **Built** — migration `20260803000000_platform_profile_identity.sql`.
+
 Durable identity gets its own columns, set once and never cleared:
 
 ```sql
 alter table platform.profile
-  add column "ugaEmail"        citext unique,   -- the Airtable key; see below
-  add column "legalFirstName"  text,
-  add column "legalLastName"   text,
+  add column "ugaEmail"          text,          -- the Airtable key; see below
+  add column "legalFirstName"    text,
+  add column "legalLastName"     text,
   add column "identitySourcedAt" timestamptz;   -- when the roster last confirmed it
+
+alter table platform.profile
+  add constraint "profile_ugaEmail_lowercase"
+  check ("ugaEmail" is null or "ugaEmail" = lower("ugaEmail"));
+
+create unique index "profile_ugaEmail_key" on platform.profile ("ugaEmail");
 ```
 
 The Involvement import writes both sets: `involvement*` as it does now, plus
@@ -74,8 +82,31 @@ will otherwise look like duplication:
 | `involvement*`       | Are they on the _current_ roster | **Yes** — by design |
 | `legal*`, `ugaEmail` | Who is this person, durably      | Never               |
 
-`citext` for `ugaEmail` because the import already lowercases and a case
-mismatch would create a second member row for the same person.
+`ugaEmail` is case-folded because the import already lowercases and a case
+mismatch would create a second member row for the same person. This was drafted
+as `citext`, which says that directly; it shipped as a check constraint plus a
+plain unique index instead, because `citext` is an extension type — under
+Supabase's layout the column would be `extensions.citext` — and `drizzle-kit
+pull` cannot render that into the generated schema. The guarantee is identical
+and the generated column stays a plain `text`.
+
+Because the check rejects a mixed-case address outright rather than folding it,
+anything writing this column must lowercase first. The import already does.
+
+#### Members cannot write their own identity
+
+`platform.profile` is written straight from the browser through PostgREST — the
+account page updates `preferredName`, `bio`, `pronouns`, `roleDescription` and
+the `show*` flags that way — and its UPDATE policy is a permissive
+`auth.uid() = "userId"`. That policy is about _which row_, not which columns, so
+on its own it would let a member set their own `ugaEmail` and rewrite the
+identity a dues record is keyed on.
+
+Column-level grants are the fix, and they only work in one direction: a
+`revoke update ("ugaEmail") …` against a table-wide UPDATE grant does nothing.
+The table-wide grant has to go first, then come back per column — the same shape
+migration `20260730000005` asserts for app schemas. `packages/sb/testing/rls.test.ts`
+covers both sides.
 
 ### UGA email as the key, with one caveat
 

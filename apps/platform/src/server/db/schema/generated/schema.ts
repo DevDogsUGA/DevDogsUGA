@@ -686,8 +686,17 @@ export const profileInPlatform = platform.table.withRLS(
     involvementLastName: text(),
     involvementImportedAt: timestamp(),
     roleDescription: varchar({ length: 127 }),
+    ugaEmail: text(),
+    legalFirstName: text(),
+    legalLastName: text(),
+    identitySourcedAt: timestamp({ withTimezone: true }),
   },
   (table) => [
+    uniqueIndex("profile_ugaEmail_key").using(
+      "btree",
+      table.ugaEmail.asc().nullsLast(),
+    ),
+
     pgPolicy("crud_authenticated_policy_delete", {
       as: "restrictive",
       for: "delete",
@@ -714,6 +723,10 @@ export const profileInPlatform = platform.table.withRLS(
       using: sql`(( SELECT auth.uid() AS uid) = "userId")`,
       withCheck: sql`(( SELECT auth.uid() AS uid) = "userId")`,
     }),
+    check(
+      "profile_ugaEmail_lowercase",
+      sql`(("ugaEmail" IS NULL) OR ("ugaEmail" = lower("ugaEmail")))`,
+    ),
   ],
 );
 

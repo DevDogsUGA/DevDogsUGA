@@ -54,7 +54,13 @@ export async function uploadVerificationCSV(
   let updated = 0;
 
   await db.transaction(async (tx) => {
-    // Clear all involvement fields — anyone not in this CSV loses involvement status
+    // Clear all involvement fields — anyone not in this CSV loses involvement status.
+    //
+    // Only these. The durable identity columns written below (`ugaEmail`,
+    // `legal*`) answer a different question — who this person is, rather than
+    // whether they are on the current roster — and are never cleared. Blanking
+    // them would blank the name on the member's dues record in Airtable every
+    // time they were missing from a single CSV.
     await tx.update(profiles).set({
       involvementFirstName: null,
       involvementLastName: null,
@@ -89,6 +95,10 @@ export async function uploadVerificationCSV(
             involvementFirstName: firstName,
             involvementLastName: lastName,
             involvementImportedAt: importedAt,
+            ugaEmail: email,
+            legalFirstName: firstName,
+            legalLastName: lastName,
+            identitySourcedAt: importedAt,
           })
           .onConflictDoNothing();
 
@@ -102,6 +112,10 @@ export async function uploadVerificationCSV(
             involvementFirstName: firstName,
             involvementLastName: lastName,
             involvementImportedAt: importedAt,
+            ugaEmail: email,
+            legalFirstName: firstName,
+            legalLastName: lastName,
+            identitySourcedAt: importedAt,
             preferredName: sql`CASE
               WHEN lower(trim(${profiles.preferredName}))
                  = lower(trim(${profiles.involvementFirstName}) || ' ' || trim(${profiles.involvementLastName}))

@@ -379,3 +379,82 @@ describe("platform.claim_root", () => {
     expect(error).not.toBeNull();
   });
 });
+
+describe("platform.profile durable identity", () => {
+  // The profile UPDATE policy is a permissive `auth.uid() = "userId"`, which
+  // decides which ROW a member may write, not which columns. Keeping them out
+  // of `ugaEmail` / `legal*` is column-level grants instead, so these cases
+  // exercise a different mechanism from every other test in this file — and
+  // one that fails open if the table-wide UPDATE grant is ever restored.
+  beforeAll(async () => {
+    await admin().from("profile").insert({
+      userId: member.userId,
+      preferredName: "Member Persona",
+      ugaEmail: "member-persona@uga.edu",
+      legalFirstName: "Member",
+      legalLastName: "Persona",
+    });
+  }, 30_000);
+
+  it("lets a member edit the profile fields that are theirs", async () => {
+    const { error } = await member.client
+      .from("profile")
+      .update({ bio: "edited by the member" })
+      .eq("userId", member.userId);
+    expect(error).toBeNull();
+  });
+
+  it("refuses a member rewriting their own UGA email", async () => {
+    const { error } = await member.client
+      .from("profile")
+      .update({ ugaEmail: "someone-else@uga.edu" })
+      .eq("userId", member.userId);
+    expect(error).not.toBeNull();
+
+    const { data } = await admin()
+      .from("profile")
+      .select("ugaEmail")
+      .eq("userId", member.userId)
+      .single();
+    expect(data?.ugaEmail).toBe("member-persona@uga.edu");
+  });
+
+  it("refuses a member rewriting their own legal name", async () => {
+    const { error } = await member.client
+      .from("profile")
+      .update({ legalFirstName: "Someone" })
+      .eq("userId", member.userId);
+    expect(error).not.toBeNull();
+  });
+
+  it("holds one row per UGA email, case-folded", async () => {
+    const a = admin();
+    // Its own address rather than the member's: the cases above write to that
+    // one, so reusing it would make this test pass or fail on ordering.
+    const address = `dup-${crypto.randomUUID().slice(0, 8)}@uga.edu`;
+
+    const { error: first } = await a.from("profile").insert({
+      userId: moderator.userId,
+      preferredName: "Moderator Persona",
+      ugaEmail: address,
+    });
+    expect(first).toBeNull();
+
+    const { error: duplicate } = await a.from("profile").insert({
+      userId: suspended.userId,
+      preferredName: "Suspended Persona",
+      ugaEmail: address,
+    });
+    expect(duplicate?.code).toBe("23505");
+
+    // Uppercase is rejected outright rather than stored as a second identity
+    // for the same person — the import lowercases, and this is what keeps a
+    // future writer from bypassing it.
+    const { error: mixedCase } = await a.from("profile").insert({
+      userId: suspended.userId,
+      preferredName: "Suspended Persona",
+      ugaEmail: address.toUpperCase(),
+    });
+    expect(mixedCase?.code).toBe("23514");
+  });
+});
