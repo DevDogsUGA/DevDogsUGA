@@ -1,124 +1,51 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import DocPageContent from "~/components/DocPageContent";
+import { DOCS_BRANCH, DOCS_REPO } from "~/config/docs";
 import { env } from "~/env";
-import { docsHref, projectPath, resolveDocsSlug } from "~/lib/docsSlug";
-import { firstPagePath } from "~/lib/docsTree";
+import { projectPath } from "~/lib/docsSlug";
+import { toTitleCase } from "~/lib/toTitleCase";
+import type { DocsTreeNode } from "~/lib/docsTree";
 import {
-  getDocsBranches,
   getDocsPage,
   getDocsProjects,
   getDocsTree,
 } from "~/server/docs/queries";
-import { toTitleCase } from "~/server/docs/parse";
 
-interface Resolved {
-  repoSlug: string;
-  project: string;
-  branch: string;
-  path: string[];
-}
-
-/**
- * Resolves the catch-all slug to a branch + project-relative page path,
- * issuing canonical redirects along the way. Branch names may contain slashes,
- * so the branch is longest-prefix matched against the (monorepo-global) branch
- * list (see ~/lib/docsSlug).
- */
-async function resolve(
-  params: Promise<{ project: string; slug: string[] }>,
-): Promise<Resolved> {
-  const { project, slug } = await params;
-  const projectSlug = decodeURIComponent(project);
-  const segments = slug.map(decodeURIComponent);
-
-  const branches = await getDocsBranches();
-  if (!branches) notFound();
-
-  const resolved = resolveDocsSlug(
-    segments,
-    branches.names,
-    branches.defaultBranch,
-  );
-
-  // Canonicalize /docs/project/main/... to /docs/project/...
-  if (resolved.redundantBranchPrefix) {
-    redirect(
-      docsHref(
-        projectSlug,
-        resolved.branch,
-        resolved.path,
-        branches.defaultBranch,
-      ),
-    );
-  }
-
-  // A branch root has no page: land on the project's first page for that branch.
-  if (resolved.path.length === 0) {
-    const tree = await getDocsTree(
-      branches.repoSlug,
-      projectSlug,
-      resolved.branch,
-    );
-    const first = firstPagePath(tree);
-    if (!first) notFound();
-    redirect(
-      docsHref(
-        projectSlug,
-        resolved.branch,
-        first.split("/"),
-        branches.defaultBranch,
-      ),
-    );
-  }
-
-  return {
-    repoSlug: branches.repoSlug,
-    project: projectSlug,
-    branch: resolved.branch,
-    path: resolved.path,
-  };
-}
-
-export async function generateStaticParams() {
-  const [projects, branches] = await Promise.all([
-    getDocsProjects(),
-    getDocsBranches(),
-  ]);
-  if (!branches) return [];
-
+// Every docs page is enumerated below and prerendered at build time. Anything
+// else renders on demand and 404s via notFound() — safe on Workers because the
+// lookup reads a bundled constant, not the filesystem. (`dynamicParams` can't
+// express that here: Cache Components rejects the route segment config.)
+export function generateStaticParams() {
   const params: { project: string; slug: string[] }[] = [];
-  for (const project of projects) {
-    const tree = await getDocsTree(
-      branches.repoSlug,
-      project.slug,
-      branches.defaultBranch,
-    );
-    const collect = (nodes: typeof tree) => {
-      for (const node of nodes) {
-        if (node.type === "page") {
-          params.push({ project: project.slug, slug: node.path.split("/") });
-        } else {
-          collect(node.children);
-        }
+
+  function collect(project: string, nodes: DocsTreeNode[]) {
+    for (const node of nodes) {
+      if (node.type === "page") {
+        params.push({ project, slug: node.path.split("/") });
+      } else {
+        collect(project, node.children);
       }
-    };
-    collect(tree);
+    }
   }
-  // See [project]/page.tsx — Cache Components rejects an empty return, so emit a
-  // placeholder when no docs pages exist yet (fresh/empty DB at build). The
-  // route notFound()s it; real params replace it once docs are synced.
-  if (params.length === 0)
-    return [{ project: "__placeholder__", slug: ["index"] }];
+
+  for (const project of getDocsProjects()) {
+    collect(project.slug, getDocsTree(project.slug));
+  }
+
   return params;
 }
 
 export async function generateMetadata({
   params,
 }: PageProps<"/docs/[project]/[...slug]">): Promise<Metadata> {
-  const { repoSlug, project, branch, path } = await resolve(params);
-  const page = await getDocsPage(repoSlug, project, branch, path.join("/"));
+  const { project, slug } = await params;
+  const page = getDocsPage(
+    decodeURIComponent(project),
+    slug.map(decodeURIComponent).join("/"),
+  );
   if (!page) return {};
+
   return {
     title: `${page.title} | DevDogs Docs`,
     description: page.description ?? undefined,
@@ -128,16 +55,18 @@ export async function generateMetadata({
 export default async function DocsPage({
   params,
 }: PageProps<"/docs/[project]/[...slug]">) {
-  const { repoSlug, project, branch, path } = await resolve(params);
+  const { project, slug } = await params;
+  const projectSlug = decodeURIComponent(project);
+  const path = slug.map(decodeURIComponent);
 
-  const page = await getDocsPage(repoSlug, project, branch, path.join("/"));
+  const page = getDocsPage(projectSlug, path.join("/"));
   if (!page) notFound();
 
   const breadcrumbs = [
-    toTitleCase(project),
+    toTitleCase(projectSlug),
     ...path.slice(0, -1).map(toTitleCase),
   ];
-  const githubUrl = `https://github.com/${env.GITHUB_ORG}/${repoSlug}/blob/${branch}/docs/${projectPath(project, path.join("/"))}.md`;
+  const githubUrl = `https://github.com/${env.GITHUB_ORG}/${DOCS_REPO}/blob/${DOCS_BRANCH}/docs/${projectPath(projectSlug, path.join("/"))}.md`;
 
   return (
     <DocPageContent

@@ -8,8 +8,8 @@ export const metadata: Metadata = {
   description: "Documentation for DevDogs projects.",
 };
 
-export default async function DocsLandingPage() {
-  const projects = await getDocsProjects();
+export default function DocsLandingPage() {
+  const projects = getDocsProjects();
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-12">

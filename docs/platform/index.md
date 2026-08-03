@@ -1,3 +1,8 @@
+---
+name: Platform
+description: The DevDogs web platform — the site, console, docs, and public APIs.
+---
+
 # DevDogs Website
 
 Welcome to the documentation for the DevDogs Website — the open-source web platform for the DevDogs club at the University of Georgia.

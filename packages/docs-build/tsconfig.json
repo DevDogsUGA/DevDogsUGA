@@ -1,0 +1,11 @@
+{
+  "extends": "../config/tsconfig/lib.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    // TypeScript 6 no longer auto-includes everything under node_modules/@types;
+    // the compiler walks the filesystem. Same pattern as packages/with-env.
+    "types": ["node"]
+  },
+  "include": ["src"]
+}

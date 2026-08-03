@@ -1,0 +1,39 @@
+{
+  "name": "@devdogsuga/docs-build",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Compiles a folder of markdown into a typed data module",
+  "bin": {
+    "docs-build": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "github-slugger": "^2.0.0",
+    "gray-matter": "^4.0.3",
+    "mdast-util-to-string": "^4.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.1.0"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/mdast": "^4.0.4",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

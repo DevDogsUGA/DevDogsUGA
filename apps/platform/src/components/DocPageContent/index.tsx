@@ -2,12 +2,11 @@ import DocsMarkdown from "~/components/DocsMarkdown";
 import InlineTableOfContents from "~/components/InlineTableOfContents";
 import TableOfContents from "~/components/TableOfContents";
 import type { DocHeading, TOCItem } from "~/lib/toc";
-import { parseDocFile } from "~/server/docs/parse";
 
 interface Props {
   source: string;
-  /** Pre-extracted headings (as stored with published pages); derived from source when omitted. */
-  headings?: DocHeading[];
+  /** Headings extracted at build time by @devdogsuga/docs. */
+  headings: DocHeading[];
   breadcrumbs?: string[];
   githubUrl?: string;
 }
@@ -18,10 +17,7 @@ export default async function DocPageContent({
   breadcrumbs,
   githubUrl,
 }: Props) {
-  const resolvedHeadings =
-    headings ?? parseDocFile(source, "untitled").headings;
-
-  const toc: TOCItem[] = resolvedHeadings.map((h) => ({
+  const toc: TOCItem[] = headings.map((h) => ({
     title: h.title,
     url: `#${h.id}`,
     depth: h.depth,

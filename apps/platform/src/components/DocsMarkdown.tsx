@@ -1,4 +1,5 @@
 import rehypeShiki from "@shikijs/rehype";
+import { cacheLife } from "next/cache";
 import { MarkdownAsync } from "react-markdown";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeKatex from "rehype-katex";
@@ -13,11 +14,20 @@ import remarkMath from "remark-math";
 import remarkSmartypants from "remark-smartypants";
 
 /**
- * The single markdown pipeline for documentation, shared by the published
- * /docs pages and the local docs-preview tool. Renders on the server; callers
- * own caching.
+ * The single markdown pipeline for documentation.
+ *
+ * `"use cache"` is required, not an optimisation: something in this plugin
+ * chain reads `Date.now()`, which Cache Components forbids during a prerender
+ * unless it happens inside a cached function. It is also exactly right
+ * semantically — the rendered output is a pure function of `source`, so
+ * `cacheLife("max")` is accurate, and because every docs page is prerendered
+ * the entry is baked into the static output rather than needing a runtime
+ * cache store (which the Cloudflare adapter does not have configured).
  */
-export default function DocsMarkdown({ source }: { source: string }) {
+export default async function DocsMarkdown({ source }: { source: string }) {
+  "use cache";
+  cacheLife("max");
+
   return (
     <MarkdownAsync
       remarkPlugins={[

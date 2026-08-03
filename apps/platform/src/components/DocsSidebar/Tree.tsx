@@ -13,8 +13,6 @@ import {
 
 interface TreeContext {
   project: string;
-  branch: string;
-  defaultBranch: string;
   activePath: string;
 }
 
@@ -62,12 +60,7 @@ function Nodes({ nodes, ctx }: { nodes: DocsTreeNode[]; ctx: TreeContext }) {
         ) : (
           <li key={node.path}>
             <Link
-              href={docsHref(
-                ctx.project,
-                ctx.branch,
-                node.path.split("/"),
-                ctx.defaultBranch,
-              )}
+              href={docsHref(ctx.project, node.path.split("/"))}
               data-active={node.path === ctx.activePath || undefined}
               className={cn(
                 "flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white",
@@ -94,7 +87,7 @@ export default function Tree({
   if (nodes.length === 0) {
     return (
       <p className="px-2 py-1.5 text-sm text-mauve-500">
-        No documentation on this branch yet.
+        No documentation for this project yet.
       </p>
     );
   }

@@ -1,4 +1,5 @@
 /** The docs sidebar tree, folded from the flat (path, title) page rows. */
+import { toTitleCase } from "./toTitleCase";
 
 export interface DocsTreePage {
   type: "page";
@@ -16,13 +17,6 @@ export interface DocsTreeFolder {
 }
 
 export type DocsTreeNode = DocsTreePage | DocsTreeFolder;
-
-function toTitleCase(name: string): string {
-  return name
-    .replace(/[-_]/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 function isIndexPage(node: DocsTreeNode): boolean {
   if (node.type !== "page") return false;
@@ -85,13 +79,4 @@ export function firstPagePath(nodes: DocsTreeNode[]): string | null {
     if (nested) return nested;
   }
   return null;
-}
-
-export function treeContainsPath(nodes: DocsTreeNode[], path: string): boolean {
-  for (const node of nodes) {
-    if (node.type === "page" && node.path === path) return true;
-    if (node.type === "folder" && treeContainsPath(node.children, path))
-      return true;
-  }
-  return false;
 }

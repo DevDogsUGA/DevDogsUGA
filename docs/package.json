@@ -1,0 +1,19 @@
+{
+  "name": "@devdogsuga/docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The monorepo's documentation content. Markdown only — the compiler lives in @devdogsuga/docs-build.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "docs-build"
+  },
+  "dependencies": {
+    "@devdogsuga/docs-build": "workspace:*"
+  }
+}

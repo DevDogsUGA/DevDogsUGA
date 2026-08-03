@@ -1,21 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { docsHref } from "~/lib/docsSlug";
 import { firstPagePath } from "~/lib/docsTree";
-import {
-  getDocsBranches,
-  getDocsProjects,
-  getDocsTree,
-} from "~/server/docs/queries";
+import { getDocsProjects, getDocsTree } from "~/server/docs/queries";
 
-export async function generateStaticParams() {
-  const projects = await getDocsProjects();
-  // Cache Components rejects an empty generateStaticParams return. When no docs
-  // projects exist yet (e.g. a fresh/empty database at build time) emit a single
-  // placeholder so the build can complete; the route notFound()s it at request
-  // time. Once any project is synced, real slugs are returned and the
-  // placeholder is never emitted.
-  if (projects.length === 0) return [{ project: "__placeholder__" }];
-  return projects.map((project) => ({ project: project.slug }));
+export function generateStaticParams() {
+  return getDocsProjects().map((project) => ({ project: project.slug }));
 }
 
 export default async function DocsProjectPage({
@@ -24,25 +13,14 @@ export default async function DocsProjectPage({
   const { project } = await params;
   const projectSlug = decodeURIComponent(project);
 
-  const branches = await getDocsBranches();
-  if (!branches) notFound();
+  // Projects come from the bundled artifact, so an unrecognised slug is a 404
+  // rather than an empty project.
+  if (!getDocsProjects().some((p) => p.slug === projectSlug)) notFound();
 
-  const tree = await getDocsTree(
-    branches.repoSlug,
-    projectSlug,
-    branches.defaultBranch,
-  );
-  const first = firstPagePath(tree);
+  const first = firstPagePath(getDocsTree(projectSlug));
 
   if (first) {
-    redirect(
-      docsHref(
-        projectSlug,
-        branches.defaultBranch,
-        first.split("/"),
-        branches.defaultBranch,
-      ),
-    );
+    redirect(docsHref(projectSlug, first.split("/")));
   }
 
   return (
