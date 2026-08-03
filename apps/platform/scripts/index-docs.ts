@@ -17,7 +17,12 @@ import { env } from "~/env";
  *   pnpm docs:index --force  # any other database (deploys)
  */
 
-const LOCAL_DB_HOSTS = ["localhost", "127.0.0.1", "[::1]", "host.docker.internal"];
+const LOCAL_DB_HOSTS = [
+  "localhost",
+  "127.0.0.1",
+  "[::1]",
+  "host.docker.internal",
+];
 
 function isLocalDatabase(url: string): boolean {
   try {

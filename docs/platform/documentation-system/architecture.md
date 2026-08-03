@@ -12,13 +12,13 @@ There is no GitHub API call, no webhook, no cache invalidation, and no runtime f
 
 The content and the code that processes it are deliberately separate.
 
-**`docs/` is `@devdogsuga/docs`** — a pnpm workspace package holding *only* markdown and a `package.json`. Its entire build script is `docs-build`. No TypeScript, no config, nothing to read past the folder of `.md` files.
+**`docs/` is `@devdogsuga/docs`** — a pnpm workspace package holding _only_ markdown and a `package.json`. Its entire build script is `docs-build`. No TypeScript, no config, nothing to read past the folder of `.md` files.
 
 **`packages/docs-build/` is `@devdogsuga/docs-build`** — the compiler. It exposes a `docs-build` CLI that treats its working directory as the content root, walks it for `*.md`, parses each file, and emits `dist/index.js` plus a hand-written `dist/index.d.ts`. Emitting the declarations directly (rather than running `tsc`) is what lets the content package stay free of a TypeScript toolchain.
 
 Being a package is what makes the rest work:
 
-- `turbo watch` sees markdown edits at package granularity, because the markdown *is* a package. No bespoke file watcher exists.
+- `turbo watch` sees markdown edits at package granularity, because the markdown _is_ a package. No bespoke file watcher exists.
 - The platform depends on `@devdogsuga/docs`, so the existing `dependsOn: ["^build"]` in `turbo.json` produces the artifact for `build`, `typecheck`, `lint` and `test` with no extra task, and Turborepo's remote cache restores it in CI.
 
 > [!NOTE]
@@ -30,11 +30,11 @@ Being a package is what makes the rest work:
 
 `src/server/docs/queries.ts` is a thin layer over the imported constants — `getDocsProjects()`, `getDocsTree()`, `getDocsPage()`. Every call is an in-memory lookup; none is async, and none touches a cache or database.
 
-| Route | Renders |
-| --- | --- |
-| `/docs` | the project cards, from `projects[]` |
-| `/docs/[project]` | redirects to the project's first page |
-| `/docs/[project]/[...slug]` | the page itself |
+| Route                       | Renders                               |
+| --------------------------- | ------------------------------------- |
+| `/docs`                     | the project cards, from `projects[]`  |
+| `/docs/[project]`           | redirects to the project's first page |
+| `/docs/[project]/[...slug]` | the page itself                       |
 
 `generateStaticParams` enumerates every page, so all of them are prerendered at build time. A path that isn't enumerated renders on demand and 404s via `notFound()` — safe on Workers, because the lookup reads a bundled constant rather than the filesystem.
 

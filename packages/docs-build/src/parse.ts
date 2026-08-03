@@ -60,10 +60,7 @@ function blockText(node: Node): string {
  * use github-slugger so they match the anchors that rehype-slug generates at
  * render time.
  */
-export function parseDocFile(
-  source: string,
-  fileName: string,
-): ParsedDocFile {
+export function parseDocFile(source: string, fileName: string): ParsedDocFile {
   const { data: frontmatter, content } = matter(source);
 
   const tree = processor.parse(content);
