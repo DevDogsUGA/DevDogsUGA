@@ -26,7 +26,6 @@
   },
   "dependencies": {
     "@devdogsuga/db": "workspace:*",
-    "@devdogsuga/feedback-client": "workspace:*",
     "@devdogsuga/oauth-setup": "workspace:*",
     "@devdogsuga/sb": "workspace:*",
     "@radix-ui/react-accordion": "catalog:",
@@ -59,7 +58,6 @@
   },
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
-    "@devdogsuga/docs-preview": "workspace:*",
     "@devdogsuga/with-env": "workspace:*",
     "@opennextjs/cloudflare": "catalog:",
     "@playwright/test": "catalog:",

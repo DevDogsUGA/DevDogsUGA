@@ -15,7 +15,6 @@ export interface CronEnv {
 
 const CRON_ROUTES: Record<string, string> = {
   "0 0 * * *": "/api/github/sync-leaderboard",
-  "* * * * *": "/api/cron/deliver-webhooks",
   "*/10 * * * *": "/api/cron/sync-discord-roles",
 };
 

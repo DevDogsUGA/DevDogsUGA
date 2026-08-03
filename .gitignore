@@ -45,6 +45,12 @@ yarn-error.log*
 .env*
 !.env.example
 
+# throwaway spikes
+# These carry credentials inline (see scripts/spike/SPIKE-README.md) rather than
+# reading from .env, because they are run by hand against throwaway accounts.
+# Nothing in here is tracked, so a pasted client secret cannot be committed.
+scripts/spike/
+
 # vercel
 .vercel
 

@@ -9,7 +9,7 @@ allowBuilds:
 # package stay as literal ranges in that package's package.json.
 catalog:
   # --- Framework / runtime ---
-  next: ^16.2.11
+  next: 16.3.0-canary.97
   react: ^19.2.8
   react-dom: ^19.2.8
 
@@ -161,6 +161,11 @@ onlyBuiltDependencies:
 packages:
   - apps/*
   - packages/*
+  # The documentation content itself. Being a package (rather than a bare
+  # folder) is what lets `turbo watch` see doc edits at package granularity and
+  # lets the platform pick up the parsed output through the existing `^build`
+  # dependency — no root task, no bespoke file watcher.
+  - docs
 
 # Run package.json scripts through pnpm's built-in JS shell (@yarnpkg/shell)
 # instead of the platform shell. It implements the POSIX subset these scripts

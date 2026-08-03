@@ -10,11 +10,13 @@ apps/
   platform/            Next.js — the main DevDogs site + OAuth server   → schema: platform
   schedule-builder/    Next.js — course schedule builder                → schema: schedule_builder
   study-group-finder/  Flutter — study group finder (scaffold)          → schema: study_group_finder
+                       (no app owns `sandbox` — it is fixture content for the moderation
+                        tooling, present in every tier and denied on production by RLS)
 packages/
   sb/                  @devdogsuga/sb — shared Supabase: config.toml, SQL migrations,
                        generated Database types, and client factories
-  feedback-client/     @devdogsuga/feedback-client
-  reports-client/      @devdogsuga/reports-client
+  moderation/          @devdogsuga/moderation — typed wrappers + React dialogs for the
+                       reporting/feedback RPCs (replaced feedback-client & reports-client)
   oauth-setup/         @devdogsuga/oauth-setup
   docs-preview/        @devdogsuga/docs-preview
   with-env/            @devdogsuga/with-env — the `with-env` bin used by every script

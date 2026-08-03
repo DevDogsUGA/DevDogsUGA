@@ -28,10 +28,6 @@ export const env = createEnv({
     DISCORD_TOKEN: z.string(),
     GITHUB_ORG: z.string(),
     GITHUB_TOKEN: z.string(),
-    GITHUB_WEBHOOK_SECRET: switchEnvironment({
-      local: z.string().default(""),
-      deployed: z.string().min(20),
-    }),
     // Derived (.env / .env.generated)
     API_URL: z.string(),
     DB_URL: z.string(),
@@ -76,7 +72,6 @@ export const env = createEnv({
     DISCORD_TOKEN: process.env.DISCORD_TOKEN,
     GITHUB_ORG: process.env.GITHUB_ORG,
     GITHUB_TOKEN: process.env.GITHUB_TOKEN,
-    GITHUB_WEBHOOK_SECRET: process.env.GITHUB_WEBHOOK_SECRET,
     // Derived (.env / .env.generated)
     API_URL: process.env.API_URL,
     DB_URL: process.env.DB_URL,

@@ -70,7 +70,14 @@
         "NEXT_PUBLIC_AUTH_MODE"
       ]
     },
+    // `^build` so workspace deps that emit (notably @devdogsuga/docs, whose
+    // build parses docs/**/*.md into the module the docs routes import) exist
+    // before the dev server starts. `turbo watch dev` then re-runs those builds
+    // on change; for docs authoring prefer the lighter
+    // `pnpm dev:docs` watcher alongside `pnpm dev`, which lets Turbopack HMR the
+    // regenerated module instead of restarting Next.
     "dev": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     },
