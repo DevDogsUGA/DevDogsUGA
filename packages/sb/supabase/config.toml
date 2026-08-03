@@ -20,6 +20,10 @@ schemas = [
   "storage",
   "platform",
   "schedule_builder",
+  # Fixture content for the contributor tooling and the persona suite. Present
+  # in production too -- the migrations are identical everywhere -- but every
+  # table in it is denied there by a restrictive is_production() policy.
+  "sandbox",
 ]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
@@ -35,6 +39,15 @@ port = 54329
 pool_mode = "transaction"
 default_pool_size = 20
 max_client_conn = 100
+
+# Seeds run on `supabase db reset` only, never on `db push`, so they are the
+# safe place to open the development-only gate: a reset is by definition
+# pointed at a local stack or a contributor's own project. A directory glob
+# rather than the default single `./seed.sql` because seeds are split by
+# concern and applied in filename order.
+[db.seed]
+enabled = true
+sql_paths = ["./seed/*.sql"]
 
 [realtime]
 enabled = false
@@ -71,9 +84,13 @@ allowed_mime_types = [
 [auth]
 enabled = true
 site_url = "env(BASE_URL)"
+# `env(...)` is substituted only when it is the ENTIRE value — the CLI matches
+# it anchored — so "env(BASE_URL)/auth/callback" would be passed through
+# verbatim. Each callback URL therefore gets its own variable, composed from
+# BASE_URL / SCHEDULE_BUILDER_URL in the root .env.
 additional_redirect_urls = [
-  "env(BASE_URL)/auth/callback",
-  "env(SCHEDULE_BUILDER_URL)/auth/callback",
+  "env(BASE_URL_CALLBACK)",
+  "env(SCHEDULE_BUILDER_URL_CALLBACK)",
 ]
 enable_manual_linking = true
 
