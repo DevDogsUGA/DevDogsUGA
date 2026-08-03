@@ -1,0 +1,32 @@
+{
+  "name": "@devdogsuga/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The shared postgres-js + Drizzle client factory used by every Next app",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "1.0.0-rc.3",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "drizzle-orm": "catalog:",
+    "postgres": "catalog:",
+    "typescript": "catalog:"
+  }
+}

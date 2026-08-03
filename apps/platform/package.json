@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
+    "@devdogsuga/db": "workspace:*",
     "@devdogsuga/feedback-client": "workspace:*",
     "@devdogsuga/sb": "workspace:*",
     "@discordjs/builders": "^1.14.1",

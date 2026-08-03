@@ -25,6 +25,7 @@
     "cf:deploy": "with-env opennextjs-cloudflare deploy"
   },
   "dependencies": {
+    "@devdogsuga/db": "workspace:*",
     "@devdogsuga/feedback-client": "workspace:*",
     "@devdogsuga/oauth-setup": "workspace:*",
     "@devdogsuga/sb": "workspace:*",
