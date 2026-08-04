@@ -51,6 +51,8 @@ const PERMISSION_KEYS = [
   "canEditAttendance",
   "canExportStars",
   "canTriggerSync",
+  "canVoteAsOfficer",
+  "canAuditBallots",
 ] as const satisfies readonly PermissionKey[];
 
 // Two-way exhaustiveness check: fails to compile if a nullable-boolean
@@ -101,6 +103,8 @@ const ALL_PERMISSIONS_FALSE: ResolvedPermissions = {
   canEditAttendance: false,
   canExportStars: false,
   canTriggerSync: false,
+  canVoteAsOfficer: false,
+  canAuditBallots: false,
 };
 
 /** Returns the userId of the current Root holder, or null if unassigned. */
@@ -134,6 +138,8 @@ export async function resolveUserPermissions(
       canEditAttendance: resolvedUserPermissions.canEditAttendance,
       canExportStars: resolvedUserPermissions.canExportStars,
       canTriggerSync: resolvedUserPermissions.canTriggerSync,
+      canVoteAsOfficer: resolvedUserPermissions.canVoteAsOfficer,
+      canAuditBallots: resolvedUserPermissions.canAuditBallots,
     })
     .from(resolvedUserPermissions)
     .where(eq(resolvedUserPermissions.userId, userId))
@@ -178,6 +184,8 @@ export async function getCallerContext(userId: string): Promise<{
       canEditAttendance: row.canEditAttendance,
       canExportStars: row.canExportStars,
       canTriggerSync: row.canTriggerSync,
+      canVoteAsOfficer: row.canVoteAsOfficer,
+      canAuditBallots: row.canAuditBallots,
     },
     minRank: row.minRank,
     isLeader: row.isLeader,
@@ -221,6 +229,12 @@ export async function canUserExportStars(userId: string): Promise<boolean> {
 }
 export async function canUserTriggerSync(userId: string): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canTriggerSync);
+}
+export async function canUserVoteAsOfficer(userId: string): Promise<boolean> {
+  return resolveUserPermissions(userId).then((p) => p.canVoteAsOfficer);
+}
+export async function canUserAuditBallots(userId: string): Promise<boolean> {
+  return resolveUserPermissions(userId).then((p) => p.canAuditBallots);
 }
 
 // ── Shared guards ─────────────────────────────────────────────────────────────
