@@ -34,6 +34,36 @@ export type Database = {
   }
   platform: {
     Tables: {
+      airtableSyncState: {
+        Row: {
+          id: boolean
+          lastError: string | null
+          lastStatus: string | null
+          lastSyncedAt: string | null
+          rowsArchived: number
+          rowsRefused: number
+          rowsUpserted: number
+        }
+        Insert: {
+          id?: boolean
+          lastError?: string | null
+          lastStatus?: string | null
+          lastSyncedAt?: string | null
+          rowsArchived?: number
+          rowsRefused?: number
+          rowsUpserted?: number
+        }
+        Update: {
+          id?: boolean
+          lastError?: string | null
+          lastStatus?: string | null
+          lastSyncedAt?: string | null
+          rowsArchived?: number
+          rowsRefused?: number
+          rowsUpserted?: number
+        }
+        Relationships: []
+      }
       apps: {
         Row: {
           contentActioner: string | null
@@ -63,6 +93,102 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      attendance: {
+        Row: {
+          id: string
+          meetingId: string
+          method: Database["platform"]["Enums"]["checkInMethod"]
+          recordedAt: string
+          recordedBy: string | null
+          userId: string
+          workshopId: string | null
+        }
+        Insert: {
+          id?: string
+          meetingId: string
+          method: Database["platform"]["Enums"]["checkInMethod"]
+          recordedAt?: string
+          recordedBy?: string | null
+          userId: string
+          workshopId?: string | null
+        }
+        Update: {
+          id?: string
+          meetingId?: string
+          method?: Database["platform"]["Enums"]["checkInMethod"]
+          recordedAt?: string
+          recordedBy?: string | null
+          userId?: string
+          workshopId?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_meetingId_fkey"
+            columns: ["meetingId"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_workshopId_meetingId_fkey"
+            columns: ["workshopId", "meetingId"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id", "meetingId"]
+          },
+        ]
+      }
+      competitions: {
+        Row: {
+          airtableRecordId: string | null
+          deletedAt: string | null
+          id: string
+          judgingMeetingId: string | null
+          judgingStartsAt: string | null
+          maxTeamSize: number | null
+          requirementCount: number | null
+          slug: string
+          workshopId: string
+        }
+        Insert: {
+          airtableRecordId?: string | null
+          deletedAt?: string | null
+          id?: string
+          judgingMeetingId?: string | null
+          judgingStartsAt?: string | null
+          maxTeamSize?: number | null
+          requirementCount?: number | null
+          slug: string
+          workshopId: string
+        }
+        Update: {
+          airtableRecordId?: string | null
+          deletedAt?: string | null
+          id?: string
+          judgingMeetingId?: string | null
+          judgingStartsAt?: string | null
+          maxTeamSize?: number | null
+          requirementCount?: number | null
+          slug?: string
+          workshopId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competitions_judgingMeetingId_fkey"
+            columns: ["judgingMeetingId"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competitions_workshopId_fkey"
+            columns: ["workshopId"]
+            isOneToOne: true
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contentTypes: {
         Row: {
@@ -304,14 +430,17 @@ export type Database = {
       }
       instance: {
         Row: {
+          defaultMaxTeamSize: number
           environment: Database["platform"]["Enums"]["deployEnv"]
           id: boolean
         }
         Insert: {
+          defaultMaxTeamSize?: number
           environment?: Database["platform"]["Enums"]["deployEnv"]
           id?: boolean
         }
         Update: {
+          defaultMaxTeamSize?: number
           environment?: Database["platform"]["Enums"]["deployEnv"]
           id?: boolean
         }
@@ -344,6 +473,42 @@ export type Database = {
           currentYearRanking?: number | null
           githubId?: string
           githubLogin?: string
+        }
+        Relationships: []
+      }
+      meetings: {
+        Row: {
+          airtableRecordId: string | null
+          checkInClosesAt: string
+          deletedAt: string | null
+          endsAt: string
+          id: string
+          location: string | null
+          name: string
+          slug: string
+          startsAt: string
+        }
+        Insert: {
+          airtableRecordId?: string | null
+          checkInClosesAt: string
+          deletedAt?: string | null
+          endsAt: string
+          id?: string
+          location?: string | null
+          name: string
+          slug: string
+          startsAt: string
+        }
+        Update: {
+          airtableRecordId?: string | null
+          checkInClosesAt?: string
+          deletedAt?: string | null
+          endsAt?: string
+          id?: string
+          location?: string | null
+          name?: string
+          slug?: string
+          startsAt?: string
         }
         Relationships: []
       }
@@ -541,6 +706,38 @@ export type Database = {
           },
         ]
       }
+      projects: {
+        Row: {
+          appId: string | null
+          displayName: string
+          id: string
+          slug: string
+          sortOrder: number
+        }
+        Insert: {
+          appId?: string | null
+          displayName: string
+          id?: string
+          slug: string
+          sortOrder?: number
+        }
+        Update: {
+          appId?: string | null
+          displayName?: string
+          id?: string
+          slug?: string
+          sortOrder?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_appId_fkey"
+            columns: ["appId"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reportCorroborations: {
         Row: {
           createdAt: string
@@ -725,11 +922,14 @@ export type Database = {
       roles: {
         Row: {
           canCreateCredentials: boolean | null
+          canEditAttendance: boolean | null
+          canExportStars: boolean | null
           canManageFeedback: boolean | null
           canManageRoles: boolean | null
           canManageSuspensions: boolean | null
           canManageVerification: boolean | null
           canModerate: boolean | null
+          canTriggerSync: boolean | null
           canViewAuditLog: boolean | null
           color: string | null
           createdAt: string
@@ -746,11 +946,14 @@ export type Database = {
         }
         Insert: {
           canCreateCredentials?: boolean | null
+          canEditAttendance?: boolean | null
+          canExportStars?: boolean | null
           canManageFeedback?: boolean | null
           canManageRoles?: boolean | null
           canManageSuspensions?: boolean | null
           canManageVerification?: boolean | null
           canModerate?: boolean | null
+          canTriggerSync?: boolean | null
           canViewAuditLog?: boolean | null
           color?: string | null
           createdAt?: string
@@ -767,11 +970,14 @@ export type Database = {
         }
         Update: {
           canCreateCredentials?: boolean | null
+          canEditAttendance?: boolean | null
+          canExportStars?: boolean | null
           canManageFeedback?: boolean | null
           canManageRoles?: boolean | null
           canManageSuspensions?: boolean | null
           canManageVerification?: boolean | null
           canModerate?: boolean | null
+          canTriggerSync?: boolean | null
           canViewAuditLog?: boolean | null
           color?: string | null
           createdAt?: string
@@ -787,6 +993,207 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      teamAwards: {
+        Row: {
+          awardedAt: string
+          awardedBy: string
+          category: string
+          citation: string | null
+          competitionId: string
+          id: string
+          mergedPrUrl: string | null
+          teamId: string
+        }
+        Insert: {
+          awardedAt?: string
+          awardedBy: string
+          category: string
+          citation?: string | null
+          competitionId: string
+          id?: string
+          mergedPrUrl?: string | null
+          teamId: string
+        }
+        Update: {
+          awardedAt?: string
+          awardedBy?: string
+          category?: string
+          citation?: string | null
+          competitionId?: string
+          id?: string
+          mergedPrUrl?: string | null
+          teamId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teamAwards_teamId_competitionId_fkey"
+            columns: ["teamId", "competitionId"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id", "competitionId"]
+          },
+        ]
+      }
+      teamMembers: {
+        Row: {
+          competitionId: string
+          joinedAt: string
+          role: Database["platform"]["Enums"]["teamRole"]
+          teamId: string
+          userId: string
+        }
+        Insert: {
+          competitionId: string
+          joinedAt?: string
+          role?: Database["platform"]["Enums"]["teamRole"]
+          teamId: string
+          userId: string
+        }
+        Update: {
+          competitionId?: string
+          joinedAt?: string
+          role?: Database["platform"]["Enums"]["teamRole"]
+          teamId?: string
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teamMembers_teamId_competitionId_fkey"
+            columns: ["teamId", "competitionId"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id", "competitionId"]
+          },
+        ]
+      }
+      teamMembershipRequests: {
+        Row: {
+          competitionId: string
+          createdAt: string
+          createdBy: string
+          direction: Database["platform"]["Enums"]["membershipDirection"]
+          expiresAt: string | null
+          id: string
+          message: string | null
+          notifiedAt: string | null
+          respondedAt: string | null
+          respondedBy: string | null
+          status: Database["platform"]["Enums"]["membershipRequestStatus"]
+          teamId: string
+          userId: string
+        }
+        Insert: {
+          competitionId: string
+          createdAt?: string
+          createdBy: string
+          direction: Database["platform"]["Enums"]["membershipDirection"]
+          expiresAt?: string | null
+          id?: string
+          message?: string | null
+          notifiedAt?: string | null
+          respondedAt?: string | null
+          respondedBy?: string | null
+          status?: Database["platform"]["Enums"]["membershipRequestStatus"]
+          teamId: string
+          userId: string
+        }
+        Update: {
+          competitionId?: string
+          createdAt?: string
+          createdBy?: string
+          direction?: Database["platform"]["Enums"]["membershipDirection"]
+          expiresAt?: string | null
+          id?: string
+          message?: string | null
+          notifiedAt?: string | null
+          respondedAt?: string | null
+          respondedBy?: string | null
+          status?: Database["platform"]["Enums"]["membershipRequestStatus"]
+          teamId?: string
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teamMembershipRequests_teamId_competitionId_fkey"
+            columns: ["teamId", "competitionId"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id", "competitionId"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          acceptingRequests: boolean
+          clonedFromTeamId: string | null
+          competedAt: string | null
+          competitionId: string
+          createdBy: string
+          id: string
+          joinCode: string
+          lockedManuallyAt: string | null
+          name: string
+          requirementsMet: number | null
+          slug: string
+          submissionState:
+            | Database["platform"]["Enums"]["submissionState"]
+            | null
+          submissionUrl: string | null
+          submittedAt: string | null
+        }
+        Insert: {
+          acceptingRequests?: boolean
+          clonedFromTeamId?: string | null
+          competedAt?: string | null
+          competitionId: string
+          createdBy: string
+          id?: string
+          joinCode: string
+          lockedManuallyAt?: string | null
+          name: string
+          requirementsMet?: number | null
+          slug: string
+          submissionState?:
+            | Database["platform"]["Enums"]["submissionState"]
+            | null
+          submissionUrl?: string | null
+          submittedAt?: string | null
+        }
+        Update: {
+          acceptingRequests?: boolean
+          clonedFromTeamId?: string | null
+          competedAt?: string | null
+          competitionId?: string
+          createdBy?: string
+          id?: string
+          joinCode?: string
+          lockedManuallyAt?: string | null
+          name?: string
+          requirementsMet?: number | null
+          slug?: string
+          submissionState?:
+            | Database["platform"]["Enums"]["submissionState"]
+            | null
+          submissionUrl?: string | null
+          submittedAt?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_clonedFromTeamId_fkey"
+            columns: ["clonedFromTeamId"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_competitionId_fkey"
+            columns: ["competitionId"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       userRoles: {
         Row: {
@@ -838,8 +1245,74 @@ export type Database = {
         }
         Relationships: []
       }
+      workshops: {
+        Row: {
+          airtableRecordId: string | null
+          deletedAt: string | null
+          id: string
+          meetingId: string
+          projectId: string
+        }
+        Insert: {
+          airtableRecordId?: string | null
+          deletedAt?: string | null
+          id?: string
+          meetingId: string
+          projectId: string
+        }
+        Update: {
+          airtableRecordId?: string | null
+          deletedAt?: string | null
+          id?: string
+          meetingId?: string
+          projectId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workshops_meetingId_fkey"
+            columns: ["meetingId"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshops_projectId_fkey"
+            columns: ["projectId"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
+      memberStars: {
+        Row: {
+          competitionStar: boolean | null
+          meetingId: string | null
+          projectId: string | null
+          userId: string | null
+          won: boolean | null
+          workshopId: string | null
+          workshopStar: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workshops_meetingId_fkey"
+            columns: ["meetingId"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshops_projectId_fkey"
+            columns: ["projectId"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profileWithVerification: {
         Row: {
           hasDiscord: boolean | null
@@ -873,11 +1346,14 @@ export type Database = {
       resolvedUserPermissions: {
         Row: {
           canCreateCredentials: boolean | null
+          canEditAttendance: boolean | null
+          canExportStars: boolean | null
           canManageFeedback: boolean | null
           canManageRoles: boolean | null
           canManageSuspensions: boolean | null
           canManageVerification: boolean | null
           canModerate: boolean | null
+          canTriggerSync: boolean | null
           canViewAuditLog: boolean | null
           isLeader: boolean | null
           minRank: number | null
@@ -991,6 +1467,7 @@ export type Database = {
       }
     }
     Enums: {
+      checkInMethod: "code" | "discord" | "officer"
       contentAction: "quarantine" | "no_action"
       contentVisibility: "public" | "restricted"
       credentialType: "email_password" | "totp" | "email_password_totp"
@@ -1006,10 +1483,19 @@ export type Database = {
         | "other"
       filerAction: "warn" | "suspend" | "no_action"
       graduationSemester: "spring" | "summer" | "fall"
+      membershipDirection: "invite" | "request"
+      membershipRequestStatus:
+        | "pending"
+        | "accepted"
+        | "declined"
+        | "withdrawn"
+        | "expired"
       oauthRegistrationType: "development" | "production"
       reportStatus: "open" | "resolved" | "dismissed"
       roleType: "default" | "root" | "custom"
       subjectAction: "warn" | "suspend" | "ban" | "no_action"
+      submissionState: "open" | "closed" | "merged"
+      teamRole: "lead" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2519,6 +3005,7 @@ export const Constants = {
   },
   platform: {
     Enums: {
+      checkInMethod: ["code", "discord", "officer"],
       contentAction: ["quarantine", "no_action"],
       contentVisibility: ["public", "restricted"],
       credentialType: ["email_password", "totp", "email_password_totp"],
@@ -2535,10 +3022,20 @@ export const Constants = {
       ],
       filerAction: ["warn", "suspend", "no_action"],
       graduationSemester: ["spring", "summer", "fall"],
+      membershipDirection: ["invite", "request"],
+      membershipRequestStatus: [
+        "pending",
+        "accepted",
+        "declined",
+        "withdrawn",
+        "expired",
+      ],
       oauthRegistrationType: ["development", "production"],
       reportStatus: ["open", "resolved", "dismissed"],
       roleType: ["default", "root", "custom"],
       subjectAction: ["warn", "suspend", "ban", "no_action"],
+      submissionState: ["open", "closed", "merged"],
+      teamRole: ["lead", "member"],
     },
   },
   public: {

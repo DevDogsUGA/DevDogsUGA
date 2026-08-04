@@ -48,6 +48,9 @@ const PERMISSION_KEYS = [
   "canManageFeedback",
   "canCreateCredentials",
   "canManageVerification",
+  "canEditAttendance",
+  "canExportStars",
+  "canTriggerSync",
 ] as const satisfies readonly PermissionKey[];
 
 // Two-way exhaustiveness check: fails to compile if a nullable-boolean
@@ -95,6 +98,9 @@ const ALL_PERMISSIONS_FALSE: ResolvedPermissions = {
   canManageFeedback: false,
   canCreateCredentials: false,
   canManageVerification: false,
+  canEditAttendance: false,
+  canExportStars: false,
+  canTriggerSync: false,
 };
 
 /** Returns the userId of the current Root holder, or null if unassigned. */
@@ -125,6 +131,9 @@ export async function resolveUserPermissions(
       canManageFeedback: resolvedUserPermissions.canManageFeedback,
       canCreateCredentials: resolvedUserPermissions.canCreateCredentials,
       canManageVerification: resolvedUserPermissions.canManageVerification,
+      canEditAttendance: resolvedUserPermissions.canEditAttendance,
+      canExportStars: resolvedUserPermissions.canExportStars,
+      canTriggerSync: resolvedUserPermissions.canTriggerSync,
     })
     .from(resolvedUserPermissions)
     .where(eq(resolvedUserPermissions.userId, userId))
@@ -166,6 +175,9 @@ export async function getCallerContext(userId: string): Promise<{
       canManageFeedback: row.canManageFeedback,
       canCreateCredentials: row.canCreateCredentials,
       canManageVerification: row.canManageVerification,
+      canEditAttendance: row.canEditAttendance,
+      canExportStars: row.canExportStars,
+      canTriggerSync: row.canTriggerSync,
     },
     minRank: row.minRank,
     isLeader: row.isLeader,
@@ -200,6 +212,15 @@ export async function canUserManageVerification(
   userId: string,
 ): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canManageVerification);
+}
+export async function canUserEditAttendance(userId: string): Promise<boolean> {
+  return resolveUserPermissions(userId).then((p) => p.canEditAttendance);
+}
+export async function canUserExportStars(userId: string): Promise<boolean> {
+  return resolveUserPermissions(userId).then((p) => p.canExportStars);
+}
+export async function canUserTriggerSync(userId: string): Promise<boolean> {
+  return resolveUserPermissions(userId).then((p) => p.canTriggerSync);
 }
 
 // ── Shared guards ─────────────────────────────────────────────────────────────

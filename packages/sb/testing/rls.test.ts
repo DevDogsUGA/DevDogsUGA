@@ -458,3 +458,190 @@ describe("platform.profile durable identity", () => {
     expect(mixedCase?.code).toBe("23514");
   });
 });
+
+describe("platform meetings, teams and attendance", () => {
+  const projectId = "aaaaaaaa-0000-4000-a000-000000000001";
+  const meetingId = "bbbbbbbb-0000-4000-a000-000000000001";
+  const workshopId = "cccccccc-0000-4000-a000-000000000001";
+  const competitionId = "dddddddd-0000-4000-a000-000000000001";
+  const teamId = "eeeeeeee-0000-4000-a000-000000000001";
+
+  beforeAll(async () => {
+    const a = admin();
+    const now = Date.now();
+    await a
+      .from("projects")
+      .insert({ id: projectId, slug: "rls-proj", displayName: "RLS Project" });
+    await a.from("meetings").insert({
+      id: meetingId,
+      slug: "rls-meeting",
+      name: "RLS Meeting",
+      startsAt: new Date(now).toISOString(),
+      endsAt: new Date(now + 7_200_000).toISOString(),
+      checkInClosesAt: new Date(now + 3_600_000).toISOString(),
+    });
+    await a.from("workshops").insert({ id: workshopId, meetingId, projectId });
+    await a
+      .from("competitions")
+      .insert({ id: competitionId, slug: "rls-comp", workshopId });
+    await a.from("teams").insert({
+      id: teamId,
+      competitionId,
+      slug: "rls-team",
+      name: "RLS Team",
+      joinCode: "SECRET-CODE",
+      createdBy: member.userId,
+    });
+    await a
+      .from("teamMembers")
+      .insert({ teamId, competitionId, userId: member.userId, role: "lead" });
+    await a.from("attendance").insert({
+      meetingId,
+      workshopId,
+      userId: member.userId,
+      method: "code",
+    });
+  }, 60_000);
+
+  afterAll(async () => {
+    // meetings cascades to workshops -> competitions -> teams -> members,
+    // and to attendance; projects is restricted by workshops so it goes last.
+    await admin().from("meetings").delete().eq("id", meetingId);
+    await admin().from("projects").delete().eq("id", projectId);
+  });
+
+  it("publishes the schedule to logged-out visitors", async () => {
+    const client = anon();
+    for (const table of [
+      "projects",
+      "meetings",
+      "workshops",
+      "competitions",
+    ] as const) {
+      const { data, error } = await client.from(table).select("id");
+      expect(error, `${table} should be anon-readable`).toBeNull();
+      expect(data?.length ?? 0).toBeGreaterThan(0);
+    }
+  });
+
+  it("refuses client writes to the schedule", async () => {
+    // As with platform.instance above: a denied UPDATE is not an error, it
+    // matches no rows. Read the value back rather than asserting on `error`,
+    // which would pass just as happily if the write had landed.
+    for (const client of [anon(), member.client, moderator.client]) {
+      await client
+        .from("meetings")
+        .update({ name: "hacked" })
+        .eq("id", meetingId);
+    }
+
+    const { data } = await admin()
+      .from("meetings")
+      .select("name")
+      .eq("id", meetingId)
+      .single();
+    expect(data?.name).toBe("RLS Meeting");
+
+    // INSERT does surface an error, so the deny side is directly observable.
+    const { error: insert } = await member.client.from("meetings").insert({
+      slug: "rogue-meeting",
+      name: "Rogue",
+      startsAt: new Date().toISOString(),
+      endsAt: new Date(Date.now() + 3_600_000).toISOString(),
+      checkInClosesAt: new Date(Date.now() + 1_800_000).toISOString(),
+    });
+    expect(insert).not.toBeNull();
+  });
+
+  // The join code is the entire secret a join code consists of. A row policy
+  // cannot say "every column but one", so this is a column grant — and the
+  // case that matters is the signed-in member, not the anonymous visitor.
+  it("never serves joinCode to any client", async () => {
+    const { error: anonRead } = await anon()
+      .from("teams")
+      .select("joinCode")
+      .eq("id", teamId);
+    expect(anonRead).not.toBeNull();
+
+    const { error: memberRead } = await member.client
+      .from("teams")
+      .select("joinCode")
+      .eq("id", teamId);
+    expect(memberRead).not.toBeNull();
+
+    // The rest of the row still reads, or the meetings page breaks.
+    const { data, error } = await anon()
+      .from("teams")
+      .select("id, name, slug, competitionId")
+      .eq("id", teamId)
+      .single();
+    expect(error).toBeNull();
+    expect(data?.name).toBe("RLS Team");
+  });
+
+  it("keeps rosters signed-in-only", async () => {
+    const { data: anonRows } = await anon()
+      .from("teamMembers")
+      .select("userId");
+    expect(anonRows ?? []).toHaveLength(0);
+
+    const { data: memberRows, error } = await member.client
+      .from("teamMembers")
+      .select("userId");
+    expect(error).toBeNull();
+    expect(memberRows?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  // Officers read other people's attendance through a server action holding
+  // canEditAttendance, so no broad `authenticated` read has to exist.
+  it("shows a member their own attendance and nobody else's", async () => {
+    const { data: own, error } = await member.client
+      .from("attendance")
+      .select("userId");
+    expect(error).toBeNull();
+    expect(own?.length ?? 0).toBeGreaterThan(0);
+    expect(own?.every((r) => r.userId === member.userId)).toBe(true);
+
+    const { data: other } = await moderator.client
+      .from("attendance")
+      .select("userId")
+      .eq("userId", member.userId);
+    expect(other ?? []).toHaveLength(0);
+  });
+
+  it("resolves the three new permissions", async () => {
+    const a = admin();
+    for (const perm of [
+      "canEditAttendance",
+      "canExportStars",
+      "canTriggerSync",
+    ] as const) {
+      const { data: before } = await a.rpc("has_permission", {
+        uid: member.userId,
+        perm,
+      });
+      expect(before, `${perm} should start false`).toBe(false);
+    }
+
+    const roleId = await grantRole(member, "Attendance Officer", {
+      canEditAttendance: true,
+    });
+    try {
+      const { data: granted } = await a.rpc("has_permission", {
+        uid: member.userId,
+        perm: "canEditAttendance",
+      });
+      expect(granted).toBe(true);
+
+      // Granting one must not grant its neighbours — they are separate
+      // columns precisely because they have different audiences.
+      const { data: neighbour } = await a.rpc("has_permission", {
+        uid: member.userId,
+        perm: "canExportStars",
+      });
+      expect(neighbour).toBe(false);
+    } finally {
+      await deleteRole(roleId);
+    }
+  });
+});

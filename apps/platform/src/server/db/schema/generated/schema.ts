@@ -2,18 +2,19 @@ import {
   pgSchema,
   pgTable,
   uuid,
-  varchar,
   boolean,
+  varchar,
+  integer,
   text,
   pgEnum,
-  integer,
   timestamp,
+  smallint,
   date,
   doublePrecision,
   jsonb,
   customType,
-  uniqueIndex,
   index,
+  uniqueIndex,
   foreignKey,
   primaryKey,
   unique,
@@ -94,6 +95,62 @@ export const contentVisibilityInPlatform = platform.enum("contentVisibility", [
   "public",
   "restricted",
 ]);
+export const teamRoleInPlatform = platform.enum("teamRole", ["lead", "member"]);
+export const submissionStateInPlatform = platform.enum("submissionState", [
+  "open",
+  "closed",
+  "merged",
+]);
+export const checkInMethodInPlatform = platform.enum("checkInMethod", [
+  "code",
+  "discord",
+  "officer",
+]);
+export const membershipDirectionInPlatform = platform.enum(
+  "membershipDirection",
+  ["invite", "request"],
+);
+export const membershipRequestStatusInPlatform = platform.enum(
+  "membershipRequestStatus",
+  ["pending", "accepted", "declined", "withdrawn", "expired"],
+);
+
+export const airtableSyncStateInPlatform = platform.table.withRLS(
+  "airtableSyncState",
+  {
+    id: boolean().default(true).primaryKey(),
+    lastSyncedAt: timestamp({ withTimezone: true }),
+    lastStatus: text(),
+    lastError: text(),
+    rowsUpserted: integer().default(0).notNull(),
+    rowsRefused: integer().default(0).notNull(),
+    rowsArchived: integer().default(0).notNull(),
+  },
+  (table) => [
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
+      as: "restrictive",
+      for: "update",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+      withCheck: sql`false`,
+    }),
+    check("airtableSyncState_singleton", sql`id`),
+  ],
+);
 
 export const appsInPlatform = platform.table.withRLS(
   "apps",
@@ -138,6 +195,139 @@ export const appsInPlatform = platform.table.withRLS(
       to: ["anon", "authenticated"],
       using: sql`true`,
     }),
+  ],
+);
+
+export const attendanceInPlatform = platform.table.withRLS(
+  "attendance",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    meetingId: uuid()
+      .notNull()
+      .references(() => meetingsInPlatform.id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+    workshopId: uuid(),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    method: checkInMethodInPlatform().notNull(),
+    recordedBy: uuid(),
+    recordedAt: timestamp({ withTimezone: true })
+      .default(sql`now()`)
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.workshopId, table.meetingId],
+      foreignColumns: [workshopsInPlatform.id, workshopsInPlatform.meetingId],
+      name: "attendance_workshopId_meetingId_fkey",
+    })
+      .onUpdate("cascade")
+      .onDelete("set null"),
+    index("attendance_userId_idx").using(
+      "btree",
+      table.userId.asc().nullsLast(),
+    ),
+    unique("attendance_meetingId_userId_key").on(table.meetingId, table.userId),
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
+      as: "restrictive",
+      for: "update",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("own_select", {
+      for: "select",
+      to: ["authenticated"],
+      using: sql`(( SELECT auth.uid() AS uid) = "userId")`,
+    }),
+    check(
+      "attendance_recordedBy_only_for_officer",
+      sql`(("recordedBy" IS NULL) OR (method = 'officer'::platform."checkInMethod"))`,
+    ),
+  ],
+);
+
+export const competitionsInPlatform = platform.table.withRLS(
+  "competitions",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    slug: text().notNull(),
+    workshopId: uuid()
+      .notNull()
+      .references(() => workshopsInPlatform.id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+    judgingMeetingId: uuid().references(() => meetingsInPlatform.id, {
+      onDelete: "set null",
+      onUpdate: "cascade",
+    }),
+    judgingStartsAt: timestamp({ withTimezone: true }),
+    maxTeamSize: smallint(),
+    requirementCount: smallint(),
+    airtableRecordId: text(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    index("competitions_live_idx")
+      .using("btree", table.workshopId.asc().nullsLast())
+      .where(sql`("deletedAt" IS NULL)`),
+    unique("competitions_airtableRecordId_key").on(table.airtableRecordId),
+    unique("competitions_slug_key").on(table.slug),
+    unique("competitions_workshopId_key").on(table.workshopId),
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
+      as: "restrictive",
+      for: "update",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("public_select", {
+      for: "select",
+      to: ["anon", "authenticated"],
+      using: sql`true`,
+    }),
+    check(
+      "competitions_maxTeamSize_positive",
+      sql`(("maxTeamSize" IS NULL) OR ("maxTeamSize" > 0))`,
+    ),
+    check(
+      "competitions_requirementCount_nonneg",
+      sql`(("requirementCount" IS NULL) OR ("requirementCount" >= 0))`,
+    ),
   ],
 );
 
@@ -449,6 +639,7 @@ export const instanceInPlatform = platform.table.withRLS(
   {
     id: boolean().default(true).primaryKey(),
     environment: deployEnvInPlatform().default("production").notNull(),
+    defaultMaxTeamSize: smallint().default(4).notNull(),
   },
   (table) => [
     pgPolicy("no_client_delete", {
@@ -478,6 +669,10 @@ export const instanceInPlatform = platform.table.withRLS(
       to: ["anon", "authenticated"],
       using: sql`true`,
     }),
+    check(
+      "instance_defaultMaxTeamSize_positive",
+      sql`("defaultMaxTeamSize" > 0)`,
+    ),
     check("instance_singleton", sql`id`),
   ],
 );
@@ -520,6 +715,56 @@ export const leaderboardProfilesInPlatform = platform.table.withRLS(
       using: sql`false`,
       withCheck: sql`false`,
     }),
+  ],
+);
+
+export const meetingsInPlatform = platform.table.withRLS(
+  "meetings",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    slug: text().notNull(),
+    name: text().notNull(),
+    location: text(),
+    startsAt: timestamp({ withTimezone: true }).notNull(),
+    endsAt: timestamp({ withTimezone: true }).notNull(),
+    checkInClosesAt: timestamp({ withTimezone: true }).notNull(),
+    airtableRecordId: text(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    index("meetings_live_idx")
+      .using("btree", table.startsAt.asc().nullsLast())
+      .where(sql`("deletedAt" IS NULL)`),
+    unique("meetings_airtableRecordId_key").on(table.airtableRecordId),
+    unique("meetings_slug_key").on(table.slug),
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
+      as: "restrictive",
+      for: "update",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("public_select", {
+      for: "select",
+      to: ["anon", "authenticated"],
+      using: sql`true`,
+    }),
+    check("meetings_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),
   ],
 );
 
@@ -773,6 +1018,50 @@ export const profileLinksInPlatform = platform.table.withRLS(
       to: ["authenticated"],
       using: sql`(( SELECT auth.uid() AS uid) = "userId")`,
       withCheck: sql`(( SELECT auth.uid() AS uid) = "userId")`,
+    }),
+  ],
+);
+
+export const projectsInPlatform = platform.table.withRLS(
+  "projects",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    slug: text().notNull(),
+    displayName: text().notNull(),
+    appId: uuid().references(() => appsInPlatform.id, {
+      onDelete: "set null",
+      onUpdate: "cascade",
+    }),
+    sortOrder: doublePrecision().default(0).notNull(),
+  },
+  (table) => [
+    unique("projects_slug_key").on(table.slug),
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
+      as: "restrictive",
+      for: "update",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("public_select", {
+      for: "select",
+      to: ["anon", "authenticated"],
+      using: sql`true`,
     }),
   ],
 );
@@ -1042,6 +1331,9 @@ export const rolesInPlatform = platform.table.withRLS(
     discordRoleId: text(),
     discordSyncedName: text(),
     discordSyncedColor: integer(),
+    canEditAttendance: boolean(),
+    canExportStars: boolean(),
+    canTriggerSync: boolean(),
   },
   (table) => [
     unique("roles_discordRoleId_key").on(table.discordRoleId),
@@ -1084,6 +1376,290 @@ export const rolesInPlatform = platform.table.withRLS(
     check(
       "roles_custom_requires_rank",
       sql`(("roleType" = 'custom'::platform."roleType") = (rank IS NOT NULL))`,
+    ),
+  ],
+);
+
+export const teamAwardsInPlatform = platform.table.withRLS(
+  "teamAwards",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    teamId: uuid().notNull(),
+    competitionId: uuid().notNull(),
+    category: text().notNull(),
+    citation: text(),
+    mergedPrUrl: text(),
+    awardedBy: uuid().notNull(),
+    awardedAt: timestamp({ withTimezone: true })
+      .default(sql`now()`)
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.teamId, table.competitionId],
+      foreignColumns: [teamsInPlatform.id, teamsInPlatform.competitionId],
+      name: "teamAwards_teamId_competitionId_fkey",
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    uniqueIndex("teamAwards_one_winner_per_competition")
+      .using("btree", table.competitionId.asc().nullsLast())
+      .where(sql`(category = 'winner'::text)`),
+
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
+      as: "restrictive",
+      for: "update",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("public_select", {
+      for: "select",
+      to: ["anon", "authenticated"],
+      using: sql`true`,
+    }),
+  ],
+);
+
+export const teamMembersInPlatform = platform.table.withRLS(
+  "teamMembers",
+  {
+    teamId: uuid().notNull(),
+    competitionId: uuid().notNull(),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    role: teamRoleInPlatform().default("member").notNull(),
+    joinedAt: timestamp({ withTimezone: true })
+      .default(sql`now()`)
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.teamId, table.userId],
+      name: "teamMembers_pkey",
+    }),
+    foreignKey({
+      columns: [table.teamId, table.competitionId],
+      foreignColumns: [teamsInPlatform.id, teamsInPlatform.competitionId],
+      name: "teamMembers_teamId_competitionId_fkey",
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    uniqueIndex("teamMembers_one_lead_per_team")
+      .using("btree", table.teamId.asc().nullsLast())
+      .where(sql`(role = 'lead'::platform."teamRole")`),
+    unique("teamMembers_teamId_userId_role_key").on(
+      table.teamId,
+      table.userId,
+      table.role,
+    ),
+    unique("teamMembers_userId_competitionId_key").on(
+      table.userId,
+      table.competitionId,
+    ),
+    pgPolicy("authenticated_select", {
+      for: "select",
+      to: ["authenticated"],
+      using: sql`true`,
+    }),
+
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
+      as: "restrictive",
+      for: "update",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+      withCheck: sql`false`,
+    }),
+  ],
+);
+
+export const teamMembershipRequestsInPlatform = platform.table.withRLS(
+  "teamMembershipRequests",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    teamId: uuid().notNull(),
+    competitionId: uuid().notNull(),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    direction: membershipDirectionInPlatform().notNull(),
+    createdBy: uuid().notNull(),
+    message: text(),
+    status: membershipRequestStatusInPlatform().default("pending").notNull(),
+    createdAt: timestamp({ withTimezone: true })
+      .default(sql`now()`)
+      .notNull(),
+    notifiedAt: timestamp({ withTimezone: true }),
+    respondedAt: timestamp({ withTimezone: true }),
+    respondedBy: uuid(),
+    expiresAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.teamId, table.competitionId],
+      foreignColumns: [teamsInPlatform.id, teamsInPlatform.competitionId],
+      name: "teamMembershipRequests_teamId_competitionId_fkey",
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    uniqueIndex("teamMembershipRequests_one_pending_per_team_user")
+      .using(
+        "btree",
+        table.teamId.asc().nullsLast(),
+        table.userId.asc().nullsLast(),
+      )
+      .where(sql`(status = 'pending'::platform."membershipRequestStatus")`),
+    index("teamMembershipRequests_unnotified")
+      .using("btree", table.createdAt.asc().nullsLast())
+      .where(
+        sql`((status = 'pending'::platform."membershipRequestStatus") AND ("notifiedAt" IS NULL))`,
+      ),
+
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
+      as: "restrictive",
+      for: "update",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("own_or_team_select", {
+      for: "select",
+      to: ["authenticated"],
+      using: sql`((( SELECT auth.uid() AS uid) = "userId") OR (EXISTS ( SELECT 1
+   FROM platform."teamMembers" tm
+  WHERE ((tm."teamId" = "teamMembershipRequests"."teamId") AND (tm."userId" = ( SELECT auth.uid() AS uid))))))`,
+    }),
+    check(
+      "teamMembershipRequests_pending_unresponded",
+      sql`((status <> 'pending'::platform."membershipRequestStatus") OR ("respondedAt" IS NULL))`,
+    ),
+    check(
+      "teamMembershipRequests_responded_together",
+      sql`(("respondedAt" IS NULL) = ("respondedBy" IS NULL))`,
+    ),
+  ],
+);
+
+export const teamsInPlatform = platform.table.withRLS(
+  "teams",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    competitionId: uuid()
+      .notNull()
+      .references(() => competitionsInPlatform.id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+    slug: text().notNull(),
+    name: text().notNull(),
+    joinCode: text().notNull(),
+    createdBy: uuid().notNull(),
+    submissionUrl: text(),
+    submittedAt: timestamp({ withTimezone: true }),
+    submissionState: submissionStateInPlatform(),
+    competedAt: timestamp({ withTimezone: true }),
+    lockedManuallyAt: timestamp({ withTimezone: true }),
+    requirementsMet: smallint(),
+    acceptingRequests: boolean().default(true).notNull(),
+    clonedFromTeamId: uuid(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.clonedFromTeamId],
+      foreignColumns: [table.id],
+      name: "teams_clonedFromTeamId_fkey",
+    })
+      .onUpdate("cascade")
+      .onDelete("set null"),
+    unique("teams_competitionId_slug_key").on(table.competitionId, table.slug),
+    unique("teams_id_competitionId_key").on(table.id, table.competitionId),
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
+      as: "restrictive",
+      for: "update",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("public_select", {
+      for: "select",
+      to: ["anon", "authenticated"],
+      using: sql`true`,
+    }),
+    check(
+      "teams_competedAt_requires_submission",
+      sql`(("competedAt" IS NULL) OR ("submissionUrl" IS NOT NULL))`,
+    ),
+    check(
+      "teams_requirementsMet_nonneg",
+      sql`(("requirementsMet" IS NULL) OR ("requirementsMet" >= 0))`,
+    ),
+    check(
+      "teams_submission_url_state_together",
+      sql`(("submissionUrl" IS NULL) = ("submissionState" IS NULL))`,
+    ),
+    check(
+      "teams_submission_url_submittedAt_together",
+      sql`(("submissionUrl" IS NULL) = ("submittedAt" IS NULL))`,
     ),
   ],
 );
@@ -1181,6 +1757,80 @@ export const userSuspensionsInPlatform = platform.table.withRLS(
     }),
   ],
 );
+
+export const workshopsInPlatform = platform.table.withRLS(
+  "workshops",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    meetingId: uuid()
+      .notNull()
+      .references(() => meetingsInPlatform.id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+    projectId: uuid()
+      .notNull()
+      .references(() => projectsInPlatform.id, {
+        onDelete: "restrict",
+        onUpdate: "cascade",
+      }),
+    airtableRecordId: text(),
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    index("workshops_live_idx")
+      .using("btree", table.meetingId.asc().nullsLast())
+      .where(sql`("deletedAt" IS NULL)`),
+    unique("workshops_airtableRecordId_key").on(table.airtableRecordId),
+    unique("workshops_id_meetingId_key").on(table.id, table.meetingId),
+    unique("workshops_meetingId_projectId_key").on(
+      table.meetingId,
+      table.projectId,
+    ),
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
+      as: "restrictive",
+      for: "update",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("public_select", {
+      for: "select",
+      to: ["anon", "authenticated"],
+      using: sql`true`,
+    }),
+  ],
+);
+export const memberStarsInPlatform = platform
+  .view("memberStars", {
+    userId: uuid(),
+    workshopId: uuid(),
+    meetingId: uuid(),
+    projectId: uuid(),
+    workshopStar: boolean(),
+    competitionStar: boolean(),
+    won: boolean(),
+  })
+  .with({ securityInvoker: true })
+  .as(
+    sql`WITH participation AS ( SELECT a."userId", a."workshopId", true AS attended, false AS competed, false AS won FROM platform.attendance a WHERE a."workshopId" IS NOT NULL UNION ALL SELECT tm."userId", c."workshopId", false, true, false FROM platform."teamMembers" tm JOIN platform.teams t ON t.id = tm."teamId" JOIN platform.competitions c ON c.id = t."competitionId" WHERE t."competedAt" IS NOT NULL UNION ALL SELECT tm."userId", c."workshopId", false, false, true FROM platform."teamMembers" tm JOIN platform.teams t ON t.id = tm."teamId" JOIN platform.competitions c ON c.id = t."competitionId" JOIN platform."teamAwards" aw ON aw."teamId" = t.id AND aw.category = 'winner'::text ) SELECT p."userId", p."workshopId", w."meetingId", w."projectId", bool_or(p.attended OR p.competed) AS "workshopStar", bool_or(p.competed) AS "competitionStar", bool_or(p.won) AS won FROM participation p JOIN platform.workshops w ON w.id = p."workshopId" GROUP BY p."userId", p."workshopId", w."meetingId", w."projectId"`,
+  );
+
 export const profileWithVerificationInPlatform = platform
   .view("profileWithVerification", {
     userId: uuid(),
@@ -1206,11 +1856,14 @@ export const resolvedUserPermissionsInPlatform = platform
     canManageFeedback: boolean(),
     canCreateCredentials: boolean(),
     canManageVerification: boolean(),
+    canEditAttendance: boolean(),
+    canExportStars: boolean(),
+    canTriggerSync: boolean(),
     isLeader: boolean(),
     minRank: doublePrecision(),
   })
   .as(
-    sql`WITH root_holders AS ( SELECT ur."userId" FROM platform."userRoles" ur WHERE ur."roleId" = '00000000-0000-0000-0000-000000000002'::uuid ), user_custom_roles AS ( SELECT ur."userId", r.rank, r."isLeadership", r."canModerate", r."canManageRoles", r."canManageSuspensions", r."canViewAuditLog", r."canManageFeedback", r."canCreateCredentials", r."canManageVerification" FROM platform."userRoles" ur JOIN platform.roles r ON r.id = ur."roleId" AND r."roleType" = 'custom'::platform."roleType" ), first_non_null AS ( SELECT ucr."userId", min(ucr.rank) AS "minRank", bool_or(ucr."isLeadership") AS "isLeader", (array_agg(ucr."canModerate" ORDER BY ucr.rank) FILTER (WHERE ucr."canModerate" IS NOT NULL))[1] AS "canModerate", (array_agg(ucr."canManageRoles" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageRoles" IS NOT NULL))[1] AS "canManageRoles", (array_agg(ucr."canManageSuspensions" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageSuspensions" IS NOT NULL))[1] AS "canManageSuspensions", (array_agg(ucr."canViewAuditLog" ORDER BY ucr.rank) FILTER (WHERE ucr."canViewAuditLog" IS NOT NULL))[1] AS "canViewAuditLog", (array_agg(ucr."canManageFeedback" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageFeedback" IS NOT NULL))[1] AS "canManageFeedback", (array_agg(ucr."canCreateCredentials" ORDER BY ucr.rank) FILTER (WHERE ucr."canCreateCredentials" IS NOT NULL))[1] AS "canCreateCredentials", (array_agg(ucr."canManageVerification" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageVerification" IS NOT NULL))[1] AS "canManageVerification" FROM user_custom_roles ucr GROUP BY ucr."userId" ), all_users AS ( SELECT DISTINCT "userRoles"."userId" FROM platform."userRoles" ) SELECT au."userId", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canModerate", false) END AS "canModerate", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageRoles", false) END AS "canManageRoles", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageSuspensions", false) END AS "canManageSuspensions", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canViewAuditLog", false) END AS "canViewAuditLog", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageFeedback", false) END AS "canManageFeedback", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canCreateCredentials", false) END AS "canCreateCredentials", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageVerification", false) END AS "canManageVerification", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."isLeader", false) END AS "isLeader", CASE WHEN rh."userId" IS NOT NULL THEN '-Infinity'::double precision ELSE COALESCE(fnn."minRank", 'Infinity'::double precision) END AS "minRank" FROM all_users au LEFT JOIN root_holders rh ON rh."userId" = au."userId" LEFT JOIN first_non_null fnn ON fnn."userId" = au."userId"`,
+    sql`WITH root_holders AS ( SELECT ur."userId" FROM platform."userRoles" ur WHERE ur."roleId" = '00000000-0000-0000-0000-000000000002'::uuid ), user_custom_roles AS ( SELECT ur."userId", r.rank, r."isLeadership", r."canModerate", r."canManageRoles", r."canManageSuspensions", r."canViewAuditLog", r."canManageFeedback", r."canCreateCredentials", r."canManageVerification", r."canEditAttendance", r."canExportStars", r."canTriggerSync" FROM platform."userRoles" ur JOIN platform.roles r ON r.id = ur."roleId" AND r."roleType" = 'custom'::platform."roleType" ), first_non_null AS ( SELECT ucr."userId", min(ucr.rank) AS "minRank", bool_or(ucr."isLeadership") AS "isLeader", (array_agg(ucr."canModerate" ORDER BY ucr.rank) FILTER (WHERE ucr."canModerate" IS NOT NULL))[1] AS "canModerate", (array_agg(ucr."canManageRoles" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageRoles" IS NOT NULL))[1] AS "canManageRoles", (array_agg(ucr."canManageSuspensions" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageSuspensions" IS NOT NULL))[1] AS "canManageSuspensions", (array_agg(ucr."canViewAuditLog" ORDER BY ucr.rank) FILTER (WHERE ucr."canViewAuditLog" IS NOT NULL))[1] AS "canViewAuditLog", (array_agg(ucr."canManageFeedback" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageFeedback" IS NOT NULL))[1] AS "canManageFeedback", (array_agg(ucr."canCreateCredentials" ORDER BY ucr.rank) FILTER (WHERE ucr."canCreateCredentials" IS NOT NULL))[1] AS "canCreateCredentials", (array_agg(ucr."canManageVerification" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageVerification" IS NOT NULL))[1] AS "canManageVerification", (array_agg(ucr."canEditAttendance" ORDER BY ucr.rank) FILTER (WHERE ucr."canEditAttendance" IS NOT NULL))[1] AS "canEditAttendance", (array_agg(ucr."canExportStars" ORDER BY ucr.rank) FILTER (WHERE ucr."canExportStars" IS NOT NULL))[1] AS "canExportStars", (array_agg(ucr."canTriggerSync" ORDER BY ucr.rank) FILTER (WHERE ucr."canTriggerSync" IS NOT NULL))[1] AS "canTriggerSync" FROM user_custom_roles ucr GROUP BY ucr."userId" ), all_users AS ( SELECT DISTINCT "userRoles"."userId" FROM platform."userRoles" ) SELECT au."userId", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canModerate", false) END AS "canModerate", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageRoles", false) END AS "canManageRoles", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageSuspensions", false) END AS "canManageSuspensions", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canViewAuditLog", false) END AS "canViewAuditLog", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageFeedback", false) END AS "canManageFeedback", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canCreateCredentials", false) END AS "canCreateCredentials", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageVerification", false) END AS "canManageVerification", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canEditAttendance", false) END AS "canEditAttendance", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canExportStars", false) END AS "canExportStars", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canTriggerSync", false) END AS "canTriggerSync", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."isLeader", false) END AS "isLeader", CASE WHEN rh."userId" IS NOT NULL THEN '-Infinity'::double precision ELSE COALESCE(fnn."minRank", 'Infinity'::double precision) END AS "minRank" FROM all_users au LEFT JOIN root_holders rh ON rh."userId" = au."userId" LEFT JOIN first_non_null fnn ON fnn."userId" = au."userId"`,
   );
 
 // Schema-suffix aliases — appended by scripts/post-pull.ts
@@ -1227,7 +1880,15 @@ export { feedbackTypeInPlatform as feedbackType };
 export { deployEnvInPlatform as deployEnv };
 export { reportStatusInPlatform as reportStatus };
 export { contentVisibilityInPlatform as contentVisibility };
+export { teamRoleInPlatform as teamRole };
+export { submissionStateInPlatform as submissionState };
+export { checkInMethodInPlatform as checkInMethod };
+export { membershipDirectionInPlatform as membershipDirection };
+export { membershipRequestStatusInPlatform as membershipRequestStatus };
+export { airtableSyncStateInPlatform as airtableSyncState };
 export { appsInPlatform as apps };
+export { attendanceInPlatform as attendance };
+export { competitionsInPlatform as competitions };
 export { contentTypesInPlatform as contentTypes };
 export { credentialRolesInPlatform as credentialRoles };
 export { credentialsInPlatform as credentials };
@@ -1236,17 +1897,25 @@ export { feedbackInPlatform as feedback };
 export { feedbackTopicsInPlatform as feedbackTopics };
 export { instanceInPlatform as instance };
 export { leaderboardProfilesInPlatform as leaderboardProfiles };
+export { meetingsInPlatform as meetings };
 export { oauthRegistrationsInPlatform as oauthRegistrations };
 export { oauthTestAccountsInPlatform as oauthTestAccounts };
 export { pointsInPlatform as points };
 export { profileInPlatform as profile };
 export { profileLinksInPlatform as profileLinks };
+export { projectsInPlatform as projects };
 export { reportCorroborationsInPlatform as reportCorroborations };
 export { reportReasonsInPlatform as reportReasons };
 export { reportResolutionsInPlatform as reportResolutions };
 export { reportsInPlatform as reports };
 export { rolesInPlatform as roles };
+export { teamAwardsInPlatform as teamAwards };
+export { teamMembersInPlatform as teamMembers };
+export { teamMembershipRequestsInPlatform as teamMembershipRequests };
+export { teamsInPlatform as teams };
 export { userRolesInPlatform as userRoles };
 export { userSuspensionsInPlatform as userSuspensions };
+export { workshopsInPlatform as workshops };
+export { memberStarsInPlatform as memberStars };
 export { profileWithVerificationInPlatform as profileWithVerification };
 export { resolvedUserPermissionsInPlatform as resolvedUserPermissions };
