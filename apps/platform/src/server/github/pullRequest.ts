@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import { competitions, teams } from "~/server/db/schema";
 import { isEntryBase, isTeamHead } from "./naming";
@@ -74,12 +74,27 @@ export async function applyPullRequestEvent(
   // is decide anything.
   const frozen = row.competedAt !== null;
 
+  // The entry triple moves together or not at all.
+  //
+  // `teams_submission_url_state_together` and
+  // `teams_submission_url_submittedAt_together` require all three of
+  // `submissionUrl`, `submissionState` and `submittedAt` to be null or all
+  // three set. Stamping `submittedAt` only on `opened` looks right and is not:
+  // the first event this handler sees need not be `opened` at all. A webhook
+  // that was down when the PR was created, a hook added to an existing repo,
+  // or a redelivery replayed out of order all deliver `closed` or `merged`
+  // first — and that write would set two of the three and be rejected by the
+  // constraint, so the entry would never register.
+  //
+  // `coalesce` rather than a conditional: it fills the gap on a
+  // first-seen close and preserves the original time on a reopen, which is
+  // what "when this team first entered" should mean.
   await db
     .update(teams)
     .set({
       submissionState: state,
       submissionUrl: event.htmlUrl,
-      ...(state === "open" && !frozen ? { submittedAt: new Date() } : {}),
+      submittedAt: sql`coalesce(${teams.submittedAt}, now())`,
     })
     .where(eq(teams.id, row.id));
 

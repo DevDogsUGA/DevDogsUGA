@@ -40,16 +40,56 @@ export class TeamActionError extends Error {
   }
 }
 
+interface PostgresErrorShape {
+  code?: unknown;
+  constraint_name?: unknown;
+}
+
+/**
+ * Finds the driver error inside whatever Drizzle threw.
+ *
+ * **Drizzle wraps.** Every failed statement arrives as a `DrizzleQueryError`
+ * whose own `code` is `undefined`, with the `PostgresError` — the one carrying
+ * `23505` and `constraint_name` — on `.cause`. Reading the fields off the
+ * outer error therefore never matches, silently: the catch block falls
+ * through, the caller re-throws, and a member who is already on a team gets a
+ * 500 instead of "you are already on a team".
+ *
+ * Nothing about that is visible in a type, and it only shows up against a real
+ * database, which is why it survived until the ballot write path was exercised
+ * against one.
+ *
+ * The chain is walked rather than unwrapped once, because a nested transaction
+ * can add another layer and a fixed `.cause` would break again.
+ */
+function driverError(error: unknown): PostgresErrorShape | null {
+  let current: unknown = error;
+
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (typeof current !== "object" || current === null) return null;
+    const candidate = current as PostgresErrorShape & { cause?: unknown };
+    if (typeof candidate.code === "string") return candidate;
+    current = candidate.cause;
+  }
+
+  return null;
+}
+
+/** The SQLSTATE of a failed statement, or null if this is not a driver error. */
+export function sqlState(error: unknown): string | null {
+  const driver = driverError(error);
+  return typeof driver?.code === "string" ? driver.code : null;
+}
+
 /**
  * Whether a driver error is a unique violation of a specific constraint.
  *
  * Matching on the constraint name rather than on `23505` alone is the point:
  * one insert can violate more than one unique index, and the caller has to
  * know which — "you are already on a team" and "that slug is taken" are
- * different sentences. postgres-js surfaces both fields on the error.
+ * different sentences.
  */
 export function isUniqueViolation(error: unknown, constraint: string): boolean {
-  if (typeof error !== "object" || error === null) return false;
-  const e = error as { code?: unknown; constraint_name?: unknown };
-  return e.code === "23505" && e.constraint_name === constraint;
+  const driver = driverError(error);
+  return driver?.code === "23505" && driver.constraint_name === constraint;
 }
