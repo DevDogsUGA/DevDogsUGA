@@ -13,7 +13,7 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
   },
   // Backing store for the incremental cache. The binding name is fixed by the
   // OpenNext adapter. Without it the adapter falls back to its "dummy" cache,
@@ -30,8 +30,8 @@
   "r2_buckets": [
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "devdogs-platform-cache"
-    }
+      "bucket_name": "devdogs-platform-cache",
+    },
   ],
   // Non-secret runtime vars. DEPLOY_ENV drives env.ts switchEnvironment()
   // (replaces the old Vercel VERCEL_ENV); override per-environment as needed.
@@ -44,11 +44,11 @@
   // value exists. That is why cf:build and cf:deploy set DEPLOY_ENV for the
   // build too — the two must agree.
   "vars": {
-    "DEPLOY_ENV": "production"
+    "DEPLOY_ENV": "production",
   },
   // Cron triggers replace the old vercel.json crons. cloudflare/scheduled.ts
   // routes each cron to its existing CRON_SECRET-guarded /api route.
   "triggers": {
-    "crons": ["0 0 * * *", "*/10 * * * *", "*/5 * * * *"]
-  }
+    "crons": ["0 0 * * *", "*/15 * * * *", "*/10 * * * *", "*/5 * * * *"],
+  },
 }

@@ -125,6 +125,75 @@ export function buildPush<TRow>(
   return { records, unchanged, omittedBlanks };
 }
 
+/**
+ * The same projection, addressed by Airtable record id instead of match key.
+ *
+ * Which one to use is not a style choice — it follows from who authors the
+ * table:
+ *
+ *   * The platform authors Members, Projects and Teams, so a row with no
+ *     matching Airtable record SHOULD create one. That is `buildPush` +
+ *     `upsertRecords`.
+ *
+ *   * Airtable authors Meetings, Workshops and Competitions. The platform only
+ *     writes derived values back onto rows an officer already created. Sending
+ *     those through an upsert keyed on `⚙️ Platform ID` would CREATE a second
+ *     Airtable record for every row whose Platform ID is still blank — which is
+ *     every row an officer just added, i.e. exactly the rows a sync touches
+ *     first. That is this function.
+ *
+ * Same change detection and same never-blank rule, because they are properties
+ * of the engine rather than of either call site.
+ */
+export interface UpdatePlan {
+  records: { id: string; fields: Record<string, AirtableValue> }[];
+  unchanged: number;
+  omittedBlanks: number;
+}
+
+export function buildUpdate<TRow>(
+  spec: TableSpec,
+  entries: { recordId: string; row: TRow }[],
+  existing: AirtableRecord[],
+): UpdatePlan {
+  const fields = pushFields(spec);
+  const existingById = new Map(existing.map((r) => [r.id, r]));
+
+  const records: { id: string; fields: Record<string, AirtableValue> }[] = [];
+  let unchanged = 0;
+  let omittedBlanks = 0;
+
+  for (const { recordId, row } of entries) {
+    const current = existingById.get(recordId);
+    // Unlike the upsert path there is nothing to create here: an id we have
+    // never seen listed is a record deleted since the fetch, and PATCHing it
+    // would fail the whole batch of ten.
+    if (!current) continue;
+
+    const payload: Record<string, AirtableValue> = {};
+    let changed = false;
+
+    for (const fieldSpec of fields) {
+      const value = project(fieldSpec, row);
+      if (isBlank(value)) {
+        if (!isBlank(current.fields[fieldSpec.id])) omittedBlanks += 1;
+        continue;
+      }
+      payload[fieldSpec.id] = value;
+      if (!sameValue(current.fields[fieldSpec.id], value)) changed = true;
+    }
+
+    if (!changed) {
+      unchanged += 1;
+      continue;
+    }
+
+    records.push({ id: recordId, fields: payload });
+  }
+
+  return { records, unchanged, omittedBlanks };
+}
+
 function project<TRow>(spec: FieldSpec, row: TRow): AirtableValue {
   const fn = spec.project as unknown as
     | ((row: TRow) => AirtableValue)

@@ -3,6 +3,8 @@ export {
   table,
   pushFields,
   pullFields,
+  platformOwnedFields,
+  statusField,
   matchKeyField,
   isMergeEligible,
   MERGE_ELIGIBLE_TYPES,
@@ -15,6 +17,7 @@ export {
   type MergeEligibleType,
   type PullField,
   type PushField,
+  type StatusField,
   type TableSpec,
 } from "./field.js";
 
@@ -44,7 +47,13 @@ export {
   type WorkshopRow,
 } from "./registry.js";
 
-export { buildPush, mergeOn, type PushPlan } from "./push.js";
+export {
+  buildPush,
+  buildUpdate,
+  mergeOn,
+  type PushPlan,
+  type UpdatePlan,
+} from "./push.js";
 export { applyPull, type PullResult } from "./pull.js";
 
 export {

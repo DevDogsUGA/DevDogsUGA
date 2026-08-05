@@ -24,6 +24,13 @@ export interface CronEnv {
  */
 const CRON_ROUTES: Record<string, string[]> = {
   "0 0 * * *": ["/api/github/sync-leaderboard"],
+  // Airtable polls rather than subscribes. Webhooks exist but expire on a
+  // 7-day refresh cycle and deliver cursor-based payloads that have to be
+  // replayed in order -- real complexity for a club calendar that changes a
+  // few times a week. At ~5 requests a pass this is ~13% of the monthly
+  // allowance, and the manual trigger covers the case where 15 minutes is too
+  // long to wait.
+  "*/15 * * * *": ["/api/airtable/sync"],
   "*/10 * * * *": ["/api/cron/sync-discord-roles"],
   "*/5 * * * *": [
     // Freezes `teams."competedAt"` once judging begins. Five minutes rather

@@ -179,7 +179,7 @@ export const meetings = table("Meetings", todoTable("meetings"), {
     .push((m: MeetingRow) => m.attendanceCount),
   syncStatus: field
     .longText(todo("meetings_sync_status"), "⚙️ Sync status")
-    .push(() => null),
+    .status(),
 });
 
 export const workshops = table("Workshops", todoTable("workshops"), {
@@ -196,6 +196,9 @@ export const workshops = table("Workshops", todoTable("workshops"), {
   attendanceCount: field
     .number(todo("workshops_attendance"), "⚙️ Attendance")
     .push((w: WorkshopRow) => w.attendanceCount),
+  syncStatus: field
+    .longText(todo("workshops_sync_status"), "⚙️ Sync status")
+    .status(),
 });
 
 export const competitions = table("Competitions", todoTable("competitions"), {
@@ -221,6 +224,9 @@ export const competitions = table("Competitions", todoTable("competitions"), {
   teamCount: field
     .number(todo("competitions_team_count"), "⚙️ Teams")
     .push((c: CompetitionRow) => c.teamCount),
+  syncStatus: field
+    .longText(todo("competitions_sync_status"), "⚙️ Sync status")
+    .status(),
 });
 
 export const teamsTable = table("Teams", todoTable("teams"), {

@@ -50,7 +50,7 @@ export type AirtableValue =
   | undefined
   | string[];
 
-export type Direction = "push" | "pull" | "ignore";
+export type Direction = "push" | "pull" | "ignore" | "status";
 
 export interface FieldSpec<TType extends FieldType = FieldType> {
   /** `fldXXXXXXXXXXXXXX`. The wire format — never the human-readable name. */
@@ -88,6 +88,26 @@ export interface IgnoredField<
   TType extends FieldType,
 > extends FieldSpec<TType> {
   readonly direction: "ignore";
+}
+
+/**
+ * A platform-owned message channel, written outside the push engine.
+ *
+ * Exists for exactly one field — `Sync status` — and it is worth its own
+ * direction because it breaks the engine's never-blank rule on purpose.
+ *
+ * Every pushed field is a projection of Postgres state, and for those, null
+ * means "we have not learned this yet" and must never be written as empty. A
+ * refusal message is not a projection: when the officer fixes the row, the
+ * message has to be CLEARED, and a stale refusal left sitting in the grid
+ * reads as a live problem forever.
+ *
+ * So it stays declared here — the verifier still requires the field to exist
+ * and still lists it for editing lockdown, and it is still single-writer — but
+ * the sync writes it directly rather than through `buildPush`.
+ */
+export interface StatusField<TType extends FieldType> extends FieldSpec<TType> {
+  readonly direction: "status";
 }
 
 /**
@@ -163,6 +183,17 @@ export class UndirectedField<TType extends FieldType> {
       direction: "ignore",
     };
   }
+
+  /** See {@link StatusField}. Platform-owned, written outside the engine. */
+  status(): StatusField<TType> {
+    return {
+      id: this.id,
+      type: this.type,
+      name: this.name,
+      isMatchKey: this.isMatchKey,
+      direction: "status",
+    };
+  }
 }
 
 function make<TType extends FieldType>(type: TType) {
@@ -209,6 +240,26 @@ export function pushFields(spec: TableSpec): FieldSpec[] {
 
 export function pullFields(spec: TableSpec): FieldSpec[] {
   return Object.values(spec.fields).filter((f) => f.direction === "pull");
+}
+
+/**
+ * Every field the platform owns — pushed or status.
+ *
+ * This, not `pushFields`, is what the field-lockdown checklist reads: an
+ * officer editing `Sync status` by hand is the same class of problem as
+ * editing an attendance count, and both are prevented the same way.
+ */
+export function platformOwnedFields(spec: TableSpec): FieldSpec[] {
+  return Object.values(spec.fields).filter(
+    (f) => f.direction === "push" || f.direction === "status",
+  );
+}
+
+/** The `Sync status` field for a table, when it declares one. */
+export function statusField(spec: TableSpec): FieldSpec | null {
+  return (
+    Object.values(spec.fields).find((f) => f.direction === "status") ?? null
+  );
 }
 
 /**

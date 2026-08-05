@@ -2,6 +2,7 @@ import type { AirtableClient, AirtableRecord } from "./client.js";
 import {
   isMergeEligible,
   matchKeyField,
+  platformOwnedFields,
   pushFields,
   type FieldSpec,
   type TableSpec,
@@ -27,7 +28,12 @@ export interface Finding {
 
 export interface VerifyResult {
   findings: Finding[];
-  /** Every `.push()` field, as a checklist for the one thing nothing can verify. */
+  /**
+   * Every platform-owned field, as a checklist for the one thing nothing can
+   * verify. `.status()` fields are on it too — an officer typing over a
+   * refusal message is the same class of problem as one typing over an
+   * attendance count, and both are prevented the same way.
+   */
   pushChecklist: { table: string; field: string; id: string }[];
   ok: boolean;
 }
@@ -80,14 +86,12 @@ export async function verifyBase(
   // verified — so building it inside the checks would leave it empty exactly
   // when somebody is about to walk the UI with it.
   for (const spec of specs) {
-    for (const fieldSpec of Object.values(spec.fields)) {
-      if (fieldSpec.direction === "push") {
-        pushChecklist.push({
-          table: spec.name,
-          field: fieldSpec.name,
-          id: fieldSpec.id,
-        });
-      }
+    for (const fieldSpec of platformOwnedFields(spec)) {
+      pushChecklist.push({
+        table: spec.name,
+        field: fieldSpec.name,
+        id: fieldSpec.id,
+      });
     }
   }
 
