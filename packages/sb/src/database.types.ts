@@ -221,6 +221,45 @@ export type Database = {
           },
         ]
       }
+      checkInCodes: {
+        Row: {
+          code: string
+          createdAt: string
+          expiresAt: string | null
+          meetingId: string
+          workshopId: string | null
+        }
+        Insert: {
+          code: string
+          createdAt?: string
+          expiresAt?: string | null
+          meetingId: string
+          workshopId?: string | null
+        }
+        Update: {
+          code?: string
+          createdAt?: string
+          expiresAt?: string | null
+          meetingId?: string
+          workshopId?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkInCodes_meetingId_fkey"
+            columns: ["meetingId"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkInCodes_workshopId_meetingId_fkey"
+            columns: ["workshopId", "meetingId"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id", "meetingId"]
+          },
+        ]
+      }
       competitions: {
         Row: {
           airtableRecordId: string | null
@@ -1254,7 +1293,7 @@ export type Database = {
       teamAwards: {
         Row: {
           awardedAt: string
-          awardedBy: string
+          awardedBy: string | null
           category: string
           citation: string | null
           competitionId: string
@@ -1264,7 +1303,7 @@ export type Database = {
         }
         Insert: {
           awardedAt?: string
-          awardedBy: string
+          awardedBy?: string | null
           category: string
           citation?: string | null
           competitionId: string
@@ -1274,7 +1313,7 @@ export type Database = {
         }
         Update: {
           awardedAt?: string
-          awardedBy?: string
+          awardedBy?: string | null
           category?: string
           citation?: string | null
           competitionId?: string

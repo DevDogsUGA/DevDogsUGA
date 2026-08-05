@@ -13,22 +13,42 @@ export interface CronEnv {
   BASE_URL: string;
 }
 
-const CRON_ROUTES: Record<string, string> = {
-  "0 0 * * *": "/api/github/sync-leaderboard",
-  "*/10 * * * *": "/api/cron/sync-discord-roles",
-  // Freezes `teams."competedAt"` once judging begins. Five minutes rather
-  // than ten because the window between judging starting and this running is
-  // the window in which closing a PR costs a team its star.
-  "*/5 * * * *": "/api/cron/judging-start",
+/**
+ * Cron expression to the routes it fires.
+ *
+ * A list per expression, not a single route: Cloudflare fires each schedule
+ * once, and more than one pass can want the same cadence. With a bare
+ * `Record<string, string>` the second five-minute pass added would have
+ * silently replaced the first — a whole subsystem quietly not running, with
+ * nothing to notice it by.
+ */
+const CRON_ROUTES: Record<string, string[]> = {
+  "0 0 * * *": ["/api/github/sync-leaderboard"],
+  "*/10 * * * *": ["/api/cron/sync-discord-roles"],
+  "*/5 * * * *": [
+    // Freezes `teams."competedAt"` once judging begins. Five minutes rather
+    // than ten because the window between judging starting and this running
+    // is the window in which closing a PR costs a team its star.
+    "/api/cron/judging-start",
+    // Separate from the freeze despite the shared cadence: the tally blocks
+    // on ungraded competitions and on a missing tiebreak ballot, and freezing
+    // participation must happen whether or not grading is done.
+    "/api/cron/tally-elections",
+  ],
 };
 
 export async function scheduled(
   event: { cron: string },
   env: CronEnv,
 ): Promise<void> {
-  const path = CRON_ROUTES[event.cron];
-  if (!path) return;
-  await fetch(`${env.BASE_URL}${path}`, {
-    headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
-  });
+  const paths = CRON_ROUTES[event.cron];
+  if (!paths) return;
+
+  // Sequential rather than concurrent: these passes share a connection pool,
+  // and a five-minute cadence has no deadline that parallelism would help.
+  for (const path of paths) {
+    await fetch(`${env.BASE_URL}${path}`, {
+      headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
+    });
+  }
 }
