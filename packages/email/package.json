@@ -1,0 +1,39 @@
+{
+  "name": "@devdogsuga/email",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "react-email sources compiled to typed, React-free HTML templates",
+  "exports": {
+    ".": {
+      "types": "./dist/runtime/index.d.ts",
+      "default": "./dist/runtime/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsx scripts/compile.tsx && tsc -p tsconfig.build.json",
+    "compile": "tsx scripts/compile.tsx",
+    "preview": "email dev --dir src/templates",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^1.4.0",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

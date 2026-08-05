@@ -33,6 +33,28 @@
       "bucket_name": "devdogs-platform-cache",
     },
   ],
+  // Transactional email. Supabase's sender is auth-only (signup confirmation,
+  // magic link, password recovery) with no general-purpose send API, so team
+  // invitations go through the Workers binding instead.
+  //
+  // `allowed_sender_addresses` is the part that matters: without it, any code
+  // path with the binding in scope can send as any address on the domain.
+  //
+  // Requires `wrangler email sending enable mail.devdogsuga.org` first, which
+  // provisions the DKIM, SPF and DMARC records. Until that completes every
+  // send returns E_SENDER_NOT_VERIFIED -- loudly, which is the good case.
+  //
+  // For local development add `"remote": true` here so sends proxy to the real
+  // service; without it there is nothing to observe. Point it at an address
+  // you control -- bounces from invented addresses land on the domain's
+  // reputation, and the suppression list is not something to fill while
+  // testing.
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["noreply@mail.devdogsuga.org"],
+    },
+  ],
   // Non-secret runtime vars. DEPLOY_ENV drives env.ts switchEnvironment()
   // (replaces the old Vercel VERCEL_ENV); override per-environment as needed.
   // Secrets (CRON_SECRET, BASE_URL, Supabase creds, …) come from

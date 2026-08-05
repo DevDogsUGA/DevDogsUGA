@@ -70,6 +70,22 @@
         "NEXT_PUBLIC_AUTH_MODE"
       ]
     },
+    // @devdogsuga/email generates `src/generated/templates.ts` during its own
+    // build — the compiled chunk arrays and the prop types derived from each
+    // template's `Props`. It is gitignored, because a committed copy would win
+    // silently over an out-of-date rebuild. That makes it the one package
+    // whose typecheck and tests need its OWN build, not just its
+    // dependencies': on a clean checkout the file does not exist yet.
+    "@devdogsuga/email#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "src/generated/**", "*.tsbuildinfo"]
+    },
+    "@devdogsuga/email#typecheck": {
+      "dependsOn": ["^build", "build"]
+    },
+    "@devdogsuga/email#test": {
+      "dependsOn": ["^build", "build"]
+    },
     // `^build` so workspace deps that emit (notably @devdogsuga/docs, whose
     // build parses docs/**/*.md into the module the docs routes import) exist
     // before the dev server starts. `turbo watch dev` then re-runs those builds

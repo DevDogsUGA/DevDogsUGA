@@ -632,6 +632,22 @@ template:
   chunk group for an array-typed slot. Worth building only when a template
   actually needs it; the transactional set here does not.
 
+A fourth rule emerged from building it, and it is the one nobody would predict:
+**the renderer itself breaks the substitution-only rule in three places, by
+default.** Each was caught by the branching check rather than by review, which
+is the argument for having the check at all:
+
+| Default                            | What it does to a prop value                      | Fix                             |
+| ---------------------------------- | ------------------------------------------------- | ------------------------------- |
+| `<Preview>` pads to a fixed length | Output depends on the value's **length**          | Preview must be a literal       |
+| html-to-text wraps at a column     | Line breaks baked from the sentinel's length      | `wordwrap: false`               |
+| html-to-text uppercases headings   | A name in an `<h1>` arrives SHOUTING in text only | `uppercase: false` on `h1`–`h3` |
+
+The first costs something real: the preview line is generic while the subject is
+personalised. That is the right way round — the subject is what the reader scans,
+and it is a plain header with no padding behaviour — but it is a constraint, not
+a preference, and a template author will otherwise reach for a prop there first.
+
 The payoff is the caveat this replaces. The previous draft flagged Worker bundle
 size against the 3 MB compressed limit as something to watch — with compiled
 templates it stops being a consideration at all, because the runtime dependency

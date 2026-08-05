@@ -1,0 +1,14 @@
+{
+  "extends": "../config/tsconfig/lib.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "types": ["node"]
+  },
+  // Deliberately NOT `src`. The templates, the components and the theme are
+  // build-time only — React, the renderer and Tailwind never reach the Worker.
+  // What ships is a string with holes in it and a function that fills them, so
+  // this build sees only the runtime and the generated data.
+  "include": ["src/runtime", "src/generated"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
+}

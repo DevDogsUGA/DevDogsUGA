@@ -33,6 +33,7 @@
     "@devdogsuga/airtable": "workspace:*",
     "@devdogsuga/db": "workspace:*",
     "@devdogsuga/docs": "workspace:*",
+    "@devdogsuga/email": "workspace:*",
     "@devdogsuga/moderation": "workspace:*",
     "@devdogsuga/sb": "workspace:*",
     "@discordjs/builders": "^1.14.1",
