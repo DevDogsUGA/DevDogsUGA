@@ -22,6 +22,7 @@
     "supabase"
   ],
   "scripts": {
+    "cli": "tsx scripts/sb.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",

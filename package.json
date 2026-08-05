@@ -14,7 +14,7 @@
     "test:e2e": "turbo run test:e2e",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
-    "sb": "pnpm --filter @devdogsuga/sb run",
+    "sb": "pnpm --filter @devdogsuga/sb run cli",
     "setup": "tsx scripts/setup.ts"
   },
   "engines": {
