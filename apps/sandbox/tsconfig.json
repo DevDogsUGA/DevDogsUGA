@@ -1,0 +1,19 @@
+{
+  // NOT extending config/tsconfig/lib.json, unlike the other packages here.
+  // That preset is for emitting Node libraries: nodenext resolution (which
+  // demands ".js" extensions on relative imports) and Node's globals. A Worker
+  // is neither -- wrangler bundles it, so resolution is bundler-style, and its
+  // runtime globals come from workerd rather than Node.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2025"],
+    "noEmit": true,
+    // The workerd runtime's globals: Request, Response, ExecutionContext,
+    // crypto.subtle. Deliberately NOT alongside "node" -- mixing the two lets
+    // Node-only APIs typecheck and then fail at the edge.
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["src"]
+}

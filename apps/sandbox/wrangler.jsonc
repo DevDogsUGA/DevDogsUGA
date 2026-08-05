@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "devdogs-sandbox",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-22",
+  "compatibility_flags": ["nodejs_compat"],
+  // One route and one wildcard DNS record cover every environment forever, so
+  // creating one writes a database row and does no DNS work at all.
+  //
+  // One label deep is deliberate: Universal SSL covers the apex and first-level
+  // subdomains only, and `<env>.sandbox.devdogsuga.org` would need Advanced
+  // Certificate Manager at around $10/month. Changing this shape later means
+  // rewriting every stored `proxyHostname`.
+  //
+  // Neither the record nor this route is needed before deployment -- `wrangler
+  // dev` serves locally, and every routing decision reads `proxyHostname` from
+  // the database rather than inferring it from the request host.
+  "routes": [
+    {
+      "pattern": "*-sandbox.devdogsuga.org/*",
+      "zone_name": "devdogsuga.org",
+    },
+  ],
+  "vars": {
+    // The PLATFORM project's PostgREST endpoint, not a sandbox's. Overridden
+    // per environment; the secret half is set with `wrangler secret put`.
+    "PLATFORM_REST_URL": "https://REPLACE_ME.supabase.co/rest/v1",
+  },
+  "observability": {
+    "enabled": true,
+  },
+  // SANDBOX_PROXY_TOKEN is a secret, never a var. It is a JWT carrying
+  // {"role": "sandbox_proxy"}, minted at deploy time by signing with the
+  // platform project's own signing key -- no API call, no dashboard step, so
+  // rotation is free and should happen on every deploy with a 90-day exp.
+}

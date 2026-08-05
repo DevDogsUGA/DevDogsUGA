@@ -1,0 +1,25 @@
+{
+  "name": "@devdogsuga/sandbox",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The per-environment proxy Worker sitting in front of each team's Supabase project",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "with-env wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260804.1",
+    "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/with-env": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}
