@@ -5,7 +5,7 @@ import { expectSession } from "~/server/auth";
 import { authorizeUrl, isConfigured } from "~/server/supabase/oauth";
 
 /**
- * GET /api/supabase/authorize
+ * GET /supabase/authorize
  *
  * Starts the Supabase OAuth flow for the signed-in member.
  *

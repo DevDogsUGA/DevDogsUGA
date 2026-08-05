@@ -4,7 +4,7 @@ import { env } from "~/env";
 import { reconcileMembership } from "~/server/discord/reconcile";
 
 /**
- * GET /api/cron/sync-discord-roles
+ * GET /cron/sync-discord-roles
  *
  * Backstop for synced-role guild membership: additively grants/revokes
  * DevDogs roles to match Discord role membership for linked users. Role

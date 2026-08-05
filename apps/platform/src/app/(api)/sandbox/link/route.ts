@@ -3,7 +3,7 @@ import { CliAuthError, resolveTeamTarget } from "~/server/sandbox/cliAuth";
 import { issueCredentials } from "~/server/sandbox/credentials";
 
 /**
- * POST /api/sandbox/link
+ * POST /sandbox/link
  *
  * Issues a member their two tokens for their team's environment, and returns
  * the proxy URL to point a checkout at.

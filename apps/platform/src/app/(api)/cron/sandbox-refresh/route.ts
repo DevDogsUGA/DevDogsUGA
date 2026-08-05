@@ -4,7 +4,7 @@ import { env } from "~/env";
 import { refreshExpiringConnections } from "~/server/supabase/oauth";
 
 /**
- * GET /api/cron/sandbox-refresh
+ * GET /cron/sandbox-refresh
  *
  * Refreshes Supabase OAuth grants before they lapse.
  *

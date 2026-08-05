@@ -4,7 +4,7 @@ import { env } from "~/env";
 import { prewarmPass } from "~/server/supabase/provision";
 
 /**
- * GET /api/cron/sandbox-prewarm
+ * GET /cron/sandbox-prewarm
  *
  * Wakes environments with a competition starting inside fifteen minutes.
  *

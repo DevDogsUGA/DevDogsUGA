@@ -3,7 +3,7 @@ import { CliAuthError, resolveTeamTarget } from "~/server/sandbox/cliAuth";
 import { restoreEnvironment } from "~/server/supabase/provision";
 
 /**
- * POST /api/sandbox/status
+ * POST /sandbox/status
  *
  * Reports an environment's state, and wakes it if it is paused.
  *

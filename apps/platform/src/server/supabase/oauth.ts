@@ -70,7 +70,7 @@ export function authorizeUrl(state: string, codeChallenge: string): string {
   const { id } = credentials();
   const url = new URL(AUTHORIZE_URL);
   url.searchParams.set("client_id", id);
-  url.searchParams.set("redirect_uri", `${env.BASE_URL}/api/supabase/callback`);
+  url.searchParams.set("redirect_uri", `${env.BASE_URL}/supabase/callback`);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", REQUIRED_SCOPES.join(" "));
   url.searchParams.set("state", state);
@@ -168,7 +168,7 @@ export async function connectSupabase(
   const tokens = await exchange({
     grant_type: "authorization_code",
     code,
-    redirect_uri: `${env.BASE_URL}/api/supabase/callback`,
+    redirect_uri: `${env.BASE_URL}/supabase/callback`,
     code_verifier: verifier,
   });
   await persist(userId, orgSlug, tokens);

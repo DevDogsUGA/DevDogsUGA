@@ -10,7 +10,7 @@ import { canUserTriggerSync } from "~/server/actions/permissions";
  *
  * `requestAirtableSync` is the same implementation the cron runs — see
  * `server/airtable/run.ts`. Gated on `canTriggerSync`, which is also what the
- * `/api/airtable/sync` route checks, because that route is reachable from a
+ * `/airtable/sync` route checks, because that route is reachable from a
  * button field inside Airtable and an Airtable button is not an authenticated
  * caller by itself.
  */

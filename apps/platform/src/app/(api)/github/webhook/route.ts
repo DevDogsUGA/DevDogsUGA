@@ -4,7 +4,7 @@ import type { PullRequestEvent } from "~/server/github/prEvent";
 import { applyPullRequestEvent } from "~/server/github/pullRequest";
 
 /**
- * POST /api/github/webhook
+ * POST /github/webhook
  *
  * The PR half of the entry state machine. GitHub tells us a pull request
  * opened, closed, merged or reopened; the team's `submissionState` follows.

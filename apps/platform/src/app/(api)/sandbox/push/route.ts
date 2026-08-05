@@ -3,7 +3,7 @@ import { CliAuthError, resolveTeamTarget } from "~/server/sandbox/cliAuth";
 import { applyMigrations } from "~/server/supabase/provision";
 
 /**
- * POST /api/sandbox/push
+ * POST /sandbox/push
  *
  * Applies the repo's migrations to a team's environment.
  *

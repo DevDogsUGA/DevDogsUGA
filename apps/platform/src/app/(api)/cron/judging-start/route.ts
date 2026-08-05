@@ -4,7 +4,7 @@ import { env } from "~/env";
 import { runJudgingPass } from "~/server/teams/judgingPass";
 
 /**
- * GET /api/cron/judging-start
+ * GET /cron/judging-start
  *
  * Freezes competition participation and creates solo teams for competitions
  * whose judging has begun. Every five minutes.

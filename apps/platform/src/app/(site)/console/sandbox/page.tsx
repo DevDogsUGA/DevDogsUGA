@@ -147,7 +147,7 @@ function ConnectionCard({
           </span>
         </span>
         <Link
-          href="/api/supabase/authorize"
+          href="/supabase/authorize"
           className="rounded-sm border-2 border-black bg-black px-3 py-1.5 text-sm font-semibold text-white"
         >
           Connect Supabase

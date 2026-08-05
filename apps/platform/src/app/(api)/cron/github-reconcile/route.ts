@@ -4,7 +4,7 @@ import { env } from "~/env";
 import { reconcileTeams } from "~/server/github/teamSync";
 
 /**
- * GET /api/cron/github-reconcile
+ * GET /cron/github-reconcile
  *
  * Repairs GitHub team membership against `teamMembers`. Nightly.
  *

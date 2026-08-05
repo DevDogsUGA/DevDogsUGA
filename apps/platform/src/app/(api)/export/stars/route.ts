@@ -14,7 +14,7 @@ import {
 } from "~/server/export/stars";
 
 /**
- * GET /api/export/stars
+ * GET /export/stars
  *
  * One row per `(member, workshop)`, across every semester. Query parameters:
  * `from`, `to` (ISO dates, on the meeting start) and `project` (a slug).

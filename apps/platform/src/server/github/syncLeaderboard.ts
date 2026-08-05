@@ -188,6 +188,18 @@ export default async function syncLeaderboard() {
     profile.allTimeRanking = i + 1;
   });
 
+  // Nothing to write is a legitimate outcome, not an error: a fresh database, a
+  // year with no closed issues yet, or a GitHub query that matched nobody.
+  // Drizzle rejects `.values([])` with "values() must be called with at least
+  // one value", so an empty run threw a 500 rather than doing nothing.
+  //
+  // This never fired in production because the nightly cron was requesting
+  // `/api/github/sync-leaderboard`, and the handler serves
+  // `/github/sync-leaderboard` -- `(api)` is a route group, so the segment is
+  // not part of the URL. Fixing the dispatcher made this route reachable for
+  // the first time, which is how the crash surfaced.
+  if (rankedProfiles.length === 0) return;
+
   await db.transaction(async (tx) => {
     await tx
       .insert(leaderboardProfiles)

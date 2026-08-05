@@ -5,7 +5,7 @@ import { accessTokenFor } from "~/server/supabase/oauth";
 import { applyMigrations } from "~/server/supabase/provision";
 
 /**
- * POST /api/sandbox/reset
+ * POST /sandbox/reset
  *
  * Drops the team's public schema and rebuilds it from migrations.
  *

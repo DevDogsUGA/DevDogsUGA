@@ -8,7 +8,7 @@ import {
 } from "~/server/supabase/provision";
 
 /**
- * GET /api/cron/sandbox-reconcile
+ * GET /cron/sandbox-reconcile
  *
  * Nightly: project existence, status drift, 90-day pause expiry, auto-pause.
  *

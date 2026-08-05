@@ -193,20 +193,19 @@ async function teamCommand(command: Command, slug: string): Promise<number> {
   switch (command) {
     case "link": {
       await writeEnv(
-        await platformCall<LinkResponse>("/api/sandbox/link", { slug }),
+        await platformCall<LinkResponse>("/sandbox/link", { slug }),
       );
       return 0;
     }
     case "push": {
-      const result = await platformCall<{ applied: number }>(
-        "/api/sandbox/push",
-        { slug },
-      );
+      const result = await platformCall<{ applied: number }>("/sandbox/push", {
+        slug,
+      });
       console.log(`Applied migrations to ${slug} (${result.applied} files).`);
       return 0;
     }
     case "reset": {
-      const result = await platformCall<{ ok: boolean }>("/api/sandbox/reset", {
+      const result = await platformCall<{ ok: boolean }>("/sandbox/reset", {
         slug,
       });
       console.log(result.ok ? `Reset ${slug}.` : `Reset refused.`);
@@ -217,7 +216,7 @@ async function teamCommand(command: Command, slug: string): Promise<number> {
         status: string;
         waking: boolean;
         etaSeconds?: number;
-      }>("/api/sandbox/status", { slug });
+      }>("/sandbox/status", { slug });
       console.log(`${slug}: ${result.status}`);
       if (result.waking) {
         // ~196s measured. Saying "about four minutes" beats a spinner that

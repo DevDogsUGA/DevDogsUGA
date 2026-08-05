@@ -6,7 +6,7 @@ import { expectSession } from "~/server/auth";
 import { runAirtableSync, type SyncReport } from "~/server/airtable/run";
 
 /**
- * GET /api/airtable/sync — the manual trigger.
+ * GET /airtable/sync — the manual trigger.
  *
  * Exists because an Airtable **button field** can do nothing but open a URL,
  * and that is the trigger that matters in practice: it puts the control in the

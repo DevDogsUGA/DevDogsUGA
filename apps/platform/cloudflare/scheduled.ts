@@ -22,25 +22,25 @@ export interface CronEnv {
  * silently replaced the first — a whole subsystem quietly not running, with
  * nothing to notice it by.
  */
-const CRON_ROUTES: Record<string, string[]> = {
+export const CRON_ROUTES: Record<string, string[]> = {
   "0 0 * * *": [
-    "/api/github/sync-leaderboard",
+    "/github/sync-leaderboard",
     // Repairs team membership a failed API call left wrong. Nightly rather
     // than more often on purpose: every membership change already fires on
     // the platform event that caused it, so if this pass is doing meaningful
     // work regularly then something upstream is broken and a tighter cadence
     // would hide it.
-    "/api/cron/github-reconcile",
+    "/cron/github-reconcile",
     // Supabase OAuth access tokens last 24h, so daily has ample margin. Runs
     // BEFORE the reconcile below, which needs those tokens to ask whether each
     // project still exists -- reversing them would have the reconcile skip
     // every environment whose grant lapsed overnight.
-    "/api/cron/sandbox-refresh",
+    "/cron/sandbox-refresh",
     // Project existence, status drift, 90-day pause expiry, auto-pause. The
     // sole authority on orphaning: the proxy must never conclude a project is
     // gone, because a transient upstream error would tear down a healthy
     // environment's credentials and secrets.
-    "/api/cron/sandbox-reconcile",
+    "/cron/sandbox-reconcile",
   ],
   // Airtable polls rather than subscribes. Webhooks exist but expire on a
   // 7-day refresh cycle and deliver cursor-based payloads that have to be
@@ -48,21 +48,21 @@ const CRON_ROUTES: Record<string, string[]> = {
   // few times a week. At ~5 requests a pass this is ~13% of the monthly
   // allowance, and the manual trigger covers the case where 15 minutes is too
   // long to wait.
-  "*/15 * * * *": ["/api/airtable/sync"],
-  "*/10 * * * *": ["/api/cron/sync-discord-roles"],
+  "*/15 * * * *": ["/airtable/sync"],
+  "*/10 * * * *": ["/cron/sync-discord-roles"],
   "*/5 * * * *": [
     // Freezes `teams."competedAt"` once judging begins. Five minutes rather
     // than ten because the window between judging starting and this running
     // is the window in which closing a PR costs a team its star.
-    "/api/cron/judging-start",
+    "/cron/judging-start",
     // Separate from the freeze despite the shared cadence: the tally blocks
     // on ungraded competitions and on a missing tiebreak ballot, and freezing
     // participation must happen whether or not grading is done.
-    "/api/cron/tally-elections",
+    "/cron/tally-elections",
     // Wakes sandbox environments with a competition starting inside fifteen
     // minutes. Five minutes rather than ten because a restore takes 196s
     // (measured) and the lead time has to absorb a tick landing badly.
-    "/api/cron/sandbox-prewarm",
+    "/cron/sandbox-prewarm",
   ],
 };
 

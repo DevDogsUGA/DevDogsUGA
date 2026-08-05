@@ -15,7 +15,7 @@ export default mergeConfig(
       alias: { "~": fileURLToPath(new URL("./src", import.meta.url)) },
     },
     test: {
-      include: ["src/**/*.test.{ts,tsx}"],
+      include: ["src/**/*.test.{ts,tsx}", "cloudflare/**/*.test.ts"],
       // Vite defines its own `BASE_URL` — the public base path, `"/"` unless
       // configured — and Vitest puts it in `process.env`. The app happens to
       // have a server variable of the same name that must be an absolute URL,

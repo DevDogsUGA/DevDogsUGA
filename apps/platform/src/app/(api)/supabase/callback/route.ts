@@ -10,7 +10,7 @@ import {
 import { STATE_COOKIE, VERIFIER_COOKIE } from "../authorize/route";
 
 /**
- * GET /api/supabase/callback
+ * GET /supabase/callback
  *
  * Completes the Supabase OAuth flow and stores the grant in Vault.
  */
