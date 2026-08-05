@@ -27,8 +27,31 @@ export type TeamActionCode =
   | "bad_join_code"
   /** The request is not pending, or is not the caller's to answer. */
   | "request_not_actionable"
+  /** Another team in this competition already uses that name. */
+  | "name_taken"
   /** The team, request or competition named does not exist. */
   | "not_found";
+
+/**
+ * Everything a caller can be told, including the one thing the domain does not
+ * choose. `"unknown"` is a fault rather than a refusal — a dropped connection,
+ * a constraint nothing translated — and it is in the same union so the message
+ * table below can be a TOTAL record, which is what makes adding a code a build
+ * error rather than a blank paragraph in front of whoever hits it first.
+ */
+export type TeamProblemCode = TeamActionCode | "unknown";
+
+/**
+ * What every exported team action returns.
+ *
+ * A result rather than a throw, because a thrown error does not survive the
+ * trip to a client component: Next redacts an uncaught server-action error in
+ * production and hands the browser an opaque digest, so `error.code` reads
+ * correctly in development and is gone once deployed.
+ */
+export type TeamActionOutcome<T> =
+  | { ok: true; value: T }
+  | { ok: false; code: TeamProblemCode };
 
 export class TeamActionError extends Error {
   readonly code: TeamActionCode;

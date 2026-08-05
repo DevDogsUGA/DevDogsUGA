@@ -9,7 +9,11 @@ import {
   teamMembershipRequests,
   teams,
 } from "~/server/db/schema";
-import { TeamActionError, isUniqueViolation } from "~/server/teams/errors";
+import {
+  TeamActionError,
+  isUniqueViolation,
+  type TeamActionOutcome,
+} from "~/server/teams/errors";
 import { isLocked } from "~/server/teams/lockState";
 import {
   addMember,
@@ -132,25 +136,50 @@ async function requireLead(tx: Tx, teamId: string, userId: string) {
   if (row.role !== "lead") throw new TeamActionError("not_the_lead");
 }
 
-export async function createTeam(
+/**
+ * The created team, identified the way the routes are.
+ *
+ * Both the id and the slug: the id is what the GitHub provisioning needs, and
+ * the slug is what `/competitions/[slug]/teams/[team]` is keyed on — so
+ * returning only the id leaves a form with nowhere to navigate after a
+ * successful create.
+ */
+export interface CreatedTeam {
+  id: string;
+  slug: string;
+}
+
+async function createTeamImpl(
   competitionId: string,
   name: string,
-): Promise<string> {
+): Promise<CreatedTeam> {
   const userId = await expectSession();
 
-  const teamId = await db.transaction(async (tx) => {
+  const created = await db.transaction(async (tx) => {
     await requireOpenCompetition(tx, competitionId);
 
-    const [team] = await tx
-      .insert(teams)
-      .values({
-        competitionId,
-        slug: slugify(name),
-        name,
-        joinCode: generateJoinCode(),
-        createdBy: userId,
-      })
-      .returning({ id: teams.id });
+    let team: CreatedTeam | undefined;
+    try {
+      [team] = await tx
+        .insert(teams)
+        .values({
+          competitionId,
+          slug: slugify(name),
+          name,
+          joinCode: generateJoinCode(),
+          createdBy: userId,
+        })
+        .returning({ id: teams.id, slug: teams.slug });
+    } catch (error) {
+      // Two teams named the same thing in one competition. Translated here
+      // because the untranslated 23505 reaches the member as "something went
+      // wrong on our side" — which sends them to ask an officer about a
+      // problem they could have solved by picking another name.
+      if (isUniqueViolation(error, "teams_competitionId_slug_key")) {
+        throw new TeamActionError("name_taken");
+      }
+      throw error;
+    }
 
     if (!team) throw new TeamActionError("not_found");
 
@@ -172,21 +201,20 @@ export async function createTeam(
       throw error;
     }
 
-    return team.id;
+    return team;
   });
 
   // The team, its push grant and its branch. The lead is added to the GitHub
   // team by the same call chain a join would make.
-  await afterCommit(`provision ${teamId}`, () => provisionTeam(teamId));
-  await afterCommit(`add lead to ${teamId}`, () => addMember(teamId, userId));
+  await afterCommit(`provision ${created.id}`, () => provisionTeam(created.id));
+  await afterCommit(`add lead to ${created.id}`, () =>
+    addMember(created.id, userId),
+  );
 
-  return teamId;
+  return created;
 }
 
-export async function joinTeam(
-  teamId: string,
-  joinCode: string,
-): Promise<void> {
+async function joinTeamImpl(teamId: string, joinCode: string): Promise<void> {
   const userId = await expectSession();
 
   await db.transaction(async (tx) => {
@@ -212,10 +240,13 @@ export async function joinTeam(
   );
 }
 
-export async function requestToJoin(
+async function requestToJoinImpl(
   teamId: string,
-  message?: string,
+  rawMessage?: string,
 ): Promise<string> {
+  // An all-whitespace note is no note. Normalized here rather than in a form,
+  // because it is a fact about the value rather than about one screen.
+  const message = rawMessage?.trim() || undefined;
   const userId = await expectSession();
 
   return db.transaction(async (tx) => {
@@ -245,7 +276,7 @@ export async function requestToJoin(
   });
 }
 
-export async function inviteToTeam(
+async function inviteToTeamImpl(
   teamId: string,
   inviteeId: string,
 ): Promise<string> {
@@ -304,7 +335,7 @@ async function insertRequest(
   }
 }
 
-export async function respondToMembership(
+async function respondToMembershipImpl(
   requestId: string,
   accept: boolean,
 ): Promise<void> {
@@ -362,6 +393,33 @@ export async function respondToMembership(
       userId: request.userId,
     });
 
+    // Accepting one withdraws the rest for that competition.
+    //
+    // Applying to a few teams and joining whichever answers first is the
+    // intended use, so the leftovers are not a mistake — but the
+    // one-team-per-competition constraint would reject every one of them
+    // anyway, and leaving them pending strands leads waiting on somebody who
+    // is no longer available. Withdrawn rather than declined: the member did
+    // not turn these down, their situation changed.
+    //
+    // Both directions, not just invitations. A join request this member sent
+    // to another team is exactly as stale as an invitation they received.
+    await tx
+      .update(teamMembershipRequests)
+      .set({
+        status: "withdrawn",
+        respondedAt: new Date(),
+        respondedBy: callerId,
+      })
+      .where(
+        and(
+          eq(teamMembershipRequests.competitionId, request.competitionId),
+          eq(teamMembershipRequests.userId, request.userId),
+          eq(teamMembershipRequests.status, "pending"),
+          ne(teamMembershipRequests.id, requestId),
+        ),
+      );
+
     joined = { teamId: request.teamId, userId: request.userId };
   });
 
@@ -373,7 +431,7 @@ export async function respondToMembership(
   }
 }
 
-export async function leaveTeam(teamId: string): Promise<void> {
+async function leaveTeamImpl(teamId: string): Promise<void> {
   const userId = await expectSession();
 
   await db.transaction(async (tx) => {
@@ -417,7 +475,7 @@ export async function leaveTeam(teamId: string): Promise<void> {
   );
 }
 
-export async function transferLead(
+async function transferLeadImpl(
   teamId: string,
   newLeadId: string,
 ): Promise<void> {
@@ -474,7 +532,7 @@ export interface ReformReport {
  * every week, and silently re-adding people would make "I am not doing this
  * one" require an opt-out nobody would find.
  */
-export async function reformTeam(
+async function reformTeamImpl(
   sourceTeamId: string,
   targetCompetitionId: string,
 ): Promise<ReformReport> {
@@ -558,4 +616,93 @@ export async function reformTeam(
 
     return { teamId: team.id, invited, skipped };
   });
+}
+
+// ── The boundary ─────────────────────────────────────────────────────────────
+
+/**
+ * Every action returns an outcome; none of them throws across the wire.
+ *
+ * The implementations above throw `TeamActionError`, which is the right shape
+ * for them — the six join checks read as a chain of guards rather than as a
+ * result being threaded through by hand. But a thrown error does not survive
+ * the trip to a client component: Next redacts an uncaught server-action error
+ * in production and hands the browser an opaque digest, so `error.code` — the
+ * thing every one of these screens branches on — reads correctly in
+ * development and is GONE in the deployed build.
+ *
+ * Converting here rather than in a per-page wrapper is what makes that
+ * impossible to forget. A page that forgets is not broken in a way anybody
+ * notices locally; it is broken only once it ships.
+ */
+async function attempt<T>(
+  run: () => Promise<T>,
+): Promise<TeamActionOutcome<T>> {
+  try {
+    return { ok: true, value: await run() };
+  } catch (error) {
+    if (error instanceof TeamActionError) {
+      return { ok: false, code: error.code };
+    }
+    // Anything else is a fault rather than a refusal — a dropped connection, a
+    // constraint nothing translated. Logged so the server keeps it, and
+    // reported as "unknown" so a member is not told they did something wrong.
+    console.error("[teams] unexpected action failure:", error);
+    return { ok: false, code: "unknown" };
+  }
+}
+
+export async function createTeam(
+  competitionId: string,
+  name: string,
+): Promise<TeamActionOutcome<CreatedTeam>> {
+  return attempt(() => createTeamImpl(competitionId, name));
+}
+
+export async function joinTeam(
+  teamId: string,
+  joinCode: string,
+): Promise<TeamActionOutcome<void>> {
+  return attempt(() => joinTeamImpl(teamId, joinCode));
+}
+
+export async function requestToJoin(
+  teamId: string,
+  message?: string,
+): Promise<TeamActionOutcome<string>> {
+  return attempt(() => requestToJoinImpl(teamId, message));
+}
+
+export async function inviteToTeam(
+  teamId: string,
+  inviteeId: string,
+): Promise<TeamActionOutcome<string>> {
+  return attempt(() => inviteToTeamImpl(teamId, inviteeId));
+}
+
+export async function respondToMembership(
+  requestId: string,
+  accept: boolean,
+): Promise<TeamActionOutcome<void>> {
+  return attempt(() => respondToMembershipImpl(requestId, accept));
+}
+
+export async function leaveTeam(
+  teamId: string,
+): Promise<TeamActionOutcome<void>> {
+  return attempt(() => leaveTeamImpl(teamId));
+}
+
+export async function transferLead(
+  teamId: string,
+  newLeadId: string,
+): Promise<TeamActionOutcome<void>> {
+  return attempt(() => transferLeadImpl(teamId, newLeadId));
+}
+
+export async function reformTeam(
+  sourceTeamId: string,
+  targetCompetitionId: string,
+): Promise<TeamActionOutcome<ReformReport>> {
+  return attempt(() => reformTeamImpl(sourceTeamId, targetCompetitionId));
 }

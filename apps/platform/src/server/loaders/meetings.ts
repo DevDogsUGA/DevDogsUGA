@@ -4,6 +4,7 @@ import { db } from "~/server/db";
 import {
   attendance,
   competitions,
+  instance,
   meetings,
   projects,
   teams,
@@ -185,6 +186,117 @@ export const getWorkshopDetail = cache(
               teamCount: row.teamCount,
             },
     };
+  },
+);
+
+export interface MeetingWorkshop {
+  workshopId: string;
+  projectSlug: string;
+  projectName: string;
+  competitionSlug: string | null;
+  teamCount: number;
+}
+
+/**
+ * The workshops that ran at one meeting.
+ *
+ * The competition is a LEFT join, not an inner one: a supplementary workshop
+ * has no competition and is complete on its own — worth exactly one star — so
+ * an inner join would silently drop it from the meeting it ran at.
+ *
+ * Ordered by the project sort order officers control, so the list on the page
+ * matches the order the sessions are announced in rather than the alphabet.
+ */
+export const getMeetingWorkshops = cache(
+  async (meetingId: string): Promise<MeetingWorkshop[]> => {
+    return db
+      .select({
+        workshopId: workshops.id,
+        projectSlug: projects.slug,
+        projectName: projects.displayName,
+        competitionSlug: competitions.slug,
+        teamCount: sql<number>`(
+          select count(*)::int from ${teams}
+          where ${teams.competitionId} = ${competitions.id}
+        )`,
+      })
+      .from(workshops)
+      .innerJoin(projects, eq(projects.id, workshops.projectId))
+      .leftJoin(
+        competitions,
+        and(
+          eq(competitions.workshopId, workshops.id),
+          isNull(competitions.deletedAt),
+        ),
+      )
+      .where(
+        and(eq(workshops.meetingId, meetingId), isNull(workshops.deletedAt)),
+      )
+      .orderBy(asc(projects.sortOrder), asc(projects.displayName));
+  },
+);
+
+export interface CompetitionHeader {
+  id: string;
+  slug: string;
+  /** A competition has no name of its own — it is called after its project. */
+  name: string;
+  /** The opening workshop's meeting. NOT when judging happens. */
+  openedOn: Date;
+  /**
+   * When judging begins. The authority for every roster lock — and separate
+   * from `openedOn` because presentations are their own occasion, held at a
+   * later meeting. Null means "not scheduled yet", never "never".
+   */
+  judgingStartsAt: Date | null;
+  /**
+   * The roster cap, already resolved against `instance.defaultMaxTeamSize`.
+   *
+   * Resolved here rather than returned nullable, because a nullable cap makes
+   * every caller reimplement the fallback — and a page that renders "3 of —"
+   * while the action rejects a fourth member is the drift this loader exists
+   * to prevent. `requireCanJoin` resolves it the same way.
+   */
+  maxTeamSize: number;
+}
+
+/**
+ * One competition, by slug.
+ *
+ * Exists so a page can tell "no such competition" from "not scored yet".
+ * `getStandings` takes a slug and returns team rows, so an empty array merges
+ * those two states into one — and they need opposite answers: a 404 and an
+ * explanation.
+ */
+export const getCompetitionBySlug = cache(
+  async (slug: string): Promise<CompetitionHeader | null> => {
+    const [row] = await db
+      .select({
+        id: competitions.id,
+        slug: competitions.slug,
+        name: projects.displayName,
+        openedOn: meetings.startsAt,
+        judgingStartsAt: competitions.judgingStartsAt,
+        maxTeamSize: sql<number>`coalesce(
+          ${competitions.maxTeamSize},
+          (select ${instance.defaultMaxTeamSize} from ${instance} limit 1),
+          4
+        )`,
+      })
+      .from(competitions)
+      .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
+      .innerJoin(projects, eq(projects.id, workshops.projectId))
+      .innerJoin(meetings, eq(meetings.id, workshops.meetingId))
+      .where(
+        and(
+          eq(competitions.slug, slug),
+          isNull(competitions.deletedAt),
+          isNull(workshops.deletedAt),
+          isNull(meetings.deletedAt),
+        ),
+      );
+
+    return row ?? null;
   },
 );
 

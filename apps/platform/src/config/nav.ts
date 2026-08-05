@@ -42,6 +42,13 @@ export const PUBLIC_LINKS: NavItem[] = [
     description: "Upcoming meetings, workshops, and events hosted by DevDogs.",
   },
   {
+    label: "Meetings",
+    href: "/meetings",
+    icon: "CalendarDotsIcon",
+    description:
+      "Weekly meetings, the workshops that run inside them, and check-in.",
+  },
+  {
     label: "Partners",
     href: "/partners",
     icon: "HandshakeIcon",
@@ -69,6 +76,13 @@ export const SEARCH_ONLY_PAGES: NavItem[] = [
     href: "/legal/privacy",
     icon: "ScalesIcon",
     description: "How DevDogs collects, uses, and protects your data.",
+  },
+  {
+    label: "Points Leaderboard",
+    href: "/leaderboard/points",
+    icon: "RankingIcon",
+    description:
+      "Lifetime competition points, summed across every finalized competition.",
   },
 ];
 
@@ -118,6 +132,14 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
       "Upload the UGA Involvement Network roster to verify member profiles and unlock community page visibility.",
   },
   {
+    label: "Airtable Sync",
+    href: "/console/airtable",
+    icon: "ArrowSquareOutIcon",
+    permission: "canTriggerSync",
+    description:
+      "Run the Airtable sync by hand and see what the last pass refused.",
+  },
+  {
     label: "Permissions",
     href: "/console/permissions",
     icon: "LockIcon",
@@ -129,6 +151,20 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
 
 /** Signed-in-only pages, listed inside the profile popover. */
 export const PROFILE_ITEMS: NavItem[] = [
+  {
+    label: "Vote",
+    href: "/vote",
+    icon: "StarIcon",
+    description:
+      "Rank the competing implementations in any election you can vote in.",
+  },
+  {
+    label: "Team requests",
+    href: "/teams/requests",
+    icon: "UsersIcon",
+    description:
+      "Invitations addressed to you, and join requests on teams you lead.",
+  },
   {
     label: "Account",
     href: "/account",

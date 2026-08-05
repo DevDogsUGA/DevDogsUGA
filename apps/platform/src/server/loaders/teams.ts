@@ -5,9 +5,11 @@ import {
   competitions,
   competitionStandings,
   profiles,
+  projects,
   teamMembers,
   teamMembershipRequests,
   teams,
+  workshops,
 } from "~/server/db/schema";
 import { lockReason, type LockReason } from "~/server/teams/lockState";
 
@@ -38,6 +40,8 @@ export interface TeamDetail {
   competedAt: Date | null;
   acceptingRequests: boolean;
   requirementsMet: number | null;
+  /** The denominator. Without it "3 requirements met" is not a score. */
+  requirementCount: number | null;
   maxTeamSize: number | null;
   members: TeamMemberRow[];
   /** Null when the roster is open. */
@@ -80,6 +84,7 @@ export const getTeamDetail = cache(
         lockedManuallyAt: teams.lockedManuallyAt,
         acceptingRequests: teams.acceptingRequests,
         requirementsMet: teams.requirementsMet,
+        requirementCount: competitions.requirementCount,
         maxTeamSize: competitions.maxTeamSize,
         judgingStartsAt: competitions.judgingStartsAt,
       })
@@ -129,6 +134,7 @@ export const getTeamDetail = cache(
       competedAt: row.competedAt,
       acceptingRequests: row.acceptingRequests,
       requirementsMet: row.requirementsMet,
+      requirementCount: row.requirementCount,
       maxTeamSize: row.maxTeamSize,
       members: members as TeamMemberRow[],
       lock: lockReason({
@@ -201,7 +207,10 @@ export interface PendingRequest {
   id: string;
   teamId: string;
   teamName: string;
+  /** So a row can link to the team without a second lookup per competition. */
+  teamSlug: string;
   competitionSlug: string;
+  competitionName: string;
   userId: string;
   preferredName: string | null;
   direction: "invite" | "request";
@@ -224,7 +233,10 @@ export const getPendingForUser = cache(
         id: teamMembershipRequests.id,
         teamId: teamMembershipRequests.teamId,
         teamName: teams.name,
+        teamSlug: teams.slug,
         competitionSlug: competitions.slug,
+        // A competition is called after its project; it has no name of its own.
+        competitionName: projects.displayName,
         userId: teamMembershipRequests.userId,
         preferredName: profiles.preferredName,
         direction: teamMembershipRequests.direction,
@@ -234,6 +246,8 @@ export const getPendingForUser = cache(
       .from(teamMembershipRequests)
       .innerJoin(teams, eq(teams.id, teamMembershipRequests.teamId))
       .innerJoin(competitions, eq(competitions.id, teams.competitionId))
+      .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
+      .innerJoin(projects, eq(projects.id, workshops.projectId))
       .leftJoin(profiles, eq(profiles.userId, teamMembershipRequests.userId))
       .where(
         and(

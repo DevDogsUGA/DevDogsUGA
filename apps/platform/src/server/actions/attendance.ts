@@ -6,25 +6,7 @@ import { db } from "~/server/db";
 import { attendance, checkInCodes, meetings } from "~/server/db/schema";
 import { canUserEditAttendance } from "~/server/actions/permissions";
 import { isUniqueViolation } from "~/server/teams/errors";
-
-export type CheckInCode =
-  | "code_not_found"
-  | "check_in_closed"
-  | "already_checked_in";
-
-export class CheckInError extends Error {
-  readonly code: CheckInCode;
-  constructor(code: CheckInCode, message?: string) {
-    super(message ?? code);
-    this.name = "CheckInError";
-    this.code = code;
-  }
-}
-
-export interface CheckInResult {
-  meetingId: string;
-  workshopId: string | null;
-}
+import { CheckInError, type CheckInOutcome } from "~/server/attendance/errors";
 
 /**
  * Redeems a check-in code.
@@ -38,56 +20,73 @@ export interface CheckInResult {
  * normal and the grace period is deliberate, but a window that stays open
  * until somebody remembers to close it is an attendance-integrity hole nobody
  * notices.
+ *
+ * Returns an outcome rather than throwing. An error thrown inside a server
+ * action does not survive to the client in a production build — React replaces
+ * it with an opaque digest — so a form branching on `error.code` would work in
+ * development and degrade to "something went wrong" in production. The throws
+ * below are internal to the transaction and are converted at the boundary.
  */
-export async function checkIn(code: string): Promise<CheckInResult> {
+export async function checkIn(code: string): Promise<CheckInOutcome> {
   const userId = await expectSession();
   const normalized = code.trim().toUpperCase();
 
-  return db.transaction(async (tx) => {
-    const [row] = await tx
-      .select({
-        meetingId: checkInCodes.meetingId,
-        workshopId: checkInCodes.workshopId,
-        expiresAt: checkInCodes.expiresAt,
-        checkInClosesAt: meetings.checkInClosesAt,
-      })
-      .from(checkInCodes)
-      .innerJoin(meetings, eq(meetings.id, checkInCodes.meetingId))
-      .where(eq(checkInCodes.code, normalized))
-      .limit(1);
+  try {
+    return await db.transaction(async (tx) => {
+      const [row] = await tx
+        .select({
+          meetingId: checkInCodes.meetingId,
+          workshopId: checkInCodes.workshopId,
+          expiresAt: checkInCodes.expiresAt,
+          checkInClosesAt: meetings.checkInClosesAt,
+        })
+        .from(checkInCodes)
+        .innerJoin(meetings, eq(meetings.id, checkInCodes.meetingId))
+        .where(eq(checkInCodes.code, normalized))
+        .limit(1);
 
-    if (!row) throw new CheckInError("code_not_found");
+      if (!row) throw new CheckInError("code_not_found");
 
-    const now = Date.now();
-    // Two clocks, both of which must still be open: the code's own rotation
-    // window, and the meeting's check-in window. The code expiring first is
-    // the normal case during rotation; the meeting's is the hard bound.
-    if (row.expiresAt !== null && new Date(row.expiresAt).getTime() <= now) {
-      throw new CheckInError("check_in_closed");
-    }
-    if (new Date(row.checkInClosesAt).getTime() <= now) {
-      throw new CheckInError("check_in_closed");
-    }
+      const now = Date.now();
+      // Two clocks, both of which must still be open: the code's own rotation
+      // window, and the meeting's check-in window. The code expiring first is
+      // the normal case during rotation; the meeting's is the hard bound.
+      if (row.expiresAt !== null && new Date(row.expiresAt).getTime() <= now) {
+        throw new CheckInError("check_in_closed");
+      }
+      if (new Date(row.checkInClosesAt).getTime() <= now) {
+        throw new CheckInError("check_in_closed");
+      }
 
-    try {
-      await tx.insert(attendance).values({
+      try {
+        await tx.insert(attendance).values({
+          meetingId: row.meetingId,
+          workshopId: row.workshopId,
+          userId,
+          method: "code",
+        });
+      } catch (error) {
+        // unique ("meetingId", "userId") — a member attends a meeting once no
+        // matter how many workshops it holds, so a second redemption is a
+        // no-op worth reporting rather than an error worth failing on.
+        if (isUniqueViolation(error, "attendance_meetingId_userId_key")) {
+          throw new CheckInError("already_checked_in");
+        }
+        throw error;
+      }
+
+      return {
+        ok: true as const,
         meetingId: row.meetingId,
         workshopId: row.workshopId,
-        userId,
-        method: "code",
-      });
-    } catch (error) {
-      // unique ("meetingId", "userId") — a member attends a meeting once no
-      // matter how many workshops it holds, so a second redemption is a
-      // no-op worth reporting rather than an error worth failing on.
-      if (isUniqueViolation(error, "attendance_meetingId_userId_key")) {
-        throw new CheckInError("already_checked_in");
-      }
-      throw error;
+      };
+    });
+  } catch (error) {
+    if (error instanceof CheckInError) {
+      return { ok: false, error: error.code };
     }
-
-    return { meetingId: row.meetingId, workshopId: row.workshopId };
-  });
+    throw error;
+  }
 }
 
 /**

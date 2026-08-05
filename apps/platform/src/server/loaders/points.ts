@@ -104,6 +104,11 @@ export const getMemberPointsLeaderboard = cache(
   },
 );
 
+export interface MemberPointsTotals {
+  lifetimePoints: number;
+  competitionsScored: number;
+}
+
 /**
  * One member's total, for their profile.
  *
@@ -113,9 +118,7 @@ export const getMemberPointsLeaderboard = cache(
  * `competitionsScored` is what tells them apart when a caller needs to.
  */
 export const getMemberPoints = cache(
-  async (
-    userId: string,
-  ): Promise<{ lifetimePoints: number; competitionsScored: number }> => {
+  async (userId: string): Promise<MemberPointsTotals> => {
     const [row] = await db
       .select({
         lifetimePoints: memberPoints.lifetimePoints,

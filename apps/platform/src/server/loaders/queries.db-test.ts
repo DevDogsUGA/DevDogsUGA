@@ -5,6 +5,8 @@ import {
   getPastMeetings,
   getMeetingBySlug,
   getWorkshopDetail,
+  getCompetitionBySlug,
+  getMeetingWorkshops,
 } from "./meetings";
 import {
   getTeamsForCompetition,
@@ -25,7 +27,10 @@ import {
   getMyBallot,
   getElectionResults,
   getTiebreakDisclosures,
+  getPointsElections,
 } from "./elections";
+import { readSyncState } from "~/server/airtable/lease";
+import { streamStarRows } from "~/server/export/stars";
 
 const NIL = "00000000-0000-0000-0000-000000000000";
 
@@ -52,6 +57,8 @@ describe("every loader is valid SQL", () => {
     await getPastMeetings();
     await getMeetingBySlug("nope");
     await getWorkshopDetail("nope", "nope");
+    await getCompetitionBySlug("nope");
+    await getMeetingWorkshops(NIL);
     expect(true).toBe(true);
   });
   it("teams", async () => {
@@ -72,6 +79,25 @@ describe("every loader is valid SQL", () => {
     await getMemberPoints(NIL);
     expect(true).toBe(true);
   });
+  it("the airtable sync state the console renders", async () => {
+    // The console page is the only reader, and a page that throws on load is
+    // indistinguishable from the sync being broken.
+    await readSyncState();
+    expect(true).toBe(true);
+  });
+
+  it("the stars export, including its filters", async () => {
+    // The export is a generator, so nothing runs until it is drained — an
+    // untouched `streamStarRows(...)` would prove nothing at all.
+    for await (const _ of streamStarRows({}, 10)) break;
+    for await (const _ of streamStarRows(
+      { from: new Date("2020-01-01"), to: new Date(), projectSlug: "nope" },
+      10,
+    ))
+      break;
+    expect(true).toBe(true);
+  });
+
   it("elections", async () => {
     await getOpenElections();
     await getElectionBySlug("nope");
@@ -79,6 +105,7 @@ describe("every loader is valid SQL", () => {
     await getMyBallot(NIL, NIL);
     await getElectionResults(NIL);
     await getTiebreakDisclosures(NIL);
+    await getPointsElections(NIL);
     expect(true).toBe(true);
   });
 });

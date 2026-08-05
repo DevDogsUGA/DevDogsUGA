@@ -75,6 +75,44 @@ export const getElectionBySlug = cache(
   },
 );
 
+/**
+ * A competition's tallied points elections.
+ *
+ * Both filters are load-bearing rather than incidental:
+ *
+ *   * `purpose = 'points'` keeps the TIEBREAK election out. Publishing its
+ *     results would publish the officers' complete ordering — which is exactly
+ *     what `tiebreakDisclosures` exists to avoid, by naming only the pairs a
+ *     placement actually turned on.
+ *   * `status = 'tallied'` keeps out an election whose numbers are not final.
+ *     A partial standing shown before the tally is a number people screenshot.
+ */
+export const getPointsElections = cache(
+  async (
+    competitionId: string,
+  ): Promise<
+    { id: string; title: string; electorate: "teams" | "officers" }[]
+  > => {
+    return db
+      .select({
+        id: elections.id,
+        title: elections.title,
+        electorate: elections.electorate,
+      })
+      .from(elections)
+      .where(
+        and(
+          eq(elections.competitionId, competitionId),
+          eq(elections.purpose, "points"),
+          eq(elections.status, "tallied"),
+        ),
+      )
+      .orderBy(asc(elections.closesAt)) as Promise<
+      { id: string; title: string; electorate: "teams" | "officers" }[]
+    >;
+  },
+);
+
 export type VoteBlock =
   | "not_open"
   | "not_eligible"

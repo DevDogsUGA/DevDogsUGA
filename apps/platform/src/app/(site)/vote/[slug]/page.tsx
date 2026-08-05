@@ -6,10 +6,7 @@ import ConsolePageShell from "~/components/ConsolePageShell";
 import { formatEventDateTime, formatRelative } from "~/lib/eventTime";
 import { castBallot } from "~/server/actions/elections";
 import { expectSession } from "~/server/auth";
-import {
-  presentedOrder,
-  seedFrom,
-} from "~/server/elections/ballotOrder";
+import { presentedOrder, seedFrom } from "~/server/elections/ballotOrder";
 import {
   getBallotOptions,
   getElectionBySlug,
