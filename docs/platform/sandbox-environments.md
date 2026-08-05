@@ -5,13 +5,26 @@ description: How a competition team gets one shared Supabase instance without an
 
 # Sandbox Environments
 
-> **Status: schema built and verified; control plane and proxy not built.** The
-> three migrations, the `sandbox_proxy` role and both RPCs exist and are covered
-> by database tests. The provisioning module, CLI and proxy Worker are not
-> written yet. The Supabase APIs the rest depends on were exercised end to end
-> against a real free-plan account — see [Spike results](#spike-results) — so
-> the numbers and behaviors quoted below are measured rather than assumed.
-> Blocks marked **Measured** are observations; everything else is design intent.
+> **Status: built, except phase 2. Not yet run against live credentials.**
+> Phases 1 and 3–7 are implemented: the three migrations and the
+> `sandbox_proxy` role, the OAuth grant and its routes, the Management API
+> client and orchestration, the `pnpm sb` dispatcher and its four endpoints,
+> the proxy Worker, the reachability rules, and the cron passes. **Phase 2 —
+> the OAuth-owner refactor and test-account removal — is deliberately deferred;
+> see [Test accounts are removed entirely](#test-accounts-are-removed-entirely)
+> for why it cannot land before phase 3 is operational.**
+>
+> What is verified differs by layer, and the distinction matters. The database
+> layer is exercised against a real Postgres — grants, RPC outcomes, constraints
+> and reachability, all negative-controlled. The proxy is exercised against a
+> mock upstream, 36 tests, likewise negative-controlled. The Supabase-facing
+> half is typechecked and its pure logic is tested, but **no code path in it has
+> ever run against the live Management API**, because that needs a registered
+> OAuth application which does not exist yet. The phase 0 spike proved the
+> sequence; this implementation of it is unproven.
+>
+> Blocks marked **Measured** are observations from the spike or from building
+> this; everything else is design intent.
 >
 > Not to be confused with the [Sandbox App](./sandbox-app.md), which is the
 > moderation fixture schema. Unrelated, unfortunately similar name.
@@ -983,6 +996,19 @@ against a local stack, generalized to a remote project. Nobody has to copy a
 secret into a config file, so there is no secret to leak from one.
 
 ### Test accounts are removed entirely
+
+> **Deferred, and the ordering is the reason.** Everything below is still the
+> plan, but it must not land before phase 3 is _operational_ — not merely
+> written. The justification for deleting test accounts is that federated
+> sign-in replaces them, and federated sign-in requires a registered Supabase
+> OAuth application that does not exist yet. Removing them first would take away
+> the only working way for a contributor to have two users in a room and replace
+> it with nothing.
+>
+> The sequencing constraint is narrow and checkable: land this once one team has
+> signed into a provisioned environment with a real DevDogs account. The doc
+> already says this migration "should be its own PR"; this is the condition that
+> PR is waiting on.
 
 Test accounts existed because a contributor developing alone had no other way to
 have two users in a room. Federated sign-in replaces that: members authenticate
