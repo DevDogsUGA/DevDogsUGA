@@ -4,11 +4,11 @@ import {
   uuid,
   varchar,
   boolean,
-  timestamp,
   text,
-  integer,
   smallint,
   pgEnum,
+  integer,
+  timestamp,
   date,
   doublePrecision,
   numeric,
@@ -404,6 +404,59 @@ export const ballotsInPlatform = platform.table.withRLS(
       "ballots_electorate_matches_teamId",
       sql`(((electorate = 'teams'::platform."electionElectorate") AND ("teamId" IS NOT NULL)) OR ((electorate = 'officers'::platform."electionElectorate") AND ("teamId" IS NULL)))`,
     ),
+  ],
+);
+
+export const checkInCodesInPlatform = platform.table.withRLS(
+  "checkInCodes",
+  {
+    code: text().primaryKey(),
+    meetingId: uuid()
+      .notNull()
+      .references(() => meetingsInPlatform.id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+    workshopId: uuid(),
+    createdAt: timestamp({ withTimezone: true })
+      .default(sql`now()`)
+      .notNull(),
+    expiresAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.workshopId, table.meetingId],
+      foreignColumns: [workshopsInPlatform.id, workshopsInPlatform.meetingId],
+      name: "checkInCodes_workshopId_meetingId_fkey",
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    index("checkInCodes_meetingId_idx").using(
+      "btree",
+      table.meetingId.asc().nullsLast(),
+    ),
+
+    pgPolicy("no_client_delete", {
+      as: "restrictive",
+      for: "delete",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+    }),
+
+    pgPolicy("no_client_insert", {
+      as: "restrictive",
+      for: "insert",
+      to: ["anon", "authenticated"],
+      withCheck: sql`false`,
+    }),
+
+    pgPolicy("no_client_update", {
+      as: "restrictive",
+      for: "update",
+      to: ["anon", "authenticated"],
+      using: sql`false`,
+      withCheck: sql`false`,
+    }),
   ],
 );
 
@@ -2342,6 +2395,7 @@ export { appsInPlatform as apps };
 export { attendanceInPlatform as attendance };
 export { ballotRankingsInPlatform as ballotRankings };
 export { ballotsInPlatform as ballots };
+export { checkInCodesInPlatform as checkInCodes };
 export { competitionsInPlatform as competitions };
 export { competitionStandingsInPlatform as competitionStandings };
 export { contentTypesInPlatform as contentTypes };

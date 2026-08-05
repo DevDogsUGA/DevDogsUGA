@@ -49,6 +49,6 @@
   // Cron triggers replace the old vercel.json crons. cloudflare/scheduled.ts
   // routes each cron to its existing CRON_SECRET-guarded /api route.
   "triggers": {
-    "crons": ["0 0 * * *", "*/10 * * * *"]
+    "crons": ["0 0 * * *", "*/10 * * * *", "*/5 * * * *"]
   }
 }
