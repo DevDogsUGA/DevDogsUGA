@@ -403,7 +403,6 @@ apps/sandbox/
   src/
     index.ts              path-class router
     credential.ts         token → resolve_sandbox_credential
-    jwt.ts                mint short-lived authenticated JWTs
     rewrite.ts            headers, query params, Storage response URLs
     upstream.ts           forward, including WebSocket upgrade
 ```
@@ -423,9 +422,10 @@ The hostname keys to the **environment**, which is what makes reuse work: a team
 that re-attaches last event's environment keeps the same URL, so existing app
 builds and `.env` files keep working with no changes.
 
-### Hostname per environment, token per member
+### Hostname per environment, tokens per member
 
-The hostname identifies the environment; an opaque token identifies the member.
+The hostname identifies the environment; an opaque token identifies the member
+_and_ the authority they are asking for.
 
 Keying the hostname to the member would break the canonical test — one member's
 build running on another member's phone. That build would carry the first
@@ -433,7 +433,8 @@ member's URL and token, so the second member's actions would attribute to the
 first, and revoking the first would brick the second's installed app.
 
 Member tokens are opaque random strings stored hashed, following the
-`reportApiKeyHash` pattern already in `oauthRegistrations`.
+`reportApiKeyHash` pattern already in `oauthRegistrations`, and prefixed
+`dd_publishable_` / `dd_secret_` to mirror upstream.
 
 ### What the proxy actually does per request
 
@@ -441,21 +442,87 @@ Members sign in through the **proxied GoTrue**, which returns a genuine
 Supabase-signed user JWT. That token is valid upstream on its own, so the normal
 data path needs no rewriting beyond swapping the key:
 
-| Request class                         | Behavior                                         |
-| ------------------------------------- | ------------------------------------------------ |
-| Pre-login (`apikey` = member token)   | Swap for the real publishable key                |
-| Authenticated (`Authorization` = JWT) | Verify, pass through; swap `apikey`              |
-| Tooling, no user session              | Mint an `authenticated` JWT bound to the member  |
-| `x-devdogs-role: secret`              | Inject the secret key; any member; always logged |
-| Anything else                         | Reject                                           |
+| Request                                  | Behavior                                                        |
+| ---------------------------------------- | --------------------------------------------------------------- |
+| `apikey` = `dd_publishable_*`            | Swap for the real publishable key; pass `Authorization` through |
+| `apikey` = `dd_secret_*`, non-browser UA | Swap for the real secret key; always logged                     |
+| `apikey` = `dd_secret_*`, browser UA     | `401`, matching upstream                                        |
+| Anything else                            | Reject                                                          |
 
-Minting is the fallback path, not the main one.
+### Authority follows the credential, not a header
 
-**Elevation is explicit rather than implicit.** Members genuinely need to bypass
-RLS sometimes — inspecting rows a policy hides, seeding fixtures. Rather than
-running every request with that authority, the `x-devdogs-role: secret` header
-requests it per-call, is available to any active member, and is always
-attributable. Safe by default, escape hatch on request.
+Every member holds **two** tokens per environment, and which one they present is
+what decides their authority — exactly as upstream, where `sb_publishable_…`
+means `anon`/`authenticated` and `sb_secret_…` means `service_role`.
+
+```ts
+createClient(url, "dd_publishable_…"); // browser
+createClient(url, "dd_secret_…"); // server, seeding, tooling
+```
+
+An earlier draft used a custom `x-devdogs-role: secret` header instead. It was
+wrong on both axes this design cares about. On fidelity, it is a DevDogs-ism in
+a system whose entire selling point is that a sandbox behaves like the real
+thing, so code written against it needs a rewrite to ship. On security, a header
+can be attached to any request by anything holding the one token, whereas a
+scope-bearing credential is provisioned, disabled, and audited on its own —
+elevation becomes something granted rather than something asserted.
+
+`proxyRequestLog` already carries `credentialId`, so "always logged" is a join
+to that credential's scope rather than a trusted header.
+
+**Mirror the upstream prefixes.** `dd_publishable_` and `dd_secret_` are what
+make the CI secret scan on `team/**` branches able to pattern-match at all, and
+they make an accidental elevation visible in a diff.
+
+**Secret tokens are refused in the browser**, matching on `User-Agent` the way
+upstream does. Without it a student ships `dd_secret_` to the browser, it works
+all week against the sandbox, and the identical code `401`s in production.
+
+### The sandbox must be able to represent a logged-out user
+
+The same draft had a third row: _tooling with no user session gets a minted
+`authenticated` JWT bound to the member_. It is deleted, and it was the more
+damaging of the two divergences.
+
+Upstream, a publishable key with no `Authorization` header runs as `anon` and
+`auth.uid()` is null. Minting replaces that with a real session, which means the
+sandbox never once exercises the logged-out path — the state every public page,
+every sign-up flow, and every unauthenticated visitor starts in. A policy scoped
+`to authenticated` that was meant to be public reads fine all week and returns
+an empty array on demo day. An app never has to wire up sign-in to work, so the
+auth flow's first real exercise is in front of judges. And because the mint is
+bound to whoever's token it is, every script-written row is owned by the same
+member, so anything keyed to authorship goes untested.
+
+Worse, it diverges from _itself_: the same query against the same table returns
+different rows depending on whether the caller is a browser with a session or a
+script, which is not a distinction Supabase makes anywhere.
+
+Deleting the row removes no capability, because scoped tokens give all three
+underlying cases a faithful home:
+
+| Intent                      | How, and it is the upstream how                          |
+| --------------------------- | -------------------------------------------------------- |
+| Bypass RLS to seed or debug | `dd_secret_` → `service_role`                            |
+| Act as a specific user      | Sign in through the proxied GoTrue, use the returned JWT |
+| Be logged out               | `dd_publishable_`, no `Authorization` → `anon`           |
+
+The third was unreachable before. The second already works — `/auth/v1/*` is
+proxied — and was the only case minting genuinely served; it served it by
+papering over the first and deleting the third.
+
+The ergonomic cost is real: quick scripting now means signing in or reaching for
+the secret token. That belongs in the CLI rather than in a proxy that silently
+rewrites semantics, so **`pnpm sb link` writes both tokens** under the names a
+real project uses. The student then chooses the same way they will in
+production, having been shown the distinction exists.
+
+Removing the mint also means the worker never signs anything, so it has no use
+for the environment's JWT secret and `resolve_sandbox_credential` stops
+returning it. Incoming user JWTs are passed through for upstream to verify;
+attribution comes from the member token, which the worker has already resolved.
+That is a real narrowing of the one call the proxy can make.
 
 ### Secrets are read through a narrow RPC
 
@@ -475,13 +542,41 @@ where every caller must pass through.
 platform.resolve_sandbox_credential(token_hash text)
   returns table (team_id uuid, user_id uuid, project_ref text,
                  upstream_url text, publishable_key text,
-                 jwt_secret text, scope platform."proxyScope")
+                 scope platform."proxyScope")
   security definer;
 ```
 
 Execute is granted to a dedicated Postgres role with no other privileges, and
 the worker holds only that role's key. A compromised worker yields one team's
 config per _valid_ token rather than the whole Vault.
+
+**The role is reached with a self-signed JWT, not a secret API key.** This is
+the one place the new-key migration does not reach, and getting it backwards
+produces a "narrow" role that is actually `service_role`:
+
+> **Verified: `sb_secret_…` keys cannot be bound to a custom role.** Supabase's
+> [API keys guide](https://supabase.com/docs/guides/getting-started/api-keys)
+> states plainly that "secret keys authorize access to your project's data via
+> the built-in `service_role` Postgres role." There is no role parameter, no
+> scoping option. A secret key _is_ `service_role`.
+>
+> PostgREST still honors a `role` claim, and the
+> [signing keys guide](https://supabase.com/docs/guides/auth/signing-keys)
+> confirms the claim "must be set to an existing Postgres role in your database,
+> such as `anon`, `authenticated`, or `service_role`" — any role `authenticator`
+> can switch into qualifies, custom ones included.
+
+```sql
+create role sandbox_proxy nologin;
+grant sandbox_proxy to authenticator;   -- lets PostgREST SET ROLE into it
+
+revoke execute on function platform.resolve_sandbox_credential(text) from public;
+grant  execute on function platform.resolve_sandbox_credential(text) to sandbox_proxy;
+```
+
+The `revoke … from public` is not optional. A newly created function grants
+`EXECUTE` to `PUBLIC` by default, so without it the narrow role is decoration
+and `anon` can call the function directly.
 
 Vault storage reuses the helpers already in `server/actions/credentials.ts` —
 `storeVaultSecret`, `readVaultSecret`, `deleteVaultSecret`.
@@ -685,20 +780,23 @@ platform."teamEnvironments" (
     on update restrict on delete restrict
 );
 
--- One row per (contributor, environment) pair, for the lifetime of the pair.
+-- One row per (contributor, environment, scope), for the lifetime of the pair.
+-- Scope is in the key because authority follows the credential: a member holds
+-- a publishable token and a secret token, and the secret one is disabled on its
+-- own. See "Authority follows the credential, not a header".
 platform."sandboxCredentials" (
   id              uuid primary key,
   "environmentId" uuid not null references platform."sandboxEnvironments"(id) on delete cascade,
   "userId"        uuid not null references auth.users(id) on delete cascade,
   "tokenHash"     text not null,
-  scope           platform."proxyScope" not null default 'member',
+  scope           platform."proxyScope" not null,  -- 'publishable' | 'secret'
   status          platform."credentialStatus" not null default 'active',
                                         -- 'active' | 'disabled' | 'revoked'
   "lastUsedAt"    timestamptz,
   "disabledAt"    timestamptz,
   "rotatedAt"     timestamptz,
   "revokedAt"     timestamptz,
-  unique ("environmentId", "userId")   -- one pair, one row, always
+  unique ("environmentId", "userId", scope)
 );
 
 platform."envVars" (
@@ -748,14 +846,16 @@ or come back for the next event on the same environment.
 | **disabled** | Token rejected; row and history preserved | Member is no longer reachable             |
 | **revoked**  | Terminal; environment is gone             | Environment revoked or orphaned           |
 
-The point of disabling is the elevation path: `x-devdogs-role: secret` is granted
-by the credential, so someone who leaves a team must lose secret-key access to a
-project they neither own nor contribute to — immediately, and without waiting for
-anyone to notice.
+The point of disabling is the elevation path: the secret-scoped credential is
+what grants a bypass of RLS, so someone who leaves a team must lose secret-key
+access to a project they neither own nor contribute to — immediately, and
+without waiting for anyone to notice. Because scope is part of the key, that
+revocation is also available at a finer grain than "all or nothing": a member
+can keep publishable access while losing the secret token.
 
-**One row per `(contributor, environment)` pair, for the lifetime of the pair.**
-The unique constraint is unconditional, so history, `lastUsedAt`, and the audit
-trail survive a member leaving and returning.
+**One row per `(contributor, environment, scope)`, for the lifetime of the
+pair.** The unique constraint is unconditional, so history, `lastUsedAt`, and
+the audit trail survive a member leaving and returning.
 
 **Re-granting access reactivates the same token.** The row and its secret both
 persist, so a member returning to an environment finds their existing `.env`
@@ -985,21 +1085,32 @@ Two guardrails belong in phase 5c rather than later: a CI secret scan on
 `team/**` branches, because somebody will commit `.env.local`, and confirming
 `.env.local` is ignored in every workspace `sb link` writes to.
 
-## Worker key rotation
+## Worker key rotation happens at deploy
 
-The worker's key for `resolve_sandbox_credential` is a standing credential, so
-it needs a rotation path that does not involve downtime.
+The worker's credential for `resolve_sandbox_credential` is a JWT carrying
+`{"role": "sandbox_proxy"}`, signed with the platform project's own signing key.
 
-Issue it as a **modern secret API key** rather than a legacy `service_role` JWT.
-The API-key endpoints support creating and deleting keys individually
-(`POST` and `DELETE /v1/projects/{ref}/api-keys/{id}`), which makes overlap
-rotation a three-step operation: create the new key, deploy the worker with it,
-delete the old one. Legacy JWT-based keys cannot do this — there is exactly one
-of them and rotating it is a hard cutover — which is a second reason to avoid
-them beyond their documented deprecation.
+That has a consequence worth designing around: **minting is signing, not an API
+call.** There is no `POST /v1/projects/{ref}/api-keys`, no management token in
+CI, and no dashboard step — the deploy signs a token locally and writes it to
+Secrets Store. So rotation stops being a three-step overlap dance and becomes
+free, which means it should happen on **every deploy**, with a 90-day `exp` so a
+pipeline that goes stale fails loudly instead of quietly holding a key forever.
 
-Rotate at the start of each semester, and immediately if a worker deploy log
-ever leaks.
+**Import the signing key rather than letting Supabase generate one.** The
+signing-keys guide is explicit that "you can only extract the legacy JWT secret;
+once you've moved to the JWT signing keys feature, extracting the private key or
+shared secret from Supabase is not possible." Legacy keys are removed in late
+2026, so a generated key would leave nothing to sign with and force this back
+onto a manual path. Importing is a one-time decision with a deadline attached.
+
+The obvious objection is that CI now holds a key that can mint any user's
+session. It does not survive scrutiny while one pipeline deploys both workers:
+whoever can deploy `apps/platform` can already push code that reads `SECRET_KEY`
+out of its own environment, so CI is fully trusted today and this adds no
+authority it did not have. That reasoning is load-bearing, though — if the proxy
+ever moves to a separate, less-trusted pipeline, the signing key does not follow
+it, and the token goes back to being minted out-of-band.
 
 ## Rate limiting: deliberately deferred
 
@@ -1029,12 +1140,12 @@ Four files, landing **after** `<ts>_platform_teams.sql` from
 foreign key into `teamMembers("teamId", "userId", role)`, so those keys must
 already exist.
 
-| #   | File                                        | Contents                                                                               |
-| --- | ------------------------------------------- | -------------------------------------------------------------------------------------- |
-| 1   | `<ts>_platform_supabase_connections.sql`    | `supabaseConnections`, enums                                                           |
-| 2   | `<ts>_platform_sandbox_environments.sql`    | `sandboxEnvironments`, `teamEnvironments`, `envVars`                                   |
-| 3   | `<ts>_platform_sandbox_credentials.sql`     | `sandboxCredentials`, `proxyRequestLog`, `envAccessLog`, `resolve_sandbox_credential`  |
-| 4   | `<ts>_platform_oauth_environment_owner.sql` | OAuth refactor, **drop `oauthTestAccounts`**, drop `is_test_identity` + its 4 policies |
+| #   | File                                        | Contents                                                                                                                       |
+| --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `<ts>_platform_supabase_connections.sql`    | `supabaseConnections`, enums                                                                                                   |
+| 2   | `<ts>_platform_sandbox_environments.sql`    | `sandboxEnvironments`, `teamEnvironments`, `envVars`                                                                           |
+| 3   | `<ts>_platform_sandbox_credentials.sql`     | `sandboxCredentials`, `proxyRequestLog`, `envAccessLog`, `resolve_sandbox_credential`, the `sandbox_proxy` role and its grants |
+| 4   | `<ts>_platform_oauth_environment_owner.sql` | OAuth refactor, **drop `oauthTestAccounts`**, drop `is_test_identity` + its 4 policies                                         |
 
 Migration 4 is the destructive one and should be its own PR. It removes
 `platform.is_test_identity()` and the four `deny_test_identities` restrictive
@@ -1048,9 +1159,15 @@ create type platform."envKind"            as enum ('owned', 'branch');
 create type platform."envStatus"          as enum
   ('provisioning','active','paused','restoring','detached','revoked','orphaned');
 create type platform."credentialStatus"   as enum ('active','disabled','revoked');
-create type platform."proxyScope"         as enum ('member','lead');
+create type platform."proxyScope"         as enum ('publishable','secret');
 create type platform."envVarVisibility"   as enum ('shared','secret');
 ```
+
+`proxyScope` names the **key class the token stands in for**, mirroring
+upstream's publishable/secret split. An earlier draft had it as `member`/`lead`,
+which conflated authority with team role — the wrong axis, since a lead has no
+more reason to bypass RLS than anyone else, and the header that actually granted
+elevation ignored it anyway.
 
 `envStatus` is the platform's own lifecycle, not a mirror of Supabase's 15-value
 project status. Map the latter onto the former at the boundary — anything that is
@@ -1100,13 +1217,18 @@ Cross-cutting, applied before the table:
    the explanatory body, never `404`.
 2. Resolve the member token → `resolve_sandbox_credential`. Missing or
    `status <> 'active'` → `401`.
-3. If `x-devdogs-role: secret`, inject the secret key and write
-   `proxyRequestLog`. Otherwise never inject it.
+3. If the resolved credential's scope is `secret`, reject a browser `User-Agent`
+   with `401`; otherwise inject the secret key and write `proxyRequestLog`. A
+   `publishable` credential never reaches the secret key by any path.
 4. On upstream `5xx`, return the structured `503` and enqueue a platform status
    check in `ctx.waitUntil()` — the worker never concludes "paused" itself.
 
 `wrangler.jsonc` needs the route `*-sandbox.devdogsuga.org/*` against a single
-wildcard DNS record, plus the dedicated Postgres role's key in Secrets Store.
+wildcard DNS record, plus the `sandbox_proxy` JWT in Secrets Store. Both are
+deploy-time chores: nothing in phases 3–5 depends on the DNS record existing,
+since `wrangler dev` serves the proxy locally and every routing decision reads
+`proxyHostname` from the database rather than inferring it from the request
+host.
 
 ### Provisioning module
 
@@ -1140,7 +1262,7 @@ Two details that will otherwise be got wrong:
 shell out to today's exact command strings so they cannot regress.
 
 ```
-pnpm sb link   --team <slug>        # writes API_URL + member token to .env
+pnpm sb link   --team <slug>        # writes API_URL + both member tokens to .env
 pnpm sb push   --local | --remote | --team <slug>
 pnpm sb reset  --local | --remote | --team <slug>
 pnpm sb status --team <slug>        # environment status, wakes if paused
@@ -1168,8 +1290,16 @@ against a 196s restore leaves little room for a missed tick.
 ### Tests
 
 - **Worker unit tests** against a mock upstream — the routing table, `410` for
-  retired hostnames, `401` for disabled credentials, and that `x-devdogs-role:
-secret` is the _only_ path injecting the secret key.
+  retired hostnames, `401` for disabled credentials, and that a `secret`-scoped
+  credential is the _only_ path injecting the secret key. Assert the negative
+  directly: a `publishable` token plus every header an attacker might try must
+  never produce the secret key upstream.
+- **Logged-out fidelity** — a `publishable` token with no `Authorization` header
+  must reach upstream as `anon` with `auth.uid()` null. This is the property the
+  deleted minting row destroyed, and nothing else in the suite would notice its
+  return.
+- **Browser refusal** — a `secret` token with a browser `User-Agent` must `401`
+  without contacting upstream.
 - **Realtime handshake** — assert the rewritten URL carries the real publishable
   key in the query string and that `Sec-WebSocket-Protocol` retains `phoenix`
   alongside the rewritten token. This is the easiest thing to break and the

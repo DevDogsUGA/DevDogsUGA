@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, serial, text, varchar, bigserial, bigint, integer, timestamp, boolean, customType, pgEnum, time, jsonb, json, doublePrecision, date, inet, real, smallint, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy, numeric } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, text, bigserial, integer, varchar, serial, bigint, timestamp, customType, pgEnum, boolean, json, jsonb, time, doublePrecision, date, inet, real, smallint, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy, numeric } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 export const auth = pgSchema("auth");
