@@ -12,6 +12,14 @@ import {
 import { expectSession } from "~/server/auth";
 import { supabaseAdmin } from "~/supabase/admin";
 import { blankToNull } from "~/lib/blank";
+// Moved to a non-"use server" module: every export from this file is a server
+// action with an HTTP endpoint, and `readVaultSecret` as one would hand any
+// browser any secret by id.
+import {
+  deleteVaultSecret,
+  readVaultSecret,
+  storeVaultSecret,
+} from "~/server/vault";
 
 import { canUserCreateCredentials } from "~/server/actions/permissions";
 
@@ -44,48 +52,6 @@ async function userCanViewCredential(
     .limit(1);
 
   return match !== undefined;
-}
-
-// ── Vault helpers ─────────────────────────────────────────────────────────────
-
-// The vault schema is not in the generated Supabase types, so we cast to any.
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-
-async function storeVaultSecret(secret: string, name: string): Promise<string> {
-  const admin = supabaseAdmin as any;
-  const { data, error } = await admin
-    .schema("vault")
-    .from("secrets")
-    .insert({ secret, name })
-    .select("id")
-    .single();
-  /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-  if (error || !data)
-    throw new Error(
-      `Failed to store secret: ${String((error as { message?: string } | null)?.message)}`,
-    );
-  return (data as { id: string }).id;
-}
-
-async function readVaultSecret(secretId: string): Promise<string | null> {
-  /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-  const admin = supabaseAdmin as any;
-  const { data, error } = await admin
-    .schema("vault")
-    .from("decrypted_secrets")
-    .select("decrypted_secret")
-    .eq("id", secretId)
-    .single();
-  /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-  if (error || !data) return null;
-  return (data as { decrypted_secret: string }).decrypted_secret;
-}
-
-async function deleteVaultSecret(secretId: string): Promise<void> {
-  /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-  const admin = supabaseAdmin as any;
-  await admin.schema("vault").from("secrets").delete().eq("id", secretId);
-  /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 }
 
 // ── Public actions ────────────────────────────────────────────────────────────

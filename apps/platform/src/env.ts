@@ -43,6 +43,13 @@ export const env = createEnv({
     // here: it lives in Vault under "airtable_pat". See
     // docs/platform/airtable-setup.md.
     AIRTABLE_BASE_ID: z.string().default(""),
+    // Supabase OAuth, for sandbox environments. Optional for the same reason
+    // as Airtable: the app is registered separately and the platform has to
+    // boot without it -- provisioning refuses with `not_configured` rather
+    // than the whole app failing to start. See
+    // docs/platform/sandbox-environments.md.
+    SUPABASE_OAUTH_CLIENT_ID: z.string().default(""),
+    SUPABASE_OAUTH_CLIENT_SECRET: z.string().default(""),
     // Derived (.env / .env.generated)
     API_URL: z.string(),
     DB_URL: z.string(),
@@ -90,6 +97,8 @@ export const env = createEnv({
     GITHUB_COMPETITION_REPO: process.env.GITHUB_COMPETITION_REPO,
     GITHUB_WEBHOOK_SECRET: process.env.GITHUB_WEBHOOK_SECRET,
     AIRTABLE_BASE_ID: process.env.AIRTABLE_BASE_ID,
+    SUPABASE_OAUTH_CLIENT_ID: process.env.SUPABASE_OAUTH_CLIENT_ID,
+    SUPABASE_OAUTH_CLIENT_SECRET: process.env.SUPABASE_OAUTH_CLIENT_SECRET,
     // Derived (.env / .env.generated)
     API_URL: process.env.API_URL,
     DB_URL: process.env.DB_URL,
