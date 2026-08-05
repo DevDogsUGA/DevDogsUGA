@@ -31,6 +31,16 @@ const CRON_ROUTES: Record<string, string[]> = {
     // work regularly then something upstream is broken and a tighter cadence
     // would hide it.
     "/api/cron/github-reconcile",
+    // Supabase OAuth access tokens last 24h, so daily has ample margin. Runs
+    // BEFORE the reconcile below, which needs those tokens to ask whether each
+    // project still exists -- reversing them would have the reconcile skip
+    // every environment whose grant lapsed overnight.
+    "/api/cron/sandbox-refresh",
+    // Project existence, status drift, 90-day pause expiry, auto-pause. The
+    // sole authority on orphaning: the proxy must never conclude a project is
+    // gone, because a transient upstream error would tear down a healthy
+    // environment's credentials and secrets.
+    "/api/cron/sandbox-reconcile",
   ],
   // Airtable polls rather than subscribes. Webhooks exist but expire on a
   // 7-day refresh cycle and deliver cursor-based payloads that have to be
@@ -49,6 +59,10 @@ const CRON_ROUTES: Record<string, string[]> = {
     // on ungraded competitions and on a missing tiebreak ballot, and freezing
     // participation must happen whether or not grading is done.
     "/api/cron/tally-elections",
+    // Wakes sandbox environments with a competition starting inside fifteen
+    // minutes. Five minutes rather than ten because a restore takes 196s
+    // (measured) and the lead time has to absorb a tick landing badly.
+    "/api/cron/sandbox-prewarm",
   ],
 };
 

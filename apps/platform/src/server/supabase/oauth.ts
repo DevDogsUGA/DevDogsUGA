@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { supabaseConnectionsInPlatform as supabaseConnections } from "~/server/db/schema";
@@ -227,6 +227,42 @@ export async function accessTokenFor(userId: string): Promise<string> {
   const token = await readVaultSecret(row.accessTokenSecretId);
   if (!token) throw new OAuthError("not_connected");
   return token;
+}
+
+/**
+ * Refresh every grant close to lapsing. The daily cron's whole job.
+ *
+ * One member's failure must not stop the pass: a revoked grant is a permanent
+ * state that will fail on every run, and letting it abort the loop would mean
+ * one abandoned connection silently stops refreshing everybody else's.
+ */
+export async function refreshExpiringConnections(): Promise<{
+  refreshed: number;
+  failed: number;
+}> {
+  // Two days of headroom, so a single failed nightly run is not the difference
+  // between a working grant and a lapsed one.
+  const cutoff = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+  const due = await db
+    .select({ userId: supabaseConnections.userId })
+    .from(supabaseConnections)
+    .where(lt(supabaseConnections.expiresAt, cutoff));
+
+  let refreshed = 0;
+  let failed = 0;
+  for (const row of due) {
+    try {
+      await refreshConnection(row.userId);
+      refreshed += 1;
+    } catch (error) {
+      console.error(
+        `[supabase-oauth] refresh failed for ${row.userId}:`,
+        error,
+      );
+      failed += 1;
+    }
+  }
+  return { refreshed, failed };
 }
 
 /**

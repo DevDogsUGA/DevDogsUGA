@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import {
   sandboxCredentialsInPlatform as sandboxCredentials,
@@ -153,11 +153,12 @@ export async function reconcileEnvironmentAccess(
       and(
         eq(sandboxCredentials.environmentId, environmentId),
         eq(sandboxCredentials.status, "active"),
+        // Parameterized rather than string-built. See the note in
+        // supabase/provision.ts -- uuids cannot inject, but the predicate that
+        // stays correct under a future change is the one to write now.
         reachableIds.length > 0
-          ? sql`${sandboxCredentials.userId} <> all(${sql.raw(
-              `array[${reachableIds.map((id) => `'${id}'`).join(",")}]::uuid[]`,
-            )})`
-          : sql`true`,
+          ? notInArray(sandboxCredentials.userId, reachableIds)
+          : undefined,
       ),
     )
     .returning({ id: sandboxCredentials.id });
