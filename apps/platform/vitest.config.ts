@@ -14,6 +14,15 @@ export default mergeConfig(
     resolve: {
       alias: { "~": fileURLToPath(new URL("./src", import.meta.url)) },
     },
-    test: { include: ["src/**/*.test.{ts,tsx}"] },
+    test: {
+      include: ["src/**/*.test.{ts,tsx}"],
+      // Vite defines its own `BASE_URL` — the public base path, `"/"` unless
+      // configured — and Vitest puts it in `process.env`. The app happens to
+      // have a server variable of the same name that must be an absolute URL,
+      // so the collision makes `env.ts` throw "Invalid URL" in ANY test that
+      // reaches a server module, for a reason that has nothing to do with the
+      // test. Restoring the real value here is what lets those tests run.
+      env: { BASE_URL: process.env.BASE_URL ?? "http://localhost:3000" },
+    },
   }),
 );
