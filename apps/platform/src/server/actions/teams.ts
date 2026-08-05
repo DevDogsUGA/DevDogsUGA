@@ -12,6 +12,11 @@ import {
 import { TeamActionError, isUniqueViolation } from "~/server/teams/errors";
 import { isLocked } from "~/server/teams/lockState";
 import {
+  addMember,
+  provisionTeam,
+  removeMember,
+} from "~/server/github/teamSync";
+import {
   insertMembership,
   requireCanJoin,
   type Tx,
@@ -29,6 +34,32 @@ import {
  * Drizzle connects as the owning role, so RLS does not apply to anything here.
  * The authorization checks at the top of each action are the whole boundary.
  */
+
+/**
+ * Runs a GitHub side effect after the transaction has committed.
+ *
+ * Never inside. The membership row is the source of truth and repository
+ * access is a consequence of it — so a failed API call must leave somebody on
+ * the roster without push, which the nightly reconcile repairs, rather than
+ * rolling back a join that already succeeded. Rolling back would mean GitHub
+ * being down stops people from forming teams at all.
+ *
+ * Swallowing the error is therefore deliberate and not laziness: there is no
+ * caller-visible action to take, and the repair path already exists.
+ */
+async function afterCommit(
+  what: string,
+  effect: () => Promise<{ ok: boolean; detail?: string; skipped?: string }>,
+): Promise<void> {
+  try {
+    const result = await effect();
+    if (!result.ok) {
+      console.warn(`[github] ${what}: ${result.detail ?? result.skipped}`);
+    }
+  } catch (error) {
+    console.warn(`[github] ${what}:`, error);
+  }
+}
 
 const JOIN_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -107,7 +138,7 @@ export async function createTeam(
 ): Promise<string> {
   const userId = await expectSession();
 
-  return db.transaction(async (tx) => {
+  const teamId = await db.transaction(async (tx) => {
     await requireOpenCompetition(tx, competitionId);
 
     const [team] = await tx
@@ -143,6 +174,13 @@ export async function createTeam(
 
     return team.id;
   });
+
+  // The team, its push grant and its branch. The lead is added to the GitHub
+  // team by the same call chain a join would make.
+  await afterCommit(`provision ${teamId}`, () => provisionTeam(teamId));
+  await afterCommit(`add lead to ${teamId}`, () => addMember(teamId, userId));
+
+  return teamId;
 }
 
 export async function joinTeam(
@@ -168,6 +206,10 @@ export async function joinTeam(
 
     await insertMembership(tx, { teamId, competitionId, userId });
   });
+
+  await afterCommit(`add ${userId} to ${teamId}`, () =>
+    addMember(teamId, userId),
+  );
 }
 
 export async function requestToJoin(
@@ -267,6 +309,7 @@ export async function respondToMembership(
   accept: boolean,
 ): Promise<void> {
   const callerId = await expectSession();
+  let joined: { teamId: string; userId: string } | null = null;
 
   await db.transaction(async (tx) => {
     const [request] = await tx
@@ -318,7 +361,16 @@ export async function respondToMembership(
       competitionId: request.competitionId,
       userId: request.userId,
     });
+
+    joined = { teamId: request.teamId, userId: request.userId };
   });
+
+  if (joined !== null) {
+    const { teamId, userId } = joined;
+    await afterCommit(`add ${userId} to ${teamId}`, () =>
+      addMember(teamId, userId),
+    );
+  }
 }
 
 export async function leaveTeam(teamId: string): Promise<void> {
@@ -359,6 +411,10 @@ export async function leaveTeam(teamId: string): Promise<void> {
         and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)),
       );
   });
+
+  await afterCommit(`remove ${userId} from ${teamId}`, () =>
+    removeMember(teamId, userId),
+  );
 }
 
 export async function transferLead(

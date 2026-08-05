@@ -28,6 +28,15 @@ export const env = createEnv({
     DISCORD_TOKEN: z.string(),
     GITHUB_ORG: z.string(),
     GITHUB_TOKEN: z.string(),
+    // The repository competition branches live in. Defaulted rather than
+    // required: every existing deployment predates competitions, and a new
+    // required variable would stop them booting over a feature they do not
+    // use yet.
+    GITHUB_COMPETITION_REPO: z.string().default("DevDogs-Website"),
+    // Verifies `X-Hub-Signature-256` on the PR webhook. Empty means the
+    // webhook route refuses every request -- see the route for why that is the
+    // right default rather than accepting unsigned payloads.
+    GITHUB_WEBHOOK_SECRET: z.string().default(""),
     // Airtable. Optional because the base is provisioned separately and the
     // platform has to boot without it — the sync refuses with a named error
     // rather than the app failing to start. The personal access token is NOT
@@ -78,6 +87,8 @@ export const env = createEnv({
     DISCORD_TOKEN: process.env.DISCORD_TOKEN,
     GITHUB_ORG: process.env.GITHUB_ORG,
     GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+    GITHUB_COMPETITION_REPO: process.env.GITHUB_COMPETITION_REPO,
+    GITHUB_WEBHOOK_SECRET: process.env.GITHUB_WEBHOOK_SECRET,
     AIRTABLE_BASE_ID: process.env.AIRTABLE_BASE_ID,
     // Derived (.env / .env.generated)
     API_URL: process.env.API_URL,

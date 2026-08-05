@@ -23,7 +23,15 @@ export interface CronEnv {
  * nothing to notice it by.
  */
 const CRON_ROUTES: Record<string, string[]> = {
-  "0 0 * * *": ["/api/github/sync-leaderboard"],
+  "0 0 * * *": [
+    "/api/github/sync-leaderboard",
+    // Repairs team membership a failed API call left wrong. Nightly rather
+    // than more often on purpose: every membership change already fires on
+    // the platform event that caused it, so if this pass is doing meaningful
+    // work regularly then something upstream is broken and a tighter cadence
+    // would hide it.
+    "/api/cron/github-reconcile",
+  ],
   // Airtable polls rather than subscribes. Webhooks exist but expire on a
   // 7-day refresh cycle and deliver cursor-based payloads that have to be
   // replayed in order -- real complexity for a club calendar that changes a
