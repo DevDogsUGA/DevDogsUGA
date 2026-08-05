@@ -5,11 +5,13 @@ description: How a competition team gets one shared Supabase instance without an
 
 # Sandbox Environments
 
-> **Status: designed and API-verified; not built.** No platform code implements
-> this yet. The Supabase APIs it depends on were exercised end to end against a
-> real free-plan account — see [Spike results](#spike-results) — so the numbers
-> and behaviors quoted below are measured rather than assumed. Blocks marked
-> **Measured** are observations; everything else is design intent.
+> **Status: schema built and verified; control plane and proxy not built.** The
+> three migrations, the `sandbox_proxy` role and both RPCs exist and are covered
+> by database tests. The provisioning module, CLI and proxy Worker are not
+> written yet. The Supabase APIs the rest depends on were exercised end to end
+> against a real free-plan account — see [Spike results](#spike-results) — so
+> the numbers and behaviors quoted below are measured rather than assumed.
+> Blocks marked **Measured** are observations; everything else is design intent.
 >
 > Not to be confused with the [Sandbox App](./sandbox-app.md), which is the
 > moderation fixture schema. Unrelated, unfortunately similar name.
@@ -539,12 +541,43 @@ this one has to be reachable by something that is not the platform, so it lives
 where every caller must pass through.
 
 ```sql
-platform.resolve_sandbox_credential(token_hash text)
-  returns table (team_id uuid, user_id uuid, project_ref text,
-                 upstream_url text, publishable_key text,
-                 scope platform."proxyScope")
+platform.resolve_sandbox_credential(hostname text, token_hash text)
+  returns table (outcome text,            -- ok | unknown_host | retired_host
+                                          --    | bad_credential
+                 credential_id uuid, environment_id uuid, user_id uuid,
+                 project_ref text, upstream_url text, publishable_key text,
+                 secret_key text,         -- null unless scope = 'secret'
+                 scope platform."proxyScope", environment_name text)
   security definer;
+
+platform.log_proxy_request(credential_id uuid, method text,
+                           path text, status smallint)
+  returns void security definer;
 ```
+
+Three things in that signature are deliberate, each replacing something that
+would have been a defect:
+
+- **It takes the hostname as well as the token.** Resolving the token alone
+  would let a credential minted for environment A be presented at environment
+  B's hostname and resolve happily; the Worker would have to remember to compare
+  the two itself, on every path, forever.
+- **It returns the secret key, and only for a `secret` credential.** The Worker
+  needs that key to serve an elevated request. Deciding it here means a
+  publishable credential cannot obtain it even if the proxy's routing is buggy —
+  the elevation is a database fact rather than an `if` in a Worker.
+- **It returns an `outcome` rather than zero rows.** The proxy owes an unknown
+  or retired hostname a `410` and a bad credential a `401`, and cannot tell
+  those apart from an empty result.
+
+`team_id` is deliberately absent: one environment serves many teams and a member
+can be reachable through more than one, so there is no single correct answer.
+`credential_id` is what the audit trail actually needs.
+
+`log_proxy_request` is a second function rather than an `INSERT` grant so the
+role's table privileges stay at exactly zero, and so the definer can stamp
+`lastUsedAt` in the same round trip — which the reachability reconcile reads and
+the Worker could not otherwise write.
 
 Execute is granted to a dedicated Postgres role with no other privileges, and
 the worker holds only that role's key. A compromised worker yields one team's
@@ -574,9 +607,49 @@ revoke execute on function platform.resolve_sandbox_credential(text) from public
 grant  execute on function platform.resolve_sandbox_credential(text) to sandbox_proxy;
 ```
 
-The `revoke … from public` is not optional. A newly created function grants
-`EXECUTE` to `PUBLIC` by default, so without it the narrow role is decoration
-and `anon` can call the function directly.
+The `revoke … from public` is not optional — and, as built, it is not
+sufficient either. Both halves were measured rather than reasoned about, and
+both were wrong in the first draft of the migration:
+
+> **Measured: `revoke … from public` leaves the API roles' grants standing.**
+> This schema carries `alter default privileges in schema platform grant execute
+on functions to anon, authenticated, service_role`, so every new function
+> arrives with EXPLICIT per-role grants alongside the implicit `PUBLIC` one.
+> Revoking `PUBLIC` strips `=X/postgres` from the ACL and leaves
+> `anon=X/postgres` untouched. The first version of this migration therefore
+> shipped a `SECURITY DEFINER` function returning decrypted Vault secrets that
+> any browser holding an authenticated JWT could call through PostgREST. Name
+> every role explicitly.
+>
+> **Measured: `PUBLIC` made the narrow role not narrow.** Postgres grants
+> `EXECUTE` to `PUBLIC` on every new function, and `PUBLIC` means every role —
+> including one created specifically to have none. `sandbox_proxy`, holding no
+> table privileges at all, could execute **18** of this schema's functions,
+> every one of them `SECURITY DEFINER` and therefore unprotected by its empty
+> table grants. `claim_root` was among them.
+>
+> The fix is schema-wide, because the hole is:
+>
+> ```sql
+> revoke execute on all functions in schema "platform" from public;
+> alter default privileges in schema "platform"
+>   revoke execute on functions from public;
+> ```
+>
+> Safe to do because all 18 already carry explicit grants to `anon`,
+> `authenticated` and `service_role` — checked before revoking, not after. The
+> role now reaches exactly two functions where it previously reached twenty, and
+> `anon`/`authenticated` are unchanged at 18.
+
+> **Verified end to end against the local stack**, 12/12: PostgREST accepts a
+> `role: sandbox_proxy` claim and runs the function; the role cannot read any
+> table or call any other RPC; `authenticated` can neither resolve a credential
+> nor forge an audit entry; the publishable key is refused; and a JWT naming the
+> role but signed with the wrong secret is rejected outright.
+>
+> `apps/platform/src/server/sandbox/resolveCredential.db-test.ts` keeps all of
+> it honest, including a guard that fails the moment a new function reintroduces
+> a `PUBLIC` grant.
 
 Vault storage reuses the helpers already in `server/actions/credentials.ts` —
 `storeVaultSecret`, `readVaultSecret`, `deleteVaultSecret`.
@@ -1140,12 +1213,12 @@ Four files, landing **after** `<ts>_platform_teams.sql` from
 foreign key into `teamMembers("teamId", "userId", role)`, so those keys must
 already exist.
 
-| #   | File                                        | Contents                                                                                                                       |
-| --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | `<ts>_platform_supabase_connections.sql`    | `supabaseConnections`, enums                                                                                                   |
-| 2   | `<ts>_platform_sandbox_environments.sql`    | `sandboxEnvironments`, `teamEnvironments`, `envVars`                                                                           |
-| 3   | `<ts>_platform_sandbox_credentials.sql`     | `sandboxCredentials`, `proxyRequestLog`, `envAccessLog`, `resolve_sandbox_credential`, the `sandbox_proxy` role and its grants |
-| 4   | `<ts>_platform_oauth_environment_owner.sql` | OAuth refactor, **drop `oauthTestAccounts`**, drop `is_test_identity` + its 4 policies                                         |
+| #   | File                                        | Contents                                                                                                                                                                                 |
+| --- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `<ts>_platform_supabase_connections.sql`    | `supabaseConnections`, enums                                                                                                                                                             |
+| 2   | `<ts>_platform_sandbox_environments.sql`    | `sandboxEnvironments`, `teamEnvironments`, `envVars`                                                                                                                                     |
+| 3   | `<ts>_platform_sandbox_credentials.sql`     | `sandboxCredentials`, `proxyRequestLog`, `envAccessLog`, `resolve_sandbox_credential`, `log_proxy_request`, the `sandbox_proxy` role and its grants, and the schema-wide `PUBLIC` revoke |
+| 4   | `<ts>_platform_oauth_environment_owner.sql` | OAuth refactor, **drop `oauthTestAccounts`**, drop `is_test_identity` + its 4 policies                                                                                                   |
 
 Migration 4 is the destructive one and should be its own PR. It removes
 `platform.is_test_identity()` and the four `deny_test_identities` restrictive
