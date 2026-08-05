@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
+    "@devdogsuga/airtable": "workspace:*",
     "@devdogsuga/db": "workspace:*",
     "@devdogsuga/docs": "workspace:*",
     "@devdogsuga/moderation": "workspace:*",

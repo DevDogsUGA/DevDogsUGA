@@ -373,6 +373,85 @@ The reason the last rule is worth writing down: the registry makes adding a fiel
 one line, which is exactly why the boundary needs to be stated somewhere other
 than in the difficulty of the change.
 
+## Configuration
+
+> **Built** — `packages/airtable`, `apps/platform/src/server/airtable/credentials.ts`.
+> The base itself does not exist yet, so nothing below has run against a live
+> Airtable account. Everything is unit-tested against the documented API shapes.
+
+Everything the integration needs to be pointed at a base, in one place.
+
+### Environment variables
+
+| Variable           | Where       | Required           | What it is                                               |
+| ------------------ | ----------- | ------------------ | -------------------------------------------------------- |
+| `AIRTABLE_BASE_ID` | root `.env` | Only to run a sync | `appXXXXXXXXXXXXXX` — which base to talk to              |
+| `AIRTABLE_PAT`     | root `.env` | Bootstrap only     | The token, **before** Vault has one. Remove once stored. |
+
+`AIRTABLE_BASE_ID` defaults to `""` rather than being required. The platform has
+to boot without Airtable configured — the base is provisioned separately, and a
+required variable would mean the whole app refuses to start until somebody
+finishes a task in a different system. The sync refuses with a named
+`AirtableNotConfiguredError` instead, which the console can render as
+"Airtable is not configured" rather than surfacing a 401 from a vendor.
+
+### The token lives in Vault
+
+|             |                                                                                     |
+| ----------- | ----------------------------------------------------------------------------------- |
+| Secret name | `airtable_pat`                                                                      |
+| Stored via  | `storeVaultSecret(token, "airtable_pat")` — the same path as every other credential |
+| Read via    | `getAirtableToken()` in `server/airtable/credentials.ts`                            |
+
+Looked up by **name**, not by a secret id kept in an env var. Vault names are
+unique, so the name is a stable handle that survives rotation — replacing the
+value changes nothing else. A stored id would mean a rotation that creates a new
+row silently leaves the sync reading the old one.
+
+`AIRTABLE_PAT` is checked **second**, deliberately. Once the Vault entry exists a
+stale environment variable cannot quietly take precedence over the rotated token.
+
+### Token scopes
+
+Mint one token, scoped to the club workspace only:
+
+- `schema.bases:read` — `verify.ts`
+- `schema.bases:write` — `scaffold.ts`
+- `data.records:read` — the pull half of every sync
+- `data.records:write` — the push half, and the member push
+
+**Mint it as whoever created the workspace.** `POST /v0/meta/bases` requires the
+workspace _creator_ role, which is a person-level permission a token inherits and
+no scope can grant. A collaborator's token does everything else and fails only at
+scaffolding, which is a confusing place to discover it.
+
+### Turning it on, once the base exists
+
+1. `pnpm sb` — store the token: `storeVaultSecret(token, "airtable_pat")`.
+2. Set `AIRTABLE_BASE_ID` in the root `.env` (and as a Worker var in production).
+3. `pnpm --filter @devdogsuga/airtable exec tsx scripts/scaffold.ts` — creates
+   any missing tables and fields, then prints the discovered field IDs.
+4. `... scripts/pull-ids.ts` — writes those IDs into `registry.ts`. Commit it.
+5. Walk the manual checklist `verify.ts` prints (field editing permissions).
+6. `... scripts/verify.ts` — must exit clean.
+7. Grant an officer role `canTriggerSync` and run one pass from the console.
+
+Steps 3 and 4 are what replace the placeholder IDs the registry ships with.
+Until they run, `verify.ts` fails every table with "ID is still a placeholder" —
+which is deliberate, because a placeholder that reaches a live sync does not
+error. Airtable accepts the request, the write lands nowhere, and the pass
+reports success.
+
+### What the registry ships with
+
+`packages/airtable/src/registry.ts` declares six tables — Members, Projects,
+Meetings, Workshops, Competitions, Teams — with every field ID set to a
+`fldTODO_*` placeholder. The shape is real; only the IDs are pending.
+
+Adding a field later is one line in that file. Direction (`.push()` / `.pull()` /
+`.ignore()`) is mutually exclusive **in the type**, so a field both sides write
+fails to compile rather than producing last-writer-wins weeks later.
+
 ## Runbook
 
 Ordered, because several steps fail confusingly when done out of order.
@@ -406,20 +485,46 @@ Ordered, because several steps fail confusingly when done out of order.
 
 ## Tests
 
+> **Built** — 36 tests in `packages/airtable/src/*.test.ts`. What is NOT covered
+> is anything requiring a live base: every test drives a stub client, so the
+> wire format is asserted against the documented API shapes rather than against
+> Airtable's actual responses. The first real sync is still the first real
+> proof.
+
 - **Registry/base agreement** — `verify.ts` against a fixture base, asserting
   each of the four checks fires on a deliberately broken schema. The renamed-field
-  case matters most, since it is the one field IDs exist to survive.
+  case matters most, since it is the one field IDs exist to survive. ✅ — plus a
+  fifth case, the officer's own column, asserted to be a report rather than an
+  error.
 - **Direction exclusivity is a type error** — a `.push().pull()` field must fail
   to compile. Assert with a type-level test rather than a runtime one; the whole
-  value is that it never runs.
+  value is that it never runs. ✅ — `@ts-expect-error` on both directions, plus
+  the same guard on `.matchKey()` against an ineligible field type.
 - **Identity is never blanked** — a member whose `ugaEmail` goes null in Postgres
-  must leave the Airtable value untouched, not clear it.
+  must leave the Airtable value untouched, not clear it. ✅
 - **Duplicate key detection** — two Members rows sharing a UGA email are
-  reported, since Airtable will not catch it.
+  reported, since Airtable will not catch it. ✅
 - **The Involvement import writes both column sets** — `involvement*` cleared and
   repopulated, `legal*` and `ugaEmail` populated and **not** cleared for a member
   absent from the new CSV. This is the regression that the two-column split
-  exists to prevent, so it is the test that justifies the split.
+  exists to prevent, so it is the test that justifies the split. ✅ — verified
+  against the local database by driving the import's actual statements in
+  order. Not yet a standing test: `uploadVerificationCSV` takes a session and a
+  permission check, so it needs either a fixture harness or the action's core
+  extracted from its guards.
+
+Three the design note did not list, added because building the engine surfaced
+them:
+
+- **Change detection treats an absent field and an empty value as one state.**
+  Airtable omits empty fields from responses rather than returning null, so
+  without this every record with one empty field looks changed on every pass,
+  forever — burning the shared call allowance and destroying "sort by last
+  modified" as a way to find what an officer actually touched.
+- **Batching at exactly 10.** Not a tunable: exceeding it is a 422.
+- **Backoff on 429 but not on 422.** The 5 requests/second per-base limit is
+  universal and does not lift with the plan, so retrying a rate limit is
+  required at every tier — and retrying a malformed request never helps.
 
 ## See also
 

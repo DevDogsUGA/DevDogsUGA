@@ -28,6 +28,12 @@ export const env = createEnv({
     DISCORD_TOKEN: z.string(),
     GITHUB_ORG: z.string(),
     GITHUB_TOKEN: z.string(),
+    // Airtable. Optional because the base is provisioned separately and the
+    // platform has to boot without it — the sync refuses with a named error
+    // rather than the app failing to start. The personal access token is NOT
+    // here: it lives in Vault under "airtable_pat". See
+    // docs/platform/airtable-setup.md.
+    AIRTABLE_BASE_ID: z.string().default(""),
     // Derived (.env / .env.generated)
     API_URL: z.string(),
     DB_URL: z.string(),
@@ -72,6 +78,7 @@ export const env = createEnv({
     DISCORD_TOKEN: process.env.DISCORD_TOKEN,
     GITHUB_ORG: process.env.GITHUB_ORG,
     GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+    AIRTABLE_BASE_ID: process.env.AIRTABLE_BASE_ID,
     // Derived (.env / .env.generated)
     API_URL: process.env.API_URL,
     DB_URL: process.env.DB_URL,
