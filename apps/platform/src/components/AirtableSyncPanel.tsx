@@ -125,6 +125,12 @@ function ReportPanel({ report }: { report: SyncReport }) {
         {report.accountsCreated > 0 && (
           <Stat label="Accounts created" value={report.accountsCreated} />
         )}
+        {/* Shown only when it happened, like accounts created, and for a
+            sharper reason: this is the one irreversible thing a pass does, so
+            a standing "0" would train an officer to stop reading it. */}
+        {report.attendanceRemoved > 0 && (
+          <Stat label="Attendance removed" value={report.attendanceRemoved} />
+        )}
       </dl>
       {report.error && (
         <p className="mt-3 rounded-sm bg-red-50 p-2 text-red-800">

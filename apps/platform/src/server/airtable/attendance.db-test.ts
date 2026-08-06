@@ -229,16 +229,85 @@ describe("re-importing", () => {
     expect(await attendanceRows()).toHaveLength(1);
   });
 
-  it("does not delete a row whose Airtable record has gone", async () => {
-    // The rule the whole pull states and this table cannot express with a
-    // `deletedAt`: attendance is a record of who was in a room on a Tuesday,
-    // and deleting the spreadsheet row does not change that.
+  it("removes a row whose Airtable record has gone", async () => {
+    // Deleting the record IS how an officer removes somebody. The rest of the
+    // pull archives rather than deletes, on the grounds that a spreadsheet
+    // deletion must not destroy platform truth -- but that was written when the
+    // platform CREATED attendance. Once Airtable is the source, a deleted
+    // record is the source saying it did not happen.
     await pullAttendance(
       [record("recR1", { myId: "attendee1", workshop: "recWorkshopA" })],
       WORKSHOP_IDS,
     );
-    await pullAttendance([], WORKSHOP_IDS);
+    const out = await pullAttendance([], WORKSHOP_IDS);
 
+    expect(out.removed).toBe(1);
+    expect(await attendanceRows()).toHaveLength(0);
+  });
+
+  it("re-imports a restored record as an equivalent row", async () => {
+    // The property that makes deletion safe rather than reckless: Airtable's
+    // own trash is the recovery path, and a restored record reconstructs the
+    // row exactly, because nothing outside this table references an attendance
+    // id -- stars read by member and meeting, judging by member and workshop.
+    const records = [
+      record("recR1", { myId: "attendee1", workshop: "recWorkshopA" }),
+    ];
+    await pullAttendance(records, WORKSHOP_IDS);
+    await pullAttendance([], WORKSHOP_IDS);
+    await pullAttendance(records, WORKSHOP_IDS);
+
+    const rows = await attendanceRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      email: "attendee1@uga.edu",
+      workshopId: IDS.workshopA,
+      airtableRecordId: "recR1",
+    });
+  });
+
+  it("never removes an officer's row that a form later attached to", async () => {
+    // The case the `method = 'airtable'` scope exists for, and the only one
+    // that exercises it: a row with an airtableRecordId whose method is NOT
+    // 'airtable'. An officer added the member by hand, the member then filled
+    // in the form, and the import attached its record id to the existing row.
+    //
+    // Deleting that form response must not delete the officer's row. The
+    // officer created it; the response only annotated it.
+    //
+    // Written this way after a negative control caught the first version being
+    // vacuous: it used a row with a NULL record id, which `isNotNull` already
+    // excluded, so removing the method scope broke nothing.
+    await db.execute(sql`
+      insert into platform.attendance ("meetingId", "userId", method, "recordedBy")
+      values (${IDS.meetingA}::uuid, ${IDS.member}::uuid, 'officer', ${IDS.member}::uuid)`);
+    await pullAttendance(
+      [record("recR1", { myId: "existing", workshop: "recWorkshopA" })],
+      WORKSHOP_IDS,
+    );
+
+    const attached = await attendanceRows();
+    expect(attached[0]).toMatchObject({
+      method: "officer",
+      airtableRecordId: "recR1",
+    });
+
+    const out = await pullAttendance([], WORKSHOP_IDS);
+
+    expect(out.removed).toBe(0);
+    const rows = await attendanceRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.method).toBe("officer");
+  });
+
+  it("leaves a plain officer row alone", async () => {
+    await db.execute(sql`
+      insert into platform.attendance ("meetingId", "userId", method, "recordedBy")
+      values (${IDS.meetingB}::uuid, ${IDS.member}::uuid, 'officer', ${IDS.member}::uuid)`);
+
+    const out = await pullAttendance([], WORKSHOP_IDS);
+
+    expect(out.removed).toBe(0);
     expect(await attendanceRows()).toHaveLength(1);
   });
 });

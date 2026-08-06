@@ -56,6 +56,8 @@ export interface SyncReport {
   statusWrites: number;
   /** Accounts created for MyIDs with no platform user yet. */
   accountsCreated: number;
+  /** Attendance rows removed because their Airtable record was deleted. */
+  attendanceRemoved: number;
   refusals: Refusal[];
   error?: string;
 }
@@ -127,6 +129,7 @@ export async function runAirtableSync(
   let gradesApplied = 0;
   let statusWrites = 0;
   let accountsCreated = 0;
+  let attendanceRemoved = 0;
   let failure: unknown = null;
 
   try {
@@ -188,6 +191,10 @@ export async function runAirtableSync(
     );
     pulled.upserted += attendanceOutcome.imported;
     pulled.skipped += attendanceOutcome.skipped;
+    // Counted apart from `archived`. An archived meeting keeps its row and
+    // stops being shown; a removed attendance row is gone, and reporting the
+    // two under one label would hide the only irreversible thing a pass does.
+    attendanceRemoved = attendanceOutcome.removed;
     accountsCreated = attendanceOutcome.accountsCreated;
     refusals.push(...attendanceOutcome.refusals);
 
@@ -228,6 +235,7 @@ export async function runAirtableSync(
     gradesApplied,
     statusWrites,
     accountsCreated,
+    attendanceRemoved,
     refusals,
     ...(error === null ? {} : { error }),
   };
@@ -243,6 +251,7 @@ function blank(started: number, skipped: SyncReport["skipped"]): SyncReport {
     gradesApplied: 0,
     statusWrites: 0,
     accountsCreated: 0,
+    attendanceRemoved: 0,
     refusals: [],
   };
 }

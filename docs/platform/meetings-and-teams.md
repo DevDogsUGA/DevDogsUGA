@@ -1238,12 +1238,39 @@ workshops of one meeting produces two form responses and one row. The second is
 collapses them on purpose, so the officer is told that rather than left to
 notice a missing row.
 
-#### Deleting the Airtable record does not delete the attendance
+#### Deleting the Airtable record IS how somebody is removed
 
-Every other table in the pull ends by archiving rows whose record has gone. This
-one has no archive step at all, which is why `attendance` has no `deletedAt`: it
-is a record of who was in a room on a Tuesday, and no amount of "I deleted the
-wrong row" in a spreadsheet erases that.
+Every other table in the pull treats a missing record as an archive rather than
+a delete, on the grounds that attendance is a record of who was in a room on a
+Tuesday and no amount of "I deleted the wrong row" in a spreadsheet erases that.
+
+**That rule inverts here, and the inversion is the point.** It was written when
+the PLATFORM created attendance and Airtable mirrored it — there, a deletion in
+the mirror was an accident that must not destroy the original. Once Airtable is
+the source, the row exists only because somebody created it there, so removing
+it there is the source saying it did not happen, and a mirror that keeps
+asserting otherwise is stale rather than principled.
+
+The safety argument inverts with it. A removed row is fully reconstructible:
+restore the record from Airtable's trash and the next pass re-imports it on the
+same `airtableRecordId`. Nothing outside the table references an attendance id —
+stars read by member and meeting, judging by member and workshop — so a restored
+row is equivalent, not merely similar. **Airtable's own undo is the recovery
+path**, which is why this still needs no `deletedAt`.
+
+Two things bound it:
+
+- **Only rows the import created** — `method = 'airtable'` with a record id. An
+  officer's correction is never touched, including the case where a form
+  response later attached its record id to a row the officer had already made.
+  The officer created that row; the response only annotated it.
+- **An empty table really does remove everything**, and that is correct rather
+  than alarming: `listRecords` throws on any non-2xx, so a failed fetch aborts
+  the pass and cannot masquerade as "the table is empty".
+
+This is the only irreversible thing a pass does, so the console reports
+**Attendance removed** as its own figure rather than folding it into Archived,
+and shows it only when it is non-zero.
 
 #### The form link is stored, because it cannot be discovered
 

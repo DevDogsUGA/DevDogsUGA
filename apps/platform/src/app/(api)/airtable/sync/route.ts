@@ -100,6 +100,7 @@ function renderReport(report: SyncReport): string {
         ["Records already up to date", String(report.pushed.unchanged)],
         ["Grades applied", String(report.gradesApplied)],
         ["Accounts created", String(report.accountsCreated)],
+        ["Attendance removed", String(report.attendanceRemoved)],
         ["Took", `${(report.durationMs / 1000).toFixed(1)}s`],
       ];
 

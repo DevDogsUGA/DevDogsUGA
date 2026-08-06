@@ -3,7 +3,7 @@ import {
   attendanceTable as attendanceSpec,
   type AirtableRecord,
 } from "@devdogsuga/airtable";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, notInArray } from "drizzle-orm";
 import { db } from "~/server/db";
 import { attendance, profiles, workshops } from "~/server/db/schema";
 import { supabaseAdmin } from "~/supabase/admin";
@@ -36,6 +36,8 @@ interface AttendanceValues {
 export interface AttendanceOutcome {
   imported: number;
   skipped: number;
+  /** Rows whose Airtable record has gone. See `removeDeleted`. */
+  removed: number;
   accountsCreated: number;
   refusals: Refusal[];
   /** Airtable record id → attendance uuid, for the id written back. */
@@ -123,12 +125,18 @@ export async function pullAttendance(
   const out: AttendanceOutcome = {
     imported: 0,
     skipped: 0,
+    removed: 0,
     accountsCreated: 0,
     refusals: [],
     idMap: new Map(),
   };
 
   const parsed = applyPull<AttendanceValues>(attendanceSpec, records);
+
+  // Before the imports, so a record deleted and a record re-created in the same
+  // pass resolve in that order rather than fighting over the meeting/member key.
+  out.removed = await removeDeleted(records.map((r) => r.id));
+
   if (parsed.length === 0) return out;
 
   // Every workshop's meeting, in one read. `attendance` is keyed on the
@@ -229,14 +237,56 @@ export async function pullAttendance(
 }
 
 /**
- * There is deliberately no archive step here.
+ * Attendance rows whose Airtable record has gone.
  *
- * Every other table in the pull ends by marking rows whose Airtable record has
- * gone. Attendance does not, and the omission is the design: it is a record of
- * who was in a room on a Tuesday, and no amount of "I deleted the wrong row" in
- * a spreadsheet erases that. `attendance` has no `deletedAt` for the same
- * reason.
+ * Deleting the record IS how an officer removes somebody, and this is the step
+ * that makes it so.
  *
- * Asserted by a test rather than left as a comment, because an omission cannot
- * fail a build on its own.
+ * ## Why this reverses the rule the rest of the pull follows
+ *
+ * Every other table treats a missing record as an archive rather than a delete,
+ * on the grounds that attendance is a record of who was in a room on a Tuesday
+ * and no amount of "I deleted the wrong row" in a spreadsheet erases that. That
+ * reasoning was written when the PLATFORM created attendance and Airtable
+ * mirrored it — there, a deletion in the mirror was an accident that must not
+ * destroy the original.
+ *
+ * It inverts once Airtable is the source. The row exists only because somebody
+ * created it there, so removing it there is the source saying it did not
+ * happen, and a mirror that keeps asserting otherwise is simply stale.
+ *
+ * The safety argument inverts with it. A row deleted here is fully
+ * reconstructible: restore the record from Airtable's trash and the next pass
+ * re-imports it, matching on the same `airtableRecordId`. Nothing outside this
+ * table references an attendance id — stars read by member and meeting, judging
+ * by member and workshop — so a restored row is equivalent, not merely similar.
+ * Airtable's own undo is the recovery path, which is why this needs no
+ * `deletedAt` of its own.
+ *
+ * ## Scope
+ *
+ * Only rows this import created: `method = 'airtable'` with a record id. An
+ * officer's correction has neither and is never touched by a pass.
+ *
+ * An empty `presentRecordIds` really does mean an empty table, so it really
+ * does remove everything — and that is correct, because `listRecords` throws on
+ * any non-2xx rather than returning a short list. A failed fetch aborts the
+ * pass; it cannot masquerade as "the table is empty".
  */
+async function removeDeleted(presentRecordIds: string[]): Promise<number> {
+  const mine = and(
+    eq(attendance.method, "airtable"),
+    isNotNull(attendance.airtableRecordId),
+  );
+
+  const rows = await db
+    .delete(attendance)
+    .where(
+      presentRecordIds.length === 0
+        ? mine
+        : and(mine, notInArray(attendance.airtableRecordId, presentRecordIds)),
+    )
+    .returning({ id: attendance.id });
+
+  return rows.length;
+}
