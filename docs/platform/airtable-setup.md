@@ -5,17 +5,20 @@ description: How the officer base is scaffolded, verified, and extended — the 
 
 # Airtable Base Setup
 
-> **Status: designed, not built.** The base does not exist yet and neither do the
-> scripts. [Meetings & Teams](./meetings-and-teams.md#where-meetings-come-from)
-> decides _what_ syncs and in which direction; this page is _how the base gets
-> built_, how a field is added later without touching five files, and what has to
-> be true in Postgres before member data can be pushed at all.
+> **Status: built and scaffolded.** The base exists, the three scripts exist, and
+> `registry.ts` holds real IDs pulled from it.
+> [Meetings & Teams](./meetings-and-teams.md#where-meetings-come-from) decides
+> _what_ syncs and in which direction; this page is _how the base gets built_,
+> how a field is added later without touching five files, and what has to be true
+> in Postgres before member data can be pushed at all.
 >
-> **API claims here were checked against Airtable's Web API reference on
-> 2026-08-03** and are marked **Confirmed** where they were. They are still
-> documentation rather than a spike: nothing has been run against a real base, so
-> anything about behaviour under load, or about how a specific plan actually
-> enforces a documented limit, remains unproven.
+> **API claims marked Confirmed were checked against Airtable's Web API reference
+> on 2026-08-03.** Claims marked **Measured** were run against the real base on
+> 2026-08-06 — and one of them contradicts the reference outright, so prefer a
+> Measured note wherever the two disagree.
+>
+> What remains unproven is behaviour under load and how a specific plan enforces
+> a documented limit. No sync has moved real member data yet.
 
 ## Two columns have to exist first
 
@@ -257,7 +260,18 @@ scripts/airtable/
   scaffold.ts     create tables and fields from the registry's declared shape
   verify.ts       diff the live base against the registry; exit non-zero on drift
   pull-ids.ts     write discovered field IDs back into registry.ts
+  client.ts       the shared client -- environment only, never Vault
 ```
+
+Run them as `pnpm airtable:scaffold`, `pnpm airtable:pull-ids` and
+`pnpm airtable:verify`. `scaffold` takes `--dry-run`, which reports the diff
+without writing; it is worth using first, because the first real run is against
+a base somebody cares about.
+
+They read `AIRTABLE_PAT` from the environment rather than from Vault, which is
+the opposite of every other credential here and deliberate: these run _before_
+the platform is configured, they need `schema.bases:write` — a scope the sync
+token should not carry — and the person running them has the token in hand.
 
 The bootstrapping order is the awkward part, and it is worth spelling out because
 it looks circular:
@@ -270,7 +284,29 @@ it looks circular:
 4. `pull-ids.ts` writes them into `registry.ts`, which is committed.
 
 After that first run the IDs are source, and `scaffold.ts` becomes an idempotent
-"create anything missing" operation.
+"create anything missing" operation. Adding a field later is the same two steps:
+declare it with a `todo("slug")` ID, scaffold, pull-ids.
+
+Tables are created in one pass and **links in a second**, after every target
+table has an ID. Ordering the tables by dependency would work today and break
+the first time two tables link to each other; two passes cannot.
+
+> **Measured, and it contradicts the reference.** Creating a
+> `multipleRecordLinks` field accepts `linkedTableId` and **nothing else**. The
+> published field model lists `prefersSingleRecordLink` as _required_ and does
+> not mention `isReversed` at all; in practice every request carrying either key
+> is rejected:
+>
+> | Options sent                                             | Result |
+> | -------------------------------------------------------- | ------ |
+> | `{ linkedTableId }`                                      | `200`  |
+> | `{ linkedTableId, prefersSingleRecordLink }`             | `422`  |
+> | `{ linkedTableId, isReversed }`                          | `422`  |
+> | `{ linkedTableId, prefersSingleRecordLink, isReversed }` | `422`  |
+>
+> They are response-only: the create returns both, unasked. The cost is that
+> officers get a multi-record picker rather than a single-record one — cosmetic,
+> since every pull parser reads `v[0]`, but it is on the manual checklist below.
 
 **Confirmed, with a prerequisite.** `POST /v0/meta/bases` is documented as
 **"Billing plans: All plans"**, so Team qualifies and no empty base has to be
@@ -288,7 +324,9 @@ Some of the base is not API-addressable, so it goes in a checklist that
 | Task                                              | Why by hand                                  |
 | ------------------------------------------------- | -------------------------------------------- |
 | **Field editing permissions** on every `⚙️` field | A paid-plan UI feature with no public API    |
-| **The `/api/airtable/sync` button field**         | Button fields with a URL are UI-configured   |
+| **The `/airtable/sync` button field**             | Button fields with a URL are UI-configured   |
+| Deleting Airtable's default `Table 1`             | The Meta API has no table DELETE             |
+| Setting links to a single-record picker           | Rejected at creation — see the Measured note |
 | Grid views, filters, groupings                    | Officer preference, deliberately not managed |
 | Workspace and collaborator setup                  | Account-level, outside the base              |
 
@@ -311,7 +349,22 @@ one protection nothing can verify for us.
 ## Verifying the base
 
 `verify.ts` fetches the base schema and compares it against the registry. It runs
-in CI and before any sync in a fresh environment.
+in three places:
+
+- **`pnpm airtable:verify`**, by hand, as step 7 of the runbook.
+- **CI**, in the `airtable` job, whenever `@devdogsuga/airtable` is affected. It
+  skips itself when the secrets are absent, so a fork can still run CI, and it
+  passes `--no-duplicates` — duplicate match keys are a property of the _data_,
+  which changes with no commit, and a build nobody's PR can fix is a build people
+  learn to ignore.
+- **Before every sync pass**, inside `runAirtableSync`, ahead of the lease claim.
+
+That last one is the important one, and it was missing until 2026-08-06: the
+verifier existed and nothing called it. A registry ID that is not in the base is
+not an error at write time — Airtable accepts the request, the value lands
+nowhere, and the pass reports success. So the one failure mode the verifier was
+built for was the one still unguarded, and it costs a single schema read out of
+roughly seven requests a pass to close.
 
 Five checks, in order of how badly each fails:
 
@@ -376,8 +429,7 @@ than in the difficulty of the change.
 ## Configuration
 
 > **Built** — `packages/airtable`, `apps/platform/src/server/airtable/credentials.ts`.
-> The base itself does not exist yet, so nothing below has run against a live
-> Airtable account. Everything is unit-tested against the documented API shapes.
+> Scaffolded against the live base on 2026-08-06.
 
 Everything the integration needs to be pointed at a base, in one place.
 
@@ -427,14 +479,18 @@ scaffolding, which is a confusing place to discover it.
 
 ### Turning it on, once the base exists
 
-1. `pnpm sb` — store the token: `storeVaultSecret(token, "airtable_pat")`.
-2. Set `AIRTABLE_BASE_ID` in the root `.env` (and as a Worker var in production).
-3. `pnpm --filter @devdogsuga/airtable exec tsx scripts/scaffold.ts` — creates
-   any missing tables and fields, then prints the discovered field IDs.
-4. `... scripts/pull-ids.ts` — writes those IDs into `registry.ts`. Commit it.
+1. Set `AIRTABLE_BASE_ID` and `AIRTABLE_PAT` in the root `.env`.
+2. `pnpm airtable:scaffold --dry-run` — report what would be created.
+3. `pnpm airtable:scaffold` — create it.
+4. `pnpm airtable:pull-ids` — write the discovered IDs into `registry.ts`, then
+   `pnpm prettier --write` it and commit.
 5. Walk the manual checklist `verify.ts` prints (field editing permissions).
-6. `... scripts/verify.ts` — must exit clean.
-7. Grant an officer role `canTriggerSync` and run one pass from the console.
+6. `pnpm airtable:verify` — must exit clean.
+7. Store the token in Vault as `airtable_pat` and **remove `AIRTABLE_PAT` from
+   `.env`**. Vault is checked first, but a `null` from a failed read is
+   indistinguishable from "nothing stored", so a lingering env var wins by
+   accident. It is what silently inverted this precedence before 2026-08-06.
+8. Grant an officer role `canTriggerSync` and run one pass from the console.
 
 Steps 3 and 4 are what replace the placeholder IDs the registry ships with.
 Until they run, `verify.ts` fails every table with "ID is still a placeholder" —
@@ -445,8 +501,9 @@ reports success.
 ### What the registry ships with
 
 `packages/airtable/src/registry.ts` declares six tables — Members, Projects,
-Meetings, Workshops, Competitions, Teams — with every field ID set to a
-`fldTODO_*` placeholder. The shape is real; only the IDs are pending.
+Meetings, Workshops, Competitions, Teams — 37 fields, all now holding real IDs
+pulled from the live base. A newly declared field carries a `fldTODO_*`
+placeholder until `scaffold` and `pull-ids` have run for it.
 
 Adding a field later is one line in that file. Direction (`.push()` / `.pull()` /
 `.ignore()`) is mutually exclusive **in the type**, so a field both sides write
@@ -469,27 +526,35 @@ Ordered, because several steps fail confusingly when done out of order.
    everything else and fail only at step 4, which is a confusing place to
    discover it.
 
-3. **Store the token in Vault** via `storeVaultSecret`, the same path as every
-   other credential. It never lands in `.env`.
-4. **Run `scaffold.ts`.** Creates the six tables and their fields.
-5. **Run `pull-ids.ts`** and commit the resulting `registry.ts`.
+3. **Put the token in `.env` as `AIRTABLE_PAT`** for the scaffolding run. It
+   moves to Vault at step 8, once there is a base to point at.
+4. **Run `pnpm airtable:scaffold`.** Creates the six tables and their fields.
+   `--dry-run` first reports the diff without writing.
+5. **Run `pnpm airtable:pull-ids`**, format, and commit the resulting
+   `registry.ts`.
 6. **Do the manual checklist** above — field editing permissions first, since
-   they are the security-relevant one.
-7. **Run `verify.ts`.** It should exit clean. If it does not, fix the base rather
-   than the registry: the registry is what the code agrees with.
+   they are the security-relevant one. Airtable's default `Table 1` is deleted
+   here too; the Meta API cannot.
+7. **Run `pnpm airtable:verify`.** It should exit clean. If it does not, fix the
+   base rather than the registry: the registry is what the code agrees with.
 8. **Seed Projects** by running one sync pass. Projects are platform-owned and
    pushed, so the table populates itself and officers get a linked-record list
    they can select from immediately.
 9. **Only then** author a meeting. Doing it earlier produces a workshop linked to
    nothing.
+10. **Move the token to Vault** as `airtable_pat` and delete `AIRTABLE_PAT` from
+    `.env`. Last rather than first: the scaffolding scripts read the environment
+    by design, and a token that is only in Vault cannot scaffold anything.
 
 ## Tests
 
-> **Built** — 36 tests in `packages/airtable/src/*.test.ts`. What is NOT covered
-> is anything requiring a live base: every test drives a stub client, so the
-> wire format is asserted against the documented API shapes rather than against
-> Airtable's actual responses. The first real sync is still the first real
-> proof.
+> **Built** — 50 tests in `packages/airtable/src/*.test.ts`, plus 5 in
+> `apps/platform/src/server/airtable/run.test.ts` for the schema precondition.
+> Every test drives a stub client, so the wire format is asserted against the
+> documented API shapes rather than against Airtable's actual responses — which
+> is exactly how the `multipleRecordLinks` options above went undetected until
+> the scaffolder ran for real. The first sync of real member data is still the
+> first real proof.
 
 - **Registry/base agreement** — `verify.ts` against a fixture base, asserting
   each of the four checks fires on a deliberately broken schema. The renamed-field
@@ -512,6 +577,24 @@ Ordered, because several steps fail confusingly when done out of order.
   order. Not yet a standing test: `uploadVerificationCSV` takes a session and a
   permission check, so it needs either a fixture harness or the action's core
   extracted from its guards.
+
+The scaffolder's own, added because "it worked once, by hand, against one base"
+is indistinguishable from "it works":
+
+- **Links are created only after their target table exists.** Asserted on call
+  ORDER, not on the result — a scaffolder that gets this right by accident passes
+  a result check and fails the moment a table is added above it in the registry.
+  ✅
+- **`⚙️ Platform ID` ends up the primary field** in all six tables. Airtable takes
+  the first field in the array as primary and refuses links and checkboxes there,
+  so this is a property of argument order that nothing else would catch. ✅
+- **A second run does nothing**, and dropping one field makes the next run create
+  exactly that field. ✅
+- **A renamed field is not recreated** when the registry holds its ID — surviving
+  a rename being the entire reason the wire format is IDs. ✅
+- **The sync refuses a base that does not match**, claiming no lease and issuing
+  no write. ✅ Negative-controlled: deleting the precondition fails three of
+  these.
 
 Three the design note did not list, added because building the engine surfaced
 them:

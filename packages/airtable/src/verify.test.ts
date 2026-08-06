@@ -1,16 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { AirtableClient, type AirtableRecord } from "./client.js";
 import { field, table } from "./field.js";
+import { isPlaceholder, registry } from "./registry.js";
 import { duplicateKeyFindings, verifyBase } from "./verify.js";
 
 /**
  * verify.ts against a fixture base, asserting each check fires on a
  * deliberately broken schema.
  *
- * The registry itself is all placeholders until the base is scaffolded, so
- * these drive the checks through a stub client rather than through
- * `registry.ts` — except the placeholder check, which is exactly what the real
- * registry should trip today.
+ * Driven through a stub client rather than the real registry, so each check can
+ * be pointed at a base that is broken in exactly one way. The real registry
+ * gets one assertion of its own below — that it holds no placeholders — because
+ * that is the property a stub can never establish.
  */
 
 interface StubTable {
@@ -32,15 +33,45 @@ function stubClient(
   return client;
 }
 
+describe("the committed registry", () => {
+  it("holds no placeholder IDs", async () => {
+    // Until 2026-08-06 this asserted the opposite -- the base did not exist and
+    // every ID was a `fldTODO_*`. Now that it does, the enduring claim is the
+    // inverse: a field declared but never scaffolded must not reach main.
+    //
+    // Worth an assertion rather than trusting the runbook, because a
+    // placeholder does not fail loudly. Airtable accepts a write to an unknown
+    // field ID, the value lands nowhere, and the pass reports success.
+    for (const [key, spec] of Object.entries(registry)) {
+      expect(isPlaceholder(spec.id), `table ${key}`).toBe(false);
+      for (const [fieldKey, fieldSpec] of Object.entries(spec.fields)) {
+        expect(isPlaceholder(fieldSpec.id), `${key}.${fieldKey}`).toBe(false);
+      }
+    }
+  });
+
+  it("gives every link field a target that exists", async () => {
+    // `linkedTableId` is required by the Meta API, so a link naming a table the
+    // registry does not have is a scaffold that dies partway through -- after
+    // creating tables, which is the expensive half to unpick.
+    for (const [key, spec] of Object.entries(registry)) {
+      for (const [fieldKey, fieldSpec] of Object.entries(spec.fields)) {
+        if (fieldSpec.type !== "multipleRecordLinks") continue;
+        expect(fieldSpec.linkTo, `${key}.${fieldKey}`).toBeDefined();
+        expect(Object.keys(registry)).toContain(fieldSpec.linkTo);
+      }
+    }
+  });
+});
+
 describe("verifyBase", () => {
-  it("fails on the real registry while its IDs are placeholders", async () => {
-    // A placeholder that reaches a live sync does not error: Airtable accepts
-    // the request, the write lands nowhere, and the pass reports success.
+  it("fails on a base missing every registered table", async () => {
     const result = await verifyBase(stubClient([]), { checkDuplicates: false });
     expect(result.ok).toBe(false);
     expect(
       result.findings.every(
-        (f) => f.severity === "fatal" && /placeholder/.test(f.message),
+        (f) =>
+          f.severity === "fatal" && /not present in the base/.test(f.message),
       ),
     ).toBe(true);
   });

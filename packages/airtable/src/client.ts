@@ -193,14 +193,62 @@ export class AirtableClient {
    * editing-restriction data anywhere in it, which is why the field-lockdown
    * step of the runbook can never be verified automatically.
    */
-  async getBaseSchema(): Promise<{
-    tables: {
-      id: string;
-      name: string;
-      primaryFieldId: string;
-      fields: { id: string; name: string; type: string }[];
-    }[];
-  }> {
+  async getBaseSchema(): Promise<BaseSchema> {
     return this.request("GET", `/meta/bases/${this.baseId}/tables`);
   }
+
+  /**
+   * Create a table, with its fields.
+   *
+   * **The first entry in `fields` becomes the primary field**, which is why the
+   * scaffolder passes them in registry declaration order and every table in the
+   * registry declares `⚙️ Platform ID` first. Primary fields cannot be links or
+   * checkboxes, so the ordering is load-bearing rather than cosmetic.
+   */
+  async createTable(name: string, fields: NewField[]): Promise<LiveTable> {
+    return this.request("POST", `/meta/bases/${this.baseId}/tables`, {
+      name,
+      fields,
+    });
+  }
+
+  /**
+   * Add one field to an existing table.
+   *
+   * Separate from `createTable` because link fields cannot be created until the
+   * table they point at exists — see `scaffoldBase`, which creates every table
+   * without its links and then fills them in.
+   */
+  async createField(tableId: string, field: NewField): Promise<LiveField> {
+    return this.request(
+      "POST",
+      `/meta/bases/${this.baseId}/tables/${tableId}/fields`,
+      field,
+    );
+  }
+}
+
+export interface LiveField {
+  id: string;
+  name: string;
+  type: string;
+  options?: Record<string, unknown>;
+}
+
+export interface LiveTable {
+  id: string;
+  name: string;
+  primaryFieldId: string;
+  fields: LiveField[];
+}
+
+export interface BaseSchema {
+  tables: LiveTable[];
+}
+
+/** A field as the Meta API wants it created. */
+export interface NewField {
+  name: string;
+  type: string;
+  options?: Record<string, unknown>;
 }

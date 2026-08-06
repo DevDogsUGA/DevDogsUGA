@@ -124,6 +124,59 @@ jobs:
         if: always() && steps.affected.outputs.run == 'true'
         run: pnpm sb stop-local-stack || true
 
+  # The live Airtable base against the registry.
+  #
+  # Here rather than in `validate` because it needs the real base: the unit
+  # tests drive a stub client, so they prove the checks fire and prove nothing
+  # about the base anybody's data is in. A registry ID that has drifted is not
+  # an error at write time — Airtable accepts the write and it lands nowhere —
+  # so this job is the only thing standing between a renamed-away field and a
+  # sync that reports success forever.
+  #
+  # Skipped when the secrets are absent, so a fork can still run CI.
+  airtable:
+    if: >-
+      github.event_name == 'push' ||
+      contains(fromJSON('["MEMBER", "OWNER", "COLLABORATOR"]'), github.event.pull_request.author_association)
+    runs-on: ubuntu-latest
+    # Job level, not step level: a step's own `env:` is not in scope for its
+    # `if:`, so the secret-present guard has to be readable from up here.
+    env:
+      AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
+      AIRTABLE_PAT: ${{ secrets.AIRTABLE_PAT }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Is the Airtable package affected?
+        id: affected
+        run: |
+          if pnpm turbo run build --affected --filter=@devdogsuga/airtable --dry-run=json | grep -q '"@devdogsuga/airtable"'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build the Airtable package
+        if: steps.affected.outputs.run == 'true' && env.AIRTABLE_PAT != ''
+        run: pnpm turbo run build --filter=@devdogsuga/airtable
+      - name: Verify the base matches the registry
+        if: steps.affected.outputs.run == 'true' && env.AIRTABLE_PAT != ''
+        # `tsx` directly rather than the `airtable:verify` script, which wraps
+        # itself in `with-env`: there is no root .env in CI, and the credentials
+        # are already in the environment from the job's secrets.
+        #
+        # `--no-duplicates` skips reading every record. Duplicate match keys are
+        # a property of the DATA, which changes without any commit, so failing a
+        # build on them would mean a red CI that no PR caused and no PR can fix.
+        run: pnpm exec tsx scripts/airtable/verify.ts --no-duplicates
+
   # Flutter app — only when it (or a shared dep) is affected.
   flutter:
     if: >-

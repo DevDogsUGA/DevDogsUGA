@@ -27,7 +27,19 @@ export {
   BATCH_SIZE,
   type AirtableClientOptions,
   type AirtableRecord,
+  type BaseSchema,
+  type LiveField,
+  type LiveTable,
+  type NewField,
 } from "./client.js";
+
+export {
+  scaffoldBase,
+  discoverIds,
+  createOptionsFor,
+  type ScaffoldAction,
+  type ScaffoldResult,
+} from "./scaffold.js";
 
 export {
   registry,

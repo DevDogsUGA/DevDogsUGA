@@ -5,6 +5,7 @@ import {
   projects as projectsSpec,
   teamsTable as teamsSpec,
   workshops as workshopsSpec,
+  verifyBase,
   type AirtableClient,
   type AirtableRecord,
 } from "@devdogsuga/airtable";
@@ -38,8 +39,14 @@ import type { Refusal } from "./refusals";
 export interface SyncReport {
   ok: boolean;
   /** Set when the pass did not run at all. */
-  skipped?: "already_running" | "rate_limited" | "not_configured";
+  skipped?:
+    | "already_running"
+    | "rate_limited"
+    | "not_configured"
+    | "schema_invalid";
   retryAfter?: number;
+  /** Set with `schema_invalid`: the fatal findings, for the officer console. */
+  schemaFindings?: string[];
   durationMs: number;
   pulled: { upserted: number; archived: number; skipped: number };
   pushed: { created: number; updated: number; unchanged: number };
@@ -70,6 +77,31 @@ export async function runAirtableSync(
       return blank(started, "not_configured");
     }
     throw error;
+  }
+
+  // The base has to agree with the registry BEFORE anything is written.
+  //
+  // This is the check the whole verifier exists for, and it was missing: a
+  // registry ID that does not exist in the base is not an error at write time.
+  // Airtable accepts the request, the value lands nowhere, and the pass reports
+  // success -- so a sync against a drifted base is silent data loss that looks
+  // like a healthy cron. `verify.ts` being written but never called meant the
+  // one failure mode it was built for was the one still unguarded.
+  //
+  // Costs one schema read out of roughly seven requests a pass.
+  // `checkDuplicates` is off: it re-reads every record the pass is about to
+  // fetch anyway, and duplicate keys are a warning rather than a reason to
+  // refuse to run.
+  const schema = await verifyBase(client, { checkDuplicates: false });
+  if (!schema.ok) {
+    const fatal = schema.findings
+      .filter((f) => f.severity === "fatal")
+      .map((f) => `${f.table}${f.field ? `.${f.field}` : ""}: ${f.message}`);
+    console.error("[airtable] refusing to sync, base does not match registry:");
+    for (const f of fatal) console.error(`  ${f}`);
+    const report = blank(started, "schema_invalid");
+    report.schemaFindings = fatal;
+    return report;
   }
 
   // The lease is claimed AFTER the client resolves so an unconfigured install

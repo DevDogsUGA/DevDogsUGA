@@ -140,6 +140,7 @@ const SKIPPED_HEADINGS: Record<NonNullable<SyncReport["skipped"]>, string> = {
   already_running: "A sync is already running",
   rate_limited: "Too soon — a sync just ran",
   not_configured: "Airtable is not configured",
+  schema_invalid: "The base does not match the registry",
 };
 
 function escapeHtml(value: string): string {

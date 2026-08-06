@@ -60,6 +60,17 @@ export interface FieldSpec<TType extends FieldType = FieldType> {
   readonly name: string;
   readonly direction: Direction;
   readonly isMatchKey: boolean;
+  /**
+   * For `multipleRecordLinks` only: the registry key of the table this points
+   * at.
+   *
+   * Required at the type level by `field.link`, because a link field without a
+   * target is not a description of anything the scaffolder can create —
+   * `linkedTableId` is a required option on the Meta API, and the target was
+   * previously recoverable only by reading the field's NAME, which is the one
+   * thing this integration treats as changeable.
+   */
+  readonly linkTo?: string;
   /** Present only when direction is "push". */
   readonly project?: (row: never) => AirtableValue;
   /** Present only when direction is "pull". */
@@ -129,6 +140,7 @@ export class UndirectedField<TType extends FieldType> {
     readonly type: TType,
     readonly name: string,
     readonly isMatchKey: boolean = false,
+    readonly linkTo?: string,
   ) {}
 
   /**
@@ -142,7 +154,13 @@ export class UndirectedField<TType extends FieldType> {
   matchKey(
     this: UndirectedField<MergeEligibleType & TType>,
   ): UndirectedField<TType> {
-    return new UndirectedField(this.id, this.type, this.name, true);
+    return new UndirectedField(
+      this.id,
+      this.type,
+      this.name,
+      true,
+      this.linkTo,
+    );
   }
 
   push<TRow>(project: (row: TRow) => AirtableValue): PushField<TType, TRow> {
@@ -151,6 +169,7 @@ export class UndirectedField<TType extends FieldType> {
       type: this.type,
       name: this.name,
       isMatchKey: this.isMatchKey,
+      linkTo: this.linkTo,
       direction: "push",
       project,
     };
@@ -162,6 +181,7 @@ export class UndirectedField<TType extends FieldType> {
       type: this.type,
       name: this.name,
       isMatchKey: this.isMatchKey,
+      linkTo: this.linkTo,
       direction: "pull",
       parse,
     };
@@ -180,6 +200,7 @@ export class UndirectedField<TType extends FieldType> {
       type: this.type,
       name: this.name,
       isMatchKey: this.isMatchKey,
+      linkTo: this.linkTo,
       direction: "ignore",
     };
   }
@@ -191,6 +212,7 @@ export class UndirectedField<TType extends FieldType> {
       type: this.type,
       name: this.name,
       isMatchKey: this.isMatchKey,
+      linkTo: this.linkTo,
       direction: "status",
     };
   }
@@ -213,7 +235,23 @@ export const field = {
   checkbox: make("checkbox"),
   singleSelect: make("singleSelect"),
   multipleSelects: make("multipleSelects"),
-  link: make("multipleRecordLinks"),
+  /**
+   * A link, and the registry key of what it links to.
+   *
+   * The target is a required argument rather than an optional one because
+   * `linkedTableId` is required by the Meta API, so a link field that does not
+   * name its target cannot be scaffolded — and inferring it from the field's
+   * name would make the sync depend on a name being stable, which is the exact
+   * thing field IDs exist to stop mattering.
+   */
+  link: (id: string, name: string, linkTo: string) =>
+    new UndirectedField(
+      id,
+      "multipleRecordLinks" as const,
+      name,
+      false,
+      linkTo,
+    ),
 };
 
 export interface TableSpec<

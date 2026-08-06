@@ -15,12 +15,16 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "sb": "pnpm --filter @devdogsuga/sb run cli",
-    "setup": "tsx scripts/setup.ts"
+    "setup": "tsx scripts/setup.ts",
+    "airtable:scaffold": "with-env tsx scripts/airtable/scaffold.ts",
+    "airtable:pull-ids": "with-env tsx scripts/airtable/pull-ids.ts",
+    "airtable:verify": "with-env tsx scripts/airtable/verify.ts"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
+    "@devdogsuga/airtable": "workspace:*",
     "@devdogsuga/with-env": "workspace:*",
     "@types/node": "catalog:",
     "prettier": "3.8.4",

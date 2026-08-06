@@ -8,32 +8,37 @@ import { field, table } from "./field.js";
  * change detection and `⚙️` prefix conventions are properties of the engine,
  * so a new field inherits them.
  *
- * ## Field IDs are placeholders until the base exists
+ * ## The IDs below are real, and are the wire format
  *
- * Every `id` below is a PLACEHOLDER. The base has not been scaffolded yet, and
- * the bootstrapping order is deliberately circular-looking:
+ * Written by `pull-ids.ts` from the live base. Every read and write goes over
+ * the wire with these rather than with field NAMES, which is what lets an
+ * officer rename a column without breaking the sync.
  *
- *   1. `scaffold.ts` reads the shape below — table names, field names, types —
- *      and creates what is missing through the Meta API.
- *   2. It reads the schema back and prints the real field IDs.
- *   3. `pull-ids.ts` writes them in here, and the result is committed.
- *
- * After that first run the IDs are source. `verify.ts` FAILS on any remaining
- * placeholder rather than warning, because a placeholder that reaches a live
- * sync writes into nothing and reports success.
+ * To add a field: declare it here with a `todo("slug")` id, run
+ * `pnpm airtable:scaffold` to create it, then `pnpm airtable:pull-ids` to fill
+ * the real id in. `verify.ts` FAILS on any remaining placeholder rather than
+ * warning, because a placeholder that reaches a live sync writes into nothing
+ * and reports success.
  */
 
-/** Marks an ID as not-yet-discovered. See `isPlaceholder`. */
-function todo(slug: string): string {
+/**
+ * Marks an ID as not-yet-discovered. See `isPlaceholder`.
+ *
+ * Exported, and stays exported after the base is scaffolded, because adding a
+ * field later uses the same two-step: declare it with a `todo()` id, run
+ * `pnpm airtable:scaffold` to create it, then `pnpm airtable:pull-ids` to
+ * replace this call with the real one.
+ */
+export function todo(slug: string): string {
   return `fldTODO_${slug}`;
+}
+
+export function todoTable(slug: string): string {
+  return `tblTODO_${slug}`;
 }
 
 export function isPlaceholder(id: string): boolean {
   return id.startsWith("fldTODO_") || id.startsWith("tblTODO_");
-}
-
-function todoTable(slug: string): string {
-  return `tblTODO_${slug}`;
 }
 
 // ── Row shapes the platform maps onto ────────────────────────────────────────
@@ -107,44 +112,44 @@ export interface TeamRow {
  * name change, and `email`-typed fields are not eligible in `fieldsToMergeOn`
  * at all. The second makes it a requirement rather than a preference.
  */
-export const members = table("Members", todoTable("members"), {
+export const members = table("Members", "tblLTJtir40NrL87x", {
   platformId: field
-    .text(todo("members_platform_id"), "⚙️ Platform ID")
+    .text("fldXg9IE8LgkjhfKy", "⚙️ Platform ID")
     .matchKey()
     .push((m: MemberRow) => m.userId),
 
   ugaEmail: field
-    .email(todo("members_uga_email"), "UGA email")
+    .email("fldrFt40qy37Ftn9z", "UGA email")
     .push((m: MemberRow) => m.ugaEmail),
 
   legalName: field
-    .text(todo("members_legal_name"), "Legal name")
+    .text("fldeFEIojm0OmH0hL", "Legal name")
     .push(
       (m: MemberRow) =>
         [m.legalFirstName, m.legalLastName].filter(Boolean).join(" ") || null,
     ),
 
   meetingsAttended: field
-    .number(todo("members_meetings_attended"), "⚙️ Meetings attended")
+    .number("fld67SQSbL40XU6aa", "⚙️ Meetings attended")
     .push((m: MemberRow) => m.meetingCount),
 
   duesPaidAt: field
-    .date(todo("members_dues_paid"), "Dues paid")
+    .date("fld3p7eengCBxHjjj", "Dues paid")
     .pull((value) => (typeof value === "string" ? value : null)),
 
-  notes: field.longText(todo("members_notes"), "Notes").ignore(),
+  notes: field.longText("fldmpCcukx7kkNMZs", "Notes").ignore(),
 });
 
-export const projects = table("Projects", todoTable("projects"), {
+export const projects = table("Projects", "tblqcG8xDrOMuBTvF", {
   platformId: field
-    .text(todo("projects_platform_id"), "⚙️ Platform ID")
+    .text("fldniryZw7v0j7MuD", "⚙️ Platform ID")
     .matchKey()
     .push((p: ProjectRow) => p.id),
   slug: field
-    .text(todo("projects_slug"), "⚙️ Slug")
+    .text("fldqQiRT2jDhlsrWC", "⚙️ Slug")
     .push((p: ProjectRow) => p.slug),
   displayName: field
-    .text(todo("projects_name"), "Name")
+    .text("fldaDoMwYJlhoxODU", "Name")
     .push((p: ProjectRow) => p.displayName),
 });
 
@@ -154,101 +159,95 @@ export const projects = table("Projects", todoTable("projects"), {
  * The platform pushes only its own id and the derived attendance count. The
  * schedule itself belongs to whoever is running the semester.
  */
-export const meetings = table("Meetings", todoTable("meetings"), {
+export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
   platformId: field
-    .text(todo("meetings_platform_id"), "⚙️ Platform ID")
+    .text("fldIBjOSNweMYXAaj", "⚙️ Platform ID")
     .matchKey()
     .push((m: MeetingRow) => m.id),
   name: field
-    .text(todo("meetings_name"), "Name")
+    .text("fldc0NfTHVxHk8Za0", "Name")
     .pull((v) => (typeof v === "string" ? v : null)),
   location: field
-    .text(todo("meetings_location"), "Location")
+    .text("fld3MRTF42aS6c3PX", "Location")
     .pull((v) => (typeof v === "string" ? v : null)),
   startsAt: field
-    .dateTime(todo("meetings_starts_at"), "Starts at")
+    .dateTime("fld0iXyGZpgW7zJWF", "Starts at")
     .pull((v) => (typeof v === "string" ? v : null)),
   endsAt: field
-    .dateTime(todo("meetings_ends_at"), "Ends at")
+    .dateTime("fldEjZPZGVJG3qZEl", "Ends at")
     .pull((v) => (typeof v === "string" ? v : null)),
   checkInClosesAt: field
-    .dateTime(todo("meetings_check_in_closes"), "Check-in closes")
+    .dateTime("fldmhd0w0I2h88UTZ", "Check-in closes")
     .pull((v) => (typeof v === "string" ? v : null)),
   attendanceCount: field
-    .number(todo("meetings_attendance"), "⚙️ Attendance")
+    .number("fld9RRuEB6SpnqPLP", "⚙️ Attendance")
     .push((m: MeetingRow) => m.attendanceCount),
-  syncStatus: field
-    .longText(todo("meetings_sync_status"), "⚙️ Sync status")
-    .status(),
+  syncStatus: field.longText("fldyPrtUDL9iuhLA1", "⚙️ Sync status").status(),
 });
 
-export const workshops = table("Workshops", todoTable("workshops"), {
+export const workshops = table("Workshops", "tblSYPbmIagwyTFq1", {
   platformId: field
-    .text(todo("workshops_platform_id"), "⚙️ Platform ID")
+    .text("fldVVc4st1vNgVzVP", "⚙️ Platform ID")
     .matchKey()
     .push((w: WorkshopRow) => w.id),
   meeting: field
-    .link(todo("workshops_meeting"), "Meeting")
+    .link("fldqxlHThMKBmhsiq", "Meeting", "meetings")
     .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
   project: field
-    .link(todo("workshops_project"), "Project")
+    .link("fldhUjEo0dq5BRZez", "Project", "projects")
     .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
   attendanceCount: field
-    .number(todo("workshops_attendance"), "⚙️ Attendance")
+    .number("fldxdsZmSNmR30O2J", "⚙️ Attendance")
     .push((w: WorkshopRow) => w.attendanceCount),
-  syncStatus: field
-    .longText(todo("workshops_sync_status"), "⚙️ Sync status")
-    .status(),
+  syncStatus: field.longText("flddrtCx3b88sFsHl", "⚙️ Sync status").status(),
 });
 
-export const competitions = table("Competitions", todoTable("competitions"), {
+export const competitions = table("Competitions", "tbltrW1Xum127cNwy", {
   platformId: field
-    .text(todo("competitions_platform_id"), "⚙️ Platform ID")
+    .text("fld1w9dzXBszwMI0M", "⚙️ Platform ID")
     .matchKey()
     .push((c: CompetitionRow) => c.id),
   slug: field
-    .text(todo("competitions_slug"), "Branch slug")
+    .text("flduPP0rsaJ7Sjl1J", "Branch slug")
     .pull((v) => (typeof v === "string" ? v : null)),
   workshop: field
-    .link(todo("competitions_workshop"), "Workshop")
+    .link("fldge0I3DNLH0b7BN", "Workshop", "workshops")
     .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
   judgingStartsAt: field
-    .dateTime(todo("competitions_judging_starts"), "Judging starts")
+    .dateTime("fld9p3FVXCuFWJF7b", "Judging starts")
     .pull((v) => (typeof v === "string" ? v : null)),
   requirementCount: field
-    .number(todo("competitions_requirements"), "Requirements")
+    .number("fldu17YKeE2FYBkOc", "Requirements")
     .pull((v) => (typeof v === "number" ? v : null)),
   maxTeamSize: field
-    .number(todo("competitions_max_team_size"), "Max team size")
+    .number("fldGij8ChmqGklbwh", "Max team size")
     .pull((v) => (typeof v === "number" ? v : null)),
   teamCount: field
-    .number(todo("competitions_team_count"), "⚙️ Teams")
+    .number("fldss0bnDwAM2YXii", "⚙️ Teams")
     .push((c: CompetitionRow) => c.teamCount),
-  syncStatus: field
-    .longText(todo("competitions_sync_status"), "⚙️ Sync status")
-    .status(),
+  syncStatus: field.longText("fldxx0qkfiSXGhWiD", "⚙️ Sync status").status(),
 });
 
-export const teamsTable = table("Teams", todoTable("teams"), {
+export const teamsTable = table("Teams", "tblfXjgqCZiJnnD4x", {
   platformId: field
-    .text(todo("teams_platform_id"), "⚙️ Platform ID")
+    .text("fldZ7a84yBHOt1x3i", "⚙️ Platform ID")
     .matchKey()
     .push((t: TeamRow) => t.id),
-  name: field.text(todo("teams_name"), "⚙️ Name").push((t: TeamRow) => t.name),
+  name: field.text("fldkwm2qtSjZdbzPY", "⚙️ Name").push((t: TeamRow) => t.name),
   memberCount: field
-    .number(todo("teams_members"), "⚙️ Members")
+    .number("fldu6uDYUQq0ga4qH", "⚙️ Members")
     .push((t: TeamRow) => t.memberCount),
   submissionUrl: field
-    .url(todo("teams_submission"), "⚙️ Submission")
+    .url("fldt81SN59PbB0Wa5", "⚙️ Submission")
     .push((t: TeamRow) => t.submissionUrl),
   competed: field
-    .checkbox(todo("teams_competed"), "⚙️ Competed")
+    .checkbox("fldDuEeRPzyaRxqIo", "⚙️ Competed")
     .push((t: TeamRow) => t.competed),
   totalPoints: field
-    .number(todo("teams_points"), "⚙️ Points")
+    .number("fldvrkhNok0u2C7zn", "⚙️ Points")
     .push((t: TeamRow) => t.totalPoints),
   requirementsMet: field
-    .number(todo("teams_requirements_met"), "Requirements met")
+    .number("fldos8CCiyx6FwIdi", "Requirements met")
     .pull((v) => (typeof v === "number" ? v : null)),
 });
 
