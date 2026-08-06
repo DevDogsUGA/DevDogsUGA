@@ -81,9 +81,9 @@ async function seed() {
     [IDS.meetingB, "attendance-test-b"],
   ] as const) {
     await db.execute(sql`
-      insert into platform.meetings (id, slug, name, "startsAt", "endsAt", "checkInClosesAt")
+      insert into platform.meetings (id, slug, name, "startsAt", "endsAt")
       values (${id}::uuid, ${slug}, 'Attendance Test',
-              now(), now() + interval '1 hour', now() + interval '2 hours')`);
+              now(), now() + interval '1 hour')`);
   }
 
   // Two workshops in meeting A, which is the case the meeting-level uniqueness

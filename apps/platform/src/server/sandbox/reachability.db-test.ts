@@ -97,9 +97,9 @@ beforeAll(async () => {
            (${IDS.projectB}::uuid, 'reach-b', 'Reach B')
   `);
   await db.execute(sql`
-    insert into platform.meetings (id, slug, name, "startsAt", "endsAt", "checkInClosesAt")
+    insert into platform.meetings (id, slug, name, "startsAt", "endsAt")
     values (${IDS.meeting}::uuid, 'reach-meeting', 'Reach',
-            now(), now() + interval '2 hours', now() + interval '1 hour')
+            now(), now() + interval '2 hours')
   `);
 
   // Two competitions, because one member cannot be on two teams in the same

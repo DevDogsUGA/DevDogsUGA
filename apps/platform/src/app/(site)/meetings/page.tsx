@@ -5,7 +5,7 @@ import ConsolePageShell from "~/components/ConsolePageShell";
 import EmptyState from "~/components/participation/EmptyState";
 import { formatEventSpan, formatRelative } from "~/lib/eventTime";
 import {
-  checkInIsOpen,
+  attendanceFormIsLive,
   getPastMeetings,
   getUpcomingMeetings,
   type MeetingSummary,
@@ -57,9 +57,13 @@ export default async function MeetingsPage() {
                 key={meeting.id}
                 meeting={meeting}
                 trailing={
-                  checkInIsOpen(meeting, now) ? (
+                  attendanceFormIsLive(meeting, now) ? (
+                    // "Form open" rather than "Attendance open": the platform
+                    // cannot read the Airtable form's own open and close, so
+                    // the badge promises a link exists, not that a submission
+                    // will be accepted.
                     <span className="rounded-sm border-2 border-black bg-green-50 px-2 py-1 text-xs font-semibold">
-                      Check-in open
+                      Attendance form open
                     </span>
                   ) : (
                     // Relative, not absolute: the exact date is already on the

@@ -41,10 +41,9 @@ async function seed() {
     values (${IDS.project}::uuid, 'ballot-test-project', 'Ballot Test')
   `);
   await db.execute(sql`
-    insert into platform.meetings (id, slug, name, "startsAt", "endsAt", "checkInClosesAt")
+    insert into platform.meetings (id, slug, name, "startsAt", "endsAt")
     values (${IDS.meeting}::uuid, 'ballot-test-meeting', 'Ballot Test',
-            now() - interval '2 days', now() - interval '2 days' + interval '2 hours',
-            now() - interval '2 days' + interval '1 hour')
+            now() - interval '2 days', now() - interval '2 days' + interval '2 hours')
   `);
   await db.execute(sql`
     insert into platform.workshops (id, "meetingId", "projectId")

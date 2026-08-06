@@ -70,7 +70,7 @@ interface MeetingValues {
   location: string | null;
   startsAt: string | null;
   endsAt: string | null;
-  checkInClosesAt: string | null;
+  attendanceForm: string | null;
 }
 
 /**
@@ -79,7 +79,7 @@ interface MeetingValues {
  * hangs off the row rather than off its schedule.
  *
  * What it does have is a required shape: `name`, `startsAt`, `endsAt` and
- * `checkInClosesAt` are all NOT NULL, and `endsAt > startsAt` is a check
+ * `endsAt` are both NOT NULL, and `endsAt > startsAt` is a check
  * constraint. A half-filled row is skipped until it is whole.
  */
 export async function pullMeetings(
@@ -109,7 +109,6 @@ export async function pullMeetings(
       v.name !== null &&
       v.startsAt !== null &&
       v.endsAt !== null &&
-      v.checkInClosesAt !== null &&
       new Date(v.endsAt) > new Date(v.startsAt);
 
     const current = byRecordId.get(record.airtableRecordId);
@@ -125,7 +124,11 @@ export async function pullMeetings(
       location: v.location,
       startsAt: new Date(v.startsAt!),
       endsAt: new Date(v.endsAt!),
-      checkInClosesAt: new Date(v.checkInClosesAt!),
+      // Null is a legitimate state, not an incomplete one: a meeting with no
+      // workshop has no form, and one whose officer has not made this week's
+      // yet is a meeting that exists. So it is written through rather than
+      // gating `complete`.
+      attendanceFormUrl: v.attendanceForm,
     };
 
     if (current) {

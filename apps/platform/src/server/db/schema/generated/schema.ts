@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, varchar, boolean, bigint, text, pgEnum, smallint, timestamp, integer, date, doublePrecision, jsonb, numeric, customType, uniqueIndex, index, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, varchar, boolean, bigint, timestamp, text, pgEnum, smallint, integer, date, doublePrecision, jsonb, numeric, customType, uniqueIndex, index, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by scripts/post-pull.ts after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -456,9 +456,9 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	location: text(),
 	startsAt: timestamp({ withTimezone: true }).notNull(),
 	endsAt: timestamp({ withTimezone: true }).notNull(),
-	checkInClosesAt: timestamp({ withTimezone: true }).notNull(),
 	airtableRecordId: text(),
 	deletedAt: timestamp({ withTimezone: true }),
+	attendanceFormUrl: text(),
 }, (table) => [
 	index("meetings_live_idx").using("btree", table.startsAt.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	unique("meetings_airtableRecordId_key").on(table.airtableRecordId),	unique("meetings_slug_key").on(table.slug),
@@ -469,7 +469,7 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-check("meetings_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),]);
+check("meetings_attendanceFormUrl_airtable", sql`(("attendanceFormUrl" IS NULL) OR ("attendanceFormUrl" ~ '^https://airtable\.com/[A-Za-z0-9/_?=&.-]+$'::text))`),check("meetings_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),]);
 
 export const oauthRegistrationsInPlatform = platform.table.withRLS("oauthRegistrations", {
 	clientId: uuid().primaryKey().references(() => oauthClients.id, { onDelete: "cascade", onUpdate: "cascade" } ),

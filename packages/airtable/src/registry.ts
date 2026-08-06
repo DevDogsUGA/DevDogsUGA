@@ -68,7 +68,7 @@ export interface MeetingRow {
   location: string | null;
   startsAt: string;
   endsAt: string;
-  checkInClosesAt: string;
+  attendanceFormUrl: string | null;
   attendanceCount: number;
 }
 
@@ -187,8 +187,14 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
   endsAt: field
     .dateTime("fldEjZPZGVJG3qZEl", "Ends at")
     .pull((v) => (typeof v === "string" ? v : null)),
-  checkInClosesAt: field
-    .dateTime("fldmhd0w0I2h88UTZ", "Check-in closes")
+  // The week's attendance form, pasted by an officer.
+  //
+  // Not discoverable: the Meta API returns views as {id, name, type} and a
+  // form's public share token is not among them, so there is no path from
+  // "this meeting" to "this form" that does not go through somebody pasting
+  // it. Measured 2026-08-06.
+  attendanceForm: field
+    .url("fldZT0taFyXVb7Bls", "Attendance form")
     .pull((v) => (typeof v === "string" ? v : null)),
   attendanceCount: field
     .number("fld9RRuEB6SpnqPLP", "⚙️ Attendance")

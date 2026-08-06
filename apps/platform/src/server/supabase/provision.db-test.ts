@@ -182,9 +182,9 @@ beforeAll(async () => {
     values (${IDS.project}::uuid, 'prov-test', 'Prov Test')
   `);
   await db.execute(sql`
-    insert into platform.meetings (id, slug, name, "startsAt", "endsAt", "checkInClosesAt")
+    insert into platform.meetings (id, slug, name, "startsAt", "endsAt")
     values (${IDS.meeting}::uuid, 'prov-meeting', 'Prov',
-            now(), now() + interval '2 hours', now() + interval '1 hour')
+            now(), now() + interval '2 hours')
   `);
   await db.execute(sql`
     insert into platform.workshops (id, "meetingId", "projectId")

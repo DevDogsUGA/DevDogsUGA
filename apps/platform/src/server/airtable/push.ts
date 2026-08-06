@@ -178,7 +178,7 @@ export async function pushDerivedCounts(
       location: meetings.location,
       startsAt: sql<string>`${meetings.startsAt}::text`,
       endsAt: sql<string>`${meetings.endsAt}::text`,
-      checkInClosesAt: sql<string>`${meetings.checkInClosesAt}::text`,
+      attendanceFormUrl: meetings.attendanceFormUrl,
       airtableRecordId: meetings.airtableRecordId,
       attendanceCount: sql<number>`(
         select count(*)::int from ${attendance}

@@ -6,7 +6,7 @@ import EmptyState from "~/components/participation/EmptyState";
 import { formatEventDateTime, formatEventSpan } from "~/lib/eventTime";
 import { expectSession } from "~/server/auth";
 import {
-  checkInIsOpen,
+  attendanceFormIsLive,
   getMeetingBySlug,
   getMeetingWorkshops,
   type MeetingWorkshop,
@@ -60,13 +60,12 @@ export default async function MeetingPage({
     >
       <section className="flex flex-col gap-3 rounded-sm border-2 border-black bg-white p-4">
         <h2 className="font-semibold">Check in</h2>
-        <CheckInPanel
-          open={checkInIsOpen(meeting, now)}
+        <AttendancePanel
+          live={attendanceFormIsLive(meeting, now)}
           startsAt={meeting.startsAt}
-          checkInClosesAt={meeting.checkInClosesAt}
+          endsAt={meeting.endsAt}
+          formUrl={meeting.attendanceFormUrl}
           now={now}
-          signedIn={viewerId !== null}
-          slug={meeting.slug}
         />
       </section>
 
@@ -125,75 +124,72 @@ export default async function MeetingPage({
 }
 
 /**
- * Three states now, and none of them is a form.
+ * The link to this week's form, or the reason there is not one.
  *
- * Attendance is collected on the Airtable form in the room, so the platform has
- * nothing for a member to do here — but "am I counted?" is still the question
- * this section exists to answer, and the answer is different before, during and
- * after.
+ * The platform no longer knows whether attendance is open — the form's own
+ * window is the only gate and this process cannot read it — so every state here
+ * is worded as a pointer rather than a promise. Claiming "attendance is open"
+ * next to a closed form would be worse than saying nothing.
  *
- * `checkInClosesAt` is its own column and deliberately lands before `endsAt`:
- * somebody who turns up at the end for the pizza should not earn what somebody
- * who sat through the workshop earned. It is now advisory rather than enforced —
- * the form's own window is what actually stops a late submission — so the copy
- * says when it closes rather than implying the platform will refuse anything.
+ * The URL is officer-pasted rather than discovered, because it cannot be
+ * discovered: the Meta API returns views as `{id, name, type}` and a form's
+ * public share token is not among them.
  */
-function CheckInPanel({
-  open,
+function AttendancePanel({
+  live,
   startsAt,
-  checkInClosesAt,
+  endsAt,
+  formUrl,
   now,
-  signedIn,
-  slug,
 }: {
-  open: boolean;
+  live: boolean;
   startsAt: Date;
-  checkInClosesAt: Date;
+  endsAt: Date;
+  formUrl: string | null;
   now: Date;
-  signedIn: boolean;
-  slug: string;
 }) {
-  if (!open) {
-    return now < startsAt ? (
-      <p className="text-sm opacity-70">
-        Attendance is collected on the form shown in the room. It closes at{" "}
-        <time dateTime={checkInClosesAt.toISOString()}>
-          {formatEventDateTime(checkInClosesAt)}
-        </time>
-        .
-      </p>
-    ) : (
-      <p className="text-sm opacity-70">
-        Attendance closed at{" "}
-        <time dateTime={checkInClosesAt.toISOString()}>
-          {formatEventDateTime(checkInClosesAt)}
-        </time>
-        . If you were here, an officer can still add you to the roster.
-      </p>
-    );
-  }
-
-  if (!signedIn) {
+  if (live && formUrl !== null) {
     return (
-      <p className="text-sm">
-        Fill in the form shown in the room, using the UGA MyID your account
-        uses.{" "}
-        <Link
-          href={`/auth?callbackPath=${encodeURIComponent(`/meetings/${slug}`)}`}
-          className="underline"
+      <div className="flex flex-col gap-2 text-sm">
+        <a
+          href={formUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="self-start rounded-sm border-2 border-black bg-black px-4 py-2 font-semibold text-white"
         >
-          Sign in
-        </Link>{" "}
-        afterwards — attendance is tied to your account, and it is what your
-        stars are computed from.
+          Open the attendance form
+        </a>
+        <p className="opacity-70">
+          Enter your UGA MyID — the part before @uga.edu — and pick the workshop
+          you sat in. It appears on your profile within about fifteen minutes.
+        </p>
+      </div>
+    );
+  }
+
+  if (now < startsAt) {
+    return (
+      <p className="text-sm opacity-70">
+        Attendance is collected on a form during the meeting. The link appears
+        here once officers have set this week&rsquo;s up.
       </p>
     );
   }
 
+  if (now >= endsAt) {
+    return (
+      <p className="text-sm opacity-70">
+        This meeting has ended. If you were here and are not on the roster, an
+        officer can still add you.
+      </p>
+    );
+  }
+
+  // In progress, but no link — the officer has not pasted one yet.
   return (
-    <p className="text-sm">
-      Fill in the form shown in the room. Enter your UGA MyID — the part before
-      @uga.edu — and it will appear here within about fifteen minutes.
+    <p className="text-sm opacity-70">
+      Attendance is collected on a form in the room. Ask an officer for the link
+      if it is not on the screen.
     </p>
   );
 }

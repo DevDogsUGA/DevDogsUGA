@@ -813,7 +813,7 @@ export type Database = {
       meetings: {
         Row: {
           airtableRecordId: string | null
-          checkInClosesAt: string
+          attendanceFormUrl: string | null
           deletedAt: string | null
           endsAt: string
           id: string
@@ -824,7 +824,7 @@ export type Database = {
         }
         Insert: {
           airtableRecordId?: string | null
-          checkInClosesAt: string
+          attendanceFormUrl?: string | null
           deletedAt?: string | null
           endsAt: string
           id?: string
@@ -835,7 +835,7 @@ export type Database = {
         }
         Update: {
           airtableRecordId?: string | null
-          checkInClosesAt?: string
+          attendanceFormUrl?: string | null
           deletedAt?: string | null
           endsAt?: string
           id?: string

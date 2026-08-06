@@ -27,7 +27,7 @@ export interface MeetingSummary {
   location: string | null;
   startsAt: Date;
   endsAt: Date;
-  checkInClosesAt: Date;
+  attendanceFormUrl: string | null;
   attendanceCount: number;
   workshopCount: number;
 }
@@ -55,7 +55,7 @@ const summaryColumns = {
   location: meetings.location,
   startsAt: meetings.startsAt,
   endsAt: meetings.endsAt,
-  checkInClosesAt: meetings.checkInClosesAt,
+  attendanceFormUrl: meetings.attendanceFormUrl,
   attendanceCount: sql<number>`(
     select count(*)::int from ${attendance}
     where ${attendance.meetingId} = ${meetings.id}
@@ -170,7 +170,7 @@ export const getWorkshopDetail = cache(
         location: row.location,
         startsAt: row.startsAt,
         endsAt: row.endsAt,
-        checkInClosesAt: row.checkInClosesAt,
+        attendanceFormUrl: row.attendanceFormUrl,
         attendanceCount: row.attendanceCount,
         workshopCount: row.workshopCount,
       },
@@ -301,16 +301,25 @@ export const getCompetitionBySlug = cache(
 );
 
 /**
- * Whether check-in is open for a meeting, right now.
+ * Whether there is a form to point somebody at, right now.
  *
- * `checkInClosesAt` is its own column rather than `endsAt`, because officers
- * routinely want check-in to close before the meeting does — otherwise
- * somebody who walks in at the last minute for the free pizza earns the same
- * star as somebody who sat through the workshop.
+ * Deliberately NOT "whether attendance is open". The platform stopped being
+ * able to answer that when the check-in codes went: the Airtable form's own
+ * open and close is the only gate, and this process has no way to read it.
+ * Claiming otherwise would put a confident "Attendance open" badge on a page
+ * next to a form that is closed.
+ *
+ * So this answers the narrower question it can actually answer — is there a
+ * link, and is the meeting happening — and the copy around it is worded as a
+ * pointer rather than a promise.
  */
-export function checkInIsOpen(
-  meeting: Pick<MeetingSummary, "startsAt" | "checkInClosesAt">,
+export function attendanceFormIsLive(
+  meeting: Pick<MeetingSummary, "startsAt" | "endsAt" | "attendanceFormUrl">,
   now = new Date(),
 ): boolean {
-  return now >= meeting.startsAt && now < meeting.checkInClosesAt;
+  return (
+    meeting.attendanceFormUrl !== null &&
+    now >= meeting.startsAt &&
+    now < meeting.endsAt
+  );
 }

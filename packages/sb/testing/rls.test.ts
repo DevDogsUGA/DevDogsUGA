@@ -478,7 +478,6 @@ describe("platform meetings, teams and attendance", () => {
       name: "RLS Meeting",
       startsAt: new Date(now).toISOString(),
       endsAt: new Date(now + 7_200_000).toISOString(),
-      checkInClosesAt: new Date(now + 3_600_000).toISOString(),
     });
     await a.from("workshops").insert({ id: workshopId, meetingId, projectId });
     await a
@@ -548,7 +547,6 @@ describe("platform meetings, teams and attendance", () => {
       name: "Rogue",
       startsAt: new Date().toISOString(),
       endsAt: new Date(Date.now() + 3_600_000).toISOString(),
-      checkInClosesAt: new Date(Date.now() + 1_800_000).toISOString(),
     });
     expect(insert).not.toBeNull();
   });

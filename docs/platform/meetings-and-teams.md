@@ -62,7 +62,7 @@ platform.meetings (
   location          text,
   "startsAt"        timestamptz not null,
   "endsAt"          timestamptz not null,
-  "checkInClosesAt" timestamptz not null    -- see Check-in below
+  "attendanceFormUrl" text                  -- see Check-in below
 );
 
 platform.workshops (
@@ -140,7 +140,7 @@ draft had a single `sessions` table keyed `(event, track, stage)` with `stage`
 being `workshop | hackathon`. It failed on three counts once the real timeline
 was described:
 
-- `startsAt`, `endsAt`, and `checkInClosesAt` are meaningless on a competition
+- `startsAt` and `endsAt` are meaningless on a competition
   row. There is nothing to check into.
 - The competition star was defined as attendance on the hackathon session, which
   could never fire — nobody attends a week of async work.
@@ -813,7 +813,7 @@ editing surface rather than the store.
 
 | Airtable table   | Fields                                                                                                                    |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| **Meetings**     | Name, Slug, Starts, Ends, Location, Check-in closes, Sync status _(read-only)_                                            |
+| **Meetings**     | Name, Slug, Starts, Ends, Location, Attendance form, Sync status _(read-only)_                                            |
 | **Workshops**    | Meeting _(link)_, Project _(link)_, Sync status                                                                           |
 | **Competitions** | Workshop _(link)_, Judging meeting _(link)_, **Judging starts**, Requirement count, Max team size, Sync status            |
 | **Projects**     | Name, Slug, App — **platform-managed, read-only to officers**                                                             |
@@ -1245,18 +1245,33 @@ one has no archive step at all, which is why `attendance` has no `deletedAt`: it
 is a record of who was in a room on a Tuesday, and no amount of "I deleted the
 wrong row" in a spreadsheet erases that.
 
-**Codes are per workshop, not per meeting**, because that is the only thing that
-distinguishes concurrent rooms. `checkIn(code)` resolves the code to its
-workshop and derives the meeting from it, so a member never picks from a list
-and cannot claim the wrong room. A meeting with no workshop — or a member
-arriving only for judging — uses a meeting-level code that writes a row with a
-null `workshopId`.
+#### The form link is stored, because it cannot be discovered
 
-Redemption closes at `meetings.checkInClosesAt`, which defaults to `endsAt` plus
-a configurable grace period. The grace window is forgiving toward people who
-forget to check in on their way out, while still being bounded — a window that
-stays open until somebody remembers to close it is an attendance-integrity hole
-that nobody notices.
+`meetings."attendanceFormUrl"` holds the share link for the week's form, pasted
+by an officer into Airtable and pulled down like every other officer-authored
+field. A URL-shaped check constraint rejects anything that is not an
+`https://airtable.com/` link, because the value is rendered as an href on a
+public page and a paste into the wrong field would otherwise point members
+somewhere else entirely.
+
+> **Measured** on 2026-08-06: the Meta API returns views as `{id, name, type}`
+> and nothing more. A form view's public `shr...` share token is not in that
+> response, and its `viw...` id only resolves for somebody already a
+> collaborator on the base — which a member is not. So there is no API path from
+> "this meeting" to "this form", and one paste a week into a base officers are
+> already editing is the whole cost of the alternative.
+
+`checkInClosesAt` went with the codes. It existed so `checkIn(code)` could
+refuse a late redemption — somebody arriving at the end for the pizza should not
+earn what somebody who sat through the workshop earned. With nothing enforcing
+it, it had become a datetime officers maintained that changed no behaviour
+anywhere, and a column nobody acts on is worse than an absent one because it
+reads as a control.
+
+The platform therefore no longer claims to know whether attendance is open: the
+form's own window is the only gate and this process cannot read it. The meeting
+page says "here is the link" rather than "attendance is open", and the list
+badge reads **Attendance form open** for the same reason.
 
 ### Officers can edit any roster
 
@@ -1837,10 +1852,6 @@ needs the skipped-member list: `{ teamId, invited, skipped: [{ userId, reason }]
 This is where dropping RPCs pays immediately — that shape was `jsonb` before,
 typed by hand on both sides; now it is one interface.
 
-`checkIn` takes only the code, resolves it to a workshop, and derives the
-meeting — the member never selects a room. It validates against
-`meetings.checkInClosesAt`, not `endsAt`.
-
 `setSubmission` is the officer override for a team that presented without a PR;
 the webhook path writes `submissionState` directly. Both are described by
 [the entry state machine](#the-entry-state-machine).
@@ -2275,7 +2286,8 @@ resolves.
   `competedAt` so the post-competition PR cleanup cannot revoke it.
 - **The workshop is not a prerequisite for competing.** Competing earns both
   stars.
-- **Check-in closes after a grace period** past the meeting's end.
+- **Check-in windows are gone** along with the codes; the Airtable form's own
+  open and close is the only gate, and the platform does not model it.
 - **Projects are their own table**, because the study group finder carries two.
 - **Default team size is 4**, overridable per competition.
 - **Invitation email goes through the Cloudflare `send_email` binding**, because
