@@ -6,7 +6,7 @@ export default mergeConfig(
   defineConfig({
     // `testing/` holds the RLS persona suite, which talks to a running local
     // Supabase stack and so cannot be part of the default `pnpm test` that
-    // runs everywhere. `pnpm sb test:rls` runs it via vitest.rls.config.ts.
+    // runs everywhere. `pnpm --filter @devdogsuga/sb test:rls` runs it via vitest.rls.config.ts.
     test: { include: ["src/**/*.test.ts"] },
   }),
 );

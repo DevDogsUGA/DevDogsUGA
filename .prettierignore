@@ -4,3 +4,6 @@
 # tracked — .gitignore structurally cannot express those.
 **/src/database.types.ts
 **/src/supabase/drizzle/
+# Rewritten unformatted by every `db:pull`, so formatting it is a change that
+# never sticks.
+**/src/server/db/schema/generated/

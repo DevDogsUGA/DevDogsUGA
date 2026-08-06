@@ -8,7 +8,7 @@
  * the default and find every development-only capability denied. This is the
  * one-off that opens it.
  *
- *   pnpm sb set-environment test
+ *   pnpm --filter @devdogsuga/sb set-environment test
  *
  * Requires API_URL and SECRET_KEY in the root .env: the row is deliberately
  * unwritable by anon/authenticated, so only the service role can change it.
@@ -27,7 +27,7 @@ async function main() {
 
   if (!target || !isEnvironment(target)) {
     console.error(
-      `Usage: pnpm sb set-environment <${ENVIRONMENTS.join("|")}>\n` +
+      `Usage: pnpm --filter @devdogsuga/sb set-environment <${ENVIRONMENTS.join("|")}>\n` +
         (target ? `\nUnknown environment: ${target}` : ""),
     );
     process.exit(1);

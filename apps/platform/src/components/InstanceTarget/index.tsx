@@ -76,7 +76,7 @@ export default function InstanceTarget({ children }: PropsWithChildren) {
         state: "error",
         message:
           `${url} reports itself as a production instance, so the tools will not target it. ` +
-          "Point them at your own stack (`pnpm sb start-local-stack`) or a test project.",
+          "Point them at your own stack (`pnpm sb link`) or a test project.",
       });
       return;
     }

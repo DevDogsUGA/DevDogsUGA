@@ -38,12 +38,34 @@ E2E runs against the **local** Supabase stack (never remote — test accounts ar
 backed by real `auth.users`):
 
 ```bash
-pnpm sb start-local-stack              # boots Supabase, writes .env.generated
+pnpm sb link              # boots Supabase, writes .env.generated
 pnpm --filter @devdogsuga/platform test:e2e
 ```
 
 Add tests next to the code they cover (`*.test.ts`/`*.test.tsx`); E2E specs live
 in each app's `e2e/` directory.
+
+### The RLS persona suite
+
+```bash
+pnpm sb link && pnpm sb reset          # migrations + seeds
+pnpm --filter @devdogsuga/sb test:rls
+```
+
+**Run this if you touch a policy, a grant, or a `security definer` function.**
+It is not covered by `pnpm test`, because it needs a live stack.
+
+Row-level security is now the whole security boundary. Previously an API route
+was where a check lived and where a reviewer would look for it; with apps writing
+straight to Postgres, a missing predicate in a policy _is_ the vulnerability, and
+one publishable key reaches every schema. These tests are what stands where route
+review used to.
+
+Every case asserts an **allow and a deny**. A test that only checks the allow
+side passes just as happily when the policy is missing entirely — and two
+denials in this suite were in fact wide open when first written, because
+`revoke execute … from anon, authenticated` leaves the default `PUBLIC` grant
+intact.
 
 ## Database changes
 
@@ -52,10 +74,15 @@ Database tooling is per-app plus the shared `@devdogsuga/sb` package. See
 workflow; common commands:
 
 ```bash
-pnpm sb new-migration <name>           # create a migration
-pnpm sb push-migrations                # apply + regenerate types (remote)
-pnpm --filter @devdogsuga/platform db:pull   # refresh Drizzle schema from the DB
+pnpm --filter @devdogsuga/sb new-migration <name>   # create a migration
+pnpm sb reset                                       # replay everything locally
+pnpm --filter @devdogsuga/platform db:pull:local    # refresh Drizzle from the DB
+pnpm sb push --remote                               # apply to the linked project
 ```
+
+SQL is the source of truth; the Drizzle schema under
+`src/server/db/schema/generated/` is regenerated from the database and never
+edited by hand. See [Database & Migrations](./database.md).
 
 ## Documentation
 

@@ -17,7 +17,7 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   // Boots the app against the LOCAL Supabase stack via the existing `dev:local`
   // script (layers `.env.generated` over `.env`). Bring the stack up first with
-  // `pnpm sb start-local-stack`. Set E2E_BASE_URL to test an already-running app.
+  // `pnpm sb link`. Set E2E_BASE_URL to test an already-running app.
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {

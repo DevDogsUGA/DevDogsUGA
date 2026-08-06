@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -38,29 +43,44 @@ export type Database = {
         Row: {
           id: boolean
           lastError: string | null
+          lastManualRunAt: string | null
+          lastManualRunBy: string | null
+          lastRefusals: Json | null
           lastStatus: string | null
           lastSyncedAt: string | null
           rowsArchived: number
           rowsRefused: number
           rowsUpserted: number
+          runExpiresAt: string | null
+          runStartedAt: string | null
         }
         Insert: {
           id?: boolean
           lastError?: string | null
+          lastManualRunAt?: string | null
+          lastManualRunBy?: string | null
+          lastRefusals?: Json | null
           lastStatus?: string | null
           lastSyncedAt?: string | null
           rowsArchived?: number
           rowsRefused?: number
           rowsUpserted?: number
+          runExpiresAt?: string | null
+          runStartedAt?: string | null
         }
         Update: {
           id?: boolean
           lastError?: string | null
+          lastManualRunAt?: string | null
+          lastManualRunBy?: string | null
+          lastRefusals?: Json | null
           lastStatus?: string | null
           lastSyncedAt?: string | null
           rowsArchived?: number
           rowsRefused?: number
           rowsUpserted?: number
+          runExpiresAt?: string | null
+          runStartedAt?: string | null
         }
         Relationships: []
       }
@@ -591,6 +611,103 @@ export type Database = {
           },
         ]
       }
+      envAccessLog: {
+        Row: {
+          at: string
+          environmentId: string
+          id: number
+          keysFetched: string[]
+          userId: string
+        }
+        Insert: {
+          at?: string
+          environmentId: string
+          id?: never
+          keysFetched: string[]
+          userId: string
+        }
+        Update: {
+          at?: string
+          environmentId?: string
+          id?: never
+          keysFetched?: string[]
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "envAccessLog_environmentId_fkey"
+            columns: ["environmentId"]
+            isOneToOne: false
+            referencedRelation: "sandboxEnvironments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      envVars: {
+        Row: {
+          environmentId: string
+          key: string
+          secretId: string | null
+          updatedAt: string
+          updatedBy: string
+          value: string | null
+          visibility: Database["platform"]["Enums"]["envVarVisibility"]
+        }
+        Insert: {
+          environmentId: string
+          key: string
+          secretId?: string | null
+          updatedAt?: string
+          updatedBy: string
+          value?: string | null
+          visibility: Database["platform"]["Enums"]["envVarVisibility"]
+        }
+        Update: {
+          environmentId?: string
+          key?: string
+          secretId?: string | null
+          updatedAt?: string
+          updatedBy?: string
+          value?: string | null
+          visibility?: Database["platform"]["Enums"]["envVarVisibility"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "envVars_environmentId_fkey"
+            columns: ["environmentId"]
+            isOneToOne: false
+            referencedRelation: "sandboxEnvironments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exportAudit: {
+        Row: {
+          createdAt: string
+          filters: Json
+          id: string
+          kind: string
+          rowCount: number | null
+          userId: string | null
+        }
+        Insert: {
+          createdAt?: string
+          filters?: Json
+          id?: string
+          kind: string
+          rowCount?: number | null
+          userId?: string | null
+        }
+        Update: {
+          createdAt?: string
+          filters?: Json
+          id?: string
+          kind?: string
+          rowCount?: number | null
+          userId?: string | null
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           adminNote: string | null
@@ -1028,6 +1145,41 @@ export type Database = {
           },
         ]
       }
+      proxyRequestLog: {
+        Row: {
+          at: string
+          credentialId: string
+          id: number
+          method: string
+          path: string
+          status: number
+        }
+        Insert: {
+          at?: string
+          credentialId: string
+          id?: never
+          method: string
+          path: string
+          status: number
+        }
+        Update: {
+          at?: string
+          credentialId?: string
+          id?: never
+          method?: string
+          path?: string
+          status?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proxyRequestLog_credentialId_fkey"
+            columns: ["credentialId"]
+            isOneToOne: false
+            referencedRelation: "sandboxCredentials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reportCorroborations: {
         Row: {
           createdAt: string
@@ -1290,6 +1442,146 @@ export type Database = {
         }
         Relationships: []
       }
+      sandboxCredentials: {
+        Row: {
+          disabledAt: string | null
+          environmentId: string
+          id: string
+          issuedAt: string
+          lastUsedAt: string | null
+          revokedAt: string | null
+          rotatedAt: string | null
+          scope: Database["platform"]["Enums"]["proxyScope"]
+          status: Database["platform"]["Enums"]["credentialStatus"]
+          tokenHash: string
+          userId: string
+        }
+        Insert: {
+          disabledAt?: string | null
+          environmentId: string
+          id?: string
+          issuedAt?: string
+          lastUsedAt?: string | null
+          revokedAt?: string | null
+          rotatedAt?: string | null
+          scope: Database["platform"]["Enums"]["proxyScope"]
+          status?: Database["platform"]["Enums"]["credentialStatus"]
+          tokenHash: string
+          userId: string
+        }
+        Update: {
+          disabledAt?: string | null
+          environmentId?: string
+          id?: string
+          issuedAt?: string
+          lastUsedAt?: string | null
+          revokedAt?: string | null
+          rotatedAt?: string | null
+          scope?: Database["platform"]["Enums"]["proxyScope"]
+          status?: Database["platform"]["Enums"]["credentialStatus"]
+          tokenHash?: string
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sandboxCredentials_environmentId_fkey"
+            columns: ["environmentId"]
+            isOneToOne: false
+            referencedRelation: "sandboxEnvironments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sandboxEnvironments: {
+        Row: {
+          apiUrl: string
+          autoPauseEnabled: boolean
+          createdAt: string
+          id: string
+          jwtSecretId: string
+          kind: Database["platform"]["Enums"]["envKind"]
+          lastSeenActiveAt: string | null
+          name: string
+          ownerUserId: string
+          prewarmEnabled: boolean
+          projectRef: string
+          provisionedAt: string | null
+          proxyHostname: string
+          publishableKey: string
+          revokedAt: string | null
+          secretKeySecretId: string
+          status: Database["platform"]["Enums"]["envStatus"]
+        }
+        Insert: {
+          apiUrl: string
+          autoPauseEnabled?: boolean
+          createdAt?: string
+          id?: string
+          jwtSecretId: string
+          kind?: Database["platform"]["Enums"]["envKind"]
+          lastSeenActiveAt?: string | null
+          name: string
+          ownerUserId: string
+          prewarmEnabled?: boolean
+          projectRef: string
+          provisionedAt?: string | null
+          proxyHostname: string
+          publishableKey: string
+          revokedAt?: string | null
+          secretKeySecretId: string
+          status?: Database["platform"]["Enums"]["envStatus"]
+        }
+        Update: {
+          apiUrl?: string
+          autoPauseEnabled?: boolean
+          createdAt?: string
+          id?: string
+          jwtSecretId?: string
+          kind?: Database["platform"]["Enums"]["envKind"]
+          lastSeenActiveAt?: string | null
+          name?: string
+          ownerUserId?: string
+          prewarmEnabled?: boolean
+          projectRef?: string
+          provisionedAt?: string | null
+          proxyHostname?: string
+          publishableKey?: string
+          revokedAt?: string | null
+          secretKeySecretId?: string
+          status?: Database["platform"]["Enums"]["envStatus"]
+        }
+        Relationships: []
+      }
+      supabaseConnections: {
+        Row: {
+          accessTokenSecretId: string
+          connectedAt: string
+          expiresAt: string
+          orgSlug: string
+          refreshTokenSecretId: string
+          scopes: string[]
+          userId: string
+        }
+        Insert: {
+          accessTokenSecretId: string
+          connectedAt?: string
+          expiresAt: string
+          orgSlug: string
+          refreshTokenSecretId: string
+          scopes: string[]
+          userId: string
+        }
+        Update: {
+          accessTokenSecretId?: string
+          connectedAt?: string
+          expiresAt?: string
+          orgSlug?: string
+          refreshTokenSecretId?: string
+          scopes?: string[]
+          userId?: string
+        }
+        Relationships: []
+      }
       teamAwards: {
         Row: {
           awardedAt: string
@@ -1328,6 +1620,55 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id", "competitionId"]
+          },
+        ]
+      }
+      teamEnvironments: {
+        Row: {
+          attachedAt: string
+          attachedBy: string
+          environmentId: string
+          ownerRole: Database["platform"]["Enums"]["teamRole"]
+          ownerUserId: string
+          teamId: string
+        }
+        Insert: {
+          attachedAt?: string
+          attachedBy: string
+          environmentId: string
+          ownerRole?: Database["platform"]["Enums"]["teamRole"]
+          ownerUserId: string
+          teamId: string
+        }
+        Update: {
+          attachedAt?: string
+          attachedBy?: string
+          environmentId?: string
+          ownerRole?: Database["platform"]["Enums"]["teamRole"]
+          ownerUserId?: string
+          teamId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teamEnvironments_environmentId_ownerUserId_fkey"
+            columns: ["environmentId", "ownerUserId"]
+            isOneToOne: false
+            referencedRelation: "sandboxEnvironments"
+            referencedColumns: ["id", "ownerUserId"]
+          },
+          {
+            foreignKeyName: "teamEnvironments_teamId_fkey"
+            columns: ["teamId"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teamEnvironments_teamId_ownerUserId_ownerRole_fkey"
+            columns: ["teamId", "ownerUserId", "ownerRole"]
+            isOneToOne: false
+            referencedRelation: "teamMembers"
+            referencedColumns: ["teamId", "userId", "role"]
           },
         ]
       }
@@ -1767,6 +2108,15 @@ export type Database = {
       list_content_types: { Args: { app_slug?: string }; Returns: Json }
       list_feedback_topics: { Args: { app_slug: string }; Returns: Json }
       list_report_reasons: { Args: { app_slug: string }; Returns: Json }
+      log_proxy_request: {
+        Args: {
+          credential_id: string
+          method: string
+          path: string
+          status: number
+        }
+        Returns: undefined
+      }
       my_reports: { Args: { app_slug?: string }; Returns: Json }
       report_outcomes: {
         Args: { app_slug?: string; since?: string }
@@ -1799,6 +2149,21 @@ export type Database = {
         }
         Returns: Json
       }
+      resolve_sandbox_credential: {
+        Args: { hostname: string; token_hash: string }
+        Returns: {
+          credential_id: string
+          environment_id: string
+          environment_name: string
+          outcome: string
+          project_ref: string
+          publishable_key: string
+          scope: Database["platform"]["Enums"]["proxyScope"]
+          secret_key: string
+          upstream_url: string
+          user_id: string
+        }[]
+      }
       submit_feedback: {
         Args: {
           app_slug: string
@@ -1816,11 +2181,22 @@ export type Database = {
       checkInMethod: "code" | "discord" | "officer"
       contentAction: "quarantine" | "no_action"
       contentVisibility: "public" | "restricted"
+      credentialStatus: "active" | "disabled" | "revoked"
       credentialType: "email_password" | "totp" | "email_password_totp"
       deployEnv: "local" | "test" | "production"
       electionElectorate: "teams" | "officers"
       electionPurpose: "points" | "tiebreak"
       electionStatus: "draft" | "open" | "closed" | "tallied"
+      envKind: "owned" | "branch"
+      envStatus:
+        | "provisioning"
+        | "active"
+        | "paused"
+        | "restoring"
+        | "detached"
+        | "revoked"
+        | "orphaned"
+      envVarVisibility: "shared" | "secret"
       feedbackSeverity: "low" | "medium" | "high"
       feedbackStatus: "open" | "in_review" | "resolved" | "dismissed"
       feedbackType:
@@ -1840,6 +2216,7 @@ export type Database = {
         | "withdrawn"
         | "expired"
       oauthRegistrationType: "development" | "production"
+      proxyScope: "publishable" | "secret"
       reportStatus: "open" | "resolved" | "dismissed"
       roleType: "default" | "root" | "custom"
       subjectAction: "warn" | "suspend" | "ban" | "no_action"
@@ -2762,101 +3139,6 @@ export type Database = {
         }
         Relationships: []
       }
-      iceberg_namespaces: {
-        Row: {
-          bucket_name: string
-          catalog_id: string
-          created_at: string
-          id: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          bucket_name: string
-          catalog_id: string
-          created_at?: string
-          id?: string
-          metadata?: Json
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          bucket_name?: string
-          catalog_id?: string
-          created_at?: string
-          id?: string
-          metadata?: Json
-          name?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "iceberg_namespaces_catalog_id_fkey"
-            columns: ["catalog_id"]
-            isOneToOne: false
-            referencedRelation: "buckets_analytics"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      iceberg_tables: {
-        Row: {
-          bucket_name: string
-          catalog_id: string
-          created_at: string
-          id: string
-          location: string
-          name: string
-          namespace_id: string
-          remote_table_id: string | null
-          shard_id: string | null
-          shard_key: string | null
-          updated_at: string
-        }
-        Insert: {
-          bucket_name: string
-          catalog_id: string
-          created_at?: string
-          id?: string
-          location: string
-          name: string
-          namespace_id: string
-          remote_table_id?: string | null
-          shard_id?: string | null
-          shard_key?: string | null
-          updated_at?: string
-        }
-        Update: {
-          bucket_name?: string
-          catalog_id?: string
-          created_at?: string
-          id?: string
-          location?: string
-          name?: string
-          namespace_id?: string
-          remote_table_id?: string | null
-          shard_id?: string | null
-          shard_key?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "iceberg_tables_catalog_id_fkey"
-            columns: ["catalog_id"]
-            isOneToOne: false
-            referencedRelation: "buckets_analytics"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "iceberg_tables_namespace_id_fkey"
-            columns: ["namespace_id"]
-            isOneToOne: false
-            referencedRelation: "iceberg_namespaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       migrations: {
         Row: {
           executed_at: string | null
@@ -3357,11 +3639,23 @@ export const Constants = {
       checkInMethod: ["code", "discord", "officer"],
       contentAction: ["quarantine", "no_action"],
       contentVisibility: ["public", "restricted"],
+      credentialStatus: ["active", "disabled", "revoked"],
       credentialType: ["email_password", "totp", "email_password_totp"],
       deployEnv: ["local", "test", "production"],
       electionElectorate: ["teams", "officers"],
       electionPurpose: ["points", "tiebreak"],
       electionStatus: ["draft", "open", "closed", "tallied"],
+      envKind: ["owned", "branch"],
+      envStatus: [
+        "provisioning",
+        "active",
+        "paused",
+        "restoring",
+        "detached",
+        "revoked",
+        "orphaned",
+      ],
+      envVarVisibility: ["shared", "secret"],
       feedbackSeverity: ["low", "medium", "high"],
       feedbackStatus: ["open", "in_review", "resolved", "dismissed"],
       feedbackType: [
@@ -3383,6 +3677,7 @@ export const Constants = {
         "expired",
       ],
       oauthRegistrationType: ["development", "production"],
+      proxyScope: ["publishable", "secret"],
       reportStatus: ["open", "resolved", "dismissed"],
       roleType: ["default", "root", "custom"],
       subjectAction: ["warn", "suspend", "ban", "no_action"],
@@ -3410,4 +3705,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

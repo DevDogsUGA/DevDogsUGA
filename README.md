@@ -36,8 +36,8 @@ cd DevDogs-Website
 corepack enable && pnpm install
 pnpm setup                       # checks prereqs, seeds .env from .env.example
 # edit .env — add your remote Supabase creds (see the file's comments)
-pnpm sb link-remote-project      # one-time
-pnpm sb generate-types           # regenerate the shared Database types
+pnpm sb link --remote      # one-time
+pnpm --filter @devdogsuga/sb generate-types           # regenerate the shared Database types
 pnpm dev --filter @devdogsuga/platform
 ```
 
@@ -48,7 +48,7 @@ Supabase stack; the Flutter SDK only for `apps/study-group-finder`.
 
 **Remote-first**: `pnpm dev` and `pnpm sb <cmd>` target the linked remote
 Supabase project by default. The local Docker stack is opt-in
-(`pnpm sb start-local-stack`, then the `:local` / `dev:local` script variants).
+(`pnpm sb link`, then the `:local` / `dev:local` script variants).
 
 There is a **single** root `.env` for the whole monorepo — no per-app env
 files. It is loaded by [dotenvx](https://dotenvx.com) through one shared

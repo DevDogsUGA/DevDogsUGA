@@ -6,9 +6,9 @@ import { nodePreset } from "@devdogsuga/config/vitest/node";
  * running local Supabase stack and the local credentials, so it cannot run as
  * part of the workspace-wide `pnpm test`.
  *
- *   pnpm sb start-local-stack
- *   pnpm sb reset-local-database
- *   pnpm sb test:rls
+ *   pnpm sb link
+ *   pnpm sb reset
+ *   pnpm --filter @devdogsuga/sb test:rls
  *
  * Single-threaded: personas share one database, and several cases assert on
  * global state (who holds Root, what the instance environment is) that

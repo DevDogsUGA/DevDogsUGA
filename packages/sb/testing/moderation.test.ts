@@ -9,7 +9,7 @@
  * revoking from `anon, authenticated` leaves the default PUBLIC grant intact.
  *
  * Requires the local stack with migrations and seeds applied
- * (`pnpm sb reset-local-database`). Run via `pnpm sb test:rls`.
+ * (`pnpm sb reset`). Run via `pnpm --filter @devdogsuga/sb test:rls`.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {

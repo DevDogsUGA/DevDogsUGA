@@ -15,7 +15,7 @@ Drizzle is used exclusively as the type-safe query layer. It does not own the sc
 ## Making a schema change
 
 ```
-pnpm db:migration:new <name>
+pnpm --filter @devdogsuga/sb new-migration <name>
 ```
 
 This creates `supabase/migrations/<timestamp>_<name>.sql`. Write your DDL in that file.
@@ -28,13 +28,13 @@ alter table "public"."profiles" add column "website" text;
 Then apply it locally and regenerate TypeScript types:
 
 ```
-pnpm db:migrate
+pnpm sb reset
 ```
 
 Test locally, then verify the migration replays correctly from scratch:
 
 ```
-pnpm db:reset
+pnpm sb reset
 ```
 
 If you added new tables or foreign keys, update `src/server/db/relations.ts` to add the corresponding Drizzle relations. Commit the migration file and any relations changes together.
@@ -64,46 +64,68 @@ There is no Drizzle workaround layer — write SQL and it works.
 
 ## Scripts reference
 
-| Script                         | What it does                                                                         |
-| ------------------------------ | ------------------------------------------------------------------------------------ |
-| `pnpm db:migration:new <name>` | Create a new empty migration file in `supabase/migrations/`                          |
-| `pnpm db:migrate`              | Apply pending migrations → regenerate TS types → seed built-in roles                 |
-| `pnpm db:reset`                | Wipe local DB, replay all migrations from scratch → regenerate TS types → seed roles |
-| `pnpm db:pull`                 | Regenerate TS types from the current DB state without applying migrations            |
-| `pnpm db:seed-roles`           | Seed the built-in Member and Root roles (idempotent)                                 |
-| `pnpm db:push:remote`          | Push pending migrations to the linked production Supabase project                    |
-| `pnpm sb:start`                | Start local Supabase, export credentials to `.env.local`, seed storage buckets       |
-| `pnpm sb:stop`                 | Stop local Supabase                                                                  |
-| `pnpm sb:restart`              | Stop and restart local Supabase                                                      |
-| `pnpm dev`                     | Full local dev startup: start Supabase → apply migrations → start Next.js            |
+`pnpm sb` is a dispatcher over four commands and three targets. `--local` is the
+default; `--remote` is the linked Supabase project; `--team <slug>` reaches a
+team's sandbox environment through the platform.
+
+| Command                 | What it does                                                     |
+| ----------------------- | ---------------------------------------------------------------- |
+| `pnpm sb link`          | Boot the Docker stack and write `.env.generated`                 |
+| `pnpm sb link --remote` | Link the CLI to `PROJECT_REF` (one-time)                         |
+| `pnpm sb reset`         | Drop and replay every migration, run the seeds, regenerate types |
+| `pnpm sb push --remote` | Apply pending migrations to the linked project                   |
+| `pnpm sb status`        | Report the target's health                                       |
+
+Everything else is a package script, reached directly:
+
+| Script                                                   | What it does                                                                                      |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `pnpm --filter @devdogsuga/sb new-migration <name>`      | Create an empty migration in `packages/sb/supabase/migrations/`                                   |
+| `pnpm --filter @devdogsuga/sb generate-types`            | Regenerate `Database` types from the linked project                                               |
+| `pnpm --filter @devdogsuga/sb generate-types:local`      | The same, from the Docker stack                                                                   |
+| `pnpm --filter @devdogsuga/sb set-environment <env>`     | Set `platform."instance"."environment"` on a project that `db push` reached without running seeds |
+| `pnpm --filter @devdogsuga/sb test:rls`                  | The RLS persona suite (needs a running stack)                                                     |
+| `pnpm --filter @devdogsuga/platform db:pull:local`       | Regenerate the Drizzle schema from the local DB                                                   |
+| `pnpm --filter @devdogsuga/platform db:seed-roles:local` | Seed the built-in Member and Root roles (idempotent)                                              |
+
+## Seeds
+
+`packages/sb/supabase/seed/*.sql` runs on `pnpm sb reset` — and **only** then.
+`db push` applies migrations without them, which is why
+`set-environment` exists: a remote test project reached by `push` still holds the
+`production` default and has to be demoted explicitly.
+
+Seeds are the right place for anything that must not exist in production, since
+the reset they ride on is never pointed there. Migrations are the wrong place for
+the same reason.
 
 ## Multi-contributor workflow
 
 Database migrations have ordering constraints that code changes don't. Follow these rules to avoid conflicts:
 
-**Generate migration files late.** Don't run `pnpm db:migration:new` at the start of a feature branch. Iterate locally using `pnpm db:migrate` as you figure out the schema, then generate the migration file when the feature is ready to merge — after rebasing onto `main`.
+**Generate migration files late.** Don't run `pnpm --filter @devdogsuga/sb new-migration` at the start of a feature branch. Iterate locally using `pnpm sb reset` as you figure out the schema, then generate the migration file when the feature is ready to merge — after rebasing onto `main`.
 
 **One migration per PR.** A PR should produce at most one migration file covering all schema changes for that feature. This keeps the history readable and reduces the surface area for conflicts.
 
-**Rebase before generating.** Before running `pnpm db:migration:new`:
+**Rebase before generating.** Before running `pnpm --filter @devdogsuga/sb new-migration`:
 
 ```
 git fetch && git rebase origin/main
-pnpm db:reset   # re-apply all existing migrations on a clean slate
+pnpm sb reset   # re-apply all existing migrations on a clean slate
 ```
 
 Then apply your schema changes on top and generate the file. The migration will be generated against the latest baseline rather than a stale one.
 
-**CI verifies with `pnpm db:reset`.** Every PR should run `pnpm db:reset` in CI to confirm all migrations replay cleanly in order. This catches conflicts before merge, not after.
+**CI verifies with `pnpm sb reset`.** Every PR should run `pnpm sb reset` in CI to confirm all migrations replay cleanly in order. This catches conflicts before merge, not after.
 
-If two contributors generate migrations from the same baseline that touch the same tables, one of them must manually reconcile after merge. `pnpm db:reset` will surface the conflict immediately.
+If two contributors generate migrations from the same baseline that touch the same tables, one of them must manually reconcile after merge. `pnpm sb reset` will surface the conflict immediately.
 
 ## Production deployment
 
 Migrations are applied to the linked Supabase project with:
 
 ```
-pnpm db:push:remote
+pnpm sb push --remote
 ```
 
 This runs `supabase db push`, which applies only the migrations that haven't yet been applied to the remote project (tracked by Supabase's internal migration history table).
@@ -112,10 +134,21 @@ This runs `supabase db push`, which applies only the migrations that haven't yet
 
 ## Drizzle config files
 
-| File                              | Purpose                                                                                   |
-| --------------------------------- | ----------------------------------------------------------------------------------------- |
-| `drizzle.config.ts`               | Public schema — used for `drizzle-kit pull` (generates `src/server/db/schema/generated/`) |
-| `drizzle-introspection.config.ts` | Non-public schemas (`auth`, `storage`, etc.) — generates `src/supabase/drizzle/schema.ts` |
+| File                              | Schema filter                                     | Generates                         |
+| --------------------------------- | ------------------------------------------------- | --------------------------------- |
+| `drizzle.config.ts`               | `platform`                                        | `src/server/db/schema/generated/` |
+| `drizzle-introspection.config.ts` | everything except `platform`, `public`, `sandbox` | `src/supabase/drizzle/schema.ts`  |
+
+The exclusions on the second one are not arbitrary. `sandbox` is left out because
+its tables carry a foreign key to `platform."reportResolutions"` — the key that
+registers them as moderatable content — and drizzle emits that reference without
+an import it can resolve, producing a file that does not compile. Importing
+across would make the two generated modules circular.
+
+**Any app schema that adds the quarantine column belongs on that exclusion
+list**, for exactly the same reason. Nothing is lost: that module exists so the
+console can reach the Supabase-managed schemas through Drizzle, and no consumer
+imports anything but `auth` from it.
 
 Both configs point at the local DB URL and are only used with `drizzle-kit pull`. Neither is used for migrations.
 

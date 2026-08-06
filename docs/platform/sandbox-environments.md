@@ -1025,16 +1025,16 @@ deletes both the risk and its mitigation.**
 
 The inventory, all of which belongs in phase 2:
 
-| Item                                                                                                                                    | Action                            |
-| --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `components/OAuthTestAccounts.tsx`, `OAuthTestAccountsField.tsx`, `TestAccountDialog.tsx`                                               | Delete (~280 lines)               |
-| `server/actions/testAccounts.ts`                                                                                                        | Delete (~154 lines)               |
-| `server/oauth/clientAuth.ts` → `isTestAccountForClient`                                                                                 | Delete function                   |
-| `server/actions/consent.ts` → `approveTestAccountAuthorization` and its schema                                                          | Delete; consent becomes one path  |
-| `ConsentForm`, `oauth/consent/page.tsx`, `tools/oauth/page.tsx`, `FeedbackDialog`, `loaders/console.ts`                                 | Drop the test-account branch      |
-| `scripts/seed-builtin-roles.ts`                                                                                                         | Drop test-account role seeding    |
-| `platform."oauthTestAccounts"`                                                                                                          | Drop table                        |
-| `platform.is_test_identity()` and 4 `deny_test_identities` policies on `roles`, `reportReasons`, `reportContentTypes`, `feedbackTopics` | Drop — no identities left to deny |
+| Item                                                                                                                              | Action                            |
+| --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `components/OAuthTestAccounts.tsx`, `OAuthTestAccountsField.tsx`, `TestAccountDialog.tsx`                                         | Delete (~280 lines)               |
+| `server/actions/testAccounts.ts`                                                                                                  | Delete (~154 lines)               |
+| `server/oauth/clientAuth.ts` → `isTestAccountForClient`                                                                           | Delete function                   |
+| `server/actions/consent.ts` → `approveTestAccountAuthorization` and its schema                                                    | Delete; consent becomes one path  |
+| `ConsentForm`, `oauth/consent/page.tsx`, `tools/oauth/page.tsx`, `FeedbackDialog`, `loaders/console.ts`                           | Drop the test-account branch      |
+| `scripts/seed-builtin-roles.ts`                                                                                                   | Drop test-account role seeding    |
+| `platform."oauthTestAccounts"`                                                                                                    | Drop table                        |
+| `platform.is_test_identity()` and 4 `deny_test_identities` policies on `roles`, `reportReasons`, `feedbackTopics`, `contentTypes` | Drop — no identities left to deny |
 
 **`packages/sb/testing/personas.ts` is not part of this.** Personas are RLS test
 fixtures, a separate concept that its own comments are careful to distinguish
@@ -1248,8 +1248,15 @@ already exist.
 
 Migration 4 is the destructive one and should be its own PR. It removes
 `platform.is_test_identity()` and the four `deny_test_identities` restrictive
-policies on `roles`, `reportReasons`, `reportContentTypes`, and `feedbackTopics`
-that `20260729000000_platform_instance_gate.sql` created.
+policies that `20260729000000_platform_instance_gate.sql` created — on `roles`,
+`reportReasons`, `feedbackTopics`, and `contentTypes`.
+
+> The fourth policy moved after that migration was written.
+> `20260730000001_platform_reports_feedback_reshape.sql` dropped
+> `reportContentTypes` (a per-OAuth-client list of labels with no semantics), and
+> `20260730000002_platform_content_types.sql` put the same restrictive policy on
+> `platform."contentTypes"`, which replaced it. Still four policies, one of them
+> on a different table. See [Reporting & Feedback](./reporting-and-feedback.md).
 
 Enums:
 

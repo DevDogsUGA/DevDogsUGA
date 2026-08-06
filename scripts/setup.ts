@@ -38,7 +38,7 @@ else warn("corepack not found — run `corepack enable` for the pinned pnpm");
 if (has("docker info")) ok("Docker running (local Supabase stack available)");
 else
   info(
-    "Docker not running — fine for remote-first dev; needed for `pnpm sb start-local-stack`",
+    "Docker not running — fine for remote-first dev; needed for `pnpm sb link`",
   );
 
 if (has("flutter --version"))
@@ -60,10 +60,10 @@ console.log("\nNext steps:");
 info(
   "1. Edit .env — add your remote Supabase creds (dashboard > Project Settings)",
 );
+info("2. pnpm sb link --remote   # one-time, links the CLI to the project");
 info(
-  "2. pnpm sb link-remote-project   # one-time, links the CLI to the project",
+  "3. pnpm --filter @devdogsuga/sb generate-types        # regenerate the shared Database types",
 );
-info("3. pnpm sb generate-types        # regenerate the shared Database types");
 info(
   "4. pnpm dev --filter @devdogsuga/platform   # (or dev:local for the Docker stack)",
 );

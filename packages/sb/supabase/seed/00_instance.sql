@@ -7,6 +7,6 @@
 -- one place where flipping the gate open is unambiguously safe.
 --
 -- For a remote test project, where `db push` applies migrations without running
--- seeds, use `pnpm sb set-environment test` instead.
+-- seeds, use `pnpm --filter @devdogsuga/sb set-environment test` instead.
 
 update "platform"."instance" set "environment" = 'local' where "id";

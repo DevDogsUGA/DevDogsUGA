@@ -5,9 +5,9 @@
  * Every case asserts both an allow and a deny. A policy test that only checks
  * the allow side passes just as happily when the policy is missing entirely.
  *
- * Requires the local stack (`pnpm sb start-local-stack`) with migrations and
- * seeds applied (`pnpm sb reset-local-database`). Run via
- * `pnpm sb test:rls`, which supplies the local credentials.
+ * Requires the local stack (`pnpm sb link`) with migrations and
+ * seeds applied (`pnpm sb reset`). Run via
+ * `pnpm --filter @devdogsuga/sb test:rls`, which supplies the local credentials.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {

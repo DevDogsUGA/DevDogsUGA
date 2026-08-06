@@ -12,7 +12,7 @@
  * uses -- including whatever claims Supabase Auth actually puts in a token,
  * rather than what we assume it does.
  *
- * Requires the local stack: `pnpm sb start-local-stack`.
+ * Requires the local stack: `pnpm sb link`.
  */
 import { createClient } from "@supabase/supabase-js";
 import postgres from "postgres";

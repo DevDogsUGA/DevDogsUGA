@@ -129,7 +129,7 @@ export default function TargetField() {
         autoComplete="off"
       />
       <p className="text-xs text-mauve-400">
-        Both are printed by <code>pnpm sb start-local-stack</code>, and by{" "}
+        Both are printed by <code>pnpm sb link</code>, and by{" "}
         <code>supabase status</code> at any time.
       </p>
       <button

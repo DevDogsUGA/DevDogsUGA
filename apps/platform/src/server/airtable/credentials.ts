@@ -1,6 +1,6 @@
 import { AirtableClient } from "@devdogsuga/airtable";
 import { env } from "~/env";
-import { supabaseAdmin } from "~/supabase/admin";
+import { readVaultSecretByName } from "~/server/vault";
 
 /**
  * Resolving the Airtable personal access token.
@@ -10,11 +10,8 @@ import { supabaseAdmin } from "~/supabase/admin";
  * environment, and a PAT scoped to `data.records:write` can rewrite every dues
  * record in the club.
  *
- * Looked up by NAME rather than by a secret id kept in an env var. Vault names
- * are unique, so the name is a stable handle that survives the secret being
- * rotated — rotation replaces the row's value, and nothing else has to change.
- * Storing the id would mean a rotation that creates a new row silently points
- * the sync at the old one.
+ * Looked up by NAME rather than by a secret id kept in an env var — see
+ * `readVaultSecretByName`.
  */
 export const AIRTABLE_PAT_SECRET_NAME = "airtable_pat";
 
@@ -25,21 +22,6 @@ export class AirtableNotConfiguredError extends Error {
   }
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-async function readVaultSecretByName(name: string): Promise<string | null> {
-  // The vault schema is not in the generated Supabase types.
-  const admin = supabaseAdmin as any;
-  const { data, error } = await admin
-    .schema("vault")
-    .from("decrypted_secrets")
-    .select("decrypted_secret")
-    .eq("name", name)
-    .maybeSingle();
-  if (error || !data) return null;
-  return (data as { decrypted_secret: string }).decrypted_secret;
-}
-/* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-
 /**
  * The token, from Vault, or from the environment during bootstrapping.
  *
@@ -47,6 +29,11 @@ async function readVaultSecretByName(name: string): Promise<string | null> {
  * anywhere to put a secret — the base has to exist before the platform can be
  * pointed at it. It is deliberately checked SECOND, so once the Vault entry is
  * written a stale env var cannot quietly take precedence over the rotated one.
+ *
+ * That ordering was silently inverted until the Vault lookup moved to direct
+ * SQL: reading it through PostgREST always failed, `null` is indistinguishable
+ * from "no secret stored", and the fallback swallowed it. Anyone who had set
+ * `AIRTABLE_PAT` got the env var no matter what the Vault held.
  */
 export async function getAirtableToken(): Promise<string> {
   const fromVault = await readVaultSecretByName(AIRTABLE_PAT_SECRET_NAME);

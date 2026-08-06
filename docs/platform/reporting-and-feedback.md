@@ -203,8 +203,8 @@ The conformance check (below) verifies all three, and [the sandbox app](/docs/pl
 Content you create while developing lives on **your own instance**, never in the database production reads from. The tools at [`/tools/moderation`](https://devdogsuga.org/tools/moderation) and [`/tools/feedback`](https://devdogsuga.org/tools/feedback) run in your browser against a Supabase project you nominate.
 
 ```bash
-pnpm sb start-local-stack       # prints the URL and publishable key
-pnpm sb reset-local-database    # migrations, then seeds
+pnpm sb link       # prints the URL and publishable key
+pnpm sb reset    # migrations, then seeds
 ```
 
 Then open the tools, paste the URL and key, and sign in as a seeded persona (`member@sandbox.test` / `moderator@sandbox.test`, password `password`). You do not need to clone or run this monorepo to do any of that.
