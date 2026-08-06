@@ -14,7 +14,7 @@
 
 /** What the sync refused, and why, in words an officer can act on. */
 export interface Refusal {
-  table: "meetings" | "workshops" | "competitions";
+  table: "meetings" | "workshops" | "competitions" | "attendance";
   airtableRecordId: string;
   /** Machine-readable, for the console and for tests. */
   code: RefusalCode;
@@ -27,7 +27,10 @@ export type RefusalCode =
   | "workshop_project_changed"
   | "requirement_count_after_finalize"
   | "judging_before_workshop"
-  | "judging_moved_after_freeze";
+  | "judging_moved_after_freeze"
+  | "attendance_bad_myid"
+  | "attendance_unknown_workshop"
+  | "attendance_meeting_already_recorded";
 
 /**
  * A refusal is per FIELD, not per record.
@@ -243,4 +246,101 @@ function checkJudgingStartsAt(
   }
 
   return null;
+}
+
+// ── Attendance ───────────────────────────────────────────────────────────────
+
+const UGA_DOMAIN = "@uga.edu";
+
+/**
+ * A MyID as an address, or null if it cannot be one.
+ *
+ * Accepts a bare local part (`jdoe`) and also a full `@uga.edu` address, since
+ * somebody will type one however the form is labelled. Everything else is
+ * rejected rather than coerced.
+ *
+ * The rejection matters more than the parsing. Sign-in is Google restricted to
+ * `hd=uga.edu`, so an account created for `someone@gmail.com` could never be
+ * signed into by anybody — it would be an unreachable row holding somebody's
+ * attendance forever. Refusing is the only outcome that leaves a person able to
+ * fix it.
+ */
+export function myIdToEmail(raw: string | null): string | null {
+  if (!raw) return null;
+  const value = raw.trim().toLowerCase();
+  if (value === "") return null;
+
+  const local = value.endsWith(UGA_DOMAIN)
+    ? value.slice(0, -UGA_DOMAIN.length)
+    : value;
+
+  // MyIDs are alphanumeric. Anything with an @ left in it named another
+  // domain, and anything with a space is two of something.
+  if (!/^[a-z0-9._-]+$/.test(local)) return null;
+
+  return `${local}${UGA_DOMAIN}`;
+}
+
+export interface AttendanceFacts {
+  airtableRecordId: string;
+  /** What the form actually held, for quoting back at the officer. */
+  rawMyId: string | null;
+  /** The address `myIdToEmail` made of it, or null if it could not. */
+  email: string | null;
+  /** Resolved from the Workshop link, or null if it did not resolve. */
+  workshopId: string | null;
+  /** Derived from the workshop, or null if that workshop has no meeting. */
+  meetingId: string | null;
+}
+
+/**
+ * The two ways an attendance response cannot be stored.
+ *
+ * Both are refusals rather than skips, and the distinction is worth stating
+ * because the rest of the pull leans the other way. An officer half-filling a
+ * meeting row will finish it in thirty seconds, so complaining is noise. A
+ * response naming `jdoe@gmail.com`, or naming a workshop that is not in the
+ * base, will still be wrong on the next pass and every pass after — nobody
+ * finds out unless somebody is told.
+ */
+export function checkAttendance(facts: AttendanceFacts): RuleResult {
+  // An address outside uga.edu can never be signed into. Sign-in is Google
+  // with hd=uga.edu, so creating that account would produce a row holding
+  // somebody's attendance that no human on earth can reach.
+  if (facts.email === null) {
+    return {
+      refusals: [
+        {
+          table: "attendance",
+          airtableRecordId: facts.airtableRecordId,
+          code: "attendance_bad_myid",
+          message:
+            `Refused: "${facts.rawMyId ?? ""}" is not a UGA MyID. Enter the ` +
+            "part before @uga.edu — sign-in is restricted to UGA Google " +
+            "accounts, so an address anywhere else could never be claimed by " +
+            "the person who attended.",
+        },
+      ],
+      rejectedFields: new Set(["myId"]),
+    };
+  }
+
+  if (facts.workshopId === null || facts.meetingId === null) {
+    return {
+      refusals: [
+        {
+          table: "attendance",
+          airtableRecordId: facts.airtableRecordId,
+          code: "attendance_unknown_workshop",
+          message:
+            "Refused: the linked Workshop is not one the platform knows " +
+            "about. A workshop needs both its Meeting and its Project filled " +
+            "in before attendance can hang off it.",
+        },
+      ],
+      rejectedFields: new Set(["workshop"]),
+    };
+  }
+
+  return empty();
 }

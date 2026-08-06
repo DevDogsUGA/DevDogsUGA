@@ -1,4 +1,5 @@
 import {
+  attendanceTable as attendanceSpec,
   buildPush,
   buildUpdate,
   competitions as competitionsSpec,
@@ -313,6 +314,7 @@ export async function writeSyncStatus(
     meetings: AirtableRecord[];
     workshops: AirtableRecord[];
     competitions: AirtableRecord[];
+    attendance: AirtableRecord[];
   },
 ): Promise<number> {
   const byRecord = new Map<string, string[]>();
@@ -326,6 +328,12 @@ export async function writeSyncStatus(
     [meetingsSpec, listed.meetings],
     [workshopsSpec, listed.workshops],
     [competitionsSpec, listed.competitions],
+    // Attendance carries the refusals a MEMBER caused rather than an officer --
+    // a mistyped MyID, a workshop that is not in the base. Omitting it here
+    // would compute those refusals and then drop them: the response stays
+    // unimported and nothing in the grid says why, which is worse than having
+    // no rule at all.
+    [attendanceSpec, listed.attendance],
   ];
 
   let written = 0;

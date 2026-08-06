@@ -154,6 +154,20 @@ stops being usable as a merge key, which is a good reason for the registry's
 `.matchKey()` to be declared on exactly one field and checked by `verify.ts`
 against the live field type.
 
+## Attendance is the exception to everything below
+
+Six of the seven tables are either platform-owned and pushed, or officer-authored
+and pulled field by field. **Attendance is the one Airtable creates rows in** —
+from a form in the room, or a co-branded event's roster pasted in — and the
+platform writes back only `⚙️ Platform ID` and `⚙️ Sync status`.
+
+It is also the only import that can create an `auth.users` row, which is why its
+two safety rules are asserted by tests rather than described: the account is
+created unconfirmed, and it never writes `ugaEmail`. Both are explained under
+[Check-in](./meetings-and-teams.md#check-in); the second exists because
+`profile_ugaEmail_key` is unique and the roster import writes that column inside
+a transaction.
+
 ## The field registry
 
 Everything the sync reads or writes is declared in one place. This is what makes
@@ -500,9 +514,9 @@ reports success.
 
 ### What the registry ships with
 
-`packages/airtable/src/registry.ts` declares six tables — Members, Projects,
-Meetings, Workshops, Competitions, Teams — 37 fields, all now holding real IDs
-pulled from the live base. A newly declared field carries a `fldTODO_*`
+`packages/airtable/src/registry.ts` declares seven tables — Members, Projects,
+Meetings, Workshops, Competitions, Teams, Attendance — 42 fields, all now holding
+real IDs pulled from the live base. A newly declared field carries a `fldTODO_*`
 placeholder until `scaffold` and `pull-ids` have run for it.
 
 Adding a field later is one line in that file. Direction (`.push()` / `.pull()` /
@@ -540,6 +554,12 @@ Ordered, because several steps fail confusingly when done out of order.
 8. **Seed Projects** by running one sync pass. Projects are platform-owned and
    pushed, so the table populates itself and officers get a linked-record list
    they can select from immediately.
+   8b. **Build the attendance form** against the Attendance table: a MyID field and
+   a Workshop link, at minimum, alongside whatever poll questions the workshop
+   asks. `Source` distinguishes a form response from a co-branded import in the
+   grid. See
+   [Check-in](./meetings-and-teams.md#check-in) for why it collects a MyID
+   rather than an email.
 9. **Only then** author a meeting. Doing it earlier produces a workshop linked to
    nothing.
 10. **Move the token to Vault** as `airtable_pat` and delete `AIRTABLE_PAT` from

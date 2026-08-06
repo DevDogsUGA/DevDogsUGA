@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, text, uuid, boolean, bigint, varchar, integer, pgEnum, timestamp, smallint, date, doublePrecision, jsonb, numeric, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, text, uuid, boolean, bigint, varchar, integer, pgEnum, timestamp, smallint, date, doublePrecision, jsonb, numeric, customType, uniqueIndex, index, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by scripts/post-pull.ts after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -19,7 +19,7 @@ export const reportStatusInPlatform = platform.enum("reportStatus", ["open", "re
 export const contentVisibilityInPlatform = platform.enum("contentVisibility", ["public", "restricted"])
 export const teamRoleInPlatform = platform.enum("teamRole", ["lead", "member"])
 export const submissionStateInPlatform = platform.enum("submissionState", ["open", "closed", "merged"])
-export const checkInMethodInPlatform = platform.enum("checkInMethod", ["code", "discord", "officer"])
+export const checkInMethodInPlatform = platform.enum("checkInMethod", ["code", "discord", "officer", "airtable"])
 export const membershipDirectionInPlatform = platform.enum("membershipDirection", ["invite", "request"])
 export const membershipRequestStatusInPlatform = platform.enum("membershipRequestStatus", ["pending", "accepted", "declined", "withdrawn", "expired"])
 export const electionElectorateInPlatform = platform.enum("electionElectorate", ["teams", "officers"])
@@ -81,12 +81,14 @@ export const attendanceInPlatform = platform.table.withRLS("attendance", {
 	method: checkInMethodInPlatform().notNull(),
 	recordedBy: uuid(),
 	recordedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	airtableRecordId: text(),
 }, (table) => [
 	foreignKey({
 		columns: [table.workshopId, table.meetingId],
 		foreignColumns: [workshopsInPlatform.id, workshopsInPlatform.meetingId],
 		name: "attendance_workshopId_meetingId_fkey"
 	}).onUpdate("cascade").onDelete("set null"),
+	uniqueIndex("attendance_airtableRecordId_key").using("btree", table.airtableRecordId.asc().nullsLast()).where(sql`("airtableRecordId" IS NOT NULL)`),
 	index("attendance_userId_idx").using("btree", table.userId.asc().nullsLast()),
 	unique("attendance_meetingId_userId_key").on(table.meetingId, table.userId),
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),

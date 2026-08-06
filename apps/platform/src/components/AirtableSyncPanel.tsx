@@ -118,6 +118,13 @@ function ReportPanel({ report }: { report: SyncReport }) {
         />
         <Stat label="Already up to date" value={report.pushed.unchanged} />
         <Stat label="Grades applied" value={report.gradesApplied} />
+        {/* Only when it happened. A standing "0" reads as a dial somebody
+            could turn; a number appearing the week a workshop runs is the
+            signal -- these are rows in auth.users, created from a form field
+            nobody has verified. */}
+        {report.accountsCreated > 0 && (
+          <Stat label="Accounts created" value={report.accountsCreated} />
+        )}
       </dl>
       {report.error && (
         <p className="mt-3 rounded-sm bg-red-50 p-2 text-red-800">

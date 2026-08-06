@@ -15,7 +15,7 @@
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { discoverIds } from "@devdogsuga/airtable";
+import { discoverIds, isPlaceholder } from "@devdogsuga/airtable";
 import { baseId, scaffoldClient } from "./client.js";
 
 const REGISTRY = join(
@@ -82,7 +82,11 @@ function escape(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// Only the placeholders. Every already-resolved entry maps its own real id to
+// itself, and warning about those made adding ONE table print six complaints
+// about the six that were already fine.
 for (const [placeholder, real] of Object.entries(found.fields)) {
+  if (!isPlaceholder(placeholder)) continue;
   const call = new RegExp(`todo\\("${escape(slugOf(placeholder))}"\\)`, "g");
   const before = source;
   source = source.replace(call, `"${real}"`);
@@ -91,6 +95,7 @@ for (const [placeholder, real] of Object.entries(found.fields)) {
 }
 
 for (const [placeholder, real] of Object.entries(found.tables)) {
+  if (!isPlaceholder(placeholder)) continue;
   const call = new RegExp(
     `todoTable\\("${escape(slugOf(placeholder))}"\\)`,
     "g",

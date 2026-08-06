@@ -87,6 +87,17 @@ export interface CompetitionRow {
   teamCount: number;
 }
 
+/**
+ * An imported attendance row, as the platform reports it back.
+ *
+ * Only the id: everything else about the row came FROM Airtable, and pushing
+ * any of it back would make the platform a second writer of a field the form
+ * owns — the exact thing `.push()`/`.pull()` exclusivity exists to prevent.
+ */
+export interface AttendanceRow {
+  id: string;
+}
+
 export interface TeamRow {
   id: string;
   name: string;
@@ -251,6 +262,66 @@ export const teamsTable = table("Teams", "tblfXjgqCZiJnnD4x", {
     .pull((v) => (typeof v === "number" ? v : null)),
 });
 
+/**
+ * Attendance — the one table Airtable CREATES rows in.
+ *
+ * Every other table here is either platform-owned and pushed, or
+ * officer-authored and pulled field by field. This one is different in kind: a
+ * row appears because somebody filled in a form in a workshop, or because a
+ * co-branded event's roster was pasted in from whatever the other club uses.
+ * The platform never writes a record here, only reads them and reports back.
+ *
+ * ## Why a MyID and not an email field
+ *
+ * `MyID` is the local part alone — `jdoe`, not `jdoe@uga.edu`. Two reasons,
+ * and the second is the load-bearing one:
+ *
+ *   * It is what somebody standing in a workshop can type without thinking,
+ *     which matters when the alternative is a wrong address.
+ *   * An `email`-typed field cannot be a `.matchKey()` — `fieldsToMergeOn`
+ *     rejects the type outright — and more importantly, accepting a free-text
+ *     address would let a response name `someone@gmail.com`. Sign-in is Google
+ *     restricted to `hd=uga.edu`, so an address outside that domain can never
+ *     be claimed by anybody and would create an account nobody can reach.
+ *     Taking the local part and appending the domain ourselves makes that
+ *     unrepresentable rather than merely unlikely.
+ *
+ * ## What the platform writes back
+ *
+ * Only `⚙️ Platform ID` and `⚙️ Sync status`. The first is the imported row's
+ * uuid, which makes a re-import idempotent and shows an officer that a response
+ * landed. The second carries the refusal when it did not — an unknown MyID, or
+ * a workshop link the platform cannot resolve.
+ */
+export const attendanceTable = table("Attendance", "tblVgyeo1q9vk0ddD", {
+  platformId: field
+    .text("fldg06bTtZFYVcErp", "⚙️ Platform ID")
+    .matchKey()
+    .push((a: AttendanceRow) => a.id),
+
+  // The form's own field. Pulled, lowercased and trimmed by the importer --
+  // MyIDs are handed out in one case and typed in another.
+  myId: field
+    .text("fldmscaBQzdP4qhMP", "MyID")
+    .pull((v) => (typeof v === "string" ? v.trim().toLowerCase() : null)),
+
+  // Which room. The meeting is derived from the workshop rather than asked
+  // for: `attendance` is keyed on the meeting, and a form that collected both
+  // could disagree with itself.
+  workshop: field
+    .link("fldbZHdOlT5G0rAPP", "Workshop", "workshops")
+    .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
+
+  // How the row got here, for the officer's benefit rather than the
+  // platform's. A co-branded import and a form response are both 'airtable' as
+  // far as `checkInMethod` is concerned; this says which, in the grid.
+  source: field
+    .singleSelect("fldXEVVndageXQXHy", "Source")
+    .pull((v) => (typeof v === "string" ? v : null)),
+
+  syncStatus: field.longText("fldKo5gUpLqg72pKx", "⚙️ Sync status").status(),
+});
+
 export const registry = {
   members,
   projects,
@@ -258,6 +329,7 @@ export const registry = {
   workshops,
   competitions,
   teams: teamsTable,
+  attendance: attendanceTable,
 } as const;
 
 export type RegistryTable = keyof typeof registry;

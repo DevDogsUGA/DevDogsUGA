@@ -53,6 +53,18 @@ vi.mock("./credentials", () => ({
   AirtableNotConfiguredError: class extends Error {},
 }));
 
+vi.mock("./attendance", () => ({
+  pullAttendance: vi.fn(() =>
+    Promise.resolve({
+      imported: 0,
+      skipped: 0,
+      accountsCreated: 0,
+      refusals: [],
+      idMap: new Map(),
+    }),
+  ),
+}));
+
 vi.mock("./lease", () => lease);
 vi.mock("./push", () => writes);
 vi.mock("./sync", () => ({

@@ -1,4 +1,5 @@
 import {
+  attendanceTable as attendanceSpec,
   competitions as competitionsSpec,
   meetings as meetingsSpec,
   members as membersSpec,
@@ -9,6 +10,7 @@ import {
   type AirtableClient,
   type AirtableRecord,
 } from "@devdogsuga/airtable";
+import { pullAttendance } from "./attendance";
 import { AirtableNotConfiguredError, getAirtableClient } from "./credentials";
 import { claimSyncLease, releaseSyncLease, type ClaimResult } from "./lease";
 import {
@@ -52,6 +54,8 @@ export interface SyncReport {
   pushed: { created: number; updated: number; unchanged: number };
   gradesApplied: number;
   statusWrites: number;
+  /** Accounts created for MyIDs with no platform user yet. */
+  accountsCreated: number;
   refusals: Refusal[];
   error?: string;
 }
@@ -122,6 +126,7 @@ export async function runAirtableSync(
   const pushed = { created: 0, updated: 0, unchanged: 0 };
   let gradesApplied = 0;
   let statusWrites = 0;
+  let accountsCreated = 0;
   let failure: unknown = null;
 
   try {
@@ -136,6 +141,7 @@ export async function runAirtableSync(
       workshops: await client.listRecords(workshopsSpec.id),
       competitions: await client.listRecords(competitionsSpec.id),
       teams: await client.listRecords(teamsSpec.id),
+      attendance: await client.listRecords(attendanceSpec.id),
     };
 
     // Projects go up first: a workshop's Project link can only be resolved
@@ -170,6 +176,20 @@ export async function runAirtableSync(
     );
     addPull(pulled, competitionOutcome);
     refusals.push(...competitionOutcome.refusals);
+
+    // Attendance after workshops, because a response names its workshop by
+    // Airtable record id and only that pass knows what those map to. Before
+    // the pushes, so the ⚙️ Attendance counts a member reads in the base
+    // include what this same pass just imported rather than lagging one
+    // fifteen-minute cycle behind the form they watched somebody submit.
+    const attendanceOutcome = await pullAttendance(
+      listed.attendance,
+      workshopOutcome.idMap,
+    );
+    pulled.upserted += attendanceOutcome.imported;
+    pulled.skipped += attendanceOutcome.skipped;
+    accountsCreated = attendanceOutcome.accountsCreated;
+    refusals.push(...attendanceOutcome.refusals);
 
     // Grades before the team push, so a team graded this pass gets its points
     // pushed in the same pass rather than fifteen minutes later.
@@ -207,6 +227,7 @@ export async function runAirtableSync(
     pushed,
     gradesApplied,
     statusWrites,
+    accountsCreated,
     refusals,
     ...(error === null ? {} : { error }),
   };
@@ -221,6 +242,7 @@ function blank(started: number, skipped: SyncReport["skipped"]): SyncReport {
     pushed: { created: 0, updated: 0, unchanged: 0 },
     gradesApplied: 0,
     statusWrites: 0,
+    accountsCreated: 0,
     refusals: [],
   };
 }

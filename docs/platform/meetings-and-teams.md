@@ -818,7 +818,7 @@ editing surface rather than the store.
 | **Competitions** | Workshop _(link)_, Judging meeting _(link)_, **Judging starts**, Requirement count, Max team size, Sync status            |
 | **Projects**     | Name, Slug, App — **platform-managed, read-only to officers**                                                             |
 | **Members**      | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended, Dues paid — see [Setup](./airtable-setup.md#the-member-push) |
-| **Attendance**   | Member _(link)_, Meeting _(link)_, Workshop, Method — **platform-managed, fully read-only**                               |
+| **Attendance**   | MyID, Workshop _(link)_, Source, ⚙️ Platform ID, ⚙️ Sync status — **the one table Airtable creates rows in**              |
 
 **Projects are pushed the other way.** They are one of the tables the platform
 owns and mirrors _into_ Airtable, because a project carries an optional `appId`
@@ -1125,7 +1125,7 @@ platform.attendance (
   "meetingId"  uuid not null references platform.meetings(id),
   "workshopId" uuid references platform.workshops(id),
   "userId"     uuid not null references auth.users(id) on delete cascade,
-  method       platform."checkInMethod" not null,   -- code | discord | officer
+  method       platform."checkInMethod" not null,   -- code | discord | officer | airtable
   "recordedBy" uuid,
   "recordedAt" timestamptz not null default now(),
   unique ("meetingId", "userId"),
@@ -1159,10 +1159,77 @@ later, when somebody asks.
 
 ### Check-in
 
-Three paths, in descending order of how they should be used: a short rotating
-code shown at the front of the room and redeemed on the platform; a Discord
-slash command, using the command infrastructure that already exists; an officer
-adding someone by hand. All three write the same row.
+Four paths now, and since 2026-08-06 the **first is an Airtable form**: workshops
+are run with one already, because poll questions get asked in the room anyway and
+a second sign-in sheet next to a form people are filling in regardless is a
+worse experience for no gain. Co-branded events arrive the same way — whichever
+club ran the event has their own scheme, and pasting their roster into a table is
+a great deal easier than teaching the platform to import it.
+
+The other three remain: a short rotating code shown at the front of the room and
+redeemed on the platform; a Discord slash command; an officer adding someone by
+hand. All four write the same row, distinguished by `method`.
+
+> **Airtable captures, Postgres mirrors.** Postgres stays what the platform
+> READS — `memberStars` is a view over `attendance` and `judgingPass` decides
+> team eligibility from it, and neither can wait on a vendor being reachable or
+> on a fifteen-minute sync being current. So the form creates the row and the
+> import mirrors it; it is not a move.
+
+#### The form asks for a MyID, not an email
+
+The local part alone — `jdoe`, not `jdoe@uga.edu` — and the importer appends the
+domain itself. Sign-in is Google restricted to `hd=uga.edu`, so an account made
+for an address outside that domain could never be signed into by anybody: it
+would be a row holding somebody's attendance permanently out of reach. Building
+the address rather than accepting one makes that unrepresentable instead of
+merely discouraged. A response naming another domain is refused, with the value
+quoted back into `⚙️ Sync status`.
+
+#### Most first-time attendees have no account yet
+
+That is the ordinary case rather than the edge one, so the import **creates**
+the account: `auth.users` with the MyID as its email, and a profile carrying the
+MyID as `preferredName`.
+
+Two rules make that safe, and both are asserted by tests rather than left to
+this page.
+
+**The account is created UNCONFIRMED.** Nobody has checked that the person
+filling in the form owns the mailbox.
+
+> **Measured** on 2026-08-06: `admin.createUser` with `email_confirm: false`
+> produces a user carrying an `email` identity with `email_verified: false`.
+> Supabase's documented safeguard is that "when a new identity can be linked to
+> an existing user, Supabase Auth will remove any other unconfirmed identities
+> linked to an existing user" — so a real Google sign-in as that address links to
+> this row and displaces the unconfirmed identity. Passing `true` would confirm
+> the identity, the safeguard would not fire, and the behaviour would depend on a
+> case Supabase's documentation does not cover.
+>
+> The consequence is that a mistyped MyID is a prunable orphan rather than a
+> lockout for whoever really owns that address.
+
+**It does not write `ugaEmail` or `legal*`.** Those are durable identity from the
+Involvement roster, and `profile_ugaEmail_key` is unique. A self-declared MyID
+sitting in that column would raise a unique violation the next time the roster
+import reached the real owner of the address — inside a transaction, aborting the
+import for the entire club. One typo, everybody's roster.
+
+#### One attendance per member per meeting, still
+
+`unique ("meetingId", "userId")` is unchanged, so a member who sat in two
+workshops of one meeting produces two form responses and one row. The second is
+**refused rather than dropped**: both responses are legitimate and the schema
+collapses them on purpose, so the officer is told that rather than left to
+notice a missing row.
+
+#### Deleting the Airtable record does not delete the attendance
+
+Every other table in the pull ends by archiving rows whose record has gone. This
+one has no archive step at all, which is why `attendance` has no `deletedAt`: it
+is a record of who was in a room on a Tuesday, and no amount of "I deleted the
+wrong row" in a spreadsheet erases that.
 
 **Codes are per workshop, not per meeting**, because that is the only thing that
 distinguishes concurrent rooms. `checkIn(code)` resolves the code to its
@@ -1501,7 +1568,8 @@ Enums to create in migration 1:
 ```sql
 create type platform."teamRole" as enum ('lead', 'member');
 create type platform."submissionState" as enum ('open', 'closed', 'merged');
-create type platform."checkInMethod" as enum ('code', 'discord', 'officer');
+create type platform."checkInMethod" as enum
+  ('code', 'discord', 'officer', 'airtable');
 create type platform."membershipDirection" as enum ('invite', 'request');
 create type platform."membershipRequestStatus" as enum
   ('pending', 'accepted', 'declined', 'withdrawn', 'expired');
