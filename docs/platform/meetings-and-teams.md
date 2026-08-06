@@ -1031,10 +1031,11 @@ rows are in the base an officer handing somebody a roster clicks export rather
 than waiting on a platform route built to serialize the same data. See
 [CSV export](#csv-export) for what that decision costs.
 
-Corrections stay in-platform, on the meeting page that already exists for
-members redeeming check-in codes. That is one permission and one component
-against a second writer on the one table where a lost row costs somebody credit
-they earned.
+Corrections stay in-platform, on the meeting page that already exists. That is
+one permission and one component against a second writer on the one table where
+a lost row costs somebody credit they earned — and it is the path that survives
+whatever captures attendance, since somebody's phone dies, somebody arrives
+late, and somebody's MyID gets refused regardless of how the room signs in.
 
 Pushing a row per `(member, meeting)` is the largest write in the sync — a
 semester of 25 meetings and 60 members is 1,500 rows. Batched at 10 per request
@@ -1159,16 +1160,29 @@ later, when somebody asks.
 
 ### Check-in
 
-Four paths now, and since 2026-08-06 the **first is an Airtable form**: workshops
-are run with one already, because poll questions get asked in the room anyway and
-a second sign-in sheet next to a form people are filling in regardless is a
-worse experience for no gain. Co-branded events arrive the same way — whichever
-club ran the event has their own scheme, and pasting their roster into a table is
-a great deal easier than teaching the platform to import it.
+**An Airtable form**, since 2026-08-06: workshops are run with one already,
+because poll questions get asked in the room anyway and a second sign-in sheet
+next to a form people are filling in regardless is a worse experience for no
+gain. Co-branded events arrive the same way — whichever club ran the event has
+their own scheme, and pasting their roster into a table is a great deal easier
+than teaching the platform to import it.
 
-The other three remain: a short rotating code shown at the front of the room and
-redeemed on the platform; a Discord slash command; an officer adding someone by
-hand. All four write the same row, distinguished by `method`.
+Two paths remain beside it: an officer adding somebody by hand, and the Discord
+slash command this note describes but nothing has built. All of them write the
+same row, distinguished by `method`.
+
+> **The rotating check-in codes are gone**, and so is `platform."checkInCodes"`.
+> They existed to disambiguate concurrent rooms — a short string shown at the
+> front of each workshop, resolving to a (meeting, workshop) pair, so a member
+> never picked a room from a list and could not claim the wrong one. The form's
+> Workshop link is that same disambiguation without anybody reading a screen and
+> typing, so the codes were paying a whole subsystem's cost for a property
+> something else now provides for free.
+>
+> Dropping `'code'` from `checkInMethod` was safe because both the linked
+> project and the local database held **zero** attendance rows using it. Had
+> there been any, the value would have stayed: attendance is a ledger, and a row
+> saying how somebody was counted must not be edited to say something else.
 
 > **Airtable captures, Postgres mirrors.** Postgres stays what the platform
 > READS — `memberStars` is a view over `attendance` and `judgingPass` decides
@@ -2254,7 +2268,8 @@ resolves.
 - **A competition is a week-long async window**, opened by a workshop at one
   meeting and judged at a later one. It is not a room and has no check-in.
 - **Workshops run in parallel**, one per project, so attendance keys to the
-  workshop and check-in codes are per workshop.
+  workshop. Check-in codes were per workshop for the same reason; the Airtable
+  form's Workshop link replaced them on 2026-08-06.
 - **The competition star requires having had a live entry when judging began**,
   not attendance — there is nothing to attend — and it is frozen into
   `competedAt` so the post-competition PR cleanup cannot revoke it.

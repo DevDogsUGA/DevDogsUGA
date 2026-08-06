@@ -239,45 +239,6 @@ export type Database = {
           },
         ]
       }
-      checkInCodes: {
-        Row: {
-          code: string
-          createdAt: string
-          expiresAt: string | null
-          meetingId: string
-          workshopId: string | null
-        }
-        Insert: {
-          code: string
-          createdAt?: string
-          expiresAt?: string | null
-          meetingId: string
-          workshopId?: string | null
-        }
-        Update: {
-          code?: string
-          createdAt?: string
-          expiresAt?: string | null
-          meetingId?: string
-          workshopId?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "checkInCodes_meetingId_fkey"
-            columns: ["meetingId"]
-            isOneToOne: false
-            referencedRelation: "meetings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "checkInCodes_workshopId_meetingId_fkey"
-            columns: ["workshopId", "meetingId"]
-            isOneToOne: false
-            referencedRelation: "workshops"
-            referencedColumns: ["id", "meetingId"]
-          },
-        ]
-      }
       competitions: {
         Row: {
           airtableRecordId: string | null
@@ -2176,7 +2137,7 @@ export type Database = {
       }
     }
     Enums: {
-      checkInMethod: "code" | "discord" | "officer" | "airtable"
+      checkInMethod: "discord" | "officer" | "airtable"
       contentAction: "quarantine" | "no_action"
       contentVisibility: "public" | "restricted"
       credentialStatus: "active" | "disabled" | "revoked"
@@ -3729,7 +3690,7 @@ export const Constants = {
   },
   platform: {
     Enums: {
-      checkInMethod: ["code", "discord", "officer", "airtable"],
+      checkInMethod: ["discord", "officer", "airtable"],
       contentAction: ["quarantine", "no_action"],
       contentVisibility: ["public", "restricted"],
       credentialStatus: ["active", "disabled", "revoked"],

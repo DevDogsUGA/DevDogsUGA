@@ -499,7 +499,7 @@ describe("platform meetings, teams and attendance", () => {
       meetingId,
       workshopId,
       userId: member.userId,
-      method: "code",
+      method: "airtable",
     });
   }, 60_000);
 

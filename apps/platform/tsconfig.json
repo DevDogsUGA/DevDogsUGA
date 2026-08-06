@@ -20,6 +20,7 @@
     "node_modules",
     "src/_deprecated",
     "cloudflare/worker.ts",
-    "eslint.config.js"
+    "eslint.config.js",
+    "ds-bundle"
   ]
 }

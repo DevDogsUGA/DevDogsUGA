@@ -330,14 +330,15 @@ describe("what it refuses and what it skips", () => {
   });
 });
 
-describe("alongside a check-in that already happened", () => {
+describe("alongside a row an officer already made", () => {
   it("keeps the original method and fills in the workshop", async () => {
-    // The member checked in at the door with a code, then filled in the form.
-    // Airtable owns the workshop dimension now, so it supplies that -- but
-    // rewriting `method` would make the row lie about how it was captured.
+    // An officer added the member by hand, then the member filled in the form
+    // too. Airtable owns the workshop dimension now, so it supplies that -- but
+    // rewriting `method` would make the row lie about how it was captured, and
+    // 'officer' is the one method that also carries a `recordedBy`.
     await db.execute(sql`
-      insert into platform.attendance ("meetingId", "userId", method)
-      values (${IDS.meetingA}::uuid, ${IDS.member}::uuid, 'code')`);
+      insert into platform.attendance ("meetingId", "userId", method, "recordedBy")
+      values (${IDS.meetingA}::uuid, ${IDS.member}::uuid, 'officer', ${IDS.member}::uuid)`);
 
     const out = await pullAttendance(
       [record("recR1", { myId: "existing", workshop: "recWorkshopA" })],
@@ -348,7 +349,7 @@ describe("alongside a check-in that already happened", () => {
     const rows = await attendanceRows();
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
-      method: "code",
+      method: "officer",
       workshopId: IDS.workshopA,
       airtableRecordId: "recR1",
     });

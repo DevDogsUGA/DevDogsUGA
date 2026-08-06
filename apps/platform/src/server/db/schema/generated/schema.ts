@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, text, uuid, boolean, bigint, varchar, integer, pgEnum, timestamp, smallint, date, doublePrecision, jsonb, numeric, customType, uniqueIndex, index, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, varchar, boolean, bigint, text, pgEnum, smallint, timestamp, integer, date, doublePrecision, jsonb, numeric, customType, uniqueIndex, index, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by scripts/post-pull.ts after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -19,7 +19,6 @@ export const reportStatusInPlatform = platform.enum("reportStatus", ["open", "re
 export const contentVisibilityInPlatform = platform.enum("contentVisibility", ["public", "restricted"])
 export const teamRoleInPlatform = platform.enum("teamRole", ["lead", "member"])
 export const submissionStateInPlatform = platform.enum("submissionState", ["open", "closed", "merged"])
-export const checkInMethodInPlatform = platform.enum("checkInMethod", ["code", "discord", "officer", "airtable"])
 export const membershipDirectionInPlatform = platform.enum("membershipDirection", ["invite", "request"])
 export const membershipRequestStatusInPlatform = platform.enum("membershipRequestStatus", ["pending", "accepted", "declined", "withdrawn", "expired"])
 export const electionElectorateInPlatform = platform.enum("electionElectorate", ["teams", "officers"])
@@ -30,6 +29,7 @@ export const envStatusInPlatform = platform.enum("envStatus", ["provisioning", "
 export const credentialStatusInPlatform = platform.enum("credentialStatus", ["active", "disabled", "revoked"])
 export const proxyScopeInPlatform = platform.enum("proxyScope", ["publishable", "secret"])
 export const envVarVisibilityInPlatform = platform.enum("envVarVisibility", ["shared", "secret"])
+export const checkInMethodInPlatform = platform.enum("checkInMethod", ["discord", "officer", "airtable"])
 
 
 export const airtableSyncStateInPlatform = platform.table.withRLS("airtableSyncState", {
@@ -146,27 +146,6 @@ export const ballotsInPlatform = platform.table.withRLS("ballots", {
    FROM platform."teamMembers" tm
   WHERE ((tm."teamId" = ballots."teamId") AND (tm."userId" = ( SELECT auth.uid() AS uid))))))` }),
 check("ballots_electorate_matches_teamId", sql`(((electorate = 'teams'::platform."electionElectorate") AND ("teamId" IS NOT NULL)) OR ((electorate = 'officers'::platform."electionElectorate") AND ("teamId" IS NULL)))`),]);
-
-export const checkInCodesInPlatform = platform.table.withRLS("checkInCodes", {
-	code: text().primaryKey(),
-	meetingId: uuid().notNull().references(() => meetingsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
-	workshopId: uuid(),
-	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-	expiresAt: timestamp({ withTimezone: true }),
-}, (table) => [
-	foreignKey({
-		columns: [table.workshopId, table.meetingId],
-		foreignColumns: [workshopsInPlatform.id, workshopsInPlatform.meetingId],
-		name: "checkInCodes_workshopId_meetingId_fkey"
-	}).onUpdate("cascade").onDelete("cascade"),
-	index("checkInCodes_meetingId_idx").using("btree", table.meetingId.asc().nullsLast()),
-
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-]);
 
 export const competitionsInPlatform = platform.table.withRLS("competitions", {
 	id: uuid().defaultRandom().primaryKey(),
@@ -1121,7 +1100,6 @@ export { reportStatusInPlatform as reportStatus };
 export { contentVisibilityInPlatform as contentVisibility };
 export { teamRoleInPlatform as teamRole };
 export { submissionStateInPlatform as submissionState };
-export { checkInMethodInPlatform as checkInMethod };
 export { membershipDirectionInPlatform as membershipDirection };
 export { membershipRequestStatusInPlatform as membershipRequestStatus };
 export { electionElectorateInPlatform as electionElectorate };
@@ -1132,12 +1110,12 @@ export { envStatusInPlatform as envStatus };
 export { credentialStatusInPlatform as credentialStatus };
 export { proxyScopeInPlatform as proxyScope };
 export { envVarVisibilityInPlatform as envVarVisibility };
+export { checkInMethodInPlatform as checkInMethod };
 export { airtableSyncStateInPlatform as airtableSyncState };
 export { appsInPlatform as apps };
 export { attendanceInPlatform as attendance };
 export { ballotRankingsInPlatform as ballotRankings };
 export { ballotsInPlatform as ballots };
-export { checkInCodesInPlatform as checkInCodes };
 export { competitionsInPlatform as competitions };
 export { competitionStandingsInPlatform as competitionStandings };
 export { contentTypesInPlatform as contentTypes };

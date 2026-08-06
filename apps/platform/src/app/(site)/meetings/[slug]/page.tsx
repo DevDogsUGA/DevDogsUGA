@@ -1,12 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import CheckInForm from "~/components/CheckInForm";
 import ConsolePageShell from "~/components/ConsolePageShell";
 import EmptyState from "~/components/participation/EmptyState";
 import { formatEventDateTime, formatEventSpan } from "~/lib/eventTime";
-import { checkIn } from "~/server/actions/attendance";
-import type { CheckInOutcome } from "~/server/attendance/errors";
 import { expectSession } from "~/server/auth";
 import {
   checkInIsOpen,
@@ -70,7 +67,6 @@ export default async function MeetingPage({
           now={now}
           signedIn={viewerId !== null}
           slug={meeting.slug}
-          redeem={checkIn}
         />
       </section>
 
@@ -129,13 +125,18 @@ export default async function MeetingPage({
 }
 
 /**
- * The four states of check-in, which are not the four states of the meeting.
+ * Three states now, and none of them is a form.
+ *
+ * Attendance is collected on the Airtable form in the room, so the platform has
+ * nothing for a member to do here — but "am I counted?" is still the question
+ * this section exists to answer, and the answer is different before, during and
+ * after.
  *
  * `checkInClosesAt` is its own column and deliberately lands before `endsAt`:
  * somebody who turns up at the end for the pizza should not earn what somebody
- * who sat through the workshop earned. So the closed message names the close
- * time rather than the end of the meeting, and the open test comes from
- * `checkInIsOpen` rather than from any comparison written here.
+ * who sat through the workshop earned. It is now advisory rather than enforced —
+ * the form's own window is what actually stops a late submission — so the copy
+ * says when it closes rather than implying the platform will refuse anything.
  */
 function CheckInPanel({
   open,
@@ -144,7 +145,6 @@ function CheckInPanel({
   now,
   signedIn,
   slug,
-  redeem,
 }: {
   open: boolean;
   startsAt: Date;
@@ -152,20 +152,19 @@ function CheckInPanel({
   now: Date;
   signedIn: boolean;
   slug: string;
-  redeem: (code: string) => Promise<CheckInOutcome>;
 }) {
   if (!open) {
     return now < startsAt ? (
       <p className="text-sm opacity-70">
-        Check-in opens when the meeting starts, and closes at{" "}
+        Attendance is collected on the form shown in the room. It closes at{" "}
         <time dateTime={checkInClosesAt.toISOString()}>
           {formatEventDateTime(checkInClosesAt)}
         </time>
-        . The code is on the screen at the front of the room.
+        .
       </p>
     ) : (
       <p className="text-sm opacity-70">
-        Check-in closed at{" "}
+        Attendance closed at{" "}
         <time dateTime={checkInClosesAt.toISOString()}>
           {formatEventDateTime(checkInClosesAt)}
         </time>
@@ -177,17 +176,24 @@ function CheckInPanel({
   if (!signedIn) {
     return (
       <p className="text-sm">
+        Fill in the form shown in the room, using the UGA MyID your account
+        uses.{" "}
         <Link
           href={`/auth?callbackPath=${encodeURIComponent(`/meetings/${slug}`)}`}
           className="underline"
         >
           Sign in
         </Link>{" "}
-        to redeem the code on the screen. Attendance is tied to your account —
-        it is what your stars are computed from.
+        afterwards — attendance is tied to your account, and it is what your
+        stars are computed from.
       </p>
     );
   }
 
-  return <CheckInForm redeem={checkIn} />;
+  return (
+    <p className="text-sm">
+      Fill in the form shown in the room. Enter your UGA MyID — the part before
+      @uga.edu — and it will appear here within about fifteen minutes.
+    </p>
+  );
 }
