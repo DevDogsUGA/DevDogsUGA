@@ -37,12 +37,22 @@ export const REQUIRED_SCOPES = [
 export type OAuthProblem =
   | "not_configured"
   | "exchange_failed"
+  // Distinct from `exchange_failed` on purpose. Connecting is two steps —
+  // trade the code with Supabase, then store the result — and they fail for
+  // completely unrelated reasons: a bad client secret versus a Vault write or
+  // a missing table. Reporting both as "exchange_failed" sent me hunting
+  // through the token endpoint for a fault that could equally have been in our
+  // own database, and cost two wrong diagnoses before the distinction existed.
+  | "persist_failed"
   | "not_connected"
   | "refresh_failed";
 
 export class OAuthError extends Error {
-  constructor(readonly code: OAuthProblem) {
-    super(`Supabase OAuth: ${code}`);
+  constructor(
+    readonly code: OAuthProblem,
+    readonly detail?: string,
+  ) {
+    super(`Supabase OAuth: ${code}${detail ? ` — ${detail}` : ""}`);
     this.name = "OAuthError";
   }
 }
@@ -89,6 +99,21 @@ interface TokenResponse {
   // only discovered by calling an endpoint and seeing whether it works.
 }
 
+/**
+ * Exchange a code or a refresh token for a grant.
+ *
+ * Credentials go in the body AND in HTTP Basic. The body is the documented
+ * contract — the OpenAPI spec declares `security: None` for this operation and
+ * lists `client_id`/`client_secret` among its form fields — and Basic is kept
+ * because it demonstrably works too.
+ *
+ * > **Measured: both mechanisms are honoured, and equivalently.** Against the
+ * > live endpoint with a deliberately invalid code: Basic-only returns `404
+ * > Invalid or expired OAuth authorization`, body-only returns the same, and
+ * > body-only with a wrong secret returns `403 Invalid client_secret` while a
+ * > wrong id returns `422 Unrecognized client_id`. So neither is a fix for the
+ * > other, and sending both is belt-and-braces rather than a workaround.
+ */
 async function exchange(body: Record<string, string>): Promise<TokenResponse> {
   const { id, secret } = credentials();
   const res = await fetch(TOKEN_URL, {
@@ -97,11 +122,23 @@ async function exchange(body: Record<string, string>): Promise<TokenResponse> {
       "Content-Type": "application/x-www-form-urlencoded",
       Authorization: `Basic ${btoa(`${id}:${secret}`)}`,
     },
-    body: new URLSearchParams(body),
+    body: new URLSearchParams({
+      ...body,
+      client_id: id,
+      client_secret: secret,
+    }),
   });
   if (!res.ok) {
-    console.error(`[supabase-oauth] token exchange failed: ${res.status}`);
-    throw new OAuthError("exchange_failed");
+    // The body, not just the status. Supabase distinguishes "invalid
+    // client_secret" from "unrecognized client_id" from "invalid or expired
+    // authorization" in the message alone -- three completely different faults
+    // behind one thrown code. Logging the status by itself turned a named
+    // diagnosis into a guess.
+    const detail = await res.text().catch(() => "<unreadable>");
+    console.error(
+      `[supabase-oauth] token exchange failed: ${res.status} ${detail}`,
+    );
+    throw new OAuthError("exchange_failed", `${res.status} ${detail}`);
   }
   return (await res.json()) as TokenResponse;
 }
@@ -165,13 +202,24 @@ export async function connectSupabase(
   verifier: string,
   orgSlug: string,
 ): Promise<void> {
+  // `exchange` throws OAuthError("exchange_failed") with the upstream body
+  // attached. Everything after it is ours, and gets its own code.
   const tokens = await exchange({
     grant_type: "authorization_code",
     code,
     redirect_uri: `${env.BASE_URL}/supabase/callback`,
     code_verifier: verifier,
   });
-  await persist(userId, orgSlug, tokens);
+
+  try {
+    await persist(userId, orgSlug, tokens);
+  } catch (error) {
+    console.error("[supabase-oauth] persisting the grant failed:", error);
+    throw new OAuthError(
+      "persist_failed",
+      error instanceof Error ? error.message : String(error),
+    );
+  }
 }
 
 /**

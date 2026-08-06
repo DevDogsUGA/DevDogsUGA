@@ -5,6 +5,7 @@ import { expectSession } from "~/server/auth";
 import {
   accessTokenFor,
   connectSupabase,
+  OAuthError,
   probeScopes,
 } from "~/server/supabase/oauth";
 import { STATE_COOKIE, VERIFIER_COOKIE } from "../authorize/route";
@@ -61,8 +62,16 @@ export async function GET(request: Request) {
   try {
     await connectSupabase(userId, code, verifier, orgSlug ?? "");
   } catch (e) {
-    console.error("[supabase-oauth] callback failed:", e);
-    redirect("/console/sandbox?error=exchange_failed");
+    // The stage matters. Trading the code with Supabase and storing the result
+    // fail for entirely unrelated reasons, and collapsing both into one code
+    // makes the console report a Supabase problem for what may be our own
+    // database. `redirect` throws NEXT_REDIRECT, so it stays out of the try.
+    const code_ =
+      e instanceof OAuthError && e.code === "persist_failed"
+        ? "persist_failed"
+        : "exchange_failed";
+    console.error(`[supabase-oauth] callback failed (${code_}):`, e);
+    redirect(`/console/sandbox?error=${code_}`);
   }
 
   // The token response carries no `scope` field, so what was actually granted

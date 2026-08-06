@@ -202,7 +202,9 @@ function Problem({ code }: { code: string }) {
     scopes:
       "Connected, but the grant is missing a permission this needs. Disconnect and reconnect, approving every scope.",
     exchange_failed:
-      "Supabase did not complete the connection. Nothing was saved; try again.",
+      "Supabase rejected the authorization. Nothing was saved -- the server log names the reason.",
+    persist_failed:
+      "Supabase authorized the connection, but saving it here failed. The grant is not stored; the server log names the reason.",
     access_denied: "You declined the connection, so nothing was changed.",
   };
   return (
