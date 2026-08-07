@@ -90,3 +90,14 @@ export {
   type Severity,
   type VerifyResult,
 } from "./verify.js";
+
+export {
+  normalize,
+  readSnapshot,
+  snapshotDrift,
+  snapshotPath,
+  writeSnapshot,
+  SnapshotMissingError,
+  type SchemaSnapshot,
+  type SnapshotDrift,
+} from "./snapshot.js";

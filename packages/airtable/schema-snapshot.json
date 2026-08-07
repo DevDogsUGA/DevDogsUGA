@@ -1,0 +1,288 @@
+{
+  "tables": [
+    {
+      "id": "tblVgyeo1q9vk0ddD",
+      "name": "Attendance",
+      "primaryFieldId": "fldg06bTtZFYVcErp",
+      "fields": [
+        {
+          "id": "fldg06bTtZFYVcErp",
+          "name": "⚙️ Platform ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldKo5gUpLqg72pKx",
+          "name": "⚙️ Sync status",
+          "type": "multilineText"
+        },
+        {
+          "id": "fldmscaBQzdP4qhMP",
+          "name": "MyID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldXEVVndageXQXHy",
+          "name": "Source",
+          "type": "singleSelect"
+        },
+        {
+          "id": "fldbZHdOlT5G0rAPP",
+          "name": "Workshop",
+          "type": "multipleRecordLinks"
+        }
+      ]
+    },
+    {
+      "id": "tbltrW1Xum127cNwy",
+      "name": "Competitions",
+      "primaryFieldId": "fld1w9dzXBszwMI0M",
+      "fields": [
+        {
+          "id": "fld1w9dzXBszwMI0M",
+          "name": "⚙️ Platform ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldxx0qkfiSXGhWiD",
+          "name": "⚙️ Sync status",
+          "type": "multilineText"
+        },
+        {
+          "id": "fldss0bnDwAM2YXii",
+          "name": "⚙️ Teams",
+          "type": "number"
+        },
+        {
+          "id": "flduPP0rsaJ7Sjl1J",
+          "name": "Branch slug",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fld9p3FVXCuFWJF7b",
+          "name": "Judging starts",
+          "type": "dateTime"
+        },
+        {
+          "id": "fldGij8ChmqGklbwh",
+          "name": "Max team size",
+          "type": "number"
+        },
+        {
+          "id": "fldu17YKeE2FYBkOc",
+          "name": "Requirements",
+          "type": "number"
+        },
+        {
+          "id": "fldge0I3DNLH0b7BN",
+          "name": "Workshop",
+          "type": "multipleRecordLinks"
+        }
+      ]
+    },
+    {
+      "id": "tblYhJZWMnBrZ4ylM",
+      "name": "Meetings",
+      "primaryFieldId": "fldIBjOSNweMYXAaj",
+      "fields": [
+        {
+          "id": "fld9RRuEB6SpnqPLP",
+          "name": "⚙️ Attendance",
+          "type": "number"
+        },
+        {
+          "id": "fldIBjOSNweMYXAaj",
+          "name": "⚙️ Platform ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldyPrtUDL9iuhLA1",
+          "name": "⚙️ Sync status",
+          "type": "multilineText"
+        },
+        {
+          "id": "fldZT0taFyXVb7Bls",
+          "name": "Attendance form",
+          "type": "url"
+        },
+        {
+          "id": "fldmhd0w0I2h88UTZ",
+          "name": "Check-in closes",
+          "type": "dateTime"
+        },
+        {
+          "id": "fldEjZPZGVJG3qZEl",
+          "name": "Ends at",
+          "type": "dateTime"
+        },
+        {
+          "id": "fld3MRTF42aS6c3PX",
+          "name": "Location",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldc0NfTHVxHk8Za0",
+          "name": "Name",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fld0iXyGZpgW7zJWF",
+          "name": "Starts at",
+          "type": "dateTime"
+        },
+        {
+          "id": "fldANNjZaqMsRkgQZ",
+          "name": "Workshops",
+          "type": "multipleRecordLinks"
+        }
+      ]
+    },
+    {
+      "id": "tblLTJtir40NrL87x",
+      "name": "Members",
+      "primaryFieldId": "fldXg9IE8LgkjhfKy",
+      "fields": [
+        {
+          "id": "fld67SQSbL40XU6aa",
+          "name": "⚙️ Meetings attended",
+          "type": "number"
+        },
+        {
+          "id": "fldXg9IE8LgkjhfKy",
+          "name": "⚙️ Platform ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fld3p7eengCBxHjjj",
+          "name": "Dues paid",
+          "type": "date"
+        },
+        {
+          "id": "fldeFEIojm0OmH0hL",
+          "name": "Legal name",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldmpCcukx7kkNMZs",
+          "name": "Notes",
+          "type": "multilineText"
+        },
+        {
+          "id": "fldrFt40qy37Ftn9z",
+          "name": "UGA email",
+          "type": "email"
+        }
+      ]
+    },
+    {
+      "id": "tblqcG8xDrOMuBTvF",
+      "name": "Projects",
+      "primaryFieldId": "fldniryZw7v0j7MuD",
+      "fields": [
+        {
+          "id": "fldniryZw7v0j7MuD",
+          "name": "⚙️ Platform ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldqQiRT2jDhlsrWC",
+          "name": "⚙️ Slug",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldaDoMwYJlhoxODU",
+          "name": "Name",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldWQXMUDMWVFJK2T",
+          "name": "Workshops",
+          "type": "multipleRecordLinks"
+        }
+      ]
+    },
+    {
+      "id": "tblfXjgqCZiJnnD4x",
+      "name": "Teams",
+      "primaryFieldId": "fldZ7a84yBHOt1x3i",
+      "fields": [
+        {
+          "id": "fldDuEeRPzyaRxqIo",
+          "name": "⚙️ Competed",
+          "type": "checkbox"
+        },
+        {
+          "id": "fldu6uDYUQq0ga4qH",
+          "name": "⚙️ Members",
+          "type": "number"
+        },
+        {
+          "id": "fldkwm2qtSjZdbzPY",
+          "name": "⚙️ Name",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldZ7a84yBHOt1x3i",
+          "name": "⚙️ Platform ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldvrkhNok0u2C7zn",
+          "name": "⚙️ Points",
+          "type": "number"
+        },
+        {
+          "id": "fldt81SN59PbB0Wa5",
+          "name": "⚙️ Submission",
+          "type": "url"
+        },
+        {
+          "id": "fldos8CCiyx6FwIdi",
+          "name": "Requirements met",
+          "type": "number"
+        }
+      ]
+    },
+    {
+      "id": "tblSYPbmIagwyTFq1",
+      "name": "Workshops",
+      "primaryFieldId": "fldVVc4st1vNgVzVP",
+      "fields": [
+        {
+          "id": "fldxdsZmSNmR30O2J",
+          "name": "⚙️ Attendance",
+          "type": "number"
+        },
+        {
+          "id": "fldVVc4st1vNgVzVP",
+          "name": "⚙️ Platform ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "flddrtCx3b88sFsHl",
+          "name": "⚙️ Sync status",
+          "type": "multilineText"
+        },
+        {
+          "id": "fldxI3wgrnNwFEotu",
+          "name": "Attendance",
+          "type": "multipleRecordLinks"
+        },
+        {
+          "id": "fld0UvdnfDtTgG1nU",
+          "name": "Competitions",
+          "type": "multipleRecordLinks"
+        },
+        {
+          "id": "fldqxlHThMKBmhsiq",
+          "name": "Meeting",
+          "type": "multipleRecordLinks"
+        },
+        {
+          "id": "fldhUjEo0dq5BRZez",
+          "name": "Project",
+          "type": "multipleRecordLinks"
+        }
+      ]
+    }
+  ]
+}

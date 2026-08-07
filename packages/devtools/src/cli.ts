@@ -38,6 +38,7 @@ import {
   runAirtable,
   runPullIds,
   runScaffold,
+  runSnapshot,
   runVerify,
 } from "./airtable/commands.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
@@ -73,6 +74,7 @@ Airtable subcommands:
   airtable scaffold [--dry-run]   Create what the registry declares
   airtable pull-ids               Write discovered ids into registry.ts
   airtable verify [--no-duplicates]  Diff the live base against the registry
+  airtable snapshot [--check]     Refresh, or check, the committed schema snapshot
 
 Targets:
   --local            The Docker stack (default)
@@ -325,9 +327,15 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
     await runAirtable(() => runPullIds());
     return;
   }
+  if (sub === "snapshot") {
+    // `--check` is credential-free and is what pull-request CI runs; the
+    // default refreshes the committed file and needs the token.
+    await runAirtable(() => runSnapshot(rest.includes("--check")));
+    return;
+  }
 
   log.error(`Unknown airtable subcommand: ${sub}`);
-  log.message("Try scaffold, pull-ids or verify.");
+  log.message("Try scaffold, pull-ids, verify or snapshot.");
   process.exitCode = 1;
 }
 

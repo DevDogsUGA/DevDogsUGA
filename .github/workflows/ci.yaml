@@ -58,6 +58,17 @@ jobs:
         run: >-
           pnpm turbo run lint typecheck test build
           --affected --filter='!study-group-finder'
+      # Reads the committed snapshot and touches no network, so it needs no
+      # credential -- which is why it can live here at all. It answers "does
+      # registry.ts still agree with the base as last observed", not "is the
+      # live base still correct"; the latter needs a token and belongs in the
+      # deployed worker's cron.
+      #
+      # Unconditional rather than --affected: the registry is edited by hand
+      # after `pull-ids`, and a hand-edited id is exactly the mistake with no
+      # other detection. It costs no network and about a second.
+      - name: Registry agrees with the schema snapshot
+        run: pnpm airtable:snapshot:check
 
   # Repo-wide formatting check — fast, no build needed.
   format:

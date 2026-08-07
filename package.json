@@ -18,6 +18,8 @@
     "airtable:scaffold": "pnpm --filter @devdogsuga/devtools run cli airtable scaffold",
     "airtable:pull-ids": "pnpm --filter @devdogsuga/devtools run cli airtable pull-ids",
     "airtable:verify": "pnpm --filter @devdogsuga/devtools run cli airtable verify",
+    "airtable:snapshot": "pnpm --filter @devdogsuga/devtools run cli airtable snapshot",
+    "airtable:snapshot:check": "pnpm --filter @devdogsuga/devtools run cli:no-env airtable snapshot --check",
     "devtools": "pnpm --filter @devdogsuga/devtools run cli"
   },
   "engines": {

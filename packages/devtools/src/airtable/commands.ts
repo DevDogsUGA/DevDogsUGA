@@ -18,9 +18,12 @@ import {
   discoverIds,
   formatVerifyResult,
   planScaffold,
+  readSnapshot,
   scaffoldBase,
+  snapshotDrift,
   undeclaredFields,
   verifyBase,
+  writeSnapshot,
 } from "@devdogsuga/airtable";
 import { PROJECT_ROOT } from "../instance.js";
 import { errorMessage, explain } from "../ui.js";
@@ -196,6 +199,79 @@ export async function runVerify(checkDuplicates: boolean): Promise<void> {
     log.error("The base has drifted from the registry.");
     process.exitCode = 1;
   }
+}
+
+/**
+ * Refresh the committed schema snapshot, or check the registry against it.
+ *
+ * `--check` is the half that runs in pull-request CI: it reads the committed
+ * file and touches no network, so it needs no credential — which is the whole
+ * point, since a token in a PR-triggered workflow is readable by whoever opened
+ * the pull request.
+ *
+ * Writing is deliberately manual. Refreshing on a schedule would rewrite the
+ * snapshot to match a drifted base, which turns every subsequent pull request
+ * red for a cause no pull request created and none can fix.
+ */
+export async function runSnapshot(check: boolean): Promise<void> {
+  if (check) {
+    let snapshot;
+    try {
+      snapshot = readSnapshot();
+    } catch (err) {
+      explain("No schema snapshot to check against.", errorMessage(err), [
+        "Create one with `pnpm airtable:snapshot` and commit it.",
+      ]);
+      process.exitCode = 1;
+      return;
+    }
+
+    const drift = snapshotDrift(snapshot);
+    log.step(`${snapshot.tables.length} table(s) in the snapshot`);
+
+    if (drift.length === 0) {
+      log.success("The registry agrees with the committed snapshot.");
+      return;
+    }
+
+    note(
+      drift
+        .map((d) =>
+          d.absent ?
+            `${d.table} — no such table in the snapshot`
+          : `${d.table} — missing ${d.missing.join(", ")}`,
+        )
+        .join("\n"),
+      "Registry declares what the snapshot does not have",
+    );
+    explain(
+      "The registry and the snapshot disagree.",
+      "",
+      [
+        "If you edited registry.ts by hand, check the ids against the base.",
+        "If the base genuinely changed, run `pnpm airtable:snapshot` and",
+        "commit the result alongside the registry change.",
+      ],
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  const credentials = airtableClient();
+  if (!credentials) {
+    process.exitCode = 1;
+    return;
+  }
+  const { client, baseId } = credentials;
+
+  const schema = await client.getBaseSchema();
+  writeSnapshot(schema.tables);
+
+  log.step(`Base ${baseId}`);
+  log.success(
+    `Wrote ${String(schema.tables.length)} table(s) to schema-snapshot.json.`,
+  );
+  log.info("Commit it alongside whatever registry change prompted the refresh.");
 }
 
 /** Shared error path, so a thrown Airtable error is never a stack trace. */
