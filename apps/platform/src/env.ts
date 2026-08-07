@@ -38,11 +38,16 @@ export const env = createEnv({
     // redirect; the writes team provisioning performs -- createRef,
     // addOrUpdateRepoPermissionsInOrg -- are not guaranteed to follow one.
     //
-    // TODO: this should NOT be the deploy repo. A competition team granted push
-    // here can reach every other team's branch and the integration branch that
-    // judging reads, because GitHub team permissions have no branch dimension.
-    // Point it at a dedicated competition repository and add the per-team
-    // rulesets that actually enforce the isolation.
+    // This IS the deploy repo, and deliberately so -- the `production` branch,
+    // not a second repository, is the deploy boundary. What that costs is that
+    // a competition team granted push here can reach every other team's branch,
+    // because GitHub team permissions have no branch dimension: the grant is
+    // repository-wide or nothing.
+    //
+    // The isolation therefore has to come from branch rulesets, one per team,
+    // restricting pushes to that team's prefix. Until those exist the isolation
+    // is nominal. See the per-team ruleset step in the security plan; the
+    // 75-rulesets-per-repository ceiling is the real limit on team count.
     GITHUB_COMPETITION_REPO: z.string().default("DevDogsUGA"),
     // Verifies `X-Hub-Signature-256` on the PR webhook. Empty means the
     // webhook route refuses every request -- see the route for why that is the
