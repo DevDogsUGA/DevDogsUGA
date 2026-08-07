@@ -25,9 +25,8 @@
     "cf:deploy": "with-env opennextjs-cloudflare deploy"
   },
   "dependencies": {
-    "@devdogsuga/db": "workspace:*",
-    "@devdogsuga/oauth-setup": "workspace:*",
-    "@devdogsuga/sb": "workspace:*",
+    "@devdogsuga/drizzle": "workspace:*",
+    "@devdogsuga/supabase": "workspace:*",
     "@radix-ui/react-accordion": "catalog:",
     "@radix-ui/react-avatar": "catalog:",
     "@radix-ui/react-dialog": "catalog:",

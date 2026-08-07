@@ -8,6 +8,27 @@ Thanks for helping improve the DevDogs Website!
 2. **Make your changes** — keep commits focused and descriptive.
 3. **Open a pull request** targeting `main`. Fill out the PR template.
 
+## Getting set up
+
+```bash
+pnpm devtools
+```
+
+Opens a menu — start a database, reset it, apply migrations, or check that an
+app's moderation integration works. Nothing here needs you to know a command
+name, and `pnpm devtools <command>` still works if you do. `pnpm sb` is the same
+tool under its older name.
+
+Running the console itself is a separate step:
+
+```bash
+pnpm --filter platform dev:local
+```
+
+The Discord and GitHub variables in `.env.example` are validated at boot but
+only _used_ by role sync and the leaderboard, so any non-empty placeholder is
+enough unless you are working on those.
+
 ## Code style
 
 - TypeScript everywhere — avoid `any`.
@@ -26,30 +47,21 @@ Thanks for helping improve the DevDogs Website!
 
 ## Testing
 
-Unit and component tests use **Vitest**; the two Next apps also have **Playwright**
-E2E smoke tests. Shared Vitest/ESLint config lives in `packages/config`.
+Unit and component tests use **Vitest**. Shared Vitest/ESLint config lives in
+`packages/config`.
 
 ```bash
 pnpm test                              # all unit/component tests
 pnpm --filter platform test:watch   # watch a single package
 ```
 
-E2E runs against the **local** Supabase stack (never remote — test accounts are
-backed by real `auth.users`):
-
-```bash
-pnpm sb link              # boots Supabase, writes .env.generated
-pnpm --filter platform test:e2e
-```
-
-Add tests next to the code they cover (`*.test.ts`/`*.test.tsx`); E2E specs live
-in each app's `e2e/` directory.
+Add tests next to the code they cover (`*.test.ts`/`*.test.tsx`).
 
 ### The RLS persona suite
 
 ```bash
 pnpm sb link && pnpm sb reset          # migrations + seeds
-pnpm --filter @devdogsuga/sb test:rls
+pnpm --filter @devdogsuga/supabase test:rls
 ```
 
 **Run this if you touch a policy, a grant, or a `security definer` function.**
@@ -69,12 +81,12 @@ intact.
 
 ## Database changes
 
-Database tooling is per-app plus the shared `@devdogsuga/sb` package. See
+Database tooling is per-app plus the shared `@devdogsuga/supabase` package. See
 [Getting Started](./getting-started.md) and the root README for the full
 workflow; common commands:
 
 ```bash
-pnpm --filter @devdogsuga/sb new-migration <name>   # create a migration
+pnpm --filter @devdogsuga/supabase new-migration <name>   # create a migration
 pnpm sb reset                                       # replay everything locally
 pnpm --filter platform db:pull:local    # refresh Drizzle from the DB
 pnpm sb push --remote                               # apply to the linked project

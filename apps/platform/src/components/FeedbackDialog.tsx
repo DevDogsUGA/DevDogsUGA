@@ -3,7 +3,7 @@
 import {
   FeedbackDialog as FeedbackDialogBase,
   type DialogTheme,
-} from "@devdogsuga/moderation/react";
+} from "~/components/moderation";
 import { submitFeedback } from "~/server/actions/feedback";
 import { createClient } from "~/supabase/client";
 import { PLATFORM_APP_SLUG } from "~/config/apps";
@@ -38,8 +38,7 @@ const devDogsTheme: Partial<DialogTheme> = {
  * directly as the `postgres` role; routing that back out through HTTP would buy
  * nothing.
  *
- * The dialog is the same component either way, which is the point of lifting it
- * into a package.
+ * The dialog is the same component either way.
  */
 export default function FeedbackDialog({
   open,

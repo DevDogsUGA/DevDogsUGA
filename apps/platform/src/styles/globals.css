@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@devdogsuga/moderation/react/styles.css";
+@import "../components/moderation/styles.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
@@ -16,35 +16,20 @@
 }
 
 @theme {
-  --color-background: var(--color-mauve-950);
-  --color-foreground: var(--color-white);
-  --color-muted: var(--color-mauve-900);
-  --color-muted-foreground: var(--color-mauve-400);
-  --color-border: var(--color-mauve-800);
-  --color-input: var(--color-mauve-800);
-  --color-primary: var(--color-white);
-  --color-primary-foreground: var(--color-mauve-950);
-  --color-secondary: var(--color-mauve-800);
-  --color-secondary-foreground: var(--color-white);
-  --color-accent: var(--color-mauve-800);
-  --color-accent-foreground: var(--color-white);
-  --color-destructive: var(--color-rose-600);
+  /* The mauve palette itself lives in the `.dark` block near the bottom of this
+     file, not here. It used to be declared here as `--color-*: var(--color-mauve-*)`
+     pairs, but the `@theme inline` block further down re-maps every one of those
+     same names to `var(--background)`, `var(--primary)`, … — and a later @theme
+     wins, so every declaration up here was silently dead and the whole UI was
+     rendering shadcn's stock zero-chroma grays instead of mauve.
+     Two consumers have to agree on these colors: the utilities (`bg-card`) go
+     through the @theme inline indirection, and a handful of call sites read the
+     raw token directly (button.tsx does `color-mix(in oklch, var(--secondary),
+     var(--foreground) 5%)`). Setting the raw `--*` tokens is what keeps both
+     paths on the same palette, so that is where the values now live.
+     Only names with no counterpart in the @theme inline block belong here. */
   --color-destructive-foreground: var(--color-white);
-  --color-popover: var(--color-mauve-950);
-  --color-popover-foreground: var(--color-white);
-  --color-card: var(--color-mauve-900);
-  --color-card-foreground: var(--color-white);
-  --color-ring: var(--color-mauve-500);
   --color-overlay: oklch(0% 0 0 / 65%);
-
-  --color-sidebar-background: var(--color-mauve-950);
-  --color-sidebar-foreground: var(--color-white);
-  --color-sidebar-primary: var(--color-white);
-  --color-sidebar-primary-foreground: var(--color-mauve-950);
-  --color-sidebar-accent: var(--color-mauve-800);
-  --color-sidebar-accent-foreground: var(--color-white);
-  --color-sidebar-border: var(--color-mauve-800);
-  --color-sidebar-ring: var(--color-mauve-500);
 
   --block-shadow-sm: 2px;
   --block-shadow-md: 4px;
@@ -792,38 +777,53 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* The palette. `<html>` is hardcoded to `class="dark"` in app/layout.tsx, so this
+   is the only theme the platform ever renders — the `:root` values above are
+   shadcn scaffolding that nothing reaches. Values came in as shadcn's stock
+   `neutral` scale (chroma 0) despite components.json asking for `baseColor:
+   "mauve"`; they are mauve here, matching what the @theme block at the top of
+   this file always intended.
+
+   Also bound to `:root`, so the palette applies with or without a `.dark`
+   ancestor. Inert for the app — `<html>` carries `class="dark"`, so it already
+   matched — but it means the design-system bundle, which has no such host
+   element to inherit from, cannot fall through to the unused light `:root`
+   scaffolding above and render near-white. Note the `dark:` variant is a
+   separate mechanism (`@custom-variant dark (&:is(.dark *))`) and still needs a
+   real `.dark` ancestor. */
+:root,
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --background: var(--color-mauve-950);
+  --foreground: var(--color-white);
+  --card: var(--color-mauve-900);
+  --card-foreground: var(--color-white);
+  --popover: var(--color-mauve-950);
+  --popover-foreground: var(--color-white);
+  --primary: var(--color-white);
+  --primary-foreground: var(--color-mauve-950);
+  --secondary: var(--color-mauve-800);
+  --secondary-foreground: var(--color-white);
+  --muted: var(--color-mauve-900);
+  --muted-foreground: var(--color-mauve-400);
+  --accent: var(--color-mauve-800);
+  --accent-foreground: var(--color-white);
+  --destructive: var(--color-rose-600);
+  --border: var(--color-mauve-800);
+  --input: var(--color-mauve-800);
+  --ring: var(--color-mauve-500);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: var(--color-mauve-950);
+  --sidebar-foreground: var(--color-white);
+  --sidebar-primary: var(--color-white);
+  --sidebar-primary-foreground: var(--color-mauve-950);
+  --sidebar-accent: var(--color-mauve-800);
+  --sidebar-accent-foreground: var(--color-white);
+  --sidebar-border: var(--color-mauve-800);
+  --sidebar-ring: var(--color-mauve-500);
 }
 
 @layer base {

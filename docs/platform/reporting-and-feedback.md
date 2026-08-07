@@ -7,7 +7,7 @@ description: How a DevDogs app lets users report content and submit feedback —
 
 Every DevDogs app shares one Supabase project, with a Postgres schema per app. Reporting and feedback are therefore not an HTTP API any more, and there is no SDK that owns the contract.
 
-**The contract is a set of `platform` functions plus the row-level security around them**, reached through PostgREST. TypeScript and Dart call the same functions with the same arguments and get the same JSON. `@devdogsuga/moderation` is sugar over those calls; if it ever disagrees with the SQL, the SQL is right.
+**The contract is a set of `platform` functions plus the row-level security around them**, reached through PostgREST. TypeScript and Dart call the same functions with the same arguments and get the same JSON — and because those functions declare their columns, `supabase gen types` types both the arguments and the results. There is no hand-written client to disagree with the SQL.
 
 > Replaces the old Feedback API, which documented REST endpoints that were never implemented. Nothing consumed them, and nothing was migrated.
 
@@ -29,13 +29,15 @@ Three independent reasons, any one of which would be sufficient.
 
 **Server-side decisions.** Corroboration (a second reporter on content that already has an open report), rate limiting, and snapshotting are decisions, not inserts.
 
-**Flutter.** `supadart` reads only PostgREST's _default_ schema, which is `study_group_finder` — `config.toml` lists it first for exactly this reason. The Flutter app will therefore never have generated Dart models for `platform` tables. A function returning `jsonb` needs no model; table access would need hand-written Dart mirroring the TypeScript types by eye.
+**Flutter.** `supadart` reads only PostgREST's _default_ schema, which is `study_group_finder` — `config.toml` lists it first for exactly this reason. The Flutter app will therefore never have generated Dart models for `platform` tables, and an RPC needs none: Dart reads `List<Map<String, dynamic>>`. Table access would need hand-written Dart mirroring the TypeScript types by eye.
+
+> These functions used to `return jsonb` on the grounds that a jsonb result was what made them language-neutral. That was wrong, and worth recording so it is not reintroduced. PostgREST publishes **no response schema for any RPC** — `{"200": {"description": "OK"}}`, identically for a `jsonb` function and for one returning a table — so supadart could never have typed the results either way, and it does not read the `platform` schema at all. Meanwhile `supabase gen types` reads the _catalog_, so `returns table (...)` gives TypeScript every column name and type. The jsonb form was costing return types and buying nothing.
 
 Reads are RPCs for that third reason too.
 
 ## The contract
 
-All of these live in the `platform` schema and return `jsonb`.
+All of these live in the `platform` schema. They are set-returning, so **every result is a JSON array** — including the ones that logically return a single object. `file_report` comes back as `[{ reportId, corroborated }]`; use `.single()` or `[0]`.
 
 | Function               | Arguments                                                                                       | Returns                        |
 | ---------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------ |
@@ -51,24 +53,25 @@ All of these live in the `platform` schema and return `jsonb`.
 ### From a Next.js app
 
 ```ts
-import { fileReport, listReportReasons } from "@devdogsuga/moderation";
+const { data: reasons } = await supabase
+  .schema("platform")
+  .rpc("list_report_reasons", { app_slug: "forum" });
+// reasons: { id: string; title: string; description: string }[]
 
-const reasons = await listReportReasons(supabase, "forum");
-
-await fileReport(supabase, {
-  app: "forum",
-  contentType: "resource",
-  contentRef: resource.id,
-  reasonId: selected.id,
+const { data, error } = await supabase.schema("platform").rpc("file_report", {
+  app_slug: "forum",
+  content_type: "resource",
+  content_ref: resource.id,
+  reason_id: selected.id,
   description: note,
 });
+// data: { reportId: string; corroborated: boolean }[]
 ```
 
-`supabase` is your app's ordinary client, scoped to your own schema — the package hops to `platform` internally. Plus `<ReportDialog>` and `<FeedbackDialog>`, portable React components themed through CSS custom properties:
+No wrapper package: argument names and result shapes both come from `supabase gen types`, so the compiler checks them against the actual functions. `supabase` is your app's ordinary client, scoped to your own schema; `.schema("platform")` is the hop. Plus `<ReportDialog>` and `<FeedbackDialog>`, themed through CSS custom properties. They live in `apps/platform/src/components/moderation/`; an app outside this repository copies them, because nothing here is published and a package shared with nobody is just a longer import path:
 
 ```tsx
-import { ReportDialog } from "@devdogsuga/moderation/react";
-import "@devdogsuga/moderation/react/styles.css";
+import { ReportDialog } from "~/components/moderation";
 
 <ReportDialog
   open={open}
@@ -200,31 +203,58 @@ The conformance check (below) verifies all three, and [the sandbox app](/docs/pl
 
 ## Testing it
 
-Content you create while developing lives on **your own instance**, never in the database production reads from. The tools at [`/tools/moderation`](https://devdogsuga.org/tools/moderation) and [`/tools/feedback`](https://devdogsuga.org/tools/feedback) run in your browser against a Supabase project you nominate.
+Content you create while developing lives on **your own database**, never in the one production reads from. Everything below runs locally:
 
 ```bash
-pnpm sb link       # prints the URL and publishable key
-pnpm sb reset    # migrations, then seeds
+pnpm devtools
 ```
 
-Then open the tools, paste the URL and key, and sign in as a seeded persona (`member@sandbox.test` / `moderator@sandbox.test`, password `password`). You do not need to clone or run this monorepo to do any of that.
+That opens a menu — you do not need to know any command names, and every entry explains what it will do before it does it. `pnpm sb` is the same tool under its older name, and every `pnpm sb <cmd>` in the rest of these docs still works.
 
-Two things make it safe:
+| Menu entry                      | What it does                                                    |
+| ------------------------------- | --------------------------------------------------------------- |
+| Start my database               | boots the local Docker stack and writes `.env.generated`        |
+| Reset my database               | replays every migration, then the seeds                         |
+| Apply new migrations            | without erasing anything                                        |
+| Check an app's moderation setup | `platform.conformance_check()` — what the catalog derived       |
+| Test reporting end to end       | files a report, quarantines it, and checks who can still see it |
 
-- The tools read `platform."instance"` and **refuse any target that reports itself as production**, so the pointing mechanism cannot be aimed at live data.
-- The target is stored per-browser and never server-side.
+The seeds create three personas — `member@`, `author@` and `moderator@sandbox.test`, password `password` — and the sandbox content they act on.
+
+Before anything touches a database, the tool reads `platform."instance"` and **refuses any instance that reports itself as production**, so none of this can be aimed at live data.
 
 ### The conformance check
 
-`platform.conformance_check(app_slug)`, run from the Content Types card, answers "did I declare my content correctly?" before you write any app code. It reports, per content type: whether rows are addressable, whether an author can be derived, whether `resolve_content` works against a real row, whether quarantine is supported, whether clients can still write the quarantine column, and whether your policies mention it at all.
+`platform.conformance_check(app_slug)` answers "did I declare my content correctly?" before you write any app code. Per content type it reports whether rows are addressable, whether an author can be derived, whether `resolve_content` works against a real row, whether quarantine is supported, whether clients can still write the quarantine column, and whether your policies mention it at all.
 
 The last two are heuristics over policy text rather than proofs, and they say so — a false alarm gets looked at, a false pass does not.
 
-### Things worth checking by hand
+```bash
+pnpm devtools doctor --app forum    # skips the picker, for CI
+```
 
-- **Does quarantine actually hide anything?** File a report, resolve it with `quarantine`, then look at your app's listing as a different user. This exercises _your_ read policy, which is the single most likely thing to be wrong.
+### The round-trip is the one that matters
+
+**Test reporting end to end** is the check the catalog cannot do for you. It creates a sandbox post, files a report as one persona, resolves it with `quarantine` as a moderator, and then looks again as a third — asserting that the post is hidden from a member and still visible to a moderator. Fixtures are deleted afterwards whether or not the assertions held.
+
+Quarantine is the only moderation outcome whose effect lives in _your_ read policies rather than the platform's, so it is the only one that can be wired up wrong while everything appears to work: the platform records the decision, sets the column, and has no way to notice nobody reads it. Running this against your own app is the only proof.
+
+### Things still worth checking by hand
+
 - **Does a ban stop writes?** Suspend a persona, then try to write as them.
 - **What does someone else see?** Sign in as a different seeded persona. You are always Root on your own instance, so clicking around never denies you anything — switching personas is the only way to encounter a permission boundary.
+
+### The console
+
+Moderation queues and feedback submissions are read in the console at `/console/moderation` and `/console/feedback`. To work on the console itself, run it against your own stack:
+
+```bash
+pnpm --filter platform dev:local
+```
+
+The five Discord and GitHub variables in `.env.example` are validated at boot but unused by these pages, so any non-empty placeholder will do unless you are working on Discord or GitHub sync.
+
+Configuring **production** report reasons and feedback topics is separate, and lives at [`/tools/moderation`](https://devdogsuga.org/tools/moderation) and [`/tools/feedback`](https://devdogsuga.org/tools/feedback) — server-rendered, permission-gated, and pointed at production because that is where the real values belong. Your own instance gets its reasons and topics from the seeds.
 
 ## Where the moderation decision lives
 

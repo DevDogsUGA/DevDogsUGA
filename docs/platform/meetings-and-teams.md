@@ -1654,10 +1654,10 @@ multi-statement.** `apps/platform/src/server/db/index.ts` already exposes the
 client. Reads that a client component needs live in React Query hooks over
 supabase-js, which keeps RLS doing the filtering on the read path.
 
-#### Extract the client into `packages/db`
+#### Extract the client into `packages/drizzle`
 
 > **Built.** This is the one piece of this plan that exists. Both apps now import
-> `createDb` from `@devdogsuga/db`; their local `db/index.ts` is four lines.
+> `createDb` from `@devdogsuga/drizzle`; their local `db/index.ts` is four lines.
 
 `apps/platform/src/server/db/index.ts` and
 `apps/schedule-builder/src/server/db/index.ts` were **the same file** — same
@@ -1665,7 +1665,7 @@ supabase-js, which keeps RLS doing the filtering on the read path.
 differing only in which `relations` they import.
 
 ```ts
-// packages/db/src/index.ts
+// packages/drizzle/src/index.ts
 export function createDb<R extends AnyRelations>(url: string, relations: R) {
   /* the postgres-js client, the globalThis cache, the dev-only reuse */
 }
@@ -1681,7 +1681,7 @@ The one real hazard in moving it was the cache key. The old code wrote
 competes for the name — but a shared factory called twice in one process would
 have handed the second caller the first caller's connection, including its
 database. The shipped version keys a `Map` on the connection string, under a
-`Symbol.for("@devdogsuga/db.connections")` slot so two copies of the package at
+`Symbol.for("@devdogsuga/drizzle.connections")` slot so two copies of the package at
 different versions still share one cache rather than opening two pools.
 
 #### Should the proxy worker use it too?
@@ -1710,7 +1710,7 @@ The real objections are practical, and they are about where the worker sits:
   most exposed to untrusted traffic; adding a driver and an ORM to it buys
   consistency at the cost of the thing that makes it easy to audit.
 
-So: extract `packages/db` for the two Next apps, where it removes real
+So: extract `packages/drizzle` for the two Next apps, where it removes real
 duplication today. Leave the proxy worker on supabase-js against its narrow role.
 If it ever needs to do more than resolve a credential, revisit — but that would
 be a reason to widen its grants, which is the decision that actually matters, and
@@ -2136,17 +2136,17 @@ column that the trigger does not recompute will silently read as `null`.
 
 Plus two new workspace packages:
 
-| Path              | Contents                                                     |
-| ----------------- | ------------------------------------------------------------ |
-| `packages/email/` | react-email sources, compile step, generated typed templates |
-| `packages/db/`    | The shared `postgres-js` + Drizzle client factory            |
+| Path                | Contents                                                     |
+| ------------------- | ------------------------------------------------------------ |
+| `packages/email/`   | react-email sources, compile step, generated typed templates |
+| `packages/drizzle/` | The shared `postgres-js` + Drizzle client factory            |
 
 `packages/email`'s `build` task emits `dist/` and must be declared as a turbo
 dependency of the platform build, or a stale artifact ships. Because `dist/` is
 gitignored, the rendered snapshots under `__snapshots__/` are what make a design
 change visible in review.
 
-`packages/db` **exists**; it replaced the byte-identical clients in both Next
+`packages/drizzle` **exists**; it replaced the byte-identical clients in both Next
 apps. See [Extract the client](#extract-the-client-into-packagesdb).
 
 **`lockState.ts` deserves being a module rather than an inline condition.** The
@@ -2235,7 +2235,7 @@ resolves.
 
 ### Tests
 
-- **RLS persona tests** in `packages/sb/testing/` — extend `personas.ts` rather
+- **RLS persona tests** in `packages/supabase/testing/` — extend `personas.ts` rather
   than inventing a parallel fixture. Since writes no longer pass through
   Postgres, these now cover the **read** path and the deny-all write policies:
   a member cannot read another member's attendance; `memberStars` returns only
@@ -2345,7 +2345,7 @@ resolves.
 - **Lock state and participation are separate columns.** `submissionState`
   tracks the PR forever; `competedAt` is frozen once at judging. Derive what is a
   question about now, store what is a question about a past moment.
-- **The Drizzle client moves to `packages/db`**, shared by both Next apps. The
+- **The Drizzle client moves to `packages/drizzle`**, shared by both Next apps. The
   proxy worker stays on supabase-js against its narrow role — the RPC there is a
   privilege boundary, not a client-library choice.
 

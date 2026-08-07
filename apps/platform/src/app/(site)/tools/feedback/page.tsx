@@ -1,72 +1,97 @@
+import { Suspense } from "react";
 import AccentBlobs from "~/ui/accent-blobs";
 import { ConsoleCard } from "~/ui/card";
 import Field from "~/ui/field";
 import PageHeader from "~/components/PageHeader";
-import InstanceTarget from "~/components/InstanceTarget";
-import TargetField from "~/components/InstanceTarget/TargetField";
-import FeedbackPanel from "~/components/InstanceTarget/FeedbackPanel";
-import FeedbackTopicsPanel from "~/components/InstanceTarget/FeedbackTopicsPanel";
+import { TableSkeleton } from "~/components/Skeletons";
+import AppSelect from "~/components/AppSelect";
+import FeedbackTopicsField from "~/components/FeedbackTopicsField";
+import {
+  getFeedbackTopicsPageData,
+  listApps,
+  selectedApp,
+} from "~/server/loaders/moderationConfig";
 
 /**
- * Feedback tooling for a contributor's own instance. See the moderation page
- * for why these act on a nominated Supabase project rather than on this one.
+ * Configures the topics users may file feedback under, per app.
  *
- * The test-feedback list that used to live here belonged to the era when a
- * contributor's submissions landed in *this* database. They land on their own
- * instance now, so the tooling reads that instance directly instead of keeping
- * a parallel "test" corner of production.
+ * See the moderation page for why this is server-rendered against production
+ * rather than pointed at a nominated instance. Submissions themselves are read
+ * in the console at /console/feedback; this page is configuration only.
  */
-export default function FeedbackToolsPage() {
+
+async function AppPicker({ appSlug }: { appSlug: string }) {
+  const [apps, selected] = await Promise.all([
+    listApps(),
+    selectedApp(appSlug),
+  ]);
+  if (!selected) {
+    return (
+      <p className="text-sm text-mauve-400">
+        No apps are registered in this instance.
+      </p>
+    );
+  }
+  return <AppSelect apps={apps} selectedSlug={selected.slug} />;
+}
+
+async function TopicsList({ appSlug }: { appSlug: string }) {
+  const selected = await selectedApp(appSlug);
+  if (!selected) return null;
+
+  const { canEdit, topics } = await getFeedbackTopicsPageData(selected.id);
+
+  return (
+    <FeedbackTopicsField
+      appId={selected.id}
+      initialTopics={topics}
+      canEdit={canEdit}
+    />
+  );
+}
+
+export default async function FeedbackToolsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ app?: string }>;
+}) {
+  const { app } = await searchParams;
+  const appSlug = app ?? "";
+
   return (
     <div className="relative isolate mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 @sm:px-6">
       <AccentBlobs accent="amber" />
 
       <PageHeader
         title="Feedback"
-        description="Point these tools at your own Supabase instance to configure feedback topics and read what has been submitted."
+        description="Configure the feedback topics available to each DevDogs application."
         accent="amber"
       />
 
-      <InstanceTarget>
-        <ConsoleCard.Root id="instance">
-          <ConsoleCard.Header title="Target Instance" />
-          <ConsoleCard.Content>
-            <Field
-              id="instance-target"
-              label="Target Instance"
-              description="The Supabase project these tools act on. Production instances are refused."
-            >
-              <TargetField />
-            </Field>
-          </ConsoleCard.Content>
-        </ConsoleCard.Root>
+      <ConsoleCard.Root id="topics">
+        <ConsoleCard.Header title="Feedback Topics" />
+        <ConsoleCard.Content>
+          <Field
+            id="app"
+            label="Application"
+            description="Which registered DevDogs app these topics belong to."
+          >
+            <Suspense fallback={<TableSkeleton />}>
+              <AppPicker appSlug={appSlug} />
+            </Suspense>
+          </Field>
 
-        <ConsoleCard.Root id="topics">
-          <ConsoleCard.Header title="Feedback Topics" />
-          <ConsoleCard.Content>
-            <Field
-              id="feedback-topics"
-              label="Feedback Topics"
-              description="The topics users can choose from when submitting feedback about an app. Apply a template to get started quickly, or add your own."
-            >
-              <FeedbackTopicsPanel />
-            </Field>
-          </ConsoleCard.Content>
-        </ConsoleCard.Root>
-
-        <ConsoleCard.Root id="submissions">
-          <ConsoleCard.Header title="Submissions" />
-          <ConsoleCard.Content>
-            <Field
-              id="feedback-submissions"
-              label="Submissions"
-              description="Feedback on the target instance, subject to row-level security as whoever you signed in as there."
-            >
-              <FeedbackPanel />
-            </Field>
-          </ConsoleCard.Content>
-        </ConsoleCard.Root>
-      </InstanceTarget>
+          <Field
+            id="feedback-topics"
+            label="Feedback Topics"
+            description="The topics users can choose from when submitting feedback about this app. Requires the Manage Feedback permission to change."
+          >
+            <Suspense fallback={<TableSkeleton />}>
+              <TopicsList appSlug={appSlug} />
+            </Suspense>
+          </Field>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
     </div>
   );
 }

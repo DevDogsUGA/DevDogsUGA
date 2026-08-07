@@ -1,0 +1,31 @@
+{
+  // The repo base, NOT `../config/tsconfig/lib.json` like the other emitting
+  // packages — and deliberately, because the obvious cleanup is a trap.
+  //
+  // Switching this to the shared `lib` preset (`moduleResolution: nodenext`)
+  // makes tsc resolve `@supabase/supabase-js` through its **CJS** entry and bake
+  // that path into the emitted declarations:
+  //
+  //   base:     import("@supabase/supabase-js").SupabaseClient<…>
+  //   nodenext: import("@supabase/supabase-js/dist/index.cjs").SupabaseClient<…>
+  //
+  // Consumers resolve the ESM entry, so the two `SupabaseClient` classes become
+  // distinct declarations and every client handed across the boundary fails to
+  // assign — "property 'supabaseUrl' is protected but type … is not a class
+  // derived from …". Verified: the platform typechecks clean under this config
+  // and reports that error under the other.
+  //
+  // The bug that prompted the attempt — an extensionless relative import in the
+  // emitted .d.ts, invalid under nodenext, silently degrading `Database` to
+  // `any` because `skipLibCheck` hid it — is fixed at the source instead: the
+  // imports in src/index.ts carry `.js`. Keep them that way.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}

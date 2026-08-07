@@ -1,6 +1,6 @@
-# Sign in with DevDogs — OAuth Setup CLI
+# Sign in with DevDogs — OAuth Setup
 
-`@devdogsuga/oauth-setup` is a CLI wizard that configures another project's local [Supabase](https://supabase.com) instance to support **Sign in with DevDogs** OAuth. It is intended for developers of sibling DevDogs-UGA projects (e.g. the Community Resource Forum) who need to integrate DevDogs authentication without hand-writing SQL or reading internal Supabase schema documentation.
+A wizard that configures a project's local [Supabase](https://supabase.com) instance to support **Sign in with DevDogs** OAuth, for developers of sibling DevDogs-UGA projects (e.g. the Community Resource Forum) who need to integrate DevDogs authentication without hand-writing SQL or reading internal Supabase schema documentation.
 
 ## Purpose
 
@@ -9,33 +9,28 @@ DevDogs-Website's Supabase Auth instance doubles as a standards-compliant OAuth 
 1. Registering an OAuth client on the [DevDogs console](https://devdogsuga.org/tools/oauth) to get a client ID and secret.
 2. Adding a custom OIDC provider row to their own local Supabase instance pointing at DevDogs Auth.
 
-Step 2 has always been a manual, undocumented SQL operation. This CLI automates it end-to-end.
+Step 2 has always been a manual, undocumented SQL operation. This automates it end-to-end.
 
-## Installation
-
-Run the wizard directly with `pnpm dlx` (no install required):
+## Running it
 
 ```bash
-pnpm dlx @devdogsuga/oauth-setup
+pnpm devtools oauth
 ```
 
-Or install it as a dev dependency in your project:
+Or pick **Set up "Sign in with DevDogs"** from the `pnpm devtools` menu. It configures the Supabase project in **the directory you run it from**, so run it from your own project's root.
 
-```bash
-pnpm add -D @devdogsuga/oauth-setup
-pnpm devdogs-oauth-setup
-```
+> This was `@devdogsuga/oauth-setup`, a package with its own `devdogs-oauth-setup` binary, published for sibling projects to install. Nothing in this repository is published, so the separation bought a second CLI to find and a second copy of its dependencies; it is now a command on the one contributor CLI.
 
 ## Prerequisites
 
-- **Local Supabase running** — `supabase start` must have been run in your project directory. The CLI auto-detects credentials via `supabase status`.
-- **Supabase CLI installed** — available at [supabase.com/docs/guides/cli](https://supabase.com/docs/guides/cli).
+- **Local Supabase running** — `supabase start` must have been run in your project directory. The wizard auto-detects credentials via `supabase status`, trying a global Supabase CLI first and falling back to `pnpm exec`.
+- **Supabase CLI available** — globally installed from [supabase.com/docs/guides/cli](https://supabase.com/docs/guides/cli), or as a workspace dependency.
 - **OAuth client registered** — visit [devdogsuga.org/tools/oauth](https://devdogsuga.org/tools/oauth), sign in (link your GitHub account if prompted), enable OAuth, and copy your Client ID and Client Secret. The secret is shown only once.
 
 ## Usage
 
 ```bash
-devdogs-oauth-setup [--base-url <url>]
+pnpm devtools oauth [--base-url <url>]
 ```
 
 | Flag               | Description                                             |
@@ -104,7 +99,7 @@ The provider is registered with `provider_type: "oidc"` and only an `issuer` URL
 
 ### Why `process.env` instead of parsing `.env` files
 
-Different sibling projects may store environment variables in different ways — shell exports, `direnv` (`.envrc`), `.env` files loaded by the shell, or other conventions. Tying the CLI to one loading strategy (e.g. Next.js's `.env` precedence chain) would break for projects that don't follow it. Reading `process.env` directly keeps the CLI agnostic: callers load variables however they prefer before running `devdogs-oauth-setup`. Saved output still goes to `.env.local` since that is the conventional gitignored override file for local secrets.
+Different sibling projects may store environment variables in different ways — shell exports, `direnv` (`.envrc`), `.env` files loaded by the shell, or other conventions. Tying the CLI to one loading strategy (e.g. Next.js's `.env` precedence chain) would break for projects that don't follow it. Reading `process.env` directly keeps the CLI agnostic: callers load variables however they prefer before running `pnpm devtools oauth`. Saved output still goes to `.env.local` since that is the conventional gitignored override file for local secrets.
 
 ### Upsert without a native upsert endpoint
 

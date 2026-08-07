@@ -15,7 +15,7 @@ Drizzle is used exclusively as the type-safe query layer. It does not own the sc
 ## Making a schema change
 
 ```
-pnpm --filter @devdogsuga/sb new-migration <name>
+pnpm --filter @devdogsuga/supabase new-migration <name>
 ```
 
 This creates `supabase/migrations/<timestamp>_<name>.sql`. Write your DDL in that file.
@@ -64,9 +64,14 @@ There is no Drizzle workaround layer — write SQL and it works.
 
 ## Scripts reference
 
-`pnpm sb` is a dispatcher over four commands and three targets. `--local` is the
-default; `--remote` is the linked Supabase project; `--team <slug>` reaches a
-team's sandbox environment through the platform.
+`pnpm devtools` opens a menu covering all of this, which is the shortest path if
+you do not already know what you want. The commands below are the same tool with
+its arguments spelled out — `pnpm sb` is a long-standing alias for it, and both
+names take the same commands.
+
+Four commands over three targets. `--local` is the default; `--remote` is the
+linked Supabase project; `--team <slug>` reaches a team's sandbox environment
+through the platform.
 
 | Command                 | What it does                                                     |
 | ----------------------- | ---------------------------------------------------------------- |
@@ -76,21 +81,28 @@ team's sandbox environment through the platform.
 | `pnpm sb push --remote` | Apply pending migrations to the linked project                   |
 | `pnpm sb status`        | Report the target's health                                       |
 
+Two more come from the same dispatcher and act on your own stack only:
+
+| Command                          | What it does                                                     |
+| -------------------------------- | ---------------------------------------------------------------- |
+| `pnpm devtools doctor --app <s>` | What the catalog derived from an app's schema, and what is wrong |
+| `pnpm devtools roundtrip`        | File a report, quarantine it, and check who can still see it     |
+
 Everything else is a package script, reached directly:
 
-| Script                                               | What it does                                                                                      |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `pnpm --filter @devdogsuga/sb new-migration <name>`  | Create an empty migration in `packages/sb/supabase/migrations/`                                   |
-| `pnpm --filter @devdogsuga/sb generate-types`        | Regenerate `Database` types from the linked project                                               |
-| `pnpm --filter @devdogsuga/sb generate-types:local`  | The same, from the Docker stack                                                                   |
-| `pnpm --filter @devdogsuga/sb set-environment <env>` | Set `platform."instance"."environment"` on a project that `db push` reached without running seeds |
-| `pnpm --filter @devdogsuga/sb test:rls`              | The RLS persona suite (needs a running stack)                                                     |
-| `pnpm --filter platform db:pull:local`               | Regenerate the Drizzle schema from the local DB                                                   |
-| `pnpm --filter platform db:seed-roles:local`         | Seed the built-in Member and Root roles (idempotent)                                              |
+| Script                                                     | What it does                                                                                      |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `pnpm --filter @devdogsuga/supabase new-migration <name>`  | Create an empty migration in `supabase/migrations/`                                               |
+| `pnpm --filter @devdogsuga/supabase generate-types`        | Regenerate `Database` types from the linked project                                               |
+| `pnpm --filter @devdogsuga/supabase generate-types:local`  | The same, from the Docker stack                                                                   |
+| `pnpm --filter @devdogsuga/supabase set-environment <env>` | Set `platform."instance"."environment"` on a project that `db push` reached without running seeds |
+| `pnpm --filter @devdogsuga/supabase test:rls`              | The RLS persona suite (needs a running stack)                                                     |
+| `pnpm --filter platform db:pull:local`                     | Regenerate the Drizzle schema from the local DB                                                   |
+| `pnpm --filter platform db:seed-roles:local`               | Seed the built-in Member and Root roles (idempotent)                                              |
 
 ## Seeds
 
-`packages/sb/supabase/seed/*.sql` runs on `pnpm sb reset` — and **only** then.
+`supabase/seed/*.sql` runs on `pnpm sb reset` — and **only** then.
 `db push` applies migrations without them, which is why
 `set-environment` exists: a remote test project reached by `push` still holds the
 `production` default and has to be demoted explicitly.
@@ -103,11 +115,11 @@ the same reason.
 
 Database migrations have ordering constraints that code changes don't. Follow these rules to avoid conflicts:
 
-**Generate migration files late.** Don't run `pnpm --filter @devdogsuga/sb new-migration` at the start of a feature branch. Iterate locally using `pnpm sb reset` as you figure out the schema, then generate the migration file when the feature is ready to merge — after rebasing onto `main`.
+**Generate migration files late.** Don't run `pnpm --filter @devdogsuga/supabase new-migration` at the start of a feature branch. Iterate locally using `pnpm sb reset` as you figure out the schema, then generate the migration file when the feature is ready to merge — after rebasing onto `main`.
 
 **One migration per PR.** A PR should produce at most one migration file covering all schema changes for that feature. This keeps the history readable and reduces the surface area for conflicts.
 
-**Rebase before generating.** Before running `pnpm --filter @devdogsuga/sb new-migration`:
+**Rebase before generating.** Before running `pnpm --filter @devdogsuga/supabase new-migration`:
 
 ```
 git fetch && git rebase origin/main

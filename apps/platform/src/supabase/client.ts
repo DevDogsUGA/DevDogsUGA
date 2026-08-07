@@ -1,4 +1,4 @@
-import { createBrowserClient } from "@devdogsuga/sb";
+import { createBrowserClient } from "@devdogsuga/supabase";
 import { env } from "~/env";
 import { APP_SCHEMA } from "./schema";
 

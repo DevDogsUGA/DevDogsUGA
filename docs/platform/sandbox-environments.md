@@ -41,7 +41,7 @@ this page is about.
 ## What was ruled out, and why
 
 **Supabase branching.** The obvious answer, and the one to revisit if the budget
-ever allows. A branch per team, seeded from `packages/sb/supabase/migrations`,
+ever allows. A branch per team, seeded from `supabase/migrations`,
 destroyed after judging. At $0.01344/branch/hour that is roughly $6.50 for a
 weekend event with ten teams and $22.50 for a full week — affordable in
 principle, but it requires the paid plan on every instance involved and the club
@@ -414,7 +414,7 @@ It follows the same wrangler layout as `apps/platform` and
 ```
 apps/sandbox/
   wrangler.jsonc          route: *-sandbox.devdogsuga.org/*
-  package.json            deps: @devdogsuga/sb, @devdogsuga/with-env
+  package.json            deps: @devdogsuga/supabase, @devdogsuga/with-env
   src/
     index.ts              path-class router
     credential.ts         token → resolve_sandbox_credential
@@ -991,7 +991,7 @@ drop table platform."oauthTestAccounts";
 
 **The client secret never reaches a contributor.** The platform holds it in Vault
 and writes it into the project's auth configuration itself, over the Management
-API with the `auth:write` scope — the same job `packages/oauth-setup` does today
+API with the `auth:write` scope — the same job `pnpm devtools oauth` does today
 against a local stack, generalized to a remote project. Nobody has to copy a
 secret into a config file, so there is no secret to leak from one.
 
@@ -1036,7 +1036,7 @@ The inventory, all of which belongs in phase 2:
 | `platform."oauthTestAccounts"`                                                                                                    | Drop table                        |
 | `platform.is_test_identity()` and 4 `deny_test_identities` policies on `roles`, `reportReasons`, `feedbackTopics`, `contentTypes` | Drop — no identities left to deny |
 
-**`packages/sb/testing/personas.ts` is not part of this.** Personas are RLS test
+**`packages/supabase/testing/personas.ts` is not part of this.** Personas are RLS test
 fixtures, a separate concept that its own comments are careful to distinguish
 from test accounts; `rls.test.ts` depends on them and both stay.
 
@@ -1064,7 +1064,7 @@ Management API work to regress the paths the platform itself is developed on.
 Two invariants:
 
 - **Same migration files, same ledger.** The Management API driver applies the
-  same `packages/sb/supabase/migrations/*.sql` in the same order and records
+  same `supabase/migrations/*.sql` in the same order and records
   them in `supabase_migrations.schema_migrations`, exactly as the CLI does. A
   contributor who develops locally and then pushes to their team's instance must
   land on an identical schema, or the whole "build alone, then share" flow
@@ -1078,7 +1078,7 @@ Two invariants:
 
 ### Generated types leave source control
 
-`packages/sb/src/database.types.ts` becomes untracked, matching
+`packages/supabase/src/database.types.ts` becomes untracked, matching
 `apps/study-group-finder/.gitignore`, which already ignores `lib/generated/`.
 
 This solves team divergence, which is what raised the question — three teams
@@ -1120,7 +1120,7 @@ not needed. Confirm the exact exclusion set on the first CI run.
   stack reproduces it exactly.
 - **`__InternalSupabase` is not a gotcha.** The CLI does not emit it as a key at
   all; it appears only in a defensive `Omit<Database, "__InternalSupabase">`
-  helper type. The comment in `packages/sb/src/index.ts` describing it as a
+  helper type. The comment in `packages/supabase/src/index.ts` describing it as a
   generated key carrying PostgREST version metadata is stale and should be
   corrected in the same change.
 
@@ -1364,7 +1364,7 @@ Two details that will otherwise be got wrong:
 
 ### CLI surface
 
-`packages/sb` gains a dispatcher; the existing `--local` and `--remote` paths
+`packages/supabase` gains a dispatcher; the existing `--local` and `--remote` paths
 shell out to today's exact command strings so they cannot regress.
 
 ```
@@ -1375,7 +1375,7 @@ pnpm sb status --team <slug>        # environment status, wakes if paused
 ```
 
 `--team` authenticates with the member's DevDogs session, so the CLI needs a
-device-code or paste-a-token flow. Reuse `packages/oauth-setup`'s clack-based
+device-code or paste-a-token flow. Reuse `packages/devtools`'s clack-based
 prompts rather than inventing a second CLI idiom.
 
 ### Cron

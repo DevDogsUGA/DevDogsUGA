@@ -13,12 +13,15 @@ apps/
                        (no app owns `sandbox` — it is fixture content for the moderation
                         tooling, present in every tier and denied on production by RLS)
 packages/
-  sb/                  @devdogsuga/sb — shared Supabase: config.toml, SQL migrations,
+  sb/                  @devdogsuga/supabase — shared Supabase: config.toml, SQL migrations,
                        generated Database types, and client factories
-  moderation/          @devdogsuga/moderation — typed wrappers + React dialogs for the
-                       reporting/feedback RPCs (replaced feedback-client & reports-client)
-  oauth-setup/         @devdogsuga/oauth-setup
-  docs-preview/        @devdogsuga/docs-preview
+  devtools/            @devdogsuga/devtools — the `pnpm devtools` contributor CLI:
+                       database commands, moderation checks, OAuth setup
+  docs-build/          @devdogsuga/docs-build — compiles docs/ to the site's page data
+  airtable/            @devdogsuga/airtable — the officer-facing Airtable registry
+  db/                  @devdogsuga/drizzle — shared Drizzle helpers
+  email/               @devdogsuga/email — transactional email templates
+  config/              @devdogsuga/config — shared tsconfig/eslint/vitest presets
   with-env/            @devdogsuga/with-env — the `with-env` bin used by every script
 docs/                  Rendered on the platform site (per-project subfolders)
 ```
@@ -37,7 +40,7 @@ corepack enable && pnpm install
 pnpm setup                       # checks prereqs, seeds .env from .env.example
 # edit .env — add your remote Supabase creds (see the file's comments)
 pnpm sb link --remote      # one-time
-pnpm --filter @devdogsuga/sb generate-types           # regenerate the shared Database types
+pnpm --filter @devdogsuga/supabase generate-types           # regenerate the shared Database types
 pnpm dev --filter platform
 ```
 
@@ -108,12 +111,12 @@ Copy `.env.example` to `.env` (or run `pnpm setup`), then fill it in.
 
 **Root** (`pnpm <script>`)
 
-| Script                                 | Does                                   |
-| -------------------------------------- | -------------------------------------- |
-| `setup`                                | Onboarding: check prereqs, seed `.env` |
-| `dev` / `build` / `typecheck` / `lint` | `turbo run …` across the workspace     |
-| `format:write` / `format:check`        | Prettier over the repo                 |
-| `sb <cmd>`                             | Proxy to `@devdogsuga/sb` (see below)  |
+| Script                                 | Does                                        |
+| -------------------------------------- | ------------------------------------------- |
+| `setup`                                | Onboarding: check prereqs, seed `.env`      |
+| `dev` / `build` / `typecheck` / `lint` | `turbo run …` across the workspace          |
+| `format:write` / `format:check`        | Prettier over the repo                      |
+| `sb <cmd>`                             | Proxy to `@devdogsuga/supabase` (see below) |
 
 **In any package's scripts** (via `@devdogsuga/with-env`)
 

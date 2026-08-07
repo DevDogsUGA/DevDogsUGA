@@ -1,0 +1,29 @@
+{
+  "name": "@devdogsuga/devtools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "devtools": "./src/cli.ts"
+  },
+  "scripts": {
+    "cli": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@clack/prompts": "catalog:",
+    "@supabase/supabase-js": "catalog:",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
+  },
+  "description": "Contributor CLI: database, moderation checks, and OAuth setup"
+}

@@ -1,4 +1,4 @@
-import { createDb } from "@devdogsuga/db";
+import { createDb } from "@devdogsuga/drizzle";
 import { env } from "~/env";
 import { relations } from "./relations";
 

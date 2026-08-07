@@ -4,7 +4,7 @@ DevDogs Study Group Finder — a Flutter app on the shared DevDogs Supabase
 project, owning the **`study_group_finder`** Postgres schema.
 
 Currently a placeholder (`lib/main.dart` → `StudyGroupFinderApp`). The schema is
-reserved by `packages/sb/supabase/migrations/*_study_group_finder_init.sql` and
+reserved by `supabase/migrations/*_study_group_finder_init.sql` and
 exposed in `config.toml`; tables are added as the app is built.
 
 ## Prerequisites
@@ -39,7 +39,7 @@ pnpm --filter study-group-finder generate-types:local  # local stack
 
 supadart can only read PostgREST's **default** schema (it reads `/rest/v1/`
 without an `Accept-Profile` header and has no schema option). To make that work,
-`packages/sb/supabase/config.toml` lists `study_group_finder` **first** in
+`supabase/config.toml` lists `study_group_finder` **first** in
 `[api] schemas`, so it _is_ the default REST profile and supadart reads exactly
 this app's schema — no per-run config juggling. Nothing else depends on the
 default (every Supabase client sets its `db.schema` explicitly).

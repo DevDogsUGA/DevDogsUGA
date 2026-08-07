@@ -1,6 +1,6 @@
 {
-  // Shared preset for the workspace's emitting Node libraries (docs-preview,
-  // feedback-client, oauth-setup, reports-client). Inherits the repo-wide
+  // Shared preset for the workspace's emitting Node libraries (docs-build,
+  // moderation, devtools). Inherits the repo-wide
   // target/strictness from tsconfig.base.json and layers on the two things
   // those packages need that the Next apps don't: Node resolution and real
   // emit.

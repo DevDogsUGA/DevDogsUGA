@@ -28,7 +28,7 @@ project. Fill in the "Remote Supabase project" section of `.env`, then:
 
 ```bash
 pnpm sb link --remote      # one-time — links the CLI to PROJECT_REF
-pnpm --filter @devdogsuga/sb generate-types           # regenerate the shared Database types
+pnpm --filter @devdogsuga/supabase generate-types           # regenerate the shared Database types
 pnpm dev --filter platform          # or schedule-builder
 ```
 
@@ -47,7 +47,7 @@ pnpm dev:local --filter platform
 > `pnpm sb` is a four-command dispatcher — `link`, `push`, `reset`, `status` —
 > over three targets (`--local`, the default; `--remote`; `--team <slug>`). The
 > individual package scripts it delegates to are still reachable directly, e.g.
-> `pnpm --filter @devdogsuga/sb generate-types`.
+> `pnpm --filter @devdogsuga/supabase generate-types`.
 
 Contributors share the one remote dev database; the local stack is the offline /
 isolated escape hatch. There's a single root `.env` for the whole monorepo —
@@ -56,7 +56,7 @@ only `.env.example` is tracked.
 
 ### What `pnpm sb reset` seeds
 
-`reset` is not just migrations. It also runs `packages/sb/supabase/seed/*.sql`,
+`reset` is not just migrations. It also runs `supabase/seed/*.sql`,
 which is what makes a fresh instance usable rather than empty:
 
 | Seed                | What it does                                                                                                                                                                |

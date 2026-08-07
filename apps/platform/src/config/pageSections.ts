@@ -166,50 +166,19 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
   // pointed at.
   "/tools/moderation": [
     {
-      id: "instance",
-      label: "Target Instance",
-      fields: [
-        {
-          id: "instance-target",
-          label: "Target Instance",
-          description:
-            "The Supabase project these tools act on. Production instances are refused.",
-        },
-      ],
-    },
-    {
       id: "reasons",
       label: "Report Reasons",
       fields: [
         {
+          id: "app",
+          label: "Application",
+          description: "Which registered DevDogs app these reasons belong to.",
+        },
+        {
           id: "report-reasons",
           label: "Report Reasons",
           description:
-            "The reasons a user can select when filing a content report against an app.",
-        },
-      ],
-    },
-    {
-      id: "content-types",
-      label: "Content Types",
-      fields: [
-        {
-          id: "content-types-list",
-          label: "Content Types",
-          description:
-            "What the catalog detected in each app's schema, and whether the integration holds up.",
-        },
-      ],
-    },
-    {
-      id: "queue",
-      label: "Report Queue",
-      fields: [
-        {
-          id: "report-queue",
-          label: "Report Queue",
-          description:
-            "Reports filed on the target instance, and the same resolution form production moderation uses.",
+            "The reasons a user can select when filing a content report against this app. Requires the Moderate permission to change.",
         },
       ],
     },
@@ -217,38 +186,19 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
 
   "/tools/feedback": [
     {
-      id: "instance",
-      label: "Target Instance",
-      fields: [
-        {
-          id: "instance-target",
-          label: "Target Instance",
-          description:
-            "The Supabase project these tools act on. Production instances are refused.",
-        },
-      ],
-    },
-    {
       id: "topics",
       label: "Feedback Topics",
       fields: [
         {
+          id: "app",
+          label: "Application",
+          description: "Which registered DevDogs app these topics belong to.",
+        },
+        {
           id: "feedback-topics",
           label: "Feedback Topics",
           description:
-            "The topics users can choose from when submitting feedback about an app. Apply a template to get started quickly, or add your own.",
-        },
-      ],
-    },
-    {
-      id: "submissions",
-      label: "Submissions",
-      fields: [
-        {
-          id: "feedback-submissions",
-          label: "Submissions",
-          description:
-            "Feedback on the target instance, subject to row-level security as whoever you signed in as there.",
+            "The topics users can choose from when submitting feedback about this app. Requires the Manage Feedback permission to change.",
         },
       ],
     },

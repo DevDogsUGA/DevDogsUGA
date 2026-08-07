@@ -4,7 +4,7 @@
   "private": true,
   "comment": "Turborepo task wrapper for the Flutter app. The real toolchain is Flutter/Dart; these scripts shell out to it via the root `with-env` helper so the Flutter build reads the shared root .env. They use `with-env -c` because $API_URL and friends must expand from the loaded .env rather than the ambient environment. Requires the Flutter SDK on PATH.",
   "dependencies": {
-    "@devdogsuga/sb": "workspace:*"
+    "@devdogsuga/supabase": "workspace:*"
   },
   "scripts": {
     "build": "with-env -c 'flutter build web --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",

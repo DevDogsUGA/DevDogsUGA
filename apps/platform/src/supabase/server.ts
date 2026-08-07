@@ -1,4 +1,4 @@
-import { createServerClient } from "@devdogsuga/sb";
+import { createServerClient } from "@devdogsuga/supabase";
 import { cookies } from "next/headers";
 import { env } from "~/env";
 import { APP_SCHEMA } from "./schema";

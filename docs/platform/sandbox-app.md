@@ -7,13 +7,13 @@ description: The fixture app that demonstrates how an application integrates wit
 
 `sandbox` is a fixture application: three tables of fake content living in their own Postgres schema, registered in `platform."apps"` like any real app. It is not a product. It exists so that reporting and moderation can be exercised, demonstrated, and copied.
 
-Its migration is [`20260730000003_sandbox_fixture_app.sql`](https://github.com/DevDogs-UGA/DevDogs-Website/blob/main/packages/sb/supabase/migrations/20260730000003_sandbox_fixture_app.sql), and its fixture rows come from `supabase/seed/02_moderation.sql`. **If you are integrating a new app with moderation, read those two files.** This page explains why they say what they say.
+Its migration is [`20260730000003_sandbox_fixture_app.sql`](https://github.com/DevDogs-UGA/DevDogs-Website/blob/main/supabase/migrations/20260730000003_sandbox_fixture_app.sql), and its fixture rows come from `supabase/seed/02_moderation.sql`. **If you are integrating a new app with moderation, read those two files.** This page explains why they say what they say.
 
 ## Why it exists
 
 A freshly reset instance contains no user-generated content anywhere. `schedule_builder` holds course data, which is read-only reference material nobody can report. `study_group_finder` has no content tables yet. The Community Resource Forum has not migrated. Without fixtures, three separate things break at once:
 
-1. **The tooling opens empty.** `/tools/moderation` shows a queue with nothing in it and no way to put anything in it, because filing a report requires content to file against.
+1. **The tooling has nothing to work on.** `pnpm devtools` can check what the catalog derived, but its end-to-end round-trip — file a report, quarantine it, look again as someone else — needs content to file against, and `file_report` will not invent any.
 2. **The test suite has nothing to assert.** Every claim the moderation system makes has the shape "reporting content does X". With no content there is no X.
 3. **A contributor integrating an app has no worked example.** "Add a foreign key" is a sentence; a schema that works is a thing you can copy.
 
@@ -225,4 +225,4 @@ None of this affects the persona test suite, which calls `auth.admin.createUser(
 5. For content that is reportable but not quarantinable, write one `platform."contentTypes"` row declaring it — see `profiles` above.
 6. Seed report reasons and feedback topics for the app.
 7. Add the schema to `[api] schemas` in `config.toml`, and to the exclusion list in `drizzle-introspection.config.ts`.
-8. Verify with the conformance check in `/tools/moderation`, then file a report against real content and resolve it with `quarantine` — the last step exercises _your_ read policy, which is the one thing the platform cannot check for you.
+8. Verify with `pnpm devtools doctor --app <slug>`, then run the end-to-end round-trip against real content. The round-trip is the step that matters: it exercises _your_ read policy, which is the one thing the platform cannot check for you.

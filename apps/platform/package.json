@@ -32,11 +32,10 @@
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
     "@devdogsuga/airtable": "workspace:*",
-    "@devdogsuga/db": "workspace:*",
+    "@devdogsuga/drizzle": "workspace:*",
     "@devdogsuga/docs": "workspace:*",
     "@devdogsuga/email": "workspace:*",
-    "@devdogsuga/moderation": "workspace:*",
-    "@devdogsuga/sb": "workspace:*",
+    "@devdogsuga/supabase": "workspace:*",
     "@discordjs/builders": "^1.14.1",
     "@discordjs/rest": "^2.6.3",
     "@dnd-kit/core": "^6.3.1",

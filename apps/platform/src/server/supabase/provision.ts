@@ -120,7 +120,7 @@ export async function pauseOwnedProject(
 }
 
 /**
- * Every migration in `packages/sb/supabase/migrations`, concatenated in order.
+ * Every migration in `supabase/migrations`, concatenated in order.
  *
  * One payload rather than one call per file, because `database/query` is
  * atomic (measured): a multi-statement payload with an error in the middle
@@ -128,7 +128,7 @@ export async function pauseOwnedProject(
  * there is no repair path to write — which is only true if they go together.
  */
 async function migrationBundle(): Promise<string> {
-  const dir = join(process.cwd(), "../../packages/sb/supabase/migrations");
+  const dir = join(process.cwd(), "../../supabase/migrations");
   const files = (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort();
   const parts = await Promise.all(
     files.map(async (file) => {
