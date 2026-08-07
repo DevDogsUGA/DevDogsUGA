@@ -1,7 +1,7 @@
 # supadart config — generates Dart models from the shared Supabase schema
 # (`supabase gen types` has no Dart target). Run via `pnpm --filter
-# @devdogsuga/study-group-finder generate-types` (wraps with-env so the DB URL
-# and secret key come from the shared root .env).
+# study-group-finder generate-types` (wraps with-env so the DB URL and secret
+# key come from the shared root .env).
 #
 # supadart can only read PostgREST's *default* schema — it fetches the OpenAPI
 # spec from `<url>/rest/v1/` with no `Accept-Profile` header and exposes no

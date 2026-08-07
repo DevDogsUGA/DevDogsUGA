@@ -64,7 +64,5 @@ info("2. pnpm sb link --remote   # one-time, links the CLI to the project");
 info(
   "3. pnpm --filter @devdogsuga/sb generate-types        # regenerate the shared Database types",
 );
-info(
-  "4. pnpm dev --filter @devdogsuga/platform   # (or dev:local for the Docker stack)",
-);
+info("4. pnpm dev --filter platform   # (or dev:local for the Docker stack)");
 console.log("");

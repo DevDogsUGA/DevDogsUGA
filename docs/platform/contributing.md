@@ -31,7 +31,7 @@ E2E smoke tests. Shared Vitest/ESLint config lives in `packages/config`.
 
 ```bash
 pnpm test                              # all unit/component tests
-pnpm --filter @devdogsuga/platform test:watch   # watch a single package
+pnpm --filter platform test:watch   # watch a single package
 ```
 
 E2E runs against the **local** Supabase stack (never remote — test accounts are
@@ -39,7 +39,7 @@ backed by real `auth.users`):
 
 ```bash
 pnpm sb link              # boots Supabase, writes .env.generated
-pnpm --filter @devdogsuga/platform test:e2e
+pnpm --filter platform test:e2e
 ```
 
 Add tests next to the code they cover (`*.test.ts`/`*.test.tsx`); E2E specs live
@@ -76,7 +76,7 @@ workflow; common commands:
 ```bash
 pnpm --filter @devdogsuga/sb new-migration <name>   # create a migration
 pnpm sb reset                                       # replay everything locally
-pnpm --filter @devdogsuga/platform db:pull:local    # refresh Drizzle from the DB
+pnpm --filter platform db:pull:local    # refresh Drizzle from the DB
 pnpm sb push --remote                               # apply to the linked project
 ```
 

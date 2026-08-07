@@ -78,15 +78,15 @@ team's sandbox environment through the platform.
 
 Everything else is a package script, reached directly:
 
-| Script                                                   | What it does                                                                                      |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `pnpm --filter @devdogsuga/sb new-migration <name>`      | Create an empty migration in `packages/sb/supabase/migrations/`                                   |
-| `pnpm --filter @devdogsuga/sb generate-types`            | Regenerate `Database` types from the linked project                                               |
-| `pnpm --filter @devdogsuga/sb generate-types:local`      | The same, from the Docker stack                                                                   |
-| `pnpm --filter @devdogsuga/sb set-environment <env>`     | Set `platform."instance"."environment"` on a project that `db push` reached without running seeds |
-| `pnpm --filter @devdogsuga/sb test:rls`                  | The RLS persona suite (needs a running stack)                                                     |
-| `pnpm --filter @devdogsuga/platform db:pull:local`       | Regenerate the Drizzle schema from the local DB                                                   |
-| `pnpm --filter @devdogsuga/platform db:seed-roles:local` | Seed the built-in Member and Root roles (idempotent)                                              |
+| Script                                               | What it does                                                                                      |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `pnpm --filter @devdogsuga/sb new-migration <name>`  | Create an empty migration in `packages/sb/supabase/migrations/`                                   |
+| `pnpm --filter @devdogsuga/sb generate-types`        | Regenerate `Database` types from the linked project                                               |
+| `pnpm --filter @devdogsuga/sb generate-types:local`  | The same, from the Docker stack                                                                   |
+| `pnpm --filter @devdogsuga/sb set-environment <env>` | Set `platform."instance"."environment"` on a project that `db push` reached without running seeds |
+| `pnpm --filter @devdogsuga/sb test:rls`              | The RLS persona suite (needs a running stack)                                                     |
+| `pnpm --filter platform db:pull:local`               | Regenerate the Drizzle schema from the local DB                                                   |
+| `pnpm --filter platform db:seed-roles:local`         | Seed the built-in Member and Root roles (idempotent)                                              |
 
 ## Seeds
 

@@ -23,7 +23,7 @@ Then open <http://localhost:3000/docs>.
 Docs search reads a Postgres index rather than the compiled module, so it needs one extra step to see your working copy:
 
 ```bash
-pnpm --filter @devdogsuga/platform dev:local
+pnpm --filter platform dev:local
 ```
 
 `dev:local` runs `docs:index:local` against the local Supabase stack before starting the dev server, so a page you just wrote is findable in the search dialog (`Ctrl`/`⌘` + `K`).
@@ -31,7 +31,7 @@ pnpm --filter @devdogsuga/platform dev:local
 Re-run the indexer after further edits:
 
 ```bash
-pnpm --filter @devdogsuga/platform docs:index:local
+pnpm --filter platform docs:index:local
 ```
 
 > [!WARNING]

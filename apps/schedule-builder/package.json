@@ -1,5 +1,5 @@
 {
-  "name": "@devdogsuga/schedule-builder",
+  "name": "schedule-builder",
   "version": "0.1.0",
   "private": true,
   "type": "module",

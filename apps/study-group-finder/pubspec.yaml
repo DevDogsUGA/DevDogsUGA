@@ -17,8 +17,8 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   # Dart model generation from the shared Supabase schema (no official Dart
-  # target in `supabase gen types`). Run via `pnpm --filter
-  # @devdogsuga/study-group-finder generate-types`.
+  # target in `supabase gen types`). Run via `pnpm --filter study-group-finder
+  # generate-types`.
   supadart: ^1.9.3
 
 flutter:

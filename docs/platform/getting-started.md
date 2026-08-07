@@ -29,7 +29,7 @@ project. Fill in the "Remote Supabase project" section of `.env`, then:
 ```bash
 pnpm sb link --remote      # one-time — links the CLI to PROJECT_REF
 pnpm --filter @devdogsuga/sb generate-types           # regenerate the shared Database types
-pnpm dev --filter @devdogsuga/platform          # or @devdogsuga/schedule-builder
+pnpm dev --filter platform          # or schedule-builder
 ```
 
 > **`DB_URL` note:** use the **Session pooler** connection string (port 5432),
@@ -41,7 +41,7 @@ pnpm dev --filter @devdogsuga/platform          # or @devdogsuga/schedule-builde
 ```bash
 pnpm sb link      # boots Docker Supabase, writes .env.generated, seeds buckets
 pnpm sb reset     # replays all migrations, then the seeds; regenerates types
-pnpm dev:local --filter @devdogsuga/platform
+pnpm dev:local --filter platform
 ```
 
 > `pnpm sb` is a four-command dispatcher — `link`, `push`, `reset`, `status` —
@@ -83,7 +83,7 @@ acts on, [the Sandbox App](./sandbox-app.md).
 ## Local docs preview
 
 ```bash
-pnpm --filter @devdogsuga/platform docs:preview
+pnpm --filter platform docs:preview
 ```
 
 Then visit the docs preview route on the running dev server. It auto-refreshes

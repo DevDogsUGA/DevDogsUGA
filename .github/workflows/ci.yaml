@@ -42,7 +42,7 @@ jobs:
       - name: Lint + typecheck + test + build (affected)
         run: >-
           pnpm turbo run lint typecheck test build
-          --affected --filter='!@devdogsuga/study-group-finder'
+          --affected --filter='!study-group-finder'
 
   # Repo-wide formatting check — fast, no build needed.
   format:
@@ -85,8 +85,8 @@ jobs:
         id: affected
         run: |
           if pnpm turbo run test:e2e --affected \
-              --filter='@devdogsuga/platform' --filter='@devdogsuga/schedule-builder' \
-              --dry-run=json | grep -qE '"@devdogsuga/(platform|schedule-builder)"'; then
+              --filter='platform' --filter='schedule-builder' \
+              --dry-run=json | grep -qE '"(platform|schedule-builder)"'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -104,7 +104,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Install Playwright (chromium)
         if: steps.affected.outputs.run == 'true'
-        run: pnpm --filter @devdogsuga/platform exec playwright install --with-deps chromium
+        run: pnpm --filter platform exec playwright install --with-deps chromium
       - name: Start local Supabase stack
         if: steps.affected.outputs.run == 'true'
         run: pnpm sb start-local-stack
@@ -112,7 +112,7 @@ jobs:
         if: steps.affected.outputs.run == 'true'
         run: >-
           pnpm turbo run test:e2e --affected
-          --filter='@devdogsuga/platform' --filter='@devdogsuga/schedule-builder'
+          --filter='platform' --filter='schedule-builder'
       - name: Upload Playwright report
         if: failure() && steps.affected.outputs.run == 'true'
         uses: actions/upload-artifact@v4
@@ -197,7 +197,7 @@ jobs:
       - name: Is study-group-finder affected?
         id: affected
         run: |
-          if pnpm turbo run build --affected --filter=@devdogsuga/study-group-finder --dry-run=json | grep -q '"@devdogsuga/study-group-finder"'; then
+          if pnpm turbo run build --affected --filter=study-group-finder --dry-run=json | grep -q '"study-group-finder"'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"

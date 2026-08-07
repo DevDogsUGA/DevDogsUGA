@@ -1,5 +1,5 @@
 {
-  "name": "@devdogsuga/study-group-finder",
+  "name": "study-group-finder",
   "version": "0.1.0",
   "private": true,
   "comment": "Turborepo task wrapper for the Flutter app. The real toolchain is Flutter/Dart; these scripts shell out to it via the root `with-env` helper so the Flutter build reads the shared root .env. They use `with-env -c` because $API_URL and friends must expand from the loaded .env rather than the ambient environment. Requires the Flutter SDK on PATH.",

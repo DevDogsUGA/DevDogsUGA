@@ -38,7 +38,7 @@ pnpm setup                       # checks prereqs, seeds .env from .env.example
 # edit .env — add your remote Supabase creds (see the file's comments)
 pnpm sb link --remote      # one-time
 pnpm --filter @devdogsuga/sb generate-types           # regenerate the shared Database types
-pnpm dev --filter @devdogsuga/platform
+pnpm dev --filter platform
 ```
 
 Prereqs: Node ≥ 20 (`.nvmrc`), pnpm via corepack. Docker only for the local
@@ -146,7 +146,7 @@ Copy `.env.example` to `.env` (or run `pnpm setup`), then fill it in.
 | `db:seed-roles` (platform)              | Seed built-in roles                            |
 | `db:generate` (schedule-builder)        | Draft a SQL migration from the drizzle schema  |
 
-**Flutter app** (`pnpm --filter @devdogsuga/study-group-finder <script>`):
+**Flutter app** (`pnpm --filter study-group-finder <script>`):
 `dev` / `dev:local` / `build` / `test` / `lint` / `generate-types` — shell out
 to Flutter via `with-env -c`, so the `--dart-define` values come from `.env`.
 See `apps/study-group-finder/README.md`.
