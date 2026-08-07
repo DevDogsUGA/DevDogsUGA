@@ -56,7 +56,7 @@ export function themeToStyle(
     if (value === undefined) continue;
     style[THEME_VAR_NAMES[key as keyof DialogTheme]] = value;
   }
-  return style as CSSProperties;
+  return style;
 }
 
 /** Merges a caller's per-part override onto the shipped default class. */

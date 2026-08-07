@@ -61,7 +61,7 @@ export const getOpenElections = cache(async (): Promise<ElectionSummary[]> => {
         sql`now() between ${elections.opensAt} and ${elections.closesAt}`,
       ),
     )
-    .orderBy(asc(elections.closesAt)) as Promise<ElectionSummary[]>;
+    .orderBy(asc(elections.closesAt));
 });
 
 export const getElectionBySlug = cache(
@@ -107,9 +107,7 @@ export const getPointsElections = cache(
           eq(elections.status, "tallied"),
         ),
       )
-      .orderBy(asc(elections.closesAt)) as Promise<
-      { id: string; title: string; electorate: "teams" | "officers" }[]
-    >;
+      .orderBy(asc(elections.closesAt));
   },
 );
 
@@ -302,7 +300,7 @@ export const getElectionResults = cache(
       .from(electionResults)
       .innerJoin(teams, eq(teams.id, electionResults.teamId))
       .where(eq(electionResults.electionId, electionId))
-      .orderBy(asc(electionResults.placement)) as Promise<ElectionResultRow[]>;
+      .orderBy(asc(electionResults.placement));
   },
 );
 

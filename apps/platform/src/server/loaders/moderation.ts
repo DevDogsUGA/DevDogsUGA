@@ -43,7 +43,7 @@ export const getModerationPageData = cache(async () => {
       canModerate,
       openReports: [] as ReportListEntry[],
       resolvedReports: [] as ReportListEntry[],
-      appNames: {} as Record<string, string>,
+      appNames: {},
     };
   }
 

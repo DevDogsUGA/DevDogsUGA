@@ -136,7 +136,7 @@ export const getTeamDetail = cache(
       requirementsMet: row.requirementsMet,
       requirementCount: row.requirementCount,
       maxTeamSize: row.maxTeamSize,
-      members: members as TeamMemberRow[],
+      members: members,
       lock: lockReason({
         submissionState: row.submissionState,
         lockedManuallyAt: row.lockedManuallyAt,
@@ -265,9 +265,7 @@ export const getPendingForUser = cache(
           )`,
         ),
       )
-      .orderBy(desc(teamMembershipRequests.createdAt)) as Promise<
-      PendingRequest[]
-    >;
+      .orderBy(desc(teamMembershipRequests.createdAt));
   },
 );
 
