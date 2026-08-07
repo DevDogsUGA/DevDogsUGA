@@ -46,7 +46,20 @@ export default async function DocsMarkdown({ source }: { source: string }) {
         [
           rehypeShiki,
           {
-            theme: "vitesse-dark",
+            // `rose-pine-moon` rather than a stock dark theme: its base hues
+            // are the same muted violet family as the mauve palette, so
+            // highlighted code sits in the page instead of on top of it.
+            //
+            // Registered as a *named* theme with `defaultColor: false` even
+            // though there is only one. That combination stops Shiki writing
+            // literal `color:`/`background-color:` into the markup and makes
+            // it emit `--shiki-dark` custom properties instead — which is what
+            // lets globals.css decide the chrome (the `<pre>` background comes
+            // from `--card` via the prose variables) while the theme keeps
+            // ownership of the token colors. With an inline background, no
+            // amount of CSS could retheme the block short of `!important`.
+            themes: { dark: "rose-pine-moon" },
+            defaultColor: false,
             langs: [
               "bash",
               "css",

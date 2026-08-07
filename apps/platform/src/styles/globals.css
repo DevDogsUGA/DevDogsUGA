@@ -837,3 +837,142 @@
     @apply font-sans;
   }
 }
+
+/* ── Documentation prose ─────────────────────────────────────────────────── */
+/*                                                                            */
+/* Docs bodies are rendered by DocsMarkdown, which passes no `components` map  */
+/* — every node comes out as a bare HTML element, styled entirely by the       */
+/* `prose prose-invert` wrapper in DocPageContent. Left alone, that means      */
+/* @tailwindcss/typography's stock palette: `slate` for the color set and      */
+/* `rgb(0 0 0 / 50%)` for code-block backgrounds, none of which is mauve.      */
+/* That, not component drift, is why docs pages read as off-system.            */
+/*                                                                            */
+/* The fix is the plugin's own extension point rather than a hand-authored     */
+/* component per element: `prose-invert` is pure aliasing — it assigns         */
+/* `--tw-prose-body: var(--tw-prose-invert-body)` and so on for all nineteen   */
+/* names — so remapping the `-invert-` set onto the design tokens once         */
+/* restyles every element the plugin touches, in every doc, forever.           */
+/*                                                                            */
+/* Only the `-invert-` half is set: `<html>` is hardcoded `class="dark"` (see  */
+/* the palette block above), so `prose-invert` is the only branch that runs.   */
+/*                                                                            */
+/* Unlayered on purpose. The plugin registers `.prose` in the `utilities`      */
+/* layer, and unlayered rules outrank layered ones regardless of source order. */
+.prose {
+  --tw-prose-invert-body: var(--color-mauve-300);
+  --tw-prose-invert-headings: var(--foreground);
+  --tw-prose-invert-lead: var(--muted-foreground);
+  --tw-prose-invert-links: var(--foreground);
+  --tw-prose-invert-bold: var(--foreground);
+  --tw-prose-invert-counters: var(--muted-foreground);
+  --tw-prose-invert-bullets: var(--color-mauve-600);
+  --tw-prose-invert-hr: var(--border);
+  --tw-prose-invert-quotes: var(--color-mauve-200);
+  --tw-prose-invert-quote-borders: var(--border);
+  --tw-prose-invert-captions: var(--muted-foreground);
+  --tw-prose-invert-kbd: var(--foreground);
+  --tw-prose-invert-kbd-shadows: color-mix(
+    in oklch,
+    var(--foreground),
+    transparent 90%
+  );
+  --tw-prose-invert-code: var(--foreground);
+  --tw-prose-invert-pre-code: var(--color-mauve-200);
+  --tw-prose-invert-pre-bg: var(--card);
+  --tw-prose-invert-th-borders: var(--border);
+  --tw-prose-invert-td-borders: var(--border);
+}
+
+/* Inline code. The plugin colors `<code>` but gives it no chrome, so it reads
+   as plain bold text; the chip treatment is what matches the rest of the UI.
+   `:not(pre &)` keeps it off the Shiki-highlighted tokens inside code blocks. */
+.prose :where(code):not(:where(pre *)) {
+  background-color: var(--secondary);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 4px);
+  padding: 0.125em 0.375em;
+  font-weight: 500;
+}
+
+/* The plugin adds literal backticks around inline code via ::before/::after. */
+.prose :where(code):not(:where(pre *))::before,
+.prose :where(code):not(:where(pre *))::after {
+  content: none;
+}
+
+.prose :where(pre) {
+  border: 1px solid var(--border);
+}
+
+/* Shiki emits no inline colors — DocsMarkdown sets `defaultColor: false`, so
+   every token carries `--shiki-dark` and nothing else. Binding it here is what
+   actually paints the code, and it means the pre's background comes from
+   `--tw-prose-invert-pre-bg` (i.e. `--card`) rather than the theme's own.
+
+   The font properties need binding for the same reason: with no default color
+   the theme's emphasis (italic comments, bold keywords) also arrives only as a
+   variable. Each carries an explicit fallback because a `var()` with no value
+   and no fallback is invalid at computed-value time, which would drop the
+   declaration on every token the theme does not style. */
+.prose :where(pre.shiki, pre.shiki span) {
+  color: var(--shiki-dark);
+  font-style: var(--shiki-dark-font-style, inherit);
+  font-weight: var(--shiki-dark-font-weight, inherit);
+  text-decoration: var(--shiki-dark-text-decoration, inherit);
+}
+
+/* GitHub alerts (`> [!NOTE]`), used in six of the docs pages. The plugin ships
+   an alert.css, but it is GitHub's palette in hardcoded hex — importing it
+   would put GitHub blue and green in the middle of a mauve page — so the
+   layout is reproduced here against the tokens instead. Accent colors are the
+   one place a literal hue is right: severity has to read as severity. */
+.prose .markdown-alert {
+  border-left: 0.25rem solid var(--alert-accent, var(--border));
+  border-radius: calc(var(--radius) - 4px);
+  background-color: color-mix(
+    in oklch,
+    var(--alert-accent, var(--border)),
+    var(--background) 88%
+  );
+  margin-block: 1.25em;
+  padding: 0.75rem 1rem;
+}
+
+.prose .markdown-alert > :first-child {
+  margin-top: 0;
+}
+
+.prose .markdown-alert > :last-child {
+  margin-bottom: 0;
+}
+
+.prose .markdown-alert .markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--alert-accent, var(--foreground));
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.prose .markdown-alert .markdown-alert-title svg {
+  fill: currentColor;
+}
+
+.prose .markdown-alert-note {
+  --alert-accent: var(--color-sky-400);
+}
+.prose .markdown-alert-tip {
+  --alert-accent: var(--color-emerald-400);
+}
+.prose .markdown-alert-important {
+  --alert-accent: var(--color-violet-400);
+}
+.prose .markdown-alert-warning {
+  --alert-accent: var(--color-amber-400);
+}
+.prose .markdown-alert-caution {
+  --alert-accent: var(--destructive);
+}
