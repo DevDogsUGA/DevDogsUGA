@@ -8,10 +8,24 @@
  * public origin (`env.BASE_URL`), so no route logic changes — the schedules
  * mirror the former vercel.json entries.
  */
-export interface CronEnv {
-  CRON_SECRET: string;
-  BASE_URL: string;
-}
+import type { env } from "~/env";
+
+/**
+ * The bindings this handler reads, derived from the env schema rather than
+ * restated.
+ *
+ * `Pick` and not a hand-written interface, because these are Worker *secrets*
+ * and the deploy pipeline decides which secrets exist by reading the schema in
+ * `~/env`. A second, independent list here would drift silently in the
+ * dangerous direction: a secret declared only in this file is one the audit
+ * would see on the Worker, fail to find in the schema, and report as orphaned —
+ * that is, as safe to delete from production.
+ *
+ * Type-only import, so nothing is pulled into the Worker bundle and @t3-oss
+ * validation does not run in this entry point. Picking a key that leaves the
+ * schema is a compile error; declaring one that was never in it is impossible.
+ */
+export type CronEnv = Pick<typeof env, "CRON_SECRET" | "BASE_URL">;
 
 /**
  * Cron expression to the routes it fires.
