@@ -1,6 +1,10 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "devdogs-schedule-builder",
+  // Worker naming is `${DEPLOY_ENV}-${APP_NAME}`; see apps/platform/wrangler.jsonc
+  // for why the top level is the development shape and why `vars`, `services`,
+  // `images`, `r2_buckets` and `send_email` are repeated in full per
+  // environment rather than inherited.
+  "name": "development-schedule-builder",
   // Custom entry composes the OpenNext `fetch` handler with the cron
   // `scheduled` handler (see cloudflare/worker.ts + cloudflare/scheduled.ts).
   "main": "cloudflare/worker.ts",
@@ -13,40 +17,78 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
   },
-  // Backing store for the incremental cache. The binding name is fixed by the
-  // OpenNext adapter. Without it the adapter falls back to its "dummy" cache,
-  // which uploads nothing on deploy and throws on every read — every
-  // prerendered route is then re-rendered per request. This applies even though
-  // this app does not use Cache Components: its 14 fully static routes go
-  // through the incremental cache too, not the ASSETS binding. See
-  // packages/config/opennext/cloudflare.js.
-  //
-  // Created automatically on first deploy. Each worker gets its own bucket so
-  // storage and operation metrics stay attributable per app.
-  //
-  // TODO: add an R2 object lifecycle rule (delete after ~30 days). Cache keys
-  // include the build id, so every deploy writes a fresh copy and nothing ever
-  // removes the previous one.
+
+  // --- development (top level) ---------------------------------------------
+  "vars": {
+    "DEPLOY_ENV": "development",
+  },
   "r2_buckets": [
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "devdogs-schedule-builder-cache"
-    }
+      "bucket_name": "development-schedule-builder-cache",
+    },
   ],
-  // Non-secret runtime vars. DEPLOY_ENV drives env.ts switchEnvironment()
-  // (replaces the old Vercel VERCEL_ENV); override per-environment as needed.
-  // Secrets (CRON_SECRET, BASE_URL, Supabase creds, …) come from
-  // `wrangler secret put` / .dev.vars — see .dev.vars.example.
-  "vars": {
-    "DEPLOY_ENV": "production"
+
+  "env": {
+    "staging": {
+      "name": "staging-schedule-builder",
+      "vars": {
+        "DEPLOY_ENV": "staging",
+      },
+      "r2_buckets": [
+        {
+          "binding": "NEXT_INC_CACHE_R2_BUCKET",
+          "bucket_name": "staging-schedule-builder-cache",
+        },
+      ],
+      // Empty ON PURPOSE. The scrape hits UGA's registrar and RateMyProfessors
+      // from a shared IP pool; running it twice a day from two workers doubles
+      // the load those sites see for no extra coverage, and is the kind of
+      // thing that gets a range blocked. Trigger it by hand against staging.
+      "triggers": {
+        "crons": [],
+      },
+      // TODO: no `routes` yet -- staging is reachable on workers.dev only,
+      // which is fine until somebody needs a stable staging hostname.
+    },
+
+    "production": {
+      "name": "production-schedule-builder",
+      "vars": {
+        "DEPLOY_ENV": "production",
+      },
+      // Backing store for the incremental cache. The binding name is fixed by
+      // the OpenNext adapter. Without it the adapter falls back to its "dummy"
+      // cache, which uploads nothing on deploy and throws on every read --
+      // every prerendered route is then re-rendered per request. This applies
+      // even though this app does not use Cache Components: its 14 fully static
+      // routes go through the incremental cache too, not the ASSETS binding.
+      // See packages/config/opennext/cloudflare.js.
+      //
+      // Created automatically on first deploy, per worker, so storage and
+      // operation metrics stay attributable per environment.
+      //
+      // TODO: add an R2 object lifecycle rule (delete after ~30 days). Cache
+      // keys include the build id, so every deploy writes a fresh copy and
+      // nothing ever removes the previous one.
+      "r2_buckets": [
+        {
+          "binding": "NEXT_INC_CACHE_R2_BUCKET",
+          "bucket_name": "production-schedule-builder-cache",
+        },
+      ],
+      // Daily registrar/RMP scrape (replaces the vercel.json cron). See
+      // cloudflare/scheduled.ts. NOTE: the scrapers are long-running --
+      // validate them against Workers CPU/wall-time limits and consider
+      // Queues/Workflows or chunked runs before relying on a single scheduled
+      // invocation.
+      "triggers": {
+        "crons": ["5 14 * * *"],
+      },
+      // TODO: no `routes` yet -- this worker has never been deployed and has no
+      // hostname assigned. Add the custom domain here, NOT at the top level.
+    },
   },
-  // Daily registrar/RMP scrape (replaces the vercel.json cron). See
-  // cloudflare/scheduled.ts. NOTE: the scrapers are long-running — validate
-  // them against Workers CPU/wall-time limits and consider Queues/Workflows or
-  // chunked runs before relying on a single scheduled invocation.
-  "triggers": {
-    "crons": ["5 14 * * *"]
-  }
 }

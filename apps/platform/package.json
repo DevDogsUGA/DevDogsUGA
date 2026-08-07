@@ -24,9 +24,11 @@
     "db:seed-roles:local": "with-env --local tsx scripts/seed-builtin-roles.ts",
     "docs:index": "pnpm --filter @devdogsuga/docs build && with-env tsx scripts/index-docs.ts",
     "docs:index:local": "pnpm --filter @devdogsuga/docs build && with-env --local tsx scripts/index-docs.ts",
-    "cf:build": "with-env -c 'DEPLOY_ENV=production opennextjs-cloudflare build'",
     "cf:preview": "with-env --local opennextjs-cloudflare preview",
-    "cf:deploy": "pnpm docs:index --force && with-env -c 'DEPLOY_ENV=production opennextjs-cloudflare deploy'"
+    "cf:build:staging": "with-env -c 'DEPLOY_ENV=staging opennextjs-cloudflare build'",
+    "cf:build:production": "with-env -c 'DEPLOY_ENV=production opennextjs-cloudflare build'",
+    "cf:deploy:staging": "pnpm docs:index --force && with-env -c 'DEPLOY_ENV=staging opennextjs-cloudflare deploy -e staging'",
+    "cf:deploy:production": "pnpm docs:index --force && with-env -c 'DEPLOY_ENV=production opennextjs-cloudflare deploy -e production'"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

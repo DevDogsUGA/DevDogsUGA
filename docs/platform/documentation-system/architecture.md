@@ -65,7 +65,7 @@ Two reasons this stayed in Postgres rather than becoming an in-memory JS index:
 
 `pnpm docs:index` (`scripts/index-docs.ts`) reads the same build-time artifact, upserts every page by `path`, and deletes rows whose path no longer exists — one transaction. The `search` column is `generated always`, so the script writes only title/description/plainText and Postgres recomputes the vector.
 
-It refuses to run against a non-local database without `--force`, because it is destructive by design: pointed at production from a working copy, it would replace the live index with whatever is checked out. `pnpm cf:deploy` passes `--force` as part of deploying.
+It refuses to run against a non-local database without `--force`, because it is destructive by design: pointed at production from a working copy, it would replace the live index with whatever is checked out. `pnpm cf:deploy:staging` and `pnpm cf:deploy:production` pass `--force` as part of deploying.
 
 ## What this replaced
 

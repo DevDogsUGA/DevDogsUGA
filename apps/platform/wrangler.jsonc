@@ -1,6 +1,35 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "devdogs-platform",
+  // ==========================================================================
+  // Worker naming: `${DEPLOY_ENV}-${APP_NAME}`.
+  //
+  // A slash would read better but is not legal -- wrangler rejects anything
+  // outside "alphanumeric and lowercase with dashes only", so `-` is the
+  // separator. The `devdogs-` prefix this used to carry is gone: the account
+  // holds nothing but DevDogs workers, so it distinguished nothing, and it
+  // pushed the meaningful part of the name past the point where the dashboard
+  // truncates it.
+  //
+  // The TOP LEVEL IS THE DEVELOPMENT SHAPE, deliberately, and every deployable
+  // value lives under `env.*` instead. Two reasons, both learned the hard way:
+  //
+  //   1. `routes` and `triggers` ARE inherited by environments. A staging
+  //      deploy with the apex at top level reassigns devdogsuga.org away from
+  //      production -- wrangler says so in a warning and then does it anyway.
+  //      Nothing here is inherited, so nothing can be stolen.
+  //   2. `wrangler deploy` with no `--env` uses this block. Named `platform` it
+  //      would have overwritten the pre-monorepo production worker, which is
+  //      still serving the apex. `development-platform` cannot collide with
+  //      anything real.
+  //
+  // NON-INHERITABLE keys must be repeated in full in every environment:
+  // `vars`, `services`, `images`, `r2_buckets`, `send_email`. Omitting one does
+  // not fall back to the top level -- the binding is simply absent, and the
+  // failure shows up at runtime. Verified against wrangler 4.118:
+  //   pnpm exec wrangler deploy --dry-run --env production
+  // prints the resolved binding list and warns about every key left behind.
+  // ==========================================================================
+  "name": "development-platform",
   // Custom entry composes the OpenNext `fetch` handler with the cron
   // `scheduled` handler (see cloudflare/worker.ts + cloudflare/scheduled.ts).
   "main": "cloudflare/worker.ts",
@@ -11,108 +40,180 @@
   // wrangler; the adapter warns once it is more than six months stale.
   "compatibility_date": "2026-07-22",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Inheritable, and identical everywhere, so it stays at the top level.
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS",
   },
-  // Self-reference binding, required by the OpenNext cache implementation:
-  // https://opennext.js.org/cloudflare/caching
-  //
-  // `service` MUST equal the worker name above. It was "platform" before this
-  // app moved into the monorepo and the worker was renamed to
-  // "devdogs-platform"; carrying the old value over would bind to a worker that
-  // is not this one.
-  "services": [
-    {
-      "binding": "WORKER_SELF_REFERENCE",
-      "service": "devdogs-platform",
-    },
-  ],
-  // Image optimization for next/image.
-  // https://opennext.js.org/cloudflare/howtos/image
-  "images": {
-    "binding": "IMAGES",
-  },
   // Without this, `wrangler tail` and the dashboard show nothing. Invocation
-  // logs cover the cron triggers below, which have no other observable output.
+  // logs cover the cron triggers, which have no other observable output.
   "observability": {
     "logs": {
       "enabled": true,
       "invocation_logs": true,
     },
   },
-  // Backing store for the incremental cache. The binding name is fixed by the
-  // OpenNext adapter. Without it the adapter falls back to its "dummy" cache,
-  // which uploads nothing on deploy and throws on every read — every
-  // prerendered route is then re-rendered per request. See
-  // packages/config/opennext/cloudflare.js.
-  //
-  // Created automatically on first deploy. Each worker gets its own bucket so
-  // storage and operation metrics stay attributable per app.
-  //
-  // TODO: add an R2 object lifecycle rule (delete after ~30 days). Cache keys
-  // include the build id, so every deploy writes a fresh copy and nothing ever
-  // removes the previous one.
+
+  // --- development (top level) ---------------------------------------------
+  // No `routes` and no `triggers`: an accidental env-less deploy should be
+  // inert, not a second worker competing for the apex or firing the crons a
+  // second time.
+  "vars": {
+    "DEPLOY_ENV": "development",
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "development-platform",
+    },
+  ],
+  "images": {
+    "binding": "IMAGES",
+  },
   "r2_buckets": [
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "devdogs-platform-cache",
+      "bucket_name": "development-platform-cache",
     },
   ],
-  // Transactional email. Supabase's sender is auth-only (signup confirmation,
-  // magic link, password recovery) with no general-purpose send API, so team
-  // invitations go through the Workers binding instead.
-  //
-  // `allowed_sender_addresses` is the part that matters: without it, any code
-  // path with the binding in scope can send as any address on the domain.
-  //
-  // Requires `wrangler email sending enable mail.devdogsuga.org` first, which
-  // provisions the DKIM, SPF and DMARC records. Until that completes every
-  // send returns E_SENDER_NOT_VERIFIED -- loudly, which is the good case.
-  //
-  // For local development add `"remote": true` here so sends proxy to the real
-  // service; without it there is nothing to observe. Point it at an address
-  // you control -- bounces from invented addresses land on the domain's
-  // reputation, and the suppression list is not something to fill while
-  // testing.
   "send_email": [
     {
       "name": "EMAIL",
       "allowed_sender_addresses": ["noreply@mail.devdogsuga.org"],
     },
   ],
-  // Non-secret runtime vars. DEPLOY_ENV drives env.ts switchEnvironment()
-  // (replaces the old Vercel VERCEL_ENV); override per-environment as needed.
-  // Secrets (CRON_SECRET, BASE_URL, Supabase creds, …) come from
-  // `wrangler secret put` / .dev.vars — see .dev.vars.example.
-  //
-  // Setting it here is necessary but NOT sufficient: the API route guards read
-  // it at request time, but env.ts picks its schemas and the site pages resolve
-  // their under-construction gate while `next build` runs, long before this
-  // value exists. That is why cf:build and cf:deploy set DEPLOY_ENV for the
-  // build too — the two must agree.
-  "vars": {
-    "DEPLOY_ENV": "production",
-  },
-  // Cron triggers replace the old vercel.json crons. cloudflare/scheduled.ts
-  // routes each cron to its existing CRON_SECRET-guarded /api route.
-  "triggers": {
-    "crons": ["0 0 * * *", "*/15 * * * *", "*/10 * * * *", "*/5 * * * *"],
-  },
-  // The production apex. Carried over from the pre-monorepo root config; the
-  // worker was named "platform" then, so this hostname is currently bound to
-  // THAT worker. The first deploy under the new name has to take the domain
-  // over, which is a deliberate cutover rather than something a deploy does
-  // quietly -- until it happens, this worker is reachable only on workers.dev.
-  //
-  // TODO: this and "vars.DEPLOY_ENV" above are both production-only values
-  // sitting at the top level, so a staging deploy would claim the apex and
-  // report itself as production. Both must move into per-environment blocks
-  // (`env.staging` / `env.production`) BEFORE a staging environment exists.
-  "routes": [
-    {
-      "pattern": "devdogsuga.org",
-      "custom_domain": true,
+
+  "env": {
+    // ========================================================================
+    // staging
+    // ========================================================================
+    "staging": {
+      "name": "staging-platform",
+      "vars": {
+        "DEPLOY_ENV": "staging",
+      },
+      // Must equal this environment's worker name -- a self-reference pointing
+      // at production would have staging serve production's cached pages.
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "staging-platform",
+        },
+      ],
+      "images": {
+        "binding": "IMAGES",
+      },
+      "r2_buckets": [
+        {
+          "binding": "NEXT_INC_CACHE_R2_BUCKET",
+          "bucket_name": "staging-platform-cache",
+        },
+      ],
+      "send_email": [
+        {
+          "name": "EMAIL",
+          "allowed_sender_addresses": ["noreply@mail.devdogsuga.org"],
+        },
+      ],
+      // ASSUMPTION, and the one value here nobody has confirmed: staging is
+      // assumed to live at staging.devdogsuga.org. One label deep, so Universal
+      // SSL covers it without Advanced Certificate Manager -- the same
+      // constraint the sandbox worker's wildcard route is shaped around.
+      // Change it here and in the staging BASE_URL secret together; they are
+      // read by different things and nothing cross-checks them.
+      "routes": [
+        {
+          "pattern": "staging.devdogsuga.org",
+          "custom_domain": true,
+        },
+      ],
+      // Empty ON PURPOSE, and not merely omitted. Staging shares the
+      // production Airtable base (there is only one) and the club's real
+      // Discord guild, so a staging cron is not a rehearsal -- `/airtable/sync`
+      // would contend with production for the sync lease, and
+      // `/cron/sync-discord-roles` would assign real roles to real members
+      // twice. Cron behaviour is exercised by hitting the guarded routes by
+      // hand with the staging CRON_SECRET.
+      "triggers": {
+        "crons": [],
+      },
     },
-  ],
+
+    // ========================================================================
+    // production
+    // ========================================================================
+    "production": {
+      "name": "production-platform",
+      "vars": {
+        "DEPLOY_ENV": "production",
+      },
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "production-platform",
+        },
+      ],
+      "images": {
+        "binding": "IMAGES",
+      },
+      // Backing store for the incremental cache. The binding name is fixed by
+      // the OpenNext adapter. Without it the adapter falls back to its "dummy"
+      // cache, which uploads nothing on deploy and throws on every read --
+      // every prerendered route is then re-rendered per request. See
+      // packages/config/opennext/cloudflare.js.
+      //
+      // Created automatically on first deploy, per worker, so storage and
+      // operation metrics stay attributable per environment.
+      //
+      // TODO: add an R2 object lifecycle rule (delete after ~30 days). Cache
+      // keys include the build id, so every deploy writes a fresh copy and
+      // nothing ever removes the previous one.
+      "r2_buckets": [
+        {
+          "binding": "NEXT_INC_CACHE_R2_BUCKET",
+          "bucket_name": "production-platform-cache",
+        },
+      ],
+      // Transactional email. Supabase's sender is auth-only (signup
+      // confirmation, magic link, password recovery) with no general-purpose
+      // send API, so team invitations go through the Workers binding instead.
+      //
+      // `allowed_sender_addresses` is the part that matters: without it, any
+      // code path with the binding in scope can send as any address on the
+      // domain.
+      //
+      // Requires `wrangler email sending enable mail.devdogsuga.org` first,
+      // which provisions the DKIM, SPF and DMARC records. Until that completes
+      // every send returns E_SENDER_NOT_VERIFIED -- loudly, which is the good
+      // case.
+      //
+      // For local development add `"remote": true` to the top-level copy so
+      // sends proxy to the real service; without it there is nothing to
+      // observe. Point it at an address you control -- bounces from invented
+      // addresses land on the domain's reputation, and the suppression list is
+      // not something to fill while testing.
+      "send_email": [
+        {
+          "name": "EMAIL",
+          "allowed_sender_addresses": ["noreply@mail.devdogsuga.org"],
+        },
+      ],
+      // The production apex. It is currently bound to the pre-monorepo worker,
+      // which was named `platform`; the first deploy under this name has to
+      // take the domain over. That is a deliberate cutover, not something a
+      // deploy does quietly -- until it happens this worker is reachable only
+      // on workers.dev.
+      "routes": [
+        {
+          "pattern": "devdogsuga.org",
+          "custom_domain": true,
+        },
+      ],
+      // Cron triggers replace the old vercel.json crons. cloudflare/scheduled.ts
+      // routes each cron to its existing CRON_SECRET-guarded /api route.
+      "triggers": {
+        "crons": ["0 0 * * *", "*/15 * * * *", "*/10 * * * *", "*/5 * * * *"],
+      },
+    },
+  },
 }

@@ -34,8 +34,8 @@ data**. The only credential that bypasses RLS is the service role
 ## Quickstart
 
 ```bash
-git clone https://github.com/DevDogs-UGA/DevDogs-Website.git
-cd DevDogs-Website
+git clone https://github.com/DevDogsUGA/DevDogsUGA.git
+cd DevDogsUGA
 corepack enable && pnpm install
 pnpm setup                       # checks prereqs, seeds .env from .env.example
 # edit .env — add your remote Supabase creds (see the file's comments)
@@ -139,15 +139,16 @@ Copy `.env.example` to `.env` (or run `pnpm setup`), then fill it in.
 
 **Per Next.js app** (`pnpm --filter @devdogsuga/<app> <script>`)
 
-| Script                                  | Does                                           |
-| --------------------------------------- | ---------------------------------------------- |
-| `dev` / `dev:local`                     | `next dev` against remote / local Supabase     |
-| `build`                                 | `next build`                                   |
-| `typecheck` / `lint`                    | `tsc --noEmit` / `eslint src`                  |
-| `db:pull` / `db:pull:local`             | Regenerate drizzle schema from the DB          |
-| `cf:build` / `cf:preview` / `cf:deploy` | OpenNext → Cloudflare build / preview / deploy |
-| `db:seed-roles` (platform)              | Seed built-in roles                            |
-| `db:generate` (schedule-builder)        | Draft a SQL migration from the drizzle schema  |
+| Script                               | Does                                             |
+| ------------------------------------ | ------------------------------------------------ |
+| `dev` / `dev:local`                  | `next dev` against remote / local Supabase       |
+| `build`                              | `next build`                                     |
+| `typecheck` / `lint`                 | `tsc --noEmit` / `eslint src`                    |
+| `db:pull` / `db:pull:local`          | Regenerate drizzle schema from the DB            |
+| `cf:preview`                         | OpenNext → Cloudflare, served locally            |
+| `cf:build:<env>` / `cf:deploy:<env>` | Build / deploy `<env>` (`staging`, `production`) |
+| `db:seed-roles` (platform)           | Seed built-in roles                              |
+| `db:generate` (schedule-builder)     | Draft a SQL migration from the drizzle schema    |
 
 **Flutter app** (`pnpm --filter study-group-finder <script>`):
 `dev` / `dev:local` / `build` / `test` / `lint` / `generate-types` — shell out

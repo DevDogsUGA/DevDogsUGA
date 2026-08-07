@@ -19,9 +19,11 @@
     "db:generate": "with-env drizzle-kit generate --config drizzle-migrations.config.ts",
     "db:pull": "with-env drizzle-kit pull --config drizzle-introspection.config.ts",
     "db:pull:local": "with-env --local drizzle-kit pull --config drizzle-introspection.config.ts",
-    "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "with-env --local opennextjs-cloudflare preview",
-    "cf:deploy": "with-env opennextjs-cloudflare deploy"
+    "cf:build:staging": "DEPLOY_ENV=staging opennextjs-cloudflare build",
+    "cf:build:production": "DEPLOY_ENV=production opennextjs-cloudflare build",
+    "cf:deploy:staging": "with-env -c 'DEPLOY_ENV=staging opennextjs-cloudflare deploy -e staging'",
+    "cf:deploy:production": "with-env -c 'DEPLOY_ENV=production opennextjs-cloudflare deploy -e production'"
   },
   "dependencies": {
     "@devdogsuga/drizzle": "workspace:*",

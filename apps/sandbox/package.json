@@ -6,7 +6,8 @@
   "description": "The per-environment proxy Worker sitting in front of each team's Supabase project",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "with-env wrangler deploy",
+    "deploy:staging": "with-env wrangler deploy -e staging",
+    "deploy:production": "with-env wrangler deploy -e production",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
