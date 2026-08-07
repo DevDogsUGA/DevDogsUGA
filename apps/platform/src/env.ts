@@ -32,7 +32,18 @@ export const env = createEnv({
     // required: every existing deployment predates competitions, and a new
     // required variable would stop them booting over a feature they do not
     // use yet.
-    GITHUB_COMPETITION_REPO: z.string().default("DevDogs-Website"),
+    //
+    // The old default, "DevDogs-Website", stopped being a real repository name
+    // when this repo was renamed to "DevDogsUGA". Reads survived on GitHub's
+    // redirect; the writes team provisioning performs -- createRef,
+    // addOrUpdateRepoPermissionsInOrg -- are not guaranteed to follow one.
+    //
+    // TODO: this should NOT be the deploy repo. A competition team granted push
+    // here can reach every other team's branch and the integration branch that
+    // judging reads, because GitHub team permissions have no branch dimension.
+    // Point it at a dedicated competition repository and add the per-team
+    // rulesets that actually enforce the isolation.
+    GITHUB_COMPETITION_REPO: z.string().default("DevDogsUGA"),
     // Verifies `X-Hub-Signature-256` on the PR webhook. Empty means the
     // webhook route refuses every request -- see the route for why that is the
     // right default rather than accepting unsigned payloads.
