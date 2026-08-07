@@ -237,22 +237,18 @@ export async function runSnapshot(check: boolean): Promise<void> {
     note(
       drift
         .map((d) =>
-          d.absent ?
-            `${d.table} — no such table in the snapshot`
-          : `${d.table} — missing ${d.missing.join(", ")}`,
+          d.absent
+            ? `${d.table} — no such table in the snapshot`
+            : `${d.table} — missing ${d.missing.join(", ")}`,
         )
         .join("\n"),
       "Registry declares what the snapshot does not have",
     );
-    explain(
-      "The registry and the snapshot disagree.",
-      "",
-      [
-        "If you edited registry.ts by hand, check the ids against the base.",
-        "If the base genuinely changed, run `pnpm airtable:snapshot` and",
-        "commit the result alongside the registry change.",
-      ],
-    );
+    explain("The registry and the snapshot disagree.", "", [
+      "If you edited registry.ts by hand, check the ids against the base.",
+      "If the base genuinely changed, run `pnpm airtable:snapshot` and",
+      "commit the result alongside the registry change.",
+    ]);
     process.exitCode = 1;
     return;
   }
@@ -271,7 +267,9 @@ export async function runSnapshot(check: boolean): Promise<void> {
   log.success(
     `Wrote ${String(schema.tables.length)} table(s) to schema-snapshot.json.`,
   );
-  log.info("Commit it alongside whatever registry change prompted the refresh.");
+  log.info(
+    "Commit it alongside whatever registry change prompted the refresh.",
+  );
 }
 
 /** Shared error path, so a thrown Airtable error is never a stack trace. */
