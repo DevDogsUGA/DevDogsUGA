@@ -49,6 +49,12 @@ export async function runJudgingPass(): Promise<JudgingPassReport> {
  * override exists for the case where somebody manages it.
  */
 async function freezeParticipation(): Promise<number> {
+  // False positive. The `.where()` is right there with five conditions; the
+  // rule stops tracking the chain at the intervening `.from(competitions)` and
+  // concludes this is an unfiltered UPDATE. Verified by reading, not by
+  // assuming -- an `update` with no `where` writes every row, so this
+  // suppression is only safe because the filter below is real.
+  // eslint-disable-next-line drizzle/enforce-update-with-where
   const rows = await db
     .update(teams)
     .set({ competedAt: sql`now()` })
