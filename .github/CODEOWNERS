@@ -1,0 +1,52 @@
+# Code owners.
+#
+# ORDER IS LOAD-BEARING: the LAST matching pattern wins, not the most specific.
+# A broad rule placed below a narrow one silently strips ownership from it, so
+# the high-risk paths stay at the bottom of this file.
+#
+# This file only takes effect where a ruleset sets "require review from Code
+# Owners". It gates MERGING, never RUNNING -- a pull request can still edit
+# .github/ and have the edited workflow execute; what this prevents is that
+# edit being merged.
+#
+# A team named here that does not exist, or that lacks WRITE access to this
+# repo, is ignored silently -- no error, no notification, the path is simply
+# unowned. Validate with:
+#   gh api repos/DevDogsUGA/DevDogsUGA/codeowners/errors
+#
+# `admins` is a subset of `devops`, so naming both on one line is redundant.
+# Only the reverse is meaningful: `admins` is the stricter set.
+
+# ---- Baseline: every pull request needs a leadership approval ----
+*                                    @DevDogsUGA/reviewers
+
+# ---- Per-project ownership ----
+/apps/platform/**                    @DevDogsUGA/devops
+/apps/sandbox/**                     @DevDogsUGA/devops
+/apps/schedule-builder/**            @DevDogsUGA/schedule-builder
+/apps/study-group-finder/**          @DevDogsUGA/study-group-finder
+
+# ---- Shared packages: a change here reaches every app ----
+/packages/**                         @DevDogsUGA/devops
+
+# ---- High risk. MUST stay last; nothing above may reclaim these. ----
+/.github/**                          @DevDogsUGA/devops
+/pnpm-workspace.yaml                 @DevDogsUGA/devops
+/pnpm-lock.yaml                      @DevDogsUGA/devops
+/packages/with-env/**                @DevDogsUGA/devops
+/supabase/migrations/**              @DevDogsUGA/devops
+/apps/*/wrangler.jsonc               @DevDogsUGA/devops
+/apps/*/src/env.ts                   @DevDogsUGA/devops
+
+# Provisions repository access for competition teams.
+/apps/platform/src/server/github/**  @DevDogsUGA/devops
+
+# A hand-edited field id writes to nothing and reports success.
+/packages/airtable/src/registry.ts   @DevDogsUGA/devops
+
+# Carries site_url and the OAuth providers. No dry run exists for `config
+# push`, so this committed diff is the only preview anyone gets.
+/supabase/config.toml                @DevDogsUGA/devops
+
+# The access-control file itself: the stricter set.
+/.github/CODEOWNERS                  @DevDogsUGA/admins
