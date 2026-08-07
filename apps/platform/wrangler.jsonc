@@ -15,6 +15,32 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS",
   },
+  // Self-reference binding, required by the OpenNext cache implementation:
+  // https://opennext.js.org/cloudflare/caching
+  //
+  // `service` MUST equal the worker name above. It was "platform" before this
+  // app moved into the monorepo and the worker was renamed to
+  // "devdogs-platform"; carrying the old value over would bind to a worker that
+  // is not this one.
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "devdogs-platform",
+    },
+  ],
+  // Image optimization for next/image.
+  // https://opennext.js.org/cloudflare/howtos/image
+  "images": {
+    "binding": "IMAGES",
+  },
+  // Without this, `wrangler tail` and the dashboard show nothing. Invocation
+  // logs cover the cron triggers below, which have no other observable output.
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+    },
+  },
   // Backing store for the incremental cache. The binding name is fixed by the
   // OpenNext adapter. Without it the adapter falls back to its "dummy" cache,
   // which uploads nothing on deploy and throws on every read — every
@@ -73,4 +99,20 @@
   "triggers": {
     "crons": ["0 0 * * *", "*/15 * * * *", "*/10 * * * *", "*/5 * * * *"],
   },
+  // The production apex. Carried over from the pre-monorepo root config; the
+  // worker was named "platform" then, so this hostname is currently bound to
+  // THAT worker. The first deploy under the new name has to take the domain
+  // over, which is a deliberate cutover rather than something a deploy does
+  // quietly -- until it happens, this worker is reachable only on workers.dev.
+  //
+  // TODO: this and "vars.DEPLOY_ENV" above are both production-only values
+  // sitting at the top level, so a staging deploy would claim the apex and
+  // report itself as production. Both must move into per-environment blocks
+  // (`env.staging` / `env.production`) BEFORE a staging environment exists.
+  "routes": [
+    {
+      "pattern": "devdogsuga.org",
+      "custom_domain": true,
+    },
+  ],
 }
