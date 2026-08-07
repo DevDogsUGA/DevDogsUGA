@@ -17,7 +17,6 @@ updates:
           - "vitest"
           - "@vitest/*"
           - "@testing-library/*"
-          - "@playwright/test"
           - "turbo"
 
   # GitHub Actions used by the CI workflow.

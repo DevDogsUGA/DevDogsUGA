@@ -12,9 +12,6 @@ catalogs:
     '@opennextjs/cloudflare':
       specifier: ^1.20.2
       version: 1.20.2
-    '@playwright/test':
-      specifier: ^1.62.1
-      version: 1.62.1
     '@radix-ui/react-accordion':
       specifier: ^1.2.20
       version: 1.2.20
@@ -432,9 +429,6 @@ importers:
       '@opennextjs/cloudflare':
         specifier: 'catalog:'
         version: 1.20.2(next@16.3.0(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.1.2)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(wrangler@4.118.0(@cloudflare/workers-types@5.20260804.1))
-      '@playwright/test':
-        specifier: 'catalog:'
-        version: 1.62.1
       '@supabase/auth-js':
         specifier: ^2.112.0
         version: 2.112.0
@@ -637,9 +631,6 @@ importers:
       '@opennextjs/cloudflare':
         specifier: 'catalog:'
         version: 1.20.2(next@16.3.0(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@26.1.2)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(wrangler@4.118.0(@cloudflare/workers-types@5.20260804.1))
-      '@playwright/test':
-        specifier: 'catalog:'
-        version: 1.62.1
       '@testing-library/jest-dom':
         specifier: 'catalog:'
         version: 7.0.0(@testing-library/dom@10.4.1)
@@ -10591,6 +10582,7 @@ snapshots:
   '@playwright/test@1.62.1':
     dependencies:
       playwright: 1.62.1
+    optional: true
 
   '@poppinss/colors@4.1.6':
     dependencies:
@@ -15689,13 +15681,15 @@ snapshots:
     dependencies:
       find-up: 3.0.0
 
-  playwright-core@1.62.1: {}
+  playwright-core@1.62.1:
+    optional: true
 
   playwright@1.62.1:
     dependencies:
       playwright-core: 1.62.1
     optionalDependencies:
       fsevents: 2.3.2
+    optional: true
 
   possible-typed-array-names@1.1.0: {}
 

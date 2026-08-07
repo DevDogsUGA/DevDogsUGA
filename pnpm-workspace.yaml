@@ -74,7 +74,6 @@ catalog:
   # ^22.22.2 || ^24.15.0 || >=26, which is narrower than this repo's
   # declared engines.node (">=20"). Bump engines first, then jsdom.
   # vitest is held at 4.x on purpose: 5.x is still on the beta dist-tag.
-  "@playwright/test": ^1.62.1
   "@testing-library/jest-dom": ^7.0.0
   "@testing-library/react": ^16.3.2
   "@testing-library/user-event": ^14.6.3
@@ -88,9 +87,6 @@ catalog:
   "@types/react": ^19.2.18
   "@types/react-dom": ^19.2.4
 minimumReleaseAgeExclude:
-  - "@playwright/test@1.62.1"
-  - playwright-core@1.62.1
-  - playwright@1.62.1
   - "@dotenvx/dotenvx@2.19.2"
   - "@radix-ui/react-accessible-icon@1.1.15"
   - "@radix-ui/react-accordion@1.2.20"
