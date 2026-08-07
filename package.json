@@ -11,21 +11,19 @@
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
     "test": "turbo run test",
-    "test:e2e": "turbo run test:e2e",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "sb": "pnpm --filter @devdogsuga/devtools run cli",
     "setup": "pnpm --filter @devdogsuga/devtools run cli setup",
-    "airtable:scaffold": "with-env tsx scripts/airtable/scaffold.ts",
-    "airtable:pull-ids": "with-env tsx scripts/airtable/pull-ids.ts",
-    "airtable:verify": "with-env tsx scripts/airtable/verify.ts",
+    "airtable:scaffold": "pnpm --filter @devdogsuga/devtools run cli airtable scaffold",
+    "airtable:pull-ids": "pnpm --filter @devdogsuga/devtools run cli airtable pull-ids",
+    "airtable:verify": "pnpm --filter @devdogsuga/devtools run cli airtable verify",
     "devtools": "pnpm --filter @devdogsuga/devtools run cli"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
-    "@devdogsuga/airtable": "workspace:*",
     "@devdogsuga/with-env": "workspace:*",
     "@types/node": "catalog:",
     "prettier": "3.8.4",

@@ -249,6 +249,79 @@ export async function scaffoldBase(
   return { created, schema };
 }
 
+export interface ScaffoldPlan {
+  table: string;
+  /** False when the whole table would be created. */
+  exists: boolean;
+  /** Fields the registry declares and the base does not have. */
+  missing: FieldSpec[];
+  /** How many fields the registry declares for this table. */
+  declared: number;
+}
+
+/**
+ * What `scaffoldBase` would create, without creating it.
+ *
+ * Worth having because the first real run is against a base somebody cares
+ * about, and "what would this do" is the question they will actually ask. It
+ * reads the same `findTable`/`hasField` matching the real pass does, so a
+ * dry-run that says "up to date" and a run that then creates something is a
+ * contradiction rather than a difference in interpretation.
+ */
+export function planScaffold(
+  schema: LiveTable[],
+  tables?: Record<string, TableSpec>,
+): ScaffoldPlan[] {
+  const specs = tables ?? (registry as unknown as Record<string, TableSpec>);
+
+  return Object.values(specs).map((spec) => {
+    const live = findTable(schema, spec);
+    const declared = Object.values(spec.fields);
+    return {
+      table: spec.name,
+      exists: Boolean(live),
+      missing: live ? declared.filter((f) => !hasField(live, f)) : declared,
+      declared: declared.length,
+    };
+  });
+}
+
+export interface UndeclaredField {
+  table: string;
+  field: string;
+  type: string;
+}
+
+/**
+ * Fields the base has that the registry does not declare.
+ *
+ * Almost always the reverse side of a link: Airtable creates those
+ * automatically and never mentions them in a create response, so they would
+ * otherwise first appear as a surprise in `verify` output. Reported, never
+ * failed on.
+ */
+export function undeclaredFields(
+  schema: LiveTable[],
+  tables?: Record<string, TableSpec>,
+): UndeclaredField[] {
+  const specs = tables ?? (registry as unknown as Record<string, TableSpec>);
+
+  return schema.flatMap((live) => {
+    const spec = Object.values(specs).find(
+      (s) => s.id === live.id || s.name === live.name,
+    );
+    if (!spec) return [];
+
+    const declared = Object.values(spec.fields);
+    const names = new Set(declared.map((f) => f.name));
+    const ids = new Set(declared.map((f) => f.id));
+
+    return live.fields
+      .filter((f) => !names.has(f.name) && !ids.has(f.id))
+      .map((f) => ({ table: live.name, field: f.name, type: f.type }));
+  });
+}
+
 /**
  * The registry ids discovered from a live base, keyed for `pull-ids`.
  *

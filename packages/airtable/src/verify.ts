@@ -104,7 +104,7 @@ export async function verifyBase(
         severity: "fatal",
         table: spec.name,
         message:
-          "Table ID is still a placeholder — run scaffold.ts then pull-ids.ts",
+          "Table ID is still a placeholder — run `pnpm airtable:scaffold` then `pnpm airtable:pull-ids`",
       });
       continue;
     }
@@ -131,7 +131,7 @@ export async function verifyBase(
           table: spec.name,
           field: key,
           message:
-            "Field ID is still a placeholder — run scaffold.ts then pull-ids.ts",
+            "Field ID is still a placeholder — run `pnpm airtable:scaffold` then `pnpm airtable:pull-ids`",
         });
         continue;
       }

@@ -37,9 +37,19 @@ export {
   scaffoldBase,
   discoverIds,
   createOptionsFor,
+  planScaffold,
+  undeclaredFields,
   type ScaffoldAction,
+  type ScaffoldPlan,
   type ScaffoldResult,
+  type UndeclaredField,
 } from "./scaffold.js";
+
+export {
+  applyDiscoveredIds,
+  type ApplyIdsResult,
+  type DiscoveredIds,
+} from "./ids.js";
 
 export {
   registry,

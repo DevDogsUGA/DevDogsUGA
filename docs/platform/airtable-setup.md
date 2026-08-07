@@ -108,7 +108,7 @@ identity a dues record is keyed on.
 Column-level grants are the fix, and they only work in one direction: a
 `revoke update ("ugaEmail") …` against a table-wide UPDATE grant does nothing.
 The table-wide grant has to go first, then come back per column — the same shape
-migration `20260730000005` asserts for app schemas. `packages/sb/testing/rls.test.ts`
+migration `20260730000005` asserts for app schemas. `packages/supabase/testing/rls.test.ts`
 covers both sides.
 
 ### UGA email as the key, with one caveat
@@ -270,17 +270,27 @@ one — a staging base, or a rebuild after somebody deletes a table — is a
 different base with the same name.
 
 ```
-scripts/airtable/
-  scaffold.ts     create tables and fields from the registry's declared shape
-  verify.ts       diff the live base against the registry; exit non-zero on drift
-  pull-ids.ts     write discovered field IDs back into registry.ts
+packages/airtable/src/
+  scaffold.ts     create tables and fields; plan the same run without writing
+  verify.ts       diff the live base against the registry
+  ids.ts          rewrite todo("slug") calls in registry.ts with real field IDs
+
+packages/devtools/src/airtable/
+  commands.ts     the three commands: prompting, file I/O, exit codes
   client.ts       the shared client -- environment only, never Vault
 ```
 
 Run them as `pnpm airtable:scaffold`, `pnpm airtable:pull-ids` and
 `pnpm airtable:verify`. `scaffold` takes `--dry-run`, which reports the diff
 without writing; it is worth using first, because the first real run is against
-a base somebody cares about.
+a base somebody cares about. They are also in the `pnpm devtools` menu, under
+"Work on the Airtable base", which is the discoverable path — the picker lists
+them in runbook order and says which ones write.
+
+The split is deliberate. Everything that decides anything — what to create, what
+counts as drift, how a `todo("slug")` call becomes a field ID — lives in the
+package, where it is unit-tested against a fake base. What lives in `devtools` is
+prompting, reading and writing `registry.ts`, and setting an exit code.
 
 They read `AIRTABLE_PAT` from the environment rather than from Vault, which is
 the opposite of every other credential here and deliberate: these run _before_
@@ -290,12 +300,12 @@ token should not carry — and the person running them has the token in hand.
 The bootstrapping order is the awkward part, and it is worth spelling out because
 it looks circular:
 
-1. `scaffold.ts` reads a **shape** declaration — table names, field names, field
-   types — which is the registry with the IDs left blank.
+1. `pnpm airtable:scaffold` reads a **shape** declaration — table names, field
+   names, field types — which is the registry with the IDs left blank.
 2. It creates what is missing, via the Meta API
    (`POST /v0/meta/bases/{baseId}/tables`, then `.../fields`).
 3. It reads the base schema back and **prints the field IDs**.
-4. `pull-ids.ts` writes them into `registry.ts`, which is committed.
+4. `pnpm airtable:pull-ids` writes them into `registry.ts`, which is committed.
 
 After that first run the IDs are source, and `scaffold.ts` becomes an idempotent
 "create anything missing" operation. Adding a field later is the same two steps:

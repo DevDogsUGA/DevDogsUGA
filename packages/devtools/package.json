@@ -7,18 +7,21 @@
     "devtools": "./src/cli.ts"
   },
   "scripts": {
-    "cli": "tsx src/cli.ts",
+    "cli": "with-env tsx --conditions=development src/cli.ts",
+    "cli:no-env": "tsx --conditions=development src/cli.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
     "@clack/prompts": "catalog:",
+    "@devdogsuga/airtable": "workspace:*",
     "@supabase/supabase-js": "catalog:",
     "dotenv": "^17.4.2"
   },
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/with-env": "workspace:*",
     "@types/node": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",

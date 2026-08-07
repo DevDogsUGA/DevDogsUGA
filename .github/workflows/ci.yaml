@@ -168,14 +168,17 @@ jobs:
         run: pnpm turbo run build --filter=@devdogsuga/airtable
       - name: Verify the base matches the registry
         if: steps.affected.outputs.run == 'true' && env.AIRTABLE_PAT != ''
-        # `tsx` directly rather than the `airtable:verify` script, which wraps
-        # itself in `with-env`: there is no root .env in CI, and the credentials
-        # are already in the environment from the job's secrets.
+        # `cli:no-env` rather than the `airtable:verify` script, which goes
+        # through `cli` and so wraps itself in `with-env`: there is no root .env
+        # in CI, and the credentials are already in the environment from the
+        # job's secrets.
         #
         # `--no-duplicates` skips reading every record. Duplicate match keys are
         # a property of the DATA, which changes without any commit, so failing a
         # build on them would mean a red CI that no PR caused and no PR can fix.
-        run: pnpm exec tsx scripts/airtable/verify.ts --no-duplicates
+        run: >-
+          pnpm --filter @devdogsuga/devtools run cli:no-env
+          airtable verify --no-duplicates
 
   # Flutter app — only when it (or a shared dep) is affected.
   flutter:

@@ -34,6 +34,12 @@ import {
 } from "./stack.js";
 import { runOAuthSetup } from "./oauth/wizard.js";
 import { runSetup } from "./setup.js";
+import {
+  runAirtable,
+  runPullIds,
+  runScaffold,
+  runVerify,
+} from "./airtable/commands.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
 
 const DOCTOR_COMMANDS = ["doctor", "roundtrip"] as const;
@@ -61,6 +67,12 @@ Commands:
   doctor     Check an app's moderation integration
   roundtrip  File a report, quarantine it, and check who can still see it
   oauth      Configure "Sign in with DevDogs" for the project in this directory
+  airtable   Scaffold, pull ids from, or verify the officer base
+
+Airtable subcommands:
+  airtable scaffold [--dry-run]   Create what the registry declares
+  airtable pull-ids               Write discovered ids into registry.ts
+  airtable verify [--no-duplicates]  Diff the live base against the registry
 
 Targets:
   --local            The Docker stack (default)
@@ -264,6 +276,61 @@ async function runRoundTrip(instance: Instance): Promise<void> {
   }
 }
 
+// ── Airtable ─────────────────────────────────────────────────────────────────
+
+/**
+ * Runs one of the three base commands, asking which if it was not told.
+ *
+ * The order in the picker is the runbook order, and the hints say what each one
+ * writes to: these touch a base officers use every day, so "which of these is
+ * safe to run right now" has to be answerable from the menu alone.
+ */
+async function runAirtableCommand(rest: string[]): Promise<void> {
+  const sub =
+    rest.find((arg) => !arg.startsWith("--")) ??
+    unwrap(
+      await select({
+        message: "What should I do with the Airtable base?",
+        options: [
+          {
+            value: "verify",
+            label: "Check the base against the registry",
+            hint: "reads only — start here",
+          },
+          {
+            value: "scaffold",
+            label: "Create missing tables and fields",
+            hint: "writes to the base",
+          },
+          {
+            value: "pull-ids",
+            label: "Write discovered ids into registry.ts",
+            hint: "edits a committed source file",
+          },
+        ],
+      }),
+    );
+
+  if (sub === "verify") {
+    // Duplicate detection reads every record in every table, which is the
+    // expensive part of a verify and pointless on a base with no rows yet.
+    await runAirtable(() => runVerify(!rest.includes("--no-duplicates")));
+    return;
+  }
+  if (sub === "scaffold") {
+    await runAirtable(() => runScaffold(rest.includes("--dry-run")));
+    return;
+  }
+  if (sub === "pull-ids") {
+    await runAirtable(() => runPullIds());
+    return;
+  }
+
+  log.error(`Unknown airtable subcommand: ${sub}`);
+  log.message("Try scaffold, pull-ids or verify.");
+  process.exitCode = 1;
+}
+
 // ── Menu ─────────────────────────────────────────────────────────────────────
 
 async function menu(): Promise<void> {
@@ -306,12 +373,22 @@ async function menu(): Promise<void> {
           label: 'Set up "Sign in with DevDogs"',
           hint: "configures the Supabase project in this directory",
         },
+        {
+          value: "airtable" as const,
+          label: "Work on the Airtable base",
+          hint: "scaffold, pull ids, or check for drift",
+        },
       ],
     }),
   );
 
   if (choice === "setup") {
     runSetup();
+    return;
+  }
+
+  if (choice === "airtable") {
+    await runAirtableCommand([]);
     return;
   }
 
@@ -361,6 +438,12 @@ async function main(): Promise<void> {
   if (first === "oauth") {
     await runOAuthSetup(flagValue(rest, "--base-url"));
     outro('All done! You\'re ready to "Sign in with DevDogs".');
+    return;
+  }
+
+  if (first === "airtable") {
+    await runAirtableCommand(rest);
+    outro("Done.");
     return;
   }
 

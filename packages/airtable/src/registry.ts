@@ -10,9 +10,9 @@ import { field, table } from "./field.js";
  *
  * ## The IDs below are real, and are the wire format
  *
- * Written by `pull-ids.ts` from the live base. Every read and write goes over
- * the wire with these rather than with field NAMES, which is what lets an
- * officer rename a column without breaking the sync.
+ * Written by `pnpm airtable:pull-ids` from the live base. Every read and write
+ * goes over the wire with these rather than with field NAMES, which is what
+ * lets an officer rename a column without breaking the sync.
  *
  * To add a field: declare it here with a `todo("slug")` id, run
  * `pnpm airtable:scaffold` to create it, then `pnpm airtable:pull-ids` to fill

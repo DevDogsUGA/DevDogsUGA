@@ -158,9 +158,6 @@ importers:
 
   .:
     devDependencies:
-      '@devdogsuga/airtable':
-        specifier: workspace:*
-        version: link:packages/airtable
       '@devdogsuga/with-env':
         specifier: workspace:*
         version: link:packages/with-env
@@ -759,6 +756,9 @@ importers:
       '@clack/prompts':
         specifier: 'catalog:'
         version: 1.7.0
+      '@devdogsuga/airtable':
+        specifier: workspace:*
+        version: link:../airtable
       '@supabase/supabase-js':
         specifier: 'catalog:'
         version: 2.112.0(@opentelemetry/api@1.9.1)
@@ -769,6 +769,9 @@ importers:
       '@devdogsuga/config':
         specifier: workspace:*
         version: link:../config
+      '@devdogsuga/with-env':
+        specifier: workspace:*
+        version: link:../with-env
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.2
