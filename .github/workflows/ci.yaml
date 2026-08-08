@@ -146,13 +146,21 @@ jobs:
       # makes this worth running: a newly added required variable with no
       # default fails here rather than at deploy time.
       #
-      # `platform` only. schedule-builder does not yet build against the local
-      # stack -- see the note at the bottom of this file. Naming it explicitly
-      # rather than filtering it out keeps the gap visible.
-      - name: Build platform, with the env schema enforced
+      # Both Next apps. study-group-finder is Flutter and is covered by its own
+      # job.
+      #
+      # Note this goes through turbo, which under strict env mode passes a task
+      # only the variables named in turbo.json's `build.env`. A variable missing
+      # there is REMOVED rather than merely unhashed, so it arrives undefined
+      # and fails validation -- while `next build` run directly in the app
+      # inherits the real environment and succeeds. The two disagree, and this
+      # step is the one that matters.
+      - name: Build both Next apps, with the env schema enforced
         env:
           SKIP_ENV_VALIDATION: ""
-        run: pnpm exec with-env --local pnpm turbo run build --filter=platform
+        run: >-
+          pnpm exec with-env --local
+          pnpm turbo run build --filter='!study-group-finder'
 
   # Repo-wide formatting check — fast, no build needed.
   format:
@@ -242,15 +250,9 @@ jobs:
 # carries the local stack's values and nothing else. Its build step is the
 # exception and turns validation back on.
 #
-# KNOWN GAP: schedule-builder is not built by any job.
-#
-#   `platform` builds against the local stack with validation enforced, needing
-#   only the synthetic third-party values in .github/ci.env. schedule-builder
-#   does not: it fails collecting page data, on a DIFFERENT page depending on
-#   NEXT_PUBLIC_AUTH_MODE (/generate-schedule under "google", /settings under
-#   "devdogs"), while building fine against a full .env. Something it reads at
-#   build time is in that file and not yet identified.
-#
-#   Recorded here rather than papered over with a broad --filter, because a job
-#   that silently covers less than its name suggests is the exact failure this
-#   file's history is made of.
+# Both Next apps build here. An earlier revision of this file recorded
+# schedule-builder as a known gap, on the strength of a test that hand-picked a
+# subset of .env.generated rather than sourcing all of it -- FUNCTIONS_URL,
+# GRAPHQL_URL, STORAGE_S3_URL and the S3_PROTOCOL_* trio were missing, and the
+# app failed collecting page data. Given the whole file it builds. The gap was
+# in the test, not the app.

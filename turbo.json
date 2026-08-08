@@ -44,6 +44,21 @@
       // duplicate. Passthrough makes them readable by every task under strict
       // env mode; listing them here additionally folds them into the build
       // hash, which they need since their values are baked into the output.
+      //
+      // ⚠️ Under turbo's default STRICT env mode, a variable absent from this
+      // list is not merely unhashed — it is REMOVED from the task's
+      // environment. @t3-oss then reports it as `undefined` and the build
+      // fails, which is exactly what `turbo run build` did for every Next app
+      // until the Supabase block below was added: the whole connection half of
+      // the schema was missing. `next build` run directly in the app inherits
+      // the real environment and succeeds, so the two disagreed and only the
+      // turbo path was broken.
+      //
+      // NEXT_PUBLIC_* needs no entry: turbo infers the framework and includes
+      // that prefix automatically. NEXT_PUBLIC_AUTH_MODE is listed anyway
+      // because it selects a sign-in provider baked into the output, and an
+      // inference rule changing under us would silently share a cache entry
+      // across two different builds.
       "env": [
         "BASE_URL",
         "SCHEDULE_BUILDER_URL",
@@ -61,12 +76,27 @@
         "DISCORD_TOKEN",
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
-        "S3_PORT",
-        "S3_REGION",
-        "S3_ACCESS_KEY_ID",
-        "S3_SECRET_ACCESS_KEY",
-        "SHARED_AUTH_CLIENT_ID",
-        "SHARED_AUTH_CLIENT_SECRET",
+        // The Supabase connection, read by both Next apps' env schemas. The
+        // S3_PROTOCOL_* names are the ones `supabase status -o env` actually
+        // emits; this list previously carried S3_PORT, S3_REGION,
+        // S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY, which appear nowhere else
+        // in the repository and matched nothing.
+        "API_URL",
+        "DB_URL",
+        "REST_URL",
+        "PUBLISHABLE_KEY",
+        "SECRET_KEY",
+        "STORAGE_S3_URL",
+        "S3_PROTOCOL_ACCESS_KEY_ID",
+        "S3_PROTOCOL_ACCESS_KEY_SECRET",
+        "S3_PROTOCOL_REGION",
+        // schedule-builder's optional OAuth provider. Optional in the schema,
+        // but still hashed: switching providers changes the output.
+        "OAUTH_CLIENT_ID",
+        "OAUTH_CLIENT_SECRET",
+        "OAUTH_AUTHORIZATION_URL",
+        "OAUTH_TOKEN_URL",
+        "OAUTH_USERINFO_URL",
         "NEXT_PUBLIC_AUTH_MODE"
       ]
     },

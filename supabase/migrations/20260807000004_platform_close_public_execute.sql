@@ -1,6 +1,19 @@
 -- Close PUBLIC's EXECUTE on the platform schema, and this time make it stay
 -- closed.
 --
+-- Numbered ...004 rather than ...000: the moderation rebuild landed four
+-- migrations the same day and `schema_migrations.version` -- the timestamp
+-- prefix -- is a PRIMARY KEY, so a shared prefix is not an ordering ambiguity
+-- but a duplicate-key failure that stops `db reset` outright for everyone.
+--
+-- Running last is also the better order. Nothing below names a function, so it
+-- is order-independent by construction, and going after the moderation RPCs
+-- means the schema-wide revoke covers those too rather than relying on the
+-- default privilege alone. (Two functions named in the list further down --
+-- submit_feedback, list_feedback_topics -- are dropped by
+-- 20260807000002_platform_drop_feedback.sql and will not exist by the time
+-- this runs. The revoke is over `all functions`, so that costs nothing.)
+--
 -- 20260805000002 already did this once. Its schema-wide revoke was correct and
 -- worked; the statement meant to KEEP it closed did not, and nothing noticed
 -- for two days because the only thing watching was a test that cannot run in
