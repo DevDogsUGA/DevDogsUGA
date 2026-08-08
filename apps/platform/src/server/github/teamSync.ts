@@ -5,6 +5,12 @@ import { db } from "~/server/db";
 import { competitions, teamMembers, teams } from "~/server/db/schema";
 import { identitiesInAuth } from "~/supabase/drizzle/schema";
 import { githubTeamSlug, integrationBranch, teamBranch } from "./naming";
+import {
+  archiveRulesetName,
+  archiveRulesetPayload,
+  teamRulesetName,
+  teamRulesetPayload,
+} from "./rulesets";
 
 /**
  * Repository access for competition teams.
@@ -120,8 +126,14 @@ export async function provisionTeam(teamId: string): Promise<GithubResult> {
   const slug = githubTeamSlug(ctx.competitionSlug, ctx.teamSlug);
   const api = octokit();
 
+  // The numeric id, not the slug. It is needed for the ruleset's bypass actor,
+  // where `actor_type: "Team"` takes an id and nothing else — and the create
+  // response is the cheapest place to get it. The `already_exists` path costs
+  // one extra request precisely because re-provisioning is the recovery path
+  // and has to reach the same end state.
+  let githubTeamId: number;
   try {
-    await api.rest.teams.create({
+    const { data } = await api.rest.teams.create({
       org: org(),
       name: slug,
       // `closed` rather than `secret`: members need to see that the team
@@ -130,9 +142,19 @@ export async function provisionTeam(teamId: string): Promise<GithubResult> {
       privacy: "closed",
       description: `Competition team for ${ctx.competitionSlug}`,
     });
+    githubTeamId = data.id;
   } catch (error) {
     if (!isAlreadyExists(error)) {
       return failed("api_error", describe(error));
+    }
+    try {
+      const { data } = await api.rest.teams.getByName({
+        org: org(),
+        team_slug: slug,
+      });
+      githubTeamId = data.id;
+    } catch (lookupError) {
+      return failed("api_error", describe(lookupError));
     }
   }
 
@@ -148,7 +170,74 @@ export async function provisionTeam(teamId: string): Promise<GithubResult> {
     return failed("api_error", describe(error));
   }
 
-  return cutTeamBranch(ctx);
+  const branch = await cutTeamBranch(ctx);
+  if (!branch.ok) return branch;
+
+  // AFTER the branch exists. The ruleset's `update` rule governs pushes to an
+  // existing ref; creating it first would restrict a ref that is not there yet
+  // and leave the branch cut under a rule nobody had reviewed.
+  return ensureTeamRuleset(ctx, githubTeamId);
+}
+
+/**
+ * The ruleset that turns a repository-wide `push` grant into one branch.
+ *
+ * Without this, provisioning is actively harmful: the team grant above is
+ * repository-wide because GitHub team permissions have no branch dimension, so
+ * every team can push to every other team's branch and to the integration
+ * branch judging reads. This is the only thing that narrows it.
+ *
+ * Idempotent by name, because rulesets are addressed by a numeric id nothing
+ * here stores and `createRepoRuleset` does NOT reject a duplicate name — a
+ * blind create on the recovery path would leave two rulesets over one branch,
+ * both enforcing, and removing either would look like it fixed the problem.
+ */
+async function ensureTeamRuleset(
+  ctx: TeamContext,
+  githubTeamId: number,
+): Promise<GithubResult> {
+  const api = octokit();
+  const payload = teamRulesetPayload(
+    ctx.competitionSlug,
+    ctx.teamSlug,
+    githubTeamId,
+  );
+
+  let existingId: number | undefined;
+  try {
+    const { data } = await api.rest.repos.getRepoRulesets({
+      owner: org(),
+      repo: repo(),
+    });
+    existingId = data.find((r) => r.name === payload.name)?.id;
+  } catch (error) {
+    return failed("api_error", describe(error));
+  }
+
+  try {
+    if (existingId === undefined) {
+      await api.rest.repos.createRepoRuleset({
+        owner: org(),
+        repo: repo(),
+        ...payload,
+      });
+    } else {
+      // Update rather than skip: a ruleset carrying a STALE bypass actor is the
+      // dangerous case. If the GitHub team was deleted and recreated its id
+      // changed, and the ruleset would then be blocking the team it is named
+      // for while letting whoever inherited the old id through.
+      await api.rest.repos.updateRepoRuleset({
+        owner: org(),
+        repo: repo(),
+        ruleset_id: existingId,
+        ...payload,
+      });
+    }
+  } catch (error) {
+    return failed("api_error", describe(error));
+  }
+
+  return { ok: true };
 }
 
 /**
@@ -297,6 +386,85 @@ export async function removeMember(
  * later — what they lose is the ability to keep pushing to a competition that
  * has been judged.
  */
+/**
+ * Freezes a finished competition's team branches, and reclaims its rulesets.
+ *
+ * Replace, then delete — never delete. Deleting a per-team ruleset does not
+ * freeze that branch, it OPENS it: every competition team holds repository-wide
+ * `push`, so a team branch governed by no ruleset is one any member of any team
+ * can rewrite. The archive ruleset goes up FIRST, with an empty bypass list, and
+ * the per-team ones come down only once it is in place.
+ *
+ * Takes the ruleset count for the competition from N to 1, which is what keeps
+ * the 75-per-repository ceiling reachable across years rather than across a
+ * single semester.
+ *
+ * ⚠️ NOT WIRED TO ANYTHING YET, like `downgradeTeam` below. Both are the
+ * archive path, and nothing calls it — competitions are never marked finished
+ * in a way that reaches GitHub. Written now because it is the safe counterpart
+ * to `ensureTeamRuleset`: the moment somebody DOES build that flow, the obvious
+ * implementation is "delete the rulesets", which is the one thing that must not
+ * happen.
+ */
+export async function archiveCompetitionRulesets(
+  competitionSlug: string,
+): Promise<GithubResult> {
+  const api = octokit();
+  const payload = archiveRulesetPayload(competitionSlug);
+
+  let rulesets: { id: number; name: string }[];
+  try {
+    const { data } = await api.rest.repos.getRepoRulesets({
+      owner: org(),
+      repo: repo(),
+    });
+    rulesets = data.map((r) => ({ id: r.id, name: r.name }));
+  } catch (error) {
+    return failed("api_error", describe(error));
+  }
+
+  const existing = rulesets.find(
+    (r) => r.name === archiveRulesetName(competitionSlug),
+  );
+  try {
+    if (existing) {
+      await api.rest.repos.updateRepoRuleset({
+        owner: org(),
+        repo: repo(),
+        ruleset_id: existing.id,
+        ...payload,
+      });
+    } else {
+      await api.rest.repos.createRepoRuleset({
+        owner: org(),
+        repo: repo(),
+        ...payload,
+      });
+    }
+  } catch (error) {
+    return failed("api_error", describe(error));
+  }
+
+  // Only now. Matching on the name prefix the per-team rulesets are built from,
+  // which is why `teamRulesetName` has to stay derivable from the slugs.
+  const prefix = `${teamRulesetName(competitionSlug, "")}`;
+  const stale = rulesets.filter((r) => r.name.startsWith(prefix));
+
+  for (const ruleset of stale) {
+    try {
+      await api.rest.repos.deleteRepoRuleset({
+        owner: org(),
+        repo: repo(),
+        ruleset_id: ruleset.id,
+      });
+    } catch (error) {
+      if (!isNotFound(error)) return failed("api_error", describe(error));
+    }
+  }
+
+  return { ok: true };
+}
+
 export async function downgradeTeam(teamId: string): Promise<GithubResult> {
   const ctx = await contextFor(teamId);
   if (!ctx) return failed("not_found", `No team ${teamId}`);
