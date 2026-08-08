@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "motion/react";
 import { useState, type ReactNode } from "react";
 import {
   SpinnerGapIcon,

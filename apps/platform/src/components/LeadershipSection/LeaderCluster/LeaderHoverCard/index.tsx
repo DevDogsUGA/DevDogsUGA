@@ -8,7 +8,6 @@ import {
   GithubLogoIcon,
   LinkedinLogoIcon,
   EnvelopeIcon,
-  XIcon,
 } from "@phosphor-icons/react/ssr";
 import { Dialog, DialogContent, DialogTitle } from "~/ui/dialog";
 import LeaderCard from "./LeaderCard";

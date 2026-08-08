@@ -196,11 +196,14 @@ export default function ReportActionForm({
             disabled={busy}
             className="rounded-sm border border-mauve-600 bg-mauve-800 px-4 py-1.5 text-sm text-white transition-colors hover:border-white disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => {
-              const note =
-                document.querySelector<HTMLTextAreaElement>(
-                  `#${CSS.escape(formId)} textarea[name=note]`,
-                )?.value ?? undefined;
-              handleDismiss(note || undefined);
+              const note = document.querySelector<HTMLTextAreaElement>(
+                `#${CSS.escape(formId)} textarea[name=note]`,
+              )?.value;
+              // An empty textarea is no note. Written as a comparison rather
+              // than `note || undefined` because `??` is NOT the right fix
+              // there -- `""` is not nullish, so nullish coalescing would keep
+              // the empty string and send it as a real note.
+              handleDismiss(note === "" ? undefined : note);
             }}
           >
             Dismiss

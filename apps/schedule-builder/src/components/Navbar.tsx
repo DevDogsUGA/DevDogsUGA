@@ -8,7 +8,6 @@ import {
   PiChalkboardTeacherDuotone,
   PiSignInBold,
   PiSignOut,
-  PiUsersThreeBold,
   PiXBold,
 } from "react-icons/pi";
 import devdog from "~/assets/devdog.png";

@@ -21,7 +21,20 @@ const overrideRules = {
     "warn",
     { prefer: "type-imports", fixStyle: "inline-type-imports" },
   ],
-  "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+  // All three patterns, not just args. The `_` prefix already meant "declared
+  // deliberately, not read" everywhere in this repo -- type-level assertions
+  // like `type _MeetingRowCheck = MeetingRow` that keep a hand-written select
+  // in step with its row type, and `const [_, x] = ...` discards in tests --
+  // but only the args form was configured, so every one of those still warned.
+  // A convention the linter half-honours is one people stop following.
+  "@typescript-eslint/no-unused-vars": [
+    "warn",
+    {
+      argsIgnorePattern: "^_",
+      varsIgnorePattern: "^_",
+      caughtErrorsIgnorePattern: "^_",
+    },
+  ],
   "@typescript-eslint/require-await": "off",
   "@typescript-eslint/no-misused-promises": [
     "error",

@@ -10,7 +10,6 @@ import {
   userRoles,
 } from "~/server/db/schema";
 import { expectSession } from "~/server/auth";
-import { supabaseAdmin } from "~/supabase/admin";
 import { blankToNull } from "~/lib/blank";
 // Moved to a non-"use server" module: every export from this file is a server
 // action with an HTTP endpoint, and `readVaultSecret` as one would hand any

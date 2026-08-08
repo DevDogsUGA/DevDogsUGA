@@ -189,11 +189,7 @@ describe("test identities", () => {
     // so the table it used to deny access to no longer exists. contentTypes,
     // which holds the overrides and declarations that replaced it, is in the
     // same category and carries the same restrictive policy.
-    for (const table of [
-      "roles",
-      "reportReasons",
-      "contentTypes",
-    ]) {
+    for (const table of ["roles", "reportReasons", "contentTypes"]) {
       const { data } = await testAccount.client.from(table).select("*");
       expect(data, `${table} should be invisible to a test identity`).toEqual(
         [],

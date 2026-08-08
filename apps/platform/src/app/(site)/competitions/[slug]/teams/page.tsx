@@ -49,8 +49,18 @@ export default async function CompetitionTeamsPage({
   // cannot disagree about how full a team is.
   const judgingStartsAt = competition.judgingStartsAt;
   const maxTeamSize = competition.maxTeamSize;
-  const closed =
-    judgingStartsAt !== null && judgingStartsAt.getTime() <= Date.now();
+  // `react-hooks/purity` flags `Date.now()` because a render that gets replayed
+  // could produce a different answer. That is exactly the intent here: "has
+  // judging started" is a question about the current request, and the
+  // `await connection()` at the top of this component is what guarantees there
+  // is one -- it opts the segment out of prerendering, which is the failure the
+  // rule actually protects against and which the comment there already
+  // describes. Without the suppression the honest alternative is to move the
+  // comparison into the loader, which hides the same call one frame deeper
+  // rather than removing it.
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now();
+  const closed = judgingStartsAt !== null && judgingStartsAt.getTime() <= now;
 
   const teams = await getTeamsForCompetition(slug);
   const mine = await getMyTeam(slug, userId);

@@ -1,4 +1,4 @@
-import Image, { getImageProps } from "next/image";
+import { getImageProps } from "next/image";
 import lecture from "~/assets/lecture.jpg";
 import SectionBackground, {
   type BlobDef,

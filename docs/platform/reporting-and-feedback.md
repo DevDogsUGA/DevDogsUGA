@@ -13,11 +13,11 @@ Every DevDogs app shares one Supabase project, with a Postgres schema per app. R
 
 ## Three surfaces
 
-| Surface                                         | Who uses it              | What it is                                                                        |
-| ----------------------------------------------- | ------------------------ | --------------------------------------------------------------------------------- |
-| `platform` RPCs                                 | consumer apps            | the public contract: file a report, read the reasons, read your own outcomes      |
-| `platform` tables via RLS                       | the DevDogs console only | moderator queues, resolutions, audit log                                          |
-| a foreign key to `platform."reportResolutions"` | app migrations           | how a table declares itself moderatable                                           |
+| Surface                                         | Who uses it              | What it is                                                                   |
+| ----------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------- |
+| `platform` RPCs                                 | consumer apps            | the public contract: file a report, read the reasons, read your own outcomes |
+| `platform` tables via RLS                       | the DevDogs console only | moderator queues, resolutions, audit log                                     |
+| a foreign key to `platform."reportResolutions"` | app migrations           | how a table declares itself moderatable                                      |
 
 Consumer apps never touch `platform` tables directly, and the console never uses the RPCs. That split is what keeps the public surface narrow enough to change without breaking apps.
 
@@ -39,11 +39,11 @@ Reads are RPCs for that third reason too.
 
 All of these live in the `platform` schema. They are set-returning, so **every result is a JSON array** — including the ones that logically return a single object. `file_report` comes back as `[{ reportId, corroborated }]`; use `.single()` or `[0]`.
 
-| Function              | Arguments                                                             | Returns                            |
-| --------------------- | --------------------------------------------------------------------- | ---------------------------------- |
-| `list_report_reasons` | none                                                                  | `[{ reason, title, description }]` |
-| `file_report`         | `app_slug`, `content_type`, `content_ref`, `reason`, `description`     | `{ reportId, corroborated }`       |
-| `my_reports`          | `app_slug`, `since`, `only_open`                                      | the caller's reports               |
+| Function              | Arguments                                                          | Returns                            |
+| --------------------- | ------------------------------------------------------------------ | ---------------------------------- |
+| `list_report_reasons` | none                                                               | `[{ reason, title, description }]` |
+| `file_report`         | `app_slug`, `content_type`, `content_ref`, `reason`, `description` | `{ reportId, corroborated }`       |
+| `my_reports`          | `app_slug`, `since`, `only_open`                                   | the caller's reports               |
 
 Three functions, and that is the whole public surface. `report_outcomes` used to be a fourth; it was `my_reports` with `status <> 'open'` and a `since` filter, so it is now those two parameters. `only_open` is `null` for everything, `true` for open reports, `false` for decided ones.
 

@@ -677,6 +677,16 @@ export default function ProfileLinks({ initialLinks }: Props) {
             />
           </div>
         )}
+
+        {/* `useProfileLinks` has always returned this and nothing rendered it,
+            so a save that the server refused failed silently — the link simply
+            did not appear and the reason went nowhere. `role="alert"` because
+            it arrives after the interaction that caused it. */}
+        {error && (
+          <p role="alert" className="text-sm text-rose-700">
+            {error}
+          </p>
+        )}
       </div>
 
       {/* Full-screen overlay + title — portalled to body to escape any parent stacking context */}

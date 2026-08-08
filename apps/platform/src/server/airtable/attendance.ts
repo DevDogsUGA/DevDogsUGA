@@ -3,7 +3,7 @@ import {
   attendanceTable as attendanceSpec,
   type AirtableRecord,
 } from "@devdogsuga/airtable";
-import { and, eq, inArray, isNotNull, notInArray } from "drizzle-orm";
+import { and, eq, isNotNull, notInArray } from "drizzle-orm";
 import { db } from "~/server/db";
 import { attendance, profiles, workshops } from "~/server/db/schema";
 import { supabaseAdmin } from "~/supabase/admin";

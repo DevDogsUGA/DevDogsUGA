@@ -3,23 +3,24 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import ConsolePageShell from "~/components/ConsolePageShell";
 import EmptyState from "~/components/participation/EmptyState";
-import { formatEventDateTime, formatEventSpan } from "~/lib/eventTime";
-import { expectSession } from "~/server/auth";
+import { formatEventSpan } from "~/lib/eventTime";
 import {
   attendanceFormIsLive,
   getMeetingBySlug,
   getMeetingWorkshops,
-  type MeetingWorkshop,
 } from "~/server/loaders/meetings";
 
 /**
- * /meetings/[slug] — one meeting: when and where, what ran in it, and the box
- * that turns the code on the screen into an attendance row.
+ * /meetings/[slug] — one meeting: when and where, what ran in it, and the link
+ * to the attendance form while it is open.
  *
- * The page itself is public. Only the check-in box needs to know who the
- * viewer is, so a session is resolved optionally rather than required — a
- * visitor reading the agenda of a meeting they have not signed up for is the
- * normal case, not an unauthorized one.
+ * Wholly public, and it no longer resolves a session at all. It used to,
+ * because the old check-in box turned a code shown on screen into an
+ * attendance row and needed to know who was typing. That box went away with
+ * `20260806000001_platform_drop_check_in_codes.sql` — attendance is captured in
+ * an Airtable form now and mirrored back — leaving an `expectSession()` whose
+ * result nothing read, one extra session lookup per request for a feature that
+ * no longer exists.
  */
 export default async function MeetingPage({
   params,
@@ -34,10 +35,7 @@ export default async function MeetingPage({
   const meeting = await getMeetingBySlug(slug);
   if (!meeting) notFound();
 
-  const [sessions, viewerId] = await Promise.all([
-    getMeetingWorkshops(meeting.id),
-    expectSession().catch(() => null),
-  ]);
+  const sessions = await getMeetingWorkshops(meeting.id);
 
   const now = new Date();
 

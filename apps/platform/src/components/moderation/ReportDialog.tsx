@@ -79,11 +79,29 @@ export default function ReportDialog({
   const [reasonError, setReasonError] = useState(false);
   const [descriptionError, setDescriptionError] = useState(false);
 
-  const [fetchedReasons, setFetchedReasons] = useState<ReportReason[] | null>(
-    null,
-  );
-  const [reasonsLoading, setReasonsLoading] = useState(false);
-  const [reasonsLoadError, setReasonsLoadError] = useState<string | null>(null);
+  /**
+   * One state for the fetch, and `loading` derived rather than stored.
+   *
+   * This was three pieces of state, which forced `setReasonsLoading(true)` and
+   * `setReasonsLoadError(null)` to run SYNCHRONOUSLY inside the effect — a
+   * second render scheduled before the request had even started, which is what
+   * `react-hooks/set-state-in-effect` is pointing at.
+   *
+   * Loading is not independent information: it is exactly "we need the reasons
+   * and do not have them yet". Deriving it makes that unrepresentable-wrong and
+   * leaves the effect setting state only from its async callbacks, which is the
+   * part effects are for.
+   */
+  const [fetched, setFetched] = useState<
+    { reasons: ReportReason[] } | { error: string } | null
+  >(null);
+
+  // `reasons` supplied by the caller means there is nothing to fetch at all.
+  const needsFetch = open && !reasons;
+  const reasonsLoading = needsFetch && fetched === null;
+  const reasonsLoadError = fetched && "error" in fetched ? fetched.error : null;
+  const fetchedReasons =
+    fetched && "reasons" in fetched ? fetched.reasons : null;
 
   const [isPending, setIsPending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -93,31 +111,29 @@ export default function ReportDialog({
   const selected = resolvedReasons.find((r) => r.reason === reason);
 
   useEffect(() => {
-    if (!open || reasons) return;
+    if (!needsFetch) return;
 
     let cancelled = false;
-    setReasonsLoading(true);
-    setReasonsLoadError(null);
 
     callRpc(client, "list_report_reasons")
       .then((res) => {
-        if (!cancelled) setFetchedReasons(res ?? []);
+        if (!cancelled) setFetched({ reasons: res ?? [] });
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setReasonsLoadError(
-            err instanceof Error ? err.message : "Failed to load reasons.",
-          );
+          setFetched({
+            error:
+              err instanceof Error ? err.message : "Failed to load reasons.",
+          });
         }
-      })
-      .finally(() => {
-        if (!cancelled) setReasonsLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [open, reasons, client, app]);
+    // `app` was in the dependency list but is not read here; the effect
+    // re-running on an app change fetched the same global vocabulary again.
+  }, [needsFetch, client]);
 
   const reset = useCallback(() => {
     setReason("");
@@ -125,6 +141,12 @@ export default function ReportDialog({
     setDescriptionError(false);
     setSubmitError(null);
     setCorroborated(null);
+    // Discards a failed fetch so reopening retries from a clean slate rather
+    // than showing the previous error while the new request is in flight. The
+    // old effect got this for free by listing `open` and clearing the error on
+    // every run; setting it from a handler is the same behaviour without the
+    // synchronous-set-in-effect.
+    setFetched(null);
     formRef.current?.reset();
   }, []);
 
@@ -147,7 +169,13 @@ export default function ReportDialog({
       }
 
       const formData = new FormData(e.currentTarget);
-      const description = String(formData.get("description") ?? "").trim();
+      // `FormData.get` returns `string | File | null`, so the old
+      // `String(... ?? "")` would render a File as "[object File]" and submit
+      // that as the description. Narrowing instead of coercing means a
+      // non-string is treated as no description at all, which the `other`
+      // check below then catches.
+      const raw = formData.get("description");
+      const description = typeof raw === "string" ? raw.trim() : "";
 
       // Mirrors the same rule inside file_report, which is where it is
       // actually enforced -- 'other' is the catch-all, and a catch-all with no

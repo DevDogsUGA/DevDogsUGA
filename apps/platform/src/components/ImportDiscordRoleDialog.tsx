@@ -13,10 +13,7 @@ import {
   canManageDiscordRolePosition,
   type DiscordSyncCapability,
 } from "~/lib/discordCapability";
-import type {
-  ImportableDiscordRole,
-  ImportRoleInput,
-} from "~/server/discord/roleSync";
+import type { ImportableDiscordRole } from "~/server/discord/roleSync";
 import {
   Dialog,
   DialogClose,

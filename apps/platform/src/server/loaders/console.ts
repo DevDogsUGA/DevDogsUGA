@@ -1,4 +1,4 @@
-import { count, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { TestAccount } from "~/server/actions/testAccounts";

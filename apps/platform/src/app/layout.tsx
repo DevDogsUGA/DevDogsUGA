@@ -2,12 +2,7 @@ import "~/styles/globals.css";
 
 import { Suspense } from "react";
 import { type Metadata } from "next";
-import {
-  Alan_Sans,
-  Cascadia_Code,
-  Geist,
-  Hanken_Grotesk,
-} from "next/font/google";
+import { Alan_Sans, Cascadia_Code, Hanken_Grotesk } from "next/font/google";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import NavigationProgress from "~/ui/navigation-progress";
 import QueryProvider from "~/ui/query-provider";

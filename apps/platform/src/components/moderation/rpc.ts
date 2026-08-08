@@ -66,9 +66,7 @@ export async function callRpc<K extends keyof PlatformFunctions>(
     ? []
     : [args: PlatformFunctions[K]["Args"]]
 ): Promise<PlatformFunctions[K]["Returns"]> {
-  const { data, error } = await client
-    .schema(PLATFORM)
-    .rpc(fn, rest[0] as Record<string, unknown> | undefined);
+  const { data, error } = await client.schema(PLATFORM).rpc(fn, rest[0]);
   if (error) {
     throw new Error(`platform.${String(fn)}() failed: ${error.message}`);
   }
