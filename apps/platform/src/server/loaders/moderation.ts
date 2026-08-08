@@ -113,7 +113,7 @@ export const getReportDetailData = cache(async (reportId: string) => {
     where: { id: reportId },
     with: {
       resolution: true,
-      reason: { columns: { title: true } },
+      reasonDetail: { columns: { title: true } },
       app: { columns: { displayName: true, slug: true } },
       corroborations: {
         columns: { reporterUserId: true, description: true },
@@ -243,7 +243,7 @@ export const getUserModerationData = cache(async (targetUserId: string) => {
           appliedGlobally: true,
         },
       },
-      reason: { columns: { title: true } },
+      reasonDetail: { columns: { title: true } },
     },
     orderBy: { createdAt: "desc" },
   });

@@ -141,7 +141,12 @@ export const relations = defineRelations(
         to: r.apps.id,
         optional: false,
       }),
-      reason: r.one.reportReasons({
+      // `reasonDetail`, not `reason`: drizzle rejects a relation whose name
+      // collides with a column on the same table, and `reports.reason` is the
+      // enum column this joins FROM. The collision throws inside
+      // `defineRelations` at module load, so it took down every route that
+      // reaches the database rather than the one that reads the relation.
+      reasonDetail: r.one.reportReasons({
         from: r.reports.reason,
         to: r.reportReasons.reason,
         optional: false,
@@ -160,7 +165,8 @@ export const relations = defineRelations(
         to: r.reports.id,
         optional: false,
       }),
-      reason: r.one.reportReasons({
+      // Same collision as on `reports` above.
+      reasonDetail: r.one.reportReasons({
         from: r.reportCorroborations.reason,
         to: r.reportReasons.reason,
         optional: false,

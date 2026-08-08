@@ -79,7 +79,7 @@ export default async function UserModerationPage({
                       {report.contentType}: {report.contentRef}
                     </span>
                     <span className="text-xs text-mauve-500">
-                      {report.reason?.title ?? "Unknown reason"} &middot;{" "}
+                      {report.reasonDetail?.title ?? "Unknown reason"} &middot;{" "}
                       {new Date(report.createdAt).toLocaleDateString()}
                     </span>
                   </div>

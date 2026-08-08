@@ -81,7 +81,7 @@ export default async function ReportDetail({
           </p>
           {report.reason && (
             <p className="mt-1 text-xs text-mauve-400">
-              Reason: <span>{report.reason.title}</span>
+              Reason: <span>{report.reasonDetail.title}</span>
             </p>
           )}
           {report.description && (
