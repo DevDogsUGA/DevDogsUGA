@@ -10,7 +10,6 @@ interface Props {
 export default function TOTPCode({ credentialId }: Props) {
   const [otp, setOtp] = useState<string | null>(null);
   const [progress, setProgress] = useState(1);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rafRef = useRef<number | null>(null);
   const validUntilRef = useRef<number | null>(null);
 
@@ -54,7 +53,6 @@ export default function TOTPCode({ credentialId }: Props) {
     return () => {
       alive = false;
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      if (timerRef.current !== null) clearTimeout(timerRef.current);
     };
   }, [fetchOTP]);
 

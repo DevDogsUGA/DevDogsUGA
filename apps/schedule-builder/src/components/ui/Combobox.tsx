@@ -187,7 +187,7 @@ export default function Combobox<T extends Record<string, ReactNode>>({
             keys: ["content"],
           })
         : [],
-    [options, filter, preserveOrdering],
+    [options, matchableOptions, filter, preserveOrdering],
   );
 
   const [highlighted, setHighlighted] = useState(values[0]);
@@ -220,10 +220,13 @@ export default function Combobox<T extends Record<string, ReactNode>>({
     [],
   );
 
-  const handleOptionChange = useCallback((value: keyof T) => {
-    setHighlighted(value);
-    select(value);
-  }, []);
+  const handleOptionChange = useCallback(
+    (value: keyof T) => {
+      setHighlighted(value);
+      select(value);
+    },
+    [select],
+  );
 
   /**
    * Add functionality when the enter or up/down arrow keys are
@@ -265,7 +268,12 @@ export default function Combobox<T extends Record<string, ReactNode>>({
         return;
       }
     },
-    [highlighted],
+    // `filteredOptions` is load-bearing and was missing. Without it this
+    // callback keeps whichever list existed when `highlighted` last changed, so
+    // typing a filter and then pressing ArrowDown walks the PRE-FILTER options
+    // -- the highlight jumps to an entry that is not on screen, and Enter
+    // selects it.
+    [highlighted, filteredOptions, select],
   );
 
   /**
@@ -281,7 +289,10 @@ export default function Combobox<T extends Record<string, ReactNode>>({
           : [defaultValue]
         : [],
     );
-  }, [options]);
+    // `defaultValue`, not `options`. The body never reads `options`, and it is
+    // `defaultValue` that decides what "reset" restores -- so a form reset used
+    // to restore whatever default was current when `options` last changed.
+  }, [defaultValue]);
 
   /**
    * Open/close the popover, resetting the filter and highlight on close.
@@ -357,6 +368,20 @@ export default function Combobox<T extends Record<string, ReactNode>>({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(false);
     }
+    // `onChange` is deliberately NOT a dependency, and this is the one place in
+    // the file where following exhaustive-deps would make things worse. Callers
+    // pass an inline arrow, so its identity changes on every parent render; as
+    // a dependency it would re-fire this effect each time, call `onChange`
+    // again, and re-render the parent -- a loop, from a rule meant to prevent
+    // staleness. `multiple` is left out for the ordinary reason: it does not
+    // change over a mounted Combobox's life.
+    //
+    // Known wart, left alone because fixing it is a behaviour change rather
+    // than a lint fix: the effect keys on `values` (which folds in
+    // `controlledValue`) but reports `selection`. For a CONTROLLED combobox a
+    // change from the parent therefore fires a notification carrying the
+    // internal selection instead of the controlled value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values]);
 
   useEffect(() => {
