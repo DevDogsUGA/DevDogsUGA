@@ -1,41 +1,19 @@
-/** Category of a feedback submission. Mirrors `platform."feedbackType"`. */
-export type FeedbackType =
-  | "bug_report"
-  | "feature_request"
-  | "design_feedback"
-  | "performance"
-  | "content_issue"
-  | "other";
-
-/** Mirrors `platform."feedbackSeverity"`. */
-export type FeedbackSeverity = "low" | "medium" | "high";
+import type { Database } from "@devdogsuga/supabase";
 
 /**
- * Browser/device context collected at submission time, for debugging.
+ * A report reason, as `platform."reportReason"` defines it.
  *
- * A `type` rather than an `interface` so it satisfies the generated `Json`
- * parameter of `submit_feedback`: interfaces have no implicit index signature,
- * so an otherwise-identical interface is rejected where a type alias is not.
+ * Derived from the generated database types rather than restated, so a label
+ * added to the enum reaches this union the next time types are regenerated and
+ * a typo fails to compile. There is no per-app or per-content-type list: one
+ * global vocabulary, ordered by the `position` column behind
+ * `list_report_reasons()`.
  */
-export type BrowserMetadata = {
-  userAgent: string;
-  platform: string;
-  screenWidth: number;
-  screenHeight: number;
-  viewportWidth: number;
-  viewportHeight: number;
-  url: string;
-};
+export type ReportReasonValue = Database["platform"]["Enums"]["reportReason"];
 
-/** One selectable reason on a report form, from `list_report_reasons`. */
+/** One selectable reason on a report form, from `list_report_reasons()`. */
 export interface ReportReason {
-  id: string;
+  reason: ReportReasonValue;
   title: string;
   description: string | null;
-}
-
-/** One selectable topic on a feedback form, from `list_feedback_topics`. */
-export interface FeedbackTopic {
-  id: string;
-  label: string;
 }

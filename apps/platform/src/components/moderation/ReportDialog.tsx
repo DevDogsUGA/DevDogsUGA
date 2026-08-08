@@ -8,7 +8,7 @@ import {
   type FormEvent,
 } from "react";
 import { callRpc, type ModerationClient } from "./rpc";
-import type { ReportReason } from "./types";
+import type { ReportReason, ReportReasonValue } from "./types";
 import {
   DialogFooter,
   DialogShell,
@@ -75,8 +75,9 @@ export default function ReportDialog({
 }: ReportDialogProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
-  const [reasonId, setReasonId] = useState("");
+  const [reason, setReason] = useState<ReportReasonValue | "">("");
   const [reasonError, setReasonError] = useState(false);
+  const [descriptionError, setDescriptionError] = useState(false);
 
   const [fetchedReasons, setFetchedReasons] = useState<ReportReason[] | null>(
     null,
@@ -89,7 +90,7 @@ export default function ReportDialog({
   const [corroborated, setCorroborated] = useState<boolean | null>(null);
 
   const resolvedReasons = reasons ?? fetchedReasons ?? [];
-  const selected = resolvedReasons.find((r) => r.id === reasonId);
+  const selected = resolvedReasons.find((r) => r.reason === reason);
 
   useEffect(() => {
     if (!open || reasons) return;
@@ -98,7 +99,7 @@ export default function ReportDialog({
     setReasonsLoading(true);
     setReasonsLoadError(null);
 
-    callRpc(client, "list_report_reasons", { app_slug: app })
+    callRpc(client, "list_report_reasons")
       .then((res) => {
         if (!cancelled) setFetchedReasons(res ?? []);
       })
@@ -119,8 +120,9 @@ export default function ReportDialog({
   }, [open, reasons, client, app]);
 
   const reset = useCallback(() => {
-    setReasonId("");
+    setReason("");
     setReasonError(false);
+    setDescriptionError(false);
     setSubmitError(null);
     setCorroborated(null);
     formRef.current?.reset();
@@ -139,13 +141,22 @@ export default function ReportDialog({
     (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
 
-      if (!reasonId) {
+      if (!reason) {
         setReasonError(true);
         return;
       }
 
       const formData = new FormData(e.currentTarget);
       const description = String(formData.get("description") ?? "").trim();
+
+      // Mirrors the same rule inside file_report, which is where it is
+      // actually enforced -- 'other' is the catch-all, and a catch-all with no
+      // sentence attached is something a moderator can only dismiss. Checking
+      // here too just turns a round-trip error into inline feedback.
+      if (reason === "other" && !description) {
+        setDescriptionError(true);
+        return;
+      }
 
       setSubmitError(null);
       setIsPending(true);
@@ -158,7 +169,7 @@ export default function ReportDialog({
             app_slug: app,
             content_type: contentType,
             content_ref: contentRef,
-            reason_id: reasonId,
+            reason,
             description: description || undefined,
           });
           const result = rows[0];
@@ -179,7 +190,7 @@ export default function ReportDialog({
       })();
     },
     [
-      reasonId,
+      reason,
       client,
       app,
       contentType,
@@ -219,18 +230,19 @@ export default function ReportDialog({
             </label>
             <select
               className={cn("select", "devdogs-dialog__select")}
-              value={reasonId}
+              value={reason}
               disabled={reasonsLoading}
               onChange={(e) => {
-                setReasonId(e.target.value);
+                setReason(e.target.value as ReportReasonValue);
                 setReasonError(false);
+                setDescriptionError(false);
               }}
             >
               <option value="" disabled>
                 {reasonsLoading ? "Loading…" : "Select a reason…"}
               </option>
               {resolvedReasons.map((r) => (
-                <option key={r.id} value={r.id}>
+                <option key={r.reason} value={r.reason}>
                   {r.title}
                 </option>
               ))}
@@ -254,7 +266,14 @@ export default function ReportDialog({
 
           <div className={cn("field", "devdogs-dialog__field")}>
             <label className={cn("label", "devdogs-dialog__label")}>
-              Anything else? (optional)
+              {reason === "other" ? (
+                <>
+                  What happened?{" "}
+                  <span className="devdogs-dialog__required">*</span>
+                </>
+              ) : (
+                "Anything else? (optional)"
+              )}
             </label>
             <textarea
               className={cn("textarea", "devdogs-dialog__textarea")}
@@ -262,11 +281,19 @@ export default function ReportDialog({
               rows={3}
               maxLength={1000}
               placeholder="Context that would help a moderator understand the problem."
+              onChange={() => setDescriptionError(false)}
             />
-            <p className={cn("hint", "devdogs-dialog__hint")}>
-              A copy of the content is attached automatically, so there is no
-              need to quote it.
-            </p>
+            {descriptionError ? (
+              <p className={cn("error", "devdogs-dialog__error")}>
+                Please describe the problem — &ldquo;Something else&rdquo; gives
+                a moderator nothing to act on by itself.
+              </p>
+            ) : (
+              <p className={cn("hint", "devdogs-dialog__hint")}>
+                A copy of the content is attached automatically, so there is no
+                need to quote it.
+              </p>
+            )}
           </div>
 
           {submitError && (

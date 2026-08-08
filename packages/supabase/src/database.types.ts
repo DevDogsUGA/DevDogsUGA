@@ -667,101 +667,6 @@ export type Database = {
         }
         Relationships: []
       }
-      feedback: {
-        Row: {
-          adminNote: string | null
-          appId: string
-          attachmentPaths: string[] | null
-          browserMetadata: Json | null
-          createdAt: string
-          description: string
-          id: string
-          severity: Database["platform"]["Enums"]["feedbackSeverity"] | null
-          status: Database["platform"]["Enums"]["feedbackStatus"]
-          title: string
-          topicId: string | null
-          type: Database["platform"]["Enums"]["feedbackType"]
-          updatedAt: string
-          userId: string
-        }
-        Insert: {
-          adminNote?: string | null
-          appId: string
-          attachmentPaths?: string[] | null
-          browserMetadata?: Json | null
-          createdAt?: string
-          description: string
-          id?: string
-          severity?: Database["platform"]["Enums"]["feedbackSeverity"] | null
-          status?: Database["platform"]["Enums"]["feedbackStatus"]
-          title: string
-          topicId?: string | null
-          type: Database["platform"]["Enums"]["feedbackType"]
-          updatedAt?: string
-          userId: string
-        }
-        Update: {
-          adminNote?: string | null
-          appId?: string
-          attachmentPaths?: string[] | null
-          browserMetadata?: Json | null
-          createdAt?: string
-          description?: string
-          id?: string
-          severity?: Database["platform"]["Enums"]["feedbackSeverity"] | null
-          status?: Database["platform"]["Enums"]["feedbackStatus"]
-          title?: string
-          topicId?: string | null
-          type?: Database["platform"]["Enums"]["feedbackType"]
-          updatedAt?: string
-          userId?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_appId_fkey"
-            columns: ["appId"]
-            isOneToOne: false
-            referencedRelation: "apps"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedback_appId_topicId_fkey"
-            columns: ["appId", "topicId"]
-            isOneToOne: false
-            referencedRelation: "feedbackTopics"
-            referencedColumns: ["appId", "id"]
-          },
-        ]
-      }
-      feedbackTopics: {
-        Row: {
-          appId: string
-          createdAt: string
-          id: string
-          label: string
-        }
-        Insert: {
-          appId: string
-          createdAt?: string
-          id?: string
-          label: string
-        }
-        Update: {
-          appId?: string
-          createdAt?: string
-          id?: string
-          label?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedbackTopics_appId_fkey"
-            columns: ["appId"]
-            isOneToOne: false
-            referencedRelation: "apps"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       instance: {
         Row: {
           defaultMaxTeamSize: number
@@ -1144,7 +1049,7 @@ export type Database = {
           createdAt: string
           description: string | null
           id: string
-          reasonId: string
+          reason: Database["platform"]["Enums"]["reportReason"]
           reporterUserId: string
           reportId: string
         }
@@ -1152,7 +1057,7 @@ export type Database = {
           createdAt?: string
           description?: string | null
           id?: string
-          reasonId: string
+          reason: Database["platform"]["Enums"]["reportReason"]
           reporterUserId: string
           reportId: string
         }
@@ -1160,18 +1065,11 @@ export type Database = {
           createdAt?: string
           description?: string | null
           id?: string
-          reasonId?: string
+          reason?: Database["platform"]["Enums"]["reportReason"]
           reporterUserId?: string
           reportId?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "reportCorroborations_reasonId_fkey"
-            columns: ["reasonId"]
-            isOneToOne: false
-            referencedRelation: "reportReasons"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "reportCorroborations_reportId_fkey"
             columns: ["reportId"]
@@ -1183,35 +1081,24 @@ export type Database = {
       }
       reportReasons: {
         Row: {
-          appId: string
-          createdAt: string
           description: string | null
-          id: string
+          position: number
+          reason: Database["platform"]["Enums"]["reportReason"]
           title: string
         }
         Insert: {
-          appId: string
-          createdAt?: string
           description?: string | null
-          id?: string
+          position: number
+          reason: Database["platform"]["Enums"]["reportReason"]
           title: string
         }
         Update: {
-          appId?: string
-          createdAt?: string
           description?: string | null
-          id?: string
+          position?: number
+          reason?: Database["platform"]["Enums"]["reportReason"]
           title?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "reportReasons_appId_fkey"
-            columns: ["appId"]
-            isOneToOne: false
-            referencedRelation: "apps"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       reportResolutions: {
         Row: {
@@ -1267,7 +1154,7 @@ export type Database = {
           createdAt: string
           description: string | null
           id: string
-          reasonId: string
+          reason: Database["platform"]["Enums"]["reportReason"]
           reportedUserId: string
           reporterUserId: string
           resolvedAt: string | null
@@ -1282,7 +1169,7 @@ export type Database = {
           createdAt?: string
           description?: string | null
           id?: string
-          reasonId: string
+          reason: Database["platform"]["Enums"]["reportReason"]
           reportedUserId: string
           reporterUserId: string
           resolvedAt?: string | null
@@ -1297,7 +1184,7 @@ export type Database = {
           createdAt?: string
           description?: string | null
           id?: string
-          reasonId?: string
+          reason?: Database["platform"]["Enums"]["reportReason"]
           reportedUserId?: string
           reporterUserId?: string
           resolvedAt?: string | null
@@ -1311,13 +1198,6 @@ export type Database = {
             referencedRelation: "apps"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "reports_appId_reasonId_fkey"
-            columns: ["appId", "reasonId"]
-            isOneToOne: false
-            referencedRelation: "reportReasons"
-            referencedColumns: ["appId", "id"]
-          },
         ]
       }
       roles: {
@@ -1326,7 +1206,6 @@ export type Database = {
           canCreateCredentials: boolean | null
           canEditAttendance: boolean | null
           canExportStars: boolean | null
-          canManageFeedback: boolean | null
           canManageRoles: boolean | null
           canManageSuspensions: boolean | null
           canManageVerification: boolean | null
@@ -1352,7 +1231,6 @@ export type Database = {
           canCreateCredentials?: boolean | null
           canEditAttendance?: boolean | null
           canExportStars?: boolean | null
-          canManageFeedback?: boolean | null
           canManageRoles?: boolean | null
           canManageSuspensions?: boolean | null
           canManageVerification?: boolean | null
@@ -1378,7 +1256,6 @@ export type Database = {
           canCreateCredentials?: boolean | null
           canEditAttendance?: boolean | null
           canExportStars?: boolean | null
-          canManageFeedback?: boolean | null
           canManageRoles?: boolean | null
           canManageSuspensions?: boolean | null
           canManageVerification?: boolean | null
@@ -1993,7 +1870,6 @@ export type Database = {
           canCreateCredentials: boolean | null
           canEditAttendance: boolean | null
           canExportStars: boolean | null
-          canManageFeedback: boolean | null
           canManageRoles: boolean | null
           canManageSuspensions: boolean | null
           canManageVerification: boolean | null
@@ -2062,7 +1938,7 @@ export type Database = {
           content_ref: string
           content_type: string
           description?: string
-          reason_id: string
+          reason: Database["platform"]["Enums"]["reportReason"]
         }
         Returns: {
           corroborated: boolean
@@ -2094,18 +1970,11 @@ export type Database = {
           visibility: Database["platform"]["Enums"]["contentVisibility"]
         }[]
       }
-      list_feedback_topics: {
-        Args: { app_slug: string }
-        Returns: {
-          id: string
-          label: string
-        }[]
-      }
       list_report_reasons: {
-        Args: { app_slug: string }
+        Args: never
         Returns: {
           description: string
-          id: string
+          reason: Database["platform"]["Enums"]["reportReason"]
           title: string
         }[]
       }
@@ -2119,7 +1988,7 @@ export type Database = {
         Returns: undefined
       }
       my_reports: {
-        Args: { app_slug?: string }
+        Args: { app_slug?: string; only_open?: boolean; since?: string }
         Returns: {
           appSlug: string
           contentRef: string
@@ -2129,25 +1998,7 @@ export type Database = {
           createdAt: string
           description: string
           outcome: string
-          reason: string
-          reportId: string
-          resolvedAt: string
-          snapshot: string
-          status: Database["platform"]["Enums"]["reportStatus"]
-        }[]
-      }
-      report_outcomes: {
-        Args: { app_slug?: string; since?: string }
-        Returns: {
-          appSlug: string
-          contentRef: string
-          contentRemoved: boolean
-          contentType: string
-          contentUrl: string
-          createdAt: string
-          description: string
-          outcome: string
-          reason: string
+          reason: Database["platform"]["Enums"]["reportReason"]
           reportId: string
           resolvedAt: string
           snapshot: string
@@ -2199,20 +2050,6 @@ export type Database = {
           user_id: string
         }[]
       }
-      submit_feedback: {
-        Args: {
-          app_slug: string
-          browser_metadata?: Json
-          description: string
-          feedback_type: Database["platform"]["Enums"]["feedbackType"]
-          severity?: Database["platform"]["Enums"]["feedbackSeverity"]
-          title: string
-          topic_id?: string
-        }
-        Returns: {
-          feedbackId: string
-        }[]
-      }
     }
     Enums: {
       checkInMethod: "discord" | "officer" | "airtable"
@@ -2234,15 +2071,6 @@ export type Database = {
         | "revoked"
         | "orphaned"
       envVarVisibility: "shared" | "secret"
-      feedbackSeverity: "low" | "medium" | "high"
-      feedbackStatus: "open" | "in_review" | "resolved" | "dismissed"
-      feedbackType:
-        | "bug_report"
-        | "feature_request"
-        | "design_feedback"
-        | "performance"
-        | "content_issue"
-        | "other"
       filerAction: "warn" | "suspend" | "no_action"
       graduationSemester: "spring" | "summer" | "fall"
       membershipDirection: "invite" | "request"
@@ -2254,6 +2082,15 @@ export type Database = {
         | "expired"
       oauthRegistrationType: "development" | "production"
       proxyScope: "publishable" | "secret"
+      reportReason:
+        | "harassment"
+        | "hate_speech"
+        | "spam"
+        | "sexual_content"
+        | "violence"
+        | "impersonation"
+        | "off_topic"
+        | "other"
       reportStatus: "open" | "resolved" | "dismissed"
       roleType: "default" | "root" | "custom"
       subjectAction: "warn" | "suspend" | "ban" | "no_action"
@@ -3788,16 +3625,6 @@ export const Constants = {
         "orphaned",
       ],
       envVarVisibility: ["shared", "secret"],
-      feedbackSeverity: ["low", "medium", "high"],
-      feedbackStatus: ["open", "in_review", "resolved", "dismissed"],
-      feedbackType: [
-        "bug_report",
-        "feature_request",
-        "design_feedback",
-        "performance",
-        "content_issue",
-        "other",
-      ],
       filerAction: ["warn", "suspend", "no_action"],
       graduationSemester: ["spring", "summer", "fall"],
       membershipDirection: ["invite", "request"],
@@ -3810,6 +3637,16 @@ export const Constants = {
       ],
       oauthRegistrationType: ["development", "production"],
       proxyScope: ["publishable", "secret"],
+      reportReason: [
+        "harassment",
+        "hate_speech",
+        "spam",
+        "sexual_content",
+        "violence",
+        "impersonation",
+        "off_topic",
+        "other",
+      ],
       reportStatus: ["open", "resolved", "dismissed"],
       roleType: ["default", "root", "custom"],
       subjectAction: ["warn", "suspend", "ban", "no_action"],

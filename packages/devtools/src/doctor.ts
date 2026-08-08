@@ -142,9 +142,9 @@ export async function quarantineRoundTrip(
     });
 
     // ── Act: file a report as the member ─────────────────────────────────────
-    // Resolved in two steps rather than one embedded query: the join syntax
-    // depends on PostgREST detecting the foreign key, and a plain lookup fails
-    // with a message a contributor can act on.
+    // Checked up front purely for the error message: file_report would fail
+    // anyway with 'Unknown app "sandbox"', which reads like a bug in the tool
+    // rather than an un-seeded database.
     const { data: sandboxApp } = await admin
       .from("apps")
       .select("id")
@@ -156,25 +156,18 @@ export async function quarantineRoundTrip(
       );
     }
 
-    const { data: reasons } = await admin
-      .from("reportReasons")
-      .select("id")
-      .eq("appId", sandboxApp.id)
-      .limit(1);
-    if (!reasons?.[0]) {
-      throw new Error(
-        "No report reasons are configured for the sandbox app. Reset the database to seed them.",
-      );
-    }
-
     const memberPlatform = await personaClient(instance, PERSONAS.member);
+    // A literal, not a lookup. The vocabulary is a platform-owned enum, so
+    // there is no per-app row to find first -- and if this label ever stops
+    // existing, Postgres rejects the call by type rather than silently
+    // reporting "no reasons configured".
     const { data: filed, error: fileErr } = await memberPlatform.rpc(
       "file_report",
       {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: postId,
-        reason_id: reasons[0].id,
+        reason: "spam",
         description: "Filed by the devtools round-trip.",
       },
     );

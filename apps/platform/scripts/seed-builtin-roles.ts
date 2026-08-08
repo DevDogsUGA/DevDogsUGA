@@ -17,7 +17,6 @@ const ALL_FALSE = {
   canManageRoles: false,
   canManageSuspensions: false,
   canViewAuditLog: false,
-  canManageFeedback: false,
   canCreateCredentials: false,
   canManageVerification: false,
 } as const;
@@ -27,7 +26,6 @@ const ALL_TRUE = {
   canManageRoles: true,
   canManageSuspensions: true,
   canViewAuditLog: true,
-  canManageFeedback: true,
   canCreateCredentials: true,
   canManageVerification: true,
 } as const;

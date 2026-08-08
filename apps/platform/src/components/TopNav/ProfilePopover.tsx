@@ -2,15 +2,12 @@
 
 import * as Dropdown from "@radix-ui/react-dropdown-menu";
 import Link from "next/link";
-import { useState } from "react";
 import {
-  ChatCircleDotsIcon,
   SealCheckIcon,
   SignOutIcon,
   WarningCircleIcon,
 } from "@phosphor-icons/react/ssr";
 import Avatar from "~/components/AvatarField/Avatar";
-import FeedbackDialog from "~/components/FeedbackDialog";
 import * as icons from "~/config/icons";
 import type { NavItem } from "~/config/nav";
 import signOut from "~/server/actions/signOut";
@@ -24,7 +21,6 @@ interface Props {
 
 export default function ProfilePopover({ user, items }: Props) {
   const verification = useVerification();
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   return (
     <>
@@ -89,17 +85,6 @@ export default function ProfilePopover({ user, items }: Props) {
               );
             })}
 
-            <Dropdown.Item asChild>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors hover:bg-mauve-800 focus:outline-none"
-                onClick={() => setFeedbackOpen(true)}
-              >
-                Send Feedback
-                <ChatCircleDotsIcon />
-              </button>
-            </Dropdown.Item>
-
             <div className="mx-1.5 my-1.5 h-px w-[calc(100%-var(--spacing)*3)] bg-mauve-700" />
 
             <form action={signOut}>
@@ -116,8 +101,6 @@ export default function ProfilePopover({ user, items }: Props) {
           </Dropdown.Content>
         </Dropdown.Portal>
       </Dropdown.Root>
-
-      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </>
   );
 }

@@ -100,14 +100,6 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
       "Review content reports filed against community profiles and resolve them with the appropriate action.",
   },
   {
-    label: "Feedback",
-    href: "/console/feedback",
-    icon: "ChatCircleIcon",
-    permission: "canManageFeedback",
-    description:
-      "Review and respond to feedback submissions from members across all topics.",
-  },
-  {
     label: "Credentials",
     href: "/console/credentials",
     icon: "KeyIcon",
@@ -178,20 +170,6 @@ export const PROFILE_ITEMS: NavItem[] = [
     icon: "KeyIcon",
     description:
       "Set up a local OAuth client to test DevDogs sign-in from your own project.",
-  },
-  {
-    label: "Moderation",
-    href: "/tools/moderation",
-    icon: "SirenIcon",
-    description:
-      "Configure the report reasons available to each DevDogs application.",
-  },
-  {
-    label: "Feedback",
-    href: "/tools/feedback",
-    icon: "ChatCircleIcon",
-    description:
-      "Configure the feedback topics available to each DevDogs application.",
   },
 ];
 

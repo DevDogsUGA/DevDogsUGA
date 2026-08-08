@@ -74,7 +74,7 @@ export const getModerationPageData = cache(async () => {
     })
     .from(reports)
     .leftJoin(corroborationSq, eq(reports.id, corroborationSq.reportId))
-    .leftJoin(reportReasons, eq(reports.reasonId, reportReasons.id))
+    .leftJoin(reportReasons, eq(reports.reason, reportReasons.reason))
     .orderBy(desc(sql`COALESCE(${corroborationSq.corroborationCount}, 0)`));
 
   const appRows = await db

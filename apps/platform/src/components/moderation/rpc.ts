@@ -57,9 +57,18 @@ const PLATFORM = "platform";
 export async function callRpc<K extends keyof PlatformFunctions>(
   client: ModerationClient,
   fn: K,
-  args: PlatformFunctions[K]["Args"],
+  // A zero-argument function is generated as `Args: never`, not as an empty
+  // object, so `{}` is not assignable to it and the argument has to disappear
+  // entirely. The tuple-rest makes it conditionally absent; the `[T] extends
+  // [never]` wrapping is what stops the conditional distributing over `never`
+  // and collapsing to `never` on the true branch.
+  ...rest: [PlatformFunctions[K]["Args"]] extends [never]
+    ? []
+    : [args: PlatformFunctions[K]["Args"]]
 ): Promise<PlatformFunctions[K]["Returns"]> {
-  const { data, error } = await client.schema(PLATFORM).rpc(fn, args);
+  const { data, error } = await client
+    .schema(PLATFORM)
+    .rpc(fn, rest[0] as Record<string, unknown> | undefined);
   if (error) {
     throw new Error(`platform.${String(fn)}() failed: ${error.message}`);
   }

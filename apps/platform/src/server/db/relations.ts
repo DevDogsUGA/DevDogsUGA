@@ -105,37 +105,6 @@ export const relations = defineRelations(
         from: r.apps.id,
         to: r.reports.appId,
       }),
-      reportReasons: r.many.reportReasons({
-        from: r.apps.id,
-        to: r.reportReasons.appId,
-      }),
-      feedbackTopics: r.many.feedbackTopics({
-        from: r.apps.id,
-        to: r.feedbackTopics.appId,
-      }),
-      feedback: r.many.feedback({
-        from: r.apps.id,
-        to: r.feedback.appId,
-      }),
-    },
-    feedbackTopics: {
-      app: r.one.apps({
-        from: r.feedbackTopics.appId,
-        to: r.apps.id,
-        optional: false,
-      }),
-    },
-    feedback: {
-      app: r.one.apps({
-        from: r.feedback.appId,
-        to: r.apps.id,
-        optional: false,
-      }),
-      topic: r.one.feedbackTopics({
-        from: r.feedback.topicId,
-        to: r.feedbackTopics.id,
-        optional: true,
-      }),
     },
     oauthTestAccounts: {
       user: r.one.usersInAuth({
@@ -173,8 +142,8 @@ export const relations = defineRelations(
         optional: false,
       }),
       reason: r.one.reportReasons({
-        from: r.reports.reasonId,
-        to: r.reportReasons.id,
+        from: r.reports.reason,
+        to: r.reportReasons.reason,
         optional: false,
       }),
     },
@@ -192,15 +161,8 @@ export const relations = defineRelations(
         optional: false,
       }),
       reason: r.one.reportReasons({
-        from: r.reportCorroborations.reasonId,
-        to: r.reportReasons.id,
-        optional: false,
-      }),
-    },
-    reportReasons: {
-      app: r.one.apps({
-        from: r.reportReasons.appId,
-        to: r.apps.id,
+        from: r.reportCorroborations.reason,
+        to: r.reportReasons.reason,
         optional: false,
       }),
     },

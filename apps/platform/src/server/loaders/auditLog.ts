@@ -57,7 +57,7 @@ export const getAuditLogPageData = cache(
       })
       .from(reports)
       .innerJoin(apps, eq(apps.id, reports.appId))
-      .leftJoin(reportReasons, eq(reports.reasonId, reportReasons.id))
+      .leftJoin(reportReasons, eq(reports.reason, reportReasons.reason))
       .orderBy(desc(reports.createdAt))
       .limit(PAGE_SIZE)
       .offset(offset);

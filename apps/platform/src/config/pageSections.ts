@@ -159,51 +159,6 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
     },
   ],
 
-  // The app is chosen inside each card rather than getting a card of its own:
-  // configuration is per app now, and a card per registered app would make
-  // these anchors depend on the registry's contents — searchable ids that
-  // change whenever an app is added, on an instance this page isn't even
-  // pointed at.
-  "/tools/moderation": [
-    {
-      id: "reasons",
-      label: "Report Reasons",
-      fields: [
-        {
-          id: "app",
-          label: "Application",
-          description: "Which registered DevDogs app these reasons belong to.",
-        },
-        {
-          id: "report-reasons",
-          label: "Report Reasons",
-          description:
-            "The reasons a user can select when filing a content report against this app. Requires the Moderate permission to change.",
-        },
-      ],
-    },
-  ],
-
-  "/tools/feedback": [
-    {
-      id: "topics",
-      label: "Feedback Topics",
-      fields: [
-        {
-          id: "app",
-          label: "Application",
-          description: "Which registered DevDogs app these topics belong to.",
-        },
-        {
-          id: "feedback-topics",
-          label: "Feedback Topics",
-          description:
-            "The topics users can choose from when submitting feedback about this app. Requires the Manage Feedback permission to change.",
-        },
-      ],
-    },
-  ],
-
   "/console/permissions": [
     { id: "root-access", label: "Root Access" },
     { id: "assign-roles", label: "Assign Roles" },

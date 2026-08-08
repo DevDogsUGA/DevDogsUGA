@@ -1,21 +1,21 @@
 ---
-name: Reporting & Feedback
-description: How a DevDogs app lets users report content and submit feedback — the RPC contract, both consumption paths, and what a table must do to become moderatable.
+name: Reporting
+description: How a DevDogs app lets users report content — the RPC contract, both consumption paths, the reason vocabulary, and what a table must do to become moderatable.
 ---
 
-# Reporting & Feedback
+# Reporting
 
-Every DevDogs app shares one Supabase project, with a Postgres schema per app. Reporting and feedback are therefore not an HTTP API any more, and there is no SDK that owns the contract.
+Every DevDogs app shares one Supabase project, with a Postgres schema per app. Reporting is therefore not an HTTP API any more, and there is no SDK that owns the contract.
 
 **The contract is a set of `platform` functions plus the row-level security around them**, reached through PostgREST. TypeScript and Dart call the same functions with the same arguments and get the same JSON — and because those functions declare their columns, `supabase gen types` types both the arguments and the results. There is no hand-written client to disagree with the SQL.
 
-> Replaces the old Feedback API, which documented REST endpoints that were never implemented. Nothing consumed them, and nothing was migrated.
+> **Feedback used to live here and no longer does.** It is an Airtable form with automations behind it, outside the platform entirely: `platform."feedback"`, `feedbackTopics`, `submit_feedback`, `list_feedback_topics`, the `canManageFeedback` permission and the console pages that used them are all gone. Reporting is for policy violations; anything else belongs in that form.
 
 ## Three surfaces
 
 | Surface                                         | Who uses it              | What it is                                                                        |
 | ----------------------------------------------- | ------------------------ | --------------------------------------------------------------------------------- |
-| `platform` RPCs                                 | consumer apps            | the public contract: file a report, submit feedback, read reasons/topics/outcomes |
+| `platform` RPCs                                 | consumer apps            | the public contract: file a report, read the reasons, read your own outcomes      |
 | `platform` tables via RLS                       | the DevDogs console only | moderator queues, resolutions, audit log                                          |
 | a foreign key to `platform."reportResolutions"` | app migrations           | how a table declares itself moderatable                                           |
 
@@ -39,36 +39,70 @@ Reads are RPCs for that third reason too.
 
 All of these live in the `platform` schema. They are set-returning, so **every result is a JSON array** — including the ones that logically return a single object. `file_report` comes back as `[{ reportId, corroborated }]`; use `.single()` or `[0]`.
 
-| Function               | Arguments                                                                                       | Returns                        |
-| ---------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------ |
-| `list_report_reasons`  | `app_slug`                                                                                      | `[{ id, title, description }]` |
-| `list_feedback_topics` | `app_slug`                                                                                      | `[{ id, label }]`              |
-| `file_report`          | `app_slug`, `content_type`, `content_ref`, `reason_id`, `description`                           | `{ reportId, corroborated }`   |
-| `submit_feedback`      | `app_slug`, `feedback_type`, `title`, `description`, `topic_id`, `severity`, `browser_metadata` | `{ feedbackId }`               |
-| `my_reports`           | `app_slug`                                                                                      | the caller's reports           |
-| `report_outcomes`      | `app_slug`, `since`                                                                             | the decided subset             |
+| Function              | Arguments                                                             | Returns                            |
+| --------------------- | --------------------------------------------------------------------- | ---------------------------------- |
+| `list_report_reasons` | none                                                                  | `[{ reason, title, description }]` |
+| `file_report`         | `app_slug`, `content_type`, `content_ref`, `reason`, `description`     | `{ reportId, corroborated }`       |
+| `my_reports`          | `app_slug`, `since`, `only_open`                                      | the caller's reports               |
+
+Three functions, and that is the whole public surface. `report_outcomes` used to be a fourth; it was `my_reports` with `status <> 'open'` and a `since` filter, so it is now those two parameters. `only_open` is `null` for everything, `true` for open reports, `false` for decided ones.
 
 `app_slug` is the app's slug in `platform."apps"` — **not** an OAuth client id. Which app this is and which OAuth client signed the user in are deliberately separate questions now; conflating them is what welded the old system to its auth model.
+
+## The reason vocabulary
+
+There is **one global list of reasons**, shared by every app and every content type. It is a Postgres enum, `platform."reportReason"`, so `file_report` takes a label rather than a uuid — which means a client can hardcode one, a test can fixture one, and reports can be grouped by reason across apps without joining to an editable title.
+
+> **This table is a hand-maintained copy and may be out of date.** The database is the source of truth. Run `pnpm devtools catalog` to print the reasons and content types an instance actually has.
+
+| Label            | Title          |
+| ---------------- | -------------- |
+| `harassment`     | Harassment     |
+| `hate_speech`    | Hate speech    |
+| `violence`       | Violence       |
+| `sexual_content` | Sexual content |
+| `impersonation`  | Impersonation  |
+| `spam`           | Spam           |
+| `off_topic`      | Off-topic      |
+| `other`          | Something else |
+
+Titles and ordering live in `platform."reportReasons"`, keyed by the enum, so re-wording a reason applies retroactively to reports already filed — `my_reports` returns the label, and the client renders the current title. Display order comes from a `position` column, not from sorting by title, which is what keeps "Something else" at the end.
+
+**`other` requires a description**, enforced inside `file_report` so it holds for Dart and TypeScript alike. A catch-all with no sentence attached is something a moderator can only dismiss.
+
+TypeScript gets the labels as a union with no work of its own, because `supabase gen types` emits every enum twice — as a type and as a runtime array:
+
+```ts
+import type { Database } from "@devdogsuga/supabase";
+import { Constants } from "@devdogsuga/supabase";
+
+type ReportReason = Database["platform"]["Enums"]["reportReason"];
+Constants.platform.Enums.reportReason; // ["harassment", "hate_speech", ...]
+```
+
+Dart gets nothing generated: `supadart` reads only PostgREST's default schema, which is `study_group_finder`, so it never sees `platform`. Write the enum by hand from the table above, and check it against `pnpm devtools catalog`. Postgres rejects an unknown label by type before `file_report` runs, so a mistake fails loudly rather than filing something odd.
+
+**Adding a reason takes two migrations.** `alter type ... add value` cannot be used in the transaction that adds it, so the label lands in one file and its presentation row in the next. A test in `packages/supabase/testing` compares `enum_range()` against the table, so writing only the first file fails CI instead of shipping a reason that `file_report` accepts and `list_report_reasons` never returns.
 
 ### From a Next.js app
 
 ```ts
 const { data: reasons } = await supabase
   .schema("platform")
-  .rpc("list_report_reasons", { app_slug: "forum" });
-// reasons: { id: string; title: string; description: string }[]
+  .rpc("list_report_reasons");
+// reasons: { reason: ReportReason; title: string; description: string }[]
 
 const { data, error } = await supabase.schema("platform").rpc("file_report", {
   app_slug: "forum",
   content_type: "resource",
   content_ref: resource.id,
-  reason_id: selected.id,
+  reason: "spam",
   description: note,
 });
 // data: { reportId: string; corroborated: boolean }[]
 ```
 
-No wrapper package: argument names and result shapes both come from `supabase gen types`, so the compiler checks them against the actual functions. `supabase` is your app's ordinary client, scoped to your own schema; `.schema("platform")` is the hop. Plus `<ReportDialog>` and `<FeedbackDialog>`, themed through CSS custom properties. They live in `apps/platform/src/components/moderation/`; an app outside this repository copies them, because nothing here is published and a package shared with nobody is just a longer import path:
+No wrapper package: argument names and result shapes both come from `supabase gen types`, so the compiler checks them against the actual functions. `supabase` is your app's ordinary client, scoped to your own schema; `.schema("platform")` is the hop. Plus `<ReportDialog>`, themed through CSS custom properties. It lives in `apps/platform/src/components/moderation/`; an app outside this repository copies them, because nothing here is published and a package shared with nobody is just a longer import path:
 
 ```tsx
 import { ReportDialog } from "~/components/moderation";
@@ -90,7 +124,7 @@ The same calls, with no package and no generated models:
 ```dart
 final reasons = await Supabase.instance.client
     .schema('platform')
-    .rpc('list_report_reasons', params: {'app_slug': 'study_group_finder'});
+    .rpc('list_report_reasons');
 
 await Supabase.instance.client
     .schema('platform')
@@ -98,7 +132,7 @@ await Supabase.instance.client
       'app_slug':     'study_group_finder',
       'content_type': 'group',
       'content_ref':  group.id,
-      'reason_id':    reasonId,
+      'reason':       'spam',
       'description':  note,
     });
 ```
@@ -216,6 +250,7 @@ That opens a menu — you do not need to know any command names, and every entry
 | Start my database               | boots the local Docker stack and writes `.env.generated`        |
 | Reset my database               | replays every migration, then the seeds                         |
 | Apply new migrations            | without erasing anything                                        |
+| Show what can be reported       | the reason vocabulary and every app's content types             |
 | Check an app's moderation setup | `platform.conformance_check()` — what the catalog derived       |
 | Test reporting end to end       | files a report, quarantines it, and checks who can still see it |
 
@@ -246,7 +281,7 @@ Quarantine is the only moderation outcome whose effect lives in _your_ read poli
 
 ### The console
 
-Moderation queues and feedback submissions are read in the console at `/console/moderation` and `/console/feedback`. To work on the console itself, run it against your own stack:
+Reports are worked in the console at `/console/moderation`, which is the report queue and nothing else — each report shows its reason and content type inline. To work on the console itself, run it against your own stack:
 
 ```bash
 pnpm --filter platform dev:local
@@ -254,7 +289,7 @@ pnpm --filter platform dev:local
 
 The five Discord and GitHub variables in `.env.example` are validated at boot but unused by these pages, so any non-empty placeholder will do unless you are working on Discord or GitHub sync.
 
-Configuring **production** report reasons and feedback topics is separate, and lives at [`/tools/moderation`](https://devdogsuga.org/tools/moderation) and [`/tools/feedback`](https://devdogsuga.org/tools/feedback) — server-rendered, permission-gated, and pointed at production because that is where the real values belong. Your own instance gets its reasons and topics from the seeds.
+There is nothing to configure and no page that configures it. Reasons are a platform-owned enum set by migration, and content types are derived from each app's own schema, so `/tools/moderation` and `/tools/feedback` are gone — `pnpm devtools catalog` is how you read either one on any instance.
 
 ## Where the moderation decision lives
 

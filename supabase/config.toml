@@ -70,17 +70,6 @@ public = true
 file_size_limit = "256KiB"
 allowed_mime_types = ["image/webp"]
 
-[storage.buckets.feedback-attachments]
-public = false
-file_size_limit = "5MiB"
-allowed_mime_types = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-  "application/pdf",
-]
-
 [auth]
 enabled = true
 site_url = "env(BASE_URL)"

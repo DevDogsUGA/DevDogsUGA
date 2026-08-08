@@ -88,7 +88,6 @@ export function useRoles(
             canManageRoles: data.canManageRoles ?? null,
             canManageSuspensions: data.canManageSuspensions ?? null,
             canViewAuditLog: data.canViewAuditLog ?? null,
-            canManageFeedback: data.canManageFeedback ?? null,
             canCreateCredentials: data.canCreateCredentials ?? null,
             canManageVerification: data.canManageVerification ?? null,
             discordRoleId: null,
@@ -141,9 +140,6 @@ export function useRoles(
                 }),
                 ...(data.canViewAuditLog !== undefined && {
                   canViewAuditLog: data.canViewAuditLog ?? null,
-                }),
-                ...(data.canManageFeedback !== undefined && {
-                  canManageFeedback: data.canManageFeedback ?? null,
                 }),
                 ...(data.canCreateCredentials !== undefined && {
                   canCreateCredentials: data.canCreateCredentials ?? null,

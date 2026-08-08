@@ -194,19 +194,6 @@ export async function appId(slug: string): Promise<string> {
   return data.id as string;
 }
 
-/** A report reason's id, by app slug and title. Seeded by `02_moderation.sql`. */
-export async function reasonId(slug: string, title: string): Promise<string> {
-  const { data, error } = await admin()
-    .from("reportReasons")
-    .select("id")
-    .eq("appId", await appId(slug))
-    .eq("title", title)
-    .single();
-  if (error)
-    throw new Error(`reasonId(${slug}, ${title}) failed: ${error.message}`);
-  return data.id as string;
-}
-
 /** Creates a sandbox post authored by `persona`, returning its id. */
 export async function createPost(
   persona: Persona,

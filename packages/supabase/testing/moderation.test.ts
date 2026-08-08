@@ -25,7 +25,6 @@ import {
   destroyPersonas,
   grantRole,
   one,
-  reasonId,
   sql,
   suspend,
   withEnvironment,
@@ -36,10 +35,7 @@ let author: Persona;
 let reporter: Persona;
 let moderator: Persona;
 let suspended: Persona;
-let feedbackManager: Persona;
 let moderatorRoleId: string;
-let feedbackRoleId: string;
-let spamReason: string;
 let sandboxAppId: string;
 
 /** Resolves a report the way `server/actions/moderation.ts` does: one transaction. */
@@ -81,30 +77,18 @@ beforeAll(async () => {
   reporter = await createPersona("reporter");
   moderator = await createPersona("moderator");
   suspended = await createPersona("suspended");
-  feedbackManager = await createPersona("feedbackmgr");
 
   moderatorRoleId = await grantRole(moderator, "Moderator", {
     canModerate: true,
   });
-  feedbackRoleId = await grantRole(feedbackManager, "FeedbackManager", {
-    canManageFeedback: true,
-  });
   await suspend(suspended);
 
-  spamReason = await reasonId("sandbox", "Spam");
   sandboxAppId = await appId("sandbox");
 }, 90_000);
 
 afterAll(async () => {
   await deleteRole(moderatorRoleId);
-  await deleteRole(feedbackRoleId);
-  await destroyPersonas(
-    author,
-    reporter,
-    moderator,
-    suspended,
-    feedbackManager,
-  );
+  await destroyPersonas(author, reporter, moderator, suspended);
   await closeSql();
 });
 
@@ -266,7 +250,7 @@ describe("content type derivation", () => {
         app_slug: "sandbox",
         content_type: "widgets",
         content_ref: widget!.id,
-        reason_id: spamReason,
+        reason: "spam",
       });
       expect(error).toBeNull();
       reportId = one<{ reportId: string }>(filed).reportId;
@@ -302,25 +286,90 @@ describe("platform.file_report", () => {
       app_slug: "sandbox",
       content_type: "posts",
       content_ref: "00000000-0000-0000-0000-0000000000ff",
-      reason_id: spamReason,
+      reason: "spam",
     });
     expect(error?.message).toMatch(/No posts with reference/);
   });
 
-  it("rejects a reason belonging to a different app", async () => {
-    const otherReason = await reasonId("platform", "Spam");
+  // The predecessor of this test asserted that a reason belonging to another
+  // app was rejected. There is no such thing now: one global vocabulary, no
+  // per-app and no per-content-type lists. What replaces it is the guarantee
+  // that took over the job -- the enum.
+  //
+  // This asserts the DATABASE's half of that guarantee, not TypeScript's. The
+  // persona clients here are built without the `Database` generic (see
+  // personas.ts), so nothing in this file is type-checked against the catalog;
+  // the compile-time half is covered where it actually applies, by `callRpc` in
+  // apps/platform/src/components/moderation. Both halves matter, because Dart
+  // has no compile-time half at all.
+  it("rejects a label that is not in the enum, before the body runs", async () => {
     const post = await createPost(author, "Fine", "Fine content.");
     try {
       const { error } = await reporter.client.rpc("file_report", {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: post,
-        reason_id: otherReason,
+        reason: "not_a_real_reason",
       });
-      expect(error?.message).toMatch(/does not belong to app/);
+      expect(error).not.toBeNull();
+      expect(error?.message).toMatch(/invalid input value for enum/i);
     } finally {
       await deletePosts(post);
     }
+  });
+
+  it("requires a description for 'other', and only for 'other'", async () => {
+    const post = await createPost(author, "Odd", "Something unusual.");
+    try {
+      const { error: bare } = await reporter.client.rpc("file_report", {
+        app_slug: "sandbox",
+        content_type: "posts",
+        content_ref: post,
+        reason: "other",
+      });
+      expect(bare?.message).toMatch(/description is required/i);
+
+      // Whitespace is not a description.
+      const { error: blank } = await reporter.client.rpc("file_report", {
+        app_slug: "sandbox",
+        content_type: "posts",
+        content_ref: post,
+        reason: "other",
+        description: "   ",
+      });
+      expect(blank?.message).toMatch(/description is required/i);
+
+      const { data, error } = await reporter.client.rpc("file_report", {
+        app_slug: "sandbox",
+        content_type: "posts",
+        content_ref: post,
+        reason: "other",
+        description: "It is behaving strangely.",
+      });
+      expect(error).toBeNull();
+      await admin()
+        .from("reports")
+        .delete()
+        .eq("id", one<{ reportId: string }>(data).reportId);
+    } finally {
+      await deletePosts(post);
+    }
+  });
+
+  it("keeps the enum and its presentation table in step", async () => {
+    // Only one direction can break: the table's primary key IS the enum type,
+    // so a row cannot exist without a label. A label with no row can, and it
+    // fails silently -- file_report accepts it, list_report_reasons omits it,
+    // and the generated TypeScript union still contains it. Adding a reason
+    // takes two migrations precisely because `alter type ... add value` cannot
+    // be used in the transaction that adds it, so this is what catches someone
+    // writing the first file and not the second.
+    const orphans = await sql()`
+      select unnest(enum_range(null::"platform"."reportReason")) as label
+      except
+      select "reason" from "platform"."reportReasons"
+    `;
+    expect(orphans).toEqual([]);
   });
 
   it("takes the subject and the snapshot from the content, not the caller", async () => {
@@ -331,7 +380,7 @@ describe("platform.file_report", () => {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: post,
-        reason_id: spamReason,
+        reason: "spam",
         description: "please look",
       });
       reportId = one<{ reportId: string }>(data).reportId;
@@ -350,7 +399,7 @@ describe("platform.file_report", () => {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: post,
-        reason_id: spamReason,
+        reason: "spam",
         reported_user_id: reporter.userId,
       });
       expect(error).not.toBeNull();
@@ -368,7 +417,7 @@ describe("platform.file_report", () => {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: post,
-        reason_id: spamReason,
+        reason: "spam",
       });
       // Unwrap before asserting: a failed assertion here would otherwise skip
       // the assignment below and leave the report undeletable in `finally`,
@@ -382,7 +431,7 @@ describe("platform.file_report", () => {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: post,
-        reason_id: spamReason,
+        reason: "spam",
       });
       expect(
         one<{ reportId: string; corroborated: boolean }>(second),
@@ -413,7 +462,7 @@ describe("platform.file_report", () => {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: post,
-        reason_id: spamReason,
+        reason: "spam",
       });
       expect(error?.message).toMatch(/Suspended/);
 
@@ -423,7 +472,7 @@ describe("platform.file_report", () => {
           app_slug: "sandbox",
           content_type: "posts",
           content_ref: post,
-          reason_id: spamReason,
+          reason: "spam",
         },
       );
       expect(allowed).toBeNull();
@@ -447,7 +496,7 @@ describe("platform.file_report", () => {
           app_slug: "sandbox",
           content_type: "posts",
           content_ref: posts[i]!,
-          reason_id: spamReason,
+          reason: "spam",
         });
         expect(error, `report ${i} should be accepted`).toBeNull();
         reportIds.push(one<{ reportId: string }>(data).reportId);
@@ -457,7 +506,7 @@ describe("platform.file_report", () => {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: posts[10]!,
-        reason_id: spamReason,
+        reason: "spam",
       });
       expect(limited?.message).toMatch(/Too many reports/);
 
@@ -466,7 +515,7 @@ describe("platform.file_report", () => {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: posts[10]!,
-        reason_id: spamReason,
+        reason: "spam",
       });
       expect(other).toBeNull();
     } finally {
@@ -486,7 +535,7 @@ describe("quarantine", () => {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: post,
-        reason_id: spamReason,
+        reason: "spam",
       });
       reportId = one<{ reportId: string }>(data).reportId;
 
@@ -526,8 +575,9 @@ describe("quarantine", () => {
       }
 
       // And the reporter is told, without being told what happened to the author.
-      const { data: outcomes } = await reporter.client.rpc("report_outcomes", {
+      const { data: outcomes } = await reporter.client.rpc("my_reports", {
         app_slug: "sandbox",
+        only_open: false,
       });
       expect(outcomes).toEqual(
         expect.arrayContaining([
@@ -553,7 +603,7 @@ describe("quarantine", () => {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: post,
-        reason_id: spamReason,
+        reason: "spam",
       });
       reportId = one<{ reportId: string }>(data).reportId;
       const resolutionId = await resolveWith(reportId!, "quarantine");
@@ -607,7 +657,7 @@ describe("quarantine", () => {
       app_slug: "sandbox",
       content_type: "profile",
       content_ref: profile!.id,
-      reason_id: spamReason,
+      reason: "spam",
     });
     const reportId = one<{ reportId: string }>(data).reportId;
 
@@ -679,7 +729,7 @@ describe("snapshot visibility", () => {
           app_slug: "sandbox",
           content_type: type,
           content_ref: ref,
-          reason_id: spamReason,
+          reason: "spam",
         });
         reportIds.push(one<{ reportId: string }>(data).reportId);
       }
@@ -703,68 +753,6 @@ describe("snapshot visibility", () => {
       await deletePosts(post);
       await sql()`delete from sandbox."profiles" where "id" = ${profile!.id}`;
     }
-  });
-});
-
-describe("platform.submit_feedback", () => {
-  it("accepts feedback and rejects a topic from another app", async () => {
-    const { data: topics } = await reporter.client.rpc("list_feedback_topics", {
-      app_slug: "sandbox",
-    });
-    const topicId = one<{ id: string }>(topics).id;
-
-    const { data, error } = await reporter.client.rpc("submit_feedback", {
-      app_slug: "sandbox",
-      feedback_type: "bug_report",
-      title: "Posts load slowly",
-      description: "Takes a few seconds.",
-      topic_id: topicId,
-    });
-    expect(error).toBeNull();
-    const feedbackId = one<{ feedbackId: string }>(data).feedbackId;
-
-    try {
-      const { error: wrongApp } = await reporter.client.rpc("submit_feedback", {
-        app_slug: "platform",
-        feedback_type: "bug_report",
-        title: "Mismatched",
-        description: "Topic belongs to sandbox.",
-        topic_id: topicId,
-      });
-      expect(wrongApp?.message).toMatch(/does not belong to app/);
-
-      // The submitter reads their own back; another member does not.
-      const { data: own } = await reporter.client
-        .from("feedback")
-        .select("id")
-        .eq("id", feedbackId);
-      expect(own).toHaveLength(1);
-
-      const { data: other } = await author.client
-        .from("feedback")
-        .select("id")
-        .eq("id", feedbackId);
-      expect(other).toEqual([]);
-
-      // A canManageFeedback holder reads everyone's.
-      const { data: managed } = await feedbackManager.client
-        .from("feedback")
-        .select("id")
-        .eq("id", feedbackId);
-      expect(managed).toHaveLength(1);
-    } finally {
-      await admin().from("feedback").delete().eq("id", feedbackId);
-    }
-  });
-
-  it("refuses a suspended submitter", async () => {
-    const { error } = await suspended.client.rpc("submit_feedback", {
-      app_slug: "sandbox",
-      feedback_type: "bug_report",
-      title: "Anything",
-      description: "Anything at all.",
-    });
-    expect(error?.message).toMatch(/Suspended/);
   });
 });
 
@@ -833,7 +821,7 @@ describe("platform.resolve_report", () => {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: post,
-        reason_id: spamReason,
+        reason: "spam",
       });
       reportId = one<{ reportId: string }>(data).reportId;
 
@@ -888,7 +876,7 @@ describe("platform.resolve_report", () => {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: post,
-        reason_id: spamReason,
+        reason: "spam",
       });
       reportId = one<{ reportId: string }>(data).reportId;
 
@@ -926,7 +914,7 @@ describe("platform.resolve_report", () => {
         app_slug: "sandbox",
         content_type: "posts",
         content_ref: post,
-        reason_id: spamReason,
+        reason: "spam",
       });
       reportId = one<{ reportId: string }>(data).reportId;
 

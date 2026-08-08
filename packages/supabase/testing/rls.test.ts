@@ -192,7 +192,6 @@ describe("test identities", () => {
     for (const table of [
       "roles",
       "reportReasons",
-      "feedbackTopics",
       "contentTypes",
     ]) {
       const { data } = await testAccount.client.from(table).select("*");
@@ -272,45 +271,6 @@ describe("platform.reports", () => {
       .from("reports")
       .select("id");
     expect(memberRows).toEqual([]);
-  });
-});
-
-describe("platform.feedback", () => {
-  it("lets a member read their own and not another's", async () => {
-    const a = admin();
-    const platformApp = await a
-      .from("apps")
-      .select("id")
-      .eq("slug", "platform")
-      .single();
-
-    const { data: inserted } = await a
-      .from("feedback")
-      .insert({
-        userId: member.userId,
-        appId: platformApp.data!.id,
-        type: "bug_report",
-        title: "Persona feedback",
-        description: "Filed by the persona suite.",
-      })
-      .select("id")
-      .single();
-
-    try {
-      const { data: own } = await member.client
-        .from("feedback")
-        .select("id")
-        .eq("id", inserted!.id);
-      expect(own).toHaveLength(1);
-
-      const { data: other } = await moderator.client
-        .from("feedback")
-        .select("id")
-        .eq("id", inserted!.id);
-      expect(other).toEqual([]);
-    } finally {
-      await a.from("feedback").delete().eq("id", inserted!.id);
-    }
   });
 });
 

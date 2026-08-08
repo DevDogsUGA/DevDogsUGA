@@ -17,7 +17,7 @@ import type { ModerationClient } from "./rpc";
  * `Database["platform"]["Functions"]`, because the types only catch a *wrong*
  * name. They cannot catch a right name carrying the wrong value: passing
  * `contentRef` where `content_ref` was meant is a type error, but passing the
- * reason id as `content_ref` is not. These assert the mapping itself.
+ * content ref as `reason` is not. These assert the mapping itself.
  *
  * They also cover the one behaviour the shape does not imply: a corroborated
  * report and a fresh one are the same successful response, and the dialog has
@@ -50,7 +50,7 @@ function reasonOption(title: string) {
 }
 
 const REASONS = [
-  { id: "reason-1", title: "Spam", description: "Unsolicited promotion" },
+  { reason: "spam", title: "Spam", description: "Unsolicited promotion" },
 ];
 
 function renderDialog(client: ModerationClient) {
@@ -79,14 +79,16 @@ describe("ReportDialog", () => {
     renderDialog(client);
 
     await waitFor(() =>
-      expect(rpc).toHaveBeenCalledWith("list_report_reasons", {
-        app_slug: "forum",
-      }),
+      // No arguments: the vocabulary is global, so there is nothing to
+      // scope by. `undefined` rather than `{}` because a zero-argument
+      // function is generated as `Args: never`, and callRpc drops the
+      // parameter entirely rather than passing an empty object.
+      expect(rpc).toHaveBeenCalledWith("list_report_reasons", undefined),
     );
     expect(await reasonOption("Spam")).toBeInTheDocument();
   });
 
-  it("files with the content it was given, not the reason id", async () => {
+  it("files with the content it was given, not the reason", async () => {
     const { client, rpc } = stubClient({
       list_report_reasons: REASONS,
       file_report: [{ reportId: "report-1", corroborated: false }],
@@ -94,7 +96,7 @@ describe("ReportDialog", () => {
     renderDialog(client);
 
     await reasonOption("Spam");
-    await userEvent.selectOptions(screen.getByRole("combobox"), "reason-1");
+    await userEvent.selectOptions(screen.getByRole("combobox"), "spam");
     await userEvent.type(
       screen.getByRole("textbox"),
       "They posted the same link twice",
@@ -108,7 +110,7 @@ describe("ReportDialog", () => {
         app_slug: "forum",
         content_type: "resource",
         content_ref: "resource-42",
-        reason_id: "reason-1",
+        reason: "spam",
         description: "They posted the same link twice",
       }),
     );
@@ -122,7 +124,7 @@ describe("ReportDialog", () => {
     renderDialog(client);
 
     await reasonOption("Spam");
-    await userEvent.selectOptions(screen.getByRole("combobox"), "reason-1");
+    await userEvent.selectOptions(screen.getByRole("combobox"), "spam");
     await userEvent.click(
       screen.getByRole("button", { name: /submit report/i }),
     );
@@ -141,7 +143,7 @@ describe("ReportDialog", () => {
     renderDialog(client);
 
     await reasonOption("Spam");
-    await userEvent.selectOptions(screen.getByRole("combobox"), "reason-1");
+    await userEvent.selectOptions(screen.getByRole("combobox"), "spam");
     await userEvent.click(
       screen.getByRole("button", { name: /submit report/i }),
     );

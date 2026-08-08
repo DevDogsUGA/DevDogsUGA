@@ -1,8 +1,7 @@
--- Fixtures for the moderation and feedback tooling.
+-- Fixtures for the moderation tooling.
 --
--- Without these a fresh instance opens every tools page empty: no apps have
--- report reasons, so nothing can be reported; no content exists, so there is
--- nothing to report it against; and the persona suite has no fixture to file
+-- Without these a fresh instance has nothing to moderate: no content exists,
+-- so there is nothing to report; and the persona suite has no fixture to file
 -- against either. Seeds only ever run on `supabase db reset`, which is pointed
 -- at a local stack or a contributor's own throwaway project, never production.
 --
@@ -95,13 +94,13 @@ on conflict ("userId") do nothing;
 -- to see a permission boundary on an instance where you are otherwise Root.
 insert into "platform"."roles" (
   "id", "title", "description", "roleType", "rank",
-  "canModerate", "canManageFeedback"
+  "canModerate"
 )
 values (
   '00000000-0000-4000-9000-000000000001',
   'Sandbox Moderator',
-  'Seeded persona role: works the report queue and reads feedback, nothing else.',
-  'custom', 500, true, true
+  'Seeded persona role: works the report queue, and nothing else.',
+  'custom', 500, true
 )
 on conflict ("id") do nothing;
 
@@ -113,50 +112,19 @@ values (
 on conflict do nothing;
 
 -- ============================================================
--- Report reasons
+-- Report reasons -- deliberately absent
 -- ============================================================
 --
--- Per app, because the reason list is part of an app's own moderation policy.
--- Every registered app gets the same starting set; the tools page is where a
--- maintainer diverges from it.
-
-insert into "platform"."reportReasons" ("appId", "title", "description")
-select a."id", r."title", r."description"
-from "platform"."apps" a
-cross join (values
-  ('Harassment',        'Targeted abuse, bullying, or unwanted contact.'),
-  ('Hate speech',       'Attacks a person or group on the basis of who they are.'),
-  ('Spam',              'Unsolicited advertising, scams, or repetitive posting.'),
-  ('Sexual content',    'Sexually explicit material.'),
-  ('Violence',          'Threats of violence, or content glorifying it.'),
-  ('Impersonation',     'Pretending to be another person or organisation.'),
-  ('Off-topic',         'Not relevant to this space.'),
-  ('Something else',    'Anything not covered above — please describe it.')
-) as r("title", "description")
-on conflict do nothing;
-
--- ============================================================
--- Feedback topics
--- ============================================================
-
-insert into "platform"."feedbackTopics" ("appId", "label")
-select a."id", t."label"
-from "platform"."apps" a
-cross join (values
-  ('Homepage'), ('Events'), ('Projects'), ('Community'),
-  ('Console'), ('OAuth'), ('Docs'), ('Navigation'), ('Other')
-) as t("label")
-where a."slug" = 'platform'
-on conflict do nothing;
-
-insert into "platform"."feedbackTopics" ("appId", "label")
-select a."id", t."label"
-from "platform"."apps" a
-cross join (values
-  ('Posts'), ('Comments'), ('Profiles'), ('Other')
-) as t("label")
-where a."slug" = 'sandbox'
-on conflict do nothing;
+-- Reasons used to be seeded here, cross-joined onto every registered app: the
+-- same eight rows copied once per app, which is what made it obvious they were
+-- never per-app at all.
+--
+-- They are now a global vocabulary, created by
+-- 20260807000000_platform_report_reasons_enum.sql. That matters beyond tidiness:
+-- seeds run only on `db reset`, never on production, so seeding them meant a
+-- fresh production instance had no reasons and could accept no reports until
+-- somebody typed them into a dashboard page. Being in a migration is what makes
+-- every tier agree.
 
 -- ============================================================
 -- Sandbox content
@@ -213,7 +181,7 @@ on conflict ("id") do nothing;
 
 insert into "platform"."reports" (
   "id", "appId", "reporterUserId", "reportedUserId",
-  "contentType", "contentRef", "contentSnapshot", "description", "reasonId", "status"
+  "contentType", "contentRef", "contentSnapshot", "description", "reason", "status"
 )
 select
   '00000000-0000-4000-e000-000000000001',
@@ -225,16 +193,15 @@ select
   'BUY CHEAP FOLLOWERS NOW' || E'\n\n' ||
     'Clearly spam, and the subject of the open report below. Resolve it from /console/moderation to watch it disappear from the listing.',
   'This is the second one today.',
-  rr."id",
+  'spam',
   'open'
 from "platform"."apps" a
-join "platform"."reportReasons" rr on rr."appId" = a."id" and rr."title" = 'Spam'
 where a."slug" = 'sandbox'
 on conflict ("id") do nothing;
 
 insert into "platform"."reports" (
   "id", "appId", "reporterUserId", "reportedUserId",
-  "contentType", "contentRef", "contentSnapshot", "reasonId", "status", "resolvedAt"
+  "contentType", "contentRef", "contentSnapshot", "reason", "status", "resolvedAt"
 )
 select
   '00000000-0000-4000-e000-000000000002',
@@ -244,11 +211,10 @@ select
   'posts',
   '00000000-0000-4000-c000-000000000003',
   'This one is already quarantined',
-  rr."id",
+  'harassment',
   'resolved',
   now()
 from "platform"."apps" a
-join "platform"."reportReasons" rr on rr."appId" = a."id" and rr."title" = 'Harassment'
 where a."slug" = 'sandbox'
 on conflict ("id") do nothing;
 

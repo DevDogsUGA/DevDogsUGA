@@ -150,7 +150,6 @@ export async function importRoleFromDiscord(
       canManageRoles: fields.canManageRoles ?? null,
       canManageSuspensions: fields.canManageSuspensions ?? null,
       canViewAuditLog: fields.canViewAuditLog ?? null,
-      canManageFeedback: fields.canManageFeedback ?? null,
       canCreateCredentials: fields.canCreateCredentials ?? null,
       canManageVerification: fields.canManageVerification ?? null,
     })
