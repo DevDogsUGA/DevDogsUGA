@@ -70,6 +70,58 @@ jobs:
       - name: Registry agrees with the schema snapshot
         run: pnpm airtable:snapshot:check
 
+  # Everything that needs a real Postgres: 139 tests CI has never run.
+  #
+  # Credential-free like the rest of this file, and not by exception — the local
+  # stack's keys ARE the well-known constants Supabase publishes in its own
+  # documentation. Nothing here can reach a real project.
+  #
+  # Unconditional rather than --affected, deliberately. Migrations and RLS are
+  # the highest-consequence things in this repository, the whole job is a few
+  # minutes, and a security check that skips itself on a heuristic is exactly the
+  # failure mode described at the bottom of this file: the Airtable job passed
+  # for months by never running.
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The runner's volume is always empty, so this applies every migration to
+      # a fresh database and fails if any of them does not apply -- which is the
+      # "migrations apply cleanly from scratch" check, with no separate reset
+      # needed. Also writes .env.generated, which the suites below read.
+      #
+      # config.toml enables four OAuth providers with `env()` credentials that
+      # CI does not have. Verified: unset resolves to a WARN and exit 0, not an
+      # error.
+      - name: Start the local Supabase stack
+        run: pnpm --filter @devdogsuga/supabase run start-local-stack
+      # Catches a migration that changed the schema without the committed types
+      # being regenerated -- which typechecks fine everywhere until something
+      # reads a column the types still claim exists.
+      - name: Generated Database types match the migrations
+        run: |
+          pnpm --filter @devdogsuga/supabase run generate-types:local
+          git diff --exit-code -- packages/supabase/src/database.types.ts
+      # 54 tests. All app schemas share one PostgREST endpoint and one anon key,
+      # so RLS -- not the schema boundary -- is what isolates one app's data from
+      # another's. This is the only thing that checks it.
+      - name: Row-Level Security
+        run: pnpm --filter @devdogsuga/supabase run test:rls
+      # 85 tests, including the privilege-surface guards in
+      # resolveCredential.db-test.ts. Those assert the shape of the GRANTS, which
+      # nothing else can see: a function reachable by every role in the cluster
+      # typechecks perfectly.
+      - name: Query validity + privilege surface
+        run: pnpm --filter platform run test:db
+
   # Repo-wide formatting check — fast, no build needed.
   format:
     runs-on: ubuntu-latest
@@ -121,6 +173,7 @@ jobs:
           flutter pub get
           flutter analyze
           flutter test
+
 # Removed from this workflow, and not yet replaced:
 #
 #   * Airtable base verification. It needed AIRTABLE_PAT, which cannot live in a
@@ -141,8 +194,18 @@ jobs:
 #     so the condition passed by construction — protection in appearance only.
 #     With no secrets in this file there is nothing left for it to protect.
 #
-# Still to add, both credential-free:
+# Both of the gaps recorded here have since been closed, credential-free:
 #
-#   * Local Supabase stack (`supabase start`) for the 9 .db-test.ts files, and
-#     `db reset` to prove migrations apply cleanly from scratch.
-#   * Airtable registry diffed against a committed schema snapshot.
+#   * The local Supabase stack, as the `database` job above. A fresh runner
+#     volume makes `supabase start` itself the from-scratch migration check, so
+#     no separate `db reset` is needed.
+#   * The Airtable registry, diffed against a committed schema snapshot in
+#     `validate`. Note this is NOT the live-base verification that was removed:
+#     it answers "does registry.ts still agree with the base as last observed",
+#     which needs no token. "Is the live base still correct" needs one, and
+#     still belongs in the deployed worker's cron.
+#
+# Note the `database` job runs under the workflow-wide SKIP_ENV_VALIDATION, so
+# it does not prove the env schema -- .env.generated carries the local stack's
+# values and nothing else. Validating the full server schema is the deploy
+# build's job, where it is enforced rather than skipped.
