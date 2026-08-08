@@ -47,6 +47,26 @@ describe("csvField", () => {
   it("does not mangle a leading minus inside a normal value", () => {
     expect(csvField("well-known")).toBe("well-known");
   });
+
+  it("renders a Date as an offset timestamp, not a bare local time", () => {
+    // `csvStream`'s projection returns `unknown[]`, so nothing stops a caller
+    // handing a Date straight over instead of routing it through csvTimestamp.
+    // A bare `String(date)` writes "Fri Apr 10 2026 18:00:00 GMT-0400 (...)",
+    // which is the exact thing csvTimestamp exists to keep out of a spreadsheet
+    // opened in another zone.
+    expect(csvField(new Date("2026-04-10T18:00:00-04:00"))).toBe(
+      "2026-04-10T22:00:00.000Z",
+    );
+  });
+
+  it("never writes [object Object]", () => {
+    // The silent failure: "[object Object]" is a perfectly valid CSV cell that
+    // has dropped the data entirely, in a file nobody re-reads until an import
+    // has already gone wrong. JSON is lossy for some shapes but always legible,
+    // so a reviewer opening the file can see the projection is at fault.
+    expect(csvField({ name: "Sam" })).toBe('"{""name"":""Sam""}"');
+    expect(csvField([1, 2])).toBe('"[1,2]"');
+  });
 });
 
 describe("csvRow", () => {

@@ -29,7 +29,36 @@ export const LINE_ENDING = "\r\n";
 export function csvField(value: unknown): string {
   if (value === null || value === undefined) return "";
 
-  const text = typeof value === "boolean" ? String(value) : String(value);
+  // Narrowed per type rather than a bare `String()`, which is what this used to
+  // be (behind a ternary whose branches were identical). Two things reach a
+  // spreadsheet silently wrong otherwise, and both are the failure mode the
+  // whole file is shaped against:
+  //
+  //   * An object stringifies to "[object Object]" — a perfectly valid CSV cell
+  //     that has dropped the data, in a file nobody re-reads until an import has
+  //     already gone wrong.
+  //   * A Date stringifies to a bare local time. `csvTimestamp` exists
+  //     precisely so that does not reach an importer in another zone, and
+  //     `project` in `csvStream` returns `unknown[]`, so nothing stops a caller
+  //     handing one straight over.
+  let text: string;
+  if (typeof value === "string") {
+    text = value;
+  } else if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    text = String(value);
+  } else if (value instanceof Date) {
+    text = csvTimestamp(value);
+  } else {
+    // Lossy but legible, and never silent: a reviewer opening the file sees
+    // JSON in a cell and knows the projection is wrong. `JSON.stringify`
+    // returns undefined for a function or symbol, which is not data either.
+    text = JSON.stringify(value) ?? "";
+  }
+
   const guarded = /^[=+\-@\t\r]/.test(text) ? `\t${text}` : text;
 
   if (!/[",\r\n]/.test(guarded)) return guarded;

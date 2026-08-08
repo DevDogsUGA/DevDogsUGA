@@ -228,7 +228,7 @@ async function joinTeamImpl(teamId: string, joinCode: string): Promise<void> {
 
     // Checked after requireCanJoin so a closed competition or a locked roster
     // reports itself rather than looking like a bad code.
-    if (!team || team.joinCode !== joinCode.trim().toUpperCase()) {
+    if (team?.joinCode !== joinCode.trim().toUpperCase()) {
       throw new TeamActionError("bad_join_code");
     }
 
@@ -246,6 +246,12 @@ async function requestToJoinImpl(
 ): Promise<string> {
   // An all-whitespace note is no note. Normalized here rather than in a form,
   // because it is a fact about the value rather than about one screen.
+  //
+  // `||` is load-bearing and must NOT become `??`. Trimming produces `""` for
+  // an all-whitespace note, and `""` is not nullish — `??` would keep it and
+  // store an empty string as if it were a real message, which is the exact
+  // thing this line exists to prevent.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
   const message = rawMessage?.trim() || undefined;
   const userId = await expectSession();
 
@@ -340,9 +346,14 @@ async function respondToMembershipImpl(
   accept: boolean,
 ): Promise<void> {
   const callerId = await expectSession();
-  let joined: { teamId: string; userId: string } | null = null;
 
-  await db.transaction(async (tx) => {
+  // Returned from the transaction rather than assigned to a captured `let`.
+  // TypeScript does not track an assignment made inside the callback, so the
+  // old shape still read as `null` after the await: `joined !== null` narrowed
+  // to `never`, and the two fields destructured out of it were `never` too —
+  // which is what the template literal below was reporting. Returning the value
+  // keeps the type and removes the mutable at the same time.
+  const joined = await db.transaction(async (tx) => {
     const [request] = await tx
       .select({
         id: teamMembershipRequests.id,
@@ -381,7 +392,7 @@ async function respondToMembershipImpl(
       })
       .where(eq(teamMembershipRequests.id, requestId));
 
-    if (!accept) return;
+    if (!accept) return null;
 
     await requireCanJoin(tx, {
       teamId: request.teamId,
@@ -420,7 +431,7 @@ async function respondToMembershipImpl(
         ),
       );
 
-    joined = { teamId: request.teamId, userId: request.userId };
+    return { teamId: request.teamId, userId: request.userId };
   });
 
   if (joined !== null) {
