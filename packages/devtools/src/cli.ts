@@ -41,9 +41,10 @@ import {
   runSnapshot,
   runVerify,
 } from "./airtable/commands.js";
+import { readCatalog, renderCatalog } from "./catalog.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
 
-const DOCTOR_COMMANDS = ["doctor", "roundtrip"] as const;
+const DOCTOR_COMMANDS = ["doctor", "roundtrip", "catalog"] as const;
 type DoctorCommand = (typeof DOCTOR_COMMANDS)[number];
 
 function isStackCommand(value: string): value is StackCommand {
@@ -65,6 +66,7 @@ Commands:
   push       Apply migrations
   reset      Rebuild the database from migrations, then seeds
   status     Report the target's health
+  catalog    List the report reasons and content types in the database
   doctor     Check an app's moderation integration
   roundtrip  File a report, quarantine it, and check who can still see it
   oauth      Configure "Sign in with DevDogs" for the project in this directory
@@ -179,6 +181,11 @@ async function runStack(command: StackCommand, target: Target): Promise<void> {
     explain(`\`${command}\` failed.`, errorMessage(err));
     process.exitCode = 1;
   }
+}
+
+async function runCatalog(instance: Instance): Promise<void> {
+  const catalog = await readCatalog(instance);
+  note(renderCatalog(catalog), "Moderation catalog");
 }
 
 async function runDoctor(instance: Instance, appSlug?: string): Promise<void> {
@@ -367,6 +374,11 @@ async function menu(): Promise<void> {
           hint: "without erasing anything",
         },
         {
+          value: "catalog" as const,
+          label: "Show what can be reported",
+          hint: "report reasons and content types on this instance",
+        },
+        {
           value: "doctor" as const,
           label: "Check an app's moderation setup",
           hint: "what the catalog derived, and whether it holds up",
@@ -413,7 +425,8 @@ async function menu(): Promise<void> {
   const instance = await connect();
   if (!instance) return;
 
-  if (choice === "doctor") await runDoctor(instance);
+  if (choice === "catalog") await runCatalog(instance);
+  else if (choice === "doctor") await runDoctor(instance);
   else await runRoundTrip(instance);
 }
 
@@ -474,7 +487,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (first === "doctor") {
+  if (first === "catalog") {
+    await runCatalog(instance);
+  } else if (first === "doctor") {
     await runDoctor(instance, flagValue(rest, "--app"));
   } else {
     await runRoundTrip(instance);
