@@ -243,14 +243,52 @@ describe("the sandbox_proxy role's privilege surface", () => {
     // The regression guard. A new function created without an explicit grant
     // policy would show up here, and would be reachable by every custom role in
     // the cluster.
+    //
+    // `coalesce(proacl, acldefault(...))` and not a bare `proacl`, because a
+    // NULL proacl means "the built-in default" -- which for a function is owner
+    // plus EXECUTE to PUBLIC. `aclexplode(NULL)` returns no rows, so a function
+    // that was never granted OR revoked is wide open and, read the naive way,
+    // INVISIBLE TO THIS ASSERTION. That is not hypothetical: it is exactly the
+    // state a schema-scoped `alter default privileges ... revoke ... from
+    // public` produces, which is the no-op that 20260807000000 exists to fix.
+    // The guard has to see the case it was written for.
     const rows = await db.execute<{ proname: string }>(sql`
       select p.proname
         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
        where n.nspname = 'platform'
-         and exists (select 1 from aclexplode(p.proacl) a
+         and exists (select 1
+                       from aclexplode(coalesce(p.proacl,
+                                                acldefault('f', p.proowner))) a
                       where a.grantee = 0 and a.privilege_type = 'EXECUTE')
     `);
     expect(rows.map((r) => r.proname)).toEqual([]);
+  });
+
+  it("keeps PUBLIC off future functions too", async () => {
+    // The assertion above is about the functions that exist. This one is about
+    // the rule, and it is the one that would have caught the original bug: the
+    // schema-wide revoke in 20260805000002 was real, so every check of the
+    // then-current surface passed, while the statement meant to hold the line
+    // did nothing and the next migration to add a function reopened everything.
+    //
+    // Create one and look, rather than inspecting pg_default_acl -- the stored
+    // row is a delta merged over acldefault() at creation time, so the row
+    // reads clean in both the working and the broken configuration. Only the
+    // created object tells the truth.
+    await db.execute(
+      sql`create function "platform".__public_execute_probe() returns int language sql as $$ select 1 $$`,
+    );
+    try {
+      const [row] = await db.execute<{ public_can_execute: boolean }>(sql`
+        select has_function_privilege('public',
+                 'platform.__public_execute_probe()', 'execute') as public_can_execute
+      `);
+      expect(row!.public_can_execute).toBe(false);
+    } finally {
+      await db.execute(
+        sql`drop function if exists "platform".__public_execute_probe()`,
+      );
+    }
   });
 
   it("did not take the API roles down with it", async () => {

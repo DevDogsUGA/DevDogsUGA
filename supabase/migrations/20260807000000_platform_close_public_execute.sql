@@ -1,0 +1,104 @@
+-- Close PUBLIC's EXECUTE on the platform schema, and this time make it stay
+-- closed.
+--
+-- 20260805000002 already did this once. Its schema-wide revoke was correct and
+-- worked; the statement meant to KEEP it closed did not, and nothing noticed
+-- for two days because the only thing watching was a test that cannot run in
+-- CI yet.
+--
+-- ============================================================
+-- What went wrong
+-- ============================================================
+--
+-- 20260805000002 ended with:
+--
+--   alter default privileges in schema "platform"
+--     revoke execute on functions from public;
+--
+-- That statement is a NO-OP, and silently so. `pg_default_acl` stores a DELTA
+-- that Postgres merges on top of `acldefault()` at creation time, and PUBLIC's
+-- EXECUTE lives in `acldefault()` -- it is never written into the row. A revoke
+-- can only remove entries the row actually contains, so there is nothing there
+-- to remove.
+--
+-- Measured on PostgreSQL 17.6, every way the scoped form can be written:
+--
+--   scoped revoke, no prior row      -> row absent;  new proacl NULL   -> PUBLIC
+--   scoped grant to anon, then revoke-> {anon=X};    new proacl has =X -> PUBLIC
+--   grant to postgres first, revoke  -> row absent;  new proacl NULL   -> PUBLIC
+--   grant TO public, then revoke     -> {anon=X};    new proacl has =X -> PUBLIC
+--   GLOBAL revoke (no `in schema`)   -> {postgres=X};new proacl {postgres=X,anon=X}
+--
+-- Only the last one works. With no schema, `defaclnamespace` is 0 and Postgres
+-- stores the COMPLETE ACL rather than a delta, so "PUBLIC is absent" becomes
+-- expressible. In the scoped form it structurally is not.
+--
+-- The consequence was immediate: 20260806000003 drops and recreates 19
+-- functions to change their return types, reasoning that "grants revert to the
+-- defaults on recreate, which is correct for every function here -- they are
+-- all meant to be client-callable." The premise is wrong. The default is
+-- EXECUTE to PUBLIC, and PUBLIC is not "the client" -- it is every role in the
+-- cluster, `sandbox_proxy` included, which is a role created specifically to
+-- hold no privileges. Ten SECURITY DEFINER functions came back open:
+--
+--   conformance_check     dismiss_report       file_report     list_content_types
+--   list_feedback_topics  list_report_reasons  my_reports      report_outcomes
+--   resolve_report        submit_feedback
+--
+-- SECURITY DEFINER is the part that matters: they run as the owner, so an empty
+-- set of table grants stops nothing.
+
+-- ============================================================
+-- 1. Close the ten
+-- ============================================================
+--
+-- Same statement as before, and it works for the same reason it worked before:
+-- this one acts on existing objects, not on a default. Idempotent.
+--
+-- Safe for every legitimate caller: each of these carries EXPLICIT grants to
+-- anon, authenticated and service_role from the schema's per-schema default
+-- privileges (`{anon=X,authenticated=X,service_role=X}`), so dropping PUBLIC
+-- changes nothing for anyone who is supposed to reach them. Verified by the
+-- "did not take the API roles down with it" assertion in
+-- resolveCredential.db-test.ts, which fails loudly if that stops being true.
+revoke execute on all functions in schema "platform" from public;
+
+-- ============================================================
+-- 2. Keep it closed -- the global form, which is the only one that works
+-- ============================================================
+--
+-- Scope: functions created by role `postgres` in THIS DATABASE, all schemas.
+-- In practice that is migrations and the SQL editor, which is exactly the set
+-- that should be covered.
+--
+-- Deliberately NOT scoped to `platform`, even though that is what we want,
+-- because the scoped form cannot express it (see above). The wider blast radius
+-- is the price of the statement working at all. Three things bound it:
+--
+--   * EXTENSIONS ARE EXEMPT. Postgres does not apply default ACLs to objects
+--     created by an extension script, so `create extension pg_trgm` still
+--     yields functions with PUBLIC EXECUTE and `gen_random_uuid()` and friends
+--     keep working for anon. Verified directly: a hand-written function created
+--     under this rule gets `{postgres=X}`, while pg_trgm's `similarity()`
+--     created under the same rule gets NULL -- the built-in default, PUBLIC
+--     intact.
+--
+--   * SUPABASE'S OWN OBJECTS ARE UNAFFECTED. auth, storage, realtime and
+--     graphql are owned by supabase_admin / supabase_auth_admin, not postgres,
+--     and default privileges are per-owner.
+--
+--   * THE APP SCHEMAS ALREADY GRANT EXPLICITLY. platform, schedule_builder and
+--     study_group_finder each carry per-schema default privileges granting
+--     EXECUTE to anon, authenticated and service_role. Removing PUBLIC removes
+--     only the grant that lets UNLISTED roles in -- which is the whole point.
+--
+-- This is also the posture Supabase already ships for the `public` schema,
+-- whose stored row reads `{postgres=X}` with no PUBLIC entry. This extends a
+-- decision that was already made, rather than inventing one.
+alter default privileges revoke execute on functions from public;
+
+-- A new function in `platform` now arrives as
+-- `{postgres=X, anon=X, authenticated=X, service_role=X}` -- reachable by the
+-- three API roles and by nothing else. Adding a function that some other role
+-- must call is now an explicit `grant execute`, which is a line in a diff
+-- somebody reviews, rather than a default nobody sees.
