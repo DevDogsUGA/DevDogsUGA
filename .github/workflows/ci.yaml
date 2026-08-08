@@ -53,10 +53,18 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Flutter isn't installed here — the study-group-finder app is validated
-      # in the `flutter` job below. Turbo runs the four tasks in parallel.
-      - name: Lint + typecheck + test + build (affected)
+      # in the `flutter` job below. Turbo runs the three tasks in parallel.
+      #
+      # `build` is NOT in this list, and its absence is the point. A Next
+      # production build reads the environment whether or not the schema is
+      # validated -- next.config.ts resolves image patterns against
+      # NEXT_PUBLIC_SUPABASE_URL, and `new URL(path, undefined)` throws before
+      # any page renders. SKIP_ENV_VALIDATION moves that failure; it does not
+      # remove the requirement. Building the apps needs a database, so it
+      # happens in the `database` job, which has one.
+      - name: Lint + typecheck + test (affected)
         run: >-
-          pnpm turbo run lint typecheck test build
+          pnpm turbo run lint typecheck test
           --affected --filter='!study-group-finder'
       # Reads the committed snapshot and touches no network, so it needs no
       # credential -- which is why it can live here at all. It answers "does
@@ -121,6 +129,30 @@ jobs:
       # typechecks perfectly.
       - name: Query validity + privilege surface
         run: pnpm --filter platform run test:db
+      # The Supabase half comes from .env.generated, so the build renders
+      # against a real Postgres and a real PostgREST rather than a mock. The
+      # NEXT_PUBLIC pair is derived rather than hardcoded: it has to match the
+      # stack being rendered against, and the CLI's local keys are not
+      # guaranteed stable across versions.
+      - name: Synthetic environment for the build
+        run: |
+          cp .github/ci.env .env
+          set -a; . ./.env.generated; set +a
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+          } >> .env
+      # Validation ENFORCED, unlike everywhere else in this file. That is what
+      # makes this worth running: a newly added required variable with no
+      # default fails here rather than at deploy time.
+      #
+      # `platform` only. schedule-builder does not yet build against the local
+      # stack -- see the note at the bottom of this file. Naming it explicitly
+      # rather than filtering it out keeps the gap visible.
+      - name: Build platform, with the env schema enforced
+        env:
+          SKIP_ENV_VALIDATION: ""
+        run: pnpm exec with-env --local pnpm turbo run build --filter=platform
 
   # Repo-wide formatting check — fast, no build needed.
   format:
@@ -205,7 +237,20 @@ jobs:
 #     which needs no token. "Is the live base still correct" needs one, and
 #     still belongs in the deployed worker's cron.
 #
-# Note the `database` job runs under the workflow-wide SKIP_ENV_VALIDATION, so
-# it does not prove the env schema -- .env.generated carries the local stack's
-# values and nothing else. Validating the full server schema is the deploy
-# build's job, where it is enforced rather than skipped.
+# The test steps of the `database` job run under the workflow-wide
+# SKIP_ENV_VALIDATION, so they do not prove the env schema -- .env.generated
+# carries the local stack's values and nothing else. Its build step is the
+# exception and turns validation back on.
+#
+# KNOWN GAP: schedule-builder is not built by any job.
+#
+#   `platform` builds against the local stack with validation enforced, needing
+#   only the synthetic third-party values in .github/ci.env. schedule-builder
+#   does not: it fails collecting page data, on a DIFFERENT page depending on
+#   NEXT_PUBLIC_AUTH_MODE (/generate-schedule under "google", /settings under
+#   "devdogs"), while building fine against a full .env. Something it reads at
+#   build time is in that file and not yet identified.
+#
+#   Recorded here rather than papered over with a broad --filter, because a job
+#   that silently covers less than its name suggests is the exact failure this
+#   file's history is made of.
