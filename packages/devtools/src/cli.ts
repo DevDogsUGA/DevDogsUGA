@@ -42,6 +42,8 @@ import {
   runVerify,
 } from "./airtable/commands.js";
 import { readCatalog, renderCatalog } from "./catalog.js";
+import { runBwsDiff, runBwsPull, runBwsPush } from "./bws/commands.js";
+import { ENVIRONMENTS, isEnvironment } from "./bws/environments.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
 
 const DOCTOR_COMMANDS = ["doctor", "roundtrip", "catalog"] as const;
@@ -71,12 +73,21 @@ Commands:
   roundtrip  File a report, quarantine it, and check who can still see it
   oauth      Configure "Sign in with DevDogs" for the project in this directory
   airtable   Scaffold, pull ids from, or verify the officer base
+  bws        Move secrets between a .env file and Bitwarden Secrets Manager
 
 Airtable subcommands:
   airtable scaffold [--dry-run]   Create what the registry declares
   airtable pull-ids               Write discovered ids into registry.ts
   airtable verify [--no-duplicates]  Diff the live base against the registry
   airtable snapshot [--check]     Refresh, or check, the committed schema snapshot
+
+Bitwarden subcommands (--env is required: plan, staging or production):
+  bws diff --env <env>            Compare the local file to the project
+  bws pull --env <env>            Write the project's secrets to .env.<env>
+  bws push --env <env> [--prune]  Upload .env.<env>; --prune deletes the rest
+
+  Needs BWS_ACCESS_TOKEN, the machine account for that one environment.
+  Values are never printed — the diff shows key names and fingerprints.
 
 Targets:
   --local            The Docker stack (default)
@@ -346,6 +357,61 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
   process.exitCode = 1;
 }
 
+/**
+ * `bws <pull|push|diff> --env <plan|staging|production>`
+ *
+ * `--env` is required and has no default. Every other command here defaults to
+ * the local stack because guessing wrong is free; guessing wrong about which
+ * environment's credentials to overwrite is not.
+ */
+async function runBwsCommand(rest: string[]): Promise<void> {
+  const [sub] = rest;
+  const environment = flagValue(rest, "--env");
+
+  if (!sub || !["pull", "push", "diff"].includes(sub)) {
+    log.error(`Unknown bws subcommand: ${sub ?? "(none)"}`);
+    log.message("Try pull, push or diff.");
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!environment) {
+    explain("`bws` needs --env, and does not guess.", "", [
+      `Environments: ${ENVIRONMENTS.join(", ")}`,
+      "e.g. pnpm devtools bws diff --env staging",
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!isEnvironment(environment)) {
+    explain(`"${environment}" is not an environment.`, "", [
+      `Try one of: ${ENVIRONMENTS.join(", ")}`,
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+
+  const options = {
+    environment,
+    file: flagValue(rest, "--file"),
+    prune: rest.includes("--prune"),
+    yes: rest.includes("--yes"),
+  };
+
+  try {
+    if (sub === "pull") await runBwsPull(options);
+    else if (sub === "push") await runBwsPush(options);
+    else await runBwsDiff(options);
+  } catch (err) {
+    explain("The Bitwarden command failed.", errorMessage(err), [
+      "Check BWS_ACCESS_TOKEN is the machine account for this environment.",
+      "`bws project list` shows what the current token can reach.",
+    ]);
+    process.exitCode = 1;
+  }
+}
+
 // ── Menu ─────────────────────────────────────────────────────────────────────
 
 async function menu(): Promise<void> {
@@ -464,6 +530,12 @@ async function main(): Promise<void> {
 
   if (first === "airtable") {
     await runAirtableCommand(rest);
+    outro("Done.");
+    return;
+  }
+
+  if (first === "bws") {
+    await runBwsCommand(rest);
     outro("Done.");
     return;
   }
