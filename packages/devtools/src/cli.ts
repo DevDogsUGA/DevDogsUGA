@@ -81,7 +81,7 @@ Airtable subcommands:
   airtable verify [--no-duplicates]  Diff the live base against the registry
   airtable snapshot [--check]     Refresh, or check, the committed schema snapshot
 
-Bitwarden subcommands (--env is required: plan, staging or production):
+Bitwarden subcommands (--env is required: dry-run, staging or production):
   bws diff --env <env>            Compare the local file to the project
   bws pull --env <env>            Write the project's secrets to .env.<env>
   bws push --env <env> [--prune]  Upload .env.<env>; --prune deletes the rest
@@ -358,7 +358,7 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
 }
 
 /**
- * `bws <pull|push|diff> --env <plan|staging|production>`
+ * `bws <pull|push|diff> --env <dry-run|staging|production>`
  *
  * `--env` is required and has no default. Every other command here defaults to
  * the local stack because guessing wrong is free; guessing wrong about which

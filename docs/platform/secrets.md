@@ -10,10 +10,14 @@ secrets:
 
 | GitHub environment | BWS project          | Machine account | Branch policy |
 | ------------------ | -------------------- | --------------- | ------------- |
-| `plan`             | `devdogs-plan`       | read-only       | `main`        |
+| `dry-run`          | `devdogs-dry-run`    | read-only       | `main`        |
 | `staging`          | `devdogs-staging`    | read-only       | `main`        |
 | `production`       | `devdogs-production` | read-only       | `production`  |
 | `production-apply` | `devdogs-production` | _(reuses it)_   | `production`  |
+
+`dry-run` is named for what it does rather than for a noun: it holds the two
+credentials that let a merge to `main` report what a promotion _would_ change,
+and neither of them can change anything.
 
 Three projects and three machine accounts. That is **exactly** the Secrets
 Manager free-tier ceiling, so there is no headroom — a fourth environment means
@@ -25,7 +29,7 @@ reuses `production`'s machine account.
 
 > **One credential must not be shared that way.** `AIRTABLE_APPLY_PAT` is
 > write-capable, and if it sat in the shared project the ordinary production
-> deploy could read it — which would make the plan/apply split decorative. It
+> deploy could read it — which would make the reviewer gate decorative. It
 > stays a GitHub _environment secret_ on `production-apply` alone. `bws push`
 > refuses to upload it rather than trusting anyone to remember.
 

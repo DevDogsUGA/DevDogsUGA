@@ -2,7 +2,7 @@
  * The deployable environments, and which BWS project backs each.
  *
  * One project and one machine account per GitHub environment that carries
- * secrets. Three of each: `plan`, `staging`, `production`. That is not an
+ * secrets. Three of each: `dry-run`, `staging`, `production`. That is not an
  * arbitrary number — it is the documented Secrets Manager free-tier ceiling, so
  * this design lands exactly on it with no headroom. A fourth environment means
  * a paid plan, which is worth knowing before somebody proposes `preview`.
@@ -13,7 +13,7 @@
  * the one credential that must not be shared that way.
  */
 
-export const ENVIRONMENTS = ["plan", "staging", "production"] as const;
+export const ENVIRONMENTS = ["dry-run", "staging", "production"] as const;
 export type BwsEnvironment = (typeof ENVIRONMENTS)[number];
 
 export function isEnvironment(value: string): value is BwsEnvironment {
@@ -44,14 +44,14 @@ export interface EnvironmentSpec {
  * `.env*` so these are equally safe from being committed.
  */
 export const ENVIRONMENT_SPECS: Record<BwsEnvironment, EnvironmentSpec> = {
-  plan: {
-    project: "devdogs-plan",
-    file: ".env.plan",
+  "dry-run": {
+    project: "devdogs-dry-run",
+    file: ".env.dry-run",
     guarded: false,
     summary:
-      "Dry-run credentials for pull requests into production. Read-only by " +
-      "construction: a Postgres role that can see only the migrations table, " +
-      "and an Airtable PAT with schema:read and nothing else.",
+      "Credentials for the dry runs that precede a promotion to production. " +
+      "Read-only by construction: a Postgres role that can see only the " +
+      "migrations table, and an Airtable PAT with schema:read and nothing else.",
   },
   staging: {
     project: "devdogs-staging",
@@ -76,7 +76,7 @@ export const ENVIRONMENT_SPECS: Record<BwsEnvironment, EnvironmentSpec> = {
  * reuse one machine account, because a fourth project would exceed the free
  * tier. That is fine for every value both jobs need and wrong for the one that
  * separates them: if the write-capable Airtable token sat in the project, the
- * ordinary deploy could read it and the plan/apply split would be decorative.
+ * ordinary deploy could read it and the reviewer gate would be decorative.
  *
  * So it stays a GitHub *environment secret* on `production-apply` alone, where
  * the branch policy and the required reviewers are what gate it. `push` refuses
