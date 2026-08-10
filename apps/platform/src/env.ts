@@ -13,6 +13,24 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
+    // Which deployment this is. Not read through `env` -- `switchEnvironment`
+    // above needs it while this schema is still being constructed, and the
+    // call sites are plain `process.env.DEPLOY_ENV` comparisons. It is declared
+    // here purely so a typo fails the build.
+    //
+    // Worth the entry because every wrong value fails silently and in the
+    // dangerous direction: an unrecognised string is `!== "development"`, so
+    // the deployed schemas apply and the app looks configured, but it is also
+    // `!== "production"`, so every `=== "production"` gate opens. A stray
+    // `DEPLOY_ENV=production-apply` would serve the real homepage instead of
+    // <UnderConstruction />.
+    //
+    // Set by `wrangler.jsonc` per env block at runtime and by the `cf:build:*`
+    // scripts at build time. Never a GitHub environment variable, and refused
+    // by `bws push` -- it has two agreeing committed sources already.
+    DEPLOY_ENV: z
+      .enum(["development", "staging", "production"])
+      .default("development"),
     // User-specified (.env)
     BASE_URL: switchEnvironment({
       local: z.url().default(`http://localhost:${process.env.PORT ?? 3000}`),
@@ -101,6 +119,7 @@ export const env = createEnv({
    * middlewares) or client-side so we need to destruct manually.
    */
   runtimeEnv: {
+    DEPLOY_ENV: process.env.DEPLOY_ENV,
     // User-specified (.env)
     BASE_URL: process.env.BASE_URL,
     CRON_SECRET: process.env.CRON_SECRET,

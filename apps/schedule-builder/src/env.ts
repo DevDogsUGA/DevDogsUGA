@@ -9,6 +9,18 @@ function switchEnvironment<T, R>(opt: { local: T; deployed: R }) {
 
 export const env = createEnv({
   server: {
+    // Declared so a typo fails the build. Not read through `env` --
+    // `switchEnvironment` needs it while this schema is still being built.
+    //
+    // It matters more here than it looks: an unrecognised value is
+    // `!== "development"`, so NEXT_PUBLIC_AUTH_MODE below defaults to "google"
+    // and the app still works. An *absent* one falls the other way, to
+    // "devdogs" -- a deployed build pointed at the platform's dev OAuth server.
+    // `wrangler.jsonc` sets it in every env block, which is what keeps that
+    // from happening; this enum only covers the typo.
+    DEPLOY_ENV: z
+      .enum(["development", "staging", "production"])
+      .default("development"),
     CRON_SECRET: switchEnvironment({
       local: z.string().default(""),
       deployed: z.string().min(32),
@@ -47,6 +59,7 @@ export const env = createEnv({
       .default(switchEnvironment({ local: "devdogs", deployed: "google" })),
   },
   runtimeEnv: {
+    DEPLOY_ENV: process.env.DEPLOY_ENV,
     CRON_SECRET: process.env.CRON_SECRET,
     // Derived (.env / .env.generated)
     API_URL: process.env.API_URL,
