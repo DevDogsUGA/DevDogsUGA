@@ -37,6 +37,13 @@ export type CronEnv = Pick<typeof env, "CRON_SECRET" | "BASE_URL">;
  * nothing to notice it by.
  */
 export const CRON_ROUTES: Record<string, string[]> = {
+  // STAGING ONLY -- this expression appears in `env.staging.triggers.crons` and
+  // nowhere else, so production never fires it. Staging's Supabase project is
+  // on the free tier, which pauses after a week without "sufficient user
+  // database activity"; staging deploys about weekly, so without this it would
+  // pause almost every time. See the route for why prevention is the only
+  // option available to us.
+  "0 */6 * * *": ["/cron/keepalive"],
   "0 0 * * *": [
     "/github/sync-leaderboard",
     // Repairs team membership a failed API call left wrong. Nightly rather

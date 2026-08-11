@@ -127,15 +127,22 @@
           "custom_domain": true,
         },
       ],
-      // Empty ON PURPOSE, and not merely omitted. Staging shares the
+      // NONE of production's schedules, on purpose. Staging shares the
       // production Airtable base (there is only one) and the club's real
       // Discord guild, so a staging cron is not a rehearsal -- `/airtable/sync`
       // would contend with production for the sync lease, and
       // `/cron/sync-discord-roles` would assign real roles to real members
       // twice. Cron behaviour is exercised by hitting the guarded routes by
       // hand with the staging CRON_SECRET.
+      //
+      // The one schedule here touches nothing outside staging's own database:
+      // it exists to keep the free-tier Supabase project from pausing after a
+      // week idle, which staging's roughly-weekly deploy cadence would
+      // otherwise trigger almost every time. See
+      // src/app/(api)/cron/keepalive/route.ts. Delete it -- and the route --
+      // if staging ever moves to a paid project.
       "triggers": {
-        "crons": [],
+        "crons": ["0 */6 * * *"],
       },
     },
 
