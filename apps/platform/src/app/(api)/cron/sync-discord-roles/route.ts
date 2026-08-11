@@ -11,9 +11,8 @@ import { reconcileMembership } from "~/server/discord/reconcile";
  * name/color reconciliation runs on every Permissions page load instead, not
  * here — see `reconcileRoleDefinitions`.
  *
- * Auth: `Authorization: Bearer <CRON_SECRET>` (same pattern as
- * sync-leaderboard). The check is skipped when running locally (no
- * DEPLOY_ENV set).
+ * Auth: `Authorization: Bearer <CRON_SECRET>`, the same pattern as every other
+ * cron route. The check is skipped when running locally (no DEPLOY_ENV set).
  */
 export async function GET(request: Request) {
   // Force request-time execution. Under Cache Components, Next would

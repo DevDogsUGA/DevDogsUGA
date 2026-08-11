@@ -38,7 +38,6 @@ export type CronEnv = Pick<typeof env, "CRON_SECRET" | "BASE_URL">;
  */
 export const CRON_ROUTES: Record<string, string[]> = {
   "0 0 * * *": [
-    "/github/sync-leaderboard",
     // Repairs team membership a failed API call left wrong. Nightly rather
     // than more often on purpose: every membership change already fires on
     // the platform event that caused it, so if this pass is doing meaningful

@@ -107,6 +107,14 @@ export async function linkProfile(accessToken: string): Promise<void> {
     .then((res) => res.json())
     .catch(console.error);
 
+  // Records the GitHub identity against the member, and nothing more. The
+  // points columns on this table were fed by `syncLeaderboard`, removed 2026-08
+  // when the GitHub-issue leaderboard was dropped; the identity mapping is kept
+  // because whatever replaces it will need to know which GitHub account belongs
+  // to which member, and that is only knowable at link time.
+  //
+  // Not to be confused with `memberPoints` / `/leaderboard/points`, which is the
+  // competition points system and is fed by the tally.
   await db
     .insert(leaderboardProfiles)
     .values({
