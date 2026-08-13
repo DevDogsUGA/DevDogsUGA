@@ -82,7 +82,17 @@ export const ENVIRONMENT_SPECS: Record<BwsEnvironment, EnvironmentSpec> = {
  * the branch policy and the required reviewers are what gate it. `push` refuses
  * to upload these, rather than trusting anyone to remember.
  */
-export const APPLY_ONLY_KEYS = ["AIRTABLE_APPLY_PAT"] as const;
+export const APPLY_ONLY_KEYS = [
+  "AIRTABLE_APPLY_PAT",
+  // Same property, same reasoning. A Supabase personal access token "carries
+  // the same privileges as your user account" -- there is no org- or
+  // project-scoped CLI token -- so it reaches BOTH Supabase organizations.
+  // `supabase config push` is the only command that needs one, it is the one
+  // command with no dry run, and it carries `site_url` and every OAuth
+  // provider. It belongs behind the reviewers, not in the project the ordinary
+  // deploy can read.
+  "SUPABASE_ACCESS_TOKEN",
+] as const;
 
 /**
  * Keys that are never secrets and must not be pushed.
@@ -96,11 +106,19 @@ export const APPLY_ONLY_KEYS = ["AIRTABLE_APPLY_PAT"] as const;
 export const NEVER_SECRET_KEYS = [
   "DEPLOY_ENV",
   "BASE_URL",
+  "SCHEDULE_BUILDER_URL",
   "PROJECT_REF",
   "PUBLISHABLE_KEY",
+  "AIRTABLE_BASE_ID",
+  // A Discord channel id is not a secret, and it differs per environment --
+  // production posts, everything else stays empty. Empty is also unpushable
+  // (see the rejection below), so BWS could not hold the staging value even if
+  // it were the right home for it.
+  "DISCORD_ALERT_CHANNEL_ID",
   "NEXT_PUBLIC_AUTH_MODE",
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
   "NEXT_PUBLIC_AVATARS_BUCKET",
+  "NEXT_PUBLIC_FEEDBACK_BUCKET",
   "SKIP_ENV_VALIDATION",
 ] as const;
