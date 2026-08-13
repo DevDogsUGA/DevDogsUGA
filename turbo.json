@@ -74,6 +74,7 @@
         "DISCORD_GUILD_ID",
         "DISCORD_PUBLIC_KEY",
         "DISCORD_TOKEN",
+        "DISCORD_ALERT_CHANNEL_ID",
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
         // The Supabase connection, read by both Next apps' env schemas. The

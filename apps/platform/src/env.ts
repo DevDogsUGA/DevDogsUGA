@@ -44,6 +44,13 @@ export const env = createEnv({
     DISCORD_GUILD_ID: z.string(),
     DISCORD_PUBLIC_KEY: z.string(),
     DISCORD_TOKEN: z.string(),
+    // Channel for operational alerts (see server/discord/alerts.ts). Empty
+    // means "do not post", the same convention AIRTABLE_BASE_ID and
+    // GITHUB_WEBHOOK_SECRET use -- so local development and any environment
+    // that has not opted in stay quiet. That default matters here rather than
+    // being tidiness: staging shares the club's real Discord guild, so a
+    // required value would have staging posting into the officers' channel.
+    DISCORD_ALERT_CHANNEL_ID: z.string().default(""),
     GITHUB_ORG: z.string(),
     GITHUB_TOKEN: z.string(),
     // The repository competition branches live in. Defaulted rather than
@@ -127,6 +134,7 @@ export const env = createEnv({
     DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID,
     DISCORD_PUBLIC_KEY: process.env.DISCORD_PUBLIC_KEY,
     DISCORD_TOKEN: process.env.DISCORD_TOKEN,
+    DISCORD_ALERT_CHANNEL_ID: process.env.DISCORD_ALERT_CHANNEL_ID,
     GITHUB_ORG: process.env.GITHUB_ORG,
     GITHUB_TOKEN: process.env.GITHUB_TOKEN,
     GITHUB_COMPETITION_REPO: process.env.GITHUB_COMPETITION_REPO,

@@ -12,7 +12,13 @@ import {
 } from "@devdogsuga/airtable";
 import { pullAttendance } from "./attendance";
 import { AirtableNotConfiguredError, getAirtableClient } from "./credentials";
-import { claimSyncLease, releaseSyncLease, type ClaimResult } from "./lease";
+import {
+  claimSyncLease,
+  recordSchemaRefusal,
+  releaseSyncLease,
+  type ClaimResult,
+} from "./lease";
+import { postAlert } from "../discord/alerts";
 import {
   pullTeamGrades,
   pushDerivedCounts,
@@ -105,6 +111,27 @@ export async function runAirtableSync(
       .map((f) => `${f.table}${f.field ? `.${f.field}` : ""}: ${f.message}`);
     console.error("[airtable] refusing to sync, base does not match registry:");
     for (const f of fatal) console.error(`  ${f}`);
+
+    // Record it before alerting. The refusal still claims no lease and writes
+    // nothing to Airtable -- this touches only the state row the console reads,
+    // which until now showed the last *successful* pass with no sign that every
+    // pass since had refused.
+    const { previous, persisted } = await recordSchemaRefusal(fatal);
+
+    // Only the transition is news. The cron refuses 96 times a day, and an
+    // alert on every pass is one people mute -- which is worse than no alert,
+    // because a muted channel still looks like coverage.
+    if (persisted && previous !== "schema_invalid") {
+      await postAlert(
+        "Airtable sync stopped: the base no longer matches the registry",
+        fatal,
+        "The sync refused rather than writing into fields that no longer exist, " +
+          "so nothing has been lost — but nothing is flowing either. " +
+          "Run `pnpm airtable:verify` to see which field, then fix it in Airtable. " +
+          "This will not be repeated until the base is fixed and drifts again.",
+      );
+    }
+
     const report = blank(started, "schema_invalid");
     report.schemaFindings = fatal;
     return report;

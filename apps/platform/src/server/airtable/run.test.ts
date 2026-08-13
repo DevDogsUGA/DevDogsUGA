@@ -23,7 +23,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const lease = vi.hoisted(() => ({
   claimSyncLease: vi.fn(() => Promise.resolve({ ok: true as const })),
   releaseSyncLease: vi.fn(() => Promise.resolve()),
+  recordSchemaRefusal: vi.fn(() =>
+    Promise.resolve({ previous: "ok", persisted: true }),
+  ),
 }));
+
+const alerts = vi.hoisted(() => ({
+  postAlert: vi.fn(
+    (_title: string, _lines: string[], _footer?: string): Promise<void> =>
+      Promise.resolve(),
+  ),
+}));
+vi.mock("../discord/alerts", () => alerts);
 
 const writes = vi.hoisted(() => ({
   pushMembers: vi.fn(() =>
@@ -206,5 +217,87 @@ describe("runAirtableSync schema precondition", () => {
 
     const report = await runAirtableSync({ client: clientWith(schema) });
     expect(report.skipped).toBeUndefined();
+  });
+});
+
+describe("runAirtableSync drift alerting", () => {
+  /**
+   * The cron runs every fifteen minutes, so a drifted base refuses 96 times a
+   * day. Everything here is about that number: an alert per refusal is one
+   * people mute, and a muted channel is worse than no channel because it still
+   * looks like coverage.
+   */
+  const drifted = () => {
+    const schema = matchingSchema();
+    schema.tables = schema.tables.filter((t) => t.name !== "Teams");
+    return clientWith(schema);
+  };
+
+  it("alerts on the transition into drift", async () => {
+    lease.recordSchemaRefusal.mockResolvedValueOnce({
+      previous: "ok",
+      persisted: true,
+    });
+
+    await runAirtableSync({ client: drifted() });
+
+    expect(alerts.postAlert).toHaveBeenCalledOnce();
+    expect(alerts.postAlert).toHaveBeenCalledWith(
+      expect.stringMatching(/no longer matches the registry/),
+      expect.arrayContaining([expect.stringMatching(/Teams/)]),
+      expect.stringMatching(/airtable:verify/),
+    );
+  });
+
+  it("stays silent while the base is still drifted", async () => {
+    // The 95 other passes that day.
+    lease.recordSchemaRefusal.mockResolvedValueOnce({
+      previous: "schema_invalid",
+      persisted: true,
+    });
+
+    await runAirtableSync({ client: drifted() });
+
+    expect(alerts.postAlert).not.toHaveBeenCalled();
+  });
+
+  it("alerts again once the base is fixed and drifts a second time", async () => {
+    // A successful pass sets `lastStatus` back to 'ok' via releaseSyncLease, so
+    // the next drift is a fresh transition and genuinely is news.
+    lease.recordSchemaRefusal.mockResolvedValueOnce({
+      previous: "ok",
+      persisted: true,
+    });
+
+    await runAirtableSync({ client: drifted() });
+
+    expect(alerts.postAlert).toHaveBeenCalledOnce();
+  });
+
+  it("stays silent when a concurrent run held the lease", async () => {
+    // Nothing was written, so the transition check has no state behind it.
+    // Alerting anyway would fire on every interleaved pass.
+    lease.recordSchemaRefusal.mockResolvedValueOnce({
+      previous: "ok",
+      persisted: false,
+    });
+
+    await runAirtableSync({ client: drifted() });
+
+    expect(alerts.postAlert).not.toHaveBeenCalled();
+  });
+
+  it("records the refusal even though it claims no lease", async () => {
+    await runAirtableSync({ client: drifted() });
+
+    expect(lease.recordSchemaRefusal).toHaveBeenCalledOnce();
+    expect(lease.claimSyncLease).not.toHaveBeenCalled();
+  });
+
+  it("does not alert when the base matches", async () => {
+    await runAirtableSync({ client: clientWith(matchingSchema()) });
+
+    expect(alerts.postAlert).not.toHaveBeenCalled();
+    expect(lease.recordSchemaRefusal).not.toHaveBeenCalled();
   });
 });

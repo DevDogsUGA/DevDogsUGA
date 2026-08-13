@@ -155,6 +155,65 @@ export async function releaseSyncLease(result: LeaseRelease): Promise<void> {
   `);
 }
 
+/**
+ * Records a schema refusal on the state row, and reports what the status was
+ * before.
+ *
+ * A refusal happens BEFORE the lease is claimed and deliberately stays that way
+ * (see `runAirtableSync`) — but that left the console showing the last
+ * *successful* pass with no sign that every pass since had refused. Drift was
+ * only visible to somebody who manually triggered a sync, which is exactly the
+ * person who already suspects something is wrong.
+ *
+ * The returned previous status is what makes alerting possible without spamming:
+ * the cron refuses 96 times a day, and only the transition into that state is
+ * news.
+ *
+ * ⚠️ Skips the write when a run currently holds the lease. A refusing pass and
+ * a running pass can interleave, and clobbering `lastStatus = 'running'` would
+ * make a live sync look finished.
+ */
+export async function recordSchemaRefusal(
+  findings: string[],
+): Promise<SchemaRefusalRecord> {
+  // `prev` and `upd` share one snapshot, so `prev` reads the value from before
+  // the update. `RETURNING` alone would not do it: without `OLD` (Postgres 18)
+  // it yields the row as updated, which here is always 'schema_invalid' -- a
+  // transition check that reports "no change" every single time, i.e. an alert
+  // that never fires.
+  const [row] = await db.execute<{
+    previous: string | null;
+    persisted: boolean;
+  }>(sql`
+    with prev as (
+      select "lastStatus" as "previous"
+      from "platform"."airtableSyncState"
+      where "id"
+    ), upd as (
+      update "platform"."airtableSyncState"
+      set "lastStatus" = 'schema_invalid',
+          "lastError"  = ${findings.join("; ")}
+      where "id"
+        and ("runExpiresAt" is null or "runExpiresAt" < now())
+      returning 1
+    )
+    select prev."previous", exists (select 1 from upd) as "persisted"
+    from prev
+  `);
+
+  return {
+    previous: row?.previous ?? null,
+    persisted: row?.persisted ?? false,
+  };
+}
+
+export interface SchemaRefusalRecord {
+  /** `lastStatus` as it was before this refusal was recorded. */
+  previous: string | null;
+  /** False when a run held the lease, so nothing was written. */
+  persisted: boolean;
+}
+
 export interface SyncStateSnapshot {
   lastSyncedAt: Date | null;
   lastStatus: string | null;
