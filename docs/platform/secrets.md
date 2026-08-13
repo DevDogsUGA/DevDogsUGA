@@ -5,33 +5,49 @@ the token that opens it, and the deploy reads the rest at run time.
 
 ## The shape
 
-One BWS project and one machine account per GitHub environment that carries
-secrets:
+Two BWS projects, three machine accounts:
 
-| GitHub environment | BWS project          | Machine account | Branch policy |
-| ------------------ | -------------------- | --------------- | ------------- |
-| `dry-run`          | `devdogs-dry-run`    | read-only       | `main`        |
-| `staging`          | `devdogs-staging`    | read-only       | `main`        |
-| `production`       | `devdogs-production` | read-only       | `production`  |
-| `production-apply` | `devdogs-production` | _(reuses it)_   | `production`  |
+| GitHub environment | Secrets come from                                 | Branch policy |
+| ------------------ | ------------------------------------------------- | ------------- |
+| `dry-run`          | GitHub env secrets                                | `main`        |
+| `staging`          | `devdogs-staging`                                 | `main`        |
+| `production`       | `devdogs-production`                              | `production`  |
+| `production-apply` | `devdogs-production` + its own GitHub env secrets | `production`  |
 
-`dry-run` is named for what it does rather than for a noun: it holds the two
-credentials that let a merge to `main` report what a promotion _would_ change,
-and neither of them can change anything.
+| Machine account | Projects             | Permission | Token lives                                |
+| --------------- | -------------------- | ---------- | ------------------------------------------ |
+| `staging`       | `devdogs-staging`    | read       | GitHub environment `staging`               |
+| `production`    | `devdogs-production` | read       | GitHub `production` and `production-apply` |
+| `admin`         | **both**             | read/write | a maintainer's Password Manager vault      |
 
-Three projects and three machine accounts. That is **exactly** the Secrets
-Manager free-tier ceiling, so there is no headroom — a fourth environment means
-a paid plan. Worth knowing before anyone proposes `preview`.
+The free plan allows 3 projects, 3 machine accounts and 2 users. This spends 2
+projects and 3 accounts, leaving one project spare.
 
-`production-apply` is a fourth GitHub environment but not a fourth project. It
-runs against the same values with required reviewers in front of it, so it
-reuses `production`'s machine account.
+**Why `dry-run` is not a project.** It was, briefly. But `bws` has no user
+authentication — no `bws login`, no SSO, only a machine account token — so
+somebody has to hold a write-capable account, and three projects meant all three
+accounts were CI identities that must stay read-only. The only way to push was
+to temporarily grant write to a CI account and remember to take it back. That is
+a revocation somebody eventually forgets, and it forgets _silently_, leaving a
+write token in a GitHub environment.
 
-> **One credential must not be shared that way.** `AIRTABLE_APPLY_PAT` is
-> write-capable, and if it sat in the shared project the ordinary production
-> deploy could read it — which would make the reviewer gate decorative. It
-> stays a GitHub _environment secret_ on `production-apply` alone. `bws push`
-> refuses to upload it rather than trusting anyone to remember.
+Dropping the `dry-run` project buys back the slot for a dedicated `admin`
+account. Its two credentials become GitHub environment secrets instead, which is
+affordable precisely because they are read-only **by construction**: a Postgres
+role that can see one table, and a PAT with `schema.bases:read`. Nothing that
+holds them can change anything.
+
+**The `admin` token never goes in GitHub.** CI stays read-only and
+single-project, so a CI compromise is no worse than before — while the write
+path stops depending on anyone's memory.
+
+> **Two credentials must not go in the shared production project.**
+> `AIRTABLE_APPLY_PAT` is write-capable, and `SUPABASE_ACCESS_TOKEN` carries
+> full account privileges across both Supabase organizations. If either sat in
+> `devdogs-production` the ordinary deploy could read it — which would make the
+> `production-apply` reviewer gate decorative. Both are GitHub environment
+> secrets on `production-apply` alone, and `bws push` refuses them rather than
+> trusting anyone to remember.
 
 ## Commands
 
@@ -42,10 +58,10 @@ pnpm devtools bws push --env staging     # .env.staging → project
 pnpm devtools bws push --env staging --prune   # also delete what the file omits
 ```
 
-All three need `BWS_ACCESS_TOKEN` set to that environment's machine account
-token. It is read from the environment only — never a flag, because a flag puts
-a token that unlocks a whole environment into shell history and `ps` on every
-invocation.
+All three need `BWS_ACCESS_TOKEN`. `diff` and `pull` work with any account that
+can read the project; `push` needs the **admin** account. It is read from the
+environment only — never a flag, because a flag puts a token that unlocks a
+whole environment into shell history and `ps` on every invocation.
 
 **Values are never printed.** The diff shows key names and fingerprints:
 
@@ -59,48 +75,24 @@ A fingerprint distinguishes a rotation from a paste error and cannot be used to
 reconstruct anything, so the output is safe to paste into a chat window — which
 is exactly where it ends up.
 
-### Getting write access
-
-> ⚠️ **`bws` cannot authenticate as you.** There is no `bws login`, no
-> email/password, no SSO — the CLI accepts a machine account access token and
-> nothing else. Secrets Manager splits its surfaces on purpose: the web vault is
-> where humans work, the CLI is where machines do.
-
-That leaves a gap, because the free plan allows **3 machine accounts** and this
-design already spends all three on `dry-run`, `staging` and `production` — which
-are CI identities and stay **read-only**. There is no fourth account to be the
-write one.
-
-The way through is that a machine account's permission is **per project and
-changeable after creation** — "Can read" or "Can read, write", on its Projects
-tab. So writing is a deliberate, temporary act:
+### Editing a secret
 
 ```bash
-# 1. In the web vault: set that environment's machine account to
-#    "Can read, write" on its project.
-export BWS_ACCESS_TOKEN=...            # that environment's token
+export BWS_ACCESS_TOKEN=...            # the ADMIN account, not a CI token
 pnpm devtools bws pull --env staging   # writes .env.staging
 $EDITOR .env.staging
 pnpm devtools bws diff --env staging   # read-only, shows what would change
 pnpm devtools bws push --env staging
-pnpm devtools bws diff --env staging   # must now report a match
 rm .env.staging
-# 2. Set the machine account back to "Can read".
 ```
 
-**Step 2 is the one that gets forgotten**, and forgetting it leaves a
-write-capable token sitting in a GitHub environment. Treat the closing `diff`
-as the reminder: it is the last command that needs the elevated grant, so the
-moment it reports a match, go and revoke.
+The two CI tokens are read-only, so a `push` with one fails rather than
+half-succeeding. That is the intended failure: the only credential that can
+change a deployed secret lives with a person, not in GitHub.
 
-The alternative is entering values by hand in the web vault with your own
-account, which needs no grant at all. It is the better choice for one or two
-values and the worse one for forty — a mistyped `DB_URL` fails at 2am, and
-`push` from a file you can read beats a web form for that.
-
-> The free plan also allows only **2 Secrets Manager users**. Whoever holds
-> those two seats is the whole bench for this; plan the second seat around
-> officer turnover rather than convenience.
+> The free plan allows **2 Secrets Manager users**. Two people total can
+> administer this — allocate the second seat for succession rather than
+> convenience, and keep the break-glass export current.
 
 ## Rules the tooling enforces
 

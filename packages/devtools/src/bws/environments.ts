@@ -1,19 +1,37 @@
 /**
- * The deployable environments, and which BWS project backs each.
+ * The environments whose secrets live in Bitwarden, and which project backs each.
  *
- * One project and one machine account per GitHub environment that carries
- * secrets. Three of each: `dry-run`, `staging`, `production`. That is not an
- * arbitrary number — it is the documented Secrets Manager free-tier ceiling, so
- * this design lands exactly on it with no headroom. A fourth environment means
- * a paid plan, which is worth knowing before somebody proposes `preview`.
+ * TWO projects, not three, and the reason is the machine account budget rather
+ * than tidiness. The free plan allows 3 projects, 3 machine accounts and 2
+ * users. Spending a project on `dry-run` also spent the third machine account,
+ * which left no account able to WRITE — and `bws` has no user authentication at
+ * all, so there is no "just log in as yourself" alternative. The only way to
+ * push was to temporarily grant write to a CI account and remember to take it
+ * back, which is a revocation somebody eventually forgets.
  *
- * `production-apply` is a GitHub environment but NOT a fourth project. It runs
- * the same deploy against the same values, with required reviewers in front of
- * it, so it reuses `production`'s machine account. See `APPLY_ONLY_KEYS` for
- * the one credential that must not be shared that way.
+ * Dropping the `dry-run` project buys that slot back:
+ *
+ *   | Machine account | Projects              | Permission | Token lives          |
+ *   |-----------------|-----------------------|------------|----------------------|
+ *   | staging         | devdogs-staging       | read       | GitHub env `staging` |
+ *   | production      | devdogs-production    | read       | GitHub `production`  |
+ *   | admin           | BOTH                  | read/write | a human's vault      |
+ *
+ * The admin account is what these commands use. It never goes in GitHub — CI
+ * stays read-only and single-project, so the blast radius of a CI compromise is
+ * unchanged while the write path stops depending on anyone's memory.
+ *
+ * `dry-run`'s two credentials are GitHub environment secrets instead. They are
+ * read-only by construction (a Postgres role that sees one table; a PAT with
+ * `schema.bases:read`), which is what makes them cheap enough to hold that way.
+ *
+ * `production-apply` is a GitHub environment but not a third project: it runs
+ * the same deploy against the same values behind required reviewers, so it
+ * reuses `production`'s machine account. See `APPLY_ONLY_KEYS` for the two
+ * credentials that must not be shared that way.
  */
 
-export const ENVIRONMENTS = ["dry-run", "staging", "production"] as const;
+export const ENVIRONMENTS = ["staging", "production"] as const;
 export type BwsEnvironment = (typeof ENVIRONMENTS)[number];
 
 export function isEnvironment(value: string): value is BwsEnvironment {
@@ -44,15 +62,6 @@ export interface EnvironmentSpec {
  * `.env*` so these are equally safe from being committed.
  */
 export const ENVIRONMENT_SPECS: Record<BwsEnvironment, EnvironmentSpec> = {
-  "dry-run": {
-    project: "devdogs-dry-run",
-    file: ".env.dry-run",
-    guarded: false,
-    summary:
-      "Credentials for the dry runs that precede a promotion to production. " +
-      "Read-only by construction: a Postgres role that can see only the " +
-      "migrations table, and an Airtable PAT with schema:read and nothing else.",
-  },
   staging: {
     project: "devdogs-staging",
     file: ".env.staging",

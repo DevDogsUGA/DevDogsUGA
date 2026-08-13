@@ -81,12 +81,13 @@ Airtable subcommands:
   airtable verify [--no-duplicates]  Diff the live base against the registry
   airtable snapshot [--check]     Refresh, or check, the committed schema snapshot
 
-Bitwarden subcommands (--env is required: dry-run, staging or production):
+Bitwarden subcommands (--env is required: staging or production):
   bws diff --env <env>            Compare the local file to the project
   bws pull --env <env>            Write the project's secrets to .env.<env>
   bws push --env <env> [--prune]  Upload .env.<env>; --prune deletes the rest
 
-  Needs BWS_ACCESS_TOKEN, the machine account for that one environment.
+  Needs BWS_ACCESS_TOKEN. Use the ADMIN machine account, which holds both
+  projects read/write; the two CI tokens are read-only and cannot push.
   Values are never printed — the diff shows key names and fingerprints.
 
 Targets:
@@ -358,7 +359,7 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
 }
 
 /**
- * `bws <pull|push|diff> --env <dry-run|staging|production>`
+ * `bws <pull|push|diff> --env <staging|production>`
  *
  * `--env` is required and has no default. Every other command here defaults to
  * the local stack because guessing wrong is free; guessing wrong about which

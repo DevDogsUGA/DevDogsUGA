@@ -1,5 +1,5 @@
 /**
- * `pnpm devtools bws <pull|push|diff> --env <dry-run|staging|production>`
+ * `pnpm devtools bws <pull|push|diff> --env <staging|production>`
  *
  * Moving a `.env` file into Secrets Manager and back out again, without ever
  * printing a value.
