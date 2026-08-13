@@ -59,19 +59,48 @@ A fingerprint distinguishes a rotation from a paste error and cannot be used to
 reconstruct anything, so the output is safe to paste into a chat window — which
 is exactly where it ends up.
 
-### Editing a secret
+### Getting write access
+
+> ⚠️ **`bws` cannot authenticate as you.** There is no `bws login`, no
+> email/password, no SSO — the CLI accepts a machine account access token and
+> nothing else. Secrets Manager splits its surfaces on purpose: the web vault is
+> where humans work, the CLI is where machines do.
+
+That leaves a gap, because the free plan allows **3 machine accounts** and this
+design already spends all three on `dry-run`, `staging` and `production` — which
+are CI identities and stay **read-only**. There is no fourth account to be the
+write one.
+
+The way through is that a machine account's permission is **per project and
+changeable after creation** — "Can read" or "Can read, write", on its Projects
+tab. So writing is a deliberate, temporary act:
 
 ```bash
-export BWS_ACCESS_TOKEN=...          # a WRITE-capable machine account
-pnpm devtools bws pull --env staging # writes .env.staging
+# 1. In the web vault: set that environment's machine account to
+#    "Can read, write" on its project.
+export BWS_ACCESS_TOKEN=...            # that environment's token
+pnpm devtools bws pull --env staging   # writes .env.staging
 $EDITOR .env.staging
-pnpm devtools bws diff --env staging # read-only, shows what would change
+pnpm devtools bws diff --env staging   # read-only, shows what would change
 pnpm devtools bws push --env staging
+pnpm devtools bws diff --env staging   # must now report a match
 rm .env.staging
+# 2. Set the machine account back to "Can read".
 ```
 
-The deploy tokens stored in GitHub are **read-only**. Pushing needs a
-write-capable machine account, which is deliberately not the one CI holds.
+**Step 2 is the one that gets forgotten**, and forgetting it leaves a
+write-capable token sitting in a GitHub environment. Treat the closing `diff`
+as the reminder: it is the last command that needs the elevated grant, so the
+moment it reports a match, go and revoke.
+
+The alternative is entering values by hand in the web vault with your own
+account, which needs no grant at all. It is the better choice for one or two
+values and the worse one for forty — a mistyped `DB_URL` fails at 2am, and
+`push` from a file you can read beats a web form for that.
+
+> The free plan also allows only **2 Secrets Manager users**. Whoever holds
+> those two seats is the whole bench for this; plan the second seat around
+> officer turnover rather than convenience.
 
 ## Rules the tooling enforces
 
