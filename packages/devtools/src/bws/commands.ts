@@ -1,5 +1,5 @@
 /**
- * `pnpm devtools bws <pull|push|diff> --env <staging|production>`
+ * `pnpm devtools bws <pull|push|diff> --env <dry-run|staging|production>`
  *
  * Moving a `.env` file into Secrets Manager and back out again, without ever
  * printing a value.
@@ -16,7 +16,7 @@
  *     two sources of truth, and the loser is whichever the reader did not check.
  */
 import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { resolve } from "node:path";
 import { confirm, log, note } from "@clack/prompts";
 import {
   byKey,
@@ -28,7 +28,6 @@ import {
   updateSecret,
 } from "./client.js";
 import {
-  APPLY_ONLY_KEYS,
   ENVIRONMENT_SPECS,
   NEVER_SECRET_KEYS,
   type BwsEnvironment,
@@ -55,7 +54,7 @@ export interface BwsOptions {
 }
 
 function pathFor(options: BwsOptions): string {
-  return join(
+  return resolve(
     PROJECT_ROOT,
     options.file ?? ENVIRONMENT_SPECS[options.environment].file,
   );
@@ -92,16 +91,11 @@ function rejections(local: EnvMap, environment: BwsEnvironment): string[] {
     }
   }
 
-  if (environment === "production") {
-    for (const key of APPLY_ONLY_KEYS) {
-      if (local.has(key)) {
-        problems.push(
-          `${key} — write-capable, and the production deploy must not be able to read it. ` +
-            `It belongs on the production-apply GitHub environment, behind its required reviewers.`,
-        );
-      }
-    }
-  }
+  // No apply-only check here, deliberately. Bitwarden is read by a person and
+  // never by CI, so the write-capable credentials are safe to store beside the
+  // rest — one project per environment is the simplest thing to rotate. The
+  // boundary they need is which GitHub environment receives them, which is
+  // `gh push`'s job.
 
   for (const [key, value] of local) {
     if (value === "") {

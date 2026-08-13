@@ -1,37 +1,34 @@
 /**
  * The environments whose secrets live in Bitwarden, and which project backs each.
  *
- * TWO projects, not three, and the reason is the machine account budget rather
- * than tidiness. The free plan allows 3 projects, 3 machine accounts and 2
- * users. Spending a project on `dry-run` also spent the third machine account,
- * which left no account able to WRITE — and `bws` has no user authentication at
- * all, so there is no "just log in as yourself" alternative. The only way to
- * push was to temporarily grant write to a CI account and remember to take it
- * back, which is a revocation somebody eventually forgets.
+ * **Bitwarden is the source of truth, and CI never reads it.** Values are
+ * curated here, pulled to a local file, and pushed into GitHub environment
+ * secrets (`pnpm devtools gh push`). Deploy jobs then read `${{ secrets.* }}`
+ * like any other workflow.
  *
- * Dropping the `dry-run` project buys that slot back:
+ * That one decision sets the whole budget. Because nothing machine-shaped ever
+ * authenticates to Secrets Manager, there are **no CI machine accounts** — just
+ * one `admin` account, held by a person, read/write on all three projects:
  *
- *   | Machine account | Projects              | Permission | Token lives          |
- *   |-----------------|-----------------------|------------|----------------------|
- *   | staging         | devdogs-staging       | read       | GitHub env `staging` |
- *   | production      | devdogs-production    | read       | GitHub `production`  |
- *   | admin           | BOTH                  | read/write | a human's vault      |
+ *   | Used | Free plan |
+ *   |------|-----------|
+ *   | 3 projects — dry-run, staging, production | 3 |
+ *   | 1 machine account — `admin` | 3 |
  *
- * The admin account is what these commands use. It never goes in GitHub — CI
- * stays read-only and single-project, so the blast radius of a CI compromise is
- * unchanged while the write path stops depending on anyone's memory.
+ * Two machine accounts spare, where the previous shape had none and could not
+ * afford a project for `dry-run`.
  *
- * `dry-run`'s two credentials are GitHub environment secrets instead. They are
- * read-only by construction (a Postgres role that sees one table; a PAT with
- * `schema.bases:read`), which is what makes them cheap enough to hold that way.
+ * What the sync costs is a second copy that cannot be read back: GitHub secrets
+ * are write-only, so `gh status` compares names and `updatedAt` against each
+ * secret's `revisionDate` here. That catches the realistic failure — a rotation
+ * pushed to Bitwarden and never propagated — without ever comparing values.
  *
- * `production-apply` is a GitHub environment but not a third project: it runs
- * the same deploy against the same values behind required reviewers, so it
- * reuses `production`'s machine account. See `APPLY_ONLY_KEYS` for the two
- * credentials that must not be shared that way.
+ * What it buys: no `bws` binary and no Bitwarden network call in the deploy
+ * path, and `${{ secrets.* }}` is masked in workflow logs automatically, which
+ * a value pulled at run time is not unless somebody remembers `::add-mask::`.
  */
 
-export const ENVIRONMENTS = ["staging", "production"] as const;
+export const ENVIRONMENTS = ["dry-run", "staging", "production"] as const;
 export type BwsEnvironment = (typeof ENVIRONMENTS)[number];
 
 export function isEnvironment(value: string): value is BwsEnvironment {
@@ -62,6 +59,15 @@ export interface EnvironmentSpec {
  * `.env*` so these are equally safe from being committed.
  */
 export const ENVIRONMENT_SPECS: Record<BwsEnvironment, EnvironmentSpec> = {
+  "dry-run": {
+    project: "devdogs-dry-run",
+    file: ".env.dry-run",
+    guarded: false,
+    summary:
+      "Credentials for the dry runs that precede a promotion to production. " +
+      "Read-only by construction: a Postgres role that can see only the " +
+      "migrations table, and an Airtable PAT with schema:read and nothing else.",
+  },
   staging: {
     project: "devdogs-staging",
     file: ".env.staging",
@@ -79,17 +85,22 @@ export const ENVIRONMENT_SPECS: Record<BwsEnvironment, EnvironmentSpec> = {
 };
 
 /**
- * Credentials that must NOT live in the shared `production` project.
+ * Credentials that may reach the `production-apply` GitHub environment ONLY.
  *
- * `production` (deploy) and `production-apply` (migrations, gated on reviewers)
- * reuse one machine account, because a fourth project would exceed the free
- * tier. That is fine for every value both jobs need and wrong for the one that
- * separates them: if the write-capable Airtable token sat in the project, the
- * ordinary deploy could read it and the reviewer gate would be decorative.
+ * Both are write-capable: `AIRTABLE_APPLY_PAT` can reshape the base, and a
+ * Supabase access token carries full account privileges across both Supabase
+ * organizations, which is what `supabase config push` needs and the one
+ * mutation with no dry run.
  *
- * So it stays a GitHub *environment secret* on `production-apply` alone, where
- * the branch policy and the required reviewers are what gate it. `push` refuses
- * to upload these, rather than trusting anyone to remember.
+ * ⚠️ **This is a routing rule for `gh push`, not a Bitwarden one.** It moved
+ * when CI stopped reading Bitwarden. The BWS `production` project may hold
+ * these — only a person can read it, so one project per environment stays the
+ * simplest thing to rotate. What must not happen is them landing in the
+ * `production` *GitHub* environment, which deploys with no reviewer in front of
+ * it; there they would make the `production-apply` gate decorative.
+ *
+ * So `gh push --env production` refuses them and `gh push --env production-apply`
+ * accepts nothing else.
  */
 export const APPLY_ONLY_KEYS = [
   "AIRTABLE_APPLY_PAT",

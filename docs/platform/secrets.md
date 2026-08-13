@@ -1,53 +1,67 @@
 # Secrets
 
-Every deployed secret lives in **Bitwarden Secrets Manager**. GitHub holds only
-the token that opens it, and the deploy reads the rest at run time.
+**Bitwarden Secrets Manager is the source of truth. GitHub environment secrets
+are a derived copy, and what deploy jobs actually read.**
+
+```
+Bitwarden ──bws pull──> .env.<env> ──gh push──> GitHub environment secrets
+   ^                                                      |
+   └────────── bws push ──────────┘            deploy reads ${{ secrets.* }}
+```
 
 ## The shape
 
-Two BWS projects, three machine accounts:
+| GitHub environment | BWS project          | Receives                     | Branch       |
+| ------------------ | -------------------- | ---------------------------- | ------------ |
+| `dry-run`          | `devdogs-dry-run`    | everything in the project    | `main`       |
+| `staging`          | `devdogs-staging`    | everything in the project    | `main`       |
+| `production`       | `devdogs-production` | everything EXCEPT apply-only | `production` |
+| `production-apply` | `devdogs-production` | ONLY the apply-only keys     | `production` |
 
-| GitHub environment | Secrets come from                                 | Branch policy |
-| ------------------ | ------------------------------------------------- | ------------- |
-| `dry-run`          | GitHub env secrets                                | `main`        |
-| `staging`          | `devdogs-staging`                                 | `main`        |
-| `production`       | `devdogs-production`                              | `production`  |
-| `production-apply` | `devdogs-production` + its own GitHub env secrets | `production`  |
+Four GitHub environments, three Bitwarden projects. The last two split one
+project, and **that split is the reviewer gate**: `production` deploys on a push
+with nothing in front of it, `production-apply` has required reviewers. A
+write-capable credential reaching the first would make the second decorative, so
+`gh push` enforces the routing rather than leaving it to whoever last edited a
+file.
 
-| Machine account | Projects             | Permission | Token lives                                |
-| --------------- | -------------------- | ---------- | ------------------------------------------ |
-| `staging`       | `devdogs-staging`    | read       | GitHub environment `staging`               |
-| `production`    | `devdogs-production` | read       | GitHub `production` and `production-apply` |
-| `admin`         | **both**             | read/write | a maintainer's Password Manager vault      |
+### One machine account
 
-The free plan allows 3 projects, 3 machine accounts and 2 users. This spends 2
-projects and 3 accounts, leaving one project spare.
+| Used                                                     | Free plan |
+| -------------------------------------------------------- | --------- |
+| 3 projects                                               | 3         |
+| **1 machine account** — `admin`, read/write on all three | 3         |
+| 1–2 users                                                | 2         |
 
-**Why `dry-run` is not a project.** It was, briefly. But `bws` has no user
-authentication — no `bws login`, no SSO, only a machine account token — so
-somebody has to hold a write-capable account, and three projects meant all three
-accounts were CI identities that must stay read-only. The only way to push was
-to temporarily grant write to a CI account and remember to take it back. That is
-a revocation somebody eventually forgets, and it forgets _silently_, leaving a
-write token in a GitHub environment.
+Because CI reads GitHub rather than Bitwarden, **nothing machine-shaped ever
+authenticates to Secrets Manager**. There are no CI machine accounts to scope,
+rotate or leak — just one admin account, held by a person, in the Password
+Manager vault. Two accounts spare.
 
-Dropping the `dry-run` project buys back the slot for a dedicated `admin`
-account. Its two credentials become GitHub environment secrets instead, which is
-affordable precisely because they are read-only **by construction**: a Postgres
-role that can see one table, and a PAT with `schema.bases:read`. Nothing that
-holds them can change anything.
+That also settles a problem the earlier design had no good answer to: `bws` has
+no user authentication (no `bws login`, no SSO, access token only), so _somebody_
+has to hold a write-capable account. When all three accounts were CI identities
+that had to stay read-only, the only way to push was to grant write temporarily
+and remember to take it back — a revocation that fails silently.
 
-**The `admin` token never goes in GitHub.** CI stays read-only and
-single-project, so a CI compromise is no worse than before — while the write
-path stops depending on anyone's memory.
+### Why route through GitHub at all
 
-> **Two credentials must not go in the shared production project.**
-> `AIRTABLE_APPLY_PAT` is write-capable, and `SUPABASE_ACCESS_TOKEN` carries
-> full account privileges across both Supabase organizations. If either sat in
-> `devdogs-production` the ordinary deploy could read it — which would make the
-> `production-apply` reviewer gate decorative. Both are GitHub environment
-> secrets on `production-apply` alone, and `bws push` refuses them rather than
-> trusting anyone to remember.
+- **`${{ secrets.* }}` is masked in workflow logs automatically.** A value pulled
+  at run time is not, unless somebody remembers `::add-mask::` for every one —
+  and the run where they forget is the run that prints it.
+- The deploy stops depending on the `bws` binary and on Bitwarden being
+  reachable. A secrets outage should not also be a deploy outage.
+
+**The cost is a second copy that cannot be read back.** GitHub secrets are
+write-only: `gh secret list` returns names and `updatedAt`, and no route returns
+a value. `gh status` is what polices that — see below.
+
+> **Two credentials go to `production-apply` alone.** `AIRTABLE_APPLY_PAT` is
+> write-capable, and `SUPABASE_ACCESS_TOKEN` carries full account privileges
+> across both Supabase organizations (it is what `supabase config push` needs,
+> and the one mutation with no dry run). Both live in the `devdogs-production`
+> Bitwarden project — only a person reads that — and `gh push --env production`
+> refuses them.
 
 ## Commands
 
@@ -58,10 +72,15 @@ pnpm devtools bws push --env staging     # .env.staging → project
 pnpm devtools bws push --env staging --prune   # also delete what the file omits
 ```
 
-All three need `BWS_ACCESS_TOKEN`. `diff` and `pull` work with any account that
-can read the project; `push` needs the **admin** account. It is read from the
-environment only — never a flag, because a flag puts a token that unlocks a
-whole environment into shell history and `ps` on every invocation.
+```bash
+pnpm devtools gh push   --env production   # .env.production → GitHub secrets
+pnpm devtools gh status --env production   # is GitHub behind Bitwarden?
+```
+
+`bws` needs `BWS_ACCESS_TOKEN` (the admin account), read from the environment
+only — never a flag, because a flag puts a token that unlocks a whole
+environment into shell history and `ps` on every invocation. `gh` uses your own
+`gh auth login`, and setting environment secrets needs admin on the repository.
 
 **Values are never printed.** The diff shows key names and fingerprints:
 
@@ -75,20 +94,30 @@ A fingerprint distinguishes a rotation from a paste error and cannot be used to
 reconstruct anything, so the output is safe to paste into a chat window — which
 is exactly where it ends up.
 
-### Editing a secret
+### Rotating a secret
 
 ```bash
-export BWS_ACCESS_TOKEN=...            # the ADMIN account, not a CI token
-pnpm devtools bws pull --env staging   # writes .env.staging
-$EDITOR .env.staging
-pnpm devtools bws diff --env staging   # read-only, shows what would change
-pnpm devtools bws push --env staging
-rm .env.staging
+export BWS_ACCESS_TOKEN=...                 # the admin machine account
+pnpm devtools bws pull   --env production    # writes .env.production
+$EDITOR .env.production
+pnpm devtools bws diff   --env production    # read-only, shows what would change
+pnpm devtools bws push   --env production    # → Bitwarden (source of truth)
+pnpm devtools gh  push   --env production    # → GitHub (what CI reads)
+pnpm devtools gh  status --env production    # must report up to date
+rm .env.production
 ```
 
-The two CI tokens are read-only, so a `push` with one fails rather than
-half-succeeding. That is the intended failure: the only credential that can
-change a deployed secret lives with a person, not in GitHub.
+⚠️ **Step 5 without step 6 is the failure mode this whole design has.** A
+credential rotated in Bitwarden and never pushed to GitHub leaves production
+authenticating with the old value, and everything looks healthy until the old
+one is revoked. `gh status` is the only thing that catches it: it compares each
+secret's Bitwarden `revisionDate` against GitHub's `updatedAt` and reports
+anything GitHub is behind on.
+
+It cannot compare _values_ — nothing can — so it answers "was GitHub updated
+after Bitwarden last changed?" rather than "do these match?". That is the
+weaker question, and it is the one that catches the mistake people actually
+make.
 
 > The free plan allows **2 Secrets Manager users**. Two people total can
 > administer this — allocate the second seat for succession rather than
@@ -96,14 +125,16 @@ change a deployed secret lives with a person, not in GitHub.
 
 ## Rules the tooling enforces
 
-| Rule                                                      | Why                                                                                                                                                                                      |
-| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `push` never deletes without `--prune`                    | A key missing from a file is far more often an incomplete edit than an intentional removal.                                                                                              |
-| `production` always prompts, and `--yes` is refused there | `--yes` exists so CI can run unattended, and CI has no business pushing production secrets.                                                                                              |
-| Non-secrets are rejected                                  | `DEPLOY_ENV`, `BASE_URL`, `NEXT_PUBLIC_*` and friends are committed or GitHub environment _variables_. A value with two sources of truth resolves to whichever the reader did not check. |
-| Empty values are rejected                                 | An empty secret reads as "configured" to every consumer that checks for presence.                                                                                                        |
-| Files are `.env.<env>`, never `.env`                      | Pulling production over the file `pnpm dev` reads has no undo.                                                                                                                           |
-| Pulling an empty project writes nothing                   | An empty file looks exactly like a successful pull.                                                                                                                                      |
+| Rule                                                         | Why                                                                                                                                                                                      |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `push` never deletes without `--prune`                       | A key missing from a file is far more often an incomplete edit than an intentional removal.                                                                                              |
+| `production` always prompts, and `--yes` is refused there    | `--yes` exists so CI can run unattended, and CI has no business pushing production secrets.                                                                                              |
+| Non-secrets are rejected                                     | `DEPLOY_ENV`, `BASE_URL`, `NEXT_PUBLIC_*` and friends are committed or GitHub environment _variables_. A value with two sources of truth resolves to whichever the reader did not check. |
+| Empty values are rejected                                    | An empty secret reads as "configured" to every consumer that checks for presence.                                                                                                        |
+| Files are `.env.<env>`, never `.env`                         | Pulling production over the file `pnpm dev` reads has no undo.                                                                                                                           |
+| Pulling an empty project writes nothing                      | An empty file looks exactly like a successful pull.                                                                                                                                      |
+| `gh push` refuses apply-only keys outside `production-apply` | `production` deploys with no reviewer in front of it; a write-capable credential there makes the gate decorative.                                                                        |
+| `gh push` sends values on **stdin**, one process per secret  | `--body` would put a live credential in argv. `--env-file` would hand the file to a second dotenv parser, which agrees with this one until a multi-line value and then differs silently. |
 
 ## Why the CLI and not the API
 

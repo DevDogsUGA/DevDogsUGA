@@ -44,6 +44,8 @@ import {
 import { readCatalog, renderCatalog } from "./catalog.js";
 import { runBwsDiff, runBwsPull, runBwsPush } from "./bws/commands.js";
 import { ENVIRONMENTS, isEnvironment } from "./bws/environments.js";
+import { runGhPush, runGhStatus } from "./gh/commands.js";
+import { GITHUB_ENVIRONMENTS, isGithubEnvironment } from "./gh/environments.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
 
 const DOCTOR_COMMANDS = ["doctor", "roundtrip", "catalog"] as const;
@@ -74,6 +76,7 @@ Commands:
   oauth      Configure "Sign in with DevDogs" for the project in this directory
   airtable   Scaffold, pull ids from, or verify the officer base
   bws        Move secrets between a .env file and Bitwarden Secrets Manager
+  gh         Push those secrets on into GitHub environment secrets
 
 Airtable subcommands:
   airtable scaffold [--dry-run]   Create what the registry declares
@@ -81,14 +84,23 @@ Airtable subcommands:
   airtable verify [--no-duplicates]  Diff the live base against the registry
   airtable snapshot [--check]     Refresh, or check, the committed schema snapshot
 
-Bitwarden subcommands (--env is required: staging or production):
+Bitwarden subcommands (--env is required: dry-run, staging or production):
   bws diff --env <env>            Compare the local file to the project
   bws pull --env <env>            Write the project's secrets to .env.<env>
   bws push --env <env> [--prune]  Upload .env.<env>; --prune deletes the rest
 
-  Needs BWS_ACCESS_TOKEN. Use the ADMIN machine account, which holds both
-  projects read/write; the two CI tokens are read-only and cannot push.
+  Needs BWS_ACCESS_TOKEN — the single admin machine account, read/write on
+  all three projects. CI never reads Bitwarden; see the gh commands below.
   Values are never printed — the diff shows key names and fingerprints.
+
+GitHub subcommands (--env is required: dry-run, staging, production,
+production-apply):
+  gh push --env <env>             Set .env.<env>'s secrets on that environment
+  gh status --env <env>           Compare it against its Bitwarden project
+
+  Bitwarden is the source of truth; deploy jobs read GitHub Actions secrets.
+  GitHub secrets are WRITE-ONLY, so status compares names and timestamps
+  rather than values — it catches a rotation that was never propagated.
 
 Targets:
   --local            The Docker stack (default)
@@ -359,12 +371,66 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
 }
 
 /**
- * `bws <pull|push|diff> --env <staging|production>`
+ * `bws <pull|push|diff> --env <dry-run|staging|production>`
  *
  * `--env` is required and has no default. Every other command here defaults to
  * the local stack because guessing wrong is free; guessing wrong about which
  * environment's credentials to overwrite is not.
  */
+/**
+ * `gh <push|status> --env <github-environment>`
+ *
+ * A separate environment list from `bws`, and deliberately so: there are four
+ * GitHub environments and three Bitwarden projects, because `production` and
+ * `production-apply` split one project between them. Sharing one list would
+ * make that split unrepresentable.
+ */
+async function runGhCommand(rest: string[]): Promise<void> {
+  const [sub] = rest;
+  const environment = flagValue(rest, "--env");
+
+  if (!sub || !["push", "status"].includes(sub)) {
+    log.error(`Unknown gh subcommand: ${sub ?? "(none)"}`);
+    log.message("Try push or status.");
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!environment) {
+    explain("`gh` needs --env, and does not guess.", "", [
+      `Environments: ${GITHUB_ENVIRONMENTS.join(", ")}`,
+      "e.g. pnpm devtools gh status --env staging",
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!isGithubEnvironment(environment)) {
+    explain(`"${environment}" is not a GitHub environment.`, "", [
+      `Try one of: ${GITHUB_ENVIRONMENTS.join(", ")}`,
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+
+  const options = {
+    environment,
+    file: flagValue(rest, "--file"),
+    yes: rest.includes("--yes"),
+  };
+
+  try {
+    if (sub === "push") await runGhPush(options);
+    else await runGhStatus(options);
+  } catch (err) {
+    explain("The GitHub command failed.", errorMessage(err), [
+      "`gh auth status` shows whether the CLI is signed in.",
+      "Environment secrets need admin on the repository.",
+    ]);
+    process.exitCode = 1;
+  }
+}
+
 async function runBwsCommand(rest: string[]): Promise<void> {
   const [sub] = rest;
   const environment = flagValue(rest, "--env");
@@ -537,6 +603,12 @@ async function main(): Promise<void> {
 
   if (first === "bws") {
     await runBwsCommand(rest);
+    outro("Done.");
+    return;
+  }
+
+  if (first === "gh") {
+    await runGhCommand(rest);
     outro("Done.");
     return;
   }

@@ -35,6 +35,14 @@ export interface BwsSecret {
   value: string;
   note: string;
   projectId: string;
+  /**
+   * ISO 8601, when this secret last changed.
+   *
+   * Optional because it is not needed to push or pull — but it is the whole
+   * basis of `gh status`, which cannot compare values (GitHub secrets are
+   * write-only) and instead asks whether GitHub was updated after this.
+   */
+  revisionDate?: string;
 }
 
 interface BwsProject {
