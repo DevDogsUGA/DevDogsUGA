@@ -1,6 +1,6 @@
-import { Octokit } from "@octokit/rest";
 import { and, eq, isNull } from "drizzle-orm";
 import { env } from "~/env";
+import { octokit } from "./client.js";
 import { db } from "~/server/db";
 import { competitions, teamMembers, teams } from "~/server/db/schema";
 import { identitiesInAuth } from "~/supabase/drizzle/schema";
@@ -27,13 +27,6 @@ import {
  * Adding teammates to `someone/DevDogs-Website` needs that student's
  * personal-account admin, which the org's token has no reach into.
  */
-
-let client: Octokit | null = null;
-
-function octokit(): Octokit {
-  client ??= new Octokit({ auth: env.GITHUB_TOKEN });
-  return client;
-}
 
 const org = () => env.GITHUB_ORG;
 const repo = () => env.GITHUB_COMPETITION_REPO;

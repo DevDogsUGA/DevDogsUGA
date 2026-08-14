@@ -156,6 +156,9 @@ export const NEVER_SECRET_KEYS = [
   "PROJECT_REF",
   "PUBLISHABLE_KEY",
   "AIRTABLE_BASE_ID",
+  // Both appear in any webhook payload; only the private key is a secret.
+  "GITHUB_APP_ID",
+  "GITHUB_APP_INSTALLATION_ID",
   // A Discord channel id is not a secret, and it differs per environment --
   // production posts, everything else stays empty. Empty is also unpushable
   // (see the rejection below), so BWS could not hold the staging value even if

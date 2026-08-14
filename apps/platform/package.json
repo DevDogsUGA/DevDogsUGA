@@ -33,8 +33,8 @@
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
     "@devdogsuga/airtable": "workspace:*",
-    "@devdogsuga/drizzle": "workspace:*",
     "@devdogsuga/docs": "workspace:*",
+    "@devdogsuga/drizzle": "workspace:*",
     "@devdogsuga/email": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
     "@discordjs/builders": "^1.14.1",
@@ -43,6 +43,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@floating-ui/react": "^0.27.20",
+    "@octokit/auth-app": "^8.3.0",
     "@octokit/graphql": "^9.0.4",
     "@octokit/rest": "^22.0.1",
     "@opentelemetry/api": "^1.9.1",

@@ -52,7 +52,24 @@ export const env = createEnv({
     // required value would have staging posting into the officers' channel.
     DISCORD_ALERT_CHANNEL_ID: z.string().default(""),
     GITHUB_ORG: z.string(),
-    GITHUB_TOKEN: z.string(),
+    // The DevDogs GitHub App, which replaced an org-owner `ghp_` token. Every
+    // GitHub call this platform makes is an organization administration action,
+    // so the old shape meant a compromise of this Worker was an organization
+    // takeover. See server/github/client.ts.
+    //
+    // The id and installation id are NOT secrets -- they are visible in any
+    // webhook payload -- so they are GitHub environment *variables*. The private
+    // key is, and it is a multi-line PEM.
+    GITHUB_APP_ID: z.coerce.number().int().positive(),
+    GITHUB_APP_INSTALLATION_ID: z.coerce.number().int().positive(),
+    GITHUB_APP_PRIVATE_KEY: z
+      .string()
+      .min(1)
+      .refine((v) => v.includes("BEGIN") && v.includes("PRIVATE KEY"), {
+        message:
+          "GITHUB_APP_PRIVATE_KEY must be the PEM itself, not a path or an id. " +
+          "Newlines matter; keep it quoted.",
+      }),
     // The repository competition branches live in. Defaulted rather than
     // required: every existing deployment predates competitions, and a new
     // required variable would stop them booting over a feature they do not
@@ -136,7 +153,9 @@ export const env = createEnv({
     DISCORD_TOKEN: process.env.DISCORD_TOKEN,
     DISCORD_ALERT_CHANNEL_ID: process.env.DISCORD_ALERT_CHANNEL_ID,
     GITHUB_ORG: process.env.GITHUB_ORG,
-    GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+    GITHUB_APP_ID: process.env.GITHUB_APP_ID,
+    GITHUB_APP_INSTALLATION_ID: process.env.GITHUB_APP_INSTALLATION_ID,
+    GITHUB_APP_PRIVATE_KEY: process.env.GITHUB_APP_PRIVATE_KEY,
     GITHUB_COMPETITION_REPO: process.env.GITHUB_COMPETITION_REPO,
     GITHUB_WEBHOOK_SECRET: process.env.GITHUB_WEBHOOK_SECRET,
     AIRTABLE_BASE_ID: process.env.AIRTABLE_BASE_ID,

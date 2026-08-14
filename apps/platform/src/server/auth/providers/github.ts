@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import z from "zod";
 import { env } from "~/env";
+import { installationToken } from "~/server/github/client";
 import { db } from "~/server/db";
 import { leaderboardProfiles } from "~/server/db/schema";
 import { createSupabaseServerClient } from "~/supabase/server";
@@ -74,11 +75,13 @@ export async function linkProfile(accessToken: string): Promise<void> {
     .then((res) => res.json())
     .then((obj) => profileSchema.parseAsync(obj));
 
-  // Invite the GitHub user as a contributor to the DevDogs organization
+  // Invite the GitHub user as a contributor to the DevDogs organization.
+  // Authenticated as the DevDogs App: an installation token that expires in an
+  // hour, rather than an org owner's `ghp_` token that does not expire at all.
   await fetch(`https://api.github.com/orgs/${env.GITHUB_ORG}/invitations`, {
     method: "POST",
     headers: {
-      Authorization: "Bearer " + env.GITHUB_TOKEN,
+      Authorization: "Bearer " + (await installationToken()),
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
     },
@@ -156,7 +159,7 @@ export async function unlinkProfile(): Promise<void> {
     {
       method: "DELETE",
       headers: {
-        Authorization: "Bearer " + env.GITHUB_TOKEN,
+        Authorization: "Bearer " + (await installationToken()),
         "X-GitHub-Api-Version": "2022-11-28",
       },
     },
