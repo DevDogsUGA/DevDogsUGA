@@ -127,11 +127,9 @@ star.
 > App's webhook is confirmed working. Two deliveries of the same
 > `pull_request` event are harmless — `applyPullRequestEvent` is safe to replay
 > — but two places to update the secret is one place to forget.
->
-> Staging is `https://staging.devdogsuga.org/github/webhook` (both hosts come
-> from `apps/platform/wrangler.jsonc`). One App has **one** webhook URL, so
-> either leave staging without one, or create a second App for it. Do not point
-> production's webhook at staging.
+
+Staging needs its own App. See below — one App has exactly one webhook URL, and
+that is not the main reason.
 
 ### Permissions
 
@@ -169,16 +167,63 @@ nothing here is speculative.
 Leave every other event unchecked. An event nobody handles is delivery volume,
 log noise, and a payload with member data arriving somewhere it is not needed.
 
+### Staging gets a second App — with different permissions
+
+**Two Apps, and deliberately not two of the same App.**
+
+|              | `DevDogs Platform`                                                              | `DevDogs Platform (staging)`                    |
+| ------------ | ------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Webhook      | `https://devdogsuga.org/github/webhook`                                         | `https://staging.devdogsuga.org/github/webhook` |
+| Repository   | Administration **write**, Contents **write**, Metadata read, Pull requests read | Metadata **read**, Pull requests **read**       |
+| Organization | Members **write**                                                               | _none_                                          |
+| Private key  | `devdogs-production` project                                                    | `devdogs-staging` project                       |
+
+The webhook URL is the visible reason and the least important one. The real one:
+
+**There is only one GitHub organization.** Staging cannot have a staging org —
+teams, invitations, rulesets and member removals all land in the real
+`DevDogsUGA`. So a staging deployment holding `Members: write` can invite and
+remove actual students and rewrite actual rulesets.
+
+And staging is the **less** guarded environment: it deploys from `main` on every
+push, with no reviewer in front of it. Giving it org-write would make a bad
+merge more dangerous than the org-owner PAT this whole change removed, because
+at least the PAT lived behind a deploy nobody could trigger by merging.
+
+So staging is **read-only against GitHub, by construction**. It still boots,
+still receives `pull_request` deliveries, and still exercises the state machine
+that `applyPullRequestEvent` drives — which is the part worth testing. What it
+cannot do is change anything.
+
+Read-only degrades correctly rather than crashing: `provisionTeam` and its
+neighbours return `failed("api_error", …)` on a 403, so the console shows a
+clear failure instead of a 500. Nothing in staging calls GitHub unprompted
+either — `wrangler.jsonc` gives staging `"crons": []`, so `github-reconcile`
+runs on production alone.
+
+Separate keys matter for the same reason as separate permissions: staging's
+Worker secrets are a different blast radius, and sharing production's key would
+mean a staging compromise mints production-capable tokens.
+
+> `dry-run` needs no App. That tier runs migration and schema dry runs, not the
+> Next app, so it never constructs `env`.
+
+Everything else about the staging App matches the tables above: same events,
+same "only on this account", same install on all repositories.
+
 ### Where can this GitHub App be installed?
 
-**Only on this account.** One organization, one installation, forever. "Any
-account" is for Apps distributed to strangers; it would let anyone install
-something named after the club, and the org's own installation is the only one
-the platform will ever authenticate as.
+**Only on this account.** One organization; "any account" is for Apps
+distributed to strangers, and would let anyone install something named after the
+club. Both Apps install on `DevDogsUGA` and nowhere else.
 
 ---
 
 ## After creating it
+
+Run this for **each** App — production first, then staging with the reduced
+permissions. `--env staging` and `--env production` keep the two sets apart the
+whole way.
 
 1. **Generate a private key.** _General → Private keys → Generate a private
    key._ Downloads a `.pem`. This is the credential — it mints installation
@@ -214,8 +259,12 @@ the platform will ever authenticate as.
    any webhook payload); the key is a secret:
 
    ```bash
-   pnpm devtools secrets push --env production
+   pnpm devtools secrets push --env production   # or --env staging
    ```
+
+   ⚠️ The root `.env` holds **one** set of these at a time, so do one
+   environment end to end before starting the other. `secrets pull --env <env>`
+   brings back whichever set you are working on.
 
 6. **Delete the `ghp_` token** at _Settings → Developer settings → Personal
    access tokens_. Not last for tidiness — until it is revoked, the thing this
@@ -231,6 +280,15 @@ the platform will ever authenticate as.
    Expect exactly `administration: write`, `contents: write`, `metadata: read`,
    `pull_requests: read`, `members: write`. Anything else was a mis-tick, and
    this is the cheapest moment to find it.
+
+   For staging, expect **only** `metadata: read` and `pull_requests: read`. A
+   `members` or `administration` entry there is the mistake that matters: it
+   gives the unreviewed environment write access to the real organization.
+
+   ```bash
+   gh api orgs/DevDogsUGA/installations \
+     --jq '.installations[] | {app: .app_slug, perms: .permissions}'
+   ```
 
 ## Rotating the private key
 
