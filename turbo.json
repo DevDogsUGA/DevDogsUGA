@@ -68,7 +68,28 @@
         "GITHUB_CLIENT_ID",
         "GITHUB_CLIENT_SECRET",
         "GITHUB_ORG",
-        "GITHUB_TOKEN",
+        // The GitHub App, which replaced a `ghp_` token. `GITHUB_TOKEN` left
+        // the schema with it and lingered here until 2026-08-14.
+        //
+        // ⚠️ The three APP values are the only entries in this list with NO
+        // schema default, so omitting them was not a stale-hash nuisance but a
+        // build failure waiting for the first push: strict env mode strips an
+        // unlisted variable, and @t3-oss rejects `undefined` for a required
+        // field. `.github/ci.env` supplies all three, so CI would have been the
+        // one to find it -- exactly the disagreement the comment above warns
+        // about, and the second time this list has drifted behind the schema.
+        "GITHUB_APP_ID",
+        "GITHUB_APP_INSTALLATION_ID",
+        "GITHUB_APP_PRIVATE_KEY",
+        // Defaulted, so these could not break a build -- listed because they
+        // are read by the schema, and an unlisted variable silently builds as
+        // its default while the deploy path (`cf:build:*`, which loads .env
+        // through with-env rather than turbo) sees the real value.
+        "GITHUB_WEBHOOK_SECRET",
+        "GITHUB_COMPETITION_REPO",
+        "AIRTABLE_BASE_ID",
+        "SUPABASE_OAUTH_CLIENT_ID",
+        "SUPABASE_OAUTH_CLIENT_SECRET",
         "DISCORD_CLIENT_ID",
         "DISCORD_CLIENT_SECRET",
         "DISCORD_GUILD_ID",
