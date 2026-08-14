@@ -1,5 +1,5 @@
 /**
- * `pnpm devtools bws <pull|push|diff> --env <dry-run|staging|production>`
+ * `pnpm devtools bws <pull|push|diff> [dry-run|staging|production]`
  *
  * Moving a `.env` file into Secrets Manager and back out again, without ever
  * printing a value.
@@ -66,7 +66,7 @@ async function readLocal(path: string): Promise<EnvMap | null> {
     return parseEnv(await readFile(path, "utf8"));
   } catch {
     explain(`No file at ${path}.`, "", [
-      "Pull the current values first:  pnpm devtools bws pull --env <env>",
+      "Pull the current values first:  pnpm devtools bws pull <env>",
       "Or point at another file:       --file .env.something",
     ]);
     return null;
@@ -157,10 +157,10 @@ export async function runBwsPull(options: BwsOptions): Promise<void> {
         `Pulled from the Bitwarden Secrets Manager project "${spec.project}".`,
         ``,
         `DO NOT COMMIT. Regenerate with:`,
-        `  pnpm devtools bws pull --env ${options.environment}`,
+        `  pnpm devtools bws pull ${options.environment}`,
         ``,
         `Edits here reach the environment only through:`,
-        `  pnpm devtools bws push --env ${options.environment}`,
+        `  pnpm devtools bws push ${options.environment}`,
       ].join("\n"),
     ),
   );
@@ -249,7 +249,7 @@ export async function runBwsPush(options: BwsOptions): Promise<void> {
   }
 
   const index = byKey(existing);
-  const note_ = `Managed by \`pnpm devtools bws push --env ${options.environment}\`.`;
+  const note_ = `Managed by \`pnpm devtools bws push ${options.environment}\`.`;
 
   for (const key of diff.added) {
     await createSecret(projectId, key, local.get(key) ?? "", note_);

@@ -43,14 +43,14 @@ import {
 } from "./airtable/commands.js";
 import { readCatalog, renderCatalog } from "./catalog.js";
 import { runBwsDiff, runBwsPull, runBwsPush } from "./bws/commands.js";
-import { ENVIRONMENTS, isEnvironment } from "./bws/environments.js";
 import { runGhPush, runGhStatus } from "./gh/commands.js";
 import {
   runSecretsAudit,
   runSecretsPull,
   runSecretsPush,
 } from "./env/commands.js";
-import { GITHUB_ENVIRONMENTS, isGithubEnvironment } from "./gh/environments.js";
+import { positionals } from "./args.js";
+import { resolveEnvironment, resolveGithubEnvironment } from "./pick.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
 
 const DOCTOR_COMMANDS = ["doctor", "roundtrip", "catalog"] as const;
@@ -90,32 +90,35 @@ Airtable subcommands:
   airtable verify [--no-duplicates]  Diff the live base against the registry
   airtable snapshot [--check]     Refresh, or check, the committed schema snapshot
 
-Bitwarden subcommands (--env is required: dry-run, staging or production):
-  bws diff --env <env>            Compare the local file to the project
-  bws pull --env <env>            Write the project's secrets to .env.<env>
-  bws push --env <env> [--prune]  Upload .env.<env>; --prune deletes the rest
+Secrets subcommands ([env] is dry-run, staging or production):
+  secrets pull  [env]             Bitwarden -> your .env, in place
+  secrets push  [env]             your .env -> Bitwarden -> GitHub
+  secrets audit [env]             compare .env, Bitwarden, GitHub, Cloudflare
+
+  Leave [env] off and it asks. Naming it is for scripts, and for anyone who
+  would rather not be asked twice.
+
+  Edits the root .env in place, preserving comments and order. Values are
+  commented out rather than deleted. Overwrites are confirmed separately from
+  additions, and production is confirmed on top of that.
+
+Bitwarden subcommands ([env] is dry-run, staging or production):
+  bws diff [env]                  Compare the local file to the project
+  bws pull [env]                  Write the project's secrets to .env.<env>
+  bws push [env] [--prune]        Upload .env.<env>; --prune deletes the rest
 
   Needs BWS_ACCESS_TOKEN — the single admin machine account, read/write on
   all three projects. CI never reads Bitwarden; see the gh commands below.
   Values are never printed — the diff shows key names and fingerprints.
 
-GitHub subcommands (--env is required: dry-run, staging, production,
+GitHub subcommands ([env] is dry-run, staging, production or
 production-apply):
-  gh push --env <env>             Set .env.<env>'s secrets on that environment
-  gh status --env <env>           Compare it against its Bitwarden project
+  gh push [env]                   Set .env.<env>'s secrets on that environment
+  gh status [env]                 Compare it against its Bitwarden project
 
   Bitwarden is the source of truth; deploy jobs read GitHub Actions secrets.
   GitHub secrets are WRITE-ONLY, so status compares names and timestamps
   rather than values — it catches a rotation that was never propagated.
-
-Secrets subcommands (--env is required: dry-run, staging or production):
-  secrets pull  --env <env>       Bitwarden -> your .env, in place
-  secrets push  --env <env>       your .env -> Bitwarden -> GitHub
-  secrets audit --env <env>       compare .env, Bitwarden, GitHub, Cloudflare
-
-  Edits the root .env in place, preserving comments and order. Values are
-  commented out rather than deleted. Overwrites are confirmed separately from
-  additions, and production is confirmed on top of that.
 
 Targets:
   --local            The Docker stack (default)
@@ -386,14 +389,7 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
 }
 
 /**
- * `bws <pull|push|diff> --env <dry-run|staging|production>`
- *
- * `--env` is required and has no default. Every other command here defaults to
- * the local stack because guessing wrong is free; guessing wrong about which
- * environment's credentials to overwrite is not.
- */
-/**
- * `gh <push|status> --env <github-environment>`
+ * `gh <push|status> [github-environment]`
  *
  * A separate environment list from `bws`, and deliberately so: there are four
  * GitHub environments and three Bitwarden projects, because `production` and
@@ -401,8 +397,7 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
  * make that split unrepresentable.
  */
 async function runGhCommand(rest: string[]): Promise<void> {
-  const [sub] = rest;
-  const environment = flagValue(rest, "--env");
+  const [sub, named] = positionals(rest);
 
   if (!sub || !["push", "status"].includes(sub)) {
     log.error(`Unknown gh subcommand: ${sub ?? "(none)"}`);
@@ -411,19 +406,13 @@ async function runGhCommand(rest: string[]): Promise<void> {
     return;
   }
 
+  const environment = await resolveGithubEnvironment(
+    named ?? flagValue(rest, "--env"),
+    sub === "push"
+      ? "Which GitHub environment should I set secrets on?"
+      : "Which GitHub environment should I check?",
+  );
   if (!environment) {
-    explain("`gh` needs --env, and does not guess.", "", [
-      `Environments: ${GITHUB_ENVIRONMENTS.join(", ")}`,
-      "e.g. pnpm devtools gh status --env staging",
-    ]);
-    process.exitCode = 1;
-    return;
-  }
-
-  if (!isGithubEnvironment(environment)) {
-    explain(`"${environment}" is not a GitHub environment.`, "", [
-      `Try one of: ${GITHUB_ENVIRONMENTS.join(", ")}`,
-    ]);
     process.exitCode = 1;
     return;
   }
@@ -446,10 +435,9 @@ async function runGhCommand(rest: string[]): Promise<void> {
   }
 }
 
-/** `secrets <pull|push|audit> --env <dry-run|staging|production>` */
+/** `secrets <pull|push|audit> [dry-run|staging|production]` */
 async function runSecretsCommand(rest: string[]): Promise<void> {
-  const [sub] = rest;
-  const environment = flagValue(rest, "--env");
+  const [sub, named] = positionals(rest);
 
   if (!sub || !["pull", "push", "audit"].includes(sub)) {
     log.error(`Unknown secrets subcommand: ${sub ?? "(none)"}`);
@@ -458,19 +446,17 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
     return;
   }
 
+  // The question names the direction, because the answer means something
+  // different each way: pull overwrites your file, push overwrites theirs.
+  const environment = await resolveEnvironment(
+    named ?? flagValue(rest, "--env"),
+    sub === "pull"
+      ? "Which environment should I pull into your .env?"
+      : sub === "push"
+        ? "Which environment should I push your .env to?"
+        : "Which environment should I audit?",
+  );
   if (!environment) {
-    explain("`secrets` needs --env, and does not guess.", "", [
-      `Environments: ${ENVIRONMENTS.join(", ")}`,
-      "e.g. pnpm devtools secrets audit --env staging",
-    ]);
-    process.exitCode = 1;
-    return;
-  }
-
-  if (!isEnvironment(environment)) {
-    explain(`"${environment}" is not an environment.`, "", [
-      `Try one of: ${ENVIRONMENTS.join(", ")}`,
-    ]);
     process.exitCode = 1;
     return;
   }
@@ -494,9 +480,15 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
   }
 }
 
+/**
+ * `bws <pull|push|diff> [dry-run|staging|production]`
+ *
+ * The environment has no default, and is asked for when it is not named. Every
+ * other command here defaults to the local stack because guessing wrong is
+ * free; guessing wrong about whose credentials to overwrite is not.
+ */
 async function runBwsCommand(rest: string[]): Promise<void> {
-  const [sub] = rest;
-  const environment = flagValue(rest, "--env");
+  const [sub, named] = positionals(rest);
 
   if (!sub || !["pull", "push", "diff"].includes(sub)) {
     log.error(`Unknown bws subcommand: ${sub ?? "(none)"}`);
@@ -505,19 +497,15 @@ async function runBwsCommand(rest: string[]): Promise<void> {
     return;
   }
 
+  const environment = await resolveEnvironment(
+    named ?? flagValue(rest, "--env"),
+    sub === "pull"
+      ? "Which environment's secrets should I write to a file?"
+      : sub === "push"
+        ? "Which environment should I upload to?"
+        : "Which environment should I compare against?",
+  );
   if (!environment) {
-    explain("`bws` needs --env, and does not guess.", "", [
-      `Environments: ${ENVIRONMENTS.join(", ")}`,
-      "e.g. pnpm devtools bws diff --env staging",
-    ]);
-    process.exitCode = 1;
-    return;
-  }
-
-  if (!isEnvironment(environment)) {
-    explain(`"${environment}" is not an environment.`, "", [
-      `Try one of: ${ENVIRONMENTS.join(", ")}`,
-    ]);
     process.exitCode = 1;
     return;
   }

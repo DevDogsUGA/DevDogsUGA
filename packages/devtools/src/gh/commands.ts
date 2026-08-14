@@ -1,13 +1,13 @@
 /**
- * `pnpm devtools gh <push|status> --env <github-environment>`
+ * `pnpm devtools gh <push|status> [github-environment]`
  *
  * The second half of the secret path. Bitwarden is the source of truth; this
  * propagates it into GitHub environment secrets, which is what deploy jobs
  * actually read.
  *
- *   pnpm devtools bws pull --env production   # Bitwarden → .env.production
+ *   pnpm devtools bws pull production   # Bitwarden → .env.production
  *   $EDITOR .env.production                   # (optional) review
- *   pnpm devtools gh push --env production    # → GitHub environment secrets
+ *   pnpm devtools gh push production    # → GitHub environment secrets
  *   rm .env.production
  *
  * Why route through GitHub at all, rather than having the deploy read Bitwarden
@@ -100,7 +100,7 @@ export async function runGhPush(options: GhOptions): Promise<void> {
     local = parseEnv(await readFile(path, "utf8"));
   } catch {
     explain(`No file at ${path}.`, "", [
-      `Pull it from Bitwarden first: pnpm devtools bws pull --env ${spec.bwsProject ? options.environment.replace("-apply", "") : options.environment}`,
+      `Pull it from Bitwarden first: pnpm devtools bws pull ${spec.bwsProject ? options.environment.replace("-apply", "") : options.environment}`,
     ]);
     process.exitCode = 1;
     return;
@@ -178,7 +178,7 @@ export async function runGhPush(options: GhOptions): Promise<void> {
   }
 
   log.success(`Set ${written} secret(s) on \`${options.environment}\`.`);
-  log.info("Verify with: pnpm devtools gh status --env " + options.environment);
+  log.info("Verify with: pnpm devtools gh status " + options.environment);
 }
 
 // ── status ───────────────────────────────────────────────────────────────────

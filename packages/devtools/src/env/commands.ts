@@ -1,5 +1,5 @@
 /**
- * `pnpm devtools secrets <pull|push|audit> --env <env>`
+ * `pnpm devtools secrets <pull|push|audit> [env]`
  *
  * One local `.env`, three remote stores, and a source of truth:
  *
