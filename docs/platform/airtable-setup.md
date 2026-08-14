@@ -294,8 +294,11 @@ prompting, reading and writing `registry.ts`, and setting an exit code.
 
 They read `AIRTABLE_PAT` from the environment rather than from Vault, which is
 the opposite of every other credential here and deliberate: these run _before_
-the platform is configured, they need `schema.bases:write` — a scope the sync
-token should not carry — and the person running them has the token in hand.
+the platform is configured, and the person running them has the token in hand.
+
+⚠️ **The token they read is not the one in Vault, and must not be.** Scaffolding
+needs `schema.bases:write`; the sync must never hold it. Two tokens — see
+[Token scopes](#token-scopes).
 
 The bootstrapping order is the awkward part, and it is worth spelling out because
 it looks circular:
@@ -459,10 +462,10 @@ Everything the integration needs to be pointed at a base, in one place.
 
 ### Environment variables
 
-| Variable           | Where       | Required           | What it is                                               |
-| ------------------ | ----------- | ------------------ | -------------------------------------------------------- |
-| `AIRTABLE_BASE_ID` | root `.env` | Only to run a sync | `appXXXXXXXXXXXXXX` — which base to talk to              |
-| `AIRTABLE_PAT`     | root `.env` | Bootstrap only     | The token, **before** Vault has one. Remove once stored. |
+| Variable           | Where       | Required           | What it is                                                                                 |
+| ------------------ | ----------- | ------------------ | ------------------------------------------------------------------------------------------ |
+| `AIRTABLE_BASE_ID` | root `.env` | Only to run a sync | `appXXXXXXXXXXXXXX` — which base to talk to                                                |
+| `AIRTABLE_PAT`     | root `.env` | Bootstrap only     | The **scaffolding** token, while shaping the base. Remove once the sync token is in Vault. |
 
 `AIRTABLE_BASE_ID` defaults to `""` rather than being required. The platform has
 to boot without Airtable configured — the base is provisioned separately, and a
@@ -489,31 +492,68 @@ stale environment variable cannot quietly take precedence over the rotated token
 
 ### Token scopes
 
-Mint one token, scoped to the club workspace only:
+**Two tokens, not one**, both scoped to the club workspace only. The base is
+shaped by a person holding a write-capable token, and synced at run time by a
+token that cannot reshape anything.
 
-- `schema.bases:read` — `verify.ts`
-- `schema.bases:write` — `scaffold.ts`
-- `data.records:read` — the pull half of every sync
-- `data.records:write` — the push half, and the member push
+| Token           | Scopes                                                           | Lives in                                   | Used by                                     |
+| --------------- | ---------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------- |
+| **Sync**        | `schema.bases:read` · `data.records:read` · `data.records:write` | Supabase Vault, as `airtable_pat`          | the runtime sync, every pass                |
+| **Scaffolding** | the same, **plus `schema.bases:write`**                          | your `.env` as `AIRTABLE_PAT`, transiently | `airtable scaffold` · `pull-ids` · `verify` |
 
-**Mint it as whoever created the workspace.** `POST /v0/meta/bases` requires the
-workspace _creator_ role, which is a person-level permission a token inherits and
-no scope can grant. A collaborator's token does everything else and fails only at
-scaffolding, which is a confusing place to discover it.
+Merging them is the mistake this table exists to prevent. It would hand the cron
+job — and anything that can read Vault — the ability to drop a field from a base
+officers use every day.
+
+**Why the sync needs `schema.bases:read` at all.** Every pass verifies the base
+against the registry before touching a record (`run.ts:107`) and refuses with
+`schema_invalid` rather than writing into a shape it does not recognise. One
+schema read out of roughly seven requests a pass.
+
+**Why it must not have `schema.bases:write`.** The two axes are independent in
+Airtable: a `data.records` read/write token cannot alter tables or fields, no
+matter what it does to rows. That independence is the whole reason a compromised
+runtime cannot rebuild the base, and it costs one extra token to keep.
+
+**Mint the scaffolding token as whoever created the workspace.**
+`POST /v0/meta/bases` requires the workspace _creator_ role, which is a
+person-level permission a token inherits and no scope can grant. A collaborator's
+token does everything else and fails only at scaffolding, which is a confusing
+place to discover it. The sync token creates nothing, so it has no such
+requirement.
+
+CI holds two more, narrower still, and neither goes in Vault:
+`AIRTABLE_PLAN_PAT` (`schema.bases:read` only, for `scaffold --dry-run`) and
+`AIRTABLE_APPLY_PAT` (write-capable, and reachable from the `production-apply`
+GitHub environment alone). See [secrets.md](./secrets.md).
+
+> ⚠️ **This document said "mint one token" until 2026-08-13, and the base was
+> scaffolded on 2026-08-06.** If that run followed the old instructions, the
+> token now in Vault carries `schema.bases:write`. Check it in Airtable's token
+> settings; if it does, mint a sync token without that scope and replace the
+> Vault entry. Nothing breaks either way — which is the problem, and why it is
+> worth checking rather than assuming.
 
 ### Turning it on, once the base exists
 
-1. Set `AIRTABLE_BASE_ID` and `AIRTABLE_PAT` in the root `.env`.
+1. Set `AIRTABLE_BASE_ID` and the **scaffolding** token as `AIRTABLE_PAT` in the
+   root `.env`.
 2. `pnpm airtable:scaffold --dry-run` — report what would be created.
 3. `pnpm airtable:scaffold` — create it.
 4. `pnpm airtable:pull-ids` — write the discovered IDs into `registry.ts`, then
    `pnpm prettier --write` it and commit.
 5. Walk the manual checklist `verify.ts` prints (field editing permissions).
 6. `pnpm airtable:verify` — must exit clean.
-7. Store the token in Vault as `airtable_pat` and **remove `AIRTABLE_PAT` from
-   `.env`**. Vault is checked first, but a `null` from a failed read is
-   indistinguishable from "nothing stored", so a lingering env var wins by
-   accident. It is what silently inverted this precedence before 2026-08-06.
+7. Mint the **sync** token — same workspace, everything except
+   `schema.bases:write` — store it in Vault as `airtable_pat`, and **remove
+   `AIRTABLE_PAT` from `.env`**. Not the scaffolding token: once it is in Vault
+   the runtime can reshape the base, and nothing downstream would notice.
+
+   Vault is checked first, but a `null` from a failed read is indistinguishable
+   from "nothing stored", so a lingering env var wins by accident. It is what
+   silently inverted this precedence before 2026-08-06 — and with two tokens
+   that inversion also means the _broader_ one wins.
+
 8. Grant an officer role `canTriggerSync` and run one pass from the console.
 
 Steps 3 and 4 are what replace the placeholder IDs the registry ships with.
@@ -540,9 +580,10 @@ Ordered, because several steps fail confusingly when done out of order.
 1. **Create the workspace.** A separate workspace from any other club Airtable
    use, so the sync's call budget is not shared with project management. See the
    [allowance note](./meetings-and-teams.md#where-meetings-come-from).
-2. **Create a personal access token** scoped to that workspace with
+2. **Create the scaffolding token**, scoped to that workspace, with
    `schema.bases:read`, `schema.bases:write`, `data.records:read`, and
-   `data.records:write`. Write is needed for scaffolding and for the pushes.
+   `data.records:write`. Schema write is what creates the tables; records read is
+   what lets `verify` check for duplicates.
 
    **Mint it as whoever created the workspace.** `POST /v0/meta/bases` requires
    the workspace _creator_ role, which is a person-level permission the token
@@ -550,8 +591,8 @@ Ordered, because several steps fail confusingly when done out of order.
    everything else and fail only at step 4, which is a confusing place to
    discover it.
 
-3. **Put the token in `.env` as `AIRTABLE_PAT`** for the scaffolding run. It
-   moves to Vault at step 8, once there is a base to point at.
+3. **Put it in `.env` as `AIRTABLE_PAT`** for the scaffolding run. It stays there
+   only until step 10, and it is **not** the token that ends up in Vault.
 4. **Run `pnpm airtable:scaffold`.** Creates the six tables and their fields.
    `--dry-run` first reports the diff without writing.
 5. **Run `pnpm airtable:pull-ids`**, format, and commit the resulting
@@ -572,9 +613,17 @@ Ordered, because several steps fail confusingly when done out of order.
    rather than an email.
 9. **Only then** author a meeting. Doing it earlier produces a workshop linked to
    nothing.
-10. **Move the token to Vault** as `airtable_pat` and delete `AIRTABLE_PAT` from
-    `.env`. Last rather than first: the scaffolding scripts read the environment
-    by design, and a token that is only in Vault cannot scaffold anything.
+10. **Mint the sync token and put _that_ one in Vault** as `airtable_pat`, then
+    delete `AIRTABLE_PAT` from `.env` and revoke the scaffolding token until the
+    next time the base changes shape.
+
+    Last rather than first: the scaffolding scripts read the environment by
+    design, and a token that is only in Vault cannot scaffold anything.
+
+    ⚠️ **Do not promote the scaffolding token.** It carries
+    `schema.bases:write`, and in Vault that becomes a standing ability for the
+    cron job to rebuild a base officers use daily. The sync token is the same
+    scopes minus that one — see [Token scopes](#token-scopes).
 
 ## Tests
 
