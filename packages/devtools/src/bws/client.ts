@@ -20,7 +20,6 @@
  */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import type { EnvMap } from "./envfile.js";
 
 const run = promisify(execFile);
 
@@ -39,8 +38,9 @@ export interface BwsSecret {
    * ISO 8601, when this secret last changed.
    *
    * Optional because it is not needed to push or pull — but it is the whole
-   * basis of `gh status`, which cannot compare values (GitHub secrets are
-   * write-only) and instead asks whether GitHub was updated after this.
+   * basis of the staleness half of `secrets audit`, which cannot compare values
+   * (GitHub secrets are write-only) and instead asks whether GitHub was updated
+   * after this.
    */
   revisionDate?: string;
 }
@@ -162,11 +162,6 @@ export async function updateSecret(
 export async function deleteSecrets(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   await bws(["secret", "delete", ...ids]);
-}
-
-/** Secrets as a plain key/value map, which is what both commands work in. */
-export function toEnvMap(secrets: BwsSecret[]): EnvMap {
-  return new Map(secrets.map((s) => [s.key, s.value]));
 }
 
 export function byKey(secrets: BwsSecret[]): Map<string, BwsSecret> {

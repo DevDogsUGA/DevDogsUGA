@@ -16,6 +16,13 @@
  * clean audit does not mean "everything matches" — it means "nothing detectable
  * is wrong", and the report says which is which rather than implying the
  * stronger claim.
+ *
+ * Timestamps are what rescue the GitHub half from being presence-only. Bitwarden
+ * reports a `revisionDate` per secret and `gh secret list` reports `updatedAt`,
+ * so "was GitHub updated after Bitwarden last changed?" IS answerable — and that
+ * is the failure this design actually has, a credential rotated in Bitwarden and
+ * never propagated, which a name-only check calls healthy right up until the old
+ * one is revoked.
  */
 
 export type Severity = "error" | "warning" | "info";
@@ -28,21 +35,43 @@ export interface Finding {
   summary: string;
 }
 
+export interface BwsEntry {
+  value: string;
+  /** ISO 8601. Absent when the CLI did not report one. */
+  revisionDate?: string;
+}
+
+export interface GithubEntry {
+  /** Which GitHub environment this copy sits in. */
+  environment: string;
+  name: string;
+  /** ISO 8601. */
+  updatedAt?: string;
+}
+
 export interface AuditInput {
   /** Active assignments in the local `.env`. */
   local: Map<string, string>;
   /** Keys present in the local `.env` but commented out. */
   localCommented?: Set<string>;
   /** The source of truth. */
-  bws: Map<string, string>;
-  /** GitHub environment secret names. Values are unreadable. */
-  github: Set<string>;
+  bws: Map<string, BwsEntry>;
+  /**
+   * Every GitHub copy found, across every environment this project feeds.
+   *
+   * A list rather than a map keyed by name, because one Bitwarden project can
+   * feed two GitHub environments and the interesting case is a key appearing in
+   * BOTH — which a name-keyed map would quietly collapse to one.
+   */
+  github: GithubEntry[];
+  /**
+   * Where a key is supposed to live. `null` means "nowhere in this
+   * environment", which is ordinary rather than wrong.
+   */
+  route: (key: string) => string | null;
   /** Worker name → secret names on it. Values are unreadable. */
   cloudflare?: Map<string, Set<string>>;
-  /**
-   * Keys that legitimately live outside Bitwarden — non-secrets, and the
-   * apply-only credentials that belong to a different GitHub environment.
-   */
+  /** Keys that legitimately live outside Bitwarden — the non-secrets. */
   ignore?: ReadonlySet<string>;
 }
 
@@ -68,7 +97,7 @@ export function audit(input: AuditInput): Finding[] {
           "in your .env, not in Bitwarden — either a local-only value or one " +
           "somebody forgot to push",
       });
-    } else if (truth !== value) {
+    } else if (truth.value !== value) {
       findings.push({
         key,
         severity: "error",
@@ -95,30 +124,63 @@ export function audit(input: AuditInput): Finding[] {
   }
 
   // ── Bitwarden vs GitHub ────────────────────────────────────────────────────
-  // The failure this design actually has: rotated in Bitwarden, never synced.
-  for (const key of input.bws.keys()) {
+  for (const [key, entry] of input.bws) {
     if (!relevant(key)) continue;
-    if (!input.github.has(key)) {
+
+    const expected = input.route(key);
+    if (expected === null) continue;
+
+    const copies = input.github.filter((g) => g.name === key);
+    const here = copies.find((g) => g.environment === expected);
+
+    // A copy somewhere it does not belong. Listed FIRST because for the
+    // apply-only credentials this is the reviewer gate failing open: the token
+    // is sitting in an environment that deploys with nobody in front of it.
+    for (const stray of copies.filter((g) => g.environment !== expected)) {
       findings.push({
         key,
         severity: "error",
         store: "github",
         summary:
-          "in Bitwarden, NOT in the GitHub environment — the deploy cannot see it",
+          `also set on \`${stray.environment}\`, which is not where it belongs ` +
+          `(\`${expected}\`) — delete it there`,
+      });
+    }
+
+    if (!here) {
+      findings.push({
+        key,
+        severity: "error",
+        store: "github",
+        summary:
+          `in Bitwarden, NOT in the \`${expected}\` GitHub environment — ` +
+          "the deploy cannot see it",
+      });
+      continue;
+    }
+
+    if (isStale(entry.revisionDate, here.updatedAt)) {
+      findings.push({
+        key,
+        severity: "error",
+        store: "github",
+        summary:
+          "rotated in Bitwarden after GitHub was last updated — the deploy is " +
+          "still using the previous value",
       });
     }
   }
 
-  for (const key of input.github) {
-    if (!relevant(key)) continue;
-    if (!input.bws.has(key)) {
+  for (const copy of input.github) {
+    if (!relevant(copy.name)) continue;
+    if (!input.bws.has(copy.name)) {
       findings.push({
-        key,
+        key: copy.name,
         severity: "warning",
         store: "github",
         summary:
-          "in the GitHub environment, not in Bitwarden — an orphan from a " +
-          "rename or a removal",
+          `in the \`${copy.environment}\` GitHub environment, not in ` +
+          "Bitwarden — an orphan from a rename or a removal",
       });
     }
   }
@@ -145,6 +207,25 @@ export function audit(input: AuditInput): Finding[] {
   return findings.sort(
     (a, b) => rank(a.severity) - rank(b.severity) || a.key.localeCompare(b.key),
   );
+}
+
+/**
+ * True when GitHub's copy predates the Bitwarden revision.
+ *
+ * A missing or unparseable date on either side returns false. A comparison
+ * against `NaN` is false anyway, so this is only making that explicit — but the
+ * reason to be explicit is that the alternative reading, "unknown means stale",
+ * turns one malformed timestamp into a report that says everything is behind,
+ * after which nobody reads it, including on the run where something really is.
+ */
+function isStale(revisionDate?: string, updatedAt?: string): boolean {
+  if (!revisionDate || !updatedAt) return false;
+
+  const revised = Date.parse(revisionDate);
+  const updated = Date.parse(updatedAt);
+  if (Number.isNaN(revised) || Number.isNaN(updated)) return false;
+
+  return updated < revised;
 }
 
 function rank(s: Severity): number {

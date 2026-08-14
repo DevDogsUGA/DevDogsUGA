@@ -42,15 +42,13 @@ import {
   runVerify,
 } from "./airtable/commands.js";
 import { readCatalog, renderCatalog } from "./catalog.js";
-import { runBwsDiff, runBwsPull, runBwsPush } from "./bws/commands.js";
-import { runGhPush, runGhStatus } from "./gh/commands.js";
 import {
   runSecretsAudit,
   runSecretsPull,
   runSecretsPush,
 } from "./env/commands.js";
 import { positionals } from "./args.js";
-import { resolveEnvironment, resolveGithubEnvironment } from "./pick.js";
+import { resolveEnvironment } from "./pick.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
 
 const DOCTOR_COMMANDS = ["doctor", "roundtrip", "catalog"] as const;
@@ -80,8 +78,6 @@ Commands:
   roundtrip  File a report, quarantine it, and check who can still see it
   oauth      Configure "Sign in with DevDogs" for the project in this directory
   airtable   Scaffold, pull ids from, or verify the officer base
-  bws        Move secrets between a .env file and Bitwarden Secrets Manager
-  gh         Push those secrets on into GitHub environment secrets
   secrets    One .env, synced to Bitwarden + GitHub, with a drift audit
 
 Airtable subcommands:
@@ -90,35 +86,23 @@ Airtable subcommands:
   airtable verify [--no-duplicates]  Diff the live base against the registry
   airtable snapshot [--check]     Refresh, or check, the committed schema snapshot
 
-Secrets subcommands ([env] is dry-run, staging or production):
-  secrets pull  [env]             Bitwarden -> your .env, in place
-  secrets push  [env]             your .env -> Bitwarden -> GitHub
-  secrets audit [env]             compare .env, Bitwarden, GitHub, Cloudflare
+Secrets subcommands (--env is dry-run, staging or production):
+  secrets pull  --env <env>       Bitwarden -> your .env, in place
+  secrets push  --env <env>       your .env -> Bitwarden -> GitHub
+  secrets audit --env <env>       compare .env, Bitwarden, GitHub, Cloudflare
 
-  Leave [env] off and it asks. Naming it is for scripts, and for anyone who
+  Leave --env off and it asks. Naming it is for scripts, and for anyone who
   would rather not be asked twice.
+
+  Bitwarden is the source of truth; deploy jobs read GitHub Actions secrets,
+  so push sends to both — a value in one and not the other is the failure
+  this design has. Needs BWS_ACCESS_TOKEN (the admin machine account) and a
+  signed-in GitHub CLI.
 
   Edits the root .env in place, preserving comments and order. Values are
   commented out rather than deleted. Overwrites are confirmed separately from
-  additions, and production is confirmed on top of that.
-
-Bitwarden subcommands ([env] is dry-run, staging or production):
-  bws diff [env]                  Compare the local file to the project
-  bws pull [env]                  Write the project's secrets to .env.<env>
-  bws push [env] [--prune]        Upload .env.<env>; --prune deletes the rest
-
-  Needs BWS_ACCESS_TOKEN — the single admin machine account, read/write on
-  all three projects. CI never reads Bitwarden; see the gh commands below.
-  Values are never printed — the diff shows key names and fingerprints.
-
-GitHub subcommands ([env] is dry-run, staging, production or
-production-apply):
-  gh push [env]                   Set .env.<env>'s secrets on that environment
-  gh status [env]                 Compare it against its Bitwarden project
-
-  Bitwarden is the source of truth; deploy jobs read GitHub Actions secrets.
-  GitHub secrets are WRITE-ONLY, so status compares names and timestamps
-  rather than values — it catches a rotation that was never propagated.
+  additions, and production is confirmed on top of that. Values are never
+  printed — changes show as key names and fingerprints.
 
 Targets:
   --local            The Docker stack (default)
@@ -389,55 +373,18 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
 }
 
 /**
- * `gh <push|status> [github-environment]`
+ * `secrets <pull|push|audit> --env <dry-run|staging|production>`
  *
- * A separate environment list from `bws`, and deliberately so: there are four
- * GitHub environments and three Bitwarden projects, because `production` and
- * `production-apply` split one project between them. Sharing one list would
- * make that split unrepresentable.
+ * The environment has no default, and is asked for when `--env` is absent.
+ * Every other command here defaults to the local stack because guessing wrong
+ * is free; guessing wrong about whose credentials to overwrite is not.
  */
-async function runGhCommand(rest: string[]): Promise<void> {
-  const [sub, named] = positionals(rest);
-
-  if (!sub || !["push", "status"].includes(sub)) {
-    log.error(`Unknown gh subcommand: ${sub ?? "(none)"}`);
-    log.message("Try push or status.");
-    process.exitCode = 1;
-    return;
-  }
-
-  const environment = await resolveGithubEnvironment(
-    named ?? flagValue(rest, "--env"),
-    sub === "push"
-      ? "Which GitHub environment should I set secrets on?"
-      : "Which GitHub environment should I check?",
-  );
-  if (!environment) {
-    process.exitCode = 1;
-    return;
-  }
-
-  const options = {
-    environment,
-    file: flagValue(rest, "--file"),
-    yes: rest.includes("--yes"),
-  };
-
-  try {
-    if (sub === "push") await runGhPush(options);
-    else await runGhStatus(options);
-  } catch (err) {
-    explain("The GitHub command failed.", errorMessage(err), [
-      "`gh auth status` shows whether the CLI is signed in.",
-      "Environment secrets need admin on the repository.",
-    ]);
-    process.exitCode = 1;
-  }
-}
-
-/** `secrets <pull|push|audit> [dry-run|staging|production]` */
 async function runSecretsCommand(rest: string[]): Promise<void> {
-  const [sub, named] = positionals(rest);
+  // `positionals` rather than `rest[0]`, so a flag before the subcommand does
+  // not become the subcommand -- and, more to the point, so the VALUE of a flag
+  // never does: in `secrets --file production pull`, `production` is a
+  // filename and must not be read as anything else.
+  const [sub] = positionals(rest);
 
   if (!sub || !["pull", "push", "audit"].includes(sub)) {
     log.error(`Unknown secrets subcommand: ${sub ?? "(none)"}`);
@@ -449,7 +396,7 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
   // The question names the direction, because the answer means something
   // different each way: pull overwrites your file, push overwrites theirs.
   const environment = await resolveEnvironment(
-    named ?? flagValue(rest, "--env"),
+    flagValue(rest, "--env"),
     sub === "pull"
       ? "Which environment should I pull into your .env?"
       : sub === "push"
@@ -475,56 +422,6 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
     explain("The secrets command failed.", errorMessage(err), [
       "BWS_ACCESS_TOKEN must be set to the admin machine account.",
       "`gh auth status` shows whether the GitHub CLI is signed in.",
-    ]);
-    process.exitCode = 1;
-  }
-}
-
-/**
- * `bws <pull|push|diff> [dry-run|staging|production]`
- *
- * The environment has no default, and is asked for when it is not named. Every
- * other command here defaults to the local stack because guessing wrong is
- * free; guessing wrong about whose credentials to overwrite is not.
- */
-async function runBwsCommand(rest: string[]): Promise<void> {
-  const [sub, named] = positionals(rest);
-
-  if (!sub || !["pull", "push", "diff"].includes(sub)) {
-    log.error(`Unknown bws subcommand: ${sub ?? "(none)"}`);
-    log.message("Try pull, push or diff.");
-    process.exitCode = 1;
-    return;
-  }
-
-  const environment = await resolveEnvironment(
-    named ?? flagValue(rest, "--env"),
-    sub === "pull"
-      ? "Which environment's secrets should I write to a file?"
-      : sub === "push"
-        ? "Which environment should I upload to?"
-        : "Which environment should I compare against?",
-  );
-  if (!environment) {
-    process.exitCode = 1;
-    return;
-  }
-
-  const options = {
-    environment,
-    file: flagValue(rest, "--file"),
-    prune: rest.includes("--prune"),
-    yes: rest.includes("--yes"),
-  };
-
-  try {
-    if (sub === "pull") await runBwsPull(options);
-    else if (sub === "push") await runBwsPush(options);
-    else await runBwsDiff(options);
-  } catch (err) {
-    explain("The Bitwarden command failed.", errorMessage(err), [
-      "Check BWS_ACCESS_TOKEN is the machine account for this environment.",
-      "`bws project list` shows what the current token can reach.",
     ]);
     process.exitCode = 1;
   }
@@ -648,18 +545,6 @@ async function main(): Promise<void> {
 
   if (first === "airtable") {
     await runAirtableCommand(rest);
-    outro("Done.");
-    return;
-  }
-
-  if (first === "bws") {
-    await runBwsCommand(rest);
-    outro("Done.");
-    return;
-  }
-
-  if (first === "gh") {
-    await runGhCommand(rest);
     outro("Done.");
     return;
   }

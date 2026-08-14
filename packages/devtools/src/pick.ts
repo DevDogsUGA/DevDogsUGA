@@ -1,11 +1,10 @@
 /**
  * Choosing an environment when the command line did not name one.
  *
- * The environment is an optional final argument — `secrets pull staging` — and
- * when it is absent this asks instead of guessing. Nothing else in this CLI
- * defaults to anything but the local stack; here there is no safe default to
- * fall back to, because the three environments differ precisely in how much
- * damage picking the wrong one does.
+ * `--env` is optional, and when it is absent this asks rather than guessing.
+ * Nothing else in this CLI defaults to anything but the local stack; here there
+ * is no safe default to fall back to, because the three environments differ
+ * precisely in how much damage picking the wrong one does.
  *
  * Two properties the prompt is built around:
  *
@@ -21,11 +20,6 @@ import {
   isEnvironment,
   type BwsEnvironment,
 } from "./bws/environments.js";
-import {
-  GITHUB_ENVIRONMENTS,
-  isGithubEnvironment,
-  type GithubEnvironment,
-} from "./gh/environments.js";
 import { explain, unwrap } from "./ui.js";
 
 /** Short enough to sit beside the name; the specs' summaries are paragraphs. */
@@ -33,13 +27,6 @@ const BWS_HINTS: Record<BwsEnvironment, string> = {
   "dry-run": "read-only credentials for the pre-promotion checks",
   staging: "the everyday one — safe to overwrite",
   production: "⚠️  the live values",
-};
-
-const GITHUB_HINTS: Record<GithubEnvironment, string> = {
-  "dry-run": "read-only credentials for the pre-promotion checks",
-  staging: "the everyday one — safe to overwrite",
-  production: "⚠️  deploys with no reviewer in front of it",
-  "production-apply": "⚠️  the write-capable credentials, behind reviewers",
 };
 
 /**
@@ -57,24 +44,6 @@ export async function resolveEnvironment(
     await select({
       message,
       options: ENVIRONMENTS.map((value) => ({ value, hint: BWS_HINTS[value] })),
-    }),
-  );
-}
-
-export async function resolveGithubEnvironment(
-  given: string | undefined,
-  message: string,
-): Promise<GithubEnvironment | null> {
-  const checked = precheck(given, GITHUB_ENVIRONMENTS, isGithubEnvironment);
-  if (checked !== ASK) return checked;
-
-  return unwrap(
-    await select({
-      message,
-      options: GITHUB_ENVIRONMENTS.map((value) => ({
-        value,
-        hint: GITHUB_HINTS[value],
-      })),
     }),
   );
 }
@@ -97,7 +66,7 @@ function precheck<T extends string>(
 
   if (!process.stdin.isTTY) {
     explain("No environment given, and there is nobody here to ask.", "", [
-      `Name one as the last argument: ${all.join(" | ")}`,
+      `Pass --env: ${all.join(" | ")}`,
     ]);
     return null;
   }

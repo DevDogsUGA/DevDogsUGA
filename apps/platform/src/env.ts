@@ -26,8 +26,8 @@ export const env = createEnv({
     // <UnderConstruction />.
     //
     // Set by `wrangler.jsonc` per env block at runtime and by the `cf:build:*`
-    // scripts at build time. Never a GitHub environment variable, and refused
-    // by `bws push` -- it has two agreeing committed sources already.
+    // scripts at build time. Never a GitHub environment variable, and skipped
+    // by `secrets push` -- it has two agreeing committed sources already.
     DEPLOY_ENV: z
       .enum(["development", "staging", "production"])
       .default("development"),

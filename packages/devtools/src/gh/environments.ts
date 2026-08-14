@@ -34,8 +34,6 @@ export function isGithubEnvironment(v: string): v is GithubEnvironment {
 }
 
 export interface GithubEnvironmentSpec {
-  /** Local file `push` reads. */
-  file: string;
   /** BWS project to compare against, or null when nothing backs it. */
   bwsProject: string | null;
   /** Deployment branch policy, for the summary line. */
@@ -59,7 +57,6 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
   GithubEnvironmentSpec
 > = {
   "dry-run": {
-    file: ".env.dry-run",
     bwsProject: "devdogs-dry-run",
     branch: "main",
     onlyKeys: null,
@@ -67,7 +64,6 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
     guarded: false,
   },
   staging: {
-    file: ".env.staging",
     bwsProject: "devdogs-staging",
     branch: "main",
     onlyKeys: null,
@@ -75,7 +71,6 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
     guarded: false,
   },
   production: {
-    file: ".env.production",
     bwsProject: "devdogs-production",
     branch: "production",
     onlyKeys: null,
@@ -83,7 +78,6 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
     guarded: true,
   },
   "production-apply": {
-    file: ".env.production",
     bwsProject: "devdogs-production",
     branch: "production",
     onlyKeys: APPLY_ONLY_KEYS,
@@ -91,3 +85,39 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
     guarded: true,
   },
 };
+
+// ── Routing ──────────────────────────────────────────────────────────────────
+//
+// One Bitwarden project can feed more than one GitHub environment — production
+// feeds two — so a push has to know which key goes where. Derived from the
+// table above rather than written out a second time: the split IS the reviewer
+// gate, and a hardcoded copy of it is a copy that can disagree.
+
+/** The GitHub environments fed by one Bitwarden project, in precedence order. */
+export function githubTargets(bwsProject: string): GithubEnvironment[] {
+  return GITHUB_ENVIRONMENTS.filter(
+    (e) => GITHUB_ENVIRONMENT_SPECS[e].bwsProject === bwsProject,
+  );
+}
+
+/** Whether one environment takes a given key. */
+export function accepts(environment: GithubEnvironment, key: string): boolean {
+  const spec = GITHUB_ENVIRONMENT_SPECS[environment];
+  return spec.onlyKeys
+    ? spec.onlyKeys.includes(key)
+    : !spec.excludeKeys.includes(key);
+}
+
+/**
+ * The one environment a key belongs in, or `null` for "nowhere here".
+ *
+ * `null` is not an error. Pushing `staging` with an apply-only credential in
+ * the file is the ordinary case — that key belongs to production and simply has
+ * no home in the staging environment.
+ */
+export function routeTo(
+  bwsProject: string,
+  key: string,
+): GithubEnvironment | null {
+  return githubTargets(bwsProject).find((e) => accepts(e, key)) ?? null;
+}

@@ -1,5 +1,5 @@
 /**
- * `pnpm devtools secrets <pull|push|audit> [env]`
+ * `pnpm devtools secrets <pull|push|audit> --env <env>`
  *
  * One local `.env`, three remote stores, and a source of truth:
  *
@@ -34,10 +34,16 @@ import {
   APPLY_ONLY_KEYS,
   type BwsEnvironment,
 } from "../bws/environments.js";
-import { fingerprint } from "../bws/envfile.js";
+import { fingerprint } from "../fingerprint.js";
 import { listSecrets as listGhSecrets, setSecret } from "../gh/client.js";
-import { GITHUB_ENVIRONMENT_SPECS } from "../gh/environments.js";
-import { audit, hasErrors, renderFindings } from "./audit.js";
+import {
+  GITHUB_ENVIRONMENT_SPECS,
+  accepts,
+  githubTargets,
+  routeTo,
+  type GithubEnvironment,
+} from "../gh/environments.js";
+import { audit, hasErrors, renderFindings, type GithubEntry } from "./audit.js";
 import { listWorkerSecrets } from "./cloudflare.js";
 import { EnvDocument } from "./document.js";
 import { PROJECT_ROOT } from "../instance.js";
@@ -50,9 +56,21 @@ export interface SecretsOptions {
   yes?: boolean;
 }
 
-/** Keys that live outside Bitwarden and must not be reported as drift. */
-function ignored(): Set<string> {
-  return new Set<string>([...NEVER_SECRET_KEYS, ...APPLY_ONLY_KEYS]);
+/**
+ * Keys that never belong in this environment's Bitwarden project.
+ *
+ * The non-secrets always — those are GitHub *variables*, and a value with two
+ * sources of truth resolves to whichever the reader did not check. The
+ * apply-only credentials everywhere but production, because they exist to
+ * reshape production and a staging copy would be a second thing to rotate for
+ * no benefit.
+ */
+function ignoredFor(environment: BwsEnvironment): Set<string> {
+  const skip = new Set<string>(NEVER_SECRET_KEYS);
+  if (environment !== "production") {
+    for (const key of APPLY_ONLY_KEYS) skip.add(key);
+  }
+  return skip;
 }
 
 async function readDocument(path: string): Promise<EnvDocument> {
@@ -73,8 +91,8 @@ function pathFor(options: SecretsOptions): string {
  * Brings Bitwarden's values into the local `.env`, in place.
  *
  * ⚠️ This is the file `pnpm dev` reads. Pulling `production` points local
- * development at production, which is why that environment is confirmed
- * separately and by name rather than with a generic yes/no.
+ * development at production, which is why that environment warns and defaults
+ * its confirmation to no.
  */
 export async function runSecretsPull(options: SecretsOptions): Promise<void> {
   const spec = ENVIRONMENT_SPECS[options.environment];
@@ -148,7 +166,7 @@ export async function runSecretsPush(options: SecretsOptions): Promise<void> {
   const spec = ENVIRONMENT_SPECS[options.environment];
   const path = pathFor(options);
   const doc = await readDocument(path);
-  const skip = ignored();
+  const skip = ignoredFor(options.environment);
 
   const local = new Map(
     doc.entries().filter(([key, value]) => !skip.has(key) && value !== ""),
@@ -156,8 +174,7 @@ export async function runSecretsPush(options: SecretsOptions): Promise<void> {
 
   if (local.size === 0) {
     explain(`No pushable values in ${path}.`, "", [
-      "Non-secrets and empty values are skipped; apply-only credentials go to",
-      "production-apply separately. Nothing else was found.",
+      "Non-secrets and empty values are skipped. Nothing else was found.",
     ]);
     process.exitCode = 1;
     return;
@@ -248,39 +265,59 @@ export async function runSecretsPush(options: SecretsOptions): Promise<void> {
 
 const MANAGED = "Managed by `pnpm devtools secrets push`.";
 
-/** The second half of every push. Routing per GitHub environment. */
+/**
+ * The second half of every push.
+ *
+ * One Bitwarden project can feed more than one GitHub environment: `production`
+ * feeds both `production` and `production-apply`, and which key goes where IS
+ * the reviewer gate. So this loops over the routed targets rather than assuming
+ * one, and confirms each separately — agreeing to update production's ordinary
+ * secrets is not agreeing to touch the two write-capable credentials sitting
+ * behind the reviewers.
+ */
 async function pushToGithub(
   environment: BwsEnvironment,
   local: Map<string, string>,
   yes?: boolean,
 ): Promise<void> {
-  const spec = GITHUB_ENVIRONMENT_SPECS[environment];
-  const chosen = new Map(
-    [...local].filter(([key]) => !spec.excludeKeys.includes(key)),
-  );
+  const project = ENVIRONMENT_SPECS[environment].project;
 
-  const existing = await listGhSecrets(environment);
-  const known = new Set(existing.map((s) => s.name));
-  const fresh = [...chosen.keys()].filter((k) => !known.has(k));
+  for (const target of githubTargets(project)) {
+    const chosen = new Map([...local].filter(([key]) => accepts(target, key)));
+    if (chosen.size === 0) continue;
 
-  if (!yes) {
-    const ok = unwrap(
-      await confirm({
-        message: `Sync ${chosen.size} secret(s) to the \`${environment}\` GitHub environment (${fresh.length} new)?`,
-        initialValue: true,
-      }),
-    );
-    if (!ok) {
-      log.warn(
-        "Skipped. ⚠️ Bitwarden is now ahead of GitHub — the deploy still uses " +
-          "the previous values. Run `pnpm devtools secrets audit` when you fix it.",
+    const existing = await listGhSecrets(target);
+    const known = new Set(existing.map((s) => s.name));
+    const fresh = [...chosen.keys()].filter((k) => !known.has(k));
+
+    if (!yes) {
+      const ok = unwrap(
+        await confirm({
+          message:
+            `Sync ${chosen.size} secret(s) to the \`${target}\` GitHub ` +
+            `environment (${fresh.length} new)?`,
+          // The gated environments hold what a reviewer is meant to see before
+          // it can be used, so the default answer there is no.
+          initialValue: !GITHUB_ENVIRONMENT_SPECS[target].guarded,
+        }),
       );
-      return;
+      if (!ok) {
+        log.warn(
+          `Skipped \`${target}\`. ⚠️ Bitwarden is now ahead of GitHub — the ` +
+            `deploy still uses the previous values. Run \`pnpm devtools ` +
+            `secrets audit --env ${environment}\` when you fix it.`,
+        );
+        continue;
+      }
     }
-  }
 
-  for (const [key, value] of chosen) await setSecret(environment, key, value);
-  log.success(`Synced ${chosen.size} secret(s) to \`${environment}\`.`);
+    // Sequential. `gh` is one process per secret, and a burst of them against
+    // the same environment is a good way to meet a secondary rate limit --
+    // which would leave the set half-applied, the one outcome worse than not
+    // having started.
+    for (const [key, value] of chosen) await setSecret(target, key, value);
+    log.success(`Synced ${chosen.size} secret(s) to \`${target}\`.`);
+  }
 }
 
 // ── audit ────────────────────────────────────────────────────────────────────
@@ -293,7 +330,28 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
 
   const projectId = await projectIdFor(spec.project);
   const bwsSecrets = await listBwsSecrets(projectId);
-  const gh = await listGhSecrets(options.environment);
+
+  // Every GitHub environment this project feeds, so that a key sitting in the
+  // WRONG one is visible rather than merely absent from the right one.
+  const github: GithubEntry[] = [];
+  const unreachable: GithubEnvironment[] = [];
+  for (const target of githubTargets(spec.project)) {
+    try {
+      for (const secret of await listGhSecrets(target)) {
+        github.push({
+          environment: target,
+          name: secret.name,
+          updatedAt: secret.updatedAt,
+        });
+      }
+    } catch {
+      // Usually an environment nobody has created yet. Reported, then routed
+      // around -- inventing "missing from GitHub" for every key in an
+      // environment that could not be read would bury everything else.
+      unreachable.push(target);
+    }
+  }
+
   const { secrets: cloudflare, unreadable } = await listWorkerSecrets(
     options.environment,
   );
@@ -305,14 +363,29 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
   const findings = audit({
     local: new Map(doc.entries()),
     localCommented: commented,
-    bws: new Map(bwsSecrets.map((s) => [s.key, s.value])),
-    github: new Set(gh.map((s) => s.name)),
+    bws: new Map(
+      bwsSecrets.map((s) => [
+        s.key,
+        { value: s.value, revisionDate: s.revisionDate },
+      ]),
+    ),
+    github,
+    route: (key) => {
+      const target = routeTo(spec.project, key);
+      return target && unreachable.includes(target) ? null : target;
+    },
     cloudflare,
-    ignore: ignored(),
+    ignore: ignoredFor(options.environment),
   });
 
   note(renderFindings(findings), `${options.environment} — drift`);
 
+  if (unreachable.length > 0) {
+    log.warn(
+      `Could not read the ${unreachable.join(", ")} GitHub environment(s), so ` +
+        `nothing was checked there. Usually means it does not exist yet.`,
+    );
+  }
   if (unreadable.length > 0) {
     log.warn(
       `Could not read Worker secrets for: ${unreadable.join(", ")}. ` +
@@ -322,8 +395,9 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
 
   // Said explicitly, because "no drift" reads as a stronger claim than it is.
   log.info(
-    "GitHub and Cloudflare secrets are write-only, so only presence was " +
-      "checked there. Values were compared between your .env and Bitwarden only.",
+    "GitHub and Cloudflare secrets are write-only. Values were compared " +
+      "between your .env and Bitwarden only; GitHub was checked for presence, " +
+      "for routing, and for whether its copy predates the Bitwarden revision.",
   );
 
   if (hasErrors(findings)) process.exitCode = 1;
