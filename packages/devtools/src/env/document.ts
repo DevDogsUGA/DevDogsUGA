@@ -84,6 +84,63 @@ function unescape(text: string): string {
   );
 }
 
+/**
+ * Splits everything after `=` into its value and its trailing comment.
+ *
+ * Quote-aware, because the naive "cut at the first `#`" truncates a generated
+ * password into something that still looks like one. A `#` inside quotes is
+ * part of the value; outside them it starts a comment only when whitespace
+ * precedes it.
+ */
+export function splitComment(rest: string): { comment: string } {
+  const text = rest.trimStart();
+
+  let after: number;
+  if (text.startsWith('"') || text.startsWith("'")) {
+    const end = findClosing(text, text[0]!);
+    after = end === -1 ? text.length : end + 1;
+  } else {
+    const hash = text.search(/\s#/);
+    after = hash === -1 ? text.length : hash;
+  }
+
+  const tail = text.slice(after);
+  const hash = tail.indexOf("#");
+  return { comment: hash === -1 ? "" : tail.slice(hash).trimEnd() };
+}
+
+/**
+ * Where a value came from and when — written on the same line as the value.
+ *
+ * The point is answering "is this still what production has?" without running
+ * anything. A stamped line says which environment it came from and when, so a
+ * `.env` that has been sitting for three weeks says so rather than looking
+ * exactly like one pulled this morning.
+ */
+export interface Stamp {
+  environment: string;
+  action: "pushed" | "pulled";
+  /** ISO date. Passed in rather than read from the clock, so this is testable. */
+  date: string;
+}
+
+/**
+ * Recognises a stamp this tool wrote, so it is replaced rather than duplicated.
+ *
+ * Deliberately narrow: it matches the exact bracketed shape below and nothing
+ * else, because the cost of a false positive is deleting somebody's own note.
+ */
+const STAMP =
+  /\s*#\s*\[[a-z][a-z0-9-]* (?:pushed|pulled) \d{4}-\d{2}-\d{2}\]\s*$/;
+
+function stampText(stamp: Stamp): string {
+  return `# [${stamp.environment} ${stamp.action} ${stamp.date}]`;
+}
+
+export function isStamp(comment: string): boolean {
+  return STAMP.test(comment);
+}
+
 /** Always double-quoted, so a multi-line value round-trips through one line. */
 export function quote(value: string): string {
   return `"${value
@@ -164,23 +221,38 @@ export class EnvDocument {
    * the same key twice — one of them stale, both of them plausible, and the
    * loser silently winning depending on which the reader scrolled to.
    */
-  set(key: string, value: string): void {
+  set(key: string, value: string, stamp?: Stamp): void {
     const active = this.find(key, false);
     if (active !== -1) {
       const line = this.lines[active]!;
-      line.raw = line.raw.replace(
-        ACTIVE,
-        (_m, indent: string, exported: string, k: string) =>
-          `${indent}${exported}${k}=${quote(value)}`,
-      );
-      line.value = value;
+      const match = ACTIVE.exec(line.raw)!;
+      const existing = splitComment(match[4]!).comment;
+
+      // Somebody's own note gets moved out of the way rather than overwritten.
+      // It was written about this key, so it belongs above the key -- and above
+      // the whole group, since the commented-out history sits between them.
+      if (stamp && existing !== "" && !isStamp(existing)) {
+        this.lines.splice(this.first(key), 0, { raw: existing });
+      }
+
+      const trailing = stamp
+        ? ` ${stampText(stamp)}`
+        : existing === ""
+          ? ""
+          : ` ${existing}`;
+
+      // Re-find: the splice above may have shifted this line down.
+      const at = this.find(key, false);
+      const target = this.lines[at]!;
+      target.raw = `${match[1]}${match[2]}${key}=${quote(value)}${trailing}`;
+      target.value = value;
       return;
     }
 
     const commented = this.find(key, true);
     if (commented !== -1) {
       const line = this.lines[commented]!;
-      line.raw = `${key}=${quote(value)}`;
+      line.raw = `${key}=${quote(value)}${stamp ? ` ${stampText(stamp)}` : ""}`;
       line.value = value;
       line.commented = false;
       return;
@@ -197,7 +269,87 @@ export class EnvDocument {
       this.lines.push({ raw: "" });
     }
     this.appended = true;
-    this.lines.push({ raw: `${key}=${quote(value)}`, key, value });
+    this.lines.push({
+      raw: `${key}=${quote(value)}${stamp ? ` ${stampText(stamp)}` : ""}`,
+      key,
+      value,
+    });
+  }
+
+  /** Index of the first line mentioning a key, active or commented. */
+  private first(key: string): number {
+    return this.lines.findIndex((l) => l.key === key);
+  }
+
+  /**
+   * Moves every line for a key next to that key's first appearance.
+   *
+   * Files drift: a key gets commented out near the bottom, re-added at the top
+   * six weeks later, and now two lines claim the same name a hundred lines
+   * apart. Whichever one a reader scrolls to first looks authoritative.
+   *
+   * The FIRST occurrence keeps its position, so the standalone comment block
+   * documenting a key stays attached to it. Everything else moves up to join
+   * it, in the order it already had.
+   */
+  group(): boolean {
+    const out: EnvLine[] = [];
+    const taken = new Set<number>();
+    let moved = false;
+
+    for (let i = 0; i < this.lines.length; i += 1) {
+      if (taken.has(i)) continue;
+      const line = this.lines[i]!;
+      out.push(line);
+      taken.add(i);
+      if (line.key === undefined) continue;
+
+      for (let j = i + 1; j < this.lines.length; j += 1) {
+        if (taken.has(j) || this.lines[j]!.key !== line.key) continue;
+        if (j !== i + 1 || taken.has(i + 1)) moved = true;
+        out.push(this.lines[j]!);
+        taken.add(j);
+      }
+    }
+
+    this.lines = out;
+    return moved;
+  }
+
+  /**
+   * Blanks every active value without losing one.
+   *
+   * Each becomes a commented line holding what it was, plus an empty active
+   * line under it — so the file still declares every key it needs (which is
+   * what makes it a usable checklist) while holding nothing.
+   *
+   * Already-empty keys are skipped. Commenting out `FOO=""` to write `FOO=""`
+   * underneath is churn that makes the next diff harder to read.
+   */
+  reset(): string[] {
+    const out: EnvLine[] = [];
+    const cleared: string[] = [];
+
+    for (const line of this.lines) {
+      if (line.key === undefined || line.commented || line.value === "") {
+        out.push(line);
+        continue;
+      }
+
+      const exported = ACTIVE.exec(line.raw)?.[2] ?? "";
+      line.raw = `# ${line.raw.trimStart()}`;
+      line.commented = true;
+      out.push(line);
+      out.push({
+        raw: `${exported}${line.key}=""`,
+        key: line.key,
+        value: "",
+      });
+      cleared.push(line.key);
+    }
+
+    this.lines = out;
+    return cleared;
   }
 
   /**

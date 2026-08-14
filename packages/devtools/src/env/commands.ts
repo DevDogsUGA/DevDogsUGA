@@ -40,7 +40,7 @@ import {
 } from "../gh/environments.js";
 import { audit, hasErrors, renderFindings, type GithubEntry } from "./audit.js";
 import { listWorkerSecrets } from "./cloudflare.js";
-import { EnvDocument } from "./document.js";
+import { EnvDocument, type Stamp } from "./document.js";
 import { ignoredFor, neverStore, selectForPush } from "./selection.js";
 import { PROJECT_ROOT } from "../instance.js";
 import { bail, explain, unwrap } from "../ui.js";
@@ -60,8 +60,30 @@ async function readDocument(path: string): Promise<EnvDocument> {
   }
 }
 
-function pathFor(options: SecretsOptions): string {
+function pathFor(options: Pick<SecretsOptions, "file">): string {
   return resolve(PROJECT_ROOT, options.file ?? ".env");
+}
+
+/** Today, as an ISO date. Separated so the document layer stays testable. */
+function stampFor(environment: BwsEnvironment, action: Stamp["action"]): Stamp {
+  return {
+    environment,
+    action,
+    date: new Date().toISOString().slice(0, 10),
+  };
+}
+
+/**
+ * Writes the document, tidying first.
+ *
+ * `group()` runs on every write rather than as its own command: files drift a
+ * line at a time, and a tidy pass nobody remembers to run is a tidy pass that
+ * never happens.
+ */
+async function save(path: string, doc: EnvDocument): Promise<boolean> {
+  const moved = doc.group();
+  await writeFile(path, doc.toString());
+  return moved;
 }
 
 /**
@@ -167,10 +189,14 @@ export async function runSecretsPull(options: SecretsOptions): Promise<void> {
     if (!ok) bail("Nothing written.");
   }
 
-  for (const [key, value] of remote) doc.set(key, value);
-  await writeFile(path, doc.toString());
+  const stamp = stampFor(options.environment, "pulled");
+  for (const [key, value] of remote) doc.set(key, value, stamp);
+  const moved = await save(path, doc);
 
-  log.success(`Updated ${changes.length} value(s) in ${path}.`);
+  log.success(
+    `Updated ${changes.length} value(s) in ${path}` +
+      (moved ? ", and grouped same-named lines together." : "."),
+  );
 }
 
 // ── push ─────────────────────────────────────────────────────────────────────
@@ -283,6 +309,13 @@ export async function runSecretsPush(options: SecretsOptions): Promise<void> {
   }
 
   await pushToGithub(options.environment, local, options.yes);
+
+  // Record what went where, in the file itself. Values are untouched -- this
+  // rewrites the trailing comment only -- so it needs no confirmation, and it
+  // is what makes a stale .env say so rather than looking freshly synced.
+  const stamp = stampFor(options.environment, "pushed");
+  for (const [key, value] of local) doc.set(key, value, stamp);
+  await save(path, doc);
 }
 
 const MANAGED = "Managed by `pnpm devtools secrets push`.";
@@ -424,4 +457,59 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
   );
 
   if (hasErrors(findings)) process.exitCode = 1;
+}
+
+// ── reset ────────────────────────────────────────────────────────────────────
+
+/**
+ * Empties every value in the local `.env`, losing none of them.
+ *
+ * The use is handing a filled-in file back to its blank state — after pulling
+ * production onto a laptop, before passing a machine on, or when a set of keys
+ * has to be re-entered from scratch. Deleting the values would do that too, and
+ * would also delete the only copy of anything that was never pushed.
+ *
+ * So each becomes a commented line holding what it was, plus an empty active
+ * line beneath. The file still declares every key it needs, which is what makes
+ * it a checklist rather than a blank page.
+ *
+ * Purely local. It touches no remote store and needs no environment.
+ */
+export async function runSecretsReset(
+  options: Pick<SecretsOptions, "file" | "yes">,
+): Promise<void> {
+  const path = pathFor(options);
+  const doc = await readDocument(path);
+
+  const active = doc.entries().filter(([, value]) => value !== "");
+  if (active.length === 0) {
+    log.success(`Nothing to clear — every value in ${path} is already empty.`);
+    return;
+  }
+
+  note(
+    active
+      .map(([key, value]) => `~ ${key}  ${fingerprint(value)} → empty`)
+      .join("\n"),
+    `${path} will be cleared`,
+  );
+
+  if (!options.yes) {
+    const ok = unwrap(
+      await confirm({
+        message: `Clear ${active.length} value(s)? Each is kept, commented out, on the line above.`,
+        initialValue: false,
+      }),
+    );
+    if (!ok) bail("Nothing written.");
+  }
+
+  const cleared = doc.reset();
+  await save(path, doc);
+
+  log.success(`Cleared ${cleared.length} value(s) in ${path}.`);
+  log.info(
+    "Every previous value is still in the file, commented out. `secrets pull` " +
+      "will fill them back in from Bitwarden.",
+  );
 }

@@ -195,3 +195,167 @@ describe("value fidelity", () => {
     expect(quote("two words")).toBe('"two words"');
   });
 });
+
+describe("stamping where a value came from", () => {
+  const stamp = {
+    environment: "staging",
+    action: "pulled" as const,
+    date: "2026-08-13",
+  };
+
+  it("writes the environment and date beside the value", () => {
+    const doc = EnvDocument.parse(FILE);
+    doc.set("PROJECT_REF", "xyz789", stamp);
+    expect(doc.toString()).toContain(
+      'PROJECT_REF="xyz789" # [staging pulled 2026-08-13]',
+    );
+  });
+
+  it("replaces its own stamp rather than stacking them", () => {
+    // Twenty pulls must not produce twenty comments.
+    const doc = EnvDocument.parse(FILE);
+    doc.set("PROJECT_REF", "a", stamp);
+    doc.set("PROJECT_REF", "b", { ...stamp, date: "2026-09-01" });
+
+    const line = doc
+      .toString()
+      .split("\n")
+      .find((l) => l.startsWith("PROJECT_REF"))!;
+    expect(line).toBe('PROJECT_REF="b" # [staging pulled 2026-09-01]');
+    expect(line.match(/\[/g)).toHaveLength(1);
+  });
+
+  it("does not read the stamp as part of the value", () => {
+    const doc = EnvDocument.parse(
+      'TOKEN="secret" # [production pushed 2026-08-13]\n',
+    );
+    expect(doc.get("TOKEN")).toBe("secret");
+  });
+
+  it("keeps a # that belongs to the value", () => {
+    const doc = EnvDocument.parse('PW="aB3#xY9$k"\n');
+    doc.set("PW", "aB3#xY9$k", stamp);
+    expect(doc.get("PW")).toBe("aB3#xY9$k");
+    expect(doc.toString()).toContain("# [staging pulled 2026-08-13]");
+  });
+
+  it("moves somebody's own note above the key instead of overwriting it", () => {
+    // The note was written about this key. Destroying it to record a sync date
+    // trades a person's explanation for a machine's bookkeeping.
+    const doc = EnvDocument.parse('DB_URL="x"   # set by hand, do not sync\n');
+    doc.set("DB_URL", "y", stamp);
+
+    expect(doc.toString().split("\n")).toEqual([
+      "# set by hand, do not sync",
+      'DB_URL="y" # [staging pulled 2026-08-13]',
+      "",
+    ]);
+  });
+
+  it("moves that note above the commented-out history too", () => {
+    const doc = EnvDocument.parse(
+      ['# DB_URL="older"', '# DB_URL="old"', 'DB_URL="now"  # careful'].join(
+        "\n",
+      ),
+    );
+    doc.set("DB_URL", "next", stamp);
+
+    expect(doc.toString().split("\n")).toEqual([
+      "# careful",
+      '# DB_URL="older"',
+      '# DB_URL="old"',
+      'DB_URL="next" # [staging pulled 2026-08-13]',
+    ]);
+  });
+
+  it("keeps a trailing comment when no stamp is given", () => {
+    // Spacing is normalised to one space, not preserved. The line is being
+    // rewritten anyway — the value changed length — so the original column
+    // alignment is already gone, and a canonical form beats a half-kept one.
+    const doc = EnvDocument.parse(FILE);
+    doc.set("DB_URL", "postgresql://y");
+    expect(doc.toString()).toContain('DB_URL="postgresql://y" # trailing note');
+  });
+});
+
+describe("keeping same-named lines together", () => {
+  it("moves a stray commented copy up to its active line", () => {
+    const doc = EnvDocument.parse(
+      ['A="1"', "", "# some section", 'B="2"', '# A="old"'].join("\n"),
+    );
+    expect(doc.group()).toBe(true);
+    expect(doc.toString().split("\n")).toEqual([
+      'A="1"',
+      '# A="old"',
+      "",
+      "# some section",
+      'B="2"',
+    ]);
+  });
+
+  it("leaves an already-tidy file byte for byte", () => {
+    // It runs on every write, so it must be a no-op on the common case.
+    const doc = EnvDocument.parse(FILE);
+    expect(doc.group()).toBe(false);
+    expect(doc.toString()).toBe(FILE);
+  });
+
+  it("keeps the first occurrence in place, so its documentation stays put", () => {
+    const doc = EnvDocument.parse(
+      ["# what A is for", '# A="old"', 'B="2"', 'A="1"'].join("\n"),
+    );
+    doc.group();
+    expect(doc.toString().split("\n")).toEqual([
+      "# what A is for",
+      '# A="old"',
+      'A="1"',
+      'B="2"',
+    ]);
+  });
+});
+
+describe("reset", () => {
+  it("comments out each value and leaves an empty one under it", () => {
+    const doc = EnvDocument.parse('A="1"\nB="2"\n');
+    expect(doc.reset()).toEqual(["A", "B"]);
+    expect(doc.toString().split("\n")).toEqual([
+      '# A="1"',
+      'A=""',
+      '# B="2"',
+      'B=""',
+      "",
+    ]);
+  });
+
+  it("loses nothing — every value stays readable in the file", () => {
+    const doc = EnvDocument.parse(FILE);
+    doc.reset();
+    const out = doc.toString();
+    expect(out).toContain('# PROJECT_REF="abc123"');
+    expect(out).toContain('# DB_URL="postgresql://x"');
+    expect(out).toContain("# Keep this note.");
+    // And the file still declares every key, which is what makes it a checklist.
+    expect(doc.keys()).toEqual(["PROJECT_REF", "DB_URL", "EXPORTED"]);
+    expect(doc.get("PROJECT_REF")).toBe("");
+  });
+
+  it("keeps an export prefix on the blank line", () => {
+    const doc = EnvDocument.parse('export EXPORTED="yes"\n');
+    doc.reset();
+    expect(doc.toString()).toContain('export EXPORTED=""');
+  });
+
+  it("skips a key that is already empty", () => {
+    // Commenting out `A=""` to write `A=""` underneath is churn that makes the
+    // next diff harder to read.
+    const doc = EnvDocument.parse('A=""\nB="2"\n');
+    expect(doc.reset()).toEqual(["B"]);
+    expect(doc.toString().split("\n")[0]).toBe('A=""');
+  });
+
+  it("leaves already-commented lines alone", () => {
+    const doc = EnvDocument.parse('# A="old"\nB="2"\n');
+    doc.reset();
+    expect(doc.toString()).not.toContain("##");
+  });
+});

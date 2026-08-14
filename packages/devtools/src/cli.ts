@@ -46,6 +46,7 @@ import {
   runSecretsAudit,
   runSecretsPull,
   runSecretsPush,
+  runSecretsReset,
 } from "./env/commands.js";
 import { setExplicitAccessToken } from "./bws/client.js";
 import { positionals } from "./args.js";
@@ -91,6 +92,7 @@ Secrets subcommands (--env is dry-run, staging or production):
   secrets pull  --env <env>       Bitwarden -> your .env, in place
   secrets push  --env <env>       your .env -> Bitwarden -> GitHub
   secrets audit --env <env>       compare .env, Bitwarden, GitHub, Cloudflare
+  secrets reset                   blank every value, keeping each commented out
 
   Leave --env off and it asks. Naming it is for scripts, and for anyone who
   would rather not be asked twice.
@@ -110,6 +112,10 @@ Secrets subcommands (--env is dry-run, staging or production):
   commented out rather than deleted. Overwrites are confirmed separately from
   additions, and production is confirmed on top of that. Values are never
   printed — changes show as key names and fingerprints.
+
+  pull and push stamp each line with the environment and date, so a .env that
+  has been sitting for weeks says so. Same-named lines are grouped together on
+  every write. reset is local-only and takes no --env.
 
 Targets:
   --local            The Docker stack (default)
@@ -393,10 +399,25 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
   // filename and must not be read as anything else.
   const [sub] = positionals(rest);
 
-  if (!sub || !["pull", "push", "audit"].includes(sub)) {
+  if (!sub || !["pull", "push", "audit", "reset"].includes(sub)) {
     log.error(`Unknown secrets subcommand: ${sub ?? "(none)"}`);
-    log.message("Try pull, push or audit.");
+    log.message("Try pull, push, audit or reset.");
     process.exitCode = 1;
+    return;
+  }
+
+  // `reset` only edits the local file. Asking which environment to clear it
+  // against would imply it reaches one, which is the opposite of what it does.
+  if (sub === "reset") {
+    try {
+      await runSecretsReset({
+        file: flagValue(rest, "--file"),
+        yes: rest.includes("--yes"),
+      });
+    } catch (err) {
+      explain("The reset failed.", errorMessage(err));
+      process.exitCode = 1;
+    }
     return;
   }
 
