@@ -20,6 +20,14 @@
  */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { confirm, log } from "@clack/prompts";
+import { NoAccessTokenError, promptForToken, resolveToken } from "./token.js";
+import {
+  readTokenFromVault,
+  saveTokenToVault,
+  VAULT_ITEM_NAME,
+} from "./vault.js";
+import { unwrap } from "../ui.js";
 
 const run = promisify(execFile);
 
@@ -50,28 +58,72 @@ interface BwsProject {
   name: string;
 }
 
+let explicitToken: string | undefined;
+let resolved: Promise<string> | undefined;
+
+/** Records `--access-token`, before any command runs. */
+export function setExplicitAccessToken(token: string | undefined): void {
+  explicitToken = token;
+  resolved = undefined;
+}
+
 /**
- * The access token, from the environment only.
+ * The access token, found once per process.
  *
- * Never a flag. `bws` accepts `--access-token`, and accepting one here would
- * put a token that unlocks an entire environment into shell history and `ps`
- * for every invocation, not just the ones that write a secret.
+ * Memoized as a **promise**, not a value: resolution can prompt, and a single
+ * command makes several `bws` calls. Caching the value alone would still let
+ * two concurrent calls open two prompts over each other.
+ *
+ * Whatever the source, the token reaches `bws` through its ENVIRONMENT and
+ * never through argv. `bws` does accept `--access-token`, and passing it there
+ * would put a live credential in `ps` output for the length of every call.
  */
-export function accessToken(): string {
-  const token = process.env.BWS_ACCESS_TOKEN;
-  if (!token) {
-    throw new BwsError(
-      "BWS_ACCESS_TOKEN is not set. Export the machine account token for the " +
-        "environment you are targeting.",
-    );
-  }
-  return token;
+export async function accessToken(): Promise<string> {
+  resolved ??= resolveToken({
+    explicit: explicitToken,
+    env: process.env.BWS_ACCESS_TOKEN,
+    fromVault: readTokenFromVault,
+    prompt: promptForToken,
+    offerSave: async () =>
+      unwrap(
+        await confirm({
+          message: "Save it to your Bitwarden vault, so this is the last time?",
+          initialValue: true,
+        }),
+      ),
+    save: async (token) => {
+      const saved = await saveTokenToVault(token);
+      if (saved) {
+        log.success(`Stored as "${VAULT_ITEM_NAME}" in your Bitwarden vault.`);
+      } else {
+        log.warn(
+          "Could not save it. The command will continue with the token you " +
+            "typed; nothing was written to your vault.",
+        );
+      }
+    },
+    onSource: (source) => {
+      if (source === "flag") {
+        log.warn(
+          "--access-token puts a live credential in argv, where `ps` can read " +
+            "it for the length of the call, and in your shell history. Prefer " +
+            "BWS_ACCESS_TOKEN or the vault.",
+        );
+      }
+    },
+  }).catch((err: unknown) => {
+    resolved = undefined; // so a later call can ask again
+    throw err instanceof NoAccessTokenError ? new BwsError(err.message) : err;
+  });
+
+  return resolved;
 }
 
 async function bws(args: string[]): Promise<string> {
+  const token = await accessToken();
   try {
     const { stdout } = await run("bws", [...args, "--output", "json"], {
-      env: { ...process.env, BWS_ACCESS_TOKEN: accessToken() },
+      env: { ...process.env, BWS_ACCESS_TOKEN: token },
       maxBuffer: MAX_BUFFER,
       shell: false,
     });

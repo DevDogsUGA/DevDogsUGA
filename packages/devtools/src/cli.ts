@@ -47,6 +47,7 @@ import {
   runSecretsPull,
   runSecretsPush,
 } from "./env/commands.js";
+import { setExplicitAccessToken } from "./bws/client.js";
 import { positionals } from "./args.js";
 import { resolveEnvironment } from "./pick.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
@@ -96,8 +97,14 @@ Secrets subcommands (--env is dry-run, staging or production):
 
   Bitwarden is the source of truth; deploy jobs read GitHub Actions secrets,
   so push sends to both — a value in one and not the other is the failure
-  this design has. Needs BWS_ACCESS_TOKEN (the admin machine account) and a
-  signed-in GitHub CLI.
+  this design has. Needs a signed-in GitHub CLI.
+
+  The Secrets Manager access token is looked for in four places, in order:
+  --access-token, then BWS_ACCESS_TOKEN, then your Bitwarden Password
+  Manager vault (via the bw CLI), and finally by asking — with an offer to
+  save it to the vault so it only has to be typed once. Prefer the vault or
+  the environment: --access-token is visible to ps and lands in shell
+  history.
 
   Edits the root .env in place, preserving comments and order. Values are
   commented out rather than deleted. Overwrites are confirmed separately from
@@ -408,6 +415,9 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
     return;
   }
 
+  // Before any command runs, so every `bws` call in it sees the same token.
+  setExplicitAccessToken(flagValue(rest, "--access-token"));
+
   const options = {
     environment,
     file: flagValue(rest, "--file"),
@@ -420,7 +430,8 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
     else await runSecretsAudit(options);
   } catch (err) {
     explain("The secrets command failed.", errorMessage(err), [
-      "BWS_ACCESS_TOKEN must be set to the admin machine account.",
+      "The access token is read from --access-token, then BWS_ACCESS_TOKEN,",
+      "then your Bitwarden vault, and finally by asking.",
       "`gh auth status` shows whether the GitHub CLI is signed in.",
     ]);
     process.exitCode = 1;

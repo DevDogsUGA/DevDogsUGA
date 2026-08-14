@@ -21,6 +21,7 @@
 
 /** Flags that consume the token after them. */
 export const VALUE_FLAGS = new Set([
+  "--access-token",
   "--app",
   "--base-url",
   "--env",

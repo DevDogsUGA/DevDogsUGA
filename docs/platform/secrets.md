@@ -28,25 +28,49 @@ so a reflexive Enter selects `dry-run` and never `production`; it refuses to
 prompt when stdin is not a terminal, because a prompt nobody can answer hangs
 until the job times out.
 
-You need `BWS_ACCESS_TOKEN` (the admin machine account) exported, and a
-`gh auth login` with admin on the repository.
+You need a `gh auth login` with admin on the repository, and the Secrets Manager
+access token — which the tool will find for you.
 
-### Where `BWS_ACCESS_TOKEN` itself lives
+### Where the access token lives, and how it is found
 
-**The Bitwarden Password Manager vault** — the same account, the other product —
-held by a person, and exported into the shell for the length of a command:
+**The Bitwarden Password Manager vault** — the same account, the other product.
+That is where it belongs, because `bws` has no user authentication at all (no
+`bws login`, no SSO) and cannot store the token itself: `bws config` covers
+server URLs and a state directory and nothing else.
+
+The tool looks in four places, in order, and stops at the first hit:
+
+| Order | Source               | Notes                                          |
+| ----- | -------------------- | ---------------------------------------------- |
+| 1     | `--access-token`     | ⚠️ visible to `ps`, and lands in shell history |
+| 2     | `BWS_ACCESS_TOKEN`   | the ordinary way for scripts and CI            |
+| 3     | your Bitwarden vault | needs the `bw` CLI, signed in                  |
+| 4     | asking you           | masked, with an offer to save it to the vault  |
+
+Explicit beats ambient, so `--access-token` wins over the environment: somebody
+passing it while `BWS_ACCESS_TOKEN` is set is overriding on purpose, and quietly
+using the environment instead would point the command at the account they were
+trying to avoid.
+
+**The vault path is the one to use.** Nothing to export, nothing in history:
 
 ```bash
-export BWS_ACCESS_TOKEN=...        # paste from the vault, per shell
+npm i -g @bitwarden/cli && bw login     # once
 pnpm devtools secrets audit --env staging
 ```
 
-It is read from the environment **only**. `bws` accepts `--access-token`, and
-this tool refuses to: a flag puts the token that unlocks all three projects into
-shell history and into `ps` on every invocation, not just the ones that write.
+The first run finds nothing, asks for the token, and offers to store it as
+_"DevDogs Secrets Manager access token (admin)"_. Every run after that reads it
+back. If the vault is locked it **asks before unlocking** — a tool that pops a
+master-password prompt unannounced is shaped exactly like the thing people are
+told never to type their master password into — and the password is typed
+straight into `bw`, never through this tool. Set `BW_SESSION` to skip that.
 
-`bws` cannot store it either — `bws config` covers server URLs and a state
-directory and nothing else — so the environment is the only place it can be.
+The token never passes through argv in any direction: `bws` gets it through its
+environment, the vault write pipes base64 JSON through `bw`'s **stdin**, and the
+vault read puts only the item's name on the command line. `bws` does accept
+`--access-token` and this tool declines to use it, which is why option 1 above
+carries a warning when you use it — it is the one path that trades that away.
 
 > ⚠️ **Never put it in `.env`.** The pull toward doing so is strong, because
 > `with-env` loads that file for every command and it would save re-exporting
@@ -203,12 +227,14 @@ else — and flagging that would bury the real orphans in noise.
 ### Rotating a secret
 
 ```bash
-export BWS_ACCESS_TOKEN=...                    # the admin machine account
 pnpm devtools secrets pull  --env production   # start from what is live
 $EDITOR .env                                   # change the one value
 pnpm devtools secrets push  --env production   # → Bitwarden AND GitHub
 pnpm devtools secrets audit --env production   # must report no drift
 ```
+
+No `export` step — the access token comes from your vault. See
+[how it is found](#where-the-access-token-lives-and-how-it-is-found).
 
 `push` does both stores in one run, so the old two-step gap is gone — but the
 audit still earns its place, because skipping the GitHub half at its prompt
