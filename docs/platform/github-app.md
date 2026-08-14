@@ -205,7 +205,7 @@ Separate keys matter for the same reason as separate permissions: staging's
 Worker secrets are a different blast radius, and sharing production's key would
 mean a staging compromise mints production-capable tokens.
 
-> `dry-run` needs no App. That tier runs migration and schema dry runs, not the
+> `preflight` needs no App. That tier runs migration and schema dry runs, not the
 > Next app, so it never constructs `env`.
 
 Everything else about the staging App matches the tables above: same events,

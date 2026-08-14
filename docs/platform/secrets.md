@@ -24,7 +24,7 @@ pnpm devtools secrets audit --env staging      # compare all four stores
 ```
 
 Leave `--env` off and it asks. The picker is ordered least- to most-dangerous,
-so a reflexive Enter selects `dry-run` and never `production`; it refuses to
+so a reflexive Enter selects `preflight` and never `production`; it refuses to
 prompt when stdin is not a terminal, because a prompt nobody can answer hangs
 until the job times out.
 
@@ -116,7 +116,7 @@ is exactly where it ends up.
 
 | GitHub environment | BWS project          | Receives                     | Branch       |
 | ------------------ | -------------------- | ---------------------------- | ------------ |
-| `dry-run`          | `devdogs-dry-run`    | everything in the project    | `main`       |
+| `preflight`        | `devdogs-preflight`  | everything in the project    | `main`       |
 | `staging`          | `devdogs-staging`    | everything in the project    | `main`       |
 | `production`       | `devdogs-production` | everything EXCEPT apply-only | `production` |
 | `production-apply` | `devdogs-production` | ONLY the apply-only keys     | `production` |
@@ -137,7 +137,7 @@ rather than written down twice.
 > across both Supabase organizations (it is what `supabase config push` needs,
 > and the one mutation with no dry run). Both live in the `devdogs-production`
 > Bitwarden project — only a person reads that — and are kept out of the staging
-> and dry-run projects entirely, since a copy there is a second thing to rotate
+> and preflight projects entirely, since a copy there is a second thing to rotate
 > for no benefit.
 
 ### One machine account

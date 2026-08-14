@@ -24,7 +24,7 @@ describe("githubTargets", () => {
 
   it("gives the other projects exactly one target each", () => {
     expect(githubTargets("devdogs-staging")).toEqual(["staging"]);
-    expect(githubTargets("devdogs-dry-run")).toEqual(["dry-run"]);
+    expect(githubTargets("devdogs-preflight")).toEqual(["preflight"]);
   });
 
   it("returns nothing for a project it does not know", () => {
@@ -58,7 +58,7 @@ describe("routeTo", () => {
 
   it("routes ordinary secrets in the single-target projects", () => {
     expect(routeTo("devdogs-staging", "CRON_SECRET")).toBe("staging");
-    expect(routeTo("devdogs-dry-run", "CRON_SECRET")).toBe("dry-run");
+    expect(routeTo("devdogs-preflight", "CRON_SECRET")).toBe("preflight");
   });
 });
 
@@ -75,8 +75,8 @@ describe("accepts", () => {
     expect(accepts("production-apply", "DISCORD_TOKEN")).toBe(false);
   });
 
-  it("accepts anything in dry-run, which holds no live credentials", () => {
-    expect(accepts("dry-run", APPLY_KEY)).toBe(true);
-    expect(accepts("dry-run", "CRON_SECRET")).toBe(true);
+  it("accepts anything in preflight, which holds no live credentials", () => {
+    expect(accepts("preflight", APPLY_KEY)).toBe(true);
+    expect(accepts("preflight", "CRON_SECRET")).toBe(true);
   });
 });

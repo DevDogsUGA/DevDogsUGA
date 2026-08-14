@@ -88,7 +88,7 @@ Airtable subcommands:
   airtable verify [--no-duplicates]  Diff the live base against the registry
   airtable snapshot [--check]     Refresh, or check, the committed schema snapshot
 
-Secrets subcommands (--env is dry-run, staging or production):
+Secrets subcommands (--env is preflight, staging or production):
   secrets pull  --env <env>       Bitwarden -> your .env, in place
   secrets push  --env <env>       your .env -> Bitwarden -> GitHub
   secrets audit --env <env>       compare .env, Bitwarden, GitHub, Cloudflare
@@ -386,7 +386,7 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
 }
 
 /**
- * `secrets <pull|push|audit> --env <dry-run|staging|production>`
+ * `secrets <pull|push|audit> --env <preflight|staging|production>`
  *
  * The environment has no default, and is asked for when `--env` is absent.
  * Every other command here defaults to the local stack because guessing wrong

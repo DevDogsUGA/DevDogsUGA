@@ -30,7 +30,7 @@ describe("credentials that must never be stored remotely", () => {
   it("refuses BWS_ACCESS_TOKEN in every environment, not just production", () => {
     // It unlocks all three projects, so there is no environment where storing
     // it is less bad than another.
-    for (const e of ["dry-run", "staging", "production"] as const) {
+    for (const e of ["preflight", "staging", "production"] as const) {
       expect(
         selectForPush(env({ BWS_ACCESS_TOKEN: "0.abc" }), e).push.size,
       ).toBe(0);
@@ -60,7 +60,7 @@ describe("apply-only credentials", () => {
     expect(selectForPush(env({ [key]: "tok" }), "staging").push.has(key)).toBe(
       false,
     );
-    expect(selectForPush(env({ [key]: "tok" }), "dry-run").push.has(key)).toBe(
+    expect(selectForPush(env({ [key]: "tok" }), "preflight").push.has(key)).toBe(
       false,
     );
   });

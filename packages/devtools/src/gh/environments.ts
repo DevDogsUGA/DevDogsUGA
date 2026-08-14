@@ -7,7 +7,7 @@
  *
  *   | GitHub environment | BWS project          | Receives                     |
  *   |--------------------|----------------------|------------------------------|
- *   | `dry-run`          | `devdogs-dry-run`    | everything in the project    |
+ *   | `preflight`        | `devdogs-preflight`  | everything in the project    |
  *   | `staging`          | `devdogs-staging`    | everything in the project    |
  *   | `production`       | `devdogs-production` | everything EXCEPT apply-only |
  *   | `production-apply` | `devdogs-production` | ONLY the apply-only keys     |
@@ -21,7 +21,7 @@
 import { APPLY_ONLY_KEYS } from "../bws/environments.js";
 
 export const GITHUB_ENVIRONMENTS = [
-  "dry-run",
+  "preflight",
   "staging",
   "production",
   "production-apply",
@@ -56,8 +56,8 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
   GithubEnvironment,
   GithubEnvironmentSpec
 > = {
-  "dry-run": {
-    bwsProject: "devdogs-dry-run",
+  "preflight": {
+    bwsProject: "devdogs-preflight",
     branch: "main",
     onlyKeys: null,
     excludeKeys: [],

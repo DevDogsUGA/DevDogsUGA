@@ -31,7 +31,7 @@ export interface PushSelection {
 /**
  * Non-secrets, plus the apply-only credentials outside production.
  *
- * Those two exist to reshape production, so a copy in staging or dry-run is a
+ * Those two exist to reshape production, so a copy in staging or preflight is a
  * second write-capable token to rotate for no benefit.
  */
 export function ignoredFor(environment: BwsEnvironment): Set<string> {

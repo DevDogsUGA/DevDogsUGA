@@ -9,7 +9,7 @@
  * Two properties the prompt is built around:
  *
  *   * **Production is never the highlighted option.** The list is ordered
- *     least- to most-dangerous, so a reflexive Enter selects `dry-run`.
+ *     least- to most-dangerous, so a reflexive Enter selects `preflight`.
  *   * **It refuses to prompt where nobody can answer.** A prompt on a
  *     non-interactive stdin hangs until the job times out, which reads as a
  *     broken tool rather than a missing argument.
@@ -24,7 +24,7 @@ import { explain, unwrap } from "./ui.js";
 
 /** Short enough to sit beside the name; the specs' summaries are paragraphs. */
 const BWS_HINTS: Record<BwsEnvironment, string> = {
-  "dry-run": "read-only credentials for the pre-promotion checks",
+  "preflight": "read-only credentials for the pre-promotion checks",
   staging: "the everyday one — safe to overwrite",
   production: "⚠️  the live values",
 };

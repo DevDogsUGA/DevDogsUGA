@@ -12,11 +12,11 @@
  *
  *   | Used | Free plan |
  *   |------|-----------|
- *   | 3 projects — dry-run, staging, production | 3 |
+ *   | 3 projects — preflight, staging, production | 3 |
  *   | 1 machine account — `admin` | 3 |
  *
  * Two machine accounts spare, where the previous shape had none and could not
- * afford a project for `dry-run`.
+ * afford a project for `preflight`.
  *
  * What the sync costs is a second copy that cannot be read back: GitHub secrets
  * are write-only, so `secrets audit` compares names and `updatedAt` against
@@ -29,7 +29,7 @@
  * a value pulled at run time is not unless somebody remembers `::add-mask::`.
  */
 
-export const ENVIRONMENTS = ["dry-run", "staging", "production"] as const;
+export const ENVIRONMENTS = ["preflight", "staging", "production"] as const;
 export type BwsEnvironment = (typeof ENVIRONMENTS)[number];
 
 export function isEnvironment(value: string): value is BwsEnvironment {
@@ -54,8 +54,8 @@ export interface EnvironmentSpec {
  * costs one API call and cannot go stale silently.
  */
 export const ENVIRONMENT_SPECS: Record<BwsEnvironment, EnvironmentSpec> = {
-  "dry-run": {
-    project: "devdogs-dry-run",
+  "preflight": {
+    project: "devdogs-preflight",
     guarded: false,
     summary:
       "Credentials for the dry runs that precede a promotion to production. " +
@@ -95,7 +95,7 @@ export const ENVIRONMENT_SPECS: Record<BwsEnvironment, EnvironmentSpec> = {
  * `routeTo()` in `../gh/environments.ts` is what enforces that, and it derives
  * the split from the environment table rather than repeating this list.
  *
- * They are also kept OUT of the staging and dry-run projects: they exist to
+ * They are also kept OUT of the staging and preflight projects: they exist to
  * reshape production, so a copy anywhere else is a second thing to rotate for
  * no benefit.
  */
