@@ -28,12 +28,7 @@ import {
   projectIdFor,
   updateSecret,
 } from "../bws/client.js";
-import {
-  ENVIRONMENT_SPECS,
-  NEVER_SECRET_KEYS,
-  APPLY_ONLY_KEYS,
-  type BwsEnvironment,
-} from "../bws/environments.js";
+import { ENVIRONMENT_SPECS, type BwsEnvironment } from "../bws/environments.js";
 import { fingerprint } from "../fingerprint.js";
 import { listSecrets as listGhSecrets, setSecret } from "../gh/client.js";
 import {
@@ -46,6 +41,7 @@ import {
 import { audit, hasErrors, renderFindings, type GithubEntry } from "./audit.js";
 import { listWorkerSecrets } from "./cloudflare.js";
 import { EnvDocument } from "./document.js";
+import { ignoredFor, neverStore, selectForPush } from "./selection.js";
 import { PROJECT_ROOT } from "../instance.js";
 import { bail, explain, unwrap } from "../ui.js";
 
@@ -54,23 +50,6 @@ export interface SecretsOptions {
   /** Defaults to the root `.env`. */
   file?: string;
   yes?: boolean;
-}
-
-/**
- * Keys that never belong in this environment's Bitwarden project.
- *
- * The non-secrets always — those are GitHub *variables*, and a value with two
- * sources of truth resolves to whichever the reader did not check. The
- * apply-only credentials everywhere but production, because they exist to
- * reshape production and a staging copy would be a second thing to rotate for
- * no benefit.
- */
-function ignoredFor(environment: BwsEnvironment): Set<string> {
-  const skip = new Set<string>(NEVER_SECRET_KEYS);
-  if (environment !== "production") {
-    for (const key of APPLY_ONLY_KEYS) skip.add(key);
-  }
-  return skip;
 }
 
 async function readDocument(path: string): Promise<EnvDocument> {
@@ -83,6 +62,33 @@ async function readDocument(path: string): Promise<EnvDocument> {
 
 function pathFor(options: SecretsOptions): string {
   return resolve(PROJECT_ROOT, options.file ?? ".env");
+}
+
+/**
+ * Says out loud that a refused credential was left behind.
+ *
+ * A warning rather than a hard stop, because `AIRTABLE_PAT` is legitimately in
+ * `.env` while somebody is scaffolding the base, and blocking the whole push
+ * then would be wrong. But never silence: somebody who put a token in the file
+ * expecting it to sync has to learn that it did not, or they will believe it is
+ * stored when it is not.
+ */
+function warnRefused(refused: string[]): void {
+  for (const key of refused) {
+    if (key === "BWS_ACCESS_TOKEN") {
+      log.warn(
+        `${key} was NOT uploaded, and must not be — it unlocks all three ` +
+          `Bitwarden projects, so storing it in one is a key locked inside the ` +
+          `box it opens. ⚠️ Remove it from your .env; export it per shell from ` +
+          `the Password Manager vault instead.`,
+      );
+    } else {
+      log.warn(
+        `${key} was NOT uploaded, and must not be. The runtime reads its own, ` +
+          `narrower token from Supabase Vault — see docs/platform/airtable-setup.md.`,
+      );
+    }
+  }
 }
 
 // ── pull ─────────────────────────────────────────────────────────────────────
@@ -99,9 +105,23 @@ export async function runSecretsPull(options: SecretsOptions): Promise<void> {
   const path = pathFor(options);
 
   const projectId = await projectIdFor(spec.project);
+  const refused = neverStore();
+  const all = await listBwsSecrets(projectId);
+
+  // If one of these is in the project it should not be, and writing it into the
+  // file people run `pnpm dev` against would spread it further. The audit says
+  // so loudly; here it is simply not written.
   const remote = new Map(
-    (await listBwsSecrets(projectId)).map((s) => [s.key, s.value]),
+    all.filter((s) => !refused.has(s.key)).map((s) => [s.key, s.value]),
   );
+  for (const s of all) {
+    if (refused.has(s.key)) {
+      log.warn(
+        `${s.key} is in ${spec.project} and must not be. Not written to ${path}. ` +
+          `Delete it there — run \`pnpm devtools secrets audit --env ${options.environment}\`.`,
+      );
+    }
+  }
 
   if (remote.size === 0) {
     log.warn(
@@ -168,9 +188,11 @@ export async function runSecretsPush(options: SecretsOptions): Promise<void> {
   const doc = await readDocument(path);
   const skip = ignoredFor(options.environment);
 
-  const local = new Map(
-    doc.entries().filter(([key, value]) => !skip.has(key) && value !== ""),
+  const { push: local, refused } = selectForPush(
+    doc.entries(),
+    options.environment,
   );
+  warnRefused(refused);
 
   if (local.size === 0) {
     explain(`No pushable values in ${path}.`, "", [
@@ -376,6 +398,7 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
     },
     cloudflare,
     ignore: ignoredFor(options.environment),
+    neverStore: neverStore(),
   });
 
   note(renderFindings(findings), `${options.environment} — drift`);

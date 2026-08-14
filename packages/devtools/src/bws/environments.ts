@@ -112,6 +112,35 @@ export const APPLY_ONLY_KEYS = [
 ] as const;
 
 /**
+ * Credentials that must never be stored in Bitwarden or GitHub, in any
+ * environment.
+ *
+ * Not "these are not secrets" — the opposite. These are the most sensitive
+ * values in the repository, and they are refused precisely because storing them
+ * defeats the thing they protect.
+ *
+ * **`BWS_ACCESS_TOKEN`** unlocks all three Bitwarden projects. Stored in one, it
+ * is a key locked inside the box it opens: anyone who can already read that
+ * project gains the other two, and rotating it stops meaning anything. Synced
+ * onward to GitHub it is worse — this whole design rests on nothing
+ * machine-shaped ever authenticating to Secrets Manager, and one
+ * `${{ secrets.BWS_ACCESS_TOKEN }}` would hand CI every secret we hold.
+ *
+ * The pull toward that mistake is strong, which is why it is refused in code
+ * rather than in a document: `with-env` loads the root `.env` for every command,
+ * so putting the token there is exactly what makes `secrets` work without
+ * re-exporting each session. It has to live in the Bitwarden PASSWORD MANAGER
+ * vault and reach the shell as an export — `bws` cannot persist it either
+ * (`bws config` covers server URLs and a state directory, nothing more).
+ *
+ * **`AIRTABLE_PAT`** is the scaffolding token, in `.env` only while somebody is
+ * shaping the base. The runtime reads its own, narrower token from Supabase
+ * Vault, so a copy in an environment would be a write-capable Airtable
+ * credential that nothing reads and anything could.
+ */
+export const NEVER_STORE_KEYS = ["BWS_ACCESS_TOKEN", "AIRTABLE_PAT"] as const;
+
+/**
  * Keys that are never secrets and must not be pushed.
  *
  * Each of these is either committed (identical everywhere) or a GitHub

@@ -29,9 +29,36 @@ prompt when stdin is not a terminal, because a prompt nobody can answer hangs
 until the job times out.
 
 You need `BWS_ACCESS_TOKEN` (the admin machine account) exported, and a
-`gh auth login` with admin on the repository. The Bitwarden token is read from
-the environment only — never a flag, because a flag puts a token that unlocks a
-whole environment into shell history and `ps` on every invocation.
+`gh auth login` with admin on the repository.
+
+### Where `BWS_ACCESS_TOKEN` itself lives
+
+**The Bitwarden Password Manager vault** — the same account, the other product —
+held by a person, and exported into the shell for the length of a command:
+
+```bash
+export BWS_ACCESS_TOKEN=...        # paste from the vault, per shell
+pnpm devtools secrets audit --env staging
+```
+
+It is read from the environment **only**. `bws` accepts `--access-token`, and
+this tool refuses to: a flag puts the token that unlocks all three projects into
+shell history and into `ps` on every invocation, not just the ones that write.
+
+`bws` cannot store it either — `bws config` covers server URLs and a state
+directory and nothing else — so the environment is the only place it can be.
+
+> ⚠️ **Never put it in `.env`.** The pull toward doing so is strong, because
+> `with-env` loads that file for every command and it would save re-exporting
+> each session. But `.env` is what `secrets push` uploads, and the result is the
+> master key stored inside all three boxes it opens, then synced to GitHub where
+> CI can read it — which contradicts the one property this whole design rests
+> on.
+>
+> `push` refuses it by name rather than trusting anyone to remember, `pull` will
+> not write it back, and `audit` reports it as an **error** in any remote store.
+> Same for `AIRTABLE_PAT`, the scaffolding token, which the runtime never reads
+> — see [`NEVER_STORE_KEYS`](../../packages/devtools/src/bws/environments.ts).
 
 ### It edits `.env` in place
 
@@ -203,6 +230,7 @@ leaves Bitwarden ahead, and the tool says so at the time.
 | Empty values are skipped                                         | An empty secret reads as "configured" to every consumer that checks for presence.                                                                                                        |
 | Pulling an empty project writes nothing                          | An empty result and a successful pull look identical afterwards.                                                                                                                         |
 | Apply-only keys route to `production-apply` and nowhere else     | `production` deploys with no reviewer in front of it; a write-capable credential there makes the gate decorative.                                                                        |
+| `BWS_ACCESS_TOKEN` and `AIRTABLE_PAT` are refused everywhere     | The first is a key locked inside the box it opens, and in GitHub would let CI read every secret we hold. The second is a scaffolding token the runtime never reads.                      |
 | Values go to `gh` on **stdin**, one process per secret           | `--body` would put a live credential in argv. `--env-file` would hand the file to a second dotenv parser, which agrees with this one until a multi-line value and then differs silently. |
 
 ## Why the CLI and not the API

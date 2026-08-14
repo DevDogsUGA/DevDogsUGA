@@ -260,6 +260,91 @@ describe("routing between the two production environments", () => {
   });
 });
 
+describe("credentials that must never be stored remotely", () => {
+  // BWS_ACCESS_TOKEN unlocks all three Bitwarden projects. Stored in one it is
+  // a key locked inside the box it opens; in GitHub it would hand CI every
+  // secret we have. Being in the local .env and NOWHERE else is correct.
+  const never = new Set(["BWS_ACCESS_TOKEN"]);
+
+  it("says nothing when it is local-only, which is the correct state", () => {
+    // The one that must not cry wolf. This is what a healthy machine looks
+    // like, and a warning here would train people to ignore the category.
+    expect(
+      run({
+        local: new Map([["BWS_ACCESS_TOKEN", "0.abc"]]),
+        neverStore: never,
+      }),
+    ).toEqual([]);
+  });
+
+  it("errors when it reached Bitwarden", () => {
+    const findings = run({
+      local: new Map([["BWS_ACCESS_TOKEN", "0.abc"]]),
+      bws: bws({ BWS_ACCESS_TOKEN: "0.abc" }),
+      neverStore: never,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe("error");
+    expect(findings[0]!.summary).toMatch(/NEVER be stored in Bitwarden/);
+  });
+
+  it("errors when it reached GitHub, naming the environment", () => {
+    const findings = run({
+      github: [gh("BWS_ACCESS_TOKEN", undefined, "production")],
+      neverStore: never,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe("error");
+    expect(findings[0]!.summary).toContain("production");
+  });
+
+  it("errors when it reached a Worker", () => {
+    const findings = run({
+      cloudflare: new Map([
+        ["production-platform", new Set(["BWS_ACCESS_TOKEN"])],
+      ]),
+      neverStore: never,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.store).toBe("cloudflare");
+  });
+
+  it("reports every store it leaked into, not just the first", () => {
+    // Once it is in Bitwarden, a push spreads it onward. Fixing one and
+    // believing you were done is the failure worth preventing.
+    const findings = run({
+      bws: bws({ BWS_ACCESS_TOKEN: "0.abc" }),
+      github: [gh("BWS_ACCESS_TOKEN", undefined, "staging")],
+      cloudflare: new Map([
+        ["staging-platform", new Set(["BWS_ACCESS_TOKEN"])],
+      ]),
+      neverStore: never,
+    });
+    expect(findings).toHaveLength(3);
+    expect(findings.every((f) => f.severity === "error")).toBe(true);
+    expect(findings.map((f) => f.store).sort()).toEqual([
+      "cloudflare",
+      "github",
+      "local",
+    ]);
+  });
+
+  it("does not also emit the ordinary not-in-Bitwarden warning", () => {
+    // `relevant()` has to exclude these from the normal comparisons, or the
+    // correct state produces a warning and the error gets lost beside it.
+    const findings = run({
+      local: new Map([
+        ["BWS_ACCESS_TOKEN", "0.abc"],
+        ["CRON_SECRET", "x"],
+      ]),
+      bws: bws({ CRON_SECRET: "x" }),
+      github: [gh("CRON_SECRET")],
+      neverStore: never,
+    });
+    expect(findings).toEqual([]);
+  });
+});
+
 describe("Cloudflare", () => {
   it("flags a Worker secret that no longer exists in Bitwarden", () => {
     // `--secrets-file` preserves what it omits, so a renamed variable leaves

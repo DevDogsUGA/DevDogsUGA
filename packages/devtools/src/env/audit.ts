@@ -73,14 +73,60 @@ export interface AuditInput {
   cloudflare?: Map<string, Set<string>>;
   /** Keys that legitimately live outside Bitwarden — the non-secrets. */
   ignore?: ReadonlySet<string>;
+  /**
+   * Credentials that must never be stored remotely at all.
+   *
+   * Distinct from `ignore`, and the opposite of it: an ignored key is expected
+   * somewhere else, whereas one of these appearing in ANY remote store is a
+   * finding. Being in the local `.env` and nowhere else is the correct state,
+   * so the ordinary "not in Bitwarden" warning must not fire for them.
+   */
+  neverStore?: ReadonlySet<string>;
 }
 
 export function audit(input: AuditInput): Finding[] {
   const ignore = input.ignore ?? new Set<string>();
+  const neverStore = input.neverStore ?? new Set<string>();
   const commented = input.localCommented ?? new Set<string>();
   const findings: Finding[] = [];
 
-  const relevant = (key: string) => !ignore.has(key);
+  const relevant = (key: string) => !ignore.has(key) && !neverStore.has(key);
+
+  // ── must not be stored anywhere remote ─────────────────────────────────────
+  // Checked first and reported as errors. `BWS_ACCESS_TOKEN` in a Bitwarden
+  // project is a key locked inside the box it opens; in GitHub it would give CI
+  // the ability to read every secret we have.
+  for (const key of neverStore) {
+    if (input.bws.has(key)) {
+      findings.push({
+        key,
+        severity: "error",
+        store: "local",
+        summary:
+          "must NEVER be stored in Bitwarden — delete it from the project; " +
+          "it belongs in the Password Manager vault, exported per shell",
+      });
+    }
+    for (const copy of input.github.filter((g) => g.name === key)) {
+      findings.push({
+        key,
+        severity: "error",
+        store: "github",
+        summary:
+          `must NEVER be a GitHub secret — delete it from \`${copy.environment}\`; ` +
+          "nothing machine-shaped may authenticate to Secrets Manager",
+      });
+    }
+    for (const [worker, names] of input.cloudflare ?? []) {
+      if (!names.has(key)) continue;
+      findings.push({
+        key,
+        severity: "error",
+        store: "cloudflare",
+        summary: `must NEVER be a Worker secret — delete it from ${worker}`,
+      });
+    }
+  }
 
   // ── local vs Bitwarden ─────────────────────────────────────────────────────
   // The only VALUE comparison available anywhere in this system.
