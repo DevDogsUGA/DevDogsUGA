@@ -63,7 +63,7 @@ catalog:
   # ">=4.8.4 <6.1.0", so TS 7 breaks linting in every package.
   "@clack/prompts": ^1.7.0
   "@opennextjs/cloudflare": ^1.20.2
-  eslint: ^9.39.5
+  eslint: ^10.8.1
   supabase: ^2.111.0
   tsx: ^4.23.5
   typescript: ^6.0.3
@@ -74,7 +74,7 @@ catalog:
   # ^22.22.2 || ^24.15.0 || >=26, which is narrower than this repo's
   # declared engines.node (">=20"). Bump engines first, then jsdom.
   # vitest is held at 4.x on purpose: 5.x is still on the beta dist-tag.
-  "@testing-library/jest-dom": ^7.0.0
+  "@testing-library/jest-dom": ^7.0.1
   "@testing-library/react": ^16.3.2
   "@testing-library/user-event": ^14.6.3
   "@vitest/coverage-v8": ^4.1.10
