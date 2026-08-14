@@ -45,6 +45,11 @@ import { readCatalog, renderCatalog } from "./catalog.js";
 import { runBwsDiff, runBwsPull, runBwsPush } from "./bws/commands.js";
 import { ENVIRONMENTS, isEnvironment } from "./bws/environments.js";
 import { runGhPush, runGhStatus } from "./gh/commands.js";
+import {
+  runSecretsAudit,
+  runSecretsPull,
+  runSecretsPush,
+} from "./env/commands.js";
 import { GITHUB_ENVIRONMENTS, isGithubEnvironment } from "./gh/environments.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
 
@@ -77,6 +82,7 @@ Commands:
   airtable   Scaffold, pull ids from, or verify the officer base
   bws        Move secrets between a .env file and Bitwarden Secrets Manager
   gh         Push those secrets on into GitHub environment secrets
+  secrets    One .env, synced to Bitwarden + GitHub, with a drift audit
 
 Airtable subcommands:
   airtable scaffold [--dry-run]   Create what the registry declares
@@ -101,6 +107,15 @@ production-apply):
   Bitwarden is the source of truth; deploy jobs read GitHub Actions secrets.
   GitHub secrets are WRITE-ONLY, so status compares names and timestamps
   rather than values — it catches a rotation that was never propagated.
+
+Secrets subcommands (--env is required: dry-run, staging or production):
+  secrets pull  --env <env>       Bitwarden -> your .env, in place
+  secrets push  --env <env>       your .env -> Bitwarden -> GitHub
+  secrets audit --env <env>       compare .env, Bitwarden, GitHub, Cloudflare
+
+  Edits the root .env in place, preserving comments and order. Values are
+  commented out rather than deleted. Overwrites are confirmed separately from
+  additions, and production is confirmed on top of that.
 
 Targets:
   --local            The Docker stack (default)
@@ -431,6 +446,54 @@ async function runGhCommand(rest: string[]): Promise<void> {
   }
 }
 
+/** `secrets <pull|push|audit> --env <dry-run|staging|production>` */
+async function runSecretsCommand(rest: string[]): Promise<void> {
+  const [sub] = rest;
+  const environment = flagValue(rest, "--env");
+
+  if (!sub || !["pull", "push", "audit"].includes(sub)) {
+    log.error(`Unknown secrets subcommand: ${sub ?? "(none)"}`);
+    log.message("Try pull, push or audit.");
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!environment) {
+    explain("`secrets` needs --env, and does not guess.", "", [
+      `Environments: ${ENVIRONMENTS.join(", ")}`,
+      "e.g. pnpm devtools secrets audit --env staging",
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!isEnvironment(environment)) {
+    explain(`"${environment}" is not an environment.`, "", [
+      `Try one of: ${ENVIRONMENTS.join(", ")}`,
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+
+  const options = {
+    environment,
+    file: flagValue(rest, "--file"),
+    yes: rest.includes("--yes"),
+  };
+
+  try {
+    if (sub === "pull") await runSecretsPull(options);
+    else if (sub === "push") await runSecretsPush(options);
+    else await runSecretsAudit(options);
+  } catch (err) {
+    explain("The secrets command failed.", errorMessage(err), [
+      "BWS_ACCESS_TOKEN must be set to the admin machine account.",
+      "`gh auth status` shows whether the GitHub CLI is signed in.",
+    ]);
+    process.exitCode = 1;
+  }
+}
+
 async function runBwsCommand(rest: string[]): Promise<void> {
   const [sub] = rest;
   const environment = flagValue(rest, "--env");
@@ -609,6 +672,12 @@ async function main(): Promise<void> {
 
   if (first === "gh") {
     await runGhCommand(rest);
+    outro("Done.");
+    return;
+  }
+
+  if (first === "secrets") {
+    await runSecretsCommand(rest);
     outro("Done.");
     return;
   }
