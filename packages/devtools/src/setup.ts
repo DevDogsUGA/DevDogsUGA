@@ -51,7 +51,7 @@ export function runSetup(): void {
   checks.push(
     has("docker info")
       ? "OK    Docker running (local Supabase stack available)"
-      : "INFO  Docker not running — fine for remote-first dev, needed for a local stack",
+      : "INFO  Docker not running — fine against a hosted project, needed for a local stack",
   );
 
   checks.push(

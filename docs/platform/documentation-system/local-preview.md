@@ -20,22 +20,16 @@ Then open <http://localhost:3000/docs>.
 
 ## Searching your local docs
 
-Docs search reads a Postgres index rather than the compiled module, so it needs one extra step to see your working copy:
+Docs search reads a Postgres index rather than the compiled module, so it needs one extra step to see your working copy. With the local Supabase stack running:
 
 ```bash
-pnpm --filter platform dev:local
+pnpm --filter platform docs:index
 ```
 
-`dev:local` runs `docs:index:local` against the local Supabase stack before starting the dev server, so a page you just wrote is findable in the search dialog (`Ctrl`/`⌘` + `K`).
-
-Re-run the indexer after further edits:
-
-```bash
-pnpm --filter platform docs:index:local
-```
+That indexes your working copy into the local stack, so a page you just wrote is findable in the search dialog (`Ctrl`/`⌘` + `K`). Re-run it after further edits — the dev server does not re-index for you. Like every `with-env`-wrapped script, it targets the local stack whenever one is running and prints which env files it loaded.
 
 > [!WARNING]
-> Plain `pnpm dev` points at the **deployed** database. Pages render from your working copy, but search results come from what is currently published. That mismatch is expected — use `dev:local` when you care about search.
+> Without the local stack running, `pnpm dev` and `docs:index` point at the **deployed** database. Pages still render from your working copy, but search results come from what that database has indexed. That mismatch is expected — boot the local stack (`pnpm sb link`) when you care about search.
 >
 > `docs:index` refuses to write to a non-local database without `--force`. It deletes rows for pages that no longer exist, so running it against production from a working copy would replace the live search index with your local state.
 

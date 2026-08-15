@@ -19,8 +19,7 @@ exposed in `config.toml`; tables are added as the app is built.
 Run through the workspace so Supabase config comes from the shared root `.env`:
 
 ```bash
-pnpm --filter study-group-finder dev        # remote Supabase
-pnpm --filter study-group-finder dev:local  # local stack
+pnpm --filter study-group-finder dev   # local stack auto-detected, else remote
 ```
 
 These pass `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `AUTH_MODE` to Flutter
@@ -33,8 +32,7 @@ server) in dev, `google` in production — selected by `AUTH_MODE`.
 [supadart](https://pub.dev/packages/supadart) generator (`supadart.yaml`):
 
 ```bash
-pnpm --filter study-group-finder generate-types        # remote
-pnpm --filter study-group-finder generate-types:local  # local stack
+pnpm --filter study-group-finder generate-types   # local stack auto-detected, else remote
 ```
 
 supadart can only read PostgREST's **default** schema (it reads `/rest/v1/`

@@ -1,8 +1,8 @@
 /**
  * Single env-loading helper for every workspace script:
  *
- *   with-env [--local] <command> [args...]
- *   with-env [--local] -c '<shell command>'
+ *   with-env <command> [args...]
+ *   with-env -c '<shell command>'
  *
  * Loads the environment `DEPLOY_ENV` selects — unset means development means
  * the root `.env` — plus, in development only, the `.env.generated` overlay
@@ -11,9 +11,9 @@
  * directory and its node_modules/.bin — no chdir or PATH fixup needed.
  *
  * The files it loaded are printed to stderr on every run. That is a design
- * requirement, not chattiness: the probe means a running container flips the
- * documented remote-first default, and which database a command just touched
- * must never be a guess.
+ * requirement, not chattiness: the probe silently decides between the hosted
+ * project and a running local container, and which database a command just
+ * touched must never be a guess.
  *
  * Use -c when the command needs a value *from* the env files. A $VAR in the
  * script is expanded by pnpm's shell before this helper loads anything, so it
@@ -78,34 +78,34 @@ const root = findRoot(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
 // commander safe here: the first positional ends option parsing, so in
 // `with-env next dev --port 3001` the `--port` belongs to next, not to us.
 // Without them commander would eat (or reject) the wrapped command's flags.
+//
+// There used to be a `--local` option here. It selected `.env.generated`
+// before the port probe existed, spent one release as a deprecated no-op, and
+// was removed together with the `:local` script variants once the probe alone
+// decided local vs hosted. It is NOT kept as a hidden no-op: an old script or
+// muscle memory still passing the flag should fail loudly as an unknown
+// option, because a flag that looks like it selects the database while
+// actually deciding nothing is exactly the silent lie the probe was built to
+// remove.
 const program = new Command("with-env")
   .enablePositionalOptions()
   .passThroughOptions()
-  .option(
-    "--local",
-    "deprecated no-op — the port probe decides local vs hosted",
-  )
   .option("-c <script>", "run a shell script string with the env loaded")
   .argument("[command...]", "command to run with the env loaded")
-  .configureOutput({ writeErr: (str) => process.stderr.write(str) });
+  .configureOutput({
+    // Re-prefix commander's `error:` lines so a rejected flag (e.g. the
+    // removed --local) reads as with-env refusing it, not the wrapped command.
+    writeErr: (str) =>
+      process.stderr.write(str.replace(/^error:/, "with-env:")),
+  });
 
 program.parse();
-const opts = program.opts<{ local?: boolean; c?: string }>();
+const opts = program.opts<{ c?: string }>();
 const args = program.args;
 
-// --local survives as an accepted no-op so the ~13 existing `:local` script
-// variants keep working until Phase 3 deletes them together with this flag.
-// The probe now decides; the flag decides nothing.
-if (opts.local) {
-  console.error(
-    "with-env: --local is deprecated and ignored — the local stack is " +
-      "detected by probing port 54321. (Phase 3 removes the flag.)",
-  );
-}
-
 const usage =
-  "with-env: usage: with-env [--local] <command> [args...]\n" +
-  "                 with-env [--local] -c '<shell command>'";
+  "with-env: usage: with-env <command> [args...]\n" +
+  "                 with-env -c '<shell command>'";
 
 const shellMode = opts.c !== undefined;
 if (shellMode && args.length > 0) {
@@ -134,8 +134,8 @@ try {
   for (const warning of selection.warnings) {
     console.error(`with-env: ${warning}`);
   }
-  // Required, never a guess: the probe flips the documented remote-first
-  // default, so every run says which files actually won.
+  // Required, never a guess: a running local container silently wins over the
+  // hosted project, so every run says which files actually won.
   console.error(
     `with-env: loaded ${selection.files.join(" + ")} (${selection.environment})`,
   );

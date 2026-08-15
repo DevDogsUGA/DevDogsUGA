@@ -19,10 +19,11 @@ app's moderation integration works. Nothing here needs you to know a command
 name, and `pnpm devtools <command>` still works if you do. `pnpm sb` is the same
 tool under its older name.
 
-Running the console itself is a separate step:
+Running the console itself is a separate step (with the local stack up, the
+dev server targets it automatically):
 
 ```bash
-pnpm --filter platform dev:local
+pnpm --filter platform dev
 ```
 
 The Discord and GitHub variables in `.env.example` are validated at boot but
@@ -88,7 +89,7 @@ workflow; common commands:
 ```bash
 pnpm --filter @devdogsuga/supabase new-migration <name>   # create a migration
 pnpm sb reset                                       # replay everything locally
-pnpm --filter platform db:pull:local    # refresh Drizzle from the DB
+pnpm --filter platform db:pull          # refresh Drizzle from the DB
 pnpm sb push --remote                               # apply to the linked project
 ```
 

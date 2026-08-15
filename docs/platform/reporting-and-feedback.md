@@ -282,10 +282,10 @@ Quarantine is the only moderation outcome whose effect lives in _your_ read poli
 
 ### The console
 
-Reports are worked in the console at `/console/moderation`, which is the report queue and nothing else — each report shows its reason and content type inline. To work on the console itself, run it against your own stack:
+Reports are worked in the console at `/console/moderation`, which is the report queue and nothing else — each report shows its reason and content type inline. To work on the console itself, run it with your own stack up (a running local stack is detected automatically):
 
 ```bash
-pnpm --filter platform dev:local
+pnpm --filter platform dev
 ```
 
 The five Discord and GitHub variables in `.env.example` are validated at boot but unused by these pages, so any non-empty placeholder will do unless you are working on Discord or GitHub sync.

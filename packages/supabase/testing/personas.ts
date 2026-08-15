@@ -35,7 +35,9 @@ const SCHEMA = "platform";
 /** Service-role client: bypasses RLS. Fixture setup only, never an assertion. */
 export function admin() {
   if (!SECRET_KEY) {
-    throw new Error("SECRET_KEY is required (run via `with-env --local`)");
+    throw new Error(
+      "SECRET_KEY is required (run via `with-env`, with the local stack up)",
+    );
   }
   return createClient(LOCAL_API_URL, SECRET_KEY, {
     db: { schema: SCHEMA },
@@ -46,7 +48,9 @@ export function admin() {
 /** Anonymous client: the publishable key with no session. */
 export function anon() {
   if (!PUBLISHABLE_KEY) {
-    throw new Error("PUBLISHABLE_KEY is required (run via `with-env --local`)");
+    throw new Error(
+      "PUBLISHABLE_KEY is required (run via `with-env`, with the local stack up)",
+    );
   }
   return createClient(LOCAL_API_URL, PUBLISHABLE_KEY, {
     db: { schema: SCHEMA },

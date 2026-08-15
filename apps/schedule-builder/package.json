@@ -6,7 +6,6 @@
   "scripts": {
     "build": "next build",
     "dev": "with-env next dev",
-    "dev:local": "with-env --local next dev",
     "start": "next start",
     "lint": "eslint src",
     "lint:fix": "eslint --fix src",
@@ -18,12 +17,11 @@
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx}\" --cache",
     "db:generate": "with-env drizzle-kit generate --config drizzle-migrations.config.ts",
     "db:pull": "with-env drizzle-kit pull --config drizzle-introspection.config.ts",
-    "db:pull:local": "with-env --local drizzle-kit pull --config drizzle-introspection.config.ts",
-    "cf:preview": "with-env --local opennextjs-cloudflare preview",
-    "cf:build:staging": "DEPLOY_ENV=staging opennextjs-cloudflare build",
-    "cf:build:production": "DEPLOY_ENV=production opennextjs-cloudflare build",
-    "cf:deploy:staging": "with-env -c 'DEPLOY_ENV=staging opennextjs-cloudflare deploy -e staging'",
-    "cf:deploy:production": "with-env -c 'DEPLOY_ENV=production opennextjs-cloudflare deploy -e production'"
+    "cf:preview": "with-env opennextjs-cloudflare preview",
+    "cf:build:staging": "DEPLOY_ENV=staging with-env opennextjs-cloudflare build",
+    "cf:build:production": "DEPLOY_ENV=production with-env opennextjs-cloudflare build",
+    "cf:deploy:staging": "DEPLOY_ENV=staging with-env -c 'node ../../scripts/require-cloudflare-token.mjs && opennextjs-cloudflare deploy -e staging'",
+    "cf:deploy:production": "DEPLOY_ENV=production with-env -c 'node ../../scripts/require-cloudflare-token.mjs && opennextjs-cloudflare deploy -e production'"
   },
   "dependencies": {
     "@devdogsuga/drizzle": "workspace:*",

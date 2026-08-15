@@ -159,7 +159,7 @@ jobs:
         env:
           SKIP_ENV_VALIDATION: ""
         run: >-
-          pnpm exec with-env --local
+          pnpm exec with-env
           pnpm turbo run build --filter='!study-group-finder'
 
   # Repo-wide formatting check — fast, no build needed.

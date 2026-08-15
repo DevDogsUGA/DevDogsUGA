@@ -26,7 +26,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p ../../supabase",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rls": "with-env --local vitest run --config vitest.rls.config.ts",
+    "test:rls": "with-env vitest run --config vitest.rls.config.ts",
     "test:coverage": "vitest run --coverage",
     "link-remote-project": "with-env -c 'supabase link --project-ref $PROJECT_REF'",
     "new-migration": "supabase migration new",
@@ -36,10 +36,10 @@
     "generate-types": "with-env supabase gen types --linked > src/database.types.ts && pnpm build",
     "seed-buckets": "with-env supabase seed buckets --linked",
     "start-local-stack": "with-env supabase start && with-env supabase status -o env > ../../.env.generated && pnpm seed-buckets:local",
-    "stop-local-stack": "with-env supabase stop",
-    "reset-local-database": "with-env --local supabase db reset && with-env --local supabase gen types --local > src/database.types.ts && pnpm build && pnpm seed-buckets:local",
-    "seed-buckets:local": "with-env --local supabase seed buckets --local --yes",
-    "generate-types:local": "with-env --local supabase gen types --local > src/database.types.ts && pnpm build"
+    "stop-local-stack": "with-env supabase stop && node -e \"require('node:fs').rmSync('../../.env.generated',{force:true})\"",
+    "reset-local-database": "with-env supabase db reset && with-env supabase gen types --local > src/database.types.ts && pnpm build && pnpm seed-buckets:local",
+    "seed-buckets:local": "with-env supabase seed buckets --local --yes",
+    "generate-types:local": "with-env supabase gen types --local > src/database.types.ts && pnpm build"
   },
   "dependencies": {
     "@supabase/ssr": "catalog:",

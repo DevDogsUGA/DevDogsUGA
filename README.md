@@ -22,7 +22,8 @@ packages/
   db/                  @devdogsuga/drizzle — shared Drizzle helpers
   email/               @devdogsuga/email — transactional email templates
   config/              @devdogsuga/config — shared tsconfig/eslint/vitest presets
-  with-env/            @devdogsuga/with-env — the `with-env` bin used by every script
+  env/                 @devdogsuga/env — the env-variable registry and the `with-env` bin
+                       used by every script
 docs/                  Rendered on the platform site (per-project subfolders)
 ```
 
@@ -49,25 +50,27 @@ Supabase stack; the Flutter SDK only for `apps/study-group-finder`.
 
 ## Environment
 
-**Remote-first**: `pnpm dev` and `pnpm sb <cmd>` target the linked remote
-Supabase project by default. The local Docker stack is opt-in
-(`pnpm sb link`, then the `:local` / `dev:local` script variants).
+**A running local stack wins**: `with-env` probes the local Supabase API port
+(54321) on every run. When the Docker stack is listening, the `.env.generated`
+overlay is layered on top of `.env`; when it is not, everything targets the
+linked remote Supabase project. There is no flag and no `:local` script
+variant — start the stack (`pnpm sb link`) to switch, stop it to switch back.
+`with-env` prints which files it loaded on every run, so the target is never a
+guess.
 
 There is a **single** root `.env` for the whole monorepo — no per-app env
 files. It is loaded by [dotenvx](https://dotenvx.com) through one shared
-helper, the `with-env` bin from `@devdogsuga/with-env`. Workspace scripts never
+helper, the `with-env` bin from `@devdogsuga/env`. Workspace scripts never
 call `dotenvx` directly; they wrap their command in it:
 
 ```jsonc
-"dev": "with-env next dev",                    // root .env
-"dev:local": "with-env --local next dev",      // .env.generated, then .env
+"dev": "with-env next dev",    // .env — plus .env.generated when the stack is up
 ```
 
-`--local` layers `.env.generated` on top; when more than one file is loaded the
-first one wins. The helper (`packages/with-env`) finds the env files by walking
-up to the workspace root, so it works from any package. Add
-`"@devdogsuga/with-env": "workspace:*"` to a package's devDependencies to get
-the bin on its `PATH`.
+When more than one file is loaded the first one wins. The helper
+(`packages/env`) finds the env files by walking up to the workspace root, so
+it works from any package. Add `"@devdogsuga/env": "workspace:*"` to a
+package's devDependencies to get the bin on its `PATH`.
 
 ### Cross-platform scripts
 
@@ -100,10 +103,10 @@ whenever no `.env` value is needed; it is the simpler path.
 
 Note the emulator globs unquoted `[...]`, so keep such arguments quoted.
 
-| File                  | Holds                                                                                                               | Loaded                                      |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| root `.env`           | everything: shared Supabase creds, per-app secrets, and all `config.toml` reads (ports, auth providers, `BASE_URL`) | always                                      |
-| root `.env.generated` | local-stack creds (written by `start-local-stack`)                                                                  | only by `:local` variants; wins over `.env` |
+| File                  | Holds                                                                                                               | Loaded                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| root `.env`           | everything: shared Supabase creds, per-app secrets, and all `config.toml` reads (ports, auth providers, `BASE_URL`) | always                                        |
+| root `.env.generated` | local-stack creds (written by `start-local-stack`, deleted by `stop-local-stack`)                                   | when the stack is listening; wins over `.env` |
 
 Copy `.env.example` to `.env` (or run `pnpm setup`), then fill it in.
 
@@ -118,14 +121,14 @@ Copy `.env.example` to `.env` (or run `pnpm setup`), then fill it in.
 | `format:write` / `format:check`        | Prettier over the repo                      |
 | `sb <cmd>`                             | Proxy to `@devdogsuga/supabase` (see below) |
 
-**In any package's scripts** (via `@devdogsuga/with-env`)
+**In any package's scripts** (via `@devdogsuga/env`)
 
-| Command                         | Does                                    |
-| ------------------------------- | --------------------------------------- |
-| `with-env [--local] <cmd>`      | Run `<cmd>` with the root `.env` loaded |
-| `with-env [--local] -c '<cmd>'` | Same, but `$VAR` resolves from `.env`   |
+| Command               | Does                                     |
+| --------------------- | ---------------------------------------- |
+| `with-env <cmd>`      | Run `<cmd>` with the env files loaded    |
+| `with-env -c '<cmd>'` | Same, but `$VAR` resolves from the files |
 
-**Supabase** (`pnpm sb <cmd>`) — remote-first; `:local` variants use the Docker stack
+**Supabase** (`pnpm sb <cmd>`) — a running local Docker stack is auto-detected and wins
 
 | Command                                  | Does                                                                 |
 | ---------------------------------------- | -------------------------------------------------------------------- |
@@ -141,17 +144,17 @@ Copy `.env.example` to `.env` (or run `pnpm setup`), then fill it in.
 
 | Script                               | Does                                             |
 | ------------------------------------ | ------------------------------------------------ |
-| `dev` / `dev:local`                  | `next dev` against remote / local Supabase       |
+| `dev`                                | `next dev` (local stack auto-detected)           |
 | `build`                              | `next build`                                     |
 | `typecheck` / `lint`                 | `tsc --noEmit` / `eslint src`                    |
-| `db:pull` / `db:pull:local`          | Regenerate drizzle schema from the DB            |
+| `db:pull`                            | Regenerate drizzle schema from the DB            |
 | `cf:preview`                         | OpenNext → Cloudflare, served locally            |
 | `cf:build:<env>` / `cf:deploy:<env>` | Build / deploy `<env>` (`staging`, `production`) |
 | `db:seed-roles` (platform)           | Seed built-in roles                              |
 | `db:generate` (schedule-builder)     | Draft a SQL migration from the drizzle schema    |
 
 **Flutter app** (`pnpm --filter study-group-finder <script>`):
-`dev` / `dev:local` / `build` / `test` / `lint` / `generate-types` — shell out
+`dev` / `build` / `test` / `lint` / `generate-types` — shell out
 to Flutter via `with-env -c`, so the `--dart-define` values come from `.env`.
 See `apps/study-group-finder/README.md`.
 

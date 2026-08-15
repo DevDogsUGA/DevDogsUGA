@@ -11,12 +11,10 @@
   "scripts": {
     "build": "with-env -c 'flutter build web --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",
     "dev": "with-env -c 'flutter run --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",
-    "dev:local": "with-env --local -c 'flutter run --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",
     "test": "flutter test",
     "lint": "flutter analyze",
     "typecheck": "tsc --noEmit",
-    "generate-types": "with-env -c 'SUPABASE_URL=$API_URL SUPABASE_API_KEY=$SECRET_KEY dart run supadart'",
-    "generate-types:local": "with-env --local -c 'SUPABASE_URL=$API_URL SUPABASE_API_KEY=$SECRET_KEY dart run supadart'"
+    "generate-types": "with-env -c 'SUPABASE_URL=$API_URL SUPABASE_API_KEY=$SECRET_KEY dart run supadart'"
   },
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",

@@ -49,22 +49,60 @@ interface EmailBinding {
   }): Promise<unknown>;
 }
 
-function binding(): EmailBinding | null {
+/**
+ * Why the binding is absent, because the two cases deserve opposite
+ * reactions: outside a Worker its absence is the normal state of `next dev`
+ * and every test, while *inside* a Worker it means the deployment itself is
+ * misconfigured and mail is silently not going out.
+ */
+type MissingBinding = "outside-worker" | "worker-unbound";
+
+function binding():
+  | { email: EmailBinding }
+  | { email: null; missing: MissingBinding } {
   try {
     const { env } = getCloudflareContext();
     const email = (env as unknown as { EMAIL?: EmailBinding }).EMAIL;
-    return email ?? null;
+    return email ? { email } : { email: null, missing: "worker-unbound" };
   } catch {
     // Outside a Worker — `next dev` without `--experimental-https`, a test, a
     // script. Not an error: the caller decides whether a missing binding is
     // fatal, and for an invitation it is not.
-    return null;
+    return { email: null, missing: "outside-worker" };
   }
 }
 
 /** Whether sending could work at all, for the console to branch on. */
 export function isEmailConfigured(): boolean {
-  return binding() !== null;
+  return binding().email !== null;
+}
+
+// Once per process, not once per send: the binding cannot appear mid-process,
+// and a line repeated across a seeding run's fan-out is noise that trains
+// people to ignore it. Logs the template name and the reason — never the
+// recipient address.
+let announcedMissing = false;
+
+function announceMissing(missing: MissingBinding, template: string): void {
+  if (announcedMissing) return;
+  announcedMissing = true;
+  if (missing === "outside-worker") {
+    // Expected in `next dev`, tests, and scripts, so info rather than warn.
+    console.info(
+      `email: skipped "${template}" — not running in a Worker, so there is ` +
+        "no EMAIL binding. Preview templates with " +
+        "`pnpm --filter @devdogsuga/email preview`. Further skips are silent.",
+    );
+  } else {
+    // A deployed Worker without the binding is a real misconfiguration:
+    // every send is silently failing, and only this line says so.
+    console.warn(
+      `email: this Worker has no EMAIL binding — "${template}" was not ` +
+        "sent. Add the binding in wrangler.jsonc and run " +
+        "`wrangler email sending enable mail.devdogsuga.org`. " +
+        "Further failures are silent.",
+    );
+  }
 }
 
 /**
@@ -80,8 +118,9 @@ export async function sendTemplate<K extends keyof Templates>(
   name: K,
   props: Templates[K],
 ): Promise<SendResult> {
-  const email = binding();
-  if (!email) {
+  const lookup = binding();
+  if (!lookup.email) {
+    announceMissing(lookup.missing, String(name));
     return {
       ok: false,
       reason: "not_configured",
@@ -90,6 +129,7 @@ export async function sendTemplate<K extends keyof Templates>(
         "`wrangler email sending enable mail.devdogsuga.org`.",
     };
   }
+  const email = lookup.email;
 
   const { subject, html, text } = render(name, props);
 

@@ -96,8 +96,8 @@ Everything else is a package script, reached directly:
 | `pnpm --filter @devdogsuga/supabase generate-types`       | Regenerate `Database` types from the linked project  |
 | `pnpm --filter @devdogsuga/supabase generate-types:local` | The same, from the Docker stack                      |
 | `pnpm --filter @devdogsuga/supabase test:rls`             | The RLS persona suite (needs a running stack)        |
-| `pnpm --filter platform db:pull:local`                    | Regenerate the Drizzle schema from the local DB      |
-| `pnpm --filter platform db:seed-roles:local`              | Seed the built-in Member and Root roles (idempotent) |
+| `pnpm --filter platform db:pull`                          | Regenerate the Drizzle schema from the DB            |
+| `pnpm --filter platform db:seed-roles`                    | Seed the built-in Member and Root roles (idempotent) |
 
 ## Seeds
 

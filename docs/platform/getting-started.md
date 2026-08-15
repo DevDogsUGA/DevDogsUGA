@@ -21,10 +21,16 @@ corepack enable && pnpm install
 pnpm setup          # checks prereqs and seeds .env from .env.example
 ```
 
-## Running (remote-first)
+## Running
 
-By default the apps and the Supabase CLI target the **linked remote** Supabase
-project. Fill in the "Remote Supabase project" section of `.env`, then:
+Which database you are on is decided by detection, not by a flag: if the local
+Docker stack is running (`with-env` probes its API port, 54321), its
+`.env.generated` connection overlay wins; otherwise everything targets the
+**linked remote** Supabase project from `.env`. Every command prints which env
+files it loaded, so the answer is never a guess.
+
+To run against the remote project, fill in the "Remote Supabase project"
+section of `.env`, make sure the local stack is stopped, then:
 
 ```bash
 pnpm sb link --remote      # one-time — links the CLI to PROJECT_REF
@@ -41,8 +47,15 @@ pnpm dev --filter platform          # or schedule-builder
 ```bash
 pnpm sb link      # boots Docker Supabase, writes .env.generated, seeds buckets
 pnpm sb reset     # replays all migrations, then the seeds; regenerates types
-pnpm dev:local --filter platform
+pnpm dev --filter platform    # the running stack is detected automatically
 ```
+
+While the stack is up, every `with-env`-wrapped script targets it — there are
+no separate `:local` script variants. Stop it with
+`pnpm --filter @devdogsuga/supabase stop-local-stack`, which runs
+`supabase stop` and then deletes `.env.generated`, so a stale overlay cannot
+linger once the stack is down. The port probe already ignores a stale file
+when nothing is listening, so this is belt on top of suspenders — deliberately.
 
 > `pnpm sb` is a four-command dispatcher — `link`, `push`, `reset`, `status` —
 > over three targets (`--local`, the default; `--remote`; `--team <slug>`). The
