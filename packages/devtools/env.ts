@@ -62,6 +62,7 @@ declare({
       scope: "environment",
       secrecy: "secret",
       tier: "apply",
+      commented: true,
     }),
     AIRTABLE_APPLY_PAT: define(z.string().min(1).optional(), {
       doc:
@@ -71,6 +72,7 @@ declare({
       scope: "environment",
       secrecy: "secret",
       tier: "apply",
+      commented: true,
     }),
     // Devops-only, per the model doc: it appears in no contributor flow --
     // `pnpm dev`, `pnpm build` and every test suite run without it -- so its
@@ -82,6 +84,7 @@ declare({
         "than falling into wrangler's interactive browser OAuth.",
       scope: "environment",
       secrecy: "secret",
+      commented: true,
     }),
     DEV_VPN_HOST: define(z.string().min(1).optional(), {
       doc:
@@ -97,6 +100,7 @@ declare({
         "turns misconfiguration from a build error into a runtime surprise.",
       scope: "default",
       secrecy: "public",
+      commented: true,
     }),
   },
 });

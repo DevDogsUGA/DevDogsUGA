@@ -109,6 +109,29 @@ export type EnvMeta = {
    * generated file forever.
    */
   localStack?: boolean;
+  /**
+   * The literal text `secrets example` and `secrets init` write after the `=`
+   * — `"$API_URL"`, `"https://$PROJECT_REF.supabase.co"`,
+   * `"http://localhost:3000"`, the committed Discord guild id. Absent means
+   * the line ships empty: `KEY=""`.
+   *
+   * Structure, not a placeholder: a `$VAR` derivation is how the value is
+   * actually built (dotenvx expands it), a localhost URL is the working
+   * development default, and losing either turns a fill-in-the-blanks file
+   * into a blank page. Values with no structure worth keeping stay absent.
+   */
+  example?: string;
+  /**
+   * The key ships commented out: `# KEY=""` rather than `KEY=""`.
+   *
+   * Encodes a real semantic, not tidiness: an EMPTY value for an enabled
+   * OAuth provider makes the Supabase CLI fail with `ProjectConfigParseError`
+   * — for those keys "unset" and "empty" are different states, and only the
+   * commented form is safe to ship. Also used for keys most contributors
+   * never set (operator credentials, opt-in overrides), where an uncommented
+   * empty line would read as a blank to fill in.
+   */
+  commented?: true;
 };
 
 /**

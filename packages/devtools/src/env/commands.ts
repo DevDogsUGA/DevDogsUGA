@@ -21,6 +21,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { confirm, log, note } from "@clack/prompts";
+import { variables } from "@devdogsuga/env";
 import {
   createSecret,
   listSecrets as listBwsSecrets,
@@ -84,6 +85,26 @@ async function save(path: string, doc: EnvDocument): Promise<boolean> {
   const moved = doc.group();
   await writeFile(path, doc.toString());
   return moved;
+}
+
+/**
+ * Names every key the file holds that no manifest declares.
+ *
+ * Loud on purpose, and per key: an undeclared key used to be pushed as a
+ * secret BY OMISSION, so a typo'd name uploaded garbage under the wrong key
+ * and a stray local variable uploaded something private. Now it is skipped,
+ * and the person who typed the line has to hear that — silence would read as
+ * "stored" right up until a deploy goes looking for it.
+ */
+function warnUnknown(unknown: string[]): void {
+  for (const key of unknown) {
+    log.warn(
+      `${key} is declared in no env manifest, so it was NOT pushed. If it is ` +
+        `real, declare it with define() in the owning package's env.ts so it ` +
+        `can be classified and routed; if it is a typo or a stray local ` +
+        `variable, fix or remove the line.`,
+    );
+  }
 }
 
 /**
@@ -214,11 +235,13 @@ export async function runSecretsPush(options: SecretsOptions): Promise<void> {
   const doc = await readDocument(path);
   const skip = ignoredFor(options.environment);
 
-  const { push: local, refused } = selectForPush(
-    doc.entries(),
-    options.environment,
-  );
+  const {
+    push: local,
+    refused,
+    unknown,
+  } = selectForPush(doc.entries(), options.environment);
   warnRefused(refused);
+  warnUnknown(unknown);
 
   if (local.size === 0) {
     explain(`No pushable values in ${path}.`, "", [
@@ -432,6 +455,9 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
     cloudflare,
     ignore: ignoredFor(options.environment),
     neverStore: neverStore(),
+    // Lets the audit tell "undeclared" apart from drift: the fix for one is a
+    // define() in a manifest, for the other a push or a pull.
+    declared: new Set(variables().keys()),
   });
 
   note(renderFindings(findings), `${options.environment} — drift`);

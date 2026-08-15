@@ -40,12 +40,13 @@ declare({
       scope: "environment",
       secrecy: "public",
       localStack: true,
+      example: "https://$PROJECT_REF.supabase.co",
     }),
     PUBLISHABLE_KEY: define(z.string(), {
       doc:
         "The Supabase publishable (anon) API key. Safe in a browser -- Row " +
         "Level Security is what protects the data -- and mirrored into " +
-        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Dashboard: Settings > API.",
       scope: "environment",
       secrecy: "public",
       localStack: true,
@@ -61,6 +62,8 @@ declare({
           "production default). Unset picks the per-environment default.",
         scope: "environment",
         secrecy: "public",
+        commented: true,
+        example: "devdogs",
       },
     ),
   },
@@ -78,7 +81,7 @@ declare({
     SECRET_KEY: define(z.string(), {
       doc:
         "The Supabase service-role key. Bypasses Row Level Security " +
-        "entirely -- server-side only, never in any client bundle.",
+        "entirely -- server-side only, never in any client bundle. Dashboard: Settings > API.",
       scope: "environment",
       secrecy: "secret",
       localStack: true,

@@ -47,6 +47,42 @@ const base: AuditInput = {
 
 const run = (over: Partial<AuditInput>) => audit({ ...base, ...over });
 
+describe("undeclared keys", () => {
+  it("reports them as their own category, not as drift", () => {
+    // The fix is a define() in a manifest, not a push — so the ordinary
+    // "in your .env, not in Bitwarden" warning must not fire alongside it,
+    // or the reader is told pushing would help when push skips the key.
+    const findings = run({
+      local: new Map([["MYSTERY_KEY", "x"]]),
+      declared: new Set(["DB_URL"]),
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe("warning");
+    expect(findings[0]!.summary).toMatch(/declared in no env manifest/);
+  });
+
+  it("stays quiet when the declared set is not provided", () => {
+    // Callers without a loaded registry get the old behaviour rather than
+    // every key suddenly reading as undeclared.
+    const findings = run({
+      local: new Map([["MYSTERY_KEY", "x"]]),
+      bws: bws({ MYSTERY_KEY: "x" }),
+      github: [gh("MYSTERY_KEY")],
+    });
+    expect(findings).toEqual([]);
+  });
+
+  it("does not hide a declared key's drift", () => {
+    const findings = run({
+      local: new Map([["DB_URL", "local"]]),
+      bws: bws({ DB_URL: "real" }),
+      github: [gh("DB_URL")],
+      declared: new Set(["DB_URL"]),
+    });
+    expect(findings.some((f) => /disagrees/.test(f.summary))).toBe(true);
+  });
+});
+
 describe("local vs Bitwarden", () => {
   it("flags a value that differs, as an error", () => {
     // The only value comparison this system can make anywhere. If it does not

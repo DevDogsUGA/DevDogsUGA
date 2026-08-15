@@ -15,11 +15,17 @@
  *   refused  a credential that must not be stored remotely AT ALL. Reported
  *            loudly, because somebody who put it in the file expecting it to
  *            sync has to learn that it did not.
+ *   unknown  a key NO manifest declares. Also loud, and also never uploaded:
+ *            an undeclared key used to ride along by omission, which meant a
+ *            typo'd name uploaded garbage under the wrong key and a stray
+ *            local variable uploaded something private. Fail closed — the
+ *            registry is the allowlist, not the ignore lists.
  */
 import {
   applyOnlyKeys,
   neverSecretKeys,
   neverStoreKeys,
+  variables,
 } from "@devdogsuga/env";
 import { type BwsEnvironment } from "../bws/environments.js";
 import { assertRegistryLoaded } from "./discovery.js";
@@ -27,6 +33,8 @@ import { assertRegistryLoaded } from "./discovery.js";
 export interface PushSelection {
   push: Map<string, string>;
   refused: string[];
+  /** Present in the file, declared by no manifest. Skipped, warned about. */
+  unknown: string[];
 }
 
 // The key sets are DERIVED from the env manifests (see `discovery.ts`), not
@@ -67,15 +75,25 @@ export function selectForPush(
 ): PushSelection {
   const skip = ignoredFor(environment);
   const refuse = neverStore();
+  const declared = variables();
 
   const push = new Map<string, string>();
   const refused: string[] = [];
+  const unknown: string[] = [];
 
   for (const [key, value] of entries) {
     // Refusal is checked FIRST and independently of the value. A blank
     // BWS_ACCESS_TOKEN is still a line somebody is about to fill in.
     if (refuse.has(key)) {
       if (value !== "") refused.push(key);
+      continue;
+    }
+    // Undeclared means unclassified: nothing says whether this is a secret,
+    // whose it is, or where it routes — so it does not leave the machine.
+    // Reported even when empty, because the problem is the missing
+    // declaration, not the value.
+    if (!declared.has(key)) {
+      unknown.push(key);
       continue;
     }
     if (skip.has(key)) continue;
@@ -86,5 +104,5 @@ export function selectForPush(
     push.set(key, value);
   }
 
-  return { push, refused };
+  return { push, refused, unknown };
 }

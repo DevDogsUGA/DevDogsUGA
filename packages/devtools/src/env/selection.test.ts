@@ -110,6 +110,41 @@ describe("non-secrets and empties", () => {
   });
 });
 
+describe("keys no manifest declares", () => {
+  it("skips them and names them, instead of uploading by omission", () => {
+    // The fail-closed rule: undeclared means unclassified, and unclassified
+    // values never leave the machine. A typo'd name uploading garbage or a
+    // stray local variable uploading something private are both worse than a
+    // loud skip.
+    const { push, refused, unknown } = selectForPush(
+      env({ DISCROD_TOKEN: "oops-a-typo", CRON_SECRET: "x" }),
+      "staging",
+    );
+    expect(push.has("DISCROD_TOKEN")).toBe(false);
+    expect(unknown).toEqual(["DISCROD_TOKEN"]);
+    // Not conflated with the never-store refusals — different message,
+    // different fix.
+    expect(refused).toEqual([]);
+    // And the declared half of the file still pushes.
+    expect(push.get("CRON_SECRET")).toBe("x");
+  });
+
+  it("reports an empty undeclared key too", () => {
+    // Unlike an empty declared secret (a placeholder), an empty undeclared
+    // key is a declaration problem whatever its value is.
+    const { unknown } = selectForPush(env({ MYSTERY_KEY: "" }), "staging");
+    expect(unknown).toEqual(["MYSTERY_KEY"]);
+  });
+
+  it("declared keys never appear as unknown", () => {
+    const { unknown } = selectForPush(
+      env({ DISCORD_TOKEN: "a", DEPLOY_ENV: "staging" }),
+      "staging",
+    );
+    expect(unknown).toEqual([]);
+  });
+});
+
 describe("ordinary secrets", () => {
   it("pushes them, which is the point", () => {
     const { push, refused } = selectForPush(

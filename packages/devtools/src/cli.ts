@@ -54,7 +54,9 @@ import {
   runSecretsPush,
   runSecretsReset,
 } from "./env/commands.js";
+import { runSecretsExample, runSecretsInit } from "./env/example.js";
 import { loadRegistry } from "./env/discovery.js";
+import { DEPLOY_ENVIRONMENTS, isDeployEnvironment } from "@devdogsuga/env";
 import { setExplicitAccessToken } from "./bws/client.js";
 import { positionals } from "./args.js";
 import { resolveEnvironment } from "./pick.js";
@@ -106,6 +108,12 @@ Secrets subcommands (--env is preflight, staging or production):
   secrets push  --env <env>       your .env -> Bitwarden -> GitHub
   secrets audit --env <env>       compare .env, Bitwarden, GitHub, Cloudflare
   secrets reset                   blank every value, keeping each commented out
+  secrets example [--check]       regenerate .env.example from the manifests
+                                  (--check: verify only, as CI does)
+  secrets init [--env <env>]      create a FRESH .env / .env.staging /
+                                  .env.production; refuses if the file exists.
+                                  Here --env is development (default), staging
+                                  or production — which file to create.
 
   Leave --env off and it asks. Naming it is for scripts, and for anyone who
   would rather not be asked twice.
@@ -489,11 +497,15 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
 }
 
 /**
- * `secrets <pull|push|audit> --env <preflight|staging|production>`
+ * `secrets <pull|push|audit> --env <preflight|staging|production>`, plus the
+ * three local-only subcommands: `reset`, `example [--check]`, and
+ * `init [--env <development|staging|production>]`.
  *
- * The environment has no default, and is asked for when `--env` is absent.
- * Every other command here defaults to the local stack because guessing wrong
- * is free; guessing wrong about whose credentials to overwrite is not.
+ * The environment has no default for pull/push/audit, and is asked for when
+ * `--env` is absent. Every other command here defaults to the local stack
+ * because guessing wrong is free; guessing wrong about whose credentials to
+ * overwrite is not. (`init` does default, to development: it refuses to touch
+ * an existing file, so the worst a wrong guess can do is create a blank one.)
  */
 async function runSecretsCommand(rest: string[]): Promise<void> {
   // `positionals` rather than `rest[0]`, so a flag before the subcommand does
@@ -502,9 +514,12 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
   // filename and must not be read as anything else.
   const [sub] = positionals(rest);
 
-  if (!sub || !["pull", "push", "audit", "reset"].includes(sub)) {
+  if (
+    !sub ||
+    !["pull", "push", "audit", "reset", "example", "init"].includes(sub)
+  ) {
     log.error(`Unknown secrets subcommand: ${sub ?? "(none)"}`);
-    log.message("Try pull, push, audit or reset.");
+    log.message("Try pull, push, audit, reset, example or init.");
     process.exitCode = 1;
     return;
   }
@@ -524,14 +539,52 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
     return;
   }
 
-  // pull/push/audit decide what goes where from the registry's derived key
-  // sets, and the registry fills only when the env manifests are imported.
-  // Loaded HERE, lazily, rather than at CLI start: the import pass touches a
-  // manifest in nearly every workspace package, and `pnpm devtools reset` (or
-  // any stack command) should not pay for declarations it never reads.
-  // `secrets reset` returned above for the same reason — it edits the local
-  // file and consults no key set.
+  // Every remaining subcommand reads the registry, which fills only when the
+  // env manifests are imported. Loaded HERE, lazily, rather than at CLI
+  // start: the import pass touches a manifest in nearly every workspace
+  // package, and `pnpm devtools reset` (or any stack command) should not pay
+  // for declarations it never reads. `secrets reset` returned above for the
+  // same reason — it edits the local file and consults no key set.
   await loadRegistry();
+
+  // `example` and `init` are pure registry → text. They return BEFORE the
+  // Bitwarden token lookup and the pull/push environment prompt, and must
+  // keep doing so: CI's credential-free validate job runs `example --check`,
+  // and a generator that needed a secret to describe the secrets could not
+  // live there.
+  if (sub === "example") {
+    try {
+      await runSecretsExample({ check: rest.includes("--check") });
+    } catch (err) {
+      explain("Generating .env.example failed.", errorMessage(err));
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  if (sub === "init") {
+    const given = flagValue(rest, "--env") ?? "development";
+    if (!isDeployEnvironment(given)) {
+      // init's --env speaks DEPLOY environments (which file to create), not
+      // the Bitwarden vocabulary pull/push use — there is no .env.preflight.
+      explain(
+        `"${given}" is not an environment init can create a file for.`,
+        "",
+        [
+          `Pass --env ${DEPLOY_ENVIRONMENTS.join(" | ")} (default: development).`,
+        ],
+      );
+      process.exitCode = 1;
+      return;
+    }
+    try {
+      await runSecretsInit(given);
+    } catch (err) {
+      explain("secrets init failed.", errorMessage(err));
+      process.exitCode = 1;
+    }
+    return;
+  }
 
   // The question names the direction, because the answer means something
   // different each way: pull overwrites your file, push overwrites theirs.
@@ -633,7 +686,7 @@ async function menu(): Promise<void> {
   );
 
   if (choice === "setup") {
-    runSetup();
+    await runSetup();
     return;
   }
 
@@ -682,7 +735,7 @@ async function main(): Promise<void> {
   }
 
   if (first === "setup") {
-    runSetup();
+    await runSetup();
     outro("Done.");
     return;
   }

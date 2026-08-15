@@ -1,0 +1,322 @@
+/**
+ * `pnpm devtools secrets example [--check]` and `pnpm devtools secrets init`.
+ *
+ * `.env.example` used to be the file everybody edited and nobody trusted —
+ * the fourth of the four files a new variable had to be added to, and the one
+ * whose omission nothing caught. Now it is OUTPUT: the registry the manifests
+ * populate is the single source, this module renders it, and CI's `--check`
+ * fails on drift the same way it does for `database.types.ts`. Editing the
+ * generated file by hand is therefore always wrong; the fix goes in the
+ * owning manifest's `doc`/`example`/`commented` metadata.
+ *
+ * ⚠️ Registry-only, on purpose. Nothing here touches Bitwarden, GitHub, the
+ * network, or the ambient environment — `cli.ts` dispatches these two
+ * subcommands before any token lookup or environment prompt — because the CI
+ * job that runs `--check` is deliberately credential-free, and a generator
+ * that needed a secret to describe the secrets would not be allowed there.
+ *
+ * `secrets init` is the same renderer pointed at a real env file, minus the
+ * generated-file header. It REFUSES to touch an existing file, with no
+ * `--force` and no prompt: every other write in this toolchain comments out
+ * rather than deletes and confirms before overwriting, and "replace my whole
+ * .env with blanks" has no legitimate use — `secrets reset` blanks values
+ * recoverably, `secrets pull` updates them in place.
+ */
+import { readFile, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { log, note } from "@clack/prompts";
+import {
+  envFileFor,
+  variables,
+  type DeployEnvironment,
+  type EnvEntry,
+} from "@devdogsuga/env";
+import { assertRegistryLoaded } from "./discovery.js";
+import { PROJECT_ROOT } from "../instance.js";
+import { explain } from "../ui.js";
+
+/**
+ * Section order is FIXED here rather than inherited from manifest import
+ * order, and a key declared by several manifests is rendered once, under the
+ * earliest of its sources in this list. Both choices serve the same property:
+ * the output is a pure function of the declarations, so `--check` compares
+ * content rather than filesystem enumeration accidents.
+ */
+const SECTION_ORDER = [
+  "platform",
+  "schedule-builder",
+  "study-group-finder",
+  "supabase",
+  "devtools",
+] as const;
+
+const SECTION_LABELS: Record<string, string> = {
+  platform: "platform (apps/platform/src/env.ts)",
+  "schedule-builder": "schedule-builder (apps/schedule-builder/src/env.ts)",
+  "study-group-finder": "study-group-finder (apps/study-group-finder/env.ts)",
+  supabase:
+    "supabase — read by config.toml and the Supabase CLI (supabase/env.ts)",
+  devtools:
+    "devtools — operator tooling, no app reads these (packages/devtools/env.ts)",
+};
+
+/** `study-group-finder:tooling` and friends fold into their app's section. */
+function sectionOf(source: string): string {
+  return source.split(":")[0]!;
+}
+
+function sectionRank(source: string): number {
+  const index = (SECTION_ORDER as readonly string[]).indexOf(sectionOf(source));
+  return index === -1 ? SECTION_ORDER.length : index;
+}
+
+/** Greedy wrap into `# `-prefixed lines that stay under 80 columns. */
+function comment(text: string, width = 77): string[] {
+  const lines: string[] = [];
+  let line = "";
+  for (const word of text.split(/\s+/)) {
+    if (line !== "" && line.length + 1 + word.length > width) {
+      lines.push(`# ${line}`);
+      line = word;
+    } else {
+      line = line === "" ? word : `${line} ${word}`;
+    }
+  }
+  if (line !== "") lines.push(`# ${line}`);
+  return lines;
+}
+
+const RULE = `# ${"-".repeat(75)}`;
+
+interface Block {
+  entry: EnvEntry;
+  /** Other sections declaring the same key, for the "(shared with …)" note. */
+  sharedWith: string[];
+}
+
+/** One block per key, grouped by owning section, in declaration order. */
+function sections(): { name: string; blocks: Block[] }[] {
+  assertRegistryLoaded();
+  const bySection = new Map<string, Block[]>();
+
+  for (const entries of variables().values()) {
+    // The stable sort keeps declaration order among same-section duplicates,
+    // so the owner is the canonical section's own declaration.
+    const owner = [...entries].sort(
+      (a, b) => sectionRank(a.source) - sectionRank(b.source),
+    )[0]!;
+    const own = sectionOf(owner.source);
+    const sharedWith = [
+      ...new Set(
+        entries.map((e) => sectionOf(e.source)).filter((s) => s !== own),
+      ),
+    ];
+
+    const blocks = bySection.get(own) ?? [];
+    blocks.push({ entry: owner, sharedWith });
+    bySection.set(own, blocks);
+  }
+
+  return [...bySection.entries()]
+    .sort(([a], [b]) => sectionRank(a) - sectionRank(b) || a.localeCompare(b))
+    .map(([name, blocks]) => ({ name, blocks }));
+}
+
+function renderBlock({ entry, sharedWith }: Block): string[] {
+  const { key, meta } = entry;
+  const lines = comment(meta.doc);
+
+  if (meta.localStack) {
+    lines.push(
+      "# (the running local Supabase stack supplies this via .env.generated)",
+    );
+  }
+  if (sharedWith.length > 0) {
+    lines.push(`# (shared with ${sharedWith.join(", ")})`);
+  }
+
+  // A never-store credential gets documentation and NO assignable line: a
+  // `BWS_ACCESS_TOKEN=` line in an example file invites exactly the mistake
+  // its doc warns about. The key name still appears, so grep finds it.
+  if (meta.secrecy === "never-store") {
+    return [
+      `# ${key}:`,
+      ...lines,
+      ...comment(
+        `(no ${key}= line on purpose — an assignable line here would invite ` +
+          "storing what must not be stored)",
+      ),
+    ];
+  }
+
+  const value = `${key}="${meta.example ?? ""}"`;
+  // `developer` keys are always commented: they are one contributor's own
+  // values, and an uncommented empty line reads as a blank everybody fills in.
+  const commented = meta.commented === true || meta.scope === "developer";
+  lines.push(commented ? `# ${value}` : value);
+  return lines;
+}
+
+function renderBody(): string[] {
+  const lines: string[] = [];
+  for (const { name, blocks } of sections()) {
+    lines.push("", RULE, `# ${SECTION_LABELS[name] ?? name}`, RULE);
+    for (const block of blocks) {
+      lines.push("", ...renderBlock(block));
+    }
+  }
+  return lines;
+}
+
+/** The committed `.env.example`: generated header + rendered registry. */
+export function renderExample(): string {
+  const header = [
+    "# .env.example — every declared environment variable, with its documentation.",
+    "#",
+    "# GENERATED by `pnpm devtools secrets example`. Do not edit this file: edit",
+    "# the owning manifest (src/env.ts, env.ts, supabase/env.ts) and regenerate.",
+    "# CI runs `secrets example --check` and fails on drift, the same pattern as",
+    "# database.types.ts.",
+    "#",
+    "# One env file per environment, each standalone — no shared base, so a key",
+    "# missing from a deployed file is a loud validation error rather than a",
+    "# silent fallthrough to a development value:",
+    "#",
+    "#   .env             IS development (the unsuffixed file, read by default)",
+    "#   .env.staging     `pnpm devtools secrets pull --env staging`",
+    "#   .env.production  `pnpm devtools secrets pull --env production`",
+    "#",
+    "# `pnpm devtools setup` (or `pnpm devtools secrets init`) materialises a",
+    "# fresh .env from the same registry that generated this file. The local",
+    "# Docker stack is detected by a port probe, not a flag: while it is running,",
+    "# .env.generated (written by start-local-stack) overlays the connection",
+    "# block — in development only. `supabase stop` is the toggle back.",
+  ];
+  return [...header, ...renderBody(), ""].join("\n");
+}
+
+/** A fresh env file for `secrets init` — same body, working-file header. */
+export function renderInit(
+  environment: DeployEnvironment,
+  date: string,
+): string {
+  const file = envFileFor(environment);
+  const header = [
+    `# ${file} (${environment}) — created by \`pnpm devtools secrets init\` on ${date}.`,
+    ...(environment === "development"
+      ? [
+          "# Fill in the values below. The local Supabase stack supplies the whole",
+          "# connection block: `pnpm devtools link` starts it and writes",
+          "# .env.generated, which overlays this file while the stack is running.",
+        ]
+      : [
+          `# Run \`pnpm devtools secrets pull --env ${environment}\` to fill the`,
+          "# values from Bitwarden, or fill them in by hand.",
+        ]),
+  ];
+  return [...header, ...renderBody(), ""].join("\n");
+}
+
+// ── commands ─────────────────────────────────────────────────────────────────
+
+const EXAMPLE_PATH = ".env.example";
+
+/** `KEY=`, `# KEY=` — the assignable (or deliberately commented) lines. */
+const ASSIGNMENT = /^(#\s?)?([A-Z][A-Z0-9_]*)=.*$/;
+
+/** key → full line, for the key-level diff summary. */
+function assignments(text: string): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const line of text.split("\n")) {
+    const match = ASSIGNMENT.exec(line);
+    if (match && !map.has(match[2]!)) map.set(match[2]!, line);
+  }
+  return map;
+}
+
+export async function runSecretsExample(options: {
+  check?: boolean;
+}): Promise<void> {
+  const path = resolve(PROJECT_ROOT, EXAMPLE_PATH);
+  const generated = renderExample();
+
+  if (!options.check) {
+    await writeFile(path, generated);
+    log.success(
+      `Wrote ${EXAMPLE_PATH} from the registry ` +
+        `(${assignments(generated).size} assignable keys).`,
+    );
+    return;
+  }
+
+  const committed = await readFile(path, "utf8").catch(() => null);
+  if (committed === generated) {
+    log.success(`${EXAMPLE_PATH} matches the env manifests.`);
+    return;
+  }
+
+  // Key-level, not a full diff: the file is mostly prose, and the useful
+  // answer is WHICH declarations moved, not a wall of comment churn.
+  const ours = assignments(generated);
+  const theirs =
+    committed === null ? new Map<string, string>() : assignments(committed);
+  const drift: string[] = [];
+  for (const key of ours.keys()) {
+    if (!theirs.has(key))
+      drift.push(`+ ${key}  declared, missing from ${EXAMPLE_PATH}`);
+    else if (theirs.get(key) !== ours.get(key))
+      drift.push(`~ ${key}  line differs`);
+  }
+  for (const key of theirs.keys()) {
+    if (!ours.has(key))
+      drift.push(`- ${key}  in ${EXAMPLE_PATH}, no longer generated`);
+  }
+  if (drift.length === 0) {
+    drift.push("(no key drifted — the header or a doc comment changed)");
+  }
+
+  note(drift.join("\n"), `${EXAMPLE_PATH} is out of date`);
+  explain(`${EXAMPLE_PATH} does not match the env manifests.`, "", [
+    "Regenerate it with `pnpm devtools secrets example` and commit the result.",
+    "The manifests are the source of truth; never edit the file by hand.",
+  ]);
+  process.exitCode = 1;
+}
+
+export async function runSecretsInit(
+  environment: DeployEnvironment,
+): Promise<void> {
+  const file = envFileFor(environment);
+  const path = resolve(PROJECT_ROOT, file);
+  const date = new Date().toISOString().slice(0, 10);
+
+  try {
+    // `wx` makes the existence check and the write one atomic operation, so
+    // two concurrent inits cannot both pass a stat and then clobber.
+    await writeFile(path, renderInit(environment, date), { flag: "wx" });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "EEXIST") {
+      explain(`${file} already exists, and init never overwrites.`, "", [
+        environment === "development"
+          ? "Edit .env in place, or `pnpm devtools secrets reset` blanks every" +
+            " value while keeping each recoverable as a comment."
+          : `\`pnpm devtools secrets pull --env ${environment}\` updates its` +
+            " values in place.",
+        "To start truly fresh, move the old file aside yourself first — that",
+        "way discarding it is your action, not this tool's.",
+      ]);
+      process.exitCode = 1;
+      return;
+    }
+    throw err;
+  }
+
+  log.success(`Created ${file} (${environment}).`);
+  log.info(
+    environment === "development"
+      ? "Fill in the values, or run `pnpm devtools link` to start the local " +
+          "stack — it supplies the whole connection block via .env.generated."
+      : `Every value is blank. \`pnpm devtools secrets pull --env ` +
+          `${environment}\` fills it from Bitwarden.`,
+  );
+}

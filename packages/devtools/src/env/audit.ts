@@ -82,6 +82,15 @@ export interface AuditInput {
    * so the ordinary "not in Bitwarden" warning must not fire for them.
    */
   neverStore?: ReadonlySet<string>;
+  /**
+   * Every key the registry knows. When provided, a local key outside it is
+   * reported as UNDECLARED — its own category, not folded into drift, because
+   * the fix is different: drift wants a push or a pull, an undeclared key
+   * wants a `define()` in the owning manifest (or the line removed). It is
+   * also why `secrets push` skipped it, and the audit should say so rather
+   * than let "not in Bitwarden" imply pushing would help.
+   */
+  declared?: ReadonlySet<string>;
 }
 
 export function audit(input: AuditInput): Finding[] {
@@ -128,10 +137,29 @@ export function audit(input: AuditInput): Finding[] {
     }
   }
 
+  // ── undeclared keys ────────────────────────────────────────────────────────
+  // Reported once, here, and then excluded from the drift comparisons below:
+  // an undeclared key is invisible to push routing, so "in your .env, not in
+  // Bitwarden" would be true and useless — pushing cannot fix it.
+  const undeclared = (key: string): boolean =>
+    input.declared !== undefined && !input.declared.has(key);
+  for (const key of input.local.keys()) {
+    if (!relevant(key) || !undeclared(key)) continue;
+    findings.push({
+      key,
+      severity: "warning",
+      store: "local",
+      summary:
+        "in your .env but declared in no env manifest — push skips it. " +
+        "Declare it with define() in the owning package's env.ts, or remove " +
+        "the line",
+    });
+  }
+
   // ── local vs Bitwarden ─────────────────────────────────────────────────────
   // The only VALUE comparison available anywhere in this system.
   for (const [key, value] of input.local) {
-    if (!relevant(key)) continue;
+    if (!relevant(key) || undeclared(key)) continue;
     const truth = input.bws.get(key);
 
     if (truth === undefined) {

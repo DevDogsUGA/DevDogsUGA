@@ -40,8 +40,11 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env files
-# There is a single root .env for the whole monorepo. Never commit any .env
-# file (.env, .env.generated, .env.local, ...); only .env.example is tracked.
+# One root env file per environment: .env IS development, and .env.staging /
+# .env.production are materialised by `secrets init` / `secrets pull`.
+# `.env.generated` is the local stack's overlay. None of them may ever be
+# committed. The single exception, .env.example, is GENERATED output — run
+# `pnpm devtools secrets example` rather than editing it; CI checks the drift.
 .env*
 !.env.example
 

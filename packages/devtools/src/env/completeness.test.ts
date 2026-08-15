@@ -131,6 +131,22 @@ describe("registry completeness", () => {
     }
   });
 
+  it("renders every declared key into .env.example", async () => {
+    // The converse of the check above, made possible now the file is
+    // generated: a declared variable that never reaches .env.example is
+    // documentation nobody will see. Every key appears — as an assignment,
+    // commented out (developer scope, disable-by-default), or as a named
+    // comment block (never-store) — so a plain mention is the right floor.
+    const text = await readFile(resolve(PROJECT_ROOT, ".env.example"), "utf8");
+    for (const key of variables().keys()) {
+      expect(
+        text.includes(key),
+        `${key} is declared but absent from .env.example — regenerate it ` +
+          "with `pnpm devtools secrets example`.",
+      ).toBe(true);
+    }
+  });
+
   it("gives every declaration a non-empty doc", () => {
     // The doc is what lands in `.env.example`, so it is the only documentation
     // most readers will ever see. (The values themselves are not available

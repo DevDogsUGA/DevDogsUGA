@@ -59,6 +59,7 @@ const server = {
       "cf:build:* scripts are its two committed sources.",
     scope: "default",
     secrecy: "public",
+    commented: true,
   }),
   // User-specified (.env)
   BASE_URL: define(
@@ -72,6 +73,7 @@ const server = {
         "Defaults to http://localhost:3000 in development.",
       scope: "environment",
       secrecy: "public",
+      example: "http://localhost:3000",
     },
   ),
   CRON_SECRET: define(
@@ -106,6 +108,7 @@ const server = {
       "-- the bots differ by alert channel, not by guild.",
     scope: "default",
     secrecy: "public",
+    example: "1231994798165069987",
   }),
   DISCORD_PUBLIC_KEY: define(z.string(), {
     doc:
@@ -129,7 +132,8 @@ const server = {
     doc:
       "Channel for operational alerts. Empty means do not post -- the right " +
       "value everywhere except production, because staging shares the " +
-      "club's real Discord guild.",
+      "club's real Discord guild and a stray value here reaches the " +
+      "officers' channel. Production uses 1532424905193160794.",
     scope: "environment",
     secrecy: "public",
   }),
@@ -141,6 +145,7 @@ const server = {
       "placeholder is enough to run the app locally.",
     scope: "default",
     secrecy: "public",
+    example: "DevDogsUGA",
   }),
   // The DevDogs GitHub App, which replaced an org-owner `ghp_` token. Every
   // GitHub call this platform makes is an organization administration action,
@@ -153,16 +158,21 @@ const server = {
   GITHUB_APP_ID: define(z.coerce.number().int().positive(), {
     doc:
       "The DevDogs GitHub App's id. Not a secret -- it appears in every " +
-      "webhook payload.",
+      "webhook payload. Required at boot but only used by org invites and " +
+      "team provisioning, so the numeric placeholder is enough to run the " +
+      "app locally.",
     scope: "environment",
     secrecy: "public",
+    example: "000000",
   }),
   GITHUB_APP_INSTALLATION_ID: define(z.coerce.number().int().positive(), {
     doc:
       "The App's installation id on the organization. Not a secret -- " +
-      "visible in any webhook payload.",
+      "visible in any webhook payload. Like GITHUB_APP_ID, the placeholder " +
+      "is enough unless you are working on the org integration.",
     scope: "environment",
     secrecy: "public",
+    example: "00000000",
   }),
   GITHUB_APP_PRIVATE_KEY: define(
     z
@@ -176,10 +186,16 @@ const server = {
     {
       doc:
         "The App's private key: the PEM itself, on one line, double-quoted, " +
-        "with \\n escapes. It mints installation tokens indefinitely, which " +
-        "makes it the organization credential.",
+        "with \\n escapes -- the newlines are load-bearing, and a key that " +
+        "lost them parses as a string and fails to sign. It mints " +
+        "installation tokens indefinitely, which makes it the organization " +
+        "credential.",
       scope: "environment",
       secrecy: "secret",
+      // The placeholder documents the one-line \n-escaped shape, which is the
+      // part people get wrong when pasting a real key.
+      example:
+        "-----BEGIN RSA PRIVATE KEY-----\\nPLACEHOLDER-NOT-A-REAL-KEY-see-docs-platform-secrets-md\\n-----END RSA PRIVATE KEY-----\\n",
     },
   ),
   // The repository competition branches live in. Defaulted rather than
@@ -206,9 +222,12 @@ const server = {
     doc:
       "The repository competition branches are cut in -- this one, " +
       "deliberately: the production branch, not a second repo, is the " +
-      "deploy boundary.",
+      "deploy boundary. The schema default is right; set it only if that " +
+      "ever stops being true.",
     scope: "default",
     secrecy: "public",
+    example: "DevDogsUGA",
+    commented: true,
   }),
   // Verifies `X-Hub-Signature-256` on the PR webhook. Empty means the
   // webhook route refuses every request -- see the route for why that is the
@@ -217,8 +236,10 @@ const server = {
     doc:
       "Verifies X-Hub-Signature-256 on the pull-request webhook, and it is " +
       "the same value pasted into the App's webhook-secret field. Empty " +
-      "makes the route refuse every request, which is the right local " +
-      "default.",
+      "makes the route refuse every request (503) -- the right local " +
+      "default, because an unsigned endpoint that writes submissionState " +
+      "would let anyone mark a team as merged. Full setup: " +
+      "docs/platform/github-app.md.",
     scope: "environment",
     secrecy: "secret",
   }),
@@ -230,8 +251,9 @@ const server = {
   AIRTABLE_BASE_ID: define(z.string().default(""), {
     doc:
       "The officers' Airtable base id -- the id only; the token lives in " +
-      "Supabase Vault. Empty means the sync refuses with a named error " +
-      "instead of the app failing to boot.",
+      "Supabase Vault under airtable_pat. Empty means the sync refuses with " +
+      "a named error instead of the app failing to boot, so leave it unset " +
+      "until the base exists. Full setup: docs/platform/airtable-setup.md.",
     scope: "environment",
     secrecy: "public",
   }),
@@ -248,7 +270,9 @@ const server = {
   SUPABASE_OAUTH_CLIENT_ID: define(z.string().default(""), {
     doc:
       "OAuth client id for 'Sign in with DevDogs' against sandbox " +
-      "environments. Empty means provisioning refuses with not_configured.",
+      "environments. Empty means provisioning refuses with not_configured, " +
+      "so leave both halves empty unless you are working on sandboxes. " +
+      "Full setup: docs/platform/sandbox-environments.md.",
     scope: "environment",
     secrecy: "public",
   }),
@@ -277,16 +301,21 @@ const server = {
     scope: "environment",
     secrecy: "public",
     localStack: true,
+    example: "https://$PROJECT_REF.supabase.co",
   }),
   DB_URL: define(z.string(), {
     doc:
       "Postgres connection string -- the session pooler (port 5432), NOT " +
       "the transaction pooler: drizzle-kit relies on prepared statements " +
       "the transaction pooler does not support and hangs instead of " +
-      "erroring.",
+      "erroring. Also read by the RLS persona suite, which falls back to " +
+      "the local default when unset -- a stale value here is ignored rather " +
+      "than pointed at a real database.",
     scope: "environment",
     secrecy: "secret",
     localStack: true,
+    example:
+      "postgresql://postgres.$PROJECT_REF:<password>@<host>:5432/postgres",
   }),
   // FUNCTIONS_URL: z.string(),
   // GRAPHQL_URL: z.string(),
@@ -294,7 +323,7 @@ const server = {
     doc:
       "The Supabase publishable (anon) API key. Safe in a browser -- Row " +
       "Level Security is what protects the data -- and mirrored into " +
-      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.",
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Dashboard: Settings > API.",
     scope: "environment",
     secrecy: "public",
     localStack: true,
@@ -304,6 +333,7 @@ const server = {
     scope: "environment",
     secrecy: "public",
     localStack: true,
+    example: "https://$PROJECT_REF.supabase.co/rest/v1",
   }),
   // The S3 pair splits: the key id never appears in any public payload (so
   // unlike GITHUB_APP_ID there is no argument from exposure), it is half of
@@ -329,11 +359,12 @@ const server = {
     scope: "environment",
     secrecy: "public",
     localStack: true,
+    example: "us-east-1",
   }),
   SECRET_KEY: define(z.string(), {
     doc:
       "The Supabase service-role key. Bypasses Row Level Security entirely " +
-      "-- server-side only, never in any client bundle.",
+      "-- server-side only, never in any client bundle. Dashboard: Settings > API.",
     scope: "environment",
     secrecy: "secret",
     localStack: true,
@@ -343,6 +374,7 @@ const server = {
     scope: "environment",
     secrecy: "public",
     localStack: true,
+    example: "https://$PROJECT_REF.storage.supabase.co/storage/v1/s3",
   }),
   // Built-ins
   NODE_ENV: define(
@@ -351,6 +383,7 @@ const server = {
       doc: "Set by the framework; never written into an env file.",
       scope: "default",
       secrecy: "public",
+      commented: true,
     },
   ),
 };
@@ -369,6 +402,7 @@ const client = {
       "$API_URL -- so it is never set by hand.",
     scope: "environment",
     secrecy: "public",
+    example: "$API_URL",
   }),
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: define(z.string(), {
     doc:
@@ -376,11 +410,13 @@ const client = {
       "from $PUBLISHABLE_KEY -- so it is never set by hand.",
     scope: "environment",
     secrecy: "public",
+    example: "$PUBLISHABLE_KEY",
   }),
   NEXT_PUBLIC_AVATARS_BUCKET: define(z.string(), {
     doc: "Storage bucket for avatars. The same name in every environment.",
     scope: "default",
     secrecy: "public",
+    example: "avatars",
   }),
   NEXT_PUBLIC_FEEDBACK_BUCKET: define(z.string(), {
     doc:
@@ -388,6 +424,7 @@ const client = {
       "environment.",
     scope: "default",
     secrecy: "public",
+    example: "feedback-attachments",
   }),
 };
 

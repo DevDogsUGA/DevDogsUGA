@@ -15,7 +15,7 @@
  * value — the CLI matches it anchored — which is why the callbacks are their
  * own variables rather than `"env(BASE_URL)/auth/callback"`.
  */
-import { declare, define } from "@devdogsuga/env";
+import { declare, define, type EnvMeta } from "@devdogsuga/env";
 import { z } from "zod";
 
 /**
@@ -27,22 +27,33 @@ import { z } from "zod";
  * value for an enabled provider makes the CLI fail with
  * `ProjectConfigParseError` — hence `.optional()` rather than a default.
  */
-const provider = (name: string) => ({
-  id: define(z.string().min(1).optional(), {
+const provider = (name: string, idExample?: string) => {
+  const id: EnvMeta = {
     doc: `OAuth client id for the ${name} provider in config.toml. Unset disables the provider locally; an EMPTY value makes the Supabase CLI fail with ProjectConfigParseError.`,
     scope: "environment",
     secrecy: "public",
-  } as const),
-  secret: define(z.string().min(1).optional(), {
-    doc: `OAuth client secret for the ${name} provider in config.toml. Unset disables the provider locally.`,
-    scope: "environment",
-    secrecy: "secret",
-  } as const),
-});
+    commented: true,
+  };
+  if (idExample !== undefined) id.example = idExample;
+  return {
+    id: define(z.string().min(1).optional(), id),
+    secret: define(z.string().min(1).optional(), {
+      doc: `OAuth client secret for the ${name} provider in config.toml. Unset disables the provider locally.`,
+      scope: "environment",
+      secrecy: "secret",
+      commented: true,
+    } as const),
+  };
+};
 
 const discord = provider("Discord");
 const github = provider("GitHub");
-const google = provider("Google");
+// The example preserves the id's shape — the one OAuth client id whose format
+// people second-guess when pasting from the Google console.
+const google = provider(
+  "Google",
+  "000000000000-xxxx.apps.googleusercontent.com",
+);
 const linkedin = provider("LinkedIn");
 
 declare({
@@ -55,7 +66,8 @@ declare({
       doc:
         "The remote Supabase project ref, for supabase link and the derived " +
         "connection URLs. Appears in every project URL, so an identifier, " +
-        "not a secret.",
+        "not a secret. Found under Project Settings in the Supabase " +
+        "dashboard, like the rest of the remote-project block.",
       scope: "environment",
       secrecy: "public",
     }),
@@ -64,9 +76,10 @@ declare({
         "Password for the Postgres postgres role, for non-interactive " +
         "supabase link / db push. Leave UNSET unless running remote " +
         "commands -- an empty value makes the CLI fail with " +
-        "ProjectConfigParseError.",
+        "ProjectConfigParseError (it even breaks `gen types`).",
       scope: "environment",
       secrecy: "secret",
+      commented: true,
     }),
     // auth.site_url and the redirect allowlist. BASE_URL is also declared by
     // the platform manifest, deliberately with the same classification --
@@ -77,6 +90,7 @@ declare({
         "Defaults to http://localhost:3000 in development.",
       scope: "environment",
       secrecy: "public",
+      example: "http://localhost:3000",
     }),
     SCHEDULE_BUILDER_URL: define(z.url(), {
       doc:
@@ -84,6 +98,7 @@ declare({
         "auth.additional_redirect_urls via SCHEDULE_BUILDER_URL_CALLBACK.",
       scope: "environment",
       secrecy: "public",
+      example: "http://localhost:3001",
     }),
     BASE_URL_CALLBACK: define(z.url(), {
       doc:
@@ -92,6 +107,7 @@ declare({
         "larger string.",
       scope: "environment",
       secrecy: "public",
+      example: "$BASE_URL/auth/callback",
     }),
     SCHEDULE_BUILDER_URL_CALLBACK: define(z.url(), {
       doc:
@@ -100,6 +116,7 @@ declare({
         "inside a larger string.",
       scope: "environment",
       secrecy: "public",
+      example: "$SCHEDULE_BUILDER_URL/auth/callback",
     }),
     // The four OAuth providers wired in config.toml's [auth.external.*]
     // blocks.

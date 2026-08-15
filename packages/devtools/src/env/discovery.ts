@@ -128,6 +128,7 @@ function manifestPaths(): string[] {
 function workspaceDirs(): string[] {
   const dirs: string[] = [];
   for (const parent of ["apps", "packages"]) {
+    const names: string[] = [];
     for (const entry of readdirSync(join(PROJECT_ROOT, parent), {
       withFileTypes: true,
     })) {
@@ -136,8 +137,15 @@ function workspaceDirs(): string[] {
       if (!entry.isDirectory()) continue;
       if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
       if (parent === "packages" && entry.name === "env") continue;
-      dirs.push(join(PROJECT_ROOT, parent, entry.name));
+      names.push(entry.name);
     }
+    // Sorted, because readdir order is whatever the filesystem feels like and
+    // registry insertion order is now OBSERVABLE: `secrets example` renders
+    // keys in declaration order and CI byte-compares the result, so two
+    // machines walking the same tree must import the same manifests in the
+    // same sequence.
+    names.sort();
+    for (const name of names) dirs.push(join(PROJECT_ROOT, parent, name));
   }
   dirs.push(join(PROJECT_ROOT, "docs"));
   return dirs;

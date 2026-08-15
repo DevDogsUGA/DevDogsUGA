@@ -12,9 +12,11 @@
  * from `PROJECT_ROOT` now and works from anywhere.
  */
 import { execSync } from "node:child_process";
-import { copyFileSync, existsSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { log, note } from "@clack/prompts";
+import { loadRegistry } from "./env/discovery.js";
+import { renderInit } from "./env/example.js";
 import { PROJECT_ROOT } from "./instance.js";
 
 function has(cmd: string): boolean {
@@ -26,7 +28,7 @@ function has(cmd: string): boolean {
   }
 }
 
-export function runSetup(): void {
+export async function runSetup(): Promise<void> {
   const checks: string[] = [];
 
   // ── Prerequisites ──────────────────────────────────────────────────────────
@@ -62,35 +64,44 @@ export function runSetup(): void {
 
   // ── Env ────────────────────────────────────────────────────────────────────
 
+  // Seeded from the SAME renderer as `secrets init` and the generated
+  // .env.example, rather than by copying the example file: a copy would carry
+  // the example's "GENERATED — do not edit" header into the one file that is
+  // meant to be edited. Like init, an existing file is never touched.
   const env = join(PROJECT_ROOT, ".env");
   let seededEnv = false;
   if (existsSync(env)) {
     checks.push("OK    .env already exists (left untouched)");
   } else {
-    copyFileSync(join(PROJECT_ROOT, ".env.example"), env);
-    checks.push("OK    created .env from .env.example");
+    await loadRegistry();
+    writeFileSync(
+      env,
+      renderInit("development", new Date().toISOString().slice(0, 10)),
+      { flag: "wx" },
+    );
+    checks.push("OK    created .env (same as `pnpm devtools secrets init`)");
     seededEnv = true;
   }
 
   note(checks.join("\n"), "Prerequisites");
 
   if (seededEnv) {
-    log.warn(
-      "Fill in the Remote Supabase project section of .env before `pnpm dev`.",
+    log.info(
+      ".env starts blank. The local stack fills the connection block for " +
+        "you; only a hosted project needs values typed in.",
     );
   }
 
   note(
     [
-      "1. Edit .env — add your remote Supabase creds",
-      "   (Supabase dashboard → Project Settings)",
+      "1. Run `pnpm devtools` again and choose:",
+      "     Start my database   — boots the local Docker stack and writes",
+      "                           .env.generated (no credentials needed)",
       "",
-      "2. Run `pnpm devtools` again and choose:",
-      "     Start my database   — for the local Docker stack",
+      "2. pnpm dev --filter platform",
       "",
-      "3. pnpm dev --filter platform",
-      "",
-      "Working against the linked remote project instead?",
+      "Working against a hosted Supabase project instead? Fill in .env",
+      "(dashboard → Project Settings), then:",
       "  pnpm devtools link --remote",
       "  pnpm --filter @devdogsuga/supabase generate-types",
     ].join("\n"),

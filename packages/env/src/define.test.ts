@@ -51,6 +51,32 @@ describe("define", () => {
     // rather than trust: an undeclared schema is perfectly valid zod.
     expect(metaOf(z.string())).toBeUndefined();
   });
+
+  it("round-trips the generation fields", () => {
+    // `example` and `commented` feed `secrets example`/`secrets init`; if they
+    // fell out of `metaOf`, the generated .env.example would silently lose its
+    // $VAR derivations and its disable-by-default commenting.
+    const schema = define(z.string().optional(), {
+      doc: "Derived from API_URL.",
+      scope: "environment",
+      secrecy: "public",
+      example: "$API_URL",
+      commented: true,
+    });
+
+    expect(metaOf(schema)).toMatchObject({
+      example: "$API_URL",
+      commented: true,
+    });
+    // And their absence stays absence, not a default.
+    const bare = define(z.string(), {
+      doc: "Plain.",
+      scope: "environment",
+      secrecy: "secret",
+    });
+    expect(metaOf(bare)?.example).toBeUndefined();
+    expect(metaOf(bare)?.commented).toBeUndefined();
+  });
 });
 
 describe("declare", () => {

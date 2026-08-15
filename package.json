@@ -20,6 +20,7 @@
     "airtable:verify": "pnpm --filter @devdogsuga/devtools run cli airtable verify",
     "airtable:snapshot": "pnpm --filter @devdogsuga/devtools run cli airtable snapshot",
     "airtable:snapshot:check": "pnpm --filter @devdogsuga/devtools run cli:no-env airtable snapshot --check",
+    "env:example:check": "pnpm --filter @devdogsuga/devtools run cli:no-env secrets example --check",
     "devtools": "pnpm --filter @devdogsuga/devtools run cli"
   },
   "engines": {

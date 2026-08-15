@@ -77,6 +77,18 @@ jobs:
       # other detection. It costs no network and about a second.
       - name: Registry agrees with the schema snapshot
         run: pnpm airtable:snapshot:check
+      # .env.example is GENERATED from the env manifests; this regenerates it
+      # in memory and byte-compares -- the same pattern the database job uses
+      # for database.types.ts. Credential-free by construction: the generator
+      # is registry-only (no Bitwarden token, no network, no Docker), and the
+      # script routes through cli:no-env because with-env would demand a .env
+      # this job deliberately does not have.
+      #
+      # Unconditional rather than --affected, like the snapshot check above:
+      # any manifest edit anywhere can change the output, and it costs about
+      # a second.
+      - name: .env.example agrees with the env manifests
+        run: pnpm env:example:check
 
   # Everything that needs a real Postgres: 139 tests CI has never run.
   #
