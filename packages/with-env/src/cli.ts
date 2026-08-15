@@ -18,14 +18,27 @@
  *
  * Neither mode spawns a platform shell, so this works on Windows and POSIX.
  */
-import dx from "@dotenvx/dotenvx";
-import { npath } from "@yarnpkg/fslib";
-import { execute } from "@yarnpkg/shell";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+// NOTHING ELSE IS IMPORTED AT THE TOP LEVEL, deliberately.
+//
+// This wrapper runs in front of roughly fifty package scripts, so every import
+// here is paid by every one of them -- including the ones that never reach the
+// code needing it. Measured on 2026-08-14, `with-env node -e ""` took 560ms
+// against 17ms for bare node, and the breakdown was mostly imports the common
+// path never used:
+//
+//   @yarnpkg/shell + @yarnpkg/fslib   +50ms   -- only `-c` runs a shell
+//   @dotenvx/dotenvx (Node API)      +127ms   -- only some paths load in-process
+//   tsx register                      +24ms
+//
+// So both are imported where they are used instead. Keep it that way: a
+// top-level import added here for tidiness costs a tenth of a second on every
+// script in the repository.
 
 const usage =
   "with-env: usage: with-env [--local] <command> [args...]\n" +
@@ -83,17 +96,54 @@ for (const [key, value] of Object.entries(process.env)) {
   if (value !== undefined) env[key] = value;
 }
 
-// -c: load the env in-process and evaluate the string with @yarnpkg/shell, so
-// $VAR resolves against the loaded files. dotenvx's Node API applies the same
-// rules as its CLI — first file wins, and values already in the environment are
-// left alone.
-const command = args[0];
-if (shellMode && command !== undefined) {
+/**
+ * Applies the env files to `env`, in process.
+ *
+ * dotenvx's Node API follows the same rules as its CLI — first file wins, and
+ * values already in the environment are left alone — so this and delegating to
+ * the CLI produce the same environment.
+ */
+async function loadEnv(): Promise<void> {
+  const { default: dx } = await import("@dotenvx/dotenvx");
   dx.config({
     path: envFiles.map((f) => join(root, f)),
     processEnv: env,
     quiet: true,
   });
+}
+
+/**
+ * dotenvx's CLI entry point, resolved through its package rather than a `.bin`
+ * shim: Node refuses to spawn `.cmd` without a shell, so the shim is not
+ * something we can exec directly.
+ */
+function dotenvxCli(): string {
+  try {
+    const require = createRequire(import.meta.url);
+    const pkgPath = require.resolve("@dotenvx/dotenvx/package.json");
+    const { bin } = require("@dotenvx/dotenvx/package.json") as {
+      bin?: string | Record<string, string | undefined>;
+    };
+    const entry = typeof bin === "string" ? bin : bin?.dotenvx;
+    if (!entry) throw new Error("no bin entry");
+    return join(dirname(pkgPath), entry);
+  } catch {
+    console.error(
+      "with-env: cannot find @dotenvx/dotenvx — run `pnpm install` at the repo root.",
+    );
+    process.exit(1);
+  }
+}
+
+// -c: evaluate the string with @yarnpkg/shell so $VAR resolves against the
+// loaded files rather than against whatever pnpm's shell had already expanded.
+const command = args[0];
+if (shellMode && command !== undefined) {
+  await loadEnv();
+  const [{ npath }, { execute }] = await Promise.all([
+    import("@yarnpkg/fslib"),
+    import("@yarnpkg/shell"),
+  ]);
   process.exit(
     await execute(command, [], {
       // @yarnpkg/shell works in portable (forward-slash) paths; on Windows a
@@ -107,35 +157,34 @@ if (shellMode && command !== undefined) {
   );
 }
 
-// Resolve dotenvx's entry point and run it with the current node binary, so we
-// never depend on a .bin shim (Node refuses to spawn .cmd without a shell).
-let cli: string;
-try {
-  const require = createRequire(import.meta.url);
-  const pkgPath = require.resolve("@dotenvx/dotenvx/package.json");
-  const { bin } = require("@dotenvx/dotenvx/package.json") as {
-    bin?: string | Record<string, string | undefined>;
-  };
-  const entry = typeof bin === "string" ? bin : bin?.dotenvx;
-  if (!entry) throw new Error("no bin entry");
-  cli = join(dirname(pkgPath), entry);
-} catch {
-  console.error(
-    "with-env: cannot find @dotenvx/dotenvx — run `pnpm install` at the repo root.",
-  );
-  process.exit(1);
-}
+// One process instead of two.
+//
+// This used to spawn dotenvx's CLI and have IT spawn the command, which meant a
+// second Node startup plus dotenvx's own boot (commander, conf, systeminfo) on
+// every invocation -- 238ms of the 560ms measured above. Loading in-process and
+// spawning the command directly removes that.
+//
+// ⚠️ WINDOWS STILL DELEGATES, and the reason is not stylistic. Since
+// CVE-2024-27980 Node refuses to spawn `.cmd`/`.bat` without a shell, and on
+// Windows every `node_modules/.bin` entry is a `.cmd` shim -- so a direct spawn
+// of `next` or `tsx` there fails outright. dotenvx uses execa, which handles it.
+// `shell: true` is not the fix: it would break on any path containing a space,
+// which on Windows is the ordinary case (`C:\Users\Firstname Lastname\...`).
+const windows = process.platform === "win32";
+if (!windows) await loadEnv();
 
 const child = spawn(
-  process.execPath,
-  [
-    cli,
-    "run",
-    "--quiet",
-    ...envFiles.flatMap((f) => ["-f", join(root, f)]),
-    "--",
-    ...args,
-  ],
+  windows ? process.execPath : args[0]!,
+  windows
+    ? [
+        dotenvxCli(),
+        "run",
+        "--quiet",
+        ...envFiles.flatMap((f) => ["-f", join(root, f)]),
+        "--",
+        ...args,
+      ]
+    : args.slice(1),
   { cwd, env, stdio: "inherit" },
 );
 
