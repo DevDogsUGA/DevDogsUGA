@@ -16,7 +16,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260804.1",
     "@devdogsuga/config": "workspace:*",
-    "@devdogsuga/with-env": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",

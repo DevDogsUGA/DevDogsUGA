@@ -59,7 +59,7 @@
   },
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
-    "@devdogsuga/with-env": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
     "@opennextjs/cloudflare": "catalog:",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",

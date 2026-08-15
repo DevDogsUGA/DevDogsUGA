@@ -48,7 +48,6 @@
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/env": "workspace:*",
-    "@devdogsuga/with-env": "workspace:*",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "postgres": "catalog:",

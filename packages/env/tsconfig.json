@@ -5,6 +5,10 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2025"],
     "types": ["node"],
+    // The base config sets noEmit for the app packages; this one ships dist,
+    // so emit is switched back on here. `typecheck` passes --noEmit itself.
+    "noEmit": false,
+    "declaration": true,
     "outDir": "dist",
     "rootDir": "src"
   },

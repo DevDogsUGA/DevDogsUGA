@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
-    "@devdogsuga/with-env": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
     "typescript": "catalog:"
   }
 }

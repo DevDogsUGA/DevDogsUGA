@@ -23,11 +23,11 @@
   },
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
-    "@devdogsuga/with-env": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   },
   "description": "Contributor CLI: database, moderation checks, and OAuth setup"

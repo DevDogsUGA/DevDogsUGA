@@ -27,7 +27,6 @@
   },
   "devDependencies": {
     "@devdogsuga/env": "workspace:*",
-    "@devdogsuga/with-env": "workspace:*",
     "@types/node": "catalog:",
     "prettier": "3.8.4",
     "prettier-plugin-tailwindcss": "^0.8.1",
