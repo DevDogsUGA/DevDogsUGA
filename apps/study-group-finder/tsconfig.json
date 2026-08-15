@@ -1,0 +1,7 @@
+{
+  // Covers exactly one file: env.ts, the environment manifest. The app itself
+  // is Flutter/Dart — this config exists so the manifest's define() metadata
+  // is typechecked, which is the point of it being .ts rather than JSON.
+  "extends": "../../tsconfig.base.json",
+  "include": ["env.ts"]
+}

@@ -16,8 +16,10 @@
   "dependencies": {
     "@clack/prompts": "catalog:",
     "@devdogsuga/airtable": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
     "@supabase/supabase-js": "catalog:",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",

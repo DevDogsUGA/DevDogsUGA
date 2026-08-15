@@ -7,5 +7,9 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["src/**/*.ts"]
+  // `env.ts` at the package root is the operator/tooling environment
+  // manifest — nothing imports it, so without an explicit entry here it
+  // would never be typechecked and its define() metadata would be
+  // unenforced.
+  "include": ["src/**/*.ts", "env.ts"]
 }

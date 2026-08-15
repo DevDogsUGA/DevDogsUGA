@@ -36,6 +36,7 @@
     "@devdogsuga/docs": "workspace:*",
     "@devdogsuga/drizzle": "workspace:*",
     "@devdogsuga/email": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
     "@discordjs/builders": "^1.14.1",
     "@discordjs/rest": "^2.6.3",

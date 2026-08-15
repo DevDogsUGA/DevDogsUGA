@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@devdogsuga/drizzle": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
     "@radix-ui/react-accordion": "catalog:",
     "@radix-ui/react-avatar": "catalog:",

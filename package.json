@@ -26,6 +26,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@devdogsuga/env": "workspace:*",
     "@devdogsuga/with-env": "workspace:*",
     "@types/node": "catalog:",
     "prettier": "3.8.4",
@@ -33,7 +34,8 @@
     "supabase": "catalog:",
     "tsx": "catalog:",
     "turbo": "^2.10.8",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "zod": "catalog:"
   },
   "packageManager": "pnpm@11.8.0"
 }
