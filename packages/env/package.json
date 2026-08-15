@@ -1,0 +1,30 @@
+{
+  "name": "@devdogsuga/env",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The environment-variable registry: one declaration per variable, carrying its schema and where it is allowed to live",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
