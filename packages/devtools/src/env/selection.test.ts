@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { APPLY_ONLY_KEYS, NEVER_STORE_KEYS } from "../bws/environments.js";
+import { beforeAll, describe, expect, it } from "vitest";
+import { neverStoreKeys } from "@devdogsuga/env";
+import { loadRegistry } from "./discovery.js";
 import { selectForPush } from "./selection.js";
 
 /**
@@ -10,10 +11,29 @@ import { selectForPush } from "./selection.js";
  * means rotating it at the issuer and hoping nothing read it in between.
  */
 
+// The key sets are derived from the manifests now, so the registry has to be
+// populated before `selectForPush` will answer (it refuses an empty registry
+// rather than failing open).
+beforeAll(async () => {
+  await loadRegistry();
+});
+
 const env = (o: Record<string, string>) => Object.entries(o);
 
+// Literals, not `neverStoreKeys()` / `applyOnlyKeys()`: vitest collects the
+// `it` blocks before `beforeAll` runs, when the registry is still empty. The
+// completeness test pins both derived sets to exactly these keys, and the
+// first test below re-asserts the tie so a drifted literal fails loudly here
+// rather than silently testing the wrong key.
+const NEVER_STORE = ["AIRTABLE_PAT", "BWS_ACCESS_TOKEN"] as const;
+const APPLY_ONLY = ["AIRTABLE_APPLY_PAT", "SUPABASE_ACCESS_TOKEN"] as const;
+
 describe("credentials that must never be stored remotely", () => {
-  for (const key of NEVER_STORE_KEYS) {
+  it("tests the same set the registry derives", () => {
+    expect(neverStoreKeys()).toEqual([...NEVER_STORE]);
+  });
+
+  for (const key of NEVER_STORE) {
     it(`refuses ${key} rather than uploading it`, () => {
       const { push, refused } = selectForPush(
         env({ [key]: "live-value", CRON_SECRET: "x" }),
@@ -46,7 +66,7 @@ describe("credentials that must never be stored remotely", () => {
 });
 
 describe("apply-only credentials", () => {
-  const key = APPLY_ONLY_KEYS[0];
+  const key = APPLY_ONLY[0];
 
   it("uploads them for production, where they belong", () => {
     expect(
@@ -60,9 +80,9 @@ describe("apply-only credentials", () => {
     expect(selectForPush(env({ [key]: "tok" }), "staging").push.has(key)).toBe(
       false,
     );
-    expect(selectForPush(env({ [key]: "tok" }), "preflight").push.has(key)).toBe(
-      false,
-    );
+    expect(
+      selectForPush(env({ [key]: "tok" }), "preflight").push.has(key),
+    ).toBe(false);
   });
 
   it("does not report them as refused — they are skipped, not dangerous", () => {

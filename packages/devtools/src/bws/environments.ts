@@ -54,7 +54,7 @@ export interface EnvironmentSpec {
  * costs one API call and cannot go stale silently.
  */
 export const ENVIRONMENT_SPECS: Record<BwsEnvironment, EnvironmentSpec> = {
-  "preflight": {
+  preflight: {
     project: "devdogs-preflight",
     guarded: false,
     summary:
@@ -76,98 +76,24 @@ export const ENVIRONMENT_SPECS: Record<BwsEnvironment, EnvironmentSpec> = {
   },
 };
 
-/**
- * Credentials that may reach the `production-apply` GitHub environment ONLY.
- *
- * Both are write-capable: `AIRTABLE_APPLY_PAT` can reshape the base, and a
- * Supabase access token carries full account privileges across both Supabase
- * organizations, which is what `supabase config push` needs and the one
- * mutation with no dry run.
- *
- * ⚠️ **This is a GitHub routing rule, not a Bitwarden one.** It moved when CI
- * stopped reading Bitwarden. The BWS `production` project DOES hold these —
- * only a person can read it, so one project per environment stays the simplest
- * thing to rotate, and holding them there is what lets `secrets audit` compare
- * them by value at all. What must not happen is them landing in the
- * `production` *GitHub* environment, which deploys with no reviewer in front of
- * it; there they would make the `production-apply` gate decorative.
- *
- * `routeTo()` in `../gh/environments.ts` is what enforces that, and it derives
- * the split from the environment table rather than repeating this list.
- *
- * They are also kept OUT of the staging and preflight projects: they exist to
- * reshape production, so a copy anywhere else is a second thing to rotate for
- * no benefit.
- */
-export const APPLY_ONLY_KEYS = [
-  "AIRTABLE_APPLY_PAT",
-  // Same property, same reasoning. A Supabase personal access token "carries
-  // the same privileges as your user account" -- there is no org- or
-  // project-scoped CLI token -- so it reaches BOTH Supabase organizations.
-  // `supabase config push` is the only command that needs one, it is the one
-  // command with no dry run, and it carries `site_url` and every OAuth
-  // provider. It belongs behind the reviewers, not in the project the ordinary
-  // deploy can read.
-  "SUPABASE_ACCESS_TOKEN",
-] as const;
-
-/**
- * Credentials that must never be stored in Bitwarden or GitHub, in any
- * environment.
- *
- * Not "these are not secrets" — the opposite. These are the most sensitive
- * values in the repository, and they are refused precisely because storing them
- * defeats the thing they protect.
- *
- * **`BWS_ACCESS_TOKEN`** unlocks all three Bitwarden projects. Stored in one, it
- * is a key locked inside the box it opens: anyone who can already read that
- * project gains the other two, and rotating it stops meaning anything. Synced
- * onward to GitHub it is worse — this whole design rests on nothing
- * machine-shaped ever authenticating to Secrets Manager, and one
- * `${{ secrets.BWS_ACCESS_TOKEN }}` would hand CI every secret we hold.
- *
- * The pull toward that mistake is strong, which is why it is refused in code
- * rather than in a document: `with-env` loads the root `.env` for every command,
- * so putting the token there is exactly what makes `secrets` work without
- * re-exporting each session. It has to live in the Bitwarden PASSWORD MANAGER
- * vault and reach the shell as an export — `bws` cannot persist it either
- * (`bws config` covers server URLs and a state directory, nothing more).
- *
- * **`AIRTABLE_PAT`** is the scaffolding token, in `.env` only while somebody is
- * shaping the base. The runtime reads its own, narrower token from Supabase
- * Vault, so a copy in an environment would be a write-capable Airtable
- * credential that nothing reads and anything could.
- */
-export const NEVER_STORE_KEYS = ["BWS_ACCESS_TOKEN", "AIRTABLE_PAT"] as const;
-
-/**
- * Keys that are never secrets and must not be pushed.
- *
- * Each of these is either committed (identical everywhere) or a GitHub
- * environment *variable* (differs per environment, and deliberately visible in
- * logs). A value in BWS that is also in `wrangler.jsonc` is a value with two
- * sources of truth, and the one that loses is whichever the reader did not
- * check.
- */
-export const NEVER_SECRET_KEYS = [
-  "DEPLOY_ENV",
-  "BASE_URL",
-  "SCHEDULE_BUILDER_URL",
-  "PROJECT_REF",
-  "PUBLISHABLE_KEY",
-  "AIRTABLE_BASE_ID",
-  // Both appear in any webhook payload; only the private key is a secret.
-  "GITHUB_APP_ID",
-  "GITHUB_APP_INSTALLATION_ID",
-  // A Discord channel id is not a secret, and it differs per environment --
-  // production posts, everything else stays empty. Empty is also unpushable
-  // (see the rejection below), so BWS could not hold the staging value even if
-  // it were the right home for it.
-  "DISCORD_ALERT_CHANNEL_ID",
-  "NEXT_PUBLIC_AUTH_MODE",
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-  "NEXT_PUBLIC_AVATARS_BUCKET",
-  "NEXT_PUBLIC_FEEDBACK_BUCKET",
-  "SKIP_ENV_VALIDATION",
-] as const;
+// ── Where the key sets went ──────────────────────────────────────────────────
+//
+// The hand-maintained arrays that used to live here — NEVER_STORE_KEYS,
+// NEVER_SECRET_KEYS, APPLY_ONLY_KEYS — are now DERIVED from the declarations
+// in each app's env manifest: `neverStoreKeys()`, `neverSecretKeys()`,
+// `applyOnlyKeys()` and `storableKeys()` from `@devdogsuga/env`, populated by
+// devtools' `env/discovery.ts` (`loadRegistry()`). The arrays were correct;
+// what they could not do is STAY correct, because nothing connected them to
+// the schemas they described — a key added to an `env.ts` and not here was
+// pushed to Bitwarden as a secret by omission.
+//
+// The reasoning moved with the keys, onto the declarations themselves:
+//
+//   * why `BWS_ACCESS_TOKEN` and `AIRTABLE_PAT` are refused storage anywhere
+//     (a key locked inside the box it opens) — their `define()` docs and the
+//     surrounding comments in `packages/devtools/env.ts`;
+//   * why apply-tier is a GITHUB routing rule and not a Bitwarden one (the
+//     production BWS project deliberately holds the apply credentials) — the
+//     `EnvTier` doc in `packages/env/src/meta.ts`;
+//   * why the apply pair stays out of staging/preflight — `ignoredFor()` in
+//     `../env/selection.ts`.

@@ -17,16 +17,23 @@
  *            sync has to learn that it did not.
  */
 import {
-  APPLY_ONLY_KEYS,
-  NEVER_SECRET_KEYS,
-  NEVER_STORE_KEYS,
-  type BwsEnvironment,
-} from "../bws/environments.js";
+  applyOnlyKeys,
+  neverSecretKeys,
+  neverStoreKeys,
+} from "@devdogsuga/env";
+import { type BwsEnvironment } from "../bws/environments.js";
+import { assertRegistryLoaded } from "./discovery.js";
 
 export interface PushSelection {
   push: Map<string, string>;
   refused: string[];
 }
+
+// The key sets are DERIVED from the env manifests (see `discovery.ts`), not
+// hand-listed here any more — which is why every function below insists the
+// registry is loaded. An empty registry makes each selector return `[]`, and
+// `[]` fails open in the one direction that matters: nothing would be refused,
+// so `BWS_ACCESS_TOKEN` would upload.
 
 /**
  * Non-secrets, plus the apply-only credentials outside production.
@@ -35,15 +42,17 @@ export interface PushSelection {
  * second write-capable token to rotate for no benefit.
  */
 export function ignoredFor(environment: BwsEnvironment): Set<string> {
-  const skip = new Set<string>(NEVER_SECRET_KEYS);
+  assertRegistryLoaded();
+  const skip = new Set<string>(neverSecretKeys());
   if (environment !== "production") {
-    for (const key of APPLY_ONLY_KEYS) skip.add(key);
+    for (const key of applyOnlyKeys()) skip.add(key);
   }
   return skip;
 }
 
 export function neverStore(): Set<string> {
-  return new Set<string>(NEVER_STORE_KEYS);
+  assertRegistryLoaded();
+  return new Set<string>(neverStoreKeys());
 }
 
 /**

@@ -22,6 +22,17 @@ declare({
     // Everything here is optional: these are operator credentials, and an
     // app -- or CI -- that cannot boot without one of them would be wrong.
     // Presence is checked at the point of use, with a named refusal.
+    //
+    // The pull toward storing this one is strong, which is why the refusal is
+    // in code (`secrets push` derives its never-store set from this
+    // declaration) rather than in a document: `with-env` loads the root .env
+    // for every command, so putting the token there is exactly what makes
+    // `secrets` work without re-exporting it each session. It cannot live
+    // there. Syncing it onward would be worse still -- this design rests on
+    // nothing machine-shaped ever authenticating to Secrets Manager, and one
+    // `${{ secrets.BWS_ACCESS_TOKEN }}` would hand CI every secret we hold.
+    // `bws` cannot persist it either (`bws config` covers server URLs and a
+    // state directory, nothing more); the Password Manager vault is the home.
     BWS_ACCESS_TOKEN: define(z.string().min(1).optional(), {
       doc:
         "Unlocks every Bitwarden Secrets Manager project, so it must never " +

@@ -18,7 +18,8 @@
  * credential reaching the first makes the second decorative, so the routing is
  * enforced here rather than left to whoever last edited a file.
  */
-import { APPLY_ONLY_KEYS } from "../bws/environments.js";
+import { applyOnlyKeys } from "@devdogsuga/env";
+import { assertRegistryLoaded } from "../env/discovery.js";
 
 export const GITHUB_ENVIRONMENTS = [
   "preflight",
@@ -52,11 +53,26 @@ export interface GithubEnvironmentSpec {
   guarded: boolean;
 }
 
+/**
+ * The apply-only set, derived from the env manifests (`tier: "apply"` on the
+ * declarations in `packages/devtools/env.ts`) rather than listed here.
+ *
+ * Read at ACCESS time, not module load: this module is imported by the CLI
+ * before any manifest is, so a snapshot taken now would be empty — and an
+ * empty apply set routes the write-capable credentials to the unreviewed
+ * `production` environment, which is the exact failure the split exists to
+ * prevent. The guard turns "forgot to loadRegistry()" into a crash instead.
+ */
+function applyOnly(): readonly string[] {
+  assertRegistryLoaded();
+  return applyOnlyKeys();
+}
+
 export const GITHUB_ENVIRONMENT_SPECS: Record<
   GithubEnvironment,
   GithubEnvironmentSpec
 > = {
-  "preflight": {
+  preflight: {
     bwsProject: "devdogs-preflight",
     branch: "main",
     onlyKeys: null,
@@ -67,20 +83,26 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
     bwsProject: "devdogs-staging",
     branch: "main",
     onlyKeys: null,
-    excludeKeys: APPLY_ONLY_KEYS,
+    get excludeKeys() {
+      return applyOnly();
+    },
     guarded: false,
   },
   production: {
     bwsProject: "devdogs-production",
     branch: "production",
     onlyKeys: null,
-    excludeKeys: APPLY_ONLY_KEYS,
+    get excludeKeys() {
+      return applyOnly();
+    },
     guarded: true,
   },
   "production-apply": {
     bwsProject: "devdogs-production",
     branch: "production",
-    onlyKeys: APPLY_ONLY_KEYS,
+    get onlyKeys() {
+      return applyOnly();
+    },
     excludeKeys: [],
     guarded: true,
   },

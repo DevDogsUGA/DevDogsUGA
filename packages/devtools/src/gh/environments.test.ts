@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { APPLY_ONLY_KEYS } from "../bws/environments.js";
+import { beforeAll, describe, expect, it } from "vitest";
+import { applyOnlyKeys } from "@devdogsuga/env";
+import { loadRegistry } from "../env/discovery.js";
 import { accepts, githubTargets, routeTo } from "./environments.js";
 
 /**
@@ -12,7 +13,17 @@ import { accepts, githubTargets, routeTo } from "./environments.js";
  * unreviewed".
  */
 
-const APPLY_KEY = APPLY_ONLY_KEYS[0];
+// The apply set is derived from the manifests now; routing refuses to answer
+// on an empty registry rather than failing open.
+beforeAll(async () => {
+  await loadRegistry();
+});
+
+// Literals, because vitest collects the `it` blocks before `beforeAll` fills
+// the registry. The completeness test pins `applyOnlyKeys()` to exactly this
+// pair, and the first routeTo test re-asserts the tie here.
+const APPLY_KEYS = ["AIRTABLE_APPLY_PAT", "SUPABASE_ACCESS_TOKEN"] as const;
+const APPLY_KEY = APPLY_KEYS[0];
 
 describe("githubTargets", () => {
   it("fans one production project out to two environments", () => {
@@ -33,6 +44,10 @@ describe("githubTargets", () => {
 });
 
 describe("routeTo", () => {
+  it("tests the same set the registry derives", () => {
+    expect(applyOnlyKeys()).toEqual([...APPLY_KEYS]);
+  });
+
   it("sends an apply-only credential to production-apply, never production", () => {
     // The whole point. If this ever returns "production", the gate is gone.
     expect(routeTo("devdogs-production", APPLY_KEY)).toBe("production-apply");
@@ -43,9 +58,11 @@ describe("routeTo", () => {
   });
 
   it("routes every apply-only key, not just the first", () => {
-    // A list, not a convention. Adding a third key to APPLY_ONLY_KEYS must not
-    // silently leave it routed to the unreviewed environment.
-    for (const key of APPLY_ONLY_KEYS) {
+    // A set, not a convention. A third `tier: "apply"` declaration must not
+    // silently leave its key routed to the unreviewed environment — so this
+    // loops over the DERIVED set, catching a new member the literals above
+    // have not heard of yet.
+    for (const key of applyOnlyKeys()) {
       expect(routeTo("devdogs-production", key)).toBe("production-apply");
     }
   });

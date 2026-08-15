@@ -54,6 +54,7 @@ import {
   runSecretsPush,
   runSecretsReset,
 } from "./env/commands.js";
+import { loadRegistry } from "./env/discovery.js";
 import { setExplicitAccessToken } from "./bws/client.js";
 import { positionals } from "./args.js";
 import { resolveEnvironment } from "./pick.js";
@@ -522,6 +523,15 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
     }
     return;
   }
+
+  // pull/push/audit decide what goes where from the registry's derived key
+  // sets, and the registry fills only when the env manifests are imported.
+  // Loaded HERE, lazily, rather than at CLI start: the import pass touches a
+  // manifest in nearly every workspace package, and `pnpm devtools reset` (or
+  // any stack command) should not pay for declarations it never reads.
+  // `secrets reset` returned above for the same reason — it edits the local
+  // file and consults no key set.
+  await loadRegistry();
 
   // The question names the direction, because the answer means something
   // different each way: pull overwrites your file, push overwrites theirs.
