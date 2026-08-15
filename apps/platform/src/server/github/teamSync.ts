@@ -1,6 +1,11 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { env } from "~/env";
-import { octokit } from "./client.js";
+// Extensionless like every other import in this app: tsc under bundler
+// resolution tolerates a `.js` suffix on a `.ts` source, but Turbopack's
+// production build does not resolve it -- this line was the only one in the
+// app written NodeNext-style, and it broke `next build` invisibly for weeks
+// because nothing runs a production build between pushes.
+import { octokit } from "./client";
 import { db } from "~/server/db";
 import { competitions, teamMembers, teams } from "~/server/db/schema";
 import { identitiesInAuth } from "~/supabase/drizzle/schema";
