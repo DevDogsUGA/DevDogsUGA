@@ -247,18 +247,19 @@ remember to check.
 
 ### Team size is configuration, not a constant
 
-The cap starts at **4** and will change. It belongs in the singleton `instance`
-table, with a per-competition override — a UI-heavy project may want 5 while a
-narrower one stays at 3, in the same week.
+The cap starts at **4**, with a per-competition override — a UI-heavy project
+may want 5 while a narrower one stays at 3, in the same week. That override is
+`competitions."maxTeamSize"`; null falls back to the default.
 
-```sql
-alter table platform.instance
-  add column "defaultMaxTeamSize" smallint not null default 4;
-```
-
-`competitions."maxTeamSize"` overrides it; null falls back to the instance
-default. Enforce it in the join path **on insert only**. Lowering the cap must
-never invalidate teams that already formed under the old value.
+> This was briefly a column on a singleton `platform."instance"` table, on the
+> reasoning that team size is a club decision rather than a constant. Nothing
+> ever wrote it: no console page exposed it, no script set it, and the case that
+> genuinely needs a different cap already had the per-competition column. A
+> configuration point with no way to configure it is a constant kept somewhere
+> harder to read — and it dragged a whole table along with it. The default now
+> lives in `server/teams/limits.ts`, shared by the join path and the loader so
+> the page and the action cannot disagree. Enforce it in the join path **on insert only**. Lowering the cap must
+> never invalidate teams that already formed under the old value.
 
 ### The entry state machine
 
@@ -2354,7 +2355,7 @@ resolves.
 - **Check-in code rotation interval** — a display detail, but it sets how long a
   leaked code stays useful.
 - **Grace period length.** 30 minutes is the assumed default; it belongs
-  alongside `defaultMaxTeamSize` in `platform.instance`.
+  alongside `DEFAULT_MAX_TEAM_SIZE` in `server/teams/limits.ts`.
 - **What "submitted" means for a team that presents without a PR.** The
   `setSubmission` override exists; whether officers should routinely use it, or
   whether a missing PR should simply cost the star, is a club policy call.

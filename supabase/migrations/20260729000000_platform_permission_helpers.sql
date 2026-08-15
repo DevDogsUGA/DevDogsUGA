@@ -1,93 +1,31 @@
--- Environment gate + the SQL-side permission helpers the rest of the
--- moderation/feedback rebuild is built on.
+-- The SQL-side permission helpers the rest of the moderation/feedback rebuild
+-- is built on.
 --
--- Two problems this solves.
---
--- First, every tier of this project replays the same migrations, so the
--- database itself has no idea whether it is production or a contributor's
--- throwaway instance. Development-only capabilities (seeded personas, the
--- sandbox fixture app, claiming Root) are today gated -- where they are gated
--- at all -- in the console UI, which means a routing mistake or a stale build
--- is all that stands between production and a capability that should be
--- impossible there. Moving the gate into RLS makes it a property of the data
--- rather than of the code that happens to be in front of it.
---
--- Second, authorization currently lives in TypeScript: canUserModerate() and
+-- Authorization used to live entirely in TypeScript: canUserModerate() and
 -- friends read the resolved-permissions view from the app. Policies that need
 -- the same answer have to inline the userRoles/roles join by hand, which is how
 -- they drift apart. One function, used by both, is the fix.
-
--- ============================================================
--- Environment
--- ============================================================
-
-create type "platform"."deployEnv" as enum ('local', 'test', 'production');
-
--- Single row, enforced by a primary key that can only ever hold `true`.
-create table "platform"."instance" (
-  "id"          boolean not null default true,
-  "environment" "platform"."deployEnv" not null default 'production',
-  constraint "instance_pkey" primary key ("id"),
-  constraint "instance_singleton" check ("id")
-);
-
-alter table "platform"."instance" enable row level security;
-
--- The default is deliberately 'production', which is the *restrictive* value:
--- a fresh database denies every dev-only capability until something explicitly
--- says otherwise. Defaulting to 'local' would fail open -- forgetting to set it
--- on the real production project would silently permit seeded personas and let
--- the contributor tooling point at live data, and nothing would look wrong.
 --
--- Non-production instances are demoted by `supabase/seed/00_instance.sql`,
--- which runs on `supabase db reset`. Production is never reset, so it keeps the
--- default it was created with and no operator has to remember anything.
-insert into "platform"."instance" ("id", "environment") values (true, 'production');
-
--- Which tier you are on is not a secret -- the contributor tooling has to read
--- it before it will agree to target an instance, and it does so from the
--- browser as an anonymous user.
-create policy "public_select"
-  on "platform"."instance"
-  as permissive for select to anon, authenticated
-  using (true);
-
--- Writable only by service role / migrations. If a client could set this, the
--- gate would be worth nothing.
+-- ⚠️ THIS FILE ALSO USED TO DEFINE AN ENVIRONMENT GATE -- a singleton
+-- platform."instance" table holding 'local' | 'test' | 'production', plus
+-- is_production() reading it -- and that half has been removed. It is worth
+-- saying why, because "the database should know which tier it is" sounds
+-- obviously correct.
 --
--- Split per command rather than written as one `for all`: a restrictive
--- `for all ... using (false)` also applies to SELECT, which would silently
--- override the permissive read policy above and make the table invisible.
-create policy "no_client_insert"
-  on "platform"."instance"
-  as restrictive for insert to anon, authenticated
-  with check (false);
-
-create policy "no_client_update"
-  on "platform"."instance"
-  as restrictive for update to anon, authenticated
-  using (false) with check (false);
-
-create policy "no_client_delete"
-  on "platform"."instance"
-  as restrictive for delete to anon, authenticated
-  using (false);
-
-create or replace function "platform".is_production()
-returns boolean
-language sql
-stable
--- security definer so the answer does not depend on the caller being able to
--- read the table; empty search_path so nothing here resolves through a
--- caller-controlled schema.
-security definer
-set search_path = ''
-as $$
-  select coalesce(
-    (select "environment" = 'production' from "platform"."instance" where "id"),
-    true  -- no row at all is treated as production, for the same fail-closed reason
-  );
-$$;
+-- It only ever had two consumers, and both were capabilities that should not
+-- have existed rather than capabilities needing a guard:
+--
+--   * claim_root(), which let the first authenticated user on a non-production
+--     instance grant themselves every permission. Removed outright; Root is now
+--     granted with the service key, which only somebody who already controls
+--     the database holds. See 20260730000000.
+--
+--   * the sandbox fixture schema, denied on production by a restrictive policy.
+--     The schema is gone, so there is nothing left to deny.
+--
+-- What remained was a column that had to be set correctly on every instance for
+-- anything to work, could not be checked by CI, and whose value nothing read.
+-- A gate with no consumers is not defence in depth; it is a thing to get wrong.
 
 -- ============================================================
 -- Permission helpers

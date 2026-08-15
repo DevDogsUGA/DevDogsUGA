@@ -1,13 +1,16 @@
--- Fixtures for the moderation tooling.
+-- Personas, and a worked example of a report against real content.
 --
--- Without these a fresh instance has nothing to moderate: no content exists,
--- so there is nothing to report; and the persona suite has no fixture to file
--- against either. Seeds only ever run on `supabase db reset`, which is pointed
--- at a local stack or a contributor's own throwaway project, never production.
+-- Without these a fresh instance has nothing to moderate: no member exists, so
+-- there is nothing to report, and the console's moderation queue opens empty and
+-- unexplained. Seeds only ever run on `supabase db reset`, which is pointed at a
+-- local stack or a contributor's own throwaway project, never production.
 --
--- The sandbox rows here are also the worked example of the integration an app
--- has to perform. If you are wiring up a new app, read
--- 20260730000003_sandbox_fixture_app.sql and then this file.
+-- ⚠️ THE CONTENT HERE IS REAL. An earlier version of this file seeded a
+-- `sandbox` schema of fake posts and comments -- an entire fixture app,
+-- registered in platform."apps" on every tier including production, denied there
+-- by a restrictive policy. It is gone. What is reported below is
+-- platform."profile", the same table the account settings page writes, so the
+-- integration a contributor reads here is the one that actually ships.
 
 -- ============================================================
 -- Personas
@@ -18,12 +21,12 @@
 -- and therefore cannot host OAuth at all.
 --
 -- Every one of them signs in with the password `password`. That is fine here
--- and nowhere else: this file cannot reach production, and the instance gate
--- refuses to be demoted by anything short of a migration.
+-- and nowhere else: seeds do not run on `db push`, so this file cannot reach a
+-- database that was not deliberately erased first.
 --
 -- They exist mainly so a contributor can *encounter* a permission boundary.
 -- You are always Root on your own instance, so clicking around never denies you
--- anything -- switching to `member@sandbox.test` is the only way to see what an
+-- anything -- switching to `member@devdogs.test` is the only way to see what an
 -- ordinary user sees.
 
 -- The empty strings are not decoration. GoTrue scans confirmation_token,
@@ -41,7 +44,7 @@ values
   (
     '00000000-0000-4000-a000-000000000001',
     '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-    'member@sandbox.test', extensions.crypt('password', extensions.gen_salt('bf')),
+    'member@devdogs.test', extensions.crypt('password', extensions.gen_salt('bf')),
     now(), '{"provider":"email","providers":["email"]}'::jsonb,
     '{"preferred_name":"Sandy Member"}'::jsonb,
     '', '', '', '', now(), now()
@@ -49,7 +52,7 @@ values
   (
     '00000000-0000-4000-a000-000000000002',
     '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-    'author@sandbox.test', extensions.crypt('password', extensions.gen_salt('bf')),
+    'author@devdogs.test', extensions.crypt('password', extensions.gen_salt('bf')),
     now(), '{"provider":"email","providers":["email"]}'::jsonb,
     '{"preferred_name":"Avery Author"}'::jsonb,
     '', '', '', '', now(), now()
@@ -57,7 +60,7 @@ values
   (
     '00000000-0000-4000-a000-000000000003',
     '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-    'moderator@sandbox.test', extensions.crypt('password', extensions.gen_salt('bf')),
+    'moderator@devdogs.test', extensions.crypt('password', extensions.gen_salt('bf')),
     now(), '{"provider":"email","providers":["email"]}'::jsonb,
     '{"preferred_name":"Morgan Moderator"}'::jsonb,
     '', '', '', '', now(), now()
@@ -75,30 +78,51 @@ select
   jsonb_build_object('sub', u."id"::text, 'email', u."email", 'email_verified', true),
   now(), now(), now()
 from auth.users u
-where u."email" like '%@sandbox.test'
+where u."email" like '%@devdogs.test'
 on conflict ("provider", "provider_id") do nothing;
 
-insert into "platform"."profile" ("userId", "preferredName", "bio")
+-- The profiles are the reportable content, so what goes in them matters.
+--
+-- Avery carries a legal name and Sandy does not, which is the difference the
+-- quarantine trigger turns on: resolving a report against Avery's profile
+-- resets the display name to the name of record, and resolving one against
+-- Sandy's leaves it alone and warns. Both paths are worth being able to see.
+insert into "platform"."profile"
+  ("userId", "preferredName", "bio", "legalFirstName", "legalLastName")
 values
-  ('00000000-0000-4000-a000-000000000001', 'Sandy Member',    'A perfectly ordinary member.'),
-  ('00000000-0000-4000-a000-000000000002', 'Avery Author',    'Writes things in the sandbox.'),
-  ('00000000-0000-4000-a000-000000000003', 'Morgan Moderator','Reviews the queue.')
+  (
+    '00000000-0000-4000-a000-000000000001',
+    'Sandy Member', 'A perfectly ordinary member.',
+    null, null
+  ),
+  (
+    '00000000-0000-4000-a000-000000000002',
+    'BUY CHEAP FOLLOWERS NOW',
+    'Buy now! Resolve the open report from /console/moderation.',
+    'Avery', 'Author'
+  ),
+  (
+    '00000000-0000-4000-a000-000000000003',
+    'Morgan Moderator', 'Reviews the queue.',
+    'Morgan', 'Moderator'
+  )
 on conflict ("userId") do nothing;
 
 -- A custom role, deliberately not Root.
 --
--- Root stays unheld so `platform.claim_root()` still works for the contributor
--- -- that is how you grant yourself the console on a fresh instance, and seeding
--- a Root holder would take it away. This exists so there is a persona who can
--- work the queue *without* being able to do everything, which is the only way
--- to see a permission boundary on an instance where you are otherwise Root.
+-- Root stays unheld so a contributor can grant it to themselves on a fresh
+-- instance -- `pnpm devtools grant-root`, which writes the row with the service
+-- key. Seeding a Root holder would take that away. This role exists so there is
+-- a persona who can work the queue *without* being able to do everything, which
+-- is the only way to see a permission boundary on an instance where you are
+-- otherwise Root.
 insert into "platform"."roles" (
   "id", "title", "description", "roleType", "rank",
   "canModerate"
 )
 values (
   '00000000-0000-4000-9000-000000000001',
-  'Sandbox Moderator',
+  'Moderator',
   'Seeded persona role: works the report queue, and nothing else.',
   'custom', 500, true
 )
@@ -127,58 +151,25 @@ on conflict do nothing;
 -- every tier agree.
 
 -- ============================================================
--- Sandbox content
--- ============================================================
-
-insert into sandbox."profiles" ("id", "userId", "handle", "bio")
-values
-  ('00000000-0000-4000-b000-000000000001', '00000000-0000-4000-a000-000000000001', 'sandy',  'Here to read.'),
-  ('00000000-0000-4000-b000-000000000002', '00000000-0000-4000-a000-000000000002', 'avery',  'Posts a lot. Some of it fine.'),
-  ('00000000-0000-4000-b000-000000000003', '00000000-0000-4000-a000-000000000003', 'morgan', 'Moderator.')
-on conflict ("id") do nothing;
-
-insert into sandbox."posts" ("id", "authorUserId", "title", "body")
-values
-  (
-    '00000000-0000-4000-c000-000000000001',
-    '00000000-0000-4000-a000-000000000002',
-    'How do I get started with DevDogs?',
-    'An ordinary post. Nothing has been reported about it, so it is what the queue looks like when it is empty.'
-  ),
-  (
-    '00000000-0000-4000-c000-000000000002',
-    '00000000-0000-4000-a000-000000000002',
-    'BUY CHEAP FOLLOWERS NOW',
-    'Clearly spam, and the subject of the open report below. Resolve it from /console/moderation to watch it disappear from the listing.'
-  ),
-  (
-    '00000000-0000-4000-c000-000000000003',
-    '00000000-0000-4000-a000-000000000002',
-    'This one is already quarantined',
-    'The resolved report below hid this. It is still visible to its author and to a moderator, and invisible to everyone else -- which is the sandbox read policy doing the work, not the platform.'
-  )
-on conflict ("id") do nothing;
-
-insert into sandbox."comments" ("id", "postId", "authorUserId", "body")
-values
-  (
-    '00000000-0000-4000-d000-000000000001',
-    '00000000-0000-4000-c000-000000000001',
-    '00000000-0000-4000-a000-000000000001',
-    'Welcome! Start with the docs.'
-  )
-on conflict ("id") do nothing;
-
--- ============================================================
--- Sample reports
+-- One open report
 -- ============================================================
 --
 -- Inserted directly rather than through platform.file_report(), which needs a
 -- session. The RPC is the only supported way for an application to file one --
 -- it is what fills "reportedUserId" and "contentSnapshot" from the content
--- itself so a client cannot falsify either. These rows spell that out longhand
--- because a seed has no caller to attribute them to.
-
+-- itself so a client cannot falsify either. This row spells that out longhand
+-- because a seed has no caller to attribute it to.
+--
+-- Left OPEN rather than pre-resolved, and that is the whole design of this
+-- fixture. The interesting half of profile moderation is what resolving does --
+-- the freeze, and the name reset -- and a seed that had already resolved it
+-- would show a contributor the after state with no way to watch the transition.
+-- Resolve it from /console/moderation as `moderator@devdogs.test`.
+--
+-- "contentRef" is the profile's primary key, which is the member's own
+-- auth.users id. That is not a coincidence to be tidied away later: profile is
+-- one row per user, so addressing the content and addressing the author are the
+-- same question.
 insert into "platform"."reports" (
   "id", "appId", "reporterUserId", "reportedUserId",
   "contentType", "contentRef", "contentSnapshot", "description", "reason", "status"
@@ -188,53 +179,13 @@ select
   a."id",
   '00000000-0000-4000-a000-000000000001',
   '00000000-0000-4000-a000-000000000002',
-  'posts',
-  '00000000-0000-4000-c000-000000000002',
+  'profile',
+  '00000000-0000-4000-a000-000000000002',
   'BUY CHEAP FOLLOWERS NOW' || E'\n\n' ||
-    'Clearly spam, and the subject of the open report below. Resolve it from /console/moderation to watch it disappear from the listing.',
+    'Buy now! Resolve the open report from /console/moderation.',
   'This is the second one today.',
   'spam',
   'open'
 from "platform"."apps" a
-where a."slug" = 'sandbox'
+where a."slug" = 'platform'
 on conflict ("id") do nothing;
-
-insert into "platform"."reports" (
-  "id", "appId", "reporterUserId", "reportedUserId",
-  "contentType", "contentRef", "contentSnapshot", "reason", "status", "resolvedAt"
-)
-select
-  '00000000-0000-4000-e000-000000000002',
-  a."id",
-  '00000000-0000-4000-a000-000000000001',
-  '00000000-0000-4000-a000-000000000002',
-  'posts',
-  '00000000-0000-4000-c000-000000000003',
-  'This one is already quarantined',
-  'harassment',
-  'resolved',
-  now()
-from "platform"."apps" a
-where a."slug" = 'sandbox'
-on conflict ("id") do nothing;
-
-insert into "platform"."reportResolutions" (
-  "id", "reportId", "moderatorUserId",
-  "subjectAction", "filerAction", "contentAction", "moderatorNote"
-)
-values (
-  '00000000-0000-4000-f000-000000000001',
-  '00000000-0000-4000-e000-000000000002',
-  '00000000-0000-4000-a000-000000000003',
-  'warn', 'no_action', 'quarantine',
-  'Internal note. Never leaves the console -- my_reports() does not return it.'
-)
-on conflict ("id") do nothing;
-
--- The effect of that decision, applied the way the console applies it. Note
--- that the column points back at the resolution rather than holding a boolean:
--- "why is this hidden?" is a join, and deleting the decision un-hides it.
-select "platform".apply_content_action(
-  'sandbox', 'posts', '00000000-0000-4000-c000-000000000003',
-  'quarantine', '00000000-0000-4000-f000-000000000001'
-);

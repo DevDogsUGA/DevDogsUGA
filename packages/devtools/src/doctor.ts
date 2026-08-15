@@ -9,12 +9,18 @@
  * from the catalog, and `platform.conformance_check()` does the answering.
  *
  * `quarantineRoundTrip()` answers the question the catalog cannot: *does
- * quarantine hide anything?* Quarantine is the only moderation outcome whose
- * effect lives in the app's own read policies rather than the platform's, so it
- * is the only one that can be wired up wrong while everything appears to work —
+ * quarantine do anything?* Quarantine is the only moderation outcome whose
+ * effect lives in the app's own policies rather than the platform's, so it is
+ * the only one that can be wired up wrong while everything appears to work —
  * the platform records the decision, sets the column, and has no way to notice
- * nobody reads it. The only proof is to file, resolve, and then look as someone
- * else. That is what this does.
+ * nobody reads it. The only proof is to file, resolve, and then look.
+ *
+ * It runs against `platform.profile`, where quarantine means FREEZE rather than
+ * hide: the display name is reset to the member's name of record and they lose
+ * the ability to change it back. A profile cannot be hidden — rosters, teams
+ * and standings all render the name, and the row is own-row-only over PostgREST
+ * anyway, so there is nobody to hide it from. See
+ * 20260808000000_platform_profile_moderation.sql.
  *
  * Both run as seeded personas over PostgREST rather than as `postgres` over
  * SQL, because RLS is the thing under test and a superuser bypasses it.
@@ -22,6 +28,7 @@
 import {
   adminClient,
   personaClient,
+  PERSONA_PASSWORD,
   PERSONAS,
   type Instance,
 } from "./instance.js";
@@ -29,7 +36,7 @@ import type { CheckResult } from "./ui.js";
 
 interface ConformanceType {
   contentType: string;
-  /** Schema-qualified, e.g. `sandbox.posts`. */
+  /** Schema-qualified, e.g. `platform.profile`. */
   tableName: string;
   checks: CheckResult[];
 }
@@ -66,8 +73,16 @@ export interface RoundTripStep {
 }
 
 /**
- * Files a report against a sandbox post, resolves it with quarantine, and
- * checks who can still see the post.
+ * Files a report against a profile, resolves it with quarantine, and checks
+ * that the freeze and the name reset both landed.
+ *
+ * The subject is a THROWAWAY member created for the run, not one of the seeded
+ * personas, and that is not squeamishness about touching fixtures. `file_report`
+ * corroborates an existing open report rather than filing a second one against
+ * the same content — and the seeds ship exactly such a report against the author
+ * persona's profile. Reusing it would make this function's first step silently
+ * become "add a corroboration", and every assertion after it would be reading
+ * the seed's decision instead of its own.
  *
  * Everything it creates, it deletes — including on the failure paths, which is
  * why the teardown is in a `finally`. A contributor running this twice should
@@ -78,95 +93,89 @@ export async function quarantineRoundTrip(
 ): Promise<RoundTripStep[]> {
   const steps: RoundTripStep[] = [];
   const admin = adminClient(instance);
-  const sandbox = adminClient(instance, "sandbox");
 
-  let postId: string | null = null;
+  const email = `roundtrip-${crypto.randomUUID().slice(0, 8)}@devdogs.test`;
+  const abusiveName = "BUY CHEAP FOLLOWERS NOW";
+
+  let subjectId: string | null = null;
   let reportId: string | null = null;
 
   try {
-    // ── Arrange: a post by the author persona ────────────────────────────────
+    // ── Arrange: a member with an abusive display name and a name of record ──
     //
     // Through the GoTrue admin API rather than `from("users")`: the `auth`
     // schema is not exposed over PostgREST, and should not be.
-    const { data: users, error: usersErr } = await admin.auth.admin.listUsers();
-    if (usersErr) {
+    const { data: created, error: createErr } =
+      await admin.auth.admin.createUser({
+        email,
+        password: PERSONA_PASSWORD,
+        email_confirm: true,
+      });
+    if (createErr ?? !created.user) {
       throw new Error(
-        `Could not read the seeded personas: ${usersErr.message}. ` +
-          "Reset the database to create them.",
+        `Could not create the subject account: ${createErr?.message}`,
       );
     }
+    subjectId = created.user.id;
 
-    const authorId = users.users.find((u) => u.email === PERSONAS.author)?.id;
-    if (!authorId) {
-      throw new Error(
-        `${PERSONAS.author} does not exist. Reset the database to seed it.`,
-      );
+    const { error: profileErr } = await admin.from("profile").insert({
+      userId: subjectId,
+      preferredName: abusiveName,
+      bio: "Created by `pnpm devtools`, and deleted again immediately.",
+      // The name the reset restores. Written by the Involvement roster import
+      // in production (server/actions/verification.ts); set by hand here so the
+      // round-trip exercises the branch that has something to restore.
+      legalFirstName: "Round",
+      legalLastName: "Trip",
+    });
+    if (profileErr) {
+      throw new Error(`Could not create a profile: ${profileErr.message}`);
     }
-
-    const { data: post, error: postErr } = await sandbox
-      .from("posts")
-      .insert({
-        authorUserId: authorId,
-        title: "Round-trip fixture",
-        body: "Created by `pnpm devtools`, and deleted again immediately.",
-      })
-      .select("id")
-      .single();
-    if (postErr) throw new Error(`Could not create a post: ${postErr.message}`);
-    postId = post.id as string;
 
     steps.push({
       name: "fixture",
       ok: true,
-      detail: `Created a sandbox post authored by ${PERSONAS.author}.`,
+      detail: `Created a profile named "${abusiveName}" with a name of record.`,
     });
 
-    // ── Visible before ───────────────────────────────────────────────────────
-    const memberSandbox = await personaClient(
-      instance,
-      PERSONAS.member,
-      "sandbox",
-    );
-    const { data: before } = await memberSandbox
-      .from("posts")
-      .select("id")
-      .eq("id", postId);
+    // ── Editable before ─────────────────────────────────────────────────────
+    //
+    // Establishes the baseline the freeze is measured against. Without it a
+    // profile that was never editable in the first place would pass the freeze
+    // check for the wrong reason.
+    const subject = await personaClient(instance, email);
+    await subject
+      .from("profile")
+      .update({ bio: "Edited." })
+      .eq("userId", subjectId);
 
-    const visibleBefore = (before ?? []).length === 1;
-    steps.push({
-      name: "visible_before",
-      ok: visibleBefore,
-      detail: visibleBefore
-        ? "A member can see the post before it is reported."
-        : "A member could NOT see the post before it was reported — the read policy is denying more than quarantine.",
-    });
-
-    // ── Act: file a report as the member ─────────────────────────────────────
-    // Checked up front purely for the error message: file_report would fail
-    // anyway with 'Unknown app "sandbox"', which reads like a bug in the tool
-    // rather than an un-seeded database.
-    const { data: sandboxApp } = await admin
-      .from("apps")
-      .select("id")
-      .eq("slug", "sandbox")
+    const { data: beforeRow } = await admin
+      .from("profile")
+      .select("bio")
+      .eq("userId", subjectId)
       .single();
-    if (!sandboxApp) {
-      throw new Error(
-        "The sandbox app is not registered. Reset the database to create it.",
-      );
-    }
 
-    const memberPlatform = await personaClient(instance, PERSONAS.member);
+    const editableBefore = beforeRow?.bio === "Edited.";
+    steps.push({
+      name: "editable_before",
+      ok: editableBefore,
+      detail: editableBefore
+        ? "The member can edit their own profile before it is reported."
+        : "The member could NOT edit their own profile before it was reported — the update policy is denying more than quarantine.",
+    });
+
+    // ── Act: file a report as the seeded member ─────────────────────────────
+    const memberClient = await personaClient(instance, PERSONAS.member);
     // A literal, not a lookup. The vocabulary is a platform-owned enum, so
     // there is no per-app row to find first -- and if this label ever stops
     // existing, Postgres rejects the call by type rather than silently
     // reporting "no reasons configured".
-    const { data: filed, error: fileErr } = await memberPlatform.rpc(
+    const { data: filed, error: fileErr } = await memberClient.rpc(
       "file_report",
       {
-        app_slug: "sandbox",
-        content_type: "posts",
-        content_ref: postId,
+        app_slug: "platform",
+        content_type: "profile",
+        content_ref: subjectId,
         reason: "spam",
         description: "Filed by the devtools round-trip.",
       },
@@ -181,10 +190,10 @@ export async function quarantineRoundTrip(
     steps.push({
       name: "file_report",
       ok: true,
-      detail: `A member filed a report against the post (${reportId}).`,
+      detail: `A member filed a report against the profile (${reportId}).`,
     });
 
-    // ── Act: resolve with quarantine as the moderator ────────────────────────
+    // ── Act: resolve with quarantine as the moderator ───────────────────────
     const moderator = await personaClient(instance, PERSONAS.moderator);
     const { error: resolveErr } = await moderator.rpc("resolve_report", {
       report_id: reportId,
@@ -202,14 +211,14 @@ export async function quarantineRoundTrip(
       detail: "A moderator resolved the report with `quarantine`.",
     });
 
-    // ── Assert: the effect actually landed ───────────────────────────────────
-    const { data: column } = await sandbox
-      .from("posts")
-      .select("quarantinedBy")
-      .eq("id", postId)
+    // ── Assert: the effect actually landed ──────────────────────────────────
+    const { data: after } = await admin
+      .from("profile")
+      .select("quarantinedBy, preferredName")
+      .eq("userId", subjectId)
       .single();
 
-    const columnSet = Boolean(column?.quarantinedBy);
+    const columnSet = Boolean(after?.quarantinedBy);
     steps.push({
       name: "quarantine_column",
       ok: columnSet,
@@ -218,46 +227,46 @@ export async function quarantineRoundTrip(
         : 'The resolution did NOT set "quarantinedBy" — apply_content_action did not reach this table.',
     });
 
-    // ── Assert: and that somebody else stopped seeing it ─────────────────────
-    const { data: after } = await memberSandbox
-      .from("posts")
-      .select("id")
-      .eq("id", postId);
-
-    const hiddenFromMember = (after ?? []).length === 0;
+    const nameReset = after?.preferredName === "Round Trip";
     steps.push({
-      name: "hidden_from_member",
-      ok: hiddenFromMember,
-      detail: hiddenFromMember
-        ? "A member can no longer see the quarantined post."
-        : 'A member can STILL see the quarantined post. The read policy does not filter on "quarantinedBy" — this is the check that matters.',
+      name: "name_reset",
+      ok: nameReset,
+      detail: nameReset
+        ? 'The display name was reset to the name of record ("Round Trip").'
+        : `The display name is still "${String(after?.preferredName)}" — the reset trigger did not fire, so the remedy is a record with no effect.`,
     });
 
-    // A moderator keeps seeing it, or the queue would be unworkable.
-    const moderatorSandbox = await personaClient(
-      instance,
-      PERSONAS.moderator,
-      "sandbox",
-    );
-    const { data: modView } = await moderatorSandbox
-      .from("posts")
-      .select("id")
-      .eq("id", postId);
+    // ── Assert: and that the member stopped being able to undo it ───────────
+    //
+    // The check that matters. A denied UPDATE under RLS is not an error — it
+    // simply matches no rows — so asserting on `error` here would pass just as
+    // happily if the write had landed. Read the value back instead.
+    await subject
+      .from("profile")
+      .update({ preferredName: abusiveName })
+      .eq("userId", subjectId);
 
-    const visibleToModerator = (modView ?? []).length === 1;
+    const { data: frozenRow } = await admin
+      .from("profile")
+      .select("preferredName")
+      .eq("userId", subjectId)
+      .single();
+
+    const frozen = frozenRow?.preferredName !== abusiveName;
     steps.push({
-      name: "visible_to_moderator",
-      ok: visibleToModerator,
-      detail: visibleToModerator
-        ? "A moderator can still see it, so the queue stays workable."
-        : "A moderator can no longer see it either — the read policy is missing its canModerate branch.",
+      name: "frozen_after",
+      ok: frozen,
+      detail: frozen
+        ? "The member can no longer change their display name back."
+        : 'The member CHANGED IT STRAIGHT BACK. The update policy does not filter on "quarantinedBy" — this is the check that matters.',
     });
 
     return steps;
   } finally {
     // Teardown runs whether or not the assertions held. Deleting the report
-    // first lets the resolution cascade, which releases the FK on the post.
+    // first lets the resolution cascade, which releases the FK on the profile;
+    // deleting the auth user then cascades to the profile row itself.
     if (reportId) await admin.from("reports").delete().eq("id", reportId);
-    if (postId) await sandbox.from("posts").delete().eq("id", postId);
+    if (subjectId) await admin.auth.admin.deleteUser(subjectId);
   }
 }

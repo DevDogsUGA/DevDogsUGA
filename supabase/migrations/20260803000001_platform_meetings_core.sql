@@ -131,7 +131,13 @@ create table "platform"."competitions" (
   -- data entry into a write error.
   "judgingMeetingId" uuid,
   "judgingStartsAt"  timestamptz,
-  -- null falls back to platform."instance"."defaultMaxTeamSize".
+  -- null falls back to DEFAULT_MAX_TEAM_SIZE in the platform app
+  -- (server/teams/limits.ts). This was briefly a column on a singleton
+  -- platform."instance" table, on the reasoning that team size is a club
+  -- decision rather than a constant -- but nothing ever wrote it, no surface
+  -- existed to change it, and a competition that needs a different cap already
+  -- has this column. A configuration point with no way to configure it is just
+  -- a constant kept somewhere harder to read.
   "maxTeamSize"      smallint,
   -- null = not yet graded. Officers fill this in through Airtable once they
   -- have decided what the feature required.
@@ -150,20 +156,6 @@ create table "platform"."competitions" (
 );
 
 alter table "platform"."competitions" enable row level security;
-
--- ============================================================
--- Instance configuration
--- ============================================================
---
--- Team size is configuration rather than a constant because it is a club
--- decision that changes between semesters, and a competition can override it
--- for one week without the default moving.
-alter table "platform"."instance"
-  add column "defaultMaxTeamSize" smallint not null default 4;
-
-alter table "platform"."instance"
-  add constraint "instance_defaultMaxTeamSize_positive"
-  check ("defaultMaxTeamSize" > 0);
 
 -- ============================================================
 -- RLS

@@ -19,7 +19,7 @@ Welcome to the documentation for the DevDogs Website — the open-source web pla
 **Subsystems**
 
 - [Reporting & feedback](./reporting-and-feedback.md) — the RPC contract every app calls, and how a table becomes moderatable
-- [The sandbox app](./sandbox-app.md) — the moderation fixture schema, and the traps integration hides
+- [Moderatable content](./moderatable-content.md) — how content becomes reportable, and the traps integration hides
 - [Sandbox environments](./sandbox-environments.md) — one shared Supabase instance per competition team (unrelated to the above, despite the name)
 - [Meetings & teams](./meetings-and-teams.md), [Elections](./elections.md), [Airtable setup](./airtable-setup.md)
 - [OAuth setup](./oauth-setup.md) — how a sibling project gets **Sign in with DevDogs**

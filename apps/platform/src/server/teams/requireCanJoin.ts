@@ -1,8 +1,9 @@
 import { and, count, eq, sql } from "drizzle-orm";
 import type { db } from "~/server/db";
-import { competitions, instance, teamMembers, teams } from "~/server/db/schema";
+import { competitions, teamMembers, teams } from "~/server/db/schema";
 import { identitiesInAuth } from "~/supabase/drizzle/schema";
 import { TeamActionError, isUniqueViolation } from "./errors";
+import { DEFAULT_MAX_TEAM_SIZE } from "./limits";
 import { isLocked } from "./lockState";
 
 /** The transaction handle Drizzle hands to `db.transaction`. */
@@ -86,7 +87,7 @@ export async function requireCanJoin(
   // and the insert. The `for update` above is what actually enforces it: the
   // second transaction blocks until the first commits, then reads the true
   // count and fails here cleanly.
-  const cap = row.maxTeamSize ?? (await defaultMaxTeamSize(tx));
+  const cap = row.maxTeamSize ?? DEFAULT_MAX_TEAM_SIZE;
   const [tally] = await tx
     .select({ n: count() })
     .from(teamMembers)
@@ -153,15 +154,4 @@ export async function insertMembership(
     }
     throw error;
   }
-}
-
-async function defaultMaxTeamSize(tx: Tx): Promise<number> {
-  const [row] = await tx
-    .select({ size: instance.defaultMaxTeamSize })
-    .from(instance)
-    .limit(1);
-  // The instance row is seeded by migration and singleton-constrained, so this
-  // fallback is unreachable in practice — it exists so a missing row degrades
-  // to the documented default rather than to NaN.
-  return row?.size ?? 4;
 }

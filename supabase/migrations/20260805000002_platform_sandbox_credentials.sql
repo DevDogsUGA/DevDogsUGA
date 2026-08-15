@@ -356,7 +356,9 @@ grant  execute on function "platform".log_proxy_request(uuid, text, text, smalli
 -- `sandbox_proxy`, holding no table grants at all, could execute 18 of this
 -- schema's functions, every one of them SECURITY DEFINER. SECURITY DEFINER is
 -- the part that matters: those functions run as the owner, so the role's empty
--- table privileges stop nothing. `claim_root` was among them.
+-- table privileges stop nothing. `claim_root` -- which granted the caller every
+-- permission in the system, and has since been removed for related reasons --
+-- was among them.
 --
 -- Verified safe before revoking: all 18 carry EXPLICIT grants to anon,
 -- authenticated and service_role from this schema's default privileges, so

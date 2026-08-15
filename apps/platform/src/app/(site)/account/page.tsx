@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Fragment, Suspense } from "react";
 import AccentBlobs from "~/ui/accent-blobs";
 import AvatarField from "~/components/AvatarField";
 import BioField from "~/components/BioField";
@@ -6,6 +6,7 @@ import { ConsoleCard } from "~/ui/card";
 import DiscordField from "~/components/ConnectedAccountField/DiscordField";
 import EmailField from "~/components/EmailField";
 import Field from "~/ui/field";
+import { FrozenFields, FrozenProfileNotice } from "~/components/FrozenProfile";
 import GithubField from "~/components/ConnectedAccountField/GithubField";
 import GraduationDateField from "~/components/GraduationDateField";
 import LinkedinField from "~/components/ConnectedAccountField/LinkedinField";
@@ -21,53 +22,62 @@ import { getProfilePageData } from "~/server/loaders/console";
 async function AccountContent() {
   const data = await getProfilePageData();
 
+  // Set by a moderator resolving a report with `quarantine`. Everything under
+  // it is refused by RLS regardless; this is what stops the page pretending
+  // otherwise. See ~/components/FrozenProfile.
+  const frozen = Boolean(data.profile?.quarantinedBy);
+  const Fields = frozen ? FrozenFields : Fragment;
+
   return (
     <>
       <ConsoleCard.Root id="profile">
         <ConsoleCard.Header title="Profile" />
         <ConsoleCard.Content>
-          <Field
-            id="avatar"
-            label="Profile Photo"
-            description="Shown on your public profile, the community page, and anywhere else your account appears."
-          >
-            <AvatarField {...data} />
-          </Field>
-          <Field
-            id="preferredName"
-            label="Preferred Name"
-            description="Displayed across DevDogs instead of your legal name."
-          >
-            <PreferredNameField {...data} />
-          </Field>
-          <Field
-            id="pronouns"
-            label="Pronouns"
-            description="Select from common options or add your own. Shown on your public profile."
-          >
-            <PronounsField {...data} />
-          </Field>
-          <Field
-            id="graduation"
-            label="Graduation"
-            description="Your expected graduation semester and year — used to verify your student status."
-          >
-            <GraduationDateField {...data} />
-          </Field>
-          <Field
-            id="bio"
-            label="Bio"
-            description="A short description of yourself."
-          >
-            <BioField {...data} />
-          </Field>
-          <Field
-            id="links"
-            label="Links"
-            description="Add up to five links (e.g., portfolio, resume, socials) to display on your public profile. Drag to reorder."
-          >
-            <ProfileLinks initialLinks={data.profile.links} />
-          </Field>
+          {frozen && <FrozenProfileNotice />}
+          <Fields>
+            <Field
+              id="avatar"
+              label="Profile Photo"
+              description="Shown on your public profile, the community page, and anywhere else your account appears."
+            >
+              <AvatarField {...data} />
+            </Field>
+            <Field
+              id="preferredName"
+              label="Preferred Name"
+              description="Displayed across DevDogs instead of your legal name."
+            >
+              <PreferredNameField {...data} />
+            </Field>
+            <Field
+              id="pronouns"
+              label="Pronouns"
+              description="Select from common options or add your own. Shown on your public profile."
+            >
+              <PronounsField {...data} />
+            </Field>
+            <Field
+              id="graduation"
+              label="Graduation"
+              description="Your expected graduation semester and year — used to verify your student status."
+            >
+              <GraduationDateField {...data} />
+            </Field>
+            <Field
+              id="bio"
+              label="Bio"
+              description="A short description of yourself."
+            >
+              <BioField {...data} />
+            </Field>
+            <Field
+              id="links"
+              label="Links"
+              description="Add up to five links (e.g., portfolio, resume, socials) to display on your public profile. Drag to reorder."
+            >
+              <ProfileLinks initialLinks={data.profile.links} />
+            </Field>
+          </Fields>
         </ConsoleCard.Content>
       </ConsoleCard.Root>
 
@@ -130,13 +140,18 @@ async function AccountContent() {
             </div>
           </Field>
           {data.isLeader && (
-            <Field
-              id="roleDescription"
-              label="Role Description"
-              description="A short description of what you do, shown on the leadership section of the homepage."
-            >
-              <RoleDescriptionField {...data} />
-            </Field>
+            // Also a column on platform."profile", so also frozen — and it is
+            // rendered on the homepage, which makes it exactly the kind of
+            // thing a frozen member should not be able to rewrite.
+            <Fields>
+              <Field
+                id="roleDescription"
+                label="Role Description"
+                description="A short description of what you do, shown on the leadership section of the homepage."
+              >
+                <RoleDescriptionField {...data} />
+              </Field>
+            </Fields>
           )}
           <Field
             id="verification"

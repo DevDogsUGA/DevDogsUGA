@@ -26,8 +26,9 @@ description: How a competition team gets one shared Supabase instance without an
 > Blocks marked **Measured** are observations from the spike or from building
 > this; everything else is design intent.
 >
-> Not to be confused with the [Sandbox App](./sandbox-app.md), which is the
-> moderation fixture schema. Unrelated, unfortunately similar name.
+> Not to be confused with the moderation fixture schema that used to be called
+> the Sandbox App. That is gone; see
+> [Moderatable Content](./moderatable-content.md) for what replaced it.
 
 A competition team needs one Supabase instance they all build against. The reason
 is mobile: to test the study group finder's messaging you need two people
@@ -639,7 +640,7 @@ on functions to anon, authenticated, service_role`, so every new function
 > including one created specifically to have none. `sandbox_proxy`, holding no
 > table privileges at all, could execute **18** of this schema's functions,
 > every one of them `SECURITY DEFINER` and therefore unprotected by its empty
-> table grants. `claim_root` was among them.
+> table grants. `claim_root` — since removed — was among them.
 >
 > The fix is schema-wide, because the hole is:
 >
@@ -1018,7 +1019,7 @@ job.
 
 Removing them is also a security simplification rather than just a deletion. Test
 accounts were backed by genuine `auth.users` rows, which is why
-`20260729000000_platform_instance_gate.sql` had to build `platform.is_test_identity()`
+`20260729000000_platform_permission_helpers.sql` had to build `platform.is_test_identity()`
 and four restrictive `deny_test_identities` policies to subtract those identities
 from tables granting unconditional `authenticated` SELECT. **Deleting the concept
 deletes both the risk and its mitigation.**
@@ -1248,7 +1249,7 @@ already exist.
 
 Migration 4 is the destructive one and should be its own PR. It removes
 `platform.is_test_identity()` and the four `deny_test_identities` restrictive
-policies that `20260729000000_platform_instance_gate.sql` created — on `roles`,
+policies that `20260729000000_platform_permission_helpers.sql` created — on `roles`,
 `reportReasons`, `feedbackTopics`, and `contentTypes`.
 
 > The fourth policy moved after that migration was written.

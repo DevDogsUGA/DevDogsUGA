@@ -47,10 +47,13 @@ export interface Instance {
 
 /** The seeded personas, from `supabase/seed/02_moderation.sql`. */
 export const PERSONAS = {
-  member: "member@sandbox.test",
-  author: "author@sandbox.test",
-  moderator: "moderator@sandbox.test",
+  member: "member@devdogs.test",
+  author: "author@devdogs.test",
+  moderator: "moderator@devdogs.test",
 } as const;
+
+/** The built-in Root role, from `supabase/seed/01_roles.sql`. */
+export const ROOT_ROLE_ID = "00000000-0000-0000-0000-000000000002";
 
 export const PERSONA_PASSWORD = "password";
 
@@ -107,36 +110,32 @@ export function detectLocalInstance(cwd: string = PROJECT_ROOT): Instance {
 }
 
 /**
- * Refuses to act on a production instance.
+ * Confirms the instance has actually been migrated.
  *
- * The gate reads the tier rather than asking the operator to assert it, and it
- * runs before anything else: these commands file reports, quarantine content
- * and sign in as seeded personas, none of which may ever touch live data.
+ * This used to be `assertNotProduction()`, which read a tier out of a singleton
+ * `platform."instance"` table and refused anything reporting itself as
+ * production. That table is gone, and the check it performed was not the one
+ * doing the work: `detectLocalInstance()` above reads `supabase status`, which
+ * only ever describes the Docker stack on this machine. A remote project cannot
+ * reach these commands in the first place, so the tier column was guarding a
+ * door that was already walled up — while being one more thing to set correctly
+ * on every instance.
+ *
+ * What was genuinely useful was its error message, because "have you run
+ * migrations?" is the failure a contributor actually hits. That is all this
+ * does now.
  */
-export async function assertNotProduction(
-  instance: Instance,
-): Promise<"local" | "test"> {
+export async function assertMigrated(instance: Instance): Promise<void> {
   const client = makeClient(instance.apiUrl, instance.secretKey, "platform");
 
-  const { data, error } = await client
-    .from("instance")
-    .select("environment")
-    .single();
+  const { error } = await client.from("apps").select("slug").limit(1);
 
   if (error) {
     throw new Error(
-      `Could not read platform."instance": ${error.message}. ` +
-        "Have migrations been applied?",
+      `Could not read platform."apps": ${error.message}. ` +
+        "Have migrations been applied? `pnpm devtools reset` rebuilds from scratch.",
     );
   }
-
-  const environment = data.environment as "local" | "test" | "production";
-  if (environment === "production") {
-    throw new Error(
-      "That instance reports itself as production, so these tools will not touch it.",
-    );
-  }
-  return environment;
 }
 
 /** A service-role client. Bypasses RLS — setup and teardown only. */

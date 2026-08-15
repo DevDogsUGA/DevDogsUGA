@@ -1,6 +1,5 @@
 /**
- * RLS persona tests for the environment gate, permission helpers, and app
- * registry.
+ * RLS persona tests for the permission helpers and the app registry.
  *
  * Every case asserts both an allow and a deny. A policy test that only checks
  * the allow side passes just as happily when the policy is missing entirely.
@@ -11,7 +10,6 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  ROOT_ROLE_ID,
   admin,
   anon,
   createPersona,
@@ -20,7 +18,6 @@ import {
   grantRole,
   makeTestAccount,
   suspend,
-  withEnvironment,
   type Persona,
 } from "./personas";
 
@@ -46,40 +43,6 @@ beforeAll(async () => {
 afterAll(async () => {
   await deleteRole(moderatorRoleId);
   await destroyPersonas(member, moderator, suspended, testAccount);
-});
-
-describe("platform.instance", () => {
-  it("is readable by anyone, including anonymously", async () => {
-    const { data: anonRow } = await anon()
-      .from("instance")
-      .select("environment")
-      .single();
-    expect(anonRow?.environment).toBeTruthy();
-
-    const { data: memberRow } = await member.client
-      .from("instance")
-      .select("environment")
-      .single();
-    expect(memberRow?.environment).toBeTruthy();
-  });
-
-  it("cannot be written by a client, at any persona", async () => {
-    // A denied UPDATE under RLS is not an error -- it simply matches no rows.
-    // Asserting on the error would pass even if the write had succeeded, so
-    // read the value back instead.
-    for (const client of [anon(), member.client, moderator.client]) {
-      await client
-        .from("instance")
-        .update({ environment: "production" })
-        .eq("id", true);
-    }
-
-    const { data } = await admin()
-      .from("instance")
-      .select("environment")
-      .single();
-    expect(data?.environment).not.toBe("production");
-  });
 });
 
 describe("platform.has_permission", () => {
@@ -270,72 +233,6 @@ describe("platform.reports", () => {
   });
 });
 
-describe("platform.claim_root", () => {
-  it("refuses on a production instance", async () => {
-    await withEnvironment("production", async () => {
-      const { error } = await member.client.rpc("claim_root");
-      expect(error?.message).toMatch(/not available on a production instance/);
-    });
-  });
-
-  it("grants Root when unheld, then refuses a second claim", async () => {
-    const a = admin();
-    const { data: existing } = await a
-      .from("userRoles")
-      .select("userId")
-      .eq("roleId", ROOT_ROLE_ID);
-
-    // The seeded instance may already have a Root holder; park it so this test
-    // exercises the unheld path, and restore it afterwards.
-    const priorHolder = existing?.[0]?.userId as string | undefined;
-    if (priorHolder) {
-      await a
-        .from("userRoles")
-        .delete()
-        .eq("roleId", ROOT_ROLE_ID)
-        .eq("userId", priorHolder);
-    }
-
-    try {
-      const { error } = await member.client.rpc("claim_root");
-      expect(error).toBeNull();
-
-      const { data: held } = await a
-        .from("userRoles")
-        .select("userId")
-        .eq("roleId", ROOT_ROLE_ID)
-        .single();
-      expect(held?.userId).toBe(member.userId);
-
-      // Root confers every permission through the matview's special case.
-      const { data: canModerate } = await a.rpc("has_permission", {
-        uid: member.userId,
-        perm: "canModerate",
-      });
-      expect(canModerate).toBe(true);
-
-      const { error: second } = await moderator.client.rpc("claim_root");
-      expect(second?.message).toMatch(/already held/);
-    } finally {
-      await a
-        .from("userRoles")
-        .delete()
-        .eq("roleId", ROOT_ROLE_ID)
-        .eq("userId", member.userId);
-      if (priorHolder) {
-        await a
-          .from("userRoles")
-          .insert({ userId: priorHolder, roleId: ROOT_ROLE_ID });
-      }
-    }
-  });
-
-  it("requires a session", async () => {
-    const { error } = await anon().rpc("claim_root");
-    expect(error).not.toBeNull();
-  });
-});
-
 describe("platform.profile durable identity", () => {
   // The profile UPDATE policy is a permissive `auth.uid() = "userId"`, which
   // decides which ROW a member may write, not which columns. Keeping them out
@@ -480,7 +377,7 @@ describe("platform meetings, teams and attendance", () => {
   });
 
   it("refuses client writes to the schedule", async () => {
-    // As with platform.instance above: a denied UPDATE is not an error, it
+    // A denied UPDATE is not an error under RLS, it
     // matches no rows. Read the value back rather than asserting on `error`,
     // which would pass just as happily if the write had landed.
     for (const client of [anon(), member.client, moderator.client]) {

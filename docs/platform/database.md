@@ -90,22 +90,20 @@ Two more come from the same dispatcher and act on your own stack only:
 
 Everything else is a package script, reached directly:
 
-| Script                                                     | What it does                                                                                      |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `pnpm --filter @devdogsuga/supabase new-migration <name>`  | Create an empty migration in `supabase/migrations/`                                               |
-| `pnpm --filter @devdogsuga/supabase generate-types`        | Regenerate `Database` types from the linked project                                               |
-| `pnpm --filter @devdogsuga/supabase generate-types:local`  | The same, from the Docker stack                                                                   |
-| `pnpm --filter @devdogsuga/supabase set-environment <env>` | Set `platform."instance"."environment"` on a project that `db push` reached without running seeds |
-| `pnpm --filter @devdogsuga/supabase test:rls`              | The RLS persona suite (needs a running stack)                                                     |
-| `pnpm --filter platform db:pull:local`                     | Regenerate the Drizzle schema from the local DB                                                   |
-| `pnpm --filter platform db:seed-roles:local`               | Seed the built-in Member and Root roles (idempotent)                                              |
+| Script                                                    | What it does                                         |
+| --------------------------------------------------------- | ---------------------------------------------------- |
+| `pnpm --filter @devdogsuga/supabase new-migration <name>` | Create an empty migration in `supabase/migrations/`  |
+| `pnpm --filter @devdogsuga/supabase generate-types`       | Regenerate `Database` types from the linked project  |
+| `pnpm --filter @devdogsuga/supabase generate-types:local` | The same, from the Docker stack                      |
+| `pnpm --filter @devdogsuga/supabase test:rls`             | The RLS persona suite (needs a running stack)        |
+| `pnpm --filter platform db:pull:local`                    | Regenerate the Drizzle schema from the local DB      |
+| `pnpm --filter platform db:seed-roles:local`              | Seed the built-in Member and Root roles (idempotent) |
 
 ## Seeds
 
 `supabase/seed/*.sql` runs on `pnpm sb reset` — and **only** then.
-`db push` applies migrations without them, which is why
-`set-environment` exists: a remote test project reached by `push` still holds the
-`production` default and has to be demoted explicitly.
+`db push` applies migrations without them, so a remote project reached by `push`
+has migrations but no personas, no roles and nothing to moderate.
 
 Seeds are the right place for anything that must not exist in production, since
 the reset they ride on is never pointed there. Migrations are the wrong place for

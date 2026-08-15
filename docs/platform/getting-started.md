@@ -59,26 +59,35 @@ only `.env.example` is tracked.
 `reset` is not just migrations. It also runs `supabase/seed/*.sql`,
 which is what makes a fresh instance usable rather than empty:
 
-| Seed                | What it does                                                                                                                                                                |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `00_instance.sql`   | Demotes the instance to `local`. `platform."instance"."environment"` defaults to `production` so a fresh database fails _closed_; this is the one place it is safe to open. |
-| `01_roles.sql`      | The built-in Member and Root role definitions, so `platform.claim_root()` works.                                                                                            |
-| `02_moderation.sql` | Sign-in-able personas, sandbox content, report reasons and feedback topics.                                                                                                 |
+| Seed                | What it does                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| `01_roles.sql`      | The built-in Member and Root role definitions.                                        |
+| `02_moderation.sql` | Sign-in-able personas, their profiles, and one open report filed against one of them. |
 
 Three personas are created, all with the password `password`:
 
-| Email                    | What they are for                                                                                               |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| `member@sandbox.test`    | An ordinary member — the only way to _encounter_ a permission boundary, since you are Root on your own instance |
-| `author@sandbox.test`    | Owns the sandbox content, including one quarantined post                                                        |
-| `moderator@sandbox.test` | Holds a Sandbox Moderator role: works the report queue, and nothing else                                        |
+| Email                    | What they are for                                                                                                       |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `member@devdogs.test`    | An ordinary member — the only way to _encounter_ a permission boundary, since you are Root on your own instance         |
+| `author@devdogs.test`    | Owns the profile the seeded report is filed against, and carries a name of record so the reset has something to restore |
+| `moderator@devdogs.test` | Holds a Moderator role: works the report queue, and nothing else                                                        |
 
-Root is deliberately left **unheld** so `platform.claim_root()` still works —
-that is how you grant yourself the console on a fresh instance.
+Root is deliberately left **unheld**, so the first thing to do on a fresh
+instance is take it:
+
+```bash
+pnpm devtools grant-root
+```
+
+That writes the row with the service key, which is the only credential involved
+— there is no RPC to call and no permission you could already hold. It replaced
+`platform.claim_root()`, which any authenticated caller could invoke as long as
+nobody held Root: on a freshly reset production database with sign-up open to
+the university, that would have gone to whoever authenticated first.
 
 For the reporting and moderation tooling that runs against this stack, see
-[Reporting & Feedback](./reporting-and-feedback.md); for the fixture schema it
-acts on, [the Sandbox App](./sandbox-app.md).
+[Reporting & Feedback](./reporting-and-feedback.md); for how content becomes
+reportable in the first place, [Moderatable Content](./moderatable-content.md).
 
 ## Local docs preview
 

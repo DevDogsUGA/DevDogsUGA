@@ -1,10 +1,10 @@
 import { and, asc, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "~/server/db";
+import { DEFAULT_MAX_TEAM_SIZE } from "~/server/teams/limits";
 import {
   attendance,
   competitions,
-  instance,
   meetings,
   projects,
   teams,
@@ -250,7 +250,7 @@ export interface CompetitionHeader {
    */
   judgingStartsAt: Date | null;
   /**
-   * The roster cap, already resolved against `instance.defaultMaxTeamSize`.
+   * The roster cap, already resolved against `DEFAULT_MAX_TEAM_SIZE`.
    *
    * Resolved here rather than returned nullable, because a nullable cap makes
    * every caller reimplement the fallback — and a page that renders "3 of —"
@@ -279,8 +279,7 @@ export const getCompetitionBySlug = cache(
         judgingStartsAt: competitions.judgingStartsAt,
         maxTeamSize: sql<number>`coalesce(
           ${competitions.maxTeamSize},
-          (select ${instance.defaultMaxTeamSize} from ${instance} limit 1),
-          4
+          ${DEFAULT_MAX_TEAM_SIZE}
         )`,
       })
       .from(competitions)

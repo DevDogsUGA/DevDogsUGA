@@ -349,6 +349,9 @@ export type Database = {
           createdAt: string
           id: string
           label: string | null
+          quarantineEffect:
+            | Database["platform"]["Enums"]["quarantineEffect"]
+            | null
           snapshotColumns: string[] | null
           tableName: string
           urlTemplate: string | null
@@ -361,6 +364,9 @@ export type Database = {
           createdAt?: string
           id?: string
           label?: string | null
+          quarantineEffect?:
+            | Database["platform"]["Enums"]["quarantineEffect"]
+            | null
           snapshotColumns?: string[] | null
           tableName: string
           urlTemplate?: string | null
@@ -373,6 +379,9 @@ export type Database = {
           createdAt?: string
           id?: string
           label?: string | null
+          quarantineEffect?:
+            | Database["platform"]["Enums"]["quarantineEffect"]
+            | null
           snapshotColumns?: string[] | null
           tableName?: string
           urlTemplate?: string | null
@@ -667,24 +676,6 @@ export type Database = {
         }
         Relationships: []
       }
-      instance: {
-        Row: {
-          defaultMaxTeamSize: number
-          environment: Database["platform"]["Enums"]["deployEnv"]
-          id: boolean
-        }
-        Insert: {
-          defaultMaxTeamSize?: number
-          environment?: Database["platform"]["Enums"]["deployEnv"]
-          id?: boolean
-        }
-        Update: {
-          defaultMaxTeamSize?: number
-          environment?: Database["platform"]["Enums"]["deployEnv"]
-          id?: boolean
-        }
-        Relationships: []
-      }
       leaderboardProfiles: {
         Row: {
           allTimePoints: number
@@ -878,6 +869,7 @@ export type Database = {
           legalLastName: string | null
           preferredName: string
           pronouns: string[] | null
+          quarantinedBy: string | null
           roleDescription: string | null
           showDiscord: boolean
           showEmail: boolean
@@ -901,6 +893,7 @@ export type Database = {
           legalLastName?: string | null
           preferredName: string
           pronouns?: string[] | null
+          quarantinedBy?: string | null
           roleDescription?: string | null
           showDiscord?: boolean
           showEmail?: boolean
@@ -924,6 +917,7 @@ export type Database = {
           legalLastName?: string | null
           preferredName?: string
           pronouns?: string[] | null
+          quarantinedBy?: string | null
           roleDescription?: string | null
           showDiscord?: boolean
           showEmail?: boolean
@@ -933,7 +927,15 @@ export type Database = {
           userId?: string
           viewedConsole?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profile_quarantinedBy_fkey"
+            columns: ["quarantinedBy"]
+            isOneToOne: false
+            referencedRelation: "reportResolutions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profileLinks: {
         Row: {
@@ -1895,7 +1897,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      claim_root: { Args: never; Returns: undefined }
       conformance_check: {
         Args: { app_slug: string }
         Returns: {
@@ -1950,7 +1951,6 @@ export type Database = {
         Args: { app_slug: string; content_ref: string; content_type: string }
         Returns: Json
       }
-      is_production: { Args: never; Returns: boolean }
       is_suspended: { Args: { uid: string }; Returns: boolean }
       is_test_identity: { Args: { uid: string }; Returns: boolean }
       list_content_types: {
@@ -2057,7 +2057,6 @@ export type Database = {
       contentVisibility: "public" | "restricted"
       credentialStatus: "active" | "disabled" | "revoked"
       credentialType: "email_password" | "totp" | "email_password_totp"
-      deployEnv: "local" | "test" | "production"
       electionElectorate: "teams" | "officers"
       electionPurpose: "points" | "tiebreak"
       electionStatus: "draft" | "open" | "closed" | "tallied"
@@ -2082,6 +2081,7 @@ export type Database = {
         | "expired"
       oauthRegistrationType: "development" | "production"
       proxyScope: "publishable" | "secret"
+      quarantineEffect: "hide" | "freeze"
       reportReason:
         | "harassment"
         | "hate_speech"
@@ -2104,108 +2104,6 @@ export type Database = {
   public: {
     Tables: {
       [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      [_ in never]: never
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-  sandbox: {
-    Tables: {
-      comments: {
-        Row: {
-          authorUserId: string
-          body: string
-          createdAt: string
-          id: string
-          postId: string
-          quarantinedBy: string | null
-        }
-        Insert: {
-          authorUserId: string
-          body: string
-          createdAt?: string
-          id?: string
-          postId: string
-          quarantinedBy?: string | null
-        }
-        Update: {
-          authorUserId?: string
-          body?: string
-          createdAt?: string
-          id?: string
-          postId?: string
-          quarantinedBy?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "comments_postId_fkey"
-            columns: ["postId"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      posts: {
-        Row: {
-          authorUserId: string
-          body: string
-          createdAt: string
-          id: string
-          quarantinedBy: string | null
-          title: string
-        }
-        Insert: {
-          authorUserId: string
-          body: string
-          createdAt?: string
-          id?: string
-          quarantinedBy?: string | null
-          title: string
-        }
-        Update: {
-          authorUserId?: string
-          body?: string
-          createdAt?: string
-          id?: string
-          quarantinedBy?: string | null
-          title?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          bio: string | null
-          createdAt: string
-          handle: string
-          id: string
-          userId: string
-        }
-        Insert: {
-          bio?: string | null
-          createdAt?: string
-          handle: string
-          id?: string
-          userId: string
-        }
-        Update: {
-          bio?: string | null
-          createdAt?: string
-          handle?: string
-          id?: string
-          userId?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
@@ -3610,7 +3508,6 @@ export const Constants = {
       contentVisibility: ["public", "restricted"],
       credentialStatus: ["active", "disabled", "revoked"],
       credentialType: ["email_password", "totp", "email_password_totp"],
-      deployEnv: ["local", "test", "production"],
       electionElectorate: ["teams", "officers"],
       electionPurpose: ["points", "tiebreak"],
       electionStatus: ["draft", "open", "closed", "tallied"],
@@ -3637,6 +3534,7 @@ export const Constants = {
       ],
       oauthRegistrationType: ["development", "production"],
       proxyScope: ["publishable", "secret"],
+      quarantineEffect: ["hide", "freeze"],
       reportReason: [
         "harassment",
         "hate_speech",
@@ -3655,9 +3553,6 @@ export const Constants = {
     },
   },
   public: {
-    Enums: {},
-  },
-  sandbox: {
     Enums: {},
   },
   schedule_builder: {

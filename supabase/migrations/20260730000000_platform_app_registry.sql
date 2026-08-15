@@ -99,49 +99,33 @@ insert into "platform"."apps" ("slug", "schemaName", "displayName") values
 -- ============================================================
 -- Bootstrapping Root on a fresh instance
 -- ============================================================
-
+--
 -- Every console page resolves through getCallerContext(), which reads
 -- "resolvedUserPermissions". A user with no roles resolves to all-permissions-
 -- false, so on a brand new instance the console is simply invisible -- there is
 -- no error and nothing to click, which is the exact trap documented in
--- 20260728000000_platform_resolved_permissions_triggers.sql.
+-- 20260728000000_platform_resolved_permissions_triggers.sql. Somebody has to be
+-- able to grant themselves the first role.
 --
--- Granting yourself Root is safe precisely because this is your own throwaway
--- instance, so the gate is the environment rather than any permission you could
--- already hold. On production this raises: Root is transferred there, never
--- claimed.
-create or replace function "platform".claim_root()
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  caller uuid;
-  root_role_id constant uuid := '00000000-0000-0000-0000-000000000002';
-begin
-  if "platform".is_production() then
-    raise exception 'claim_root() is not available on a production instance';
-  end if;
-
-  caller := (select auth.uid());
-  if caller is null then
-    raise exception 'claim_root() requires an authenticated session';
-  end if;
-
-  if not exists (select 1 from "platform"."roles" where "id" = root_role_id) then
-    raise exception
-      'The Root role definition is missing. Seed the built-in roles first: '
-      'pnpm --filter @devdogsuga/platform db:seed-roles:local';
-  end if;
-
-  -- "userRoles_root_singleton" already enforces this at the index level; the
-  -- explicit check exists to fail with something a human can act on.
-  if exists (select 1 from "platform"."userRoles" where "roleId" = root_role_id) then
-    raise exception 'Root is already held on this instance';
-  end if;
-
-  insert into "platform"."userRoles" ("userId", "roleId")
-  values (caller, root_role_id);
-end;
-$$;
+-- THIS USED TO BE AN RPC, `platform.claim_root()`: any authenticated caller
+-- could take Root as long as nobody held it, gated on the instance not
+-- reporting itself as production. Both halves of that were wrong.
+--
+-- The gate was a row in a table, so "is this production?" was answered by data
+-- that had to be set correctly on every instance, could not be verified by CI,
+-- and was writable by anything holding the service key. And the capability it
+-- guarded is a privilege escalation by construction: on a freshly reset
+-- production database with sign-up open to the whole university, Root would go
+-- to whoever authenticated first.
+--
+-- Now there is no RPC and nothing to gate. Root is granted by writing the row
+-- directly -- `pnpm devtools grant-root`, the Supabase dashboard, or psql --
+-- all of which require the service key or a database password. That is a
+-- credential only somebody who already controls the instance holds, which makes
+-- the authorization structural instead of a self-assertion the database has to
+-- take on trust.
+--
+--   insert into "platform"."userRoles" ("userId", "roleId")
+--   values ('<your auth.users id>', '00000000-0000-0000-0000-000000000002');
+--
+-- "userRoles_root_singleton" still enforces that at most one user holds it.

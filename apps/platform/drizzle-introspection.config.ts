@@ -5,19 +5,18 @@ import { type Config } from "drizzle-kit";
 export default {
   out: "./src/supabase/drizzle",
   dialect: "postgresql",
-  // `sandbox` is excluded because its tables carry the foreign key to
-  // platform."reportResolutions" that registers them as moderatable content.
-  // Drizzle emits that reference without an import it can resolve, so
-  // introspecting the schema here produces a file that does not compile — and
-  // importing across would make these two generated modules circular.
+  // This module exists so the console can reach the Supabase-managed schemas
+  // (auth, storage) through Drizzle; `platform` is generated separately by
+  // drizzle.config.ts.
   //
-  // Nothing is lost: this module exists so the console can reach the
-  // Supabase-managed schemas (auth, storage) through Drizzle. Sandbox content is
-  // fixture data for the contributor tooling, which reaches it over PostgREST
-  // from the browser, and the console has no reason to read another app's tables
-  // server-side. Any app that adds the quarantine column belongs on this list
-  // for the same reason.
-  schemaFilter: ["*", "!platform", "!public", "!sandbox", "!_*"],
+  // ⚠️ ANY OTHER APP'S SCHEMA THAT ADDS A QUARANTINE COLUMN MUST BE EXCLUDED
+  // HERE. A foreign key to platform."reportResolutions" makes Drizzle emit a
+  // reference it has no import for, so the generated file does not compile —
+  // and importing across would make these two generated modules circular. The
+  // `sandbox` fixture schema used to be on this list for exactly that reason.
+  // Nothing is lost by excluding one: the console has no reason to read another
+  // app's tables server-side, and apps reach their own content over PostgREST.
+  schemaFilter: ["*", "!platform", "!public", "!_*"],
   dbCredentials: {
     url: process.env.DB_URL!,
   },

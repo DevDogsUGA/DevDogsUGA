@@ -1,4 +1,4 @@
--- Built-in role definitions, so `platform.claim_root()` works on a freshly
+-- Built-in role definitions, so `pnpm devtools grant-root` works on a freshly
 -- reset instance without a second command.
 --
 -- `apps/platform/scripts/seed-builtin-roles.ts` remains authoritative -- it is

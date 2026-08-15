@@ -20,12 +20,18 @@ import {
   spinner,
 } from "@clack/prompts";
 import {
-  assertNotProduction,
+  assertMigrated,
   detectLocalInstance,
   PERSONAS,
   type Instance,
 } from "./instance.js";
 import { conformance, listApps, quarantineRoundTrip } from "./doctor.js";
+import {
+  currentRootHolder,
+  grantRoot,
+  listCandidates,
+  transferRoot,
+} from "./grantRoot.js";
 import {
   runStackCommand,
   STACK_COMMANDS,
@@ -53,7 +59,12 @@ import { positionals } from "./args.js";
 import { resolveEnvironment } from "./pick.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
 
-const DOCTOR_COMMANDS = ["doctor", "roundtrip", "catalog"] as const;
+const DOCTOR_COMMANDS = [
+  "doctor",
+  "roundtrip",
+  "catalog",
+  "grant-root",
+] as const;
 type DoctorCommand = (typeof DOCTOR_COMMANDS)[number];
 
 function isStackCommand(value: string): value is StackCommand {
@@ -77,7 +88,8 @@ Commands:
   status     Report the target's health
   catalog    List the report reasons and content types in the database
   doctor     Check an app's moderation integration
-  roundtrip  File a report, quarantine it, and check who can still see it
+  roundtrip  File a report against a profile, quarantine it, and check the freeze
+  grant-root Give yourself every permission on your own database
   oauth      Configure "Sign in with DevDogs" for the project in this directory
   airtable   Scaffold, pull ids from, or verify the officer base
   secrets    One .env, synced to Bitwarden + GitHub, with a drift audit
@@ -124,6 +136,7 @@ Targets:
 
 Options:
   --app <slug>       App to check (doctor); skips the picker
+  --user <email>     Account to grant Root to (grant-root); skips the picker
   --base-url <url>   DevDogs API URL (oauth); skips the prompt
   --help, -h         Show this message`);
 }
@@ -151,12 +164,14 @@ function flagValue(rest: string[], flag: string): string | undefined {
 // ── Connecting ───────────────────────────────────────────────────────────────
 
 /**
- * Finds the local stack and refuses production, explaining either failure.
+ * Finds the local stack and checks it has been migrated.
  *
- * The doctor commands only ever run against a local stack: they sign in as
- * seeded personas and write fixture rows, neither of which exists on a remote
- * project unless somebody seeded one, and both of which would be alarming if
- * they did.
+ * These commands only ever run against a local stack, and that is structural
+ * rather than a rule they follow: `detectLocalInstance` reads `supabase
+ * status`, which describes the Docker stack on this machine and nothing else.
+ * There is no remote project for it to return, which is why the tier check that
+ * used to sit here — reading a `production` flag out of the database — bought
+ * nothing and has been removed along with the table it read.
  */
 async function connect(): Promise<Instance | null> {
   const s = spinner();
@@ -176,10 +191,10 @@ async function connect(): Promise<Instance | null> {
   }
 
   try {
-    const environment = await assertNotProduction(instance);
-    s.stop(`Connected to your ${environment} database at ${instance.apiUrl}`);
+    await assertMigrated(instance);
+    s.stop(`Connected to your database at ${instance.apiUrl}`);
   } catch (err) {
-    s.stop("Refused to connect");
+    s.stop("Connected, but the schema is not there");
     explain("That instance cannot be used here.", errorMessage(err), [
       "Run `pnpm devtools reset` to rebuild your own database from migrations and seeds.",
     ]);
@@ -238,7 +253,7 @@ async function runDoctor(instance: Instance, appSlug?: string): Promise<void> {
         options: apps.map((value) => ({
           value,
           label: value,
-          hint: value === "sandbox" ? "the worked example" : undefined,
+          hint: value === "platform" ? "the worked example" : undefined,
         })),
       }),
     );
@@ -304,7 +319,7 @@ async function runRoundTrip(instance: Instance): Promise<void> {
     const failed = steps.filter((step) => !step.ok);
     if (failed.length === 0) {
       log.success(
-        "Quarantine hides content from other users, and the fixtures were cleaned up.",
+        "Quarantine freezes a reported profile and resets the display name, and the fixtures were cleaned up.",
       );
     } else {
       log.warn(
@@ -318,9 +333,96 @@ async function runRoundTrip(instance: Instance): Promise<void> {
       "Something went wrong before the checks could finish.",
       errorMessage(err),
       [
-        "`pnpm devtools reset` rebuilds the database with the seeded personas and sandbox content.",
+        "`pnpm devtools reset` rebuilds the database with the seeded personas and the open report they act on.",
       ],
     );
+  }
+}
+
+/**
+ * Grants Root, asking who to if it was not told.
+ *
+ * Transferring is a separate confirmation from granting, because they are
+ * different actions wearing the same name: one gives you a console you did not
+ * have, the other takes somebody else's away. `userRoles_root_singleton` means
+ * there is no state where both hold it, so the release cannot be skipped.
+ */
+async function runGrantRoot(
+  instance: Instance,
+  userEmail?: string,
+): Promise<void> {
+  let holder: Awaited<ReturnType<typeof currentRootHolder>>;
+  let candidates: Awaited<ReturnType<typeof listCandidates>>;
+
+  try {
+    [holder, candidates] = await Promise.all([
+      currentRootHolder(instance),
+      listCandidates(instance),
+    ]);
+  } catch (err) {
+    explain("Could not read the current roles.", errorMessage(err));
+    process.exitCode = 1;
+    return;
+  }
+
+  if (candidates.length === 0) {
+    explain("There are no accounts on this database yet.", "", [
+      "Sign in once through the app, then run this again.",
+      `Or use a seeded persona: ${PERSONAS.member}, password \`password\`.`,
+    ]);
+    return;
+  }
+
+  const chosen =
+    userEmail ??
+    unwrap(
+      await select({
+        message: "Which account should hold Root?",
+        options: candidates.map((c) => ({
+          value: c.email,
+          label: c.email,
+          hint: c.userId === holder?.userId ? "holds it now" : undefined,
+        })),
+      }),
+    );
+
+  const target = candidates.find((c) => c.email === chosen);
+
+  if (!target) {
+    explain(`No account on this database has the address ${chosen}.`, "", [
+      "Run without --user to pick from a list.",
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (holder?.userId === target.userId) {
+    log.info(`${target.email} already holds Root.`);
+    return;
+  }
+
+  try {
+    if (holder) {
+      const confirmed = unwrap(
+        await confirm({
+          message: `Root is held by ${holder.email}. Take it away and give it to ${target.email}?`,
+          initialValue: false,
+        }),
+      );
+      if (!confirmed) bail("Left Root where it was.");
+      await transferRoot(instance, holder.userId, target.userId);
+    } else {
+      await grantRoot(instance, target.userId);
+    }
+    log.success(
+      `${target.email} now holds Root, which confers every permission. ` +
+        "Sign out and back in if the console was already open.",
+    );
+  } catch (err) {
+    explain("Could not grant Root.", errorMessage(err), [
+      "Seeds create the Root role definition — try `pnpm devtools reset` first.",
+    ]);
+    process.exitCode = 1;
   }
 }
 
@@ -502,6 +604,11 @@ async function menu(): Promise<void> {
           hint: "file, quarantine, and check who can still see it",
         },
         {
+          value: "grant-root" as const,
+          label: "Give myself the console",
+          hint: "grants Root on your own database",
+        },
+        {
           value: "oauth" as const,
           label: 'Set up "Sign in with DevDogs"',
           hint: "configures the Supabase project in this directory",
@@ -540,6 +647,7 @@ async function menu(): Promise<void> {
 
   if (choice === "catalog") await runCatalog(instance);
   else if (choice === "doctor") await runDoctor(instance);
+  else if (choice === "grant-root") await runGrantRoot(instance);
   else await runRoundTrip(instance);
 }
 
@@ -610,6 +718,8 @@ async function main(): Promise<void> {
     await runCatalog(instance);
   } else if (first === "doctor") {
     await runDoctor(instance, flagValue(rest, "--app"));
+  } else if (first === "grant-root") {
+    await runGrantRoot(instance, flagValue(rest, "--user"));
   } else {
     await runRoundTrip(instance);
   }

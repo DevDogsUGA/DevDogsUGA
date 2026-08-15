@@ -233,7 +233,7 @@ using (
 and not platform.is_suspended((select auth.uid()))
 ```
 
-The conformance check (below) verifies all three, and [the sandbox app](/docs/platform/sandbox-app) is a worked example of all of them.
+The conformance check (below) verifies all three, and [Moderatable Content](/docs/platform/moderatable-content) is a worked example of all of them.
 
 ## Testing it
 
@@ -245,18 +245,19 @@ pnpm devtools
 
 That opens a menu — you do not need to know any command names, and every entry explains what it will do before it does it. `pnpm sb` is the same tool under its older name, and every `pnpm sb <cmd>` in the rest of these docs still works.
 
-| Menu entry                      | What it does                                                    |
-| ------------------------------- | --------------------------------------------------------------- |
-| Start my database               | boots the local Docker stack and writes `.env.generated`        |
-| Reset my database               | replays every migration, then the seeds                         |
-| Apply new migrations            | without erasing anything                                        |
-| Show what can be reported       | the reason vocabulary and every app's content types             |
-| Check an app's moderation setup | `platform.conformance_check()` — what the catalog derived       |
-| Test reporting end to end       | files a report, quarantines it, and checks who can still see it |
+| Menu entry                      | What it does                                               |
+| ------------------------------- | ---------------------------------------------------------- |
+| Start my database               | boots the local Docker stack and writes `.env.generated`   |
+| Reset my database               | replays every migration, then the seeds                    |
+| Apply new migrations            | without erasing anything                                   |
+| Show what can be reported       | the reason vocabulary and every app's content types        |
+| Check an app's moderation setup | `platform.conformance_check()` — what the catalog derived  |
+| Test reporting end to end       | files a report, quarantines it, and checks the freeze held |
+| Give myself the console         | grants Root on your own database                           |
 
-The seeds create three personas — `member@`, `author@` and `moderator@sandbox.test`, password `password` — and the sandbox content they act on.
+The seeds create three personas — `member@`, `author@` and `moderator@devdogs.test`, password `password` — their profiles, and one open report filed against one of them.
 
-Before anything touches a database, the tool reads `platform."instance"` and **refuses any instance that reports itself as production**, so none of this can be aimed at live data.
+None of this can be aimed at live data, and that is structural rather than a check: the tool finds its database by reading `supabase status`, which describes the Docker stack on this machine and nothing else. There is no remote project for it to return.
 
 ### The conformance check
 
@@ -301,6 +302,6 @@ Keeping the effect local is deliberate. Your app has to add a predicate to its r
 
 ## Related
 
-- [The sandbox app](/docs/platform/sandbox-app) — the reference implementation, and the traps integration hides
+- [Moderatable Content](/docs/platform/moderatable-content) — the reference implementation, and the traps integration hides
 - [Database & migrations](/docs/platform/database) — SQL is the source of truth; Drizzle types are generated from it
 - [OAuth setup](/docs/platform/oauth-setup) — how a sibling project gets **Sign in with DevDogs**

@@ -7,7 +7,6 @@ describe("SCHEMAS", () => {
       platform: "platform",
       scheduleBuilder: "schedule_builder",
       studyGroupFinder: "study_group_finder",
-      sandbox: "sandbox",
     });
   });
 

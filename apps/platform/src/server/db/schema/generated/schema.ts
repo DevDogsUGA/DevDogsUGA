@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, boolean, pgEnum, bigint, varchar, text, integer, timestamp, smallint, date, doublePrecision, jsonb, numeric, customType, uniqueIndex, index, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, pgEnum, bigint, varchar, boolean, text, smallint, timestamp, integer, date, doublePrecision, jsonb, numeric, customType, uniqueIndex, index, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by scripts/post-pull.ts after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -11,7 +11,6 @@ export const contentActionInPlatform = platform.enum("contentAction", ["quaranti
 export const filerActionInPlatform = platform.enum("filerAction", ["warn", "suspend", "no_action"])
 export const subjectActionInPlatform = platform.enum("subjectAction", ["warn", "suspend", "ban", "no_action"])
 export const oauthRegistrationTypeInPlatform = platform.enum("oauthRegistrationType", ["development", "production"])
-export const deployEnvInPlatform = platform.enum("deployEnv", ["local", "test", "production"])
 export const reportStatusInPlatform = platform.enum("reportStatus", ["open", "resolved", "dismissed"])
 export const contentVisibilityInPlatform = platform.enum("contentVisibility", ["public", "restricted"])
 export const teamRoleInPlatform = platform.enum("teamRole", ["lead", "member"])
@@ -28,6 +27,7 @@ export const proxyScopeInPlatform = platform.enum("proxyScope", ["publishable", 
 export const envVarVisibilityInPlatform = platform.enum("envVarVisibility", ["shared", "secret"])
 export const checkInMethodInPlatform = platform.enum("checkInMethod", ["discord", "officer", "airtable"])
 export const reportReasonInPlatform = platform.enum("reportReason", ["harassment", "hate_speech", "spam", "sexual_content", "violence", "impersonation", "off_topic", "other"])
+export const quarantineEffectInPlatform = platform.enum("quarantineEffect", ["hide", "freeze"])
 
 
 export const airtableSyncStateInPlatform = platform.table.withRLS("airtableSyncState", {
@@ -202,6 +202,7 @@ export const contentTypesInPlatform = platform.table.withRLS("contentTypes", {
 	urlTemplate: text(),
 	visibility: contentVisibilityInPlatform(),
 	createdAt: timestamp().default(sql`now()`).notNull(),
+	quarantineEffect: quarantineEffectInPlatform(),
 }, (table) => [
 	uniqueIndex("contentTypes_app_type_idx").using("btree", table.appId.asc().nullsLast(), table.contentType.asc().nullsLast()).where(sql`("contentType" IS NOT NULL)`),
 	unique("contentTypes_app_table_key").on(table.appId, table.tableName),
@@ -361,21 +362,6 @@ export const exportAuditInPlatform = platform.table.withRLS("exportAudit", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 ]);
 
-export const instanceInPlatform = platform.table.withRLS("instance", {
-	id: boolean().default(true).primaryKey(),
-	environment: deployEnvInPlatform().default("production").notNull(),
-	defaultMaxTeamSize: smallint().default(4).notNull(),
-}, (table) => [
-
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-
-	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-check("instance_defaultMaxTeamSize_positive", sql`("defaultMaxTeamSize" > 0)`),check("instance_singleton", sql`id`),]);
-
 export const leaderboardProfilesInPlatform = platform.table.withRLS("leaderboardProfiles", {
 	githubId: varchar({ length: 255 }).primaryKey(),
 	githubLogin: varchar({ length: 255 }).notNull(),
@@ -508,6 +494,7 @@ export const profileInPlatform = platform.table.withRLS("profile", {
 	legalFirstName: text(),
 	legalLastName: text(),
 	identitySourcedAt: timestamp({ withTimezone: true }),
+	quarantinedBy: uuid().references(() => reportResolutionsInPlatform.id, { onDelete: "set null" } ),
 }, (table) => [
 	uniqueIndex("profile_ugaEmail_key").using("btree", table.ugaEmail.asc().nullsLast()),
 
@@ -517,7 +504,7 @@ export const profileInPlatform = platform.table.withRLS("profile", {
 
 	pgPolicy("crud_authenticated_policy_select", { for: "select", to: ["authenticated"], using: sql`(( SELECT auth.uid() AS uid) = "userId")` }),
 
-	pgPolicy("crud_authenticated_policy_update", { for: "update", to: ["authenticated"], using: sql`(( SELECT auth.uid() AS uid) = "userId")`, withCheck: sql`(( SELECT auth.uid() AS uid) = "userId")` }),
+	pgPolicy("crud_authenticated_policy_update", { for: "update", to: ["authenticated"], using: sql`((( SELECT auth.uid() AS uid) = "userId") AND ("quarantinedBy" IS NULL) AND (NOT platform.is_suspended(( SELECT auth.uid() AS uid))))`, withCheck: sql`((( SELECT auth.uid() AS uid) = "userId") AND (NOT platform.is_suspended(( SELECT auth.uid() AS uid))))` }),
 check("profile_ugaEmail_lowercase", sql`(("ugaEmail" IS NULL) OR ("ugaEmail" = lower("ugaEmail")))`),]);
 
 export const profileLinksInPlatform = platform.table.withRLS("profileLinks", {
@@ -1029,7 +1016,6 @@ export { contentActionInPlatform as contentAction };
 export { filerActionInPlatform as filerAction };
 export { subjectActionInPlatform as subjectAction };
 export { oauthRegistrationTypeInPlatform as oauthRegistrationType };
-export { deployEnvInPlatform as deployEnv };
 export { reportStatusInPlatform as reportStatus };
 export { contentVisibilityInPlatform as contentVisibility };
 export { teamRoleInPlatform as teamRole };
@@ -1046,6 +1032,7 @@ export { proxyScopeInPlatform as proxyScope };
 export { envVarVisibilityInPlatform as envVarVisibility };
 export { checkInMethodInPlatform as checkInMethod };
 export { reportReasonInPlatform as reportReason };
+export { quarantineEffectInPlatform as quarantineEffect };
 export { airtableSyncStateInPlatform as airtableSyncState };
 export { appsInPlatform as apps };
 export { attendanceInPlatform as attendance };
@@ -1062,7 +1049,6 @@ export { electionsInPlatform as elections };
 export { envAccessLogInPlatform as envAccessLog };
 export { envVarsInPlatform as envVars };
 export { exportAuditInPlatform as exportAudit };
-export { instanceInPlatform as instance };
 export { leaderboardProfilesInPlatform as leaderboardProfiles };
 export { meetingsInPlatform as meetings };
 export { oauthRegistrationsInPlatform as oauthRegistrations };

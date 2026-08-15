@@ -20,10 +20,6 @@ schemas = [
   "storage",
   "platform",
   "schedule_builder",
-  # Fixture content for the contributor tooling and the persona suite. Present
-  # in production too -- the migrations are identical everywhere -- but every
-  # table in it is denied there by a restrictive is_production() policy.
-  "sandbox",
 ]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000

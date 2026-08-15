@@ -194,55 +194,104 @@ export async function appId(slug: string): Promise<string> {
   return data.id as string;
 }
 
-/** Creates a sandbox post authored by `persona`, returning its id. */
-export async function createPost(
-  persona: Persona,
-  title: string,
-  body: string,
-): Promise<string> {
-  const { data, error } = await admin()
-    .schema("sandbox")
-    .from("posts")
-    .insert({ authorUserId: persona.userId, title, body })
-    .select("id")
-    .single();
-  if (error) throw new Error(`createPost failed: ${error.message}`);
-  return data.id as string;
+/**
+ * An account with a profile: the reportable content on this instance.
+ *
+ * Cheaper than `createPersona` on purpose — no sign-in round trip — because
+ * most of these exist only to BE reported, never to act. A test that needs the
+ * subject to do something (edit its own profile, say) wants a persona instead.
+ *
+ * The returned id is both the account and the content reference. That is not a
+ * shortcut to be tidied away later: `platform.profile` is one row per user
+ * keyed on "userId", so addressing the content and addressing its author are
+ * the same question, and `content_types()` derives both columns as "userId".
+ */
+export interface Subject {
+  userId: string;
+  email: string;
 }
 
-/** Deletes sandbox posts by id, ignoring ones already gone. */
-export async function deletePosts(...ids: string[]): Promise<void> {
-  if (ids.length === 0) return;
-  await admin().schema("sandbox").from("posts").delete().in("id", ids);
+export async function createSubject(
+  name: string,
+  fields: {
+    preferredName?: string;
+    bio?: string;
+    legalFirstName?: string;
+    legalLastName?: string;
+  } = {},
+): Promise<Subject> {
+  const email = `${name}-${crypto.randomUUID().slice(0, 8)}@persona.test`;
+  const a = admin();
+
+  const { data, error } = await a.auth.admin.createUser({
+    email,
+    password: PASSWORD,
+    email_confirm: true,
+  });
+  if (error ?? !data.user) {
+    throw new Error(`createSubject(${name}) failed: ${error?.message}`);
+  }
+
+  const { error: profileError } = await a.from("profile").insert({
+    userId: data.user.id,
+    preferredName: fields.preferredName ?? name,
+    bio: fields.bio ?? null,
+    legalFirstName: fields.legalFirstName ?? null,
+    legalLastName: fields.legalLastName ?? null,
+  });
+  if (profileError) {
+    throw new Error(
+      `createSubject(${name}) profile failed: ${profileError.message}`,
+    );
+  }
+
+  return { userId: data.user.id, email };
+}
+
+/** Gives an existing persona a profile, so it can be reported as well as act. */
+export async function giveProfile(
+  persona: Persona,
+  fields: {
+    preferredName?: string;
+    bio?: string;
+    legalFirstName?: string;
+    legalLastName?: string;
+  } = {},
+): Promise<string> {
+  const { error } = await admin()
+    .from("profile")
+    .upsert(
+      {
+        userId: persona.userId,
+        preferredName: fields.preferredName ?? "Persona",
+        bio: fields.bio ?? null,
+        legalFirstName: fields.legalFirstName ?? null,
+        legalLastName: fields.legalLastName ?? null,
+      },
+      { onConflict: "userId" },
+    );
+  if (error) throw new Error(`giveProfile failed: ${error.message}`);
+  return persona.userId;
+}
+
+/**
+ * Deletes subjects, and the profiles that cascade from them.
+ *
+ * Deleting the auth user is what does the work: profile carries
+ * `on delete cascade` to auth.users, so removing the row directly would leave
+ * the account behind and slowly fill the local instance with them.
+ */
+export async function destroySubjects(...subjects: Subject[]): Promise<void> {
+  const a = admin();
+  for (const s of subjects) {
+    await a.auth.admin.deleteUser(s.userId);
+  }
 }
 
 /** Deletes reports (and their cascading corroborations/resolutions) by id. */
 export async function deleteReports(...ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   await admin().from("reports").delete().in("id", ids);
-}
-
-/** Temporarily flips the instance environment, restoring it afterwards. */
-export async function withEnvironment<T>(
-  environment: "local" | "test" | "production",
-  fn: () => Promise<T>,
-): Promise<T> {
-  const a = admin();
-  const { data: before } = await a
-    .from("instance")
-    .select("environment")
-    .eq("id", true)
-    .single();
-
-  await a.from("instance").update({ environment }).eq("id", true);
-  try {
-    return await fn();
-  } finally {
-    await a
-      .from("instance")
-      .update({ environment: before?.environment ?? "local" })
-      .eq("id", true);
-  }
 }
 
 /**
