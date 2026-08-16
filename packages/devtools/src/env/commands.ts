@@ -42,7 +42,7 @@ import {
 import { audit, hasErrors, renderFindings, type GithubEntry } from "./audit.js";
 import { listWorkerSecrets } from "./cloudflare.js";
 import { EnvDocument, type Stamp } from "./document.js";
-import { ignoredFor, neverStore, selectForPush } from "./selection.js";
+import { ignoredFor, minted, neverStore, selectForPush } from "./selection.js";
 import { PROJECT_ROOT } from "../instance.js";
 import { bail, explain, unwrap } from "../ui.js";
 
@@ -455,6 +455,9 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
     cloudflare,
     ignore: ignoredFor(options.environment),
     neverStore: neverStore(),
+    // Keeps the Worker's minted credential from being reported as a Cloudflare
+    // orphan — and so from being pruned — while still flagging a stored copy.
+    minted: minted(),
     // Lets the audit tell "undeclared" apart from drift: the fix for one is a
     // define() in a manifest, for the other a push or a pull.
     declared: new Set(variables().keys()),

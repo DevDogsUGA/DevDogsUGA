@@ -434,6 +434,73 @@ describe("ignored keys", () => {
   });
 });
 
+describe("minted credentials", () => {
+  // `SANDBOX_PROXY_TOKEN` is signed at deploy time and written straight to the
+  // Worker, so it is in no Bitwarden project by design. The failure this guards
+  // is the §3.6 prune path being told the live proxy credential is an orphan.
+  const minted = new Set(["SANDBOX_PROXY_TOKEN"]);
+  const onWorker = new Map([
+    ["production-sandbox", new Set(["SANDBOX_PROXY_TOKEN"])],
+  ]);
+
+  it("POSITIVE CONTROL: an unmarked Worker secret absent from Bitwarden IS an orphan", () => {
+    // Run first and deliberately: it establishes that the input below reaches
+    // the Cloudflare pass and produces a finding. Without it, the next test
+    // would pass just as well if `cloudflare` were being ignored entirely, or
+    // if `run()` had stopped calling audit at all.
+    const findings = run({ cloudflare: onWorker });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.store).toBe("cloudflare");
+    expect(findings[0]!.summary).toMatch(/not in Bitwarden/);
+  });
+
+  it("is NOT an orphan on the Worker — that is where it belongs", () => {
+    // The same world as above, with the key marked. Deleting it is what the
+    // prune path would do next, and recovery is not instant: the token comes
+    // back on the following deploy, with an outage in between.
+    expect(run({ cloudflare: onWorker, minted })).toEqual([]);
+  });
+
+  it("is an error when a copy is sitting in Bitwarden", () => {
+    // A stored copy is a long-lived token nobody rotates, beside one that
+    // rotates every deploy — and the stale copy is the one an operator reaches
+    // for when something breaks.
+    const findings = run({ bws: bws({ SANDBOX_PROXY_TOKEN: "eyJ" }), minted });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe("error");
+    expect(findings[0]!.summary).toMatch(/minted at deploy time/);
+  });
+
+  it("is an error when a copy is a GitHub secret", () => {
+    // What CI needs is the signing key, not a token somebody minted once.
+    const findings = run({ github: [gh("SANDBOX_PROXY_TOKEN")], minted });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.store).toBe("github");
+    expect(findings[0]!.severity).toBe("error");
+  });
+
+  it("never says a minted key must be deleted from the Worker", () => {
+    // The failure from marking it `never-store` instead — the intuitive reach,
+    // since it is indeed never stored. That classification inverts the orphan
+    // warning into an error demanding its removal from the one place it has to
+    // be, which is worse than the bug it was meant to fix.
+    const findings = run({ cloudflare: onWorker, minted });
+    expect(findings.map((f) => f.summary).join(" ")).not.toMatch(/delete/i);
+  });
+
+  it("does not report a minted key as ordinary Bitwarden drift", () => {
+    // Only the minted error fires: the "in Bitwarden, missing from your .env"
+    // and "not in the GitHub environment" passes must stay quiet, or the real
+    // finding is buried under two that suggest pushing would help.
+    const findings = run({
+      bws: bws({ SANDBOX_PROXY_TOKEN: "eyJ" }),
+      route: () => "production",
+      minted,
+    });
+    expect(findings).toHaveLength(1);
+  });
+});
+
 describe("reporting", () => {
   it("puts errors before warnings before info", () => {
     const findings = run({

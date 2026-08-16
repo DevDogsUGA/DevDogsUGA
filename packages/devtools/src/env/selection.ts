@@ -23,6 +23,7 @@
  */
 import {
   applyOnlyKeys,
+  mintedKeys,
   neverSecretKeys,
   neverStoreKeys,
   variables,
@@ -44,14 +45,22 @@ export interface PushSelection {
 // so `BWS_ACCESS_TOKEN` would upload.
 
 /**
- * Non-secrets, plus the apply-only credentials outside production.
+ * Non-secrets, the minted credentials, plus the apply-only ones outside
+ * production.
  *
- * Those two exist to reshape production, so a copy in staging or preflight is a
- * second write-capable token to rotate for no benefit.
+ * The apply-only two exist to reshape production, so a copy in staging or
+ * preflight is a second write-capable token to rotate for no benefit.
+ *
+ * Minted credentials are here because there is nothing to send: the value is
+ * signed at deploy time and its only copy is on the Worker. Skipping rather
+ * than refusing, because "not pushed" is the ordinary state of one of these —
+ * a refusal is for a credential somebody put in the file expecting it to sync,
+ * and nobody has this one to put there.
  */
 export function ignoredFor(environment: BwsEnvironment): Set<string> {
   assertRegistryLoaded();
   const skip = new Set<string>(neverSecretKeys());
+  for (const key of mintedKeys()) skip.add(key);
   if (environment !== "production") {
     for (const key of applyOnlyKeys()) skip.add(key);
   }
@@ -61,6 +70,20 @@ export function ignoredFor(environment: BwsEnvironment): Set<string> {
 export function neverStore(): Set<string> {
   assertRegistryLoaded();
   return new Set<string>(neverStoreKeys());
+}
+
+/**
+ * Signed at deploy time; the deploy target holds the only copy.
+ *
+ * Passed to `audit` separately from `ignoredFor()` even though it is a subset,
+ * because the audit needs the distinction: an ignored key is uninteresting
+ * everywhere, whereas a minted one is CORRECT on Cloudflare (which is what
+ * stops it being reported as an orphan and pruned) and WRONG in Bitwarden or
+ * GitHub.
+ */
+export function minted(): Set<string> {
+  assertRegistryLoaded();
+  return new Set<string>(mintedKeys());
 }
 
 /**

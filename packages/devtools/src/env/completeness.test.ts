@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   applyOnlyKeys,
+  mintedKeys,
   neverStoreKeys,
   storableKeys,
   variables,
@@ -107,6 +108,47 @@ describe("registry completeness", () => {
       "AIRTABLE_APPLY_PAT",
       "SUPABASE_ACCESS_TOKEN",
     ]);
+  });
+
+  it("pins the minted set to exactly the sandbox proxy token", () => {
+    // Pinned rather than derived-and-trusted, for the same reason as the
+    // apply-only list above: `minted` suppresses the Cloudflare orphan
+    // warning, so adding it to a key is adding an exemption from the one check
+    // that notices a Worker secret nobody stores. That should be a reviewed
+    // event with this line in the diff.
+    expect(mintedKeys()).toEqual(["SANDBOX_PROXY_TOKEN"]);
+  });
+
+  it("never lets a minted key become storable", () => {
+    // The mirror of the never-store check above, and it fails in the same
+    // direction: `secrets push` uploading a value for a credential that is
+    // supposed to be signed fresh on every deploy creates precisely the
+    // long-lived copy minting exists to avoid. Structurally true today
+    // (`storableKeys()` excludes `minted`), asserted so a refactor of that
+    // selector cannot quietly reintroduce it.
+    const storable = new Set(storableKeys());
+    for (const key of mintedKeys()) {
+      expect(
+        storable.has(key),
+        `${key} is minted yet appears in storableKeys() — secrets push would ` +
+          "upload a token that is supposed to exist only on the Worker.",
+      ).toBe(false);
+    }
+  });
+
+  it("gives every minted key a real secrecy, not a substitute for one", () => {
+    // `minted` says where the value COMES FROM; `secrecy` still has to say how
+    // sensitive it is. A minted key marked `public` would skip every refusal
+    // in `selectForPush`, and one marked `never-store` would make the audit
+    // demand its deletion from the Worker it lives on.
+    for (const key of mintedKeys()) {
+      for (const entry of variables().get(key) ?? []) {
+        expect(
+          entry.meta.secrecy,
+          `${key} is minted with the wrong secrecy`,
+        ).toBe("secret");
+      }
+    }
   });
 
   it("declares every uncommented key in .env.example", async () => {

@@ -152,11 +152,33 @@ export function resetRegistry(): void {
 // `env.ts` and not to NEVER_SECRET_KEYS was pushed to Bitwarden as a secret,
 // which is a second source of truth for a value that is also committed.
 
-/** Variables `secrets push` may send onward. */
+/**
+ * Variables `secrets push` may send onward.
+ *
+ * `minted` is excluded, and the exclusion is a fail-closed one rather than a
+ * tidiness: a minted credential is signed at deploy time and has no stored
+ * copy, so a value found under that name in somebody's `.env` is a hand-pasted
+ * token that must not be propagated — uploading it would create the long-lived
+ * copy the design exists to avoid.
+ */
 export function storableKeys(): string[] {
   return keysWhere(
-    (e) => e.meta.scope === "environment" && e.meta.secrecy === "secret",
+    (e) =>
+      e.meta.scope === "environment" &&
+      e.meta.secrecy === "secret" &&
+      e.meta.minted !== true,
   );
+}
+
+/**
+ * Variables signed at deploy time, whose only copy lives on the deploy target.
+ *
+ * Consumed by `secrets push` (never uploaded) and by `secrets audit`, where
+ * this set is what stops a Worker-only credential being reported — and then
+ * pruned — as an orphan. See `EnvMeta.minted`.
+ */
+export function mintedKeys(): string[] {
+  return keysWhere((e) => e.meta.minted === true);
 }
 
 /** Variables that must never be stored in Bitwarden or GitHub. */

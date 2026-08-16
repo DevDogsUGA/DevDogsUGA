@@ -8,6 +8,7 @@ export {
   storableKeys,
   applyOnlyKeys,
   localStackKeys,
+  mintedKeys,
   neverSecretKeys,
   neverStoreKeys,
   variables,

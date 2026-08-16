@@ -46,6 +46,7 @@ const SECTION_ORDER = [
   "platform",
   "schedule-builder",
   "study-group-finder",
+  "sandbox",
   "supabase",
   "devtools",
 ] as const;
@@ -54,6 +55,8 @@ const SECTION_LABELS: Record<string, string> = {
   platform: "platform (apps/platform/src/env.ts)",
   "schedule-builder": "schedule-builder (apps/schedule-builder/src/env.ts)",
   "study-group-finder": "study-group-finder (apps/study-group-finder/env.ts)",
+  sandbox:
+    "sandbox — the proxy Worker's bindings and what mints them (apps/sandbox/env.ts)",
   supabase:
     "supabase — read by config.toml and the Supabase CLI (supabase/env.ts)",
   devtools:
@@ -145,6 +148,23 @@ function renderBlock({ entry, sharedWith }: Block): string[] {
       ...comment(
         `(no ${key}= line on purpose — an assignable line here would invite ` +
           "storing what must not be stored)",
+      ),
+    ];
+  }
+
+  // A minted credential gets the same treatment, for a different reason. There
+  // is no value to write: it is signed at deploy time and lives only on the
+  // deploy target. A blank `SANDBOX_PROXY_TOKEN=` line would read as a field
+  // awaiting a paste, and the paste would be a hand-made token that never
+  // rotates — the exact failure minting exists to remove.
+  if (meta.minted) {
+    return [
+      `# ${key}:`,
+      ...lines,
+      ...comment(
+        `(no ${key}= line on purpose — this one is minted at deploy time, so ` +
+          "there is no value to fill in and a hand-pasted one would never " +
+          "rotate)",
       ),
     ];
   }

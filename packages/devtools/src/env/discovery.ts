@@ -24,8 +24,20 @@
  *     declares nothing itself, and importing its `src/env*.ts` internals as a
  *     manifest would be a category error.
  *
- * `apps/sandbox` has no manifest on purpose (it reads Worker bindings), which
- * is why "no env.ts found" is simply not-a-manifest rather than an error.
+ * Most workspace packages declare nothing, so "no env.ts found" is simply
+ * not-a-manifest rather than an error.
+ *
+ * ⚠️ `apps/sandbox` used to be listed here as having no manifest ON PURPOSE,
+ * on the grounds that a Worker reads bindings that arrive as a function
+ * argument rather than `process.env`. That premise is still true and the
+ * conclusion drawn from it was still wrong: a manifest is not only a
+ * description of what an app reads at boot, it is the only thing that routes a
+ * credential to a deployed environment and the only thing that tells
+ * `secrets audit` a Worker secret is supposed to be there. Without one,
+ * `SANDBOX_PROXY_TOKEN` -- which is minted at deploy time and therefore in no
+ * Bitwarden project by design -- was reported as an orphan, i.e. as safe for
+ * the §3.6 prune path to delete. `apps/sandbox/env.ts` exists now, and states
+ * that reasoning at length.
  */
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";

@@ -110,6 +110,34 @@ export type EnvMeta = {
    */
   localStack?: boolean;
   /**
+   * SIGNED at deploy time rather than stored anywhere, so no copy of the value
+   * exists to push, pull, or compare.
+   *
+   * The distinction `secrecy` cannot express. `secrecy` answers "where may this
+   * be stored", and every answer it has — including `never-store` — presumes
+   * there is a value somebody holds. A minted credential has no such value:
+   * `SANDBOX_PROXY_TOKEN` is a JWT the deploy signs from
+   * `SUPABASE_JWT_SIGNING_KEY` seconds before writing it to the Worker, and the
+   * previous one is replaced on every deploy. It is a genuine secret
+   * (`secrecy: "secret"`), it genuinely differs per deployment
+   * (`scope: "environment"`), and it is genuinely absent from `.env`, Bitwarden
+   * and GitHub — none of which is a mistake.
+   *
+   * ⚠️ Marking it is not bookkeeping; two tools fail in opposite directions
+   * without it, and both failures are silent:
+   *
+   *   * `secrets audit` reports every Worker secret absent from Bitwarden as an
+   *     ORPHAN, and the §3.6 prune path deletes orphans. Unmarked, the audit
+   *     would recommend deleting the live proxy credential.
+   *   * classifying it `never-store` instead — the intuitive reach, since it is
+   *     never stored — inverts that into an ERROR saying it must be deleted
+   *     from the Worker, which is the one place it has to be.
+   *
+   * Implies "not storable": `storableKeys()` excludes these, so `secrets push`
+   * cannot upload one even if a value somehow lands in a local `.env`.
+   */
+  minted?: true;
+  /**
    * The literal text `secrets example` and `secrets init` write after the `=`
    * — `"$API_URL"`, `"https://$PROJECT_REF.supabase.co"`,
    * `"http://localhost:3000"`, the committed Discord guild id. Absent means

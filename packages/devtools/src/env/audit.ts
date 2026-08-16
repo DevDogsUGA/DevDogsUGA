@@ -83,6 +83,22 @@ export interface AuditInput {
    */
   neverStore?: ReadonlySet<string>;
   /**
+   * Credentials signed at deploy time, whose only copy is on the deploy target.
+   *
+   * The third category, and it sits between the other two rather than beside
+   * them: unlike `ignore` it is a secret, and unlike `neverStore` there is one
+   * remote store it BELONGS in. `SANDBOX_PROXY_TOKEN` is a JWT the deploy mints
+   * and writes to the Worker, so being on Cloudflare and nowhere else is
+   * exactly right.
+   *
+   * Without this set the Cloudflare pass below reads "on production-sandbox,
+   * not in Bitwarden" and reports the live proxy credential as an orphan —
+   * which the plan doc's §3.6 prune path then offers to delete. Marking it the
+   * other obvious way, as `never-store`, inverts the error into "must NEVER be
+   * a Worker secret" and is just as wrong in the opposite direction.
+   */
+  minted?: ReadonlySet<string>;
+  /**
    * Every key the registry knows. When provided, a local key outside it is
    * reported as UNDECLARED — its own category, not folded into drift, because
    * the fix is different: drift wants a push or a pull, an undeclared key
@@ -96,10 +112,12 @@ export interface AuditInput {
 export function audit(input: AuditInput): Finding[] {
   const ignore = input.ignore ?? new Set<string>();
   const neverStore = input.neverStore ?? new Set<string>();
+  const minted = input.minted ?? new Set<string>();
   const commented = input.localCommented ?? new Set<string>();
   const findings: Finding[] = [];
 
-  const relevant = (key: string) => !ignore.has(key) && !neverStore.has(key);
+  const relevant = (key: string) =>
+    !ignore.has(key) && !neverStore.has(key) && !minted.has(key);
 
   // ── must not be stored anywhere remote ─────────────────────────────────────
   // Checked first and reported as errors. `BWS_ACCESS_TOKEN` in a Bitwarden
@@ -133,6 +151,38 @@ export function audit(input: AuditInput): Finding[] {
         severity: "error",
         store: "cloudflare",
         summary: `must NEVER be a Worker secret — delete it from ${worker}`,
+      });
+    }
+  }
+
+  // ── minted at deploy time ──────────────────────────────────────────────────
+  // Cloudflare is deliberately NOT checked: that is where these belong, and
+  // saying so is the entire point of the category. What IS checked is the two
+  // stores a minted credential must never reach, because a copy in either is a
+  // long-lived token nobody rotates sitting beside one that rotates every
+  // deploy — and the stale copy is the one an operator will reach for when
+  // something breaks.
+  for (const key of minted) {
+    if (input.bws.has(key)) {
+      findings.push({
+        key,
+        severity: "error",
+        store: "local",
+        summary:
+          "is minted at deploy time and must not be stored in Bitwarden — " +
+          "delete it from the project; the deploy signs a fresh one and " +
+          "writes it straight to the Worker",
+      });
+    }
+    for (const copy of input.github.filter((g) => g.name === key)) {
+      findings.push({
+        key,
+        severity: "error",
+        store: "github",
+        summary:
+          `is minted at deploy time and must not be a GitHub secret — delete ` +
+          `it from \`${copy.environment}\`; what CI needs is the signing key, ` +
+          "not a token somebody minted once",
       });
     }
   }

@@ -1,8 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   // Worker naming is `${DEPLOY_ENV}-${APP_NAME}`; see apps/platform/wrangler.jsonc
-  // for why the top level is the development shape and why `vars` is repeated
-  // in full per environment rather than inherited.
+  // for why the top level is the development shape. Note that wrangler does NOT
+  // inherit `vars` into an environment block -- which is why the top-level entry
+  // below reaches `wrangler dev` and nothing else.
   "name": "development-sandbox",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-22",
@@ -15,22 +16,38 @@
   // No route: `wrangler dev` serves locally, and every routing decision reads
   // `proxyHostname` from the database rather than inferring it from the
   // request host.
+  //
+  // The local Supabase stack's PostgREST endpoint, which is what `wrangler dev`
+  // should talk to and the one environment whose value IS the same on every
+  // machine. Deployed environments carry no `vars` block at all -- see below.
   "vars": {
-    // The PLATFORM project's PostgREST endpoint, not a sandbox's. The secret
-    // half is set with `wrangler secret put`.
-    "PLATFORM_REST_URL": "https://REPLACE_ME.supabase.co/rest/v1",
+    "PLATFORM_REST_URL": "http://127.0.0.1:54321/rest/v1",
   },
 
+  // NEITHER binding is committed for a deployed environment, and both absences
+  // are deliberate.
+  //
   // SANDBOX_PROXY_TOKEN is a secret, never a var. It is a JWT carrying
-  // {"role": "sandbox_proxy"}, minted at deploy time by signing with the
-  // platform project's own signing key -- no API call, no dashboard step, so
-  // rotation is free and should happen on every deploy with a 90-day exp.
+  // {"role": "sandbox_proxy"}, minted at deploy time by
+  // `scripts/mint-sandbox-token.mjs` signing with the platform project's own
+  // signing key -- no API call, no dashboard step, so rotation is free and
+  // should happen on every deploy with a 90-day exp.
+  //
+  // PLATFORM_REST_URL used to be committed here as
+  // `https://REPLACE_ME.supabase.co/rest/v1`, identically in all three
+  // environments. That is not a value awaiting a fill-in: one committed string
+  // cannot be right for three projects, so the placeholder was the honest
+  // shape of the idea and it was never going to be edited. It is a registry
+  // entry now (`apps/sandbox/env.ts`), supplied at deploy time as
+  // `--var PLATFORM_REST_URL:$REST_URL` from the environment's own env file.
+  //
+  // ⚠️ Deploying without supplying it leaves the binding UNDEFINED, which
+  // `src/index.ts` answers with a named 503 `proxy_misconfigured`. That is the
+  // improvement: `REPLACE_ME` produced a DNS failure on every request instead,
+  // which reads as an upstream outage rather than as a missing setting.
   "env": {
     "staging": {
       "name": "staging-sandbox",
-      "vars": {
-        "PLATFORM_REST_URL": "https://REPLACE_ME.supabase.co/rest/v1",
-      },
       // A distinct wildcard, because two workers cannot both claim
       // `*-sandbox.devdogsuga.org/*`. Still one label deep, which is the
       // constraint that shaped the production pattern: Universal SSL covers the
@@ -49,9 +66,6 @@
 
     "production": {
       "name": "production-sandbox",
-      "vars": {
-        "PLATFORM_REST_URL": "https://REPLACE_ME.supabase.co/rest/v1",
-      },
       // One route and one wildcard DNS record cover every sandbox environment
       // forever, so creating one writes a database row and does no DNS work at
       // all.
