@@ -153,7 +153,12 @@ export function resetRegistry(): void {
 // which is a second source of truth for a value that is also committed.
 
 /**
- * Variables `secrets push` may send onward.
+ * Variables `secrets push` may send onward as GitHub Actions **secrets**.
+ *
+ * Its public counterpart is `variableKeys()` below: same scope, same minted
+ * exclusion, opposite secrecy — and between them they cover every
+ * environment-scoped key, which is what makes Bitwarden a COMPLETE picture of
+ * an environment rather than the secret half of one.
  *
  * `minted` is excluded, and the exclusion is a fail-closed one rather than a
  * tidiness: a minted credential is signed at deploy time and has no stored
@@ -166,6 +171,53 @@ export function storableKeys(): string[] {
     (e) =>
       e.meta.scope === "environment" &&
       e.meta.secrecy === "secret" &&
+      e.meta.minted !== true,
+  );
+}
+
+/**
+ * Variables `secrets push` may send as GitHub **variables** rather than secrets.
+ *
+ * The mirror of `storableKeys()`, differing in one field — `secrecy: "public"`
+ * instead of `"secret"` — and that one field is the whole routing decision.
+ * Two concrete reasons these are not simply stored as secrets:
+ *
+ *   * GitHub MASKS a secret's value in logs, by substring. `PROJECT_REF` as a
+ *     secret turns the paused-project link
+ *     `https://supabase.com/dashboard/project/<ref>` into `.../***`, which is
+ *     the entire point of that gate — and because the ref is a substring of
+ *     `REST_URL`, `API_URL` and every Supabase hostname, the masking corrupts
+ *     unrelated log lines repo-wide.
+ *   * Variables are READABLE through the API; secrets are write-only. So
+ *     `secrets audit` can compare these by VALUE, which is the limitation the
+ *     security plan's §3.6 otherwise concedes ("a changed value is
+ *     undetectable").
+ *
+ * ⚠️ `scope === "environment"` is doing real work and must not be relaxed to
+ * "every public key". `neverSecretKeys()` is the wider set, and it sweeps in
+ * the committed `scope: "default"` constants (`NEXT_PUBLIC_AVATARS_BUCKET`,
+ * `GITHUB_ORG`) and the `scope: "developer"` ones (`DEV_VPN_HOST`, one
+ * machine's IP). Pushing either gives a value that is already in the repo — or
+ * that is meaningful on exactly one laptop — a second, per-environment home to
+ * disagree with.
+ *
+ * ⚠️ `localStack: true` is deliberately NOT excluded. Five of these carry it
+ * (`API_URL`, `PUBLISHABLE_KEY`, `REST_URL`, `S3_PROTOCOL_REGION`,
+ * `STORAGE_S3_URL`), and it means "supplied by `supabase status` in
+ * DEVELOPMENT, so absent from `.env` by design" — a statement about the local
+ * stack and about `.env.example` rendering, not a claim that the value is
+ * unnecessary once deployed. Staging and production have no local stack to
+ * supply them; withholding them there points a deployed Worker at nothing.
+ *
+ * `minted` is excluded for the same fail-closed reason it is in
+ * `storableKeys()`, and it excludes nothing today (the one minted key is a
+ * secret) — which is exactly why it is written down rather than relied upon.
+ */
+export function variableKeys(): string[] {
+  return keysWhere(
+    (e) =>
+      e.meta.scope === "environment" &&
+      e.meta.secrecy === "public" &&
       e.meta.minted !== true,
   );
 }
@@ -186,7 +238,13 @@ export function neverStoreKeys(): string[] {
   return keysWhere((e) => e.meta.secrecy === "never-store");
 }
 
-/** Variables that are not secrets and must not be pushed as ones. */
+/**
+ * Variables that are not secrets and must not be pushed as ones.
+ *
+ * Wider than `variableKeys()` — it ignores scope — so it is the wrong set to
+ * push FROM. What it is right for is the refusal: nothing here may become a
+ * GitHub Actions secret, whatever its scope.
+ */
 export function neverSecretKeys(): string[] {
   return keysWhere((e) => e.meta.secrecy === "public");
 }

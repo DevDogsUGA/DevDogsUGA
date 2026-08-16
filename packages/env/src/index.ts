@@ -11,6 +11,7 @@ export {
   mintedKeys,
   neverSecretKeys,
   neverStoreKeys,
+  variableKeys,
   variables,
   UndeclaredVariableError,
   type EnvEntry,

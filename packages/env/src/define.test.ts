@@ -15,11 +15,13 @@ import {
   define,
   localStackKeys,
   metaOf,
+  mintedKeys,
   neverSecretKeys,
   neverStoreKeys,
   resetRegistry,
   storableKeys,
   UndeclaredVariableError,
+  variableKeys,
   variables,
 } from "./define.js";
 import {
@@ -199,6 +201,23 @@ describe("derived selectors", () => {
           scope: "developer",
           secrecy: "public",
         }),
+        PROJECT_REF: define(z.string(), {
+          doc: "Public, and different in every environment.",
+          scope: "environment",
+          secrecy: "public",
+        }),
+        API_URL: define(z.string(), {
+          doc: "Public, per-environment, and supplied locally by the stack.",
+          scope: "environment",
+          secrecy: "public",
+          localStack: true,
+        }),
+        SANDBOX_PROXY_TOKEN: define(z.string(), {
+          doc: "Signed at deploy time; the Worker holds the only copy.",
+          scope: "environment",
+          secrecy: "secret",
+          minted: true,
+        }),
       },
     });
   });
@@ -226,13 +245,90 @@ describe("derived selectors", () => {
   });
 
   it("marks what the local stack supplies", () => {
-    expect(localStackKeys()).toEqual(["DB_URL"]);
+    // Both secrecies, because `localStack` is orthogonal to secrecy and the
+    // routing code has to keep treating it that way.
+    expect(localStackKeys()).toEqual(["API_URL", "DB_URL"]);
     expect(localStackKeys()).not.toContain("CRON_SECRET");
   });
 
   it("keeps public values out of the secret store", () => {
     expect(neverSecretKeys()).toContain("GITHUB_ORG");
     expect(neverSecretKeys()).not.toContain("CRON_SECRET");
+  });
+
+  it("sends public per-environment values onward as variables", () => {
+    const variableSet = variableKeys();
+    expect(variableSet).toContain("PROJECT_REF");
+
+    // The four denials, each for a different reason.
+    expect(variableSet).not.toContain("CRON_SECRET"); // a secret
+    expect(variableSet).not.toContain("BWS_ACCESS_TOKEN"); // never-store
+    expect(variableSet).not.toContain("GITHUB_ORG"); // committed, scope default
+    expect(variableSet).not.toContain("DEV_VPN_HOST"); // one contributor's box
+  });
+
+  it("keeps a localStack public value in the variable set", () => {
+    // `localStack` says "supplied by `supabase status` in DEVELOPMENT", which
+    // is a statement about the local stack and about how `.env.example`
+    // renders — not a reason to withhold the value from staging or production,
+    // where there is no local stack to supply it. Excluding these would point
+    // a deployed Worker at nothing, silently.
+    expect(variableKeys()).toContain("API_URL");
+    // The positive control for the assertion above: the set is non-empty and
+    // being computed, so `toContain` is not passing over a bug that made
+    // everything a variable or nothing one.
+    expect(variableKeys()).not.toContain("DB_URL"); // localStack, but a secret
+  });
+
+  it("never lets one key be both storable and a variable", () => {
+    // They differ only in `secrecy`, so an overlap is impossible today. Pinned
+    // because the two consumers disagree about what to do with the same key:
+    // one seals it into a write-only store, the other publishes it in
+    // plaintext, and a key in both sets would go to BOTH.
+    const storable = new Set(storableKeys());
+    for (const key of variableKeys()) {
+      expect(storable.has(key), `${key} is both storable and a variable`).toBe(
+        false,
+      );
+    }
+    // Non-vacuous: quantifying over an empty set would pass just as happily.
+    expect(variableKeys().length).toBeGreaterThan(0);
+  });
+
+  it("never lets a minted key become a variable", () => {
+    // In the real registry the one minted key is also a secret, so `secrecy`
+    // alone would exclude it and the `minted !== true` clause would be
+    // unfalsifiable — a guard no test can turn red is a guard that will be
+    // deleted as redundant. So this declares the case the clause exists for: a
+    // PUBLIC minted value, which `secrecy` would happily wave through.
+    //
+    // Uploading one is not merely untidy. A minted credential is signed at
+    // deploy time and the deploy target holds the only copy, so a value under
+    // that name in somebody's `.env` is hand-pasted — and pushing it creates
+    // the long-lived copy the design exists to avoid, which the next deploy
+    // then silently contradicts.
+    declare({
+      source: "odd-app",
+      server: {
+        PUBLIC_MINTED: define(z.string(), {
+          doc: "Public, per-environment, and signed at deploy time.",
+          scope: "environment",
+          secrecy: "public",
+          minted: true,
+        }),
+      },
+    });
+
+    expect(mintedKeys()).toContain("PUBLIC_MINTED");
+    const variableSet = new Set(variableKeys());
+    for (const key of mintedKeys()) {
+      expect(variableSet.has(key), `${key} is minted yet a variable`).toBe(
+        false,
+      );
+    }
+    // POSITIVE CONTROL: an otherwise identical declaration without `minted`
+    // IS a variable, so the exclusion above is `minted` doing the work.
+    expect(variableSet.has("PROJECT_REF")).toBe(true);
   });
 
   it("treats one app calling a variable secret as enough", () => {

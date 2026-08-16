@@ -24,6 +24,14 @@
  * rotation pushed to Bitwarden and never propagated — without ever comparing
  * values.
  *
+ * ⚠️ These projects hold the PUBLIC per-environment values too, not only the
+ * secrets — `PROJECT_REF`, `BASE_URL`, `PUBLISHABLE_KEY` and the rest go on to
+ * GitHub as *variables* rather than secrets. "Bitwarden is the source of truth"
+ * has to be true of a whole environment for `pull` to rebuild a `.env` an app
+ * can boot from; while it was true of the secret half only, 27 values existed
+ * nowhere but somebody's laptop. Variables ARE readable back, so for those keys
+ * the audit compares values and the paragraph above does not apply.
+ *
  * What it buys: no `bws` binary and no Bitwarden network call in the deploy
  * path, and `${{ secrets.* }}` is masked in workflow logs automatically, which
  * a value pulled at run time is not unless somebody remembers `::add-mask::`.

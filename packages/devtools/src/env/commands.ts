@@ -4,7 +4,7 @@
  * One local `.env`, three remote stores, and a source of truth:
  *
  *   pull   Bitwarden → your .env
- *   push   your .env → Bitwarden → GitHub environment secrets   (both, always)
+ *   push   your .env → Bitwarden → GitHub secrets AND variables (all, always)
  *   audit  compare .env · Bitwarden · GitHub · Cloudflare
  *
  * Three rules shape all of it:
@@ -13,6 +13,13 @@
  *     destructive change is listed in fingerprints and confirmed. `push` sends
  *     to Bitwarden AND GitHub because a value in one and not the other is the
  *     failure this design has.
+ *   * **Bitwarden holds an entire environment, not its secret half.** The
+ *     public per-environment values (`PROJECT_REF`, `BASE_URL`,
+ *     `PUBLISHABLE_KEY`, …) are stored there too and pushed on to GitHub as
+ *     *variables* rather than secrets. Storing them as secrets would mask them
+ *     in every log line they appear in, by substring, and make their values
+ *     unreadable to `audit`; leaving them out of Bitwarden would mean `pull`
+ *     reconstructs a file that cannot boot an app.
  *   * **Nothing is deleted from `.env`.** A key that should go away is
  *     commented out, so the previous value stays recoverable from the file.
  *   * **Values are never printed.** Fingerprints tell a rotation from a paste
@@ -31,7 +38,12 @@ import {
 } from "../bws/client.js";
 import { ENVIRONMENT_SPECS, type BwsEnvironment } from "../bws/environments.js";
 import { fingerprint } from "../fingerprint.js";
-import { listSecrets as listGhSecrets, setSecret } from "../gh/client.js";
+import {
+  listSecrets as listGhSecrets,
+  listVariables as listGhVariables,
+  setSecret,
+  setVariable,
+} from "../gh/client.js";
 import {
   GITHUB_ENVIRONMENT_SPECS,
   accepts,
@@ -39,10 +51,22 @@ import {
   routeTo,
   type GithubEnvironment,
 } from "../gh/environments.js";
-import { audit, hasErrors, renderFindings, type GithubEntry } from "./audit.js";
+import {
+  audit,
+  hasErrors,
+  renderFindings,
+  type GithubEntry,
+  type GithubVariableEntry,
+} from "./audit.js";
 import { listWorkerSecrets } from "./cloudflare.js";
 import { EnvDocument, type Stamp } from "./document.js";
-import { ignoredFor, minted, neverStore, selectForPush } from "./selection.js";
+import {
+  ignoredFor,
+  minted,
+  neverStore,
+  pushableVariables,
+  selectForPush,
+} from "./selection.js";
 import { PROJECT_ROOT } from "../instance.js";
 import { bail, explain, unwrap } from "../ui.js";
 
@@ -228,6 +252,15 @@ export async function runSecretsPull(options: SecretsOptions): Promise<void> {
  * Both, always. Bitwarden alone is the failure this design has: the source of
  * truth moves, the deploy does not, and everything looks healthy until the old
  * credential is revoked.
+ *
+ * ⚠️ Two GitHub stores on the far side, and only one Bitwarden project. The
+ * public per-environment values become GitHub *variables* rather than secrets
+ * (see `gh/client.ts` for why the store matters), but they are stored in
+ * Bitwarden alongside the secrets — because the claim "Bitwarden is the source
+ * of truth" has to be true of a WHOLE environment for `pull` to rebuild a
+ * working `.env`. Splitting them would make GitHub the only home for 27 keys
+ * and the second source of truth for their values, which is the arrangement
+ * this tool exists to remove.
  */
 export async function runSecretsPush(options: SecretsOptions): Promise<void> {
   const spec = ENVIRONMENT_SPECS[options.environment];
@@ -236,16 +269,22 @@ export async function runSecretsPush(options: SecretsOptions): Promise<void> {
   const skip = ignoredFor(options.environment);
 
   const {
-    push: local,
+    push: secrets,
+    variables: publicValues,
     refused,
     unknown,
   } = selectForPush(doc.entries(), options.environment);
   warnRefused(refused);
   warnUnknown(unknown);
 
-  if (local.size === 0) {
+  // What Bitwarden holds: both halves, keyed together. The two are disjoint by
+  // construction (see `selection.ts`), so this loses nothing.
+  const stored = new Map([...secrets, ...publicValues]);
+
+  if (stored.size === 0) {
     explain(`No pushable values in ${path}.`, "", [
-      "Non-secrets and empty values are skipped. Nothing else was found.",
+      "Committed defaults, per-developer values and empty values are skipped.",
+      "Nothing else was found.",
     ]);
     process.exitCode = 1;
     return;
@@ -257,7 +296,7 @@ export async function runSecretsPush(options: SecretsOptions): Promise<void> {
 
   const created: string[] = [];
   const updated: string[] = [];
-  for (const [key, value] of local) {
+  for (const [key, value] of stored) {
     const current = index.get(key);
     if (!current) created.push(key);
     else if (current.value !== value) updated.push(key);
@@ -267,7 +306,7 @@ export async function runSecretsPush(options: SecretsOptions): Promise<void> {
   // an intentional deletion.
   const orphaned = existing
     .map((s) => s.key)
-    .filter((k) => !local.has(k) && !skip.has(k));
+    .filter((k) => !stored.has(k) && !skip.has(k));
 
   if (created.length === 0 && updated.length === 0) {
     log.success(`${spec.project} already matches ${path}.`);
@@ -278,12 +317,17 @@ export async function runSecretsPush(options: SecretsOptions): Promise<void> {
       );
     }
   } else {
+    // Fingerprints for the public values too, not their plaintext. They are
+    // safe to print, but "values are never printed" is a rule worth being able
+    // to state without an exception — and a fingerprint answers the question
+    // anybody is actually asking here, which is whether this is a rotation or
+    // a paste error.
     note(
       [
-        ...created.map((k) => `+ ${k}  (${fingerprint(local.get(k)!)})`),
+        ...created.map((k) => `+ ${k}  (${fingerprint(stored.get(k)!)})`),
         ...updated.map(
           (k) =>
-            `~ ${k}  ${fingerprint(index.get(k)!.value)} → ${fingerprint(local.get(k)!)}`,
+            `~ ${k}  ${fingerprint(index.get(k)!.value)} → ${fingerprint(stored.get(k)!)}`,
         ),
         ...orphaned.map((k) => `? ${k}  only in the project — left alone`),
       ].join("\n"),
@@ -321,23 +365,23 @@ export async function runSecretsPush(options: SecretsOptions): Promise<void> {
     }
 
     for (const key of created) {
-      await createSecret(projectId, key, local.get(key)!, MANAGED);
+      await createSecret(projectId, key, stored.get(key)!, MANAGED);
     }
     for (const key of updated) {
-      await updateSecret(index.get(key)!.id, local.get(key)!, MANAGED);
+      await updateSecret(index.get(key)!.id, stored.get(key)!, MANAGED);
     }
     log.success(
       `${spec.project}: ${created.length} created, ${updated.length} updated.`,
     );
   }
 
-  await pushToGithub(options.environment, local, options.yes);
+  await pushToGithub(options.environment, secrets, publicValues, options.yes);
 
   // Record what went where, in the file itself. Values are untouched -- this
   // rewrites the trailing comment only -- so it needs no confirmation, and it
   // is what makes a stale .env say so rather than looking freshly synced.
   const stamp = stampFor(options.environment, "pushed");
-  for (const [key, value] of local) doc.set(key, value, stamp);
+  for (const [key, value] of stored) doc.set(key, value, stamp);
   await save(path, doc);
 }
 
@@ -352,28 +396,56 @@ const MANAGED = "Managed by `pnpm devtools secrets push`.";
  * one, and confirms each separately — agreeing to update production's ordinary
  * secrets is not agreeing to touch the two write-capable credentials sitting
  * behind the reviewers.
+ *
+ * The two maps stay two maps all the way down to the two `gh` calls. Merging
+ * them and branching at the bottom would put "which store does this go to?" one
+ * boolean away from being wrong, and getting it wrong in the variable direction
+ * publishes a credential's plaintext to everyone who can read the repository's
+ * Actions config.
+ *
+ * Exported ONLY so that dispatch can be tested against a mocked `gh` client.
+ * The two `setSecret`/`setVariable` lines below are the one place in this change
+ * where a swap is silent, irreversible, and invisible to `selection.ts`'s tests.
  */
-async function pushToGithub(
+export async function pushToGithub(
   environment: BwsEnvironment,
-  local: Map<string, string>,
+  secrets: Map<string, string>,
+  publicValues: Map<string, string>,
   yes?: boolean,
 ): Promise<void> {
   const project = ENVIRONMENT_SPECS[environment].project;
 
   for (const target of githubTargets(project)) {
-    const chosen = new Map([...local].filter(([key]) => accepts(target, key)));
-    if (chosen.size === 0) continue;
+    // Routing applies to both stores. It falls out right for `production-apply`
+    // without a special case: its `onlyKeys` is the apply-tier pair, both
+    // secrets, so no variable is ever offered to the reviewer-gated
+    // environment.
+    const chosenSecrets = new Map(
+      [...secrets].filter(([key]) => accepts(target, key)),
+    );
+    const chosenVariables = new Map(
+      [...publicValues].filter(([key]) => accepts(target, key)),
+    );
+    const total = chosenSecrets.size + chosenVariables.size;
+    if (total === 0) continue;
 
-    const existing = await listGhSecrets(target);
-    const known = new Set(existing.map((s) => s.name));
-    const fresh = [...chosen.keys()].filter((k) => !known.has(k));
+    const knownSecrets = new Set(
+      (await listGhSecrets(target)).map((s) => s.name),
+    );
+    const knownVariables = new Set(
+      (await listGhVariables(target)).map((v) => v.name),
+    );
+    const fresh =
+      [...chosenSecrets.keys()].filter((k) => !knownSecrets.has(k)).length +
+      [...chosenVariables.keys()].filter((k) => !knownVariables.has(k)).length;
 
     if (!yes) {
       const ok = unwrap(
         await confirm({
           message:
-            `Sync ${chosen.size} secret(s) to the \`${target}\` GitHub ` +
-            `environment (${fresh.length} new)?`,
+            `Sync ${chosenSecrets.size} secret(s) and ` +
+            `${chosenVariables.size} variable(s) to the \`${target}\` GitHub ` +
+            `environment (${fresh} new)?`,
           // The gated environments hold what a reviewer is meant to see before
           // it can be used, so the default answer there is no.
           initialValue: !GITHUB_ENVIRONMENT_SPECS[target].guarded,
@@ -393,8 +465,15 @@ async function pushToGithub(
     // the same environment is a good way to meet a secondary rate limit --
     // which would leave the set half-applied, the one outcome worse than not
     // having started.
-    for (const [key, value] of chosen) await setSecret(target, key, value);
-    log.success(`Synced ${chosen.size} secret(s) to \`${target}\`.`);
+    for (const [key, value] of chosenSecrets)
+      await setSecret(target, key, value);
+    for (const [key, value] of chosenVariables) {
+      await setVariable(target, key, value);
+    }
+    log.success(
+      `Synced ${chosenSecrets.size} secret(s) and ${chosenVariables.size} ` +
+        `variable(s) to \`${target}\`.`,
+    );
   }
 }
 
@@ -410,16 +489,33 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
   const bwsSecrets = await listBwsSecrets(projectId);
 
   // Every GitHub environment this project feeds, so that a key sitting in the
-  // WRONG one is visible rather than merely absent from the right one.
+  // WRONG one is visible rather than merely absent from the right one. Both
+  // stores are read for each: a key in the wrong STORE is as invisible to a
+  // presence check as one in the wrong environment, and more dangerous.
   const github: GithubEntry[] = [];
+  const githubVariables: GithubVariableEntry[] = [];
   const unreachable: GithubEnvironment[] = [];
   for (const target of githubTargets(spec.project)) {
     try {
-      for (const secret of await listGhSecrets(target)) {
+      // Both reads complete before either is recorded. Half an environment is
+      // worse than none of it: the secrets alone, with the target then marked
+      // unreachable, would leave every variable it holds looking like a GitHub
+      // orphan that somebody should delete.
+      const secrets = await listGhSecrets(target);
+      const variables = await listGhVariables(target);
+      for (const secret of secrets) {
         github.push({
           environment: target,
           name: secret.name,
           updatedAt: secret.updatedAt,
+        });
+      }
+      for (const variable of variables) {
+        githubVariables.push({
+          environment: target,
+          name: variable.name,
+          value: variable.value,
+          updatedAt: variable.updatedAt,
         });
       }
     } catch {
@@ -448,6 +544,11 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
       ]),
     ),
     github,
+    githubVariables,
+    // Which store each key belongs in. Read from the registry rather than
+    // inferred from where a copy turned up — otherwise a misplaced key would
+    // define its own correctness and never be reported.
+    variables: pushableVariables(),
     route: (key) => {
       const target = routeTo(spec.project, key);
       return target && unreachable.includes(target) ? null : target;
@@ -478,11 +579,15 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
     );
   }
 
-  // Said explicitly, because "no drift" reads as a stronger claim than it is.
+  // Said explicitly, because "no drift" reads as a stronger claim than it is —
+  // and it is now a stronger claim for some keys than for others, which is
+  // exactly the sort of difference a summary line quietly loses.
   log.info(
-    "GitHub and Cloudflare secrets are write-only. Values were compared " +
-      "between your .env and Bitwarden only; GitHub was checked for presence, " +
-      "for routing, and for whether its copy predates the Bitwarden revision.",
+    "GitHub *secrets* and Cloudflare secrets are write-only: those were " +
+      "checked for presence, for routing, and for whether GitHub's copy " +
+      "predates the Bitwarden revision — a changed value is undetectable. " +
+      "GitHub *variables* are readable, so the public per-environment keys " +
+      "were compared by VALUE, as your .env and Bitwarden were.",
   );
 
   if (hasErrors(findings)) process.exitCode = 1;

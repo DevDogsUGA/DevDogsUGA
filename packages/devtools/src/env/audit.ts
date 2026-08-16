@@ -4,25 +4,34 @@
  * Each store answers a different question, and only one of them answers it
  * completely:
  *
- *   | Store      | Exposes            | So it can be checked for |
- *   |------------|--------------------|--------------------------|
- *   | local .env | names AND values   | value drift              |
- *   | Bitwarden  | names AND values   | value drift (the truth)  |
- *   | GitHub     | names + updatedAt  | presence, staleness      |
- *   | Cloudflare | names only         | presence, orphans        |
+ *   | Store              | Exposes           | So it can be checked for |
+ *   |--------------------|-------------------|--------------------------|
+ *   | local .env         | names AND values  | value drift              |
+ *   | Bitwarden          | names AND values  | value drift (the truth)  |
+ *   | GitHub *secrets*   | names + updatedAt | presence, staleness      |
+ *   | GitHub *variables* | names AND values  | value drift              |
+ *   | Cloudflare         | names only        | presence, orphans        |
  *
- * That asymmetry is the whole design. Only the local file can be compared to
- * Bitwarden by VALUE, because the two downstream stores are write-only. So a
- * clean audit does not mean "everything matches" — it means "nothing detectable
- * is wrong", and the report says which is which rather than implying the
- * stronger claim.
+ * That asymmetry is the whole design. A GitHub *secret* is write-only, so a
+ * clean audit of one does not mean "the values match" — it means "nothing
+ * detectable is wrong", and the report says which is which rather than implying
+ * the stronger claim.
  *
- * Timestamps are what rescue the GitHub half from being presence-only. Bitwarden
+ * Timestamps are what rescue that row from being presence-only. Bitwarden
  * reports a `revisionDate` per secret and `gh secret list` reports `updatedAt`,
  * so "was GitHub updated after Bitwarden last changed?" IS answerable — and that
  * is the failure this design actually has, a credential rotated in Bitwarden and
  * never propagated, which a name-only check calls healthy right up until the old
  * one is revoked.
+ *
+ * ⚠️ GitHub *variables* are the one downstream store that needs none of that
+ * reasoning: `gh variable list` returns the value, so the public per-environment
+ * keys are compared exactly the way the local file is. Staleness is deliberately
+ * NOT applied to them — a timestamp is a proxy for a comparison that could not
+ * be made, and using the proxy where the real answer is available would report a
+ * variable re-pushed with an identical value as drift. The security plan's §3.6
+ * limitation ("names only… a changed value is undetectable") now holds for the
+ * secret row alone.
  */
 
 export type Severity = "error" | "warning" | "info";
@@ -49,6 +58,14 @@ export interface GithubEntry {
   updatedAt?: string;
 }
 
+/**
+ * A GitHub environment *variable*: the same shape plus the thing that makes
+ * variables worth having, a readable value.
+ */
+export interface GithubVariableEntry extends GithubEntry {
+  value: string;
+}
+
 export interface AuditInput {
   /** Active assignments in the local `.env`. */
   local: Map<string, string>;
@@ -64,6 +81,26 @@ export interface AuditInput {
    * BOTH — which a name-keyed map would quietly collapse to one.
    */
   github: GithubEntry[];
+  /**
+   * Every GitHub environment *variable* found, across the same environments.
+   *
+   * Separate from `github` rather than merged with a discriminator, because
+   * GitHub genuinely allows one name to exist as both a secret and a variable
+   * in one environment and resolves the ambiguity by never telling you — see
+   * `scripts/deploy-write-env.ts`, which refuses that case outright. Two lists
+   * can represent it; one list keyed by name cannot, and would silently pick a
+   * winner.
+   */
+  githubVariables?: GithubVariableEntry[];
+  /**
+   * Keys that belong in the variable store rather than the secret store —
+   * `variableKeys()` from the registry.
+   *
+   * Drives two things at once: which store a key is compared against, and the
+   * pair of misplacement errors. Absent, every key is treated as a secret,
+   * which is the pre-variables behaviour.
+   */
+  variables?: ReadonlySet<string>;
   /**
    * Where a key is supposed to live. `null` means "nowhere in this
    * environment", which is ordinary rather than wrong.
@@ -114,6 +151,8 @@ export function audit(input: AuditInput): Finding[] {
   const neverStore = input.neverStore ?? new Set<string>();
   const minted = input.minted ?? new Set<string>();
   const commented = input.localCommented ?? new Set<string>();
+  const variables = input.variables ?? new Set<string>();
+  const githubVariables = input.githubVariables ?? [];
   const findings: Finding[] = [];
 
   const relevant = (key: string) =>
@@ -187,6 +226,41 @@ export function audit(input: AuditInput): Finding[] {
     }
   }
 
+  // ── in the wrong GitHub store ──────────────────────────────────────────────
+  // Errors, and reported before the drift passes, because both directions are
+  // silent misconfigurations that a presence check calls healthy: the NAME is
+  // in GitHub either way.
+  for (const copy of input.github) {
+    if (!relevant(copy.name) || !variables.has(copy.name)) continue;
+    findings.push({
+      key: copy.name,
+      severity: "error",
+      store: "github",
+      summary:
+        `is public and is a SECRET on \`${copy.environment}\` — delete it and ` +
+        "let push set it as a variable; GitHub masks a secret's value in logs " +
+        "by substring, which redacts the very links and hostnames it appears in",
+    });
+  }
+  for (const copy of githubVariables) {
+    if (!relevant(copy.name) || variables.has(copy.name)) continue;
+    // Only for a key the registry calls a secret. An unrecognised name in the
+    // variable store is an orphan from a rename, reported as one below —
+    // calling it a leaked secret would be a guess, and a loud wrong one. With
+    // no declared set there is no way to tell the two apart, so neither fires.
+    if (input.declared === undefined || !input.declared.has(copy.name))
+      continue;
+    findings.push({
+      key: copy.name,
+      severity: "error",
+      store: "github",
+      summary:
+        `is a secret and is a VARIABLE on \`${copy.environment}\` — its value ` +
+        "is readable by anyone who can see the repository's Actions config, " +
+        "and it is not masked in logs. Delete it there and rotate it",
+    });
+  }
+
   // ── undeclared keys ────────────────────────────────────────────────────────
   // Reported once, here, and then excluded from the drift comparisons below:
   // an undeclared key is invisible to push routing, so "in your .env, not in
@@ -248,13 +322,21 @@ export function audit(input: AuditInput): Finding[] {
   }
 
   // ── Bitwarden vs GitHub ────────────────────────────────────────────────────
+  // One pass over both stores. Which one a key is compared against is decided
+  // by the registry, not by where the key happened to turn up — otherwise a
+  // misplaced copy would define its own correctness and never be reported.
   for (const [key, entry] of input.bws) {
     if (!relevant(key)) continue;
 
     const expected = input.route(key);
     if (expected === null) continue;
 
-    const copies = input.github.filter((g) => g.name === key);
+    const isVariable = variables.has(key);
+    const noun = isVariable ? "variable" : "secret";
+    const pool: readonly GithubEntry[] = isVariable
+      ? githubVariables
+      : input.github;
+    const copies = pool.filter((g) => g.name === key);
     const here = copies.find((g) => g.environment === expected);
 
     // A copy somewhere it does not belong. Listed FIRST because for the
@@ -266,8 +348,8 @@ export function audit(input: AuditInput): Finding[] {
         severity: "error",
         store: "github",
         summary:
-          `also set on \`${stray.environment}\`, which is not where it belongs ` +
-          `(\`${expected}\`) — delete it there`,
+          `also set as a ${noun} on \`${stray.environment}\`, which is not ` +
+          `where it belongs (\`${expected}\`) — delete it there`,
       });
     }
 
@@ -277,9 +359,31 @@ export function audit(input: AuditInput): Finding[] {
         severity: "error",
         store: "github",
         summary:
-          `in Bitwarden, NOT in the \`${expected}\` GitHub environment — ` +
-          "the deploy cannot see it",
+          `in Bitwarden, NOT a ${noun} on the \`${expected}\` GitHub ` +
+          "environment — the deploy cannot see it",
       });
+      continue;
+    }
+
+    // The comparison a secret cannot have. Kept distinct from the missing case
+    // above on purpose: "absent" is fixed by a push, "drifted" means somebody
+    // edited the value in the GitHub UI and the two stores now disagree about
+    // which is real — and the fix has to start by deciding that.
+    if (isVariable) {
+      const mine = githubVariables.find(
+        (g) => g.name === key && g.environment === expected,
+      );
+      if (mine !== undefined && mine.value !== entry.value) {
+        findings.push({
+          key,
+          severity: "error",
+          store: "github",
+          summary:
+            `the \`${expected}\` GitHub variable's VALUE disagrees with ` +
+            "Bitwarden — push to overwrite GitHub, or fix Bitwarden if the " +
+            "edit there was the deliberate one",
+        });
+      }
       continue;
     }
 
@@ -305,6 +409,20 @@ export function audit(input: AuditInput): Finding[] {
         summary:
           `in the \`${copy.environment}\` GitHub environment, not in ` +
           "Bitwarden — an orphan from a rename or a removal",
+      });
+    }
+  }
+
+  for (const copy of githubVariables) {
+    if (!relevant(copy.name)) continue;
+    if (!input.bws.has(copy.name)) {
+      findings.push({
+        key: copy.name,
+        severity: "warning",
+        store: "github",
+        summary:
+          `a variable on the \`${copy.environment}\` GitHub environment, not ` +
+          "in Bitwarden — an orphan from a rename or a removal",
       });
     }
   }

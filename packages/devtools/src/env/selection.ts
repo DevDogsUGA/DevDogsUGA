@@ -7,25 +7,36 @@
  * read it in between — so the rule about what may go is worth stating once, in
  * one place, with tests on it.
  *
- * Three outcomes, and the difference between the last two matters:
+ * Four outcomes, and the difference between the last two matters:
  *
- *   push     a secret for this environment
- *   skipped  not a secret here — a GitHub *variable*, an empty value, or a
- *            credential belonging to a different environment. Uninteresting.
- *   refused  a credential that must not be stored remotely AT ALL. Reported
- *            loudly, because somebody who put it in the file expecting it to
- *            sync has to learn that it did not.
- *   unknown  a key NO manifest declares. Also loud, and also never uploaded:
- *            an undeclared key used to ride along by omission, which meant a
- *            typo'd name uploaded garbage under the wrong key and a stray
- *            local variable uploaded something private. Fail closed — the
- *            registry is the allowlist, not the ignore lists.
+ *   push      a secret for this environment
+ *   variables a PUBLIC per-environment value: Bitwarden, then a GitHub
+ *             *variable* rather than a secret. Its own outcome, not a skip —
+ *             these used to fall into "uninteresting" and so had no remote
+ *             home at all, which meant CI never received them and `pull` on a
+ *             fresh machine could not reconstruct a working environment.
+ *   skipped   nothing here to send: an empty value, a committed or
+ *             developer-scoped constant, a minted credential, or one belonging
+ *             to a different environment. Uninteresting, and not returned.
+ *   refused   a credential that must not be stored remotely AT ALL. Reported
+ *             loudly, because somebody who put it in the file expecting it to
+ *             sync has to learn that it did not.
+ *   unknown   a key NO manifest declares. Also loud, and also never uploaded:
+ *             an undeclared key used to ride along by omission, which meant a
+ *             typo'd name uploaded garbage under the wrong key and a stray
+ *             local variable uploaded something private. Fail closed — the
+ *             registry is the allowlist, not the ignore lists.
+ *
+ * `push` and `variables` are disjoint by construction: `storableKeys()` and
+ * `variableKeys()` differ only in `secrecy`, so no key can be in both, and the
+ * loop below routes to one or the other and never to neither-nor-both.
  */
 import {
   applyOnlyKeys,
   mintedKeys,
   neverSecretKeys,
   neverStoreKeys,
+  variableKeys,
   variables,
 } from "@devdogsuga/env";
 import { type BwsEnvironment } from "../bws/environments.js";
@@ -33,6 +44,12 @@ import { assertRegistryLoaded } from "./discovery.js";
 
 export interface PushSelection {
   push: Map<string, string>;
+  /**
+   * Public per-environment values, bound for Bitwarden and for GitHub
+   * *variables*. Plaintext at both ends — no libsodium sealing, and readable
+   * back through the API, which is what lets `audit` compare them by value.
+   */
+  variables: Map<string, string>;
   refused: string[];
   /** Present in the file, declared by no manifest. Skipped, warned about. */
   unknown: string[];
@@ -45,8 +62,28 @@ export interface PushSelection {
 // so `BWS_ACCESS_TOKEN` would upload.
 
 /**
- * Non-secrets, the minted credentials, plus the apply-only ones outside
- * production.
+ * Public per-environment values: Bitwarden, and then GitHub *variables*.
+ *
+ * Symmetric with `neverStore()` and `minted()` — a set, read at call time,
+ * refusing an empty registry. See `variableKeys()` for why the set is narrower
+ * than "every public key" and why the five `localStack` ones are still in it.
+ */
+export function pushableVariables(): Set<string> {
+  assertRegistryLoaded();
+  return new Set<string>(variableKeys());
+}
+
+/**
+ * Nothing to send: the committed and per-developer non-secrets, the minted
+ * credentials, plus the apply-only ones outside production.
+ *
+ * ⚠️ This is `neverSecretKeys()` MINUS the pushable variables, and the
+ * subtraction is the change that gave 27 public, environment-scoped values a
+ * remote home. They used to land here — "not a secret, therefore uninteresting"
+ * — which conflated two different facts: that a value must not be a GitHub
+ * *secret* (true of all of them) and that it goes nowhere (true only of the
+ * committed and per-developer ones). Every consumer of this set reads it as the
+ * second, so the first no longer belongs in it.
  *
  * The apply-only two exist to reshape production, so a copy in staging or
  * preflight is a second write-capable token to rotate for no benefit.
@@ -59,7 +96,10 @@ export interface PushSelection {
  */
 export function ignoredFor(environment: BwsEnvironment): Set<string> {
   assertRegistryLoaded();
-  const skip = new Set<string>(neverSecretKeys());
+  const pushable = pushableVariables();
+  const skip = new Set<string>(
+    neverSecretKeys().filter((key) => !pushable.has(key)),
+  );
   for (const key of mintedKeys()) skip.add(key);
   if (environment !== "production") {
     for (const key of applyOnlyKeys()) skip.add(key);
@@ -98,9 +138,11 @@ export function selectForPush(
 ): PushSelection {
   const skip = ignoredFor(environment);
   const refuse = neverStore();
+  const pushable = pushableVariables();
   const declared = variables();
 
   const push = new Map<string, string>();
+  const publicValues = new Map<string, string>();
   const refused: string[] = [];
   const unknown: string[] = [];
 
@@ -119,13 +161,28 @@ export function selectForPush(
       unknown.push(key);
       continue;
     }
+    // Checked BEFORE the variable branch, so the exclusions that are about
+    // *this environment* keep winning: an apply-only key outside production,
+    // or a minted one anywhere, is skipped whatever its secrecy. The two sets
+    // are disjoint today, and this ordering is what keeps a future overlap
+    // failing closed rather than open.
     if (skip.has(key)) continue;
     // An empty secret reads as "configured" to every consumer that checks for
-    // presence, which is worse than an absent one.
+    // presence, which is worse than an absent one. Equally true of a variable:
+    // an empty `PROJECT_REF` builds a URL pointing at nothing.
     if (value === "") continue;
+
+    // Public and per-environment: a GitHub *variable*, not a secret. Routed
+    // here rather than dropped, because the value still has to reach CI — and
+    // still belongs in Bitwarden, so that `pull` rebuilds a COMPLETE env file
+    // rather than the secret half of one.
+    if (pushable.has(key)) {
+      publicValues.set(key, value);
+      continue;
+    }
 
     push.set(key, value);
   }
 
-  return { push, refused, unknown };
+  return { push, variables: publicValues, refused, unknown };
 }

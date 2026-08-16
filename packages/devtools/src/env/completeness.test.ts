@@ -6,6 +6,7 @@ import {
   mintedKeys,
   neverStoreKeys,
   storableKeys,
+  variableKeys,
   variables,
 } from "@devdogsuga/env";
 import { PROJECT_ROOT } from "../instance.js";
@@ -187,6 +188,112 @@ describe("registry completeness", () => {
         ).toBe("secret");
       }
     }
+  });
+
+  it("routes every environment-scoped key to exactly one remote store", () => {
+    // The property that makes "Bitwarden is the source of truth" true of a
+    // WHOLE environment rather than its secret half. Before variables existed,
+    // 27 public per-environment keys fell between the two selectors: not
+    // storable, not anything else, and so pushed nowhere — which meant CI
+    // never received them and `pull` on a fresh machine rebuilt a file that
+    // could not boot an app.
+    //
+    // Quantified over the registry, so a new declaration cannot reopen the gap
+    // by being neither.
+    const storable = new Set(storableKeys());
+    const variableSet = new Set(variableKeys());
+    const never = new Set(neverStoreKeys());
+    const minted = new Set(mintedKeys());
+
+    let checked = 0;
+    for (const [key, entries] of variables()) {
+      if (!entries.some((e) => e.meta.scope === "environment")) continue;
+      if (never.has(key) || minted.has(key)) continue;
+      checked += 1;
+      expect(
+        storable.has(key) !== variableSet.has(key),
+        `${key} is environment-scoped but is in ${
+          storable.has(key) ? "BOTH" : "NEITHER"
+        } of storableKeys() and variableKeys(). One store, exactly.`,
+      ).toBe(true);
+    }
+    // Non-vacuous: an empty registry, or a filter that excluded everything,
+    // would pass the loop above without checking anything.
+    expect(checked).toBeGreaterThanOrEqual(40);
+  });
+
+  it("puts nothing committed or per-developer in the variable set", () => {
+    // Deliberately NOT `neverSecretKeys()`, which ignores scope: it would sweep
+    // in `NEXT_PUBLIC_AVATARS_BUCKET` (committed, already in the repo) and
+    // `DEV_VPN_HOST` (one contributor's IP). Pushing either gives a value that
+    // already has a source of truth a second one to disagree with.
+    for (const key of variableKeys()) {
+      for (const entry of variables().get(key) ?? []) {
+        expect(
+          entry.meta.scope,
+          `${key} is in variableKeys() with scope "${entry.meta.scope}"`,
+        ).toBe("environment");
+        expect(entry.meta.secrecy, `${key} is in variableKeys()`).toBe(
+          "public",
+        );
+      }
+    }
+    // The floor, for the same reason as the count above.
+    expect(variableKeys().length).toBeGreaterThanOrEqual(20);
+
+    // And the deny side, named: these are the two the wider selector catches.
+    expect(variableKeys()).not.toContain("NEXT_PUBLIC_AVATARS_BUCKET");
+    expect(variableKeys()).not.toContain("DEV_VPN_HOST");
+  });
+
+  it("keeps the localStack values in the variable set", () => {
+    // ⚠️ `localStack: true` means "supplied by `supabase status` in
+    // DEVELOPMENT, so absent from .env by design". It describes the local
+    // stack and how `.env.example` renders — it is NOT a reason to withhold a
+    // deployed value, and staging and production have no stack to supply one.
+    // Dropping these makes a deploy point at nothing, silently.
+    //
+    // Pinned by name because the mistake is a plausible one-line filter that
+    // reads as tidying up.
+    const variableSet = new Set(variableKeys());
+    for (const key of [
+      "API_URL",
+      "PUBLISHABLE_KEY",
+      "REST_URL",
+      "S3_PROTOCOL_REGION",
+      "STORAGE_S3_URL",
+    ]) {
+      expect(
+        variableSet.has(key),
+        `${key} is a public per-environment value that the local stack also ` +
+          "supplies. It still has to reach staging and production.",
+      ).toBe(true);
+    }
+    // POSITIVE CONTROL: the same metadata on a SECRET still routes to the
+    // secret store, so the assertions above are about scope and secrecy rather
+    // than `localStack` having become a synonym for "variable".
+    expect(variableSet.has("S3_PROTOCOL_ACCESS_KEY_SECRET")).toBe(false);
+    expect(new Set(storableKeys()).has("S3_PROTOCOL_ACCESS_KEY_SECRET")).toBe(
+      true,
+    );
+  });
+
+  it("never lets a never-store key become a variable", () => {
+    // The mirror of the `storableKeys()` check above, and the worse failure of
+    // the two: `secrets push` sending BWS_ACCESS_TOKEN to the SECRET store
+    // would at least be write-only, whereas the variable store publishes its
+    // value to anyone who can read the repository's Actions config.
+    const variableSet = new Set(variableKeys());
+    for (const key of neverStoreKeys()) {
+      expect(
+        variableSet.has(key),
+        `${key} is never-store yet appears in variableKeys() — secrets push ` +
+          "would publish it in plaintext as a GitHub variable.",
+      ).toBe(false);
+    }
+    // Non-vacuous: an empty `neverStoreKeys()` would pass this trivially, and
+    // an empty one is exactly the fail-open state discovery.ts guards against.
+    expect(neverStoreKeys()).toEqual(["AIRTABLE_PAT", "BWS_ACCESS_TOKEN"]);
   });
 
   it("declares every uncommented key in .env.example", async () => {

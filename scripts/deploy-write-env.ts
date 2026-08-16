@@ -310,12 +310,14 @@ if (missing.length > 0) {
       const meta = variables().get(key)![0]!.meta;
       return meta.secrecy === "secret"
         ? `${key}  — a secret: \`pnpm devtools secrets push\` sends it`
-        : `${key}  — not a secret: set it as a GitHub environment VARIABLE`;
+        : `${key}  — not a secret: it belongs in the environment's VARIABLES`;
     }),
     "",
-    "`secrets push` syncs secrets only. The public per-environment values",
-    "(PROJECT_REF, BASE_URL, PUBLISHABLE_KEY, …) are variables somebody sets",
-    "on the environment by hand.",
+    '`secrets push` syncs both stores: `secrecy: "secret"` keys to the',
+    "environment's secrets, the public per-environment ones (PROJECT_REF,",
+    "BASE_URL, PUBLISHABLE_KEY, …) to its variables. A key missing here was",
+    "either never in the pusher's .env or never pushed — run",
+    "`pnpm devtools secrets audit --env <env>` to see which.",
   ]);
 }
 

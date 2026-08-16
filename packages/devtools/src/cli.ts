@@ -105,7 +105,8 @@ Airtable subcommands:
 
 Secrets subcommands (--env is preflight, staging or production):
   secrets pull  --env <env>       Bitwarden -> your .env, in place
-  secrets push  --env <env>       your .env -> Bitwarden -> GitHub
+  secrets push  --env <env>       your .env -> Bitwarden -> GitHub secrets
+                                  and variables
   secrets audit --env <env>       compare .env, Bitwarden, GitHub, Cloudflare
   secrets reset                   blank every value, keeping each commented out
   secrets example [--check]       regenerate .env.example from the manifests
@@ -118,9 +119,13 @@ Secrets subcommands (--env is preflight, staging or production):
   Leave --env off and it asks. Naming it is for scripts, and for anyone who
   would rather not be asked twice.
 
-  Bitwarden is the source of truth; deploy jobs read GitHub Actions secrets,
-  so push sends to both — a value in one and not the other is the failure
-  this design has. Needs a signed-in GitHub CLI.
+  Bitwarden is the source of truth for a WHOLE environment, secret and
+  public alike; deploy jobs read GitHub, so push sends to both — a value in
+  one and not the other is the failure this design has. On GitHub the split
+  matters: secrets go to the secret store, the public per-environment values
+  (PROJECT_REF, BASE_URL, PUBLISHABLE_KEY, ...) to the variable store, where
+  logs do not mask them and audit can compare their values. Needs a
+  signed-in GitHub CLI.
 
   The Secrets Manager access token is looked for in four places, in order:
   --access-token, then BWS_ACCESS_TOKEN, then your Bitwarden Password

@@ -5,6 +5,7 @@ import {
   type AuditInput,
   type BwsEntry,
   type GithubEntry,
+  type GithubVariableEntry,
 } from "./audit.js";
 
 /**
@@ -36,6 +37,16 @@ function gh(
   environment = "staging",
 ): GithubEntry {
   return { name, environment, updatedAt };
+}
+
+/** A GitHub *variable*, which unlike a secret carries its value. */
+function ghVar(
+  name: string,
+  value: string,
+  environment = "staging",
+  updatedAt?: string,
+): GithubVariableEntry {
+  return { name, value, environment, updatedAt };
 }
 
 const base: AuditInput = {
@@ -498,6 +509,207 @@ describe("minted credentials", () => {
       minted,
     });
     expect(findings).toHaveLength(1);
+  });
+});
+
+describe("GitHub variables", () => {
+  // `PROJECT_REF` is public and per-environment, so it lives in the variable
+  // store. The point of that store, for this file, is that `gh variable list`
+  // returns the VALUE — so the §3.6 limitation ("names only… a changed value
+  // is undetectable") does not apply to these keys.
+  const variables = new Set(["PROJECT_REF"]);
+
+  it("POSITIVE CONTROL: a matching variable produces no finding", () => {
+    // Run first and deliberately. Every assertion below is "a finding exists";
+    // this one establishes that the same inputs can also produce silence, so
+    // the others are not passing because everything reports.
+    expect(
+      run({
+        local: new Map([["PROJECT_REF", "abcdefgh"]]),
+        bws: bws({ PROJECT_REF: "abcdefgh" }),
+        githubVariables: [ghVar("PROJECT_REF", "abcdefgh")],
+        variables,
+      }),
+    ).toEqual([]);
+  });
+
+  it("detects a VALUE that drifted — the thing secrets cannot do", () => {
+    // Somebody edited the variable in the GitHub UI. Every name is present,
+    // every timestamp is plausible, and the deploy is configured with a value
+    // nobody stored. A presence check calls this healthy.
+    const findings = run({
+      local: new Map([["PROJECT_REF", "abcdefgh"]]),
+      bws: bws({ PROJECT_REF: "abcdefgh" }),
+      githubVariables: [ghVar("PROJECT_REF", "WRONGREF")],
+      variables,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.store).toBe("github");
+    expect(findings[0]!.severity).toBe("error");
+    expect(findings[0]!.summary).toMatch(/VALUE disagrees with Bitwarden/);
+  });
+
+  it("tells a MISSING variable apart from a drifted one", () => {
+    // Different fixes: one is "push it", the other is "decide which store is
+    // right first". A single message covering both sends half the readers to
+    // the wrong remedy.
+    const missing = run({
+      local: new Map([["PROJECT_REF", "abcdefgh"]]),
+      bws: bws({ PROJECT_REF: "abcdefgh" }),
+      githubVariables: [],
+      variables,
+    });
+    expect(missing).toHaveLength(1);
+    expect(missing[0]!.summary).toMatch(/NOT a variable/);
+    expect(missing[0]!.summary).not.toMatch(/VALUE disagrees/);
+
+    const drifted = run({
+      local: new Map([["PROJECT_REF", "abcdefgh"]]),
+      bws: bws({ PROJECT_REF: "abcdefgh" }),
+      githubVariables: [ghVar("PROJECT_REF", "other")],
+      variables,
+    });
+    expect(drifted[0]!.summary).toMatch(/VALUE disagrees/);
+    expect(drifted[0]!.summary).not.toMatch(/NOT a variable/);
+  });
+
+  it("does not look for a variable in the SECRET store", () => {
+    // The bug this shape prevents: a variable key compared against
+    // `gh secret list`, which never holds it, reporting "the deploy cannot see
+    // it" on every run of a correctly-configured environment.
+    const findings = run({
+      local: new Map([["PROJECT_REF", "abcdefgh"]]),
+      bws: bws({ PROJECT_REF: "abcdefgh" }),
+      github: [],
+      githubVariables: [ghVar("PROJECT_REF", "abcdefgh")],
+      variables,
+    });
+    expect(findings).toEqual([]);
+  });
+
+  it("does not apply staleness to a variable whose value already matches", () => {
+    // A timestamp is a proxy for a comparison that could not be made. Where
+    // the real comparison IS available, the proxy only manufactures noise: a
+    // re-push with an identical value would read as "the deploy is still using
+    // the previous value" while the two values are byte-identical.
+    expect(
+      run({
+        local: new Map([["PROJECT_REF", "abcdefgh"]]),
+        bws: bws({ PROJECT_REF: ["abcdefgh", "2026-08-13T12:00:00Z"] }),
+        githubVariables: [
+          ghVar("PROJECT_REF", "abcdefgh", "staging", "2026-08-01T12:00:00Z"),
+        ],
+        variables,
+      }),
+    ).toEqual([]);
+  });
+
+  it("flags a copy in an environment it does not belong to", () => {
+    const findings = run({
+      bws: bws({ PROJECT_REF: "abcdefgh" }),
+      githubVariables: [
+        ghVar("PROJECT_REF", "abcdefgh", "staging"),
+        ghVar("PROJECT_REF", "abcdefgh", "production"),
+      ],
+      local: new Map([["PROJECT_REF", "abcdefgh"]]),
+      variables,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.summary).toMatch(/not where it belongs/);
+    expect(findings[0]!.summary).toContain("production");
+  });
+
+  it("flags an orphan variable left by a rename", () => {
+    const findings = run({
+      githubVariables: [ghVar("OLD_URL", "https://x")],
+      variables,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe("warning");
+    expect(findings[0]!.summary).toMatch(/orphan/);
+    // Named as a variable, because deleting it means `gh variable delete` and
+    // looking for it under Secrets finds nothing.
+    expect(findings[0]!.summary).toMatch(/variable/);
+  });
+
+  it("still compares its value against the local .env", () => {
+    // Variables are in Bitwarden too, so the local axis is unchanged — that is
+    // the whole reason `pull` can rebuild a working file.
+    const findings = run({
+      local: new Map([["PROJECT_REF", "stale"]]),
+      bws: bws({ PROJECT_REF: "abcdefgh" }),
+      githubVariables: [ghVar("PROJECT_REF", "abcdefgh")],
+      variables,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.store).toBe("local");
+    expect(findings[0]!.summary).toMatch(/disagrees with Bitwarden/);
+  });
+});
+
+describe("a key in the wrong GitHub store", () => {
+  const variables = new Set(["PROJECT_REF"]);
+  const declared = new Set(["PROJECT_REF", "DISCORD_TOKEN"]);
+
+  it("errors on a public key stored as a SECRET", () => {
+    // GitHub masks a secret's value in logs by substring. PROJECT_REF as a
+    // secret redacts `https://supabase.com/dashboard/project/***` — the
+    // paused-project gate's entire output — and every Supabase hostname the
+    // ref appears inside.
+    const findings = run({
+      github: [gh("PROJECT_REF")],
+      variables,
+      declared,
+    });
+    expect(findings.some((f) => f.severity === "error")).toBe(true);
+    expect(findings.map((f) => f.summary).join(" ")).toMatch(
+      /is public and is a SECRET/,
+    );
+  });
+
+  it("errors on a secret stored as a VARIABLE, and says to rotate it", () => {
+    // The irreversible direction. A variable's value is readable through the
+    // API, so this is not "in the wrong place", it is disclosed.
+    const findings = run({
+      bws: bws({ DISCORD_TOKEN: "tok" }),
+      local: new Map([["DISCORD_TOKEN", "tok"]]),
+      github: [gh("DISCORD_TOKEN")],
+      githubVariables: [ghVar("DISCORD_TOKEN", "tok")],
+      variables,
+      declared,
+    });
+    const leak = findings.find((f) =>
+      /is a secret and is a VARIABLE/.test(f.summary),
+    );
+    expect(leak).toBeDefined();
+    expect(leak!.severity).toBe("error");
+    expect(leak!.summary).toMatch(/rotate/);
+  });
+
+  it("does not call an unrecognised variable a leaked secret", () => {
+    // An unknown name in the variable store is an orphan from a rename. Naming
+    // it a disclosed credential would be a guess, and a loud wrong one — the
+    // kind that trains people to skim the category.
+    const findings = run({
+      githubVariables: [ghVar("SOME_OLD_NAME", "x")],
+      variables,
+      declared,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe("warning");
+    expect(findings[0]!.summary).toMatch(/orphan/);
+  });
+
+  it("stays quiet about stores when the registry sets are absent", () => {
+    // Callers without a loaded registry get the pre-variables behaviour rather
+    // than every secret suddenly reading as misplaced.
+    expect(
+      run({
+        local: new Map([["DISCORD_TOKEN", "tok"]]),
+        bws: bws({ DISCORD_TOKEN: "tok" }),
+        github: [gh("DISCORD_TOKEN")],
+      }),
+    ).toEqual([]);
   });
 });
 
