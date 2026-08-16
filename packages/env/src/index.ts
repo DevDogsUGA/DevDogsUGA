@@ -21,6 +21,7 @@ export {
   type EnvTier,
   type Manifest,
 } from "./define.js";
+export { derivationOf, envReferences } from "./derivation.js";
 export {
   DEPLOY_ENVIRONMENTS,
   ENV_TARGETS,

@@ -1,0 +1,416 @@
+/**
+ * What `env init --target <vault target>` is allowed to write.
+ *
+ * The file this renders exists to be FILLED IN AND PUSHED, which makes both of
+ * its failure modes silent ones:
+ *
+ *   * a prefilled value that is wrong for a deployed target — `BASE_URL` as
+ *     `http://localhost:3000`, `GITHUB_APP_PRIVATE_KEY` as a placeholder PEM —
+ *     is non-empty, so `selectForPush()` sends it, and `env audit` then reports
+ *     NO DRIFT because the stored value matches the file it came from. A clean
+ *     audit over a broken production is the worst outcome this system has.
+ *   * a must-fill key shipped COMMENTED — 17 of staging's 45 did, including
+ *     `SUPABASE_DB_PASSWORD` and all four OAuth client secrets — swallows the
+ *     value typed on it, because a commented line is not an assignment.
+ *
+ * ⚠️ EVERYTHING HERE PARSES THE RENDERED TEXT with its own regexes and
+ * recomputes the expected key set from raw `variables()` metadata. Reusing
+ * `keysRoutedTo()` or `ASSIGNMENT` from the module under test would make most
+ * of these tests tautologies — they would agree with the renderer about a
+ * shared mistake, which is the exact shape of the bug they exist to catch.
+ *
+ * The development rendering is pinned here too, and deliberately so: it is the
+ * one this change must NOT touch, and `setup.ts` seeds every contributor's
+ * `.env` from it.
+ */
+import { beforeAll, describe, expect, it } from "vitest";
+import {
+  VAULT_TARGETS,
+  applyOnlyKeys,
+  mintedKeys,
+  neverStoreKeys,
+  variables,
+  type VaultTarget,
+} from "@devdogsuga/env";
+import { loadRegistry } from "./discovery.js";
+import { renderExample, renderInit } from "./example.js";
+
+const DATE = "2026-08-16";
+
+beforeAll(async () => {
+  await loadRegistry();
+});
+
+// ── an independent reading of the rendered file ──────────────────────────────
+
+/** `KEY="value"`, active. Its own regex — see the header. */
+const ACTIVE = /^([A-Z][A-Z0-9_]*)="(.*)"$/;
+/** `# KEY="value"` — the same line, commented out. */
+const COMMENTED = /^#\s?([A-Z][A-Z0-9_]*)="(.*)"$/;
+/** `$NAME` / `${NAME}`, dotenvx's expansion syntax. */
+const REFERENCE = /\$\{([A-Z][A-Z0-9_]*)\}|\$([A-Z][A-Z0-9_]*)/g;
+
+interface Parsed {
+  /** Assignable lines: key → value, in file order. */
+  active: Map<string, string>;
+  /** Keys whose only line is commented out. */
+  commented: Set<string>;
+  /** Section labels, in file order. */
+  sections: string[];
+  /** Section label → how many assignable lines followed it. */
+  assignmentsPerSection: Map<string, number>;
+}
+
+function parse(text: string): Parsed {
+  const active = new Map<string, string>();
+  const commented = new Set<string>();
+  const sections: string[] = [];
+  const assignmentsPerSection = new Map<string, number>();
+  const lines = text.split("\n");
+
+  let section: string | null = null;
+  for (const [index, line] of lines.entries()) {
+    // A section label is the line between two rules.
+    if (
+      line.startsWith("# ---") &&
+      lines[index + 2]?.startsWith("# ---") === true
+    ) {
+      section = lines[index + 1]!.slice(2);
+      sections.push(section);
+      assignmentsPerSection.set(section, 0);
+      continue;
+    }
+
+    const activeMatch = ACTIVE.exec(line);
+    if (activeMatch) {
+      active.set(activeMatch[1]!, activeMatch[2]!);
+      if (section !== null) {
+        assignmentsPerSection.set(
+          section,
+          assignmentsPerSection.get(section)! + 1,
+        );
+      }
+      continue;
+    }
+    const commentedMatch = COMMENTED.exec(line);
+    if (commentedMatch) commented.add(commentedMatch[1]!);
+  }
+
+  return { active, commented, sections, assignmentsPerSection };
+}
+
+/** Everything from the first section rule on — the header dropped. */
+function bodyOf(text: string): string {
+  return text.slice(text.indexOf("\n# ---------"));
+}
+
+function references(value: string): string[] {
+  return [...value.matchAll(REFERENCE)].map((m) => (m[1] ?? m[2])!);
+}
+
+const target = (name: VaultTarget): Parsed => parse(renderInit(name, DATE));
+const development = (): Parsed => parse(renderInit("development", DATE));
+
+/** Every key with a line of any kind — active or commented. */
+function mentioned(file: Parsed): Set<string> {
+  return new Set([...file.active.keys(), ...file.commented]);
+}
+
+// ── an independent reading of the registry ───────────────────────────────────
+
+/**
+ * The keys a push for `target` routes, recomputed from the metadata.
+ *
+ * Deliberately NOT `keysRoutedTo()`: this is the claim that function is
+ * supposed to satisfy, written out from the two rules that decide it —
+ * "`scope: environment`, storable somewhere, not minted" and "apply-tier is
+ * production's alone".
+ */
+function routedByHand(name: VaultTarget): Set<string> {
+  const keys = new Set<string>();
+  for (const [key, entries] of variables()) {
+    const storedSomewhere = entries.some(
+      (e) =>
+        e.meta.scope === "environment" &&
+        (e.meta.secrecy === "secret" || e.meta.secrecy === "public") &&
+        e.meta.minted !== true,
+    );
+    const applyOnly = entries.some((e) => e.meta.tier === "apply");
+    if (storedSomewhere && (name === "production" || !applyOnly)) keys.add(key);
+  }
+  return keys;
+}
+
+/** Keys every one of whose declarations carries `scope`. */
+function scoped(scope: string): string[] {
+  return [...variables().entries()]
+    .filter(([, entries]) => entries.every((e) => e.meta.scope === scope))
+    .map(([key]) => key);
+}
+
+/** Keys some declaration of which asks to ship commented out. */
+function commentedByDeclaration(): string[] {
+  return [...variables().entries()]
+    .filter(([, entries]) => entries.some((e) => e.meta.commented === true))
+    .map(([key]) => key);
+}
+
+/** The `example` a key declares, or `""`. */
+function declaredExample(key: string): string {
+  return variables().get(key)![0]!.meta.example ?? "";
+}
+
+// ── the invariant ────────────────────────────────────────────────────────────
+
+describe.each(VAULT_TARGETS)("%s", (name) => {
+  it("writes nothing but blanks and derivations this file can expand", () => {
+    // THE invariant, and it is mechanical on purpose: no list of keys to keep
+    // up to date, so a variable added tomorrow with a localhost default or a
+    // `<fill-me>` placeholder fails here rather than in production.
+    const { active } = target(name);
+
+    for (const [key, value] of active) {
+      if (value === "") continue;
+
+      const refs = references(value);
+      expect(
+        refs.length,
+        `${key}="${value}" is non-empty and derives from nothing — it is a ` +
+          "development default or a placeholder, and push would send it",
+      ).toBeGreaterThan(0);
+
+      for (const ref of refs) {
+        expect(
+          active.has(ref),
+          `${key} derives from $${ref}, which has no line in this file — ` +
+            "the formula cannot expand, so the literal would be pushed",
+        ).toBe(true);
+      }
+
+      // The hybrid case: a real derivation with fill-me holes punched into it,
+      // like DB_URL's `postgresql://postgres.$PROJECT_REF:<password>@<host>…`.
+      expect(
+        value.replaceAll(REFERENCE, ""),
+        `${key} carries a fill-me marker outside its references`,
+      ).not.toMatch(/[<>]/);
+    }
+  });
+
+  it("keeps the derivations — the file is not simply blanked", () => {
+    // The positive control for the invariant above, which every line passes
+    // vacuously if the renderer empties everything. Losing the derivations
+    // turns a fill-in-the-blanks file into a blank page, and they are the one
+    // kind of value that IS right in a deployed environment.
+    const { active } = target(name);
+    const derived = [...active].filter(([, value]) => value !== "");
+
+    expect(derived.length).toBeGreaterThanOrEqual(8);
+    expect(active.get("API_URL")).toBe("https://$PROJECT_REF.supabase.co");
+    expect(active.get("NEXT_PUBLIC_SUPABASE_URL")).toBe("$API_URL");
+    expect(active.get("BASE_URL_CALLBACK")).toBe("$BASE_URL/auth/callback");
+  });
+
+  it("drops the values that were wrong for a deployed target", () => {
+    // The named regressions from the bug report, asserted as present-and-empty
+    // rather than absent: the key still needs its line, it is the VALUE that
+    // had to go.
+    const { active } = target(name);
+    for (const key of [
+      "BASE_URL",
+      "SCHEDULE_BUILDER_URL",
+      "GITHUB_APP_ID",
+      "GITHUB_APP_INSTALLATION_ID",
+      "GITHUB_APP_PRIVATE_KEY",
+      "DB_URL",
+      "GOOGLE_CLIENT_ID",
+    ]) {
+      expect(active.get(key), `${key} should ship blank`).toBe("");
+      // …and each of these really does declare a value, so the assertion above
+      // is about the renderer dropping it rather than there being none.
+      expect(declaredExample(key), `${key} declares an example`).not.toBe("");
+    }
+  });
+
+  it("never invents a value", () => {
+    // Whatever survives is the declared `example` verbatim. Rules out a
+    // renderer that "helpfully" rewrites localhost into something else.
+    const { active } = target(name);
+    for (const [key, value] of active) {
+      if (value !== "") expect(value).toBe(declaredExample(key));
+    }
+  });
+
+  it("ships every key it carries uncommented", () => {
+    // The whole file is a form to fill in. A commented line is not an
+    // assignment — `selectForPush` never sees one — so a value typed on it is
+    // silently dropped by the push this file exists to feed.
+    const file = target(name);
+    expect([...file.commented]).toEqual([]);
+    expect(file.active.size).toBeGreaterThan(0);
+  });
+
+  it("carries exactly the keys a push for it routes", () => {
+    const file = target(name);
+    const expected = routedByHand(name);
+
+    expect(expected.size).toBeGreaterThan(0);
+    expect([...file.active.keys()].sort()).toEqual([...expected].sort());
+  });
+
+  it("leaves out the committed and per-developer values", () => {
+    const file = mentioned(target(name));
+    const committed = scoped("default");
+    const developer = scoped("developer");
+
+    // Positive controls: both sets are real, so the loops below quantify over
+    // something. This suite has been bitten by an assertion over an empty set.
+    expect(committed.length).toBeGreaterThan(0);
+    expect(developer.length).toBeGreaterThan(0);
+
+    for (const key of [...committed, ...developer]) {
+      expect(
+        file.has(key),
+        `${key} is scope default/developer and has no meaning in ${name}`,
+      ).toBe(false);
+    }
+  });
+
+  it("leaves out the minted and never-store credentials", () => {
+    const file = mentioned(target(name));
+
+    expect(mintedKeys().length).toBeGreaterThan(0);
+    expect(neverStoreKeys().length).toBeGreaterThan(0);
+
+    for (const key of [...mintedKeys(), ...neverStoreKeys()]) {
+      expect(file.has(key), `${key} must have no assignable line`).toBe(false);
+    }
+  });
+
+  it("uncomments the keys the registry asks to comment out", () => {
+    // The `commented: true` decision, asserted rather than described. It
+    // encodes "unset and empty are different states" — true of the Supabase
+    // CLI reading `.env`, and irrelevant to push, which skips an empty value
+    // and never reads a commented line at all. In a file that exists to be
+    // pushed, the flag would only hide the must-fill keys.
+    const { active } = target(name);
+    const routed = commentedByDeclaration().filter((key) =>
+      routedByHand(name).has(key),
+    );
+
+    expect(routed.length).toBeGreaterThanOrEqual(10);
+    expect(routed).toContain("SUPABASE_DB_PASSWORD");
+    for (const key of routed) {
+      expect(active.has(key), `${key} must be assignable in ${name}`).toBe(
+        true,
+      );
+    }
+  });
+
+  it("prints no section heading over an empty section", () => {
+    // Every section survives the filter today, so this is a guard rather than
+    // a caught bug: a heading over nothing claims "this app needs nothing
+    // here", which is a different and false statement.
+    const file = target(name);
+    expect(file.sections.length).toBeGreaterThan(0);
+    for (const section of file.sections) {
+      expect(file.assignmentsPerSection.get(section), section).toBeGreaterThan(
+        0,
+      );
+    }
+  });
+});
+
+describe("across the targets", () => {
+  it("gives production the apply-tier credentials and staging none", () => {
+    const apply = applyOnlyKeys();
+    // Not a hardcoded pair: the point is that the tier routes, not which two
+    // keys carry it today.
+    expect(apply.length).toBeGreaterThan(0);
+
+    const staging = mentioned(target("staging"));
+    const preflight = mentioned(target("preflight"));
+    const production = mentioned(target("production"));
+
+    for (const key of apply) {
+      expect(staging.has(key), `${key} in .env.staging`).toBe(false);
+      expect(preflight.has(key), `${key} in .env.preflight`).toBe(false);
+      expect(production.has(key), `${key} in .env.production`).toBe(true);
+    }
+  });
+
+  it("stops rendering all three targets byte-identically", () => {
+    // The shape of the original bug: three files that differed only in their
+    // header, so whatever was wrong for one was wrong for all of them.
+    const staging = renderInit("staging", DATE);
+    const production = renderInit("production", DATE);
+    expect(staging).not.toBe(production);
+
+    // And the difference is in the BODY, not just the header line: the three
+    // used to differ by exactly two lines of prose.
+    expect(bodyOf(staging)).not.toBe(bodyOf(production));
+  });
+});
+
+// ── the path this change must not touch ──────────────────────────────────────
+
+describe("development", () => {
+  it("renders the same body as .env.example", () => {
+    // The tightest pin available: `.env.example` is byte-compared in CI
+    // (`pnpm env:example:check`), so tying the development file to it means
+    // any drift in either shows up in one of the two checks.
+    expect(bodyOf(renderInit("development", DATE))).toBe(
+      bodyOf(renderExample()),
+    );
+  });
+
+  it("keeps the development defaults, which are correct there", () => {
+    const { active } = development();
+    expect(active.get("BASE_URL")).toBe("http://localhost:3000");
+    expect(active.get("SCHEDULE_BUILDER_URL")).toBe("http://localhost:3001");
+    expect(active.get("GITHUB_APP_ID")).toBe("000000");
+  });
+
+  it("keeps the commented keys commented", () => {
+    // The other half of the `commented: true` decision: the flag still means
+    // what it says in the one file the Supabase CLI reads, where an empty
+    // value for an enabled OAuth provider is a `ProjectConfigParseError` and
+    // nothing pushes the file anywhere.
+    const file = development();
+    const declared = commentedByDeclaration();
+
+    expect(declared.length).toBeGreaterThan(0);
+    for (const key of declared) {
+      expect(file.commented.has(key), `${key} should stay commented`).toBe(
+        true,
+      );
+      expect(file.active.has(key), `${key} should not be assignable`).toBe(
+        false,
+      );
+    }
+  });
+
+  it("keeps every declared key, including the ones no target carries", () => {
+    const file = mentioned(development());
+    // The never-store and minted keys are excluded because they get
+    // documentation and NO assignable line anywhere — asserted separately
+    // below. `AIRTABLE_PAT` is both `scope: developer` and never-store, so it
+    // would otherwise be expected in two contradictory places.
+    const withoutLines = new Set([...mintedKeys(), ...neverStoreKeys()]);
+    for (const key of [
+      ...scoped("default"),
+      ...scoped("developer"),
+      ...applyOnlyKeys(),
+    ].filter((key) => !withoutLines.has(key))) {
+      expect(file.has(key), `${key} belongs in the development file`).toBe(
+        true,
+      );
+    }
+    // The two kinds of key that get documentation and no assignable line at
+    // all keep that treatment — asserted so "it is in the file somewhere" is
+    // not mistaken for "it has a line to paste into".
+    for (const key of [...mintedKeys(), ...neverStoreKeys()]) {
+      expect(file.has(key), `${key} must have no assignable line`).toBe(false);
+      expect(renderInit("development", DATE)).toContain(`# ${key}:`);
+    }
+  });
+});

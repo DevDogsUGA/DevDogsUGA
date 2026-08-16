@@ -76,6 +76,7 @@ import { writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  derivationOf,
   fileFor,
   neverStoreKeys,
   resolveEnvironment,
@@ -143,20 +144,22 @@ function readContext(name: string): Record<string, string> {
 /**
  * The value the registry itself supplies, or `null` when it supplies none.
  *
- * `secrecy: "public"` is the gate, and it is doing real work rather than being
- * a tidy precondition: `DB_URL`'s example is
- * `postgresql://postgres.$PROJECT_REF:<password>@<host>:5432/postgres`, which
- * contains a `$` and would otherwise read as a derivation. A secret's example
- * is never a value; it is a shape.
+ * The derivation half is `derivationOf()` in `@devdogsuga/env` rather than a
+ * test written here, because `env init --target` has to make the identical
+ * call: the file a person fills in by hand and the file this script composes
+ * on a runner are the same file, and a second opinion about which `example`
+ * values are real would make them differ. See that module for what each of its
+ * gates is closing — chiefly `DB_URL`, whose example is a genuine
+ * `$PROJECT_REF` derivation with `<password>` and `<host>` punched into it.
  */
 function fromRegistry(meta: EnvEntry["meta"]): Resolved | null {
-  if (meta.secrecy !== "public") return null;
+  const derivation = derivationOf(meta);
+  if (derivation !== null) return { value: derivation, from: "derived" };
 
   const example = meta.example;
   if (example === undefined || example === "") return null;
 
-  if (example.includes("$")) return { value: example, from: "derived" };
-  return meta.scope === "default"
+  return meta.scope === "default" && meta.secrecy === "public"
     ? { value: example, from: "committed" }
     : null;
 }

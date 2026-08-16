@@ -134,6 +134,12 @@ from it:
   staging area for pushing credentials; DEPLOY_ENV=preflight is refused, so
   nothing boots from it.
 
+  init writes what the target actually needs. The development file gets every
+  declared key with its development defaults; a vault target's gets only the
+  keys a push for it routes, uncommented and blank apart from the $VAR
+  derivations — a development default or a placeholder is non-empty, so
+  prefilling one would push it to that environment.
+
   Leave --target off and it asks. Naming it is for scripts, and for anyone
   who would rather not be asked twice.
 
@@ -609,7 +615,9 @@ async function runEnvCommand(rest: string[]): Promise<void> {
   if (sub === "init") {
     // Every target, including `development` and `preflight`: init maps target
     // → file and nothing else, and every target has a file. It is the one
-    // subcommand here that needs no Bitwarden project.
+    // subcommand here that needs no Bitwarden project — though WHAT it writes
+    // now depends on the target: see `example.ts`'s header for why a vault
+    // target's file is not the development one under a different name.
     const given = flagValue(rest, "--target") ?? "development";
     if (!isEnvTarget(given)) {
       explain(`"${given}" is not a target init can create a file for.`, "", [

@@ -15,13 +15,44 @@
  * job that runs `--check` is deliberately credential-free, and a generator
  * that needed a secret to describe the secrets would not be allowed there.
  *
- * `env init` is the same renderer pointed at a real env file, minus the
- * generated-file header. It takes any `--target` and writes THAT target's file
- * — `.env`, `.env.preflight`, `.env.staging` or `.env.production` — from the
- * one target table, which is the same table `pull`, `push` and `audit` now
- * default their file from. When `init` mapped target → file and `push` did
- * not, `init --env staging` created `.env.staging` and `push --env staging`
- * uploaded `.env`.
+ * `env init` is the same renderer pointed at a real env file. It takes any
+ * `--target` and writes THAT target's file — `.env`, `.env.preflight`,
+ * `.env.staging` or `.env.production` — from the one target table, which is
+ * the same table `pull`, `push` and `audit` now default their file from. When
+ * `init` mapped target → file and `push` did not, `init --env staging` created
+ * `.env.staging` and `push --env staging` uploaded `.env`.
+ *
+ * ⚠️ A VAULT TARGET'S FILE IS NOT THE DEVELOPMENT ONE WITH A DIFFERENT NAME,
+ * and rendering it as though it were produced a file that was worse than
+ * useless: fill in its blanks, push it, and localhost URLs and a placeholder
+ * GitHub App private key went to production — after which `env audit` reported
+ * NO DRIFT, because the stored values matched the file they came from. Two
+ * differences, both mechanical:
+ *
+ *   * **Which keys.** `keysRoutedTo()` — what a push for that target would
+ *     actually carry somewhere. Not the committed `scope: "default"`
+ *     constants, not one contributor's `scope: "developer"` values, and not
+ *     the apply-tier credentials outside production, all three of which used
+ *     to ship in all three files because all three files were byte-identical
+ *     but for the header.
+ *   * **Which values.** Blank, unless `derivationOf()` says the `example` is a
+ *     derivation AND every variable it expands from is in the same file. A
+ *     development default and a placeholder are both non-empty, and every
+ *     consumer downstream skips only EMPTY values.
+ *
+ * Nothing is commented out in one either, `commented: true` included. That
+ * flag encodes a real distinction — an EMPTY value for an enabled OAuth
+ * provider makes the Supabase CLI fail with `ProjectConfigParseError`, so
+ * "unset" and "empty" are genuinely different states — but not one this file
+ * can act on. `push` skips an empty value and never sees a commented line at
+ * all, so the two states are the same to it, while a value typed on a
+ * commented line is silently NOT pushed. In a file whose entire purpose is to
+ * be filled in and pushed, that turns the flag from a safeguard into a trap:
+ * `SUPABASE_DB_PASSWORD`, `SUPABASE_JWT_SIGNING_KEY`, `CLOUDFLARE_API_TOKEN`
+ * and all four OAuth client secrets shipped commented, i.e. the must-fill keys
+ * were the ones that could not be filled. They ship uncommented here; the flag
+ * still governs `.env.example` and the development `.env`, where the CLI reads
+ * the file and nothing pushes it.
  *
  * It REFUSES to touch an existing file, with no `--force` and no prompt: every
  * other write in this toolchain comments out rather than deletes and confirms
@@ -33,12 +64,18 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { log, note } from "@clack/prompts";
 import {
+  derivationOf,
+  envReferences,
   fileFor,
+  isVaultTarget,
   variables,
   type EnvTarget,
   type EnvEntry,
+  type EnvMeta,
+  type VaultTarget,
 } from "@devdogsuga/env";
 import { assertRegistryLoaded } from "./discovery.js";
+import { keysRoutedTo } from "./selection.js";
 import { PROJECT_ROOT } from "../instance.js";
 import { explain } from "../ui.js";
 
@@ -132,11 +169,40 @@ function sections(): { name: string; blocks: Block[] }[] {
     .map(([name, blocks]) => ({ name, blocks }));
 }
 
-function renderBlock({ entry, sharedWith }: Block): string[] {
+/**
+ * The value a vault target's file carries for a key: a derivation, or nothing.
+ *
+ * `routed` is the rest of the file, and passing it is the whole check. A
+ * formula is only a value if the file can expand it — `$BASE_URL/auth/callback`
+ * with no `BASE_URL` line above it is not "structure worth keeping", it is a
+ * literal dollar sign about to be pushed to Bitwarden, stored, synced to
+ * GitHub, and written into a deployed environment verbatim.
+ */
+function derivedValue(meta: EnvMeta, routed: ReadonlySet<string>): string {
+  const derivation = derivationOf(meta);
+  if (derivation === null) return "";
+  return envReferences(derivation).every((ref) => routed.has(ref))
+    ? derivation
+    : "";
+}
+
+/**
+ * `routed` is absent for `.env.example` and the development `.env` — the two
+ * renderings that want every declared key, with its `example` as written —
+ * and present for a vault target, where it is both the filter and the set a
+ * derivation's references have to resolve within.
+ */
+function renderBlock(
+  { entry, sharedWith }: Block,
+  routed?: ReadonlySet<string>,
+): string[] {
   const { key, meta } = entry;
   const lines = comment(meta.doc);
 
-  if (meta.localStack) {
+  // Development-only, and actively misleading in a deployed file: staging has
+  // no local stack to supply anything, which is why the five keys carrying
+  // this flag are still in `variableKeys()` and still land here.
+  if (meta.localStack && routed === undefined) {
     lines.push(
       "# (the running local Supabase stack supplies this via .env.generated)",
     );
@@ -176,6 +242,14 @@ function renderBlock({ entry, sharedWith }: Block): string[] {
     ];
   }
 
+  // A vault target's file: a derivation or a blank, always assignable. See the
+  // module header for why `commented` stops applying here and why every other
+  // `example` is dropped rather than carried across.
+  if (routed !== undefined) {
+    lines.push(`${key}="${derivedValue(meta, routed)}"`);
+    return lines;
+  }
+
   const value = `${key}="${meta.example ?? ""}"`;
   // `developer` keys are always commented: they are one contributor's own
   // values, and an uncommented empty line reads as a blank everybody fills in.
@@ -184,12 +258,25 @@ function renderBlock({ entry, sharedWith }: Block): string[] {
   return lines;
 }
 
-function renderBody(): string[] {
+/**
+ * `routed` absent renders every declared key; present renders that set only.
+ *
+ * A section whose keys are all filtered out is dropped with them. A heading
+ * over nothing reads as "this app needs nothing here", which is a different
+ * and false claim.
+ */
+function renderBody(routed?: ReadonlySet<string>): string[] {
   const lines: string[] = [];
   for (const { name, blocks } of sections()) {
+    const included =
+      routed === undefined
+        ? blocks
+        : blocks.filter(({ entry }) => routed.has(entry.key));
+    if (included.length === 0) continue;
+
     lines.push("", RULE, `# ${SECTION_LABELS[name] ?? name}`, RULE);
-    for (const block of blocks) {
-      lines.push("", ...renderBlock(block));
+    for (const block of included) {
+      lines.push("", ...renderBlock(block, routed));
     }
   }
   return lines;
@@ -226,23 +313,94 @@ export function renderExample(): string {
   return [...header, ...renderBody(), ""].join("\n");
 }
 
-/** A fresh env file for `env init` — same body, working-file header. */
+/** The prose above a vault target's blanks, explaining why they are blank. */
+function targetHeader(target: VaultTarget, count: number): string[] {
+  return [
+    "#",
+    ...comment(
+      `The ${count} keys a \`pnpm devtools env push --target ${target}\` ` +
+        "routes, and only those. The committed defaults and the " +
+        "per-developer values go nowhere, and a minted credential is signed " +
+        "at deploy time rather than stored, so none of the three has a line " +
+        "here to fill in.",
+    ),
+    "#",
+    ...comment(
+      target === "production"
+        ? "The apply-tier credentials ARE here — SUPABASE_ACCESS_TOKEN and " +
+            "AIRTABLE_APPLY_PAT reach the production-apply GitHub " +
+            "environment, and no other target carries them."
+        : "The apply-tier credentials are NOT here. They exist to reshape " +
+            `production, so a copy in ${target} would be a second ` +
+            "write-capable token to rotate for no benefit — and `env push` " +
+            "skips them outside production anyway.",
+    ),
+    "#",
+    ...comment(
+      "Fill the values in, or run " +
+        `\`pnpm devtools env pull --target ${target}\` to fetch what ` +
+        "Bitwarden already holds. Nothing is commented out: push reads " +
+        "assignments, and a commented line is not one — a value typed on it " +
+        "would be silently skipped.",
+    ),
+    "#",
+    ...comment(
+      "The blanks are blank ON PURPOSE. A key's `example` metadata is a " +
+        "development default (`http://localhost:3000`) or an .env.example " +
+        "placeholder (`000000`, a fake private key), and every consumer " +
+        "downstream skips only EMPTY values — so a prefilled one would push " +
+        "cleanly and then be reported as no drift, because the stored value " +
+        "would match this file. The `$VAR` lines that DID survive are " +
+        "derivations: how the value is built, from another line in this same " +
+        "file. Leave them alone unless the target genuinely differs.",
+    ),
+    ...(target === "preflight"
+      ? [
+          "#",
+          ...comment(
+            "⚠️ PREFLIGHT IS WIDER HERE THAN IT SHOULD BE. The project holds " +
+              "read-only credentials by construction — a Postgres role that " +
+              "sees only the migrations table, an Airtable PAT with " +
+              "schema:read — but no declaration says which keys belong to " +
+              "which target, so this file lists everything a preflight push " +
+              "would route. Delete the lines that do not belong before " +
+              "filling it in; a key left blank is skipped, not pushed.",
+          ),
+        ]
+      : []),
+  ];
+}
+
+/**
+ * A fresh env file for `env init`.
+ *
+ * Two renderings, not one with a different first line — see the module header.
+ * `development` wants every declared key with its `example` as written, which
+ * is also what `.env.example` wants; a vault target wants what a push for that
+ * target routes, blank unless the registry can derive it.
+ */
 export function renderInit(target: EnvTarget, date: string): string {
   const file = fileFor(target);
-  const header = [
-    `# ${file} (${target}) — created by \`pnpm devtools env init\` on ${date}.`,
-    ...(target === "development"
-      ? [
-          "# Fill in the values below. The local Supabase stack supplies the whole",
-          "# connection block: `pnpm devtools link` starts it and writes",
-          "# .env.generated, which overlays this file while the stack is running.",
-        ]
-      : [
-          `# Run \`pnpm devtools env pull --target ${target}\` to fill the`,
-          "# values from Bitwarden, or fill them in by hand.",
-        ]),
-  ];
-  return [...header, ...renderBody(), ""].join("\n");
+  const stamp = `# ${file} (${target}) — created by \`pnpm devtools env init\` on ${date}.`;
+
+  if (isVaultTarget(target)) {
+    const routed = keysRoutedTo(target);
+    return [
+      stamp,
+      ...targetHeader(target, routed.size),
+      ...renderBody(routed),
+      "",
+    ].join("\n");
+  }
+
+  return [
+    stamp,
+    "# Fill in the values below. The local Supabase stack supplies the whole",
+    "# connection block: `pnpm devtools link` starts it and writes",
+    "# .env.generated, which overlays this file while the stack is running.",
+    ...renderBody(),
+    "",
+  ].join("\n");
 }
 
 // ── commands ─────────────────────────────────────────────────────────────────
@@ -342,7 +500,9 @@ export async function runEnvInit(target: EnvTarget): Promise<void> {
     target === "development"
       ? "Fill in the values, or run `pnpm devtools link` to start the local " +
           "stack — it supplies the whole connection block via .env.generated."
-      : `Every value is blank. \`pnpm devtools env pull --target ${target}\` ` +
-          `fills it from Bitwarden.`,
+      : "Every value is blank but the `$VAR` derivations, which are how those " +
+          "values are built rather than a guess at them. " +
+          `\`pnpm devtools env pull --target ${target}\` fills the rest from ` +
+          "Bitwarden.",
   );
 }

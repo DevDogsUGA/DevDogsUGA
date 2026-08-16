@@ -36,6 +36,7 @@ import {
   mintedKeys,
   neverSecretKeys,
   neverStoreKeys,
+  storableKeys,
   variableKeys,
   variables,
 } from "@devdogsuga/env";
@@ -110,6 +111,36 @@ export function ignoredFor(target: VaultTarget): Set<string> {
 export function neverStore(): Set<string> {
   assertRegistryLoaded();
   return new Set<string>(neverStoreKeys());
+}
+
+/**
+ * The keys a push for this target ROUTES — its two destinations, unioned.
+ *
+ * The complement of everything above, stated positively, because one consumer
+ * needs the question the other way round: `env init --target staging` renders
+ * a file whose whole purpose is to be filled in and pushed, so the keys it
+ * should contain are exactly the keys a push for that target would carry
+ * somewhere. Derived from `ignoredFor()` rather than re-listed, so the file
+ * and the upload cannot disagree about which target a key belongs to — the
+ * generated file used to be byte-identical for all three targets, which put
+ * the apply-tier credentials in `.env.staging` where `ignoredFor()` refuses
+ * them.
+ *
+ * The `neverStore()` subtraction is unreachable today (a never-store key is
+ * neither `secrecy: "secret"` nor `"public"`, so neither selector returns it)
+ * and is written down anyway: this set decides what gets an assignable line in
+ * a file people fill in, and `BWS_ACCESS_TOKEN=` is the one line that must
+ * never appear in one.
+ */
+export function keysRoutedTo(target: VaultTarget): Set<string> {
+  assertRegistryLoaded();
+  const skip = ignoredFor(target);
+  const refuse = neverStore();
+  return new Set<string>(
+    [...storableKeys(), ...variableKeys()].filter(
+      (key) => !skip.has(key) && !refuse.has(key),
+    ),
+  );
 }
 
 /**
