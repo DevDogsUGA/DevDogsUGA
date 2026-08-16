@@ -106,20 +106,43 @@ declare({
       secrecy: "secret",
       minted: true,
     }),
+  },
+});
 
-    // ── What mints it ──────────────────────────────────────────────────────
-    // Declared in the sandbox section rather than the devtools operator one
-    // because minting that token is its only use in this repository, and a
-    // reader of `.env.example` should find the whole rotation path -- the
-    // endpoint, the minted token, and the key that signs it -- in one place.
-    //
-    // The blast radius is nonetheless much wider than the sandbox, hence the
-    // doc. Per the design doc: whoever can deploy `apps/platform` can already
-    // read SECRET_KEY out of its own environment, so a CI pipeline that
-    // deploys both Workers is not gaining authority it lacked. That reasoning
-    // is load-bearing -- if the proxy ever moves to a separate, less-trusted
-    // pipeline, this key does NOT follow it and the token goes back to being
-    // minted out of band.
+/**
+ * What mints the token -- and a SEPARATE source, which is the whole point.
+ *
+ * `scripts/deploy-secrets-file.ts` sends a Worker every storable key its app
+ * declares, and excludes `:tooling` sources precisely because "a key the
+ * DEPLOY needs is not automatically a key the WORKER needs". Declared as plain
+ * `sandbox`, this key rode that path onto the proxy Worker itself.
+ *
+ * That is the exact inversion this file's own comments argue against. The
+ * signing key mints a token for ANY role, `service_role` included;
+ * `sandbox_proxy` was built to hold EXECUTE on two functions and no table
+ * grants. Uploading the former to the Worker restricted to the latter hands an
+ * internet-facing proxy the means to escalate itself to everything, and it
+ * would sit there as a Cloudflare secret long after the deploy that wrote it.
+ *
+ * The trust argument that justifies CI holding it -- whoever deploys
+ * `apps/platform` can already read `SECRET_KEY` from its own environment, so a
+ * pipeline deploying both Workers gains no authority it lacked -- is about the
+ * PIPELINE. It says nothing about the Worker, which is a different principal
+ * with a much longer-lived and more exposed store. Keep the two apart: the
+ * mint script runs on the runner, the token is what reaches the edge.
+ *
+ * Still declared here rather than in the devtools operator manifest, because
+ * minting that token is its only use in this repository and a reader of
+ * `.env.example` should find the whole rotation path in one place -- the
+ * endpoint, the minted token, and the key that signs it. `:tooling` sources
+ * fold into their app's section when the example is rendered, so that holds.
+ *
+ * If the proxy ever moves to a separate, less-trusted pipeline, this key does
+ * NOT follow it and the token goes back to being minted out of band.
+ */
+declare({
+  source: "sandbox:tooling",
+  server: {
     SUPABASE_JWT_SIGNING_KEY: define(z.string().min(32).optional(), {
       doc:
         "The platform Supabase project's JWT signing secret (HS256), used by " +

@@ -83,6 +83,44 @@ describe("registry completeness", () => {
     }
   });
 
+  it("uploads no stored credential to the sandbox Worker", () => {
+    // `scripts/deploy-secrets-file.ts` sends a Worker every storable key its
+    // app's own manifest declares, excluding `:tooling` sources. For the proxy
+    // that set must stay EMPTY: `PLATFORM_REST_URL` is public and arrives as a
+    // `--var`, `SANDBOX_PROXY_TOKEN` is minted on the runner. Anything else
+    // appearing here is a long-lived secret sitting on an internet-facing
+    // Worker that never asked for one.
+    //
+    // This is a regression test with a name. `SUPABASE_JWT_SIGNING_KEY` was
+    // declared `source: "sandbox"` and rode exactly this path onto the proxy —
+    // a key that mints a token for ANY role, `service_role` included, handed
+    // to the one component built to hold EXECUTE on two functions and no table
+    // grants. It belongs in "sandbox:tooling": the mint script runs on the
+    // runner, and only the token it produces reaches the edge.
+    const runtime = [...variables().values()]
+      .flat()
+      .filter((e) => e.source === "sandbox");
+
+    // Non-vacuous, twice over: if discovery misses the manifest the set is
+    // empty and the assertion below passes while checking nothing, and if the
+    // proxy token stops being declared here the mint path has moved.
+    expect(runtime.map((e) => e.key).sort()).toEqual([
+      "PLATFORM_REST_URL",
+      "SANDBOX_PROXY_TOKEN",
+    ]);
+
+    const storable = new Set(storableKeys());
+    for (const entry of runtime) {
+      expect(
+        storable.has(entry.key),
+        `${entry.key} is declared by the sandbox runtime manifest and is ` +
+          "storable, so deploy-secrets-file.ts would upload it to the proxy " +
+          'Worker. Move it to the "sandbox:tooling" manifest if the DEPLOY ' +
+          "needs it rather than the Worker.",
+      ).toBe(false);
+    }
+  });
+
   it("never lets a never-store key become storable", () => {
     // Structurally true today — `storableKeys()` requires `secrecy: "secret"`
     // and `neverStoreKeys()` requires `secrecy: "never-store"`, which cannot
