@@ -222,8 +222,8 @@ club. Both Apps install on `DevDogsUGA` and nowhere else.
 ## After creating it
 
 Run this for **each** App — production first, then staging with the reduced
-permissions. `--env staging` and `--env production` keep the two sets apart the
-whole way.
+permissions. `--target staging` and `--target production` keep the two sets
+apart the whole way.
 
 1. **Generate a private key.** _General → Private keys → Generate a private
    key._ Downloads a `.pem`. This is the credential — it mints installation
@@ -259,12 +259,12 @@ whole way.
    any webhook payload); the key is a secret:
 
    ```bash
-   pnpm devtools secrets push --env production   # or --env staging
+   pnpm devtools env push --target production   # or --target staging
    ```
 
-   ⚠️ The root `.env` holds **one** set of these at a time, so do one
-   environment end to end before starting the other. `secrets pull --env <env>`
-   brings back whichever set you are working on.
+   Each target has its own file — `.env.production`, `.env.staging` — so the
+   two sets no longer share one, and `env pull --target <target>` brings back
+   whichever set you are working on.
 
 6. **Delete the `ghp_` token** at _Settings → Developer settings → Personal
    access tokens_. Not last for tidiness — until it is revoked, the thing this
@@ -296,7 +296,7 @@ Generate the new key **before** deleting the old one — an App can hold two at
 once, and the overlap is what keeps the platform running through the change.
 
 ```bash
-pnpm devtools secrets push --env production   # new key → Bitwarden + GitHub
+pnpm devtools env push --target production   # new key → Bitwarden + GitHub
 # redeploy, confirm a team provision works
 # then delete the old key in the App's settings
 ```

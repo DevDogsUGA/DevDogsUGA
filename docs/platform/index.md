@@ -24,7 +24,7 @@ Welcome to the documentation for the DevDogs Website — the open-source web pla
 - [Meetings & teams](./meetings-and-teams.md), [Elections](./elections.md), [Airtable setup](./airtable-setup.md)
 - [OAuth setup](./oauth-setup.md) — how a sibling project gets **Sign in with DevDogs**
 - [The GitHub App](./github-app.md) — the identity the platform authenticates as, and why it is **not** the OAuth app above
-- [Secrets](./secrets.md) — one `.env`, synced to Bitwarden and GitHub, with a drift audit
+- [Env](./env.md) — one env file per target, synced to Bitwarden and GitHub, with a drift audit
 - [The documentation system](./documentation-system/architecture.md) — how this page is built
 
 ## Tech stack

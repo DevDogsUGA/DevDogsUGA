@@ -1,32 +1,68 @@
-# Secrets
+# Env
 
 **Bitwarden Secrets Manager is the source of truth. GitHub environment secrets
 are a derived copy, and what deploy jobs actually read.**
 
 ```
-        ┌── secrets pull ──┐                 ┌── secrets push ──┐
+        ┌──── env pull ────┐                 ┌──── env push ────┐
         v                  │                 v                  v
-   your .env <─────────────┴── Bitwarden ────┴──> GitHub environment secrets
+  .env.staging <───────────┴── Bitwarden ────┴──> GitHub environment secrets
         │                                                       │
-        └── secrets audit ──> compares all four <───────────────┘
+        └──── env audit ───> compares all four <────────────────┘
                               (+ Cloudflare Worker secrets)
 ```
 
-One local `.env`. `push` writes **Bitwarden and GitHub in the same run**,
-because a value in one and not the other is the failure this design has.
+One env file per target. `push` writes **Bitwarden and GitHub in the same
+run**, because a value in one and not the other is the failure this design has.
+
+## One `--target`, one row
+
+Everything per-target is read from a single table
+([`packages/env/src/targets.ts`](../../packages/env/src/targets.ts)):
+
+| `--target`    | File              | Bitwarden project    | Valid `DEPLOY_ENV`? |
+| ------------- | ----------------- | -------------------- | ------------------- |
+| `development` | `.env`            | — none               | yes                 |
+| `preflight`   | `.env.preflight`  | `devdogs-preflight`  | **no**              |
+| `staging`     | `.env.staging`    | `devdogs-staging`    | yes                 |
+| `production`  | `.env.production` | `devdogs-production` | yes                 |
+
+> ⚠️ **This used to be two vocabularies behind one flag**, and they overlapped
+> in the middle: a deploy environment
+> (`development | staging | production`, deciding which FILE) and a Bitwarden
+> environment (`preflight | staging | production`, deciding which PROJECT).
+> `init --env staging` created `.env.staging`; `push --env staging` read the
+> root `.env`. So filling in `.env.staging` and pushing it uploaded the
+> DEVELOPMENT values to the staging project and reported success. `--target`
+> is one row, and `pull`, `push` and `audit` all default their file from it.
+
+Two rows are asymmetric, and both on purpose:
+
+- **`development` has no Bitwarden project.** `.env` is your own file; there is
+  no shared development credential set to sync it against. `pull`, `push` and
+  `audit` refuse `--target development` by name rather than falling through to
+  some default project.
+- **`preflight` is not a deploy environment.** `.env.preflight` is a staging
+  area for pushing credentials into the preflight project; nothing boots from
+  it, and `DEPLOY_ENV=preflight` is refused. The preflight credentials are
+  read-only by construction, so an app started against them would fail
+  feature-by-feature rather than at startup.
 
 ## Commands
 
 ```bash
-pnpm devtools secrets pull  --env staging      # Bitwarden → your .env, in place
-pnpm devtools secrets push  --env staging      # your .env → Bitwarden → GitHub
-pnpm devtools secrets audit --env staging      # compare all four stores
+pnpm devtools env pull  --target staging   # Bitwarden → .env.staging, in place
+pnpm devtools env push  --target staging   # .env.staging → Bitwarden → GitHub
+pnpm devtools env audit --target staging   # compare all four stores
 ```
 
-Leave `--env` off and it asks. The picker is ordered least- to most-dangerous,
-so a reflexive Enter selects `preflight` and never `production`; it refuses to
-prompt when stdin is not a terminal, because a prompt nobody can answer hangs
-until the job times out.
+`--file` overrides the file a target implies. It is an override for odd jobs,
+not the way to choose a target.
+
+Leave `--target` off and it asks. The picker is ordered least- to
+most-dangerous, so a reflexive Enter selects `preflight` and never
+`production`; it refuses to prompt when stdin is not a terminal, because a
+prompt nobody can answer hangs until the job times out.
 
 You need a `gh auth login` with admin on the repository, and the Secrets Manager
 access token — which the tool will find for you.
@@ -56,7 +92,7 @@ trying to avoid.
 
 ```bash
 npm i -g @bitwarden/cli && bw login     # once
-pnpm devtools secrets audit --env staging
+pnpm devtools env audit --target staging
 ```
 
 The first run finds nothing, asks for the token, and offers to store it as
@@ -74,7 +110,8 @@ carries a warning when you use it — it is the one path that trades that away.
 
 > ⚠️ **Never put it in `.env`.** The pull toward doing so is strong, because
 > `with-env` loads that file for every command and it would save re-exporting
-> each session. But `.env` is what `secrets push` uploads, and the result is the
+> each session. But `.env` is what `env push --file .env` uploads, and the
+> result is the
 > master key stored inside all three boxes it opens, then synced to GitHub where
 > CI can read it — which contradicts the one property this whole design rests
 > on.
@@ -82,21 +119,21 @@ carries a warning when you use it — it is the one path that trades that away.
 > `push` refuses it by name rather than trusting anyone to remember, `pull` will
 > not write it back, and `audit` reports it as an **error** in any remote store.
 > Same for `AIRTABLE_PAT`, the scaffolding token, which the runtime never reads
-> — see [`NEVER_STORE_KEYS`](../../packages/devtools/src/bws/environments.ts).
+> — see the `neverStore` declarations in each package's `env.ts`.
 
-### It edits `.env` in place
+### It edits the target's file in place
 
-The root `.env` is the file `pnpm dev` reads, and it is mostly commentary —
-which value breaks the Supabase CLI when empty, which must stay commented out,
-why. So `pull` edits **lines**, not a parsed map: untouched lines come back
-byte-for-byte, ordering survives, and every note stays where its key is.
+An env file is mostly commentary — which value breaks the Supabase CLI when
+empty, which must stay commented out, why. So `pull` edits **lines**, not a
+parsed map: untouched lines come back byte-for-byte, ordering survives, and
+every note stays where its key is.
 
 - **Nothing is deleted.** A key that should go away is commented out, so the
   previous value stays recoverable from the file rather than from somebody's
   memory. Setting a commented key revives that line instead of appending a
   second copy.
-- **`pull --env production` warns and defaults to no.** It points your local app
-  at production, and there is no undo.
+- **`pull --target production` warns and defaults to no.** Anything that loads
+  `.env.production` is then pointed at production, and there is no undo.
 
 ### Values are never printed
 
@@ -126,7 +163,7 @@ project, and **that split is the reviewer gate**: `production` deploys on a push
 with nothing in front of it, `production-apply` has required reviewers. A
 write-capable credential reaching the first would make the second decorative.
 
-So `secrets push --env production` writes **two** GitHub environments in one
+So `env push --target production` writes **two** GitHub environments in one
 run, routing each key to exactly one of them, and confirms them separately —
 agreeing to update production's ordinary secrets is not agreeing to touch the
 credentials behind the reviewers. The routing is derived from the table above
@@ -169,17 +206,17 @@ and remember to take it back — a revocation that fails silently.
 
 **The cost is a second copy that cannot be read back.** GitHub secrets are
 write-only: `gh secret list` returns names and `updatedAt`, and no route returns
-a value. `secrets audit` is what polices that.
+a value. `env audit` is what polices that.
 
 ## The audit
 
 ```bash
-pnpm devtools secrets audit --env production
+pnpm devtools env audit --target production
 ```
 
 | Store        | Exposes             | So it is checked for         |
 | ------------ | ------------------- | ---------------------------- |
-| local `.env` | names AND values    | value drift                  |
+| the env file | names AND values    | value drift                  |
 | Bitwarden    | names AND values    | value drift (the truth)      |
 | GitHub       | names + `updatedAt` | presence, routing, staleness |
 | Cloudflare   | names only          | orphans                      |
@@ -194,7 +231,7 @@ What it catches, in severity order:
 
 | ✗ error                                                | Why it matters                                                                                                          |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `.env` and Bitwarden disagree on a value               | The only value comparison available anywhere in this system.                                                            |
+| The env file and Bitwarden disagree on a value         | The only value comparison available anywhere in this system.                                                            |
 | In Bitwarden, not in its GitHub environment            | The deploy cannot see it.                                                                                               |
 | In GitHub, but the **wrong** environment               | An apply-only credential sitting in `production` makes the reviewer gate decorative. Presence alone calls this healthy. |
 | Rotated in Bitwarden **after** GitHub was last updated | ⚠️ See below.                                                                                                           |
@@ -202,8 +239,8 @@ What it catches, in severity order:
 | ! warning                                  | Why it matters                                                                                                                                             |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | In GitHub or on a Worker, not in Bitwarden | An orphan from a rename. `wrangler deploy --secrets-file` **preserves what it omits**, so a renamed variable leaves its secret on the Worker indefinitely. |
-| In your `.env`, not in Bitwarden           | A local-only value, or one somebody forgot to push.                                                                                                        |
-| In Bitwarden, missing from your `.env`     | You are about to push an incomplete set.                                                                                                                   |
+| In your env file, not in Bitwarden         | A local-only value, or one somebody forgot to push.                                                                                                        |
+| In Bitwarden, missing from your env file   | You are about to push an incomplete set.                                                                                                                   |
 
 ⚠️ **A rotation pushed to Bitwarden and never propagated is the failure this
 whole design has.** Production keeps authenticating with the old value and
@@ -227,10 +264,10 @@ else — and flagging that would bury the real orphans in noise.
 ### Rotating a secret
 
 ```bash
-pnpm devtools secrets pull  --env production   # start from what is live
-$EDITOR .env                                   # change the one value
-pnpm devtools secrets push  --env production   # → Bitwarden AND GitHub
-pnpm devtools secrets audit --env production   # must report no drift
+pnpm devtools env pull  --target production   # start from what is live
+$EDITOR .env.production                       # change the one value
+pnpm devtools env push  --target production   # → Bitwarden AND GitHub
+pnpm devtools env audit --target production   # must report no drift
 ```
 
 No `export` step — the access token comes from your vault. See
@@ -251,7 +288,7 @@ leaves Bitwarden ahead, and the tool says so at the time.
 | Overwrites are confirmed **separately** from additions           | Answering yes to "create three new secrets" must not also be answering yes to "replace a live credential".                                                                               |
 | `production` always prompts, and `--yes` is refused there        | `--yes` exists so a script can run unattended, and nothing unattended has business pushing production secrets.                                                                           |
 | Secrets in the project and not in the file are **never** removed | A key missing from a file is far more often an incomplete edit than an intentional deletion. They are reported and left alone.                                                           |
-| Keys are commented out of `.env`, never deleted                  | A removal has to be recoverable from the file rather than from somebody's memory.                                                                                                        |
+| Keys are commented out of the file, never deleted                | A removal has to be recoverable from the file rather than from somebody's memory.                                                                                                        |
 | Non-secrets are skipped                                          | `DEPLOY_ENV`, `BASE_URL`, `NEXT_PUBLIC_*` and friends are committed or GitHub environment _variables_. A value with two sources of truth resolves to whichever the reader did not check. |
 | Empty values are skipped                                         | An empty secret reads as "configured" to every consumer that checks for presence.                                                                                                        |
 | Pulling an empty project writes nothing                          | An empty result and a successful pull look identical afterwards.                                                                                                                         |

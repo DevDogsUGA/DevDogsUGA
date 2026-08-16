@@ -525,7 +525,7 @@ requirement.
 CI holds two more, narrower still, and neither goes in Vault:
 `AIRTABLE_PLAN_PAT` (`schema.bases:read` only, for `scaffold --dry-run`) and
 `AIRTABLE_APPLY_PAT` (write-capable, and reachable from the `production-apply`
-GitHub environment alone). See [secrets.md](./secrets.md).
+GitHub environment alone). See [env.md](./env.md).
 
 > ⚠️ **This document said "mint one token" until 2026-08-13, and the base was
 > scaffolded on 2026-08-06.** If that run followed the old instructions, the
