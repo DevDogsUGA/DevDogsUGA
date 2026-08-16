@@ -25,7 +25,7 @@ if (!process.env.CLOUDFLARE_API_TOKEN) {
     "CLOUDFLARE_API_TOKEN is not set — refusing to deploy.\n" +
       "Cloudflare access is devops-only: ask the devops team to run this " +
       "deploy, or for the token if you are joining them " +
-      "(it lives in the devops .env.production, via `secrets pull`).",
+      "(it lives in the devops .env.production, via `env pull`).",
   );
   process.exit(1);
 }

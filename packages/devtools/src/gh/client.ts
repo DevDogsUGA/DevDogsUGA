@@ -22,7 +22,7 @@
  * `https://supabase.com/dashboard/project/<ref>` to `.../***` — the paused-
  * project gate's whole output — and, because the ref is a substring of every
  * Supabase hostname, corrupts unrelated log lines across the repo. The
- * readability is what lets `secrets audit` compare a variable by VALUE, which
+ * readability is what lets `env audit` compare a variable by VALUE, which
  * it cannot do for anything on the top row.
  *
  * ⚠️ The corollary, and the reason each setter is its own function rather than
@@ -164,7 +164,7 @@ export async function deleteSecret(
 /**
  * Environment variable names, VALUES, and when each last changed.
  *
- * The value is the point. It is what turns the GitHub half of `secrets audit`
+ * The value is the point. It is what turns the GitHub half of `env audit`
  * from a presence check into a real comparison for these keys — a variable
  * whose value drifted from Bitwarden is detectable, where the same drift in a
  * secret is not detectable by anything.

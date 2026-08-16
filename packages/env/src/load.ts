@@ -13,8 +13,8 @@
  * or an innocent `import { selectEnvFiles } from "@devdogsuga/env"` in server
  * code fails at the edge instead of at build.
  */
-import { envFileFor, resolveEnvironment } from "./environments.js";
-import type { DeployEnvironment } from "./environments.js";
+import { fileFor, resolveEnvironment } from "./targets.js";
+import type { DeployEnvironment } from "./targets.js";
 
 /**
  * The local Supabase API port. Hardcoded to match `supabase/config.toml`,
@@ -30,7 +30,14 @@ export const GENERATED_FILE = ".env.generated";
 /**
  * A selected environment's file is missing. The message names the file and
  * the command that materialises it, because "ENOENT: .env.staging" tells a
- * new contributor nothing about `secrets pull`.
+ * new contributor nothing about `env pull`.
+ *
+ * ⚠️ The named command has to actually produce the named file. It did not
+ * before: this said `secrets pull --env staging`, whose `--env` was the VAULT
+ * vocabulary, so it wrote staging's values into the development `.env` — the
+ * file that may hold the only copy of somebody's production credentials — and
+ * left `.env.staging` still missing, so the error repeated. `--target` now
+ * defaults the file from the same table this message reads.
  */
 export class MissingEnvFileError extends Error {
   constructor(
@@ -41,7 +48,7 @@ export class MissingEnvFileError extends Error {
       environment === "development"
         ? `${file} does not exist. Run \`pnpm devtools setup\` to create it.`
         : `${file} does not exist. Run ` +
-            `\`pnpm devtools secrets pull --env ${environment}\` to fetch it.`,
+            `\`pnpm devtools env pull --target ${environment}\` to fetch it.`,
     );
     this.name = "MissingEnvFileError";
   }
@@ -100,7 +107,7 @@ export async function selectEnvFiles(
   ctx: SelectionContext,
 ): Promise<Selection> {
   const environment = resolveEnvironment(ctx.deployEnv);
-  const envFile = envFileFor(environment);
+  const envFile = fileFor(environment);
 
   // Fail on the missing base file before probing: the overlay is meaningless
   // without the `.env` it overlays, and every environment needs its own file

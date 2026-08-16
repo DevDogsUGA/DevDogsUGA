@@ -1,29 +1,41 @@
 /**
- * Choosing an environment when the command line did not name one.
+ * Choosing a target when the command line did not name one.
  *
- * `--env` is optional, and when it is absent this asks rather than guessing.
+ * `--target` is optional, and when it is absent this asks rather than guessing.
  * Nothing else in this CLI defaults to anything but the local stack; here there
- * is no safe default to fall back to, because the three environments differ
- * precisely in how much damage picking the wrong one does.
+ * is no safe default to fall back to, because the targets differ precisely in
+ * how much damage picking the wrong one does.
  *
- * Two properties the prompt is built around:
+ * Three properties the prompt is built around:
  *
  *   * **Production is never the highlighted option.** The list is ordered
- *     least- to most-dangerous, so a reflexive Enter selects `preflight`.
+ *     least- to most-dangerous (that order lives in the target table), so a
+ *     reflexive Enter selects `preflight`.
  *   * **It refuses to prompt where nobody can answer.** A prompt on a
  *     non-interactive stdin hangs until the job times out, which reads as a
  *     broken tool rather than a missing argument.
+ *   * **`development` is refused by name, not by silence.** It is a real
+ *     target — it has a file — and it is the one target with no Bitwarden
+ *     project, so `pull`/`push`/`audit` cannot do anything with it. Leaving it
+ *     out of the accepted list and letting it fall into "not a target" would
+ *     say something false; the message says which fact rules it out.
  */
 import { select } from "@clack/prompts";
 import {
-  ENVIRONMENTS,
-  isEnvironment,
-  type BwsEnvironment,
+  ENV_TARGETS,
+  VAULT_TARGETS,
+  isEnvTarget,
+  isVaultTarget,
+  type VaultTarget,
+} from "@devdogsuga/env";
+import {
+  NO_VAULT_PROJECT_HINTS,
+  NoVaultProjectError,
 } from "./bws/environments.js";
 import { explain, unwrap } from "./ui.js";
 
 /** Short enough to sit beside the name; the specs' summaries are paragraphs. */
-const BWS_HINTS: Record<BwsEnvironment, string> = {
+const VAULT_HINTS: Record<VaultTarget, string> = {
   preflight: "read-only credentials for the pre-promotion checks",
   staging: "the everyday one — safe to overwrite",
   production: "⚠️  the live values",
@@ -33,43 +45,43 @@ const BWS_HINTS: Record<BwsEnvironment, string> = {
  * `null` means the failure has already been explained; set an exit code and
  * stop. It is not the same as a cancel, which exits the process outright.
  */
-export async function resolveEnvironment(
+export async function resolveVaultTarget(
   given: string | undefined,
   message: string,
-): Promise<BwsEnvironment | null> {
-  const checked = precheck(given, ENVIRONMENTS, isEnvironment);
-  if (checked !== ASK) return checked;
-
-  return unwrap(
-    await select({
-      message,
-      options: ENVIRONMENTS.map((value) => ({ value, hint: BWS_HINTS[value] })),
-    }),
-  );
-}
-
-const ASK = Symbol("ask");
-
-/** Validates what was named, or reports that asking is the way forward. */
-function precheck<T extends string>(
-  given: string | undefined,
-  all: readonly T[],
-  valid: (value: string) => value is T,
-): T | null | typeof ASK {
+): Promise<VaultTarget | null> {
   if (given !== undefined) {
-    if (valid(given)) return given;
-    explain(`"${given}" is not an environment.`, "", [
-      `Try one of: ${all.join(", ")}`,
+    if (isVaultTarget(given)) return given;
+
+    if (isEnvTarget(given)) {
+      explain(
+        new NoVaultProjectError(given).message,
+        "",
+        NO_VAULT_PROJECT_HINTS,
+      );
+      return null;
+    }
+
+    explain(`"${given}" is not a target.`, "", [
+      `Try one of: ${ENV_TARGETS.join(", ")}`,
+      `Only ${VAULT_TARGETS.join(", ")} have a Bitwarden project.`,
     ]);
     return null;
   }
 
   if (!process.stdin.isTTY) {
-    explain("No environment given, and there is nobody here to ask.", "", [
-      `Pass --env: ${all.join(" | ")}`,
+    explain("No target given, and there is nobody here to ask.", "", [
+      `Pass --target: ${VAULT_TARGETS.join(" | ")}`,
     ]);
     return null;
   }
 
-  return ASK;
+  return unwrap(
+    await select({
+      message,
+      options: VAULT_TARGETS.map((value) => ({
+        value,
+        hint: VAULT_HINTS[value],
+      })),
+    }),
+  );
 }

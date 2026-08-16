@@ -6,7 +6,7 @@
  * `process.env`, so there is no `createEnv` here and no boot that this file
  * could fail. Like `packages/devtools/env.ts` and `apps/study-group-finder/
  * env.ts` it exists for the registry's consumers -- the completeness test, the
- * `.env.example` generator, `secrets push` routing, and `secrets audit`. The
+ * `.env.example` generator, `env push` routing, and `env audit`. The
  * sibling `tsconfig.json` names it explicitly, which is what keeps the metadata
  * typechecked.
  *
@@ -16,7 +16,7 @@
  * would describe nothing. That is true of the RUNTIME and false of everything
  * else. Two concrete failures followed from the absence:
  *
- *   1. `secrets audit` reports any Worker secret it cannot find in Bitwarden as
+ *   1. `env audit` reports any Worker secret it cannot find in Bitwarden as
  *      an orphan, and the plan doc's §3.6 prune path deletes orphans on
  *      `workflow_dispatch`. `SANDBOX_PROXY_TOKEN` is minted, so it is in no
  *      Bitwarden project by design -- which made the live proxy credential
@@ -90,8 +90,8 @@ declare({
     // two functions and no table grants at all (migration
     // 20260805000002_platform_sandbox_credentials.sql).
     //
-    // `minted: true` is what tells `secrets push` never to upload it and
-    // `secrets audit` that its absence from Bitwarden is correct rather than a
+    // `minted: true` is what tells `env push` never to upload it and
+    // `env audit` that its absence from Bitwarden is correct rather than a
     // rename left behind. See the long-form reasoning on `EnvMeta.minted`.
     SANDBOX_PROXY_TOKEN: define(z.string().min(1).optional(), {
       doc:

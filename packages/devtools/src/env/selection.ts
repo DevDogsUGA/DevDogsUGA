@@ -9,7 +9,7 @@
  *
  * Four outcomes, and the difference between the last two matters:
  *
- *   push      a secret for this environment
+ *   push      a secret for this target
  *   variables a PUBLIC per-environment value: Bitwarden, then a GitHub
  *             *variable* rather than a secret. Its own outcome, not a skip —
  *             these used to fall into "uninteresting" and so had no remote
@@ -17,7 +17,7 @@
  *             fresh machine could not reconstruct a working environment.
  *   skipped   nothing here to send: an empty value, a committed or
  *             developer-scoped constant, a minted credential, or one belonging
- *             to a different environment. Uninteresting, and not returned.
+ *             to a different target. Uninteresting, and not returned.
  *   refused   a credential that must not be stored remotely AT ALL. Reported
  *             loudly, because somebody who put it in the file expecting it to
  *             sync has to learn that it did not.
@@ -39,7 +39,7 @@ import {
   variableKeys,
   variables,
 } from "@devdogsuga/env";
-import { type BwsEnvironment } from "../bws/environments.js";
+import { type VaultTarget } from "../bws/environments.js";
 import { assertRegistryLoaded } from "./discovery.js";
 
 export interface PushSelection {
@@ -94,14 +94,14 @@ export function pushableVariables(): Set<string> {
  * a refusal is for a credential somebody put in the file expecting it to sync,
  * and nobody has this one to put there.
  */
-export function ignoredFor(environment: BwsEnvironment): Set<string> {
+export function ignoredFor(target: VaultTarget): Set<string> {
   assertRegistryLoaded();
   const pushable = pushableVariables();
   const skip = new Set<string>(
     neverSecretKeys().filter((key) => !pushable.has(key)),
   );
   for (const key of mintedKeys()) skip.add(key);
-  if (environment !== "production") {
+  if (target !== "production") {
     for (const key of applyOnlyKeys()) skip.add(key);
   }
   return skip;
@@ -134,9 +134,9 @@ export function minted(): Set<string> {
  */
 export function selectForPush(
   entries: readonly (readonly [string, string])[],
-  environment: BwsEnvironment,
+  target: VaultTarget,
 ): PushSelection {
-  const skip = ignoredFor(environment);
+  const skip = ignoredFor(target);
   const refuse = neverStore();
   const pushable = pushableVariables();
   const declared = variables();
@@ -162,7 +162,7 @@ export function selectForPush(
       continue;
     }
     // Checked BEFORE the variable branch, so the exclusions that are about
-    // *this environment* keep winning: an apply-only key outside production,
+    // *this target* keep winning: an apply-only key outside production,
     // or a minted one anywhere, is skipped whatever its secrecy. The two sets
     // are disjoint today, and this ordering is what keeps a future overlap
     // failing closed rather than open.

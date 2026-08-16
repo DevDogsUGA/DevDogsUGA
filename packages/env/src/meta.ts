@@ -27,7 +27,7 @@ export type EnvScope =
    * `.env.production` each carry their own value, and the deployed ones are
    * pushed to Bitwarden and GitHub.
    *
-   * This is the only scope `secrets push` sends anywhere.
+   * This is the only scope `env push` sends anywhere.
    */
   | "environment"
   /**
@@ -77,7 +77,7 @@ export type EnvSecrecy =
  * ⚠️ A GitHub routing rule, not a Bitwarden one. The `production` Bitwarden
  * project does hold these: only a person can read it, one project per
  * environment stays the simplest thing to rotate, and holding them there is
- * what lets `secrets audit` compare them at all.
+ * what lets `env audit` compare them at all.
  */
 export type EnvTier = "plan" | "apply";
 
@@ -126,19 +126,19 @@ export type EnvMeta = {
    * ⚠️ Marking it is not bookkeeping; two tools fail in opposite directions
    * without it, and both failures are silent:
    *
-   *   * `secrets audit` reports every Worker secret absent from Bitwarden as an
+   *   * `env audit` reports every Worker secret absent from Bitwarden as an
    *     ORPHAN, and the §3.6 prune path deletes orphans. Unmarked, the audit
    *     would recommend deleting the live proxy credential.
    *   * classifying it `never-store` instead — the intuitive reach, since it is
    *     never stored — inverts that into an ERROR saying it must be deleted
    *     from the Worker, which is the one place it has to be.
    *
-   * Implies "not storable": `storableKeys()` excludes these, so `secrets push`
+   * Implies "not storable": `storableKeys()` excludes these, so `env push`
    * cannot upload one even if a value somehow lands in a local `.env`.
    */
   minted?: true;
   /**
-   * The literal text `secrets example` and `secrets init` write after the `=`
+   * The literal text `env example` and `env init` write after the `=`
    * — `"$API_URL"`, `"https://$PROJECT_REF.supabase.co"`,
    * `"http://localhost:3000"`, the committed Discord guild id. Absent means
    * the line ships empty: `KEY=""`.

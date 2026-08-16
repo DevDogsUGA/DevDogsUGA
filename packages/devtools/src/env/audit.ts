@@ -140,7 +140,7 @@ export interface AuditInput {
    * reported as UNDECLARED — its own category, not folded into drift, because
    * the fix is different: drift wants a push or a pull, an undeclared key
    * wants a `define()` in the owning manifest (or the line removed). It is
-   * also why `secrets push` skipped it, and the audit should say so rather
+   * also why `env push` skipped it, and the audit should say so rather
    * than let "not in Bitwarden" imply pushing would help.
    */
   declared?: ReadonlySet<string>;

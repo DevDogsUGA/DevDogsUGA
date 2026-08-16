@@ -12,7 +12,7 @@
  * ## Where the values come from, and why there are four answers
  *
  *   secret     `${{ secrets.* }}` for the environment — written by a human
- *              running `pnpm devtools secrets push`. CI never reads Bitwarden.
+ *              running `pnpm devtools env push`. CI never reads Bitwarden.
  *   variable   `${{ vars.* }}` — the per-environment values that are NOT
  *              secrets (`PROJECT_REF`, `BASE_URL`, `PUBLISHABLE_KEY`, …).
  *   derived    an `example` metadata entry that is a `$VAR` formula rather than
@@ -49,12 +49,12 @@
  * ## Refusals
  *
  * `neverStoreKeys()` appearing in either context is a hard failure. It is
- * mostly unreachable — `secrets push` will not upload one — but this is the
+ * mostly unreachable — `env push` will not upload one — but this is the
  * last place to catch a `BWS_ACCESS_TOKEN` added to the repository by hand,
  * and the cost of missing it is every secret the project holds (see the long
  * comment on the declaration in `packages/devtools/env.ts`).
  *
- * Writing uses `{ flag: "wx" }`, the same atomic refusal `secrets init` uses.
+ * Writing uses `{ flag: "wx" }`, the same atomic refusal `env init` uses.
  * On a runner the file never exists; on a laptop it is the devops copy of the
  * production credentials, and a stray run of this script must not be able to
  * overwrite it. `development` is refused outright for the same reason: `.env`
@@ -76,7 +76,7 @@ import { writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  envFileFor,
+  fileFor,
   neverStoreKeys,
   resolveEnvironment,
   variables,
@@ -309,21 +309,21 @@ if (missing.length > 0) {
     ...missing.map((key) => {
       const meta = variables().get(key)![0]!.meta;
       return meta.secrecy === "secret"
-        ? `${key}  — a secret: \`pnpm devtools secrets push\` sends it`
+        ? `${key}  — a secret: \`pnpm devtools env push\` sends it`
         : `${key}  — not a secret: it belongs in the environment's VARIABLES`;
     }),
     "",
-    '`secrets push` syncs both stores: `secrecy: "secret"` keys to the',
+    '`env push` syncs both stores: `secrecy: "secret"` keys to the',
     "environment's secrets, the public per-environment ones (PROJECT_REF,",
     "BASE_URL, PUBLISHABLE_KEY, …) to its variables. A key missing here was",
     "either never in the pusher's .env or never pushed — run",
-    "`pnpm devtools secrets audit --env <env>` to see which.",
+    "`pnpm devtools env audit --target <target>` to see which.",
   ]);
 }
 
 // ── write ────────────────────────────────────────────────────────────────────
 
-const file = envFileFor(environment);
+const file = fileFor(environment);
 const lines = [
   `# ${file} — composed by scripts/deploy-write-env.ts for a deploy job.`,
   "#",

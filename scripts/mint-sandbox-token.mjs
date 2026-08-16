@@ -97,9 +97,9 @@ export function mintSandboxToken({ signingKey, projectRef, now = Date.now() }) {
   if (typeof signingKey !== "string" || signingKey.trim() === "") {
     throw new MintError(
       "SUPABASE_JWT_SIGNING_KEY is empty or unset. It is the platform " +
-        "project's JWT secret and lives in the devops .env for the " +
-        "environment being deployed -- `pnpm devtools secrets pull --env " +
-        "<env>` fetches it. Refusing to mint: an empty HMAC key signs a " +
+        "project's JWT secret and lives in the devops env file for the " +
+        "environment being deployed -- `pnpm devtools env pull --target " +
+        "<target>` fetches it. Refusing to mint: an empty HMAC key signs a " +
         "token anyone can forge.",
     );
   }

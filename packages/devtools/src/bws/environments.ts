@@ -1,8 +1,18 @@
 /**
- * The environments whose secrets live in Bitwarden, and which project backs each.
+ * The targets whose values live in Bitwarden, and what backs each.
+ *
+ * ⚠️ DERIVED, NOT DECLARED. The list of vault targets and the project name for
+ * each come from the one target table in `@devdogsuga/env`
+ * (`packages/env/src/targets.ts`); only the prose summaries are added here.
+ * This file used to declare its own `preflight | staging | production` enum
+ * beside that package's `development | staging | production` one, both behind
+ * a flag spelled `--env`, and the two agreeing on the words `staging` and
+ * `production` is what let `push --env staging` read the development `.env`
+ * while `init --env staging` wrote `.env.staging`. See the table's own comment
+ * for the full account.
  *
  * **Bitwarden is the source of truth, and CI never reads it.** Values are
- * curated in the local `.env` and sent onward by `pnpm devtools secrets push`,
+ * curated in a local env file and sent onward by `pnpm devtools env push`,
  * which writes Bitwarden AND the GitHub environment secrets in one go. Deploy
  * jobs then read `${{ secrets.* }}` like any other workflow.
  *
@@ -18,31 +28,40 @@
  * Two machine accounts spare, where the previous shape had none and could not
  * afford a project for `preflight`.
  *
+ * There are three projects and FOUR targets: `development` has none. `.env` is
+ * one contributor's own file, there is no shared development credential set to
+ * sync it against, and `pull`/`push`/`audit` refuse that target by name rather
+ * than falling through to a default project.
+ *
  * What the sync costs is a second copy that cannot be read back: GitHub secrets
- * are write-only, so `secrets audit` compares names and `updatedAt` against
- * each secret's `revisionDate` here. That catches the realistic failure — a
+ * are write-only, so `env audit` compares names and `updatedAt` against each
+ * secret's `revisionDate` here. That catches the realistic failure — a
  * rotation pushed to Bitwarden and never propagated — without ever comparing
  * values.
  *
  * ⚠️ These projects hold the PUBLIC per-environment values too, not only the
  * secrets — `PROJECT_REF`, `BASE_URL`, `PUBLISHABLE_KEY` and the rest go on to
  * GitHub as *variables* rather than secrets. "Bitwarden is the source of truth"
- * has to be true of a whole environment for `pull` to rebuild a `.env` an app
- * can boot from; while it was true of the secret half only, 27 values existed
- * nowhere but somebody's laptop. Variables ARE readable back, so for those keys
- * the audit compares values and the paragraph above does not apply.
+ * has to be true of a whole target for `pull` to rebuild an env file an
+ * app can boot from; while it was true of the secret half only, 27 values
+ * existed nowhere but somebody's laptop. Variables ARE readable back, so for
+ * those keys the audit compares values and the paragraph above does not apply.
  *
  * What it buys: no `bws` binary and no Bitwarden network call in the deploy
  * path, and `${{ secrets.* }}` is masked in workflow logs automatically, which
  * a value pulled at run time is not unless somebody remembers `::add-mask::`.
  */
+import {
+  VAULT_TARGETS,
+  fileFor,
+  isGuarded,
+  isVaultTarget,
+  projectFor,
+  type EnvTarget,
+  type VaultTarget,
+} from "@devdogsuga/env";
 
-export const ENVIRONMENTS = ["preflight", "staging", "production"] as const;
-export type BwsEnvironment = (typeof ENVIRONMENTS)[number];
-
-export function isEnvironment(value: string): value is BwsEnvironment {
-  return (ENVIRONMENTS as readonly string[]).includes(value);
-}
+export { VAULT_TARGETS, isVaultTarget, type VaultTarget };
 
 export interface EnvironmentSpec {
   /** BWS project name. Resolved to a UUID at run time, never committed. */
@@ -52,37 +71,78 @@ export interface EnvironmentSpec {
   summary: string;
 }
 
-/**
- * Project *names*, not ids.
- *
- * A project id is a UUID that means nothing without a token, so committing one
- * would leak nothing — but it would rot. Ids change when a project is recreated
- * (which is exactly what happens after a botched rotation), and a stale id fails
- * as "project not found" rather than as anything actionable. Resolving by name
- * costs one API call and cannot go stale silently.
- */
-export const ENVIRONMENT_SPECS: Record<BwsEnvironment, EnvironmentSpec> = {
-  preflight: {
-    project: "devdogs-preflight",
-    guarded: false,
-    summary:
-      "Credentials for the dry runs that precede a promotion to production. " +
-      "Read-only by construction: a Postgres role that can see only the " +
-      "migrations table, and an Airtable PAT with schema:read and nothing else.",
-  },
-  staging: {
-    project: "devdogs-staging",
-    guarded: false,
-    summary: "Everything the two Next apps consume, pointed at staging.",
-  },
-  production: {
-    project: "devdogs-production",
-    guarded: true,
-    summary:
-      "The live values. Shared with the production-apply environment, which " +
-      "is the same project behind required reviewers.",
-  },
+const SUMMARIES: Record<VaultTarget, string> = {
+  preflight:
+    "Credentials for the dry runs that precede a promotion to production. " +
+    "Read-only by construction: a Postgres role that can see only the " +
+    "migrations table, and an Airtable PAT with schema:read and nothing else.",
+  staging: "Everything the two Next apps consume, pointed at staging.",
+  production:
+    "The live values. Shared with the production-apply environment, which " +
+    "is the same project behind required reviewers.",
 };
+
+/**
+ * Project *names*, not ids — see `TargetSpec.project` for why.
+ *
+ * Assembled from the target table rather than typed out again: a second copy
+ * of "staging means devdogs-staging" is a copy that can disagree, and the
+ * disagreement would be silent in exactly the direction that matters.
+ */
+export const ENVIRONMENT_SPECS = Object.fromEntries(
+  VAULT_TARGETS.map((target) => [
+    target,
+    {
+      // Non-null by construction: `VAULT_TARGETS` is the targets whose
+      // `project` is not null.
+      project: projectFor(target)!,
+      guarded: isGuarded(target),
+      summary: SUMMARIES[target],
+    },
+  ]),
+) as Record<VaultTarget, EnvironmentSpec>;
+
+/**
+ * `--target development` reached `pull`, `push` or `audit`.
+ *
+ * Its own error rather than a lookup that returns `undefined`, because the old
+ * shape of this mistake was silence: `development` was simply not in the vault
+ * enum, so nothing named it and nothing said why. It is a real target with a
+ * real file; what it does not have is a shared credential set to sync against.
+ */
+export class NoVaultProjectError extends Error {
+  constructor(readonly target: EnvTarget) {
+    super(
+      `--target ${target} has no Bitwarden project, so there is nothing to ` +
+        `pull from, push to, or audit against. ${fileFor(target)} is your own ` +
+        `file — nobody else's copy is meant to match it.`,
+    );
+    this.name = "NoVaultProjectError";
+  }
+}
+
+/** Said wherever the refusal is reported, so the advice cannot drift. */
+export const NO_VAULT_PROJECT_HINTS = [
+  `Pass --target ${VAULT_TARGETS.join(" | ")} instead.`,
+  "`pnpm devtools env reset` blanks the values in a local file, keeping each",
+  "recoverable as a comment. `pnpm devtools setup` creates a fresh .env.",
+];
+
+/**
+ * Refuses the one target that has no project, and narrows the rest.
+ *
+ * Called at the top of every command that talks to a vault, so the refusal is
+ * a property of the commands rather than of the argument parser alone — a new
+ * subcommand that forgets to validate its flag still cannot fall through to a
+ * default project. It narrows as well as throws, so everything after the call
+ * is typed as a target that HAS a project rather than merely believed to be
+ * one.
+ */
+export function assertVaultTarget(
+  target: EnvTarget,
+): asserts target is VaultTarget {
+  if (!isVaultTarget(target)) throw new NoVaultProjectError(target);
+}
 
 // ── Where the key sets went ──────────────────────────────────────────────────
 //

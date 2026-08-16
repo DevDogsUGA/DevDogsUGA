@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { UnknownEnvironmentError } from "./environments.js";
+import { UnknownEnvironmentError } from "./targets.js";
 import {
   GENERATED_FILE,
   MissingEnvFileError,
@@ -42,6 +42,17 @@ describe("environment selection", () => {
     }
   });
 
+  it("rejects DEPLOY_ENV=preflight, which HAS a file and is not an environment", async () => {
+    // `preflight` is a real row in the target table — `.env.preflight` exists
+    // as a staging area for pushing credentials — and is deliberately NOT a
+    // deploy environment. Unifying the vocabularies must not have quietly
+    // made it one: the preflight credentials are read-only by construction, so
+    // an app booted on them fails feature-by-feature rather than at startup.
+    await expect(
+      selectEnvFiles(ctx({ deployEnv: "preflight" })),
+    ).rejects.toThrow(UnknownEnvironmentError);
+  });
+
   it("rejects an unknown DEPLOY_ENV naming the allowlist, never a suffix", async () => {
     // The hazard is DEPLOY_ENV=example resolving to .env.example — a real,
     // committed file whose placeholders largely pass validation. It must be
@@ -56,7 +67,11 @@ describe("environment selection", () => {
 });
 
 describe("missing env files", () => {
-  it("fails for staging/production naming the file and the pull command", async () => {
+  it("fails for staging/production naming the file and a pull that creates it", async () => {
+    // The command in the message has to produce the file in the message. It
+    // said `secrets pull --env staging`, whose `--env` was the vault
+    // vocabulary: that wrote into `.env`, left `.env.staging` missing, and so
+    // reprinted this same error. `--target` defaults its file from the table.
     for (const env of ["staging", "production"] as const) {
       const attempt = selectEnvFiles(
         ctx({ deployEnv: env, exists: () => false }),
@@ -65,9 +80,22 @@ describe("missing env files", () => {
       await expect(
         selectEnvFiles(ctx({ deployEnv: env, exists: () => false })),
       ).rejects.toThrow(
-        new RegExp(`\\.env\\.${env}.*secrets pull --env ${env}`),
+        new RegExp(`\\.env\\.${env}.*env pull --target ${env}`),
       );
     }
+  });
+
+  it("never advises the retired --env flag", async () => {
+    // A positive control on the rename. Asserting only that SOME command is
+    // named would have passed before the fix, when the named command wrote to
+    // the wrong file; this pins the flag that makes the advice work.
+    const thrown: unknown = await selectEnvFiles(
+      ctx({ deployEnv: "staging", exists: () => false }),
+    ).catch((err: unknown) => err);
+
+    expect(thrown).toBeInstanceOf(MissingEnvFileError);
+    expect((thrown as Error).message).toContain("env pull --target staging");
+    expect((thrown as Error).message).not.toContain("--env ");
   });
 
   it("fails for development pointing at pnpm devtools setup", async () => {

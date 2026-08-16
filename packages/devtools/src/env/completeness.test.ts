@@ -127,12 +127,12 @@ describe("registry completeness", () => {
     // and `neverStoreKeys()` requires `secrecy: "never-store"`, which cannot
     // both hold. Asserted anyway so a refactor of either selector (say, one
     // that starts reasoning from scope alone) cannot fail open: the failure
-    // would be `secrets push` uploading BWS_ACCESS_TOKEN.
+    // would be `env push` uploading BWS_ACCESS_TOKEN.
     const storable = new Set(storableKeys());
     for (const key of neverStoreKeys()) {
       expect(
         storable.has(key),
-        `${key} is never-store yet appears in storableKeys() — secrets push ` +
+        `${key} is never-store yet appears in storableKeys() — env push ` +
           "would upload it.",
       ).toBe(false);
     }
@@ -160,7 +160,7 @@ describe("registry completeness", () => {
 
   it("never lets a minted key become storable", () => {
     // The mirror of the never-store check above, and it fails in the same
-    // direction: `secrets push` uploading a value for a credential that is
+    // direction: `env push` uploading a value for a credential that is
     // supposed to be signed fresh on every deploy creates precisely the
     // long-lived copy minting exists to avoid. Structurally true today
     // (`storableKeys()` excludes `minted`), asserted so a refactor of that
@@ -169,7 +169,7 @@ describe("registry completeness", () => {
     for (const key of mintedKeys()) {
       expect(
         storable.has(key),
-        `${key} is minted yet appears in storableKeys() — secrets push would ` +
+        `${key} is minted yet appears in storableKeys() — env push would ` +
           "upload a token that is supposed to exist only on the Worker.",
       ).toBe(false);
     }
@@ -280,14 +280,14 @@ describe("registry completeness", () => {
 
   it("never lets a never-store key become a variable", () => {
     // The mirror of the `storableKeys()` check above, and the worse failure of
-    // the two: `secrets push` sending BWS_ACCESS_TOKEN to the SECRET store
+    // the two: `env push` sending BWS_ACCESS_TOKEN to the SECRET store
     // would at least be write-only, whereas the variable store publishes its
     // value to anyone who can read the repository's Actions config.
     const variableSet = new Set(variableKeys());
     for (const key of neverStoreKeys()) {
       expect(
         variableSet.has(key),
-        `${key} is never-store yet appears in variableKeys() — secrets push ` +
+        `${key} is never-store yet appears in variableKeys() — env push ` +
           "would publish it in plaintext as a GitHub variable.",
       ).toBe(false);
     }
@@ -299,7 +299,7 @@ describe("registry completeness", () => {
   it("declares every uncommented key in .env.example", async () => {
     // The catch for a LEGACY key: one that predates the registry, lives in
     // .env.example because it always has, and that nobody declared. Undeclared
-    // means invisible to `secrets push` routing and to drift audits — the
+    // means invisible to `env push` routing and to drift audits — the
     // original four-files failure, surviving in the one file this test can
     // still read. Commented-out lines are prose, not assignments, and are
     // skipped the same way the .env parser skips them.
@@ -329,7 +329,7 @@ describe("registry completeness", () => {
       expect(
         text.includes(key),
         `${key} is declared but absent from .env.example — regenerate it ` +
-          "with `pnpm devtools secrets example`.",
+          "with `pnpm devtools env example`.",
       ).toBe(true);
     }
   });

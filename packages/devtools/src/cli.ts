@@ -49,17 +49,17 @@ import {
 } from "./airtable/commands.js";
 import { readCatalog, renderCatalog } from "./catalog.js";
 import {
-  runSecretsAudit,
-  runSecretsPull,
-  runSecretsPush,
-  runSecretsReset,
+  runEnvAudit,
+  runEnvPull,
+  runEnvPush,
+  runEnvReset,
 } from "./env/commands.js";
-import { runSecretsExample, runSecretsInit } from "./env/example.js";
+import { runEnvExample, runEnvInit } from "./env/example.js";
 import { loadRegistry } from "./env/discovery.js";
-import { DEPLOY_ENVIRONMENTS, isDeployEnvironment } from "@devdogsuga/env";
+import { ENV_TARGETS, isEnvTarget } from "@devdogsuga/env";
 import { setExplicitAccessToken } from "./bws/client.js";
 import { positionals } from "./args.js";
-import { resolveEnvironment } from "./pick.js";
+import { resolveVaultTarget } from "./pick.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
 
 const DOCTOR_COMMANDS = [
@@ -79,7 +79,7 @@ function isDoctorCommand(value: string): value is DoctorCommand {
 }
 
 function printHelp(): void {
-  console.log(`pnpm devtools [command] [target]
+  console.log(`pnpm devtools [command] [options]
 
 Run with no command to choose from a menu.
 
@@ -95,7 +95,8 @@ Commands:
   grant-root Give yourself every permission on your own database
   oauth      Configure "Sign in with DevDogs" for the project in this directory
   airtable   Scaffold, pull ids from, or verify the officer base
-  secrets    One .env, synced to Bitwarden + GitHub, with a drift audit
+  env        One env file per target, synced to Bitwarden + GitHub, with a
+             drift audit
 
 Airtable subcommands:
   airtable scaffold [--dry-run]   Create what the registry declares
@@ -103,23 +104,40 @@ Airtable subcommands:
   airtable verify [--no-duplicates]  Diff the live base against the registry
   airtable snapshot [--check]     Refresh, or check, the committed schema snapshot
 
-Secrets subcommands (--env is preflight, staging or production):
-  secrets pull  --env <env>       Bitwarden -> your .env, in place
-  secrets push  --env <env>       your .env -> Bitwarden -> GitHub secrets
+Env subcommands. One --target, one row, and every per-target fact read
+from it:
+
+  --target       file              Bitwarden project      DEPLOY_ENV?
+  development    .env              (none)                 yes
+  preflight      .env.preflight    devdogs-preflight       no
+  staging        .env.staging      devdogs-staging         yes
+  production     .env.production   devdogs-production      yes
+
+  env pull  --target <t>          Bitwarden -> that target's file, in place
+  env push  --target <t>          that file -> Bitwarden -> GitHub secrets
                                   and variables
-  secrets audit --env <env>       compare .env, Bitwarden, GitHub, Cloudflare
-  secrets reset                   blank every value, keeping each commented out
-  secrets example [--check]       regenerate .env.example from the manifests
+  env audit --target <t>          compare the file, Bitwarden, GitHub,
+                                  Cloudflare
+  env reset                       blank every value in .env, keeping each
+                                  commented out
+  env example [--check]           regenerate .env.example from the manifests
                                   (--check: verify only, as CI does)
-  secrets init [--env <env>]      create a FRESH .env / .env.staging /
-                                  .env.production; refuses if the file exists.
-                                  Here --env is development (default), staging
-                                  or production — which file to create.
+  env init [--target <t>]         create a FRESH file for the target
+                                  (default: development); refuses if it exists
 
-  Leave --env off and it asks. Naming it is for scripts, and for anyone who
-  would rather not be asked twice.
+  pull, push and audit each READ AND WRITE the target's own file. --file
+  overrides that; it is not how you choose a target. --target development
+  is refused by all three: .env is your own file and has no Bitwarden
+  project behind it.
 
-  Bitwarden is the source of truth for a WHOLE environment, secret and
+  preflight is a target but NOT a deploy environment. .env.preflight is a
+  staging area for pushing credentials; DEPLOY_ENV=preflight is refused, so
+  nothing boots from it.
+
+  Leave --target off and it asks. Naming it is for scripts, and for anyone
+  who would rather not be asked twice.
+
+  Bitwarden is the source of truth for a WHOLE target, secret and
   public alike; deploy jobs read GitHub, so push sends to both — a value in
   one and not the other is the failure this design has. On GitHub the split
   matters: secrets go to the secret store, the public per-environment values
@@ -134,16 +152,16 @@ Secrets subcommands (--env is preflight, staging or production):
   the environment: --access-token is visible to ps and lands in shell
   history.
 
-  Edits the root .env in place, preserving comments and order. Values are
+  Edits the target's file in place, preserving comments and order. Values are
   commented out rather than deleted. Overwrites are confirmed separately from
   additions, and production is confirmed on top of that. Values are never
   printed — changes show as key names and fingerprints.
 
-  pull and push stamp each line with the environment and date, so a .env that
+  pull and push stamp each line with the target and date, so a file that
   has been sitting for weeks says so. Same-named lines are grouped together on
-  every write. reset is local-only and takes no --env.
+  every write. reset is local-only and takes no --target.
 
-Targets:
+Database targets (link, push, reset, status) — unrelated to env's --target:
   --local            The Docker stack (default)
   --remote           The linked Supabase project
   --team <slug>      A team's sandbox environment, through the platform
@@ -502,38 +520,59 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
 }
 
 /**
- * `secrets <pull|push|audit> --env <preflight|staging|production>`, plus the
+ * `env <pull|push|audit> --target <preflight|staging|production>`, plus the
  * three local-only subcommands: `reset`, `example [--check]`, and
- * `init [--env <development|staging|production>]`.
+ * `init [--target <target>]`.
  *
- * The environment has no default for pull/push/audit, and is asked for when
- * `--env` is absent. Every other command here defaults to the local stack
+ * The target has no default for pull/push/audit, and is asked for when
+ * `--target` is absent. Every other command here defaults to the local stack
  * because guessing wrong is free; guessing wrong about whose credentials to
  * overwrite is not. (`init` does default, to development: it refuses to touch
  * an existing file, so the worst a wrong guess can do is create a blank one.)
+ *
+ * One flag, one vocabulary. `--target` names a row in the target table, and
+ * the file, the Bitwarden project and whether `DEPLOY_ENV` may say it all come
+ * from that row. Its predecessor `--env` named one of two different enums
+ * depending on which subcommand read it, which is why `init --env staging`
+ * wrote `.env.staging` while `push --env staging` uploaded `.env`.
  */
-async function runSecretsCommand(rest: string[]): Promise<void> {
+async function runEnvCommand(rest: string[]): Promise<void> {
   // `positionals` rather than `rest[0]`, so a flag before the subcommand does
   // not become the subcommand -- and, more to the point, so the VALUE of a flag
-  // never does: in `secrets --file production pull`, `production` is a
-  // filename and must not be read as anything else.
+  // never does: in `env --file production pull`, `production` is a filename and
+  // must not be read as anything else.
   const [sub] = positionals(rest);
 
   if (
     !sub ||
     !["pull", "push", "audit", "reset", "example", "init"].includes(sub)
   ) {
-    log.error(`Unknown secrets subcommand: ${sub ?? "(none)"}`);
+    log.error(`Unknown env subcommand: ${sub ?? "(none)"}`);
     log.message("Try pull, push, audit, reset, example or init.");
     process.exitCode = 1;
     return;
   }
 
-  // `reset` only edits the local file. Asking which environment to clear it
-  // against would imply it reaches one, which is the opposite of what it does.
+  // Refused by name rather than ignored. `--env` used to be this flag, and the
+  // words it took (`staging`, `production`) are still valid `--target` values,
+  // so a stale invocation would otherwise run with NO target — prompting, or
+  // failing as "nobody here to ask", neither of which says what changed.
+  if (rest.includes("--env")) {
+    explain("`--env` is now `--target`.", "", [
+      "It named two different things depending on the subcommand: which file",
+      "(init) and which Bitwarden project (pull/push/audit). --target names",
+      `one row: ${ENV_TARGETS.join(", ")}.`,
+      "wrangler, supabase and gh still have their own --env; this is ours.",
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+
+  // `reset` only edits a local file. Asking which target to clear it against
+  // would imply it reaches one, which is the opposite of what it does.
   if (sub === "reset") {
     try {
-      await runSecretsReset({
+      await runEnvReset({
         file: flagValue(rest, "--file"),
         yes: rest.includes("--yes"),
       });
@@ -548,18 +587,18 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
   // env manifests are imported. Loaded HERE, lazily, rather than at CLI
   // start: the import pass touches a manifest in nearly every workspace
   // package, and `pnpm devtools reset` (or any stack command) should not pay
-  // for declarations it never reads. `secrets reset` returned above for the
+  // for declarations it never reads. `env reset` returned above for the
   // same reason — it edits the local file and consults no key set.
   await loadRegistry();
 
   // `example` and `init` are pure registry → text. They return BEFORE the
-  // Bitwarden token lookup and the pull/push environment prompt, and must
+  // Bitwarden token lookup and the pull/push target prompt, and must
   // keep doing so: CI's credential-free validate job runs `example --check`,
   // and a generator that needed a secret to describe the secrets could not
   // live there.
   if (sub === "example") {
     try {
-      await runSecretsExample({ check: rest.includes("--check") });
+      await runEnvExample({ check: rest.includes("--check") });
     } catch (err) {
       explain("Generating .env.example failed.", errorMessage(err));
       process.exitCode = 1;
@@ -568,24 +607,21 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
   }
 
   if (sub === "init") {
-    const given = flagValue(rest, "--env") ?? "development";
-    if (!isDeployEnvironment(given)) {
-      // init's --env speaks DEPLOY environments (which file to create), not
-      // the Bitwarden vocabulary pull/push use — there is no .env.preflight.
-      explain(
-        `"${given}" is not an environment init can create a file for.`,
-        "",
-        [
-          `Pass --env ${DEPLOY_ENVIRONMENTS.join(" | ")} (default: development).`,
-        ],
-      );
+    // Every target, including `development` and `preflight`: init maps target
+    // → file and nothing else, and every target has a file. It is the one
+    // subcommand here that needs no Bitwarden project.
+    const given = flagValue(rest, "--target") ?? "development";
+    if (!isEnvTarget(given)) {
+      explain(`"${given}" is not a target init can create a file for.`, "", [
+        `Pass --target ${ENV_TARGETS.join(" | ")} (default: development).`,
+      ]);
       process.exitCode = 1;
       return;
     }
     try {
-      await runSecretsInit(given);
+      await runEnvInit(given);
     } catch (err) {
-      explain("secrets init failed.", errorMessage(err));
+      explain("env init failed.", errorMessage(err));
       process.exitCode = 1;
     }
     return;
@@ -593,15 +629,15 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
 
   // The question names the direction, because the answer means something
   // different each way: pull overwrites your file, push overwrites theirs.
-  const environment = await resolveEnvironment(
-    flagValue(rest, "--env"),
+  const target = await resolveVaultTarget(
+    flagValue(rest, "--target"),
     sub === "pull"
-      ? "Which environment should I pull into your .env?"
+      ? "Which target should I pull into its env file?"
       : sub === "push"
-        ? "Which environment should I push your .env to?"
-        : "Which environment should I audit?",
+        ? "Which target should I push its env file to?"
+        : "Which target should I audit?",
   );
-  if (!environment) {
+  if (!target) {
     process.exitCode = 1;
     return;
   }
@@ -610,17 +646,17 @@ async function runSecretsCommand(rest: string[]): Promise<void> {
   setExplicitAccessToken(flagValue(rest, "--access-token"));
 
   const options = {
-    environment,
+    target,
     file: flagValue(rest, "--file"),
     yes: rest.includes("--yes"),
   };
 
   try {
-    if (sub === "pull") await runSecretsPull(options);
-    else if (sub === "push") await runSecretsPush(options);
-    else await runSecretsAudit(options);
+    if (sub === "pull") await runEnvPull(options);
+    else if (sub === "push") await runEnvPush(options);
+    else await runEnvAudit(options);
   } catch (err) {
-    explain("The secrets command failed.", errorMessage(err), [
+    explain("The env command failed.", errorMessage(err), [
       "The access token is read from --access-token, then BWS_ACCESS_TOKEN,",
       "then your Bitwarden vault, and finally by asking.",
       "`gh auth status` shows whether the GitHub CLI is signed in.",
@@ -757,9 +793,22 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (first === "secrets") {
-    await runSecretsCommand(rest);
+  if (first === "env") {
+    await runEnvCommand(rest);
     outro("Done.");
+    return;
+  }
+
+  // The old name, refused with the new one rather than falling into "Unknown
+  // command". It is in this repo's own docs, scripts and shell histories, and
+  // the rename came with a flag rename, so a bare "unknown" would leave both
+  // halves to be rediscovered.
+  if (first === "secrets") {
+    explain("`secrets` is now `env`.", "", [
+      "pnpm devtools env <pull|push|audit|reset|example|init>",
+      "`--env` is now `--target`, for the same reason: one name, one meaning.",
+    ]);
+    process.exitCode = 1;
     return;
   }
 

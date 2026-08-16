@@ -38,7 +38,7 @@ function switchEnvironment<T, R>(opt: { local: T; deployed: R }) {
 /**
  * Server-side variables. Every schema goes through `define()`, which records
  * scope and secrecy into the `@devdogsuga/env` registry — `.env.example` and
- * the `secrets push` routing are derived from these declarations. Keys shared
+ * the `env push` routing are derived from these declarations. Keys shared
  * with the platform app (the Supabase connection block, CRON_SECRET) are
  * deliberately declared in BOTH manifests with the same metadata: the
  * completeness test asserts duplicates agree, and divergence is a bug worth

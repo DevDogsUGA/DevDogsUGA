@@ -7,7 +7,7 @@
  * whether it is a secret, because the app will not compile otherwise.
  *
  * Everything downstream is derived from what accumulates here — `.env.example`,
- * which keys `secrets push` sends to Bitwarden, which reach the `production`
+ * which keys `env push` sends to Bitwarden, which reach the `production`
  * GitHub environment versus `production-apply`, and the drift check that says
  * a declared variable is missing from a deployed environment. None of those
  * are lists anybody maintains by hand any more, which is the entire reason
@@ -153,7 +153,7 @@ export function resetRegistry(): void {
 // which is a second source of truth for a value that is also committed.
 
 /**
- * Variables `secrets push` may send onward as GitHub Actions **secrets**.
+ * Variables `env push` may send onward as GitHub Actions **secrets**.
  *
  * Its public counterpart is `variableKeys()` below: same scope, same minted
  * exclusion, opposite secrecy — and between them they cover every
@@ -176,7 +176,7 @@ export function storableKeys(): string[] {
 }
 
 /**
- * Variables `secrets push` may send as GitHub **variables** rather than secrets.
+ * Variables `env push` may send as GitHub **variables** rather than secrets.
  *
  * The mirror of `storableKeys()`, differing in one field — `secrecy: "public"`
  * instead of `"secret"` — and that one field is the whole routing decision.
@@ -189,7 +189,7 @@ export function storableKeys(): string[] {
  *     `REST_URL`, `API_URL` and every Supabase hostname, the masking corrupts
  *     unrelated log lines repo-wide.
  *   * Variables are READABLE through the API; secrets are write-only. So
- *     `secrets audit` can compare these by VALUE, which is the limitation the
+ *     `env audit` can compare these by VALUE, which is the limitation the
  *     security plan's §3.6 otherwise concedes ("a changed value is
  *     undetectable").
  *
@@ -225,7 +225,7 @@ export function variableKeys(): string[] {
 /**
  * Variables signed at deploy time, whose only copy lives on the deploy target.
  *
- * Consumed by `secrets push` (never uploaded) and by `secrets audit`, where
+ * Consumed by `env push` (never uploaded) and by `env audit`, where
  * this set is what stops a Worker-only credential being reported — and then
  * pruned — as an orphan. See `EnvMeta.minted`.
  */

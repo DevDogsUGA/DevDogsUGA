@@ -187,7 +187,7 @@ export async function saveTokenToVault(token: string): Promise<boolean> {
     notes:
       "Bitwarden Secrets Manager access token for the `admin` machine account, " +
       "read/write on devdogs-preflight, devdogs-staging and devdogs-production.\n\n" +
-      "Read automatically by `pnpm devtools secrets`. Never put this in a .env " +
+      "Read automatically by `pnpm devtools env`. Never put this in a .env " +
       "file: it unlocks all three projects, and the tool refuses to upload it.",
     favorite: false,
     reprompt: 0,

@@ -64,7 +64,7 @@ export async function runSetup(): Promise<void> {
 
   // ── Env ────────────────────────────────────────────────────────────────────
 
-  // Seeded from the SAME renderer as `secrets init` and the generated
+  // Seeded from the SAME renderer as `env init` and the generated
   // .env.example, rather than by copying the example file: a copy would carry
   // the example's "GENERATED — do not edit" header into the one file that is
   // meant to be edited. Like init, an existing file is never touched.
@@ -79,7 +79,7 @@ export async function runSetup(): Promise<void> {
       renderInit("development", new Date().toISOString().slice(0, 10)),
       { flag: "wx" },
     );
-    checks.push("OK    created .env (same as `pnpm devtools secrets init`)");
+    checks.push("OK    created .env (same as `pnpm devtools env init`)");
     seededEnv = true;
   }
 

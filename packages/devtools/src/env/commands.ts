@@ -1,11 +1,20 @@
 /**
- * `pnpm devtools secrets <pull|push|audit> --env <env>`
+ * `pnpm devtools env <pull|push|audit> --target <target>`
  *
- * One local `.env`, three remote stores, and a source of truth:
+ * One local env file per target, three remote stores, and a source of truth:
  *
- *   pull   Bitwarden → your .env
- *   push   your .env → Bitwarden → GitHub secrets AND variables (all, always)
- *   audit  compare .env · Bitwarden · GitHub · Cloudflare
+ *   pull   Bitwarden → your env file
+ *   push   your env file → Bitwarden → GitHub secrets AND variables (all, always)
+ *   audit  compare the file · Bitwarden · GitHub · Cloudflare
+ *
+ * ⚠️ THE FILE IS DERIVED FROM THE TARGET, and that one line is the bug this
+ * module was carrying. `pathFor()` used to default to the root `.env`
+ * regardless of target and honour only an explicit `--file`, while `init`
+ * mapped target → file the way the table always said. So `push --env staging`
+ * uploaded the DEVELOPMENT file to the staging project and reported success,
+ * and nothing in either subcommand was internally wrong — they were reading
+ * two different enums behind one flag name. `--file` remains, as an override
+ * somebody types on purpose.
  *
  * Three rules shape all of it:
  *
@@ -13,14 +22,14 @@
  *     destructive change is listed in fingerprints and confirmed. `push` sends
  *     to Bitwarden AND GitHub because a value in one and not the other is the
  *     failure this design has.
- *   * **Bitwarden holds an entire environment, not its secret half.** The
+ *   * **Bitwarden holds an entire target, not its secret half.** The
  *     public per-environment values (`PROJECT_REF`, `BASE_URL`,
  *     `PUBLISHABLE_KEY`, …) are stored there too and pushed on to GitHub as
  *     *variables* rather than secrets. Storing them as secrets would mask them
  *     in every log line they appear in, by substring, and make their values
  *     unreadable to `audit`; leaving them out of Bitwarden would mean `pull`
  *     reconstructs a file that cannot boot an app.
- *   * **Nothing is deleted from `.env`.** A key that should go away is
+ *   * **Nothing is deleted from the file.** A key that should go away is
  *     commented out, so the previous value stays recoverable from the file.
  *   * **Values are never printed.** Fingerprints tell a rotation from a paste
  *     error and cannot be used to reconstruct anything.
@@ -28,7 +37,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { confirm, log, note } from "@clack/prompts";
-import { variables } from "@devdogsuga/env";
+import { fileFor, variables, type EnvTarget } from "@devdogsuga/env";
 import {
   createSecret,
   listSecrets as listBwsSecrets,
@@ -36,7 +45,11 @@ import {
   projectIdFor,
   updateSecret,
 } from "../bws/client.js";
-import { ENVIRONMENT_SPECS, type BwsEnvironment } from "../bws/environments.js";
+import {
+  ENVIRONMENT_SPECS,
+  assertVaultTarget,
+  type VaultTarget,
+} from "../bws/environments.js";
 import { fingerprint } from "../fingerprint.js";
 import {
   listSecrets as listGhSecrets,
@@ -70,9 +83,15 @@ import {
 import { PROJECT_ROOT } from "../instance.js";
 import { bail, explain, unwrap } from "../ui.js";
 
-export interface SecretsOptions {
-  environment: BwsEnvironment;
-  /** Defaults to the root `.env`. */
+export interface EnvOptions {
+  /**
+   * Typed as any `EnvTarget` rather than as a `VaultTarget`, on purpose.
+   * `development` has to be able to REACH these commands so each can refuse it
+   * by name; narrowing here would move the refusal back into the argument
+   * parser, which is where it was missing.
+   */
+  target: EnvTarget;
+  /** Overrides the file the target implies. */
   file?: string;
   yes?: boolean;
 }
@@ -85,14 +104,23 @@ async function readDocument(path: string): Promise<EnvDocument> {
   }
 }
 
-function pathFor(options: Pick<SecretsOptions, "file">): string {
-  return resolve(PROJECT_ROOT, options.file ?? ".env");
+/**
+ * The file a command works on: the target's, unless `--file` overrides it.
+ *
+ * The default is the whole fix. `--target staging` now reads and writes
+ * `.env.staging` for pull, push AND audit, where it used to reach the root
+ * `.env` — which meant pushing "staging" uploaded the development values, and
+ * pulling "staging" overwrote the development file. Every caller passes the
+ * target explicitly so that no future one can inherit `.env` by omission.
+ */
+function pathFor(target: EnvTarget, file?: string): string {
+  return resolve(PROJECT_ROOT, file ?? fileFor(target));
 }
 
 /** Today, as an ISO date. Separated so the document layer stays testable. */
-function stampFor(environment: BwsEnvironment, action: Stamp["action"]): Stamp {
+function stampFor(target: VaultTarget, action: Stamp["action"]): Stamp {
   return {
-    environment,
+    environment: target,
     action,
     date: new Date().toISOString().slice(0, 10),
   };
@@ -161,15 +189,18 @@ function warnRefused(refused: string[]): void {
 // ── pull ─────────────────────────────────────────────────────────────────────
 
 /**
- * Brings Bitwarden's values into the local `.env`, in place.
+ * Brings Bitwarden's values into the target's env file, in place.
  *
- * ⚠️ This is the file `pnpm dev` reads. Pulling `production` points local
- * development at production, which is why that environment warns and defaults
- * its confirmation to no.
+ * ⚠️ With `--file .env` (or `--target development`, which is refused) this is
+ * the file `pnpm dev` reads. Pulling `production` into it points local
+ * development at production, which is why that target warns and defaults its
+ * confirmation to no.
  */
-export async function runSecretsPull(options: SecretsOptions): Promise<void> {
-  const spec = ENVIRONMENT_SPECS[options.environment];
-  const path = pathFor(options);
+export async function runEnvPull(options: EnvOptions): Promise<void> {
+  assertVaultTarget(options.target);
+  const target = options.target;
+  const spec = ENVIRONMENT_SPECS[target];
+  const path = pathFor(target, options.file);
 
   const projectId = await projectIdFor(spec.project);
   const refused = neverStore();
@@ -185,7 +216,7 @@ export async function runSecretsPull(options: SecretsOptions): Promise<void> {
     if (refused.has(s.key)) {
       log.warn(
         `${s.key} is in ${spec.project} and must not be. Not written to ${path}. ` +
-          `Delete it there — run \`pnpm devtools secrets audit --env ${options.environment}\`.`,
+          `Delete it there — run \`pnpm devtools env audit --target ${target}\`.`,
       );
     }
   }
@@ -220,8 +251,8 @@ export async function runSecretsPull(options: SecretsOptions): Promise<void> {
 
   if (spec.guarded) {
     log.warn(
-      `This writes PRODUCTION values into ${path}, which is the file ` +
-        `\`pnpm dev\` reads. Your local app will be pointed at production.`,
+      `This writes PRODUCTION values into ${path}. Anything that loads that ` +
+        `file — or a stray \`--file .env\` — is then pointed at production.`,
     );
   }
   if (!options.yes) {
@@ -234,7 +265,7 @@ export async function runSecretsPull(options: SecretsOptions): Promise<void> {
     if (!ok) bail("Nothing written.");
   }
 
-  const stamp = stampFor(options.environment, "pulled");
+  const stamp = stampFor(target, "pulled");
   for (const [key, value] of remote) doc.set(key, value, stamp);
   const moved = await save(path, doc);
 
@@ -247,33 +278,40 @@ export async function runSecretsPull(options: SecretsOptions): Promise<void> {
 // ── push ─────────────────────────────────────────────────────────────────────
 
 /**
- * Sends the local `.env` to Bitwarden and then on to GitHub.
+ * Sends the target's env file to Bitwarden and then on to GitHub.
  *
  * Both, always. Bitwarden alone is the failure this design has: the source of
  * truth moves, the deploy does not, and everything looks healthy until the old
  * credential is revoked.
  *
+ * ⚠️ The file comes from the TARGET. `--target staging` reads `.env.staging`,
+ * not the root `.env` — that defaulting mistake meant this command uploaded a
+ * developer's own values to a shared project and said "3 created, 12 updated"
+ * about it.
+ *
  * ⚠️ Two GitHub stores on the far side, and only one Bitwarden project. The
  * public per-environment values become GitHub *variables* rather than secrets
  * (see `gh/client.ts` for why the store matters), but they are stored in
  * Bitwarden alongside the secrets — because the claim "Bitwarden is the source
- * of truth" has to be true of a WHOLE environment for `pull` to rebuild a
- * working `.env`. Splitting them would make GitHub the only home for 27 keys
- * and the second source of truth for their values, which is the arrangement
- * this tool exists to remove.
+ * of truth" has to be true of a WHOLE target for `pull` to rebuild a working
+ * env file. Splitting them would make GitHub the only home for 27 keys and the
+ * second source of truth for their values, which is the arrangement this tool
+ * exists to remove.
  */
-export async function runSecretsPush(options: SecretsOptions): Promise<void> {
-  const spec = ENVIRONMENT_SPECS[options.environment];
-  const path = pathFor(options);
+export async function runEnvPush(options: EnvOptions): Promise<void> {
+  assertVaultTarget(options.target);
+  const target = options.target;
+  const spec = ENVIRONMENT_SPECS[target];
+  const path = pathFor(target, options.file);
   const doc = await readDocument(path);
-  const skip = ignoredFor(options.environment);
+  const skip = ignoredFor(target);
 
   const {
     push: secrets,
     variables: publicValues,
     refused,
     unknown,
-  } = selectForPush(doc.entries(), options.environment);
+  } = selectForPush(doc.entries(), target);
   warnRefused(refused);
   warnUnknown(unknown);
 
@@ -375,17 +413,17 @@ export async function runSecretsPush(options: SecretsOptions): Promise<void> {
     );
   }
 
-  await pushToGithub(options.environment, secrets, publicValues, options.yes);
+  await pushToGithub(target, secrets, publicValues, options.yes);
 
   // Record what went where, in the file itself. Values are untouched -- this
   // rewrites the trailing comment only -- so it needs no confirmation, and it
-  // is what makes a stale .env say so rather than looking freshly synced.
-  const stamp = stampFor(options.environment, "pushed");
+  // is what makes a stale file say so rather than looking freshly synced.
+  const stamp = stampFor(target, "pushed");
   for (const [key, value] of stored) doc.set(key, value, stamp);
   await save(path, doc);
 }
 
-const MANAGED = "Managed by `pnpm devtools secrets push`.";
+const MANAGED = "Managed by `pnpm devtools env push`.";
 
 /**
  * The second half of every push.
@@ -408,32 +446,36 @@ const MANAGED = "Managed by `pnpm devtools secrets push`.";
  * where a swap is silent, irreversible, and invisible to `selection.ts`'s tests.
  */
 export async function pushToGithub(
-  environment: BwsEnvironment,
+  target: VaultTarget,
   secrets: Map<string, string>,
   publicValues: Map<string, string>,
   yes?: boolean,
 ): Promise<void> {
-  const project = ENVIRONMENT_SPECS[environment].project;
+  const project = ENVIRONMENT_SPECS[target].project;
 
-  for (const target of githubTargets(project)) {
+  // `ghEnvironment`, not `target`: a GitHub environment is a THIRD vocabulary
+  // (there are four of them, and `production-apply` is not an env target at
+  // all), so it keeps a name of its own. Reusing `target` here is how the two
+  // vocabularies this change collapsed got confused in the first place.
+  for (const ghEnvironment of githubTargets(project)) {
     // Routing applies to both stores. It falls out right for `production-apply`
     // without a special case: its `onlyKeys` is the apply-tier pair, both
     // secrets, so no variable is ever offered to the reviewer-gated
     // environment.
     const chosenSecrets = new Map(
-      [...secrets].filter(([key]) => accepts(target, key)),
+      [...secrets].filter(([key]) => accepts(ghEnvironment, key)),
     );
     const chosenVariables = new Map(
-      [...publicValues].filter(([key]) => accepts(target, key)),
+      [...publicValues].filter(([key]) => accepts(ghEnvironment, key)),
     );
     const total = chosenSecrets.size + chosenVariables.size;
     if (total === 0) continue;
 
     const knownSecrets = new Set(
-      (await listGhSecrets(target)).map((s) => s.name),
+      (await listGhSecrets(ghEnvironment)).map((s) => s.name),
     );
     const knownVariables = new Set(
-      (await listGhVariables(target)).map((v) => v.name),
+      (await listGhVariables(ghEnvironment)).map((v) => v.name),
     );
     const fresh =
       [...chosenSecrets.keys()].filter((k) => !knownSecrets.has(k)).length +
@@ -444,18 +486,18 @@ export async function pushToGithub(
         await confirm({
           message:
             `Sync ${chosenSecrets.size} secret(s) and ` +
-            `${chosenVariables.size} variable(s) to the \`${target}\` GitHub ` +
-            `environment (${fresh} new)?`,
+            `${chosenVariables.size} variable(s) to the \`${ghEnvironment}\` ` +
+            `GitHub environment (${fresh} new)?`,
           // The gated environments hold what a reviewer is meant to see before
           // it can be used, so the default answer there is no.
-          initialValue: !GITHUB_ENVIRONMENT_SPECS[target].guarded,
+          initialValue: !GITHUB_ENVIRONMENT_SPECS[ghEnvironment].guarded,
         }),
       );
       if (!ok) {
         log.warn(
-          `Skipped \`${target}\`. ⚠️ Bitwarden is now ahead of GitHub — the ` +
-            `deploy still uses the previous values. Run \`pnpm devtools ` +
-            `secrets audit --env ${environment}\` when you fix it.`,
+          `Skipped \`${ghEnvironment}\`. ⚠️ Bitwarden is now ahead of GitHub ` +
+            `— the deploy still uses the previous values. Run \`pnpm devtools ` +
+            `env audit --target ${target}\` when you fix it.`,
         );
         continue;
       }
@@ -466,13 +508,13 @@ export async function pushToGithub(
     // which would leave the set half-applied, the one outcome worse than not
     // having started.
     for (const [key, value] of chosenSecrets)
-      await setSecret(target, key, value);
+      await setSecret(ghEnvironment, key, value);
     for (const [key, value] of chosenVariables) {
-      await setVariable(target, key, value);
+      await setVariable(ghEnvironment, key, value);
     }
     log.success(
       `Synced ${chosenSecrets.size} secret(s) and ${chosenVariables.size} ` +
-        `variable(s) to \`${target}\`.`,
+        `variable(s) to \`${ghEnvironment}\`.`,
     );
   }
 }
@@ -480,9 +522,14 @@ export async function pushToGithub(
 // ── audit ────────────────────────────────────────────────────────────────────
 
 /** Read-only, and safe to run against anything. */
-export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
-  const spec = ENVIRONMENT_SPECS[options.environment];
-  const path = pathFor(options);
+export async function runEnvAudit(options: EnvOptions): Promise<void> {
+  assertVaultTarget(options.target);
+  const target = options.target;
+  const spec = ENVIRONMENT_SPECS[target];
+  // The target's own file, like pull and push. Auditing `--target staging`
+  // against the development `.env` reported drift on every key that legitimately
+  // differs between the two, which is most of them.
+  const path = pathFor(target, options.file);
   const doc = await readDocument(path);
 
   const projectId = await projectIdFor(spec.project);
@@ -495,24 +542,24 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
   const github: GithubEntry[] = [];
   const githubVariables: GithubVariableEntry[] = [];
   const unreachable: GithubEnvironment[] = [];
-  for (const target of githubTargets(spec.project)) {
+  for (const ghEnvironment of githubTargets(spec.project)) {
     try {
       // Both reads complete before either is recorded. Half an environment is
-      // worse than none of it: the secrets alone, with the target then marked
-      // unreachable, would leave every variable it holds looking like a GitHub
-      // orphan that somebody should delete.
-      const secrets = await listGhSecrets(target);
-      const variables = await listGhVariables(target);
+      // worse than none of it: the secrets alone, with the environment then
+      // marked unreachable, would leave every variable it holds looking like a
+      // GitHub orphan that somebody should delete.
+      const secrets = await listGhSecrets(ghEnvironment);
+      const variables = await listGhVariables(ghEnvironment);
       for (const secret of secrets) {
         github.push({
-          environment: target,
+          environment: ghEnvironment,
           name: secret.name,
           updatedAt: secret.updatedAt,
         });
       }
       for (const variable of variables) {
         githubVariables.push({
-          environment: target,
+          environment: ghEnvironment,
           name: variable.name,
           value: variable.value,
           updatedAt: variable.updatedAt,
@@ -522,13 +569,11 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
       // Usually an environment nobody has created yet. Reported, then routed
       // around -- inventing "missing from GitHub" for every key in an
       // environment that could not be read would bury everything else.
-      unreachable.push(target);
+      unreachable.push(ghEnvironment);
     }
   }
 
-  const { secrets: cloudflare, unreadable } = await listWorkerSecrets(
-    options.environment,
-  );
+  const { secrets: cloudflare, unreadable } = await listWorkerSecrets(target);
 
   const commented = new Set(
     bwsSecrets.map((s) => s.key).filter((k) => doc.isCommented(k)),
@@ -550,11 +595,11 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
     // define its own correctness and never be reported.
     variables: pushableVariables(),
     route: (key) => {
-      const target = routeTo(spec.project, key);
-      return target && unreachable.includes(target) ? null : target;
+      const routed = routeTo(spec.project, key);
+      return routed && unreachable.includes(routed) ? null : routed;
     },
     cloudflare,
-    ignore: ignoredFor(options.environment),
+    ignore: ignoredFor(target),
     neverStore: neverStore(),
     // Keeps the Worker's minted credential from being reported as a Cloudflare
     // orphan — and so from being pruned — while still flagging a stored copy.
@@ -564,7 +609,7 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
     declared: new Set(variables().keys()),
   });
 
-  note(renderFindings(findings), `${options.environment} — drift`);
+  note(renderFindings(findings), `${target} (${path}) — drift`);
 
   if (unreachable.length > 0) {
     log.warn(
@@ -587,7 +632,7 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
       "checked for presence, for routing, and for whether GitHub's copy " +
       "predates the Bitwarden revision — a changed value is undetectable. " +
       "GitHub *variables* are readable, so the public per-environment keys " +
-      "were compared by VALUE, as your .env and Bitwarden were.",
+      "were compared by VALUE, as your env file and Bitwarden were.",
   );
 
   if (hasErrors(findings)) process.exitCode = 1;
@@ -596,7 +641,7 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
 // ── reset ────────────────────────────────────────────────────────────────────
 
 /**
- * Empties every value in the local `.env`, losing none of them.
+ * Empties every value in a local env file, losing none of them.
  *
  * The use is handing a filled-in file back to its blank state — after pulling
  * production onto a laptop, before passing a machine on, or when a set of keys
@@ -607,12 +652,16 @@ export async function runSecretsAudit(options: SecretsOptions): Promise<void> {
  * line beneath. The file still declares every key it needs, which is what makes
  * it a checklist rather than a blank page.
  *
- * Purely local. It touches no remote store and needs no environment.
+ * Purely local. It touches no remote store, so it takes no `--target`: asking
+ * which target to clear a file against would imply it reaches one. It works on
+ * `.env` unless `--file` says otherwise, and that default is written out here
+ * rather than inherited, so that the shared `pathFor` has no "no target" case
+ * for a remote command to fall into.
  */
-export async function runSecretsReset(
-  options: Pick<SecretsOptions, "file" | "yes">,
+export async function runEnvReset(
+  options: Pick<EnvOptions, "file" | "yes">,
 ): Promise<void> {
-  const path = pathFor(options);
+  const path = pathFor("development", options.file);
   const doc = await readDocument(path);
 
   const active = doc.entries().filter(([, value]) => value !== "");
@@ -643,7 +692,7 @@ export async function runSecretsReset(
 
   log.success(`Cleared ${cleared.length} value(s) in ${path}.`);
   log.info(
-    "Every previous value is still in the file, commented out. `secrets pull` " +
+    "Every previous value is still in the file, commented out. `env pull` " +
       "will fill them back in from Bitwarden.",
   );
 }

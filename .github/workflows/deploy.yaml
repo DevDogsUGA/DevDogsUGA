@@ -485,7 +485,7 @@ jobs:
   #
   # ⚠️ `CLOUDFLARE_API_TOKEN` is plan-tier, so `routeTo()` sends it to
   # `production` and not to `production-apply`. This job therefore needs a copy
-  # here that the routing does not currently create — `secrets audit` will
+  # here that the routing does not currently create — `env audit` will
   # report it as living somewhere it does not belong until §3.6 and the routing
   # agree on which environment prunes.
   prune-orphans:

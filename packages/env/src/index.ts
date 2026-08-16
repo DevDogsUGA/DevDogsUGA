@@ -23,9 +23,19 @@ export {
 } from "./define.js";
 export {
   DEPLOY_ENVIRONMENTS,
-  envFileFor,
+  ENV_TARGETS,
+  TARGETS,
+  VAULT_TARGETS,
+  fileFor,
   isDeployEnvironment,
+  isEnvTarget,
+  isGuarded,
+  isVaultTarget,
+  projectFor,
   resolveEnvironment,
   UnknownEnvironmentError,
   type DeployEnvironment,
-} from "./environments.js";
+  type EnvTarget,
+  type TargetSpec,
+  type VaultTarget,
+} from "./targets.js";

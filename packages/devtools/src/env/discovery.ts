@@ -33,7 +33,7 @@
  * conclusion drawn from it was still wrong: a manifest is not only a
  * description of what an app reads at boot, it is the only thing that routes a
  * credential to a deployed environment and the only thing that tells
- * `secrets audit` a Worker secret is supposed to be there. Without one,
+ * `env audit` a Worker secret is supposed to be there. Without one,
  * `SANDBOX_PROXY_TOKEN` -- which is minted at deploy time and therefore in no
  * Bitwarden project by design -- was reported as an orphan, i.e. as safe for
  * the §3.6 prune path to delete. `apps/sandbox/env.ts` exists now, and states
@@ -152,7 +152,7 @@ function workspaceDirs(): string[] {
       names.push(entry.name);
     }
     // Sorted, because readdir order is whatever the filesystem feels like and
-    // registry insertion order is now OBSERVABLE: `secrets example` renders
+    // registry insertion order is now OBSERVABLE: `env example` renders
     // keys in declaration order and CI byte-compares the result, so two
     // machines walking the same tree must import the same manifests in the
     // same sequence.

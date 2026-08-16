@@ -7,25 +7,34 @@
  * `filter((a) => !a.startsWith("--"))` reads the VALUE of a flag as a
  * positional:
  *
- *     secrets --file notes.env audit
- *                    ^^^^^^^^^ a bare word that is not a subcommand
+ *     env --file notes.env audit
+ *                ^^^^^^^^^ a bare word that is not a subcommand
  *
  * There the mistake is loud, because `notes.env` is not a subcommand and the
  * command refuses. The quiet version is the one that matters:
  *
- *     secrets --file push audit
+ *     env --file push audit
  *
  * which would run `push` — writing to Bitwarden and GitHub — when `audit`,
  * which writes nothing at all, is what was asked for.
  */
 
-/** Flags that consume the token after them. */
+/**
+ * Flags that consume the token after them.
+ *
+ * `--env` is in here even though nothing accepts it any more: it was this
+ * CLI's spelling of `--target` until the two vocabularies behind it were
+ * merged, and a stale `env push --env staging` in somebody's shell history
+ * must not read `staging` as the subcommand. `cli.ts` rejects the flag by name
+ * instead, which says what happened.
+ */
 export const VALUE_FLAGS = new Set([
   "--access-token",
   "--app",
   "--base-url",
   "--env",
   "--file",
+  "--target",
   "--team",
 ]);
 

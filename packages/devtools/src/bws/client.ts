@@ -46,7 +46,7 @@ export interface BwsSecret {
    * ISO 8601, when this secret last changed.
    *
    * Optional because it is not needed to push or pull — but it is the whole
-   * basis of the staleness half of `secrets audit`, which cannot compare values
+   * basis of the staleness half of `env audit`, which cannot compare values
    * (GitHub secrets are write-only) and instead asks whether GitHub was updated
    * after this.
    */

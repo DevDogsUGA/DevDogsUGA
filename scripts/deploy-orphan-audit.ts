@@ -14,7 +14,7 @@
  * declares with `secrecy: "secret"`. That deliberately includes the MINTED
  * ones — `SANDBOX_PROXY_TOKEN` has no copy in Bitwarden or GitHub by design,
  * and an audit that reasoned from stored copies alone would report the live
- * proxy credential as safe to delete. (`secrets audit` had exactly that bug;
+ * proxy credential as safe to delete. (`env audit` had exactly that bug;
  * see `EnvMeta.minted`.)
  *
  * ## Report always, prune almost never (security plan §3.6)
@@ -154,6 +154,8 @@ for (const { app, worker, key } of toPrune) {
     // output on the job log where a reviewer approving this can read it.
     execFileSync(
       "pnpm",
+      // WRANGLER's `--env` — a wrangler.jsonc environment block. Unrelated to
+      // devtools' `--target`, and not renamed with it.
       ["exec", "wrangler", "secret", "delete", key, "--env", environment],
       { cwd: join(PROJECT_ROOT, "apps", app), stdio: "inherit", shell: false },
     );

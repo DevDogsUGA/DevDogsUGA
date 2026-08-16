@@ -4,7 +4,7 @@ import { positionals } from "./args.js";
 /**
  * The parser that decides which subcommand runs.
  *
- * `secrets pull`, `secrets push` and `secrets audit` do very different things
+ * `env pull`, `env push` and `env audit` do very different things
  * to live credentials, so the failure to guard against is not "no subcommand"
  * — that errors — but the wrong one, picked out of a flag's value.
  */
@@ -24,7 +24,15 @@ describe("positionals", () => {
     expect(positionals(["--file", ".env.local", "audit"])).toEqual(["audit"]);
   });
 
-  it("does not read the --env value as a subcommand", () => {
+  it("does not read the --target value as a subcommand", () => {
+    expect(positionals(["pull", "--target", "production"])).toEqual(["pull"]);
+    expect(positionals(["--target", "production", "pull"])).toEqual(["pull"]);
+  });
+
+  it("still consumes the retired --env's value", () => {
+    // `--env` was this CLI's spelling of `--target`, and its values are still
+    // valid target names. `cli.ts` refuses the flag by name; that refusal only
+    // gets to run if `production` was not read as the subcommand first.
     expect(positionals(["pull", "--env", "production"])).toEqual(["pull"]);
     expect(positionals(["--env", "production", "pull"])).toEqual(["pull"]);
   });

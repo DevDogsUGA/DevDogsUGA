@@ -41,10 +41,10 @@ yarn-error.log*
 
 # local env files
 # One root env file per environment: .env IS development, and .env.staging /
-# .env.production are materialised by `secrets init` / `secrets pull`.
+# .env.production are materialised by `env init` / `env pull`.
 # `.env.generated` is the local stack's overlay. None of them may ever be
 # committed. The single exception, .env.example, is GENERATED output — run
-# `pnpm devtools secrets example` rather than editing it; CI checks the drift.
+# `pnpm devtools env example` rather than editing it; CI checks the drift.
 .env*
 !.env.example
 

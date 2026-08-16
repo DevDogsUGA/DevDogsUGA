@@ -23,7 +23,7 @@ interface WranglerSecret {
 }
 
 /**
- * Secret names per Worker for one environment.
+ * Secret names per Worker for one target.
  *
  * Failures are returned as an empty set for that Worker rather than thrown, and
  * the caller is told which ones could not be read. A Worker that has never been
@@ -32,13 +32,13 @@ interface WranglerSecret {
  * nobody runs.
  */
 export async function listWorkerSecrets(
-  environment: string,
+  target: string,
 ): Promise<{ secrets: Map<string, Set<string>>; unreadable: string[] }> {
   const secrets = new Map<string, Set<string>>();
   const unreadable: string[] = [];
 
   for (const app of WORKER_APPS) {
-    const worker = `${environment}-${app}`;
+    const worker = `${target}-${app}`;
     try {
       const { stdout } = await run(
         "pnpm",
@@ -47,8 +47,10 @@ export async function listWorkerSecrets(
           "wrangler",
           "secret",
           "list",
+          // ⚠️ WRANGLER's `--env`, not ours. Our flag is `--target`; this one
+          // names a wrangler.jsonc environment block and must keep its spelling.
           "--env",
-          environment,
+          target,
           "--format",
           "json",
         ],

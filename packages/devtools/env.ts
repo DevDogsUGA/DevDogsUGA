@@ -5,7 +5,7 @@
  *
  * NOTHING IMPORTS THIS FILE at runtime. Like the other package-root
  * manifests it exists for the registry's consumers — the completeness test,
- * the `.env.example` generator, the `secrets push` routing — and the
+ * the `.env.example` generator, the `env push` routing — and the
  * package's `typecheck` script is what keeps the metadata honest.
  *
  * This is also where the two `never-store` credentials are declared, and the
@@ -24,7 +24,7 @@ declare({
     // Presence is checked at the point of use, with a named refusal.
     //
     // The pull toward storing this one is strong, which is why the refusal is
-    // in code (`secrets push` derives its never-store set from this
+    // in code (`env push` derives its never-store set from this
     // declaration) rather than in a document: `with-env` loads the root .env
     // for every command, so putting the token there is exactly what makes
     // `secrets` work without re-exporting it each session. It cannot live

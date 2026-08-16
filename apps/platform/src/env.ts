@@ -38,7 +38,7 @@ function switchEnvironment<T, R>(opt: { local: T; deployed: R }) {
 /**
  * Server-side variables. Every schema goes through `define()`, which is what
  * records the variable's classification — scope, secrecy, routing — into the
- * `@devdogsuga/env` registry. `.env.example` and the `secrets push` key lists
+ * `@devdogsuga/env` registry. `.env.example` and the `env push` key lists
  * are derived from these declarations, so an entry here is the whole paper
  * trail a variable gets.
  */
@@ -50,7 +50,7 @@ const server = {
   //
   // Set by `wrangler.jsonc` per env block at runtime and by the `cf:build:*`
   // scripts at build time. Never a GitHub environment secret, never in any
-  // .env file, and skipped by `secrets push` -- it has two agreeing committed
+  // .env file, and skipped by `env push` -- it has two agreeing committed
   // sources already.
   DEPLOY_ENV: define(z.enum(DEPLOY_ENVIRONMENTS).default("development"), {
     doc:
@@ -195,7 +195,7 @@ const server = {
       // The placeholder documents the one-line \n-escaped shape, which is the
       // part people get wrong when pasting a real key.
       example:
-        "-----BEGIN RSA PRIVATE KEY-----\\nPLACEHOLDER-NOT-A-REAL-KEY-see-docs-platform-secrets-md\\n-----END RSA PRIVATE KEY-----\\n",
+        "-----BEGIN RSA PRIVATE KEY-----\\nPLACEHOLDER-NOT-A-REAL-KEY-see-docs-platform-env-md\\n-----END RSA PRIVATE KEY-----\\n",
     },
   ),
   // The repository competition branches live in. Defaulted rather than
@@ -433,7 +433,7 @@ const client = {
  * not instead of it. @t3-oss keeps doing the real runtime work (the
  * client/server split and the proxy that throws when server config is read in
  * a browser bundle); `declare()` is what makes the variables *visible* to the
- * tooling that derives `.env.example` and the `secrets push` routing. It
+ * tooling that derives `.env.example` and the `env push` routing. It
  * throws on any schema that skipped `define()`, so a variable cannot exist
  * here unclassified.
  */
