@@ -24,7 +24,7 @@ import { explain, unwrap } from "./ui.js";
 
 /** Short enough to sit beside the name; the specs' summaries are paragraphs. */
 const BWS_HINTS: Record<BwsEnvironment, string> = {
-  "preflight": "read-only credentials for the pre-promotion checks",
+  preflight: "read-only credentials for the pre-promotion checks",
   staging: "the everyday one — safe to overwrite",
   production: "⚠️  the live values",
 };
