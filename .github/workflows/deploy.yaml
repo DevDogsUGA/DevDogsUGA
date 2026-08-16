@@ -1,0 +1,511 @@
+name: Deploy
+
+# The only workflow in this repository that holds credentials.
+#
+# `ci.yaml` is validation and deliberately has none: on `pull_request` GitHub
+# runs the workflow definition FROM THE PULL REQUEST, so any secret in scope
+# there is readable by whoever opened it. This file is the other side of that
+# line — everything needing a real credential lives here, after the merge gate.
+#
+#   feature ──PR──▶ main ──────────────────────▶ deploy STAGING
+#                    │
+#                    └──promotion PR──▶ production ──▶ deploy PRODUCTION
+#
+# ⚠️ THERE IS NO `pull_request` TRIGGER HERE, AND THERE CANNOT BE ONE. This is
+# structural rather than stylistic: environment secrets are reachable only when
+# `github.ref` matches the environment's deployment-branch policy, and a pull
+# request's ref is `refs/pull/N/merge`, which matches no policy pattern. Adding
+# a PR trigger would not "run the deploy on PRs"; it would run a deploy with
+# every credential silently empty, against whatever the branch happened to say.
+#
+# Staging deploys from `main` rather than from a `staging` branch. A workflow
+# pushing to a protected branch needs a GitHub App in the bypass list —
+# complexity with no matching benefit when the branch would only ever mirror
+# `main`.
+#
+# ⚠️ No TURBO_TOKEN / TURBO_TEAM here either. Remote caching is entirely off
+# (`turbo.json` configures no `remoteCache`, verified 2026-08-11), and turning
+# it on requires — in the same change — either `remoteCache.signature` or
+# disjoint cache scopes for trusted and untrusted contexts. A PR that can WRITE
+# a cache a deploy later READS is a path from an unreviewed branch into a
+# production artifact. `ci.yaml` carries the same warning.
+
+on:
+  push:
+    branches: [main, production]
+  workflow_dispatch:
+    inputs:
+      prune_orphans:
+        description: >-
+          Delete Worker secrets nothing declares any more. Production only,
+          and it SKIPS the deploy — see the prune job for why.
+        type: boolean
+        default: false
+
+# No `cancel-in-progress`, unlike ci.yaml. A cancelled validation run wastes a
+# minute; a cancelled deploy leaves a Worker half-published or a migration
+# half-applied, and the queue is one deploy deep in practice anyway.
+concurrency:
+  group: deploy-${{ github.ref }}
+
+# Least privilege for GITHUB_TOKEN. Nothing here writes to the repository —
+# the deploy targets are Cloudflare and Supabase, reached with their own
+# credentials.
+permissions:
+  contents: read
+
+env:
+  # The one place the branch becomes an environment name. Everything downstream
+  # reads DEPLOY_ENV, which `@devdogsuga/env` ALLOWLISTS to three names — so a
+  # typo here fails loudly at the first `with-env` rather than loading a file
+  # nobody meant.
+  DEPLOY_ENV: ${{ github.ref_name == 'production' && 'production' || 'staging' }}
+
+# ⚠️ SKIP_ENV_VALIDATION IS DELIBERATELY ABSENT, and this is the difference
+# that matters between this file and ci.yaml. CI sets it because it has no
+# .env; here the whole env schema is exactly what should be enforced, and a
+# newly required variable with no value must fail the build rather than reach
+# production undefined (security plan §A.6.3).
+
+jobs:
+  # ── staging ─────────────────────────────────────────────────────────────────
+
+  # Is staging's Supabase project awake? See the script for the whole argument;
+  # in short, staging is free-tier, free-tier projects pause after a week
+  # without activity, and staging deploys roughly weekly — so paused is the
+  # EXPECTED state and must not surface as a Postgres connection error that
+  # reads like a broken migration.
+  #
+  # A separate job rather than a first step, so the skip shows up in the run
+  # graph as a skipped deploy instead of a green one that quietly did nothing.
+  staging-preflight:
+    if: github.ref_name == 'main' && !inputs.prune_orphans
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # For `vars` only. PROJECT_REF and PUBLISHABLE_KEY are both public (§A.4)
+    # and no secret is read here — one unauthenticated request classifies the
+    # project before any credential is in scope.
+    environment: staging
+    outputs:
+      paused: ${{ steps.probe.outputs.paused }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      # No pnpm install: the script imports nothing outside node: builtins,
+      # which is what keeps this job to a few seconds.
+      - name: Classify the Supabase project
+        id: probe
+        env:
+          PROJECT_REF: ${{ vars.PROJECT_REF }}
+          PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
+        run: node scripts/preflight-supabase-project.mjs
+
+  staging-deploy:
+    needs: staging-preflight
+    if: needs.staging-preflight.outputs.paused != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+    strategy:
+      # The three Workers are independent deploy targets. One failing is worth
+      # knowing about on its own; it is not a reason to leave the other two on
+      # the previous version.
+      fail-fast: false
+      matrix:
+        include:
+          - app: platform
+            mint: ""
+          - app: schedule-builder
+            mint: ""
+          # The sandbox proxy's credential is SIGNED at deploy time rather than
+          # stored, so it cannot arrive through the env file. See
+          # scripts/mint-sandbox-token.mjs.
+          - app: sandbox
+            mint: --mint scripts/mint-sandbox-token.mjs
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The ONLY step in this file that reads the `secrets` and `vars` contexts.
+      # After it, the checkout looks like a devops laptop and every later step
+      # is the command a person would run by hand.
+      - name: Compose .env.staging from the environment
+        env:
+          DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
+          DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
+        run: pnpm exec tsx scripts/deploy-write-env.ts
+      - name: Build the workspace packages this app depends on
+        run: pnpm turbo run build --filter='${{ matrix.app }}^...'
+      # `next build` through OpenNext, with the env schema ENFORCED. sandbox is
+      # a plain Worker and wrangler bundles it during the deploy itself.
+      - name: Build ${{ matrix.app }}
+        if: matrix.app != 'sandbox'
+        run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
+      # Written to a mkdtemp 0700 directory and removed below whatever happens.
+      - name: Compose the Worker secrets file
+        id: secrets
+        run: >-
+          pnpm exec with-env tsx scripts/deploy-secrets-file.ts
+          --app ${{ matrix.app }} ${{ matrix.mint }}
+      - name: Deploy ${{ matrix.app }}
+        if: matrix.app != 'sandbox'
+        env:
+          DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
+        run: pnpm --filter ${{ matrix.app }} run "cf:deploy:$DEPLOY_ENV"
+      # ⚠️ Inline rather than `pnpm --filter sandbox run deploy:staging`, and
+      # only because that script does not yet take the two flags. It is the
+      # same line plus `--secrets-file` and `--var`; both belong in
+      # apps/sandbox/package.json alongside the DEPLOY_SECRETS_FILE hook the
+      # other two Workers now carry, at which point this collapses into the
+      # step above.
+      #
+      # PLATFORM_REST_URL is a deploy-time `--var` rather than a committed
+      # wrangler.jsonc entry: one committed value cannot be right for three
+      # environments, and the placeholder that shipped in all three is the
+      # measurement of how often it got edited by hand.
+      - name: Deploy sandbox
+        if: matrix.app == 'sandbox'
+        env:
+          DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
+        run: |
+          pnpm --filter sandbox exec with-env -c 'node ../../scripts/require-cloudflare-token.mjs && wrangler deploy -e "$DEPLOY_ENV" --secrets-file "$DEPLOY_SECRETS_FILE" --var PLATFORM_REST_URL:$REST_URL'
+      # The `finally` half of the mkdtemp. A hosted runner is discarded whole,
+      # so this is for the self-hosted case and for a job that fails between
+      # composing the file and using it.
+      - name: Remove the Worker secrets file
+        if: always()
+        env:
+          DIR: ${{ steps.secrets.outputs.dir }}
+        run: if [ -n "$DIR" ]; then rm -rf "$DIR"; fi
+
+  # ── plan against production, on merge to main (§3.5 stage 1) ────────────────
+
+  # Runs BEFORE the promotion PR is opened, so "what would this do to
+  # production" is answered on the commit that will be promoted rather than
+  # discovered during the promotion.
+  #
+  # `preflight` is a read-only credential tier by construction: a Postgres role
+  # granted SELECT on `supabase_migrations.schema_migrations` and nothing else.
+  # A general read-only role would NOT be acceptable — it would put every row of
+  # production data behind a `main`-tier trust boundary.
+  #
+  # This is reachable from `main` only because environment policies match
+  # `github.ref`; the same job could never be run from a pull request.
+  main-plan:
+    if: github.ref_name == 'main' && !inputs.prune_orphans
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: preflight
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # ⚠️ `set -o pipefail` is load-bearing, not boilerplate. `supabase db
+      # push` exits 1 on a connection failure, and a pipeline without it reports
+      # the exit code of `tee` — so a dry run that never connected reads as a
+      # clean plan.
+      - name: What would these migrations do to production?
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+        run: |
+          set -euo pipefail
+          { echo '### Migration plan — production (from `main`)'; echo; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          pnpm exec supabase db push --dry-run --db-url "$DB_URL" 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      # NOT DONE HERE: the Airtable schema plan §3.5 also calls for. The
+      # scaffolding client reads AIRTABLE_PAT (`devtools/src/airtable/client.ts`)
+      # and that key is declared `secrecy: "never-store"`, so it can never be a
+      # GitHub secret — there is no credential this job could legitimately hold.
+      # A separate `AIRTABLE_PLAN_PAT` with `schema.bases:read` was validated
+      # against the live base but is declared in no manifest, so nothing routes
+      # it. Declaring it and teaching the client to prefer it is the work; a
+      # step guarded on `secrets.X != ''` is not, because a guard like that is
+      # exactly how the old Airtable job passed for months without running.
+
+  # ── production ──────────────────────────────────────────────────────────────
+
+  # Stage 2 of the dry runs. Stage 1 above goes stale the moment another
+  # promotion lands first; this one is computed seconds before the mutation.
+  production-plan:
+    if: github.ref_name == 'production' && !inputs.prune_orphans
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    outputs:
+      config-changed: ${{ steps.config.outputs.changed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Both ends of the push, so the config diff below can be taken.
+          fetch-depth: 0
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: What will these migrations do to production?
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+        run: |
+          set -euo pipefail
+          { echo '### Migration plan — production'; echo; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          pnpm exec supabase db push --dry-run --db-url "$DB_URL" 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      # `supabase config` has exactly one subcommand — `push`. No pull, no diff,
+      # no --dry-run. So config.toml is the highest blast radius (site_url and
+      # every OAuth provider) with the least visibility, and its COMMITTED DIFF
+      # is the only plan there is. Printing it here is that plan; the reviewer
+      # gate on the apply job is what makes printing it worth anything.
+      #
+      # `github.event.before` is absent on a dispatch and all-zeros on a new
+      # branch. Either way this falls through to "changed", which asks for an
+      # approval that may be unnecessary — the safe direction.
+      - name: Did config.toml change?
+        id: config
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "No usable base commit; assuming config.toml changed." >&2
+            exit 0
+          fi
+          if git diff --quiet "$BEFORE" "$GITHUB_SHA" -- supabase/config.toml; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            { echo; echo '### config.toml diff — this IS the plan'; echo; echo '```diff'; } >> "$GITHUB_STEP_SUMMARY"
+            git diff "$BEFORE" "$GITHUB_SHA" -- supabase/config.toml >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # Applying the migrations. In `production` rather than `production-apply`,
+  # and that placement follows the tiering rather than working around it:
+  # apply-tier is for credentials that can reshape production AND HAVE NO DRY
+  # RUN. Migrations have one — it ran seconds ago, in the job this needs — so
+  # the Postgres credential is plan-tier and lives here. The gate in front of
+  # it is the promotion PR (maintainers only, two approvals).
+  #
+  # `--db-url` rather than `--linked`: linking needs a Supabase access token,
+  # which is the account-wide credential this tier deliberately does not hold.
+  production-migrate:
+    needs: production-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply migrations
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+        run: |
+          set -euo pipefail
+          pnpm exec supabase db push --db-url "$DB_URL" --yes
+
+  # The one mutation with no dry run gets its own approval step, which is what
+  # `production-apply` is: the same Bitwarden project as `production`, split
+  # across two GitHub environments, with required reviewers on this half. That
+  # split IS the gate — see packages/devtools/src/gh/environments.ts.
+  #
+  # Skipped when config.toml did not change, so the approval is asked for when
+  # there is something to approve rather than on every promotion.
+  production-config:
+    needs: [production-plan, production-migrate]
+    if: needs.production-plan.outputs.config-changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production-apply
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # `--source supabase` composes exactly what config.toml reads — the four
+      # OAuth provider pairs, the two site URLs and their callbacks — and
+      # demands every secret among them rather than only the schema-required
+      # ones. They are all `.optional()`, because no APP boots on them; only
+      # this file does. So without that stricter rule a provider could be
+      # reconfigured with its secret quietly unset, which is the single highest
+      # blast radius change in the repository (`site_url` and every sign-in
+      # route) arriving through the step with no dry run.
+      #
+      # ⚠️ Those secrets are plan-tier today, so `routeTo()` sends them to
+      # `production` and NOT to `production-apply`. Until they are declared
+      # `tier: "apply"` in `supabase/env.ts` — nothing but config.toml reads
+      # them, so nothing else would notice — this step is what will say so,
+      # by name, instead of the Supabase CLI complaining about a config file.
+      - name: Compose the config-push environment
+        env:
+          DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
+          DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
+        run: pnpm exec tsx scripts/deploy-write-env.ts --source supabase
+      # SUPABASE_ACCESS_TOKEN is passed here rather than composed: it belongs to
+      # the operator manifest, not to supabase's, and `with-env` leaves a value
+      # already in the environment alone.
+      - name: Push config.toml
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          pnpm exec with-env -c 'supabase config push --project-ref $PROJECT_REF'
+
+  production-deploy:
+    needs: [production-plan, production-migrate, production-config]
+    # A dependency that was SKIPPED normally skips its dependents, and the
+    # config job is skipped on most promotions — config.toml rarely changes. So
+    # the condition is spelled out: migrations must have succeeded, and config
+    # must not have FAILED (skipped is fine). `!cancelled()` rather than
+    # `always()`, so cancelling the run still cancels the deploy.
+    if: >-
+      !cancelled()
+      && needs.production-migrate.result == 'success'
+      && needs.production-config.result != 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: platform
+            mint: ""
+          - app: schedule-builder
+            mint: ""
+          - app: sandbox
+            mint: --mint scripts/mint-sandbox-token.mjs
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Compose .env.production from the environment
+        env:
+          DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
+          DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
+        run: pnpm exec tsx scripts/deploy-write-env.ts
+      - name: Build the workspace packages this app depends on
+        run: pnpm turbo run build --filter='${{ matrix.app }}^...'
+      - name: Build ${{ matrix.app }}
+        if: matrix.app != 'sandbox'
+        run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
+      - name: Compose the Worker secrets file
+        id: secrets
+        run: >-
+          pnpm exec with-env tsx scripts/deploy-secrets-file.ts
+          --app ${{ matrix.app }} ${{ matrix.mint }}
+      - name: Deploy ${{ matrix.app }}
+        if: matrix.app != 'sandbox'
+        env:
+          DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
+        run: pnpm --filter ${{ matrix.app }} run "cf:deploy:$DEPLOY_ENV"
+      # See the staging job for why this one is inline.
+      - name: Deploy sandbox
+        if: matrix.app == 'sandbox'
+        env:
+          DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
+        run: |
+          pnpm --filter sandbox exec with-env -c 'node ../../scripts/require-cloudflare-token.mjs && wrangler deploy -e "$DEPLOY_ENV" --secrets-file "$DEPLOY_SECRETS_FILE" --var PLATFORM_REST_URL:$REST_URL'
+      - name: Remove the Worker secrets file
+        if: always()
+        env:
+          DIR: ${{ steps.secrets.outputs.dir }}
+        run: if [ -n "$DIR" ]; then rm -rf "$DIR"; fi
+
+  # ── orphaned Worker secrets (§3.6) ──────────────────────────────────────────
+
+  # `--secrets-file` preserves what it omits, so a renamed or dropped variable
+  # leaves its secret on the Worker indefinitely and nothing else in the system
+  # can see it. Reported on every production deploy; NEVER fatal, because a
+  # stale name is not a defect in the change that was just shipped.
+  production-orphans:
+    needs: production-deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # No env file: this reads secret NAMES from Cloudflare and needs exactly
+      # one credential to do it. The existing guard is invoked rather than
+      # reimplemented, so a missing token says who to ask instead of dropping
+      # into wrangler's browser OAuth.
+      - name: Report orphaned Worker secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          node scripts/require-cloudflare-token.mjs
+          pnpm exec tsx scripts/deploy-orphan-audit.ts
+
+  # Deleting them is a separate, deliberate, human-triggered run — never
+  # chained to a deploy. Each deletion PUBLISHES A NEW VERSION of the code
+  # already deployed (there is no way to change a Worker secret without
+  # publishing), so auto-pruning would turn every deploy carrying an orphan
+  # into two publishes, the second of which went through neither the promotion
+  # PR nor this environment's reviewers.
+  #
+  # It skips the deploy entirely: a dispatch that ticked this box is a
+  # maintenance run, not a release.
+  #
+  # ⚠️ `CLOUDFLARE_API_TOKEN` is plan-tier, so `routeTo()` sends it to
+  # `production` and not to `production-apply`. This job therefore needs a copy
+  # here that the routing does not currently create — `secrets audit` will
+  # report it as living somewhere it does not belong until §3.6 and the routing
+  # agree on which environment prunes.
+  prune-orphans:
+    if: github.event_name == 'workflow_dispatch' && inputs.prune_orphans && github.ref_name == 'production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production-apply
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Prune orphaned Worker secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          node scripts/require-cloudflare-token.mjs
+          pnpm exec tsx scripts/deploy-orphan-audit.ts --prune

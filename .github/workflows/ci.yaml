@@ -89,6 +89,16 @@ jobs:
       # a second.
       - name: .env.example agrees with the env manifests
         run: pnpm env:example:check
+      # `scripts/` is not a workspace package, so `turbo run typecheck` cannot
+      # see it and nothing else here would -- while the files in it are the
+      # ones that compose production credentials and write Worker secrets.
+      # They reach into devtools' sources, whose own workspace dependencies
+      # have to be built first for their types to resolve to anything but
+      # `any`; same reason `turbo.json` gives typecheck a `^build`.
+      - name: Typecheck the deploy scripts
+        run: |
+          pnpm turbo run build --filter='@devdogsuga/devtools^...'
+          pnpm exec tsc --noEmit -p scripts/tsconfig.json
 
   # Everything that needs a real Postgres: 139 tests CI has never run.
   #

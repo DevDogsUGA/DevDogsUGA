@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "incremental": false,
+    "checkJs": false
+  },
+  "include": ["deploy-*.ts"]
+}
