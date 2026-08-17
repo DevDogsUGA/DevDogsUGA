@@ -89,16 +89,17 @@ jobs:
       # a second.
       - name: .env.example agrees with the env manifests
         run: pnpm env:example:check
-      # `scripts/` is not a workspace package, so `turbo run typecheck` cannot
-      # see it and nothing else here would -- while the files in it are the
-      # ones that compose production credentials and write Worker secrets.
-      # They reach into devtools' sources, whose own workspace dependencies
-      # have to be built first for their types to resolve to anything but
-      # `any`; same reason `turbo.json` gives typecheck a `^build`.
-      - name: Typecheck the deploy scripts
-        run: |
-          pnpm turbo run build --filter='@devdogsuga/devtools^...'
-          pnpm exec tsc --noEmit -p scripts/tsconfig.json
+      # REMOVED: "Typecheck the deploy scripts" (`tsc -p scripts/tsconfig.json`).
+      #
+      # It existed because `scripts/` was not a workspace package, so `turbo run
+      # typecheck` could not see it — while the files in it were the ones that
+      # composed production credentials and wrote Worker secrets. All six are
+      # `devtools deploy` commands now, so they are typechecked, linted and
+      # TESTED by the `turbo run lint typecheck test` step above, along with
+      # everything else in that package. `scripts/` is gone with them; a step
+      # pointed at an empty directory does not fail loudly, it fails as
+      # TS18003 "no inputs were found", which reads like a broken config
+      # rather than like a job with nothing to do.
 
   # Everything that needs a real Postgres: 139 tests CI has never run.
   #

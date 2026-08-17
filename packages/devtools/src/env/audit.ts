@@ -87,7 +87,7 @@ export interface AuditInput {
    * Separate from `github` rather than merged with a discriminator, because
    * GitHub genuinely allows one name to exist as both a secret and a variable
    * in one environment and resolves the ambiguity by never telling you — see
-   * `scripts/deploy-write-env.ts`, which refuses that case outright. Two lists
+   * `deploy/write-env.ts`, which refuses that case outright. Two lists
    * can represent it; one list keyed by name cannot, and would silently pick a
    * winner.
    */

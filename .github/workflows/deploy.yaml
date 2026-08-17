@@ -66,11 +66,47 @@ env:
 # .env; here the whole env schema is exactly what should be enforced, and a
 # newly required variable with no value must fail the build rather than reach
 # production undefined (security plan §A.6.3).
+#
+# ── the two devtools entry points, and why every step names one ──────────────
+#
+# Every step below runs a `devtools deploy <step>` command. They used to be
+# loose files in `scripts/` that reached into devtools' own sources through a
+# relative path; they are commands now, with the same help, refusals and named
+# errors as the rest of the CLI. Which entry point a step uses is NOT a style
+# choice:
+#
+#   run cli          `with-env tsx src/cli.ts` — loads .env.$DEPLOY_ENV first.
+#   run cli:no-env   the same entry point with that wrapper removed.
+#
+# ⚠️ `deploy write-env` is the step that CREATES .env.$DEPLOY_ENV, so routing
+# it through `with-env` is a bootstrap cycle: it would die on
+# MissingEnvFileError for the file it was about to write.
+#
+# `deploy orphans`, `deploy preflight` and `deploy require-token` are
+# `cli:no-env` for a different reason — they run in jobs that hold one narrow
+# credential and compose no env file at all, so the wrapped entry point would
+# exit reporting a missing FILE rather than the missing TOKEN or the paused
+# project, which is the one thing those jobs exist to say. Note that this is
+# NOT about the two nested cases: inside `with-env -c '…'` the wrapper would be
+# value-neutral anyway, because dotenvx leaves an already-set value alone. It
+# is about the BARE runs in the orphan-audit and prune jobs, and the same entry
+# point is used in both places so there is one answer rather than two.
+#
+# Everything downstream of write-env uses `run cli`, because reading the values
+# it composed is the entire point of those steps.
+#
+# ⚠️ NOTHING here may run a deploy command through a wrapper that writes to
+# stdout. `deploy secrets-file` emits `::add-mask::<token>`, which GitHub
+# recognises only on a line of its own, and `deploy mint-token` (which
+# `--mint` runs) emits a JWT its caller takes whole. pnpm's own `$ <command>`
+# banner goes to stderr — measured — which is why `pnpm --filter … run` is
+# safe here; `intro()` does not, which is why cli.ts suppresses it for this
+# group.
 
 jobs:
   # ── staging ─────────────────────────────────────────────────────────────────
 
-  # Is staging's Supabase project awake? See the script for the whole argument;
+  # Is staging's Supabase project awake? See the command for the whole argument;
   # in short, staging is free-tier, free-tier projects pause after a week
   # without activity, and staging deploys roughly weekly — so paused is the
   # EXPECTED state and must not surface as a Postgres connection error that
@@ -90,17 +126,30 @@ jobs:
       paused: ${{ steps.probe.outputs.paused }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: .nvmrc
-      # No pnpm install: the script imports nothing outside node: builtins,
-      # which is what keeps this job to a few seconds.
+          cache: pnpm
+      # This job used to skip `pnpm install` entirely — the probe was a
+      # standalone script importing nothing outside node: builtins, and that
+      # kept the job to a few seconds. It is a devtools command now, so the
+      # install is back. The trade is deliberate: a cached install is a few
+      # tens of seconds against a probe that shares the CLI's error reporting
+      # and is covered by the same suite as everything else here, rather than
+      # being the one step in the pipeline that nothing tests.
+      - run: pnpm install --frozen-lockfile
+      # cli:no-env — there is no env file in this job, and there must not be:
+      # it holds `vars` only, so that one unauthenticated request classifies
+      # the project before any credential is in scope.
       - name: Classify the Supabase project
         id: probe
         env:
           PROJECT_REF: ${{ vars.PROJECT_REF }}
           PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
-        run: node scripts/preflight-supabase-project.mjs
+        run: >-
+          pnpm --filter @devdogsuga/devtools run cli:no-env deploy preflight
 
   staging-deploy:
     needs: staging-preflight
@@ -120,10 +169,14 @@ jobs:
           - app: schedule-builder
             mint: ""
           # The sandbox proxy's credential is SIGNED at deploy time rather than
-          # stored, so it cannot arrive through the env file. See
-          # scripts/mint-sandbox-token.mjs.
+          # stored, so it cannot arrive through the env file. `--mint` is a
+          # BARE FLAG now: it runs `devtools deploy mint-token`, a sibling of
+          # the command that calls it, and derives WHICH variable the token
+          # fills from the app's own manifest. It used to name a script to run
+          # and take the stdout of, which made a workflow edit enough to point
+          # the composer at any executable on the runner.
           - app: sandbox
-            mint: --mint scripts/mint-sandbox-token.mjs
+            mint: --mint
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Enable corepack (pnpm)
@@ -140,7 +193,12 @@ jobs:
         env:
           DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
           DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        run: pnpm exec tsx scripts/deploy-write-env.ts
+        # ⚠️ cli:no-env, and this is the one place in the file where that is
+        # not interchangeable with `run cli`. This step CREATES the file
+        # `with-env` would insist on reading, so routing it through the wrapper
+        # would fail on MissingEnvFileError for its own output.
+        run: >-
+          pnpm --filter @devdogsuga/devtools run cli:no-env deploy write-env
       - name: Build the workspace packages this app depends on
         run: pnpm turbo run build --filter='${{ matrix.app }}^...'
       # `next build` through OpenNext, with the env schema ENFORCED. sandbox is
@@ -151,8 +209,11 @@ jobs:
       # Written to a mkdtemp 0700 directory and removed below whatever happens.
       - name: Compose the Worker secrets file
         id: secrets
+        # `run cli` — with-env — because the whole job of this step is to read
+        # the values write-env composed. Its stdout carries `::add-mask::` and
+        # nothing else; see the note at the top of this file.
         run: >-
-          pnpm exec with-env tsx scripts/deploy-secrets-file.ts
+          pnpm --filter @devdogsuga/devtools run cli deploy secrets-file
           --app ${{ matrix.app }} ${{ matrix.mint }}
       - name: Deploy ${{ matrix.app }}
         if: matrix.app != 'sandbox'
@@ -175,7 +236,7 @@ jobs:
         env:
           DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
         run: |
-          pnpm --filter sandbox exec with-env -c 'node ../../scripts/require-cloudflare-token.mjs && wrangler deploy -e "$DEPLOY_ENV" --secrets-file "$DEPLOY_SECRETS_FILE" --var PLATFORM_REST_URL:$REST_URL'
+          pnpm --filter sandbox exec with-env -c 'pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token && wrangler deploy -e "$DEPLOY_ENV" --secrets-file "$DEPLOY_SECRETS_FILE" --var PLATFORM_REST_URL:$REST_URL'
       # The `finally` half of the mkdtemp. A hosted runner is discarded whole,
       # so this is for the self-hosted case and for a job that fails between
       # composing the file and using it.
@@ -364,7 +425,11 @@ jobs:
         env:
           DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
           DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        run: pnpm exec tsx scripts/deploy-write-env.ts --source supabase
+        # cli:no-env for the same bootstrap reason as the other write-env
+        # steps: this composes .env.production, which nothing has written yet.
+        run: >-
+          pnpm --filter @devdogsuga/devtools run cli:no-env deploy write-env
+          --source supabase
       # SUPABASE_ACCESS_TOKEN is passed here rather than composed: it belongs to
       # the operator manifest, not to supabase's, and `with-env` leaves a value
       # already in the environment alone.
@@ -397,8 +462,9 @@ jobs:
             mint: ""
           - app: schedule-builder
             mint: ""
+          # See the staging matrix for why --mint takes no argument.
           - app: sandbox
-            mint: --mint scripts/mint-sandbox-token.mjs
+            mint: --mint
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Enable corepack (pnpm)
@@ -412,7 +478,12 @@ jobs:
         env:
           DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
           DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        run: pnpm exec tsx scripts/deploy-write-env.ts
+        # ⚠️ cli:no-env, and this is the one place in the file where that is
+        # not interchangeable with `run cli`. This step CREATES the file
+        # `with-env` would insist on reading, so routing it through the wrapper
+        # would fail on MissingEnvFileError for its own output.
+        run: >-
+          pnpm --filter @devdogsuga/devtools run cli:no-env deploy write-env
       - name: Build the workspace packages this app depends on
         run: pnpm turbo run build --filter='${{ matrix.app }}^...'
       - name: Build ${{ matrix.app }}
@@ -420,8 +491,11 @@ jobs:
         run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
       - name: Compose the Worker secrets file
         id: secrets
+        # `run cli` — with-env — because the whole job of this step is to read
+        # the values write-env composed. Its stdout carries `::add-mask::` and
+        # nothing else; see the note at the top of this file.
         run: >-
-          pnpm exec with-env tsx scripts/deploy-secrets-file.ts
+          pnpm --filter @devdogsuga/devtools run cli deploy secrets-file
           --app ${{ matrix.app }} ${{ matrix.mint }}
       - name: Deploy ${{ matrix.app }}
         if: matrix.app != 'sandbox'
@@ -434,7 +508,7 @@ jobs:
         env:
           DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
         run: |
-          pnpm --filter sandbox exec with-env -c 'node ../../scripts/require-cloudflare-token.mjs && wrangler deploy -e "$DEPLOY_ENV" --secrets-file "$DEPLOY_SECRETS_FILE" --var PLATFORM_REST_URL:$REST_URL'
+          pnpm --filter sandbox exec with-env -c 'pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token && wrangler deploy -e "$DEPLOY_ENV" --secrets-file "$DEPLOY_SECRETS_FILE" --var PLATFORM_REST_URL:$REST_URL'
       - name: Remove the Worker secrets file
         if: always()
         env:
@@ -461,17 +535,17 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # No env file: this reads secret NAMES from Cloudflare and needs exactly
-      # one credential to do it. The existing guard is invoked rather than
-      # reimplemented, so a missing token says who to ask instead of dropping
-      # into wrangler's browser OAuth.
+      # No env file, hence cli:no-env on both lines: this reads secret NAMES
+      # from Cloudflare and needs exactly one credential to do it. The existing
+      # guard is invoked rather than reimplemented, so a missing token says who
+      # to ask instead of dropping into wrangler's browser OAuth.
       - name: Report orphaned Worker secrets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          node scripts/require-cloudflare-token.mjs
-          pnpm exec tsx scripts/deploy-orphan-audit.ts
+          pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token
+          pnpm --filter @devdogsuga/devtools run cli:no-env deploy orphans
 
   # Deleting them is a separate, deliberate, human-triggered run — never
   # chained to a deploy. Each deletion PUBLISHES A NEW VERSION of the code
@@ -507,5 +581,5 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          node scripts/require-cloudflare-token.mjs
-          pnpm exec tsx scripts/deploy-orphan-audit.ts --prune
+          pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token
+          pnpm --filter @devdogsuga/devtools run cli:no-env deploy orphans --prune

@@ -85,7 +85,7 @@ describe("registry completeness", () => {
   });
 
   it("uploads no stored credential to the sandbox Worker", () => {
-    // `scripts/deploy-secrets-file.ts` sends a Worker every storable key its
+    // `deploy secrets-file` sends a Worker every storable key its
     // app's own manifest declares, excluding `:tooling` sources. For the proxy
     // that set must stay EMPTY: `PLATFORM_REST_URL` is public and arrives as a
     // `--var`, `SANDBOX_PROXY_TOKEN` is minted on the runner. Anything else
@@ -115,7 +115,7 @@ describe("registry completeness", () => {
       expect(
         storable.has(entry.key),
         `${entry.key} is declared by the sandbox runtime manifest and is ` +
-          "storable, so deploy-secrets-file.ts would upload it to the proxy " +
+          "storable, so `deploy secrets-file` would upload it to the proxy " +
           'Worker. Move it to the "sandbox:tooling" manifest if the DEPLOY ' +
           "needs it rather than the Worker.",
       ).toBe(false);

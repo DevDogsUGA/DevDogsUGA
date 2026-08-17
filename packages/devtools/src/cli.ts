@@ -55,6 +55,10 @@ import {
   runEnvReset,
 } from "./env/commands.js";
 import { runEnvExample, runEnvInit } from "./env/example.js";
+import { DeployError, say } from "./deploy/report.js";
+import { renderWriteEnvReport, runDeployWriteEnv } from "./deploy/write-env.js";
+import { runDeploySecretsFile } from "./deploy/secrets-file.js";
+import { runDeployOrphans } from "./deploy/orphans.js";
 import { loadRegistry } from "./env/discovery.js";
 import { ENV_TARGETS, isEnvTarget } from "@devdogsuga/env";
 import { setExplicitAccessToken } from "./bws/client.js";
@@ -97,6 +101,7 @@ Commands:
   airtable   Scaffold, pull ids from, or verify the officer base
   env        One env file per target, synced to Bitwarden + GitHub, with a
              drift audit
+  deploy     The steps a deploy job runs. Not for a laptop — see below
 
 Airtable subcommands:
   airtable scaffold [--dry-run]   Create what the registry declares
@@ -166,6 +171,32 @@ from it:
   pull and push stamp each line with the target and date, so a file that
   has been sitting for weeks says so. Same-named lines are grouped together on
   every write. reset is local-only and takes no --target.
+
+Deploy subcommands. Steps of .github/workflows/deploy.yaml, run in order by a
+job that has already set DEPLOY_ENV:
+
+  deploy write-env [--source <manifest>]
+                                  compose .env.<DEPLOY_ENV> from the GitHub
+                                  environment's secrets and variables
+  deploy secrets-file --app <app> [--mint]
+                                  write the --secrets-file wrangler uploads
+                                  with that Worker, into a 0700 temp dir
+  deploy orphans [--prune]        report Worker secrets nothing declares
+                                  (--prune deletes them; production-apply only)
+
+  These print NOTHING to stdout except the one line GitHub has to parse:
+  secrets-file's \`::add-mask::\`. No banner, no prompts, no menu — they run
+  unattended, and two of them have a stdout something downstream reads.
+
+  ⚠️ write-env and orphans must NOT go through \`pnpm devtools\`, which is
+  \`with-env tsx src/cli.ts\`. write-env CREATES the env file with-env would
+  demand, and orphans runs in a job that has none. Both use the wrapper-free
+  entry point:
+
+    pnpm --filter @devdogsuga/devtools run cli:no-env deploy write-env
+
+  secrets-file is the opposite: it reads the values write-env composed out of
+  the ambient environment, so it wants \`pnpm devtools deploy secrets-file\`.
 
 Database targets (link, push, reset, status) — unrelated to env's --target:
   --local            The Docker stack (default)
@@ -673,6 +704,127 @@ async function runEnvCommand(rest: string[]): Promise<void> {
   }
 }
 
+// ── Deploy ───────────────────────────────────────────────────────────────────
+
+/**
+ * `deploy <write-env | secrets-file | orphans>` — the steps of a deploy job.
+ *
+ * These were three files in `scripts/` that imported devtools' own sources
+ * through a relative path, which is why `scripts/` needed a tsconfig and a CI
+ * typecheck step of its own. They are devtools commands now, and get the
+ * documentation, refusals and named errors the rest of the CLI has.
+ *
+ * ## ⚠️ Dispatched BEFORE `intro()`, and it never calls `outro()`
+ *
+ * Every `@clack/prompts` writer — `intro`, `outro`, `log.*`, `note`, the
+ * spinner — writes to STDOUT (measured; see `deploy/report.ts`). Two commands
+ * in this group have a stdout something downstream parses: `secrets-file`
+ * emits `::add-mask::<token>`, which GitHub recognises only on a line of its
+ * own, and `mint-token` emits a signed JWT that its caller takes whole. A
+ * banner on that stream is not cosmetic — it is an unmasked production
+ * credential in a public repository's job log, or a Worker secret with a box
+ * drawing character in it.
+ *
+ * So: no `intro`, no `outro`, and nothing in `deploy/` may use `log`, `note`
+ * or `explain`. Failures render through `say()`, which is stderr.
+ *
+ * Nothing here prompts either. There is nobody to ask on a runner, and a
+ * command that fell back to a prompt would hang the job rather than fail it.
+ */
+async function runDeployCommand(rest: string[]): Promise<void> {
+  // `positionals` rather than `rest[0]`, for the reason its own module gives:
+  // the value of a flag must never be read as a subcommand. Here that would be
+  // `--source production orphans` selecting a subcommand from a manifest name.
+  const [sub] = positionals(rest);
+
+  if (!sub) {
+    say([
+      "devtools deploy: which step?",
+      "  write-env [--source <manifest>]   compose .env.<DEPLOY_ENV>",
+      "  secrets-file --app <app> [--mint] compose the Worker secrets file",
+      "  orphans [--prune]                 audit Worker secrets nothing declares",
+    ]);
+    process.exitCode = 1;
+    return;
+  }
+
+  try {
+    // The registry fills only when the manifests are imported, and all three of
+    // these derive their whole key set from it. Loaded here rather than at CLI
+    // start for the reason `runEnvCommand` gives: the import pass touches a
+    // manifest in nearly every workspace package.
+    await loadRegistry();
+
+    if (sub === "write-env") {
+      // Parsed here rather than with `flagValue`, which cannot tell "absent"
+      // from "given something that looks like a flag" — and `--source --mint`
+      // silently composing EVERYTHING instead of one manifest's slice is the
+      // difference between a narrow config push and a full credential set.
+      const index = rest.indexOf("--source");
+      const source = index === -1 ? null : rest[index + 1];
+      if (index !== -1 && (!source || source.startsWith("--"))) {
+        throw new DeployError(
+          "--source needs a manifest name, e.g. --source supabase.",
+        );
+      }
+
+      const result = await runDeployWriteEnv({ source });
+      say(renderWriteEnvReport(result));
+      return;
+    }
+
+    if (sub === "secrets-file") {
+      const app = flagValue(rest, "--app");
+      if (!app) {
+        throw new DeployError("--app <name> is required.", [
+          "It names the workspace app whose manifest declares the Worker's",
+          "secrets — platform, schedule-builder or sandbox.",
+        ]);
+      }
+
+      // `--mint` takes no value now. Refused by name rather than ignored: the
+      // old form named a script to run and take the stdout of, so a stale
+      // `--mint scripts/mint-sandbox-token.mjs` left as-is would silently drop
+      // the path, mint through the sibling command, and look like it worked —
+      // or, worse, keep working as a way to name any executable on the runner.
+      const mintIndex = rest.indexOf("--mint");
+      const after = mintIndex === -1 ? undefined : rest[mintIndex + 1];
+      if (after !== undefined && !after.startsWith("--")) {
+        throw new DeployError("`--mint` no longer takes a script path.", [
+          `Drop the "${after}" after it. There is one minting command in this`,
+          "repository — `devtools deploy mint-token` — and this runs it; which",
+          "variable it fills is derived from the app's manifest, not passed in.",
+        ]);
+      }
+
+      await runDeploySecretsFile({ app, mint: mintIndex !== -1 });
+      return;
+    }
+
+    if (sub === "orphans") {
+      await runDeployOrphans({ prune: rest.includes("--prune") });
+      return;
+    }
+
+    say([
+      `devtools deploy: unknown subcommand "${sub}".`,
+      "  Try write-env, secrets-file or orphans.",
+    ]);
+    process.exitCode = 1;
+  } catch (err) {
+    // stderr, not `explain()`. See the header.
+    say(
+      err instanceof DeployError
+        ? [
+            `devtools deploy ${sub}: ${err.message}`,
+            ...err.detail.map((line) => `  ${line}`),
+          ]
+        : [`devtools deploy ${sub}: ${errorMessage(err)}`],
+    );
+    process.exitCode = 1;
+  }
+}
+
 // ── Menu ─────────────────────────────────────────────────────────────────────
 
 async function menu(): Promise<void> {
@@ -774,6 +926,16 @@ async function main(): Promise<void> {
   }
 
   const [first, ...rest] = argv;
+
+  // ⚠️ BEFORE `intro()`, and this ordering is load-bearing rather than tidy.
+  // `intro` writes to STDOUT, and `deploy secrets-file` / `deploy mint-token`
+  // have a stdout that GitHub and this CLI respectively PARSE. See the header
+  // on `runDeployCommand`. It returns without an `outro()` for the same
+  // reason.
+  if (first === "deploy") {
+    await runDeployCommand(rest);
+    return;
+  }
 
   intro("DevDogs devtools");
 

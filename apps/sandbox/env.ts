@@ -112,7 +112,7 @@ declare({
 /**
  * What mints the token -- and a SEPARATE source, which is the whole point.
  *
- * `scripts/deploy-secrets-file.ts` sends a Worker every storable key its app
+ * `devtools deploy secrets-file` sends a Worker every storable key its app
  * declares, and excludes `:tooling` sources precisely because "a key the
  * DEPLOY needs is not automatically a key the WORKER needs". Declared as plain
  * `sandbox`, this key rode that path onto the proxy Worker itself.
