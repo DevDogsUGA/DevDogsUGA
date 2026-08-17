@@ -59,6 +59,9 @@ import { DeployError, say } from "./deploy/report.js";
 import { renderWriteEnvReport, runDeployWriteEnv } from "./deploy/write-env.js";
 import { runDeploySecretsFile } from "./deploy/secrets-file.js";
 import { runDeployOrphans } from "./deploy/orphans.js";
+import { runMintToken } from "./deploy/mint-token.js";
+import { runPreflight } from "./deploy/preflight.js";
+import { runRequireToken } from "./deploy/require-token.js";
 import { loadRegistry } from "./env/discovery.js";
 import { ENV_TARGETS, isEnvTarget } from "@devdogsuga/env";
 import { setExplicitAccessToken } from "./bws/client.js";
@@ -183,15 +186,23 @@ job that has already set DEPLOY_ENV:
                                   with that Worker, into a 0700 temp dir
   deploy orphans [--prune]        report Worker secrets nothing declares
                                   (--prune deletes them; production-apply only)
+  deploy preflight                classify the Supabase project before a job
+                                  commits to it: paused (skip) vs broken (fail)
+  deploy mint-token               sign a fresh sandbox proxy JWT to stdout.
+                                  The deploy reaches this through
+                                  secrets-file --mint, not by running it
+  deploy require-token            exit non-zero, naming who to ask, when
+                                  CLOUDFLARE_API_TOKEN is unset
 
   These print NOTHING to stdout except the one line GitHub has to parse:
   secrets-file's \`::add-mask::\`. No banner, no prompts, no menu — they run
   unattended, and two of them have a stdout something downstream reads.
 
-  ⚠️ write-env and orphans must NOT go through \`pnpm devtools\`, which is
-  \`with-env tsx src/cli.ts\`. write-env CREATES the env file with-env would
-  demand, and orphans runs in a job that has none. Both use the wrapper-free
-  entry point:
+  ⚠️ write-env, orphans, preflight and require-token must NOT go through
+  \`pnpm devtools\`, which is \`with-env tsx src/cli.ts\`. write-env CREATES the
+  env file with-env would demand; the other three run in jobs that have none,
+  where the wrapper would report a missing FILE rather than the missing TOKEN
+  or the paused project. All four use the wrapper-free entry point:
 
     pnpm --filter @devdogsuga/devtools run cli:no-env deploy write-env
 
@@ -707,7 +718,8 @@ async function runEnvCommand(rest: string[]): Promise<void> {
 // ── Deploy ───────────────────────────────────────────────────────────────────
 
 /**
- * `deploy <write-env | secrets-file | orphans>` — the steps of a deploy job.
+ * `deploy <write-env | secrets-file | orphans | preflight | mint-token |
+ * require-token>` — the steps of a deploy job.
  *
  * These were three files in `scripts/` that imported devtools' own sources
  * through a relative path, which is why `scripts/` needed a tsconfig and a CI
@@ -743,12 +755,45 @@ async function runDeployCommand(rest: string[]): Promise<void> {
       "  write-env [--source <manifest>]   compose .env.<DEPLOY_ENV>",
       "  secrets-file --app <app> [--mint] compose the Worker secrets file",
       "  orphans [--prune]                 audit Worker secrets nothing declares",
+      "  preflight                         classify the project (paused vs broken)",
+      "  mint-token                        sign a fresh sandbox proxy JWT",
+      "  require-token                     refuse to deploy without a CF token",
     ]);
     process.exitCode = 1;
     return;
   }
 
   try {
+    // ── Registry-free steps, dispatched FIRST ──────────────────────────────
+    //
+    // None of these three reads a declaration, and two of them are the ones
+    // that must stay quick: `require-token` is a guard standing in front of a
+    // deploy, and `preflight` classifies a paused project before a job decides
+    // whether to run at all. Loading the registry would import a manifest from
+    // nearly every workspace package to answer a question none of them asks.
+    if (sub === "require-token") {
+      runRequireToken();
+      return;
+    }
+
+    // Healthy AND paused both exit 0 — a paused staging project is the
+    // expected state, not a failure, and the verdict it returns is what the
+    // calling job reads. Anything else throws, and the catch below makes it a
+    // non-zero exit. See the module for why only HTTP 540 is a skip.
+    if (sub === "preflight") {
+      await runPreflight();
+      return;
+    }
+
+    // Reachable by hand for a rotation, but the deploy does NOT come through
+    // here: `secrets-file` calls `runMintToken` in-process with a collecting
+    // sink, which is what removed stdout-as-a-credential-channel from the
+    // pipeline entirely. Run directly, stdout is still the bare JWT.
+    if (sub === "mint-token") {
+      runMintToken();
+      return;
+    }
+
     // The registry fills only when the manifests are imported, and all three of
     // these derive their whole key set from it. Loaded here rather than at CLI
     // start for the reason `runEnvCommand` gives: the import pass touches a
@@ -808,7 +853,8 @@ async function runDeployCommand(rest: string[]): Promise<void> {
 
     say([
       `devtools deploy: unknown subcommand "${sub}".`,
-      "  Try write-env, secrets-file or orphans.",
+      "  Try write-env, secrets-file, orphans, preflight, mint-token or",
+      "  require-token.",
     ]);
     process.exitCode = 1;
   } catch (err) {
