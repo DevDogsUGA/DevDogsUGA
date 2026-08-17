@@ -159,7 +159,7 @@ describe("registry completeness", () => {
     expect(mintedKeys()).toEqual(["SANDBOX_PROXY_TOKEN"]);
   });
 
-  it("pins the narrowed set to the two dry-run credentials", () => {
+  it("pins the narrowed set to the dry run's two credentials and its base id", () => {
     // Pinned for the same reason as the two lists above, and with the sharpest
     // consequence of the three: `narrowed` is what lets a key into
     // `devdogs-preflight`, whose GitHub environment is reachable from `main`.
@@ -168,12 +168,22 @@ describe("registry completeness", () => {
     // that no type can check, so the reviewer of that change should have to
     // touch this line.
     //
-    // The two are the two SHAPES of the marker, which is why both are named
+    // The three are the three SHAPES of the marker, which is why each is named
     // here rather than counted: `DB_URL` is one key name carrying a weaker
-    // credential in preflight than in the deployed targets, and
+    // credential in preflight than in the deployed targets,
     // `AIRTABLE_PLAN_PAT` is a key that is only ever the narrow one — the wider
-    // Airtable tokens are separate declarations. See `EnvMeta.narrowed`.
-    expect(narrowedKeys()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
+    // Airtable tokens are separate declarations — and `AIRTABLE_BASE_ID` is not
+    // a credential at all, a public identifier that names which base the plan
+    // PAT may read and confers no access to it. See `EnvMeta.narrowed`.
+    //
+    // ⚠️ The third shape is the one to be suspicious of on a fourth key. The
+    // test is "would a preflight job fail without it", not "is it public" —
+    // most public keys are neither needed there nor safe to add by reflex.
+    expect(narrowedKeys()).toEqual([
+      "AIRTABLE_BASE_ID",
+      "AIRTABLE_PLAN_PAT",
+      "DB_URL",
+    ]);
   });
 
   it("keeps the three Airtable tokens three separate declarations", () => {

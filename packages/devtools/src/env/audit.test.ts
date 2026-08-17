@@ -305,6 +305,73 @@ describe("routing between the two production environments", () => {
     });
     expect(findings).toEqual([]);
   });
+
+  // ── the fan-out, since production-apply became a superset ──────────────────
+  //
+  // `env push --target production` now writes most keys to BOTH environments,
+  // so `route` alone stopped being able to answer "is this copy misplaced?".
+  // `accepted` answers it, and getting this wrong is not a cosmetic problem:
+  // 46 spurious "delete it there" errors on every audit is how a reviewer
+  // learns to skim the one finding that catches the reviewer gate failing open.
+  describe("a second copy in the reviewed environment", () => {
+    // What `runEnvAudit` passes: the routing's own `accepts()`, which takes
+    // everything in `production-apply` and refuses the apply pair in
+    // `production`.
+    const accepted = (key: string, environment: string) =>
+      environment === "production-apply" || key !== "AIRTABLE_APPLY_PAT";
+
+    it("is not a stray, because the push put it there", () => {
+      expect(
+        run({
+          local: new Map([["DISCORD_TOKEN", "y"]]),
+          bws: bws({ DISCORD_TOKEN: "y" }),
+          github: [
+            gh("DISCORD_TOKEN", undefined, "production"),
+            gh("DISCORD_TOKEN", undefined, "production-apply"),
+          ],
+          route,
+          accepted,
+        }),
+      ).toEqual([]);
+    });
+
+    it("⚠️ STILL flags the apply key in the unreviewed environment", () => {
+      // The finding the loosening must not swallow, and the reason `accepted`
+      // is a predicate rather than "anything in this project is fine". Same
+      // inputs as the test above but for the key, so a pass here is about the
+      // KEY rather than about the audit having gone quiet.
+      const findings = run({
+        local: new Map([["AIRTABLE_APPLY_PAT", "x"]]),
+        bws: bws({ AIRTABLE_APPLY_PAT: "x" }),
+        github: [
+          gh("AIRTABLE_APPLY_PAT", undefined, "production"),
+          gh("AIRTABLE_APPLY_PAT", undefined, "production-apply"),
+        ],
+        route,
+        accepted,
+      });
+      expect(findings).toHaveLength(1);
+      expect(findings[0]!.severity).toBe("error");
+      expect(findings[0]!.summary).toMatch(/not where it belongs/);
+    });
+
+    it("keeps the strict answer for a caller that passes no predicate", () => {
+      // The default. A caller that has not thought about fan-out gets the old
+      // behaviour rather than silence — which is why the first test in this
+      // block passes `accepted` explicitly and this one does not.
+      const findings = run({
+        local: new Map([["DISCORD_TOKEN", "y"]]),
+        bws: bws({ DISCORD_TOKEN: "y" }),
+        github: [
+          gh("DISCORD_TOKEN", undefined, "production"),
+          gh("DISCORD_TOKEN", undefined, "production-apply"),
+        ],
+        route,
+      });
+      expect(findings).toHaveLength(1);
+      expect(findings[0]!.summary).toMatch(/not where it belongs/);
+    });
+  });
 });
 
 describe("credentials that must never be stored remotely", () => {

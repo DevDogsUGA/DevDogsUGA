@@ -102,10 +102,27 @@ export interface AuditInput {
    */
   variables?: ReadonlySet<string>;
   /**
-   * Where a key is supposed to live. `null` means "nowhere in this
-   * environment", which is ordinary rather than wrong.
+   * Where a key is supposed to live — the PRIMARY environment, the one whose
+   * absence is an error. `null` means "nowhere in this environment", which is
+   * ordinary rather than wrong.
    */
   route: (key: string) => string | null;
+  /**
+   * Whether a copy found in some OTHER environment is legitimate.
+   *
+   * Separate from `route` because the two questions stopped having the same
+   * answer when `production-apply` became a superset of `production`: an
+   * ordinary production key is now pushed to both, so "not where `route` says"
+   * no longer means "misplaced". Folding them back together reports every
+   * correctly-pushed copy as a stray to delete, and a reviewer who deletes 46
+   * of those learns to skim the stray finding — which is the one finding that
+   * catches an apply-tier credential sitting in the unreviewed environment.
+   *
+   * Defaults to the old behaviour (`only where route says`), so a caller that
+   * has not thought about fan-out gets the strict answer rather than a
+   * permissive one.
+   */
+  accepted?: (key: string, environment: string) => boolean;
   /** Worker name → secret names on it. Values are unreadable. */
   cloudflare?: Map<string, Set<string>>;
   /** Keys that legitimately live outside Bitwarden — the non-secrets. */
@@ -330,6 +347,9 @@ export function audit(input: AuditInput): Finding[] {
 
     const expected = input.route(key);
     if (expected === null) continue;
+    const accepted =
+      input.accepted ??
+      ((_key: string, environment: string) => environment === expected);
 
     const isVariable = variables.has(key);
     const noun = isVariable ? "variable" : "secret";
@@ -342,7 +362,11 @@ export function audit(input: AuditInput): Finding[] {
     // A copy somewhere it does not belong. Listed FIRST because for the
     // apply-only credentials this is the reviewer gate failing open: the token
     // is sitting in an environment that deploys with nobody in front of it.
-    for (const stray of copies.filter((g) => g.environment !== expected)) {
+    //
+    // `accepted`, not `!== expected`: `production-apply` legitimately holds a
+    // second copy of most production keys. An apply-tier key in `production`
+    // still lands here, which is the case this finding exists for.
+    for (const stray of copies.filter((g) => !accepted(key, g.environment))) {
       findings.push({
         key,
         severity: "error",

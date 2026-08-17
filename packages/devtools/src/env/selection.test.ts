@@ -471,14 +471,22 @@ describe("preflight, the target no app boots from", () => {
 
   it("routes exactly the keys that opted in", () => {
     expect([...keysRoutedTo("preflight")].sort()).toEqual([
+      "AIRTABLE_BASE_ID",
       "AIRTABLE_PLAN_PAT",
       "DB_URL",
     ]);
-    // Tied to the registry, so "two keys" is the marker's doing rather than a
-    // filter that happened to leave two behind. They are the two credentials
-    // §3.5 stage 1 needs and the only two: a Postgres role that sees the
-    // migrations table, and a PAT that can read one base's schema.
-    expect(narrowedKeys()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
+    // Tied to the registry, so "three keys" is the marker's doing rather than a
+    // filter that happened to leave three behind. Two are the credentials §3.5
+    // stage 1 needs and the only two — a Postgres role that sees the migrations
+    // table, and a PAT that can read one base's schema — and the third is the
+    // public base id that says which base the PAT may read, which the schema
+    // plan cannot run without and which used to be a hand-set repository
+    // variable for exactly that reason.
+    expect(narrowedKeys()).toEqual([
+      "AIRTABLE_BASE_ID",
+      "AIRTABLE_PLAN_PAT",
+      "DB_URL",
+    ]);
   });
 
   it("routes the plan PAT here and NOT the two write-capable Airtable ones", () => {
@@ -543,9 +551,16 @@ describe("preflight, the target no app boots from", () => {
     // say "preflight and production but not staging"; the copy there is a
     // read-only token no staging deploy reads, which is a spare credential to
     // rotate rather than a privilege.
+    //
+    // Then ONLY preflight moved: 2 → 3. `AIRTABLE_BASE_ID` gained `narrowed`
+    // on 2026-08-17, and unlike the PAT it was already routed to staging and
+    // production — it is an ordinary `scope: "environment"` public variable, so
+    // the marker only added a target rather than a key. A change that moved
+    // all three here would mean the marker had been read as something other
+    // than "also preflight".
     expect(keysRoutedTo("staging").size).toBe(46);
     expect(keysRoutedTo("production").size).toBe(48);
-    expect(keysRoutedTo("preflight").size).toBe(2);
+    expect(keysRoutedTo("preflight").size).toBe(3);
   });
 });
 

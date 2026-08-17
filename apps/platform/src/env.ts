@@ -248,6 +248,17 @@ const server = {
   // rather than the app failing to start. The personal access token is NOT
   // here: it lives in Vault under "airtable_pat". See
   // docs/platform/airtable-setup.md.
+  //
+  // `narrowed` because `deploy airtable-plan` runs in `preflight` and cannot
+  // name a base without it. It is the non-credential shape of the marker — a
+  // public identifier that confers nothing on its own, so the promise the field
+  // makes ("what preflight holds under this name cannot do more than the dry
+  // runs need") holds trivially rather than by scoping. What bounds the dry run
+  // is AIRTABLE_PLAN_PAT's `schema.bases:read`, in the row below.
+  //
+  // ⚠️ Until 2026-08-17 this was left unmarked and set by hand as a
+  // repository-level GitHub variable instead, which every environment sees —
+  // a wider blast radius than the routing, arrived at by trying to be careful.
   AIRTABLE_BASE_ID: define(z.string().default(""), {
     doc:
       "The officers' Airtable base id -- the id only; the token lives in " +
@@ -256,6 +267,7 @@ const server = {
       "until the base exists. Full setup: docs/platform/airtable-setup.md.",
     scope: "environment",
     secrecy: "public",
+    narrowed: true,
   }),
   // Supabase OAuth, for sandbox environments. Optional for the same reason
   // as Airtable: the app is registered separately and the platform has to

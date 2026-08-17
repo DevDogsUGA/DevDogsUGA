@@ -145,8 +145,8 @@ describe("stdout stays clean for every deploy command", () => {
   });
 
   it("names the token variables when only the base id is set", async () => {
-    // The refusal a real job hits: the repository variable is there and the
-    // environment secret is not. Both commands have to say WHICH variable, and
+    // The refusal a real job hits: the base id variable is there and the
+    // token secret is not. Both commands have to say WHICH variable, and
     // each has to name its own row rather than a shared list.
     const plan = await devtools(["deploy", "airtable-plan"], {
       AIRTABLE_BASE_ID: "appTESTTESTTEST01",

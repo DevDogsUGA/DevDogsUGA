@@ -111,10 +111,10 @@ export type EnvMeta = {
    * The target half of the rule is derived instead — see
    * `holdsOnlyNarrowedKeys()` in `targets.ts`.
    *
-   * ⚠️ TWO SHAPES SATISFY IT, and the difference decides how you check a third
-   * before marking it. The field says nothing about which shape a key is — it
-   * says only that the claim below holds — so reading it as one shape and
-   * marking a key of the other is how the wrong credential gets in.
+   * ⚠️ THREE SHAPES SATISFY IT, and the difference decides how you check a
+   * fourth before marking it. The field says nothing about which shape a key is
+   * — it says only that the claim below holds — so reading it as one shape and
+   * marking a key of another is how the wrong credential gets in.
    *
    *   * **The same key name, carrying a weaker credential here.** `DB_URL` is
    *     a full connection string in `.env`, `.env.staging` and
@@ -131,8 +131,22 @@ export type EnvMeta = {
    *     (`AIRTABLE_PAT`, `AIRTABLE_APPLY_PAT`). Here the narrowness is a
    *     property of the key rather than of one target's copy of it, so the
    *     claim is checked when the token is minted and cannot drift per target.
+   *   * **A key that is not a credential at all.** `AIRTABLE_BASE_ID` is a
+   *     public identifier (`secrecy: "public"`, so it is a GitHub *variable*
+   *     that anyone who can read the repository's Actions config can read
+   *     anyway). It names WHICH base the dry run talks to and confers no access
+   *     to it; every capability in `deploy airtable-plan` comes from
+   *     `AIRTABLE_PLAN_PAT` beside it. Here the promise holds trivially rather
+   *     than by scoping — there is nothing under this name that could do more.
    *
-   * Both shapes make the same promise and it is the promise, not the shape,
+   *     ⚠️ Added 2026-08-17, and it is the shape most easily over-applied.
+   *     "Public" is not the test; "confers nothing" is. A public value that
+   *     names a resource the preflight tier should not be able to REACH still
+   *     widens what a dry run can do, and `secrecy: "public"` says nothing
+   *     about that. If reading the value teaches an attacker where to point a
+   *     credential they already hold, it is a shape-one question, not this one.
+   *
+   * All three make the same promise and it is the promise, not the shape,
    * that this field asserts: what `preflight` holds under this name cannot do
    * more than the dry runs need.
    *
@@ -147,7 +161,7 @@ export type EnvMeta = {
    * production data from the `main` trust tier"; a signing key is considerably
    * worse.
    *
-   * ⚠️ NOT a claim that the value is harmless, in either shape. Each has its
+   * ⚠️ NOT a claim that the value is harmless, in any shape. Each has its
    * own way of being marked wrongly:
    *
    *   * shared-name — marking a key whose ONLY credential is the deployed one
@@ -156,7 +170,11 @@ export type EnvMeta = {
    *   * narrow-key — marking a key that is narrow by habit rather than by
    *     scope. `AIRTABLE_PLAN_PAT` qualifies because a token minted with
    *     `schema.bases:read` alone cannot be talked into a write; a key that
-   *     merely *happens* to hold a limited token today does not.
+   *     merely *happens* to hold a limited token today does not;
+   *   * non-credential — reading `secrecy: "public"` as the test and marking
+   *     every public key. Most of them are not needed by a dry run at all, and
+   *     `narrowed` is an opt-in to a TIER, not a secrecy restatement: the
+   *     question is whether a preflight job would fail without it.
    */
   narrowed?: true;
   /**

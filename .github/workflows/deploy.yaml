@@ -305,13 +305,18 @@ jobs:
       # command REFUSES by name when the credential is missing, and a red job
       # saying which variable is unset is the entire value of the step.
       #
-      # ⚠️ AIRTABLE_BASE_ID has to be a REPOSITORY variable, not an environment
-      # one. It is public (§A.4) and declared without `narrowed`, so
-      # `env push --target preflight` does not route it — and the same is true
-      # of `production-apply` below, which takes the apply-tier keys and
-      # nothing else. A repository-level variable is visible to every
-      # environment and is shadowed by the environment copies `env push` writes
-      # for staging and production, so one setting covers both gaps.
+      # AIRTABLE_BASE_ID is an ENVIRONMENT variable on `preflight`, written by
+      # `env push --target preflight` like everything else this job reads. It
+      # is public (§A.4), so it lands in the variable store rather than the
+      # secret one — hence `vars.` rather than `secrets.` — and it is declared
+      # `narrowed`, which is what routes it to a target no app boots from.
+      #
+      # It was a hand-set REPOSITORY variable until 2026-08-17, because nothing
+      # routed it here. A repository variable is visible to every environment,
+      # so the workaround for a routing gap had a wider reach than the routing
+      # it stood in for. If one is still set, delete it: an environment copy
+      # shadows it, so a stale repository value is invisible until the day
+      # somebody removes the environment one.
       - name: What would this commit do to the Airtable base?
         env:
           AIRTABLE_BASE_ID: ${{ vars.AIRTABLE_BASE_ID }}
@@ -464,11 +469,14 @@ jobs:
       # blast radius change in the repository (`site_url` and every sign-in
       # route) arriving through the step with no dry run.
       #
-      # ⚠️ Those secrets are plan-tier today, so `routeTo()` sends them to
-      # `production` and NOT to `production-apply`. Until they are declared
-      # `tier: "apply"` in `supabase/env.ts` — nothing but config.toml reads
-      # them, so nothing else would notice — this step is what will say so,
-      # by name, instead of the Supabase CLI complaining about a config file.
+      # Those secrets are plan-tier, and `production-apply` receives them
+      # because it receives everything `production` does plus the apply-tier
+      # pair. That is not the gate leaking: the gate is what the UNREVIEWED
+      # `production` may not hold, and this environment is the reviewed half of
+      # the same Bitwarden project. Until 2026-08-17 the routing withheld them
+      # here and this step could not have run at all.
+      #
+      # SUPABASE_DB_PASSWORD arrives the same way, from the same push.
       - name: Compose the config-push environment
         env:
           DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
@@ -520,16 +528,20 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # AIRTABLE_APPLY_PAT is the only Airtable token `routeTo()` sends to this
-      # environment — apply-tier keys and nothing else — which is what makes
-      # the reviewer gate mean something. The command asks for `write` and
-      # never falls back to AIRTABLE_PLAN_PAT: that token cannot write, so a
-      # fallback would turn a named refusal into a 403 with the base half
-      # changed.
+      # AIRTABLE_APPLY_PAT is the only Airtable token this environment holds
+      # that `production` does NOT — apply-tier routes here and nowhere else,
+      # which is what makes the reviewer gate mean something. The command asks
+      # for `write` and never falls back to AIRTABLE_PLAN_PAT: that token
+      # cannot write, so a fallback would turn a named refusal into a 403 with
+      # the base half changed.
       #
-      # AIRTABLE_BASE_ID is a REPOSITORY variable — see the note on the
-      # `main-plan` step. `onlyKeys` keeps environment-scoped variables out of
-      # production-apply, so the repository level is where this one has to live.
+      # ⚠️ Both are secrets ON this environment now that `production-apply`
+      # receives a superset. The `env:` block below is what keeps this step to
+      # one token — the plan PAT is never in the process environment, so
+      # capability selection has nothing to get wrong here.
+      #
+      # AIRTABLE_BASE_ID is an environment variable, written by
+      # `env push --target production` like every other value this job reads.
       - name: Apply the Airtable schema
         env:
           AIRTABLE_BASE_ID: ${{ vars.AIRTABLE_BASE_ID }}
@@ -660,11 +672,13 @@ jobs:
   # It skips the deploy entirely: a dispatch that ticked this box is a
   # maintenance run, not a release.
   #
-  # ⚠️ `CLOUDFLARE_API_TOKEN` is plan-tier, so `routeTo()` sends it to
-  # `production` and not to `production-apply`. This job therefore needs a copy
-  # here that the routing does not currently create — `env audit` will
-  # report it as living somewhere it does not belong until §3.6 and the routing
-  # agree on which environment prunes.
+  # `CLOUDFLARE_API_TOKEN` is plan-tier, and it reaches this environment
+  # because `production-apply` receives everything `production` does plus the
+  # apply-tier pair. The token being plan-tier is right — pruning has a dry run,
+  # `deploy orphans` without `--prune`, and it is the job above — so what puts a
+  # human in front of the deletion is this environment's reviewers rather than
+  # the tier. Until 2026-08-17 the routing withheld it and this job could not
+  # have run.
   prune-orphans:
     if: github.event_name == 'workflow_dispatch' && inputs.prune_orphans && github.ref_name == 'production'
     runs-on: ubuntu-latest

@@ -1,7 +1,13 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { applyOnlyKeys } from "@devdogsuga/env";
 import { loadRegistry } from "../env/discovery.js";
-import { accepts, githubTargets, routeTo } from "./environments.js";
+import {
+  accepts,
+  acceptedBy,
+  acceptsKey,
+  githubTargets,
+  routeTo,
+} from "./environments.js";
 
 /**
  * The routing that IS the reviewer gate.
@@ -54,6 +60,9 @@ describe("routeTo", () => {
   });
 
   it("sends every ordinary secret to production", () => {
+    // The PRIMARY environment. `production-apply` also accepts it — see
+    // `acceptedBy` below — and `production` comes first because that is where
+    // the deploy reads it.
     expect(routeTo("devdogs-production", "DISCORD_TOKEN")).toBe("production");
   });
 
@@ -80,20 +89,85 @@ describe("routeTo", () => {
 });
 
 describe("accepts", () => {
-  it("refuses apply-only keys in the unreviewed environments", () => {
-    expect(accepts("production", APPLY_KEY)).toBe(false);
-    expect(accepts("staging", APPLY_KEY)).toBe(false);
+  it("⚠️ refuses EVERY apply-only key in the unreviewed environments", () => {
+    // THE INVARIANT, and since `production-apply` became a superset it is the
+    // only thing enforcing the reviewer gate: `production.excludeKeys`. By
+    // name and per key, not `applyOnlyKeys().every(...)` — a derived set that
+    // emptied would make the loop vacuous and the test green.
+    for (const key of APPLY_KEYS) {
+      expect(accepts("production", key), `${key} in production`).toBe(false);
+      expect(accepts("staging", key), `${key} in staging`).toBe(false);
+    }
+    // POSITIVE CONTROL: the mechanism refuses these two and nothing else, so
+    // the assertions above are not an `accepts()` that returns false for
+    // everything.
+    expect(accepts("production", "DISCORD_TOKEN")).toBe(true);
+    expect(accepts("staging", "DISCORD_TOKEN")).toBe(true);
   });
 
-  it("takes only the apply-only keys in production-apply", () => {
-    // It exists to hold exactly those. A third key landing there would make
-    // "behind reviewers" mean less than it says.
+  it("gives production-apply a SUPERSET of production", () => {
+    // It used to take the apply pair and nothing else, which withheld
+    // plan-tier secrets and every public variable from the three jobs that run
+    // there. Restricting the REVIEWED half buys nothing — same Bitwarden
+    // project, required reviewers in front of it — and the gate is the row
+    // above, about the unreviewed half.
     expect(accepts("production-apply", APPLY_KEY)).toBe(true);
-    expect(accepts("production-apply", "DISCORD_TOKEN")).toBe(false);
+    expect(accepts("production-apply", "DISCORD_TOKEN")).toBe(true);
+    expect(accepts("production-apply", "CLOUDFLARE_API_TOKEN")).toBe(true);
+    expect(accepts("production-apply", "AIRTABLE_BASE_ID")).toBe(true);
   });
 
   it("accepts anything in preflight, which holds no live credentials", () => {
     expect(accepts("preflight", APPLY_KEY)).toBe(true);
     expect(accepts("preflight", "CRON_SECRET")).toBe(true);
+  });
+});
+
+describe("acceptedBy", () => {
+  it("fans an ordinary production key out to both environments", () => {
+    expect(acceptedBy("devdogs-production", "DISCORD_TOKEN")).toEqual([
+      "production",
+      "production-apply",
+    ]);
+  });
+
+  it("gives an apply-only key the reviewed environment and only that", () => {
+    // The set-shaped statement of the invariant, and what `env audit` compares
+    // a found copy against. If `production` ever appears in this list, a
+    // write-capable credential is sitting where an unreviewed deploy reads it.
+    for (const key of APPLY_KEYS) {
+      expect(acceptedBy("devdogs-production", key), key).toEqual([
+        "production-apply",
+      ]);
+    }
+  });
+
+  it("stays a single-element answer for the one-environment projects", () => {
+    expect(acceptedBy("devdogs-staging", "CRON_SECRET")).toEqual(["staging"]);
+    expect(acceptedBy("devdogs-staging", APPLY_KEY)).toEqual([]);
+  });
+});
+
+describe("acceptsKey", () => {
+  // The predicate `env audit` passes as `AuditInput.accepted`. It lives in this
+  // module rather than at that call site because `runEnvAudit` cannot be
+  // unit-tested without mocking three remote services, so logic written there
+  // has no tests at all.
+  it("agrees with accepts() on a known environment", () => {
+    expect(acceptsKey("DISCORD_TOKEN", "production-apply")).toBe(true);
+    // ⚠️ The gate, through the audit's door this time: a copy of an apply-tier
+    // key found in `production` must read as misplaced.
+    for (const key of APPLY_KEYS) {
+      expect(acceptsKey(key, "production"), key).toBe(false);
+      expect(acceptsKey(key, "production-apply"), key).toBe(true);
+    }
+  });
+
+  it("refuses an environment it does not recognise", () => {
+    // Fails CLOSED. The name comes from whatever `gh` listed, and this decides
+    // whether a found copy is reported as a stray — so an unknown environment
+    // holding a credential is the case most worth reporting, not least worth.
+    expect(acceptsKey("DISCORD_TOKEN", "production-legacy")).toBe(false);
+    expect(acceptsKey("DISCORD_TOKEN", "")).toBe(false);
   });
 });

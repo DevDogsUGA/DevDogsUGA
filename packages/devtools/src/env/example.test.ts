@@ -370,7 +370,11 @@ describe("preflight", () => {
 
   it("carries the narrowed keys and nothing else", () => {
     const { active } = target("preflight");
-    expect([...active.keys()].sort()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
+    expect([...active.keys()].sort()).toEqual([
+      "AIRTABLE_BASE_ID",
+      "AIRTABLE_PLAN_PAT",
+      "DB_URL",
+    ]);
   });
 
   it("carries none of the three credentials the finding named", () => {
@@ -404,33 +408,39 @@ describe("preflight", () => {
     // 1/45/47 before `AIRTABLE_PLAN_PAT` was declared. It is narrowed, so it
     // joins preflight; it is plan-tier, so it also routes wherever an ordinary
     // deployed secret does. One key, three counts, each up by exactly one.
-    expect(target("preflight").active.size).toBe(2);
+    //
+    // `AIRTABLE_BASE_ID`'s `narrowed` (2026-08-17) moved preflight ALONE, 2 →
+    // 3: it was already routed to the deployed targets, being an ordinary
+    // public environment variable, so the marker added a target and not a key.
+    expect(target("preflight").active.size).toBe(3);
     expect(target("staging").active.size).toBe(46);
     expect(target("production").active.size).toBe(48);
   });
 
-  it("says in the file itself why it is short, and what is still needed", () => {
-    // A two-line env file looks like a broken generator. The header has to
+  it("says in the file itself why it is short, and that nothing is hand-set", () => {
+    // A three-line env file looks like a broken generator. The header has to
     // claim the shortness, or the next person "fixes" it by pasting the other
-    // 44 keys back in — and `deploy airtable-plan` needs a key this file
-    // CANNOT carry, so that has to be said out loud rather than discovered on
-    // a red job.
+    // 43 keys back in.
     const text = renderInit("preflight", DATE);
     expect(text).toContain("PREFLIGHT IS DELIBERATELY TINY");
     expect(text).toMatch(/Airtable PAT/);
-    // AIRTABLE_BASE_ID is public, so it is a GitHub VARIABLE, and it is
-    // declared without `narrowed` — nothing routes it here. The file says so,
-    // and says the fix (a repository-level variable, which every environment
-    // sees) rather than leaving it as an absence.
-    expect(text).toContain("AIRTABLE_BASE_ID is NOT here");
-    expect(text).toContain("REPOSITORY");
-    // POSITIVE CONTROL for that pair: the key it DOES carry is in the body as
-    // an assignable line, so "mentioned in the header" and "rendered" are not
-    // the same claim.
+    // ⚠️ THE INSTRUCTION THAT HAD TO GO. Until 2026-08-17 this header said
+    // AIRTABLE_BASE_ID was "NOT here" and told the reader to set a REPOSITORY
+    // variable by hand — visible to every environment, and wider than the
+    // routing it stood in for. `narrowed` routes it now, so the instruction is
+    // not merely stale, it is wrong.
+    expect(text).not.toContain("AIRTABLE_BASE_ID is NOT here");
+    expect(text).not.toMatch(/REPOSITORY variable/);
+    // It is in the BODY instead, as an assignable line a push reads. Both
+    // halves asserted, because "the header stopped saying it" and "the file
+    // carries it" are different claims and only the second is the fix.
+    expect(text).toMatch(/^AIRTABLE_BASE_ID=""$/m);
+    // POSITIVE CONTROL: the key that was always here still renders, so the
+    // line above is not a generator that started emitting everything.
     expect(text).toMatch(/^AIRTABLE_PLAN_PAT=""$/m);
-    expect(text).not.toMatch(/^AIRTABLE_BASE_ID=/m);
+    expect(text).not.toMatch(/^SUPABASE_JWT_SIGNING_KEY=/m);
     // And the count in the prose agrees with the body, plural and all.
-    expect(text).toContain("The 2 keys a");
+    expect(text).toContain("The 3 keys a");
   });
 });
 

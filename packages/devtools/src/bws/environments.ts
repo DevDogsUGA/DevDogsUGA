@@ -89,7 +89,8 @@ const SUMMARIES: Record<VaultTarget, string> = {
   preflight:
     "Credentials for the dry runs that precede a promotion to production. " +
     "Read-only by construction: a Postgres role that can see only the " +
-    "migrations table, and an Airtable PAT with schema:read and nothing else.",
+    "migrations table, an Airtable PAT with schema:read and nothing else, " +
+    "and the public base id naming which base that PAT may read.",
   staging: "Everything the two Next apps consume, pointed at staging.",
   production:
     "The live values. Shared with the production-apply environment, which " +

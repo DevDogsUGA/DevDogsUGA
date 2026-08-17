@@ -367,19 +367,20 @@ function targetHeader(target: VaultTarget, count: number): string[] {
               "RUNS, which read and change nothing, so it carries only the " +
               "keys whose declaration opts in with `narrowed` — each of which " +
               "is narrow enough for a dry run and no wider: a Postgres role " +
-              "that sees only the migrations table, and an Airtable PAT with " +
-              "`schema.bases:read` on one base. Every other key is absent ON " +
+              "that sees only the migrations table, an Airtable PAT with " +
+              "`schema.bases:read` on one base, and the public base id that " +
+              "says which base to read. Every other key is absent ON " +
               "PURPOSE: this project's GitHub environment is reachable from " +
               "`main`, and it used to list all 45 routable keys, the JWT " +
               "signing key included.",
           ),
           "#",
           ...comment(
-            "⚠️ AIRTABLE_BASE_ID is NOT here, and `deploy airtable-plan` " +
-              "needs it. It is public rather than secret, so it is a GitHub " +
-              "VARIABLE — and it is declared without `narrowed`, so a push " +
-              "for this target does not route it. Set it as a REPOSITORY " +
-              "variable, which every environment sees, including this one.",
+            "Nothing here is set by hand. AIRTABLE_BASE_ID is public, so a " +
+              "push writes it to the GitHub VARIABLE store rather than the " +
+              "secret one — the same environment-scoped push as every other " +
+              "key in this file, not a repository-wide setting somebody has " +
+              "to remember.",
           ),
         ]
       : []),

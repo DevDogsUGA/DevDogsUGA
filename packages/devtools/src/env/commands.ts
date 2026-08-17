@@ -60,6 +60,7 @@ import {
 import {
   GITHUB_ENVIRONMENT_SPECS,
   accepts,
+  acceptsKey,
   githubTargets,
   routeTo,
   type GithubEnvironment,
@@ -484,10 +485,16 @@ export async function pushToGithub(
   // all), so it keeps a name of its own. Reusing `target` here is how the two
   // vocabularies this change collapsed got confused in the first place.
   for (const ghEnvironment of githubTargets(project)) {
-    // Routing applies to both stores. It falls out right for `production-apply`
-    // without a special case: its `onlyKeys` is the apply-tier pair, both
-    // secrets, so no variable is ever offered to the reviewer-gated
-    // environment.
+    // Routing applies to both stores, and the two loops below are the same
+    // filter twice rather than one filter and a branch — see the header.
+    //
+    // `production-apply` accepts everything `production` does plus the
+    // apply-tier pair, so a production push writes MOST keys twice: once to the
+    // unreviewed environment the deploy reads, once to the reviewed one whose
+    // three jobs (`production-config`, `production-airtable`, `prune-orphans`)
+    // were previously starved of them. That is not the gate leaking. The gate
+    // is `production.excludeKeys`, which keeps the apply-tier pair out of the
+    // FIRST environment; it has never had anything to say about the second.
     const chosenSecrets = new Map(
       [...secrets].filter(([key]) => accepts(ghEnvironment, key)),
     );
@@ -624,6 +631,14 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
       const routed = routeTo(spec.project, key);
       return routed && unreachable.includes(routed) ? null : routed;
     },
+    // Whether a SECOND copy is legitimate, which stopped being "the one place
+    // `route` names" when `production-apply` became a superset of `production`.
+    // A push now writes most production keys to both, and comparing against
+    // `route` alone would report every one of them as a stray to delete —
+    // burying the one stray that matters, an apply-tier key in the unreviewed
+    // environment. `acceptsKey()` still says no to that one, and is a name
+    // rather than a lambda so that it has tests of its own.
+    accepted: acceptsKey,
     cloudflare,
     ignore: ignoredFor(target),
     neverStore: neverStore(),
