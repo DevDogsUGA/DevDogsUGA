@@ -52,6 +52,38 @@ declare({
       scope: "developer",
       secrecy: "never-store",
     }),
+    // The narrowest of the three Airtable tokens, and the only one CI may
+    // hold outside the reviewer gate. §3.5's stage-1 dry run answers "what
+    // would this commit do to the base" from `main`, so whatever it
+    // authenticates with is reachable from the `main` trust tier -- which
+    // rules out AIRTABLE_PAT (never-store, and write-capable) and rules out
+    // AIRTABLE_APPLY_PAT (that is what the reviewer gate is for). A token
+    // that can read a schema and do nothing else is what is left.
+    //
+    // ⚠️ `narrowed: true` here is the SECOND shape of that marker, not the
+    // DB_URL one. There is no wider credential under this name in any target
+    // -- the scope split is between three separate declarations rather than
+    // three values of one key -- so nobody has to remember to mint a weaker
+    // variant for preflight. See `EnvMeta.narrowed` for both shapes and for
+    // what marking a key wrongly costs.
+    //
+    // Plan tier, deliberately: it reaches `preflight` (where `main-plan`
+    // runs) and `production` (where `production-plan` runs). `tier: "apply"`
+    // would send it to production-apply ALONE, which is the one environment
+    // the plan never runs in.
+    AIRTABLE_PLAN_PAT: define(z.string().min(1).optional(), {
+      doc:
+        "Read-only Airtable token for the schema dry run: `schema.bases:read` " +
+        "on the officers' base and nothing else. Probed against the live " +
+        "base -- a records read and a schema write both answered 403 -- so a " +
+        "job holding it can report what a promotion would do to the base and " +
+        "cannot do it. This is the credential the plan step on `main` uses, " +
+        "which is why it must stay unable to read a single record.",
+      scope: "environment",
+      secrecy: "secret",
+      narrowed: true,
+      commented: true,
+    }),
     SUPABASE_ACCESS_TOKEN: define(z.string().min(1).optional(), {
       doc:
         "A Supabase personal access token, carrying full account privileges " +

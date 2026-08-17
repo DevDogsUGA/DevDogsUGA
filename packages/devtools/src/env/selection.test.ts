@@ -470,10 +470,33 @@ describe("preflight, the target no app boots from", () => {
   });
 
   it("routes exactly the keys that opted in", () => {
-    expect([...keysRoutedTo("preflight")]).toEqual(["DB_URL"]);
-    // Tied to the registry, so "one key" is the marker's doing rather than a
-    // filter that happened to leave one behind.
-    expect(narrowedKeys()).toEqual(["DB_URL"]);
+    expect([...keysRoutedTo("preflight")].sort()).toEqual([
+      "AIRTABLE_PLAN_PAT",
+      "DB_URL",
+    ]);
+    // Tied to the registry, so "two keys" is the marker's doing rather than a
+    // filter that happened to leave two behind. They are the two credentials
+    // §3.5 stage 1 needs and the only two: a Postgres role that sees the
+    // migrations table, and a PAT that can read one base's schema.
+    expect(narrowedKeys()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
+  });
+
+  it("routes the plan PAT here and NOT the two write-capable Airtable ones", () => {
+    // The point of three declarations rather than one key with three values.
+    // `main` can reach this environment, so what it may hold is the whole
+    // question — and the answer has to hold for every Airtable token at once.
+    const preflight = keysRoutedTo("preflight");
+    expect(preflight.has("AIRTABLE_PLAN_PAT")).toBe(true);
+    // never-store: refused every remote store, so it is in no target's set.
+    expect(preflight.has("AIRTABLE_PAT")).toBe(false);
+    expect(keysRoutedTo("production").has("AIRTABLE_PAT")).toBe(false);
+    // apply-tier: production only, and behind required reviewers there.
+    expect(preflight.has("AIRTABLE_APPLY_PAT")).toBe(false);
+    expect(keysRoutedTo("production").has("AIRTABLE_APPLY_PAT")).toBe(true);
+    // POSITIVE CONTROL: the plan PAT reaches production too, which is where
+    // `production-plan` runs. "Absent from preflight" is not the only way for
+    // a routing assertion to pass.
+    expect(keysRoutedTo("production").has("AIRTABLE_PLAN_PAT")).toBe(true);
   });
 
   for (const key of THE_FINDING) {
@@ -512,9 +535,17 @@ describe("preflight, the target no app boots from", () => {
     // The regression that would make this a bug rather than a fix: one branch
     // in `ignoredFor()` narrows preflight, and a branch that ran for every
     // target would empty all three identically — which looks like it worked.
-    expect(keysRoutedTo("staging").size).toBe(45);
-    expect(keysRoutedTo("production").size).toBe(47);
-    expect(keysRoutedTo("preflight").size).toBe(1);
+    //
+    // All three moved by exactly one when `AIRTABLE_PLAN_PAT` was declared —
+    // it is an ordinary plan-tier secret everywhere except that `narrowed`
+    // also lets it into preflight, so 45/47/1 became 46/48/2. Staging carries
+    // it because plan-tier is the default and nothing about the tiering can
+    // say "preflight and production but not staging"; the copy there is a
+    // read-only token no staging deploy reads, which is a spare credential to
+    // rotate rather than a privilege.
+    expect(keysRoutedTo("staging").size).toBe(46);
+    expect(keysRoutedTo("production").size).toBe(48);
+    expect(keysRoutedTo("preflight").size).toBe(2);
   });
 });
 

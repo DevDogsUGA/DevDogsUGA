@@ -370,7 +370,7 @@ describe("preflight", () => {
 
   it("carries the narrowed keys and nothing else", () => {
     const { active } = target("preflight");
-    expect([...active.keys()]).toEqual(["DB_URL"]);
+    expect([...active.keys()].sort()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
   });
 
   it("carries none of the three credentials the finding named", () => {
@@ -401,22 +401,36 @@ describe("preflight", () => {
     // fix. The exclusion is one branch in `ignoredFor()`, and a branch that
     // ran for every target would empty all three files identically — which
     // reads exactly like a working narrow.
-    expect(target("preflight").active.size).toBe(1);
-    expect(target("staging").active.size).toBe(45);
-    expect(target("production").active.size).toBe(47);
+    // 1/45/47 before `AIRTABLE_PLAN_PAT` was declared. It is narrowed, so it
+    // joins preflight; it is plan-tier, so it also routes wherever an ordinary
+    // deployed secret does. One key, three counts, each up by exactly one.
+    expect(target("preflight").active.size).toBe(2);
+    expect(target("staging").active.size).toBe(46);
+    expect(target("production").active.size).toBe(48);
   });
 
-  it("says in the file itself why it is short, and what is missing", () => {
-    // A one-line env file looks like a broken generator. The header has to
+  it("says in the file itself why it is short, and what is still needed", () => {
+    // A two-line env file looks like a broken generator. The header has to
     // claim the shortness, or the next person "fixes" it by pasting the other
-    // 44 keys back in — and the Airtable PAT that genuinely belongs here is
-    // declared in no manifest, so its absence needs saying out loud too.
+    // 44 keys back in — and `deploy airtable-plan` needs a key this file
+    // CANNOT carry, so that has to be said out loud rather than discovered on
+    // a red job.
     const text = renderInit("preflight", DATE);
     expect(text).toContain("PREFLIGHT IS DELIBERATELY TINY");
-    expect(text).toContain("OUTSTANDING");
     expect(text).toMatch(/Airtable PAT/);
-    // And the count in the prose agrees with the body, singular and all.
-    expect(text).toContain("The 1 key a");
+    // AIRTABLE_BASE_ID is public, so it is a GitHub VARIABLE, and it is
+    // declared without `narrowed` — nothing routes it here. The file says so,
+    // and says the fix (a repository-level variable, which every environment
+    // sees) rather than leaving it as an absence.
+    expect(text).toContain("AIRTABLE_BASE_ID is NOT here");
+    expect(text).toContain("REPOSITORY");
+    // POSITIVE CONTROL for that pair: the key it DOES carry is in the body as
+    // an assignable line, so "mentioned in the header" and "rendered" are not
+    // the same claim.
+    expect(text).toMatch(/^AIRTABLE_PLAN_PAT=""$/m);
+    expect(text).not.toMatch(/^AIRTABLE_BASE_ID=/m);
+    // And the count in the prose agrees with the body, plural and all.
+    expect(text).toContain("The 2 keys a");
   });
 });
 

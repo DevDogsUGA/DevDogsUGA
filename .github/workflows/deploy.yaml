@@ -82,11 +82,14 @@ env:
 # it through `with-env` is a bootstrap cycle: it would die on
 # MissingEnvFileError for the file it was about to write.
 #
-# `deploy orphans`, `deploy preflight` and `deploy require-token` are
-# `cli:no-env` for a different reason — they run in jobs that hold one narrow
-# credential and compose no env file at all, so the wrapped entry point would
-# exit reporting a missing FILE rather than the missing TOKEN or the paused
-# project, which is the one thing those jobs exist to say. Note that this is
+# `deploy orphans`, `deploy preflight`, `deploy require-token`,
+# `deploy airtable-plan` and `deploy airtable-apply` are `cli:no-env` for a
+# different reason — they run in jobs that hold one narrow credential and
+# compose no env file at all, so the wrapped entry point would exit reporting a
+# missing FILE rather than the missing TOKEN, the paused project or the missing
+# Airtable credential, which is the one thing those jobs exist to say. Note
+# that the Airtable pair take their two variables from the step's own `env:`
+# block precisely so that stays true: nothing composes a file for them. This is
 # NOT about the two nested cases: inside `with-env -c '…'` the wrapper would be
 # value-neutral anyway, because dotenvx leaves an already-set value alone. It
 # is about the BARE runs in the orphan-audit and prune jobs, and the same entry
@@ -285,15 +288,40 @@ jobs:
           { echo '### Migration plan — production (from `main`)'; echo; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           pnpm exec supabase db push --dry-run --db-url "$DB_URL" 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-      # NOT DONE HERE: the Airtable schema plan §3.5 also calls for. The
-      # scaffolding client reads AIRTABLE_PAT (`devtools/src/airtable/client.ts`)
-      # and that key is declared `secrecy: "never-store"`, so it can never be a
-      # GitHub secret — there is no credential this job could legitimately hold.
-      # A separate `AIRTABLE_PLAN_PAT` with `schema.bases:read` was validated
-      # against the live base but is declared in no manifest, so nothing routes
-      # it. Declaring it and teaching the client to prefer it is the work; a
-      # step guarded on `secrets.X != ''` is not, because a guard like that is
-      # exactly how the old Airtable job passed for months without running.
+      # The other half of §3.5 stage 1. It used to be a comment here saying it
+      # could not be done: the Airtable commands read AIRTABLE_PAT, which is
+      # declared `secrecy: "never-store"`, so no CI job could legitimately hold
+      # a credential they would use.
+      #
+      # What closed it is a THIRD token rather than a wider one.
+      # AIRTABLE_PLAN_PAT carries `schema.bases:read` on the one base — a
+      # records read and a schema write both answered 403 when it was probed —
+      # and the client now picks its token by CAPABILITY, preferring the
+      # narrowest that can do the job. `deploy airtable-plan` asks for `read`,
+      # which never consults AIRTABLE_APPLY_PAT at all.
+      #
+      # ⚠️ NO `if: secrets.AIRTABLE_PLAN_PAT != ''`, DELIBERATELY. That guard
+      # is how the old Airtable job passed for months without ever running. The
+      # command REFUSES by name when the credential is missing, and a red job
+      # saying which variable is unset is the entire value of the step.
+      #
+      # ⚠️ AIRTABLE_BASE_ID has to be a REPOSITORY variable, not an environment
+      # one. It is public (§A.4) and declared without `narrowed`, so
+      # `env push --target preflight` does not route it — and the same is true
+      # of `production-apply` below, which takes the apply-tier keys and
+      # nothing else. A repository-level variable is visible to every
+      # environment and is shadowed by the environment copies `env push` writes
+      # for staging and production, so one setting covers both gaps.
+      - name: What would this commit do to the Airtable base?
+        env:
+          AIRTABLE_BASE_ID: ${{ vars.AIRTABLE_BASE_ID }}
+          AIRTABLE_PLAN_PAT: ${{ secrets.AIRTABLE_PLAN_PAT }}
+        # cli:no-env, like the other steps in jobs that hold one narrow
+        # credential and compose no env file: `with-env` would report a missing
+        # FILE rather than the missing TOKEN, which is the one thing this step
+        # exists to say.
+        run: >-
+          pnpm --filter @devdogsuga/devtools run cli:no-env deploy airtable-plan
 
   # ── production ──────────────────────────────────────────────────────────────
 
@@ -306,6 +334,7 @@ jobs:
     environment: production
     outputs:
       config-changed: ${{ steps.config.outputs.changed }}
+      airtable-changed: ${{ steps.airtable.outputs.changed }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -354,6 +383,25 @@ jobs:
             git diff "$BEFORE" "$GITHUB_SHA" -- supabase/config.toml >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
+      # The same read-only plan the `main` job ran, recomputed seconds before
+      # the apply — stage 1 goes stale the moment another promotion lands
+      # first, which is the whole reason §3.5 has two stages.
+      #
+      # It also GATES the apply, the way the config diff above gates its own
+      # approval: `changed` is true only when the base is missing a table or a
+      # field the registry declares. Asking for a reviewer on every promotion
+      # is how approvals stop being read.
+      #
+      # AIRTABLE_PLAN_PAT is plan-tier, so `env push` routes it to `production`
+      # as well as to `preflight`; this job needs no write credential and must
+      # not be given one — that is what the job below is for.
+      - name: What will this promotion do to the Airtable base?
+        id: airtable
+        env:
+          AIRTABLE_BASE_ID: ${{ vars.AIRTABLE_BASE_ID }}
+          AIRTABLE_PLAN_PAT: ${{ secrets.AIRTABLE_PLAN_PAT }}
+        run: >-
+          pnpm --filter @devdogsuga/devtools run cli:no-env deploy airtable-plan
 
   # Applying the migrations. In `production` rather than `production-apply`,
   # and that placement follows the tiering rather than working around it:
@@ -440,17 +488,72 @@ jobs:
           set -euo pipefail
           pnpm exec with-env -c 'supabase config push --project-ref $PROJECT_REF'
 
+  # The Airtable schema apply — the other mutation that needs a reviewer, and
+  # the only write-capable Airtable credential in the pipeline.
+  #
+  # ⚠️ ITS OWN JOB, NOT A STEP IN production-config, and the reason is that
+  # job's `if:`. `production-config` is skipped unless config.toml changed, so
+  # an Airtable step living there would never run on a promotion that changed
+  # `registry.ts` and nothing else — which is exactly the promotion the schema
+  # apply exists for. A step that silently does not run is the failure mode
+  # this whole section was written to remove.
+  #
+  # Gated on the plan instead, the same way the config job is gated on its own
+  # diff: an approval requested on every promotion is an approval nobody reads.
+  # `scaffoldBase` is idempotent, so a re-run after a partial failure creates
+  # only what is still missing.
+  #
+  # Needs production-migrate for ordering rather than for data: both mutate,
+  # and doing them in a fixed order makes a half-finished promotion legible.
+  production-airtable:
+    needs: [production-plan, production-migrate]
+    if: needs.production-plan.outputs.airtable-changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production-apply
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # AIRTABLE_APPLY_PAT is the only Airtable token `routeTo()` sends to this
+      # environment — apply-tier keys and nothing else — which is what makes
+      # the reviewer gate mean something. The command asks for `write` and
+      # never falls back to AIRTABLE_PLAN_PAT: that token cannot write, so a
+      # fallback would turn a named refusal into a 403 with the base half
+      # changed.
+      #
+      # AIRTABLE_BASE_ID is a REPOSITORY variable — see the note on the
+      # `main-plan` step. `onlyKeys` keeps environment-scoped variables out of
+      # production-apply, so the repository level is where this one has to live.
+      - name: Apply the Airtable schema
+        env:
+          AIRTABLE_BASE_ID: ${{ vars.AIRTABLE_BASE_ID }}
+          AIRTABLE_APPLY_PAT: ${{ secrets.AIRTABLE_APPLY_PAT }}
+        run: >-
+          pnpm --filter @devdogsuga/devtools run cli:no-env deploy airtable-apply
+
   production-deploy:
-    needs: [production-plan, production-migrate, production-config]
-    # A dependency that was SKIPPED normally skips its dependents, and the
-    # config job is skipped on most promotions — config.toml rarely changes. So
-    # the condition is spelled out: migrations must have succeeded, and config
-    # must not have FAILED (skipped is fine). `!cancelled()` rather than
-    # `always()`, so cancelling the run still cancels the deploy.
+    needs:
+      - production-plan
+      - production-migrate
+      - production-config
+      - production-airtable
+    # A dependency that was SKIPPED normally skips its dependents, and both the
+    # config and Airtable jobs are skipped on most promotions — config.toml
+    # rarely changes and the base rarely gains a field. So the condition is
+    # spelled out: migrations must have succeeded, and neither gated job may
+    # have FAILED (skipped is fine). `!cancelled()` rather than `always()`, so
+    # cancelling the run still cancels the deploy.
     if: >-
       !cancelled()
       && needs.production-migrate.result == 'success'
       && needs.production-config.result != 'failure'
+      && needs.production-airtable.result != 'failure'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production

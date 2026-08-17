@@ -159,18 +159,49 @@ describe("registry completeness", () => {
     expect(mintedKeys()).toEqual(["SANDBOX_PROXY_TOKEN"]);
   });
 
-  it("pins the narrowed set to exactly the migrations-only DB_URL", () => {
+  it("pins the narrowed set to the two dry-run credentials", () => {
     // Pinned for the same reason as the two lists above, and with the sharpest
     // consequence of the three: `narrowed` is what lets a key into
     // `devdogs-preflight`, whose GitHub environment is reachable from `main`.
-    // Adding it to a key is asserting that a deliberately weaker credential
-    // exists under that name — a claim about the OUTSIDE world that no type can
-    // check, so the reviewer of that change should have to touch this line.
+    // Adding it to a key is asserting that what preflight holds under that name
+    // cannot do more than a dry run needs — a claim about the OUTSIDE world
+    // that no type can check, so the reviewer of that change should have to
+    // touch this line.
     //
-    // `AIRTABLE_PLAN_PAT` (the `schema:read` PAT the preflight project is also
-    // meant to hold) is OUTSTANDING: it is declared in no manifest at all, so
-    // there is nothing here to mark. Declaring it is what adds it.
-    expect(narrowedKeys()).toEqual(["DB_URL"]);
+    // The two are the two SHAPES of the marker, which is why both are named
+    // here rather than counted: `DB_URL` is one key name carrying a weaker
+    // credential in preflight than in the deployed targets, and
+    // `AIRTABLE_PLAN_PAT` is a key that is only ever the narrow one — the wider
+    // Airtable tokens are separate declarations. See `EnvMeta.narrowed`.
+    expect(narrowedKeys()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
+  });
+
+  it("keeps the three Airtable tokens three separate declarations", () => {
+    // The property that makes `AIRTABLE_PLAN_PAT`'s `narrowed` claim checkable
+    // at all. If the scopes were three values of ONE key, "the plan token
+    // cannot write" would be a fact about whichever value a target happened to
+    // hold, and marking it narrowed would be the DB_URL claim — unverifiable
+    // here — rather than a property of the key.
+    //
+    // Their routing is the other half, and it is what the split buys:
+    const airtable = [...variables().keys()].filter((k) =>
+      k.startsWith("AIRTABLE_"),
+    );
+    expect(airtable.sort()).toEqual([
+      "AIRTABLE_APPLY_PAT",
+      "AIRTABLE_BASE_ID",
+      "AIRTABLE_PAT",
+      "AIRTABLE_PLAN_PAT",
+    ]);
+
+    // never-store: the operator's own token, refused every remote store.
+    expect(neverStoreKeys()).toContain("AIRTABLE_PAT");
+    // apply-tier: production-apply alone, behind required reviewers.
+    expect(applyOnlyKeys()).toContain("AIRTABLE_APPLY_PAT");
+    // narrowed plan-tier: reaches preflight, where the `main` dry run runs.
+    expect(narrowedKeys()).toContain("AIRTABLE_PLAN_PAT");
+    expect(applyOnlyKeys()).not.toContain("AIRTABLE_PLAN_PAT");
+    expect(neverStoreKeys()).not.toContain("AIRTABLE_PLAN_PAT");
   });
 
   it("keeps `narrowed` on keys that can actually route somewhere", () => {

@@ -78,8 +78,14 @@ const SUMMARIES: Record<VaultTarget, string> = {
   // this sentence was aspirational and `env push --target preflight` uploaded
   // all 45 routable keys — SUPABASE_JWT_SIGNING_KEY, SECRET_KEY and
   // GITHUB_APP_PRIVATE_KEY included — into a project whose GitHub environment
-  // `main` can reach. The Airtable PAT below is still aspirational: no
-  // manifest declares it.
+  // `main` can reach.
+  //
+  // Both halves of the sentence below are now real. `AIRTABLE_PLAN_PAT` is
+  // declared in `packages/devtools/env.ts` with `narrowed: true`, so
+  // `keysRoutedTo("preflight")` carries it alongside `DB_URL` and
+  // `deploy airtable-plan` has a credential it can legitimately hold. It used
+  // to be aspirational: no manifest declared it, so nothing routed it, and the
+  // workflow step that would have used it was a comment.
   preflight:
     "Credentials for the dry runs that precede a promotion to production. " +
     "Read-only by construction: a Postgres role that can see only the " +

@@ -292,9 +292,11 @@ counts as drift, how a `todo("slug")` call becomes a field ID — lives in the
 package, where it is unit-tested against a fake base. What lives in `devtools` is
 prompting, reading and writing `registry.ts`, and setting an exit code.
 
-They read `AIRTABLE_PAT` from the environment rather than from Vault, which is
-the opposite of every other credential here and deliberate: these run _before_
-the platform is configured, and the person running them has the token in hand.
+They read their token from the environment rather than from Vault, which is the
+opposite of every other credential here and deliberate: these run _before_ the
+platform is configured, and the person running them has the token in hand.
+_Which_ variable they read follows from what each one does — see
+[Token scopes](#token-scopes).
 
 ⚠️ **The token they read is not the one in Vault, and must not be.** Scaffolding
 needs `schema.bases:write`; the sync must never hold it. Two tokens — see
@@ -523,9 +525,38 @@ place to discover it. The sync token creates nothing, so it has no such
 requirement.
 
 CI holds two more, narrower still, and neither goes in Vault:
-`AIRTABLE_PLAN_PAT` (`schema.bases:read` only, for `scaffold --dry-run`) and
-`AIRTABLE_APPLY_PAT` (write-capable, and reachable from the `production-apply`
-GitHub environment alone). See [env.md](./env.md).
+
+| Token     | Scopes                       | Lives in                                                                     | Used by                 |
+| --------- | ---------------------------- | ---------------------------------------------------------------------------- | ----------------------- |
+| **Plan**  | `schema.bases:read` **only** | `AIRTABLE_PLAN_PAT`, in the `preflight` and `production` GitHub environments | `deploy airtable-plan`  |
+| **Apply** | the scaffolding scopes       | `AIRTABLE_APPLY_PAT`, in `production-apply` alone, behind required reviewers | `deploy airtable-apply` |
+
+See [env.md](./env.md) for how each is routed.
+
+**Which token a command picks is a function of what it does**, not of what is
+set. `airtableClient({ need })` takes a capability and walks a preference list:
+`read` tries `AIRTABLE_PLAN_PAT` then `AIRTABLE_PAT`; `write` tries
+`AIRTABLE_APPLY_PAT` then `AIRTABLE_PAT`. **Narrowest first, deliberately** — an
+operator at a terminal usually holds the full scaffolding token, which satisfies
+both rows, so an unordered lookup would authenticate every dry run with a token
+that can restructure the base. Neither row crosses the split: `read` never falls
+back to the apply token (a plan running on it would make the reviewer gate
+decorative), and `write` never falls back to the plan token (it cannot write, so
+the fallback would be a 403 partway through a schema change).
+
+⚠️ **On a machine holding both `AIRTABLE_PLAN_PAT` and `AIRTABLE_PAT`,
+`airtable verify` with duplicate checking on will 403.** Duplicate detection
+reads _records_, and the plan token has no `data.records:read`. Either run
+`verify --no-duplicates`, which reads only the schema, or keep
+`AIRTABLE_PLAN_PAT` out of your `.env` — it is a CI credential and has no reason
+to be there.
+
+⚠️ **The dry run is a separate command, not a flag.** `deploy airtable-plan`
+lives in its own module with no import of the scaffolder at all, so "it only
+reads" is a property of the module graph rather than of an argument somebody
+could get wrong. `airtable scaffold --dry-run` is the contributor-facing
+equivalent and picks its capability from the same flag — the one call site in
+the repository where the capability is not constant.
 
 > ⚠️ **This document said "mint one token" until 2026-08-13, and the base was
 > scaffolded on 2026-08-06.** If that run followed the old instructions, the

@@ -60,6 +60,8 @@ import { renderWriteEnvReport, runDeployWriteEnv } from "./deploy/write-env.js";
 import { runDeploySecretsFile } from "./deploy/secrets-file.js";
 import { runDeployOrphans } from "./deploy/orphans.js";
 import { runMintToken } from "./deploy/mint-token.js";
+import { runDeployAirtablePlan } from "./deploy/airtable-plan.js";
+import { runDeployAirtableApply } from "./deploy/airtable-apply.js";
 import { runPreflight } from "./deploy/preflight.js";
 import { runRequireToken } from "./deploy/require-token.js";
 import { loadRegistry } from "./env/discovery.js";
@@ -193,16 +195,23 @@ job that has already set DEPLOY_ENV:
                                   secrets-file --mint, not by running it
   deploy require-token            exit non-zero, naming who to ask, when
                                   CLOUDFLARE_API_TOKEN is unset
+  deploy airtable-plan            what a scaffold WOULD create in the officers'
+                                  base, to \$GITHUB_STEP_SUMMARY. Reads with
+                                  AIRTABLE_PLAN_PAT (schema.bases:read only)
+                                  and cannot mutate
+  deploy airtable-apply           create it. AIRTABLE_APPLY_PAT, and the
+                                  production-apply reviewer gate in front
 
   These print NOTHING to stdout except the one line GitHub has to parse:
   secrets-file's \`::add-mask::\`. No banner, no prompts, no menu — they run
   unattended, and two of them have a stdout something downstream reads.
 
-  ⚠️ write-env, orphans, preflight and require-token must NOT go through
-  \`pnpm devtools\`, which is \`with-env tsx src/cli.ts\`. write-env CREATES the
-  env file with-env would demand; the other three run in jobs that have none,
-  where the wrapper would report a missing FILE rather than the missing TOKEN
-  or the paused project. All four use the wrapper-free entry point:
+  ⚠️ write-env, orphans, preflight, require-token, airtable-plan and
+  airtable-apply must NOT go through \`pnpm devtools\`, which is
+  \`with-env tsx src/cli.ts\`. write-env CREATES the env file with-env would
+  demand; the others run in jobs that have none, where the wrapper would
+  report a missing FILE rather than the missing TOKEN, the paused project or
+  the missing Airtable credential. All six use the wrapper-free entry point:
 
     pnpm --filter @devdogsuga/devtools run cli:no-env deploy write-env
 
@@ -719,12 +728,14 @@ async function runEnvCommand(rest: string[]): Promise<void> {
 
 /**
  * `deploy <write-env | secrets-file | orphans | preflight | mint-token |
- * require-token>` — the steps of a deploy job.
+ * require-token | airtable-plan | airtable-apply>` — the steps of a deploy job.
  *
- * These were three files in `scripts/` that imported devtools' own sources
+ * The first SIX were files in `scripts/` that imported devtools' own sources
  * through a relative path, which is why `scripts/` needed a tsconfig and a CI
  * typecheck step of its own. They are devtools commands now, and get the
- * documentation, refusals and named errors the rest of the CLI has.
+ * documentation, refusals and named errors the rest of the CLI has. The two
+ * Airtable steps were never in `scripts/`: they are new work, filling the
+ * §3.5 gap the deploy workflow used to describe in a comment.
  *
  * ## ⚠️ Dispatched BEFORE `intro()`, and it never calls `outro()`
  *
@@ -758,6 +769,8 @@ async function runDeployCommand(rest: string[]): Promise<void> {
       "  preflight                         classify the project (paused vs broken)",
       "  mint-token                        sign a fresh sandbox proxy JWT",
       "  require-token                     refuse to deploy without a CF token",
+      "  airtable-plan                     what a scaffold would create (reads only)",
+      "  airtable-apply                    create it (production-apply only)",
     ]);
     process.exitCode = 1;
     return;
@@ -791,6 +804,29 @@ async function runDeployCommand(rest: string[]): Promise<void> {
     // pipeline entirely. Run directly, stdout is still the bare JWT.
     if (sub === "mint-token") {
       runMintToken();
+      return;
+    }
+
+    // Registry-free for the same reason, and it matters more here than
+    // anywhere else in this group: both run in jobs that hold ONE narrow
+    // Airtable credential and compose no env file, so loading the manifests
+    // would import a declaration from nearly every workspace package to answer
+    // a question neither asks. Which base and which token is all they read,
+    // and both arrive from the workflow's `env:` block.
+    //
+    // ⚠️ Two commands rather than one with a `--dry-run` flag. The plan runs
+    // from `main`, where a write-capable credential must never be in scope, so
+    // "reads only" has to be a property of the code path rather than of an
+    // argument somebody could get wrong — `deploy/airtable-plan.ts` has no
+    // import of `scaffoldBase` at all. A flag would make the safe case one
+    // typo away from the unsafe one.
+    if (sub === "airtable-plan") {
+      await runDeployAirtablePlan();
+      return;
+    }
+
+    if (sub === "airtable-apply") {
+      await runDeployAirtableApply();
       return;
     }
 
@@ -853,8 +889,8 @@ async function runDeployCommand(rest: string[]): Promise<void> {
 
     say([
       `devtools deploy: unknown subcommand "${sub}".`,
-      "  Try write-env, secrets-file, orphans, preflight, mint-token or",
-      "  require-token.",
+      "  Try write-env, secrets-file, orphans, preflight, mint-token,",
+      "  require-token, airtable-plan or airtable-apply.",
     ]);
     process.exitCode = 1;
   } catch (err) {

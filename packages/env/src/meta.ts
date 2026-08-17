@@ -101,8 +101,8 @@ export type EnvMeta = {
   /** Deployed-secret routing. Defaults to `plan` when absent. */
   tier?: EnvTier;
   /**
-   * A NARROWER credential exists under this same key name for the targets no
-   * app boots from — today, `preflight` alone.
+   * Whatever the targets no app boots from — today, `preflight` alone — hold
+   * under this key name is narrow enough for a dry run and no wider.
    *
    * The opt-in that decides which keys a CI-only target carries, and it has to
    * live on the KEY rather than in the target table: nothing in a row about
@@ -111,10 +111,30 @@ export type EnvMeta = {
    * The target half of the rule is derived instead — see
    * `holdsOnlyNarrowedKeys()` in `targets.ts`.
    *
-   * `DB_URL` is the only one today: its preflight value is a Postgres role that
-   * can see the migrations table and nothing else. Same key name, same schema,
-   * a credential deliberately weaker than the deployed one — which is exactly
-   * what one vault project per target already makes possible.
+   * ⚠️ TWO SHAPES SATISFY IT, and the difference decides how you check a third
+   * before marking it. The field says nothing about which shape a key is — it
+   * says only that the claim below holds — so reading it as one shape and
+   * marking a key of the other is how the wrong credential gets in.
+   *
+   *   * **The same key name, carrying a weaker credential here.** `DB_URL` is
+   *     a full connection string in `.env`, `.env.staging` and
+   *     `.env.production`; its preflight value is a Postgres role that can see
+   *     `supabase_migrations.schema_migrations` and nothing else. Same key,
+   *     same schema, a value deliberately weaker than the deployed one — which
+   *     is exactly what one vault project per target already makes possible.
+   *     Marking one of these is a claim about a value that has to be minted
+   *     and pushed separately, and nothing in this repository can check it.
+   *   * **A key that is only ever the narrow one.** `AIRTABLE_PLAN_PAT` holds
+   *     a PAT with `schema.bases:read` on the officers' base and nothing else;
+   *     there is no wider credential under that name in any target, because
+   *     the wider Airtable tokens are separate declarations
+   *     (`AIRTABLE_PAT`, `AIRTABLE_APPLY_PAT`). Here the narrowness is a
+   *     property of the key rather than of one target's copy of it, so the
+   *     claim is checked when the token is minted and cannot drift per target.
+   *
+   * Both shapes make the same promise and it is the promise, not the shape,
+   * that this field asserts: what `preflight` holds under this name cannot do
+   * more than the dry runs need.
    *
    * ⚠️ ABSENT MEANS "NOT IN PREFLIGHT", and that default is the whole security
    * property. Without this field `keysRoutedTo("preflight")` answered with all
@@ -127,10 +147,16 @@ export type EnvMeta = {
    * production data from the `main` trust tier"; a signing key is considerably
    * worse.
    *
-   * ⚠️ NOT a claim that the value is harmless. It claims a narrow variant
-   * EXISTS and is what the CI-only target holds. Marking a key whose only
-   * credential is the deployed one hands that credential to `main`, which is
-   * the bug this field was added to close, reintroduced one field later.
+   * ⚠️ NOT a claim that the value is harmless, in either shape. Each has its
+   * own way of being marked wrongly:
+   *
+   *   * shared-name — marking a key whose ONLY credential is the deployed one
+   *     hands that credential to `main`, which is the bug this field was added
+   *     to close, reintroduced one field later;
+   *   * narrow-key — marking a key that is narrow by habit rather than by
+   *     scope. `AIRTABLE_PLAN_PAT` qualifies because a token minted with
+   *     `schema.bases:read` alone cannot be talked into a write; a key that
+   *     merely *happens* to hold a limited token today does not.
    */
   narrowed?: true;
   /**

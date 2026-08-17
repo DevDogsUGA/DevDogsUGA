@@ -118,6 +118,54 @@ describe("stdout stays clean for every deploy command", () => {
     expect(stderr).toContain("must name a deployed environment");
     expect(code).toBe(1);
   });
+
+  it("prints no banner when airtable-plan refuses", async () => {
+    // ⚠️ EXIT 1, not a quiet 0. The step this backs runs on every merge to
+    // `main`, and the shape it must never take is the one this repository has
+    // already been bitten by: a step guarded on `secrets.X != ''`, which
+    // passed green for months without ever running. A missing credential has
+    // to be red.
+    const { code, stdout, stderr } = await devtools([
+      "deploy",
+      "airtable-plan",
+    ]);
+    expect(stdout).toBe("");
+    expect(stderr).toContain("AIRTABLE_BASE_ID is not set");
+    expect(code).toBe(1);
+  });
+
+  it("prints no banner when airtable-apply refuses", async () => {
+    const { code, stdout, stderr } = await devtools([
+      "deploy",
+      "airtable-apply",
+    ]);
+    expect(stdout).toBe("");
+    expect(stderr).toContain("AIRTABLE_BASE_ID is not set");
+    expect(code).toBe(1);
+  });
+
+  it("names the token variables when only the base id is set", async () => {
+    // The refusal a real job hits: the repository variable is there and the
+    // environment secret is not. Both commands have to say WHICH variable, and
+    // each has to name its own row rather than a shared list.
+    const plan = await devtools(["deploy", "airtable-plan"], {
+      AIRTABLE_BASE_ID: "appTESTTESTTEST01",
+    });
+    expect(plan.stdout).toBe("");
+    expect(plan.stderr).toContain("AIRTABLE_PLAN_PAT, AIRTABLE_PAT");
+    expect(plan.code).toBe(1);
+
+    const apply = await devtools(["deploy", "airtable-apply"], {
+      AIRTABLE_BASE_ID: "appTESTTESTTEST01",
+    });
+    expect(apply.stdout).toBe("");
+    expect(apply.stderr).toContain("AIRTABLE_APPLY_PAT, AIRTABLE_PAT");
+    expect(apply.code).toBe(1);
+    // POSITIVE CONTROL on the pairing: neither refusal offers the other's
+    // token as a way out, which is the whole point of two disjoint rows.
+    expect(plan.stderr).not.toContain("AIRTABLE_APPLY_PAT, AIRTABLE_PAT");
+    expect(apply.stderr).not.toContain("AIRTABLE_PLAN_PAT, AIRTABLE_PAT");
+  });
 });
 
 describe("argument refusals", () => {

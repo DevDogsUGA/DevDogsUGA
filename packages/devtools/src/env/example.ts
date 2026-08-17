@@ -366,18 +366,20 @@ function targetHeader(target: VaultTarget, count: number): string[] {
               "this target: it exists to feed CI's migration and schema DRY " +
               "RUNS, which read and change nothing, so it carries only the " +
               "keys whose declaration opts in with `narrowed` — each of which " +
-              "is a deliberately weaker credential under the same name (here, " +
-              "a Postgres role that sees only the migrations table). Every " +
-              "other key is absent ON PURPOSE: this project's GitHub " +
-              "environment is reachable from `main`, and it used to list all " +
-              "45 routable keys, the JWT signing key included.",
+              "is narrow enough for a dry run and no wider: a Postgres role " +
+              "that sees only the migrations table, and an Airtable PAT with " +
+              "`schema.bases:read` on one base. Every other key is absent ON " +
+              "PURPOSE: this project's GitHub environment is reachable from " +
+              "`main`, and it used to list all 45 routable keys, the JWT " +
+              "signing key included.",
           ),
           "#",
           ...comment(
-            "OUTSTANDING: the Airtable PAT with `schema:read` that this tier " +
-              "is also supposed to hold is declared in no manifest at all, so " +
-              "there is no line for it to have. Declaring it with " +
-              "`narrowed: true` is what puts it here.",
+            "⚠️ AIRTABLE_BASE_ID is NOT here, and `deploy airtable-plan` " +
+              "needs it. It is public rather than secret, so it is a GitHub " +
+              "VARIABLE — and it is declared without `narrowed`, so a push " +
+              "for this target does not route it. Set it as a REPOSITORY " +
+              "variable, which every environment sees, including this one.",
           ),
         ]
       : []),

@@ -55,7 +55,11 @@ const NEXT_STEPS = {
  * that one field. Run it against a finished base and it does nothing.
  */
 export async function runScaffold(dryRun: boolean): Promise<void> {
-  const credentials = airtableClient();
+  // ⚠️ The ONE call site in this file where the capability is not a constant,
+  // and both directions of getting it wrong are bad: `write` under `--dry-run`
+  // authenticates the §3.5 plan step with a token that can restructure the
+  // base, and `read` without it fails 403 partway through creating tables.
+  const credentials = airtableClient({ need: dryRun ? "read" : "write" });
   if (!credentials) {
     process.exitCode = 1;
     return;
@@ -125,7 +129,9 @@ export async function runScaffold(dryRun: boolean): Promise<void> {
  * which is worse than looking untouched.
  */
 export async function runPullIds(): Promise<void> {
-  const credentials = airtableClient();
+  // Reads the base schema and writes a COMMITTED SOURCE FILE. The write is
+  // local, so nothing here needs a token that can change anything remote.
+  const credentials = airtableClient({ need: "read" });
   if (!credentials) {
     process.exitCode = 1;
     return;
@@ -168,7 +174,12 @@ export async function runPullIds(): Promise<void> {
  * failing the next sync quietly.
  */
 export async function runVerify(checkDuplicates: boolean): Promise<void> {
-  const credentials = airtableClient();
+  // ⚠️ `read` covers the schema half only. Duplicate detection also reads
+  // RECORDS (`data.records:read`), which `AIRTABLE_PLAN_PAT` deliberately
+  // cannot do — so on a machine holding both tokens, `verify` with duplicate
+  // checking on needs `AIRTABLE_PAT` and says so through `runAirtable`'s hint
+  // rather than through a bare 403.
+  const credentials = airtableClient({ need: "read" });
   if (!credentials) {
     process.exitCode = 1;
     return;
@@ -253,7 +264,8 @@ export async function runSnapshot(check: boolean): Promise<void> {
     return;
   }
 
-  const credentials = airtableClient();
+  // Schema only, into a committed file. Same shape as pull-ids.
+  const credentials = airtableClient({ need: "read" });
   if (!credentials) {
     process.exitCode = 1;
     return;
@@ -279,7 +291,13 @@ export async function runAirtable(action: () => Promise<void>): Promise<void> {
   } catch (err) {
     explain("The Airtable command failed.", errorMessage(err), [
       "A 401 or 403 means the token is missing a scope — see",
-      "docs/platform/airtable-setup.md for the four it needs.",
+      "docs/platform/airtable-setup.md for the three tokens and their scopes.",
+      "",
+      "Note WHICH token these commands pick: the reading ones prefer",
+      "AIRTABLE_PLAN_PAT over AIRTABLE_PAT, and the plan token carries",
+      "schema.bases:read ALONE. So a 403 on a records read means both are set",
+      "and the narrow one won — `verify --no-duplicates` reads no records, or",
+      "unset AIRTABLE_PLAN_PAT in .env, where it does not belong anyway.",
     ]);
     process.exitCode = 1;
   }
