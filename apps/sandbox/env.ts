@@ -45,7 +45,7 @@ declare({
     // Everything here is `.optional()`. No app boots on these: the Worker
     // checks its two bindings itself and answers 503 `proxy_misconfigured`
     // when either is missing, and the signing key is checked by
-    // `scripts/mint-sandbox-token.mjs` with a named refusal. A required
+    // `devtools deploy mint-token` with a named refusal. A required
     // schema here would only break CI, which holds none of them.
 
     // ── Decided here rather than in wrangler.jsonc ──────────────────────────
@@ -81,7 +81,7 @@ declare({
 
     // ── The credential this whole file exists for ──────────────────────────
     // A JWT carrying {"role": "sandbox_proxy"}, signed with the platform
-    // project's own signing key by `scripts/mint-sandbox-token.mjs`.
+    // project's own signing key by `devtools deploy mint-token`.
     //
     // NOT a Supabase secret key, and the distinction is the security property:
     // `sb_secret_...` keys authorize as `service_role` and cannot be bound to
@@ -146,7 +146,7 @@ declare({
     SUPABASE_JWT_SIGNING_KEY: define(z.string().min(32).optional(), {
       doc:
         "The platform Supabase project's JWT signing secret (HS256), used by " +
-        "scripts/mint-sandbox-token.mjs to sign SANDBOX_PROXY_TOKEN at " +
+        "devtools deploy mint-token to sign SANDBOX_PROXY_TOKEN at " +
         "deploy time. ⚠️ It can mint a token for ANY role, including a " +
         "user session -- it is the widest credential in this file by a long " +
         "way, and it is here only because the sandbox token is the one thing " +

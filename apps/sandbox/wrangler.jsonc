@@ -29,7 +29,7 @@
   //
   // SANDBOX_PROXY_TOKEN is a secret, never a var. It is a JWT carrying
   // {"role": "sandbox_proxy"}, minted at deploy time by
-  // `scripts/mint-sandbox-token.mjs` signing with the platform project's own
+  // `devtools deploy mint-token` signing with the platform project's own
   // signing key -- no API call, no dashboard step, so rotation is free and
   // should happen on every deploy with a 90-day exp.
   //

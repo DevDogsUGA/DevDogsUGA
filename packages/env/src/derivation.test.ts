@@ -1,7 +1,7 @@
 /**
  * The one question two very different callers ask: is this `example` a VALUE?
  *
- * `scripts/deploy-write-env.ts` asks it to decide what a deploy job writes
+ * `devtools deploy write-env` asks it to decide what a deploy job writes
  * into a runner's env file, and `env init --target` asks it to decide what a
  * person is handed to fill in. A disagreement between them is not a cosmetic
  * one — it means the file CI composes and the file a human curates stop being

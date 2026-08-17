@@ -21,7 +21,7 @@
  * because the stored value does match the file it came from.
  *
  * Two callers make this distinction and they must not disagree about it:
- * `scripts/deploy-write-env.ts` composing a deploy's env file, and
+ * `devtools deploy write-env` composing a deploy's env file, and
  * `env init --target <vault target>` rendering one to fill in by hand. When
  * they disagree, the file a person fills in and the file CI writes stop being
  * the same file, which is the class of bug the whole registry exists to close.
