@@ -20,8 +20,8 @@
     "cf:preview": "with-env opennextjs-cloudflare preview",
     "cf:build:staging": "DEPLOY_ENV=staging with-env opennextjs-cloudflare build",
     "cf:build:production": "DEPLOY_ENV=production with-env opennextjs-cloudflare build",
-    "cf:deploy:staging": "DEPLOY_ENV=staging with-env -c 'node ../../scripts/require-cloudflare-token.mjs && opennextjs-cloudflare deploy -e staging ${DEPLOY_SECRETS_FILE:+--secrets-file $DEPLOY_SECRETS_FILE}'",
-    "cf:deploy:production": "DEPLOY_ENV=production with-env -c 'node ../../scripts/require-cloudflare-token.mjs && opennextjs-cloudflare deploy -e production ${DEPLOY_SECRETS_FILE:+--secrets-file $DEPLOY_SECRETS_FILE}'"
+    "cf:deploy:staging": "DEPLOY_ENV=staging with-env -c 'pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token && opennextjs-cloudflare deploy -e staging ${DEPLOY_SECRETS_FILE:+--secrets-file $DEPLOY_SECRETS_FILE}'",
+    "cf:deploy:production": "DEPLOY_ENV=production with-env -c 'pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token && opennextjs-cloudflare deploy -e production ${DEPLOY_SECRETS_FILE:+--secrets-file $DEPLOY_SECRETS_FILE}'"
   },
   "dependencies": {
     "@devdogsuga/drizzle": "workspace:*",

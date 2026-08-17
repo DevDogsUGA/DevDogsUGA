@@ -6,8 +6,8 @@
   "description": "The per-environment proxy Worker sitting in front of each team's Supabase project",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy:staging": "DEPLOY_ENV=staging with-env -c 'node ../../scripts/require-cloudflare-token.mjs && wrangler deploy -e staging'",
-    "deploy:production": "DEPLOY_ENV=production with-env -c 'node ../../scripts/require-cloudflare-token.mjs && wrangler deploy -e production'",
+    "deploy:staging": "DEPLOY_ENV=staging with-env -c 'pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token && wrangler deploy -e staging'",
+    "deploy:production": "DEPLOY_ENV=production with-env -c 'pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token && wrangler deploy -e production'",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
