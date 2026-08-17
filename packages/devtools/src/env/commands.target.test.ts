@@ -34,14 +34,23 @@ import { resolve } from "node:path";
  */
 
 /**
- * One key, and the local copy deliberately differs from the remote one.
+ * Two keys, and the local copies deliberately differ from the remote one.
  *
  * `pull` returns early when nothing would change and `push` when nothing is
  * pushable, so equal values would make every command below a no-op that never
  * opened a file — and "it read no file" passes a `not.toContain` check just as
  * well as "it read the right one".
+ *
+ * ⚠️ `DB_URL` is here for `preflight` specifically, and dropping it would make
+ * the preflight case below pass for the wrong reason. That target carries only
+ * the keys declared `narrowed`, so a file holding `DISCORD_TOKEN` alone is a
+ * file with nothing pushable in it: `push` would bail before resolving a
+ * project id, and the assertion that it resolved the RIGHT project id would be
+ * asserting over an empty call list.
  */
-const readFile = vi.hoisted(() => vi.fn(async () => 'DISCORD_TOKEN="local"\n'));
+const readFile = vi.hoisted(() =>
+  vi.fn(async () => 'DISCORD_TOKEN="local"\nDB_URL="postgresql://local"\n'),
+);
 const writeFile = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock("node:fs/promises", () => ({ readFile, writeFile }));

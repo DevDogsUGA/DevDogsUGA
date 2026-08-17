@@ -34,7 +34,9 @@
  *     constants, not one contributor's `scope: "developer"` values, and not
  *     the apply-tier credentials outside production, all three of which used
  *     to ship in all three files because all three files were byte-identical
- *     but for the header.
+ *     but for the header. `preflight` is narrower again — a target no app boots
+ *     from carries only the keys declared `narrowed` — so its file is one line
+ *     long today rather than 45.
  *   * **Which values.** Blank, unless `derivationOf()` says the `example` is a
  *     derivation AND every variable it expands from is in the same file. A
  *     development default and a placeholder are both non-empty, and every
@@ -318,8 +320,9 @@ function targetHeader(target: VaultTarget, count: number): string[] {
   return [
     "#",
     ...comment(
-      `The ${count} keys a \`pnpm devtools env push --target ${target}\` ` +
-        "routes, and only those. The committed defaults and the " +
+      `The ${count} key${count === 1 ? "" : "s"} a ` +
+        `\`pnpm devtools env push --target ${target}\` ` +
+        "routes, and nothing else. The committed defaults and the " +
         "per-developer values go nowhere, and a minted credential is signed " +
         "at deploy time rather than stored, so none of the three has a line " +
         "here to fill in.",
@@ -358,13 +361,23 @@ function targetHeader(target: VaultTarget, count: number): string[] {
       ? [
           "#",
           ...comment(
-            "⚠️ PREFLIGHT IS WIDER HERE THAN IT SHOULD BE. The project holds " +
-              "read-only credentials by construction — a Postgres role that " +
-              "sees only the migrations table, an Airtable PAT with " +
-              "schema:read — but no declaration says which keys belong to " +
-              "which target, so this file lists everything a preflight push " +
-              "would route. Delete the lines that do not belong before " +
-              "filling it in; a key left blank is skipped, not pushed.",
+            "⚠️ PREFLIGHT IS DELIBERATELY TINY, and a short file here is the " +
+              "correct output rather than a truncated one. Nothing boots from " +
+              "this target: it exists to feed CI's migration and schema DRY " +
+              "RUNS, which read and change nothing, so it carries only the " +
+              "keys whose declaration opts in with `narrowed` — each of which " +
+              "is a deliberately weaker credential under the same name (here, " +
+              "a Postgres role that sees only the migrations table). Every " +
+              "other key is absent ON PURPOSE: this project's GitHub " +
+              "environment is reachable from `main`, and it used to list all " +
+              "45 routable keys, the JWT signing key included.",
+          ),
+          "#",
+          ...comment(
+            "OUTSTANDING: the Airtable PAT with `schema:read` that this tier " +
+              "is also supposed to hold is declared in no manifest at all, so " +
+              "there is no line for it to have. Declaring it with " +
+              "`narrowed: true` is what puts it here.",
           ),
         ]
       : []),

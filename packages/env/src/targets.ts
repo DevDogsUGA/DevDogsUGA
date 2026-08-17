@@ -180,6 +180,35 @@ export function isGuarded(target: EnvTarget): boolean {
   return TARGETS[target].guarded;
 }
 
+/**
+ * Whether this target carries ONLY the keys declared `narrowed`, instead of
+ * everything a push for it would otherwise route.
+ *
+ * ⚠️ DERIVED FROM `deployEnv: false`, and that is a rule rather than a
+ * coincidence about the one row that has it. A target no app boots from exists
+ * for one purpose: to feed CI's plan jobs — migration and schema DRY RUNS —
+ * and a plan job is narrow by construction. It reads, it reports, it changes
+ * nothing. So there is no credential such a target needs that a deployed one
+ * does not, and the moment a row stops being a deploy environment it also stops
+ * having any claim on the deployed credential set. A future non-booting target
+ * inherits that, correctly, without anyone remembering to say so.
+ *
+ * A `membership` column saying the same thing was the obvious alternative and
+ * is the worse one: it encodes this partition twice, and the two copies can
+ * disagree silently in exactly the bad direction — `deployEnv: false` beside a
+ * membership of "everything" is a non-booting target holding every
+ * production-shaped secret, which is what `preflight` was until this existed.
+ * `keysRoutedTo("preflight")` returned all 45 routable keys,
+ * `SUPABASE_JWT_SIGNING_KEY` and `GITHUB_APP_PRIVATE_KEY` included, into a
+ * project whose GitHub environment is reachable from `main`.
+ *
+ * The other half — WHICH keys — cannot be derived from this table at all, and
+ * lives on the declarations as `EnvMeta.narrowed`.
+ */
+export function holdsOnlyNarrowedKeys(target: EnvTarget): boolean {
+  return !TARGETS[target].deployEnv;
+}
+
 export class UnknownEnvironmentError extends Error {
   constructor(readonly value: string) {
     super(

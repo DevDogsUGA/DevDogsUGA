@@ -101,6 +101,39 @@ export type EnvMeta = {
   /** Deployed-secret routing. Defaults to `plan` when absent. */
   tier?: EnvTier;
   /**
+   * A NARROWER credential exists under this same key name for the targets no
+   * app boots from — today, `preflight` alone.
+   *
+   * The opt-in that decides which keys a CI-only target carries, and it has to
+   * live on the KEY rather than in the target table: nothing in a row about
+   * `.env.preflight` can say *which* keys belong in it, and a hand-written list
+   * in that row would be precisely the array this registry exists to delete.
+   * The target half of the rule is derived instead — see
+   * `holdsOnlyNarrowedKeys()` in `targets.ts`.
+   *
+   * `DB_URL` is the only one today: its preflight value is a Postgres role that
+   * can see the migrations table and nothing else. Same key name, same schema,
+   * a credential deliberately weaker than the deployed one — which is exactly
+   * what one vault project per target already makes possible.
+   *
+   * ⚠️ ABSENT MEANS "NOT IN PREFLIGHT", and that default is the whole security
+   * property. Without this field `keysRoutedTo("preflight")` answered with all
+   * 45 routable keys, so `env push --target preflight` on a filled-in file
+   * uploaded `SUPABASE_JWT_SIGNING_KEY` — which mints a token for ANY role,
+   * `service_role` included — along with `SECRET_KEY` and
+   * `GITHUB_APP_PRIVATE_KEY` into `devdogs-preflight`, whose GitHub environment
+   * is reachable from `main`. §3.5 of the security plan refuses even a general
+   * read-only Postgres role at that tier, on the grounds that it "would read all
+   * production data from the `main` trust tier"; a signing key is considerably
+   * worse.
+   *
+   * ⚠️ NOT a claim that the value is harmless. It claims a narrow variant
+   * EXISTS and is what the CI-only target holds. Marking a key whose only
+   * credential is the deployed one hands that credential to `main`, which is
+   * the bug this field was added to close, reintroduced one field later.
+   */
+  narrowed?: true;
+  /**
    * Supplied by `supabase status` when the local stack is running, so it is
    * absent from `.env` by design rather than by oversight.
    *

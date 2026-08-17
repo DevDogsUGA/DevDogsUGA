@@ -1,7 +1,13 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { neverStoreKeys, variableKeys } from "@devdogsuga/env";
+import {
+  TARGETS,
+  narrowedKeys,
+  neverStoreKeys,
+  variableKeys,
+  variables,
+} from "@devdogsuga/env";
 import { loadRegistry } from "./discovery.js";
-import { selectForPush } from "./selection.js";
+import { keysRoutedTo, selectForPush } from "./selection.js";
 
 /**
  * The gate on what leaves this machine, and which of the two GitHub stores it
@@ -289,6 +295,226 @@ describe("keys no manifest declares", () => {
       "staging",
     );
     expect(unknown).toEqual([]);
+  });
+});
+
+describe("a value that is still the declared derivation", () => {
+  /**
+   * The eight `$VAR` lines `env init --target` writes, and what each is.
+   *
+   * Literals rather than a call to `derivationOf()`, for the same reason the
+   * never-store list above is literal: the registry is empty at collection
+   * time. The first test re-ties them to the registry, so a drifted literal
+   * fails loudly instead of testing a key that no longer derives.
+   */
+  const DERIVATIONS = {
+    API_URL: "https://$PROJECT_REF.supabase.co",
+    BASE_URL_CALLBACK: "$BASE_URL/auth/callback",
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "$PUBLISHABLE_KEY",
+    NEXT_PUBLIC_SUPABASE_URL: "$API_URL",
+    PLATFORM_REST_URL: "$REST_URL",
+    REST_URL: "https://$PROJECT_REF.supabase.co/rest/v1",
+    SCHEDULE_BUILDER_URL_CALLBACK: "$SCHEDULE_BUILDER_URL/auth/callback",
+    STORAGE_S3_URL: "https://$PROJECT_REF.storage.supabase.co/storage/v1/s3",
+  } as const;
+
+  it("tests the same eight the registry declares", () => {
+    for (const [key, value] of Object.entries(DERIVATIONS)) {
+      expect(
+        variables().get(key)?.[0]?.meta.example,
+        `${key} no longer declares this derivation`,
+      ).toBe(value);
+    }
+  });
+
+  it("leaves each one to the registry instead of storing it", () => {
+    // The bug: `env init` writes these lines, push stored them verbatim, and a
+    // STORED value beats the registry when the deploy composes an env file. So
+    // the literal `https://$PROJECT_REF.supabase.co` arrived as
+    // `from: "variable"`, was never expanded, and was written single-quoted —
+    // which dotenvx takes as fully literal. The deployed app then resolved a
+    // host called `$PROJECT_REF.supabase.co` while `env audit` reported NO
+    // DRIFT, because the stored value did match the file.
+    const {
+      push,
+      variables: vars,
+      derived,
+    } = selectForPush(env({ ...DERIVATIONS, CRON_SECRET: "s" }), "staging");
+
+    expect(derived.sort()).toEqual(Object.keys(DERIVATIONS).sort());
+    for (const key of Object.keys(DERIVATIONS)) {
+      expect(push.has(key), `${key} reached the secret store`).toBe(false);
+      expect(vars.has(key), `${key} reached the variable store`).toBe(false);
+    }
+    // POSITIVE CONTROL: the same call still pushed the file's real secret, so
+    // the eight above are a routing decision rather than an empty result.
+    expect(push.get("CRON_SECRET")).toBe("s");
+  });
+
+  it("is its own outcome, not a silent skip and not a refusal", () => {
+    // `env init` WROTE these lines. A push that said nothing about them would
+    // read as "your eight `$VAR` lines were stored"; a refusal would cry wolf
+    // on the ordinary, correct state of a freshly generated file.
+    const { derived, refused, unknown } = selectForPush(
+      env({ NEXT_PUBLIC_SUPABASE_URL: "$API_URL" }),
+      "staging",
+    );
+    expect(derived).toEqual(["NEXT_PUBLIC_SUPABASE_URL"]);
+    expect(refused).toEqual([]);
+    expect(unknown).toEqual([]);
+  });
+
+  it("PUSHES a value that replaced the derivation", () => {
+    // ⚠️ The direction that must not break. Somebody who typed a real value
+    // over the formula meant it, and dropping it would upload nothing while
+    // reporting success — a missing secret that `env audit` then agrees with,
+    // which is worse than the bug this gate closes.
+    const { variables: vars, derived } = selectForPush(
+      env({ NEXT_PUBLIC_SUPABASE_URL: "https://abcdefghijklmnop.supabase.co" }),
+      "staging",
+    );
+    expect(vars.get("NEXT_PUBLIC_SUPABASE_URL")).toBe(
+      "https://abcdefghijklmnop.supabase.co",
+    );
+    expect(derived).toEqual([]);
+  });
+
+  it("PUSHES a DIFFERENT derivation", () => {
+    // A formula that is not the declared one is deliberate input too: it is
+    // how a target says its value is built from something else. Only exact
+    // identity with what the registry declares is "nothing here to send".
+    const { variables: vars, derived } = selectForPush(
+      env({ NEXT_PUBLIC_SUPABASE_URL: "$BASE_URL" }),
+      "staging",
+    );
+    expect(vars.get("NEXT_PUBLIC_SUPABASE_URL")).toBe("$BASE_URL");
+    expect(derived).toEqual([]);
+  });
+
+  it("PUSHES a secret whose example merely contains a $", () => {
+    // The gate is `derivationOf()`, not "looks like a formula". `DB_URL`'s
+    // declared example is `postgresql://postgres.$PROJECT_REF:<password>@…` —
+    // a real `$REF` with two fill-me holes punched in it, and a SECRET, so it
+    // is not a derivation at either gate. A looser predicate here would drop a
+    // production database URL on the floor.
+    const shape =
+      "postgresql://postgres.$PROJECT_REF:<password>@<host>:5432/postgres";
+    const { push, derived } = selectForPush(env({ DB_URL: shape }), "staging");
+    expect(push.get("DB_URL")).toBe(shape);
+    expect(derived).toEqual([]);
+  });
+
+  it("still counts an empty value as skipped rather than derived", () => {
+    // The two are different states and stay different: empty means "nobody has
+    // filled this in", derived means "the registry already knows it".
+    const {
+      push,
+      variables: vars,
+      derived,
+    } = selectForPush(
+      env({ NEXT_PUBLIC_SUPABASE_URL: "", DISCORD_TOKEN: "" }),
+      "staging",
+    );
+    expect(push.size).toBe(0);
+    expect(vars.size).toBe(0);
+    expect(derived).toEqual([]);
+  });
+
+  it("does not let an UNDECLARED key be excused as a derivation", () => {
+    // Order matters: undeclared is checked first, so a stray key whose value
+    // happens to be a formula is still reported as the declaration problem it
+    // is rather than quietly filed under "the registry has this one".
+    const { derived, unknown } = selectForPush(
+      env({ MYSTERY_URL: "$API_URL" }),
+      "staging",
+    );
+    expect(unknown).toEqual(["MYSTERY_URL"]);
+    expect(derived).toEqual([]);
+  });
+
+  it("does not let a REFUSED key be excused as a derivation", () => {
+    // Same ordering claim on the other loud outcome. A never-store credential
+    // has to be reported however its line reads.
+    const { derived, refused } = selectForPush(
+      env({ BWS_ACCESS_TOKEN: "$API_URL" }),
+      "production",
+    );
+    expect(refused).toEqual(["BWS_ACCESS_TOKEN"]);
+    expect(derived).toEqual([]);
+  });
+});
+
+describe("preflight, the target no app boots from", () => {
+  /**
+   * The finding: `keysRoutedTo("preflight")` answered with all 45 routable
+   * keys, so `env push --target preflight` on a filled-in file uploaded the
+   * token-minting key, the service-role key and the GitHub App private key
+   * into `devdogs-preflight` — whose GitHub environment is reachable from
+   * `main`. §3.5 of the security plan refuses even a general read-only
+   * Postgres role at that tier.
+   */
+  const THE_FINDING = [
+    "SUPABASE_JWT_SIGNING_KEY",
+    "SECRET_KEY",
+    "GITHUB_APP_PRIVATE_KEY",
+  ] as const;
+
+  it("derives its narrowness from deployEnv, not from its name", () => {
+    // The premise. `preflight` is the only row with `deployEnv: false`, and
+    // that is what `ignoredFor()` reads — a `membership` column saying the same
+    // thing twice could drift, and would drift silently in the direction that
+    // matters.
+    expect(TARGETS.preflight.deployEnv).toBe(false);
+    expect(TARGETS.staging.deployEnv).toBe(true);
+    expect(TARGETS.production.deployEnv).toBe(true);
+  });
+
+  it("routes exactly the keys that opted in", () => {
+    expect([...keysRoutedTo("preflight")]).toEqual(["DB_URL"]);
+    // Tied to the registry, so "one key" is the marker's doing rather than a
+    // filter that happened to leave one behind.
+    expect(narrowedKeys()).toEqual(["DB_URL"]);
+  });
+
+  for (const key of THE_FINDING) {
+    it(`does not route ${key} to preflight`, () => {
+      // BY NAME, because these three are the finding rather than a sample of
+      // it. POSITIVE CONTROL in the same test: each IS routed to staging, so
+      // "absent from preflight" is a routing decision and not a key that
+      // stopped existing.
+      expect(keysRoutedTo("preflight").has(key)).toBe(false);
+      expect(keysRoutedTo("staging").has(key)).toBe(true);
+    });
+
+    it(`refuses to upload ${key} even when the file holds one`, () => {
+      // The end-to-end claim: routing is what `env init` renders, and THIS is
+      // what a push actually does with a file somebody filled in anyway.
+      const {
+        push,
+        variables: vars,
+        refused,
+      } = selectForPush(
+        env({ [key]: "live-value", DB_URL: "postgresql://migrations-only" }),
+        "preflight",
+      );
+      expect(push.has(key)).toBe(false);
+      expect(vars.has(key)).toBe(false);
+      // Skipped rather than refused: `refused` means "must not be stored
+      // ANYWHERE", and these three belong in staging and production.
+      expect(refused).toEqual([]);
+      // POSITIVE CONTROL: the narrowed key in the same file did push, so the
+      // assertions above are not two empty maps.
+      expect(push.get("DB_URL")).toBe("postgresql://migrations-only");
+    });
+  }
+
+  it("leaves staging and production untouched", () => {
+    // The regression that would make this a bug rather than a fix: one branch
+    // in `ignoredFor()` narrows preflight, and a branch that ran for every
+    // target would empty all three identically — which looks like it worked.
+    expect(keysRoutedTo("staging").size).toBe(45);
+    expect(keysRoutedTo("production").size).toBe(47);
+    expect(keysRoutedTo("preflight").size).toBe(1);
   });
 });
 

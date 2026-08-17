@@ -114,6 +114,18 @@ beforeEach(() => {
         secrecy: "secret",
         tier: "apply",
       }),
+      NARROW_ONE: define(z.string().optional(), {
+        doc: "A key with a deliberately weaker credential for the CI tier.",
+        scope: "environment",
+        secrecy: "secret",
+        narrowed: true,
+      }),
+      HALF_NARROW: define(z.string().optional(), {
+        doc: "Marked narrowed by ONE of its two declarations. See below.",
+        scope: "environment",
+        secrecy: "secret",
+        narrowed: true,
+      }),
       MINTED_ONE: define(z.string().optional(), {
         doc: "Signed at deploy time; no stored copy exists.",
         scope: "environment",
@@ -130,6 +142,26 @@ beforeEach(() => {
         scope: "developer",
         secrecy: "public",
         example: "10.0.0.1",
+      }),
+    },
+  });
+
+  // A SECOND declaration of `HALF_NARROW`, this one WITHOUT the marker.
+  //
+  // Two manifests disagreeing about a key is a bug the real registry's
+  // completeness test catches — but it catches it after the fact, and until it
+  // does, something has to decide what the disagreement means. For every other
+  // flag the safe reading is "one app calling it a secret makes it a secret".
+  // For this one it inverts: `narrowed` is an EXEMPTION from an exclusion, so
+  // honouring a single mention would let a key into a project whose GitHub
+  // environment `main` can read on the strength of half a declaration.
+  declare({
+    source: "devtools",
+    server: {
+      HALF_NARROW: define(z.string().optional(), {
+        doc: "The same key, declared here without the marker.",
+        scope: "environment",
+        secrecy: "secret",
       }),
     },
   });
@@ -197,6 +229,44 @@ describe("a vault target's file", () => {
       expect(valueOf(staging, key), key).toBeNull();
       expect(isCommented(staging, key), key).toBe(false);
     }
+  });
+
+  it("gives a target no app boots from only the narrowed keys", () => {
+    // The registry here is entirely synthetic, so `preflight` carrying exactly
+    // `NARROW_ONE` is a property of the RULE rather than of what the real
+    // manifests happen to declare today. Everything else in this registry is
+    // ordinary and routable, and none of it may reach a project whose GitHub
+    // environment `main` can read.
+    const preflight = renderInit("preflight", DATE);
+    expect(valueOf(preflight, "NARROW_ONE")).toBe("");
+    for (const key of ["ANCHOR", "DERIVED_OK", "SECRET_SHAPE", "MUST_FILL"]) {
+      expect(valueOf(preflight, key), key).toBeNull();
+      expect(isCommented(preflight, key), key).toBe(false);
+    }
+  });
+
+  it("needs EVERY declaration to opt in, not just one", () => {
+    // Fails open otherwise, and open here means a full-strength credential in
+    // the CI-only vault project. `HALF_NARROW` carries the marker in one of its
+    // two declarations; the deployed targets still get it, preflight does not.
+    const preflight = renderInit("preflight", DATE);
+    expect(valueOf(preflight, "HALF_NARROW")).toBeNull();
+    expect(isCommented(preflight, "HALF_NARROW")).toBe(false);
+    // POSITIVE CONTROL: the key is real and routes, so its absence above is
+    // the disagreement rather than a key nothing declares.
+    expect(valueOf(renderInit("staging", DATE), "HALF_NARROW")).toBe("");
+    // …and the wholly-marked key in the same registry DID reach preflight, so
+    // the marker still works at all.
+    expect(valueOf(preflight, "NARROW_ONE")).toBe("");
+  });
+
+  it("does NOT withhold a narrowed key from the deployed targets", () => {
+    // `narrowed` says "a weaker credential exists for the CI tier", not "this
+    // key is CI's alone". Reading it the second way would strip a real secret
+    // out of staging and production — a missing credential that pushes
+    // cleanly, which is the failure mode this whole file exists to catch.
+    expect(valueOf(renderInit("staging", DATE), "NARROW_ONE")).toBe("");
+    expect(valueOf(renderInit("production", DATE), "NARROW_ONE")).toBe("");
   });
 
   it("drops a section whose every key was filtered out", () => {

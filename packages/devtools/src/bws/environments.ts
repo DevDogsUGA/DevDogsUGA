@@ -72,6 +72,14 @@ export interface EnvironmentSpec {
 }
 
 const SUMMARIES: Record<VaultTarget, string> = {
+  // ⚠️ "Read-only by construction" is now enforced rather than described:
+  // `preflight` is the one row with `deployEnv: false`, and `ignoredFor()`
+  // reads that as "carries only the keys declared `narrowed`". Until it did,
+  // this sentence was aspirational and `env push --target preflight` uploaded
+  // all 45 routable keys — SUPABASE_JWT_SIGNING_KEY, SECRET_KEY and
+  // GITHUB_APP_PRIVATE_KEY included — into a project whose GitHub environment
+  // `main` can reach. The Airtable PAT below is still aspirational: no
+  // manifest declares it.
   preflight:
     "Credentials for the dry runs that precede a promotion to production. " +
     "Read-only by construction: a Postgres role that can see only the " +

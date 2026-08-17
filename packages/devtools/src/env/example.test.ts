@@ -25,6 +25,7 @@
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import {
+  TARGETS,
   VAULT_TARGETS,
   applyOnlyKeys,
   mintedKeys,
@@ -122,11 +123,15 @@ function mentioned(file: Parsed): Set<string> {
  * The keys a push for `target` routes, recomputed from the metadata.
  *
  * Deliberately NOT `keysRoutedTo()`: this is the claim that function is
- * supposed to satisfy, written out from the two rules that decide it —
- * "`scope: environment`, storable somewhere, not minted" and "apply-tier is
- * production's alone".
+ * supposed to satisfy, written out from the three rules that decide it —
+ * "`scope: environment`, storable somewhere, not minted", "apply-tier is
+ * production's alone", and "a target no app boots from carries only what opted
+ * in". The third is spelled out from `deployEnv` and `meta.narrowed` here, not
+ * read from `holdsOnlyNarrowedKeys()` / `narrowedKeys()`, so that a renderer
+ * and a selector agreeing on a shared mistake still fails.
  */
 function routedByHand(name: VaultTarget): Set<string> {
+  const narrowTarget = !TARGETS[name].deployEnv;
   const keys = new Set<string>();
   for (const [key, entries] of variables()) {
     const storedSomewhere = entries.some(
@@ -136,10 +141,28 @@ function routedByHand(name: VaultTarget): Set<string> {
         e.meta.minted !== true,
     );
     const applyOnly = entries.some((e) => e.meta.tier === "apply");
+    // Opting in takes EVERY declaration, matching `narrowedKeys()`: this is an
+    // exemption from an exclusion, and an exemption one of two declarations
+    // grants is an exemption granted by accident.
+    const narrowed = entries.every((e) => e.meta.narrowed === true);
+    if (narrowTarget && !narrowed) continue;
     if (storedSomewhere && (name === "production" || !applyOnly)) keys.add(key);
   }
   return keys;
 }
+
+/**
+ * The vault targets an app actually boots from — staging and production.
+ *
+ * The block below them asserts things about a file with 45 keys in it: that it
+ * kept its derivations, that it blanked the localhost defaults, that its
+ * must-fill secrets are assignable. None of that is meaningful for `preflight`,
+ * which carries one key on purpose; it gets its own describe at the bottom,
+ * where "one key" is the claim rather than an embarrassment.
+ */
+const DEPLOYED_VAULT_TARGETS = VAULT_TARGETS.filter(
+  (name) => TARGETS[name].deployEnv,
+);
 
 /** Keys every one of whose declarations carries `scope`. */
 function scoped(scope: string): string[] {
@@ -193,41 +216,6 @@ describe.each(VAULT_TARGETS)("%s", (name) => {
         value.replaceAll(REFERENCE, ""),
         `${key} carries a fill-me marker outside its references`,
       ).not.toMatch(/[<>]/);
-    }
-  });
-
-  it("keeps the derivations — the file is not simply blanked", () => {
-    // The positive control for the invariant above, which every line passes
-    // vacuously if the renderer empties everything. Losing the derivations
-    // turns a fill-in-the-blanks file into a blank page, and they are the one
-    // kind of value that IS right in a deployed environment.
-    const { active } = target(name);
-    const derived = [...active].filter(([, value]) => value !== "");
-
-    expect(derived.length).toBeGreaterThanOrEqual(8);
-    expect(active.get("API_URL")).toBe("https://$PROJECT_REF.supabase.co");
-    expect(active.get("NEXT_PUBLIC_SUPABASE_URL")).toBe("$API_URL");
-    expect(active.get("BASE_URL_CALLBACK")).toBe("$BASE_URL/auth/callback");
-  });
-
-  it("drops the values that were wrong for a deployed target", () => {
-    // The named regressions from the bug report, asserted as present-and-empty
-    // rather than absent: the key still needs its line, it is the VALUE that
-    // had to go.
-    const { active } = target(name);
-    for (const key of [
-      "BASE_URL",
-      "SCHEDULE_BUILDER_URL",
-      "GITHUB_APP_ID",
-      "GITHUB_APP_INSTALLATION_ID",
-      "GITHUB_APP_PRIVATE_KEY",
-      "DB_URL",
-      "GOOGLE_CLIENT_ID",
-    ]) {
-      expect(active.get(key), `${key} should ship blank`).toBe("");
-      // …and each of these really does declare a value, so the assertion above
-      // is about the renderer dropping it rather than there being none.
-      expect(declaredExample(key), `${key} declares an example`).not.toBe("");
     }
   });
 
@@ -286,6 +274,58 @@ describe.each(VAULT_TARGETS)("%s", (name) => {
     }
   });
 
+  it("prints no section heading over an empty section", () => {
+    // Every section survives the filter today, so this is a guard rather than
+    // a caught bug: a heading over nothing claims "this app needs nothing
+    // here", which is a different and false statement.
+    const file = target(name);
+    expect(file.sections.length).toBeGreaterThan(0);
+    for (const section of file.sections) {
+      expect(file.assignmentsPerSection.get(section), section).toBeGreaterThan(
+        0,
+      );
+    }
+  });
+});
+
+// ── the deployed targets, whose files are the full form ──────────────────────
+
+describe.each(DEPLOYED_VAULT_TARGETS)("%s", (name) => {
+  it("keeps the derivations — the file is not simply blanked", () => {
+    // The positive control for the invariant above, which every line passes
+    // vacuously if the renderer empties everything. Losing the derivations
+    // turns a fill-in-the-blanks file into a blank page, and they are the one
+    // kind of value that IS right in a deployed environment.
+    const { active } = target(name);
+    const derived = [...active].filter(([, value]) => value !== "");
+
+    expect(derived.length).toBeGreaterThanOrEqual(8);
+    expect(active.get("API_URL")).toBe("https://$PROJECT_REF.supabase.co");
+    expect(active.get("NEXT_PUBLIC_SUPABASE_URL")).toBe("$API_URL");
+    expect(active.get("BASE_URL_CALLBACK")).toBe("$BASE_URL/auth/callback");
+  });
+
+  it("drops the values that were wrong for a deployed target", () => {
+    // The named regressions from the bug report, asserted as present-and-empty
+    // rather than absent: the key still needs its line, it is the VALUE that
+    // had to go.
+    const { active } = target(name);
+    for (const key of [
+      "BASE_URL",
+      "SCHEDULE_BUILDER_URL",
+      "GITHUB_APP_ID",
+      "GITHUB_APP_INSTALLATION_ID",
+      "GITHUB_APP_PRIVATE_KEY",
+      "DB_URL",
+      "GOOGLE_CLIENT_ID",
+    ]) {
+      expect(active.get(key), `${key} should ship blank`).toBe("");
+      // …and each of these really does declare a value, so the assertion above
+      // is about the renderer dropping it rather than there being none.
+      expect(declaredExample(key), `${key} declares an example`).not.toBe("");
+    }
+  });
+
   it("uncomments the keys the registry asks to comment out", () => {
     // The `commented: true` decision, asserted rather than described. It
     // encodes "unset and empty are different states" — true of the Supabase
@@ -305,18 +345,78 @@ describe.each(VAULT_TARGETS)("%s", (name) => {
       );
     }
   });
+});
 
-  it("prints no section heading over an empty section", () => {
-    // Every section survives the filter today, so this is a guard rather than
-    // a caught bug: a heading over nothing claims "this app needs nothing
-    // here", which is a different and false statement.
-    const file = target(name);
-    expect(file.sections.length).toBeGreaterThan(0);
-    for (const section of file.sections) {
-      expect(file.assignmentsPerSection.get(section), section).toBeGreaterThan(
-        0,
+// ── the CI-only target, whose file is one line ───────────────────────────────
+
+/**
+ * `preflight` renders only the keys that opted in with `narrowed`.
+ *
+ * The finding this closes: `env init --target preflight` wrote 45 keys, and a
+ * person who filled that file in and pushed it put the token-minting key, the
+ * service-role key and the GitHub App private key into `devdogs-preflight` —
+ * whose GitHub environment is reachable from `main`. §3.5 of the security plan
+ * refuses even a general read-only Postgres role at that tier.
+ */
+describe("preflight", () => {
+  it("is the target the split is about — not a deploy environment", () => {
+    // The premise, asserted so the two blocks above cannot silently become
+    // the same block. If `preflight` ever gained `deployEnv: true`, it would
+    // rejoin the 45-key describe and every assertion below would move with it.
+    expect(DEPLOYED_VAULT_TARGETS).toEqual(["staging", "production"]);
+    expect(VAULT_TARGETS).toContain("preflight");
+    expect(TARGETS.preflight.deployEnv).toBe(false);
+  });
+
+  it("carries the narrowed keys and nothing else", () => {
+    const { active } = target("preflight");
+    expect([...active.keys()]).toEqual(["DB_URL"]);
+  });
+
+  it("carries none of the three credentials the finding named", () => {
+    // BY NAME, because these three are the finding rather than a sample of it:
+    // a key that mints a token for any role including `service_role`, the
+    // service-role key itself, and the private key of the GitHub App.
+    const file = mentioned(target("preflight"));
+    for (const key of [
+      "SUPABASE_JWT_SIGNING_KEY",
+      "SECRET_KEY",
+      "GITHUB_APP_PRIVATE_KEY",
+    ]) {
+      expect(file.has(key), `${key} must not reach devdogs-preflight`).toBe(
+        false,
       );
+      // POSITIVE CONTROL: each really is a key some target carries, so "absent
+      // from preflight" is a routing decision and not a typo'd key name that
+      // was never in any file.
+      expect(
+        mentioned(target("production")).has(key),
+        `${key} is no longer declared under that name`,
+      ).toBe(true);
     }
+  });
+
+  it("shrinks preflight WITHOUT shrinking staging or production", () => {
+    // The regression that would make this whole change a bug rather than a
+    // fix. The exclusion is one branch in `ignoredFor()`, and a branch that
+    // ran for every target would empty all three files identically — which
+    // reads exactly like a working narrow.
+    expect(target("preflight").active.size).toBe(1);
+    expect(target("staging").active.size).toBe(45);
+    expect(target("production").active.size).toBe(47);
+  });
+
+  it("says in the file itself why it is short, and what is missing", () => {
+    // A one-line env file looks like a broken generator. The header has to
+    // claim the shortness, or the next person "fixes" it by pasting the other
+    // 44 keys back in — and the Airtable PAT that genuinely belongs here is
+    // declared in no manifest, so its absence needs saying out loud too.
+    const text = renderInit("preflight", DATE);
+    expect(text).toContain("PREFLIGHT IS DELIBERATELY TINY");
+    expect(text).toContain("OUTSTANDING");
+    expect(text).toMatch(/Airtable PAT/);
+    // And the count in the prose agrees with the body, singular and all.
+    expect(text).toContain("The 1 key a");
   });
 });
 

@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   applyOnlyKeys,
   mintedKeys,
+  narrowedKeys,
   neverStoreKeys,
   storableKeys,
   variableKeys,
@@ -156,6 +157,54 @@ describe("registry completeness", () => {
     // that notices a Worker secret nobody stores. That should be a reviewed
     // event with this line in the diff.
     expect(mintedKeys()).toEqual(["SANDBOX_PROXY_TOKEN"]);
+  });
+
+  it("pins the narrowed set to exactly the migrations-only DB_URL", () => {
+    // Pinned for the same reason as the two lists above, and with the sharpest
+    // consequence of the three: `narrowed` is what lets a key into
+    // `devdogs-preflight`, whose GitHub environment is reachable from `main`.
+    // Adding it to a key is asserting that a deliberately weaker credential
+    // exists under that name — a claim about the OUTSIDE world that no type can
+    // check, so the reviewer of that change should have to touch this line.
+    //
+    // `AIRTABLE_PLAN_PAT` (the `schema:read` PAT the preflight project is also
+    // meant to hold) is OUTSTANDING: it is declared in no manifest at all, so
+    // there is nothing here to mark. Declaring it is what adds it.
+    expect(narrowedKeys()).toEqual(["DB_URL"]);
+  });
+
+  it("keeps `narrowed` on keys that can actually route somewhere", () => {
+    // A committed constant or a per-developer value marked `narrowed` would be
+    // a marker that grants nothing and documents a lie: nothing outside
+    // `scope: "environment"` reaches a vault project at all. It would also read
+    // to the next person as "preflight holds this", which it does not.
+    for (const key of narrowedKeys()) {
+      for (const entry of variables().get(key) ?? []) {
+        expect(
+          entry.meta.scope,
+          `${key} is narrowed with scope "${entry.meta.scope}"`,
+        ).toBe("environment");
+      }
+    }
+    // Non-vacuous — an empty narrowed set would pass the loop checking nothing,
+    // and an empty one means `env init --target preflight` renders no keys.
+    expect(narrowedKeys().length).toBeGreaterThan(0);
+  });
+
+  it("never lets a never-store or minted key be narrowed", () => {
+    // Fail-closed, in the two directions where `narrowed` would be an exemption
+    // from a stronger rule: a never-store credential must not reach a vault
+    // project even a narrow one, and a minted credential has no stored value to
+    // put there. Structurally possible today — `narrowed` is checked
+    // independently of both — so it is asserted rather than assumed.
+    const narrow = new Set(narrowedKeys());
+    for (const key of [...neverStoreKeys(), ...mintedKeys()]) {
+      expect(
+        narrow.has(key),
+        `${key} is narrowed, which would route it to devdogs-preflight`,
+      ).toBe(false);
+    }
+    expect(neverStoreKeys().length + mintedKeys().length).toBeGreaterThan(0);
   });
 
   it("never lets a minted key become storable", () => {

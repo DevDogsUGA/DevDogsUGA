@@ -314,6 +314,12 @@ const server = {
     scope: "environment",
     secrecy: "secret",
     localStack: true,
+    // The one key `preflight` carries. Same name, same schema, a role that can
+    // see only the migrations table -- which is the whole of what a migration
+    // dry run needs. See `EnvMeta.narrowed`: without the marker, preflight
+    // routed all 45 keys and `env push --target preflight` uploaded the JWT
+    // signing key into a project `main` can read.
+    narrowed: true,
     example:
       "postgresql://postgres.$PROJECT_REF:<password>@<host>:5432/postgres",
   }),

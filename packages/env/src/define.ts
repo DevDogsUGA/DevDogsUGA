@@ -249,6 +249,32 @@ export function neverSecretKeys(): string[] {
   return keysWhere((e) => e.meta.secrecy === "public");
 }
 
+/**
+ * Variables that have a narrower credential for the non-deploy targets — the
+ * ONLY keys such a target carries. See `EnvMeta.narrowed`.
+ *
+ * ⚠️ `every`, not `keysWhere()`'s `some`, and the difference is the direction
+ * each fails in. Every other selector answers "is this key sensitive/routed",
+ * where one manifest saying yes is the safe reading. This one answers "is this
+ * key EXEMPT from the preflight exclusion", and an exemption granted because
+ * one of two declarations mentions it fails OPEN: the key reaches a vault
+ * project whose GitHub environment `main` can read. Duplicate declarations
+ * cannot legally disagree anyway (the completeness test pins the whole meta),
+ * so this costs nothing and closes the direction that matters.
+ *
+ * The length check is not decoration: `[].every(...)` is `true`, and a key
+ * whose entry list somehow emptied would otherwise be marked narrowed.
+ */
+export function narrowedKeys(): string[] {
+  return [...registry.entries()]
+    .filter(
+      ([, entries]) =>
+        entries.length > 0 && entries.every((e) => e.meta.narrowed === true),
+    )
+    .map(([key]) => key)
+    .sort();
+}
+
 /** Deployed secrets restricted to the `production-apply` GitHub environment. */
 export function applyOnlyKeys(): string[] {
   return keysWhere((e) => e.meta.tier === "apply");

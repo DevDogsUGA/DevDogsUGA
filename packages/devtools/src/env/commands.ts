@@ -186,6 +186,27 @@ function warnRefused(refused: string[]): void {
   }
 }
 
+/**
+ * Says that some lines were left to the registry rather than stored.
+ *
+ * `info`, not `warn`: this is the correct outcome, and the eight lines it
+ * covers are ones `env init --target` WROTE. Silence would be the problem —
+ * somebody who filled in a file and pushed it has to be able to tell "your
+ * derivations were left alone, on purpose" from "your derivations were
+ * dropped", and before this the tool said neither.
+ */
+function noteDerived(derived: string[]): void {
+  if (derived.length === 0) return;
+  log.info(
+    `${derived.length} value(s) were left to the registry: ${derived.join(", ")}. ` +
+      "Each is still exactly the derivation its declaration gives — a shape " +
+      "rather than a value — so storing it would freeze today's formula into " +
+      "Bitwarden and GitHub and stop the registry from ever changing it. The " +
+      "deploy expands them at compose time instead. Replace one with a real " +
+      "value if this target genuinely differs, and it will push.",
+  );
+}
+
 // ── pull ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -311,9 +332,11 @@ export async function runEnvPush(options: EnvOptions): Promise<void> {
     variables: publicValues,
     refused,
     unknown,
+    derived,
   } = selectForPush(doc.entries(), target);
   warnRefused(refused);
   warnUnknown(unknown);
+  noteDerived(derived);
 
   // What Bitwarden holds: both halves, keyed together. The two are disjoint by
   // construction (see `selection.ts`), so this loses nothing.
@@ -322,7 +345,10 @@ export async function runEnvPush(options: EnvOptions): Promise<void> {
   if (stored.size === 0) {
     explain(`No pushable values in ${path}.`, "", [
       "Committed defaults, per-developer values and empty values are skipped.",
-      "Nothing else was found.",
+      derived.length > 0
+        ? `The ${derived.length} line(s) named above are still their declared ` +
+          "derivations, which the registry expands at deploy time."
+        : "Nothing else was found.",
     ]);
     process.exitCode = 1;
     return;

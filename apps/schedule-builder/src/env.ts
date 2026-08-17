@@ -95,6 +95,9 @@ const server = {
     scope: "environment",
     secrecy: "secret",
     localStack: true,
+    // Kept in step with the platform manifest's declaration -- duplicates must
+    // agree on every field. See `EnvMeta.narrowed` for what the marker buys.
+    narrowed: true,
     example:
       "postgresql://postgres.$PROJECT_REF:<password>@<host>:5432/postgres",
   }),
