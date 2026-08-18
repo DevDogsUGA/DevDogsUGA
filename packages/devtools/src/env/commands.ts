@@ -54,6 +54,7 @@ import { fingerprint } from "../fingerprint.js";
 import {
   listSecrets as listGhSecrets,
   listVariables as listGhVariables,
+  listRepositoryVariables,
   setSecret,
   setVariable,
 } from "../gh/client.js";
@@ -71,6 +72,7 @@ import {
   renderFindings,
   type GithubEntry,
   type GithubVariableEntry,
+  type RepositoryVariableScan,
 } from "./audit.js";
 import { listWorkerSecrets } from "./cloudflare.js";
 import { EnvDocument, type Stamp } from "./document.js";
@@ -82,7 +84,7 @@ import {
   selectForPush,
 } from "./selection.js";
 import { PROJECT_ROOT } from "../instance.js";
-import { bail, explain, unwrap } from "../ui.js";
+import { bail, errorMessage, explain, unwrap } from "../ui.js";
 
 export interface EnvOptions {
   /**
@@ -606,6 +608,27 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
     }
   }
 
+  // The repository's own variables, which no environment read can see and push
+  // never writes. Failure is CARRIED rather than thrown or flattened to `[]`:
+  // this list can be unreadable where the environment ones are readable, and an
+  // audit that quietly downgraded "could not look" to "nothing there" would
+  // report the exact hazard it was added to catch as health.
+  let repositoryVariables: RepositoryVariableScan;
+  try {
+    repositoryVariables = {
+      readable: true,
+      names: (await listRepositoryVariables()).map((v) => v.name),
+    };
+  } catch (err) {
+    repositoryVariables = {
+      readable: false,
+      // The FIRST line only. `describe()` in the gh client returns a
+      // paragraph of guidance, and a finding is one line — the rest of it is
+      // reproducible by running the command the finding tells you to run.
+      reason: errorMessage(err).split("\n")[0]?.trim() || "`gh` failed",
+    };
+  }
+
   const { secrets: cloudflare, unreadable } = await listWorkerSecrets(target);
 
   const commented = new Set(
@@ -648,6 +671,9 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
     // Lets the audit tell "undeclared" apart from drift: the fix for one is a
     // define() in a manifest, for the other a push or a pull.
     declared: new Set(variables().keys()),
+    // The scope nothing else here addresses. Passed as the scan rather than as
+    // a list so that `audit` can tell "checked, clean" from "could not check".
+    repositoryVariables,
   });
 
   note(renderFindings(findings), `${target} (${path}) — drift`);
@@ -673,7 +699,15 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
       "checked for presence, for routing, and for whether GitHub's copy " +
       "predates the Bitwarden revision — a changed value is undetectable. " +
       "GitHub *variables* are readable, so the public per-environment keys " +
-      "were compared by VALUE, as your env file and Bitwarden were.",
+      "were compared by VALUE, as your env file and Bitwarden were. " +
+      // Stated only when it is true. The claim is the coverage itself, so
+      // printing it unconditionally would turn the one run that could not look
+      // into the one run that says it did.
+      (repositoryVariables.readable
+        ? "The repository's own variables were listed too, and checked for " +
+          "names that an environment copy would shadow."
+        : "The repository's own variables could NOT be listed, so nothing " +
+          "above rules out a shadowed copy at that scope."),
   );
 
   if (hasErrors(findings)) process.exitCode = 1;

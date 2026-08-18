@@ -6,6 +6,7 @@ import {
   type BwsEntry,
   type GithubEntry,
   type GithubVariableEntry,
+  type RepositoryVariableScan,
 } from "./audit.js";
 
 /**
@@ -777,6 +778,246 @@ describe("a key in the wrong GitHub store", () => {
         github: [gh("DISCORD_TOKEN")],
       }),
     ).toEqual([]);
+  });
+});
+
+describe("repository-level variables", () => {
+  /**
+   * The scope `push` never writes to, and the one every other check here is
+   * blind to.
+   *
+   * An ENVIRONMENT variable shadows a repository variable of the same name, so
+   * a repository-level `AIRTABLE_BASE_ID` — set by hand back when the setup
+   * docs said to — is read by no job, drifts from Bitwarden forever, and turns
+   * live the moment somebody removes the environment copy. Every assertion
+   * below is a way that could go unnoticed.
+   */
+  const variables = new Set(["AIRTABLE_BASE_ID", "PROJECT_REF"]);
+  const declared = new Set([
+    "AIRTABLE_BASE_ID",
+    "PROJECT_REF",
+    "DISCORD_TOKEN",
+    "BWS_ACCESS_TOKEN",
+  ]);
+
+  /** A scan that succeeded and saw these names. */
+  const saw = (...names: string[]): RepositoryVariableScan => ({
+    readable: true,
+    names,
+  });
+
+  it("POSITIVE CONTROL: a scan that found nothing produces no findings", () => {
+    // Run first and deliberately. Everything below asserts "a finding exists",
+    // and this establishes that the same inputs can also produce silence — so
+    // the rest are not passing because these inputs report unconditionally.
+    //
+    // That the CHECK RAN is reported by `runEnvAudit`'s coverage line, not by
+    // the finding list; `commands.audit.test.ts` asserts that half.
+    expect(run({ repositoryVariables: saw(), variables, declared })).toEqual(
+      [],
+    );
+  });
+
+  it("reports a repository variable colliding with a managed key", () => {
+    const findings = run({
+      repositoryVariables: saw("AIRTABLE_BASE_ID"),
+      variables,
+      declared,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.key).toBe("AIRTABLE_BASE_ID");
+    expect(findings[0]!.store).toBe("github");
+    // A warning, not an error: the environment copy wins today, so nothing is
+    // broken. It is the orphan category — state nothing manages and nothing
+    // else would ever mention — which is a warning everywhere else in here.
+    expect(findings[0]!.severity).toBe("warning");
+  });
+
+  it("says WHY it is dangerous, not merely that it exists", () => {
+    // The whole finding. "There is also a repository variable" reads as
+    // tidiness and gets deferred; the reason it cannot be deferred is that it
+    // is invisible now and authoritative later.
+    const [finding] = run({
+      repositoryVariables: saw("AIRTABLE_BASE_ID"),
+      variables,
+      declared,
+    });
+    expect(finding!.summary).toMatch(/shadows it/);
+    expect(finding!.summary).toMatch(/invisible/);
+    expect(finding!.summary).toMatch(/live value/);
+  });
+
+  it("names the fix, with the key in it", () => {
+    // `gh variable delete AIRTABLE_BASE_ID` — no `--env`, which is the flag
+    // that would delete the managed copy and leave the stale one in charge.
+    const [finding] = run({
+      repositoryVariables: saw("AIRTABLE_BASE_ID"),
+      variables,
+      declared,
+    });
+    expect(finding!.summary).toContain("gh variable delete AIRTABLE_BASE_ID");
+    expect(finding!.summary).not.toContain("--env");
+  });
+
+  it("says nothing about a name the registry does not declare", () => {
+    // Another team's variable is another team's business, and a check that
+    // reports every one of them is a check people learn to skim — which
+    // costs the finding above its reader.
+    //
+    // The declared name alongside it is the control: without it this would
+    // pass just as well if the whole pass were skipped.
+    const findings = run({
+      repositoryVariables: saw("SOMEONE_ELSES_FLAG", "AIRTABLE_BASE_ID"),
+      variables,
+      declared,
+    });
+    expect(findings.map((f) => f.key)).toEqual(["AIRTABLE_BASE_ID"]);
+  });
+
+  it("reports a FAILED list as 'could not check'", () => {
+    // ⚠️ The assertion that protects every other one in this describe. A scan
+    // that could not run must never look like a scan that ran clean: listing
+    // repository variables can fail on a permission that leaves the
+    // environment reads working, and the silent downgrade to "nothing there"
+    // is the exact failure this check was added to catch, one scope up.
+    const findings = run({
+      repositoryVariables: { readable: false, reason: "HTTP 403: Forbidden" },
+      variables,
+      declared,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.key).toBe("(repository variables)");
+    expect(findings[0]!.summary).toMatch(/could not check/);
+    // The reason travels with it: a 403 is an admin's problem and an
+    // unauthenticated CLI is the reader's, and the finding cannot say which
+    // without carrying it.
+    expect(findings[0]!.summary).toContain("HTTP 403: Forbidden");
+  });
+
+  it("keeps 'could not check' distinguishable from 'checked, clean'", () => {
+    // Asserted as a comparison rather than as two separate tests, because the
+    // bug is that the two outputs become the SAME output — which two passing
+    // tests in different worlds would not notice.
+    const failed = run({
+      repositoryVariables: { readable: false, reason: "HTTP 403: Forbidden" },
+      variables,
+      declared,
+    });
+    const clean = run({ repositoryVariables: saw(), variables, declared });
+
+    expect(clean).toEqual([]);
+    expect(failed).not.toEqual(clean);
+    expect(failed[0]!.summary).toMatch(/rules out NOTHING/);
+  });
+
+  it("does not fail the audit over a check it could not run", () => {
+    // A warning, so `runEnvAudit` still exits 0. An unreadable list is a gap
+    // in coverage, not a defect found — and making it exit 1 on every run of
+    // a machine without the permission is how the whole report gets ignored.
+    expect(
+      hasErrors(
+        run({
+          repositoryVariables: { readable: false, reason: "HTTP 403" },
+          variables,
+          declared,
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("stays silent when the caller never looked", () => {
+    // Absent is a third state, and it must not claim anything. Callers that
+    // do not pass a scan get the pre-existing behaviour rather than a finding
+    // about a check nobody asked for.
+    expect(
+      run({
+        repositoryVariables: undefined,
+        variables,
+        declared,
+        local: new Map([["AIRTABLE_BASE_ID", "app1"]]),
+        bws: bws({ AIRTABLE_BASE_ID: "app1" }),
+        githubVariables: [ghVar("AIRTABLE_BASE_ID", "app1")],
+      }),
+    ).toEqual([]);
+  });
+
+  it("errors on a declared SECRET at repository scope, and says to rotate", () => {
+    // Not a shadowing problem at all — secrets and variables are separate
+    // namespaces, so nothing hides this one. It is a disclosure: the value is
+    // readable by everyone who can see the repository's Actions config.
+    const findings = run({
+      repositoryVariables: saw("DISCORD_TOKEN"),
+      variables,
+      declared,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe("error");
+    expect(findings[0]!.summary).toMatch(/REPOSITORY-level GitHub variable/);
+    expect(findings[0]!.summary).toMatch(/rotate/);
+    // And it must not claim the shadowing story, which would send the reader
+    // looking for an environment copy that is not there.
+    expect(findings[0]!.summary).not.toMatch(/shadows it/);
+  });
+
+  it("still reports a never-store credential at that scope", () => {
+    // `ignore` is filtered out below; `neverStore` and `minted` are NOT. A
+    // credential that must never be stored anywhere, sitting in the one store
+    // that hands its value back to any reader, is the worst case this file
+    // knows about rather than an exempt one.
+    const findings = run({
+      repositoryVariables: saw("BWS_ACCESS_TOKEN"),
+      variables,
+      declared,
+      neverStore: new Set(["BWS_ACCESS_TOKEN"]),
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.severity).toBe("error");
+  });
+
+  it("skips a variable this target does not route", () => {
+    // `ignoredFor("preflight")` sweeps in every key that tier was not narrowed
+    // to, and push writes no copy of those here — so there is no managed
+    // environment copy of ours doing the shadowing, and nothing to report.
+    // Every other pass in this file treats an ignored key the same way.
+    expect(
+      run({
+        repositoryVariables: saw("PROJECT_REF"),
+        variables,
+        declared,
+        ignore: new Set(["PROJECT_REF"]),
+      }),
+    ).toEqual([]);
+  });
+
+  it("does not report a key that legitimately lives outside these stores", () => {
+    // `GITHUB_ORG` is a committed constant, ignored by every other pass here.
+    // A repository variable holding it is somebody making a reasonable choice,
+    // and calling that a leaked secret is the loud wrong guess that costs the
+    // real findings their audience.
+    expect(
+      run({
+        repositoryVariables: saw("GITHUB_ORG"),
+        variables,
+        declared: new Set([...declared, "GITHUB_ORG"]),
+        ignore: new Set(["GITHUB_ORG"]),
+      }),
+    ).toEqual([]);
+  });
+
+  it("does not confuse the repository scope with an environment one", () => {
+    // The managed environment copy is correct and must stay silent while the
+    // repository one is reported. If these two ever merge into one list, this
+    // is the test that notices.
+    const findings = run({
+      local: new Map([["AIRTABLE_BASE_ID", "app1"]]),
+      bws: bws({ AIRTABLE_BASE_ID: "app1" }),
+      githubVariables: [ghVar("AIRTABLE_BASE_ID", "app1")],
+      repositoryVariables: saw("AIRTABLE_BASE_ID"),
+      variables,
+      declared,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.summary).toMatch(/REPOSITORY-level/);
   });
 });
 

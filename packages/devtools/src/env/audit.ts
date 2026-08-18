@@ -32,6 +32,14 @@
  * variable re-pushed with an identical value as drift. The security plan's §3.6
  * limitation ("names only… a changed value is undetectable") now holds for the
  * secret row alone.
+ *
+ * ⚠️ One scope sits outside that table altogether: the repository's OWN
+ * variables. Push writes environment-scoped values only, and an environment
+ * variable SHADOWS a repository one of the same name — so a repository-level
+ * copy of a managed key is read by nothing, drifts forever, and becomes the
+ * live value on the day somebody deletes the environment copy. It is checked
+ * here for the same reason §3.6's orphans are: nothing manages it, so nothing
+ * else in this system would ever mention it.
  */
 
 export type Severity = "error" | "warning" | "info";
@@ -161,7 +169,37 @@ export interface AuditInput {
    * than let "not in Bitwarden" imply pushing would help.
    */
   declared?: ReadonlySet<string>;
+  /**
+   * The repository's OWN variables — the scope with no environment — or the
+   * fact that they could not be listed.
+   *
+   * A union rather than a list, because three states have to stay apart and a
+   * list can only hold two of them: nobody looked (absent — the pre-existing
+   * behaviour, and no claim either way), looked and saw these names
+   * (`readable`), and TRIED TO LOOK AND COULD NOT (`readable: false`). Listing
+   * repository variables can fail where listing environment ones succeeds, so
+   * the third state is ordinary rather than exotic — and collapsing it into an
+   * empty list is precisely the bug this check was added to catch, one scope
+   * up: a report that says "checked, nothing found" about a check that never
+   * ran.
+   *
+   * Names only. See `GhRepositoryVariable` for why the value is deliberately
+   * not fetched.
+   */
+  repositoryVariables?: RepositoryVariableScan;
 }
+
+/**
+ * What `gh variable list` (no `--env`) returned, or why it returned nothing.
+ *
+ * `reason` is carried rather than dropped because the two failures need
+ * different next steps and look identical from a finding that omits it: a
+ * missing permission is fixed by an admin, an unauthenticated CLI by the person
+ * reading the report.
+ */
+export type RepositoryVariableScan =
+  | { readable: true; names: readonly string[] }
+  | { readable: false; reason: string };
 
 export function audit(input: AuditInput): Finding[] {
   const ignore = input.ignore ?? new Set<string>();
@@ -275,6 +313,87 @@ export function audit(input: AuditInput): Finding[] {
         `is a secret and is a VARIABLE on \`${copy.environment}\` — its value ` +
         "is readable by anyone who can see the repository's Actions config, " +
         "and it is not masked in logs. Delete it there and rotate it",
+    });
+  }
+
+  // ── repository-level variables ─────────────────────────────────────────────
+  // The scope push never writes to, and the one a presence check cannot see
+  // from inside an environment.
+  //
+  // ⚠️ An ENVIRONMENT variable SHADOWS a repository variable of the same name.
+  // So a repository-level `AIRTABLE_BASE_ID` — which people were told to set by
+  // hand, before push started routing that key — is not merely redundant: it is
+  // unreadable from every job, holds whatever it held the day it was set, and
+  // becomes live the moment somebody deletes the environment copy. Nothing
+  // manages it and nothing else here would ever mention it, which makes it the
+  // same failure as the §3.6 orphan audit rather than a new one.
+  const repository = input.repositoryVariables;
+  if (repository !== undefined && !repository.readable) {
+    // A finding, in the same list as the rest, rather than a line printed
+    // underneath it: the whole hazard of this check is that its absence looks
+    // like health, and a clean report with a quiet caveat below it reads as
+    // clean. The key is parenthesised so it cannot be mistaken for one.
+    findings.push({
+      key: "(repository variables)",
+      severity: "warning",
+      store: "github",
+      summary:
+        "could not check — listing the repository's own variables failed " +
+        `(${repository.reason}). This run rules out NOTHING at that scope; a ` +
+        "repository variable shadowed by an environment copy would look " +
+        "exactly like this report. Run `gh variable list` by hand",
+    });
+  }
+  const repositoryNames =
+    repository !== undefined && repository.readable ? repository.names : [];
+  for (const name of repositoryNames) {
+    // Membership in `variables` IS the declaration test for this branch — the
+    // set comes from the registry — which is why it does not also consult
+    // `declared`. A caller that passed one and forgot the other would
+    // otherwise get silence from the check it asked for.
+    if (variables.has(name)) {
+      if (!relevant(name)) continue;
+      findings.push({
+        key: name,
+        severity: "warning",
+        store: "github",
+        summary:
+          "is also a REPOSITORY-level GitHub variable, which push does not " +
+          "manage — the environment copy shadows it, so every job reads the " +
+          "environment value and this one is invisible, stale, and unnoticed " +
+          "until somebody deletes that copy, whereupon it silently becomes " +
+          `the live value. Delete it: \`gh variable delete ${name}\``,
+      });
+      continue;
+    }
+
+    // A name the registry calls a SECRET, sitting in the readable store one
+    // scope up. The environment-level version of this is an error above, and
+    // this is the same finding — with the shadowing sentence removed, because
+    // there is none: secrets and variables are separate namespaces, so nothing
+    // hides this one.
+    //
+    // ⚠️ Filtered on `ignore` alone, deliberately NOT on the whole of
+    // `relevant()`. An ignored key legitimately lives outside these stores —
+    // `GITHUB_ORG` is a committed constant, and a repository variable holding
+    // it is somebody making a reasonable choice. A never-store or minted
+    // credential in the READABLE store is the worst case this file knows
+    // about, not an exempt one, so those two fall through to the error.
+    //
+    // `declared` is required here for the reason it is required above: without
+    // it an unrecognised name is indistinguishable from another team's
+    // variable, and calling that a leaked secret would be a loud guess.
+    if (ignore.has(name)) continue;
+    if (input.declared === undefined || !input.declared.has(name)) continue;
+    findings.push({
+      key: name,
+      severity: "error",
+      store: "github",
+      summary:
+        "is a secret and is a REPOSITORY-level GitHub variable — its value " +
+        "is readable by anyone who can see the repository's Actions config, " +
+        "and no environment copy hides it: secrets and variables are separate " +
+        `namespaces. Delete it (\`gh variable delete ${name}\`) and rotate it`,
     });
   }
 

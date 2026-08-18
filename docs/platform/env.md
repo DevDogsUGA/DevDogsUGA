@@ -214,12 +214,13 @@ a value. `env audit` is what polices that.
 pnpm devtools env audit --target production
 ```
 
-| Store        | Exposes             | So it is checked for         |
-| ------------ | ------------------- | ---------------------------- |
-| the env file | names AND values    | value drift                  |
-| Bitwarden    | names AND values    | value drift (the truth)      |
-| GitHub       | names + `updatedAt` | presence, routing, staleness |
-| Cloudflare   | names only          | orphans                      |
+| Store                                  | Exposes             | So it is checked for                 |
+| -------------------------------------- | ------------------- | ------------------------------------ |
+| the env file                           | names AND values    | value drift                          |
+| Bitwarden                              | names AND values    | value drift (the truth)              |
+| GitHub                                 | names + `updatedAt` | presence, routing, staleness         |
+| Cloudflare                             | names only          | orphans                              |
+| GitHub, **repository-level** variables | names only          | shadowed copies push does not manage |
 
 **That asymmetry is the whole design.** Only the local file can be compared to
 Bitwarden by _value_, because the two downstream stores are write-only. So a
@@ -229,18 +230,21 @@ claim.
 
 What it catches, in severity order:
 
-| ✗ error                                                | Why it matters                                                                                                          |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| The env file and Bitwarden disagree on a value         | The only value comparison available anywhere in this system.                                                            |
-| In Bitwarden, not in its GitHub environment            | The deploy cannot see it.                                                                                               |
-| In GitHub, but the **wrong** environment               | An apply-only credential sitting in `production` makes the reviewer gate decorative. Presence alone calls this healthy. |
-| Rotated in Bitwarden **after** GitHub was last updated | ⚠️ See below.                                                                                                           |
+| ✗ error                                                | Why it matters                                                                                                                                                                       |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The env file and Bitwarden disagree on a value         | The only value comparison available anywhere in this system.                                                                                                                         |
+| In Bitwarden, not in its GitHub environment            | The deploy cannot see it.                                                                                                                                                            |
+| In GitHub, but the **wrong** environment               | An apply-only credential sitting in `production` makes the reviewer gate decorative. Presence alone calls this healthy.                                                              |
+| Rotated in Bitwarden **after** GitHub was last updated | ⚠️ See below.                                                                                                                                                                        |
+| A secret's name is a **repository-level** variable     | Its value is readable by anyone who can see the repository's Actions config, and no environment copy hides it — secrets and variables are separate namespaces. Delete it and rotate. |
 
-| ! warning                                  | Why it matters                                                                                                                                             |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| In GitHub or on a Worker, not in Bitwarden | An orphan from a rename. `wrangler deploy --secrets-file` **preserves what it omits**, so a renamed variable leaves its secret on the Worker indefinitely. |
-| In your env file, not in Bitwarden         | A local-only value, or one somebody forgot to push.                                                                                                        |
-| In Bitwarden, missing from your env file   | You are about to push an incomplete set.                                                                                                                   |
+| ! warning                                             | Why it matters                                                                                                                                             |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| In GitHub or on a Worker, not in Bitwarden            | An orphan from a rename. `wrangler deploy --secrets-file` **preserves what it omits**, so a renamed variable leaves its secret on the Worker indefinitely. |
+| In your env file, not in Bitwarden                    | A local-only value, or one somebody forgot to push.                                                                                                        |
+| In Bitwarden, missing from your env file              | You are about to push an incomplete set.                                                                                                                   |
+| A managed key is **also** a repository-level variable | ⚠️ See below. The environment copy shadows it, so it is invisible until somebody deletes that copy — and then a stale value takes over silently.           |
+| The repository's variables could not be listed        | A check that did not run. Said out loud, because a clean report that quietly skipped a check is indistinguishable from a clean one that did not.           |
 
 ⚠️ **A rotation pushed to Bitwarden and never propagated is the failure this
 whole design has.** Production keeps authenticating with the old value and
@@ -255,6 +259,21 @@ An unknown or unparseable date counts as **current**, not stale. "Unknown means
 behind" turns one malformed timestamp into a report that says everything is
 broken, after which nobody reads any of it — including on the run where
 something really is.
+
+⚠️ **A repository-level variable is shadowed by the environment copy of the
+same name, and nothing in GitHub's UI says so.** `env push` writes
+environment-scoped values only, so a repository variable somebody set by hand —
+`AIRTABLE_BASE_ID` is the case; the setup docs used to ask for it — is read by
+no job, drifts from Bitwarden forever, and becomes the live value the day the
+environment copy is removed. The audit lists them (`gh variable list`, no
+`--env`) and reports any name the registry declares. The fix is
+`gh variable delete <NAME>` — without `--env`, which would delete the managed
+copy and leave the stale one in charge.
+
+That listing needs permissions the environment reads do not, so it can fail on
+its own. When it does, the audit says **could not check** rather than reporting
+nothing found, and the closing summary withdraws the claim instead of adding a
+footnote to it.
 
 The Cloudflare axis is one-directional on purpose: a Worker holding a secret
 nobody stores is an orphan worth reporting, but a secret _absent_ from a given

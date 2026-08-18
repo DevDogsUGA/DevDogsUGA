@@ -243,3 +243,53 @@ export async function deleteVariable(
     throw new GhError(describe(err));
   }
 }
+
+// ── repository-level variables ───────────────────────────────────────────────
+
+/**
+ * A repository-level variable. NAME ONLY, and that is deliberate.
+ *
+ * `gh variable list` will return the value here as readily as it does for an
+ * environment variable, and fetching it would invite the obvious next step —
+ * comparing it against Bitwarden. That comparison has no correct answer. This
+ * copy is unmanaged whatever it holds, so a value that matches today proves
+ * nothing except that somebody set them the same way once; reporting only the
+ * mismatch would then read as "the matching one is fine", which is the belief
+ * this whole check exists to break.
+ */
+export interface GhRepositoryVariable {
+  name: string;
+  updatedAt: string;
+}
+
+/**
+ * The repository's OWN variables — the ones with no environment.
+ *
+ * ⚠️ The reason this exists at all: an environment variable of the same name
+ * **shadows** a repository one, and nothing in GitHub's UI says so. Every job
+ * that runs in the environment reads the environment copy, so a repository
+ * variable a person set by hand before `env push` routed that key keeps its
+ * stale value indefinitely, invisibly — right up until somebody deletes the
+ * environment copy, at which point the stale value silently becomes live.
+ *
+ * No `--env`, and that missing flag IS the call. Everything else in this file
+ * addresses one environment; this addresses the repository itself, which is
+ * the scope nothing here writes to and therefore the scope nothing here would
+ * otherwise notice.
+ */
+export async function listRepositoryVariables(): Promise<
+  GhRepositoryVariable[]
+> {
+  try {
+    const { stdout } = await run(
+      "gh",
+      ["variable", "list", "--json", "name,updatedAt"],
+      { maxBuffer: MAX_BUFFER, shell: false },
+    );
+    return stdout.trim() === ""
+      ? []
+      : (JSON.parse(stdout) as GhRepositoryVariable[]);
+  } catch (err) {
+    throw new GhError(describe(err));
+  }
+}

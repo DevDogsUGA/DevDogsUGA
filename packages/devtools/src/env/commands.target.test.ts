@@ -93,6 +93,7 @@ vi.mock("../bws/client.js", () => ({
 vi.mock("../gh/client.js", () => ({
   listSecrets: vi.fn(async () => []),
   listVariables: vi.fn(async () => []),
+  listRepositoryVariables: vi.fn(async () => []),
   setSecret: vi.fn(async () => undefined),
   setVariable: vi.fn(async () => undefined),
 }));
