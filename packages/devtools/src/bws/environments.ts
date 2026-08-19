@@ -101,7 +101,7 @@ const SUMMARIES: Record<VaultTarget, string> = {
  * Project *names*, not ids — see `TargetSpec.project` for why.
  *
  * Assembled from the target table rather than typed out again: a second copy
- * of "staging means devdogs-staging" is a copy that can disagree, and the
+ * of "staging means staging" is a copy that can disagree, and the
  * disagreement would be silent in exactly the direction that matters.
  */
 export const ENVIRONMENT_SPECS = Object.fromEntries(

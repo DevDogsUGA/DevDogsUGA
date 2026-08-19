@@ -175,14 +175,14 @@ describe.each(RUNNERS)("$name", ({ name, run, writes }) => {
     expect(pathsRead()).not.toContain(at(".env"));
   });
 
-  it("maps preflight to .env.preflight and the devdogs-preflight project", async () => {
+  it("maps preflight to .env.preflight and the preflight project", async () => {
     await run({ target: "preflight", yes: true });
 
     expect(pathsRead()).toContain(at(".env.preflight"));
-    expect(vi.mocked(projectIdFor).mock.calls).toEqual([["devdogs-preflight"]]);
+    expect(vi.mocked(projectIdFor).mock.calls).toEqual([["preflight"]]);
   });
 
-  it("maps production to .env.production and the devdogs-production project", async () => {
+  it("maps production to .env.production and the production project", async () => {
     // The positive control for the two above: if the file were hardcoded
     // rather than derived, every target would produce the same path and the
     // staging assertion alone could not tell.
@@ -190,9 +190,7 @@ describe.each(RUNNERS)("$name", ({ name, run, writes }) => {
 
     expect(pathsRead()).toContain(at(".env.production"));
     expect(pathsRead()).not.toContain(at(".env.staging"));
-    expect(vi.mocked(projectIdFor).mock.calls).toEqual([
-      ["devdogs-production"],
-    ]);
+    expect(vi.mocked(projectIdFor).mock.calls).toEqual([["production"]]);
   });
 
   it("lets --file override the file the target implies", async () => {
@@ -203,7 +201,7 @@ describe.each(RUNNERS)("$name", ({ name, run, writes }) => {
     // The override is about the FILE only. It must not also redirect which
     // project is written, or `--file` would become a second way to choose a
     // target — the ambiguity this whole change removes.
-    expect(vi.mocked(projectIdFor).mock.calls).toEqual([["devdogs-staging"]]);
+    expect(vi.mocked(projectIdFor).mock.calls).toEqual([["staging"]]);
   });
 
   it("refuses --target development, naming the missing vault project", async () => {

@@ -1,12 +1,12 @@
 /**
  * The env TARGETS: one row per thing a command can be pointed at.
  *
- *   | `--target`    | File              | Bitwarden project    | `DEPLOY_ENV`? |
- *   |---------------|-------------------|----------------------|---------------|
- *   | `development` | `.env`            | — none               | yes           |
- *   | `preflight`   | `.env.preflight`  | `devdogs-preflight`  | **no**        |
- *   | `staging`     | `.env.staging`    | `devdogs-staging`    | yes           |
- *   | `production`  | `.env.production` | `devdogs-production` | yes           |
+ *   | `--target`    | File              | Bitwarden project | `DEPLOY_ENV`? |
+ *   |---------------|-------------------|-------------------|---------------|
+ *   | `development` | `.env`            | — none            | yes           |
+ *   | `preflight`   | `.env.preflight`  | `preflight`       | **no**        |
+ *   | `staging`     | `.env.staging`    | `staging`         | yes           |
+ *   | `production`  | `.env.production` | `production`      | yes           |
  *
  * ⚠️ ONE TABLE, ON PURPOSE. This used to be two enums that overlapped in the
  * middle and diverged at both ends — a `DeployEnvironment`
@@ -89,19 +89,19 @@ export const TARGETS = {
   },
   preflight: {
     file: ".env.preflight",
-    project: "devdogs-preflight",
+    project: "preflight",
     deployEnv: false,
     guarded: false,
   },
   staging: {
     file: ".env.staging",
-    project: "devdogs-staging",
+    project: "staging",
     deployEnv: true,
     guarded: false,
   },
   production: {
     file: ".env.production",
-    project: "devdogs-production",
+    project: "production",
     deployEnv: true,
     guarded: true,
   },

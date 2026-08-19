@@ -33,15 +33,15 @@ const APPLY_KEY = APPLY_KEYS[0];
 
 describe("githubTargets", () => {
   it("fans one production project out to two environments", () => {
-    expect(githubTargets("devdogs-production")).toEqual([
+    expect(githubTargets("production")).toEqual([
       "production",
       "production-apply",
     ]);
   });
 
   it("gives the other projects exactly one target each", () => {
-    expect(githubTargets("devdogs-staging")).toEqual(["staging"]);
-    expect(githubTargets("devdogs-preflight")).toEqual(["preflight"]);
+    expect(githubTargets("staging")).toEqual(["staging"]);
+    expect(githubTargets("preflight")).toEqual(["preflight"]);
   });
 
   it("returns nothing for a project it does not know", () => {
@@ -56,14 +56,14 @@ describe("routeTo", () => {
 
   it("sends an apply-only credential to production-apply, never production", () => {
     // The whole point. If this ever returns "production", the gate is gone.
-    expect(routeTo("devdogs-production", APPLY_KEY)).toBe("production-apply");
+    expect(routeTo("production", APPLY_KEY)).toBe("production-apply");
   });
 
   it("sends every ordinary secret to production", () => {
     // The PRIMARY environment. `production-apply` also accepts it — see
     // `acceptedBy` below — and `production` comes first because that is where
     // the deploy reads it.
-    expect(routeTo("devdogs-production", "DISCORD_TOKEN")).toBe("production");
+    expect(routeTo("production", "DISCORD_TOKEN")).toBe("production");
   });
 
   it("routes every apply-only key, not just the first", () => {
@@ -72,19 +72,19 @@ describe("routeTo", () => {
     // loops over the DERIVED set, catching a new member the literals above
     // have not heard of yet.
     for (const key of applyOnlyKeys()) {
-      expect(routeTo("devdogs-production", key)).toBe("production-apply");
+      expect(routeTo("production", key)).toBe("production-apply");
     }
   });
 
   it("gives an apply-only key no home outside production", () => {
     // Not an error: it belongs to production, and staging simply has no place
     // for it. The caller skips rather than refusing.
-    expect(routeTo("devdogs-staging", APPLY_KEY)).toBeNull();
+    expect(routeTo("staging", APPLY_KEY)).toBeNull();
   });
 
   it("routes ordinary secrets in the single-target projects", () => {
-    expect(routeTo("devdogs-staging", "CRON_SECRET")).toBe("staging");
-    expect(routeTo("devdogs-preflight", "CRON_SECRET")).toBe("preflight");
+    expect(routeTo("staging", "CRON_SECRET")).toBe("staging");
+    expect(routeTo("preflight", "CRON_SECRET")).toBe("preflight");
   });
 });
 
@@ -136,7 +136,7 @@ describe("accepts", () => {
 
 describe("acceptedBy", () => {
   it("fans an ordinary production key out to both environments", () => {
-    expect(acceptedBy("devdogs-production", "DISCORD_TOKEN")).toEqual([
+    expect(acceptedBy("production", "DISCORD_TOKEN")).toEqual([
       "production",
       "production-apply",
     ]);
@@ -147,15 +147,13 @@ describe("acceptedBy", () => {
     // a found copy against. If `production` ever appears in this list, a
     // write-capable credential is sitting where an unreviewed deploy reads it.
     for (const key of APPLY_KEYS) {
-      expect(acceptedBy("devdogs-production", key), key).toEqual([
-        "production-apply",
-      ]);
+      expect(acceptedBy("production", key), key).toEqual(["production-apply"]);
     }
   });
 
   it("stays a single-element answer for the one-environment projects", () => {
-    expect(acceptedBy("devdogs-staging", "CRON_SECRET")).toEqual(["staging"]);
-    expect(acceptedBy("devdogs-staging", APPLY_KEY)).toEqual([]);
+    expect(acceptedBy("staging", "CRON_SECRET")).toEqual(["staging"]);
+    expect(acceptedBy("staging", APPLY_KEY)).toEqual([]);
   });
 });
 

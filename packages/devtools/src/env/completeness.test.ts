@@ -163,7 +163,7 @@ describe("registry completeness", () => {
   it("pins the narrowed set to the dry run's two credentials and its base id", () => {
     // Pinned for the same reason as the two lists above, and with the sharpest
     // consequence of the three: `narrowed` is what lets a key into
-    // `devdogs-preflight`, whose GitHub environment is reachable from `main`.
+    // `preflight`, whose GitHub environment is reachable from `main`.
     // Adding it to a key is asserting that what preflight holds under that name
     // cannot do more than a dry run needs — a claim about the OUTSIDE world
     // that no type can check, so the reviewer of that change should have to
@@ -245,7 +245,7 @@ describe("registry completeness", () => {
     for (const key of [...neverStoreKeys(), ...mintedKeys()]) {
       expect(
         narrow.has(key),
-        `${key} is narrowed, which would route it to devdogs-preflight`,
+        `${key} is narrowed, which would route it to preflight`,
       ).toBe(false);
     }
     expect(neverStoreKeys().length + mintedKeys().length).toBeGreaterThan(0);

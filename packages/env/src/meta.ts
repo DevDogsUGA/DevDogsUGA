@@ -171,7 +171,7 @@ export type EnvMeta = {
    * 45 routable keys, so `env push --target preflight` on a filled-in file
    * uploaded `SUPABASE_JWT_SIGNING_KEY` — which mints a token for ANY role,
    * `service_role` included — along with `SECRET_KEY` and
-   * `GITHUB_APP_PRIVATE_KEY` into `devdogs-preflight`, whose GitHub environment
+   * `GITHUB_APP_PRIVATE_KEY` into `preflight`, whose GitHub environment
    * is reachable from `main`. §3.5 of the security plan refuses even a general
    * read-only Postgres role at that tier, on the grounds that it "would read all
    * production data from the `main` trust tier"; a signing key is considerably

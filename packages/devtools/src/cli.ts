@@ -117,11 +117,11 @@ Airtable subcommands:
 Env subcommands. One --target, one row, and every per-target fact read
 from it:
 
-  --target       file              Bitwarden project      DEPLOY_ENV?
-  development    .env              (none)                 yes
-  preflight      .env.preflight    devdogs-preflight       no
-  staging        .env.staging      devdogs-staging         yes
-  production     .env.production   devdogs-production      yes
+  --target       file              Bitwarden project   DEPLOY_ENV?
+  development    .env              (none)              yes
+  preflight      .env.preflight    preflight           no
+  staging        .env.staging      staging             yes
+  production     .env.production   production          yes
 
   env pull  --target <t>          Bitwarden -> that target's file, in place
   env push  --target <t>          that file -> Bitwarden -> GitHub secrets

@@ -361,7 +361,7 @@ describe.each(DEPLOYED_VAULT_TARGETS)("%s", (name) => {
  *
  * The finding this closes: `env init --target preflight` wrote 45 keys, and a
  * person who filled that file in and pushed it put the token-minting key, the
- * service-role key and the GitHub App private key into `devdogs-preflight` —
+ * service-role key and the GitHub App private key into `preflight` —
  * whose GitHub environment is reachable from `main`. §3.5 of the security plan
  * refuses even a general read-only Postgres role at that tier.
  */
@@ -394,9 +394,7 @@ describe("preflight", () => {
       "SECRET_KEY",
       "GITHUB_APP_PRIVATE_KEY",
     ]) {
-      expect(file.has(key), `${key} must not reach devdogs-preflight`).toBe(
-        false,
-      );
+      expect(file.has(key), `${key} must not reach preflight`).toBe(false);
       // POSITIVE CONTROL: each really is a key some target carries, so "absent
       // from preflight" is a routing decision and not a typo'd key name that
       // was never in any file.

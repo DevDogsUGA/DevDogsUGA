@@ -176,7 +176,7 @@ log noise, and a payload with member data arriving somewhere it is not needed.
 | Webhook      | `https://devdogsuga.org/github/webhook`                                         | `https://staging.devdogsuga.org/github/webhook` |
 | Repository   | Administration **write**, Contents **write**, Metadata read, Pull requests read | Metadata **read**, Pull requests **read**       |
 | Organization | Members **write**                                                               | _none_                                          |
-| Private key  | `devdogs-production` project                                                    | `devdogs-staging` project                       |
+| Private key  | `production` project                                                            | `staging` project                               |
 
 The webhook URL is the visible reason and the least important one. The real one:
 

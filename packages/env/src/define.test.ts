@@ -440,9 +440,9 @@ describe("the target table", () => {
   });
 
   it("maps each vault target to its Bitwarden project", () => {
-    expect(projectFor("preflight")).toBe("devdogs-preflight");
-    expect(projectFor("staging")).toBe("devdogs-staging");
-    expect(projectFor("production")).toBe("devdogs-production");
+    expect(projectFor("preflight")).toBe("preflight");
+    expect(projectFor("staging")).toBe("staging");
+    expect(projectFor("production")).toBe("production");
   });
 
   it("gives development no project, which is what makes it refusable", () => {

@@ -449,7 +449,7 @@ describe("preflight, the target no app boots from", () => {
    * The finding: `keysRoutedTo("preflight")` answered with all 45 routable
    * keys, so `env push --target preflight` on a filled-in file uploaded the
    * token-minting key, the service-role key and the GitHub App private key
-   * into `devdogs-preflight` — whose GitHub environment is reachable from
+   * into `preflight` — whose GitHub environment is reachable from
    * `main`. §3.5 of the security plan refuses even a general read-only
    * Postgres role at that tier.
    */

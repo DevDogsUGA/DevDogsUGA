@@ -20,12 +20,12 @@ run**, because a value in one and not the other is the failure this design has.
 Everything per-target is read from a single table
 ([`packages/env/src/targets.ts`](../../packages/env/src/targets.ts)):
 
-| `--target`    | File              | Bitwarden project    | Valid `DEPLOY_ENV`? |
-| ------------- | ----------------- | -------------------- | ------------------- |
-| `development` | `.env`            | — none               | yes                 |
-| `preflight`   | `.env.preflight`  | `devdogs-preflight`  | **no**              |
-| `staging`     | `.env.staging`    | `devdogs-staging`    | yes                 |
-| `production`  | `.env.production` | `devdogs-production` | yes                 |
+| `--target`    | File              | Bitwarden project | Valid `DEPLOY_ENV`? |
+| ------------- | ----------------- | ----------------- | ------------------- |
+| `development` | `.env`            | — none            | yes                 |
+| `preflight`   | `.env.preflight`  | `preflight`       | **no**              |
+| `staging`     | `.env.staging`    | `staging`         | yes                 |
+| `production`  | `.env.production` | `production`      | yes                 |
 
 > ⚠️ **This used to be two vocabularies behind one flag**, and they overlapped
 > in the middle: a deploy environment
@@ -151,12 +151,12 @@ is exactly where it ends up.
 
 ## The shape
 
-| GitHub environment | BWS project          | Receives                     | Branch       |
-| ------------------ | -------------------- | ---------------------------- | ------------ |
-| `preflight`        | `devdogs-preflight`  | everything in the project    | `main`       |
-| `staging`          | `devdogs-staging`    | everything in the project    | `main`       |
-| `production`       | `devdogs-production` | everything EXCEPT apply-tier | `production` |
-| `production-apply` | `devdogs-production` | everything, apply-tier too   | `production` |
+| GitHub environment | BWS project  | Receives                     | Branch       |
+| ------------------ | ------------ | ---------------------------- | ------------ |
+| `preflight`        | `preflight`  | everything in the project    | `main`       |
+| `staging`          | `staging`    | everything in the project    | `main`       |
+| `production`       | `production` | everything EXCEPT apply-tier | `production` |
+| `production-apply` | `production` | everything, apply-tier too   | `production` |
 
 Which keys a project holds is the tier's decision, named after the jobs that
 read each key (`EnvTier` in `packages/env/src/meta.ts`): `deploy` (the
@@ -179,7 +179,7 @@ rather than written down twice.
 > **Two credentials go to `production-apply` alone.** `AIRTABLE_APPLY_PAT` is
 > write-capable, and `SUPABASE_ACCESS_TOKEN` carries full account privileges
 > across both Supabase organizations (it is what `supabase config push` needs,
-> and the one mutation with no dry run). Both live in the `devdogs-production`
+> and the one mutation with no dry run). Both live in the `production`
 > Bitwarden project — only a person reads that — and are kept out of the staging
 > and preflight projects entirely, since a copy there is a second thing to rotate
 > for no benefit.

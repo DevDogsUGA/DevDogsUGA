@@ -5,12 +5,12 @@
  * them is the mistake this file exists to prevent. There are FOUR GitHub
  * environments and THREE BWS projects:
  *
- *   | GitHub environment | BWS project          | Receives                     |
- *   |--------------------|----------------------|------------------------------|
- *   | `preflight`        | `devdogs-preflight`  | everything in the project    |
- *   | `staging`          | `devdogs-staging`    | everything in the project    |
- *   | `production`       | `devdogs-production` | everything EXCEPT apply-only |
- *   | `production-apply` | `devdogs-production` | everything, apply-only too   |
+ *   | GitHub environment | BWS project  | Receives                     |
+ *   |--------------------|--------------|------------------------------|
+ *   | `preflight`        | `preflight`  | everything in the project    |
+ *   | `staging`          | `staging`    | everything in the project    |
+ *   | `production`       | `production` | everything EXCEPT apply-only |
+ *   | `production-apply` | `production` | everything, apply-only too   |
  *
  * The last two split one project between two GitHub environments, and that
  * split IS the reviewer gate. `production` deploys on a push with nothing in
@@ -111,14 +111,14 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
   GithubEnvironmentSpec
 > = {
   preflight: {
-    bwsProject: "devdogs-preflight",
+    bwsProject: "preflight",
     branch: "main",
     onlyKeys: null,
     excludeKeys: [],
     guarded: false,
   },
   staging: {
-    bwsProject: "devdogs-staging",
+    bwsProject: "staging",
     branch: "main",
     onlyKeys: null,
     // Both narrow tiers: no staging job plans, and none may apply.
@@ -135,7 +135,7 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
   // an unreviewed deploy. `environments.test.ts` asserts both apply keys by
   // name against exactly this.
   production: {
-    bwsProject: "devdogs-production",
+    bwsProject: "production",
     branch: "production",
     onlyKeys: null,
     get excludeKeys() {
@@ -153,7 +153,7 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
   // needed a deploy-tier secret or a public variable and got neither). The gate
   // is what `production` may NOT have, one row above.
   "production-apply": {
-    bwsProject: "devdogs-production",
+    bwsProject: "production",
     branch: "production",
     onlyKeys: null,
     excludeKeys: [],
@@ -209,7 +209,7 @@ export function routeTo(
  *
  * The set-shaped question, for callers that compare against what a push
  * actually wrote rather than against one destination. `routeTo()` is this with
- * `[0]` taken, and the difference is only ever visible for `devdogs-production`
+ * `[0]` taken, and the difference is only ever visible for `production`
  * — the one project that fans out to two environments.
  */
 export function acceptedBy(
