@@ -150,10 +150,16 @@ declare({
         "deploy time. ⚠️ It can mint a token for ANY role, including a " +
         "user session -- it is the widest credential in this file by a long " +
         "way, and it is here only because the sandbox token is the one thing " +
-        "signed with it. Devops-only. Import the key into Supabase rather " +
-        "than letting it generate one: an extracted private key is not " +
-        "retrievable afterwards, and legacy JWT secrets are removed in late " +
-        "2026.",
+        "signed with it. Devops-only. Mint the secret yourself, store it " +
+        "here, and IMPORT it as a shared-secret key on the project's JWT " +
+        "signing keys page -- never let Supabase generate it: keys in that " +
+        "system cannot be extracted afterwards, so an imported copy is the " +
+        "only way this side can hold the signing half. The legacy JWT " +
+        "secret is deprecated with no announced removal date; the imported " +
+        "shared secret is the path that outlives it. After migrating a " +
+        "project to signing keys, verify the sandbox token still resolves " +
+        "-- PostgREST v13 tightened custom-JWT validation (2025-07) and " +
+        "some migrated projects needed the key re-imported.",
       scope: "environment",
       secrecy: "secret",
       commented: true,
