@@ -74,7 +74,7 @@ TypeScript gets the labels as a union with no work of its own, because `supabase
 
 ```ts
 import type { Database } from "@devdogsuga/supabase";
-import { Constants } from "@devdogsuga/supabase";
+import { Constants } from "@devdogsuga/supabase/types";
 
 type ReportReason = Database["platform"]["Enums"]["reportReason"];
 Constants.platform.Enums.reportReason; // ["harassment", "hate_speech", ...]
@@ -266,12 +266,12 @@ None of this can be aimed at live data, and that is structural rather than a che
 The last two are heuristics over policy text rather than proofs, and they say so — a false alarm gets looked at, a false pass does not.
 
 ```bash
-pnpm devtools doctor --app forum    # skips the picker, for CI
+pnpm devtools doctor --app platform    # skips the picker, for CI
 ```
 
 ### The round-trip is the one that matters
 
-**Test reporting end to end** is the check the catalog cannot do for you. It creates a sandbox post, files a report as one persona, resolves it with `quarantine` as a moderator, and then looks again as a third — asserting that the post is hidden from a member and still visible to a moderator. Fixtures are deleted afterwards whether or not the assertions held.
+**Test reporting end to end** is the check the catalog cannot do for you. It runs against `platform.profile`, where quarantine means freeze rather than hide: it seeds a profile with an abusive display name, files a report as one persona, resolves it with `quarantine` as a moderator, and then asserts the freeze held — the name reset to the name of record and the member unable to change it back (see `quarantineRoundTrip` in `packages/devtools/src/doctor.ts`). Fixtures are deleted afterwards whether or not the assertions held.
 
 Quarantine is the only moderation outcome whose effect lives in _your_ read policies rather than the platform's, so it is the only one that can be wired up wrong while everything appears to work: the platform records the decision, sets the column, and has no way to notice nobody reads it. Running this against your own app is the only proof.
 
@@ -282,13 +282,13 @@ Quarantine is the only moderation outcome whose effect lives in _your_ read poli
 
 ### The console
 
-Reports are worked in the console at `/console/moderation`, which is the report queue and nothing else — each report shows its reason and content type inline. To work on the console itself, run it with your own stack up (a running local stack is detected automatically):
+Reports are worked in the console at `/console/moderation` — the report queue, a per-report page, and a users view. Each report shows its reason and content type inline. To work on the console itself, run it with your own stack up (a running local stack is detected automatically):
 
 ```bash
 pnpm --filter platform dev
 ```
 
-The five Discord and GitHub variables in `.env.example` are validated at boot but unused by these pages, so any non-empty placeholder will do unless you are working on Discord or GitHub sync.
+The Discord and GitHub variables in `.env.example` are validated at boot but unused by these pages, so any non-empty placeholder will do unless you are working on Discord or GitHub sync.
 
 There is nothing to configure and no page that configures it. Reasons are a platform-owned enum set by migration, and content types are derived from each app's own schema, so `/tools/moderation` and `/tools/feedback` are gone — `pnpm devtools catalog` is how you read either one on any instance.
 

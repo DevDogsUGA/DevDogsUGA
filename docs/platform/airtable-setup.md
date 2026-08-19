@@ -5,7 +5,7 @@ description: How the officer base is scaffolded, verified, and extended — the 
 
 # Airtable Base Setup
 
-> **Status: built and scaffolded.** The base exists, the three scripts exist, and
+> **Status: built and scaffolded.** The base exists, the four `airtable` devtools subcommands exist, and
 > `registry.ts` holds real IDs pulled from it.
 > [Meetings & Teams](./meetings-and-teams.md#where-meetings-come-from) decides
 > _what_ syncs and in which direction; this page is _how the base gets built_,
@@ -274,14 +274,16 @@ packages/airtable/src/
   scaffold.ts     create tables and fields; plan the same run without writing
   verify.ts       diff the live base against the registry
   ids.ts          rewrite todo("slug") calls in registry.ts with real field IDs
+  snapshot.ts     refresh, or check, the committed schema snapshot
 
 packages/devtools/src/airtable/
-  commands.ts     the three commands: prompting, file I/O, exit codes
+  commands.ts     the four commands: prompting, file I/O, exit codes
   client.ts       the shared client -- environment only, never Vault
 ```
 
-Run them as `pnpm airtable:scaffold`, `pnpm airtable:pull-ids` and
-`pnpm airtable:verify`. `scaffold` takes `--dry-run`, which reports the diff
+Run them as `pnpm airtable:scaffold`, `pnpm airtable:pull-ids`,
+`pnpm airtable:verify` and `pnpm airtable:snapshot`. `scaffold` takes
+`--dry-run`, which reports the diff
 without writing; it is worth using first, because the first real run is against
 a base somebody cares about. They are also in the `pnpm devtools` menu, under
 "Work on the Airtable base", which is the discoverable path — the picker lists
@@ -381,11 +383,11 @@ one protection nothing can verify for us.
 in three places:
 
 - **`pnpm airtable:verify`**, by hand, as step 7 of the runbook.
-- **CI**, in the `airtable` job, whenever `@devdogsuga/airtable` is affected. It
-  skips itself when the secrets are absent, so a fork can still run CI, and it
-  passes `--no-duplicates` — duplicate match keys are a property of the _data_,
-  which changes with no commit, and a build nobody's PR can fix is a build people
-  learn to ignore.
+- **CI**, as `pnpm airtable:snapshot:check` in the main validation job — a
+  credential-free diff of `registry.ts` against the committed schema snapshot,
+  answering "does the registry still agree with the base as last observed".
+  (Live-base verification needs a token and so cannot run on PRs; see the
+  closing notes in `.github/workflows/ci.yaml`.)
 - **Before every sync pass**, inside `runAirtableSync`, ahead of the lease claim.
 
 That last one is the important one, and it was missing until 2026-08-06: the
@@ -478,11 +480,11 @@ finishes a task in a different system. The sync refuses with a named
 
 ### The token lives in Vault
 
-|             |                                                                                     |
-| ----------- | ----------------------------------------------------------------------------------- |
-| Secret name | `airtable_pat`                                                                      |
-| Stored via  | `storeVaultSecret(token, "airtable_pat")` — the same path as every other credential |
-| Read via    | `getAirtableToken()` in `server/airtable/credentials.ts`                            |
+|             |                                                                                                             |
+| ----------- | ----------------------------------------------------------------------------------------------------------- |
+| Secret name | `airtable_pat`                                                                                              |
+| Stored via  | `storeVaultSecret(token, "airtable_pat")` (`src/server/vault.ts`) — the same path as every other credential |
+| Read via    | `getAirtableToken()` in `server/airtable/credentials.ts`                                                    |
 
 Looked up by **name**, not by a secret id kept in an env var. Vault names are
 unique, so the name is a stable handle that survives rotation — replacing the
@@ -624,7 +626,7 @@ Ordered, because several steps fail confusingly when done out of order.
 
 3. **Put it in `.env` as `AIRTABLE_PAT`** for the scaffolding run. It stays there
    only until step 10, and it is **not** the token that ends up in Vault.
-4. **Run `pnpm airtable:scaffold`.** Creates the six tables and their fields.
+4. **Run `pnpm airtable:scaffold`.** Creates the seven tables and their fields.
    `--dry-run` first reports the diff without writing.
 5. **Run `pnpm airtable:pull-ids`**, format, and commit the resulting
    `registry.ts`.
@@ -658,7 +660,7 @@ Ordered, because several steps fail confusingly when done out of order.
 
 ## Tests
 
-> **Built** — 50 tests in `packages/airtable/src/*.test.ts`, plus 5 in
+> **Built** — the suites in `packages/airtable/src/*.test.ts`, plus
 > `apps/platform/src/server/airtable/run.test.ts` for the schema precondition.
 > Every test drives a stub client, so the wire format is asserted against the
 > documented API shapes rather than against Airtable's actual responses — which
@@ -695,7 +697,7 @@ is indistinguishable from "it works":
   ORDER, not on the result — a scaffolder that gets this right by accident passes
   a result check and fails the moment a table is added above it in the registry.
   ✅
-- **`⚙️ Platform ID` ends up the primary field** in all six tables. Airtable takes
+- **`⚙️ Platform ID` ends up the primary field** in all seven tables. Airtable takes
   the first field in the array as primary and refuses links and checkboxes there,
   so this is a property of argument order that nothing else would catch. ✅
 - **A second run does nothing**, and dropping one field makes the next run create

@@ -15,10 +15,10 @@ for the full layout and script reference.
 ## Installation
 
 ```bash
-git clone https://github.com/DevDogs-UGA/DevDogs-Website.git
-cd DevDogs-Website
+git clone https://github.com/DevDogsUGA/DevDogsUGA.git
+cd DevDogsUGA
 corepack enable && pnpm install
-pnpm setup          # checks prereqs and seeds .env from .env.example
+pnpm setup          # checks prereqs and generates .env from the env registry
 ```
 
 ## Running
@@ -50,8 +50,9 @@ pnpm sb reset     # replays all migrations, then the seeds; regenerates types
 pnpm dev --filter platform    # the running stack is detected automatically
 ```
 
-While the stack is up, every `with-env`-wrapped script targets it — there are
-no separate `:local` script variants. Stop it with
+While the stack is up, every `with-env`-wrapped script targets it
+automatically; only the few explicit `…:local` package scripts (e.g.
+`generate-types:local`) pin the stack by name. Stop it with
 `pnpm --filter @devdogsuga/supabase stop-local-stack`, which runs
 `supabase stop` and then deletes `.env.generated`, so a stale overlay cannot
 linger once the stack is down. The port probe already ignores a stale file
@@ -63,9 +64,9 @@ when nothing is listening, so this is belt on top of suspenders — deliberately
 > `pnpm --filter @devdogsuga/supabase generate-types`.
 
 Contributors share the one remote dev database; the local stack is the offline /
-isolated escape hatch. There's a single root `.env` for the whole monorepo —
-never commit it. `.env`, `.env.generated`, and `.env.local` are all gitignored;
-only `.env.example` is tracked.
+isolated escape hatch. Env files live at the repo root, one per target — `.env`
+is development; see [Env](./env.md) for the deploy targets. Every `.env*` is
+gitignored except the generated `.env.example`. Never commit one.
 
 ### What `pnpm sb reset` seeds
 
@@ -105,8 +106,10 @@ reportable in the first place, [Moderatable Content](./moderatable-content.md).
 ## Local docs preview
 
 ```bash
-pnpm --filter platform docs:preview
+pnpm dev         # one terminal — the platform dev server
+pnpm dev:docs    # another — rebuilds the docs data on save
 ```
 
-Then visit the docs preview route on the running dev server. It auto-refreshes
-when you save any file in `docs/` and renders like the live docs site.
+Then open <http://localhost:3000/docs>. See
+[the documentation system's local preview page](./documentation-system/local-preview.md)
+for details (including `pnpm --filter platform docs:index` for search).

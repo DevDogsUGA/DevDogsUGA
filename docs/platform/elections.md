@@ -5,7 +5,11 @@ description: How teams and officers rank competing implementations, how a 1000-p
 
 # Elections
 
-> **Status: designed, not built.** Nothing here exists yet.
+> **Status: implemented.** The schema lives in migrations `20260803000007`
+> through `20260803000009`, the tally in
+> `server/elections/{tally,runTally,ballotOrder}.ts`, and the cron in
+> `app/(api)/cron/tally-elections/route.ts`, scheduled `*/5 * * * *` in
+> `wrangler.jsonc`. This page records the design and its reasoning.
 
 When a competition is judged, competing implementations are ranked in one or more
 **award categories** — "best looking", "most useful", and so on. Each category is
@@ -563,9 +567,9 @@ constraint is the only thing left that a forgetful caller cannot skip. See
 
 | #   | File                                     | Contents                                                                                                     |
 | --- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| 1   | `<ts>_platform_elections.sql`            | Enums, `elections`, `ballots`, `ballotRankings`                                                              |
-| 2   | `<ts>_platform_election_results.sql`     | `electionResults`, `pairwiseTallies`, `tiebreakDisclosures`, `competitionStandings`, the `memberPoints` view |
-| 3   | `<ts>_platform_election_permissions.sql` | `canVoteAsOfficer`, `canAuditBallots`, policy updates                                                        |
+| 1   | `<ts>_platform_election_permissions.sql` | `canVoteAsOfficer`, `canAuditBallots`, policy updates                                                        |
+| 2   | `<ts>_platform_elections.sql`            | Enums, `elections`, `ballots`, `ballotRankings`                                                              |
+| 3   | `<ts>_platform_election_results.sql`     | `electionResults`, `pairwiseTallies`, `tiebreakDisclosures`, `competitionStandings`, the `memberPoints` view |
 
 These land after `<ts>_platform_teams.sql`, which supplies the `teams` keys.
 There is no RPC migration: casting a ballot and recording a tally are server
@@ -638,15 +642,17 @@ twice and the results compared.
 
 ### Application layer
 
-| Path                                           | Contents                                        |
-| ---------------------------------------------- | ----------------------------------------------- |
-| `server/elections/tally.ts`                    | Borda, Copeland, scoring, standings             |
-| `server/elections/tally.test.ts`               | Table-driven, degenerate cases first            |
-| `server/actions/elections.ts`                  | Cast or revise a ballot                         |
-| `server/loaders/elections.ts`                  | Open elections, own ballot, results             |
-| `server/loaders/points.ts`                     | Standings breakdown; `memberPoints`             |
-| `app/(site)/competitions/[slug]/vote/page.tsx` | The ranking UI, per-ballot shuffle              |
-| `server/airtable/sync.ts`                      | Categories in; requirement counts and grades in |
+| Path                              | Contents                                        |
+| --------------------------------- | ----------------------------------------------- |
+| `server/elections/tally.ts`       | Borda, Copeland, scoring, standings             |
+| `server/elections/tally.test.ts`  | Table-driven, degenerate cases first            |
+| `server/elections/runTally.ts`    | The cron entry: find closed elections, tally    |
+| `server/elections/ballotOrder.ts` | The persisted per-ballot shuffle                |
+| `server/actions/elections.ts`     | Cast or revise a ballot                         |
+| `server/loaders/elections.ts`     | Open elections, own ballot, results             |
+| `server/loaders/points.ts`        | Standings breakdown; `memberPoints`             |
+| `app/(site)/vote/[slug]/page.tsx` | The ranking UI, per-ballot shuffle              |
+| `server/airtable/sync.ts`         | Categories in; requirement counts and grades in |
 
 **Ballots are revisable until `closesAt`.** Re-casting replaces the ranking and
 updates `castAt`, so a lead who mis-ordered a drag-and-drop is not stuck with it.

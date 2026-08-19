@@ -5,10 +5,12 @@ description: How DevDogs meetings, workshops, week-long competitions, teams, att
 
 # Meetings & Teams
 
-> **Status: designed, not built.** Nothing here exists yet. The first half
-> records the decisions and their reasoning; [Implementation](#implementation)
-> turns them into migrations, server actions, policies, and tests so the whole
-> thing can be reviewed before any of it is written.
+> **Status: implemented.** The schema lives in migrations `20260803000001`
+> through `20260803000006` under `supabase/migrations/`, the server code under
+> `apps/platform/src/server/`, and the scheduled passes under `app/(api)/cron/`.
+> This page records the design and its reasoning; the first half explains the
+> decisions, and [Implementation](#implementation) maps them onto the
+> migrations, server actions, policies, and tests.
 
 DevDogs meets weekly. Each meeting runs one or more **workshops** — parallel
 sessions, one per project, where members learn a feature area. A workshop
@@ -477,7 +479,9 @@ mail.devdogsuga.org`, which provisions the DKIM, SPF, and DMARC records. Until
    it completes, every send returns `E_SENDER_NOT_VERIFIED`.
 2. **Add the binding** to `apps/platform/wrangler.jsonc` as above, then
    `wrangler types` to regenerate `Env` with the real `SendEmail` types rather
-   than hand-written ones.
+   than hand-written ones. This one is already done: every environment declares
+   the `EMAIL` binding with `allowed_sender_addresses` of
+   `noreply@mail.devdogsuga.org`, leaving only the domain onboarding manual.
 
 For local development add `"remote": true` to the binding so sends proxy to the
 real service; without it there is nothing to observe. Point it at a real address
@@ -551,13 +555,13 @@ function that fills them.
 packages/email/
   src/
     theme.ts            shared tokens — imported from the site's Tailwind config
-    components/         Button, Layout, Heading, Footer
+    components/         Button, Layout, Heading
     templates/          TeamInvite.tsx, JoinRequest.tsx, …
-    marketing/          Campaign.tsx — the shell, with editable regions
-  scripts/compile.ts    render → tokenize → emit
+    marketing/          Campaign.tsx — the shell, with editable regions (not yet built)
+  scripts/compile.tsx   render → tokenize → emit
   dist/                 generated; gitignored, built by turbo
-    templates.js        chunk arrays + slot names, per template
-    templates.d.ts      the generated prop types
+    generated/          templates.js — chunk arrays + slot names — and templates.d.ts
+    runtime/            the fill loop that interleaves chunks and values
   __snapshots__/        tracked: rendered HTML, so design diffs show in review
 ```
 
@@ -1127,7 +1131,7 @@ platform.attendance (
   "meetingId"  uuid not null references platform.meetings(id),
   "workshopId" uuid references platform.workshops(id),
   "userId"     uuid not null references auth.users(id) on delete cascade,
-  method       platform."checkInMethod" not null,   -- code | discord | officer | airtable
+  method       platform."checkInMethod" not null,   -- discord | officer | airtable
   "recordedBy" uuid,
   "recordedAt" timestamptz not null default now(),
   unique ("meetingId", "userId"),
@@ -1627,6 +1631,9 @@ create type platform."teamRole" as enum ('lead', 'member');
 create type platform."submissionState" as enum ('open', 'closed', 'merged');
 create type platform."checkInMethod" as enum
   ('code', 'discord', 'officer', 'airtable');
+-- 'code' was later dropped when check-in codes were removed; see
+-- 20260806000001_platform_drop_check_in_codes.sql, which rebuilt the enum
+-- as ('discord', 'officer', 'airtable').
 create type platform."membershipDirection" as enum ('invite', 'request');
 create type platform."membershipRequestStatus" as enum
   ('pending', 'accepted', 'declined', 'withdrawn', 'expired');
@@ -2130,7 +2137,8 @@ column that the trigger does not recompute will silently read as `null`.
 | `server/github/teamSync.ts`        | Team/branch creation, member add and remove, reconcile                  |
 | `app/(api)/export/stars/route.ts`  | Cross-semester CSV, streamed                                            |
 | `app/(api)/airtable/sync/route.ts` | Manual sync trigger, permission-gated                                   |
-| `server/airtable/client.ts`        | Typed REST wrapper, PAT from Vault, rate-limit backoff                  |
+| `packages/airtable/src/client.ts`  | Typed REST wrapper, rate-limit backoff                                  |
+| `server/airtable/credentials.ts`   | PAT from Vault                                                          |
 | `packages/airtable/`               | The field registry; see [Setup](./airtable-setup.md#the-field-registry) |
 | `server/airtable/sync.ts`          | Upsert by `airtableRecordId`, refusals, status write-back               |
 | `server/airtable/push.ts`          | Projects mirror, counts, points, attendance rows and counts             |
@@ -2148,7 +2156,7 @@ gitignored, the rendered snapshots under `__snapshots__/` are what make a design
 change visible in review.
 
 `packages/drizzle` **exists**; it replaced the byte-identical clients in both Next
-apps. See [Extract the client](#extract-the-client-into-packagesdb).
+apps. See [Extract the client](#extract-the-client-into-packagesdrizzle).
 
 **`lockState.ts` deserves being a module rather than an inline condition.** The
 predicate is read by the join checks, the team page, the star view's SQL
@@ -2159,9 +2167,10 @@ join.
 
 ### Scheduled work
 
-`apps/platform/cloudflare/scheduled.ts` gains three passes on top of what the
-sandbox and election work already need. Listing them together because they are
-easy to design one at a time and then forget to schedule:
+`apps/platform/cloudflare/scheduled.ts` dispatches three passes on top of what
+the sandbox and election work already need; the handlers live under
+`app/(api)/cron/`. Listing them together because they are easy to design one at
+a time and then forget to schedule:
 
 | Pass             | Cadence | Does                                                |
 | ---------------- | ------- | --------------------------------------------------- |
@@ -2169,10 +2178,11 @@ easy to design one at a time and then forget to schedule:
 | Judging start    | 5 min   | Freeze `competedAt`, create solo teams, hard-lock   |
 | GitHub reconcile | nightly | Repair team membership that a failed webhook missed |
 
-`wrangler.jsonc` currently declares `["0 0 * * *", "*/10 * * * *"]`, so the
-triggers have to be widened before any of this runs. Cloudflare allows several
-cron expressions per Worker and `scheduled.ts` already dispatches on
-`event.cron`, so this is a config change rather than a new deployment unit.
+`wrangler.jsonc` declares
+`["0 0 * * *", "*/15 * * * *", "*/10 * * * *", "*/5 * * * *"]` in production
+(staging runs none). Cloudflare allows several cron expressions per Worker and
+`scheduled.ts` dispatches on `event.cron`, so adding a cadence is a config
+change rather than a new deployment unit.
 
 #### The judging-start pass
 
@@ -2352,10 +2362,6 @@ resolves.
 
 ## Open decisions
 
-- **Check-in code rotation interval** — a display detail, but it sets how long a
-  leaked code stays useful.
-- **Grace period length.** 30 minutes is the assumed default; it belongs
-  alongside `DEFAULT_MAX_TEAM_SIZE` in `server/teams/limits.ts`.
 - **What "submitted" means for a team that presents without a PR.** The
   `setSubmission` override exists; whether officers should routinely use it, or
   whether a missing PR should simply cost the star, is a club policy call.

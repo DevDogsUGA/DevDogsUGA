@@ -99,8 +99,4 @@ edited by hand. See [Database & Migrations](./database.md).
 
 ## Documentation
 
-Add or update markdown files in `docs/` alongside your code changes. Use the local preview to check rendering:
-
-```bash
-pnpm docs:preview
-```
+Add or update markdown files in `docs/` alongside your code changes. Use the local preview to check rendering — `pnpm dev` in one terminal, `pnpm dev:docs` in another, then open `/docs`; see [local preview](./documentation-system/local-preview.md).

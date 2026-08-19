@@ -10,16 +10,20 @@ apps/
   platform/            Next.js — the main DevDogs site + OAuth server   → schema: platform
   schedule-builder/    Next.js — course schedule builder                → schema: schedule_builder
   study-group-finder/  Flutter — study group finder (scaffold)          → schema: study_group_finder
-                       (no app owns `sandbox` — it is fixture content for the moderation
-                        tooling, present in every tier and denied on production by RLS)
+  sandbox/             Cloudflare Worker — the per-environment proxy in front of each
+                       team's Supabase project
+                       (no app owns the `sandbox` DB schema — it is fixture content for the
+                        moderation tooling, present in every tier and denied on production
+                        by RLS)
 packages/
-  sb/                  @devdogsuga/supabase — shared Supabase: config.toml, SQL migrations,
+  supabase/            @devdogsuga/supabase — shared Supabase: config.toml, SQL migrations,
                        generated Database types, and client factories
   devtools/            @devdogsuga/devtools — the `pnpm devtools` contributor CLI:
-                       database commands, moderation checks, OAuth setup
+                       database commands, moderation checks, OAuth setup, env sync, and
+                       the `deploy` steps CI runs
   docs-build/          @devdogsuga/docs-build — compiles docs/ to the site's page data
   airtable/            @devdogsuga/airtable — the officer-facing Airtable registry
-  db/                  @devdogsuga/drizzle — shared Drizzle helpers
+  drizzle/             @devdogsuga/drizzle — shared Drizzle helpers
   email/               @devdogsuga/email — transactional email templates
   config/              @devdogsuga/config — shared tsconfig/eslint/vitest presets
   env/                 @devdogsuga/env — the env-variable registry and the `with-env` bin
@@ -38,7 +42,7 @@ data**. The only credential that bypasses RLS is the service role
 git clone https://github.com/DevDogsUGA/DevDogsUGA.git
 cd DevDogsUGA
 corepack enable && pnpm install
-pnpm setup                       # checks prereqs, seeds .env from .env.example
+pnpm setup                       # checks prereqs, generates .env from the env registry
 # edit .env — add your remote Supabase creds (see the file's comments)
 pnpm sb link --remote      # one-time
 pnpm --filter @devdogsuga/supabase generate-types           # regenerate the shared Database types
@@ -53,8 +57,9 @@ Supabase stack; the Flutter SDK only for `apps/study-group-finder`.
 **A running local stack wins**: `with-env` probes the local Supabase API port
 (54321) on every run. When the Docker stack is listening, the `.env.generated`
 overlay is layered on top of `.env`; when it is not, everything targets the
-linked remote Supabase project. There is no flag and no `:local` script
-variant — start the stack (`pnpm sb link`) to switch, stop it to switch back.
+linked remote Supabase project. There is no flag — start the stack
+(`pnpm sb link`) to switch, stop it to switch back. (A few package scripts
+keep explicit `…:local` variants that pin the stack by name.)
 `with-env` prints which files it loaded on every run, so the target is never a
 guess.
 
@@ -103,23 +108,25 @@ whenever no `.env` value is needed; it is the simpler path.
 
 Note the emulator globs unquoted `[...]`, so keep such arguments quoted.
 
-| File                  | Holds                                                                                                               | Loaded                                        |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| root `.env`           | everything: shared Supabase creds, per-app secrets, and all `config.toml` reads (ports, auth providers, `BASE_URL`) | always                                        |
-| root `.env.generated` | local-stack creds (written by `start-local-stack`, deleted by `stop-local-stack`)                                   | when the stack is listening; wins over `.env` |
+| File                                  | Holds                                                                                                                     | Loaded                                           |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| root `.env`                           | everything: shared Supabase creds, per-app secrets, and all `config.toml` reads (ports, auth providers, `BASE_URL`)       | always                                           |
+| root `.env.generated`                 | local-stack creds (written by `start-local-stack`, deleted by `stop-local-stack`)                                         | when the stack is listening; wins over `.env`    |
+| `.env.{preflight,staging,production}` | per-environment deploy targets, synced to Bitwarden + GitHub by `pnpm devtools env push` — see `pnpm devtools env --help` | by deploy jobs only (`DEPLOY_ENV`), never in dev |
 
-Copy `.env.example` to `.env` (or run `pnpm setup`), then fill it in.
+Run `pnpm setup` to generate `.env` (`.env.example` documents every key), then
+fill it in.
 
 ## Scripts
 
 **Root** (`pnpm <script>`)
 
-| Script                                 | Does                                        |
-| -------------------------------------- | ------------------------------------------- |
-| `setup`                                | Onboarding: check prereqs, seed `.env`      |
-| `dev` / `build` / `typecheck` / `lint` | `turbo run …` across the workspace          |
-| `format:write` / `format:check`        | Prettier over the repo                      |
-| `sb <cmd>`                             | Proxy to `@devdogsuga/supabase` (see below) |
+| Script                                          | Does                                   |
+| ----------------------------------------------- | -------------------------------------- |
+| `setup`                                         | Onboarding: check prereqs, seed `.env` |
+| `dev` / `build` / `typecheck` / `lint` / `test` | `turbo run …` across the workspace     |
+| `format:write` / `format:check`                 | Prettier over the repo                 |
+| `devtools` (alias: `sb`)                        | The contributor CLI (see below)        |
 
 **In any package's scripts** (via `@devdogsuga/env`)
 
@@ -128,17 +135,23 @@ Copy `.env.example` to `.env` (or run `pnpm setup`), then fill it in.
 | `with-env <cmd>`      | Run `<cmd>` with the env files loaded    |
 | `with-env -c '<cmd>'` | Same, but `$VAR` resolves from the files |
 
-**Supabase** (`pnpm sb <cmd>`) — a running local Docker stack is auto-detected and wins
+**Contributor CLI** (`pnpm devtools <cmd>`, or the `pnpm sb` alias) — run with
+no command for a menu, or `--help` for the full reference. Highlights:
 
-| Command                                  | Does                                                                 |
-| ---------------------------------------- | -------------------------------------------------------------------- |
-| `link-remote-project`                    | One-time: link the CLI to the remote project (`PROJECT_REF`)         |
-| `new-migration <name>`                   | Create a new SQL migration                                           |
-| `push-migrations`                        | Apply migrations to the remote DB + regenerate types                 |
-| `reset-remote-database`                  | **Destructive**: wipe + replay migrations on remote (interactive)    |
-| `generate-types`                         | Regenerate `Database` types from the linked DB + rebuild the package |
-| `start-local-stack` / `stop-local-stack` | Bring the local Docker stack up/down                                 |
-| `reset-local-database`                   | Wipe + replay migrations on the local stack                          |
+| Command                    | Does                                                          |
+| -------------------------- | ------------------------------------------------------------- |
+| `link [--local\|--remote]` | Start the local Docker stack, or link the CLI to the remote   |
+| `push` / `reset`           | Apply migrations / rebuild the DB from migrations + seeds     |
+| `status`                   | Report the target's health                                    |
+| `doctor` / `roundtrip`     | Check an app's moderation integration                         |
+| `oauth`                    | Configure "Sign in with DevDogs" for the project in this dir  |
+| `airtable <sub>`           | Scaffold, pull ids from, verify, or snapshot the officer base |
+| `env <sub> --target <t>`   | Pull/push/audit one env target across Bitwarden + GitHub      |
+| `deploy <sub>`             | The steps `deploy.yaml` runs — CI-only, not for a laptop      |
+
+The database verbs delegate to `@devdogsuga/supabase` package scripts
+(`pnpm --filter @devdogsuga/supabase run <script>` for the full set:
+`new-migration`, `push-config`, `seed-buckets`, `generate-types`, `test:rls`, …).
 
 **Per Next.js app** (`pnpm --filter @devdogsuga/<app> <script>`)
 
@@ -161,6 +174,14 @@ See `apps/study-group-finder/README.md`.
 ## Docs & deployment
 
 - Docs live in root `docs/` (per-project subfolders) and render on the platform
-  site; see `docs/getting-started.md` and `docs/database.md`.
-- Both Next apps deploy to Cloudflare Workers via OpenNext (`cf:*` scripts +
-  each app's `wrangler.jsonc`). Deploy wiring is in progress.
+  site; start with `docs/platform/getting-started.md` and
+  `docs/platform/database.md`.
+- CI (`.github/workflows/ci.yaml`) validates every PR and holds **no secrets**,
+  deliberately. Deploys run from `.github/workflows/deploy.yaml`: merging to
+  `main` deploys **staging**; a promotion PR into the `production` branch
+  deploys **production**, with migration/config/Airtable plans and reviewer
+  gates in between. Three Workers per environment:
+  `{staging,production}-{platform,schedule-builder,sandbox}`, built via
+  OpenNext (`cf:*` scripts + each app's `wrangler.jsonc`). The workflow files'
+  comments are the authoritative walkthrough of why each step is shaped the
+  way it is.

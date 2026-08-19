@@ -415,12 +415,12 @@ It follows the same wrangler layout as `apps/platform` and
 ```
 apps/sandbox/
   wrangler.jsonc          route: *-sandbox.devdogsuga.org/*
-  package.json            deps: @devdogsuga/supabase, @devdogsuga/with-env
+  package.json            deps: @devdogsuga/env (the with-env bin), @devdogsuga/config
   src/
-    index.ts              path-class router
-    credential.ts         token → resolve_sandbox_credential
-    rewrite.ts            headers, query params, Storage response URLs
-    upstream.ts           forward, including WebSocket upgrade
+    index.ts              entry
+    paths.ts              path-class router
+    proxy.ts              resolve credential, rewrite, forward
+    token.ts              the signed proxy token
 ```
 
 ### The hostname is one label deep, deliberately
@@ -665,8 +665,8 @@ on functions to anon, authenticated, service_role`, so every new function
 > it honest, including a guard that fails the moment a new function reintroduces
 > a `PUBLIC` grant.
 
-Vault storage reuses the helpers already in `server/actions/credentials.ts` —
-`storeVaultSecret`, `readVaultSecret`, `deleteVaultSecret`.
+Vault storage reuses the existing helpers `storeVaultSecret`,
+`readVaultSecret`, `deleteVaultSecret` (`src/server/vault.ts`).
 
 Do not cache in the first cut. It trades revocation latency for latency that is
 not yet a problem.
@@ -1032,8 +1032,8 @@ The inventory, all of which belongs in phase 2:
 | `server/actions/testAccounts.ts`                                                                                                  | Delete (~154 lines)               |
 | `server/oauth/clientAuth.ts` → `isTestAccountForClient`                                                                           | Delete function                   |
 | `server/actions/consent.ts` → `approveTestAccountAuthorization` and its schema                                                    | Delete; consent becomes one path  |
-| `ConsentForm`, `oauth/consent/page.tsx`, `tools/oauth/page.tsx`, `FeedbackDialog`, `loaders/console.ts`                           | Drop the test-account branch      |
-| `scripts/seed-builtin-roles.ts`                                                                                                   | Drop test-account role seeding    |
+| `ConsentForm`, `oauth/consent/page.tsx`, `tools/oauth/page.tsx`, `FeedbackDialog`, `server/loaders/console.ts`                    | Drop the test-account branch      |
+| `apps/platform/scripts/seed-builtin-roles.ts`                                                                                     | Drop test-account role seeding    |
 | `platform."oauthTestAccounts"`                                                                                                    | Drop table                        |
 | `platform.is_test_identity()` and 4 `deny_test_identities` policies on `roles`, `reportReasons`, `feedbackTopics`, `contentTypes` | Drop — no identities left to deny |
 
@@ -1048,10 +1048,10 @@ its own test.
 
 ## `sb` targets
 
-The existing scripts are thin `with-env` wrappers over the Supabase CLI with a
+The old scripts were thin `with-env` wrappers over the Supabase CLI with a
 two-target convention (`reset-remote-database` / `reset-local-database`). Adding
-a third target would take that to 3× the script count, so the CLI gains a
-dispatcher instead:
+a third target would have taken that to 3× the script count, which is why the
+CLI gained a dispatcher instead (now shipped as `pnpm sb {link,push,reset,status}`):
 
 ```
 pnpm sb push   --local | --remote | --team <slug>
@@ -1127,7 +1127,8 @@ not needed. Confirm the exact exclusion set on the first CI run.
 
 #### Consequences to handle
 
-- **`turbo.json` gains a `generate-types` task** that `build`, `typecheck`, and
+- **`turbo.json` gains a `generate-types` task** (✅ built — see `turbo.json`)
+  that `build`, `typecheck`, and
   `lint` depend on, with `inputs` set to `supabase/migrations/**` and
   `supabase/config.toml` and `outputs` to the generated file. Turbo's cache then
   runs it once per migration change rather than per invocation, which is what
@@ -1161,9 +1162,10 @@ account, so nothing below is blocked on unknowns.
 3. **Supabase OAuth** — app registration, authorize and callback routes, Vault
    token storage, refresh cron, and the `GET /v1/projects` capacity check with
    its three remedies — attach, pause-in-flow, transfer lead.
-   `scripts/spike/supabase-oauth-spike.ts` already implements this sequence
-   working against the live API; it is the skeleton to lift from, and what needs
-   rewriting is its error handling, not its flow.
+   The phase-0 spike (`scripts/spike/supabase-oauth-spike.ts`, since deleted
+   with `scripts/`) proved this sequence against the live API — see the Spike
+   results section for what it covered; the error handling, not the flow, is
+   what needs writing fresh.
 4. **Control plane** — `pnpm sb push --team` and `reset --team` through the
    Management API, plus the target dispatcher and the generated-types change.
    Simpler than originally scoped: `database/query` is atomic, so no repair path
@@ -1192,8 +1194,9 @@ The worker's credential for `resolve_sandbox_credential` is a JWT carrying
 
 That has a consequence worth designing around: **minting is signing, not an API
 call.** There is no `POST /v1/projects/{ref}/api-keys`, no management token in
-CI, and no dashboard step — the deploy signs a token locally and writes it to
-Secrets Store. So rotation stops being a three-step overlap dance and becomes
+CI, and no dashboard step — the deploy signs a token locally
+(`pnpm devtools deploy mint-token`) and delivers it as a Worker secret via
+`deploy secrets-file --mint`. So rotation stops being a three-step overlap dance and becomes
 free, which means it should happen on **every deploy**, with a 90-day `exp` so a
 pipeline that goes stale fails loudly instead of quietly holding a key forever.
 
@@ -1339,9 +1342,10 @@ host.
 
 ### Provisioning module
 
-`apps/platform/src/server/supabase/` — the sequence is already proven end to end
-in `scripts/spike/supabase-oauth-spike.ts`, so lift the flow and rewrite the
-error handling.
+`apps/platform/src/server/supabase/` — the sequence was proven end to end by
+the phase-0 spike (`scripts/spike/supabase-oauth-spike.ts`, since deleted; its
+results are recorded below), so the flow is settled and the error handling is
+what needs writing.
 
 ```ts
 connectSupabase(userId, code, verifier): Promise<void>   // store tokens in Vault

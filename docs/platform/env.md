@@ -119,7 +119,7 @@ carries a warning when you use it — it is the one path that trades that away.
 > `push` refuses it by name rather than trusting anyone to remember, `pull` will
 > not write it back, and `audit` reports it as an **error** in any remote store.
 > Same for `AIRTABLE_PAT`, the scaffolding token, which the runtime never reads
-> — see the `neverStore` declarations in each package's `env.ts`.
+> — see the `secrecy: "never-store"` declarations in `packages/devtools/env.ts`.
 
 ### It edits the target's file in place
 

@@ -1,19 +1,36 @@
-# Optimal-Schedule-Builder
+# schedule-builder
 
-DevDogs' inaugural, 2024-2025 project: an optimal schedule-building website for UGA students.
+The DevDogs course schedule builder (branded "Optimal Schedule Builder") — a
+Next.js app on the shared DevDogs Supabase project, owning the
+**`schedule_builder`** Postgres schema
+(`supabase/migrations/*_schedule_builder_init.sql`).
 
-## Welcome to the DevDogs Optimal Schedule Builder project!
+For monorepo setup, env handling, and the contribution workflow, see the repo
+README and `docs/platform/contributing.md`; project-facing docs are in
+`docs/schedule-builder/`.
 
-We’re excited to have you here! If you’re interested in contributing to our project, please request to join the 2024-2025 Project Contributers team [here](https://github.com/orgs/DevDogs-UGA/teams/24-25-project-contributors) and join our [Discord server](https://discord.com/invite/MuyJ4f5xKE). If you're a new member or want a refresher check out our [catch up article!](/gitWiki/catchUp.md).
+## Develop
 
-## Getting Started
+```bash
+pnpm --filter schedule-builder dev   # local stack auto-detected, else remote
+```
 
-1. **Join the Team**: Request to join the 2024-2025 Project Contributor team on our GitHub Organization.
-2. **Review Issues**: Check the Issues tab to see what work needs to be done. Feel free to add issues with features or modifications you would like to include in the project!
-3. **Fork the Repository**: Create a fork of this repository to work on your own copy of the code. Assign yourself an issue to work on.
-4. **Clone the Repository**: Use Git or GitHub Desktop to clone your forked repository to your local machine.
-5. **Work on the Issue**: Complete the tasks associated with your assigned issue.
-6. **Push Changes**: Push your local changes to your forked GitHub repository.
-7. **Create a Pull Request**: Once your work is complete, submit a pull request (PR) to the original repository. Be sure to document your changes thoroughly and include any relevant screenshots.
+Schema changes follow the shared workflow in `docs/platform/database.md`, with
+one twist: this app drafts its migrations from the Drizzle schema —
+`db:generate` (drizzle-kit, via `drizzle-migrations.config.ts`) writes draft
+SQL to `drizzle-generated/`, which is then carried into a real migration in
+`supabase/migrations/` (the source of truth). `db:pull` regenerates the
+Drizzle schema from the live DB.
 
-**Important**: Always sync your forked repository with the original before starting any new coding session, and pull the latest changes to your local machine.
+## Course data
+
+Course and instructor data arrive via cron routes (`src/app/(api)/cron/`):
+`scrape-registrar` and `scrape-rmp`, with parsing in `src/lib/parsers/` and
+upserts in `src/lib/sync/`. Schedule generation lives in `src/lib/algorithm/`.
+
+## Deploy
+
+Deploys to Cloudflare Workers via OpenNext like the platform app: `cf:preview`
+locally; CI runs `cf:build:*` / `cf:deploy:*` from
+`.github/workflows/deploy.yaml`. The app has no custom hostname yet — it is
+workers.dev-only until one is decided.

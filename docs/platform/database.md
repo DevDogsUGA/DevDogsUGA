@@ -126,13 +126,13 @@ pnpm sb reset   # re-apply all existing migrations on a clean slate
 
 Then apply your schema changes on top and generate the file. The migration will be generated against the latest baseline rather than a stale one.
 
-**CI verifies with `pnpm sb reset`.** Every PR should run `pnpm sb reset` in CI to confirm all migrations replay cleanly in order. This catches conflicts before merge, not after.
+**CI already verifies this.** The `database` job in `.github/workflows/ci.yaml` boots a fresh local stack on every PR, which replays every migration from scratch — no separate reset step.
 
 If two contributors generate migrations from the same baseline that touch the same tables, one of them must manually reconcile after merge. `pnpm sb reset` will surface the conflict immediately.
 
-## Production deployment
+## Applying migrations
 
-Migrations are applied to the linked Supabase project with:
+The shared **dev** project is pushed by hand:
 
 ```
 pnpm sb push --remote
@@ -140,27 +140,30 @@ pnpm sb push --remote
 
 This runs `supabase db push`, which applies only the migrations that haven't yet been applied to the remote project (tracked by Supabase's internal migration history table).
 
+**Staging and production are applied by CI, never by hand** — the deploy workflow dry-runs the plan and then pushes (`production-migrate` in `.github/workflows/deploy.yaml`; the workflow's comments explain the gates).
+
 **Never run `drizzle-kit push` against a production database.** That command pushes directly without a migration record and has no rollback path.
 
 ## Drizzle config files
 
-| File                              | Schema filter                                     | Generates                         |
-| --------------------------------- | ------------------------------------------------- | --------------------------------- |
-| `drizzle.config.ts`               | `platform`                                        | `src/server/db/schema/generated/` |
-| `drizzle-introspection.config.ts` | everything except `platform`, `public`, `sandbox` | `src/supabase/drizzle/schema.ts`  |
+| File                              | Schema filter                                | Generates                         |
+| --------------------------------- | -------------------------------------------- | --------------------------------- |
+| `drizzle.config.ts`               | `platform`                                   | `src/server/db/schema/generated/` |
+| `drizzle-introspection.config.ts` | everything except `platform`, `public`, `_*` | `src/supabase/drizzle/schema.ts`  |
 
-The exclusions on the second one are not arbitrary. `sandbox` is left out because
-its tables carry a foreign key to `platform."reportResolutions"` — the key that
-registers them as moderatable content — and drizzle emits that reference without
-an import it can resolve, producing a file that does not compile. Importing
-across would make the two generated modules circular.
+The exclusions on the second one are not arbitrary. A schema whose tables carry
+a foreign key to `platform."reportResolutions"` — the key that registers them as
+moderatable content — must be excluded, because drizzle emits that reference
+without an import it can resolve, producing a file that does not compile
+(importing across would make the two generated modules circular). `sandbox` was
+the original case; the rule outlives the instance.
 
 **Any app schema that adds the quarantine column belongs on that exclusion
 list**, for exactly the same reason. Nothing is lost: that module exists so the
 console can reach the Supabase-managed schemas through Drizzle, and no consumer
 imports anything but `auth` from it.
 
-Both configs point at the local DB URL and are only used with `drizzle-kit pull`. Neither is used for migrations.
+Both configs point at whichever database `with-env` resolves (`DB_URL`) and are only used with `drizzle-kit pull`. Neither is used for migrations.
 
 ## For sibling projects
 

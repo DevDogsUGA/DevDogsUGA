@@ -31,7 +31,7 @@ Welcome to the documentation for the DevDogs Website — the open-source web pla
 
 | Layer     | Technology              |
 | --------- | ----------------------- |
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js 16 (App Router) |
 | Database  | Supabase (Postgres)     |
 | ORM       | Drizzle ORM             |
 | Styling   | Tailwind CSS v4         |

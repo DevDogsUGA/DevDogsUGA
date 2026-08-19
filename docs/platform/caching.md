@@ -14,7 +14,7 @@ Functions and components marked with `"use cache"` have their results cached, ke
 See the [Next.js `"use cache"` reference](https://nextjs.org/docs/app/api-reference/directives/use-cache).
 
 > [!IMPORTANT]
-> The Cloudflare adapter is currently configured with `defineCloudflareConfig()` and no cache overrides, which resolves to `incrementalCache: "dummy"` and `tagCache: "dummy"`. In production that means **`"use cache"` entries do not persist across requests and `revalidateTag` does nothing.** Anything relying on runtime caching or on-demand invalidation would need R2 and D1 provisioned first. Nothing in the app relies on either today — that is why it goes unnoticed.
+> Both Next apps configure the Cloudflare adapter with `defineDevDogsCloudflareConfig()` (`packages/config/opennext/cloudflare.js`), which backs the incremental cache with a per-environment R2 bucket (`NEXT_INC_CACHE_R2_BUCKET` in each `wrangler.jsonc`), so `"use cache"` entries persist across requests. `tagCache` is still `"dummy"`: **`revalidateTag` does nothing** — and nothing in the app calls it. On-demand invalidation would need D1 provisioned first.
 
 ## Where `"use cache"` is actually used
 

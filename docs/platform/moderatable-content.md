@@ -17,7 +17,7 @@ Nothing is stored on the platform side, so nothing can drift: drop the column an
 
 This page is about everything that sentence leaves out.
 
-The worked example is [`20260808000000_platform_profile_moderation.sql`](https://github.com/DevDogs-UGA/DevDogs-Website/blob/main/supabase/migrations/20260808000000_platform_profile_moderation.sql), which makes `platform."profile"` — a member's display name and bio — reportable. **If you are integrating a new app, read that file.** This page explains why it says what it says.
+The worked example is [`20260808000000_platform_profile_moderation.sql`](https://github.com/DevDogsUGA/DevDogsUGA/blob/main/supabase/migrations/20260808000000_platform_profile_moderation.sql), which makes `platform."profile"` — a member's display name and bio — reportable. **If you are integrating a new app, read that file.** This page explains why it says what it says.
 
 > **This used to be a fixture.** Until August 2026 the worked example was a `sandbox` schema of fake posts and comments, registered in `platform."apps"` on every tier including production and denied there by a restrictive policy. It is gone. A fixture app is indistinguishable from a real one to everything downstream, it had to be excluded by hand from Drizzle introspection and listed by hand in `config.toml`, and it meant the reference implementation was the one piece of the system nobody actually used. Real content that ships on every tier is a better example than fake content that ships on every tier.
 
@@ -126,7 +126,7 @@ revoke update on forum."resources" from anon, authenticated;
 grant update ("title", "body") on forum."resources" to authenticated;
 ```
 
-`platform."profile"` had already done this, for an unrelated reason — [`20260803000000`](https://github.com/DevDogs-UGA/DevDogs-Website/blob/main/supabase/migrations/20260803000000_platform_profile_identity.sql) revoked the table-wide grant to keep clients out of `ugaEmail` and `legal*`. That is why adding `quarantinedBy` to it needed no grant statement of its own: **a column added after the revoke is unreachable by clients by default.** Doing it in the other order is what leaves the hole.
+`platform."profile"` had already done this, for an unrelated reason — [`20260803000000`](https://github.com/DevDogsUGA/DevDogsUGA/blob/main/supabase/migrations/20260803000000_platform_profile_identity.sql) revoked the table-wide grant to keep clients out of `ugaEmail` and `legal*`. That is why adding `quarantinedBy` to it needed no grant statement of its own: **a column added after the revoke is unreachable by clients by default.** Doing it in the other order is what leaves the hole.
 
 The persona suite asserts both halves: that a quarantined member cannot clear their own column, and that a moderator cannot forge one onto somebody else — the same error either way, because this is a role-level denial rather than a row-level one.
 
@@ -207,4 +207,4 @@ None of this affects the persona test suite, which calls `auth.admin.createUser(
 7. Add the schema to `[api] schemas` in `config.toml`, and to the exclusion list in `drizzle-introspection.config.ts`.
 8. Verify with `pnpm devtools doctor --app <slug>`, then `pnpm devtools roundtrip`. The round-trip is the step that matters: it exercises _your_ policy, which is the one thing the platform cannot check for you.
 
-> **`config.toml` changes need a restart, not a reset.** `[api] schemas` becomes PostgREST's `db-schemas` at `supabase start`, so `supabase db reset` alone leaves the old list in place — and if a schema on it no longer exists, PostgREST refuses to build its schema cache at all and every request returns `PGRST002`. `pnpm exec supabase stop && pnpm exec supabase start`.
+> **`config.toml` changes need a restart, not a reset.** `[api] schemas` becomes PostgREST's `db-schemas` at `supabase start`, so `supabase db reset` alone leaves the old list in place — and if a schema on it no longer exists, PostgREST refuses to build its schema cache at all and every request returns `PGRST002`. `pnpm --filter @devdogsuga/supabase run stop-local-stack`, then `start-local-stack` — the wrappers also regenerate `.env.generated` and seed the buckets.

@@ -24,7 +24,8 @@ pnpm --filter study-group-finder dev   # local stack auto-detected, else remote
 
 These pass `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `AUTH_MODE` to Flutter
 via `--dart-define`. Auth mirrors the web apps: `devdogs` (platform OAuth
-server) in dev, `google` in production — selected by `AUTH_MODE`.
+server) in dev, `google` in production — selected by `NEXT_PUBLIC_AUTH_MODE`
+in `.env` (`AUTH_MODE` is only the `--dart-define` name it maps onto).
 
 ## Typed models
 
@@ -50,6 +51,6 @@ schema is currently empty, so this is a no-op until tables are added.
 ## Turborepo
 
 `package.json` is a thin task wrapper (`build`/`dev`/`test`/`lint`/
-`generate-types`) so `turbo` can orchestrate the Flutter toolchain; `build`
+`typecheck`/`generate-types`) so `turbo` can orchestrate the Flutter toolchain; `build`
 targets the web output for fast validation. Release Android/iOS artifacts are
 built in dedicated pipelines, not by turbo.
