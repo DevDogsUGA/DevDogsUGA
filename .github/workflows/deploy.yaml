@@ -266,6 +266,20 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # ⚠️ Before the dry run, because the dry run cannot tell the difference.
+      # This environment's DB_URL must be the migration_planner role — SELECT
+      # on supabase_migrations.schema_migrations and nothing else — and a full
+      # connection string pasted there is invisible to everything at rest: the
+      # plan succeeds, `env push` uploads it, `env audit` sees no drift. A live
+      # connection is the only place the difference shows, so this step opens
+      # one: it must authenticate as the planner, FAIL to read
+      # platform.profile, and succeed on the migrations table. `cli:no-env`
+      # like the other one-credential guards.
+      - name: The credential is the planner role, and no more
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+        run: >-
+          pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-planner
       # ⚠️ `set -o pipefail` is load-bearing, not boilerplate. `supabase db
       # push` exits 1 on a connection failure, and a pipeline without it reports
       # the exit code of `tee` — so a dry run that never connected reads as a

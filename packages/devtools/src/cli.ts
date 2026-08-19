@@ -63,7 +63,13 @@ import { runMintToken } from "./deploy/mint-token.js";
 import { runDeployAirtablePlan } from "./deploy/airtable-plan.js";
 import { runDeployAirtableApply } from "./deploy/airtable-apply.js";
 import { runPreflight } from "./deploy/preflight.js";
+import { runRequirePlanner } from "./deploy/require-planner.js";
 import { runRequireToken } from "./deploy/require-token.js";
+import {
+  runPlannerCreate,
+  runPlannerResetPassword,
+  runPlannerStatus,
+} from "./planner/commands.js";
 import { loadRegistry } from "./env/discovery.js";
 import { ENV_TARGETS, isEnvTarget } from "@devdogsuga/env";
 import { setExplicitAccessToken } from "./bws/client.js";
@@ -106,7 +112,23 @@ Commands:
   airtable   Scaffold, pull ids from, or verify the officer base
   env        One env file per target, synced to Bitwarden + GitHub, with a
              drift audit
+  planner    The migration_planner role: the one Postgres credential the
+             preflight tier may hold
   deploy     The steps a deploy job runs. Not for a laptop — see below
+
+Planner subcommands. All need a privileged production connection —
+.env.production's DB_URL (env pull --target production), or --db-url:
+
+  planner status                  does the role exist, hold exactly the two
+                                  validated grants, and reach nothing else
+  planner create                  mint role + grants + generated password,
+                                  verify it live, write .env.preflight's
+                                  DB_URL (then: env push --target preflight)
+  planner reset-password          rotate the password on the existing role;
+                                  same verification, same write. There is no
+                                  retrieve: the server holds a hash, and the
+                                  URL's home is .env.preflight / Bitwarden
+                                  (env pull --target preflight)
 
 Airtable subcommands:
   airtable scaffold [--dry-run]   Create what the registry declares
@@ -195,6 +217,10 @@ job that has already set DEPLOY_ENV:
                                   secrets-file --mint, not by running it
   deploy require-token            exit non-zero, naming who to ask, when
                                   CLOUDFLARE_API_TOKEN is unset
+  deploy require-planner          refuse the §3.5 stage-1 dry run unless
+                                  DB_URL authenticates as migration_planner,
+                                  cannot read platform.*, and CAN read the
+                                  migrations table
   deploy airtable-plan            what a scaffold WOULD create in the officers'
                                   base, to \$GITHUB_STEP_SUMMARY. Reads with
                                   AIRTABLE_PLAN_PAT (schema.bases:read only)
@@ -206,12 +232,13 @@ job that has already set DEPLOY_ENV:
   secrets-file's \`::add-mask::\`. No banner, no prompts, no menu — they run
   unattended, and two of them have a stdout something downstream reads.
 
-  ⚠️ write-env, orphans, preflight, require-token, airtable-plan and
-  airtable-apply must NOT go through \`pnpm devtools\`, which is
-  \`with-env tsx src/cli.ts\`. write-env CREATES the env file with-env would
-  demand; the others run in jobs that have none, where the wrapper would
-  report a missing FILE rather than the missing TOKEN, the paused project or
-  the missing Airtable credential. All six use the wrapper-free entry point:
+  ⚠️ write-env, orphans, preflight, require-token, require-planner,
+  airtable-plan and airtable-apply must NOT go through \`pnpm devtools\`,
+  which is \`with-env tsx src/cli.ts\`. write-env CREATES the env file
+  with-env would demand; the others run in jobs that have none, where the
+  wrapper would report a missing FILE rather than the missing TOKEN, the
+  paused project or the missing credential. All seven use the wrapper-free
+  entry point:
 
     pnpm --filter @devdogsuga/devtools run cli:no-env deploy write-env
 
@@ -769,6 +796,7 @@ async function runDeployCommand(rest: string[]): Promise<void> {
       "  preflight                         classify the project (paused vs broken)",
       "  mint-token                        sign a fresh sandbox proxy JWT",
       "  require-token                     refuse to deploy without a CF token",
+      "  require-planner                   refuse to plan unless DB_URL is the planner role",
       "  airtable-plan                     what a scaffold would create (reads only)",
       "  airtable-apply                    create it (production-apply only)",
     ]);
@@ -786,6 +814,15 @@ async function runDeployCommand(rest: string[]): Promise<void> {
     // nearly every workspace package to answer a question none of them asks.
     if (sub === "require-token") {
       runRequireToken();
+      return;
+    }
+
+    // Registry-free like its sibling guards: the main-plan job holds one
+    // credential in the step's env: block and composes no file. What it
+    // checks — that DB_URL is the planner role and no more — is the one
+    // property of the preflight tier nothing at rest can verify.
+    if (sub === "require-planner") {
+      await runRequirePlanner();
       return;
     }
 
@@ -890,7 +927,7 @@ async function runDeployCommand(rest: string[]): Promise<void> {
     say([
       `devtools deploy: unknown subcommand "${sub}".`,
       "  Try write-env, secrets-file, orphans, preflight, mint-token,",
-      "  require-token, airtable-plan or airtable-apply.",
+      "  require-token, require-planner, airtable-plan or airtable-apply.",
     ]);
     process.exitCode = 1;
   } catch (err) {
@@ -905,6 +942,40 @@ async function runDeployCommand(rest: string[]): Promise<void> {
     );
     process.exitCode = 1;
   }
+}
+
+/**
+ * `planner <status|create|reset-password> [--db-url <url>]`
+ *
+ * Operator-side lifecycle of the `migration_planner` role — see
+ * `planner/commands.ts` for the commands themselves and for why there is no
+ * `retrieve`. Interactive by design (create and reset confirm before writing
+ * to production), so unlike the `deploy` group it talks through clack and is
+ * fine to run as plain `pnpm devtools planner …`.
+ */
+async function runPlannerCommand(rest: string[]): Promise<void> {
+  const [sub] = positionals(rest);
+  const options = { dbUrl: flagValue(rest, "--db-url") ?? undefined };
+
+  if (sub === "status") {
+    await runPlannerStatus(options);
+    return;
+  }
+  if (sub === "create") {
+    await runPlannerCreate(options);
+    return;
+  }
+  if (sub === "reset-password") {
+    await runPlannerResetPassword(options);
+    return;
+  }
+
+  log.error(
+    sub
+      ? `devtools planner: unknown subcommand "${sub}". Try status, create or reset-password.`
+      : "devtools planner: which of status, create, reset-password?",
+  );
+  process.exitCode = 1;
 }
 
 // ── Menu ─────────────────────────────────────────────────────────────────────
@@ -1047,6 +1118,12 @@ async function main(): Promise<void> {
 
   if (first === "env") {
     await runEnvCommand(rest);
+    outro("Done.");
+    return;
+  }
+
+  if (first === "planner") {
+    await runPlannerCommand(rest);
     outro("Done.");
     return;
   }

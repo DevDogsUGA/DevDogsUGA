@@ -777,6 +777,9 @@ importers:
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
+      postgres:
+        specifier: 'catalog:'
+        version: 3.4.9
       zod:
         specifier: 'catalog:'
         version: 4.4.3

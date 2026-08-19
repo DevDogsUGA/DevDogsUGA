@@ -139,7 +139,12 @@ export type EnvMeta = {
    *     same schema, a value deliberately weaker than the deployed one — which
    *     is exactly what one vault project per target already makes possible.
    *     Marking one of these is a claim about a value that has to be minted
-   *     and pushed separately, and nothing in this repository can check it.
+   *     and pushed separately, and nothing at rest can check it — which is
+   *     why DB_URL's claim is enforced live instead: `devtools planner
+   *     create` verifies the freshly minted role, and CI's
+   *     `deploy require-planner` re-runs the same checks before every §3.5
+   *     stage-1 dry run. A fourth key of this shape should ship with the
+   *     same kind of runtime check, because nothing else will catch it.
    *   * **A key that is only ever the narrow one.** `AIRTABLE_PLAN_PAT` holds
    *     a PAT with `schema.bases:read` on the officers' base and nothing else;
    *     there is no wider credential under that name in any target, because

@@ -18,6 +18,7 @@
     "@devdogsuga/airtable": "workspace:*",
     "@devdogsuga/env": "workspace:*",
     "@supabase/supabase-js": "catalog:",
+    "postgres": "catalog:",
     "dotenv": "^17.4.2",
     "zod": "catalog:"
   },
