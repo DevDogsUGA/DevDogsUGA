@@ -7,6 +7,11 @@ Currently a placeholder (`lib/main.dart` → `StudyGroupFinderApp`). The schema 
 reserved by `supabase/migrations/*_study_group_finder_init.sql` and
 exposed in `config.toml`; tables are added as the app is built.
 
+Branded **Dog Pack**, with `dogpack.dev` reserved for its eventual web
+deployment — `STUDY_GROUP_FINDER_URL` / `_CALLBACK` are already declared in
+the env registry and `config.toml`'s auth redirect allowlist, unset until the
+deploy exists. In-app branding is unchanged for now, by decision.
+
 ## Prerequisites
 
 - The [Flutter SDK](https://docs.flutter.dev/get-started/install) on `PATH`

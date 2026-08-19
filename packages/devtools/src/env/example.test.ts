@@ -421,9 +421,13 @@ describe("preflight", () => {
     // `AIRTABLE_PLAN_PAT`'s `tier: "plan"` then moved staging ALONE, 46 → 45:
     // only the two §3.5 plan jobs read it, and neither runs in staging, so
     // the rendered staging file stops asking anyone to fill it in.
+    //
+    // The Dog Pack rebrand (dogpack.dev) then moved staging and production
+    // by two each: STUDY_GROUP_FINDER_URL + _CALLBACK, public redirect
+    // allowlist entries declared ahead of the web deploy that fills them.
     expect(target("preflight").active.size).toBe(3);
-    expect(target("staging").active.size).toBe(45);
-    expect(target("production").active.size).toBe(48);
+    expect(target("staging").active.size).toBe(47);
+    expect(target("production").active.size).toBe(50);
   });
 
   it("says in the file itself why it is short, and that nothing is hand-set", () => {

@@ -572,8 +572,13 @@ describe("preflight, the target no app boots from", () => {
     // `tier: "plan"`, which says "the two §3.5 plan jobs read this and
     // nothing else does" — preflight and production keep it, staging drops
     // the read-only spare nobody there could use.
-    expect(keysRoutedTo("staging").size).toBe(45);
-    expect(keysRoutedTo("production").size).toBe(48);
+    //
+    // Then staging and production moved by two: STUDY_GROUP_FINDER_URL and
+    // its _CALLBACK joined the supabase manifest for the Dog Pack rebrand
+    // (dogpack.dev) — public environment values in the auth redirect
+    // allowlist, declared ahead of the web deployment that will fill them.
+    expect(keysRoutedTo("staging").size).toBe(47);
+    expect(keysRoutedTo("production").size).toBe(50);
     expect(keysRoutedTo("preflight").size).toBe(3);
   });
 });

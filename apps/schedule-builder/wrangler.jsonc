@@ -50,8 +50,19 @@
       "triggers": {
         "crons": [],
       },
-      // TODO: no `routes` yet -- staging is reachable on workers.dev only,
-      // which is fine until somebody needs a stable staging hostname.
+      // Dog Days (the schedule builder's brand) lives on its own zone,
+      // dogdays.dev -- one label deep, so Universal SSL covers it without
+      // Advanced Certificate Manager. The ZONE must exist in the Cloudflare
+      // account before the first deploy with this route; the custom domain
+      // itself is provisioned by the deploy. Change it here and in the
+      // staging SCHEDULE_BUILDER_URL value together; nothing cross-checks
+      // them.
+      "routes": [
+        {
+          "pattern": "staging.dogdays.dev",
+          "custom_domain": true,
+        },
+      ],
     },
 
     "production": {
@@ -87,8 +98,17 @@
       "triggers": {
         "crons": ["5 14 * * *"],
       },
-      // TODO: no `routes` yet -- this worker has never been deployed and has no
-      // hostname assigned. Add the custom domain here, NOT at the top level.
+      // Dog Days production. Unlike the platform's devdogsuga.org there is
+      // no cutover -- this worker has never been deployed and nothing else
+      // holds the hostname -- so the first deploy simply claims it, once the
+      // dogdays.dev zone exists in the account. Keep in step with the
+      // production SCHEDULE_BUILDER_URL value.
+      "routes": [
+        {
+          "pattern": "dogdays.dev",
+          "custom_domain": true,
+        },
+      ],
     },
   },
 }

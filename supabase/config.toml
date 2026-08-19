@@ -72,10 +72,14 @@ site_url = "env(BASE_URL)"
 # `env(...)` is substituted only when it is the ENTIRE value — the CLI matches
 # it anchored — so "env(BASE_URL)/auth/callback" would be passed through
 # verbatim. Each callback URL therefore gets its own variable, composed from
-# BASE_URL / SCHEDULE_BUILDER_URL in the root .env.
+# BASE_URL / SCHEDULE_BUILDER_URL / STUDY_GROUP_FINDER_URL in the root .env.
+# The third (Dog Pack, dogpack.dev) has no web deployment yet: its variable
+# stays unset, which the CLI treats as a WARN and an absent entry, so the
+# allowlist gains the origin the day the value is filled and not before.
 additional_redirect_urls = [
   "env(BASE_URL_CALLBACK)",
   "env(SCHEDULE_BUILDER_URL_CALLBACK)",
+  "env(STUDY_GROUP_FINDER_URL_CALLBACK)",
 ]
 enable_manual_linking = true
 

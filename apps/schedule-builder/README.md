@@ -32,5 +32,7 @@ upserts in `src/lib/sync/`. Schedule generation lives in `src/lib/algorithm/`.
 
 Deploys to Cloudflare Workers via OpenNext like the platform app: `cf:preview`
 locally; CI runs `cf:build:*` / `cf:deploy:*` from
-`.github/workflows/deploy.yaml`. The app has no custom hostname yet — it is
-workers.dev-only until one is decided.
+`.github/workflows/deploy.yaml`. Branded **Dog Days**, on its own zone:
+`dogdays.dev` (production) and `staging.dogdays.dev` (staging), as custom
+domains in `wrangler.jsonc` — keep `SCHEDULE_BUILDER_URL` in step, since
+nothing cross-checks them. In-app branding is unchanged for now, by decision.

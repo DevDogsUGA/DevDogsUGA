@@ -95,10 +95,28 @@ declare({
     SCHEDULE_BUILDER_URL: define(z.url(), {
       doc:
         "The schedule-builder app's public URL, reaching " +
-        "auth.additional_redirect_urls via SCHEDULE_BUILDER_URL_CALLBACK.",
+        "auth.additional_redirect_urls via SCHEDULE_BUILDER_URL_CALLBACK. " +
+        "Branded Dog Days: https://dogdays.dev in production, " +
+        "https://staging.dogdays.dev in staging -- keep in step with the " +
+        "routes in apps/schedule-builder/wrangler.jsonc, which nothing " +
+        "cross-checks.",
       scope: "environment",
       secrecy: "public",
       example: "http://localhost:3001",
+    }),
+    STUDY_GROUP_FINDER_URL: define(z.url().optional(), {
+      doc:
+        "The study-group-finder's public web URL, once it has one -- " +
+        "branded Dog Pack, https://dogpack.dev. No web deployment exists " +
+        "yet (the app is Flutter, validated as a web build only), so this " +
+        "is declared ahead of it: the auth redirect allowlist is deployment " +
+        "configuration, and registering the origin is what makes the first " +
+        "web deploy a value-fill rather than a config change. Optional, and " +
+        "an unset env() in config.toml is a WARN, not an error -- leave it " +
+        "unset until the deploy exists.",
+      scope: "environment",
+      secrecy: "public",
+      commented: true,
     }),
     BASE_URL_CALLBACK: define(z.url(), {
       doc:
@@ -117,6 +135,17 @@ declare({
       scope: "environment",
       secrecy: "public",
       example: "$SCHEDULE_BUILDER_URL/auth/callback",
+    }),
+    STUDY_GROUP_FINDER_URL_CALLBACK: define(z.url().optional(), {
+      doc:
+        "STUDY_GROUP_FINDER_URL plus /auth/callback, in the redirect " +
+        "allowlist for the future Dog Pack web deploy. Same shape as the " +
+        "other *_CALLBACK pair; same reason it is its own variable. Leave " +
+        "unset until the deploy exists.",
+      scope: "environment",
+      secrecy: "public",
+      example: "$STUDY_GROUP_FINDER_URL/auth/callback",
+      commented: true,
     }),
     // The four OAuth providers wired in config.toml's [auth.external.*]
     // blocks.
