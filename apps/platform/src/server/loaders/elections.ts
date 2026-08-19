@@ -112,11 +112,7 @@ export const getPointsElections = cache(
 );
 
 export type VoteBlock =
-  | "not_open"
-  | "not_eligible"
-  | "already_voted"
-  | "no_team"
-  | "not_the_lead";
+  "not_open" | "not_eligible" | "already_voted" | "no_team" | "not_the_lead";
 
 export interface Eligibility {
   canVote: boolean;

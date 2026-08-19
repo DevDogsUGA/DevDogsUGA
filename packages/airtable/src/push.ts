@@ -196,8 +196,7 @@ export function buildUpdate<TRow>(
 
 function project<TRow>(spec: FieldSpec, row: TRow): AirtableValue {
   const fn = spec.project as unknown as
-    | ((row: TRow) => AirtableValue)
-    | undefined;
+    ((row: TRow) => AirtableValue) | undefined;
   return fn ? fn(row) : null;
 }
 

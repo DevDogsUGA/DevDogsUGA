@@ -48,10 +48,7 @@ export interface SyncReport {
   ok: boolean;
   /** Set when the pass did not run at all. */
   skipped?:
-    | "already_running"
-    | "rate_limited"
-    | "not_configured"
-    | "schema_invalid";
+    "already_running" | "rate_limited" | "not_configured" | "schema_invalid";
   retryAfter?: number;
   /** Set with `schema_invalid`: the fatal findings, for the officer console. */
   schemaFindings?: string[];

@@ -19,10 +19,7 @@ import { supabaseAdmin } from "~/supabase/admin";
  */
 
 export type CliProblem =
-  | "no_token"
-  | "invalid_token"
-  | "not_a_member"
-  | "no_environment";
+  "no_token" | "invalid_token" | "not_a_member" | "no_environment";
 
 export class CliAuthError extends Error {
   constructor(

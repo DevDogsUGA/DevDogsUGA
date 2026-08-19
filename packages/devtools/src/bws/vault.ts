@@ -34,10 +34,7 @@ const run = promisify(execFile);
 export const VAULT_ITEM_NAME = "DevDogs Secrets Manager access token (admin)";
 
 export type VaultStatus =
-  | "unavailable"
-  | "unauthenticated"
-  | "locked"
-  | "unlocked";
+  "unavailable" | "unauthenticated" | "locked" | "unlocked";
 
 /** `bw status`, or `unavailable` when the CLI is not installed. */
 export async function vaultStatus(): Promise<VaultStatus> {

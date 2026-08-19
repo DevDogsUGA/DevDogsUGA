@@ -30,14 +30,10 @@ export const SENDER = {
  * invitation that looks sent forever.
  */
 export type SendFailure =
-  | "not_configured"
-  | "suppressed"
-  | "sender_not_verified"
-  | "unknown";
+  "not_configured" | "suppressed" | "sender_not_verified" | "unknown";
 
 export type SendResult =
-  | { ok: true }
-  | { ok: false; reason: SendFailure; message: string };
+  { ok: true } | { ok: false; reason: SendFailure; message: string };
 
 interface EmailBinding {
   send(message: {
@@ -58,8 +54,7 @@ interface EmailBinding {
 type MissingBinding = "outside-worker" | "worker-unbound";
 
 function binding():
-  | { email: EmailBinding }
-  | { email: null; missing: MissingBinding } {
+  { email: EmailBinding } | { email: null; missing: MissingBinding } {
   try {
     const { env } = getCloudflareContext();
     const email = (env as unknown as { EMAIL?: EmailBinding }).EMAIL;

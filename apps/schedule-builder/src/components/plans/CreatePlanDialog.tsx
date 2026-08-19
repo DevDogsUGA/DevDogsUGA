@@ -431,8 +431,7 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                   <Combobox
                     value={
                       (gapDay ?? undefined) as
-                        | keyof typeof gapDayOptions
-                        | undefined
+                        keyof typeof gapDayOptions | undefined
                     }
                     options={gapDayOptions}
                     preserveOrdering

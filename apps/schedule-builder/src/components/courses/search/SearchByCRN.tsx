@@ -45,13 +45,11 @@ export default function SearchByCRN({
   );
 
   useEffect(() => {
-    if (
-      !(
-        defaultValue &&
-        "crn" in defaultValue &&
-        crnsQuery.data?.includes(Number(defaultValue.crn))
-      )
-    )
+    if (!(
+      defaultValue &&
+      "crn" in defaultValue &&
+      crnsQuery.data?.includes(Number(defaultValue.crn))
+    ))
       return;
     onInput?.({});
     onChange?.(null);

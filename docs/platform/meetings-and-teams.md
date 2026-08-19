@@ -596,9 +596,7 @@ export const TeamInvite = {
     chunks: ["<!doctype html>…Hi ", ", ", " invited you…", "…"],
     slots: ["inviteeName", "teamName", "acceptUrl"],
   },
-  text: {
-    /* … */
-  },
+  text: {/* … */},
 };
 ```
 

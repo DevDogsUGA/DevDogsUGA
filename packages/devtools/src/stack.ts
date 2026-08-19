@@ -13,9 +13,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export type Target =
-  | { kind: "local" }
-  | { kind: "remote" }
-  | { kind: "team"; slug: string };
+  { kind: "local" } | { kind: "remote" } | { kind: "team"; slug: string };
 
 export const STACK_COMMANDS = ["link", "push", "reset", "status"] as const;
 export type StackCommand = (typeof STACK_COMMANDS)[number];

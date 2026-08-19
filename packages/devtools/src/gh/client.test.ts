@@ -155,7 +155,12 @@ describe("the list calls", () => {
     // A repository read that quietly became an environment read would see the
     // managed copies and report the shadowing hazard as clean forever.
     await listRepositoryVariables();
-    expect(lastExec().args).toEqual(["variable", "list", "--json", "name,updatedAt"]);
+    expect(lastExec().args).toEqual([
+      "variable",
+      "list",
+      "--json",
+      "name,updatedAt",
+    ]);
     expect(lastExec().args).not.toContain("--env");
   });
 

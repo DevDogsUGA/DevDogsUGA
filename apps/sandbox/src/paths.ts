@@ -8,12 +8,7 @@
  */
 
 export type PathClass =
-  | "rest"
-  | "auth"
-  | "storage"
-  | "realtime"
-  | "functions"
-  | "unknown";
+  "rest" | "auth" | "storage" | "realtime" | "functions" | "unknown";
 
 const PREFIXES: [string, PathClass][] = [
   ["/rest/v1/", "rest"],

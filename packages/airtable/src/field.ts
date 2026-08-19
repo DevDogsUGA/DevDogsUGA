@@ -43,12 +43,7 @@ export type MergeEligibleType =
   | "multipleSelects";
 
 export type AirtableValue =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | string[];
+  string | number | boolean | null | undefined | string[];
 
 export type Direction = "push" | "pull" | "ignore" | "status";
 

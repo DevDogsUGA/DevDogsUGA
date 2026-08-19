@@ -50,8 +50,7 @@ export type TeamProblemCode = TeamActionCode | "unknown";
  * correctly in development and is gone once deployed.
  */
 export type TeamActionOutcome<T> =
-  | { ok: true; value: T }
-  | { ok: false; code: TeamProblemCode };
+  { ok: true; value: T } | { ok: false; code: TeamProblemCode };
 
 export class TeamActionError extends Error {
   readonly code: TeamActionCode;

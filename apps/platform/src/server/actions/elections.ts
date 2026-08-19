@@ -20,8 +20,7 @@ import { getBallotOptions, getEligibility } from "~/server/loaders/elections";
  */
 
 export type CastBallotResult =
-  | { ok: true }
-  | { ok: false; error: CastBallotError };
+  { ok: true } | { ok: false; error: CastBallotError };
 
 export type CastBallotError =
   | "not_open"

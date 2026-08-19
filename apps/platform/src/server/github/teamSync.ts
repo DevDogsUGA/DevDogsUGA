@@ -38,10 +38,7 @@ const repo = () => env.GITHUB_COMPETITION_REPO;
 
 /** Why a GitHub operation did not happen, in terms a caller can act on. */
 export type GithubSkip =
-  | "not_linked"
-  | "already_exists"
-  | "not_found"
-  | "api_error";
+  "not_linked" | "already_exists" | "not_found" | "api_error";
 
 export interface GithubResult {
   ok: boolean;

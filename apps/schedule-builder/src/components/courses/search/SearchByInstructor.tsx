@@ -73,9 +73,11 @@ export default function SearchByInstructor({
   );
 
   useEffect(() => {
-    if (
-      !(defaultValue && "instructor" in defaultValue && instructorsQuery.data)
-    )
+    if (!(
+      defaultValue &&
+      "instructor" in defaultValue &&
+      instructorsQuery.data
+    ))
       return;
     if (!instructorsQuery.data.includes(defaultValue.instructor)) {
       onInput?.({});

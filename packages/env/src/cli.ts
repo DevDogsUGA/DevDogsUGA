@@ -61,7 +61,7 @@ import {
 // Walk up for the workspace marker rather than assuming a fixed depth, so the
 // helper keeps working if this package is ever moved.
 function findRoot(from: string): string {
-  for (let dir = from; ; ) {
+  for (let dir = from; ;) {
     if (existsSync(join(dir, "pnpm-workspace.yaml"))) return dir;
     const parent = dirname(dir);
     if (parent === dir) {

@@ -29,7 +29,7 @@
   "devDependencies": {
     "@devdogsuga/env": "workspace:*",
     "@types/node": "catalog:",
-    "prettier": "3.8.4",
+    "prettier": "3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "supabase": "catalog:",
     "tsx": "catalog:",

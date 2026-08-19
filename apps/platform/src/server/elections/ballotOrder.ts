@@ -86,10 +86,7 @@ export function presentedOrder<T extends Orderable>(
 }
 
 export type BallotProblem =
-  | "incomplete"
-  | "duplicate"
-  | "unknown_team"
-  | "untouched";
+  "incomplete" | "duplicate" | "unknown_team" | "untouched";
 
 /**
  * Whether a submitted ranking is a ballot at all.

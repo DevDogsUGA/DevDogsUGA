@@ -82,14 +82,12 @@ export default async function BallotPage({
       ) : eligibility.canVote ? (
         <BallotForm
           electionId={election.id}
-          options={ordered.map(
-            (option): BallotOptionView => ({
-              teamId: option.teamId,
-              teamName: option.teamName,
-              submissionUrl: option.submissionUrl,
-              isOwnTeam: option.teamId === eligibility.teamId,
-            }),
-          )}
+          options={ordered.map((option): BallotOptionView => ({
+            teamId: option.teamId,
+            teamName: option.teamName,
+            submissionUrl: option.submissionUrl,
+            isOwnTeam: option.teamId === eligibility.teamId,
+          }))}
           castBallot={castBallot}
         />
       ) : (
