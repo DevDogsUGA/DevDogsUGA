@@ -54,7 +54,11 @@ vi.mock("../ui.js", async (importOriginal) => ({
 
 import { CHECK_IDENTITY, CHECK_MIGRATIONS, CHECK_OVERREACH } from "./checks.js";
 import type { PlannerDb } from "./db.js";
-import { runPlannerCreate, runPlannerResetPassword } from "./commands.js";
+import {
+  runPlannerCreate,
+  runPlannerDrop,
+  runPlannerResetPassword,
+} from "./commands.js";
 
 const ADMIN_URL =
   "postgresql://postgres.ref:admin-secret@pooler.example.com:5432/postgres";
@@ -198,6 +202,60 @@ describe("planner create", () => {
     await expect(
       runPlannerCreate({ connect: harness.connect }),
     ).rejects.toThrow(/env pull --target production|--db-url/);
+  });
+});
+
+describe("planner drop", () => {
+  const PLANNER_URL =
+    "postgresql://migration_planner.ref:pw@pooler.example.com:5432/postgres";
+
+  it("revokes before dropping, in one transaction, and blanks the dead DB_URL", async () => {
+    // DROP ROLE alone fails on a role that still holds grants — and a role
+    // being dropped for the WRONG shape is exactly the one whose grants
+    // this command cannot enumerate, so DROP OWNED goes first.
+    files.map.set(".env.preflight", `DB_URL="${PLANNER_URL}"\n`);
+    const harness = fake(true);
+    await runPlannerDrop({ connect: harness.connect });
+
+    expect(harness.statements).toEqual([
+      "begin",
+      "drop owned by migration_planner",
+      "drop role migration_planner",
+      "commit",
+    ]);
+    // The stored credential died with the role; left in place it would push
+    // cleanly and audit green.
+    expect(preflightWrite()).toMatch(/DB_URL=""/);
+  });
+
+  it("leaves a DB_URL that is not the planner's alone", async () => {
+    // A hand-set URL under this key is somebody's deliberate state, whatever
+    // it is — blanking it would destroy information the drop knows nothing
+    // about.
+    files.map.set(
+      ".env.preflight",
+      'DB_URL="postgresql://postgres.ref:pw@host:5432/postgres"\n',
+    );
+    const harness = fake(true);
+    await runPlannerDrop({ connect: harness.connect });
+    expect(files.written.size).toBe(0);
+  });
+
+  it("refuses when the role does not exist", async () => {
+    const harness = fake(false);
+    await expect(runPlannerDrop({ connect: harness.connect })).rejects.toThrow(
+      /nothing to drop/,
+    );
+    expect(harness.statements).toEqual([]);
+  });
+
+  it("stops at the confirm — this kills the live preflight credential", async () => {
+    prompts.confirmed = false;
+    const harness = fake(true);
+    await expect(runPlannerDrop({ connect: harness.connect })).rejects.toThrow(
+      /bail/,
+    );
+    expect(harness.urls).toEqual([]);
   });
 });
 

@@ -67,6 +67,7 @@ import { runRequirePlanner } from "./deploy/require-planner.js";
 import { runRequireToken } from "./deploy/require-token.js";
 import {
   runPlannerCreate,
+  runPlannerDrop,
   runPlannerResetPassword,
   runPlannerStatus,
 } from "./planner/commands.js";
@@ -129,6 +130,10 @@ Planner subcommands. All need a privileged production connection —
                                   retrieve: the server holds a hash, and the
                                   URL's home is .env.preflight / Bitwarden
                                   (env pull --target preflight)
+  planner drop                    remove the role (grants revoked first, one
+                                  transaction) and blank the dead DB_URL in
+                                  .env.preflight — the recovery path for a
+                                  shape create refuses to repair
 
 Airtable subcommands:
   airtable scaffold [--dry-run]   Create what the registry declares
@@ -945,7 +950,7 @@ async function runDeployCommand(rest: string[]): Promise<void> {
 }
 
 /**
- * `planner <status|create|reset-password> [--db-url <url>]`
+ * `planner <status|create|reset-password|drop> [--db-url <url>]`
  *
  * Operator-side lifecycle of the `migration_planner` role — see
  * `planner/commands.ts` for the commands themselves and for why there is no
@@ -969,11 +974,15 @@ async function runPlannerCommand(rest: string[]): Promise<void> {
     await runPlannerResetPassword(options);
     return;
   }
+  if (sub === "drop") {
+    await runPlannerDrop(options);
+    return;
+  }
 
   log.error(
     sub
-      ? `devtools planner: unknown subcommand "${sub}". Try status, create or reset-password.`
-      : "devtools planner: which of status, create, reset-password?",
+      ? `devtools planner: unknown subcommand "${sub}". Try status, create, reset-password or drop.`
+      : "devtools planner: which of status, create, reset-password, drop?",
   );
   process.exitCode = 1;
 }

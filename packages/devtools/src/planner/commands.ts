@@ -1,8 +1,8 @@
 /**
- * `pnpm devtools planner <status|create|reset-password>` — the operator side
- * of the `migration_planner` role.
+ * `pnpm devtools planner <status|create|reset-password|drop>` — the operator
+ * side of the `migration_planner` role.
  *
- * Three commands because the role has exactly three lifecycle moments:
+ * Four commands because the role has exactly four lifecycle moments:
  *
  *   status          does it exist, can it log in, does it hold the two
  *                   validated grants and nothing that reaches further
@@ -10,6 +10,9 @@
  *                   live, written into .env.preflight
  *   reset-password  new password on the existing role, same verification,
  *                   same write
+ *   drop            remove it — the recovery path for a role in a shape
+ *                   create refuses to repair, and the retirement path if
+ *                   the tier is ever redesigned
  *
  * There is no `retrieve`. A Postgres password is not retrievable — the server
  * holds a hash — and the composed DB_URL's home is `.env.preflight`, synced
@@ -189,7 +192,7 @@ export async function runPlannerStatus(
         "⚠️ the supabase_migrations schema DOES NOT EXIST on this database " +
           "— the grants below cannot hold and the dry run cannot plan. " +
           "Initialize the migration history, then `planner reset-password` " +
-          "will re-verify (or drop the role and re-run `planner create`).",
+          "will re-verify (or `planner drop` and re-run `planner create`).",
       );
     }
 
@@ -219,7 +222,7 @@ export async function runPlannerStatus(
     lines.push(
       overreach.length === 0
         ? "no usage on any application schema (platform, schedule_builder, study_group_finder, auth, storage)"
-        : `⚠️ CAN REACH: ${overreach.map((s) => String(s.nspname)).join(", ")} — drop and re-create the role`,
+        : `⚠️ CAN REACH: ${overreach.map((s) => String(s.nspname)).join(", ")} — \`planner drop\`, then \`planner create\``,
     );
 
     const healthy = !lines.some((l) => l.includes("⚠️"));
@@ -227,8 +230,9 @@ export async function runPlannerStatus(
     if (!healthy) {
       log.error(
         "The role does not match the validated shape. `planner create` " +
-          "refuses to touch an existing role — drop it and re-run create, " +
-          "or repair the grants by hand (planner/role.ts holds the pair).",
+          "refuses to touch an existing role — `planner drop` and re-run " +
+          "create, or repair the grants by hand (planner/role.ts holds the " +
+          "pair).",
       );
       process.exitCode = 1;
     }
@@ -301,8 +305,7 @@ export async function runPlannerCreate(
       bail(
         `${PLANNER_ROLE} already exists. Run \`planner status\` to check its ` +
           "shape, `planner reset-password` to rotate it — or, for a " +
-          `from-scratch mint, \`drop role ${PLANNER_ROLE};\` and re-run ` +
-          "create.",
+          "from-scratch mint, `planner drop` and re-run create.",
       );
     }
     const password = generatePassword();
@@ -322,6 +325,68 @@ export async function runPlannerCreate(
     log.success(`Created ${PLANNER_ROLE} with the two validated grants.`);
     await verifyAndStore(connect, admin, password);
   });
+}
+
+export async function runPlannerDrop(
+  options: PlannerOptions = {},
+): Promise<void> {
+  const connect = options.connect ?? connectDb;
+  const admin = await adminUrl(options);
+
+  const go = unwrap(
+    await confirm({
+      message:
+        `Drop role ${PLANNER_ROLE} from the PRODUCTION database? The ` +
+        "preflight credential stops working the moment this runs.",
+      initialValue: false,
+    }),
+  );
+  if (!go) bail();
+
+  await withDb(connect, admin, async (db) => {
+    if (!(await roleExists(db))) {
+      bail(`${PLANNER_ROLE} does not exist — nothing to drop.`);
+    }
+    // DROP OWNED first, in the same transaction: DROP ROLE alone fails on a
+    // role that still holds grants ("some objects depend on it"), and a role
+    // being dropped for the WRONG shape — stranded grants, an overreaching
+    // grant somebody added by hand — is exactly the one whose grants this
+    // command cannot enumerate. The role owns no objects by design, so DROP
+    // OWNED only revokes; if somebody ever made it own something, dropping
+    // that too is what "drop" has to mean for a from-scratch re-mint.
+    await db.run("begin");
+    try {
+      await db.run(`drop owned by ${PLANNER_ROLE}`);
+      await db.run(`drop role ${PLANNER_ROLE}`);
+      await db.run("commit");
+    } catch (error) {
+      await db.run("rollback").catch(() => undefined);
+      throw error;
+    }
+    log.success(`Dropped ${PLANNER_ROLE}.`);
+  });
+
+  // The stored credential died with the role; a dead value left in place
+  // would push cleanly and audit green, which is this feature's least
+  // favorite shape. Blanked, not deleted — a blank line is the file's
+  // "fill me in" convention — and only when the value is actually the
+  // planner's: a hand-set URL under this key is somebody's deliberate state.
+  const path = preflightPath();
+  let doc: EnvDocument;
+  try {
+    doc = EnvDocument.parse(await readFile(path, "utf8"));
+  } catch {
+    return;
+  }
+  const stored = doc.get("DB_URL");
+  if (stored && stored.includes(PLANNER_ROLE)) {
+    doc.set("DB_URL", "");
+    await writeFile(path, doc.toString());
+    log.info(
+      `Blanked the dead DB_URL in ${fileFor("preflight")}. After the next ` +
+        "`planner create`, push it with `env push --target preflight`.",
+    );
+  }
 }
 
 export async function runPlannerResetPassword(
