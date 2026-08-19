@@ -219,6 +219,11 @@ describe("planner drop", () => {
 
     expect(harness.statements).toEqual([
       "begin",
+      // Membership first: Supabase's postgres is CREATEROLE, not superuser,
+      // and DROP OWNED requires being a MEMBER of the role — creating it is
+      // not enough, which the first real run proved with a permission
+      // denial.
+      "grant migration_planner to current_user",
       "drop owned by migration_planner",
       "drop role migration_planner",
       "commit",
@@ -247,6 +252,36 @@ describe("planner drop", () => {
       /nothing to drop/,
     );
     expect(harness.statements).toEqual([]);
+  });
+
+  it("diagnoses a permission denial instead of dumping it, and rolls back", async () => {
+    // The failure a non-postgres admin connection produces. The raw error
+    // says "permission denied" and nothing about role membership; the bail
+    // has to say whose connection string fixes it.
+    const statements: string[] = [];
+    const denied = Object.assign(
+      new Error(`permission denied to drop objects belonging to role "x"`),
+      { code: "42501" },
+    );
+    const connect = () => ({
+      async run(query: string) {
+        if (query.includes("from pg_roles where")) {
+          return [{ rolcanlogin: true }];
+        }
+        statements.push(query);
+        if (query.startsWith("drop owned")) throw denied;
+        return [];
+      },
+      async end() {},
+    });
+
+    await expect(runPlannerDrop({ connect })).rejects.toThrow(
+      /postgres.*connection string|dashboard/i,
+    );
+    // The transaction was rolled back, so the self-grant did not survive.
+    expect(statements.at(-1)).toBe("rollback");
+    // And nothing touched the preflight file on the failure path.
+    expect(files.written.size).toBe(0);
   });
 
   it("stops at the confirm — this kills the live preflight credential", async () => {

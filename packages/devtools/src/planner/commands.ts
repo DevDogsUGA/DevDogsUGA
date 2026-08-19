@@ -149,6 +149,16 @@ async function migrationSchemaExists(db: PlannerDb): Promise<boolean> {
   return (await db.run(QUERY_SCHEMA)).length > 0;
 }
 
+/** Postgres 42501 (insufficient_privilege), with a text fallback. */
+function isPermissionDenied(error: unknown): boolean {
+  const e = error as { code?: string; message?: string };
+  return e.code === "42501" || /permission denied/i.test(e.message ?? "");
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function bailMissingSchema(): never {
   bail(
     "The supabase_migrations schema does not exist on this database, so " +
@@ -347,20 +357,43 @@ export async function runPlannerDrop(
     if (!(await roleExists(db))) {
       bail(`${PLANNER_ROLE} does not exist — nothing to drop.`);
     }
-    // DROP OWNED first, in the same transaction: DROP ROLE alone fails on a
-    // role that still holds grants ("some objects depend on it"), and a role
-    // being dropped for the WRONG shape — stranded grants, an overreaching
-    // grant somebody added by hand — is exactly the one whose grants this
-    // command cannot enumerate. The role owns no objects by design, so DROP
-    // OWNED only revokes; if somebody ever made it own something, dropping
-    // that too is what "drop" has to mean for a from-scratch re-mint.
+    // Three statements, one transaction, and the order is load-bearing twice:
+    //
+    //   * DROP OWNED before DROP ROLE — DROP ROLE alone fails on a role that
+    //     still holds grants ("some objects depend on it"), and a role being
+    //     dropped for the WRONG shape — stranded grants, an overreaching
+    //     grant somebody added by hand — is exactly the one whose grants
+    //     this command cannot enumerate. The role owns no objects by design,
+    //     so DROP OWNED only revokes; if somebody ever made it own
+    //     something, dropping that too is what "drop" has to mean for a
+    //     from-scratch re-mint.
+    //   * GRANT before DROP OWNED — Supabase's `postgres` is CREATEROLE, not
+    //     superuser, and DROP OWNED requires MEMBERSHIP in the role: having
+    //     created it (which confers ADMIN on the role, and the right to
+    //     drop it) is not enough, and the first real run failed here with
+    //     "permission denied". Granting the role to ourselves is what a
+    //     non-superuser admin has to do, it is idempotent (a re-grant is a
+    //     NOTICE), and the membership vanishes with the role two statements
+    //     later — or with the rollback.
     await db.run("begin");
     try {
+      await db.run(`grant ${PLANNER_ROLE} to current_user`);
       await db.run(`drop owned by ${PLANNER_ROLE}`);
       await db.run(`drop role ${PLANNER_ROLE}`);
       await db.run("commit");
     } catch (error) {
       await db.run("rollback").catch(() => undefined);
+      if (isPermissionDenied(error)) {
+        bail(
+          `Postgres refused: ${errorText(error)}. Dropping ${PLANNER_ROLE} ` +
+            "needs a connection that can administer it — on Supabase that " +
+            "is the `postgres` user's own connection string (what " +
+            "`.env.production`'s DB_URL should hold), not a lesser role. " +
+            "If postgres itself is refused, the role was created by " +
+            "somebody else's admin role; drop it from the dashboard's SQL " +
+            "editor, which runs as postgres.",
+        );
+      }
       throw error;
     }
     log.success(`Dropped ${PLANNER_ROLE}.`);
