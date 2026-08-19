@@ -42,6 +42,7 @@ import {
   narrowedKeys,
   neverSecretKeys,
   neverStoreKeys,
+  planOnlyKeys,
   storableKeys,
   variableKeys,
   variables,
@@ -132,6 +133,15 @@ export function ignoredFor(target: VaultTarget): Set<string> {
   for (const key of mintedKeys()) skip.add(key);
   if (target !== "production") {
     for (const key of applyOnlyKeys()) skip.add(key);
+  }
+  // Plan-tier keys are read by exactly two jobs: `main-plan` (preflight) and
+  // `production-plan` (production). Everywhere else — staging today — a copy
+  // is a credential nothing reads, so it is skipped the same way the
+  // apply-tier pair is. Preflight is NOT excluded here: the narrowed-only
+  // branch below already decides that target key by key, and a plan-tier key
+  // reaches it through its `narrowed` opt-in.
+  if (target !== "production" && !holdsOnlyNarrowedKeys(target)) {
+    for (const key of planOnlyKeys()) skip.add(key);
   }
   if (holdsOnlyNarrowedKeys(target)) {
     const narrow = new Set<string>(narrowedKeys());

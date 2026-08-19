@@ -67,10 +67,13 @@ declare({
     // variant for preflight. See `EnvMeta.narrowed` for both shapes and for
     // what marking a key wrongly costs.
     //
-    // Plan tier, deliberately: it reaches `preflight` (where `main-plan`
-    // runs) and `production` (where `production-plan` runs). `tier: "apply"`
-    // would send it to production-apply ALONE, which is the one environment
-    // the plan never runs in.
+    // `tier: "plan"`, deliberately: it reaches `preflight` (where `main-plan`
+    // runs, via the `narrowed` opt-in) and `production` (where
+    // `production-plan` runs) and nothing else. The default tier used to send
+    // it to staging as well, where no job reads it — a read-only spare to
+    // rotate, not a privilege, but a spare with no purpose. `tier: "apply"`
+    // would be wrong in the other direction: production-apply ALONE, the one
+    // environment the plan never runs in.
     AIRTABLE_PLAN_PAT: define(z.string().min(1).optional(), {
       doc:
         "Read-only Airtable token for the schema dry run: `schema.bases:read` " +
@@ -81,6 +84,7 @@ declare({
         "which is why it must stay unable to read a single record.",
       scope: "environment",
       secrecy: "secret",
+      tier: "plan",
       narrowed: true,
       commented: true,
     }),

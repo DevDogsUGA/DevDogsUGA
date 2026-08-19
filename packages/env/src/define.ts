@@ -280,6 +280,20 @@ export function applyOnlyKeys(): string[] {
   return keysWhere((e) => e.meta.tier === "apply");
 }
 
+/**
+ * Deployed secrets only the §3.5 plan jobs read: routed to `preflight` (via
+ * their `narrowed` opt-in) and `production`, and EXCLUDED from `staging`,
+ * where nothing reads them and a copy is one more credential to rotate.
+ *
+ * `keysWhere()`'s `some` is the right direction here for the same reason as
+ * `applyOnlyKeys()`: one declaration calling a key plan-only excludes it from
+ * an environment, and over-excluding fails closed (a starved job names the
+ * missing key) where under-excluding parks an unread credential in staging.
+ */
+export function planOnlyKeys(): string[] {
+  return keysWhere((e) => e.meta.tier === "plan");
+}
+
 /** Variables supplied by a running local Supabase stack. */
 export function localStackKeys(): string[] {
   return keysWhere((e) => e.meta.localStack === true);

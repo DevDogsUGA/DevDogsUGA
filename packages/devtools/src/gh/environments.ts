@@ -25,11 +25,11 @@
  * additionally hold, because holding more there buys no privilege: it is the
  * same Bitwarden project, and `production-apply` is the strictly MORE trusted
  * of the two. Withholding ordinary keys from it broke every job that runs
- * there — the config push wanted plan-tier OAuth secrets, the Airtable apply
- * wanted a public base id, the orphan prune wanted a plan-tier API token — so
+ * there — the config push wanted deploy-tier OAuth secrets, the Airtable apply
+ * wanted a public base id, the orphan prune wanted a deploy-tier API token — so
  * `production-apply` now receives a SUPERSET of `production`.
  */
-import { applyOnlyKeys } from "@devdogsuga/env";
+import { applyOnlyKeys, planOnlyKeys } from "@devdogsuga/env";
 import { assertRegistryLoaded } from "../env/discovery.js";
 
 export const GITHUB_ENVIRONMENTS = [
@@ -96,6 +96,16 @@ function applyOnly(): readonly string[] {
   return applyOnlyKeys();
 }
 
+/**
+ * The plan-tier set, same shape and same load-time caveat as `applyOnly()`.
+ * Read by `main-plan` (preflight) and `production-plan` (production); a copy
+ * anywhere else is a credential nothing reads, so `staging` excludes it.
+ */
+function planOnly(): readonly string[] {
+  assertRegistryLoaded();
+  return planOnlyKeys();
+}
+
 export const GITHUB_ENVIRONMENT_SPECS: Record<
   GithubEnvironment,
   GithubEnvironmentSpec
@@ -111,8 +121,9 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
     bwsProject: "devdogs-staging",
     branch: "main",
     onlyKeys: null,
+    // Both narrow tiers: no staging job plans, and none may apply.
     get excludeKeys() {
-      return applyOnly();
+      return [...applyOnly(), ...planOnly()];
     },
     guarded: false,
   },
@@ -139,7 +150,7 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
   // required reviewers — the more trusted half of the split — so withholding a
   // key from it protects nothing and only starves the jobs that run here
   // (`production-config`, `production-airtable`, `prune-orphans`, all of which
-  // needed a plan-tier secret or a public variable and got neither). The gate
+  // needed a deploy-tier secret or a public variable and got neither). The gate
   // is what `production` may NOT have, one row above.
   "production-apply": {
     bwsProject: "devdogs-production",

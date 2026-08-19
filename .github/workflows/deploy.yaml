@@ -402,7 +402,7 @@ jobs:
   # and that placement follows the tiering rather than working around it:
   # apply-tier is for credentials that can reshape production AND HAVE NO DRY
   # RUN. Migrations have one — it ran seconds ago, in the job this needs — so
-  # the Postgres credential is plan-tier and lives here. The gate in front of
+  # the Postgres credential is deploy-tier and lives here. The gate in front of
   # it is the promotion PR (maintainers only, two approvals).
   #
   # `--db-url` rather than `--linked`: linking needs a Supabase access token,
@@ -459,7 +459,7 @@ jobs:
       # blast radius change in the repository (`site_url` and every sign-in
       # route) arriving through the step with no dry run.
       #
-      # Those secrets are plan-tier, and `production-apply` receives them
+      # Those secrets are deploy-tier, and `production-apply` receives them
       # because it receives everything `production` does plus the apply-tier
       # pair. That is not the gate leaking: the gate is what the UNREVIEWED
       # `production` may not hold, and this environment is the reviewed half of
@@ -656,9 +656,9 @@ jobs:
   # It skips the deploy entirely: a dispatch that ticked this box is a
   # maintenance run, not a release.
   #
-  # `CLOUDFLARE_API_TOKEN` is plan-tier, and it reaches this environment
+  # `CLOUDFLARE_API_TOKEN` is deploy-tier, and it reaches this environment
   # because `production-apply` receives everything `production` does plus the
-  # apply-tier pair. The token being plan-tier is right — pruning has a dry run,
+  # apply-tier pair. The token being deploy-tier is right — pruning has a dry run,
   # `deploy orphans` without `--prune`, and it is the job above — so what puts a
   # human in front of the deletion is this environment's reviewers rather than
   # the tier. Until 2026-08-17 the routing withheld it and this job could not

@@ -144,11 +144,11 @@ describe("pushToGithub", () => {
       expect(secretsTo("production")).toEqual(["DISCORD_TOKEN"]);
     });
 
-    it("gives production-apply a SUPERSET: plan secrets, public variables, and the apply pair", async () => {
+    it("gives production-apply a SUPERSET: ordinary secrets, public variables, and the apply pair", async () => {
       // The three jobs that run in `production-apply` and were starved by the
-      // old rule, one key each: `production-config` wanted a plan-tier OAuth
+      // old rule, one key each: `production-config` wanted a deploy-tier OAuth
       // secret, `production-airtable` wanted a public variable, `prune-orphans`
-      // wanted a plan-tier API token. Three out of three is a broken rule
+      // wanted a deploy-tier API token. Three out of three is a broken rule
       // rather than three misconfigured jobs.
       await pushToGithub(
         "production",

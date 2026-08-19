@@ -155,8 +155,14 @@ is exactly where it ends up.
 | ------------------ | -------------------- | ---------------------------- | ------------ |
 | `preflight`        | `devdogs-preflight`  | everything in the project    | `main`       |
 | `staging`          | `devdogs-staging`    | everything in the project    | `main`       |
-| `production`       | `devdogs-production` | everything EXCEPT apply-only | `production` |
-| `production-apply` | `devdogs-production` | ONLY the apply-only keys     | `production` |
+| `production`       | `devdogs-production` | everything EXCEPT apply-tier | `production` |
+| `production-apply` | `devdogs-production` | everything, apply-tier too   | `production` |
+
+Which keys a project holds is the tier's decision, named after the jobs that
+read each key (`EnvTier` in `packages/env/src/meta.ts`): `deploy` (the
+default) reaches staging and production; `plan` reaches preflight and
+production only — `AIRTABLE_PLAN_PAT` is read by the two §3.5 plan jobs and
+nothing in staging; `apply` reaches `production-apply` alone.
 
 Four GitHub environments, three Bitwarden projects. The last two split one
 project, and **that split is the reviewer gate**: `production` deploys on a push
@@ -164,8 +170,9 @@ with nothing in front of it, `production-apply` has required reviewers. A
 write-capable credential reaching the first would make the second decorative.
 
 So `env push --target production` writes **two** GitHub environments in one
-run, routing each key to exactly one of them, and confirms them separately —
-agreeing to update production's ordinary secrets is not agreeing to touch the
+run — `production-apply` receives a superset of `production`, since it is the
+more trusted half of the same project — and confirms them separately: agreeing
+to update production's ordinary secrets is not agreeing to touch the
 credentials behind the reviewers. The routing is derived from the table above
 rather than written down twice.
 

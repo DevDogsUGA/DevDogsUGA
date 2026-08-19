@@ -6,6 +6,7 @@ import {
   mintedKeys,
   narrowedKeys,
   neverStoreKeys,
+  planOnlyKeys,
   storableKeys,
   variableKeys,
   variables,
@@ -208,8 +209,10 @@ describe("registry completeness", () => {
     expect(neverStoreKeys()).toContain("AIRTABLE_PAT");
     // apply-tier: production-apply alone, behind required reviewers.
     expect(applyOnlyKeys()).toContain("AIRTABLE_APPLY_PAT");
-    // narrowed plan-tier: reaches preflight, where the `main` dry run runs.
+    // narrowed AND plan-tier: reaches preflight (where the `main` dry run
+    // runs) and production (where `production-plan` runs), nothing else.
     expect(narrowedKeys()).toContain("AIRTABLE_PLAN_PAT");
+    expect(planOnlyKeys()).toContain("AIRTABLE_PLAN_PAT");
     expect(applyOnlyKeys()).not.toContain("AIRTABLE_PLAN_PAT");
     expect(neverStoreKeys()).not.toContain("AIRTABLE_PLAN_PAT");
   });

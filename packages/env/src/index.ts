@@ -7,6 +7,7 @@ export {
   resetRegistry,
   storableKeys,
   applyOnlyKeys,
+  planOnlyKeys,
   localStackKeys,
   mintedKeys,
   narrowedKeys,

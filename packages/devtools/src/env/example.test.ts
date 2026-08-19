@@ -123,12 +123,13 @@ function mentioned(file: Parsed): Set<string> {
  * The keys a push for `target` routes, recomputed from the metadata.
  *
  * Deliberately NOT `keysRoutedTo()`: this is the claim that function is
- * supposed to satisfy, written out from the three rules that decide it —
+ * supposed to satisfy, written out from the four rules that decide it —
  * "`scope: environment`, storable somewhere, not minted", "apply-tier is
- * production's alone", and "a target no app boots from carries only what opted
- * in". The third is spelled out from `deployEnv` and `meta.narrowed` here, not
- * read from `holdsOnlyNarrowedKeys()` / `narrowedKeys()`, so that a renderer
- * and a selector agreeing on a shared mistake still fails.
+ * production's alone", "plan-tier belongs to the targets whose plan jobs run
+ * (preflight and production)", and "a target no app boots from carries only
+ * what opted in". The last is spelled out from `deployEnv` and `meta.narrowed`
+ * here, not read from `holdsOnlyNarrowedKeys()` / `narrowedKeys()`, so that a
+ * renderer and a selector agreeing on a shared mistake still fails.
  */
 function routedByHand(name: VaultTarget): Set<string> {
   const narrowTarget = !TARGETS[name].deployEnv;
@@ -141,12 +142,18 @@ function routedByHand(name: VaultTarget): Set<string> {
         e.meta.minted !== true,
     );
     const applyOnly = entries.some((e) => e.meta.tier === "apply");
+    const planOnly = entries.some((e) => e.meta.tier === "plan");
     // Opting in takes EVERY declaration, matching `narrowedKeys()`: this is an
     // exemption from an exclusion, and an exemption one of two declarations
     // grants is an exemption granted by accident.
     const narrowed = entries.every((e) => e.meta.narrowed === true);
     if (narrowTarget && !narrowed) continue;
-    if (storedSomewhere && (name === "production" || !applyOnly)) keys.add(key);
+    if (!storedSomewhere) continue;
+    if (applyOnly && name !== "production") continue;
+    // Plan-tier: production keeps it (production-plan), the narrow target
+    // takes it through its own opt-in above, staging has no job that reads it.
+    if (planOnly && name !== "production" && !narrowTarget) continue;
+    keys.add(key);
   }
   return keys;
 }
@@ -406,14 +413,18 @@ describe("preflight", () => {
     // ran for every target would empty all three files identically — which
     // reads exactly like a working narrow.
     // 1/45/47 before `AIRTABLE_PLAN_PAT` was declared. It is narrowed, so it
-    // joins preflight; it is plan-tier, so it also routes wherever an ordinary
-    // deployed secret does. One key, three counts, each up by exactly one.
+    // joins preflight; back then it also routed wherever an ordinary deployed
+    // secret does. One key, three counts, each up by exactly one.
     //
     // `AIRTABLE_BASE_ID`'s `narrowed` (2026-08-17) moved preflight ALONE, 2 →
     // 3: it was already routed to the deployed targets, being an ordinary
     // public environment variable, so the marker added a target and not a key.
+    //
+    // `AIRTABLE_PLAN_PAT`'s `tier: "plan"` then moved staging ALONE, 46 → 45:
+    // only the two §3.5 plan jobs read it, and neither runs in staging, so
+    // the rendered staging file stops asking anyone to fill it in.
     expect(target("preflight").active.size).toBe(3);
-    expect(target("staging").active.size).toBe(46);
+    expect(target("staging").active.size).toBe(45);
     expect(target("production").active.size).toBe(48);
   });
 

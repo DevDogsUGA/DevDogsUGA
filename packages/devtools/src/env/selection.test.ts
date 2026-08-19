@@ -507,6 +507,19 @@ describe("preflight, the target no app boots from", () => {
     expect(keysRoutedTo("production").has("AIRTABLE_PLAN_PAT")).toBe(true);
   });
 
+  it("keeps the plan PAT out of staging, where no job reads it", () => {
+    // `tier: "plan"` exists for exactly this key: `main-plan` runs in
+    // preflight and `production-plan` in production, so a staging copy is a
+    // second read-only token to rotate for no benefit. Before the tier it
+    // rode along because the default routed everywhere an app boots from.
+    expect(keysRoutedTo("staging").has("AIRTABLE_PLAN_PAT")).toBe(false);
+    // POSITIVE CONTROL: the narrowed PUBLIC value beside it still routes to
+    // staging — `narrowed` alone must not become a staging exclusion, or
+    // DB_URL (narrowed shape one) would vanish from every deployed target.
+    expect(keysRoutedTo("staging").has("AIRTABLE_BASE_ID")).toBe(true);
+    expect(keysRoutedTo("staging").has("DB_URL")).toBe(true);
+  });
+
   for (const key of THE_FINDING) {
     it(`does not route ${key} to preflight`, () => {
       // BY NAME, because these three are the finding rather than a sample of
@@ -545,12 +558,8 @@ describe("preflight, the target no app boots from", () => {
     // target would empty all three identically — which looks like it worked.
     //
     // All three moved by exactly one when `AIRTABLE_PLAN_PAT` was declared —
-    // it is an ordinary plan-tier secret everywhere except that `narrowed`
-    // also lets it into preflight, so 45/47/1 became 46/48/2. Staging carries
-    // it because plan-tier is the default and nothing about the tiering can
-    // say "preflight and production but not staging"; the copy there is a
-    // read-only token no staging deploy reads, which is a spare credential to
-    // rotate rather than a privilege.
+    // it was an ordinary default-tier secret everywhere except that `narrowed`
+    // also let it into preflight, so 45/47/1 became 46/48/2.
     //
     // Then ONLY preflight moved: 2 → 3. `AIRTABLE_BASE_ID` gained `narrowed`
     // on 2026-08-17, and unlike the PAT it was already routed to staging and
@@ -558,7 +567,12 @@ describe("preflight, the target no app boots from", () => {
     // the marker only added a target rather than a key. A change that moved
     // all three here would mean the marker had been read as something other
     // than "also preflight".
-    expect(keysRoutedTo("staging").size).toBe(46);
+    //
+    // Then ONLY staging moved: 46 → 45. `AIRTABLE_PLAN_PAT` became
+    // `tier: "plan"`, which says "the two §3.5 plan jobs read this and
+    // nothing else does" — preflight and production keep it, staging drops
+    // the read-only spare nobody there could use.
+    expect(keysRoutedTo("staging").size).toBe(45);
     expect(keysRoutedTo("production").size).toBe(48);
     expect(keysRoutedTo("preflight").size).toBe(3);
   });

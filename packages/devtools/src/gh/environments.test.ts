@@ -105,6 +105,17 @@ describe("accepts", () => {
     expect(accepts("staging", "DISCORD_TOKEN")).toBe(true);
   });
 
+  it("refuses the plan-tier key in staging, where no job reads it", () => {
+    // Not a security gate like the apply exclusion — a stray copy could not
+    // write anything — but the same failure mode as §3.6's orphans: a
+    // credential nothing manages and nothing would ever mention. `staging`
+    // excludes it so a push routes it nowhere and `audit` names a stray.
+    expect(accepts("staging", "AIRTABLE_PLAN_PAT")).toBe(false);
+    // The two environments whose plan jobs read it still take it.
+    expect(accepts("production", "AIRTABLE_PLAN_PAT")).toBe(true);
+    expect(accepts("preflight", "AIRTABLE_PLAN_PAT")).toBe(true);
+  });
+
   it("gives production-apply a SUPERSET of production", () => {
     // It used to take the apply pair and nothing else, which withheld
     // plan-tier secrets and every public variable from the three jobs that run

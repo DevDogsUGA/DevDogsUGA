@@ -67,7 +67,23 @@ export type EnvSecrecy =
   | "never-store";
 
 /**
- * Which GitHub environment a deployed secret may reach.
+ * Which environments a deployed secret may reach, named after the JOBS that
+ * read it — the same vocabulary `deploy.yaml` uses for its own sections.
+ *
+ * `deploy` (the default when absent) is an ordinary deployed secret: the
+ * environments an app boots from read it, so it routes to `staging` and
+ * `production`.
+ *
+ * `plan` is for credentials only the §3.5 dry-run jobs read — `main-plan`
+ * (which runs in the `preflight` environment) and `production-plan` (which
+ * runs in `production`). Such a key has no reader in `staging`, and a copy
+ * there is a second credential to rotate for no benefit — which is exactly
+ * what `AIRTABLE_PLAN_PAT` was until this tier existed. ⚠️ Reaching
+ * `preflight` is still `narrowed`'s decision, not this one: the two fields
+ * answer different questions (`narrowed` promises the preflight VALUE is
+ * narrow enough for a dry run; the tier says which jobs READ the key), and a
+ * plan-tier key that skipped the `narrowed` opt-in would silently starve
+ * `main-plan`.
  *
  * `apply` is for credentials that can reshape production and have no dry run —
  * a Supabase access token carries full account privileges, and
@@ -75,11 +91,11 @@ export type EnvSecrecy =
  * required reviewers, not in the environment an ordinary deploy reads.
  *
  * ⚠️ A GitHub routing rule, not a Bitwarden one. The `production` Bitwarden
- * project does hold these: only a person can read it, one project per
+ * project does hold the apply pair: only a person can read it, one project per
  * environment stays the simplest thing to rotate, and holding them there is
  * what lets `env audit` compare them at all.
  */
-export type EnvTier = "plan" | "apply";
+export type EnvTier = "deploy" | "plan" | "apply";
 
 /**
  * A type alias rather than an `interface`, and it has to be.
@@ -98,7 +114,7 @@ export type EnvMeta = {
   doc: string;
   scope: EnvScope;
   secrecy: EnvSecrecy;
-  /** Deployed-secret routing. Defaults to `plan` when absent. */
+  /** Deployed-secret routing. Defaults to `deploy` when absent. */
   tier?: EnvTier;
   /**
    * Whatever the targets no app boots from — today, `preflight` alone — hold
