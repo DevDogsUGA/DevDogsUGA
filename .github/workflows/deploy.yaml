@@ -218,28 +218,18 @@ jobs:
         run: >-
           pnpm --filter @devdogsuga/devtools run cli deploy secrets-file
           --app ${{ matrix.app }} ${{ matrix.mint }}
+      # One step for all three Workers now that apps/sandbox/package.json
+      # carries the same `cf:deploy:*` scripts as the Next apps — the
+      # ${DEPLOY_SECRETS_FILE:+--secrets-file …} hook plus, for sandbox,
+      # `--var PLATFORM_REST_URL:$REST_URL`. That --var is a deploy-time value
+      # rather than a committed wrangler.jsonc entry: one committed value
+      # cannot be right for three environments, and the placeholder that
+      # shipped in all three is the measurement of how often it got edited by
+      # hand.
       - name: Deploy ${{ matrix.app }}
-        if: matrix.app != 'sandbox'
         env:
           DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
         run: pnpm --filter ${{ matrix.app }} run "cf:deploy:$DEPLOY_ENV"
-      # ⚠️ Inline rather than `pnpm --filter sandbox run deploy:staging`, and
-      # only because that script does not yet take the two flags. It is the
-      # same line plus `--secrets-file` and `--var`; both belong in
-      # apps/sandbox/package.json alongside the DEPLOY_SECRETS_FILE hook the
-      # other two Workers now carry, at which point this collapses into the
-      # step above.
-      #
-      # PLATFORM_REST_URL is a deploy-time `--var` rather than a committed
-      # wrangler.jsonc entry: one committed value cannot be right for three
-      # environments, and the placeholder that shipped in all three is the
-      # measurement of how often it got edited by hand.
-      - name: Deploy sandbox
-        if: matrix.app == 'sandbox'
-        env:
-          DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
-        run: |
-          pnpm --filter sandbox exec with-env -c 'pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token && wrangler deploy -e "$DEPLOY_ENV" --secrets-file "$DEPLOY_SECRETS_FILE" --var PLATFORM_REST_URL:$REST_URL'
       # The `finally` half of the mkdtemp. A hosted runner is discarded whole,
       # so this is for the self-hosted case and for a job that fails between
       # composing the file and using it.
@@ -612,18 +602,12 @@ jobs:
         run: >-
           pnpm --filter @devdogsuga/devtools run cli deploy secrets-file
           --app ${{ matrix.app }} ${{ matrix.mint }}
+      # One step for all three Workers; see the staging job for the
+      # PLATFORM_REST_URL note.
       - name: Deploy ${{ matrix.app }}
-        if: matrix.app != 'sandbox'
         env:
           DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
         run: pnpm --filter ${{ matrix.app }} run "cf:deploy:$DEPLOY_ENV"
-      # See the staging job for why this one is inline.
-      - name: Deploy sandbox
-        if: matrix.app == 'sandbox'
-        env:
-          DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
-        run: |
-          pnpm --filter sandbox exec with-env -c 'pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token && wrangler deploy -e "$DEPLOY_ENV" --secrets-file "$DEPLOY_SECRETS_FILE" --var PLATFORM_REST_URL:$REST_URL'
       - name: Remove the Worker secrets file
         if: always()
         env:
