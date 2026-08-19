@@ -78,7 +78,12 @@ vi.mock("./cloudflare.js", () => ({
   })),
 }));
 
-import { GhError, listRepositoryVariables } from "../gh/client.js";
+import { listSecrets as listBwsSecrets } from "../bws/client.js";
+import {
+  GhError,
+  listRepositoryVariables,
+  listSecrets as listGhSecrets,
+} from "../gh/client.js";
 import { runEnvAudit } from "./commands.js";
 import { loadRegistry } from "./discovery.js";
 
@@ -195,5 +200,63 @@ describe("env audit, at the repository scope", () => {
 
     expect(prompts.note).toHaveBeenCalled();
     expect(printed()).toMatch(/write-only/);
+  });
+});
+
+describe("env audit, the accepted wiring", () => {
+  /**
+   * The one line `audit.ts`'s own tests cannot cover: `runEnvAudit` passing
+   * `accepted: acceptsKey`. The predicate has tests of its own; this is the
+   * call site, where dropping the argument falls back to the strict default
+   * ("only where `route` says") and reports every correctly-fanned-out
+   * production key as a stray to delete — burying the one stray that matters.
+   */
+  const AT = "2026-01-01T00:00:00Z";
+
+  beforeEach(() => {
+    // The production project fans out to two GitHub environments. Both hold
+    // both keys: the ordinary secret legitimately (a push writes the
+    // superset), the apply-tier one half-legitimately — its `production` copy
+    // is the reviewer gate failing open.
+    const stored = (id: string, key: string) => ({
+      id,
+      key,
+      value: "v",
+      note: "",
+      projectId: "project-id",
+      revisionDate: AT,
+    });
+    vi.mocked(listBwsSecrets).mockResolvedValue([
+      stored("s-1", "CRON_SECRET"),
+      stored("s-2", "AIRTABLE_APPLY_PAT"),
+    ]);
+    vi.mocked(listGhSecrets).mockResolvedValue([
+      { name: "CRON_SECRET", updatedAt: AT },
+      { name: "AIRTABLE_APPLY_PAT", updatedAt: AT },
+    ]);
+  });
+
+  afterEach(() => {
+    vi.mocked(listBwsSecrets).mockResolvedValue([]);
+    vi.mocked(listGhSecrets).mockResolvedValue([]);
+  });
+
+  it("does not report production-apply's superset copy as a stray", async () => {
+    await runEnvAudit({ target: "production", yes: true });
+
+    // The default predicate would flag CRON_SECRET's `production-apply` copy
+    // ("also set … not where it belongs"). `acceptsKey` knows the superset.
+    expect(printed()).not.toMatch(/CRON_SECRET[^\n]*not where it belongs/);
+  });
+
+  it("still names the apply-tier key sitting in the unreviewed environment", async () => {
+    // The positive control for the test above — an `accepted` of "everything
+    // is fine" would also produce no stray findings. This copy is the
+    // reviewer gate failing open, and it must survive the superset logic.
+    await runEnvAudit({ target: "production", yes: true });
+
+    expect(printed()).toMatch(
+      /AIRTABLE_APPLY_PAT[^\n]*`production`[^\n]*not where it belongs/,
+    );
   });
 });
