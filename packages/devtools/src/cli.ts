@@ -71,6 +71,11 @@ import {
   runPlannerResetPassword,
   runPlannerStatus,
 } from "./planner/commands.js";
+import {
+  runSigningKeyGenerate,
+  runSigningKeyImport,
+  runSigningKeyStatus,
+} from "./signing-key/commands.js";
 import { loadRegistry } from "./env/discovery.js";
 import { ENV_TARGETS, isEnvTarget } from "@devdogsuga/env";
 import { setExplicitAccessToken } from "./bws/client.js";
@@ -115,6 +120,8 @@ Commands:
              drift audit
   planner    The migration_planner role: the one Postgres credential the
              preflight tier may hold
+  signing-key  SUPABASE_JWT_SIGNING_KEY: mint it, register it with the
+             Supabase project, see what is registered
   deploy     The steps a deploy job runs. Not for a laptop — see below
 
 Planner subcommands. All need a privileged production connection —
@@ -134,6 +141,19 @@ Planner subcommands. All need a privileged production connection —
                                   transaction) and blank the dead DB_URL in
                                   .env.preflight — the recovery path for a
                                   shape create refuses to repair
+
+Signing-key subcommands. Always --target <staging|production> — two
+environments, two projects, two secrets. import/status also need
+SUPABASE_ACCESS_TOKEN (exported, or in .env.production):
+
+  signing-key generate --target <t>  mint a 64-char HS256 secret into
+                                  .env.<t> (confirmed overwrite = rotation)
+  signing-key import --target <t> register that secret with the project as a
+                                  standby shared-secret signing key. Standby
+                                  VERIFIES custom JWTs (the sandbox token)
+                                  without changing what signs user sessions;
+                                  promotion to in_use stays a dashboard act
+  signing-key status --target <t> list the project's signing keys
 
 Airtable subcommands:
   airtable scaffold [--dry-run]   Create what the registry declares
@@ -987,6 +1007,40 @@ async function runPlannerCommand(rest: string[]): Promise<void> {
   process.exitCode = 1;
 }
 
+/**
+ * `signing-key <generate|import|status> --target <staging|production>`
+ *
+ * Operator-side like `planner`, and for the same reasons: prompts, env-file
+ * writes, and SUPABASE_ACCESS_TOKEN — the apply-tier credential no unattended
+ * job outside production-apply may hold. The deploy pipeline only READS the
+ * key (`deploy mint-token`); everything that creates or registers it is a
+ * human's move. See `signing-key/commands.ts`.
+ */
+async function runSigningKeyCommand(rest: string[]): Promise<void> {
+  const [sub] = positionals(rest);
+  const options = { target: flagValue(rest, "--target") ?? undefined };
+
+  if (sub === "generate") {
+    await runSigningKeyGenerate(options);
+    return;
+  }
+  if (sub === "import") {
+    await runSigningKeyImport(options);
+    return;
+  }
+  if (sub === "status") {
+    await runSigningKeyStatus(options);
+    return;
+  }
+
+  log.error(
+    sub
+      ? `devtools signing-key: unknown subcommand "${sub}". Try generate, import or status.`
+      : "devtools signing-key: which of generate, import, status?",
+  );
+  process.exitCode = 1;
+}
+
 // ── Menu ─────────────────────────────────────────────────────────────────────
 
 async function menu(): Promise<void> {
@@ -1133,6 +1187,12 @@ async function main(): Promise<void> {
 
   if (first === "planner") {
     await runPlannerCommand(rest);
+    outro("Done.");
+    return;
+  }
+
+  if (first === "signing-key") {
+    await runSigningKeyCommand(rest);
     outro("Done.");
     return;
   }

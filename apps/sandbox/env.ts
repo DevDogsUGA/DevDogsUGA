@@ -150,11 +150,13 @@ declare({
         "deploy time. ⚠️ It can mint a token for ANY role, including a " +
         "user session -- it is the widest credential in this file by a long " +
         "way, and it is here only because the sandbox token is the one thing " +
-        "signed with it. Devops-only. Mint the secret yourself, store it " +
-        "here, and IMPORT it as a shared-secret key on the project's JWT " +
-        "signing keys page -- never let Supabase generate it: keys in that " +
-        "system cannot be extracted afterwards, so an imported copy is the " +
-        "only way this side can hold the signing half. The legacy JWT " +
+        "signed with it. Devops-only. Mint and register it with " +
+        "`pnpm devtools signing-key generate` then `signing-key import` " +
+        "(--target staging|production) -- never let Supabase generate it: " +
+        "keys in that system cannot be extracted afterwards, so an imported " +
+        "copy is the only way this side can hold the signing half. The " +
+        "import lands as a standby shared-secret key, which verifies the " +
+        "sandbox token without changing what signs user sessions. The legacy JWT " +
         "secret is deprecated with no announced removal date; the imported " +
         "shared secret is the path that outlives it. After migrating a " +
         "project to signing keys, verify the sandbox token still resolves " +
