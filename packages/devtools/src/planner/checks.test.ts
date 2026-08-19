@@ -80,6 +80,28 @@ describe("checkPlanner", () => {
     expect(verdict.problem).toMatch(/can read platform\.profile/);
   });
 
+  it("names the missing-schema state instead of blaming the grants", async () => {
+    // A database the CLI has never migrated has no supabase_migrations
+    // schema at all. "Re-apply the grants" would send somebody granting on a
+    // schema that is not there; the fix is initializing the migration
+    // history, and the verdict has to say which disease this is.
+    const missing = Object.assign(
+      new Error('schema "supabase_migrations" does not exist'),
+      { code: "3F000" },
+    );
+    const verdict = await checkPlanner(
+      db({
+        [CHECK_IDENTITY]: [{ who: "migration_planner" }],
+        [CHECK_OVERREACH]: DENIED,
+        [CHECK_MIGRATIONS]: missing,
+      }),
+    );
+    expect(verdict.ok).toBe(false);
+    expect(verdict.problem).toMatch(/schema does not exist/);
+    expect(verdict.problem).toMatch(/not a grants problem/);
+    expect(verdict.problem).toMatch(/db push|migration repair/);
+  });
+
   it("refuses a planner that cannot do its one job", async () => {
     // POSITIVE CONTROL for the deny-probe: a role denied everywhere would
     // pass check 2, and this is what stops "denied everywhere" from reading

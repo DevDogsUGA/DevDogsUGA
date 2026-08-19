@@ -66,7 +66,7 @@ interface Fake {
 }
 
 /** Admin connections answer role queries; planner ones answer the checks. */
-function fake(roleExists: boolean): Fake {
+function fake(roleExists: boolean, schemaExists = true): Fake {
   const urls: string[] = [];
   const statements: string[] = [];
   return {
@@ -91,6 +91,9 @@ function fake(roleExists: boolean): Fake {
         }
         if (query.includes("from pg_roles where")) {
           return roleExists ? [{ rolcanlogin: true }] : [];
+        }
+        if (query.includes("from pg_namespace where")) {
+          return schemaExists ? [{ "?column?": 1 }] : [];
         }
         statements.push(query);
         return [];
@@ -125,13 +128,17 @@ describe("planner create", () => {
     const harness = fake(false);
     await runPlannerCreate({ connect: harness.connect });
 
-    // The CREATE and both GRANTs, in order, on the admin connection.
-    expect(harness.statements[0]).toMatch(
+    // The CREATE and both GRANTs, in order, in ONE transaction on the admin
+    // connection — a mid-flight failure must leave no grant-less role behind
+    // for the already-exists refusal to protect.
+    expect(harness.statements[0]).toBe("begin");
+    expect(harness.statements[1]).toMatch(
       /^create role migration_planner login password '[A-Za-z0-9_-]{32}'$/,
     );
-    expect(harness.statements.slice(1)).toEqual([
+    expect(harness.statements.slice(2)).toEqual([
       "grant usage on schema supabase_migrations to migration_planner",
       "grant select on supabase_migrations.schema_migrations to migration_planner",
+      "commit",
     ]);
 
     // A SECOND connection, as the planner, against the same host.
@@ -166,6 +173,23 @@ describe("planner create", () => {
       runPlannerCreate({ connect: harness.connect }),
     ).rejects.toThrow(/bail/);
     expect(harness.urls).toEqual([]);
+  });
+
+  it("refuses a database with no migration history, BEFORE creating anything", async () => {
+    // The failure that shaped this: on a database the CLI has never
+    // migrated, CREATE ROLE succeeded and the first GRANT failed on the
+    // missing schema — stranding a grant-less role behind the
+    // already-exists refusal. The precondition has to fire first.
+    const harness = fake(false, false);
+    await expect(
+      runPlannerCreate({ connect: harness.connect }),
+    ).rejects.toThrow(/supabase_migrations schema does not exist/);
+    expect(harness.statements).toEqual([]);
+    expect(files.written.size).toBe(0);
+    // And the message names the two ways history comes to exist.
+    await expect(
+      runPlannerCreate({ connect: harness.connect }),
+    ).rejects.toThrow(/db push|migration repair/);
   });
 
   it("refuses to run with no admin URL, naming both ways to supply one", async () => {

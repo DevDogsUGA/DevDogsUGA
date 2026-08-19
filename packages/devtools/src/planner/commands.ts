@@ -56,6 +56,15 @@ import {
 
 /** Constants, like `checks.ts`: `PlannerDb.run` never sees a composed string. */
 const QUERY_ROLE = `select rolcanlogin from pg_roles where rolname = '${PLANNER_ROLE}'`;
+/**
+ * The schema the grants attach to. The Supabase CLI creates it the first time
+ * it records migration history on a database — so on a database that has
+ * never been CLI-migrated (or baselined with `supabase migration repair`)
+ * there is nothing to grant on, and `create` has to say that BEFORE issuing
+ * CREATE ROLE, or it strands a grant-less role behind a refusal to re-run.
+ */
+const QUERY_SCHEMA =
+  "select 1 from pg_namespace where nspname = 'supabase_migrations'";
 const QUERY_GRANTS =
   `select has_schema_privilege('${PLANNER_ROLE}', 'supabase_migrations', 'usage') as schema_usage, ` +
   `has_table_privilege('${PLANNER_ROLE}', 'supabase_migrations.schema_migrations', 'select') as table_select`;
@@ -133,15 +142,40 @@ async function roleExists(db: PlannerDb): Promise<boolean> {
   return (await db.run(QUERY_ROLE)).length > 0;
 }
 
+async function migrationSchemaExists(db: PlannerDb): Promise<boolean> {
+  return (await db.run(QUERY_SCHEMA)).length > 0;
+}
+
+function bailMissingSchema(): never {
+  bail(
+    "The supabase_migrations schema does not exist on this database, so " +
+      "there is nothing to grant on — and nothing for the §3.5 dry run to " +
+      "plan against. The Supabase CLI creates it the first time it records " +
+      "migration history here: `supabase db push` on a fresh database, or " +
+      "`supabase migration repair` to baseline one that already has its " +
+      "objects. Initialize the history first, then re-run this command.",
+  );
+}
+
 export async function runPlannerStatus(
   options: PlannerOptions = {},
 ): Promise<void> {
   const connect = options.connect ?? connectDb;
   await withDb(connect, await adminUrl(options), async (db) => {
+    // First, because it recolors everything after it: on a database with no
+    // migration history, "missing grants" is not the story — this is.
+    const schemaReady = await migrationSchemaExists(db);
+
     const [role] = await db.run(QUERY_ROLE);
     if (!role) {
       log.warn(
-        `${PLANNER_ROLE} does not exist. Mint it with \`pnpm devtools planner create\`.`,
+        schemaReady
+          ? `${PLANNER_ROLE} does not exist. Mint it with \`pnpm devtools planner create\`.`
+          : `${PLANNER_ROLE} does not exist — and neither does the ` +
+              "supabase_migrations schema, so `planner create` would refuse: " +
+              "initialize this database's migration history first " +
+              "(`supabase db push`, or `supabase migration repair` to " +
+              "baseline an existing database).",
       );
       process.exitCode = 1;
       return;
@@ -150,16 +184,29 @@ export async function runPlannerStatus(
     const lines = [
       `exists, ${role.rolcanlogin ? "can log in" : "⚠️ CANNOT log in (nologin)"}`,
     ];
+    if (!schemaReady) {
+      lines.push(
+        "⚠️ the supabase_migrations schema DOES NOT EXIST on this database " +
+          "— the grants below cannot hold and the dry run cannot plan. " +
+          "Initialize the migration history, then `planner reset-password` " +
+          "will re-verify (or drop the role and re-run `planner create`).",
+      );
+    }
 
-    const [grants] = await db.run(QUERY_GRANTS);
-    lines.push(
-      grants?.schema_usage
-        ? "has usage on supabase_migrations"
-        : "⚠️ MISSING usage on supabase_migrations",
-      grants?.table_select
-        ? "has select on supabase_migrations.schema_migrations"
-        : "⚠️ MISSING select on supabase_migrations.schema_migrations",
-    );
+    // Skipped when the schema is absent: has_schema_privilege raises on a
+    // name that does not exist, and the schema line above already carries
+    // the diagnosis.
+    if (schemaReady) {
+      const [grants] = await db.run(QUERY_GRANTS);
+      lines.push(
+        grants?.schema_usage
+          ? "has usage on supabase_migrations"
+          : "⚠️ MISSING usage on supabase_migrations",
+        grants?.table_select
+          ? "has select on supabase_migrations.schema_migrations"
+          : "⚠️ MISSING select on supabase_migrations.schema_migrations",
+      );
+    }
 
     const memberships = await db.run(QUERY_MEMBERSHIPS);
     lines.push(
@@ -240,6 +287,12 @@ export async function runPlannerCreate(
   if (!go) bail();
 
   await withDb(connect, admin, async (db) => {
+    // Before CREATE ROLE, so a database with no migration history refuses
+    // cleanly instead of stranding a grant-less role behind the
+    // already-exists refusal below — which is exactly what happened the
+    // first time this ran against a database the CLI had never migrated.
+    if (!(await migrationSchemaExists(db))) bailMissingSchema();
+
     if (await roleExists(db)) {
       // Refused rather than repaired: an existing role may hold grants this
       // command did not give it, and layering the validated pair on top would
@@ -247,13 +300,24 @@ export async function runPlannerCreate(
       // `reset-password` rotates the credential without touching grants.
       bail(
         `${PLANNER_ROLE} already exists. Run \`planner status\` to check its ` +
-          "shape, `planner reset-password` to rotate it — or drop the role " +
-          "and re-run create for a from-scratch mint.",
+          "shape, `planner reset-password` to rotate it — or, for a " +
+          `from-scratch mint, \`drop role ${PLANNER_ROLE};\` and re-run ` +
+          "create.",
       );
     }
     const password = generatePassword();
-    for (const statement of createRoleSql(password)) {
-      await db.run(statement);
+    // One transaction: the role and its grants exist together or not at all.
+    // A mid-flight failure used to leave the role behind with no grants,
+    // which the already-exists refusal then protected like a real one.
+    await db.run("begin");
+    try {
+      for (const statement of createRoleSql(password)) {
+        await db.run(statement);
+      }
+      await db.run("commit");
+    } catch (error) {
+      await db.run("rollback").catch(() => undefined);
+      throw error;
     }
     log.success(`Created ${PLANNER_ROLE} with the two validated grants.`);
     await verifyAndStore(connect, admin, password);

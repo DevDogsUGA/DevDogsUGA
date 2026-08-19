@@ -86,7 +86,24 @@ export async function checkPlanner(db: PlannerDb): Promise<PlannerVerdict> {
     lines.push(
       `can read supabase_migrations.schema_migrations (${String(row?.n)} rows)`,
     );
-  } catch {
+  } catch (error) {
+    // Two different diseases share this symptom, and the fix for one is a
+    // GRANT while the fix for the other is initializing the database's
+    // migration history — so the message has to say which. 3F000 is
+    // invalid_schema_name; the text match covers drivers that drop the code.
+    if (isMissingSchema(error)) {
+      return {
+        ok: false,
+        lines,
+        problem:
+          "the supabase_migrations schema does not exist on this database. " +
+          "The Supabase CLI creates it the first time it records migration " +
+          "history there (`supabase db push`, or `supabase migration " +
+          "repair` when baselining an existing database) — until then " +
+          "there is nothing for the planner to read and nothing for the " +
+          "dry run to plan against. This is not a grants problem.",
+      };
+    }
     return {
       ok: false,
       lines,
@@ -98,4 +115,13 @@ export async function checkPlanner(db: PlannerDb): Promise<PlannerVerdict> {
   }
 
   return { ok: true, lines };
+}
+
+/** Postgres 3F000 (invalid_schema_name), with a text fallback. */
+export function isMissingSchema(error: unknown): boolean {
+  const e = error as { code?: string; message?: string };
+  return (
+    e.code === "3F000" ||
+    /schema "?supabase_migrations"? does not exist/i.test(e.message ?? "")
+  );
 }
