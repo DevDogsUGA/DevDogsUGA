@@ -322,7 +322,12 @@ const server = {
       "the transaction pooler does not support and hangs instead of " +
       "erroring. Also read by the RLS persona suite, which falls back to " +
       "the local default when unset -- a stale value here is ignored rather " +
-      "than pointed at a real database.",
+      "than pointed at a real database. " +
+      "⚠️ In .env.preflight this must be the migration_planner " +
+      "role -- SELECT on supabase_migrations.schema_migrations and nothing " +
+      "else -- NEVER the full connection string. That file feeds an " +
+      "environment `main` can read, and nothing can detect a full string " +
+      "pasted here: the dry run works, push succeeds, audit stays green.",
     scope: "environment",
     secrecy: "secret",
     localStack: true,
