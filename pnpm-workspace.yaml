@@ -11,6 +11,17 @@ allowBuilds:
   supabase: true
   unrs-resolver: true
   workerd: true
+# undici 6 (via @discordjs/rest) starts compiling its llhttp Wasm AT MODULE
+# SCOPE — `llhttpPromise = lazyllhttp()` guarded by an argument-LESS
+# `.catch()`, which swallows nothing — and the Workers runtime forbids
+# runtime Wasm codegen, so merely importing the library rejected every
+# platform page render with an unhandled CompileError (2026-08-20). undici 7
+# instantiates llhttp lazily and synchronously on first socket connect,
+# which the fetch-based transports never reach. @discordjs/rest uses only
+# Headers/request/FormData — all unchanged in 7 — and cheerio already pulls
+# 7.28 into this tree.
+overrides:
+  undici: ^7.28.0
 # Single source of truth for every dependency used by more than one workspace
 # package. Packages reference these with "catalog:" instead of a literal range,
 # so a shared version can only ever be bumped here. Deps used by exactly one

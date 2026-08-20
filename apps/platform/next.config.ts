@@ -24,9 +24,18 @@ const config = {
     },
     resolveExtensions: [".graphql", ".gql", ".js", ".jsx", ".ts", ".tsx"],
   },
-  cacheComponents: true,
+  // NOT `cacheComponents: true`, deliberately, since 2026-08-20: Cache
+  // Components' partial prerendering is broken on the OpenNext Cloudflare
+  // adapter. Upstream's symptom is cached shells served without dynamic
+  // streaming (opennextjs-cloudflare#1115); ours was worse — every `◐` route
+  // hung in workerd until the runtime killed the request ("hung and would
+  // never generate a response"), while route handlers, middleware and the
+  // database all worked. `experimental.useCache` keeps the `"use cache"` +
+  // `cacheLife` directives (DocsMarkdown and friends) compiling and caching;
+  // only the PPR machinery is off. Revisit when the adapter supports it.
   experimental: {
     authInterrupts: true,
+    useCache: true,
   },
   images: {
     remotePatterns: [

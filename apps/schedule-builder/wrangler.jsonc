@@ -27,6 +27,16 @@
   "vars": {
     "DEPLOY_ENV": "development",
   },
+  // OpenNext's memory queue (ISR revalidation of stale `cacheLife` entries)
+  // re-invokes the worker through this binding. Must equal this environment's
+  // own worker name — see apps/platform/wrangler.jsonc for the staging
+  // cross-pollution failure mode.
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "development-schedule-builder",
+    },
+  ],
   "r2_buckets": [
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
@@ -40,6 +50,12 @@
       "vars": {
         "DEPLOY_ENV": "staging",
       },
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "staging-schedule-builder",
+        },
+      ],
       "r2_buckets": [
         {
           "binding": "NEXT_INC_CACHE_R2_BUCKET",
@@ -73,6 +89,12 @@
       "vars": {
         "DEPLOY_ENV": "production",
       },
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "production-schedule-builder",
+        },
+      ],
       // Backing store for the incremental cache. The binding name is fixed by
       // the OpenNext adapter. Without it the adapter falls back to its "dummy"
       // cache, which uploads nothing on deploy and throws on every read --

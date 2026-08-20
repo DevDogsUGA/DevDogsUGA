@@ -1,6 +1,7 @@
 import { defineCloudflareConfig } from "@opennextjs/cloudflare";
 import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
 import { withRegionalCache } from "@opennextjs/cloudflare/overrides/incremental-cache/regional-cache";
+import memoryQueue from "@opennextjs/cloudflare/overrides/queue/memory-queue";
 
 /**
  * The shared OpenNext -> Cloudflare config for every Next.js app in this repo.
@@ -39,11 +40,19 @@ import { withRegionalCache } from "@opennextjs/cloudflare/overrides/incremental-
  *   returns the entry's own `lastModified` (not `-1`) and `isStale` returns
  *   `false`, so it never invalidates a live entry. Wiring up D1 or a Durable
  *   Object would add infrastructure to track tags nobody writes.
- * - **queue.** Background ISR revalidation. Content here only changes on
- *   deploy, and a new deploy mints a new build id (which is part of every cache
- *   key), so there is nothing to revalidate in place. This is also why no
- *   `WORKER_SELF_REFERENCE` service binding is needed — that binding exists for
- *   the queue and the Pages-Router `res.revalidate()` patch, not for the cache.
+ *
+ * ## Why the queue is NOT dummy (since 2026-08-20)
+ *
+ * This section used to leave `queue` as `"dummy"`, reasoning that content only
+ * changes on deploy so nothing revalidates in place. That reasoning missed
+ * `cacheLife`: the platform's profiles give routes revalidate windows (the
+ * build output's `◐ / 15m`), so entries go STALE on a running deployment —
+ * and the dummy queue's `send()` THROWS a FatalError. The first staging
+ * deployment served 500 on every `◐` route as soon as its entries aged past
+ * their window, while fully-dynamic routes kept working. The memory queue
+ * revalidates by re-invoking the Worker through the `WORKER_SELF_REFERENCE`
+ * service binding, which every OpenNext app's wrangler.jsonc must therefore
+ * bind to the SAME environment's own worker name.
  *
  * ## Per-app wrangler config
  *
@@ -71,5 +80,6 @@ export function defineDevDogsCloudflareConfig() {
     incrementalCache: withRegionalCache(r2IncrementalCache, {
       mode: "long-lived",
     }),
+    queue: memoryQueue,
   });
 }
