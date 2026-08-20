@@ -7,10 +7,12 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
       "default": "./dist/index.js"
     },
     "./load": {
       "types": "./dist/load.d.ts",
+      "development": "./src/load.ts",
       "default": "./dist/load.js"
     }
   },
