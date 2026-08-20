@@ -55,11 +55,24 @@ export default async function addProfileLink(
     // OG title fetching must remain server-side. Browsers block cross-origin
     // HTML fetches (CORS) unless the target sets Access-Control-Allow-Origin,
     // which almost no site does on its HTML pages.
+    //
+    // The fetch is OURS, with ogs only parsing the `html`: given a bare
+    // `url`, ogs fetches through undici, whose first request compiles the
+    // llhttp parser's Wasm — and the Workers runtime forbids runtime Wasm
+    // codegen (the same class of failure DocsMarkdown hit with Shiki's
+    // Oniguruma engine). The platform-native fetch needs no parser.
     let title: string | null = suppliedTitle ?? null;
     if (!title) {
       try {
-        const { result } = await ogs({ url, timeout: 5000 });
-        title = result.ogTitle ?? result.dcTitle ?? null;
+        const response = await fetch(url, {
+          signal: AbortSignal.timeout(5000),
+          headers: { Accept: "text/html" },
+        });
+        const contentType = response.headers.get("content-type") ?? "";
+        if (response.ok && contentType.includes("text/")) {
+          const { result } = await ogs({ html: await response.text() });
+          title = result.ogTitle ?? result.dcTitle ?? null;
+        }
       } catch {
         // fall through to hostname fallback
       }
