@@ -34,7 +34,7 @@
     "prettier-plugin-tailwindcss": "^0.8.1",
     "supabase": "catalog:",
     "tsx": "catalog:",
-    "turbo": "^2.10.8",
+    "turbo": "^2.10.10",
     "typescript": "catalog:",
     "zod": "catalog:"
   },
