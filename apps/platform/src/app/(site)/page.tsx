@@ -126,7 +126,7 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         <MarqueeItem>Build Sessions</MarqueeItem>
         <MarqueeItem>Build Every Week</MarqueeItem>
         <MarqueeItem>All Skill Levels Welcome</MarqueeItem>
-        <MarqueeItem>Boyd GSRC 303</MarqueeItem>
+        <MarqueeItem>DLW 124</MarqueeItem>
         <MarqueeItem>Fall & Spring Semesters</MarqueeItem>
       </SectionMarquee>
 

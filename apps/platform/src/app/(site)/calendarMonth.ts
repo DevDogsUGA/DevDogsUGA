@@ -69,7 +69,9 @@ function generateMonthEvents(year: number, month: number): CalendarEvent[] {
       });
     }
 
-    if (dow === 4) {
+    // Wednesday, so the session lands squarely between the Monday that opens a
+    // competition and the Monday that judges it.
+    if (dow === 3) {
       events.push({
         id: `build-${year}-${month}-${d}`,
         type: "build",

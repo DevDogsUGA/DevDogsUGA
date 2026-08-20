@@ -1,4 +1,4 @@
-import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
+import { ArrowRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
 import SectionBackground, {
   type BlobDef,
   type EdgeType,
@@ -49,8 +49,14 @@ export default function EventsSection({ topEdge, bottomEdge }: Props) {
             </h2>
             <p className="text-base/relaxed text-balance text-mauve-700">
               Every week, rain or shine: workshops that teach a feature area,
-              week-long competitions to build it, and open build sessions in
-              between.
+              week-long competitions to build it, and open build sessions on
+              Wednesdays in between.
+            </p>
+            {/* One room for everything, so it is said once here rather than
+                repeated on all four cards. */}
+            <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-black">
+              <MapPinIcon className="shrink-0 text-mauve-500" weight="fill" />
+              DLW 124 — the new Dining, Learning &amp; Well-Being center
             </p>
           </div>
 
