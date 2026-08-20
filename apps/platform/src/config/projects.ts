@@ -7,8 +7,13 @@ import type { TechKey } from "./tech";
  * Ordered by what someone can join today: DogDays, DogPack, the Platform, then
  * the paused Community Resource Forum.
  */
+/** Keys into PROJECT_ICONS — marks drawn for the apps that have one. */
+export type ProjectIconName = "dogdays" | "dogpack";
+
 export interface Project {
   badge: { label: string; bg: string; text: string };
+  /** Icon mark rendered beside the title, tinted by titleColor. */
+  icon?: ProjectIconName;
   year: string;
   title: string;
   titleColor: string;
@@ -30,6 +35,7 @@ export const PROJECTS: Project[] = [
     badge: { label: "In Progress", bg: "bg-cyan-400", text: "text-black" },
     year: "2026 – 2027",
     title: "DogDays",
+    icon: "dogdays",
     tagline: "Schedule Builder",
     titleColor: "text-amber-700",
     description:
@@ -43,6 +49,7 @@ export const PROJECTS: Project[] = [
     badge: { label: "In Design", bg: "bg-rose-400", text: "text-black" },
     year: "2026 – 2027",
     title: "DogPack",
+    icon: "dogpack",
     tagline: "Study Group Finder",
     titleColor: "text-indigo-700",
     description:

@@ -2,9 +2,11 @@ import Link from "next/link";
 import { ArrowSquareOutIcon, GithubLogoIcon } from "@phosphor-icons/react/ssr";
 import type { Project } from "~/config/projects";
 import { TECH } from "~/config/tech";
+import { PROJECT_ICONS } from "./project-icons";
 
 export default function ProjectCard({
   badge,
+  icon,
   year,
   title,
   titleColor,
@@ -16,6 +18,7 @@ export default function ProjectCard({
   liveUrl,
   shadow = "shadow-block-lg",
 }: Project) {
+  const Icon = icon ? PROJECT_ICONS[icon] : null;
   return (
     <div
       className={`flex h-full flex-col gap-4 rounded-sm border-2 border-black bg-white p-6 ${shadow}`}
@@ -31,7 +34,10 @@ export default function ProjectCard({
         </span>
       </div>
       <div className="space-y-1">
-        <h3 className={`font-display text-2xl font-bold ${titleColor}`}>
+        <h3
+          className={`font-display flex items-center gap-2 text-2xl font-bold ${titleColor}`}
+        >
+          {Icon && <Icon className="size-6 shrink-0" />}
           {title}
         </h3>
         <p className="text-sm font-semibold text-mauve-500">{tagline}</p>
