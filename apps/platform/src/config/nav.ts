@@ -42,13 +42,6 @@ export const PUBLIC_LINKS: NavItem[] = [
     description: "Upcoming meetings, workshops, and events hosted by DevDogs.",
   },
   {
-    label: "Meetings",
-    href: "/meetings",
-    icon: "CalendarDotsIcon",
-    description:
-      "Weekly meetings, the workshops that run inside them, and check-in.",
-  },
-  {
     label: "Partners",
     href: "/partners",
     icon: "HandshakeIcon",
