@@ -85,20 +85,17 @@ export default function DocsMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         data-active={active || undefined}
-        className={`${className} flex items-center gap-1`}
+        className={`${className} flex items-center gap-2`}
       >
         {label}
-        <CaretDownIcon
-          aria-hidden
-          className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`}
-        />
+        <CaretDownIcon aria-hidden className="size-3.5" />
       </Link>
 
       {/* The padding bridges the gap under the navbar so the pointer can
           travel from the trigger into the menu without closing it. */}
       {open && (
         <div className="absolute top-full left-0 pt-2">
-          <div className="w-80 rounded-lg border border-mauve-800 bg-mauve-950 p-1 shadow-lg">
+          <div className="animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 w-80 origin-top rounded-lg border border-mauve-800 bg-mauve-950 p-1 shadow-lg duration-150 ease-out">
             {projects.map((project) => (
               <Link
                 key={project.slug}
