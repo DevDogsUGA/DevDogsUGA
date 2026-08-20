@@ -109,7 +109,12 @@ export default function AppSwitcher() {
           {CLOSED_PROJECTS.length > 0 && (
             <div className="grid gap-4 sm:grid-cols-2">
               {CLOSED_PROJECTS.map((project) => (
-                <ProjectCard key={project.title} {...project} compact />
+                <ProjectCard
+                  key={project.title}
+                  {...project}
+                  shadow="shadow-block-md"
+                  recessed
+                />
               ))}
             </div>
           )}

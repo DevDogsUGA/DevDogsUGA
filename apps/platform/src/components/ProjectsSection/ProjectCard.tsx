@@ -5,12 +5,13 @@ import { TECH } from "~/config/tech";
 
 interface Props extends Project {
   /**
-   * Renders the card as a secondary listing: muted border and fill, a smaller
-   * block shadow, and a plain title instead of the project's own color. Used
-   * for projects that are not open to contributions, which belong on the page
-   * but should not compete with the ones a visitor can actually join.
+   * Sits the card back from the ones beside it, for projects that are not open
+   * to contributions. Same card — this only scales and fades it, the way
+   * `EventCard` recedes an event that is not the highlighted one, and hovering
+   * brings it fully back. Only from `lg` up, where there is room for the size
+   * difference to read as depth rather than as a smaller card.
    */
-  compact?: boolean;
+  recessed?: boolean;
 }
 
 export default function ProjectCard({
@@ -24,15 +25,15 @@ export default function ProjectCard({
   techStack,
   githubUrl,
   liveUrl,
-  compact = false,
-  shadow = compact ? "shadow-block-sm" : "shadow-block-lg",
+  recessed = false,
+  shadow = "shadow-block-lg",
 }: Props) {
   return (
     <div
-      className={`flex h-full flex-col rounded-sm border-2 ${shadow} ${
-        compact
-          ? "gap-3 border-mauve-400 bg-mauve-50 p-5"
-          : "gap-4 border-black bg-white p-6"
+      className={`flex h-full flex-col gap-4 rounded-sm border-2 border-black bg-white p-6 ${shadow} ${
+        recessed
+          ? "transition-[opacity,scale] hover:scale-100 hover:opacity-100 lg:scale-90 lg:opacity-75"
+          : ""
       }`}
     >
       <div className="flex items-start gap-2">
@@ -46,11 +47,7 @@ export default function ProjectCard({
         </span>
       </div>
       <div className="space-y-1">
-        <h3
-          className={`font-display font-bold ${
-            compact ? "text-xl text-mauve-800" : `text-2xl ${titleColor}`
-          }`}
-        >
+        <h3 className={`font-display text-2xl font-bold ${titleColor}`}>
           {title}
         </h3>
         <p className="text-sm font-semibold text-mauve-500">{tagline}</p>

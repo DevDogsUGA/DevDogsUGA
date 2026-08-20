@@ -106,7 +106,7 @@ export default function ProjectsSection({
                 </div>
                 <div className="grid items-stretch gap-4 md:grid-cols-2">
                   {CLOSED_PROJECTS.map((project) => (
-                    <ProjectCard key={project.title} {...project} compact />
+                    <ProjectCard key={project.title} {...project} recessed />
                   ))}
                 </div>
               </div>
