@@ -49,7 +49,7 @@ pnpm --filter @devdogsuga/supabase generate-types           # regenerate the sha
 pnpm dev --filter platform
 ```
 
-Prereqs: Node ≥ 20 (`.nvmrc`), pnpm via corepack. Docker only for the local
+Prereqs: Node ≥ 22.12 — `.nvmrc` pins 24, pnpm via corepack. Docker only for the local
 Supabase stack; the Flutter SDK only for `apps/study-group-finder`.
 
 ## Environment

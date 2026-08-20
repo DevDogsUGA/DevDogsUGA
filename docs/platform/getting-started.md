@@ -6,7 +6,7 @@ for the full layout and script reference.
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org) 20 or later (`.nvmrc`)
+- [Node.js](https://nodejs.org) 22.12 or later — `.nvmrc` pins 24
 - [pnpm](https://pnpm.io) via `corepack enable` (version pinned in the root
   `package.json`)
 - [Docker](https://www.docker.com) — only for the optional local Supabase stack

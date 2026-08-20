@@ -25,7 +25,7 @@
     "bw": "pnpm --filter @devdogsuga/devtools exec bw"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "devDependencies": {
     "@devdogsuga/env": "workspace:*",

@@ -38,10 +38,14 @@ export async function runSetup(): Promise<void> {
   // Flutter app, and saying otherwise trains people to ignore the output.
 
   const node = process.versions.node;
+  // The floor is 22.12, not the .nvmrc pin (24): pnpm 11 needs node:sqlite,
+  // which appeared in 22.5 and went LTS-stable at 22.12 — CI's first-ever
+  // run failed on exactly this, with Node 20 from the old pin.
+  const [major = 0, minor = 0] = node.split(".").map(Number);
   checks.push(
-    Number(node.split(".")[0]) >= 20
+    major > 22 || (major === 22 && minor >= 12)
       ? `OK    Node ${node}`
-      : `WARN  Node ${node} — this repo needs >= 20 (see .nvmrc)`,
+      : `WARN  Node ${node} — this repo needs >= 22.12 for pnpm 11 (see .nvmrc)`,
   );
 
   checks.push(
