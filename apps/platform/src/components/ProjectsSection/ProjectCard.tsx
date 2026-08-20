@@ -6,11 +6,12 @@ interface ProjectCardProps {
   year: string;
   title: string;
   titleColor: string;
+  /** The "what is it, in four words" line that sits under the title. */
+  tagline: string;
   description: string;
   techStack?: string[];
   githubUrl?: string;
   liveUrl?: string;
-  joinCta?: { text: string; href: string; linkText: string };
   shadow?: string;
 }
 
@@ -19,11 +20,11 @@ export default function ProjectCard({
   year,
   title,
   titleColor,
+  tagline,
   description,
   techStack,
   githubUrl,
   liveUrl,
-  joinCta,
   shadow = "shadow-block-lg",
 }: ProjectCardProps) {
   return (
@@ -40,12 +41,15 @@ export default function ProjectCard({
           {year}
         </span>
       </div>
-      <h3 className={`font-display text-2xl font-bold ${titleColor}`}>
-        {title}
-      </h3>
+      <div className="space-y-1">
+        <h3 className={`font-display text-2xl font-bold ${titleColor}`}>
+          {title}
+        </h3>
+        <p className="text-sm font-semibold text-mauve-500">{tagline}</p>
+      </div>
       <p className="text-sm/relaxed text-mauve-600">{description}</p>
       {techStack && techStack.length > 0 && (
-        <div className="mt-auto flex flex-wrap gap-2">
+        <div className="mt-auto flex flex-wrap gap-2 pt-2">
           {techStack.map((t) => (
             <span
               key={t}
@@ -77,18 +81,6 @@ export default function ProjectCard({
             </Link>
           )}
         </div>
-      )}
-      {joinCta && (
-        <p className="border-t border-mauve-200 pt-4 text-sm text-mauve-500">
-          {joinCta.text}{" "}
-          <Link
-            href={joinCta.href}
-            className="text-emerald-700 hover:underline"
-          >
-            {joinCta.linkText}
-          </Link>{" "}
-          and start shipping.
-        </p>
       )}
     </div>
   );
