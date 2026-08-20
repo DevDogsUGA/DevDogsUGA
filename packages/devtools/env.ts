@@ -125,6 +125,25 @@ declare({
       secrecy: "secret",
       commented: true,
     }),
+    // The value is committed as the example: one account, public identifier
+    // (it is in every dashboard URL), same in every environment.
+    CLOUDFLARE_ACCOUNT_ID: define(
+      z
+        .string()
+        .regex(/^[0-9a-f]{32}$/)
+        .optional(),
+      {
+        doc:
+          "The Cloudflare account the Workers live in. OpenNext's R2 cache " +
+          "provisioning reads it from the environment and cannot infer it " +
+          "from the scoped CLOUDFLARE_API_TOKEN (the first staging deploy " +
+          "hung on exactly that); wrangler honors it too. Identifies, does " +
+          "not authorize — every capability is the token's.",
+        scope: "default",
+        secrecy: "public",
+        example: "61d185ff419ef7bd5bd4b3d314081a49",
+      },
+    ),
     // Developer-scoped even though the VALUE is org-wide: only operators
     // running `env pull/push/audit` on their own machines read it, no app and
     // no CI job does, and developer scope is what keeps a purely local input
