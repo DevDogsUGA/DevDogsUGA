@@ -358,6 +358,34 @@ describe("refusals", () => {
     ).rejects.toThrow(/DANGLING is derived from NOWHERE, which has no value/);
   });
 
+  it("omits an OPTIONAL derivation whose input has no value", async () => {
+    // The real case: STUDY_GROUP_FINDER_URL_CALLBACK derives from
+    // STUDY_GROUP_FINDER_URL, both optional — declared ahead of any web
+    // deployment, with "leave it unset until the deploy exists" as the
+    // documented contract. The first real staging deploy failed here.
+    resetRegistry();
+    declare({
+      source: "platform",
+      server: {
+        FUTURE_CALLBACK: define(z.url().optional(), {
+          doc: "Derived from a key declared ahead of its deployment.",
+          scope: "environment",
+          secrecy: "public",
+          example: "$FUTURE_URL/auth/callback",
+        }),
+      },
+    });
+
+    const dir = root();
+    await runDeployWriteEnv({
+      root: dir,
+      env: { DEPLOY_ENV: "staging" },
+    });
+
+    const written = readFileSync(join(dir, ".env.staging"), "utf8");
+    expect(written).not.toContain("FUTURE_CALLBACK");
+  });
+
   it("refuses a derivation cycle rather than recursing forever", async () => {
     resetRegistry();
     declare({

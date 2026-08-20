@@ -194,6 +194,16 @@ function fromRegistry(meta: EnvEntry["meta"]): Resolved | null {
 }
 
 /**
+ * The one expansion failure with a second meaning. For a REQUIRED key it is a
+ * fault like any other `DeployError`; for an optional one it is the registry
+ * saying "leave it unset until the deploy exists" (STUDY_GROUP_FINDER_URL and
+ * its `_CALLBACK`, declared ahead of any web deployment), so the caller skips
+ * the key instead. A distinct class rather than a message match, because the
+ * write loop's catch must never swallow a cycle or a quoting refusal.
+ */
+class MissingSourceError extends DeployError {}
+
+/**
  * Expands `$NAME` / `${NAME}` against the values resolved so far.
  *
  * dotenvx would do this at load time and the composed file could simply carry
@@ -221,7 +231,7 @@ function expand(
       }
       const target = resolved.get(name);
       if (!target) {
-        throw new DeployError(
+        throw new MissingSourceError(
           `${key} is derived from ${name}, which has no value.`,
           [`${name} is the value to fix; ${key} follows from it.`],
         );
@@ -320,6 +330,8 @@ function compose(
 
   const resolved = new Map<string, Resolved>();
   const missing: string[] = [];
+  /** Which keys the write loop may NOT silently drop — see MissingSourceError. */
+  const requiredKeys = new Set<string>();
 
   for (const [key, entries] of variables()) {
     const meta = entries[0]!.meta;
@@ -371,6 +383,8 @@ function compose(
       entries.some((e) => !e.schema.safeParse(undefined).success) ||
       (source !== null && meta.secrecy === "secret");
 
+    if (required) requiredKeys.add(key);
+
     if (!value) {
       if (required) missing.push(key);
       continue;
@@ -414,10 +428,23 @@ function compose(
   const provenance = new Map<string, Provenance>();
 
   for (const [key, entry] of resolved) {
-    const value =
-      entry.from === "derived"
-        ? expand(key, entry.value, resolved)
-        : entry.value;
+    let value: string;
+    if (entry.from === "derived") {
+      try {
+        value = expand(key, entry.value, resolved);
+      } catch (error) {
+        // An optional derivation whose source has no value is a key the
+        // registry declared ahead of its deployment, not a fault: omit it,
+        // exactly as a hand-filled .env leaves it commented out. A required
+        // key keeps the loud failure, naming the source to fix.
+        if (error instanceof MissingSourceError && !requiredKeys.has(key)) {
+          continue;
+        }
+        throw error;
+      }
+    } else {
+      value = entry.value;
+    }
     lines.push(`${key}=${quote(key, value)}`);
     provenance.set(key, entry.from);
   }
