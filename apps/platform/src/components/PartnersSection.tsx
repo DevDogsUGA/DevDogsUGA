@@ -17,10 +17,10 @@ const PARTNERS_BLOBS: BlobDef[] = [
 
 function MarchingAntsBadge() {
   return (
-    <div className="relative grow">
+    <div className="relative min-h-56 grow">
       <Link
         href="mailto:devdogs@uga.edu"
-        className="absolute inset-1/2 flex aspect-square -translate-1/2 items-center justify-center transition-transform will-change-transform hover:scale-105 md:w-56 md:shrink-0"
+        className="absolute inset-1/2 flex aspect-square w-44 -translate-1/2 items-center justify-center transition-transform will-change-transform hover:scale-105 md:w-56 md:shrink-0"
         aria-label="Partner with DevDogs"
       >
         <svg

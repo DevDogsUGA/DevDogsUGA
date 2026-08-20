@@ -61,12 +61,12 @@ export default function EventsGrid({ month }: Props) {
       data-animate-stagger
     >
       <div
-        className="row-span-full flex flex-col gap-[inherit] lg:col-span-2"
+        className="flex flex-col gap-[inherit] lg:col-span-2 lg:row-span-full"
         data-animate="fade-up"
       >
         <MonthCalendar month={month} onEventTypeHover={setHoveredEventType} />
         <div
-          className="shadow-block-md relative grow overflow-hidden rounded-sm border-2 border-black"
+          className="shadow-block-md relative aspect-video grow overflow-hidden rounded-sm border-2 border-black lg:aspect-auto"
           data-animate="fade-up"
         >
           <Image
@@ -85,12 +85,12 @@ export default function EventsGrid({ month }: Props) {
         </div>
       </div>
 
-      <div className="col-span-3 row-span-2 grid grid-cols-2 grid-rows-subgrid gap-1">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-3 lg:row-span-2 lg:grid-rows-subgrid lg:gap-1">
         {EVENT_TYPES.map((type) => {
           const event = nextOrLatest(events, type, nowMs);
           if (!event) return null;
           return (
-            <div className="aspect-square" key={type} data-animate="fade-up">
+            <div className="lg:aspect-square" key={type} data-animate="fade-up">
               <EventCard
                 event={event}
                 isHighlighted={hoveredEventType === type}

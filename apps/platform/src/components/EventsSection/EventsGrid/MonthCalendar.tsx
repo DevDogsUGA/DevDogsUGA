@@ -358,7 +358,7 @@ export default function MonthCalendar({
             return (
               <button
                 key={idx}
-                className={`${baseClass} cursor-pointer rounded hover:bg-mauve-50`}
+                className={`${baseClass} relative cursor-pointer rounded before:absolute before:-inset-x-2 before:-inset-y-1.5 before:content-[''] hover:bg-mauve-50`}
                 aria-expanded={open && active?.day === day}
                 aria-haspopup="dialog"
                 onMouseEnter={(e) =>

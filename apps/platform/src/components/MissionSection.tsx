@@ -18,7 +18,7 @@ const MISSION_BLOBS: BlobDef[] = [
 function SpinStarImage() {
   return (
     <div
-      className="@container-[size] relative -my-6 min-w-64 grow drop-shadow-[8px_8px_0_var(--color-cyan-500),10px_10px_0_var(--color-indigo-700),12px_12px_0_var(--color-mauve-800)]"
+      className="@container-[size] relative h-64 min-w-64 grow drop-shadow-[8px_8px_0_var(--color-cyan-500),10px_10px_0_var(--color-indigo-700),12px_12px_0_var(--color-mauve-800)] md:-my-6 md:h-auto"
       aria-hidden="true"
     >
       <svg
@@ -63,10 +63,10 @@ export default function MissionSection({ topEdge, bottomEdge }: Props) {
           base="#f0fdff"
           blobs={MISSION_BLOBS}
         />
-        <div className="relative z-10 mx-auto flex max-w-6xl gap-4 px-12 py-14 md:py-20">
+        <div className="relative z-10 mx-auto flex max-w-6xl flex-col gap-10 px-6 py-14 md:flex-row md:gap-4 md:px-12 md:py-20">
           <SpinStarImage />
-          <div className="w-full max-w-prose space-y-4 text-right text-base/relaxed text-mauve-700 *:text-balance md:text-lg/relaxed">
-            <h2 className="font-display mb-8 text-right text-4xl font-extrabold text-black md:text-5xl">
+          <div className="w-full max-w-prose space-y-4 text-left text-base/relaxed text-mauve-700 *:text-balance md:text-right md:text-lg/relaxed">
+            <h2 className="font-display mb-8 text-left text-4xl font-extrabold text-black md:text-right md:text-5xl">
               Our Mission
             </h2>
             <p>

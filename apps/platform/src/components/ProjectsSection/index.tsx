@@ -24,8 +24,8 @@ const PROJECTS_BLOBS: BlobDef[] = [
 
 function RotatedImage() {
   return (
-    <div className="@container-[size] flex grow items-center justify-center drop-shadow-[12px_0px_0_var(--color-mauve-800)]">
-      <div className="relative -ml-12 size-[calc(100cqh/sqrt(2))] rotate-45 overflow-hidden rounded-sm border-2 border-black">
+    <div className="@container-[size] flex h-64 grow items-center justify-center drop-shadow-[12px_0px_0_var(--color-mauve-800)] md:h-auto">
+      <div className="relative size-[calc(100cqh/sqrt(2))] rotate-45 overflow-hidden rounded-sm border-2 border-black md:-ml-12">
         <div className="absolute inset-1/2 size-[100cqh] -translate-1/2 -rotate-45">
           <Image
             alt=""
@@ -69,9 +69,9 @@ export default function ProjectsSection({
           base="#f0fdf4"
           blobs={PROJECTS_BLOBS}
         />
-        <div className="relative z-10 mx-auto max-w-6xl space-y-16 px-12 py-12 md:py-16">
-          <div className="-mt-12 flex">
-            <div className="max-w-prose space-y-4 pt-12 text-left text-balance">
+        <div className="relative z-10 mx-auto max-w-6xl space-y-16 px-6 py-12 md:px-12 md:py-16">
+          <div className="flex flex-col gap-10 md:-mt-12 md:flex-row md:gap-0">
+            <div className="max-w-prose space-y-4 text-left text-balance md:pt-12">
               <h2 className="font-display mb-8 text-4xl font-extrabold text-black md:text-5xl">
                 Projects
               </h2>
