@@ -5,7 +5,7 @@ import SectionBackground, {
   type BlobDef,
   type EdgeType,
 } from "~/ui/section-background";
-import { PROJECTS } from "~/config/projects";
+import { CLOSED_PROJECTS, OPEN_PROJECTS } from "~/config/projects";
 import ProjectCard from "./ProjectCard";
 
 const PROJECTS_BLOBS: BlobDef[] = [
@@ -89,10 +89,28 @@ export default function ProjectsSection({
             <RotatedImage />
           </div>
 
-          <div className="grid items-stretch gap-4 md:grid-cols-2">
-            {PROJECTS.map((project) => (
-              <ProjectCard key={project.title} {...project} />
-            ))}
+          <div className="space-y-10">
+            <div className="grid items-stretch gap-4 md:grid-cols-2">
+              {OPEN_PROJECTS.map((project) => (
+                <ProjectCard key={project.title} {...project} />
+              ))}
+            </div>
+
+            {CLOSED_PROJECTS.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-xs font-bold tracking-widest text-mauve-500 uppercase">
+                    Not open for contributions
+                  </h3>
+                  <span className="h-px grow bg-mauve-300" />
+                </div>
+                <div className="grid items-stretch gap-4 md:grid-cols-2">
+                  {CLOSED_PROJECTS.map((project) => (
+                    <ProjectCard key={project.title} {...project} compact />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col items-center gap-4 text-center">

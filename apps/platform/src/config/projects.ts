@@ -4,8 +4,9 @@ import type { TechKey } from "./tech";
  * The DevDogs projects, shared by the homepage Projects section and the
  * fullscreen app switcher so both render the same cards from one source.
  *
- * Ordered by what someone can join today: DogDays, DogPack, the Platform, then
- * the paused Community Resource Forum.
+ * Ordered by what someone can join today, which is also the order the two
+ * surfaces group them in: the `"open"` projects lead, and the `"closed"` ones
+ * follow in a quieter block.
  */
 export interface Project {
   badge: { label: string; bg: string; text: string };
@@ -15,13 +16,19 @@ export interface Project {
   /** The "what is it, in four words" line that sits under the title. */
   tagline: string;
   description: string;
-  /** Who can contribute, when that is not simply "anyone who shows up". */
+  /**
+   * Whether anyone can pick up an issue, or only a closed group can. Drives
+   * how prominently the card renders — `"closed"` projects are real work worth
+   * listing, but they are not what a prospective member should click first.
+   */
+  contributions: "open" | "closed";
+  /** Why contributions are closed, or any other one-line caveat. */
   note?: string;
   techStack?: TechKey[];
   githubUrl?: string;
   /** A deployed site, with the label its button carries. */
   liveUrl?: { href: string; label: string };
-  /** Block shadow used on the homepage; the overlay picks its own. */
+  /** Block shadow override; each surface picks its own default. */
   shadow?: string;
 }
 
@@ -34,7 +41,15 @@ export const PROJECTS: Project[] = [
     titleColor: "text-amber-700",
     description:
       "Plan your semester against live UGA registrar data. Answer a short questionnaire, and DogDays generates conflict-free schedules — weighing professor ratings, walking distance between buildings, and the credits you already have.",
-    techStack: ["next", "typescript", "tailwind", "drizzle", "supabase"],
+    contributions: "open",
+    techStack: [
+      "next",
+      "typescript",
+      "tailwind",
+      "drizzle",
+      "supabase",
+      "postgres",
+    ],
     githubUrl:
       "https://github.com/DevDogsUGA/DevDogsUGA/tree/main/apps/schedule-builder",
     liveUrl: { href: "https://dogdays.dev", label: "Public Beta" },
@@ -47,6 +62,7 @@ export const PROJECTS: Project[] = [
     titleColor: "text-indigo-700",
     description:
       "Our first mobile app: find the people already studying what you're studying. Match with classmates by course, form a group, and pick a time that works — built in Flutter for iOS and Android.",
+    contributions: "open",
     techStack: ["flutter", "dart", "supabase", "postgres"],
     githubUrl:
       "https://github.com/DevDogsUGA/DevDogsUGA/tree/main/apps/study-group-finder",
@@ -59,8 +75,16 @@ export const PROJECTS: Project[] = [
     titleColor: "text-mauve-950",
     description:
       "The site you're on. A member portal and developer platform for the club — profiles, contribution streaks, an OAuth server our other apps sign in against, and the tooling that runs DevDogs.",
+    contributions: "closed",
     note: "Built and maintained by DevDogs officers.",
-    techStack: ["next", "typescript", "tailwind", "drizzle", "supabase"],
+    techStack: [
+      "next",
+      "typescript",
+      "tailwind",
+      "drizzle",
+      "supabase",
+      "postgres",
+    ],
     githubUrl:
       "https://github.com/DevDogsUGA/DevDogsUGA/tree/main/apps/platform",
   },
@@ -72,7 +96,16 @@ export const PROJECTS: Project[] = [
     titleColor: "text-emerald-700",
     description:
       "A searchable hub connecting Athens residents to local community services, events, and organizations. Development is paused before launch — the groundwork is built and waiting on a team to carry it the rest of the way.",
+    contributions: "closed",
     techStack: ["next", "typescript", "drizzle", "supabase", "postgres"],
     githubUrl: "https://github.com/DevDogs-UGA/Community-Resource-Forum",
   },
 ];
+
+/** The projects anyone can contribute to — the ones the page leads with. */
+export const OPEN_PROJECTS = PROJECTS.filter((p) => p.contributions === "open");
+
+/** Everything else: still listed, deliberately quieter. */
+export const CLOSED_PROJECTS = PROJECTS.filter(
+  (p) => p.contributions === "closed",
+);

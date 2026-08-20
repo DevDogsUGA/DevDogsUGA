@@ -9,7 +9,7 @@ import { useNavUser } from "~/components/TopNav/NavUserProvider";
 import SignInButton from "~/components/TopNav/SignInButton";
 import * as icons from "~/config/icons";
 import { SOCIAL_LINKS, SWITCHER_LINKS, SWITCHER_PRIMARY } from "~/config/nav";
-import { PROJECTS } from "~/config/projects";
+import { CLOSED_PROJECTS, OPEN_PROJECTS } from "~/config/projects";
 import LinkButton from "~/ui/link-button";
 import EntryButton from "./EntryButton";
 import { useAppSwitcher } from "./provider";
@@ -96,7 +96,7 @@ export default function AppSwitcher() {
             Projects
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
-            {PROJECTS.map((project) => (
+            {OPEN_PROJECTS.map((project) => (
               <ProjectCard
                 key={project.title}
                 {...project}
@@ -104,6 +104,15 @@ export default function AppSwitcher() {
               />
             ))}
           </div>
+          {/* Same split the homepage makes: the projects a visitor can join
+              lead, and the closed ones follow as secondary listings. */}
+          {CLOSED_PROJECTS.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {CLOSED_PROJECTS.map((project) => (
+                <ProjectCard key={project.title} {...project} compact />
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mx-auto flex w-full max-w-md flex-col gap-3">
