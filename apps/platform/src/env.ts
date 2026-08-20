@@ -97,12 +97,12 @@ const server = {
     scope: "default",
     secrecy: "public",
   }),
-  // Scope "default" even though the schema still requires a value: one guild
-  // is shared by every environment (the bots differ by channel, not by
-  // guild), and the id is committed in .env.example. Folding it into a schema
-  // default is a later phase's change -- this file must not alter schema
-  // semantics.
-  DISCORD_GUILD_ID: define(z.string(), {
+  // Scope "default" AND a schema default (since 2026-08-20; the DEVDOGS_EPOCH
+  // pattern): one guild is shared by every environment -- the bots differ by
+  // channel, not by guild -- so the committed id doubles as the fallback and
+  // a bare environment boots without the line. A set value still overrides,
+  // which is how ci.env keeps its obvious placeholder.
+  DISCORD_GUILD_ID: define(z.string().default("1231994798165069987"), {
     doc:
       "The club's Discord guild. One shared guild across every environment " +
       "-- the bots differ by alert channel, not by guild.",
@@ -137,9 +137,8 @@ const server = {
     scope: "environment",
     secrecy: "public",
   }),
-  // Same "default" reasoning as DISCORD_GUILD_ID: identical everywhere and
-  // committed in .env.example, but the schema does not default it yet.
-  GITHUB_ORG: define(z.string(), {
+  // Same "default" reasoning as DISCORD_GUILD_ID, schema default included.
+  GITHUB_ORG: define(z.string().default("DevDogsUGA"), {
     doc:
       "The GitHub organization the platform administers. Any non-empty " +
       "placeholder is enough to run the app locally.",
@@ -453,7 +452,8 @@ const client = {
     secrecy: "public",
     example: "$PUBLISHABLE_KEY",
   }),
-  NEXT_PUBLIC_AVATARS_BUCKET: define(z.string(), {
+  // Same "default" reasoning as DISCORD_GUILD_ID, schema default included.
+  NEXT_PUBLIC_AVATARS_BUCKET: define(z.string().default("avatars"), {
     doc: "Storage bucket for avatars. The same name in every environment.",
     scope: "default",
     secrecy: "public",
