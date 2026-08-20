@@ -78,13 +78,6 @@ export const SEARCH_ONLY_PAGES: NavItem[] = [
     icon: "ScalesIcon",
     description: "How DevDogs collects, uses, and protects your data.",
   },
-  {
-    label: "Points Leaderboard",
-    href: "/leaderboard/points",
-    icon: "RankingIcon",
-    description:
-      "Lifetime competition points, summed across every finalized competition.",
-  },
 ];
 
 /**

@@ -135,12 +135,6 @@ export default async function Footer() {
                 </li>
 
                 <li>
-                  <Link href="/leaderboard/points" className="hover:underline">
-                    Points Leaderboard
-                  </Link>
-                </li>
-
-                <li>
                   <Link href="/legal/privacy" className="hover:underline">
                     Privacy Policy
                   </Link>

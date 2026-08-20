@@ -116,8 +116,8 @@ export async function linkProfile(accessToken: string): Promise<void> {
   // because whatever replaces it will need to know which GitHub account belongs
   // to which member, and that is only knowable at link time.
   //
-  // Not to be confused with `memberPoints` / `/leaderboard/points`, which is the
-  // competition points system and is fed by the tally.
+  // Not to be confused with `memberPoints`, which is the competition points
+  // system and is fed by the tally.
   await db
     .insert(leaderboardProfiles)
     .values({
