@@ -30,6 +30,11 @@
   // prints the resolved binding list and warns about every key left behind.
   // ==========================================================================
   "name": "development-platform",
+  // Pinned because the deploy token is scoped and OpenNext's R2 cache
+  // provisioning cannot infer the account from it ("Could not determine
+  // Cloudflare account ID", first staging deploy). Not a secret — it is in
+  // every dashboard URL. Inherited by every environment block.
+  "account_id": "61d185ff419ef7bd5bd4b3d314081a49",
   // Custom entry composes the OpenNext `fetch` handler with the cron
   // `scheduled` handler (see cloudflare/worker.ts + cloudflare/scheduled.ts).
   "main": "cloudflare/worker.ts",

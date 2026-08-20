@@ -5,6 +5,9 @@
   // `images`, `r2_buckets` and `send_email` are repeated in full per
   // environment rather than inherited.
   "name": "development-schedule-builder",
+  // See apps/platform/wrangler.jsonc: the scoped deploy token defeats
+  // OpenNext's account inference, so the account is pinned. Not a secret.
+  "account_id": "61d185ff419ef7bd5bd4b3d314081a49",
   // Custom entry composes the OpenNext `fetch` handler with the cron
   // `scheduled` handler (see cloudflare/worker.ts + cloudflare/scheduled.ts).
   "main": "cloudflare/worker.ts",

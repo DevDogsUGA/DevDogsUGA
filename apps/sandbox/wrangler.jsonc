@@ -5,6 +5,8 @@
   // inherit `vars` into an environment block -- which is why the top-level entry
   // below reaches `wrangler dev` and nothing else.
   "name": "development-sandbox",
+  // See apps/platform/wrangler.jsonc: pinned for the scoped deploy token.
+  "account_id": "61d185ff419ef7bd5bd4b3d314081a49",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-22",
   "compatibility_flags": ["nodejs_compat"],
