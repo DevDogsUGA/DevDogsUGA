@@ -573,12 +573,12 @@ describe("preflight, the target no app boots from", () => {
     // nothing else does" — preflight and production keep it, staging drops
     // the read-only spare nobody there could use.
     //
-    // Then staging and production moved by two: STUDY_GROUP_FINDER_URL and
-    // its _CALLBACK joined the supabase manifest for the Dog Pack rebrand
-    // (dogpack.dev) — public environment values in the auth redirect
-    // allowlist, declared ahead of the web deployment that will fill them.
-    expect(keysRoutedTo("staging").size).toBe(47);
-    expect(keysRoutedTo("production").size).toBe(50);
+    // Then staging and production moved by two (STUDY_GROUP_FINDER_URL +
+    // _CALLBACK, the Dog Pack redirect reservation), and by one more when
+    // AIRTABLE_SYNC_PAT moved from Supabase Vault into the platform manifest
+    // (2026-08-19) — one storage mechanism, auditable, Worker-delivered.
+    expect(keysRoutedTo("staging").size).toBe(48);
+    expect(keysRoutedTo("production").size).toBe(51);
     expect(keysRoutedTo("preflight").size).toBe(3);
   });
 });

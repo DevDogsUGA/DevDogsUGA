@@ -45,10 +45,10 @@ declare({
     }),
     AIRTABLE_PAT: define(z.string().min(1).optional(), {
       doc:
-        "Bootstrap-only Airtable token for the scaffolding scripts, which " +
-        "run before there is anywhere to put a secret. The runtime reads " +
-        "its own narrower token from Supabase Vault; this one stays in the " +
-        "operator's vault, in .env only while shaping the base.",
+        "Bootstrap-only Airtable token for the scaffolding scripts. The " +
+        "runtime reads its own narrower token, AIRTABLE_SYNC_PAT — a " +
+        "separate key, so this one can never shadow it. This one stays in " +
+        "the operator's password vault, in .env only while shaping the base.",
       scope: "developer",
       secrecy: "never-store",
     }),

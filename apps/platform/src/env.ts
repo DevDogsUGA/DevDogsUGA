@@ -245,8 +245,11 @@ const server = {
   }),
   // Airtable. Optional because the base is provisioned separately and the
   // platform has to boot without it — the sync refuses with a named error
-  // rather than the app failing to start. The personal access token is NOT
-  // here: it lives in Vault under "airtable_pat". See
+  // rather than the app failing to start. The sync token moved HERE from
+  // Supabase Vault ("airtable_pat") on 2026-08-19, by decision: one storage
+  // mechanism, auditable by `env audit`, delivered like every other Worker
+  // secret. What that traded away is officer rotation without a deploy —
+  // rotating it is now Bitwarden → `env push` → next deploy. See
   // docs/platform/airtable-setup.md.
   //
   // `narrowed` because `deploy airtable-plan` runs in `preflight` and cannot
@@ -261,13 +264,28 @@ const server = {
   // a wider blast radius than the routing, arrived at by trying to be careful.
   AIRTABLE_BASE_ID: define(z.string().default(""), {
     doc:
-      "The officers' Airtable base id -- the id only; the token lives in " +
-      "Supabase Vault under airtable_pat. Empty means the sync refuses with " +
+      "The officers' Airtable base id -- the id only; the sync token is " +
+      "AIRTABLE_SYNC_PAT beside it. Empty means the sync refuses with " +
       "a named error instead of the app failing to boot, so leave it unset " +
       "until the base exists. Full setup: docs/platform/airtable-setup.md.",
     scope: "environment",
     secrecy: "public",
     narrowed: true,
+  }),
+  AIRTABLE_SYNC_PAT: define(z.string().default(""), {
+    doc:
+      "The runtime sync token: schema.bases:read, data.records:read and " +
+      "data.records:write on the one officers' base, and nothing else -- it " +
+      "can rewrite every dues record, which is why it is the narrowest of " +
+      "the four Airtable tokens that still touches data. Empty means the " +
+      "sync refuses with a named error (the platform boots without it). " +
+      "Reaches the Worker like every other secret; rotating it is " +
+      "Bitwarden -> `env push` -> next deploy. NOT the scaffolding token " +
+      "(AIRTABLE_PAT, never stored) and NOT the CI pair (PLAN/APPLY, " +
+      "schema-only).",
+    scope: "environment",
+    secrecy: "secret",
+    commented: true,
   }),
   // Supabase OAuth, for sandbox environments. Optional for the same reason
   // as Airtable: the app is registered separately and the platform has to

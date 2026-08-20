@@ -427,12 +427,12 @@ describe("preflight", () => {
     // only the two §3.5 plan jobs read it, and neither runs in staging, so
     // the rendered staging file stops asking anyone to fill it in.
     //
-    // The Dog Pack rebrand (dogpack.dev) then moved staging and production
-    // by two each: STUDY_GROUP_FINDER_URL + _CALLBACK, public redirect
-    // allowlist entries declared ahead of the web deploy that fills them.
+    // The Dog Pack rebrand (dogpack.dev) moved staging and production by two
+    // (STUDY_GROUP_FINDER_URL + _CALLBACK), and AIRTABLE_SYNC_PAT — moved from
+    // Supabase Vault into the platform manifest — by one more (2026-08-19).
     expect(target("preflight").active.size).toBe(3);
-    expect(target("staging").active.size).toBe(47);
-    expect(target("production").active.size).toBe(50);
+    expect(target("staging").active.size).toBe(48);
+    expect(target("production").active.size).toBe(51);
   });
 
   it("says in the file itself why it is short, and that nothing is hand-set", () => {

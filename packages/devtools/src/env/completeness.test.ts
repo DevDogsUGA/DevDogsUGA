@@ -187,12 +187,17 @@ describe("registry completeness", () => {
     ]);
   });
 
-  it("keeps the three Airtable tokens three separate declarations", () => {
+  it("keeps the four Airtable tokens four separate declarations", () => {
     // The property that makes `AIRTABLE_PLAN_PAT`'s `narrowed` claim checkable
-    // at all. If the scopes were three values of ONE key, "the plan token
+    // at all. If the scopes were values of ONE key, "the plan token
     // cannot write" would be a fact about whichever value a target happened to
     // hold, and marking it narrowed would be the DB_URL claim — unverifiable
     // here — rather than a property of the key.
+    //
+    // AIRTABLE_SYNC_PAT joined 2026-08-19, when the runtime data token moved
+    // out of Supabase Vault into the platform manifest — the fourth scope
+    // (records read/write), still its own key for the same reason as the
+    // other three.
     //
     // Their routing is the other half, and it is what the split buys:
     const airtable = [...variables().keys()].filter((k) =>
@@ -203,6 +208,7 @@ describe("registry completeness", () => {
       "AIRTABLE_BASE_ID",
       "AIRTABLE_PAT",
       "AIRTABLE_PLAN_PAT",
+      "AIRTABLE_SYNC_PAT",
     ]);
 
     // never-store: the operator's own token, refused every remote store.

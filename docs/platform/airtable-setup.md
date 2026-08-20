@@ -478,21 +478,23 @@ finishes a task in a different system. The sync refuses with a named
 `AirtableNotConfiguredError` instead, which the console can render as
 "Airtable is not configured" rather than surfacing a 401 from a vendor.
 
-### The token lives in Vault
+### The token is an environment secret
 
-|             |                                                                                                             |
-| ----------- | ----------------------------------------------------------------------------------------------------------- |
-| Secret name | `airtable_pat`                                                                                              |
-| Stored via  | `storeVaultSecret(token, "airtable_pat")` (`src/server/vault.ts`) — the same path as every other credential |
-| Read via    | `getAirtableToken()` in `server/airtable/credentials.ts`                                                    |
+|          |                                                                                              |
+| -------- | -------------------------------------------------------------------------------------------- |
+| Key      | `AIRTABLE_SYNC_PAT` (platform manifest; optional — empty means the sync refuses by name)     |
+| Stored   | Bitwarden → GitHub → the platform Worker, like every other secret (`pnpm devtools env push`) |
+| Read via | `getAirtableToken()` in `server/airtable/credentials.ts`                                     |
 
-Looked up by **name**, not by a secret id kept in an env var. Vault names are
-unique, so the name is a stable handle that survives rotation — replacing the
-value changes nothing else. A stored id would mean a rotation that creates a new
-row silently leaves the sync reading the old one.
+It lived in Supabase Vault (as `airtable_pat`) until 2026-08-19; the move to
+the env registry was a decision, trading officer rotation-without-a-deploy for
+one storage mechanism, an `env audit`-visible copy, and delivery on the same
+path as every other Worker secret. Rotation is now Bitwarden →
+`env push --target production` → the next deploy.
 
-`AIRTABLE_PAT` is checked **second**, deliberately. Once the Vault entry exists a
-stale environment variable cannot quietly take precedence over the rotated token.
+There is exactly **one** source, deliberately: the old resolver's Vault-then-
+`AIRTABLE_PAT` fallback ordering was silently inverted for a while, and a
+single named variable cannot shadow anything.
 
 ### Token scopes
 
@@ -502,11 +504,11 @@ token that cannot reshape anything.
 
 | Token           | Scopes                                                           | Lives in                                   | Used by                                     |
 | --------------- | ---------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------- |
-| **Sync**        | `schema.bases:read` · `data.records:read` · `data.records:write` | Supabase Vault, as `airtable_pat`          | the runtime sync, every pass                |
+| **Sync**        | `schema.bases:read` · `data.records:read` · `data.records:write` | the env registry, as `AIRTABLE_SYNC_PAT`   | the runtime sync, every pass                |
 | **Scaffolding** | the same, **plus `schema.bases:write`**                          | your `.env` as `AIRTABLE_PAT`, transiently | `airtable scaffold` · `pull-ids` · `verify` |
 
 Merging them is the mistake this table exists to prevent. It would hand the cron
-job — and anything that can read Vault — the ability to drop a field from a base
+job — and anything that can read the Worker's environment — the ability to drop a field from a base
 officers use every day.
 
 **Why the sync needs `schema.bases:read` at all.** Every pass verifies the base
@@ -578,12 +580,13 @@ the repository where the capability is not constant.
 5. Walk the manual checklist `verify.ts` prints (field editing permissions).
 6. `pnpm airtable:verify` — must exit clean.
 7. Mint the **sync** token — same workspace, everything except
-   `schema.bases:write` — store it in Vault as `airtable_pat`, and **remove
-   `AIRTABLE_PAT` from `.env`**. Not the scaffolding token: once it is in Vault
-   the runtime can reshape the base, and nothing downstream would notice.
+   `schema.bases:write` — set it as `AIRTABLE_SYNC_PAT` (Bitwarden, then
+   `env push --target production`), and **remove `AIRTABLE_PAT` from
+   `.env`**. Not the scaffolding token: give the runtime a write-capable
+   token and it can reshape the base, and nothing downstream would notice.
 
-   Vault is checked first, but a `null` from a failed read is indistinguishable
-   from "nothing stored", so a lingering env var wins by accident. It is what
+   The two are separate KEYS, so a lingering `AIRTABLE_PAT` cannot win by
+   accident — the runtime never reads it. It is what
    silently inverted this precedence before 2026-08-06 — and with two tokens
    that inversion also means the _broader_ one wins.
 
@@ -646,12 +649,13 @@ Ordered, because several steps fail confusingly when done out of order.
    rather than an email.
 9. **Only then** author a meeting. Doing it earlier produces a workshop linked to
    nothing.
-10. **Mint the sync token and put _that_ one in Vault** as `airtable_pat`, then
-    delete `AIRTABLE_PAT` from `.env` and revoke the scaffolding token until the
-    next time the base changes shape.
+10. **Mint the sync token and set _that_ one as `AIRTABLE_SYNC_PAT`**
+    (Bitwarden → `env push --target production`), then delete `AIRTABLE_PAT`
+    from `.env` and revoke the scaffolding token until the next time the base
+    changes shape.
 
-    Last rather than first: the scaffolding scripts read the environment by
-    design, and a token that is only in Vault cannot scaffold anything.
+    Last rather than first: the scaffolding scripts read `AIRTABLE_PAT` by
+    design, and the sync key cannot scaffold anything.
 
     ⚠️ **Do not promote the scaffolding token.** It carries
     `schema.bases:write`, and in Vault that becomes a standing ability for the

@@ -1,20 +1,22 @@
 import { AirtableClient } from "@devdogsuga/airtable";
 import { env } from "~/env";
-import { readVaultSecretByName } from "~/server/vault";
 
 /**
- * Resolving the Airtable personal access token.
+ * Resolving the Airtable sync token.
  *
- * The token lives in Vault, not in `.env`, for the same reason every other
- * credential does: `.env` is readable by anything that can read the worker's
- * environment, and a PAT scoped to `data.records:write` can rewrite every dues
- * record in the club.
+ * It reads `AIRTABLE_SYNC_PAT` from the environment — moved OUT of Supabase
+ * Vault ("airtable_pat") on 2026-08-19, by decision. What the move bought:
+ * one storage mechanism instead of two, `env audit` can see the copy on the
+ * Worker, and the token rides the same Bitwarden → GitHub → Worker path as
+ * every other secret. What it traded away, recorded rather than forgotten:
+ * an officer can no longer rotate it from the console without a deploy —
+ * rotation is Bitwarden → `env push` → the next deploy's secrets-file.
  *
- * Looked up by NAME rather than by a secret id kept in an env var — see
- * `readVaultSecretByName`.
+ * ONE source, deliberately. The old resolver had two (Vault, then an
+ * `AIRTABLE_PAT` bootstrap fallback), and the fallback ordering was silently
+ * inverted for a while — anyone who still had the env var set got it no
+ * matter what the Vault held. A single named variable cannot shadow anything.
  */
-export const AIRTABLE_PAT_SECRET_NAME = "airtable_pat";
-
 export class AirtableNotConfiguredError extends Error {
   constructor(message: string) {
     super(message);
@@ -22,29 +24,13 @@ export class AirtableNotConfiguredError extends Error {
   }
 }
 
-/**
- * The token, from Vault, or from the environment during bootstrapping.
- *
- * `AIRTABLE_PAT` exists because the scaffolding scripts run before there is
- * anywhere to put a secret — the base has to exist before the platform can be
- * pointed at it. It is deliberately checked SECOND, so once the Vault entry is
- * written a stale env var cannot quietly take precedence over the rotated one.
- *
- * That ordering was silently inverted until the Vault lookup moved to direct
- * SQL: reading it through PostgREST always failed, `null` is indistinguishable
- * from "no secret stored", and the fallback swallowed it. Anyone who had set
- * `AIRTABLE_PAT` got the env var no matter what the Vault held.
- */
-export async function getAirtableToken(): Promise<string> {
-  const fromVault = await readVaultSecretByName(AIRTABLE_PAT_SECRET_NAME);
-  if (fromVault) return fromVault;
-
-  const fromEnv = process.env.AIRTABLE_PAT;
-  if (fromEnv) return fromEnv;
+/** @throws {AirtableNotConfiguredError} when the token is unset. */
+export function getAirtableToken(): string {
+  if (env.AIRTABLE_SYNC_PAT) return env.AIRTABLE_SYNC_PAT;
 
   throw new AirtableNotConfiguredError(
-    `No Airtable token. Store one in Vault as "${AIRTABLE_PAT_SECRET_NAME}", ` +
-      "or set AIRTABLE_PAT while bootstrapping. See docs/platform/airtable-setup.md.",
+    "AIRTABLE_SYNC_PAT is not set. It belongs in the environment like every " +
+      "other secret — see docs/platform/airtable-setup.md.",
   );
 }
 
@@ -64,16 +50,10 @@ export async function getAirtableClient(): Promise<AirtableClient> {
     );
   }
 
-  return new AirtableClient({ baseId, token: await getAirtableToken() });
+  return new AirtableClient({ baseId, token: getAirtableToken() });
 }
 
 /** Whether a sync could run at all, for the console to branch on. */
-export async function isAirtableConfigured(): Promise<boolean> {
-  if (!env.AIRTABLE_BASE_ID) return false;
-  try {
-    await getAirtableToken();
-    return true;
-  } catch {
-    return false;
-  }
+export function isAirtableConfigured(): boolean {
+  return Boolean(env.AIRTABLE_BASE_ID) && Boolean(env.AIRTABLE_SYNC_PAT);
 }
