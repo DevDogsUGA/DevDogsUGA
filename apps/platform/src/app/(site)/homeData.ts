@@ -9,24 +9,29 @@ import zayan from "~/assets/zayan.jpg";
 import anika from "~/assets/anika.png";
 import type { LeaderHoverCardProps } from "~/components/LeadershipSection/LeaderCluster/LeaderHoverCard";
 
-export type EventType = "workshop" | "hackathon" | "devhours" | "career";
+export type EventType = "workshop" | "hackathon" | "build" | "career";
 
 export interface CalendarEvent {
   id: string;
   type: EventType;
   title: string;
   description: string;
-  location: string;
+  /**
+   * Ordered beats that explain the format, rendered in place of the
+   * time/place footer these cards used to carry. Reserved for the event types
+   * whose shape is not obvious from the name — the competition, mainly.
+   */
+  steps?: string[];
   start: string; // ISO 8601, e.g. "2026-05-13T18:30:00-04:00"
   end: string; // ISO 8601
   rsvpUrl?: string;
 }
 
 /**
- * Events happen in Athens, GA. Every date here is formatted in that zone rather
- * than the ambient one, so the server and the browser produce identical text —
- * `toLocaleTimeString()` would render the server's zone during SSR and the
- * visitor's on hydration, which React resolves by discarding the server HTML.
+ * Events happen in Athens, GA. Nothing user-facing prints a clock time — the
+ * calendar shows which day something falls on and no more — but the day itself
+ * still has to be decided in this zone rather than the ambient one, or an
+ * evening event files under tomorrow's square the moment the server runs in UTC.
  */
 export const EVENT_TZ = "America/New_York";
 
@@ -39,31 +44,6 @@ export interface CalendarMonth {
   /** The instant this frame was generated, for "is this event still upcoming?". */
   now: string;
   events: CalendarEvent[];
-}
-
-// Intl formatters rather than @date-fns/tz: TZDate's constructor runs
-// `new Date()` on every construction (see date/mini.js), and these run inside
-// client components during the prerender, where a clock read cannot be covered
-// by "use cache" and silently drops the whole page out of the static shell.
-// Intl.DateTimeFormat with an explicit timeZone is pure — same output on the
-// server and in the browser, no clock involved.
-const DAY_FORMAT = new Intl.DateTimeFormat("en-US", {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-  timeZone: EVENT_TZ,
-});
-
-const TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
-  hour: "numeric",
-  minute: "2-digit",
-  timeZone: EVENT_TZ,
-});
-
-export function formatEventTime(start: string, end: string): string {
-  const s = new Date(start);
-  const e = new Date(end);
-  return `${DAY_FORMAT.format(s)} · ${TIME_FORMAT.format(s)} – ${TIME_FORMAT.format(e)}`;
 }
 
 /**

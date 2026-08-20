@@ -48,8 +48,9 @@ export default function EventsSection({ topEdge, bottomEdge }: Props) {
               Events
             </h2>
             <p className="text-base/relaxed text-balance text-mauve-700">
-              Every week, rain or shine: workshops, hackathons, and open dev
-              sessions to keep you building.
+              Every week, rain or shine: workshops that teach a feature area,
+              week-long competitions to build it, and open build sessions in
+              between.
             </p>
           </div>
 

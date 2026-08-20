@@ -8,11 +8,17 @@ import {
 
 /**
  * Server-only, deliberately split from homeData.ts: that module is imported by
- * the calendar's client components for `formatEventTime` and its types, so it
+ * the calendar's client components for `eventLocalDay` and its types, so it
  * compiles into the browser graph too. Nothing here is reachable from the
  * client, which is what lets it read the clock — see {@link getCalendarMonth}.
  */
 
+/**
+ * Nothing renders a clock time any more — the cards and the popover print an
+ * event's format, not its schedule. The hour survives because it still decides
+ * the order two events appear in on a shared day, and the zone still decides
+ * *which* day that is.
+ */
 function iso(
   year: number,
   month: number,
@@ -42,8 +48,13 @@ function generateMonthEvents(year: number, month: number): CalendarEvent[] {
         type: "hackathon",
         title: "Hackathon Presentations",
         description:
-          "Teams present the features they shipped during the sprint. See real progress, give feedback, and celebrate wins.",
-        location: "Boyd GSRC 303",
+          "The week's feature competition comes due. Every team demos what it built, judges score them against the same requirements, and one implementation wins.",
+        steps: [
+          "A workshop announces the feature",
+          "Teams of up to four build it in a week",
+          "Demos judged on requirements shipped",
+          "The winning pull request gets merged",
+        ],
         start: iso(year, month, d, 18, 30),
         end: iso(year, month, d, 19, 0),
       });
@@ -52,8 +63,7 @@ function generateMonthEvents(year: number, month: number): CalendarEvent[] {
         type: "workshop",
         title: "Weekly Workshop",
         description:
-          "A hands-on session covering a technical concept directly relevant to the current project — taught by members, for members.",
-        location: "Boyd GSRC 303",
+          "A hands-on session covering a technical concept directly relevant to the current project — taught by members, for members. Most workshops close by announcing the feature the next competition is built around.",
         start: iso(year, month, d, 19, 0),
         end: iso(year, month, d, 20, 0),
       });
@@ -61,19 +71,18 @@ function generateMonthEvents(year: number, month: number): CalendarEvent[] {
 
     if (dow === 4) {
       events.push({
-        id: `devhours-${year}-${month}-${d}`,
-        type: "devhours",
-        title: "Dev / Office Hours",
+        id: `build-${year}-${month}-${d}`,
+        type: "build",
+        title: "Build Session",
         description:
-          "Optional open work session. Bring your laptop, get unblocked, pair with teammates, or just ship.",
-        location: "Boyd GSRC 303",
+          "Optional open work time mid-competition. Bring your laptop, pair with your team, get unblocked, or just ship.",
         start: iso(year, month, d, 18, 30),
         end: iso(year, month, d, 20, 0),
       });
     }
   }
 
-  // Career placeholder — first Tuesday of next month at noon
+  // Career placeholder — first Tuesday of next month
   const nextMonth = month === 11 ? 0 : month + 1;
   const nextYear = month === 11 ? year + 1 : year;
   for (let d = 1; d <= 7; d++) {
@@ -84,7 +93,6 @@ function generateMonthEvents(year: number, month: number): CalendarEvent[] {
         title: "Employer Event",
         description:
           "Network with recruiters and engineers from companies actively hiring DevDogs members.",
-        location: "Boyd GSRC 303",
         start: iso(nextYear, nextMonth, d, 17, 0),
         end: iso(nextYear, nextMonth, d, 19, 0),
       });

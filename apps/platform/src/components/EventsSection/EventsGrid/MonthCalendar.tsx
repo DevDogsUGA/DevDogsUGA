@@ -31,35 +31,17 @@ import {
   ArrowUpRightIcon,
   CalendarDotsIcon,
   CaretRightIcon,
-  ClockIcon,
-  MapPinIcon,
 } from "@phosphor-icons/react/ssr";
 import type {
   CalendarEvent,
   CalendarMonth,
   EventType,
 } from "~/app/(site)/homeData";
-import { eventLocalDay, formatEventTime } from "~/app/(site)/homeData";
-
-const dotColor: Record<EventType, string> = {
-  hackathon: "bg-cyan-500",
-  workshop: "bg-amber-400",
-  devhours: "bg-mauve-800",
-  career: "bg-emerald-700",
-};
-
-const badgeStyle: Record<
-  EventType,
-  { bg: string; text: string; label: string }
-> = {
-  hackathon: { bg: "bg-cyan-400", text: "text-black", label: "Hackathon" },
-  workshop: { bg: "bg-amber-400", text: "text-black", label: "Workshop" },
-  devhours: { bg: "bg-mauve-800", text: "text-white", label: "Dev Hours" },
-  career: { bg: "bg-emerald-800", text: "text-white", label: "Career" },
-};
+import { eventLocalDay } from "~/app/(site)/homeData";
+import { dotColor, eventBadge } from "./eventBadge";
 
 function EventDetail({ event }: { event: CalendarEvent }) {
-  const badge = badgeStyle[event.type];
+  const badge = eventBadge[event.type];
   return (
     <div className="flex w-52 flex-col gap-2">
       <span
@@ -71,26 +53,31 @@ function EventDetail({ event }: { event: CalendarEvent }) {
         {event.title}
       </p>
       <p className="text-xs/relaxed text-mauve-600">{event.description}</p>
-      <div className="flex flex-col gap-1 border-t border-mauve-200 pt-2 text-xs text-mauve-500">
-        <span className="flex items-center gap-1.5">
-          <ClockIcon className="shrink-0" />
-          {formatEventTime(event.start, event.end)}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <MapPinIcon className="shrink-0" />
-          {event.location}
-        </span>
-        {event.rsvpUrl && (
-          <a
-            href={event.rsvpUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-0.5 inline-flex items-center gap-1 font-semibold text-black hover:underline"
-          >
-            RSVP <ArrowUpRightIcon />
-          </a>
-        )}
-      </div>
+      {event.steps && (
+        <ol className="flex flex-col gap-1.5 border-t border-mauve-200 pt-2 text-xs/snug text-mauve-600">
+          {event.steps.map((step, i) => (
+            <li key={step} className="flex items-start gap-2">
+              <span
+                aria-hidden
+                className={`${badge.bg} ${badge.text} mt-px flex size-4 shrink-0 items-center justify-center rounded-full text-[0.625rem] font-bold`}
+              >
+                {i + 1}
+              </span>
+              {step}
+            </li>
+          ))}
+        </ol>
+      )}
+      {event.rsvpUrl && (
+        <a
+          href={event.rsvpUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex w-fit items-center gap-1 text-xs font-semibold text-black hover:underline"
+        >
+          RSVP <ArrowUpRightIcon />
+        </a>
+      )}
     </div>
   );
 }
@@ -390,7 +377,7 @@ export default function MonthCalendar({
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-mauve-200 pt-3 text-xs text-mauve-600">
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-2 rounded-full bg-cyan-500" />{" "}
-            Hackathon
+            Competition
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-2 rounded-full bg-amber-400" />{" "}
@@ -398,7 +385,7 @@ export default function MonthCalendar({
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-2 rounded-full bg-mauve-800" />{" "}
-            Dev Hours
+            Build Session
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-2 rounded-full bg-emerald-700" />{" "}

@@ -20,16 +20,11 @@ const gifMap: Record<EventType | "default", StaticImageData> = {
   default: staticGif,
   hackathon: charlieConspiracy,
   workshop: informationGif,
-  devhours: bruceAlmighty,
+  build: bruceAlmighty,
   career: jobApplication,
 };
 
-const EVENT_TYPES: EventType[] = [
-  "hackathon",
-  "workshop",
-  "devhours",
-  "career",
-];
+const EVENT_TYPES: EventType[] = ["hackathon", "workshop", "build", "career"];
 
 /**
  * `nowMs` is passed in rather than read from the clock: this renders on the

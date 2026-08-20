@@ -1,20 +1,6 @@
-import {
-  ArrowUpRightIcon,
-  ClockIcon,
-  MapPinIcon,
-} from "@phosphor-icons/react/ssr";
-import type { CalendarEvent, EventType } from "~/app/(site)/homeData";
-import { formatEventTime } from "~/app/(site)/homeData";
-
-const eventBadge: Record<
-  EventType,
-  { bg: string; text: string; label: string }
-> = {
-  hackathon: { bg: "bg-cyan-400", text: "text-black", label: "Hackathon" },
-  workshop: { bg: "bg-amber-400", text: "text-black", label: "Workshop" },
-  devhours: { bg: "bg-mauve-800", text: "text-white", label: "Dev Hours" },
-  career: { bg: "bg-emerald-800", text: "text-white", label: "Career" },
-};
+import { ArrowUpRightIcon } from "@phosphor-icons/react/ssr";
+import type { CalendarEvent } from "~/app/(site)/homeData";
+import { eventBadge } from "./eventBadge";
 
 interface Props {
   event: CalendarEvent;
@@ -47,26 +33,31 @@ export default function EventCard({
       <p className="flex-1 text-sm/relaxed text-mauve-600">
         {event.description}
       </p>
-      <div className="flex flex-col gap-1 border-t border-mauve-200 pt-3 text-xs text-mauve-500">
-        <span className="flex items-center gap-1.5">
-          <ClockIcon className="shrink-0" />
-          {formatEventTime(event.start, event.end)}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <MapPinIcon className="shrink-0" />
-          {event.location}
-        </span>
-        {event.rsvpUrl && (
-          <a
-            href={event.rsvpUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 inline-flex items-center gap-1 font-semibold text-black hover:underline"
-          >
-            RSVP <ArrowUpRightIcon />
-          </a>
-        )}
-      </div>
+      {event.steps && (
+        <ol className="flex flex-col gap-1.5 border-t border-mauve-200 pt-3 text-xs/snug text-mauve-600">
+          {event.steps.map((step, i) => (
+            <li key={step} className="flex items-start gap-2">
+              <span
+                aria-hidden
+                className={`${badge.bg} ${badge.text} mt-px flex size-4 shrink-0 items-center justify-center rounded-full text-[0.625rem] font-bold`}
+              >
+                {i + 1}
+              </span>
+              {step}
+            </li>
+          ))}
+        </ol>
+      )}
+      {event.rsvpUrl && (
+        <a
+          href={event.rsvpUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex w-fit items-center gap-1 text-xs font-semibold text-black hover:underline"
+        >
+          RSVP <ArrowUpRightIcon />
+        </a>
+      )}
     </div>
   );
 }
