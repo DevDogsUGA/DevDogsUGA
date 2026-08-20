@@ -45,9 +45,6 @@
   --animate-collapsible-closed: collapsible-closed 200ms ease-out;
   --animate-dialog-slide-in: dialog-slide-in 200ms ease-in;
   --animate-dialog-slide-out: dialog-slide-out 200ms ease-out;
-  /* Scroll marquee — duration controlled via CSS variable by scroll listener */
-  --animate-marquee-scroll: marquee-scroll var(--marquee-duration, 24s) linear
-    infinite;
   --animate-march-dashes: march-dashes 1.4s linear infinite;
   --animate-spin-slow: spin 10s linear infinite;
   --animate-spin-slower: spin 20s linear infinite;
@@ -253,7 +250,7 @@
   transform: none;
 }
 
-/* ── Scroll marquee keyframe ─────────────────────────────────────────────── */
+/* ── Marquee strip keyframe ─────────────────────────────────────────────── */
 @keyframes marquee-scroll {
   to {
     transform: translateX(-50%);

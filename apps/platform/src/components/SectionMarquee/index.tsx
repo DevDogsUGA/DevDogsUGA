@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import MarqueeItem from "./MarqueeItem";
-import ScrollMarquee from "./ScrollMarquee";
+import MarqueeTrack from "./MarqueeTrack";
 
 export { MarqueeItem };
 
@@ -47,14 +47,14 @@ export default function SectionMarquee({
       className={`w-full overflow-hidden ${bg} relative z-10 ${skewCls}`}
       aria-label={ariaLabel}
     >
-      <ScrollMarquee
-        baseDuration={duration}
+      <MarqueeTrack
+        duration={duration}
         direction={direction}
         copyZBase={copyZBase}
         className={className}
       >
         {indexedChildren}
-      </ScrollMarquee>
+      </MarqueeTrack>
     </div>
   );
 }

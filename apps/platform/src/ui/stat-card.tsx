@@ -3,7 +3,7 @@ import range from "~/lib/range";
 
 // Jagged right edge used by stat cards. Cards overlap by CHEVRON_DEPTH so
 // each card's teeth appear on top of the next card's bg. copyZBase gives each
-// ScrollMarquee copy its own stacking context so the left copy renders on top at
+// MarqueeTrack copy its own stacking context so the left copy renders on top at
 // every seam including the loop point.
 const CHEVRON_DEPTH = 10;
 const CHEVRON_COUNT = 6;
