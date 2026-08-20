@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Compiles a folder of markdown into a typed data module",
   "bin": {
-    "docs-build": "./dist/cli.js"
+    "docs-build": "./bin/docs-build.mjs"
   },
   "exports": {
     ".": {

@@ -129,6 +129,13 @@ jobs:
       # "migrations apply cleanly from scratch" check, with no separate reset
       # needed. Also writes .env.generated, which the suites below read.
       #
+      # ⚠️ The stack scripts run through `with-env`, which REFUSES a missing
+      # .env by design — the first real run of this job died on exactly that,
+      # before the synthetic-environment step further down had composed one.
+      # Seeded here from the same committed file that step copies; the later
+      # copy simply overwrites this one and appends the generated values.
+      - name: Seed the env file with-env insists on
+        run: cp .github/ci.env .env
       # config.toml enables four OAuth providers with `env()` credentials that
       # CI does not have. Verified: unset resolves to a WARN and exit 0, not an
       # error.
