@@ -1,12 +1,14 @@
 import { cacheLife } from "next/cache";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  GithubLogoIcon,
-  InstagramLogoIcon,
-  LinkedinLogoIcon,
-} from "@phosphor-icons/react/ssr";
+import * as icons from "~/config/icons";
+import { PUBLIC_LINKS, SOCIAL_LINKS } from "~/config/nav";
 import devdog from "~/assets/devdog.png";
+
+/** The address already sits in the bottom bar as text, so it is not repeated as an icon. */
+const SOCIAL_ICONS = SOCIAL_LINKS.filter(
+  (social) => !social.href.startsWith("mailto:"),
+);
 
 /**
  * `"use cache"` is required, not an optimisation. This renders in the site
@@ -73,9 +75,9 @@ export default async function Footer() {
             </p>
 
             <p className="text-center text-balance lg:text-left">
-              Each year, we work to develop impactful software from concept to
-              completion, learning real-world skills and industry-standard tech
-              along the way.
+              Every semester, members collaborate across design, engineering,
+              and product to ship real software for real users — learning
+              industry-standard tooling along the way.
             </p>
           </div>
 
@@ -84,21 +86,15 @@ export default async function Footer() {
               <p className="pb-2 text-lg font-bold text-mauve-100">
                 Explore DevDogs
               </p>
+              {/* The same list the navbar renders, so the two cannot drift. */}
               <ul className="contents">
-                <li>
-                  <Link href="/events" className="hover:underline">
-                    Events
-                  </Link>
-                </li>
-
-                <li>
-                  <Link
-                    href="mailto:devdogs@uga.edu"
-                    className="hover:underline"
-                  >
-                    Partners
-                  </Link>
-                </li>
+                {PUBLIC_LINKS.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="hover:underline">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
 
                 <li>
                   {/* Redirects off-site, not a page — never prefetch. */}
@@ -117,6 +113,18 @@ export default async function Footer() {
               <p className="pb-2 text-lg font-bold text-mauve-100">Resources</p>
               <ul className="contents">
                 <li>
+                  {/* The organisation, not one repository: the projects grid
+                      lists four now, and every one of them lives under it. */}
+                  <Link
+                    href="https://github.com/DevDogs-UGA"
+                    className="hover:underline"
+                    target="_blank"
+                  >
+                    GitHub Organization
+                  </Link>
+                </li>
+
+                <li>
                   <Link
                     href="https://forum.devdogsuga.org"
                     className="hover:underline"
@@ -127,22 +135,8 @@ export default async function Footer() {
                 </li>
 
                 <li>
-                  <Link
-                    href="https://github.com/DevDogs-UGA/Community-Resource-Forum"
-                    className="hover:underline"
-                    target="_blank"
-                  >
-                    Current Project Repository
-                  </Link>
-                </li>
-
-                <li>
-                  <Link
-                    href="https://github.com/DevDogs-UGA/Community-Resource-Forum/wiki"
-                    className="hover:underline"
-                    target="_blank"
-                  >
-                    Current Project Wiki
+                  <Link href="/leaderboard/points" className="hover:underline">
+                    Points Leaderboard
                   </Link>
                 </li>
 
@@ -165,35 +159,21 @@ export default async function Footer() {
               </p>
 
               <ul className="flex items-center gap-2">
-                <li className="contents">
-                  <Link
-                    className="rounded-sm border border-mauve-700 p-1 text-lg transition-colors hover:bg-mauve-800"
-                    href="https://instagram.com/DevDogs_UGA"
-                    target="_blank"
-                  >
-                    <InstagramLogoIcon />
-                  </Link>
-                </li>
-
-                <li className="contents">
-                  <Link
-                    className="rounded-sm border border-mauve-700 p-1 text-lg transition-colors hover:bg-mauve-800"
-                    href="https://linkedin.com/company/DevDogs-UGA"
-                    target="_blank"
-                  >
-                    <LinkedinLogoIcon />
-                  </Link>
-                </li>
-
-                <li className="contents">
-                  <Link
-                    className="rounded-sm border border-mauve-700 p-1 text-lg transition-colors hover:bg-mauve-800"
-                    href="https://github.com/DevDogs-UGA"
-                    target="_blank"
-                  >
-                    <GithubLogoIcon />
-                  </Link>
-                </li>
+                {SOCIAL_ICONS.map((social) => {
+                  const Icon = social.icon ? icons[social.icon] : null;
+                  return (
+                    <li key={social.href} className="contents">
+                      <Link
+                        className="rounded-sm border border-mauve-700 p-1 text-lg transition-colors hover:bg-mauve-800"
+                        href={social.href}
+                        aria-label={social.label}
+                        target="_blank"
+                      >
+                        {Icon && <Icon />}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </div>
