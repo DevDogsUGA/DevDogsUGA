@@ -61,6 +61,12 @@ port = 54324
 enabled = true
 file_size_limit = "50MiB"
 
+# Explicitly off: the CLI's default is `enabled = true`, and `config push`
+# pushes defaults too — a free-tier project answers 402 for vector buckets,
+# which is how the first staging push failed. Nothing here uses them.
+[storage.vector]
+enabled = false
+
 [storage.buckets.avatars]
 public = true
 file_size_limit = "256KiB"

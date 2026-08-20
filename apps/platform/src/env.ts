@@ -459,14 +459,6 @@ const client = {
     secrecy: "public",
     example: "avatars",
   }),
-  NEXT_PUBLIC_FEEDBACK_BUCKET: define(z.string(), {
-    doc:
-      "Storage bucket for feedback attachments. The same name in every " +
-      "environment.",
-    scope: "default",
-    secrecy: "public",
-    example: "feedback-attachments",
-  }),
 };
 
 /**
@@ -496,7 +488,6 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_AVATARS_BUCKET: process.env.NEXT_PUBLIC_AVATARS_BUCKET,
-    NEXT_PUBLIC_FEEDBACK_BUCKET: process.env.NEXT_PUBLIC_FEEDBACK_BUCKET,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
