@@ -178,10 +178,23 @@ export async function runDeploySecretsFile(
 
   for (const [key, entries] of variables()) {
     if (!declaredBy(entries, app)) continue;
-    if (entries[0]!.meta.secrecy !== "secret") continue;
+    const meta = entries[0]!.meta;
 
-    if (!storable.has(key)) {
-      minted.push(key);
+    // Public server keys ship alongside the secrets, because nothing else
+    // reaches the Worker's runtime: OpenNext copies the Worker env into
+    // process.env per request, and a value that was only in the composed
+    // .env file at build time is gone by then. The first staging deploy
+    // proved it — the schedule-builder Worker booted without API_URL,
+    // REST_URL, PUBLISHABLE_KEY, STORAGE_S3_URL or S3_PROTOCOL_REGION and
+    // answered 500 on every route. Client (NEXT_PUBLIC) keys are excluded
+    // by `declaredBy` (inlined at build); never-store keys stay excluded —
+    // a Worker secret is a remote copy, which is the thing they forbid.
+    if (meta.secrecy === "secret") {
+      if (!storable.has(key)) {
+        minted.push(key);
+        continue;
+      }
+    } else if (meta.secrecy !== "public") {
       continue;
     }
 
@@ -200,7 +213,7 @@ export async function runDeploySecretsFile(
   // it: every consumer that checks for presence would read it as configured.
   if (absent.length > 0) {
     say([
-      `devtools deploy secrets-file: ${absent.length} optional secret(s) have ` +
+      `devtools deploy secrets-file: ${absent.length} optional key(s) have ` +
         `no value and are omitted: ${absent.join(", ")}`,
     ]);
   }

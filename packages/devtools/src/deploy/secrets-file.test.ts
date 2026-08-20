@@ -137,7 +137,7 @@ beforeEach(() => {
 });
 
 describe("which keys are sent", () => {
-  it("sends the app's own stored secrets and nothing else", async () => {
+  it("sends the app's own stored secrets and public server keys, nothing else", async () => {
     const { result } = await compose({
       mint: true,
       mintToken: () => TOKEN,
@@ -149,8 +149,13 @@ describe("which keys are sent", () => {
       },
     });
 
+    // Public server keys ride along since 2026-08-20: the Worker's runtime
+    // env is the only process.env it has, and the first staging deploy
+    // booted a Worker whose schema rejected the environment on every
+    // request. See the selection comment in secrets-file.ts.
     expect(result.keys.sort()).toEqual([
       "SANDBOX_PROXY_TOKEN",
+      "SANDBOX_PUBLIC",
       "SANDBOX_STORED",
     ]);
 
@@ -160,7 +165,6 @@ describe("which keys are sent", () => {
     // credential it never asks for.
     expect(body).not.toContain("SANDBOX_TOOLING_KEY");
     expect(body).not.toContain("SANDBOX_CLIENT_SECRET");
-    expect(body).not.toContain("SANDBOX_PUBLIC");
     expect(body).not.toContain("PLATFORM_SECRET");
   });
 
@@ -175,7 +179,7 @@ describe("which keys are sent", () => {
   it("omits an optional secret with no value rather than sending an empty one", async () => {
     const { result } = await compose({ mint: true, mintToken: () => TOKEN });
 
-    expect(result.omitted).toEqual(["SANDBOX_OPTIONAL"]);
+    expect(result.omitted).toEqual(["SANDBOX_OPTIONAL", "SANDBOX_PUBLIC"]);
     // Sending "" would read as configured to every consumer that checks for
     // presence, which is worse than the key being absent.
     expect(
@@ -189,7 +193,7 @@ describe("which keys are sent", () => {
       mintToken: () => TOKEN,
       env: { SANDBOX_OPTIONAL: "" },
     });
-    expect(result.omitted).toEqual(["SANDBOX_OPTIONAL"]);
+    expect(result.omitted).toEqual(["SANDBOX_OPTIONAL", "SANDBOX_PUBLIC"]);
   });
 });
 

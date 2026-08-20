@@ -107,13 +107,23 @@ function deleteViaWrangler(
   );
 }
 
-/** Secret names the app's manifest declares, stored or minted. */
+/**
+ * Names the app's manifest declares for its Worker: secrets (stored or
+ * minted) AND public server keys — `secrets-file` ships both since
+ * 2026-08-20, so a public key on the Worker is expected, not an orphan.
+ */
 function expectedFor(app: string): Set<string> {
   const keys = new Set<string>();
   for (const [key, entries] of variables()) {
     const own = entries.filter((e: EnvEntry) => e.source === app && !e.client);
     if (own.length === 0) continue;
-    if (own.some((e) => e.meta.secrecy === "secret")) keys.add(key);
+    if (
+      own.some(
+        (e) => e.meta.secrecy === "secret" || e.meta.secrecy === "public",
+      )
+    ) {
+      keys.add(key);
+    }
   }
   return keys;
 }
