@@ -49,7 +49,7 @@ async function devtools(
   try {
     const { stdout, stderr } = await run(
       TSX,
-      ["--conditions=development", CLI, ...args],
+      ["--conditions=devdogs-source", CLI, ...args],
       // PATH and HOME only. See the header.
       {
         cwd: PROJECT_ROOT,

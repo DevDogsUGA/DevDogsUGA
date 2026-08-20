@@ -38,7 +38,7 @@
  *     instead of a missing token — the wrong diagnosis, on the failure path,
  *     which is the only path anybody reads.
  *
- * `cli:no-env` (`tsx --conditions=development src/cli.ts`) is the seam for
+ * `cli:no-env` (`tsx --conditions=devdogs-source src/cli.ts`) is the seam for
  * both: it loads no env of its own and reads whatever the caller already put
  * in `process.env`, which is exactly the guard's contract. Verified by running
  * `pnpm --filter @devdogsuga/devtools run cli:no-env` inside a real
