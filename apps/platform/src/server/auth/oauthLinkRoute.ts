@@ -3,11 +3,12 @@ import { authenticate } from "~/server/auth";
 import { callbackPathSchema } from "~/server/utils";
 
 /**
- * The GET handler behind `/auth` and `/join`.
+ * The GET handler behind `/auth`. `/join` shared it until that route became a
+ * redirect to the Involvement Network; point it back here to restore sign-up.
  *
- * Both routes *start* an OAuth flow — they mint a PKCE challenge, write the
- * `sb-<ref>-auth-token-code-verifier` cookie and redirect to Google — so they
- * are state-changing despite being GETs. `<Link>` prefetches them like any
+ * The route *starts* an OAuth flow — it mints a PKCE challenge, writes the
+ * `sb-<ref>-auth-token-code-verifier` cookie and redirects to Google — so it
+ * is state-changing despite being a GET. `<Link>` prefetches it like any
  * other route, which meant every page view silently began two handshakes
  * before the visitor clicked anything.
  *

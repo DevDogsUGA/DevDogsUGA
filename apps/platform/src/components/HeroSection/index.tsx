@@ -117,7 +117,7 @@ export default function HeroSection() {
               <div className="flex flex-wrap gap-3">
                 <LinkButton
                   href="/join"
-                  // Starts an OAuth handshake, not a page — never prefetch.
+                  // Redirects off-site, not a page — never prefetch.
                   prefetch={false}
                   className="transition-lift hover:shadow-block-md flex items-center gap-2 rounded-sm border border-black bg-cyan-400 px-6 py-2.5 font-bold text-black shadow-none hover:-translate-x-1 hover:-translate-y-1 hover:shadow-amber-400"
                 >

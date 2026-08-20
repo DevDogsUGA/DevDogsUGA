@@ -8,6 +8,7 @@ import {
   XIcon,
 } from "@phosphor-icons/react/ssr";
 import SyncPreferredNameButton from "~/components/SyncPreferredNameButton";
+import { INVOLVEMENT_NETWORK_URL } from "~/config/nav";
 
 interface VerificationStatus {
   hasPronouns: boolean;
@@ -93,7 +94,7 @@ export default function VerificationChecklist({
                 Joined DevDogs on the{" "}
                 <Link
                   className="underline hover:text-white"
-                  href="https://uga.campuslabs.com/engage/organization/devdogs"
+                  href={INVOLVEMENT_NETWORK_URL}
                   target="_blank"
                 >
                   Involvement Network

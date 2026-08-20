@@ -101,7 +101,7 @@ export default async function Footer() {
                 </li>
 
                 <li>
-                  {/* Starts an OAuth handshake, not a page — never prefetch. */}
+                  {/* Redirects off-site, not a page — never prefetch. */}
                   <Link
                     href="/join"
                     prefetch={false}
