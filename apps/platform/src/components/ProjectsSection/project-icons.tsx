@@ -58,34 +58,34 @@ export function DogPackIcon({ className }: { className?: string }) {
       className={className}
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M 24 24.6 C 28.6 24.6 34.7 26.8 35.5 31.6 C 36.2 36.4 30.8 40.6 24 40.6 C 17.2 40.6 11.8 36.4 12.5 31.6 C 13.3 26.8 19.4 24.6 24 24.6 Z" />
+      <path d="M 24 24.6 C 28.6 24.6 34 26.8 34.8 31.6 C 35.5 36.4 30.8 40.6 24 40.6 C 17.2 40.6 12.5 36.4 13.2 31.6 C 14 26.8 19.4 24.6 24 24.6 Z" />
       <ellipse
         cx="16.8"
-        cy="15.5"
+        cy="15.2"
         rx="4.4"
         ry="5.6"
-        transform="rotate(-8 16.8 15.5)"
+        transform="rotate(-8 16.8 15.2)"
       />
       <ellipse
         cx="31.2"
-        cy="15.5"
+        cy="15.2"
         rx="4.4"
         ry="5.6"
-        transform="rotate(8 31.2 15.5)"
+        transform="rotate(8 31.2 15.2)"
       />
       <ellipse
-        cx="9.4"
-        cy="24.4"
+        cx="8.9"
+        cy="23.2"
         rx="4.2"
         ry="5.4"
-        transform="rotate(-30 9.4 24.4)"
+        transform="rotate(-30 8.9 23.2)"
       />
       <ellipse
-        cx="38.6"
-        cy="24.4"
+        cx="39.1"
+        cy="23.2"
         rx="4.2"
         ry="5.4"
-        transform="rotate(30 38.6 24.4)"
+        transform="rotate(30 39.1 23.2)"
       />
     </svg>
   );
