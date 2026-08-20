@@ -27,8 +27,9 @@
  * It is a public identifier (a UUID that confers nothing), read from
  * `BWS_ORG_ID` — see the declaration in `packages/devtools/env.ts`.
  */
-import { confirm, log } from "@clack/prompts";
+import { log, select, text } from "@clack/prompts";
 import { NoAccessTokenError, promptForToken, resolveToken } from "./token.js";
+import { saveToDevEnv } from "./store.js";
 import {
   readTokenFromVault,
   saveTokenToVault,
@@ -57,6 +58,8 @@ export interface BwsSecret {
 
 let explicitToken: string | undefined;
 let resolved: Promise<string> | undefined;
+/** Where a just-typed token goes, picked in `offerSave`, used in `save`. */
+let saveDestination: "env" | "vault" | "no" = "no";
 
 /** Records `--access-token`, before any command runs. */
 export function setExplicitAccessToken(token: string | undefined): void {
@@ -80,14 +83,39 @@ export async function accessToken(): Promise<string> {
     env: process.env.BWS_ACCESS_TOKEN,
     fromVault: readTokenFromVault,
     prompt: promptForToken,
-    offerSave: async () =>
-      unwrap(
-        await confirm({
-          message: "Save it to your Bitwarden vault, so this is the last time?",
-          initialValue: true,
+    // The destination is picked when the save is offered, and the pick is
+    // carried into `save` by closure — the two callbacks are halves of one
+    // exchange. `.env` first: it is this repository's own file, `with-env`
+    // already loads it, and `env push` refuses the key by name, so the only
+    // machine that can read the saved copy is this one.
+    offerSave: async () => {
+      saveDestination = unwrap(
+        await select({
+          message: "Save it, so this is the last time you paste it?",
+          options: [
+            {
+              value: "env" as const,
+              label: "yes — into .env",
+              hint: "gitignored, this machine only; push refuses it by name",
+            },
+            {
+              value: "vault" as const,
+              label: "yes — into my Bitwarden vault",
+              hint: "needs `pnpm bw login`; follows you across machines",
+            },
+            { value: "no" as const, label: "no — ask me again next time" },
+          ],
+          initialValue: "env" as const,
         }),
-      ),
+      );
+      return saveDestination !== "no";
+    },
     save: async (token) => {
+      if (saveDestination === "env") {
+        await saveToDevEnv("BWS_ACCESS_TOKEN", token);
+        log.success("Stored in .env — with-env loads it on every run.");
+        return;
+      }
       const saved = await saveTokenToVault(token);
       if (saved) {
         log.success(`Stored as "${VAULT_ITEM_NAME}" in your Bitwarden vault.`);
@@ -115,21 +143,65 @@ export async function accessToken(): Promise<string> {
   return resolved;
 }
 
+let resolvedOrgId: Promise<string> | undefined;
+
 /**
- * The organization the machine account belongs to.
+ * The organization the machine account belongs to: the environment, else a
+ * prompt with an offer to save.
  *
- * Refused by name when unset: an SDK error about a malformed UUID would send
- * somebody debugging the token, which is the one thing that is fine.
+ * Prompted rather than only refused because it is the one Secrets Manager
+ * input with nothing secret about it — a public UUID that identifies and
+ * does not authorize — so asking costs nothing and saves a docs round-trip.
+ * Where nobody can answer (a pipe), the named refusal below is the answer:
+ * an SDK error about a malformed UUID would send somebody debugging the
+ * token, which is the one thing that is fine.
  */
-function organizationId(): string {
-  const id = process.env.BWS_ORG_ID;
-  if (id) return id;
-  throw new BwsError(
-    "BWS_ORG_ID is not set. The Secrets Manager SDK addresses everything by " +
-      "organization id — a public UUID, shown in the Secrets Manager URL " +
-      "(bitwarden.com/#/sm/<org-id>/...) and on the machine-account page. " +
-      "Put it in your .env; it identifies, it does not authorize.",
-  );
+function organizationId(): Promise<string> {
+  resolvedOrgId ??= (async () => {
+    const fromEnv = process.env.BWS_ORG_ID;
+    if (fromEnv) return fromEnv;
+
+    if (!process.stdin.isTTY) {
+      throw new BwsError(
+        "BWS_ORG_ID is not set. The Secrets Manager SDK addresses everything " +
+          "by organization id — a public UUID, shown in the Secrets Manager " +
+          "URL (bitwarden.com/#/sm/<org-id>/...) and on the machine-account " +
+          "page. Put it in your .env; it identifies, it does not authorize.",
+      );
+    }
+
+    const typed = unwrap(
+      await text({
+        message:
+          "What is the Bitwarden organization id? (the UUID in the Secrets " +
+          "Manager URL: bitwarden.com/#/sm/<org-id>/...)",
+        validate: (v) =>
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            (v ?? "").trim(),
+          )
+            ? undefined
+            : "That is not a UUID.",
+      }),
+    ).trim();
+
+    // Saved without a destination question, unlike the token: this is a
+    // public identifier with exactly one sensible home, and "ask me every
+    // run" is not a state anyone wants for a value that never changes.
+    try {
+      await saveToDevEnv("BWS_ORG_ID", typed);
+      log.success("Stored BWS_ORG_ID in .env.");
+    } catch (err) {
+      log.warn(
+        `Could not save it to .env: ${err instanceof Error ? err.message : String(err)}. ` +
+          "Continuing with the id you typed.",
+      );
+    }
+    return typed;
+  })();
+  resolvedOrgId.catch(() => {
+    resolvedOrgId = undefined; // so a later call can ask again
+  });
+  return resolvedOrgId;
 }
 
 /** The lazily-loaded, logged-in SDK client — one per process. */
@@ -188,9 +260,10 @@ function iso(value: unknown): string | undefined {
 /** Resolves a project name to its id. Names are unique within an org. */
 export async function projectIdFor(name: string): Promise<string> {
   const c = await client();
+  const org = await organizationId();
   let projects: { id: string; name: string }[];
   try {
-    projects = (await c.projects().list(organizationId())).data;
+    projects = (await c.projects().list(org)).data;
   } catch (err) {
     throw new BwsError(describeSdkFailure(err, "listing projects"));
   }
@@ -212,12 +285,13 @@ export async function projectIdFor(name: string): Promise<string> {
 
 export async function listSecrets(projectId: string): Promise<BwsSecret[]> {
   const c = await client();
+  const org = await organizationId();
   try {
     // The SDK lists IDENTIFIERS org-wide (only what the token may see), then
     // fetches the values in one batch. Filtered to the project HERE, so the
     // callers' contract — "the secrets of this project" — survives the
     // transport change byte-for-byte.
-    const identifiers = (await c.secrets().list(organizationId())).data;
+    const identifiers = (await c.secrets().list(org)).data;
     if (identifiers.length === 0) return [];
     const full = (await c.secrets().getByIds(identifiers.map((i) => i.id)))
       .data;
@@ -243,8 +317,9 @@ export async function createSecret(
   note: string,
 ): Promise<void> {
   const c = await client();
+  const org = await organizationId();
   try {
-    await c.secrets().create(organizationId(), key, value, note, [projectId]);
+    await c.secrets().create(org, key, value, note, [projectId]);
   } catch (err) {
     throw new BwsError(describeSdkFailure(err, `creating ${key}`));
   }
@@ -261,12 +336,11 @@ export async function updateSecret(
   note: string,
 ): Promise<void> {
   const c = await client();
+  const org = await organizationId();
   try {
     await c
       .secrets()
-      .update(organizationId(), secret.id, secret.key, value, note, [
-        secret.projectId,
-      ]);
+      .update(org, secret.id, secret.key, value, note, [secret.projectId]);
   } catch (err) {
     throw new BwsError(describeSdkFailure(err, `updating ${secret.key}`));
   }

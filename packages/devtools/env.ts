@@ -23,23 +23,26 @@ declare({
     // app -- or CI -- that cannot boot without one of them would be wrong.
     // Presence is checked at the point of use, with a named refusal.
     //
-    // The pull toward storing this one is strong, which is why the refusal is
-    // in code (`env push` derives its never-store set from this
-    // declaration) rather than in a document: `with-env` loads the root .env
-    // for every command, so putting the token there is exactly what makes
-    // `secrets` work without re-exporting it each session. It cannot live
-    // there. Syncing it onward would be worse still -- this design rests on
-    // nothing machine-shaped ever authenticating to Secrets Manager, and one
-    // `${{ secrets.BWS_ACCESS_TOKEN }}` would hand CI every secret we hold.
-    // `bws` cannot persist it either (`bws config` covers server URLs and a
-    // state directory, nothing more); the Password Manager vault is the home.
+    // Local .env storage was refused here until 2026-08-19 and is now
+    // OFFERED (the prompt's default save destination), by decision. What
+    // held, holds: the refusals that matter are the REMOTE ones -- `env
+    // push` refuses this key by name, `pull` will not write it back, and
+    // `audit` errors on any remote copy -- because one
+    // `${{ secrets.BWS_ACCESS_TOKEN }}` would hand CI every secret we hold,
+    // and storing it in a Bitwarden project is a key locked inside the box
+    // it opens. A gitignored .env on the operator's own machine is neither
+    // store, and it already holds credentials of comparable reach after any
+    // `env pull --target production`. Note `with-env` loads .env for every
+    // wrapped command, dev servers included; the Password Manager vault
+    // remains the save destination for anyone who minds that.
     BWS_ACCESS_TOKEN: define(z.string().min(1).optional(), {
       doc:
         "Unlocks every Bitwarden Secrets Manager project, so it must never " +
-        "be stored in one (a key locked inside the box it opens) nor synced " +
-        "to GitHub (would hand CI every secret we hold). Lives in the " +
-        "operator's Password Manager vault and reaches the shell as an " +
-        "export.",
+        "reach a remote store: never IN one of those projects (a key locked " +
+        "inside the box it opens), never synced to GitHub (would hand CI " +
+        "every secret we hold) -- push refuses it by name. Lives on the " +
+        "operator's own machine: this file (the prompt offers to save it " +
+        "here) or their Password Manager vault.",
       scope: "environment",
       secrecy: "never-store",
     }),
@@ -134,7 +137,8 @@ declare({
         "the org explicitly, and nothing in its surface discovers it from " +
         "the token. A public UUID -- it is in the Secrets Manager URL " +
         "(bitwarden.com/#/sm/<org-id>/...) -- that identifies and does not " +
-        "authorize.",
+        "authorize. Leave it unset and the first Secrets Manager command " +
+        "asks, then saves it here.",
       scope: "developer",
       secrecy: "public",
     }),

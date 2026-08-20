@@ -56,13 +56,20 @@ export type EnvSecrecy =
   /** A secret. Bitwarden and GitHub Actions secrets only. */
   | "secret"
   /**
-   * A secret that must never be stored anywhere but the operator's own vault —
-   * not Bitwarden, not GitHub, not `.env.example`.
+   * A secret that must never reach any REMOTE store — not Bitwarden, not
+   * GitHub, not a vault target's file. `push` refuses it by name, `pull`
+   * will not write it back, and `audit` errors on any remote copy.
    *
    * Not "less sensitive than `secret`". The opposite: `BWS_ACCESS_TOKEN`
    * unlocks every Bitwarden project, so storing it in one is a key locked
    * inside the box it opens, and syncing it to GitHub would hand CI every
    * secret we hold.
+   *
+   * The operator's OWN machine may hold one — their password vault, or
+   * (since 2026-08-19, by decision) their gitignored `.env`, which the BWS
+   * prompts offer to save into. What the classification forbids is any
+   * store a push could reach or CI could read; the local file is neither,
+   * and the refusals above are what keep it that way.
    */
   | "never-store";
 

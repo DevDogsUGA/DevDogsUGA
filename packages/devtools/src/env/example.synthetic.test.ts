@@ -337,10 +337,13 @@ describe("the development file, from the same declarations", () => {
     expect(isCommented(development, "DEV_ONLY")).toBe(true);
     expect(valueOf(development, "MUST_FILL")).toBeNull();
 
-    // Documentation, no assignable line — for opposite reasons: one must not
-    // be stored, the other has no value to store.
+    // A never-store key ships COMMENTED (2026-08-19): never in any remote
+    // store — push refuses it by name — but the operator's own .env may hold
+    // one, and the commented line is the home the BWS prompts' save revives.
     expect(valueOf(development, "VAULT_TOKEN")).toBeNull();
-    expect(development).toContain("# VAULT_TOKEN:");
+    expect(isCommented(development, "VAULT_TOKEN")).toBe(true);
+    // A minted key keeps documentation and no line at all: no value exists.
+    expect(development).toContain("# MINTED_ONE:");
     expect(valueOf(development, "MINTED_ONE")).toBeNull();
     expect(development).toContain("# MINTED_ONE:");
 

@@ -250,18 +250,15 @@ function renderBlock(
     lines.push(`# (shared with ${sharedWith.join(", ")})`);
   }
 
-  // A never-store credential gets documentation and NO assignable line: a
-  // `BWS_ACCESS_TOKEN=` line in an example file invites exactly the mistake
-  // its doc warns about. The key name still appears, so grep finds it.
+  // A never-store credential ships COMMENTED. "Never store" is about REMOTE
+  // stores — push refuses these by name, pull will not write them back, and
+  // audit errors on any remote copy — but the operator's own gitignored .env
+  // may hold one (since 2026-08-19, by decision), and the BWS prompts offer
+  // to save there. The commented line is the documented home that offer
+  // revives; a vault target's file never renders these at all, because
+  // `keysRoutedTo()` refuses them.
   if (meta.secrecy === "never-store") {
-    return [
-      `# ${key}:`,
-      ...lines,
-      ...comment(
-        `(no ${key}= line on purpose — an assignable line here would invite ` +
-          "storing what must not be stored)",
-      ),
-    ];
+    return [...lines, `# ${key}=""`];
   }
 
   // A minted credential gets the same treatment, for a different reason. There

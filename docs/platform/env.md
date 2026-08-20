@@ -88,18 +88,24 @@ passing it while `BWS_ACCESS_TOKEN` is set is overriding on purpose, and quietly
 using the environment instead would point the command at the account they were
 trying to avoid.
 
-**The vault path is the one to use.** Nothing to install and nothing to
-export — the `bw` CLI is a devtools dependency since 2026-08-19, so
-`pnpm install` already brought it:
+**The easiest path is to let the tool set itself up.** Run any Secrets
+Manager command and answer the prompts — token and org id both land in your
+`.env` (see the note below on why that is now fine):
 
 ```bash
-pnpm bw login                            # once
 pnpm devtools env audit --target staging
 ```
 
-The first run finds nothing, asks for the token, and offers to store it as
-_"DevDogs Secrets Manager access token (admin)"_. Every run after that reads it
-back. If the vault is locked it **asks before unlocking** — a tool that pops a
+Prefer the vault instead? It works with nothing to install — the `bw` CLI is
+a devtools dependency since 2026-08-19 (`pnpm bw login` once), and picking
+"vault" at the save prompt stores the token there.
+
+The first run finds nothing, asks for the token, and offers to save it —
+into `.env` (the default: gitignored, this machine only) or into your vault as
+_"DevDogs Secrets Manager access token (admin)"_. Every run after that reads
+it back. `BWS_ORG_ID` gets the same treatment with no destination question:
+it is a public identifier with one sensible home, so the first run asks once
+and writes it to `.env`. If the vault is locked it **asks before unlocking** — a tool that pops a
 master-password prompt unannounced is shaped exactly like the thing people are
 told never to type their master password into — and the password is typed
 straight into `bw`, never through this tool. Set `BW_SESSION` to skip that.
@@ -110,18 +116,23 @@ vault read puts only the item's name on the command line. `bws` does accept
 `--access-token` and this tool declines to use it, which is why option 1 above
 carries a warning when you use it — it is the one path that trades that away.
 
-> ⚠️ **Never put it in `.env`.** The pull toward doing so is strong, because
-> `with-env` loads that file for every command and it would save re-exporting
-> each session. But `.env` is what `env push --file .env` uploads, and the
-> result is the
-> master key stored inside all three boxes it opens, then synced to GitHub where
-> CI can read it — which contradicts the one property this whole design rests
-> on.
+> **`.env` is a fine home for it** (since 2026-08-19, by decision — it was
+> refused before). `with-env` loads that file for every command, so a saved
+> token means never re-exporting; the prompt above offers exactly this save.
+> What made `.env` storage dangerous was never the file, it was the road out
+> of it, and the road stays closed: `push` refuses the key **by name** rather
+> than trusting anyone to remember, `pull` will not write it back, and
+> `audit` reports it as an **error** in any remote store. The master key must
+> never sit inside the boxes it opens (a Bitwarden project) nor where CI can
+> read it (GitHub) — a gitignored file on your own machine is neither, and it
+> already holds credentials of comparable reach after any
+> `env pull --target production`.
 >
-> `push` refuses it by name rather than trusting anyone to remember, `pull` will
-> not write it back, and `audit` reports it as an **error** in any remote store.
-> Same for `AIRTABLE_PAT`, the scaffolding token, which the runtime never reads
-> — see the `secrecy: "never-store"` declarations in `packages/devtools/env.ts`.
+> One consequence to know: `with-env` puts it in the environment of every
+> wrapped command, dev servers included. If you mind that, pick the vault as
+> the save destination instead. Same rules for `AIRTABLE_PAT`, the
+> scaffolding token, which the runtime never reads — see the
+> `secrecy: "never-store"` declarations in `packages/devtools/env.ts`.
 
 ### It edits the target's file in place
 

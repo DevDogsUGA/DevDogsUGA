@@ -547,12 +547,20 @@ describe("development", () => {
         true,
       );
     }
-    // The two kinds of key that get documentation and no assignable line at
-    // all keep that treatment — asserted so "it is in the file somewhere" is
-    // not mistaken for "it has a line to paste into".
-    for (const key of [...mintedKeys(), ...neverStoreKeys()]) {
+    // Minted keys keep documentation and no line of any kind: there is no
+    // value to paste, and a hand-pasted one would never rotate.
+    for (const key of mintedKeys()) {
       expect(file.has(key), `${key} must have no assignable line`).toBe(false);
       expect(renderInit("development", DATE)).toContain(`# ${key}:`);
+    }
+    // Never-store keys ship COMMENTED (since 2026-08-19): never in any
+    // remote store — push refuses them by name — but the operator's own
+    // .env may hold one, and the commented line is the documented home the
+    // BWS prompts' save offer revives.
+    const parsed = development();
+    for (const key of neverStoreKeys()) {
+      expect(parsed.active.has(key), `${key} must not ship active`).toBe(false);
+      expect(parsed.commented.has(key), `${key} ships commented`).toBe(true);
     }
   });
 });
