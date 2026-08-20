@@ -65,8 +65,8 @@
         "DEPLOY_ENV",
         "CRON_SECRET",
         "DEVDOGS_EPOCH",
-        "GITHUB_CLIENT_ID",
-        "GITHUB_CLIENT_SECRET",
+        "GH_CLIENT_ID",
+        "GH_CLIENT_SECRET",
         "GITHUB_ORG",
         // The GitHub App, which replaced a `ghp_` token. `GITHUB_TOKEN` left
         // the schema with it and lingered here until 2026-08-14.
@@ -78,16 +78,23 @@
         // field. `.github/ci.env` supplies all three, so CI would have been the
         // one to find it -- exactly the disagreement the comment above warns
         // about, and the second time this list has drifted behind the schema.
-        "GITHUB_APP_ID",
-        "GITHUB_APP_INSTALLATION_ID",
-        "GITHUB_APP_PRIVATE_KEY",
-        // Defaulted, so these could not break a build -- listed because they
-        // are read by the schema, and an unlisted variable silently builds as
-        // its default while the deploy path (`cf:build:*`, which loads .env
-        // through with-env rather than turbo) sees the real value.
-        "GITHUB_WEBHOOK_SECRET",
+        // GH_*, not GITHUB_*, since 2026-08-20: GitHub Actions reserves the
+        // GITHUB_ prefix for its own secrets, so every store-bound key was
+        // renamed. This list drifted behind the schema for a third time on
+        // that rename and CI's maiden voyage caught it, as the paragraph
+        // above said it would.
+        "GH_APP_ID",
+        "GH_APP_INSTALLATION_ID",
+        "GH_APP_PRIVATE_KEY",
+        // Defaulted or optional, so these could not break a build -- listed
+        // because they are read by the schema, and an unlisted variable
+        // silently builds as its default while the deploy path (`cf:build:*`,
+        // which loads .env through with-env rather than turbo) sees the real
+        // value.
+        "GH_WEBHOOK_SECRET",
         "GITHUB_COMPETITION_REPO",
         "AIRTABLE_BASE_ID",
+        "AIRTABLE_SYNC_PAT",
         "SUPABASE_OAUTH_CLIENT_ID",
         "SUPABASE_OAUTH_CLIENT_SECRET",
         "DISCORD_CLIENT_ID",
