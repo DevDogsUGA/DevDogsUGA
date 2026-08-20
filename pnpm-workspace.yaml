@@ -86,7 +86,7 @@ catalog:
   supabase: ^2.111.0
   tsx: ^4.23.5
   typescript: ^6.0.3
-  wrangler: ^4.118.0
+  wrangler: ^4.123.0
 
   # --- Testing ---
   # jsdom is held at 29.x on purpose: 30.x raises its floor to node
