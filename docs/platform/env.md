@@ -88,10 +88,12 @@ passing it while `BWS_ACCESS_TOKEN` is set is overriding on purpose, and quietly
 using the environment instead would point the command at the account they were
 trying to avoid.
 
-**The vault path is the one to use.** Nothing to export, nothing in history:
+**The vault path is the one to use.** Nothing to install and nothing to
+export — the `bw` CLI is a devtools dependency since 2026-08-19, so
+`pnpm install` already brought it:
 
 ```bash
-npm i -g @bitwarden/cli && bw login     # once
+pnpm bw login                            # once
 pnpm devtools env audit --target staging
 ```
 
@@ -326,18 +328,19 @@ leaves Bitwarden ahead, and the tool says so at the time.
 
 Secrets Manager is end-to-end encrypted: the server stores ciphertext and the
 key that opens it is derived from the access token _by the client_. A `fetch`
-against the REST API with a bearer token returns encrypted blobs, so doing this
-without the `bws` binary means reimplementing Bitwarden's crypto.
+against the REST API with a bearer token returns encrypted blobs — so the
+client-side crypto has to come from Bitwarden. It used to come from the `bws`
+binary (installed by hand); since 2026-08-19 it comes from
+`@bitwarden/sdk-napi`, the same Rust core loaded in-process as a devtools
+dependency. Nothing to install, and — a real improvement, not a side effect —
+**values never appear in argv**: `bws secret create` took the secret as a
+positional argument, visible to `ps` for the life of the call, which was the
+reason `push` was banned from shared machines. In-process values never touch
+a process table.
 
-Install it from
-[the Bitwarden docs](https://bitwarden.com/help/secrets-manager-cli/), or
-`cargo install bws`.
-
-> ⚠️ `bws secret create` takes the value as a **positional argument**, so it is
-> visible to `ps` for the life of the call. The CLI offers no stdin form, so
-> this is a property of the tool. Everything here spawns with an argv array and
-> `shell: false`, which keeps values out of shell history and away from glob
-> expansion — but it cannot hide argv. Do not run `push` on a shared machine.
+The one thing the SDK needs that the binary did not: `BWS_ORG_ID`, the
+organization's public UUID (visible in the Secrets Manager URL), set once in
+your `.env`. It identifies; the access token authorizes.
 
 `gh` is used for the same reason: the value has to be encrypted client-side with
 a libsodium sealed box against the environment's public key before it can be

@@ -1,6 +1,14 @@
+# Which dependencies' install scripts may run — pnpm 11's per-dep decision
+# map (it migrated the four `true`s from onlyBuiltDependencies below and
+# inserted the core-js placeholder itself). `false` is a decision, not an
+# omission: core-js (via @bitwarden/cli) postinstalls a funding banner and
+# nothing the package needs to work. supabase is `true` here for the same
+# reason it is in the older list — its postinstall fetches the CLI binary.
 allowBuilds:
+  core-js: false
   esbuild: true
   sharp: true
+  supabase: true
   unrs-resolver: true
   workerd: true
 # Single source of truth for every dependency used by more than one workspace

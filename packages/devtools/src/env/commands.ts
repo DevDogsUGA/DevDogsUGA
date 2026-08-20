@@ -435,7 +435,7 @@ export async function runEnvPush(options: EnvOptions): Promise<void> {
       await createSecret(projectId, key, stored.get(key)!, MANAGED);
     }
     for (const key of updated) {
-      await updateSecret(index.get(key)!.id, stored.get(key)!, MANAGED);
+      await updateSecret(index.get(key)!, stored.get(key)!, MANAGED);
     }
     log.success(
       `${spec.project}: ${created.length} created, ${updated.length} updated.`,

@@ -14,12 +14,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@bitwarden/cli": "2026.7.0",
+    "@bitwarden/sdk-napi": "1.0.0",
     "@clack/prompts": "catalog:",
     "@devdogsuga/airtable": "workspace:*",
     "@devdogsuga/env": "workspace:*",
     "@supabase/supabase-js": "catalog:",
-    "postgres": "catalog:",
     "dotenv": "^17.4.2",
+    "postgres": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

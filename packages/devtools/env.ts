@@ -122,6 +122,22 @@ declare({
       secrecy: "secret",
       commented: true,
     }),
+    // Developer-scoped even though the VALUE is org-wide: only operators
+    // running `env pull/push/audit` on their own machines read it, no app and
+    // no CI job does, and developer scope is what keeps a purely local input
+    // out of every routed set. A public identifier — it names the org and
+    // authorizes nothing; every capability comes from BWS_ACCESS_TOKEN.
+    BWS_ORG_ID: define(z.uuid().optional(), {
+      doc:
+        "The Bitwarden organization id, needed since the Secrets Manager " +
+        "SDK replaced the bws binary (2026-08-19): every SDK call addresses " +
+        "the org explicitly, and nothing in its surface discovers it from " +
+        "the token. A public UUID -- it is in the Secrets Manager URL " +
+        "(bitwarden.com/#/sm/<org-id>/...) -- that identifies and does not " +
+        "authorize.",
+      scope: "developer",
+      secrecy: "public",
+    }),
     DEV_VPN_HOST: define(z.string().min(1).optional(), {
       doc:
         "One machine's VPN IP, for testing on a phone over VPN (the HMR " +

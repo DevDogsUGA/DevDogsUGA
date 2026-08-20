@@ -1,25 +1,32 @@
 /**
- * A thin wrapper over the `bws` binary.
+ * Secrets Manager, through the official SDK — no `bws` binary to install.
  *
- * The binary, and not the REST API, because Secrets Manager is end-to-end
- * encrypted: the server stores ciphertext, and the key that opens it is derived
- * from the access token by the client. A `fetch` against the API with a bearer
- * token returns encrypted blobs, so re-implementing this without the CLI means
- * re-implementing Bitwarden's crypto. That is not a trade worth making to avoid
- * one dependency.
+ * This wrapped the `bws` CLI until 2026-08-19. The CLI was the right call
+ * against the raw REST API — Secrets Manager is end-to-end encrypted, the
+ * server stores ciphertext, and the key that opens it is derived from the
+ * access token by the client, so `fetch` returns blobs and reimplementing the
+ * crypto is not a trade worth making. `@bitwarden/sdk-napi` is that same
+ * client-side crypto (the same Rust core the CLI wraps), loaded in-process,
+ * which buys two things the CLI could not:
  *
- * Everything spawns with an argv ARRAY and `shell: false`. That matters more
- * than usual here — `bws secret create` takes the value as a positional
- * argument, so a shell would put live credentials through word-splitting, glob
- * expansion and history.
+ *   * **Nothing to install.** The SDK is a dependency of this package, so
+ *     `pnpm install` is the whole setup — no more "install bws from the
+ *     releases page" step, and no version somebody's laptop drifted on.
+ *   * **No credential in argv.** `bws secret create` took the VALUE as a
+ *     positional argument, visible to `ps` for the length of the call — a
+ *     documented property of the tool this wrapper could only apologize for.
+ *     In-process values never touch a process table.
  *
- * ⚠️ Even so, argv is visible to `ps` for the lifetime of the call. The CLI
- * offers no stdin form, so this is a property of the tool rather than of this
- * wrapper. It is acceptable on a maintainer's laptop and on an ephemeral
- * runner, and it is the reason `push` is not something to run on a shared box.
+ * ⚠️ Imported LAZILY, at the first real call. The SDK is a native module, and
+ * loading it at import time would tax every `cli:no-env` path — including the
+ * CI guards — with a `.node` binary none of them use.
+ *
+ * The one thing the SDK needs that the CLI did not: the ORGANIZATION ID. The
+ * CLI derived it from the access token's login response; the SDK's every list
+ * and create takes it as an argument, and nothing in its surface discovers it.
+ * It is a public identifier (a UUID that confers nothing), read from
+ * `BWS_ORG_ID` — see the declaration in `packages/devtools/env.ts`.
  */
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { confirm, log } from "@clack/prompts";
 import { NoAccessTokenError, promptForToken, resolveToken } from "./token.js";
 import {
@@ -28,11 +35,6 @@ import {
   VAULT_ITEM_NAME,
 } from "./vault.js";
 import { unwrap } from "../ui.js";
-
-const run = promisify(execFile);
-
-/** Max buffer for a project's worth of secrets. The default 1MB is thin. */
-const MAX_BUFFER = 16 * 1024 * 1024;
 
 export class BwsError extends Error {}
 
@@ -53,11 +55,6 @@ export interface BwsSecret {
   revisionDate?: string;
 }
 
-interface BwsProject {
-  id: string;
-  name: string;
-}
-
 let explicitToken: string | undefined;
 let resolved: Promise<string> | undefined;
 
@@ -71,12 +68,11 @@ export function setExplicitAccessToken(token: string | undefined): void {
  * The access token, found once per process.
  *
  * Memoized as a **promise**, not a value: resolution can prompt, and a single
- * command makes several `bws` calls. Caching the value alone would still let
- * two concurrent calls open two prompts over each other.
+ * command makes several Secrets Manager calls. Caching the value alone would
+ * still let two concurrent calls open two prompts over each other.
  *
- * Whatever the source, the token reaches `bws` through its ENVIRONMENT and
- * never through argv. `bws` does accept `--access-token`, and passing it there
- * would put a live credential in `ps` output for the length of every call.
+ * Whatever the source, the token reaches the SDK as a function argument in
+ * this process — never argv, never a child's environment.
  */
 export async function accessToken(): Promise<string> {
   resolved ??= resolveToken({
@@ -119,59 +115,85 @@ export async function accessToken(): Promise<string> {
   return resolved;
 }
 
-async function bws(args: string[]): Promise<string> {
-  const token = await accessToken();
-  try {
-    const { stdout } = await run("bws", [...args, "--output", "json"], {
-      env: { ...process.env, BWS_ACCESS_TOKEN: token },
-      maxBuffer: MAX_BUFFER,
-      shell: false,
-    });
-    return stdout;
-  } catch (err) {
-    throw new BwsError(describeSpawnFailure(err));
-  }
+/**
+ * The organization the machine account belongs to.
+ *
+ * Refused by name when unset: an SDK error about a malformed UUID would send
+ * somebody debugging the token, which is the one thing that is fine.
+ */
+function organizationId(): string {
+  const id = process.env.BWS_ORG_ID;
+  if (id) return id;
+  throw new BwsError(
+    "BWS_ORG_ID is not set. The Secrets Manager SDK addresses everything by " +
+      "organization id — a public UUID, shown in the Secrets Manager URL " +
+      "(bitwarden.com/#/sm/<org-id>/...) and on the machine-account page. " +
+      "Put it in your .env; it identifies, it does not authorize.",
+  );
+}
+
+/** The lazily-loaded, logged-in SDK client — one per process. */
+let sdk: Promise<import("@bitwarden/sdk-napi").BitwardenClient> | undefined;
+
+async function client() {
+  sdk ??= (async () => {
+    const token = await accessToken();
+    // Dynamic, so the native module loads only when a command actually
+    // talks to Secrets Manager — see the header.
+    const { BitwardenClient } = await import("@bitwarden/sdk-napi");
+    const instance = new BitwardenClient();
+    try {
+      await instance.auth().loginAccessToken(token);
+    } catch (err) {
+      throw new BwsError(describeSdkFailure(err, "logging in"));
+    }
+    return instance;
+  })();
+  sdk.catch(() => {
+    sdk = undefined; // so a later call can retry with a fresh token prompt
+  });
+  return sdk;
 }
 
 /**
- * Turns a spawn failure into something with a next step in it.
+ * Turns an SDK failure into something with a next step in it.
  *
- * The two that actually happen are a missing binary and a token that does not
- * cover the project, and both are unrecognisable in raw form — ENOENT says
- * nothing about Bitwarden, and an authorisation failure surfaces as a bare
- * "404 Not Found" because a project you cannot see and a project that does not
- * exist are the same answer.
+ * The two that actually happen are a rejected token and a token that does not
+ * cover the project — the latter surfaces as a bare "not found", because a
+ * project you cannot see and a project that does not exist are the same
+ * answer, deliberately.
  */
-function describeSpawnFailure(err: unknown): string {
-  const e = err as { code?: string; stderr?: string; message?: string };
-
-  if (e.code === "ENOENT") {
+function describeSdkFailure(err: unknown, doing: string): string {
+  const message = err instanceof Error ? err.message : String(err);
+  if (/404|not.?found/i.test(message)) {
     return (
-      "The `bws` CLI is not installed, or is not on PATH.\n" +
-      "Install it from https://bitwarden.com/help/secrets-manager-cli/ " +
-      "(or `cargo install bws`), then re-run."
-    );
-  }
-
-  const stderr = (e.stderr ?? "").trim();
-  if (/404|not found/i.test(stderr)) {
-    return (
-      `${stderr}\n\n` +
+      `${message}\n\n` +
       "A 404 here usually means the access token is valid but its machine " +
       "account is not assigned to this project — Secrets Manager reports " +
       "'invisible' and 'absent' identically."
     );
   }
-  if (/401|unauthorized|invalid/i.test(stderr)) {
-    return `${stderr}\n\nThe access token was rejected. It may have been revoked or belong to another organization.`;
+  if (/401|unauthoriz|invalid|expired/i.test(message)) {
+    return `${message}\n\nThe access token was rejected while ${doing}. It may have been revoked or belong to another organization.`;
   }
+  return message || `Secrets Manager failed with no message while ${doing}.`;
+}
 
-  return stderr || e.message || "bws failed with no output.";
+function iso(value: unknown): string | undefined {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string" && value !== "") return value;
+  return undefined;
 }
 
 /** Resolves a project name to its id. Names are unique within an org. */
 export async function projectIdFor(name: string): Promise<string> {
-  const projects = JSON.parse(await bws(["project", "list"])) as BwsProject[];
+  const c = await client();
+  let projects: { id: string; name: string }[];
+  try {
+    projects = (await c.projects().list(organizationId())).data;
+  } catch (err) {
+    throw new BwsError(describeSdkFailure(err, "listing projects"));
+  }
   const match = projects.find((p) => p.name === name);
 
   if (!match) {
@@ -189,9 +211,29 @@ export async function projectIdFor(name: string): Promise<string> {
 }
 
 export async function listSecrets(projectId: string): Promise<BwsSecret[]> {
-  const raw = await bws(["secret", "list", projectId]);
-  // An empty project returns `[]`, but an older CLI returned an empty string.
-  return raw.trim() === "" ? [] : (JSON.parse(raw) as BwsSecret[]);
+  const c = await client();
+  try {
+    // The SDK lists IDENTIFIERS org-wide (only what the token may see), then
+    // fetches the values in one batch. Filtered to the project HERE, so the
+    // callers' contract — "the secrets of this project" — survives the
+    // transport change byte-for-byte.
+    const identifiers = (await c.secrets().list(organizationId())).data;
+    if (identifiers.length === 0) return [];
+    const full = (await c.secrets().getByIds(identifiers.map((i) => i.id)))
+      .data;
+    return full
+      .filter((s) => s.projectId === projectId)
+      .map((s) => ({
+        id: s.id,
+        key: s.key,
+        value: s.value,
+        note: s.note,
+        projectId,
+        revisionDate: iso(s.revisionDate),
+      }));
+  } catch (err) {
+    throw new BwsError(describeSdkFailure(err, "listing secrets"));
+  }
 }
 
 export async function createSecret(
@@ -200,20 +242,44 @@ export async function createSecret(
   value: string,
   note: string,
 ): Promise<void> {
-  await bws(["secret", "create", key, value, projectId, "--note", note]);
+  const c = await client();
+  try {
+    await c.secrets().create(organizationId(), key, value, note, [projectId]);
+  } catch (err) {
+    throw new BwsError(describeSdkFailure(err, `creating ${key}`));
+  }
 }
 
+/**
+ * Takes the whole secret rather than an id: the SDK's update is a full
+ * replace (organization, key, project list included), and every caller
+ * already holds the listed secret it is updating.
+ */
 export async function updateSecret(
-  id: string,
+  secret: BwsSecret,
   value: string,
   note: string,
 ): Promise<void> {
-  await bws(["secret", "edit", id, "--value", value, "--note", note]);
+  const c = await client();
+  try {
+    await c
+      .secrets()
+      .update(organizationId(), secret.id, secret.key, value, note, [
+        secret.projectId,
+      ]);
+  } catch (err) {
+    throw new BwsError(describeSdkFailure(err, `updating ${secret.key}`));
+  }
 }
 
 export async function deleteSecrets(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
-  await bws(["secret", "delete", ...ids]);
+  const c = await client();
+  try {
+    await c.secrets().delete(ids);
+  } catch (err) {
+    throw new BwsError(describeSdkFailure(err, "deleting secrets"));
+  }
 }
 
 export function byKey(secrets: BwsSecret[]): Map<string, BwsSecret> {
