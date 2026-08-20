@@ -2,7 +2,7 @@
 
 import { Fragment } from "react";
 import { useRouter } from "next/navigation";
-import { CaretRightIcon } from "@phosphor-icons/react/ssr";
+import { CaretRightIcon, MagnifyingGlassIcon } from "@phosphor-icons/react/ssr";
 import {
   Command,
   CommandEmpty,
@@ -113,8 +113,21 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
             fieldClassName="h-11! *:data-[slot=input-group-addon]:pl-3! [&_[data-slot=input-group-addon]_svg]:size-5!"
           />
           <CommandList className="max-h-96">
+            {!search.trim() && (
+              <div className="text-muted-foreground flex flex-col items-center gap-1.5 px-6 py-14 text-center">
+                <MagnifyingGlassIcon className="size-6 opacity-40" />
+                <p className="text-foreground text-sm font-medium">
+                  Search DevDogs
+                </p>
+                <p className="text-xs">
+                  Start typing to find pages, docs, and settings.
+                </p>
+              </div>
+            )}
             {!isLoading && search.trim() && !hasResults && (
-              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandEmpty className="px-6 py-14 text-base">
+                No results found.
+              </CommandEmpty>
             )}
             {pageResults.length > 0 && (
               <CommandGroup heading="Pages">
