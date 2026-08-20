@@ -357,8 +357,16 @@ the access token authorizes.
 Logins are **cached in a state file** (`~/.config/devdogs-devtools/`), so
 pushing several targets back-to-back authenticates once rather than once per
 command — Bitwarden's identity endpoint rate-limits repeated access-token
-logins, and this cache is what keeps a busy session under it. A 429 that
-still slips through is retried automatically with backoff, out loud.
+logins, and this cache is what keeps a busy session under it.
+
+Every other call is **paced under Bitwarden's published per-IP limits**
+(60 POSTs / 200 GETs a minute; writes spaced 1.1s, reads 350ms — see
+`bws/pace.ts` for sources), so the limit never fires in the first place: a
+full first push takes a predictable minute, announced up front, and later
+pushes touch few keys. There is no bulk write to use instead — the API
+creates and updates secrets one at a time; reads and deletes are batched,
+and the client already batches them. A 429 that still slips through (the
+undocumented corners) is retried automatically with backoff, out loud.
 
 `gh` is used for the same reason: the value has to be encrypted client-side with
 a libsodium sealed box against the environment's public key before it can be

@@ -431,6 +431,16 @@ export async function runEnvPush(options: EnvOptions): Promise<void> {
       if (!sure) bail("Nothing written.");
     }
 
+    // Writes are paced ~1.1s apart, under Bitwarden's published 60-POSTs-a-
+    // minute limit (see bws/pace.ts) — said out loud for a big push, because
+    // a minute of silence reads as a hang and gets Ctrl-C'd.
+    const writes = created.length + updated.length;
+    if (writes > 5) {
+      log.info(
+        `Writing ${writes} secrets, paced to stay under Bitwarden's rate ` +
+          `limit — about ${Math.ceil((writes * 1.1) / 10) * 10} seconds.`,
+      );
+    }
     for (const key of created) {
       await createSecret(projectId, key, stored.get(key)!, MANAGED);
     }

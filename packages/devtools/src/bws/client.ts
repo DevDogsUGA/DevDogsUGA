@@ -33,6 +33,7 @@ import { dirname, join } from "node:path";
 import { log, select, text } from "@clack/prompts";
 import { NoAccessTokenError, promptForToken, resolveToken } from "./token.js";
 import { withRateLimitRetry } from "./retry.js";
+import { makePacer } from "./pace.js";
 import { saveToDevEnv } from "./store.js";
 import {
   readTokenFromVault,
@@ -42,6 +43,13 @@ import {
 import { unwrap } from "../ui.js";
 
 export class BwsError extends Error {}
+
+/**
+ * One pacer for the process: every Secrets Manager request funnels through
+ * it, spaced under the published per-IP limits so the 429 retry stays a
+ * backstop instead of the plan. See `pace.ts` for the numbers and sources.
+ */
+const pace = makePacer();
 
 export interface BwsSecret {
   id: string;
@@ -245,7 +253,10 @@ async function client() {
       const stateFile = stateFileFor(token);
       await mkdir(dirname(stateFile), { recursive: true, mode: 0o700 });
       await withRateLimitRetry(
-        () => instance.auth().loginAccessToken(token, stateFile),
+        async () => {
+          await pace("write");
+          return instance.auth().loginAccessToken(token, stateFile);
+        },
         { doing: "the login" },
       );
     } catch (err) {
@@ -304,9 +315,15 @@ export async function projectIdFor(name: string): Promise<string> {
   let projects: { id: string; name: string }[];
   try {
     projects = (
-      await withRateLimitRetry(() => c.projects().list(org), {
-        doing: "listing projects",
-      })
+      await withRateLimitRetry(
+        async () => {
+          await pace("read");
+          return c.projects().list(org);
+        },
+        {
+          doing: "listing projects",
+        },
+      )
     ).data;
   } catch (err) {
     throw new BwsError(describeSdkFailure(err, "listing projects"));
@@ -336,14 +353,23 @@ export async function listSecrets(projectId: string): Promise<BwsSecret[]> {
     // callers' contract — "the secrets of this project" — survives the
     // transport change byte-for-byte.
     const identifiers = (
-      await withRateLimitRetry(() => c.secrets().list(org), {
-        doing: "listing secrets",
-      })
+      await withRateLimitRetry(
+        async () => {
+          await pace("read");
+          return c.secrets().list(org);
+        },
+        {
+          doing: "listing secrets",
+        },
+      )
     ).data;
     if (identifiers.length === 0) return [];
     const full = (
       await withRateLimitRetry(
-        () => c.secrets().getByIds(identifiers.map((i) => i.id)),
+        async () => {
+          await pace("read");
+          return c.secrets().getByIds(identifiers.map((i) => i.id));
+        },
         { doing: "reading secrets" },
       )
     ).data;
@@ -372,7 +398,10 @@ export async function createSecret(
   const org = await organizationId();
   try {
     await withRateLimitRetry(
-      () => c.secrets().create(org, key, value, note, [projectId]),
+      async () => {
+        await pace("write");
+        return c.secrets().create(org, key, value, note, [projectId]);
+      },
       { doing: `creating ${key}` },
     );
   } catch (err) {
@@ -394,10 +423,12 @@ export async function updateSecret(
   const org = await organizationId();
   try {
     await withRateLimitRetry(
-      () =>
-        c
+      async () => {
+        await pace("write");
+        return c
           .secrets()
-          .update(org, secret.id, secret.key, value, note, [secret.projectId]),
+          .update(org, secret.id, secret.key, value, note, [secret.projectId]);
+      },
       { doing: `updating ${secret.key}` },
     );
   } catch (err) {
@@ -409,9 +440,15 @@ export async function deleteSecrets(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   const c = await client();
   try {
-    await withRateLimitRetry(() => c.secrets().delete(ids), {
-      doing: "deleting secrets",
-    });
+    await withRateLimitRetry(
+      async () => {
+        await pace("write");
+        return c.secrets().delete(ids);
+      },
+      {
+        doing: "deleting secrets",
+      },
+    );
   } catch (err) {
     throw new BwsError(describeSdkFailure(err, "deleting secrets"));
   }
