@@ -64,8 +64,9 @@ export default function ProjectCard({
                 href={tech.href}
                 target="_blank"
                 // Sides and top at 1px, bottom at 2px — the chips pick up the
-                // same weighted underline the block shadows give the cards.
-                className="flex items-center gap-1.5 rounded-sm border-x border-t border-b-2 border-mauve-300 px-2 py-0.5 font-mono text-xs text-mauve-500 transition-colors hover:border-mauve-400 hover:bg-mauve-50 hover:text-mauve-700"
+                // same weighted underline the block shadows give the cards,
+                // and sit a step darker than the card they lie on.
+                className="flex items-center gap-1.5 rounded-sm border-x border-t border-b-2 border-mauve-300 bg-mauve-50 px-2 py-0.5 font-mono text-xs text-mauve-500 transition-colors hover:border-mauve-400 hover:bg-mauve-100 hover:text-mauve-700"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -80,13 +81,15 @@ export default function ProjectCard({
           })}
         </div>
       )}
+      {/* Both buttons carry the streak CTA's shapes: the outline for the
+          secondary repo link, the solid fill for the deployed site. */}
       {(githubUrl ?? liveUrl) && (
-        <div className="flex gap-3 border-t border-mauve-200 pt-4">
+        <div className="flex justify-end gap-3 border-t border-mauve-200 pt-4">
           {githubUrl && (
             <Link
               href={githubUrl}
               target="_blank"
-              className="flex items-center gap-1.5 rounded-sm border border-mauve-300 bg-white px-3 py-1.5 text-sm font-medium text-mauve-700 transition-colors hover:bg-mauve-50"
+              className="transition-lift hover:shadow-block-md flex shrink-0 items-center gap-2 rounded-sm border-2 border-black bg-white px-4 py-2 text-sm font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5"
             >
               <GithubLogoIcon /> GitHub
             </Link>
@@ -95,7 +98,7 @@ export default function ProjectCard({
             <Link
               href={liveUrl.href}
               target="_blank"
-              className="flex items-center gap-1.5 rounded-sm border border-emerald-500 bg-white px-3 py-1.5 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+              className="transition-lift hover:shadow-block-sm flex shrink-0 items-center gap-2 rounded-sm border-2 border-black bg-mauve-950 px-4 py-2 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-cyan-400"
             >
               <ArrowSquareOutIcon /> {liveUrl.label}
             </Link>

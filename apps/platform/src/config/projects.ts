@@ -38,7 +38,7 @@ export const PROJECTS: Project[] = [
     year: "2026 – 2027",
     title: "DogDays",
     tagline: "Schedule Builder",
-    titleColor: "text-amber-700",
+    titleColor: "text-red-700",
     description:
       "Plan your semester against live UGA registrar data. Answer a short questionnaire, and DogDays generates conflict-free schedules — weighing professor ratings, walking distance between buildings, and the credits you already have.",
     contributions: "open",
@@ -55,11 +55,11 @@ export const PROJECTS: Project[] = [
     liveUrl: { href: "https://dogdays.dev", label: "Public Beta" },
   },
   {
-    badge: { label: "In Design", bg: "bg-rose-400", text: "text-black" },
+    badge: { label: "In Progress", bg: "bg-cyan-400", text: "text-black" },
     year: "2026 – 2027",
     title: "DogPack",
     tagline: "Study Group Finder",
-    titleColor: "text-indigo-700",
+    titleColor: "text-purple-700",
     description:
       "Our first mobile app: find the people already studying what you're studying. Match with classmates by course, form a group, and pick a time that works — built in Flutter for iOS and Android.",
     contributions: "open",
@@ -68,7 +68,7 @@ export const PROJECTS: Project[] = [
       "https://github.com/DevDogsUGA/DevDogsUGA/tree/main/apps/study-group-finder",
   },
   {
-    badge: { label: "In Progress", bg: "bg-cyan-400", text: "text-black" },
+    badge: { label: "Invite-Only", bg: "bg-amber-400", text: "text-black" },
     year: "2026 – 2027",
     title: "DevDogs Platform",
     tagline: "Member Portal & Dev Tools",
