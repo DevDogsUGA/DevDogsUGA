@@ -210,10 +210,13 @@ describe("the step summary", () => {
 });
 
 describe("the request", () => {
-  it("asks the project's own PostgREST root, with the publishable key", async () => {
+  it("asks the project's auth health endpoint, with the publishable key", async () => {
     const { requests, headers } = await preflight([200]);
-    expect(requests).toEqual([`https://${REF}.supabase.co/rest/v1/`]);
-    // The positive control for the header: without an apikey, PostgREST
+    // NOT `/rest/v1/`: the REST root is the OpenAPI schema document, which
+    // Supabase answers with 401 for any non-secret key — a healthy project
+    // would land in the "broken" bucket (it did, on the first real run).
+    expect(requests).toEqual([`https://${REF}.supabase.co/auth/v1/health`]);
+    // The positive control for the header: without an apikey, the gateway
     // answers 401 and a healthy project lands in the "broken" bucket.
     expect(headers[0]).toEqual({ apikey: KEY });
   });

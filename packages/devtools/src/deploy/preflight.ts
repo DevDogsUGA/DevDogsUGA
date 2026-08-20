@@ -165,7 +165,13 @@ export async function runPreflight(
     );
   }
 
-  const url = `https://${ref}.supabase.co/rest/v1/`;
+  // Auth's health endpoint, NOT `/rest/v1/` — the REST root is PostgREST's
+  // OpenAPI schema document, and Supabase now answers it with 401 "Secret API
+  // key required" for every non-secret key, publishable and legacy anon alike
+  // (observed 2026-08-20; it failed the first real staging preflight). Health
+  // keeps the same verdict table: 200 only with the right publishable key,
+  // 401 for a wrong one, 540 from the gateway when paused.
+  const url = `https://${ref}.supabase.co/auth/v1/health`;
 
   let response: Response | undefined;
   let lastTransportError: unknown;
