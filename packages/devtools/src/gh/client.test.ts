@@ -110,6 +110,10 @@ beforeEach(() => {
   fake.state.execResult = { stdout: "" };
   fake.state.spawnCalls.length = 0;
   fake.state.spawnExit = { code: 0, stderr: "" };
+  // The developer's own shell may carry these into vitest; the override
+  // warning must fire from THIS suite's arrangements only.
+  delete process.env.GH_TOKEN;
+  delete process.env.GITHUB_TOKEN;
 });
 
 const lastExec = () => fake.state.execCalls.at(-1)!;
@@ -243,6 +247,36 @@ describe("the delete calls", () => {
       "--env",
       "staging",
     ]);
+  });
+});
+
+describe("the env-token override", () => {
+  it("diagnoses the classic-PAT 403 with the .env mechanism and the fix", async () => {
+    // The failure that prompted this: a leftover ghp_ line in .env hijacked
+    // every gh call via with-env, invisibly, until the org's classic-PAT
+    // block (deliberate, §0.3) turned it into a bare 403.
+    fake.state.execResult = Object.assign(new Error("exit 1"), {
+      stderr:
+        "HTTP 403: `DevDogsUGA` forbids access via a personal access token (classic).",
+    });
+    await expect(listSecrets("production")).rejects.toThrow(
+      /GH_TOKEN \/ GITHUB_TOKEN[\s\S]*with-env loads[\s\S]*revoke/,
+    );
+  });
+
+  it("warns ONCE, on stderr, when an environment token will override the login", async () => {
+    const stderr = vi.spyOn(console, "error").mockImplementation(() => {});
+    process.env.GITHUB_TOKEN = "ghp_leftover";
+    await listSecrets("staging");
+    await listVariables("staging");
+    const warnings = stderr.mock.calls.filter(([m]) =>
+      String(m).includes("NOT your"),
+    );
+    // Once: a warning per call is a warning nobody reads, and the point is
+    // the MECHANISM (with-env loads .env), which does not bear repeating.
+    expect(warnings).toHaveLength(1);
+    expect(String(warnings[0]![0])).toContain("GITHUB_TOKEN");
+    stderr.mockRestore();
   });
 });
 

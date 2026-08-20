@@ -41,6 +41,35 @@ const MAX_BUFFER = 16 * 1024 * 1024;
 
 export class GhError extends Error {}
 
+let warnedAboutTokenOverride = false;
+
+/**
+ * Says, once, when `gh` is about to ignore its own login.
+ *
+ * `gh` prefers `GH_TOKEN` / `GITHUB_TOKEN` from the environment over the
+ * account somebody logged in with — and `with-env` loads `.env` for every
+ * devtools command, so a token line in that file takes over EVERY `gh` call
+ * silently. That is how a leftover classic PAT kept authenticating after the
+ * operator's real login was a perfectly valid OAuth token, right up until
+ * the org's classic-PAT block turned it into a 403 with no visible cause.
+ * stderr and not clack, so it shows the same way from every command shape.
+ */
+function warnOnEnvTokenOverride(): void {
+  if (warnedAboutTokenOverride) return;
+  const source = process.env.GH_TOKEN
+    ? "GH_TOKEN"
+    : process.env.GITHUB_TOKEN
+      ? "GITHUB_TOKEN"
+      : undefined;
+  if (!source) return;
+  warnedAboutTokenOverride = true;
+  console.error(
+    `gh: authenticating with ${source} from the environment, NOT your ` +
+      "`gh auth login` account. with-env loads .env, so a token line there " +
+      "takes over silently — comment it out if that is not what you meant.",
+  );
+}
+
 export interface GhSecret {
   name: string;
   updatedAt: string;
@@ -73,6 +102,18 @@ function describe(err: unknown): string {
 
   const stderr = (e.stderr ?? "").trim();
 
+  if (/personal access token \(classic\)/i.test(stderr)) {
+    return (
+      `${stderr}\n\n` +
+      "The organization forbids classic PATs (by design — §0.3), and gh " +
+      "authenticated with one anyway. gh prefers GH_TOKEN / GITHUB_TOKEN " +
+      "from the environment over your `gh auth login`, and with-env loads " +
+      ".env — so the usual culprit is a leftover ghp_ token line in that " +
+      "file. Comment it out (and revoke the token at " +
+      "github.com/settings/tokens); your stored gh login then takes over."
+    );
+  }
+
   if (/not logged into|authentication required|gh auth login/i.test(stderr)) {
     return `${stderr}\n\nRun \`gh auth login\`. Managing environment secrets needs the \`repo\` scope.`;
   }
@@ -101,6 +142,7 @@ function describe(err: unknown): string {
 
 /** Environment secret names and when each last changed. Never values. */
 export async function listSecrets(environment: string): Promise<GhSecret[]> {
+  warnOnEnvTokenOverride();
   try {
     const { stdout } = await run(
       "gh",
@@ -130,6 +172,7 @@ export async function setSecret(
   name: string,
   value: string,
 ): Promise<void> {
+  warnOnEnvTokenOverride();
   await new Promise<void>((resolve, reject) => {
     const child = spawn("gh", ["secret", "set", name, "--env", environment], {
       stdio: ["pipe", "ignore", "pipe"],
@@ -158,6 +201,7 @@ export async function deleteSecret(
   environment: string,
   name: string,
 ): Promise<void> {
+  warnOnEnvTokenOverride();
   try {
     await run("gh", ["secret", "delete", name, "--env", environment], {
       shell: false,
@@ -180,6 +224,7 @@ export async function deleteSecret(
 export async function listVariables(
   environment: string,
 ): Promise<GhVariable[]> {
+  warnOnEnvTokenOverride();
   try {
     const { stdout } = await run(
       "gh",
@@ -214,6 +259,7 @@ export async function setVariable(
   name: string,
   value: string,
 ): Promise<void> {
+  warnOnEnvTokenOverride();
   await new Promise<void>((resolve, reject) => {
     const child = spawn("gh", ["variable", "set", name, "--env", environment], {
       stdio: ["pipe", "ignore", "pipe"],
@@ -243,6 +289,7 @@ export async function deleteVariable(
   environment: string,
   name: string,
 ): Promise<void> {
+  warnOnEnvTokenOverride();
   try {
     await run("gh", ["variable", "delete", name, "--env", environment], {
       shell: false,
@@ -288,6 +335,7 @@ export interface GhRepositoryVariable {
 export async function listRepositoryVariables(): Promise<
   GhRepositoryVariable[]
 > {
+  warnOnEnvTokenOverride();
   try {
     const { stdout } = await run(
       "gh",
