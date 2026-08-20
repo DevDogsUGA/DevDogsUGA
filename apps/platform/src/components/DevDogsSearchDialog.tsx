@@ -100,16 +100,19 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
         <DialogDescription>Search pages, docs, and settings</DialogDescription>
       </DialogHeader>
       <DialogContent
-        className="top-1/3 translate-y-0 overflow-hidden rounded-xl p-0"
+        className="top-1/4 translate-y-0 overflow-hidden rounded-xl p-0 sm:max-w-xl"
+        overlayClassName="bg-black/40"
         showCloseButton={false}
       >
-        <Command shouldFilter={false}>
+        <Command shouldFilter={false} className="p-1.5">
           <CommandInput
             placeholder="Search pages, docs, and settings..."
             value={search}
             onValueChange={setSearch}
+            className="text-base"
+            fieldClassName="h-11! *:data-[slot=input-group-addon]:pl-3! [&_[data-slot=input-group-addon]_svg]:size-5!"
           />
-          <CommandList>
+          <CommandList className="max-h-96">
             {!isLoading && search.trim() && !hasResults && (
               <CommandEmpty>No results found.</CommandEmpty>
             )}
