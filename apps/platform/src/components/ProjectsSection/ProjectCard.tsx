@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowSquareOutIcon, GithubLogoIcon } from "@phosphor-icons/react/ssr";
 import type { Project } from "~/config/projects";
+import { TECH } from "~/config/tech";
 
 export default function ProjectCard({
   badge,
@@ -9,6 +10,7 @@ export default function ProjectCard({
   titleColor,
   tagline,
   description,
+  note,
   techStack,
   githubUrl,
   liveUrl,
@@ -35,16 +37,29 @@ export default function ProjectCard({
         <p className="text-sm font-semibold text-mauve-500">{tagline}</p>
       </div>
       <p className="text-sm/relaxed text-mauve-600">{description}</p>
+      {note && <p className="text-sm text-mauve-500 italic">{note}</p>}
       {techStack && techStack.length > 0 && (
         <div className="mt-auto flex flex-wrap gap-2 pt-2">
-          {techStack.map((t) => (
-            <span
-              key={t}
-              className="rounded-sm border border-mauve-300 px-2 py-0.5 font-mono text-xs text-mauve-500"
-            >
-              {t}
-            </span>
-          ))}
+          {techStack.map((key) => {
+            const tech = TECH[key];
+            return (
+              <Link
+                key={key}
+                href={tech.href}
+                target="_blank"
+                className="flex items-center gap-1.5 rounded-sm border border-mauve-300 px-2 py-0.5 font-mono text-xs text-mauve-500 transition-colors hover:border-mauve-400 hover:bg-mauve-50 hover:text-mauve-700"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className="size-3 shrink-0 fill-current"
+                >
+                  <path d={tech.path} />
+                </svg>
+                {tech.label}
+              </Link>
+            );
+          })}
         </div>
       )}
       {(githubUrl ?? liveUrl) && (
@@ -60,11 +75,11 @@ export default function ProjectCard({
           )}
           {liveUrl && (
             <Link
-              href={liveUrl}
+              href={liveUrl.href}
               target="_blank"
               className="flex items-center gap-1.5 rounded-sm border border-emerald-500 bg-white px-3 py-1.5 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
-              <ArrowSquareOutIcon /> Live Site
+              <ArrowSquareOutIcon /> {liveUrl.label}
             </Link>
           )}
         </div>
