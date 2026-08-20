@@ -32,7 +32,7 @@ export default function EventCard({
   const badge = eventBadge[event.type];
   return (
     <div
-      className={`shadow-block-lg flex h-full flex-col gap-3 rounded-sm border-2 border-black bg-white p-5 transition-[opacity,scale] hover:scale-100 hover:opacity-100 ${isHighlighted ? "scale-100 opacity-100" : "scale-90 opacity-75"}`}
+      className={`shadow-block-lg flex h-full flex-col gap-3 rounded-sm border-2 border-black bg-white p-5 transition-[opacity,scale] hover:scale-100 hover:opacity-100 ${isHighlighted ? "scale-100 opacity-100" : "lg:scale-90 lg:opacity-75"}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

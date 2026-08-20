@@ -77,6 +77,16 @@ export default async function DocsMarkdown({ source }: { source: string }) {
 
   return (
     <MarkdownAsync
+      components={{
+        // Tables render at their natural width, which on a phone can exceed
+        // the article column — scroll the table inside its own container
+        // rather than letting it stretch the page sideways.
+        table: ({ node: _node, ...props }) => (
+          <div className="overflow-x-auto">
+            <table {...props} />
+          </div>
+        ),
+      }}
       remarkPlugins={[
         remarkFrontmatter,
         remarkGfm,

@@ -45,7 +45,7 @@ export default function UnderConstruction() {
           />
           <div className="relative z-10 flex flex-col items-center gap-8 px-6 py-24 text-center">
             <h1
-              className="font-display text-5xl/none font-extrabold text-white sm:text-6xl/none lg:text-7xl/none"
+              className="font-display text-[clamp(2rem,10.5vw,4.5rem)]/none font-extrabold text-white"
               style={{ filter: "drop-shadow(4px 4px 0 #e11d48)" }}
             >
               UNDER
