@@ -18,11 +18,6 @@ export default async function StreakCTA() {
   if (!linkedGithubProfile) {
     return (
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
-        <p className="text-sm text-mauve-700">
-          Contribute to these projects by linking your{" "}
-          <span className="font-bold text-mauve-900">GitHub account</span> to
-          DevDogs.
-        </p>
         {/*
           Linking runs through the same unfinished sign-in flow, so this opens
           the explainer rather than submitting to `linkGithubProfile`. Restoring

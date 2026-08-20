@@ -4,9 +4,9 @@ import type { TechKey } from "./tech";
  * The DevDogs projects, shared by the homepage Projects section and the
  * fullscreen app switcher so both render the same cards from one source.
  *
- * Ordered by what someone can join today, which is also the order the two
- * surfaces group them in: the `"open"` projects lead, and the `"closed"` ones
- * follow in a quieter block.
+ * Ordered by what someone can join today: the `"open"` projects lead, and the
+ * `"closed"` ones follow, rendered recessed so they read as secondary without
+ * needing a label to say so.
  */
 export interface Project {
   badge: { label: string; bg: string; text: string };
@@ -101,11 +101,3 @@ export const PROJECTS: Project[] = [
     githubUrl: "https://github.com/DevDogs-UGA/Community-Resource-Forum",
   },
 ];
-
-/** The projects anyone can contribute to — the ones the page leads with. */
-export const OPEN_PROJECTS = PROJECTS.filter((p) => p.contributions === "open");
-
-/** Everything else: still listed, deliberately quieter. */
-export const CLOSED_PROJECTS = PROJECTS.filter(
-  (p) => p.contributions === "closed",
-);

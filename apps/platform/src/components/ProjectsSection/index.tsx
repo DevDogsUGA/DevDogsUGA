@@ -1,11 +1,12 @@
 import { Suspense, type ReactNode } from "react";
-import Image from "next/image";
-import ibm from "~/assets/ibm.gif";
+// Parked with `RotatedImage` below — restore both together.
+// import Image from "next/image";
+// import ibm from "~/assets/ibm.gif";
 import SectionBackground, {
   type BlobDef,
   type EdgeType,
 } from "~/ui/section-background";
-import { CLOSED_PROJECTS, OPEN_PROJECTS } from "~/config/projects";
+import { PROJECTS } from "~/config/projects";
 import ProjectCard from "./ProjectCard";
 
 const PROJECTS_BLOBS: BlobDef[] = [
@@ -22,6 +23,10 @@ const PROJECTS_BLOBS: BlobDef[] = [
   }, // indigo
 ];
 
+/* Parked, not deleted: the header is centered copy for now, with no room for
+   the rotated diamond beside it. Uncomment this, its two imports above, and
+   the call in the header to bring it back.
+
 function RotatedImage() {
   return (
     <div className="@container-[size] flex h-64 grow items-center justify-center drop-shadow-[12px_0px_0_var(--color-mauve-800)] md:h-auto">
@@ -37,6 +42,7 @@ function RotatedImage() {
     </div>
   );
 }
+*/
 
 interface Props {
   topEdge: EdgeType;
@@ -70,47 +76,33 @@ export default function ProjectsSection({
           blobs={PROJECTS_BLOBS}
         />
         <div className="relative z-10 mx-auto max-w-6xl space-y-16 px-6 py-12 md:px-12 md:py-16">
-          <div className="flex flex-col gap-10 md:-mt-12 md:flex-row md:gap-0">
-            <div className="max-w-prose space-y-4 text-left text-balance md:pt-12">
-              <h2 className="font-display mb-8 text-4xl font-extrabold text-black md:text-5xl">
-                Projects
-              </h2>
-              <div className="mx-auto flex max-w-2xl flex-col gap-3 text-base/relaxed text-mauve-700">
-                <p>
-                  At DevDogs, every project is a real product built for real
-                  users — not a toy app or a class assignment.
-                </p>
-                <p>
-                  Each semester, members collaborate across design, engineering,
-                  and product to ship something that matters.
-                </p>
-              </div>
+          <div className="mx-auto max-w-prose space-y-4 text-center text-balance">
+            <h2 className="font-display mb-8 text-4xl font-extrabold text-black md:text-5xl">
+              Projects
+            </h2>
+            <div className="mx-auto flex max-w-2xl flex-col gap-3 text-base/relaxed text-mauve-700">
+              <p>
+                At DevDogs, every project is a real product built for real users
+                — not a toy app or a class assignment.
+              </p>
+              <p>
+                Each semester, members collaborate across design, engineering,
+                and product to ship something that matters.
+              </p>
             </div>
-            <RotatedImage />
+            {/* <RotatedImage /> */}
           </div>
 
-          <div className="space-y-10">
-            <div className="grid items-stretch gap-4 md:grid-cols-2">
-              {OPEN_PROJECTS.map((project) => (
-                <ProjectCard key={project.title} {...project} />
-              ))}
-            </div>
-
-            {CLOSED_PROJECTS.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-xs font-bold tracking-widest text-mauve-500 uppercase">
-                    Not open for contributions
-                  </h3>
-                  <span className="h-px grow bg-mauve-300" />
-                </div>
-                <div className="grid items-stretch gap-4 md:grid-cols-2">
-                  {CLOSED_PROJECTS.map((project) => (
-                    <ProjectCard key={project.title} {...project} recessed />
-                  ))}
-                </div>
-              </div>
-            )}
+          {/* One grid, ordered open-first: the projects closed to
+              contributions sit back rather than sitting under a label. */}
+          <div className="grid items-stretch gap-4 md:grid-cols-2">
+            {PROJECTS.map((project) => (
+              <ProjectCard
+                key={project.title}
+                {...project}
+                recessed={project.contributions === "closed"}
+              />
+            ))}
           </div>
 
           <div className="flex flex-col items-center gap-4 text-center">
