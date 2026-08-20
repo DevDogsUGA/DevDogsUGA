@@ -52,6 +52,17 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Next's GENERATED types (PageProps/LayoutProps globals, the image
+      # module declarations, next-env.d.ts itself) exist on every laptop that
+      # has ever run `next dev` and on no fresh checkout — `tsc --noEmit`
+      # then fails on names the framework provides. `next typegen` creates
+      # them without a build or a database; next.config.ts falls back to a
+      # placeholder URL under SKIP_ENV_VALIDATION so loading it here needs no
+      # credentials.
+      - name: Generate the Next type stubs
+        run: |
+          pnpm --filter platform exec next typegen
+          pnpm --filter schedule-builder exec next typegen
       # Flutter isn't installed here — the study-group-finder app is validated
       # in the `flutter` job below. Turbo runs the three tasks in parallel.
       #

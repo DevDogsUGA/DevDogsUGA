@@ -1951,6 +1951,7 @@ export type Database = {
         Args: { app_slug: string; content_ref: string; content_type: string }
         Returns: Json
       }
+      is_profile_frozen: { Args: { uid: string }; Returns: boolean }
       is_suspended: { Args: { uid: string }; Returns: boolean }
       is_test_identity: { Args: { uid: string }; Returns: boolean }
       list_content_types: {
