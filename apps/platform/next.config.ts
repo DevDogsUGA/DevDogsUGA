@@ -33,6 +33,15 @@ const config = {
   // database all worked. `experimental.useCache` keeps the `"use cache"` +
   // `cacheLife` directives (DocsMarkdown and friends) compiling and caching;
   // only the PPR machinery is off. Revisit when the adapter supports it.
+  //
+  // ⚠️ `experimental.useCache` prints "is deprecated. Please use the
+  // top-level `cacheComponents` option instead" — read next's own
+  // config.js (search `E1465`) before "fixing" that: `cacheComponents` is a
+  // plain boolean with no partial mode, and setting it ALSO flips
+  // `experimental.ppr = true` internally. There is currently no way to get
+  // `"use cache"` support without PPR except this deprecated flag. The
+  // warning is honest about the flag's name, not about there being a
+  // working replacement for what this file needs.
   experimental: {
     authInterrupts: true,
     useCache: true,
