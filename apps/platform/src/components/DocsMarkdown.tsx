@@ -1,4 +1,4 @@
-import rehypeShiki from "@shikijs/rehype";
+import rehypeShikiFromHighlighter from "@shikijs/rehype/core";
 import { cacheLife } from "next/cache";
 import { MarkdownAsync } from "react-markdown";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
@@ -12,6 +12,51 @@ import remarkGfm from "remark-gfm";
 import { remarkAlert } from "remark-github-blockquote-alert";
 import remarkMath from "remark-math";
 import remarkSmartypants from "remark-smartypants";
+import { createHighlighterCore } from "shiki/core";
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+
+/**
+ * One highlighter for the process, on Shiki's JAVASCRIPT regex engine.
+ *
+ * Not the stock `@shikijs/rehype` plugin, whose bundled highlighter compiles
+ * the Oniguruma engine's Wasm at request time — and the Workers runtime
+ * forbids `WebAssembly.compile()` outright ("Wasm code generation disallowed
+ * by embedder"). On the first staging deploy that CompileError surfaced as an
+ * unhandled rejection inside MarkdownAsync, the response promise never
+ * settled, and every page render hung until the runtime killed the request.
+ * Prerendered pages hid it locally; any `◐` partial-prerender revalidating in
+ * the Worker hit it.
+ *
+ * The deep `shiki/dist/...` paths are that package's published `./*` export —
+ * each is a one-line re-export of `@shikijs/langs/*` / `@shikijs/themes/*`,
+ * reached through the direct `shiki` dependency so no transitive package is
+ * imported. The langs here must cover what DocsMarkdown's option list names.
+ */
+const highlighterPromise = createHighlighterCore({
+  themes: [import("shiki/dist/themes/rose-pine-moon.mjs")],
+  langs: [
+    import("shiki/dist/langs/bash.mjs"),
+    import("shiki/dist/langs/css.mjs"),
+    import("shiki/dist/langs/diff.mjs"),
+    import("shiki/dist/langs/graphql.mjs"),
+    import("shiki/dist/langs/html.mjs"),
+    import("shiki/dist/langs/http.mjs"),
+    import("shiki/dist/langs/java.mjs"),
+    import("shiki/dist/langs/javascript.mjs"),
+    import("shiki/dist/langs/json.mjs"),
+    import("shiki/dist/langs/jsx.mjs"),
+    import("shiki/dist/langs/markdown.mjs"),
+    import("shiki/dist/langs/python.mjs"),
+    import("shiki/dist/langs/sql.mjs"),
+    import("shiki/dist/langs/toml.mjs"),
+    import("shiki/dist/langs/tsx.mjs"),
+    import("shiki/dist/langs/typescript.mjs"),
+    import("shiki/dist/langs/yaml.mjs"),
+  ],
+  // `forgiving` skips the rare grammar rule the JS engine cannot translate
+  // instead of throwing — a partially-highlighted block beats a hung render.
+  engine: createJavaScriptRegexEngine({ forgiving: true }),
+});
 
 /**
  * The single markdown pipeline for documentation.
@@ -27,6 +72,8 @@ import remarkSmartypants from "remark-smartypants";
 export default async function DocsMarkdown({ source }: { source: string }) {
   "use cache";
   cacheLife("max");
+
+  const highlighter = await highlighterPromise;
 
   return (
     <MarkdownAsync
@@ -44,7 +91,8 @@ export default async function DocsMarkdown({ source }: { source: string }) {
         [rehypeAutolinkHeadings, { behavior: "wrap" }],
         rehypeUnwrapImages,
         [
-          rehypeShiki,
+          rehypeShikiFromHighlighter,
+          highlighter,
           {
             // `rose-pine-moon` rather than a stock dark theme: its base hues
             // are the same muted violet family as the mauve palette, so
@@ -60,25 +108,8 @@ export default async function DocsMarkdown({ source }: { source: string }) {
             // amount of CSS could retheme the block short of `!important`.
             themes: { dark: "rose-pine-moon" },
             defaultColor: false,
-            langs: [
-              "bash",
-              "css",
-              "diff",
-              "graphql",
-              "html",
-              "http",
-              "java",
-              "javascript",
-              "json",
-              "jsx",
-              "markdown",
-              "python",
-              "sql",
-              "toml",
-              "tsx",
-              "typescript",
-              "yaml",
-            ],
+            // The language LIST lives on the highlighter above — the core
+            // plugin renders with whatever that instance loaded.
             fallbackLanguage: "text",
           },
         ],
