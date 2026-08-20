@@ -180,7 +180,15 @@ from it:
   env example [--check]           regenerate .env.example from the manifests
                                   (--check: verify only, as CI does)
   env init [--target <t>]         create a FRESH file for the target
-                                  (default: development); refuses if it exists
+             [--apps <a,b,…>]     (default: development). For development it
+                                  asks which projects you are working on and
+                                  renders only their sections (plus the shared
+                                  supabase stack); devtools is offered as a
+                                  ROLE — the operator credentials no app
+                                  reads. Re-running APPENDS the sections a new
+                                  selection adds, never touching filled
+                                  values. --apps skips the prompt; a vault
+                                  target's file still refuses to exist twice
 
   pull, push and audit each READ AND WRITE the target's own file. --file
   overrides that; it is not how you choose a target. --target development
@@ -730,7 +738,11 @@ async function runEnvCommand(rest: string[]): Promise<void> {
       return;
     }
     try {
-      await runEnvInit(given);
+      // `--apps` (development only): which projects' sections to render —
+      // comma-separated app names, plus `devtools` for the operator role.
+      // Absent at a terminal, init asks; absent in a pipe, it renders
+      // everything, which is what every pre-picker caller got.
+      await runEnvInit(given, flagValue(rest, "--apps") ?? undefined);
     } catch (err) {
       explain("env init failed.", errorMessage(err));
       process.exitCode = 1;

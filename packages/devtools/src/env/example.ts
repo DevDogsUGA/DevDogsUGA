@@ -64,7 +64,9 @@
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { log, note } from "@clack/prompts";
+import { log, multiselect, note } from "@clack/prompts";
+import { EnvDocument } from "./document.js";
+import { unwrap } from "../ui.js";
 import {
   derivationOf,
   envReferences,
@@ -112,6 +114,41 @@ const SECTION_LABELS: Record<string, string> = {
 /** `study-group-finder:tooling` and friends fold into their app's section. */
 function sectionOf(source: string): string {
   return source.split(":")[0]!;
+}
+
+/**
+ * The sections a development init may narrow to: the four apps.
+ *
+ * `supabase` is NOT here and NOT optional — it is the shared database and
+ * auth layer every app runs against, so any selection implies it (the caller
+ * adds it). `devtools` is not here either, deliberately: it is a ROLE, not a
+ * project. A contributor picks what they are building; whether they also
+ * operate deploys is a separate question the picker asks separately.
+ */
+export const APP_SECTIONS = [
+  "platform",
+  "schedule-builder",
+  "study-group-finder",
+  "sandbox",
+] as const;
+
+/**
+ * Every declared key belonging to one of the chosen sections.
+ *
+ * `some` over a key's declaring sources, so a key SHARED between a chosen and
+ * an unchosen app (API_URL, the whole connection block) is included by
+ * whichever side was picked — a narrowed file must never lose the
+ * infrastructure a chosen app boots on just because another app shares it.
+ */
+export function keysForSections(chosen: ReadonlySet<string>): Set<string> {
+  assertRegistryLoaded();
+  const keys = new Set<string>();
+  for (const [key, entries] of variables()) {
+    if (entries.some((entry) => chosen.has(sectionOf(entry.source)))) {
+      keys.add(key);
+    }
+  }
+  return keys;
 }
 
 function sectionRank(source: string): number {
@@ -407,7 +444,17 @@ function targetHeader(target: VaultTarget, count: number): string[] {
  * is also what `.env.example` wants; a vault target wants what a push for that
  * target routes, blank unless the registry can derive it.
  */
-export function renderInit(target: EnvTarget, date: string): string {
+export function renderInit(
+  target: EnvTarget,
+  date: string,
+  /**
+   * Development only: the sections to render, from the project picker.
+   * Callers pass the CHOSEN set plus `supabase` (the shared stack is implied
+   * by any choice); absent means everything, which is what the vault targets
+   * and every pre-picker caller get.
+   */
+  sections?: ReadonlySet<string>,
+): string {
   const file = fileFor(target);
   const stamp = `# ${file} (${target}) — created by \`pnpm devtools env init\` on ${date}.`;
 
@@ -421,12 +468,24 @@ export function renderInit(target: EnvTarget, date: string): string {
     ].join("\n");
   }
 
+  const narrowed =
+    sections &&
+    (SECTION_ORDER as readonly string[]).some((s) => !sections.has(s));
   return [
     stamp,
+    ...(narrowed
+      ? [
+          `# Narrowed to: ${[...sections].sort().join(", ")} — the projects picked at`,
+          "# init. Nothing else is missing by accident: re-run",
+          "# `pnpm devtools env init --target development` any time to add the",
+          "# sections for another project (or the operator tooling), appended",
+          "# without touching a value you have already filled in.",
+        ]
+      : []),
     "# Fill in the values below. The local Supabase stack supplies the whole",
     "# connection block: `pnpm devtools link` starts it and writes",
     "# .env.generated, which overlays this file while the stack is running.",
-    ...renderBody(),
+    ...renderBody(sections ? keysForSections(sections) : undefined),
     "",
   ].join("\n");
 }
@@ -497,23 +556,109 @@ export async function runEnvExample(options: {
   process.exitCode = 1;
 }
 
-export async function runEnvInit(target: EnvTarget): Promise<void> {
+/**
+ * The development sections to render: `--apps`, else the picker, else all.
+ *
+ * `undefined` means "everything", which keeps three callers honest at once:
+ * a script with no flag, a pipe with no terminal (the picker refuses to
+ * prompt where nobody can answer, like every other picker here), and the
+ * vault targets, which never narrow.
+ */
+export async function resolveSections(
+  apps?: string,
+): Promise<Set<string> | undefined> {
+  if (apps !== undefined) {
+    const chosen = apps
+      .split(",")
+      .map((name) => name.trim())
+      .filter((name) => name !== "");
+    const valid: readonly string[] = [...APP_SECTIONS, "devtools"];
+    for (const name of chosen) {
+      if (!valid.includes(name)) {
+        throw new Error(
+          `--apps: "${name}" is not a section. Apps: ${APP_SECTIONS.join(", ")}; ` +
+            "plus `devtools` for the operator tooling. `supabase` is implied " +
+            "by any choice and is not an option.",
+        );
+      }
+    }
+    if (chosen.length === 0) return undefined;
+    return new Set([...chosen, "supabase"]);
+  }
+
+  if (!process.stdin.isTTY) return undefined;
+
+  const chosen = unwrap(
+    await multiselect({
+      message:
+        "Which projects are you working on? (The shared Supabase stack is " +
+        "always included; re-run init later to add more.)",
+      options: [
+        ...APP_SECTIONS.map((app) => ({ value: app as string, label: app })),
+        {
+          value: "devtools",
+          label: "deploy & officer tooling",
+          hint: "a role, not an app — operator credentials, all commented out; most contributors never need these",
+        },
+      ],
+      initialValues: [...APP_SECTIONS] as string[],
+      required: true,
+    }),
+  );
+  return new Set([...chosen, "supabase"]);
+}
+
+export async function runEnvInit(
+  target: EnvTarget,
+  apps?: string,
+): Promise<void> {
   const file = fileFor(target);
   const path = resolve(PROJECT_ROOT, file);
   const date = new Date().toISOString().slice(0, 10);
+  const sections =
+    target === "development" ? await resolveSections(apps) : undefined;
 
   try {
     // `wx` makes the existence check and the write one atomic operation, so
     // two concurrent inits cannot both pass a stat and then clobber.
-    await writeFile(path, renderInit(target, date), { flag: "wx" });
+    await writeFile(path, renderInit(target, date, sections), { flag: "wx" });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "EEXIST") {
+      // A development re-run is ADDITIVE: the picker's whole story is "pick
+      // less now, come back for more later", and that story needs the later.
+      // Only keys the file does not mention at all are appended — an active
+      // line holds somebody's value and a commented one holds their decision,
+      // and both survive byte-for-byte.
+      if (target === "development") {
+        const existing = await readFile(path, "utf8");
+        const doc = EnvDocument.parse(existing);
+        const wanted = sections
+          ? keysForSections(sections)
+          : new Set(variables().keys());
+        const missing = new Set(
+          [...wanted].filter((key) => !doc.has(key) && !doc.isCommented(key)),
+        );
+        if (missing.size === 0) {
+          log.info(`${file} already covers that selection — nothing to add.`);
+          return;
+        }
+        const appended = [
+          "",
+          `# --- added by \`pnpm devtools env init\` on ${date} for: ${
+            sections ? [...sections].sort().join(", ") : "everything"
+          } ---`,
+          ...renderBody(missing),
+          "",
+        ].join("\n");
+        await writeFile(path, existing.replace(/\n?$/, "\n") + appended);
+        log.success(
+          `Appended ${missing.size} key${missing.size === 1 ? "" : "s"} to ${file}; existing lines untouched.`,
+        );
+        return;
+      }
       explain(`${file} already exists, and init never overwrites.`, "", [
-        target === "development"
-          ? "Edit .env in place, or `pnpm devtools env reset` blanks every" +
-            " value while keeping each recoverable as a comment."
-          : `\`pnpm devtools env pull --target ${target}\` updates its` +
-            " values in place.",
+        `\`pnpm devtools env pull --target ${target}\` updates its` +
+          " values in place.",
         "To start truly fresh, move the old file aside yourself first — that",
         "way discarding it is your action, not this tool's.",
       ]);

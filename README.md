@@ -42,7 +42,7 @@ data**. The only credential that bypasses RLS is the service role
 git clone https://github.com/DevDogsUGA/DevDogsUGA.git
 cd DevDogsUGA
 corepack enable && pnpm install
-pnpm setup                       # checks prereqs, generates .env from the env registry
+pnpm setup                       # checks prereqs; asks which projects you're on, generates .env
 # edit .env — add your remote Supabase creds (see the file's comments)
 pnpm sb link --remote      # one-time
 pnpm --filter @devdogsuga/supabase generate-types           # regenerate the shared Database types

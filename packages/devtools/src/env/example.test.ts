@@ -34,7 +34,12 @@ import {
   type VaultTarget,
 } from "@devdogsuga/env";
 import { loadRegistry } from "./discovery.js";
-import { renderExample, renderInit } from "./example.js";
+import {
+  keysForSections,
+  renderExample,
+  renderInit,
+  resolveSections,
+} from "./example.js";
 
 const DATE = "2026-08-16";
 
@@ -549,5 +554,68 @@ describe("development", () => {
       expect(file.has(key), `${key} must have no assignable line`).toBe(false);
       expect(renderInit("development", DATE)).toContain(`# ${key}:`);
     }
+  });
+});
+
+describe("the project picker's rendering", () => {
+  // The picker itself is a TTY prompt; what is testable — and what carries
+  // the security property — is the selection arithmetic and the render.
+  const SB = new Set(["schedule-builder", "supabase"]);
+
+  it("keeps the shared infrastructure a chosen app boots on", () => {
+    const keys = keysForSections(SB);
+    // API_URL is declared by platform AND schedule-builder; picking either
+    // side must keep it, or the narrowed file loses the connection block.
+    expect(keys.has("API_URL")).toBe(true);
+    // The supabase section rides along with any choice (the caller adds it).
+    expect(keys.has("PROJECT_REF")).toBe(true);
+  });
+
+  it("drops the unchosen app's keys and the operator tooling", () => {
+    const keys = keysForSections(SB);
+    expect(keys.has("DISCORD_TOKEN")).toBe(false);
+    // devtools is a ROLE, not implied by any app choice.
+    expect(keys.has("CLOUDFLARE_API_TOKEN")).toBe(false);
+    expect(keys.has("BWS_ACCESS_TOKEN")).toBe(false);
+  });
+
+  it("includes the operator tooling only when the role is picked", () => {
+    const keys = keysForSections(new Set([...SB, "devtools"]));
+    expect(keys.has("CLOUDFLARE_API_TOKEN")).toBe(true);
+  });
+
+  it("renders a narrowed development file that says it is narrowed", () => {
+    const text = renderInit("development", DATE, SB);
+    expect(text).toMatch(/Narrowed to: schedule-builder, supabase/);
+    expect(text).toContain("SCHEDULE_BUILDER_URL");
+    expect(text).not.toContain("DISCORD_TOKEN");
+    expect(text).not.toContain("CLOUDFLARE_API_TOKEN");
+  });
+
+  it("renders the full file, with no narrowed banner, when nothing narrows", () => {
+    // Every pre-picker caller — and every pipe with no terminal — lands here,
+    // so "no sections" has to mean exactly what init always meant.
+    const text = renderInit("development", DATE);
+    expect(text).not.toContain("Narrowed to:");
+    expect(text).toContain("DISCORD_TOKEN");
+  });
+
+  it("resolveSections parses --apps and implies supabase", async () => {
+    const sections = await resolveSections("schedule-builder,devtools");
+    expect(sections).toEqual(
+      new Set(["schedule-builder", "devtools", "supabase"]),
+    );
+  });
+
+  it("resolveSections refuses a section that is not an app or the role", async () => {
+    // `supabase` is refused as an OPTION precisely because it is implied —
+    // accepting it would teach people it is optional.
+    await expect(resolveSections("supabase")).rejects.toThrow(/not a section/);
+    await expect(resolveSections("platfrom")).rejects.toThrow(/not a section/);
+  });
+
+  it("resolveSections answers everything when nobody can be asked", async () => {
+    // vitest has no TTY on stdin, which IS the pipe case.
+    expect(await resolveSections()).toBeUndefined();
   });
 });

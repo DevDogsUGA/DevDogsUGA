@@ -16,7 +16,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { log, note } from "@clack/prompts";
 import { loadRegistry } from "./env/discovery.js";
-import { renderInit } from "./env/example.js";
+import { renderInit, resolveSections } from "./env/example.js";
 import { PROJECT_ROOT } from "./instance.js";
 
 function has(cmd: string): boolean {
@@ -74,9 +74,20 @@ export async function runSetup(): Promise<void> {
     checks.push("OK    .env already exists (left untouched)");
   } else {
     await loadRegistry();
+    // The project picker: a contributor's .env carries the sections for the
+    // projects they picked (plus the shared Supabase stack), not all six.
+    // The operator tooling is offered as a ROLE in the same picker, off by
+    // default — no app reads those keys, and every command that needs one
+    // refuses by name with the recovery step. Re-running `env init` later
+    // APPENDS the sections for a new project without touching filled values.
+    const sections = await resolveSections();
     writeFileSync(
       env,
-      renderInit("development", new Date().toISOString().slice(0, 10)),
+      renderInit(
+        "development",
+        new Date().toISOString().slice(0, 10),
+        sections,
+      ),
       { flag: "wx" },
     );
     checks.push("OK    created .env (same as `pnpm devtools env init`)");

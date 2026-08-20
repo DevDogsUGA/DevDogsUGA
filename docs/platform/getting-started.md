@@ -18,7 +18,8 @@ for the full layout and script reference.
 git clone https://github.com/DevDogsUGA/DevDogsUGA.git
 cd DevDogsUGA
 corepack enable && pnpm install
-pnpm setup          # checks prereqs and generates .env from the env registry
+pnpm setup          # checks prereqs; asks which projects you're working on
+                    # and generates .env with just their sections
 ```
 
 ## Running
