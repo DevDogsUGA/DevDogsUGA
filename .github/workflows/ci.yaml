@@ -59,8 +59,14 @@ jobs:
       # them without a build or a database; next.config.ts falls back to a
       # placeholder URL under SKIP_ENV_VALIDATION so loading it here needs no
       # credentials.
+      # `pnpm --filter ... exec` bypasses turbo, so nothing has compiled the
+      # workspace packages the Next configs import (`~/env` reaches into
+      # @devdogsuga/env's dist/) — build the apps' dependencies first. The
+      # results land in turbo's cache, so the lint/typecheck/test step below
+      # doesn't repeat the work.
       - name: Generate the Next type stubs
         run: |
+          pnpm turbo run build --filter 'platform^...' --filter 'schedule-builder^...'
           pnpm --filter platform exec next typegen
           pnpm --filter schedule-builder exec next typegen
       # Flutter isn't installed here — the study-group-finder app is validated
@@ -168,8 +174,14 @@ jobs:
       # resolveCredential.db-test.ts. Those assert the shape of the GRANTS, which
       # nothing else can see: a function reachable by every role in the cluster
       # typechecks perfectly.
+      # Vitest resolves @devdogsuga/drizzle and friends from their dist/,
+      # which a fresh checkout doesn't have — the `pnpm --filter ... run`
+      # invocation bypasses turbo's ^build ordering, so build the app's
+      # dependencies first (cached for the build step below).
       - name: Query validity + privilege surface
-        run: pnpm --filter platform run test:db
+        run: |
+          pnpm turbo run build --filter 'platform^...'
+          pnpm --filter platform run test:db
       # The Supabase half comes from .env.generated, so the build renders
       # against a real Postgres and a real PostgREST rather than a mock. The
       # NEXT_PUBLIC pair is derived rather than hardcoded: it has to match the
