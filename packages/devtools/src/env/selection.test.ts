@@ -456,7 +456,7 @@ describe("preflight, the target no app boots from", () => {
   const THE_FINDING = [
     "SUPABASE_JWT_SIGNING_KEY",
     "SECRET_KEY",
-    "GITHUB_APP_PRIVATE_KEY",
+    "GH_APP_PRIVATE_KEY",
   ] as const;
 
   it("derives its narrowness from deployEnv, not from its name", () => {

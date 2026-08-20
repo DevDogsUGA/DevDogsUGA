@@ -43,9 +43,9 @@ export function octokit(): Octokit {
   client ??= new Octokit({
     authStrategy: createAppAuth,
     auth: {
-      appId: env.GITHUB_APP_ID,
-      privateKey: env.GITHUB_APP_PRIVATE_KEY,
-      installationId: env.GITHUB_APP_INSTALLATION_ID,
+      appId: env.GH_APP_ID,
+      privateKey: env.GH_APP_PRIVATE_KEY,
+      installationId: env.GH_APP_INSTALLATION_ID,
     },
   });
   return client;

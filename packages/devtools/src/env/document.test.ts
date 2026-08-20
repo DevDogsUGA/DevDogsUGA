@@ -161,10 +161,10 @@ describe("value fidelity", () => {
   it("round-trips a multi-line private key through one line", () => {
     const pem = "-----BEGIN KEY-----\nline1\nline2\n-----END KEY-----";
     const doc = EnvDocument.empty();
-    doc.set("GITHUB_APP_PRIVATE_KEY", pem);
-    expect(
-      EnvDocument.parse(doc.toString()).get("GITHUB_APP_PRIVATE_KEY"),
-    ).toBe(pem);
+    doc.set("GH_APP_PRIVATE_KEY", pem);
+    expect(EnvDocument.parse(doc.toString()).get("GH_APP_PRIVATE_KEY")).toBe(
+      pem,
+    );
   });
 
   it("round-trips quotes, backslashes and tabs", () => {

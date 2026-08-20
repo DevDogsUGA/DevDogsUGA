@@ -124,7 +124,7 @@ const server = {
   }),
   // Channel for operational alerts (see server/discord/alerts.ts). Empty
   // means "do not post", the same convention AIRTABLE_BASE_ID and
-  // GITHUB_WEBHOOK_SECRET use -- so local development and any environment
+  // GH_WEBHOOK_SECRET use -- so local development and any environment
   // that has not opted in stay quiet. That default matters here rather than
   // being tidiness: staging shares the club's real Discord guild, so a
   // required value would have staging posting into the officers' channel.
@@ -155,7 +155,7 @@ const server = {
   // The id and installation id are NOT secrets -- they are visible in any
   // webhook payload -- so they are GitHub environment *variables*. The private
   // key is, and it is a multi-line PEM.
-  GITHUB_APP_ID: define(z.coerce.number().int().positive(), {
+  GH_APP_ID: define(z.coerce.number().int().positive(), {
     doc:
       "The DevDogs GitHub App's id. Not a secret -- it appears in every " +
       "webhook payload. Required at boot but only used by org invites and " +
@@ -165,22 +165,22 @@ const server = {
     secrecy: "public",
     example: "000000",
   }),
-  GITHUB_APP_INSTALLATION_ID: define(z.coerce.number().int().positive(), {
+  GH_APP_INSTALLATION_ID: define(z.coerce.number().int().positive(), {
     doc:
       "The App's installation id on the organization. Not a secret -- " +
-      "visible in any webhook payload. Like GITHUB_APP_ID, the placeholder " +
+      "visible in any webhook payload. Like GH_APP_ID, the placeholder " +
       "is enough unless you are working on the org integration.",
     scope: "environment",
     secrecy: "public",
     example: "00000000",
   }),
-  GITHUB_APP_PRIVATE_KEY: define(
+  GH_APP_PRIVATE_KEY: define(
     z
       .string()
       .min(1)
       .refine((v) => v.includes("BEGIN") && v.includes("PRIVATE KEY"), {
         message:
-          "GITHUB_APP_PRIVATE_KEY must be the PEM itself, not a path or an id. " +
+          "GH_APP_PRIVATE_KEY must be the PEM itself, not a path or an id. " +
           "Newlines matter; keep it quoted.",
       }),
     {
@@ -232,7 +232,7 @@ const server = {
   // Verifies `X-Hub-Signature-256` on the PR webhook. Empty means the
   // webhook route refuses every request -- see the route for why that is the
   // right default rather than accepting unsigned payloads.
-  GITHUB_WEBHOOK_SECRET: define(z.string().default(""), {
+  GH_WEBHOOK_SECRET: define(z.string().default(""), {
     doc:
       "Verifies X-Hub-Signature-256 on the pull-request webhook, and it is " +
       "the same value pasted into the App's webhook-secret field. Empty " +
@@ -377,7 +377,7 @@ const server = {
     example: "https://$PROJECT_REF.supabase.co/rest/v1",
   }),
   // The S3 pair splits: the key id never appears in any public payload (so
-  // unlike GITHUB_APP_ID there is no argument from exposure), it is half of
+  // unlike GH_APP_ID there is no argument from exposure), it is half of
   // a credential pair, and keeping it beside its secret in Bitwarden is the
   // simplest thing to rotate. The region is a name the model doc prints in
   // plaintext.

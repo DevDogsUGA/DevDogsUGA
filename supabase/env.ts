@@ -151,8 +151,8 @@ declare({
     // blocks.
     DISCORD_CLIENT_ID: discord.id,
     DISCORD_CLIENT_SECRET: discord.secret,
-    GITHUB_CLIENT_ID: github.id,
-    GITHUB_CLIENT_SECRET: github.secret,
+    GH_CLIENT_ID: github.id,
+    GH_CLIENT_SECRET: github.secret,
     GOOGLE_CLIENT_ID: google.id,
     GOOGLE_CLIENT_SECRET: google.secret,
     LINKEDIN_CLIENT_ID: linkedin.id,

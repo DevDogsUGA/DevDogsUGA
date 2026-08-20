@@ -68,7 +68,7 @@ describe("derivationOf", () => {
 
   it("refuses a development default and a placeholder", () => {
     // Both are non-empty, so every consumer downstream treats them as values
-    // and pushes them. `BASE_URL` and `GITHUB_APP_ID` reached a generated
+    // and pushes them. `BASE_URL` and `GH_APP_ID` reached a generated
     // `.env.production` this way.
     expect(derivationOf(meta("http://localhost:3000"))).toBeNull();
     expect(derivationOf(meta("000000"))).toBeNull();

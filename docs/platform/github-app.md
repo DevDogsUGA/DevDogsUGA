@@ -7,7 +7,7 @@ description: Creating and configuring the App the platform authenticates as — 
 
 > **Status: code done, App not yet created.** `apps/platform` authenticates as
 > the App on every GitHub call. Until the App exists and the three
-> `GITHUB_APP_*` values are set, **the platform will not boot** — `env.ts`
+> `GH_APP_*` values are set, **the platform will not boot** — `env.ts`
 > requires them.
 
 ## Why
@@ -30,8 +30,8 @@ An App does not make compromise less likely. It caps what compromise reaches:
 ## ⚠️ It does NOT replace the OAuth app
 
 **Keep the existing GitHub OAuth app.** It is configured in
-`supabase/config.toml` as `[auth.external.github]` with `GITHUB_CLIENT_ID` /
-`GITHUB_CLIENT_SECRET`, and it is what links a member's GitHub profile to their
+`supabase/config.toml` as `[auth.external.github]` with `GH_CLIENT_ID` /
+`GH_CLIENT_SECRET`, and it is what links a member's GitHub profile to their
 Supabase identity. Leave the App's "Identifying and authorizing users" section
 **empty**.
 
@@ -114,11 +114,11 @@ would be a route to build, secure, and then never visit again.
 | -------------------- | --------------------------------------- |
 | **Active**           | ✅ checked                              |
 | **Webhook URL**      | `https://devdogsuga.org/github/webhook` |
-| **Webhook secret**   | the value of `GITHUB_WEBHOOK_SECRET`    |
+| **Webhook secret**   | the value of `GH_WEBHOOK_SECRET`        |
 | **SSL verification** | ✅ Enable                               |
 
 The route is `apps/platform/src/app/(api)/github/webhook/route.ts`. It verifies
-`X-Hub-Signature-256` against `GITHUB_WEBHOOK_SECRET` and **refuses with 503
+`X-Hub-Signature-256` against `GH_WEBHOOK_SECRET` and **refuses with 503
 when that value is empty** — an unsigned endpoint that writes `submissionState`
 would let anyone on the internet mark a team as having merged, which awards a
 star.
@@ -235,19 +235,19 @@ apart the whole way.
      reads like a missing repo rather than a missing installation.
 3. **Collect three values.**
 
-   | Value                        | Where                                                     |
-   | ---------------------------- | --------------------------------------------------------- |
-   | `GITHUB_APP_ID`              | App settings → _General → About → App ID_                 |
-   | `GITHUB_APP_INSTALLATION_ID` | the installation's URL: `.../settings/installations/<id>` |
-   | `GITHUB_APP_PRIVATE_KEY`     | the `.pem` you downloaded                                 |
+   | Value                    | Where                                                     |
+   | ------------------------ | --------------------------------------------------------- |
+   | `GH_APP_ID`              | App settings → _General → About → App ID_                 |
+   | `GH_APP_INSTALLATION_ID` | the installation's URL: `.../settings/installations/<id>` |
+   | `GH_APP_PRIVATE_KEY`     | the `.pem` you downloaded                                 |
 
 4. **Put them in the root `.env`.** The key goes on **one line**, double-quoted,
    with `\n` escapes:
 
    ```bash
-   GITHUB_APP_ID="123456"
-   GITHUB_APP_INSTALLATION_ID="12345678"
-   GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\nMIIEow...\n-----END RSA PRIVATE KEY-----\n"
+   GH_APP_ID="123456"
+   GH_APP_INSTALLATION_ID="12345678"
+   GH_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\nMIIEow...\n-----END RSA PRIVATE KEY-----\n"
    ```
 
    The newlines are load-bearing: a key that lost them parses as a string and

@@ -29,7 +29,7 @@ export async function postAlert(
   footer?: string,
 ): Promise<void> {
   // Empty means "not configured", the same convention `AIRTABLE_BASE_ID` and
-  // `GITHUB_WEBHOOK_SECRET` use. Local development and any environment that
+  // `GH_WEBHOOK_SECRET` use. Local development and any environment that
   // has not opted in stay silent rather than posting into the club's real
   // Discord -- staging shares the production guild, so this is not theoretical.
   if (!env.DISCORD_ALERT_CHANNEL_ID) return;

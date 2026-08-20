@@ -5,7 +5,7 @@
  * its failure modes silent ones:
  *
  *   * a prefilled value that is wrong for a deployed target — `BASE_URL` as
- *     `http://localhost:3000`, `GITHUB_APP_PRIVATE_KEY` as a placeholder PEM —
+ *     `http://localhost:3000`, `GH_APP_PRIVATE_KEY` as a placeholder PEM —
  *     is non-empty, so `selectForPush()` sends it, and `env audit` then reports
  *     NO DRIFT because the stored value matches the file it came from. A clean
  *     audit over a broken production is the worst outcome this system has.
@@ -325,9 +325,9 @@ describe.each(DEPLOYED_VAULT_TARGETS)("%s", (name) => {
     for (const key of [
       "BASE_URL",
       "SCHEDULE_BUILDER_URL",
-      "GITHUB_APP_ID",
-      "GITHUB_APP_INSTALLATION_ID",
-      "GITHUB_APP_PRIVATE_KEY",
+      "GH_APP_ID",
+      "GH_APP_INSTALLATION_ID",
+      "GH_APP_PRIVATE_KEY",
       "DB_URL",
       "GOOGLE_CLIENT_ID",
     ]) {
@@ -397,7 +397,7 @@ describe("preflight", () => {
     for (const key of [
       "SUPABASE_JWT_SIGNING_KEY",
       "SECRET_KEY",
-      "GITHUB_APP_PRIVATE_KEY",
+      "GH_APP_PRIVATE_KEY",
     ]) {
       expect(file.has(key), `${key} must not reach preflight`).toBe(false);
       // POSITIVE CONTROL: each really is a key some target carries, so "absent
@@ -509,7 +509,7 @@ describe("development", () => {
     const { active } = development();
     expect(active.get("BASE_URL")).toBe("http://localhost:3000");
     expect(active.get("SCHEDULE_BUILDER_URL")).toBe("http://localhost:3001");
-    expect(active.get("GITHUB_APP_ID")).toBe("000000");
+    expect(active.get("GH_APP_ID")).toBe("000000");
   });
 
   it("keeps the commented keys commented", () => {

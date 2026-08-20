@@ -124,6 +124,28 @@ describe("registry completeness", () => {
     }
   });
 
+  it("⚠️ lets no routed key start with GITHUB_ — GitHub reserves the prefix", () => {
+    // Learned the expensive way (2026-08-20): GitHub Actions REFUSES secret
+    // and variable names beginning `GITHUB_` — HTTP 422, "Secret names must
+    // not start with GITHUB_" — and this registry uses ONE name from env
+    // file to Bitwarden to GitHub to Worker, so a routed key with the
+    // reserved prefix pushes to Bitwarden cleanly and then dies at the
+    // GitHub half, leaving the two stores disagreeing. The App credentials
+    // renamed to GH_* for exactly this; committed constants (GITHUB_ORG,
+    // GITHUB_COMPETITION_REPO) never enter GitHub's stores and keep the
+    // honest name.
+    const offenders = [...variables().entries()]
+      .filter(([key]) => key.startsWith("GITHUB_"))
+      .filter(([, entries]) =>
+        entries.some((e) => e.meta.scope === "environment"),
+      )
+      .map(([key]) => key);
+    expect(
+      offenders,
+      "environment-scoped keys with GitHub's reserved prefix",
+    ).toEqual([]);
+  });
+
   it("never lets a never-store key become storable", () => {
     // Structurally true today — `storableKeys()` requires `secrecy: "secret"`
     // and `neverStoreKeys()` requires `secrecy: "never-store"`, which cannot

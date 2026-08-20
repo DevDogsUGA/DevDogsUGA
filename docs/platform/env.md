@@ -372,7 +372,7 @@ undocumented corners) is retried automatically with backoff, out loud.
 a libsodium sealed box against the environment's public key before it can be
 sent, and `gh` does that locally.
 
-> `GITHUB_APP_PRIVATE_KEY` is the multi-line value this tooling exists to
+> `GH_APP_PRIVATE_KEY` is the multi-line value this tooling exists to
 > round-trip intact. Creating and rotating that key is
 > [The GitHub App](./github-app.md).
 

@@ -119,7 +119,7 @@ export function pushableVariables(): Set<string> {
  * short answer; "which credentials may a CI-only tier hold?" has the answer
  * "the ones deliberately narrowed for it, and nothing by omission". Until this
  * existed, `env push --target preflight` uploaded `SUPABASE_JWT_SIGNING_KEY`,
- * `SECRET_KEY` and `GITHUB_APP_PRIVATE_KEY` into a project whose GitHub
+ * `SECRET_KEY` and `GH_APP_PRIVATE_KEY` into a project whose GitHub
  * environment is reachable from `main`. Both halves are derived — the target
  * from `deployEnv: false`, the keys from `EnvMeta.narrowed` — so neither is a
  * list to keep up to date.

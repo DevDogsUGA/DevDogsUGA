@@ -77,7 +77,7 @@ const SUMMARIES: Record<VaultTarget, string> = {
   // reads that as "carries only the keys declared `narrowed`". Until it did,
   // this sentence was aspirational and `env push --target preflight` uploaded
   // all 45 routable keys — SUPABASE_JWT_SIGNING_KEY, SECRET_KEY and
-  // GITHUB_APP_PRIVATE_KEY included — into a project whose GitHub environment
+  // GH_APP_PRIVATE_KEY included — into a project whose GitHub environment
   // `main` can reach.
   //
   // Both halves of the sentence below are now real. `AIRTABLE_PLAN_PAT` is

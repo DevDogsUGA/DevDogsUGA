@@ -17,14 +17,14 @@ import { applyPullRequestEvent } from "~/server/github/pullRequest";
 export async function POST(request: Request) {
   await connection();
 
-  const secret = env.GITHUB_WEBHOOK_SECRET;
+  const secret = env.GH_WEBHOOK_SECRET;
   if (!secret) {
     // Refusing is the right default. An unsigned webhook endpoint that writes
     // `submissionState` lets anyone on the internet mark a team as having
     // merged — which awards a star. Accepting unsigned payloads "until the
     // secret is configured" is exactly the window that never gets closed.
     return NextResponse.json(
-      { error: "GITHUB_WEBHOOK_SECRET is not set" },
+      { error: "GH_WEBHOOK_SECRET is not set" },
       { status: 503 },
     );
   }

@@ -42,7 +42,7 @@
  *              carried in the registry (`GITHUB_ORG`, the avatars bucket).
  *
  * ⚠️ A literal `example` on a `scope: "environment"` key is NOT a fallback.
- * `BASE_URL`'s example is `http://localhost:3000` and `GITHUB_APP_ID`'s is
+ * `BASE_URL`'s example is `http://localhost:3000` and `GH_APP_ID`'s is
  * `000000`: both are the shape of a working development file, and taking
  * either as a deploy default would ship a production Worker pointed at
  * localhost with nothing anywhere saying so. Only a `$`-formula (a derivation)

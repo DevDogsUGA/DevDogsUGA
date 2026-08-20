@@ -199,7 +199,7 @@ export function isGuarded(target: EnvTarget): boolean {
  * membership of "everything" is a non-booting target holding every
  * production-shaped secret, which is what `preflight` was until this existed.
  * `keysRoutedTo("preflight")` returned all 45 routable keys,
- * `SUPABASE_JWT_SIGNING_KEY` and `GITHUB_APP_PRIVATE_KEY` included, into a
+ * `SUPABASE_JWT_SIGNING_KEY` and `GH_APP_PRIVATE_KEY` included, into a
  * project whose GitHub environment is reachable from `main`.
  *
  * The other half — WHICH keys — cannot be derived from this table at all, and
