@@ -4,24 +4,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon, XIcon } from "@phosphor-icons/react/ssr";
 import devdog from "~/assets/devdog.png";
+import ProjectCard from "~/components/ProjectsSection/ProjectCard";
+import { useNavUser } from "~/components/TopNav/NavUserProvider";
+import SignInButton from "~/components/TopNav/SignInButton";
 import * as icons from "~/config/icons";
-import {
-  SOCIAL_LINKS,
-  SWITCHER_LINKS,
-  SWITCHER_PRIMARY,
-  SWITCHER_PROJECTS,
-} from "~/config/nav";
+import { SOCIAL_LINKS, SWITCHER_LINKS, SWITCHER_PRIMARY } from "~/config/nav";
+import { PROJECTS } from "~/config/projects";
 import LinkButton from "~/ui/link-button";
 import EntryButton from "./EntryButton";
 import { useAppSwitcher } from "./provider";
 
 /**
- * Fullscreen linktree-style overlay listing DevDogs projects, external
- * listings, and social channels. Expands from the trigger's position using
- * the shared menu-expand/menu-collapse keyframes.
+ * Fullscreen linktree-style overlay: the DevDogs pitch, a project card per
+ * project, external listings, and social channels. Expands from the trigger's
+ * position using the shared menu-expand/menu-collapse keyframes.
  */
 export default function AppSwitcher() {
   const { visible, closing, origin, close } = useAppSwitcher();
+  const navUser = useNavUser();
 
   if (!visible) return null;
 
@@ -40,7 +40,7 @@ export default function AppSwitcher() {
         } as React.CSSProperties
       }
     >
-      <div className="flex h-16 shrink-0 items-center justify-between px-4 md:px-6">
+      <div className="flex h-16 shrink-0 items-center justify-between gap-4 px-4 md:px-6">
         <Link
           href="/"
           onClick={close}
@@ -53,18 +53,24 @@ export default function AppSwitcher() {
             DevDogs
           </span>
         </Link>
-        <button
-          type="button"
-          onClick={close}
-          aria-label="Close app switcher"
-          className="flex size-10 items-center justify-center rounded-sm text-xl text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white"
-        >
-          <XIcon />
-        </button>
+        <div className="flex items-center gap-2 md:gap-3">
+          <button
+            type="button"
+            onClick={close}
+            aria-label="Close app switcher"
+            className="flex size-10 items-center justify-center rounded-sm text-xl text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white"
+          >
+            <XIcon />
+          </button>
+          {/* The overlay only mounts on a click, well after the streamed user
+              cluster has hydrated the context — so a signed-in visitor never
+              sees this flash before `navUser` arrives. */}
+          {!navUser && <SignInButton />}
+        </div>
       </div>
 
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-10 px-4 py-8">
-        <div className="flex w-full flex-col items-center gap-6">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-10 px-4 py-8">
+        <div className="mx-auto flex w-full max-w-md flex-col items-center gap-6">
           <p className="animate-wave cursor-default text-5xl">👋</p>
           <p className="text-center text-white">
             <span className="inline-block">
@@ -74,26 +80,34 @@ export default function AppSwitcher() {
               software with an impact. Join us below!
             </span>
           </p>
-        </div>
 
-        <LinkButton
-          href={SWITCHER_PRIMARY.href}
-          // /join redirects off-site, not a page — never prefetch.
-          prefetch={false}
-          className="hover:shadow-block-md flex items-center justify-center gap-5 rounded-sm border border-black bg-cyan-400 px-12 py-3 text-xl font-extrabold tracking-wide text-black shadow-none transition-[translate,box-shadow] hover:-translate-x-1 hover:-translate-y-1"
-        >
-          {SWITCHER_PRIMARY.label} <ArrowRightIcon />
-        </LinkButton>
+          <LinkButton
+            href={SWITCHER_PRIMARY.href}
+            // /join redirects off-site, not a page — never prefetch.
+            prefetch={false}
+            className="hover:shadow-block-md flex w-full items-center justify-center gap-5 rounded-sm border border-black bg-cyan-400 px-12 py-3 text-xl font-extrabold tracking-wide text-black shadow-none transition-[translate,box-shadow] hover:-translate-x-1 hover:-translate-y-1"
+          >
+            {SWITCHER_PRIMARY.label} <ArrowRightIcon />
+          </LinkButton>
+        </div>
 
         <div className="flex w-full flex-col gap-3">
           <p className="text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
             Projects
           </p>
-          {SWITCHER_PROJECTS.map((entry) => (
-            <EntryButton key={entry.href} entry={entry} />
-          ))}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {PROJECTS.map((project) => (
+              <ProjectCard
+                key={project.title}
+                {...project}
+                shadow="shadow-block-md"
+              />
+            ))}
+          </div>
+        </div>
 
-          <p className="pt-3 text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
+        <div className="mx-auto flex w-full max-w-md flex-col gap-3">
+          <p className="text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
             Links
           </p>
           {SWITCHER_LINKS.map((entry) => (

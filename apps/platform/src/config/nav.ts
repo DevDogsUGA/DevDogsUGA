@@ -180,25 +180,10 @@ export const SWITCHER_PRIMARY: SwitcherEntry = {
   href: "/join",
 };
 
-/** Other DevDogs projects, shown in the app switcher. */
-export const SWITCHER_PROJECTS: SwitcherEntry[] = [
-  {
-    label: "Community Resource Forum",
-    href: "https://forum.devdogsuga.org",
-    icon: "GlobeIcon",
-    description: "This year's flagship project, live in production.",
-    external: true,
-  },
-  {
-    label: "GitHub Organization",
-    href: "https://github.com/DevDogs-UGA",
-    icon: "GithubLogoIcon",
-    description: "All DevDogs repositories, open source and open to PRs.",
-    external: true,
-  },
-];
-
-/** External listings and forms, shown in the app switcher. */
+/**
+ * External listings, shown in the app switcher. Projects are not listed here —
+ * the switcher renders them as cards from `~/config/projects`.
+ */
 export const SWITCHER_LINKS: SwitcherEntry[] = [
   {
     label: "UGA Involvement Network Listing",
@@ -208,16 +193,6 @@ export const SWITCHER_LINKS: SwitcherEntry[] = [
   {
     label: "Google GDG on Campus: UGA Listing",
     href: "https://gdg.community.dev/gdg-on-campus-university-of-georgia-athens-united-states/",
-    external: true,
-  },
-  {
-    label: "Focus Lead Interest Form",
-    href: "https://docs.google.com/forms/d/e/1FAIpQLSfH6BQCUm96Q9rUu-WKVeG6qzM4tRrXzfwxj_Np8XJoZtlZJQ/viewform",
-    external: true,
-  },
-  {
-    label: "A-Team Interest Form",
-    href: "https://forms.gle/7DFteDC9iGu5rVCL7",
     external: true,
   },
 ];

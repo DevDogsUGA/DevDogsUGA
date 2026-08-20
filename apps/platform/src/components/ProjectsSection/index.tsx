@@ -5,6 +5,7 @@ import SectionBackground, {
   type BlobDef,
   type EdgeType,
 } from "~/ui/section-background";
+import { PROJECTS } from "~/config/projects";
 import ProjectCard from "./ProjectCard";
 
 const PROJECTS_BLOBS: BlobDef[] = [
@@ -89,67 +90,9 @@ export default function ProjectsSection({
           </div>
 
           <div className="grid items-stretch gap-4 md:grid-cols-2">
-            <ProjectCard
-              badge={{
-                label: "In Progress",
-                bg: "bg-cyan-400",
-                text: "text-black",
-              }}
-              year="2025 – 2026"
-              title="DogDays"
-              tagline="Schedule Builder"
-              titleColor="text-amber-700"
-              description="Plan your semester against live UGA registrar data. Answer a short questionnaire, and DogDays generates conflict-free schedules — weighing professor ratings, walking distance between buildings, and the credits you already have."
-              techStack={["Next.js", "Drizzle", "Supabase", "Cloudflare"]}
-              githubUrl="https://github.com/DevDogsUGA/DevDogsUGA/tree/main/apps/schedule-builder"
-              shadow="shadow-block-lg shadow-amber-400"
-            />
-            <ProjectCard
-              badge={{
-                label: "In Design",
-                bg: "bg-rose-400",
-                text: "text-black",
-              }}
-              year="2025 – 2026"
-              title="DogPack"
-              tagline="Study Group Finder"
-              titleColor="text-indigo-700"
-              description="Our first mobile app: find the people already studying what you're studying. Match with classmates by course, form a group, and pick a time that works — built in Flutter for iOS and Android."
-              techStack={["Flutter", "Dart", "Supabase", "PostgreSQL"]}
-              githubUrl="https://github.com/DevDogsUGA/DevDogsUGA/tree/main/apps/study-group-finder"
-              shadow="shadow-block-lg shadow-indigo-400"
-            />
-            <ProjectCard
-              badge={{
-                label: "In Progress",
-                bg: "bg-cyan-400",
-                text: "text-black",
-              }}
-              year="2025 – 2026"
-              title="DevDogs Platform"
-              tagline="Member Portal & Dev Tools"
-              titleColor="text-mauve-950"
-              description="The site you're on. A member portal and developer platform for the club — profiles, contribution streaks, an OAuth server our other apps sign in against, and the tooling that runs DevDogs."
-              techStack={["Next.js", "Drizzle", "Supabase", "Cloudflare"]}
-              githubUrl="https://github.com/DevDogsUGA/DevDogsUGA/tree/main/apps/platform"
-              shadow="shadow-block-lg shadow-cyan-400"
-            />
-            <ProjectCard
-              badge={{
-                label: "Shipped",
-                bg: "bg-amber-400",
-                text: "text-black",
-              }}
-              year="2024 – 2025"
-              title="Community Resource Forum"
-              tagline="Athens Services Directory"
-              titleColor="text-emerald-700"
-              description="A searchable hub connecting Athens residents to local community services, events, and organizations. Built from concept to production by DevDogs in one academic year."
-              techStack={["Next.js", "PostgreSQL", "Supabase", "Drizzle"]}
-              githubUrl="https://github.com/DevDogs-UGA/Community-Resource-Forum"
-              liveUrl="https://forum.devdogsuga.org"
-              shadow="shadow-block-lg shadow-emerald-400"
-            />
+            {PROJECTS.map((project) => (
+              <ProjectCard key={project.title} {...project} />
+            ))}
           </div>
 
           <div className="flex flex-col items-center gap-4 text-center">

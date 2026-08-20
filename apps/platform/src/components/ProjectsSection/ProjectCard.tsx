@@ -1,19 +1,6 @@
 import Link from "next/link";
 import { ArrowSquareOutIcon, GithubLogoIcon } from "@phosphor-icons/react/ssr";
-
-interface ProjectCardProps {
-  badge: { label: string; bg: string; text: string };
-  year: string;
-  title: string;
-  titleColor: string;
-  /** The "what is it, in four words" line that sits under the title. */
-  tagline: string;
-  description: string;
-  techStack?: string[];
-  githubUrl?: string;
-  liveUrl?: string;
-  shadow?: string;
-}
+import type { Project } from "~/config/projects";
 
 export default function ProjectCard({
   badge,
@@ -26,10 +13,10 @@ export default function ProjectCard({
   githubUrl,
   liveUrl,
   shadow = "shadow-block-lg",
-}: ProjectCardProps) {
+}: Project) {
   return (
     <div
-      className={`flex flex-col gap-4 rounded-sm border-2 border-black bg-white p-6 ${shadow}`}
+      className={`flex h-full flex-col gap-4 rounded-sm border-2 border-black bg-white p-6 ${shadow}`}
     >
       <div className="flex items-start gap-2">
         <span
