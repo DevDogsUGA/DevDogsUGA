@@ -87,6 +87,14 @@ function describe(err: unknown): string {
   if (/403|forbidden|must have admin/i.test(stderr)) {
     return `${stderr}\n\nSetting environment secrets needs admin on the repository.`;
   }
+  if (/\b429\b|rate.?limit|too many requests/i.test(stderr)) {
+    return (
+      `${stderr}\n\n` +
+      "GitHub rate-limited this. A push is one API call per secret, so a " +
+      "burst of pushes can trip the secondary limit — wait a minute and " +
+      "re-run; already-written values are simply overwritten with themselves."
+    );
+  }
 
   return stderr || e.message || "gh failed with no output.";
 }

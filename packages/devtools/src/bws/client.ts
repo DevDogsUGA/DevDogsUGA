@@ -27,8 +27,12 @@
  * It is a public identifier (a UUID that confers nothing), read from
  * `BWS_ORG_ID` — see the declaration in `packages/devtools/env.ts`.
  */
+import { mkdir } from "node:fs/promises";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import { log, select, text } from "@clack/prompts";
 import { NoAccessTokenError, promptForToken, resolveToken } from "./token.js";
+import { withRateLimitRetry } from "./retry.js";
 import { saveToDevEnv } from "./store.js";
 import {
   readTokenFromVault,
@@ -207,6 +211,29 @@ function organizationId(): Promise<string> {
 /** The lazily-loaded, logged-in SDK client — one per process. */
 let sdk: Promise<import("@bitwarden/sdk-napi").BitwardenClient> | undefined;
 
+/**
+ * Where the SDK caches its login, so a process is not a fresh authentication.
+ *
+ * ⚠️ This file is what stops the 429s. Bitwarden's identity endpoint
+ * rate-limits repeated access-token logins hard, and "push preflight, audit,
+ * push staging, audit, push production, audit" is six devtools processes in
+ * two minutes — six logins without this, ONE with it (the `bws` binary kept
+ * a state directory for exactly this reason, and the SDK migration dropped
+ * it). Per machine account (the token's client-id UUID is in the filename,
+ * public by format), under 0700 directories, outside the repository — it
+ * caches an auth token, so it must live where nothing syncs or commits it.
+ */
+function stateFileFor(accessToken: string): string {
+  const clientId =
+    /^\d+\.([0-9a-f-]{36})\./i.exec(accessToken)?.[1] ?? "default";
+  return join(
+    homedir(),
+    ".config",
+    "devdogs-devtools",
+    `bws-state-${clientId}.json`,
+  );
+}
+
 async function client() {
   sdk ??= (async () => {
     const token = await accessToken();
@@ -215,7 +242,12 @@ async function client() {
     const { BitwardenClient } = await import("@bitwarden/sdk-napi");
     const instance = new BitwardenClient();
     try {
-      await instance.auth().loginAccessToken(token);
+      const stateFile = stateFileFor(token);
+      await mkdir(dirname(stateFile), { recursive: true, mode: 0o700 });
+      await withRateLimitRetry(
+        () => instance.auth().loginAccessToken(token, stateFile),
+        { doing: "the login" },
+      );
     } catch (err) {
       throw new BwsError(describeSdkFailure(err, "logging in"));
     }
@@ -237,6 +269,14 @@ async function client() {
  */
 function describeSdkFailure(err: unknown, doing: string): string {
   const message = err instanceof Error ? err.message : String(err);
+  if (/\b429\b|too many requests/i.test(message)) {
+    return (
+      `${message}\n\n` +
+      "Bitwarden rate-limited this even after the automatic retries. Wait a " +
+      "minute and re-run — the login is cached in a state file now, so " +
+      "re-running does not spend another authentication."
+    );
+  }
   if (/404|not.?found/i.test(message)) {
     return (
       `${message}\n\n` +
@@ -263,7 +303,11 @@ export async function projectIdFor(name: string): Promise<string> {
   const org = await organizationId();
   let projects: { id: string; name: string }[];
   try {
-    projects = (await c.projects().list(org)).data;
+    projects = (
+      await withRateLimitRetry(() => c.projects().list(org), {
+        doing: "listing projects",
+      })
+    ).data;
   } catch (err) {
     throw new BwsError(describeSdkFailure(err, "listing projects"));
   }
@@ -291,10 +335,18 @@ export async function listSecrets(projectId: string): Promise<BwsSecret[]> {
     // fetches the values in one batch. Filtered to the project HERE, so the
     // callers' contract — "the secrets of this project" — survives the
     // transport change byte-for-byte.
-    const identifiers = (await c.secrets().list(org)).data;
+    const identifiers = (
+      await withRateLimitRetry(() => c.secrets().list(org), {
+        doing: "listing secrets",
+      })
+    ).data;
     if (identifiers.length === 0) return [];
-    const full = (await c.secrets().getByIds(identifiers.map((i) => i.id)))
-      .data;
+    const full = (
+      await withRateLimitRetry(
+        () => c.secrets().getByIds(identifiers.map((i) => i.id)),
+        { doing: "reading secrets" },
+      )
+    ).data;
     return full
       .filter((s) => s.projectId === projectId)
       .map((s) => ({
@@ -319,7 +371,10 @@ export async function createSecret(
   const c = await client();
   const org = await organizationId();
   try {
-    await c.secrets().create(org, key, value, note, [projectId]);
+    await withRateLimitRetry(
+      () => c.secrets().create(org, key, value, note, [projectId]),
+      { doing: `creating ${key}` },
+    );
   } catch (err) {
     throw new BwsError(describeSdkFailure(err, `creating ${key}`));
   }
@@ -338,9 +393,13 @@ export async function updateSecret(
   const c = await client();
   const org = await organizationId();
   try {
-    await c
-      .secrets()
-      .update(org, secret.id, secret.key, value, note, [secret.projectId]);
+    await withRateLimitRetry(
+      () =>
+        c
+          .secrets()
+          .update(org, secret.id, secret.key, value, note, [secret.projectId]),
+      { doing: `updating ${secret.key}` },
+    );
   } catch (err) {
     throw new BwsError(describeSdkFailure(err, `updating ${secret.key}`));
   }
@@ -350,7 +409,9 @@ export async function deleteSecrets(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   const c = await client();
   try {
-    await c.secrets().delete(ids);
+    await withRateLimitRetry(() => c.secrets().delete(ids), {
+      doing: "deleting secrets",
+    });
   } catch (err) {
     throw new BwsError(describeSdkFailure(err, "deleting secrets"));
   }

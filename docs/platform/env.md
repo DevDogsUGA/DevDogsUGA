@@ -351,7 +351,14 @@ a process table.
 
 The one thing the SDK needs that the binary did not: `BWS_ORG_ID`, the
 organization's public UUID (visible in the Secrets Manager URL), set once in
-your `.env`. It identifies; the access token authorizes.
+your `.env` — the first command prompts for it and saves it. It identifies;
+the access token authorizes.
+
+Logins are **cached in a state file** (`~/.config/devdogs-devtools/`), so
+pushing several targets back-to-back authenticates once rather than once per
+command — Bitwarden's identity endpoint rate-limits repeated access-token
+logins, and this cache is what keeps a busy session under it. A 429 that
+still slips through is retried automatically with backoff, out loud.
 
 `gh` is used for the same reason: the value has to be encrypted client-side with
 a libsodium sealed box against the environment's public key before it can be
