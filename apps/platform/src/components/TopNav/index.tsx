@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ListIcon } from "@phosphor-icons/react/ssr";
 import { Suspense } from "react";
 import devdog from "~/assets/devdog.png";
+import { getDocsProjects } from "~/server/docs/queries";
 import AppSwitcherButton from "./AppSwitcherButton";
 import NavLinks, { NavLinksFallback } from "./NavLinks";
 import SearchButton from "./SearchButton";
@@ -10,6 +11,14 @@ import { TopNavConsole, TopNavMobile, TopNavProfile } from "./TopNavUser";
 import UserClusterSkeleton from "./UserClusterSkeleton";
 
 export default function TopNav() {
+  // Parsed from `docs/` at build time, so this is an in-memory read; the whole
+  // docs module stays server-side and only the slugs reach the client.
+  const docsProjects = getDocsProjects().map(({ slug, name, description }) => ({
+    slug,
+    name,
+    description,
+  }));
+
   return (
     <header className="sticky top-0 z-50 border-b-2 border-mauve-800 bg-mauve-950/90 backdrop-blur">
       <div className="flex h-16 items-center gap-4 px-4 md:px-6">
@@ -22,8 +31,8 @@ export default function TopNav() {
           </span>
         </Link>
 
-        <Suspense fallback={<NavLinksFallback />}>
-          <NavLinks />
+        <Suspense fallback={<NavLinksFallback docsProjects={docsProjects} />}>
+          <NavLinks docsProjects={docsProjects} />
         </Suspense>
 
         <div className="ml-auto flex items-center gap-1.5">
