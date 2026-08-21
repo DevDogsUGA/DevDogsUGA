@@ -200,19 +200,19 @@ export const SWITCHER_LINKS: SwitcherEntry[] = [
 export const SOCIAL_LINKS: SwitcherEntry[] = [
   {
     label: "Instagram",
-    href: "https://instagram.com/DevDogs_UGA",
+    href: "https://instagram.com/DevDogsUGA",
     icon: "InstagramLogoIcon",
     external: true,
   },
   {
     label: "LinkedIn",
-    href: "https://linkedin.com/company/DevDogs-UGA",
+    href: "https://linkedin.com/company/DevDogsUGA",
     icon: "LinkedinLogoIcon",
     external: true,
   },
   {
     label: "GitHub",
-    href: "https://github.com/DevDogs-UGA",
+    href: "https://github.com/DevDogsUGA",
     icon: "GithubLogoIcon",
     external: true,
   },

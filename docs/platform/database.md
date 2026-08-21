@@ -167,7 +167,7 @@ Both configs point at whichever database `with-env` resolves (`DB_URL`) and are 
 
 ## For sibling projects
 
-The same workflow applies to other DevDogs-UGA projects that use Supabase:
+The same workflow applies to other DevDogsUGA projects that use Supabase:
 
 1. Manage migrations in `supabase/migrations/` via the Supabase CLI (`supabase migration new`, `supabase migration up`, `supabase db reset`).
 2. Use `drizzle-kit pull` to generate TypeScript types from the DB after applying migrations.

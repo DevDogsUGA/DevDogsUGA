@@ -32,7 +32,7 @@ export default async function StreakCTA() {
           alive — contribute before the week ends.
         </p>
         <Link
-          href="https://github.com/DevDogs-UGA"
+          href="https://github.com/DevDogsUGA"
           target="_blank"
           className="transition-lift hover:shadow-block-sm flex shrink-0 items-center gap-2 rounded-sm border-2 border-amber-500 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-amber-500"
         >
@@ -52,7 +52,7 @@ export default async function StreakCTA() {
         contributing to our open-source projects.
       </p>
       <Link
-        href="https://github.com/DevDogs-UGA"
+        href="https://github.com/DevDogsUGA"
         target="_blank"
         className="transition-lift hover:shadow-block-sm flex shrink-0 items-center gap-2 rounded-sm border-2 border-black bg-mauve-950 px-4 py-2 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-cyan-400"
       >

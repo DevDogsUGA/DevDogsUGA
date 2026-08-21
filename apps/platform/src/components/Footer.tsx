@@ -3,12 +3,28 @@ import Image from "next/image";
 import Link from "next/link";
 import * as icons from "~/config/icons";
 import { PUBLIC_LINKS, SOCIAL_LINKS } from "~/config/nav";
+import { PROJECTS } from "~/config/projects";
 import devdog from "~/assets/devdog.png";
 
-/** The address already sits in the bottom bar as text, so it is not repeated as an icon. */
-const SOCIAL_ICONS = SOCIAL_LINKS.filter(
-  (social) => !social.href.startsWith("mailto:"),
-);
+/** Docs sits under Resources instead, alongside the rest of the reference links. */
+const EXPLORE_LINKS = PUBLIC_LINKS.filter((link) => link.href !== "/docs");
+
+/**
+ * Every project the homepage lists, in the same order, each pointing at the
+ * best destination it has: its live site, else wherever the fullscreen
+ * switcher sends you, else its repository. The paused ones have none of the
+ * three, so they fall back to the homepage section that describes them rather
+ * than dropping out of the list — the footer says what DevDogs has built, not
+ * only what is currently reachable.
+ */
+const PROJECT_LINKS = PROJECTS.map((project) => ({
+  title: project.title,
+  href:
+    project.liveUrl?.href ??
+    project.switcher?.url ??
+    project.githubUrl ??
+    "/#projects",
+}));
 
 /**
  * `"use cache"` is required, not an optimisation. This renders in the site
@@ -88,7 +104,7 @@ export default async function Footer() {
               </p>
               {/* The same list the navbar renders, so the two cannot drift. */}
               <ul className="contents">
-                {PUBLIC_LINKS.map((link) => (
+                {EXPLORE_LINKS.map((link) => (
                   <li key={link.href}>
                     <Link href={link.href} className="hover:underline">
                       {link.label}
@@ -110,27 +126,44 @@ export default async function Footer() {
             </div>
 
             <div className="flex flex-col gap-2">
+              <p className="pb-2 text-lg font-bold text-mauve-100">Projects</p>
+              <ul className="contents">
+                {PROJECT_LINKS.map((project) => (
+                  <li key={project.title}>
+                    <Link
+                      href={project.href}
+                      className="hover:underline"
+                      // Only the off-site destinations open a tab; "/" and the
+                      // homepage anchor are this same site.
+                      target={
+                        project.href.startsWith("http") ? "_blank" : undefined
+                      }
+                    >
+                      {project.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="flex flex-col gap-2">
               <p className="pb-2 text-lg font-bold text-mauve-100">Resources</p>
               <ul className="contents">
                 <li>
-                  {/* The organisation, not one repository: the projects grid
-                      lists four now, and every one of them lives under it. */}
-                  <Link
-                    href="https://github.com/DevDogs-UGA"
-                    className="hover:underline"
-                    target="_blank"
-                  >
-                    GitHub Organization
+                  <Link href="/docs" className="hover:underline">
+                    Docs
                   </Link>
                 </li>
 
                 <li>
+                  {/* The organisation, not one repository: every project above
+                      lives under it. */}
                   <Link
-                    href="https://forum.devdogsuga.org"
+                    href="https://github.com/DevDogsUGA"
                     className="hover:underline"
                     target="_blank"
                   >
-                    Community Resource Forum
+                    GitHub Organization
                   </Link>
                 </li>
 
@@ -152,8 +185,11 @@ export default async function Footer() {
                 our various social channels.
               </p>
 
+              {/* Every channel the fullscreen switcher shows, in its order —
+                  email included, so the two never disagree about how to reach
+                  DevDogs. The bottom bar spells the same address out in full. */}
               <ul className="flex items-center gap-2">
-                {SOCIAL_ICONS.map((social) => {
+                {SOCIAL_LINKS.map((social) => {
                   const Icon = social.icon ? icons[social.icon] : null;
                   return (
                     <li key={social.href} className="contents">

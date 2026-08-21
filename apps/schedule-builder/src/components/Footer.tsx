@@ -57,7 +57,7 @@ export function Footer() {
             title="Instagram"
             rel="noopener"
             className="flex items-center justify-center justify-end px-2 text-4xl text-neutral-500 hover:text-slate-900 sm:text-2xl"
-            href="https://www.instagram.com/devdogs_uga/"
+            href="https://www.instagram.com/devdogsuga/"
             target="_blank"
           >
             <PiInstagramLogoBold />
@@ -66,7 +66,7 @@ export function Footer() {
             title="LinkedIn"
             rel="noopener"
             className="flex items-center justify-center justify-start px-2 text-4xl text-neutral-500 hover:text-slate-900 sm:text-2xl dark:text-white dark:hover:text-slate-300"
-            href="https://www.linkedin.com/company/devdogs-uga/"
+            href="https://www.linkedin.com/company/devdogsuga/"
             target="_blank"
           >
             <PiLinkedinLogoBold />

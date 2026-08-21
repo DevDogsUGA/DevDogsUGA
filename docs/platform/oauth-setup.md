@@ -1,6 +1,6 @@
 # Sign in with DevDogs — OAuth Setup
 
-A wizard that configures a project's local [Supabase](https://supabase.com) instance to support **Sign in with DevDogs** OAuth, for developers of sibling DevDogs-UGA projects (e.g. the Community Resource Forum) who need to integrate DevDogs authentication without hand-writing SQL or reading internal Supabase schema documentation.
+A wizard that configures a project's local [Supabase](https://supabase.com) instance to support **Sign in with DevDogs** OAuth, for developers of sibling DevDogsUGA projects (e.g. the Community Resource Forum) who need to integrate DevDogs authentication without hand-writing SQL or reading internal Supabase schema documentation.
 
 ## Purpose
 
