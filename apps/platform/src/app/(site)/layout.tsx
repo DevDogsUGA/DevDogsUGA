@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import AnnouncementBanner from "~/components/AnnouncementBanner";
 import AppSwitcher from "~/components/AppSwitcher";
 import AutoOpen from "~/components/AppSwitcher/AutoOpen";
 import { AppSwitcherProvider } from "~/components/AppSwitcher/provider";
@@ -12,6 +13,13 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
     <NavUserProvider>
       <AppSwitcherProvider>
         <div className="flex min-h-screen flex-col">
+          {/* Above the navbar rather than inside it, and deliberately not
+              sticky: TopNav owns `sticky top-0`, and a second sticky layer
+              would either fight it for the same offset or permanently eat a
+              band of a phone screen. Sitting at the very top of the document
+              is what makes the notice unmissable on arrival; scrolling past it
+              is the reader's answer. */}
+          <AnnouncementBanner />
           <TopNav />
           <main
             id="main-content"

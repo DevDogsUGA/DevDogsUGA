@@ -29,6 +29,7 @@ export default function LeadershipSection({ topEdge, bottomEdge }: Props) {
   return (
     <div className="mx-4 overflow-hidden rounded-xl md:mx-6">
       <section
+        id="leadership"
         className="relative w-full pt-(--section-skew-slope) pb-(--section-skew-slope)"
         data-animate="fade-up"
       >

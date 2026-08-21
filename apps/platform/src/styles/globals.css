@@ -212,6 +212,17 @@
   background-size: 14px 14px;
 }
 
+/* ── Announcement banner ────────────────────────────────────── */
+/* The banner is in the server HTML so it is there on first paint. When this  */
+/* session already dismissed the current notice, the blocking script in       */
+/* AnnouncementBanner sets the attribute below on <html> BEFORE the banner    */
+/* markup is parsed, so a dismissed banner never paints and never shifts the  */
+/* page. React state handles the dismiss click itself; this rule only covers  */
+/* the reload.                                                                */
+[data-announcement="dismissed"] [data-slot="announcement-banner"] {
+  display: none;
+}
+
 /* ── Section scroll-in animations ───────────────────────────────────────── */
 /* Applied via data-animate attribute; JS adds .is-visible once in viewport  */
 [data-animate] {
