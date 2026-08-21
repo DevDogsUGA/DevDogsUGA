@@ -58,6 +58,7 @@ export default function PartnersSection({ topEdge, bottomEdge }: Props) {
   return (
     <div className="mx-4 overflow-hidden rounded-xl md:mx-6">
       <section
+        id="partners"
         className="relative w-full overflow-hidden pt-(--section-skew-slope) pb-(--section-skew-slope)"
         data-animate="scale-up"
       >

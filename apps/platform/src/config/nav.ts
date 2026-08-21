@@ -68,8 +68,11 @@ export const PUBLIC_LINKS: NavItem[] = [
     description: "Upcoming meetings, workshops, and events hosted by DevDogs.",
   },
   {
+    // Scrolls to the homepage's Partners section rather than opening the
+    // standalone `/partners` page, which still exists but isn't linked to
+    // from here.
     label: "Partners",
-    href: "/partners",
+    href: "/#partners",
     icon: "HandshakeIcon",
     description: "Organizations and sponsors that partner with DevDogs.",
   },
