@@ -5,6 +5,7 @@ import SectionBackground, {
 } from "~/ui/section-background";
 import LinkButton from "~/ui/link-button";
 import EventsGrid from "./EventsGrid";
+import FindUs from "./FindUs";
 import { getCalendarMonth } from "~/app/(site)/calendarMonth";
 
 const EVENTS_BLOBS: BlobDef[] = [
@@ -61,6 +62,8 @@ export default function EventsSection({ topEdge, bottomEdge }: Props) {
           </div>
 
           <EventsGrid month={month} />
+
+          <FindUs />
 
           <div className="mt-6 flex justify-end">
             <LinkButton
