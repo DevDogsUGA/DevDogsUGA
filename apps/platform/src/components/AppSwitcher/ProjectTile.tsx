@@ -34,19 +34,19 @@ export default function ProjectTile({ project, onNavigate }: Props) {
         <Icon weight="bold" />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="font-display leading-none font-bold text-white">
-            {project.title}
-          </h3>
-          {badge && (
-            <span
-              className={`rounded-sm ${badge.bg} ${badge.text} px-1.5 py-0.5 text-[0.625rem] leading-none font-bold tracking-wide uppercase`}
-            >
-              {badge.label}
-            </span>
-          )}
-        </div>
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+        <h3 className="font-display leading-none font-bold text-white">
+          {project.title}
+        </h3>
+        {/* On its own line under the name rather than beside it: the longer
+            labels were wrapping the pill onto a second row anyway. */}
+        {badge && (
+          <span
+            className={`rounded-sm ${badge.bg} ${badge.text} px-1.5 py-0.5 text-[0.625rem] leading-none font-bold tracking-wide uppercase`}
+          >
+            {badge.label}
+          </span>
+        )}
         <p className="text-xs/relaxed text-balance text-mauve-400">{blurb}</p>
       </div>
 

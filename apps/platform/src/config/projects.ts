@@ -35,7 +35,7 @@ export interface ProjectSwitcher {
    * overlay; absolute ones open in a new tab.
    */
   url?: string;
-  /** Absent means no pill — as on the app you are already inside. */
+  /** Absent means no pill. Every project carries one today. */
   badge?: Badge;
 }
 
@@ -99,8 +99,9 @@ export const PROJECTS: Project[] = [
       blurb:
         "The site you're on — member portal, OAuth server, and club tooling.",
       url: "/",
-      // No badge: this is the app you are already inside, so a status pill
-      // would only be telling you about where you are standing.
+      // Where you are standing, rather than how far along it is — the one
+      // tile in the switcher whose badge answers a different question.
+      badge: { label: "You are Here", bg: "bg-amber-400", text: "text-black" },
     },
     contributions: "closed",
     note: "Built and maintained by DevDogs officers.",
