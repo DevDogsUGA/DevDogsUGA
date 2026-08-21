@@ -212,13 +212,13 @@
   background-size: 14px 14px;
 }
 
-/* ── Announcement banner ────────────────────────────────────── */
-/* The banner is in the server HTML so it is there on first paint. When this  */
-/* session already dismissed the current notice, the blocking script in       */
-/* AnnouncementBanner sets the attribute below on <html> BEFORE the banner    */
-/* markup is parsed, so a dismissed banner never paints and never shifts the  */
-/* page. React state handles the dismiss click itself; this rule only covers  */
-/* the reload.                                                                */
+/* ── Announcement notice ────────────────────────────────────── */
+/* The notice is in the server HTML so it is there on first paint. When this  */
+/* session already dismissed the current announcement, the blocking script in */
+/* AnnouncementBanner sets the attribute below on <html> BEFORE that markup   */
+/* is parsed, so a dismissed notice never paints — no flash of a card sliding */
+/* up from the bottom of every page. React state handles the dismiss click    */
+/* itself; this rule only covers the reload.                                  */
 [data-announcement="dismissed"] [data-slot="announcement-banner"] {
   display: none;
 }

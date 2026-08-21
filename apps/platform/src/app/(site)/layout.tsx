@@ -13,13 +13,6 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
     <NavUserProvider>
       <AppSwitcherProvider>
         <div className="flex min-h-screen flex-col">
-          {/* Above the navbar rather than inside it, and deliberately not
-              sticky: TopNav owns `sticky top-0`, and a second sticky layer
-              would either fight it for the same offset or permanently eat a
-              band of a phone screen. Sitting at the very top of the document
-              is what makes the notice unmissable on arrival; scrolling past it
-              is the reader's answer. */}
-          <AnnouncementBanner />
           <TopNav />
           <main
             id="main-content"
@@ -59,6 +52,15 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
               sits at the bottom of short pages. */}
           <Footer />
         </div>
+
+        {/* Last in the document, and fixed to the bottom of the viewport
+            rather than to the end of the page — it stays in view the whole way
+            down, which is what keeps a club-wide notice unmissable without
+            handing it a second sticky layer at the top to fight TopNav for.
+            Being last also means its pre-paint hide script has run before the
+            markup it hides is ever parsed. Outside the flex column because a
+            fixed element contributes nothing to that layout anyway. */}
+        <AnnouncementBanner />
 
         <AppSwitcher />
         <Suspense>
