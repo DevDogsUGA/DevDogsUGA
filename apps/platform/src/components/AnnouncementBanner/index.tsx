@@ -250,11 +250,11 @@ export default function AnnouncementBanner() {
               toneClasses.chip,
             )}
           >
+            {/* aria-hidden: the button's label already says "dismiss". */}
+            <XIcon aria-hidden className="size-3" weight="bold" />
             <span className="font-display text-[0.7rem] font-extrabold tracking-widest uppercase">
               {eyebrow}
             </span>
-            {/* aria-hidden: the button's label already says "dismiss". */}
-            <XIcon aria-hidden className="size-3" weight="bold" />
           </button>
         </aside>
       </div>
