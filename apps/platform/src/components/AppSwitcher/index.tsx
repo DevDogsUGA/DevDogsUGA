@@ -64,8 +64,14 @@ export default function AppSwitcher() {
           </button>
           {/* The overlay only mounts on a click, well after the streamed user
               cluster has hydrated the context — so a signed-in visitor never
-              sees this flash before `navUser` arrives. */}
-          {!navUser && <SignInButton />}
+              sees this flash before `navUser` arrives. Hidden below md, where
+              the navbar has already folded into the drawer: the overlay's Join
+              CTA is the pitch there, not signing in. */}
+          {!navUser && (
+            <div className="hidden md:block">
+              <SignInButton />
+            </div>
+          )}
         </div>
       </div>
 
