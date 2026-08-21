@@ -111,10 +111,20 @@ export default function AnnouncementBanner() {
           high z-index), so a toast is never buried by it.
 
           The gutter is pointer-events-none: it spans the whole viewport width
-          and would otherwise swallow clicks on whatever sits behind it. */}
+          and would otherwise swallow clicks on whatever sits behind it.
+
+          The right padding carries an extra --block-shadow-xl because the
+          block shadow falls outside the card's box: mx-auto would centre the
+          box and leave the thing you actually see sitting half the offset
+          left of centre, and on a narrow screen, where the card fills the
+          gutter, the shadow would eat half the right-hand gap. Widening the
+          gutter on that side by exactly the offset squares both — the card
+          shifts left by half of it when centred, and the shadow lands in the
+          space that was added for it when it does not. Reading the token
+          rather than a literal keeps it true if the offset changes. */}
       <div
         data-slot="announcement-banner"
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6 md:pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 p-4 pr-[calc(1rem+var(--block-shadow-xl))] pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6 md:pr-[calc(1.5rem+var(--block-shadow-xl))] md:pb-[max(1.5rem,env(safe-area-inset-bottom))]"
       >
         {/* Scrim. It grounds the notice against whatever is scrolling under it
             and gives the card's black border something other than page text
@@ -193,37 +203,31 @@ export default function AnnouncementBanner() {
               </p>
             </div>
 
-            <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
-              <Link
-                href={action.href}
-                {...(action.external
-                  ? { target: "_blank", rel: "noreferrer" }
-                  : {})}
-                className={cn(
-                  "hover:shadow-block-sm transition-lift flex items-center gap-2 rounded-sm border-2 border-black bg-black px-3.5 py-1.5 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5",
-                  toneClasses.blockShadow,
-                )}
-              >
-                {action.label}
-                {action.external ? (
-                  <ArrowSquareOutIcon className="size-4" />
-                ) : (
-                  <ArrowRightIcon className="size-4" />
-                )}
-              </Link>
-
-              <button
-                type="button"
-                onClick={dismiss}
-                aria-label="Dismiss announcement"
-                className="flex size-8 shrink-0 items-center justify-center rounded-sm text-black/60 transition-colors hover:bg-black/10 hover:text-black focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none"
-              >
-                <XIcon className="size-4" weight="bold" />
-              </button>
-            </div>
+            <Link
+              href={action.href}
+              {...(action.external
+                ? { target: "_blank", rel: "noreferrer" }
+                : {})}
+              className={cn(
+                "hover:shadow-block-sm transition-lift flex shrink-0 items-center gap-2 self-end rounded-sm border-2 border-black bg-black px-3.5 py-1.5 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5 sm:self-auto",
+                toneClasses.blockShadow,
+              )}
+            >
+              {action.label}
+              {action.external ? (
+                <ArrowSquareOutIcon className="size-4" />
+              ) : (
+                <ArrowRightIcon className="size-4" />
+              )}
+            </Link>
           </div>
 
-          {/* The tab. It comes AFTER the card in the DOM so its opaque fill
+          {/* The tab, which is also the dismiss control — the X lives here
+              rather than in the action row, so the notice has exactly one
+              close affordance and the row is left to the one thing it wants
+              you to do.
+
+              It comes AFTER the card in the DOM so its opaque fill
               paints over the card's top border, erasing exactly the span it
               covers, and `translate-y` drops it 2px into the card so that
               erased band is precisely the border's width — no seam, no
@@ -233,16 +237,25 @@ export default function AnnouncementBanner() {
               No block shadow here on purpose: the card's falls down and to the
               right, away from the tab, while a shadow on the tab itself would
               land squarely on the card's face. */}
-          <p
+          <button
+            type="button"
+            onClick={dismiss}
+            /* The eyebrow is inside the control, so the label has to carry
+               both — "Now open, button" would say nothing about what pressing
+               it does, and a bare "Dismiss announcement" would drop the
+               eyebrow from the accessible name entirely. */
+            aria-label={`${eyebrow} — dismiss announcement`}
             className={cn(
-              "absolute bottom-full left-4 translate-y-[2px] rounded-t-lg border-2 border-b-0 border-black px-2.5 py-1",
+              "absolute bottom-full left-4 flex translate-y-[2px] items-center gap-1.5 rounded-t-lg border-2 border-b-0 border-black px-2.5 py-1.5 transition-[filter] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none",
               toneClasses.chip,
             )}
           >
             <span className="font-display text-[0.7rem] font-extrabold tracking-widest uppercase">
               {eyebrow}
             </span>
-          </p>
+            {/* aria-hidden: the button's label already says "dismiss". */}
+            <XIcon aria-hidden className="size-3" weight="bold" />
+          </button>
         </aside>
       </div>
     </>
