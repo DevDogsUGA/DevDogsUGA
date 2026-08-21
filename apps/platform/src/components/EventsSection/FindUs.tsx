@@ -1,4 +1,5 @@
 import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
+import { BUILDINGS, ROADS, ROUTE, VIEW } from "./campusMapData";
 
 /**
  * The destination is passed as a place query rather than coordinates: the DLW
@@ -16,9 +17,30 @@ const STEP_CHIP_CLS =
   "mt-px flex size-4 shrink-0 items-center justify-center rounded-full bg-rose-400 text-[0.625rem] font-bold text-black";
 
 const CAMPUS_STEPS = [
-  "From the Tate Center bus stops, walk south on S. Lumpkin St.",
-  "Turn right onto E. Cloverhurst Ave — the DLW is the big new building on your right at University Ct.",
+  "From the Tate Center bus stops, cross S. Lumpkin St and follow it south, downhill past the Hill Community dorms.",
+  "Turn right onto University Court, keeping O-House on your left.",
+  "The DLW is the big new building straight ahead, where University Ct curls into E. Cloverhurst Ave.",
   "Driving? The Tate Deck is the closest visitor parking, about a five-minute walk away.",
+];
+
+/** OSM's name for the building the map highlights. */
+const DLW_OSM_NAME = "Dining, Learning and Well-being Center";
+
+/**
+ * Label anchors placed by eye against the generated footprint coordinates
+ * (each building's centroid is printed when the generator runs) — nudged off
+ * roads and off each other, so re-check after regenerating campusMapData.
+ */
+const BUILDING_LABELS: { text: string; x: number; y: number }[] = [
+  { text: "Brumby", x: 28, y: 205 },
+  { text: "Russell", x: 85, y: 190 },
+  { text: "Creswell", x: 140, y: 190 },
+  { text: "Hill Community", x: 258, y: 152 },
+  { text: "Bolton", x: 285, y: 93 },
+  { text: "MLC", x: 384, y: 82 },
+  { text: "Tate Center", x: 392, y: 158 },
+  { text: "Tate Deck", x: 338, y: 158 },
+  { text: "Oglethorpe House & Dining", x: 200, y: 368 },
 ];
 
 const ROOM_STEPS = [
@@ -107,212 +129,141 @@ function DirectionsLink({
 }
 
 /**
- * A wayfinding sketch, not a survey map: roads are straightened and blocks are
- * nudged so the route reads at a glance. Only the relationships are load-bearing
- * — the DLW sits at E. Cloverhurst Ave & University Ct, south of Baxter St,
- * west of S. Lumpkin St, below the West Campus high-rises.
+ * Real geometry, not a sketch: road centerlines and building footprints come
+ * from OpenStreetMap via scripts/generate-campus-map.ts, projected into the
+ * viewBox. Labels are placed by eye against those generated coordinates —
+ * after regenerating campusMapData, re-check them against the rendered map.
  */
 function CampusMap() {
   return (
     <svg
       aria-hidden
-      viewBox="0 0 480 300"
+      viewBox={`0 0 ${VIEW.w} ${VIEW.h}`}
       className="w-full rounded-sm border-2 border-black"
     >
-      <rect width="480" height="300" className="fill-orange-50" />
+      <rect width={VIEW.w} height={VIEW.h} className="fill-orange-50" />
 
-      {/* Roads: black casing under a white surface, drawn wide-then-narrow */}
-      <g strokeLinecap="square">
-        {/* Baxter St */}
-        <line
-          x1="0"
-          y1="48"
-          x2="480"
-          y2="48"
-          className="stroke-black"
-          strokeWidth="16"
-        />
-        <line
-          x1="0"
-          y1="48"
-          x2="480"
-          y2="48"
-          className="stroke-white"
-          strokeWidth="11"
-        />
-        {/* S. Lumpkin St */}
-        <line
-          x1="400"
-          y1="0"
-          x2="400"
-          y2="300"
-          className="stroke-black"
-          strokeWidth="16"
-        />
-        <line
-          x1="400"
-          y1="0"
-          x2="400"
-          y2="300"
-          className="stroke-white"
-          strokeWidth="11"
-        />
-        {/* E. Cloverhurst Ave */}
-        <line
-          x1="0"
-          y1="228"
-          x2="400"
-          y2="228"
-          className="stroke-black"
-          strokeWidth="13"
-        />
-        <line
-          x1="0"
-          y1="228"
-          x2="400"
-          y2="228"
-          className="stroke-white"
-          strokeWidth="8"
-        />
-        {/* University Ct */}
-        <line
-          x1="148"
-          y1="228"
-          x2="148"
-          y2="120"
-          className="stroke-black"
-          strokeWidth="13"
-        />
-        <line
-          x1="148"
-          y1="228"
-          x2="148"
-          y2="120"
-          className="stroke-white"
-          strokeWidth="8"
-        />
+      {/* Roads: every black casing first, then every white surface, so the
+          surfaces run together at junctions instead of butting into casings */}
+      <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+        {Object.entries(ROADS).map(([name, d]) => (
+          <path key={name} d={d} className="stroke-black" strokeWidth="12" />
+        ))}
+        {Object.entries(ROADS).map(([name, d]) => (
+          <path key={name} d={d} className="stroke-white" strokeWidth="8" />
+        ))}
       </g>
 
-      {/* West Campus high-rises */}
-      <g className="fill-white stroke-black" strokeWidth="2">
-        <rect x="56" y="76" width="52" height="36" rx="2" />
-        <rect x="124" y="70" width="52" height="36" rx="2" />
-        <rect x="192" y="76" width="52" height="36" rx="2" />
+      {/* Building footprints, the DLW's highlighted */}
+      {BUILDINGS.map((b) =>
+        b.name === DLW_OSM_NAME ? (
+          <path
+            key={b.name}
+            d={b.d}
+            className="fill-rose-400 stroke-black"
+            strokeWidth="2.5"
+          />
+        ) : (
+          <path
+            key={b.name}
+            d={b.d}
+            className="fill-white stroke-black"
+            strokeWidth="1.5"
+          />
+        ),
+      )}
+      <g
+        textAnchor="middle"
+        fontSize="8"
+        className="fill-mauve-600 font-semibold"
+      >
+        {BUILDING_LABELS.map((l) => (
+          <text key={l.text} x={l.x} y={l.y}>
+            {l.text}
+          </text>
+        ))}
       </g>
-      <text
-        x="150"
-        y="128"
-        textAnchor="middle"
-        fontSize="10"
-        className="fill-mauve-600 font-semibold"
-      >
-        Brumby · Russell · Creswell
-      </text>
 
-      {/* Tate Center, across Lumpkin */}
-      <rect
-        x="418"
-        y="72"
-        width="52"
-        height="40"
-        rx="2"
-        className="fill-white stroke-black"
-        strokeWidth="2"
-      />
-      <text
-        x="444"
-        y="126"
-        textAnchor="middle"
-        fontSize="10"
-        className="fill-mauve-600 font-semibold"
-      >
-        Tate
-      </text>
-      <text
-        x="444"
-        y="138"
-        textAnchor="middle"
-        fontSize="10"
-        className="fill-mauve-600 font-semibold"
-      >
-        Center
-      </text>
-
-      {/* The DLW itself */}
-      <rect
-        x="168"
-        y="146"
-        width="124"
-        height="68"
-        rx="2"
-        className="fill-rose-400 stroke-black"
-        strokeWidth="3"
-      />
-      <text
-        x="230"
-        y="178"
-        textAnchor="middle"
-        fontSize="20"
-        className="font-display fill-black font-extrabold"
-      >
-        DLW
-      </text>
-      <text
-        x="230"
-        y="196"
-        textAnchor="middle"
-        fontSize="9"
-        className="fill-black font-semibold"
-      >
-        Dining, Learning &amp; Well-Being
-      </text>
-
-      {/* Walking route: Tate → south on Lumpkin → west on Cloverhurst → door */}
+      {/* Walking route: Tate's west side → S. Lumpkin → University Ct → DLW */}
       <path
-        d="M 418 108 L 400 122 L 400 228 L 240 228 L 240 218"
+        d={ROUTE}
         fill="none"
         className="stroke-rose-600"
         strokeWidth="3"
         strokeDasharray="7 5"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d="M 240 212 l -6 9 h 12 z" className="fill-rose-600" />
 
-      {/* Road labels */}
-      <text x="10" y="38" fontSize="11" className="fill-mauve-700 font-bold">
-        Baxter St
-      </text>
-      <text x="10" y="220" fontSize="11" className="fill-mauve-700 font-bold">
-        E. Cloverhurst Ave
-      </text>
-      <text
-        x="412"
-        y="296"
-        fontSize="11"
-        transform="rotate(-90 412 296)"
-        className="fill-mauve-700 font-bold"
-      >
-        S. Lumpkin St
-      </text>
-      <text
-        x="140"
-        y="222"
-        fontSize="9"
-        transform="rotate(-90 140 222)"
-        className="fill-mauve-500 font-semibold"
-      >
-        University Ct
-      </text>
+      {/* Destination pin on the DLW, name called out in the open block west
+          of it (the footprint is too small to hold its own label) */}
+      <circle
+        cx="184"
+        cy="219"
+        r="8"
+        className="fill-rose-600 stroke-black"
+        strokeWidth="2"
+      />
+      <path d="M 177.5 224 L 190.5 224 L 184 238 Z" className="fill-rose-600" />
+      <line
+        x1="113"
+        y1="248"
+        x2="166"
+        y2="237"
+        className="stroke-mauve-400"
+        strokeWidth="1"
+      />
+      <g textAnchor="middle">
+        <text
+          x="82"
+          y="250"
+          fontSize="15"
+          className="font-display fill-black font-extrabold"
+        >
+          DLW
+        </text>
+        <text x="80" y="264" fontSize="7" className="fill-black font-semibold">
+          Dining, Learning
+        </text>
+        <text x="80" y="274" fontSize="7" className="fill-black font-semibold">
+          &amp; Well-Being Center
+        </text>
+      </g>
 
-      {/* Compass */}
+      {/* Road labels, angled along their roads */}
+      <g fontSize="10" className="fill-mauve-700 font-bold">
+        <text x="40" y="118" transform="rotate(-12.5 40 118)">
+          Baxter St
+        </text>
+        <text x="296" y="208" transform="rotate(-76 296 208)">
+          S. Lumpkin St
+        </text>
+        <text x="54" y="372" transform="rotate(-67.5 54 372)">
+          E. Cloverhurst Ave
+        </text>
+        <text x="222" y="322" fontSize="8" transform="rotate(23 222 322)">
+          University Ct
+        </text>
+      </g>
+
+      {/* Compass + the ODbL attribution OSM data requires */}
       <text
         x="24"
-        y="284"
+        y="40"
         textAnchor="middle"
         fontSize="13"
         className="font-display fill-black font-extrabold"
       >
         N ↑
+      </text>
+      <text
+        x="474"
+        y="382"
+        textAnchor="end"
+        fontSize="6.5"
+        className="fill-mauve-400"
+      >
+        Map data © OpenStreetMap
       </text>
     </svg>
   );
