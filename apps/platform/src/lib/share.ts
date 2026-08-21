@@ -65,6 +65,29 @@ export async function shareOrCopy({
     await navigator.clipboard.writeText(data.url);
     return "copied";
   } catch {
-    return "failed";
+    return legacyCopy(data.url) ? "copied" : "failed";
   }
+}
+
+/**
+ * `navigator.clipboard` (like the share sheet) only exists in secure
+ * contexts, which a dev server reached over plain http on a LAN is not — the
+ * deprecated selection-based copy is the only thing that still works there.
+ */
+function legacyCopy(text: string): boolean {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.append(textarea);
+  textarea.select();
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch {
+    // Left false: the caller reports the failure.
+  }
+  textarea.remove();
+  return copied;
 }

@@ -22,6 +22,8 @@ function stubNavigator(props: {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // Drop any mock the legacy-copy tests planted over jsdom's document.
+  delete (document as { execCommand?: unknown }).execCommand;
 });
 
 describe("shareOrCopy", () => {
@@ -106,10 +108,27 @@ describe("shareOrCopy", () => {
     expect(writeText).toHaveBeenCalled();
   });
 
-  it("reports failure when the clipboard is unavailable too", async () => {
+  it("falls back to a selection-based copy when the clipboard API fails", async () => {
+    // What an insecure context looks like: no share sheet, no async clipboard.
     stubNavigator({
       writeText: vi.fn().mockRejectedValue(new Error("denied")),
     });
+    const execCommand = vi.fn().mockReturnValue(true);
+    document.execCommand = execCommand;
+
+    await expect(
+      shareOrCopy({ title: "DogDays", url: "https://dogdays.dev" }),
+    ).resolves.toBe("copied");
+    expect(execCommand).toHaveBeenCalledWith("copy");
+    // The scratch textarea must not be left behind in the page.
+    expect(document.querySelector("textarea")).toBeNull();
+  });
+
+  it("reports failure when the legacy copy fails too", async () => {
+    stubNavigator({
+      writeText: vi.fn().mockRejectedValue(new Error("denied")),
+    });
+    document.execCommand = vi.fn().mockReturnValue(false);
 
     await expect(
       shareOrCopy({ title: "DogDays", url: "https://dogdays.dev" }),
