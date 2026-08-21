@@ -4,6 +4,7 @@ import SectionBackground, {
   type BlobDef,
   type EdgeType,
 } from "~/ui/section-background";
+import LinkButton from "~/ui/link-button";
 
 const BADGE_POINTS =
   "50,4 58,11 68,8 72,17 83,18 83,28 93,32 89,42 96,50 89,58 93,68 83,72 83,83 72,83 68,93 58,89 50,96 42,89 32,93 28,83 18,83 17,72 8,68 11,58 4,50 11,42 8,32 17,28 18,18 28,17 32,8 42,11";
@@ -84,13 +85,12 @@ export default function PartnersSection({ topEdge, bottomEdge }: Props) {
                 driven students. We offer sponsorship tiers, recruiting access,
                 and mentorship opportunities.
               </p>
-              <Link
+              <LinkButton
                 href="mailto:devdogs@uga.edu"
-                className="transition-lift shadow-block-lg mt-8 flex w-fit shrink-0 items-center gap-2 rounded-sm border-2 border-black bg-white px-4 py-2 text-sm font-semibold text-mauve-950 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-purple-400)]"
+                className="hover:shadow-block-md transition-lift mt-8 flex w-fit items-center gap-2 rounded-sm border-2 border-black bg-white px-4 py-2 text-sm font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5"
               >
-                Get in Touch
-                <ArrowRightIcon className="text-xs" />
-              </Link>
+                Get in Touch <ArrowRightIcon />
+              </LinkButton>
             </div>
             <MarchingAntsBadge />
           </div>
