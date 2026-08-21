@@ -113,7 +113,7 @@ export default function AnnouncementBanner() {
         <aside
           aria-label="Club announcement"
           className={cn(
-            "animate-in slide-in-from-bottom-6 fade-in shadow-block-md pointer-events-auto relative isolate mx-auto flex max-w-4xl flex-col gap-2.5 overflow-hidden rounded-lg border-2 border-black px-4 py-3 text-black duration-500 motion-reduce:animate-none sm:flex-row sm:items-center sm:gap-4",
+            "animate-in slide-in-from-bottom-6 fade-in shadow-block-md pointer-events-auto relative isolate mx-auto flex max-w-4xl flex-col gap-2.5 overflow-hidden rounded-lg px-4 py-3 text-black duration-500 motion-reduce:animate-none sm:flex-row sm:items-center sm:gap-4",
             toneClasses.card,
             toneClasses.blockShadow,
           )}
@@ -124,6 +124,35 @@ export default function AnnouncementBanner() {
             aria-hidden
             className="bg-dot-grid-dense pointer-events-none absolute inset-0 -z-10 opacity-[0.07]"
           />
+
+          {/* Marching ants in place of a solid border, the same stroke the
+              partners badge uses. Drawn as an SVG rather than a `border`
+              because the dashes have to move, and only stroke-dashoffset can
+              do that. Inset 1px with a 2px stroke so it occupies exactly the
+              2px the `border-2` used to, leaving the card's box unchanged.
+
+              `rx` is the card's own radius less that 1px inset: --radius-lg is
+              0.625rem, so 10px on the outside, 9 in here.
+
+              Under reduced motion the animation stops, which drops the
+              dasharray the keyframes carry and leaves a plain solid stroke —
+              the border this replaced, which is the right thing to land on. */}
+          <svg
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 h-full w-full"
+          >
+            <rect
+              x="1"
+              y="1"
+              width="calc(100% - 2px)"
+              height="calc(100% - 2px)"
+              rx="9"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="animate-march-dashes motion-reduce:animate-none"
+            />
+          </svg>
 
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <span className="relative flex size-7 shrink-0 items-center justify-center">
