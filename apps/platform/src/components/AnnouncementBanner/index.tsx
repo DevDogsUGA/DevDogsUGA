@@ -22,7 +22,7 @@ interface ToneClasses {
   card: string;
   /** The pulse behind the megaphone. */
   pulse: string;
-  /** The eyebrow chip. */
+  /** The tab that carries the eyebrow, notched onto the card's top edge. */
   chip: string;
   /**
    * The block shadow the card rests on, and the one the action button throws
@@ -110,22 +110,30 @@ export default function AnnouncementBanner() {
         data-slot="announcement-banner"
         className="pointer-events-none fixed inset-x-0 bottom-0 z-40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6 md:pb-[max(1.5rem,env(safe-area-inset-bottom))]"
       >
+        {/* The landmark wraps card AND tab, so a screen reader reads the
+            eyebrow as part of the notice rather than as loose text beside it.
+            It also carries the entrance animation, so the tab rises with the
+            card instead of being left behind, and it must NOT clip: the tab
+            hangs above its box. */}
         <aside
           aria-label="Club announcement"
-          className={cn(
-            "animate-in slide-in-from-bottom-6 fade-in shadow-block-md pointer-events-auto relative isolate mx-auto flex max-w-4xl flex-col gap-2.5 overflow-hidden rounded-lg px-4 py-3 text-black duration-500 motion-reduce:animate-none sm:flex-row sm:items-center sm:gap-4",
-            toneClasses.card,
-            toneClasses.blockShadow,
-          )}
+          className="animate-in slide-in-from-bottom-6 fade-in pointer-events-auto relative mx-auto max-w-4xl duration-500 motion-reduce:animate-none"
         >
-          {/* The site's dot texture, dialled down so it reads as paper grain
+          <div
+            className={cn(
+              "shadow-block-md relative isolate flex flex-col gap-2.5 overflow-hidden rounded-lg px-4 py-3 text-black sm:flex-row sm:items-center sm:gap-4",
+              toneClasses.card,
+              toneClasses.blockShadow,
+            )}
+          >
+            {/* The site's dot texture, dialled down so it reads as paper grain
               rather than as a second pattern competing with the copy. */}
-          <span
-            aria-hidden
-            className="bg-dot-grid-dense pointer-events-none absolute inset-0 -z-10 opacity-[0.07]"
-          />
+            <span
+              aria-hidden
+              className="bg-dot-grid-dense pointer-events-none absolute inset-0 -z-10 opacity-[0.07]"
+            />
 
-          {/* Marching ants in place of a solid border, the same stroke the
+            {/* Marching ants in place of a solid border, the same stroke the
               partners badge uses. Drawn as an SVG rather than a `border`
               because the dashes have to move, and only stroke-dashoffset can
               do that. Inset 1px with a 2px stroke so it occupies exactly the
@@ -137,88 +145,122 @@ export default function AnnouncementBanner() {
               Under reduced motion the animation stops, which drops the
               dasharray the keyframes carry and leaves a plain solid stroke —
               the border this replaced, which is the right thing to land on. */}
-          <svg
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 h-full w-full"
-          >
-            <rect
-              x="1"
-              y="1"
-              width="calc(100% - 2px)"
-              height="calc(100% - 2px)"
-              rx="9"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className="animate-march-dashes motion-reduce:animate-none"
-            />
-          </svg>
-
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <span className="relative flex size-7 shrink-0 items-center justify-center">
-              <span
-                aria-hidden
-                className={cn(
-                  "absolute inset-0 animate-ping rounded-full motion-reduce:hidden",
-                  toneClasses.pulse,
-                )}
+            <svg
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 h-full w-full"
+            >
+              <rect
+                x="1"
+                y="1"
+                width="calc(100% - 2px)"
+                height="calc(100% - 2px)"
+                rx="9"
+                fill="none"
+                stroke="black"
+                strokeWidth="2"
+                className="animate-march-dashes motion-reduce:animate-none"
               />
-              {/* Mirrored: Phosphor's megaphone points right, which aims it
+            </svg>
+
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <span className="relative flex size-7 shrink-0 items-center justify-center">
+                <span
+                  aria-hidden
+                  className={cn(
+                    "absolute inset-0 animate-ping rounded-full motion-reduce:hidden",
+                    toneClasses.pulse,
+                  )}
+                />
+                {/* Mirrored: Phosphor's megaphone points right, which aims it
                   off the edge of the card. Flipped, it points into the copy. */}
-              <MegaphoneIcon
-                weight="fill"
-                className="relative size-5 shrink-0 -scale-x-100"
-              />
-            </span>
+                <MegaphoneIcon
+                  weight="fill"
+                  className="relative size-5 shrink-0 -scale-x-100"
+                />
+              </span>
 
-            {/* max-w-prose caps the measure. The card runs to max-w-4xl so it
+              {/* max-w-prose caps the measure. The card runs to max-w-4xl so it
                 has room for the action button on the same row, but a line of
                 copy that wide is a chore to read — the text stops at a
                 comfortable measure and wraps, and the leftover width stays
                 with the button. */}
-            <p className="flex max-w-prose min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-              <span
+              <p className="max-w-prose min-w-0 text-sm font-semibold text-balance sm:text-[0.9rem]">
+                {message}
+              </p>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
+              <Link
+                href={action.href}
+                {...(action.external
+                  ? { target: "_blank", rel: "noreferrer" }
+                  : {})}
                 className={cn(
-                  "font-display shrink-0 rounded-sm px-1.5 py-0.5 text-[0.7rem] font-extrabold tracking-widest uppercase",
-                  toneClasses.chip,
+                  "hover:shadow-block-sm transition-lift flex items-center gap-2 rounded-sm border-2 border-black bg-black px-3.5 py-1.5 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5",
+                  toneClasses.blockShadow,
                 )}
               >
-                {eyebrow}
-              </span>
-              <span className="text-sm font-semibold text-balance sm:text-[0.9rem]">
-                {message}
-              </span>
-            </p>
+                {action.label}
+                {action.external ? (
+                  <ArrowSquareOutIcon className="size-4" />
+                ) : (
+                  <ArrowRightIcon className="size-4" />
+                )}
+              </Link>
+
+              <button
+                type="button"
+                onClick={dismiss}
+                aria-label="Dismiss announcement"
+                className="flex size-8 shrink-0 items-center justify-center rounded-sm text-black/60 transition-colors hover:bg-black/10 hover:text-black focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none"
+              >
+                <XIcon className="size-4" weight="bold" />
+              </button>
+            </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
-            <Link
-              href={action.href}
-              {...(action.external
-                ? { target: "_blank", rel: "noreferrer" }
-                : {})}
-              className={cn(
-                "hover:shadow-block-sm transition-lift flex items-center gap-2 rounded-sm border-2 border-black bg-black px-3.5 py-1.5 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5",
-                toneClasses.blockShadow,
-              )}
-            >
-              {action.label}
-              {action.external ? (
-                <ArrowSquareOutIcon className="size-4" />
-              ) : (
-                <ArrowRightIcon className="size-4" />
-              )}
-            </Link>
+          {/* The tab, and the trick that makes the outline continuous.
 
-            <button
-              type="button"
-              onClick={dismiss}
-              aria-label="Dismiss announcement"
-              className="flex size-8 shrink-0 items-center justify-center rounded-sm text-black/60 transition-colors hover:bg-black/10 hover:text-black focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none"
+              It comes AFTER the card in the DOM so its opaque fill paints
+              over the card's top stroke, erasing exactly the span the tab
+              covers — that erased span is the "mouth" the tab opens into.
+              `translate-y` drops it 2px into the card so the overlap is
+              precisely the card's stroke width, leaving no seam and no
+              doubled line.
+
+              Its own stroke is an over-tall rect — 100% + 20px — clipped by
+              `overflow-hidden` at the tab's bottom edge. That is what removes
+              the bottom line without needing to know the tab's width, which
+              depends on the eyebrow text and so is not knowable in a static
+              path. What survives the clip is left side, rounded top, right
+              side: a tab outline that runs down to meet the card's top edge
+              at both ends. */}
+          <p
+            className={cn(
+              "absolute bottom-full left-4 translate-y-[2px] overflow-hidden rounded-t-lg px-2.5 py-1",
+              toneClasses.chip,
+            )}
+          >
+            <svg
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 h-full w-full"
             >
-              <XIcon className="size-4" weight="bold" />
-            </button>
-          </div>
+              <rect
+                x="1"
+                y="1"
+                width="calc(100% - 2px)"
+                height="calc(100% + 20px)"
+                rx="9"
+                fill="none"
+                stroke="black"
+                strokeWidth="2"
+                className="animate-march-dashes motion-reduce:animate-none"
+              />
+            </svg>
+            <span className="font-display relative text-[0.7rem] font-extrabold tracking-widest uppercase">
+              {eyebrow}
+            </span>
+          </p>
         </aside>
       </div>
     </>
