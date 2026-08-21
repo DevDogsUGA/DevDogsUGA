@@ -26,8 +26,9 @@ interface ToneClasses {
   chip: string;
   /**
    * The block shadow the card rests on, and the one the action button throws
-   * on hover. The card takes `shadow-block-outlined-lg`: the size the section
-   * cards use, but outlined, and in the tone's accent rather than their black.
+   * on hover. The card takes `shadow-block-outlined-xl`: a step past the size
+   * the section cards use, since it floats over the page rather than sitting
+   * in a section, and outlined in the tone's accent rather than their black.
    * Those cards sit on light section backgrounds where a black block reads on
    * its own; over a near-black page black is no shadow at all, so the block
    * has to be coloured — and a coloured block with no edge is a smear, which
@@ -115,6 +116,30 @@ export default function AnnouncementBanner() {
         data-slot="announcement-banner"
         className="pointer-events-none fixed inset-x-0 bottom-0 z-40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6 md:pb-[max(1.5rem,env(safe-area-inset-bottom))]"
       >
+        {/* Scrim. It grounds the notice against whatever is scrolling under it
+            and gives the card's black border something other than page text
+            to sit on.
+
+            The blur has to fade out, and `backdrop-filter` takes no gradient —
+            so the gradient goes on a `mask-image` instead, which is applied to
+            this element's composited result and therefore fades the blur and
+            the darkening together, in one pass. Tailwind emits the -webkit-
+            prefixed property alongside the standard one, so old Safari is
+            covered without a second class.
+
+            Height: it hangs 4/6 above the gutter's box, which is the same step
+            as the gutter's own padding — so the distance it reaches past the
+            top of the notice is the gap below it, mirrored. The extra also
+            covers the tab, which hangs above the gutter's box and would
+            otherwise sit on the scrim's hard edge.
+
+            No z-index: like the tab, it just takes its place in DOM order —
+            first child, so both the card and the tab paint over it. */}
+        <div
+          aria-hidden
+          className="animate-in fade-in pointer-events-none absolute inset-x-0 -top-4 bottom-0 bg-black/50 [mask-image:linear-gradient(to_top,#000_0%,#000_20%,transparent_100%)] duration-500 supports-backdrop-filter:backdrop-blur-sm motion-reduce:animate-none md:-top-6"
+        />
+
         {/* The landmark wraps card AND tab, so a screen reader reads the
             eyebrow as part of the notice rather than as loose text beside it.
             It also carries the entrance animation, so the tab rises with the
@@ -132,7 +157,7 @@ export default function AnnouncementBanner() {
               the same reason. There is nothing here for a merge to resolve
               anyway — no caller passes a className in. */}
           <div
-            className={`shadow-block-outlined-lg relative isolate flex flex-col gap-2.5 overflow-hidden rounded-lg border-2 border-black px-4 py-3 text-black sm:flex-row sm:items-center sm:gap-4 ${toneClasses.card} ${toneClasses.blockShadow}`}
+            className={`shadow-block-outlined-xl relative isolate flex flex-col gap-2.5 overflow-hidden rounded-lg border-2 border-black px-4 py-3 text-black sm:flex-row sm:items-center sm:gap-4 ${toneClasses.card} ${toneClasses.blockShadow}`}
           >
             {/* The site's dot texture, dialled down so it reads as paper grain
               rather than as a second pattern competing with the copy. */}

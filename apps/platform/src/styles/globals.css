@@ -34,6 +34,7 @@
   --block-shadow-sm: 2px;
   --block-shadow-md: 4px;
   --block-shadow-lg: 5px;
+  --block-shadow-xl: 8px;
 
   --font-sans:
     var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
@@ -163,16 +164,20 @@
 
 /* Outlined block shadow — the offset block gets its own black edge, so it
    reads as a second sheet of paper behind the element rather than a coloured
-   smear. Two shadows at the same offset: the coloured block, and beneath it a
-   black one spread 2px wider, which shows only as a ring around whatever of
-   the block is not covered by the element itself. Size via sm/md/lg; block
-   color via shadow-{color}. Needed on dark backgrounds, where a plain black
-   block shadow is invisible and a coloured one has no edge to define it. */
+   smear. Needed on dark backgrounds, where a plain black block shadow is
+   invisible and a coloured one has no edge to define it.
+
+   Two shadows at the same offset: a full-size black one, and the coloured
+   block painted over it inset 2px, so the black survives only as a 2px edge
+   around the colour. The edge is inset rather than spread outward so the whole
+   thing still measures exactly --block-shadow-*, and shadow-block-lg and
+   shadow-block-outlined-lg cast the same size of shadow. Size via
+   sm/md/lg/xl; block color via shadow-{color}. */
 @utility shadow-block-outlined-* {
   --tw-shadow-block:
-    --value(--block-shadow-*) --value(--block-shadow-*) 0 0
+    --value(--block-shadow-*) --value(--block-shadow-*) 0 -2px
       var(--tw-shadow-color, black),
-    --value(--block-shadow-*) --value(--block-shadow-*) 0 2px black;
+    --value(--block-shadow-*) --value(--block-shadow-*) 0 0 black;
   @apply shadow-(--tw-shadow-block);
 }
 
