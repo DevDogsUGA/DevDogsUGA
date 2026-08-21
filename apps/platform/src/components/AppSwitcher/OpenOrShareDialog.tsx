@@ -49,7 +49,7 @@ export default function OpenOrShareDialog({
   const lift =
     "transition-[translate,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_var(--color-amber-400)]";
   const openStyle = `flex items-center justify-center gap-2 rounded-sm border border-black bg-cyan-400 px-3 py-2.5 text-sm font-bold text-black ${lift}`;
-  const shareStyle = `flex items-center justify-center gap-2 rounded-sm border border-mauve-600 px-3 py-2.5 text-sm font-bold text-white ${lift}`;
+  const shareStyle = `flex items-center justify-center gap-2 rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-2.5 text-sm font-bold text-white ${lift}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
