@@ -13,7 +13,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/ui/dialog";
-import { BUILDINGS, ROADS, ROUTE, ROUTE_START, VIEW } from "./campusMapData";
+import {
+  DLW_FOOTPRINT,
+  FOOTPRINTS,
+  MAJOR_ROADS,
+  MINOR_ROADS,
+  VIEW,
+} from "./campusMapData";
 
 /**
  * The destination is passed as a place query rather than coordinates: the DLW
@@ -30,13 +36,6 @@ const APPLE_MAPS_URL = `https://maps.apple.com/?daddr=${DESTINATION}`;
 const STEP_CHIP_CLS =
   "mt-px flex size-4 shrink-0 items-center justify-center rounded-full bg-rose-400 text-[0.625rem] font-bold text-black";
 
-const CAMPUS_STEPS = [
-  "From the Tate Center bus stops, cross S. Lumpkin St and follow it south, downhill past the Hill Community dorms.",
-  "Turn right onto University Court, keeping O-House on your left.",
-  "The DLW is the big new building straight ahead, where University Ct curls into E. Cloverhurst Ave.",
-  "Driving? The Tate Deck is the closest visitor parking, about a five-minute walk away.",
-];
-
 const ROOM_STEPS = [
   "Come in through the main entrance on E. Cloverhurst Ave.",
   "Skip the stairs — dining is on floors 2 and 3, and we stay on 1.",
@@ -48,9 +47,6 @@ const TABS = [
   { id: "room", label: "To Room 124" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
-
-/** OSM's name for the building the map highlights. */
-const DLW_OSM_NAME = "Dining, Learning and Well-being Center";
 
 /**
  * Label anchors placed by eye against the generated footprint coordinates
@@ -126,6 +122,9 @@ export default function FindUs() {
           {tab === "building" ? (
             <>
               <CampusMap />
+              {/* No turn-by-turn here: people start from all over campus, so
+                  the map just places the building and the buttons below hand
+                  off to a navigation app for the door-to-door part. */}
               <div className="flex flex-wrap gap-2">
                 <DirectionsLink href={GOOGLE_MAPS_URL}>
                   Google Maps
@@ -134,7 +133,12 @@ export default function FindUs() {
                   Apple Maps
                 </DirectionsLink>
               </div>
-              <StepList steps={CAMPUS_STEPS} />
+              <p className="text-sm/relaxed text-mauve-600">
+                The DLW sits at the corner of E. Cloverhurst Ave and University
+                Court — just below the Hill dorms, across from O-House, and
+                downhill from the Tate Center. Driving? The Tate Deck is the
+                closest visitor parking, about a five-minute walk away.
+              </p>
             </>
           ) : (
             <>
@@ -199,39 +203,35 @@ function CampusMap() {
     >
       <rect width={VIEW.w} height={VIEW.h} className="fill-orange-50" />
 
-      {/* Roads: every black casing first, then every white surface, so the
-          surfaces run together at junctions instead of butting into casings */}
+      {/* Roads: minor drives first and thin, then the cased streets — each
+          tier's black casing before its white surface, so surfaces run
+          together at junctions instead of butting into casings */}
       <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-        {Object.entries(ROADS).map(([name, d]) => (
-          <path key={name} d={d} className="stroke-black" strokeWidth="10" />
-        ))}
-        {Object.entries(ROADS).map(([name, d]) => (
-          <path key={name} d={d} className="stroke-white" strokeWidth="6.5" />
-        ))}
+        <path d={MINOR_ROADS} className="stroke-mauve-200" strokeWidth="2" />
+        <path d={MAJOR_ROADS} className="stroke-black" strokeWidth="10" />
+        <path d={MAJOR_ROADS} className="stroke-white" strokeWidth="6.5" />
       </g>
 
-      {/* Building footprints, the DLW's highlighted */}
-      {BUILDINGS.map((b) =>
-        b.name === DLW_OSM_NAME ? (
-          <path
-            key={b.name}
-            d={b.d}
-            className="fill-rose-400 stroke-black"
-            strokeWidth="2.5"
-          />
-        ) : (
-          <path
-            key={b.name}
-            d={b.d}
-            className="fill-white stroke-black"
-            strokeWidth="1.5"
-          />
-        ),
-      )}
+      {/* Every building footprint in the frame, then the DLW's on top */}
+      <path
+        d={FOOTPRINTS}
+        className="fill-white stroke-black"
+        strokeWidth="1"
+      />
+      <path
+        d={DLW_FOOTPRINT}
+        className="fill-rose-400 stroke-black"
+        strokeWidth="2.5"
+      />
+      {/* paint-order:stroke turns each label's white stroke into a halo
+          behind the glyphs — the standard cartographic trick that keeps text
+          readable over footprints and parking aisles */}
       <g
         textAnchor="middle"
         fontSize="8"
-        className="fill-mauve-600 font-semibold"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+        className="fill-mauve-600 stroke-white font-semibold [paint-order:stroke]"
       >
         {BUILDING_LABELS.map((l) => (
           <text key={l.text} x={l.x} y={l.y}>
@@ -239,25 +239,6 @@ function CampusMap() {
           </text>
         ))}
       </g>
-
-      {/* Walking route: the Tate crossing on S. Lumpkin → University Ct → DLW,
-          with a dot marking the start by the Tate bus stops */}
-      <circle
-        cx={ROUTE_START[0]}
-        cy={ROUTE_START[1]}
-        r="4.5"
-        className="fill-rose-600 stroke-black"
-        strokeWidth="1.5"
-      />
-      <path
-        d={ROUTE}
-        fill="none"
-        className="stroke-rose-600"
-        strokeWidth="3"
-        strokeDasharray="7 5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
 
       {/* Destination pin on the DLW, name called out in the open block west
           of it (the footprint is too small to hold its own label) */}
@@ -277,7 +258,12 @@ function CampusMap() {
         className="stroke-mauve-400"
         strokeWidth="1"
       />
-      <g textAnchor="middle">
+      <g
+        textAnchor="middle"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+        className="stroke-white [paint-order:stroke]"
+      >
         <text
           x="66"
           y="201"
@@ -305,7 +291,12 @@ function CampusMap() {
       </g>
 
       {/* Road labels, angled along their roads */}
-      <g fontSize="9" className="fill-mauve-700 font-bold">
+      <g
+        fontSize="9"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+        className="fill-mauve-700 stroke-white font-bold [paint-order:stroke]"
+      >
         <text x="32" y="95" transform="rotate(-12.5 32 95)">
           Baxter St
         </text>
@@ -332,7 +323,9 @@ function CampusMap() {
         y="40"
         textAnchor="middle"
         fontSize="13"
-        className="font-display fill-black font-extrabold"
+        strokeWidth="3"
+        strokeLinejoin="round"
+        className="font-display fill-black stroke-white font-extrabold [paint-order:stroke]"
       >
         N ↑
       </text>
@@ -341,7 +334,9 @@ function CampusMap() {
         y="409"
         textAnchor="end"
         fontSize="6.5"
-        className="fill-mauve-400"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        className="fill-mauve-500 stroke-white [paint-order:stroke]"
       >
         Map data © OpenStreetMap
       </text>
