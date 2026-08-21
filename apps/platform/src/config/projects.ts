@@ -67,7 +67,12 @@ export interface Project {
   /** The "what is it, in four words" line that sits under the title. */
   tagline: string;
   description: string;
-  switcher: ProjectSwitcher;
+  /**
+   * Present for the projects the switcher lists as apps. Absent keeps a
+   * project on the homepage but out of the switcher — the switcher is a short
+   * list of what DevDogs is building now, not the whole back catalogue.
+   */
+  switcher?: ProjectSwitcher;
   /**
    * Whether anyone can pick up an issue, or only a closed group can. Drives
    * how prominently the card renders — `"closed"` projects are real work worth
@@ -213,16 +218,19 @@ export const PROJECTS: Project[] = [
     titleColor: "text-sky-700",
     description:
       "A native Android app for riding UGA transit: buses moving on the map in real time, and arrival times for the stop you are actually standing at. Development is paused, and the source was never published.",
-    switcher: {
-      icon: "BusIcon",
-      iconBg: "bg-sky-400",
-      blurb: "Live UGA bus positions and arrival times, on Android.",
-      // No `url`, and no `githubUrl` either: nothing of this one shipped.
-      badge: PAUSED,
-    },
+    // No `switcher`: nothing of this one shipped and nothing is being built,
+    // so it stays on the homepage as history and off the switcher.
     contributions: "closed",
     // The only project here predating the shared Supabase project, hence its
     // own database and no Postgres.
     techStack: ["android", "kotlin", "java", "spring", "mysql", "maps"],
   },
 ];
+
+/** A project the switcher lists — one that carries a `switcher` block. */
+export type SwitcherProject = Project & { switcher: ProjectSwitcher };
+
+/** The projects the fullscreen switcher shows as apps, in array order. */
+export const SWITCHER_PROJECTS = PROJECTS.filter(
+  (project): project is SwitcherProject => project.switcher !== undefined,
+);

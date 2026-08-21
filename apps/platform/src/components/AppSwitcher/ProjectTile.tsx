@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import * as icons from "~/config/icons";
-import type { Project } from "~/config/projects";
+import type { SwitcherProject } from "~/config/projects";
 
 interface Props {
-  project: Project;
+  project: SwitcherProject;
   /** Dismisses the overlay when an in-app tile is followed. */
   onNavigate: () => void;
 }

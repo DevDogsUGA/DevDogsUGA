@@ -8,7 +8,7 @@ import { useNavUser } from "~/components/TopNav/NavUserProvider";
 import SignInButton from "~/components/TopNav/SignInButton";
 import * as icons from "~/config/icons";
 import { SOCIAL_LINKS, SWITCHER_LINKS, SWITCHER_PRIMARY } from "~/config/nav";
-import { PROJECTS } from "~/config/projects";
+import { SWITCHER_PROJECTS } from "~/config/projects";
 import LinkButton from "~/ui/link-button";
 import EntryButton from "./EntryButton";
 import ProjectTile from "./ProjectTile";
@@ -102,7 +102,7 @@ export default function AppSwitcher() {
               is the same size, and the ones with nowhere to send you render
               disabled, which says more than a size difference would. */}
           <div className="grid gap-3 sm:grid-cols-2">
-            {PROJECTS.map((project) => (
+            {SWITCHER_PROJECTS.map((project) => (
               <ProjectTile
                 key={project.title}
                 project={project}
