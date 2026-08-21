@@ -114,9 +114,11 @@ export default function ProjectsSection({
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-4 text-center">
-            <Suspense fallback={null}>{streakCta}</Suspense>
-          </div>
+          {/* No wrapper: `StreakCTA` returns null for most visitors, and
+              Suspense renders no element of its own, so the section's spacing
+              skips it entirely rather than leaving a gap. The CTA centers
+              itself when it does render. */}
+          <Suspense fallback={null}>{streakCta}</Suspense>
         </div>
       </section>
     </div>

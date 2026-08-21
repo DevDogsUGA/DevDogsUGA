@@ -5,7 +5,6 @@ import {
   GithubLogoIcon,
 } from "@phosphor-icons/react/ssr";
 import { expectUserWith } from "~/server/auth";
-import SignInUnavailableDialog from "~/components/SignInUnavailableDialog";
 
 export default async function StreakCTA() {
   const user = await expectUserWith({
@@ -15,32 +14,15 @@ export default async function StreakCTA() {
   const linkedGithubProfile = !!user?.githubIdentity;
   const streak = null;
 
-  if (!linkedGithubProfile) {
-    return (
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
-        {/*
-          Linking runs through the same unfinished sign-in flow, so this opens
-          the explainer rather than submitting to `linkGithubProfile`. Restoring
-          it means putting the <form action={linkGithubProfile}> back around
-          this button.
-        */}
-        <SignInUnavailableDialog>
-          <button
-            type="button"
-            className="transition-lift hover:shadow-block-md flex shrink-0 items-center gap-2 rounded-sm border-2 border-black bg-white px-4 py-2 text-sm font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5"
-          >
-            <GithubLogoIcon />
-            Sign In with GitHub
-            <ArrowRightIcon className="text-xs" />
-          </button>
-        </SignInUnavailableDialog>
-      </div>
-    );
-  }
+  // Nothing to say to a visitor who has not linked GitHub: the sign-in flow is
+  // unfinished, so the prompt that used to live here could only open an
+  // explainer. Returning null rather than an empty wrapper matters — the
+  // section spaces its children, so a childless div would still leave a gap.
+  if (!linkedGithubProfile) return null;
 
   if (streak) {
     return (
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
+      <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:gap-4">
         <p className="text-sm text-mauve-600">
           Keep your{" "}
           <span className="font-bold text-amber-700">
@@ -63,7 +45,7 @@ export default async function StreakCTA() {
   }
 
   return (
-    <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
+    <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:gap-4">
       <p className="text-sm text-mauve-600">
         Build real software every week.{" "}
         <span className="font-bold text-mauve-900">Start your streak</span> by

@@ -11,10 +11,11 @@ interface Props extends Project {
    * smaller and its text genuinely shorter, rather than a full-size card drawn
    * at 90%.
    *
-   * The tones are the same black the full card uses, just carrying alpha —
-   * border, shadow, and fill all thin out rather than switching to a gray. A
-   * literal lighter gray reads as a different, muddier color next to the black
-   * borders beside it; translucent black reads as the same ink, further away.
+   * The border and shadow are the same black the full card uses, just carrying
+   * alpha, so the ink thins rather than switching to a gray that would read as
+   * a different, muddier color beside it. The fills stay real mauve — a
+   * translucent black fill tinted toward whatever the section sat on, which
+   * made the card look washed rather than quiet.
    */
   recessed?: boolean;
 }
@@ -40,12 +41,12 @@ export default function ProjectCard({
   // both variants — that rule is relative, so it has to move with the fill.
   const t = recessed
     ? {
-        card: "gap-3 border-black/40 bg-black/5 p-4",
+        card: "gap-3 border-black/40 bg-mauve-100 p-4",
         title: "text-xl",
         label: "text-[0.65rem]",
         body: "text-xs/relaxed",
-        meta: "bg-black/10",
-        chip: "bg-black/10 hover:bg-black/15",
+        meta: "bg-mauve-200",
+        chip: "bg-mauve-200 hover:bg-mauve-300",
         chipPad: "px-1.5 py-px",
         chipIcon: "size-2.5",
         stackPad: "pt-1.5",
@@ -138,7 +139,7 @@ export default function ProjectCard({
             <Link
               href={liveUrl.href}
               target="_blank"
-              className={`transition-lift hover:shadow-block-md flex shrink-0 items-center gap-2 rounded-sm border-2 border-black bg-emerald-500 ${t.button} font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5`}
+              className={`transition-lift hover:shadow-block-md flex shrink-0 items-center gap-2 rounded-sm border-2 border-black bg-emerald-400 ${t.button} font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5`}
             >
               <ArrowSquareOutIcon /> {liveUrl.label}
             </Link>
