@@ -77,11 +77,16 @@ export async function shareOrCopy({
 function legacyCopy(text: string): boolean {
   const textarea = document.createElement("textarea");
   textarea.value = text;
+  // Read-only so focusing it does not raise the on-screen keyboard.
   textarea.setAttribute("readonly", "");
   textarea.style.position = "fixed";
   textarea.style.opacity = "0";
   document.body.append(textarea);
+  textarea.focus();
   textarea.select();
+  // iOS Safari ignores `select()` and copies the empty selection it left
+  // behind — the range has to be spelled out.
+  textarea.setSelectionRange(0, text.length);
   let copied = false;
   try {
     copied = document.execCommand("copy");
