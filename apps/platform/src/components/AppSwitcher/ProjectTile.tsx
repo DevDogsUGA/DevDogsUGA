@@ -35,10 +35,7 @@ export default function ProjectTile({ project, onNavigate }: Props) {
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
-        <h3 className="font-display leading-none font-bold text-white">
-          {project.title}
-        </h3>
-        {/* On its own line under the name rather than beside it: the longer
+        {/* On its own line above the name rather than beside it: the longer
             labels were wrapping the pill onto a second row anyway. */}
         {badge && (
           <span
@@ -47,6 +44,9 @@ export default function ProjectTile({ project, onNavigate }: Props) {
             {badge.label}
           </span>
         )}
+        <h3 className="font-display leading-none font-bold text-white">
+          {project.title}
+        </h3>
         <p className="text-xs/relaxed text-balance text-mauve-400">{blurb}</p>
       </div>
 
