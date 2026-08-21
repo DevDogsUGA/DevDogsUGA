@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon, ClockIcon } from "@phosphor-icons/react/ssr";
+import { ArrowUpRightIcon } from "@phosphor-icons/react/ssr";
 import type { CalendarEvent } from "~/app/(site)/homeData";
 import { formatRecurrence } from "~/app/(site)/homeData";
 import { eventBadge } from "./eventBadge";
@@ -19,7 +19,10 @@ export default function EventCard({
   const badge = eventBadge[event.type];
   // A career event is a one-off with no beats, so it gets no footer rule at all
   // rather than an empty one under its description.
-  const hasFooter = event.recurring === true || event.steps !== undefined;
+  const hasFooter =
+    event.recurring !== undefined ||
+    event.note !== undefined ||
+    event.steps !== undefined;
   return (
     <div
       className={`shadow-block-lg flex h-full flex-col gap-3 overflow-hidden rounded-sm border-2 border-black bg-white p-5 transition-[opacity,scale] hover:scale-100 hover:opacity-100 ${isHighlighted ? "scale-100 opacity-100" : "lg:scale-90 lg:opacity-75"}`}
@@ -43,11 +46,11 @@ export default function EventCard({
       {hasFooter && (
         <div className="flex flex-col gap-1.5 border-t border-mauve-200 pt-3 text-xs/snug text-mauve-600">
           {event.recurring && (
-            <p className="flex items-center gap-1.5 font-semibold text-black">
-              <ClockIcon className="shrink-0 text-mauve-500" />
-              {formatRecurrence(event.start, event.end)}
+            <p className="font-semibold text-black">
+              {formatRecurrence(event.start, event.end, event.recurring)}
             </p>
           )}
+          {event.note && <p className="text-mauve-500">{event.note}</p>}
           {event.steps && (
             <ol className="flex flex-col gap-1.5">
               {event.steps.map((step, i) => (

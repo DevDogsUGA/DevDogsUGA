@@ -31,7 +31,6 @@ import {
   ArrowUpRightIcon,
   CalendarDotsIcon,
   CaretRightIcon,
-  ClockIcon,
 } from "@phosphor-icons/react/ssr";
 import type {
   CalendarEvent,
@@ -55,10 +54,12 @@ function EventDetail({ event }: { event: CalendarEvent }) {
       </p>
       <p className="text-xs/relaxed text-mauve-600">{event.description}</p>
       {event.recurring && (
-        <p className="flex items-center gap-1.5 border-t border-mauve-200 pt-2 text-xs/snug font-semibold text-black">
-          <ClockIcon className="shrink-0 text-mauve-500" />
-          {formatRecurrence(event.start, event.end)}
+        <p className="border-t border-mauve-200 pt-2 text-xs/snug font-semibold text-black">
+          {formatRecurrence(event.start, event.end, event.recurring)}
         </p>
+      )}
+      {event.note && (
+        <p className="text-xs/snug text-mauve-500">{event.note}</p>
       )}
       {event.steps && (
         <ol

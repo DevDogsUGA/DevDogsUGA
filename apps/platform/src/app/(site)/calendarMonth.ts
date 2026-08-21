@@ -51,13 +51,15 @@ function generateMonthEvents(year: number, month: number): CalendarEvent[] {
         // line: the card is square at lg, so this list and the description
         // share a fixed height with no room to spill.
         description:
-          "A workshop announces a feature. A week later every team that built it demos, and the best implementation wins.",
+          "A workshop announces the feature. A week later, the best implementation ships.",
         steps: [
           "Teams of up to four get a week to build it",
           "Demos judged on requirements shipped",
           "The winning pull request gets merged",
         ],
-        recurring: true,
+        // The hackathon itself runs all week; only the presentations sit in
+        // this half-hour, and the card has to say which of the two it is timing.
+        recurring: "Presentations",
         start: iso(year, month, d, 18, 0),
         end: iso(year, month, d, 18, 30),
       });
@@ -66,8 +68,9 @@ function generateMonthEvents(year: number, month: number): CalendarEvent[] {
         type: "workshop",
         title: "Weekly Workshop",
         description:
-          "A hands-on session covering a technical concept directly relevant to the current project — taught by members, for members. Most workshops close by announcing the feature the next hackathon is built around.",
+          "A hands-on session on a technical concept from the current project — taught by members, for members. Most close by announcing the feature the next hackathon is built around.",
         recurring: true,
+        note: "Starts as soon as the presentations finish",
         start: iso(year, month, d, 18, 30),
         end: iso(year, month, d, 19, 30),
       });
