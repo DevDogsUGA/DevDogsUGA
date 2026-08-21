@@ -161,6 +161,21 @@
   @apply shadow-(--tw-shadow-block);
 }
 
+/* Outlined block shadow — the offset block gets its own black edge, so it
+   reads as a second sheet of paper behind the element rather than a coloured
+   smear. Two shadows at the same offset: the coloured block, and beneath it a
+   black one spread 2px wider, which shows only as a ring around whatever of
+   the block is not covered by the element itself. Size via sm/md/lg; block
+   color via shadow-{color}. Needed on dark backgrounds, where a plain black
+   block shadow is invisible and a coloured one has no edge to define it. */
+@utility shadow-block-outlined-* {
+  --tw-shadow-block:
+    --value(--block-shadow-*) --value(--block-shadow-*) 0 0
+      var(--tw-shadow-color, black),
+    --value(--block-shadow-*) --value(--block-shadow-*) 0 2px black;
+  @apply shadow-(--tw-shadow-block);
+}
+
 /* Block-style drop shadow — composes with other filter utilities via --tw-drop-shadow. */
 @utility drop-shadow-block-* {
   --tw-drop-shadow-block: drop-shadow(

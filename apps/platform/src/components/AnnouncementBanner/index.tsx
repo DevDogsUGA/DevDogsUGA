@@ -26,10 +26,13 @@ interface ToneClasses {
   chip: string;
   /**
    * The block shadow the card rests on, and the one the action button throws
-   * on hover. `shadow-block-lg`, the size the section cards use — but not
-   * their color: those sit on light section backgrounds where black reads,
-   * and black on a near-black page is no shadow at all, so a floating card
-   * has to borrow the tone's accent to have a shadow you can see.
+   * on hover. The card takes `shadow-block-outlined-lg`: the size the section
+   * cards use, but outlined, and in the tone's accent rather than their black.
+   * Those cards sit on light section backgrounds where a black block reads on
+   * its own; over a near-black page black is no shadow at all, so the block
+   * has to be coloured — and a coloured block with no edge is a smear, which
+   * is what the black outline is for. It picks up where the card's own
+   * `border-2 border-black` leaves off.
    */
   blockShadow: string;
 }
@@ -129,7 +132,7 @@ export default function AnnouncementBanner() {
               the same reason. There is nothing here for a merge to resolve
               anyway — no caller passes a className in. */}
           <div
-            className={`shadow-block-lg relative isolate flex flex-col gap-2.5 overflow-hidden rounded-lg border-2 border-black px-4 py-3 text-black sm:flex-row sm:items-center sm:gap-4 ${toneClasses.card} ${toneClasses.blockShadow}`}
+            className={`shadow-block-outlined-lg relative isolate flex flex-col gap-2.5 overflow-hidden rounded-lg border-2 border-black px-4 py-3 text-black sm:flex-row sm:items-center sm:gap-4 ${toneClasses.card} ${toneClasses.blockShadow}`}
           >
             {/* The site's dot texture, dialled down so it reads as paper grain
               rather than as a second pattern competing with the copy. */}
