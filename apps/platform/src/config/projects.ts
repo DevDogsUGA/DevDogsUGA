@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import type * as icons from "./icons";
-import { PauseIcon, PulseIcon, WrenchIcon } from "./icons";
+import { PauseIcon, PlayIcon, WrenchIcon } from "./icons";
 import type { TechKey } from "./tech";
 
 /** A status pill: what it says, and the colors it says it in. */
@@ -87,7 +87,7 @@ export interface Project {
 /** Shipping now, and open to whoever shows up. */
 const ACTIVE: Badge = {
   label: "Active",
-  icon: PulseIcon,
+  icon: PlayIcon,
   bg: "bg-cyan-400",
   text: "text-black",
 };
@@ -136,8 +136,6 @@ export const PROJECTS: Project[] = [
       "supabase",
       "postgres",
     ],
-    githubUrl:
-      "https://github.com/DevDogsUGA/DevDogsUGA/tree/main/apps/platform",
   },
   {
     badge: ACTIVE,
@@ -206,7 +204,6 @@ export const PROJECTS: Project[] = [
     },
     contributions: "closed",
     techStack: ["next", "typescript", "drizzle", "supabase", "postgres"],
-    githubUrl: "https://github.com/DevDogs-UGA/Community-Resource-Forum",
   },
   {
     badge: PAUSED,

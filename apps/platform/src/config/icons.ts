@@ -18,7 +18,7 @@ export {
   LockIcon,
   MagnifyingGlassIcon,
   PauseIcon,
-  PulseIcon,
+  PlayIcon,
   ScalesIcon,
   RankingIcon,
   ScrollIcon,
