@@ -85,7 +85,10 @@ export default function AppSwitcher() {
             href={SWITCHER_PRIMARY.href}
             // /join redirects off-site, not a page — never prefetch.
             prefetch={false}
-            className="hover:shadow-block-md flex w-full items-center justify-center gap-5 rounded-sm border border-black bg-cyan-400 px-12 py-3 text-xl font-extrabold tracking-wide text-black shadow-none transition-[translate,box-shadow] hover:-translate-x-1 hover:-translate-y-1"
+            // The amber lift the Sign In button in the header uses, a size up:
+            // this one moves twice as far, so the shadow grows with it to stay
+            // a step ahead of the travel rather than hiding behind the button.
+            className="hover:shadow-block-lg flex w-full items-center justify-center gap-5 rounded-sm border border-black bg-cyan-400 px-12 py-3 text-xl font-extrabold tracking-wide text-black shadow-none transition-[translate,box-shadow] hover:-translate-x-1 hover:-translate-y-1 hover:shadow-amber-400"
           >
             {SWITCHER_PRIMARY.label} <ArrowRightIcon />
           </LinkButton>
