@@ -20,6 +20,13 @@ export const INVOLVEMENT_NETWORK_URL =
  */
 export const INVOLVEMENT_NETWORK_EVENTS_URL = `${INVOLVEMENT_NETWORK_URL}/events`;
 
+/**
+ * The roster tab of the same Involvement Network listing. `/community`
+ * redirects here while the platform's own community page is under
+ * construction.
+ */
+export const INVOLVEMENT_NETWORK_ROSTER_URL = `${INVOLVEMENT_NETWORK_URL}/roster`;
+
 export interface NavItem {
   label: string;
   href: string;
