@@ -25,11 +25,11 @@ export default function ProjectTile({ project, onNavigate }: Props) {
   const body = (
     <>
       {/* The icon carries the block shadow the cards used to, so the tile
-          itself can stay flat and let the mark be the thing you look at.
-          Rim and shadow are light rather than the cards' black: these sit on
-          a near-black tile, where black would disappear into it. */}
+          itself can stay flat and let the mark be the thing you look at. Rim
+          and shadow stay black, as everywhere else on the site — it is the
+          tile beneath that lifts, to give them something to read against. */}
       <div
-        className={`shadow-block-sm flex size-12 shrink-0 items-center justify-center rounded-xl border-2 border-mauve-300 text-2xl text-black shadow-mauve-600 transition-transform group-hover:-translate-y-0.5 ${iconBg}`}
+        className={`shadow-block-sm flex size-12 shrink-0 items-center justify-center rounded-xl border-2 border-black text-2xl text-black shadow-black transition-transform group-hover:-translate-y-0.5 ${iconBg}`}
       >
         <Icon weight="bold" />
       </div>
@@ -54,7 +54,7 @@ export default function ProjectTile({ project, onNavigate }: Props) {
           lands is the tile's business, and two glyphs only made the row of
           them look inconsistent. */}
       {url && (
-        <span className="shrink-0 text-mauve-300 transition-colors group-hover:text-white">
+        <span className="shrink-0 text-mauve-400 transition-colors group-hover:text-white">
           <ArrowRightIcon weight="bold" />
         </span>
       )}
@@ -63,13 +63,13 @@ export default function ProjectTile({ project, onNavigate }: Props) {
 
   // No `group` here: it goes on the link alone, so nothing on a disabled tile
   // responds to a hover it cannot act on.
-  const shell = "flex items-center gap-4 rounded-sm border px-4 py-3";
+  const shell = "flex items-center gap-4 rounded-md border px-4 py-3";
 
   if (!url) {
     return (
       <div
         aria-disabled="true"
-        className={`${shell} cursor-not-allowed border-mauve-900 bg-mauve-950 opacity-60`}
+        className={`${shell} cursor-not-allowed border-mauve-700 bg-mauve-800 opacity-60`}
       >
         {body}
       </div>
@@ -83,7 +83,7 @@ export default function ProjectTile({ project, onNavigate }: Props) {
         ? { target: "_blank" }
         : // In-app, so the overlay has to get out of the way behind it.
           { onClick: onNavigate })}
-      className={`${shell} group border-mauve-800 bg-mauve-950 transition-colors hover:border-mauve-600 hover:bg-mauve-900`}
+      className={`${shell} group border-mauve-700 bg-mauve-800 transition-colors hover:border-mauve-500 hover:bg-mauve-700`}
     >
       {body}
     </Link>
