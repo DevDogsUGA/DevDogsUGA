@@ -6,12 +6,13 @@ import {
   ArrowSquareOutIcon,
   ShareNetworkIcon,
 } from "@phosphor-icons/react/ssr";
+import { Dialog as DialogPrimitive } from "radix-ui";
 import { useShare } from "~/lib/useShare";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
+  DialogPortal,
   DialogTitle,
 } from "~/ui/dialog";
 
@@ -53,60 +54,66 @@ export default function OpenOrShareDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Above the switcher overlay's z-100, which the default z-50 is not. */}
-      <DialogContent
-        overlayClassName="z-110 bg-black/50"
-        showCloseButton={false}
-        className="z-110 max-w-xs rounded-md border border-mauve-600 bg-mauve-900 p-5 text-white ring-0"
-      >
-        <DialogHeader>
-          <DialogTitle className="font-display font-bold text-white">
-            {title}
-          </DialogTitle>
-          <DialogDescription className="text-xs text-mauve-400">
-            {external
-              ? `This link goes to ${new URL(url).hostname}.`
-              : "This link stays on this site."}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid grid-cols-2 gap-2">
-          {/* Share on the left, so the primary action ends the row. */}
-          <button
-            type="button"
-            onClick={() => {
-              // The share first, while the click's user activation is fresh —
-              // closing is just cleanup and can happen behind it.
-              share();
-              onOpenChange(false);
-            }}
-            className={shareStyle}
-          >
-            Share <ShareNetworkIcon weight="bold" />
-          </button>
-          {external ? (
-            <a
-              href={url}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => onOpenChange(false)}
-              className={openStyle}
-            >
-              Open <ArrowSquareOutIcon weight="bold" />
-            </a>
-          ) : (
-            <Link
-              href={url}
+      {/* The overlay and card are composed from the primitives rather than
+          taken from ~/ui/dialog: its DialogContent bakes in a hundred-
+          millisecond fade, and tailwind-merge cannot tell one animation
+          utility from another, so the site's modal keyframes would only win
+          by stylesheet order. Both sit above the switcher's z-100. */}
+      <DialogPortal>
+        <DialogPrimitive.Overlay className="data-open:animate-modal-overlay-in data-closed:animate-modal-overlay-out fixed inset-0 z-110 bg-black/50" />
+        {/* Centered with the `translate` property, which the keyframes'
+            `transform` leaves alone — the card rises the last 12px into place
+            without losing its centering on the way. */}
+        <DialogPrimitive.Content className="data-open:animate-modal-content-in data-closed:animate-modal-content-out fixed top-1/2 left-1/2 z-110 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-md border border-mauve-600 bg-mauve-900 p-5 text-sm text-white outline-none sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="font-display font-bold text-white">
+              {title}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-mauve-400">
+              {external
+                ? `This link goes to ${new URL(url).hostname}.`
+                : "This link stays on this site."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-2">
+            {/* Share on the left, so the primary action ends the row. */}
+            <button
+              type="button"
               onClick={() => {
+                // The share first, while the click's user activation is fresh —
+                // closing is just cleanup and can happen behind it.
+                share();
                 onOpenChange(false);
-                onNavigate?.();
               }}
-              className={openStyle}
+              className={shareStyle}
             >
-              Open <ArrowRightIcon weight="bold" />
-            </Link>
-          )}
-        </div>
-      </DialogContent>
+              Share <ShareNetworkIcon weight="bold" />
+            </button>
+            {external ? (
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => onOpenChange(false)}
+                className={openStyle}
+              >
+                Open <ArrowSquareOutIcon weight="bold" />
+              </a>
+            ) : (
+              <Link
+                href={url}
+                onClick={() => {
+                  onOpenChange(false);
+                  onNavigate?.();
+                }}
+                className={openStyle}
+              >
+                Open <ArrowRightIcon weight="bold" />
+              </Link>
+            )}
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPortal>
     </Dialog>
   );
 }
