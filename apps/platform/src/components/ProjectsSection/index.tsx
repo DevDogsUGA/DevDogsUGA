@@ -8,7 +8,6 @@ import SectionBackground, {
 } from "~/ui/section-background";
 import { PROJECTS } from "~/config/projects";
 import ProjectCard from "./ProjectCard";
-import SuggestProjectCard from "./SuggestProjectCard";
 
 const OPEN_PROJECTS = PROJECTS.filter((p) => p.contributions === "open");
 const CLOSED_PROJECTS = PROJECTS.filter((p) => p.contributions === "closed");
@@ -110,7 +109,6 @@ export default function ProjectsSection({
               {CLOSED_PROJECTS.map((project) => (
                 <ProjectCard key={project.title} {...project} recessed />
               ))}
-              <SuggestProjectCard />
             </div>
           </div>
 

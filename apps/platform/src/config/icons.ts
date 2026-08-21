@@ -1,6 +1,7 @@
 export {
   ArrowSquareOutIcon,
   BookOpenIcon,
+  BusIcon,
   CalendarDotsIcon,
   ChatCircleIcon,
   DiscordLogoIcon,
@@ -16,6 +17,8 @@ export {
   LinkedinLogoIcon,
   LockIcon,
   MagnifyingGlassIcon,
+  PauseIcon,
+  PulseIcon,
   ScalesIcon,
   RankingIcon,
   ScrollIcon,
@@ -28,4 +31,5 @@ export {
   TrophyIcon,
   UserIcon,
   UsersIcon,
+  WrenchIcon,
 } from "@phosphor-icons/react/ssr";

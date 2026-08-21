@@ -75,14 +75,19 @@ export default function ProjectCard({
         footPad: "pt-4",
       };
 
+  // Capitalized so JSX reads it as a component, and guarded: `Badge.icon` is
+  // optional, since the switcher's pills carry none.
+  const BadgeIcon = badge.icon;
+
   return (
     <div
       className={`flex h-full flex-col rounded-sm border-2 ${shadow} ${t.fill} ${t.card}`}
     >
       <div className="flex items-start gap-2">
         <span
-          className={`rounded-sm ${badge.bg} ${badge.text} ${t.chipPad} ${t.label} font-bold tracking-wide uppercase`}
+          className={`flex items-center gap-1 rounded-sm ${badge.bg} ${badge.text} ${t.chipPad} ${t.label} font-bold tracking-wide uppercase`}
         >
+          {BadgeIcon && <BadgeIcon className={`${t.chipIcon} shrink-0`} />}
           {badge.label}
         </span>
         <span

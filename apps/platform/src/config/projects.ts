@@ -1,9 +1,17 @@
+import type { ComponentType } from "react";
 import type * as icons from "./icons";
+import { PauseIcon, PulseIcon, WrenchIcon } from "./icons";
 import type { TechKey } from "./tech";
 
 /** A status pill: what it says, and the colors it says it in. */
 export interface Badge {
   label: string;
+  /**
+   * Drawn before the label. Optional because the switcher's pills answer
+   * "where am I going" and read fine as words alone; the homepage cards carry
+   * states you scan repeatedly down a grid, where a shape lands faster.
+   */
+  icon?: ComponentType<{ className?: string }>;
   bg: string;
   text: string;
 }
@@ -76,18 +84,34 @@ export interface Project {
   shadow?: string;
 }
 
-/**
- * Where the "Suggest a Project" card sends people.
- *
- * TODO: set this to the idea-submission form once it exists. While it is null
- * the card renders its button disabled, so nothing links to a dead target.
- */
-export const SUGGEST_PROJECT_FORM_URL: string | null = null;
+/** Shipping now, and open to whoever shows up. */
+const ACTIVE: Badge = {
+  label: "Active",
+  icon: PulseIcon,
+  bg: "bg-cyan-400",
+  text: "text-black",
+};
+
+/** Still running, but only its owners touch it. */
+const MAINTENANCE: Badge = {
+  label: "Maintenance",
+  icon: WrenchIcon,
+  bg: "bg-amber-400",
+  text: "text-black",
+};
+
+/** Stopped, with the work left where it stands. */
+const PAUSED: Badge = {
+  label: "Paused",
+  icon: PauseIcon,
+  bg: "bg-mauve-300",
+  text: "text-mauve-800",
+};
 
 export const PROJECTS: Project[] = [
   {
-    badge: { label: "Invite-Only", bg: "bg-amber-400", text: "text-black" },
-    year: "2026 – 2027",
+    badge: MAINTENANCE,
+    year: "2026 – present",
     title: "DevDogs Platform",
     tagline: "Member Portal & Dev Tools",
     titleColor: "text-mauve-950",
@@ -104,7 +128,6 @@ export const PROJECTS: Project[] = [
       badge: { label: "You are Here", bg: "bg-amber-400", text: "text-black" },
     },
     contributions: "closed",
-    note: "Built and maintained by DevDogs officers.",
     techStack: [
       "next",
       "typescript",
@@ -117,8 +140,8 @@ export const PROJECTS: Project[] = [
       "https://github.com/DevDogsUGA/DevDogsUGA/tree/main/apps/platform",
   },
   {
-    badge: { label: "In Progress", bg: "bg-cyan-400", text: "text-black" },
-    year: "2026 – 2027",
+    badge: ACTIVE,
+    year: "2024 – present",
     title: "DogDays",
     tagline: "Schedule Builder",
     titleColor: "text-red-700",
@@ -146,8 +169,8 @@ export const PROJECTS: Project[] = [
     liveUrl: { href: "https://dogdays.dev", label: "Public Beta" },
   },
   {
-    badge: { label: "In Progress", bg: "bg-cyan-400", text: "text-black" },
-    year: "2026 – 2027",
+    badge: ACTIVE,
+    year: "2026 – present",
     title: "DogPack",
     tagline: "Study Group Finder",
     titleColor: "text-purple-700",
@@ -167,7 +190,7 @@ export const PROJECTS: Project[] = [
       "https://github.com/DevDogsUGA/DevDogsUGA/tree/main/apps/study-group-finder",
   },
   {
-    badge: { label: "Paused", bg: "bg-mauve-300", text: "text-mauve-800" },
+    badge: PAUSED,
     year: "2025 – 2026",
     title: "Community Resource Forum",
     tagline: "Athens Services Directory",
@@ -184,5 +207,25 @@ export const PROJECTS: Project[] = [
     contributions: "closed",
     techStack: ["next", "typescript", "drizzle", "supabase", "postgres"],
     githubUrl: "https://github.com/DevDogs-UGA/Community-Resource-Forum",
+  },
+  {
+    badge: PAUSED,
+    year: "2023 – 2024",
+    title: "Better Bus Tracker",
+    tagline: "Campus Transit, Live",
+    titleColor: "text-sky-700",
+    description:
+      "A native Android app for riding UGA transit: buses moving on the map in real time, and arrival times for the stop you are actually standing at. Development is paused, and the source was never published.",
+    switcher: {
+      icon: "BusIcon",
+      iconBg: "bg-sky-400",
+      blurb: "Live UGA bus positions and arrival times, on Android.",
+      // No `url`, and no `githubUrl` either: nothing of this one shipped.
+      badge: PAUSED,
+    },
+    contributions: "closed",
+    // The only project here predating the shared Supabase project, hence its
+    // own database and no Postgres.
+    techStack: ["android", "kotlin", "java", "spring", "mysql", "maps"],
   },
 ];
