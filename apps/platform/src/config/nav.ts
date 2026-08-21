@@ -1,3 +1,6 @@
+import type { StaticImageData } from "next/image";
+import gdgFavicon from "~/assets/favicons/gdg.png";
+import involvementFavicon from "~/assets/favicons/involvement-network.png";
 import type { ResolvedPermissions } from "~/server/actions/permissions";
 import type * as icons from "./icons";
 
@@ -37,6 +40,8 @@ export interface SwitcherEntry {
   label: string;
   href: string;
   icon?: NavIcon;
+  /** The destination's own favicon, shown on the switcher's listing rows. */
+  favicon?: StaticImageData;
   description?: string;
   external?: true;
 }
@@ -187,11 +192,13 @@ export const SWITCHER_LINKS: SwitcherEntry[] = [
   {
     label: "UGA Involvement Network Listing",
     href: INVOLVEMENT_NETWORK_URL,
+    favicon: involvementFavicon,
     external: true,
   },
   {
     label: "Google GDG on Campus: UGA Listing",
     href: "https://gdg.community.dev/gdg-on-campus-university-of-georgia-athens-united-states/",
+    favicon: gdgFavicon,
     external: true,
   },
 ];

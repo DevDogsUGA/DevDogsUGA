@@ -1,46 +1,48 @@
 "use client";
 
-import Link from "next/link";
-import { LinkIcon } from "@phosphor-icons/react/ssr";
+import { useState } from "react";
+import Image from "next/image";
 import type { SwitcherEntry } from "~/config/nav";
-import { useLongPress } from "~/lib/useLongPress";
-import { useShare } from "~/lib/useShare";
-import ShareButton from "~/ui/share-button";
+import OpenOrShareDialog from "./OpenOrShareDialog";
 
 /**
- * An external listing, opened by tapping and shared the same two ways the
- * project tiles offer: a share button for a pointer that can hover, a long
- * press for a finger.
+ * An external listing. Pressing the row asks — open or share? — the same
+ * question the project tiles ask, so the row carries no glyph of its own
+ * beyond the site's favicon, which says where the link lands better than the
+ * generic link icon it replaced.
  */
 export default function EntryButton({ entry }: { entry: SwitcherEntry }) {
-  const share = useShare({ title: entry.label, url: entry.href });
-  const longPress = useLongPress(share);
+  const [open, setOpen] = useState(false);
 
   return (
-    // The row is the container and the link stretches over it, rather than the
-    // link being the row with a button nested inside it — which is invalid,
-    // and is what the share control here used to be.
-    <div
-      {...longPress}
-      className="group relative flex items-center justify-between gap-2 rounded-sm border border-black bg-white px-4 py-2 text-mauve-950 select-none [-webkit-touch-callout:none] hover:bg-mauve-100"
-    >
-      <LinkIcon className="shrink-0" />
-      <Link
-        href={entry.href}
-        target={entry.external ? "_blank" : undefined}
-        className="w-full rounded-sm text-center outline-none after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-mauve-950"
-      >
-        {entry.label}
-      </Link>
-      {/* Invisible at rest and untappable with it, so a touch never catches it
-          by accident — but still in the DOM, and still reachable by keyboard,
-          which is the only way a long press gets announced at all. */}
-      <ShareButton
+    <>
+      <div className="relative flex cursor-pointer items-center justify-center gap-2.5 rounded-sm border border-black bg-white px-4 py-2 text-mauve-950 transition-colors hover:bg-mauve-100">
+        {entry.favicon && (
+          <Image
+            src={entry.favicon}
+            alt=""
+            className="size-4 shrink-0"
+            // Rendered at 16px from a 64px source — no pipeline pass needed.
+            unoptimized
+          />
+        )}
+        {/* The button wraps the label and stretches over the whole row with
+            its own ::after, so the row is one control. */}
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="rounded-sm outline-none after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-mauve-950"
+        >
+          {entry.label}
+        </button>
+      </div>
+      <OpenOrShareDialog
         title={entry.label}
         url={entry.href}
-        label={entry.label}
-        className="pointer-events-none relative z-10 -m-1 shrink-0 rounded-sm p-1 opacity-0 transition-opacity outline-none group-hover:pointer-events-auto group-hover:opacity-100 hover:bg-mauve-200 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-mauve-950"
+        external={entry.external ?? false}
+        open={open}
+        onOpenChange={setOpen}
       />
-    </div>
+    </>
   );
 }
