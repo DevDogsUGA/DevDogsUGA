@@ -84,23 +84,13 @@ export default function PartnersSection({ topEdge, bottomEdge }: Props) {
                 driven students. We offer sponsorship tiers, recruiting access,
                 and mentorship opportunities.
               </p>
-              <div className="shadow-block-lg mx-auto mt-8 flex flex-col gap-3 rounded-sm border-2 border-black bg-white p-4 sm:flex-row sm:items-center sm:gap-6">
-                <p className="flex-1 text-sm text-mauve-600">
-                  <span className="inline-block">
-                    Interested in sponsoring DevDogs?
-                  </span>
-                  <span className="inline-block font-bold text-mauve-900">
-                    Put your brand in front of 350+ driven builders.
-                  </span>
-                </p>
-                <Link
-                  href="mailto:devdogs@uga.edu"
-                  className="transition-lift flex shrink-0 items-center gap-2 rounded-sm border-2 border-black bg-mauve-950 px-4 py-2 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-purple-400)]"
-                >
-                  Get in Touch
-                  <ArrowRightIcon className="text-xs" />
-                </Link>
-              </div>
+              <Link
+                href="mailto:devdogs@uga.edu"
+                className="transition-lift shadow-block-lg mt-8 flex w-fit shrink-0 items-center gap-2 rounded-sm border-2 border-black bg-white px-4 py-2 text-sm font-semibold text-mauve-950 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-purple-400)]"
+              >
+                Get in Touch
+                <ArrowRightIcon className="text-xs" />
+              </Link>
             </div>
             <MarchingAntsBadge />
           </div>
