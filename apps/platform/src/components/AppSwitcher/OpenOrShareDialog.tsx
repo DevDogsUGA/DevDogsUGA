@@ -68,6 +68,19 @@ export default function OpenOrShareDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-2">
+          {/* Share on the left, so the primary action ends the row. */}
+          <button
+            type="button"
+            onClick={() => {
+              // The share first, while the click's user activation is fresh —
+              // closing is just cleanup and can happen behind it.
+              share();
+              onOpenChange(false);
+            }}
+            className={shareStyle}
+          >
+            Share <ShareNetworkIcon weight="bold" />
+          </button>
           {external ? (
             <a
               href={url}
@@ -90,18 +103,6 @@ export default function OpenOrShareDialog({
               Open <ArrowRightIcon weight="bold" />
             </Link>
           )}
-          <button
-            type="button"
-            onClick={() => {
-              // The share first, while the click's user activation is fresh —
-              // closing is just cleanup and can happen behind it.
-              share();
-              onOpenChange(false);
-            }}
-            className={shareStyle}
-          >
-            Share <ShareNetworkIcon weight="bold" />
-          </button>
         </div>
       </DialogContent>
     </Dialog>
