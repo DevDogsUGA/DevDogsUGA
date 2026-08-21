@@ -1,6 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -24,6 +29,8 @@ interface ToneClasses {
   pulse: string;
   /** The tab that carries the eyebrow, notched onto the card's top edge. */
   chip: string;
+  /** The tab under the cursor. One step lighter — it is a close button. */
+  chipHover: string;
   /**
    * The block shadow the card rests on, and the one the action button throws
    * on hover. The card takes `shadow-block-outlined-xl`: a step past the size
@@ -48,12 +55,14 @@ const TONES: Record<AnnouncementTone, ToneClasses> = {
     card: "bg-amber-300",
     pulse: "bg-rose-600/50",
     chip: "bg-rose-600 text-white",
+    chipHover: "hover:bg-rose-500",
     blockShadow: "shadow-rose-600",
   },
   info: {
     card: "bg-sky-300",
     pulse: "bg-sky-700/40",
     chip: "bg-sky-800 text-white",
+    chipHover: "hover:bg-sky-700",
     blockShadow: "shadow-sky-800",
   },
 };
@@ -79,16 +88,46 @@ const HIDE_SCRIPT = ANNOUNCEMENT
     )})document.documentElement.dataset.announcement="dismissed"}catch(e){}`
   : "";
 
+/**
+ * How far the notice has to be dragged down before letting go closes it.
+ * 50px is Radix Toast's default swipe threshold, which is a well-worn number
+ * for exactly this gesture.
+ */
+const SWIPE_CLOSE_DISTANCE = 50;
+
+/** How long the notice takes to leave, and to spring back from a short drag. */
+const EXIT_MS = 200;
+
+/** Travel before a press counts as a drag rather than a tap. */
+const DRAG_SLOP = 4;
+
 export default function AnnouncementBanner() {
   const pathname = usePathname();
   const [dismissed, setDismissed] = useState(false);
+  /** Offset while a finger is on the notice; null when nothing is dragging. */
+  const [dragY, setDragY] = useState<number | null>(null);
+  /** Set once dismissal is committed to, while the exit plays out. */
+  const [closing, setClosing] = useState(false);
+  const dragStart = useRef<{
+    y: number;
+    pointerId: number;
+    captured: boolean;
+  } | null>(null);
+  const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (exitTimer.current) clearTimeout(exitTimer.current);
+    },
+    [],
+  );
 
   if (!ANNOUNCEMENT || dismissed || !showsAnnouncement(pathname)) return null;
 
   const { id, eyebrow, message, action, tone } = ANNOUNCEMENT;
   const toneClasses = TONES[tone];
 
-  const dismiss = () => {
+  const commitDismissal = () => {
     setDismissed(true);
     try {
       sessionStorage.setItem(ANNOUNCEMENT_STORAGE_KEY, id);
@@ -97,6 +136,59 @@ export default function AnnouncementBanner() {
       // blocked). The card still closes for this page view; it just comes back
       // on the next load, which is the honest failure direction for a notice.
     }
+  };
+
+  /**
+   * Both ways out — pressing the tab and swiping down — run the exit first and
+   * commit on a timer rather than on transitionend, which never fires if the
+   * transition is interrupted or optimised away and would strand the notice
+   * on screen for good.
+   */
+  const startDismiss = () => {
+    if (closing) return;
+    setClosing(true);
+    exitTimer.current = setTimeout(commitDismissal, EXIT_MS);
+  };
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    // Mouse sits this out deliberately: a click-drag across a card of text
+    // fights text selection, and this gesture is asking for a finger.
+    if (closing || event.pointerType === "mouse") return;
+    dragStart.current = {
+      y: event.clientY,
+      pointerId: event.pointerId,
+      captured: false,
+    };
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    const start = dragStart.current;
+    if (start?.pointerId !== event.pointerId) return;
+    const distance = event.clientY - start.y;
+
+    // Capture only once the finger has actually travelled, never on the way
+    // down. Capturing on pointerdown re-targets the click that follows, which
+    // would break tapping the tab and the action button — the two things most
+    // people touch this notice for.
+    if (!start.captured) {
+      if (Math.abs(distance) < DRAG_SLOP) return;
+      start.captured = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+
+    // Down tracks the finger exactly; up is heavily damped, since there is
+    // nothing above for the notice to go to and it should feel like it knows.
+    setDragY(distance > 0 ? distance : distance / 6);
+  };
+
+  const onPointerEnd = (event: ReactPointerEvent<HTMLElement>) => {
+    const start = dragStart.current;
+    if (start?.pointerId !== event.pointerId) return;
+    dragStart.current = null;
+    const distance = event.clientY - start.y;
+    setDragY(null);
+    // A press that never became a drag is a tap; leave it to the click.
+    if (start.captured && distance >= SWIPE_CLOSE_DISTANCE) startDismiss();
   };
 
   return (
@@ -147,6 +239,11 @@ export default function AnnouncementBanner() {
             first child, so both the card and the tab paint over it. */}
         <div
           aria-hidden
+          style={
+            closing
+              ? { opacity: 0, transition: `opacity ${EXIT_MS}ms ease-out` }
+              : undefined
+          }
           className="animate-in fade-in pointer-events-none absolute inset-x-0 -top-4 bottom-0 bg-black/50 [mask-image:linear-gradient(to_top,#000_0%,#000_20%,transparent_100%)] duration-500 supports-backdrop-filter:backdrop-blur-sm motion-reduce:animate-none md:-top-6"
         />
 
@@ -157,7 +254,30 @@ export default function AnnouncementBanner() {
             hangs above its box. */}
         <aside
           aria-label="Club announcement"
-          className="animate-in slide-in-from-bottom-6 fade-in pointer-events-auto relative mx-auto max-w-4xl duration-500 motion-reduce:animate-none"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerEnd}
+          onPointerCancel={onPointerEnd}
+          style={{
+            translate: closing
+              ? "0 140%"
+              : dragY !== null
+                ? `0 ${dragY}px`
+                : undefined,
+            opacity: closing ? 0 : undefined,
+            // Inline, so it beats every utility. While a finger is down there
+            // must be no transition at all or the notice lags behind it; and
+            // Tailwind's duration-* would collide with the entrance
+            // animation's own duration token on this same element.
+            transition:
+              dragY === null
+                ? `translate ${EXIT_MS}ms ease-out, opacity ${EXIT_MS}ms ease-out`
+                : "none",
+          }}
+          /* touch-none hands us the vertical drag instead of scrolling the
+             page with it — the same trade Radix Toast makes. It costs the
+             ability to scroll by starting the drag on the notice itself. */
+          className="animate-in slide-in-from-bottom-6 fade-in pointer-events-auto relative mx-auto max-w-4xl touch-none duration-500 motion-reduce:animate-none"
         >
           {/* Template literal, not cn(): tailwind-merge files `shadow-block-lg`
               and `shadow-rose-600` under one `shadow` group and keeps only the
@@ -239,19 +359,27 @@ export default function AnnouncementBanner() {
               land squarely on the card's face. */}
           <button
             type="button"
-            onClick={dismiss}
+            onClick={startDismiss}
             /* The eyebrow is inside the control, so the label has to carry
                both — "Now open, button" would say nothing about what pressing
                it does, and a bare "Dismiss announcement" would drop the
                eyebrow from the accessible name entirely. */
             aria-label={`${eyebrow} — dismiss announcement`}
             className={cn(
-              "absolute bottom-full left-4 flex translate-y-[2px] items-center gap-1.5 rounded-t-lg border-2 border-b-0 border-black px-2.5 py-1.5 transition-[filter] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none",
+              "group/tab absolute bottom-full left-4 flex translate-y-[2px] items-center gap-1.5 rounded-t-lg border-2 border-b-0 border-black px-2.5 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none",
               toneClasses.chip,
+              toneClasses.chipHover,
             )}
           >
-            {/* aria-hidden: the button's label already says "dismiss". */}
-            <XIcon aria-hidden className="size-3" weight="bold" />
+            {/* `fill` rather than `bold`: the label beside it is extrabold and
+                Phosphor's stroke weights top out lighter than that.
+                aria-hidden because the button's label already says
+                "dismiss". */}
+            <XIcon
+              aria-hidden
+              weight="fill"
+              className="size-3 transition-transform group-hover/tab:scale-125"
+            />
             <span className="font-display text-[0.7rem] font-extrabold tracking-widest uppercase">
               {eyebrow}
             </span>
