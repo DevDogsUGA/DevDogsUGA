@@ -14,7 +14,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260804.1",
+    "@cloudflare/workers-types": "^5.20260820.1",
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/env": "workspace:*",
     "@types/node": "catalog:",

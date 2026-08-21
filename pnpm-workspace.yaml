@@ -28,13 +28,13 @@ overrides:
 # package stay as literal ranges in that package's package.json.
 catalog:
   # --- Framework / runtime ---
-  next: ^16.3.1
+  next: ^16.3.2
   react: ^19.2.8
   react-dom: ^19.2.8
 
   # --- Supabase ---
   "@supabase/ssr": ^0.12.4
-  "@supabase/supabase-js": ^2.112.0
+  "@supabase/supabase-js": ^2.112.3
 
   # --- Radix ---
   # Kept on one release train even where a package is currently used by only
@@ -67,12 +67,12 @@ catalog:
   "@t3-oss/env-nextjs": ^0.13.11
   date-fns: ^4.4.0
   motion: ^12.43.0
-  papaparse: ^5.5.4
+  papaparse: ^5.6.0
 
   # --- Styling ---
   "@tailwindcss/forms": ^0.5.11
   "@tailwindcss/postcss": ^4.3.3
-  postcss: ^8.5.25
+  postcss: ^8.5.26
   tailwindcss: ^4.3.3
 
   # --- Toolchain ---
@@ -83,25 +83,25 @@ catalog:
   "@clack/prompts": ^1.7.0
   "@opennextjs/cloudflare": ^1.20.2
   eslint: ^9.39.5
-  supabase: ^2.111.0
-  tsx: ^4.23.5
+  supabase: ^2.115.0
+  tsx: ^4.23.12
   typescript: ^6.0.3
-  wrangler: ^4.118.0
+  wrangler: ^4.125.0
 
   # --- Testing ---
   # jsdom is held at 29.x on purpose: 30.x raises its floor to node
   # ^22.22.2 || ^24.15.0 || >=26, which is narrower than this repo's
   # declared engines.node (">=20"). Bump engines first, then jsdom.
   # vitest is held at 4.x on purpose: 5.x is still on the beta dist-tag.
-  "@testing-library/jest-dom": ^7.0.0
+  "@testing-library/jest-dom": ^7.0.1
   "@testing-library/react": ^16.3.2
-  "@testing-library/user-event": ^14.6.3
-  "@vitest/coverage-v8": ^4.1.10
+  "@testing-library/user-event": ^14.6.5
+  "@vitest/coverage-v8": ^4.1.11
   jsdom: ^29.1.1
-  vitest: ^4.1.10
+  vitest: ^4.1.11
 
   # --- Types ---
-  "@types/node": ^26.1.2
+  "@types/node": ^26.2.0
   "@types/papaparse": ^5.5.2
   "@types/react": ^19.2.18
   "@types/react-dom": ^19.2.4
@@ -172,6 +172,18 @@ minimumReleaseAgeExclude:
   - "@turbo/windows-arm64@2.10.8"
   - radix-ui@1.6.7
   - turbo@2.10.8
+  - '@next/env@16.3.2'
+  - '@next/eslint-plugin-next@16.3.2'
+  - '@next/swc-darwin-arm64@16.3.2'
+  - '@next/swc-darwin-x64@16.3.2'
+  - '@next/swc-linux-arm64-gnu@16.3.2'
+  - '@next/swc-linux-arm64-musl@16.3.2'
+  - '@next/swc-linux-x64-gnu@16.3.2'
+  - '@next/swc-linux-x64-musl@16.3.2'
+  - '@next/swc-win32-arm64-msvc@16.3.2'
+  - '@next/swc-win32-x64-msvc@16.3.2'
+  - eslint-config-next@16.3.2
+  - next@16.3.2
 onlyBuiltDependencies:
   - esbuild
   - sharp
