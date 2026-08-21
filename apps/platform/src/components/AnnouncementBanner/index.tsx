@@ -171,7 +171,12 @@ export default function AnnouncementBanner() {
               />
             </span>
 
-            <p className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+            {/* max-w-prose caps the measure. The card runs to max-w-4xl so it
+                has room for the action button on the same row, but a line of
+                copy that wide is a chore to read — the text stops at a
+                comfortable measure and wraps, and the leftover width stays
+                with the button. */}
+            <p className="flex max-w-prose min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
               <span
                 className={cn(
                   "font-display shrink-0 rounded-sm px-1.5 py-0.5 text-[0.7rem] font-extrabold tracking-widest uppercase",

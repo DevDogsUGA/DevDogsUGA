@@ -21,7 +21,11 @@ export interface Announcement {
   id: string;
   /** Two or three words, set in a chip ahead of the message. */
   eyebrow: string;
-  /** The notice itself. One sentence — the card is one line on desktop. */
+  /**
+   * The notice itself. One sentence. The text is capped at `max-w-prose`
+   * (65ch), so anything past that wraps to a second line rather than
+   * running the full width of the card.
+   */
   message: string;
   /** The thing to go do about it. A notice with no action is just noise. */
   action: {

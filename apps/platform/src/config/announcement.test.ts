@@ -55,7 +55,7 @@ describe("ANNOUNCEMENT", () => {
     expect(ANNOUNCEMENT.action.href).not.toBe("");
   });
 
-  it("keeps the message to one sentence so the bar stays one line", () => {
+  it("keeps the message short enough to stay near the prose measure", () => {
     if (!ANNOUNCEMENT) return;
     expect(ANNOUNCEMENT.message.length).toBeLessThanOrEqual(120);
   });
