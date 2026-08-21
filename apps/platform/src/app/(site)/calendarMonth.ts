@@ -14,10 +14,10 @@ import {
  */
 
 /**
- * Nothing renders a clock time any more — the cards and the popover print an
- * event's format, not its schedule. The hour survives because it still decides
- * the order two events appear in on a shared day, and the zone still decides
- * *which* day that is.
+ * These instants are the single source for the recurrence line a card prints
+ * ("Weekly on Mondays · 6:00 – 6:30 PM"), for the order two events appear in on
+ * a shared day, and — via the zone — for which day that is at all. Change an
+ * hour here and the card follows; there is no second copy of the schedule.
  */
 function iso(
   year: number,
@@ -46,26 +46,30 @@ function generateMonthEvents(year: number, month: number): CalendarEvent[] {
       events.push({
         id: `hackathon-${year}-${month}-${d}`,
         type: "hackathon",
-        title: "Hackathon Presentations",
+        title: "Feature Hackathon",
+        // Three steps, not four, and each one short enough to hold a single
+        // line: the card is square at lg, so this list and the description
+        // share a fixed height with no room to spill.
         description:
-          "The week's feature competition comes due. Every team demos what it built, judges score them against the same requirements, and one implementation wins.",
+          "A workshop announces a feature. A week later every team that built it demos, and the best implementation wins.",
         steps: [
-          "A workshop announces the feature",
-          "Teams of up to four build it in a week",
+          "Teams of up to four get a week to build it",
           "Demos judged on requirements shipped",
           "The winning pull request gets merged",
         ],
-        start: iso(year, month, d, 18, 30),
-        end: iso(year, month, d, 19, 0),
+        recurring: true,
+        start: iso(year, month, d, 18, 0),
+        end: iso(year, month, d, 18, 30),
       });
       events.push({
         id: `workshop-${year}-${month}-${d}`,
         type: "workshop",
         title: "Weekly Workshop",
         description:
-          "A hands-on session covering a technical concept directly relevant to the current project — taught by members, for members. Most workshops close by announcing the feature the next competition is built around.",
-        start: iso(year, month, d, 19, 0),
-        end: iso(year, month, d, 20, 0),
+          "A hands-on session covering a technical concept directly relevant to the current project — taught by members, for members. Most workshops close by announcing the feature the next hackathon is built around.",
+        recurring: true,
+        start: iso(year, month, d, 18, 30),
+        end: iso(year, month, d, 19, 30),
       });
     }
 
@@ -77,9 +81,10 @@ function generateMonthEvents(year: number, month: number): CalendarEvent[] {
         type: "build",
         title: "Build Session",
         description:
-          "Optional open work time mid-competition. Bring your laptop, pair with your team, get unblocked, or just ship.",
-        start: iso(year, month, d, 18, 30),
-        end: iso(year, month, d, 20, 0),
+          "Optional open work time mid-hackathon. Bring your laptop, pair with your team, get unblocked, or just ship.",
+        recurring: true,
+        start: iso(year, month, d, 18, 0),
+        end: iso(year, month, d, 19, 0),
       });
     }
   }

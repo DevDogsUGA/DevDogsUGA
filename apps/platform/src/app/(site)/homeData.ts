@@ -22,16 +22,26 @@ export interface CalendarEvent {
    * whose shape is not obvious from the name — the competition, mainly.
    */
   steps?: string[];
+  /**
+   * Set when this type meets on the same day every week, which is what lets a
+   * card say "Weekly on Mondays" instead of naming one date. The day and the
+   * clock times are read back off `start`/`end` rather than written out
+   * separately — see {@link formatRecurrence} — so the sentence on the card and
+   * the square on the calendar can never disagree. Career events are one-offs
+   * and leave it unset.
+   */
+  recurring?: boolean;
   start: string; // ISO 8601, e.g. "2026-05-13T18:30:00-04:00"
   end: string; // ISO 8601
   rsvpUrl?: string;
 }
 
 /**
- * Events happen in Athens, GA. Nothing user-facing prints a clock time — the
- * calendar shows which day something falls on and no more — but the day itself
- * still has to be decided in this zone rather than the ambient one, or an
- * evening event files under tomorrow's square the moment the server runs in UTC.
+ * Events happen in Athens, GA. Every date and time here is formatted in that
+ * zone rather than the ambient one, so the server and the browser produce
+ * identical text — `toLocaleTimeString()` would render the server's zone during
+ * SSR and the visitor's on hydration, which React resolves by discarding the
+ * server HTML.
  */
 export const EVENT_TZ = "America/New_York";
 
@@ -44,6 +54,44 @@ export interface CalendarMonth {
   /** The instant this frame was generated, for "is this event still upcoming?". */
   now: string;
   events: CalendarEvent[];
+}
+
+// Intl formatters rather than @date-fns/tz: TZDate's constructor runs
+// `new Date()` on every construction (see date/mini.js), and these run inside
+// client components during the prerender, where a clock read cannot be covered
+// by "use cache" and silently drops the whole page out of the static shell.
+// Intl.DateTimeFormat with an explicit timeZone is pure — same output on the
+// server and in the browser, no clock involved.
+const WEEKDAY_FORMAT = new Intl.DateTimeFormat("en-US", {
+  weekday: "long",
+  timeZone: EVENT_TZ,
+});
+
+const TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: EVENT_TZ,
+});
+
+/**
+ * "Weekly on Mondays · 6:00 – 6:30 PM", built from the event's own instants.
+ *
+ * The meridiem is printed once when both ends share it, which every current
+ * event does; an evening-to-night event would still read correctly because the
+ * check is on the rendered suffix rather than assumed.
+ */
+export function formatRecurrence(start: string, end: string): string {
+  const s = new Date(start);
+  const e = new Date(end);
+  const startText = TIME_FORMAT.format(s);
+  const endText = TIME_FORMAT.format(e);
+  const [startClock, startMeridiem] = startText.split(" ");
+  const endMeridiem = endText.split(" ")[1];
+  const range =
+    startMeridiem === endMeridiem
+      ? `${startClock} – ${endText}`
+      : `${startText} – ${endText}`;
+  return `Weekly on ${WEEKDAY_FORMAT.format(s)}s · ${range}`;
 }
 
 /**

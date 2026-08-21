@@ -31,13 +31,14 @@ import {
   ArrowUpRightIcon,
   CalendarDotsIcon,
   CaretRightIcon,
+  ClockIcon,
 } from "@phosphor-icons/react/ssr";
 import type {
   CalendarEvent,
   CalendarMonth,
   EventType,
 } from "~/app/(site)/homeData";
-import { eventLocalDay } from "~/app/(site)/homeData";
+import { eventLocalDay, formatRecurrence } from "~/app/(site)/homeData";
 import { dotColor, eventBadge } from "./eventBadge";
 
 function EventDetail({ event }: { event: CalendarEvent }) {
@@ -53,8 +54,16 @@ function EventDetail({ event }: { event: CalendarEvent }) {
         {event.title}
       </p>
       <p className="text-xs/relaxed text-mauve-600">{event.description}</p>
+      {event.recurring && (
+        <p className="flex items-center gap-1.5 border-t border-mauve-200 pt-2 text-xs/snug font-semibold text-black">
+          <ClockIcon className="shrink-0 text-mauve-500" />
+          {formatRecurrence(event.start, event.end)}
+        </p>
+      )}
       {event.steps && (
-        <ol className="flex flex-col gap-1.5 border-t border-mauve-200 pt-2 text-xs/snug text-mauve-600">
+        <ol
+          className={`flex flex-col gap-1.5 text-xs/snug text-mauve-600 ${event.recurring ? "" : "border-t border-mauve-200 pt-2"}`}
+        >
           {event.steps.map((step, i) => (
             <li key={step} className="flex items-start gap-2">
               <span
