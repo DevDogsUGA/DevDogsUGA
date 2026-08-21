@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon, XIcon } from "@phosphor-icons/react/ssr";
 import devdog from "~/assets/devdog.png";
-import ProjectCard from "~/components/ProjectsSection/ProjectCard";
 import { useNavUser } from "~/components/TopNav/NavUserProvider";
 import SignInButton from "~/components/TopNav/SignInButton";
 import * as icons from "~/config/icons";
@@ -12,11 +11,12 @@ import { SOCIAL_LINKS, SWITCHER_LINKS, SWITCHER_PRIMARY } from "~/config/nav";
 import { PROJECTS } from "~/config/projects";
 import LinkButton from "~/ui/link-button";
 import EntryButton from "./EntryButton";
+import ProjectTile from "./ProjectTile";
 import { useAppSwitcher } from "./provider";
 
 /**
- * Fullscreen linktree-style overlay: the DevDogs pitch, a project card per
- * project, external listings, and social channels. Expands from the trigger's
+ * Fullscreen linktree-style overlay: the DevDogs pitch, the projects as app
+ * icons, external listings, and social channels. Expands from the trigger's
  * position using the shared menu-expand/menu-collapse keyframes.
  */
 export default function AppSwitcher() {
@@ -95,16 +95,11 @@ export default function AppSwitcher() {
           <p className="text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
             Projects
           </p>
-          {/* Same one-grid treatment the homepage uses: open projects lead,
-              and the closed ones sit back in place. */}
-          <div className="grid gap-4 sm:grid-cols-2">
+          {/* No recessed treatment here, unlike the homepage grid: every tile
+              is the same size, and the badge says which are open. */}
+          <div className="grid gap-3 sm:grid-cols-2">
             {PROJECTS.map((project) => (
-              <ProjectCard
-                key={project.title}
-                {...project}
-                shadow="shadow-block-md"
-                recessed={project.contributions === "closed"}
-              />
+              <ProjectTile key={project.title} {...project} />
             ))}
           </div>
         </div>
