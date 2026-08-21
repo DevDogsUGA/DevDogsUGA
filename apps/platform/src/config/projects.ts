@@ -32,6 +32,14 @@ export interface Project {
   shadow?: string;
 }
 
+/**
+ * Where the "Suggest a Project" card sends people.
+ *
+ * TODO: set this to the idea-submission form once it exists. While it is null
+ * the card renders its button disabled, so nothing links to a dead target.
+ */
+export const SUGGEST_PROJECT_FORM_URL: string | null = null;
+
 export const PROJECTS: Project[] = [
   {
     badge: { label: "In Progress", bg: "bg-cyan-400", text: "text-black" },

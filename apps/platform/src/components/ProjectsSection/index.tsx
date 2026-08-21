@@ -8,6 +8,10 @@ import SectionBackground, {
 } from "~/ui/section-background";
 import { PROJECTS } from "~/config/projects";
 import ProjectCard from "./ProjectCard";
+import SuggestProjectCard from "./SuggestProjectCard";
+
+const OPEN_PROJECTS = PROJECTS.filter((p) => p.contributions === "open");
+const CLOSED_PROJECTS = PROJECTS.filter((p) => p.contributions === "closed");
 
 const PROJECTS_BLOBS: BlobDef[] = [
   { cx: "20%", cy: "30%", rx: "55%", ry: "50%", fill: "#a7f3d0" }, // emerald
@@ -93,16 +97,21 @@ export default function ProjectsSection({
             {/* <RotatedImage /> */}
           </div>
 
-          {/* One grid, ordered open-first: the projects closed to
-              contributions sit back rather than sitting under a label. */}
-          <div className="grid items-stretch gap-4 md:grid-cols-2">
-            {PROJECTS.map((project) => (
-              <ProjectCard
-                key={project.title}
-                {...project}
-                recessed={project.contributions === "closed"}
-              />
-            ))}
+          {/* Two rows rather than one 2x2: the projects you can join get the
+              full-width pair, and the closed ones share a row of three with
+              the card that asks for the next project. */}
+          <div className="space-y-4">
+            <div className="grid items-stretch gap-4 md:grid-cols-2">
+              {OPEN_PROJECTS.map((project) => (
+                <ProjectCard key={project.title} {...project} />
+              ))}
+            </div>
+            <div className="grid items-stretch gap-4 md:grid-cols-3">
+              {CLOSED_PROJECTS.map((project) => (
+                <ProjectCard key={project.title} {...project} recessed />
+              ))}
+              <SuggestProjectCard />
+            </div>
           </div>
 
           <div className="flex flex-col items-center gap-4 text-center">
