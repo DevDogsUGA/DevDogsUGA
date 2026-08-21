@@ -32,16 +32,21 @@ export default function ProjectCard({
   githubUrl,
   liveUrl,
   recessed = false,
-  shadow = recessed ? "shadow-block-md shadow-black/30" : "shadow-block-lg",
+  shadow = recessed ? "shadow-block-md shadow-black/40" : "shadow-block-lg",
 }: Props) {
   // One step down in size, spacing, and contrast, kept in one object so the
   // two variants cannot drift apart. Every padding has an entry: shrinking the
   // type without shrinking what surrounds it is what makes a small card read
   // as a big card squeezed. `chip` also stays a step darker than `card` in
   // both variants — that rule is relative, so it has to move with the fill.
+  //
+  // `fill` is its own entry because two things share it: the card, and the
+  // outlined GitHub button, which is meant to read as a cutout of the card
+  // rather than as a white chip sitting on it.
   const t = recessed
     ? {
-        card: "gap-3 border-black/40 bg-mauve-100 p-4",
+        card: "gap-3 border-black/50 p-4",
+        fill: "bg-mauve-100",
         title: "text-xl",
         label: "text-[0.65rem]",
         body: "text-xs/relaxed",
@@ -55,7 +60,8 @@ export default function ProjectCard({
         footPad: "pt-3",
       }
     : {
-        card: "gap-4 border-black bg-white p-6",
+        card: "gap-4 border-black p-6",
+        fill: "bg-white",
         title: "text-2xl",
         label: "text-xs",
         body: "text-sm/relaxed",
@@ -71,7 +77,7 @@ export default function ProjectCard({
 
   return (
     <div
-      className={`flex h-full flex-col rounded-sm border-2 ${shadow} ${t.card}`}
+      className={`flex h-full flex-col rounded-sm border-2 ${shadow} ${t.fill} ${t.card}`}
     >
       <div className="flex items-start gap-2">
         <span
@@ -130,7 +136,7 @@ export default function ProjectCard({
             <Link
               href={githubUrl}
               target="_blank"
-              className={`transition-lift hover:shadow-block-md flex shrink-0 items-center gap-2 rounded-sm border-2 border-black bg-white ${t.button} font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5`}
+              className={`transition-lift hover:shadow-block-md flex shrink-0 items-center gap-2 rounded-sm border-2 border-black ${t.fill} ${t.button} font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5`}
             >
               <GithubLogoIcon /> GitHub
             </Link>
