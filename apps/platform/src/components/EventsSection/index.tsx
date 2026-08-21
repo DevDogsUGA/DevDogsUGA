@@ -55,15 +55,16 @@ export default function EventsSection({ topEdge, bottomEdge }: Props) {
             </p>
             {/* One room for everything, so it is said once here rather than
                 repeated on all four cards. */}
-            <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-black">
-              <MapPinIcon className="shrink-0 text-mauve-500" weight="fill" />
-              DLW 124 — the new Dining, Learning &amp; Well-Being center
-            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <p className="flex items-center gap-2 text-sm font-semibold text-black">
+                <MapPinIcon className="shrink-0 text-mauve-500" weight="fill" />
+                DLW 124 — the new Dining, Learning &amp; Well-Being center
+              </p>
+              <FindUs />
+            </div>
           </div>
 
           <EventsGrid month={month} />
-
-          <FindUs />
 
           <div className="mt-6 flex justify-end">
             <LinkButton

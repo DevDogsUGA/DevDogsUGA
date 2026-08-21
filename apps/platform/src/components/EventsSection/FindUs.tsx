@@ -1,5 +1,19 @@
-import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
-import { BUILDINGS, ROADS, ROUTE, VIEW } from "./campusMapData";
+"use client";
+
+import { useState } from "react";
+import {
+  ArrowUpRightIcon,
+  MapPinIcon,
+  MapTrifoldIcon,
+} from "@phosphor-icons/react/ssr";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from "~/ui/dialog";
+import { BUILDINGS, ROADS, ROUTE, ROUTE_START, VIEW } from "./campusMapData";
 
 /**
  * The destination is passed as a place query rather than coordinates: the DLW
@@ -23,6 +37,18 @@ const CAMPUS_STEPS = [
   "Driving? The Tate Deck is the closest visitor parking, about a five-minute walk away.",
 ];
 
+const ROOM_STEPS = [
+  "Come in through the main entrance on E. Cloverhurst Ave.",
+  "Skip the stairs — dining is on floors 2 and 3, and we stay on 1.",
+  "Head into the first-floor classroom hallway: Room 124 has the DevDogs sign on the door.",
+];
+
+const TABS = [
+  { id: "building", label: "To the building" },
+  { id: "room", label: "To Room 124" },
+] as const;
+type TabId = (typeof TABS)[number]["id"];
+
 /** OSM's name for the building the map highlights. */
 const DLW_OSM_NAME = "Dining, Learning and Well-being Center";
 
@@ -32,80 +58,110 @@ const DLW_OSM_NAME = "Dining, Learning and Well-being Center";
  * roads and off each other, so re-check after regenerating campusMapData.
  */
 const BUILDING_LABELS: { text: string; x: number; y: number }[] = [
-  { text: "Brumby", x: 28, y: 205 },
-  { text: "Russell", x: 85, y: 190 },
-  { text: "Creswell", x: 140, y: 190 },
-  { text: "Hill Community", x: 258, y: 152 },
-  { text: "Bolton", x: 285, y: 93 },
-  { text: "MLC", x: 384, y: 82 },
-  { text: "Tate Center", x: 392, y: 158 },
-  { text: "Tate Deck", x: 338, y: 158 },
-  { text: "Oglethorpe House & Dining", x: 200, y: 368 },
-];
-
-const ROOM_STEPS = [
-  "Come in through the main entrance on E. Cloverhurst Ave.",
-  "Skip the stairs — dining is on floors 2 and 3, and we stay on 1.",
-  "Head into the first-floor classroom hallway: Room 124 has the DevDogs sign on the door.",
+  { text: "Brumby", x: 22, y: 165 },
+  { text: "Russell", x: 68, y: 153 },
+  { text: "Creswell", x: 112, y: 153 },
+  { text: "The Hill", x: 198, y: 126 },
+  { text: "Bolton", x: 229, y: 75 },
+  { text: "MLC", x: 308, y: 66 },
+  { text: "Tate Center", x: 319, y: 127 },
+  { text: "Tate Deck", x: 267, y: 127 },
+  { text: "Oglethorpe House & Dining", x: 161, y: 296 },
+  { text: "Boyd", x: 330, y: 352 },
+  { text: "Science Library", x: 290, y: 346 },
+  { text: "Physics", x: 320, y: 216 },
+  { text: "Snelling", x: 276, y: 404 },
+  { text: "Sanford Stadium", x: 405, y: 141 },
+  { text: "Journalism", x: 385, y: 44 },
 ];
 
 export default function FindUs() {
+  const [tab, setTab] = useState<TabId>("building");
+
   return (
-    <div className="space-y-4">
-      <h3 className="font-display flex items-center gap-2 text-2xl font-extrabold text-black">
-        <MapPinIcon className="text-mauve-500" weight="fill" />
-        How to find us
-      </h3>
-      <div
-        className="grid grid-cols-1 gap-4 lg:grid-cols-2"
-        data-animate-stagger
-      >
-        <MapPanel title="Getting to the DLW" steps={CAMPUS_STEPS}>
-          <CampusMap />
-          <div className="mt-4 flex flex-wrap gap-2">
-            <DirectionsLink href={GOOGLE_MAPS_URL}>Google Maps</DirectionsLink>
-            <DirectionsLink href={APPLE_MAPS_URL}>Apple Maps</DirectionsLink>
-          </div>
-        </MapPanel>
-        <MapPanel title="Finding Room 124" steps={ROOM_STEPS}>
-          <FloorPlan />
-        </MapPanel>
-      </div>
-    </div>
+    <Dialog>
+      <DialogTrigger asChild>
+        <button className="hover:shadow-block-md transition-lift flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5">
+          <MapTrifoldIcon /> Directions
+        </button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[85dvh] w-full overflow-y-auto rounded-sm border-2 border-black bg-white p-5 text-black ring-0 sm:max-w-xl">
+        <div className="flex flex-col gap-2">
+          <DialogTitle className="font-display flex items-center gap-2 text-2xl leading-none font-extrabold text-black">
+            <MapPinIcon className="text-mauve-500" weight="fill" />
+            How to find us
+          </DialogTitle>
+          <DialogDescription className="text-sm text-mauve-600">
+            Every event happens in DLW 124 — the new Dining, Learning &
+            Well-Being center on West Campus.
+          </DialogDescription>
+        </div>
+
+        <div role="tablist" aria-label="Directions" className="flex gap-2">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              id={`findus-tab-${t.id}`}
+              aria-selected={tab === t.id}
+              aria-controls={`findus-panel-${t.id}`}
+              onClick={() => setTab(t.id)}
+              className={`rounded-sm border-2 border-black px-3 py-1.5 text-xs font-bold transition-[background-color,box-shadow] ${
+                tab === t.id
+                  ? "shadow-block-sm bg-rose-400 text-black"
+                  : "bg-white text-mauve-600 hover:bg-rose-50"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div
+          role="tabpanel"
+          id={`findus-panel-${tab}`}
+          aria-labelledby={`findus-tab-${tab}`}
+          className="flex flex-col gap-3"
+        >
+          {tab === "building" ? (
+            <>
+              <CampusMap />
+              <div className="flex flex-wrap gap-2">
+                <DirectionsLink href={GOOGLE_MAPS_URL}>
+                  Google Maps
+                </DirectionsLink>
+                <DirectionsLink href={APPLE_MAPS_URL}>
+                  Apple Maps
+                </DirectionsLink>
+              </div>
+              <StepList steps={CAMPUS_STEPS} />
+            </>
+          ) : (
+            <>
+              <FloorPlan />
+              <StepList steps={ROOM_STEPS} />
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function MapPanel({
-  title,
-  steps,
-  children,
-}: {
-  title: string;
-  steps: string[];
-  children: React.ReactNode;
-}) {
+function StepList({ steps }: { steps: string[] }) {
   return (
-    <div
-      className="shadow-block-lg flex h-full flex-col gap-3 rounded-sm border-2 border-black bg-white p-5"
-      data-animate="fade-up"
-    >
-      <h4 className="font-display text-lg leading-tight font-extrabold text-black">
-        {title}
-      </h4>
-      {children}
-      {/* The list, not the drawing, is the accessible version of the route —
-          both SVGs are aria-hidden so screen readers get one copy, not two. */}
-      <ol className="mt-1 flex flex-col gap-1.5 text-sm/relaxed text-mauve-600">
-        {steps.map((step, i) => (
-          <li key={step} className="flex items-start gap-2">
-            <span aria-hidden className={STEP_CHIP_CLS}>
-              {i + 1}
-            </span>
-            {step}
-          </li>
-        ))}
-      </ol>
-    </div>
+    /* The list, not the drawing, is the accessible version of the route —
+       both SVGs are aria-hidden so screen readers get one copy, not two. */
+    <ol className="flex flex-col gap-1.5 text-sm/relaxed text-mauve-600">
+      {steps.map((step, i) => (
+        <li key={step} className="flex items-start gap-2">
+          <span aria-hidden className={STEP_CHIP_CLS}>
+            {i + 1}
+          </span>
+          {step}
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -147,10 +203,10 @@ function CampusMap() {
           surfaces run together at junctions instead of butting into casings */}
       <g fill="none" strokeLinecap="round" strokeLinejoin="round">
         {Object.entries(ROADS).map(([name, d]) => (
-          <path key={name} d={d} className="stroke-black" strokeWidth="12" />
+          <path key={name} d={d} className="stroke-black" strokeWidth="10" />
         ))}
         {Object.entries(ROADS).map(([name, d]) => (
-          <path key={name} d={d} className="stroke-white" strokeWidth="8" />
+          <path key={name} d={d} className="stroke-white" strokeWidth="6.5" />
         ))}
       </g>
 
@@ -184,7 +240,15 @@ function CampusMap() {
         ))}
       </g>
 
-      {/* Walking route: Tate's west side → S. Lumpkin → University Ct → DLW */}
+      {/* Walking route: the Tate crossing on S. Lumpkin → University Ct → DLW,
+          with a dot marking the start by the Tate bus stops */}
+      <circle
+        cx={ROUTE_START[0]}
+        cy={ROUTE_START[1]}
+        r="4.5"
+        className="fill-rose-600 stroke-black"
+        strokeWidth="1.5"
+      />
       <path
         d={ROUTE}
         fill="none"
@@ -198,51 +262,67 @@ function CampusMap() {
       {/* Destination pin on the DLW, name called out in the open block west
           of it (the footprint is too small to hold its own label) */}
       <circle
-        cx="184"
-        cy="219"
-        r="8"
+        cx="148"
+        cy="176"
+        r="7"
         className="fill-rose-600 stroke-black"
         strokeWidth="2"
       />
-      <path d="M 177.5 224 L 190.5 224 L 184 238 Z" className="fill-rose-600" />
+      <path d="M 142.6 180 L 153.4 180 L 148 191 Z" className="fill-rose-600" />
       <line
-        x1="113"
-        y1="248"
-        x2="166"
-        y2="237"
+        x1="91"
+        y1="199"
+        x2="133"
+        y2="190"
         className="stroke-mauve-400"
         strokeWidth="1"
       />
       <g textAnchor="middle">
         <text
-          x="82"
-          y="250"
-          fontSize="15"
+          x="66"
+          y="201"
+          fontSize="14"
           className="font-display fill-black font-extrabold"
         >
           DLW
         </text>
-        <text x="80" y="264" fontSize="7" className="fill-black font-semibold">
+        <text
+          x="64"
+          y="213"
+          fontSize="6.5"
+          className="fill-black font-semibold"
+        >
           Dining, Learning
         </text>
-        <text x="80" y="274" fontSize="7" className="fill-black font-semibold">
+        <text
+          x="64"
+          y="222"
+          fontSize="6.5"
+          className="fill-black font-semibold"
+        >
           &amp; Well-Being Center
         </text>
       </g>
 
       {/* Road labels, angled along their roads */}
-      <g fontSize="10" className="fill-mauve-700 font-bold">
-        <text x="40" y="118" transform="rotate(-12.5 40 118)">
+      <g fontSize="9" className="fill-mauve-700 font-bold">
+        <text x="32" y="95" transform="rotate(-12.5 32 95)">
           Baxter St
         </text>
-        <text x="296" y="208" transform="rotate(-76 296 208)">
+        <text x="252" y="192" transform="rotate(-76 252 192)">
           S. Lumpkin St
         </text>
-        <text x="54" y="372" transform="rotate(-67.5 54 372)">
+        <text x="43" y="299" transform="rotate(-67.5 43 299)">
           E. Cloverhurst Ave
         </text>
-        <text x="222" y="322" fontSize="8" transform="rotate(23 222 322)">
+        <text x="178" y="259" fontSize="8" transform="rotate(23 178 259)">
           University Ct
+        </text>
+        <text x="285" y="328" fontSize="8" transform="rotate(-78 285 328)">
+          Sanford Dr
+        </text>
+        <text x="371" y="335" fontSize="8" transform="rotate(-90 371 335)">
+          D.W. Brooks Dr
         </text>
       </g>
 
@@ -258,7 +338,7 @@ function CampusMap() {
       </text>
       <text
         x="474"
-        y="382"
+        y="409"
         textAnchor="end"
         fontSize="6.5"
         className="fill-mauve-400"
