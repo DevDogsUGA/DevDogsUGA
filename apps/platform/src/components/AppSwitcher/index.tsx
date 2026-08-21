@@ -96,10 +96,15 @@ export default function AppSwitcher() {
             Projects
           </p>
           {/* No recessed treatment here, unlike the homepage grid: every tile
-              is the same size, and the badge says which are open. */}
+              is the same size, and the ones with nowhere to send you render
+              disabled, which says more than a size difference would. */}
           <div className="grid gap-3 sm:grid-cols-2">
             {PROJECTS.map((project) => (
-              <ProjectTile key={project.title} {...project} />
+              <ProjectTile
+                key={project.title}
+                project={project}
+                onNavigate={close}
+              />
             ))}
           </div>
         </div>
