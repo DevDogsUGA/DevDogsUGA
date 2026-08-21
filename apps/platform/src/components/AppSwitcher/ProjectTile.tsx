@@ -34,12 +34,15 @@ export default function ProjectTile({ project, onNavigate }: Props) {
         <Icon weight="bold" />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+      {/* The gap is the tight one, between the name and the line describing
+          it; the badge buys its own room back with a margin, so it sits apart
+          from the pair rather than evenly among them. */}
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
         {/* On its own line above the name rather than beside it: the longer
             labels were wrapping the pill onto a second row anyway. */}
         {badge && (
           <span
-            className={`rounded-sm ${badge.bg} ${badge.text} px-1.5 py-0.5 text-[0.625rem] leading-none font-bold tracking-wide uppercase`}
+            className={`mb-1 rounded-sm ${badge.bg} ${badge.text} px-1.5 py-0.5 text-[0.625rem] leading-none font-bold tracking-wide uppercase`}
           >
             {badge.label}
           </span>
