@@ -44,10 +44,12 @@ export default function OpenOrShareDialog({
 }: Props) {
   const share = useShare({ title, url });
 
-  const openStyle =
-    "flex items-center justify-center gap-2 rounded-sm border border-black bg-cyan-400 px-3 py-2.5 text-sm font-bold text-black transition-colors hover:bg-cyan-300";
-  const shareStyle =
-    "flex items-center justify-center gap-2 rounded-sm border border-mauve-600 px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-mauve-800";
+  // The Sign In button's amber lift, on buttons the same size: 2px of travel
+  // with the shadow a step ahead of it at 3px.
+  const lift =
+    "transition-[translate,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_var(--color-amber-400)]";
+  const openStyle = `flex items-center justify-center gap-2 rounded-sm border border-black bg-cyan-400 px-3 py-2.5 text-sm font-bold text-black ${lift}`;
+  const shareStyle = `flex items-center justify-center gap-2 rounded-sm border border-mauve-600 px-3 py-2.5 text-sm font-bold text-white ${lift}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -55,7 +57,7 @@ export default function OpenOrShareDialog({
       <DialogContent
         overlayClassName="z-110 bg-black/50"
         showCloseButton={false}
-        className="z-110 max-w-xs rounded-md border border-mauve-600 bg-mauve-900 text-white ring-0"
+        className="z-110 max-w-xs rounded-md border border-mauve-600 bg-mauve-900 p-5 text-white ring-0"
       >
         <DialogHeader>
           <DialogTitle className="font-display font-bold text-white">
