@@ -11,6 +11,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./gen": {
+      "types": "./dist/gen/run.d.ts",
+      "default": "./dist/gen/run.js"
     }
   },
   "files": [
@@ -19,7 +23,10 @@
   ],
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "github-slugger": "^2.0.0",
@@ -27,6 +34,7 @@
     "mdast-util-to-string": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
+    "typescript": "catalog:",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.1.0"
   },
@@ -34,6 +42,7 @@
     "@devdogsuga/config": "workspace:*",
     "@types/mdast": "^4.0.4",
     "@types/node": "catalog:",
-    "typescript": "catalog:"
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
   }
 }

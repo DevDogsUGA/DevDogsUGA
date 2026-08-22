@@ -11,7 +11,8 @@
     }
   },
   "scripts": {
-    "build": "docs-build"
+    "build": "docs-build",
+    "docs:gen": "docs-build gen"
   },
   "dependencies": {
     "@devdogsuga/docs-build": "workspace:*"

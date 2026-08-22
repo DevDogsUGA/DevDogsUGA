@@ -16,6 +16,11 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  # Reads this app's declarations for `docs-build gen`, which has no way to
+  # analyze Dart from Node. Used only by `tool/docs_extract.dart`. Held at 13.x
+  # because the Flutter SDK pins meta 1.18.0, which 14.x will not resolve
+  # against — see the API notes at the top of that script.
+  analyzer: ^13.0.0
   # Dart model generation from the shared Supabase schema (no official Dart
   # target in `supabase gen types`). Run via `pnpm --filter study-group-finder
   # generate-types`.

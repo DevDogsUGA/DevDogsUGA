@@ -104,6 +104,19 @@ temp_interactive_push.bat
 # platform's tsconfig include would otherwise typecheck a minified bundle.
 ds-bundle/
 
+# generated api reference
+# `docs-build gen` derives these from doc comments in the source, 200-plus
+# pages of them, and rewrites the lot on every build. Committing them would put
+# a regenerated wall of markdown into every review diff that touched a single
+# exported symbol, which makes the diff useless for reading the change that
+# actually mattered. Nothing is lost by leaving them out: every input the
+# generator reads is committed, so any clone can reproduce the output exactly
+# by building. The Dart pass is the same deal one step earlier -- the Flutter
+# analyzer writes its extraction to tool/*.docs.json, which the generator then
+# turns into pages.
+docs/*/reference/
+apps/study-group-finder/tool/*.docs.json
+
 # Design-sync working state. Local-only by choice: the tool is run from one
 # machine, so the whole directory stays out of the repo rather than just its
 # build cache. Note what that gives up — a fresh clone cannot re-sync as-is,

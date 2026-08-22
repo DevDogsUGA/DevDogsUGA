@@ -145,6 +145,65 @@
     "@devdogsuga/email#test": {
       "dependsOn": ["^build", "build"]
     },
+    // The reference generator: `docs-build gen` walks every non-test source
+    // file under apps/*/src and packages/*/src and writes markdown pages into
+    // docs/<project>/reference/. It is its own task rather than a step folded
+    // into @devdogsuga/docs#build because of what it costs -- a full
+    // type-checking pass over ~539 source files, far and away the slowest part
+    // of building the docs. Folded in, it would re-run whenever ANY file under
+    // docs/ changed, so fixing a typo in a hand-written guide would pay to
+    // re-check the entire monorepo. Split out and keyed on the source folders
+    // below, that prose-only edit is a cache hit here and only the cheap
+    // markdown compile actually runs.
+    //
+    // `^build` because the generator ships inside @devdogsuga/docs-build, and
+    // the committed bin shim immediately imports ../dist/cli.js.
+    //
+    // ⚠️ The `$TURBO_ROOT$` prefixes are load-bearing, not decoration. This
+    // task runs in the @devdogsuga/docs package, and turbo resolves inputs and
+    // outputs relative to the PACKAGE directory -- so a bare
+    // "apps/*/src/**/*.ts" would mean docs/apps/*/src and match nothing. Both
+    // halves of that fail silently rather than loudly: a task whose inputs
+    // match nothing is a permanent cache hit, and one whose outputs match
+    // nothing caches an empty artifact, so a fresh clone restoring that cache
+    // would get no reference pages at all and a docs build that quietly omits
+    // half the site. `$TURBO_ROOT$` rebases both onto the repository root,
+    // which is where the generator actually reads and writes.
+    "docs:gen": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_ROOT$/apps/*/src/**/*.ts",
+        "$TURBO_ROOT$/apps/*/src/**/*.tsx",
+        "$TURBO_ROOT$/packages/*/src/**/*.ts",
+        // The tsconfigs and package manifests are real inputs, not
+        // incidentals. The generator reads path aliases out of the former and
+        // the `exports` map out of the latter to decide what counts as a
+        // package's public surface, so adding an alias or exporting a new
+        // subpath rewrites emitted pages without touching a single .ts file.
+        "$TURBO_ROOT$/apps/*/tsconfig.json",
+        "$TURBO_ROOT$/packages/*/tsconfig.json",
+        "$TURBO_ROOT$/apps/*/package.json",
+        "$TURBO_ROOT$/packages/*/package.json",
+        "$TURBO_ROOT$/tsconfig.base.json"
+      ],
+      "outputs": ["$TURBO_ROOT$/docs/*/reference/**"]
+    },
+    // Scoped so the reference pages exist before the markdown compile reads
+    // them; the generic `build` task above has no way to say that one package
+    // needs an extra task run first. Outputs are trimmed to `dist/**` because
+    // that is all this package emits -- `docs-build` writes dist/index.js and
+    // dist/index.d.ts by hand and never invokes tsc, so there is no
+    // *.tsbuildinfo to cache alongside them the way the generic task needs.
+    //
+    // The generated pages are gitignored, so turbo's default input hashing
+    // cannot see them and a regenerated page will never invalidate this task
+    // on its own. It does not have to: depending on docs:gen folds that task's
+    // hash into this one, so a source change reaches this build through the
+    // task graph rather than through the filesystem.
+    "@devdogsuga/docs#build": {
+      "dependsOn": ["^build", "docs:gen"],
+      "outputs": ["dist/**"]
+    },
     // `^build` so workspace deps that emit (notably @devdogsuga/docs, whose
     // build parses docs/**/*.md into the module the docs routes import) exist
     // before the dev server starts. `turbo watch dev` then re-runs those builds

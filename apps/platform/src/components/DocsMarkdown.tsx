@@ -37,6 +37,10 @@ const highlighterPromise = createHighlighterCore({
   langs: [
     import("shiki/dist/langs/bash.mjs"),
     import("shiki/dist/langs/css.mjs"),
+    // Dart arrives with the generated Flutter reference, whose every signature
+    // is Dart source. Without the grammar those blocks fall back to `text` and
+    // lose their highlighting silently.
+    import("shiki/dist/langs/dart.mjs"),
     import("shiki/dist/langs/diff.mjs"),
     import("shiki/dist/langs/graphql.mjs"),
     import("shiki/dist/langs/html.mjs"),

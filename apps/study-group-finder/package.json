@@ -12,6 +12,7 @@
   "scripts": {
     "build": "with-env -c 'flutter build web --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",
     "dev": "with-env -c 'flutter run --dart-define=SUPABASE_URL=$API_URL --dart-define=SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY --dart-define=AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE:-devdogs}'",
+    "docs:extract": "dart run tool/docs_extract.dart",
     "test": "flutter test",
     "lint": "flutter analyze",
     "typecheck": "tsc --noEmit",
