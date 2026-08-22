@@ -1,13 +1,31 @@
-import { redirect } from "next/navigation";
-import { INVOLVEMENT_NETWORK_EVENTS_URL } from "~/config/nav";
+import type { Metadata } from "next";
+import EventsSection from "~/components/EventsSection";
+import UnderConstruction from "~/components/UnderConstruction";
+
+export const metadata: Metadata = {
+  title: "Events | DevDogs",
+  description: "Upcoming meetings, workshops, and events hosted by DevDogs.",
+};
+
+export default function EventsPage() {
+  // Build-time, not request-time, like the homepage: whatever DEPLOY_ENV holds
+  // during `next build` decides which branch ships.
+  if (process.env.DEPLOY_ENV === "production") return <UnderConstruction />;
+
+  return <EventsBody />;
+}
 
 /**
- * The platform's own events page isn't built yet, so `/events` sends people
- * to the Involvement Network's events tab instead. `redirect()` answers with
- * a 307, deliberately: a permanent redirect would be memorized by browsers
- * that visited during this window, and flipping `/events` back to the
- * platform's own page would have no way to reach them.
+ * Cached for the same reason the homepage's sections are: EventsSection reads
+ * the clock for the calendar month, which is only legal inside a cache scope,
+ * and nothing on the page is per-visitor.
  */
-export default function Events(): never {
-  redirect(INVOLVEMENT_NETWORK_EVENTS_URL);
+async function EventsBody() {
+  "use cache";
+
+  return (
+    <div className="flex flex-col bg-black py-4 md:py-6">
+      <EventsSection topEdge="flat" bottomEdge="flat" page />
+    </div>
+  );
 }
