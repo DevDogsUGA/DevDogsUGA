@@ -223,9 +223,14 @@ export default async function MeetingPage({
       )}
 
       <section className="flex flex-col gap-2">
-        <h2 className="font-display text-xs font-extrabold tracking-wide text-mauve-500 uppercase">
+        {/* h3, not h2: the dialog's own title is the h2 here — Radix renders
+            `DialogTitle` as one and uses it for the accessible name — so a
+            section inside the body has to sit a level below it rather than
+            beside it, or a screen reader reads the agenda as a sibling of the
+            meeting rather than part of it. */}
+        <h3 className="font-display text-xs font-extrabold tracking-wide text-mauve-500 uppercase">
           Agenda
-        </h2>
+        </h3>
         {judged.length === 0 && workshops.length === 0 ? (
           <p className="rounded-sm border-2 border-black bg-white p-3 text-sm text-mauve-700">
             Nothing is scheduled for this night yet — come build whatever you
