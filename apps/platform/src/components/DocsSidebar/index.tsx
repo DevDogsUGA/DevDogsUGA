@@ -4,13 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { SidebarIcon } from "@phosphor-icons/react/ssr";
 import type { DocsTreeNode } from "~/lib/docsTree";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/ui/select";
+import Select from "~/components/Select";
 import {
   Sheet,
   SheetContent,
@@ -48,23 +42,21 @@ function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
   return (
     <div className="flex flex-col gap-4">
       {projects.length > 1 && (
-        <Select value={project} onValueChange={onProjectChange}>
-          {/* The color is explicit because the trigger otherwise inherits
-              <body>'s text-mauve-950, and the chosen project's name painted
-              invisibly against the sidebar. */}
-          <SelectTrigger
-            aria-label="Project"
-            className="w-full font-medium text-white"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {projects.map((p) => (
-              <SelectItem key={p.slug} value={p.slug}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
+        // The site's own select — the same control the account page's
+        // graduation fields use — rather than the shadcn one in ~/ui, which
+        // is styled for a light surface and left the chosen project's name
+        // painted in <body>'s text-mauve-950 against the dark sidebar.
+        <Select
+          value={project}
+          onValueChange={onProjectChange}
+          aria-label="Project"
+          className="w-full"
+        >
+          {projects.map((p) => (
+            <Select.Item key={p.slug} value={p.slug}>
+              {p.name}
+            </Select.Item>
+          ))}
         </Select>
       )}
 

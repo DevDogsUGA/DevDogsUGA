@@ -3,18 +3,43 @@
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { CheckIcon, CaretUpDownIcon } from "@phosphor-icons/react/ssr";
 import type { ComponentPropsWithoutRef } from "react";
+import { cn } from "~/lib/cn";
 
 type RootProps = ComponentPropsWithoutRef<typeof SelectPrimitive.Root>;
 
 interface SelectProps extends RootProps {
   placeholder?: string;
+  /**
+   * Applied to the trigger, since that is the element a caller sizes. Callers
+   * that size it from the parent instead (`*:flex-1`, `*:w-full`) need
+   * nothing here.
+   */
+  className?: string;
+  /**
+   * Also the trigger's: Root renders no DOM, so a label spread onto it would
+   * be dropped. Needed wherever the chosen value alone does not say what the
+   * control selects.
+   */
+  "aria-label"?: string;
   children: React.ReactNode;
 }
 
-function Select({ placeholder, children, ...props }: SelectProps) {
+function Select({
+  placeholder,
+  className,
+  "aria-label": ariaLabel,
+  children,
+  ...props
+}: SelectProps) {
   return (
     <SelectPrimitive.Root {...props}>
-      <SelectPrimitive.Trigger className="group flex items-center justify-between gap-2 rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-2 text-sm text-white hover:border-mauve-500 hover:inset-shadow-sm focus:outline-none data-placeholder:text-mauve-500">
+      <SelectPrimitive.Trigger
+        aria-label={ariaLabel}
+        className={cn(
+          "group flex items-center justify-between gap-2 rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-2 text-sm text-white hover:border-mauve-500 hover:inset-shadow-sm focus:outline-none data-placeholder:text-mauve-500",
+          className,
+        )}
+      >
         <SelectPrimitive.Value placeholder={placeholder} />
         <SelectPrimitive.Icon>
           <CaretUpDownIcon className="text-mauve-500" />

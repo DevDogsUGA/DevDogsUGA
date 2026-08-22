@@ -1,7 +1,8 @@
 import { GithubLogoIcon } from "@phosphor-icons/react/ssr";
 import DocsMarkdown from "~/components/DocsMarkdown";
-import InlineTableOfContents from "~/components/InlineTableOfContents";
-import TableOfContents from "~/components/TableOfContents";
+import TableOfContents, {
+  InlineTableOfContents,
+} from "~/components/TableOfContents";
 import type { DocHeading, TOCItem } from "~/lib/toc";
 
 interface Props {
