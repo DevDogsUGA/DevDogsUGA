@@ -286,8 +286,9 @@ Run them as `pnpm airtable:scaffold`, `pnpm airtable:pull-ids`,
 `--dry-run`, which reports the diff
 without writing; it is worth using first, because the first real run is against
 a base somebody cares about. They are also in the `pnpm devtools` menu, under
-"Work on the Airtable base", which is the discoverable path — the picker lists
-them in runbook order and says which ones write.
+**Project setup → airtable**, which is the discoverable path — the picker lists
+them in runbook order, says which ones write, and asks about `--dry-run`
+rather than expecting you to remember it.
 
 The split is deliberate. Everything that decides anything — what to create, what
 counts as drift, how a `todo("slug")` call becomes a field ID — lives in the

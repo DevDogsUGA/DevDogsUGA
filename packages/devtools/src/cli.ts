@@ -9,6 +9,14 @@
  *
  * The subcommands still exist for anyone who does know them, and for CI, which
  * cannot answer a prompt.
+ *
+ * ## Three files, one tree
+ *
+ * `commands.ts` holds the command tree as data. `help.ts` renders one level of
+ * it at a time, and `menu.ts` walks it into an argv that comes back through
+ * `dispatch()` below — the same entry a typed command line takes. That is why
+ * the menu covers everything the CLI does: there is no second list of commands
+ * anywhere, so there is nothing to fall out of step.
  */
 import {
   confirm,
@@ -82,6 +90,10 @@ import { setExplicitAccessToken } from "./bws/client.js";
 import { positionals } from "./args.js";
 import { resolveVaultTarget } from "./pick.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
+import { helpPath, renderHelp } from "./help.js";
+import { findCommand, subcommandList, subcommandNames } from "./commands.js";
+import { runMenu } from "./menu.js";
+import { runDocsIndex } from "./docs/index-pages.js";
 
 const DOCTOR_COMMANDS = [
   "doctor",
@@ -97,197 +109,6 @@ function isStackCommand(value: string): value is StackCommand {
 
 function isDoctorCommand(value: string): value is DoctorCommand {
   return (DOCTOR_COMMANDS as readonly string[]).includes(value);
-}
-
-function printHelp(): void {
-  console.log(`pnpm devtools [command] [options]
-
-Run with no command to choose from a menu.
-
-Commands:
-  setup      Check prerequisites and seed .env — run this first
-  link       Start (or connect to) a database and write .env
-  push       Apply migrations
-  reset      Rebuild the database from migrations, then seeds
-  status     Report the target's health
-  catalog    List the report reasons and content types in the database
-  doctor     Check an app's moderation integration
-  roundtrip  File a report against a profile, quarantine it, and check the freeze
-  grant-root Give yourself every permission on your own database
-  oauth      Configure "Sign in with DevDogs" for the project in this directory
-  airtable   Scaffold, pull ids from, or verify the officer base
-  env        One env file per target, synced to Bitwarden + GitHub, with a
-             drift audit
-  planner    The migration_planner role: the one Postgres credential the
-             preflight tier may hold
-  signing-key  SUPABASE_JWT_SIGNING_KEY: mint it, register it with the
-             Supabase project, see what is registered
-  deploy     The steps a deploy job runs. Not for a laptop — see below
-
-Planner subcommands. All need a privileged production connection —
-.env.production's DB_URL (env pull --target production), or --db-url:
-
-  planner status                  does the role exist, hold exactly the two
-                                  validated grants, and reach nothing else
-  planner create                  mint role + grants + generated password,
-                                  verify it live, write .env.preflight's
-                                  DB_URL (then: env push --target preflight)
-  planner reset-password          rotate the password on the existing role;
-                                  same verification, same write. There is no
-                                  retrieve: the server holds a hash, and the
-                                  URL's home is .env.preflight / Bitwarden
-                                  (env pull --target preflight)
-  planner drop                    remove the role (grants revoked first, one
-                                  transaction) and blank the dead DB_URL in
-                                  .env.preflight — the recovery path for a
-                                  shape create refuses to repair
-
-Signing-key subcommands. Always --target <staging|production> — two
-environments, two projects, two secrets. import/status also need
-SUPABASE_ACCESS_TOKEN (exported, or in .env.production):
-
-  signing-key generate --target <t>  mint a 64-char HS256 secret into
-                                  .env.<t> (confirmed overwrite = rotation)
-  signing-key import --target <t> register that secret with the project as a
-                                  standby shared-secret signing key. Standby
-                                  VERIFIES custom JWTs (the sandbox token)
-                                  without changing what signs user sessions;
-                                  promotion to in_use stays a dashboard act
-  signing-key status --target <t> list the project's signing keys
-
-Airtable subcommands:
-  airtable scaffold [--dry-run]   Create what the registry declares
-  airtable pull-ids               Write discovered ids into registry.ts
-  airtable verify [--no-duplicates]  Diff the live base against the registry
-  airtable snapshot [--check]     Refresh, or check, the committed schema snapshot
-
-Env subcommands. One --target, one row, and every per-target fact read
-from it:
-
-  --target       file              Bitwarden project   DEPLOY_ENV?
-  development    .env              (none)              yes
-  preflight      .env.preflight    preflight           no
-  staging        .env.staging      staging             yes
-  production     .env.production   production          yes
-
-  env pull  --target <t>          Bitwarden -> that target's file, in place
-  env push  --target <t>          that file -> Bitwarden -> GitHub secrets
-                                  and variables
-  env audit --target <t>          compare the file, Bitwarden, GitHub,
-                                  Cloudflare
-  env reset                       blank every value in .env, keeping each
-                                  commented out
-  env example [--check]           regenerate .env.example from the manifests
-                                  (--check: verify only, as CI does)
-  env init [--target <t>]         create a FRESH file for the target
-             [--apps <a,b,…>]     (default: development). For development it
-                                  asks which projects you are working on and
-                                  renders only their sections (plus the shared
-                                  supabase stack); devtools is offered as a
-                                  ROLE — the operator credentials no app
-                                  reads. Re-running APPENDS the sections a new
-                                  selection adds, never touching filled
-                                  values. --apps skips the prompt; a vault
-                                  target's file still refuses to exist twice
-
-  pull, push and audit each READ AND WRITE the target's own file. --file
-  overrides that; it is not how you choose a target. --target development
-  is refused by all three: .env is your own file and has no Bitwarden
-  project behind it.
-
-  preflight is a target but NOT a deploy environment. .env.preflight is a
-  staging area for pushing credentials; DEPLOY_ENV=preflight is refused, so
-  nothing boots from it.
-
-  init writes what the target actually needs. The development file gets every
-  declared key with its development defaults; a vault target's gets only the
-  keys a push for it routes, uncommented and blank apart from the $VAR
-  derivations — a development default or a placeholder is non-empty, so
-  prefilling one would push it to that environment.
-
-  Leave --target off and it asks. Naming it is for scripts, and for anyone
-  who would rather not be asked twice.
-
-  Bitwarden is the source of truth for a WHOLE target, secret and
-  public alike; deploy jobs read GitHub, so push sends to both — a value in
-  one and not the other is the failure this design has. On GitHub the split
-  matters: secrets go to the secret store, the public per-environment values
-  (PROJECT_REF, BASE_URL, PUBLISHABLE_KEY, ...) to the variable store, where
-  logs do not mask them and audit can compare their values. Needs a
-  signed-in GitHub CLI.
-
-  The Secrets Manager access token is looked for in four places, in order:
-  --access-token, then BWS_ACCESS_TOKEN, then your Bitwarden Password
-  Manager vault (via the bw CLI), and finally by asking — with an offer to
-  save it to the vault so it only has to be typed once. Prefer the vault or
-  the environment: --access-token is visible to ps and lands in shell
-  history.
-
-  Edits the target's file in place, preserving comments and order. Values are
-  commented out rather than deleted. Overwrites are confirmed separately from
-  additions, and production is confirmed on top of that. Values are never
-  printed — changes show as key names and fingerprints.
-
-  pull and push stamp each line with the target and date, so a file that
-  has been sitting for weeks says so. Same-named lines are grouped together on
-  every write. reset is local-only and takes no --target.
-
-Deploy subcommands. Steps of .github/workflows/deploy.yaml, run in order by a
-job that has already set DEPLOY_ENV:
-
-  deploy write-env [--source <manifest>]
-                                  compose .env.<DEPLOY_ENV> from the GitHub
-                                  environment's secrets and variables
-  deploy secrets-file --app <app> [--mint]
-                                  write the --secrets-file wrangler uploads
-                                  with that Worker, into a 0700 temp dir
-  deploy orphans [--prune]        report Worker secrets nothing declares
-                                  (--prune deletes them; production-apply only)
-  deploy preflight                classify the Supabase project before a job
-                                  commits to it: paused (skip) vs broken (fail)
-  deploy mint-token               sign a fresh sandbox proxy JWT to stdout.
-                                  The deploy reaches this through
-                                  secrets-file --mint, not by running it
-  deploy require-token            exit non-zero, naming who to ask, when
-                                  CLOUDFLARE_API_TOKEN is unset
-  deploy require-planner          refuse the §3.5 stage-1 dry run unless
-                                  DB_URL authenticates as migration_planner,
-                                  cannot read platform.*, and CAN read the
-                                  migrations table
-  deploy airtable-plan            what a scaffold WOULD create in the officers'
-                                  base, to \$GITHUB_STEP_SUMMARY. Reads with
-                                  AIRTABLE_PLAN_PAT (schema.bases:read only)
-                                  and cannot mutate
-  deploy airtable-apply           create it. AIRTABLE_APPLY_PAT, and the
-                                  production-apply reviewer gate in front
-
-  These print NOTHING to stdout except the one line GitHub has to parse:
-  secrets-file's \`::add-mask::\`. No banner, no prompts, no menu — they run
-  unattended, and two of them have a stdout something downstream reads.
-
-  ⚠️ write-env, orphans, preflight, require-token, require-planner,
-  airtable-plan and airtable-apply must NOT go through \`pnpm devtools\`,
-  which is \`with-env tsx src/cli.ts\`. write-env CREATES the env file
-  with-env would demand; the others run in jobs that have none, where the
-  wrapper would report a missing FILE rather than the missing TOKEN, the
-  paused project or the missing credential. All seven use the wrapper-free
-  entry point:
-
-    pnpm --filter @devdogsuga/devtools run cli:no-env deploy write-env
-
-  secrets-file is the opposite: it reads the values write-env composed out of
-  the ambient environment, so it wants \`pnpm devtools deploy secrets-file\`.
-
-Database targets (link, push, reset, status) — unrelated to env's --target:
-  --local            The Docker stack (default)
-  --remote           The linked Supabase project
-  --team <slug>      A team's sandbox environment, through the platform
-
-Options:
-  --app <slug>       App to check (doctor); skips the picker
-  --user <email>     Account to grant Root to (grant-root); skips the picker
-  --base-url <url>   DevDogs API URL (oauth); skips the prompt
-  --help, -h         Show this message`);
 }
 
 function parseTarget(rest: string[]): Target {
@@ -606,6 +427,11 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
             label: "Write discovered ids into registry.ts",
             hint: "edits a committed source file",
           },
+          {
+            value: "snapshot",
+            label: "Refresh the committed schema snapshot",
+            hint: "--check verifies it instead, as CI does",
+          },
         ],
       }),
     );
@@ -632,7 +458,7 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
   }
 
   log.error(`Unknown airtable subcommand: ${sub}`);
-  log.message("Try scaffold, pull-ids, verify or snapshot.");
+  log.message(`Try ${subcommandList(["airtable"])}.`);
   process.exitCode = 1;
 }
 
@@ -660,12 +486,12 @@ async function runEnvCommand(rest: string[]): Promise<void> {
   // must not be read as anything else.
   const [sub] = positionals(rest);
 
-  if (
-    !sub ||
-    !["pull", "push", "audit", "reset", "example", "init"].includes(sub)
-  ) {
+  // Validated against the command tree rather than a list kept here. One
+  // declaration means a subcommand cannot exist in the CLI and be missing
+  // from the menu, or the reverse.
+  if (!sub || !subcommandNames(["env"]).includes(sub)) {
     log.error(`Unknown env subcommand: ${sub ?? "(none)"}`);
-    log.message("Try pull, push, audit, reset, example or init.");
+    log.message(`Try ${subcommandList(["env"])}.`);
     process.exitCode = 1;
     return;
   }
@@ -825,17 +651,17 @@ async function runDeployCommand(rest: string[]): Promise<void> {
   const [sub] = positionals(rest);
 
   if (!sub) {
+    // Rendered from the command tree, on stderr like every other word this
+    // group prints. `renderHelp` would be the obvious call, but it returns
+    // one string for stdout, and stdout here is a credential channel.
+    const steps = subcommandNames(["deploy"]);
+    const width = Math.max(...steps.map((name) => name.length)) + 2;
     say([
       "devtools deploy: which step?",
-      "  write-env [--source <manifest>]   compose .env.<DEPLOY_ENV>",
-      "  secrets-file --app <app> [--mint] compose the Worker secrets file",
-      "  orphans [--prune]                 audit Worker secrets nothing declares",
-      "  preflight                         classify the project (paused vs broken)",
-      "  mint-token                        sign a fresh sandbox proxy JWT",
-      "  require-token                     refuse to deploy without a CF token",
-      "  require-planner                   refuse to plan unless DB_URL is the planner role",
-      "  airtable-plan                     what a scaffold would create (reads only)",
-      "  airtable-apply                    create it (production-apply only)",
+      ...steps.map(
+        (name) =>
+          `  ${name.padEnd(width)}${findCommand(["deploy", name])!.summary}`,
+      ),
     ]);
     process.exitCode = 1;
     return;
@@ -963,8 +789,7 @@ async function runDeployCommand(rest: string[]): Promise<void> {
 
     say([
       `devtools deploy: unknown subcommand "${sub}".`,
-      "  Try write-env, secrets-file, orphans, preflight, mint-token,",
-      "  require-token, require-planner, airtable-plan or airtable-apply.",
+      `  Try ${subcommandList(["deploy"])}.`,
     ]);
     process.exitCode = 1;
   } catch (err) {
@@ -1013,8 +838,8 @@ async function runPlannerCommand(rest: string[]): Promise<void> {
 
   log.error(
     sub
-      ? `devtools planner: unknown subcommand "${sub}". Try status, create, reset-password or drop.`
-      : "devtools planner: which of status, create, reset-password, drop?",
+      ? `devtools planner: unknown subcommand "${sub}". Try ${subcommandList(["planner"])}.`
+      : `devtools planner: which of ${subcommandList(["planner"])}?`,
   );
   process.exitCode = 1;
 }
@@ -1047,166 +872,90 @@ async function runSigningKeyCommand(rest: string[]): Promise<void> {
 
   log.error(
     sub
-      ? `devtools signing-key: unknown subcommand "${sub}". Try generate, import or status.`
-      : "devtools signing-key: which of generate, import, status?",
+      ? `devtools signing-key: unknown subcommand "${sub}". Try ${subcommandList(["signing-key"])}.`
+      : `devtools signing-key: which of ${subcommandList(["signing-key"])}?`,
   );
   process.exitCode = 1;
 }
 
-// ── Menu ─────────────────────────────────────────────────────────────────────
+// ── Docs ─────────────────────────────────────────────────────────────────────
 
-async function menu(): Promise<void> {
-  const choice = unwrap(
-    await select({
-      message: "What would you like to do?",
-      options: [
-        {
-          value: "setup" as const,
-          label: "Set up my machine",
-          hint: "check prerequisites and create .env — start here",
-        },
-        {
-          value: "link" as const,
-          label: "Start my database",
-          hint: "boots the local stack and writes .env",
-        },
-        {
-          value: "reset" as const,
-          label: "Reset my database",
-          hint: "rebuild from migrations, then seeds",
-        },
-        {
-          value: "push" as const,
-          label: "Apply new migrations",
-          hint: "without erasing anything",
-        },
-        {
-          value: "catalog" as const,
-          label: "Show what can be reported",
-          hint: "report reasons and content types on this instance",
-        },
-        {
-          value: "doctor" as const,
-          label: "Check an app's moderation setup",
-          hint: "what the catalog derived, and whether it holds up",
-        },
-        {
-          value: "roundtrip" as const,
-          label: "Test reporting end to end",
-          hint: "file, quarantine, and check who can still see it",
-        },
-        {
-          value: "grant-root" as const,
-          label: "Give myself the console",
-          hint: "grants Root on your own database",
-        },
-        {
-          value: "oauth" as const,
-          label: 'Set up "Sign in with DevDogs"',
-          hint: "configures the Supabase project in this directory",
-        },
-        {
-          value: "airtable" as const,
-          label: "Work on the Airtable base",
-          hint: "scaffold, pull ids, or check for drift",
-        },
-      ],
-    }),
-  );
+/**
+ * `docs index [--force]` — the documentation search index.
+ *
+ * One subcommand today, and a group rather than a top-level `docs-index`
+ * because the artifact it reads has more than one thing worth doing to it
+ * (a `--check` that reports drift is the obvious next one).
+ */
+async function runDocsCommand(rest: string[]): Promise<void> {
+  const [sub] = positionals(rest);
 
-  if (choice === "setup") {
-    await runSetup();
+  if (!sub || !subcommandNames(["docs"]).includes(sub)) {
+    log.error(
+      sub
+        ? `devtools docs: unknown subcommand "${sub}". Try ${subcommandList(["docs"])}.`
+        : `devtools docs: which subcommand? Try ${subcommandList(["docs"])}.`,
+    );
+    process.exitCode = 1;
     return;
   }
 
-  if (choice === "airtable") {
-    await runAirtableCommand([]);
-    return;
-  }
-
-  if (isStackCommand(choice)) {
-    await runStack(choice, { kind: "local" });
-    return;
-  }
-
-  if (choice === "oauth") {
-    await runOAuthSetup();
-    return;
-  }
-
-  const instance = await connect();
-  if (!instance) return;
-
-  if (choice === "catalog") await runCatalog(instance);
-  else if (choice === "doctor") await runDoctor(instance);
-  else if (choice === "grant-root") await runGrantRoot(instance);
-  else await runRoundTrip(instance);
+  await runDocsIndex({ force: rest.includes("--force") });
 }
 
-// ── Entry ────────────────────────────────────────────────────────────────────
+// ── Dispatch ─────────────────────────────────────────────────────────────────
 
-async function main(): Promise<void> {
-  const argv = process.argv.slice(2);
+/** The outro line for a command that finished; `null` means one that failed. */
+const DONE = "Done.";
 
-  if (argv.includes("--help") || argv.includes("-h")) {
-    printHelp();
-    return;
-  }
-
+/**
+ * Routes an argv to a command, and reports what to print when it returns.
+ *
+ * The wizard calls THIS rather than the command functions, so a menu walk and
+ * a typed command line take the identical path. `deploy` is not routed here —
+ * it is dispatched before `intro()` in `main()`, for the reason
+ * `runDeployCommand`'s header gives.
+ *
+ * Returns the `outro()` line, or `null` where the failure has already been
+ * explained and a cheerful "Done." would contradict it.
+ */
+async function dispatch(argv: string[]): Promise<string | null> {
   const [first, ...rest] = argv;
-
-  // ⚠️ BEFORE `intro()`, and this ordering is load-bearing rather than tidy.
-  // `intro` writes to STDOUT, and `deploy secrets-file` / `deploy mint-token`
-  // have a stdout that GitHub and this CLI respectively PARSE. See the header
-  // on `runDeployCommand`. It returns without an `outro()` for the same
-  // reason.
-  if (first === "deploy") {
-    await runDeployCommand(rest);
-    return;
-  }
-
-  intro("DevDogs devtools");
-
-  if (!first) {
-    await menu();
-    outro("Done.");
-    return;
-  }
+  if (!first) return DONE;
 
   if (first === "setup") {
     await runSetup();
-    outro("Done.");
-    return;
+    return DONE;
   }
 
   if (first === "oauth") {
     await runOAuthSetup(flagValue(rest, "--base-url"));
-    outro('All done! You\'re ready to "Sign in with DevDogs".');
-    return;
+    return 'All done! You\'re ready to "Sign in with DevDogs".';
   }
 
   if (first === "airtable") {
     await runAirtableCommand(rest);
-    outro("Done.");
-    return;
+    return DONE;
+  }
+
+  if (first === "docs") {
+    await runDocsCommand(rest);
+    return DONE;
   }
 
   if (first === "env") {
     await runEnvCommand(rest);
-    outro("Done.");
-    return;
+    return DONE;
   }
 
   if (first === "planner") {
     await runPlannerCommand(rest);
-    outro("Done.");
-    return;
+    return DONE;
   }
 
   if (first === "signing-key") {
     await runSigningKeyCommand(rest);
-    outro("Done.");
-    return;
+    return DONE;
   }
 
   // The old name, refused with the new one rather than falling into "Unknown
@@ -1219,26 +968,28 @@ async function main(): Promise<void> {
       "`--env` is now `--target`, for the same reason: one name, one meaning.",
     ]);
     process.exitCode = 1;
-    return;
+    return null;
   }
 
   if (!isStackCommand(first) && !isDoctorCommand(first)) {
     log.error(`Unknown command: ${first}`);
-    printHelp();
+    // The top level only. The command is unknown, so there is no level below
+    // it to describe, and reprinting the whole tree here is what made the old
+    // help unreadable in the first place.
+    log.message(renderHelp());
     process.exitCode = 1;
-    return;
+    return null;
   }
 
   if (isStackCommand(first)) {
     await runStack(first, parseTarget(rest));
-    outro("Done.");
-    return;
+    return DONE;
   }
 
   const instance = await connect();
   if (!instance) {
     process.exitCode = 1;
-    return;
+    return null;
   }
 
   if (first === "catalog") {
@@ -1251,7 +1002,38 @@ async function main(): Promise<void> {
     await runRoundTrip(instance);
   }
 
-  outro("Done.");
+  return DONE;
+}
+
+// ── Entry ────────────────────────────────────────────────────────────────────
+
+async function main(): Promise<void> {
+  const argv = process.argv.slice(2);
+
+  // `helpPath` so that `env pull --help` answers about `env pull` rather than
+  // reprinting the top level, which is the whole point of the split.
+  if (argv.includes("--help") || argv.includes("-h")) {
+    console.log(renderHelp(helpPath(argv)));
+    return;
+  }
+
+  // ⚠️ BEFORE `intro()`, and this ordering is load-bearing rather than tidy.
+  // `intro` writes to STDOUT, and `deploy secrets-file` / `deploy mint-token`
+  // have a stdout that GitHub and this CLI respectively PARSE. See the header
+  // on `runDeployCommand`. It returns without an `outro()` for the same
+  // reason.
+  if (argv[0] === "deploy") {
+    await runDeployCommand(argv.slice(1));
+    return;
+  }
+
+  intro("DevDogs devtools");
+
+  // The wizard builds an argv and hands it back to `dispatch`. See `menu.ts`.
+  const closing =
+    argv.length === 0 ? await runMenu(dispatch) : await dispatch(argv);
+
+  if (closing) outro(closing);
 }
 
 main().catch((err: unknown) => {

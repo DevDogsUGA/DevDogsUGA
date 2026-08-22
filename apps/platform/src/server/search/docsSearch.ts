@@ -30,7 +30,7 @@ function toSnippetHtml(raw: string): string {
  * Full-text search over the docs index using Postgres websearch syntax (quoted
  * phrases, OR, -exclusions). The table is populated at deploy time by
  * `pnpm docs:index` from the same build-time artifact the pages render from —
- * see scripts/index-docs.ts. ts_headline runs on the top N rows only; it's by
+ * see `devtools docs index`. ts_headline runs on the top N rows only; it's by
  * far the most expensive part.
  */
 export async function searchDocs(

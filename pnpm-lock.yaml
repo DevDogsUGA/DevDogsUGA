@@ -777,6 +777,9 @@ importers:
       '@devdogsuga/airtable':
         specifier: workspace:*
         version: link:../airtable
+      '@devdogsuga/docs':
+        specifier: workspace:*
+        version: link:../../docs
       '@devdogsuga/env':
         specifier: workspace:*
         version: link:../env

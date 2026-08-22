@@ -15,9 +15,12 @@ pnpm devtools
 ```
 
 Opens a menu — start a database, reset it, apply migrations, or check that an
-app's moderation integration works. Nothing here needs you to know a command
-name, and `pnpm devtools <command>` still works if you do. `pnpm sb` is the same
-tool under its older name.
+app's moderation integration works. The menu is grouped, and it covers every
+command the CLI has along with the options each one takes, so nothing here
+needs you to know a command name. `pnpm devtools <command>` still works if you
+do, and `pnpm devtools --help` lists the groups; add `--help` to a command
+(`pnpm devtools env --help`) for what sits under it. `pnpm sb` is the same tool
+under its older name.
 
 Running the console itself is a separate step (with the local stack up, the
 dev server targets it automatically):

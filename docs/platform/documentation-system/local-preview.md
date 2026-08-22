@@ -31,7 +31,9 @@ That indexes your working copy into the local stack, so a page you just wrote is
 > [!WARNING]
 > Without the local stack running, `pnpm dev` and `docs:index` point at the **deployed** database. Pages still render from your working copy, but search results come from what that database has indexed. That mismatch is expected — boot the local stack (`pnpm sb link`) when you care about search.
 >
-> `docs:index` refuses to write to a non-local database without `--force`. It deletes rows for pages that no longer exist, so running it against production from a working copy would replace the live search index with your local state.
+> `docs:index` will not write to a non-local database on its own. It deletes rows for pages that no longer exist, so running it against production from a working copy would replace the live search index with your local state. At a terminal it asks first; in a script or a job, where there is nobody to ask, it refuses unless given `--force` — which is how the deploy says yes.
+
+`pnpm --filter platform docs:index` is an alias for `pnpm devtools docs index`, which is where the command itself lives. Either spelling works; the alias also builds the docs artifact first, so prefer it.
 
 ## What you are checking
 
