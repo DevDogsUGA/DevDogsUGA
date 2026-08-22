@@ -302,6 +302,94 @@ export interface MeetingInRange extends MeetingSummary {
 }
 
 /**
+ * The competitions judged at each of `ids`, bucketed by meeting.
+ *
+ * Extracted rather than inlined because two callers need it and there must
+ * only ever be ONE spelling of "which night is this judged on". The predicate
+ * is subtle enough that a second copy would drift: judging attaches by WHEN it
+ * starts, not by `judgingMeetingId`. See `isJudgedDuring` below for why; this
+ * join is the SQL spelling of that same predicate, and the two have to keep
+ * agreeing, so neither should be changed without the other.
+ *
+ * The null case needs no clause of its own: `judgingStartsAt is null` fails
+ * both comparisons, so an unscheduled competition joins to no meeting at all —
+ * the required behaviour ("not yet", never "never") falling out of
+ * three-valued logic rather than being bolted on.
+ *
+ * Not exported, and not `cache()`d: both callers are, and wrapping an
+ * array-argument function would memoise on a reference that changes every
+ * call anyway.
+ */
+async function judgingForMeetings(
+  ids: string[],
+): Promise<Map<string, MeetingRangeJudging[]>> {
+  const rows = await db
+    .select({
+      meetingId: meetings.id,
+      competitionId: competitions.id,
+      competitionSlug: competitions.slug,
+      projectSlug: projects.slug,
+      projectName: projects.displayName,
+      judgingStartsAt: competitions.judgingStartsAt,
+    })
+    .from(competitions)
+    .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
+    .innerJoin(projects, eq(projects.id, workshops.projectId))
+    .innerJoin(
+      meetings,
+      and(
+        inArray(meetings.id, ids),
+        gte(competitions.judgingStartsAt, meetings.startsAt),
+        lt(competitions.judgingStartsAt, meetings.endsAt),
+      ),
+    )
+    .where(
+      and(
+        isNull(competitions.deletedAt),
+        // The workshop that OPENED the competition, at some earlier meeting.
+        // Archiving that workshop retracts the competition from the calendar,
+        // matching `getCompetitionBySlug`, which would 404 on the same row.
+        isNull(workshops.deletedAt),
+        isNull(meetings.deletedAt),
+      ),
+    )
+    // 18:00 before 18:40, so the schedule reads down the evening.
+    .orderBy(asc(competitions.judgingStartsAt));
+
+  const byMeeting = new Map<string, MeetingRangeJudging[]>();
+  for (const row of rows) {
+    const entry: MeetingRangeJudging = {
+      competitionId: row.competitionId,
+      competitionSlug: row.competitionSlug,
+      projectSlug: row.projectSlug,
+      projectName: row.projectName,
+      // Non-null by construction: the join only matches rows whose
+      // `judgingStartsAt` compared successfully against two timestamps, and
+      // null compares to neither. Drizzle types it from the column, which
+      // cannot know that.
+      judgingStartsAt: row.judgingStartsAt!,
+    };
+    const bucket = byMeeting.get(row.meetingId);
+    if (bucket) bucket.push(entry);
+    else byMeeting.set(row.meetingId, [entry]);
+  }
+  return byMeeting;
+}
+
+/**
+ * The competitions judged at one meeting.
+ *
+ * Exists so a meeting's own page does not have to go through
+ * `getMeetingsInRange` to answer a question about a single row. It briefly
+ * did, by asking for a one-millisecond window around the meeting's start and
+ * picking its id back out of the result — which worked, and read like a bug.
+ */
+export const getMeetingJudging = cache(
+  async (meetingId: string): Promise<MeetingRangeJudging[]> =>
+    (await judgingForMeetings([meetingId])).get(meetingId) ?? [],
+);
+
+/**
  * Every non-archived meeting starting in `[from, to)`, ascending, with the
  * workshops it runs and the competitions it judges.
  *
@@ -366,7 +454,7 @@ export const getMeetingsInRange = cache(
     if (rows.length === 0) return [];
     const ids = rows.map((row) => row.id);
 
-    const [workshopRows, judgingRows] = await Promise.all([
+    const [workshopRows, judgingByMeeting] = await Promise.all([
       db
         .select({
           meetingId: workshops.meetingId,
@@ -389,48 +477,7 @@ export const getMeetingsInRange = cache(
         )
         .orderBy(asc(projects.sortOrder), asc(projects.displayName)),
 
-      // Judging is attached by WHEN it starts, not by `judgingMeetingId`. See
-      // `isJudgedDuring` below for why; this join is the SQL spelling of that
-      // predicate and the two have to keep agreeing, so neither should be
-      // changed without the other.
-      //
-      // The null case needs no clause of its own: `judgingStartsAt is null`
-      // fails both comparisons, so an unscheduled competition joins to no
-      // meeting at all — which is the required behaviour ("not yet", never
-      // "never") falling out of three-valued logic rather than being bolted on.
-      db
-        .select({
-          meetingId: meetings.id,
-          competitionId: competitions.id,
-          competitionSlug: competitions.slug,
-          projectSlug: projects.slug,
-          projectName: projects.displayName,
-          judgingStartsAt: competitions.judgingStartsAt,
-        })
-        .from(competitions)
-        .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
-        .innerJoin(projects, eq(projects.id, workshops.projectId))
-        .innerJoin(
-          meetings,
-          and(
-            inArray(meetings.id, ids),
-            gte(competitions.judgingStartsAt, meetings.startsAt),
-            lt(competitions.judgingStartsAt, meetings.endsAt),
-          ),
-        )
-        .where(
-          and(
-            isNull(competitions.deletedAt),
-            // The workshop that OPENED the competition, at some earlier
-            // meeting. Archiving that workshop retracts the competition from
-            // the calendar, matching `getCompetitionBySlug`, which would 404
-            // on the same row.
-            isNull(workshops.deletedAt),
-            isNull(meetings.deletedAt),
-          ),
-        )
-        // 18:00 before 18:40, so the schedule list reads down the evening.
-        .orderBy(asc(competitions.judgingStartsAt)),
+      judgingForMeetings(ids),
     ]);
 
     const workshopsByMeeting = new Map<string, MeetingRangeWorkshop[]>();
@@ -444,24 +491,6 @@ export const getMeetingsInRange = cache(
       };
       if (bucket) bucket.push(entry);
       else workshopsByMeeting.set(row.meetingId, [entry]);
-    }
-
-    const judgingByMeeting = new Map<string, MeetingRangeJudging[]>();
-    for (const row of judgingRows) {
-      const bucket = judgingByMeeting.get(row.meetingId);
-      const entry: MeetingRangeJudging = {
-        competitionId: row.competitionId,
-        competitionSlug: row.competitionSlug,
-        projectSlug: row.projectSlug,
-        projectName: row.projectName,
-        // Non-null by construction: the join above only matches rows whose
-        // `judgingStartsAt` compared successfully against two timestamps, and
-        // null compares to neither. Drizzle types it from the column, which
-        // cannot know that.
-        judgingStartsAt: row.judgingStartsAt!,
-      };
-      if (bucket) bucket.push(entry);
-      else judgingByMeeting.set(row.meetingId, [entry]);
     }
 
     return rows.map((row) => ({
