@@ -1,23 +1,21 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 /**
- * `meetings.ts` opens with `import { db } from "~/server/db"`, and that module
- * resolves `~/env` at import time — so importing this file for its two PURE
- * functions would otherwise fail the suite on a missing `DB_URL`, under a
- * `pnpm test` that has no business needing a database at all. Stubbing the
- * module (hoisted above the import below by Vitest) keeps `~/env` out of the
- * graph entirely. Nothing under test touches `db`; if something starts to, it
- * belongs in `queries.db-test.ts` instead.
+ * Imported from `~/lib/meetingSegments`, NOT from the loader that re-exports
+ * them. The rules are pure and live there precisely so nothing needs a
+ * database to exercise them — the loader's first import is `~/server/db`,
+ * which resolves `~/env` at module load, so reaching them through it used to
+ * require stubbing the database module out of the graph just to run arithmetic
+ * on dates. Importing the pure module directly removes the stub and the reason
+ * for it. Anything that genuinely touches `db` belongs in `queries.db-test.ts`.
  */
-vi.mock("~/server/db", () => ({ db: {} }));
-
 import {
   attendanceFormIsLive,
   isJudgedDuring,
   resolveMeetingSegments,
   type MeetingSegment,
   type MeetingStructure,
-} from "./meetings";
+} from "~/lib/meetingSegments";
 
 /**
  * The segment rules, without a database.

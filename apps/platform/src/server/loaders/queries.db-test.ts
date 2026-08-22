@@ -1,5 +1,7 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { sql } from "drizzle-orm";
+import { db } from "~/server/db";
 import {
   getUpcomingMeetings,
   getPastMeetings,
@@ -129,5 +131,84 @@ describe("every loader is valid SQL", () => {
     await getTiebreakDisclosures(NIL);
     await getPointsElections(NIL);
     expect(true).toBe(true);
+  });
+});
+
+const COUNTS = {
+  meeting: "11111111-2222-4000-8000-000000000001",
+  project: "11111111-2222-4000-8000-000000000002",
+  project2: "11111111-2222-4000-8000-000000000003",
+  workshop: "11111111-2222-4000-8000-000000000004",
+  workshop2: "11111111-2222-4000-8000-000000000005",
+} as const;
+
+async function cleanupCounts() {
+  await db.execute(
+    sql`delete from platform.meetings where slug = 'counts-test-meeting'`,
+  );
+  await db.execute(
+    sql`delete from platform.projects where slug like 'counts-test-%'`,
+  );
+}
+
+/**
+ * The one place in this file that asserts a VALUE, and it earns the exception.
+ *
+ * Everything above proves a statement parses and plans, which is the failure
+ * mode Drizzle expressions usually have. This covers the failure mode that
+ * slipped past exactly that net: a correlated subquery whose column references
+ * rendered unqualified, so `where "meetingId" = "id"` resolved both sides
+ * against the INNER table and compared `workshops.meetingId` to
+ * `workshops.id`. Perfectly valid SQL. Postgres plans it happily. It returns
+ * zero for every row, forever.
+ *
+ * It shipped unnoticed because `attendanceCount` and `workshopCount` had no
+ * consumer until the events page was rebuilt on them, and zero is exactly what
+ * a brand-new meeting should report — so the bug and the correct answer are
+ * indistinguishable until something has more than none.
+ *
+ * That is the whole reason this needs fixtures: the only assertion that can
+ * catch it is a non-zero one.
+ */
+describe("correlated counts on a meeting", () => {
+  beforeAll(async () => {
+    await cleanupCounts();
+    await db.execute(sql`
+      insert into platform.projects (id, slug, "displayName")
+      values (${COUNTS.project}::uuid, 'counts-test-a', 'Counts Test A'),
+             (${COUNTS.project2}::uuid, 'counts-test-b', 'Counts Test B')`);
+    await db.execute(sql`
+      insert into platform.meetings (id, slug, name, "startsAt", "endsAt")
+      values (${COUNTS.meeting}::uuid, 'counts-test-meeting', 'Counts Test',
+              now() + interval '1 day', now() + interval '1 day 2 hours')`);
+    await db.execute(sql`
+      insert into platform.workshops (id, "meetingId", "projectId")
+      values (${COUNTS.workshop}::uuid, ${COUNTS.meeting}::uuid, ${COUNTS.project}::uuid),
+             (${COUNTS.workshop2}::uuid, ${COUNTS.meeting}::uuid, ${COUNTS.project2}::uuid)`);
+  });
+
+  afterAll(cleanupCounts);
+
+  it("counts the workshops that belong to it, not zero", async () => {
+    const meeting = await getMeetingBySlug("counts-test-meeting");
+    expect(meeting).not.toBeNull();
+    expect(meeting!.workshopCount).toBe(2);
+    // No attendance rows were inserted, so zero here is the honest answer —
+    // asserted anyway, because the broken form returned zero for BOTH and a
+    // future regression could plausibly break only one.
+    expect(meeting!.attendanceCount).toBe(0);
+  });
+
+  it("counts them the same way through the range query", async () => {
+    const from = new Date(Date.now() - 86_400_000);
+    const to = new Date(Date.now() + 7 * 86_400_000);
+    const rows = await getMeetingsInRange(from, to);
+    const mine = rows.find((r) => r.slug === "counts-test-meeting");
+    expect(mine).toBeDefined();
+    // The scalar subquery and the separately-fetched array are two different
+    // routes to the same fact, and they must agree — a mismatch means one of
+    // them is filtering differently from the other.
+    expect(mine!.workshopCount).toBe(2);
+    expect(mine!.workshops).toHaveLength(2);
   });
 });
