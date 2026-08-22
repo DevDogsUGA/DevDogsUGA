@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import RouteDialog from "~/components/EventsSection/FindUs/RouteDialog";
+import { FindUsHeader } from "~/components/EventsSection/FindUs/FindUsDialog";
+import RouteDialog from "~/ui/route-dialog";
 
 /**
  * The dialog frame is the segment's *layout*, with the content as its page,
@@ -8,11 +9,21 @@ import RouteDialog from "~/components/EventsSection/FindUs/RouteDialog";
  * wholesale. That split is also what prefetching fetches: under this app's
  * cookie-reading site layout every route is dynamic, and a dynamic route is
  * prefetched down to its first loading boundary, which is exactly this frame.
+ *
+ * The header comes from here rather than from inside the shared frame because
+ * the frame is shared: it belongs to whatever route is using it. `closeTo` is
+ * `/events` because that is the layout holding the calendar behind the dialog,
+ * so a dialog that was cold-loaded closes onto the calendar instead of an
+ * empty tab.
  */
 export default function DirectionsModalLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  return <RouteDialog>{children}</RouteDialog>;
+  return (
+    <RouteDialog header={<FindUsHeader />} closeTo="/events">
+      {children}
+    </RouteDialog>
+  );
 }

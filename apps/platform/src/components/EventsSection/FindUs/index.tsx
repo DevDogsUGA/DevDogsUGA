@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { MapTrifoldIcon } from "@phosphor-icons/react/ssr";
+import { RouteDialogLink } from "~/ui/route-dialog";
 import FindUsDialog from "./FindUsDialog";
 import FindUsContent, { preloadCampusMap } from "./FindUsContent";
-import { markOpenedInApp } from "./openedInApp";
 
 const TRIGGER_CLS =
   "hover:shadow-block-md transition-lift flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5";
@@ -13,6 +12,10 @@ const TRIGGER_CLS =
  * Every way of showing intent short of clicking: a pointer arriving, a
  * keyboard focus, a finger landing. Each starts the map chunk downloading so
  * it is normally already here when the dialog opens. Calling it twice is free.
+ *
+ * This stays here rather than moving into the shared route-dialog trigger:
+ * warming a chunk only pays off because this dialog's map is 46 KB of generated
+ * path data, and a dialog without such a chunk would be preloading nothing.
  */
 const INTENT_HANDLERS = {
   onPointerEnter: preloadCampusMap,
@@ -41,21 +44,18 @@ export default function FindUs() {
  * calendar mounted behind it, so following this swaps only the leaf — no
  * remount of the page underneath, and the URL is shareable.
  *
- * `scroll={false}` because opening a dialog should not scroll the page behind
- * it to the top. `onNavigate` fires only when the router handles the click, so
- * it marks precisely the case where closing can safely go back (see
- * {@link markOpenedInApp}).
+ * {@link RouteDialogLink} carries the props that make that URL behave like a
+ * dialog rather than a page — no scroll to the top, and the mark that lets
+ * closing go back instead of pushing.
  */
 export function FindUsLink() {
   return (
-    <Link
+    <RouteDialogLink
       href="/events/directions"
-      scroll={false}
-      onNavigate={markOpenedInApp}
       className={TRIGGER_CLS}
       {...INTENT_HANDLERS}
     >
       <MapTrifoldIcon /> Directions
-    </Link>
+    </RouteDialogLink>
   );
 }

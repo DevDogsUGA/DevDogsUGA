@@ -2,13 +2,8 @@
 
 import type { ReactNode } from "react";
 import { MapPinIcon } from "@phosphor-icons/react/ssr";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
-} from "~/ui/dialog";
+import { DialogDescription, DialogTitle } from "~/ui/dialog";
+import DialogShell from "~/ui/dialog-shell";
 import { FIND_US_BLURB, FIND_US_TITLE } from "./copy";
 
 interface Props {
@@ -21,7 +16,31 @@ interface Props {
   children: ReactNode;
 }
 
-/** The directions dialog's frame: overlay, panel, title, blurb. */
+/**
+ * The directions dialog's header, exported on its own because the two ways in
+ * need it separately: the homepage renders the whole dialog below, while
+ * `/events/directions` hands this to the shared {@link RouteDialog}, which
+ * owns the close behaviour a route dialog needs. Both get the same title from
+ * the same place instead of two copies drifting apart.
+ */
+export function FindUsHeader() {
+  return (
+    <div className="flex flex-col gap-2">
+      <DialogTitle className="font-display flex items-center gap-2 text-2xl leading-none font-extrabold text-black">
+        <MapPinIcon className="text-mauve-500" weight="fill" />
+        {FIND_US_TITLE}
+      </DialogTitle>
+      <DialogDescription className="text-sm text-mauve-600">
+        {FIND_US_BLURB}
+      </DialogDescription>
+    </div>
+  );
+}
+
+/**
+ * The directions dialog opened in place, by a trigger rather than by a URL:
+ * the shared frame with this dialog's header in it.
+ */
 export default function FindUsDialog({
   open,
   onOpenChange,
@@ -29,20 +48,13 @@ export default function FindUsDialog({
   children,
 }: Props) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="max-h-[85dvh] w-full overflow-y-auto rounded-sm border-2 border-black bg-white p-5 text-black ring-0 sm:max-w-xl">
-        <div className="flex flex-col gap-2">
-          <DialogTitle className="font-display flex items-center gap-2 text-2xl leading-none font-extrabold text-black">
-            <MapPinIcon className="text-mauve-500" weight="fill" />
-            {FIND_US_TITLE}
-          </DialogTitle>
-          <DialogDescription className="text-sm text-mauve-600">
-            {FIND_US_BLURB}
-          </DialogDescription>
-        </div>
-        {children}
-      </DialogContent>
-    </Dialog>
+    <DialogShell
+      open={open}
+      onOpenChange={onOpenChange}
+      trigger={trigger}
+      header={<FindUsHeader />}
+    >
+      {children}
+    </DialogShell>
   );
 }
