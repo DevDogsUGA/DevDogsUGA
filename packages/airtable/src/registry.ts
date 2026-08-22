@@ -1,4 +1,4 @@
-import { field, table } from "./field.js";
+import { field, table, type AirtableValue } from "./field.js";
 
 /**
  * The field registry: one declaration read by the push builder, the pull
@@ -108,6 +108,150 @@ export interface TeamRow {
   totalPoints: number | null;
 }
 
+// ── Officer-authored meeting copy ────────────────────────────────────────────
+//
+// The three fields below are what let an officer say what a night is ABOUT,
+// rather than leaving the events page to infer it from the night's structure.
+// Their parsers live here, next to the declarations, because the pull, the
+// verifier and the app's refusal rules all need to agree on exactly one
+// definition of "acceptable" — and a second copy of that definition is how a
+// value gets published that the database then rejects.
+//
+// ## Every parser here returns null instead of throwing
+//
+// `applyPull` runs each parser inside a bare `.map()` over the fetched
+// records, so an exception does not skip one row: it escapes the map, escapes
+// the pull, and fails the entire sync pass for every table. `new URL()` throws
+// on anything it cannot parse, which is precisely what an officer pasting the
+// wrong thing produces, so it is wrapped rather than trusted.
+
+/**
+ * How long a meeting summary may be, measured after normalization.
+ *
+ * The events card is sized for one or two sentences. Longer than this is not
+ * a card, it is an article, and the layout has nowhere to put it.
+ */
+export const MEETING_SUMMARY_MAX_LENGTH = 240;
+
+/**
+ * Trims and collapses a summary, or null when the officer has written nothing.
+ *
+ * Exported because the refusal rule needs the same normalized text this
+ * produces — it reports the length that was measured, and a message quoting a
+ * different number than the rule applied is worse than no message.
+ */
+export function normalizeMeetingSummary(value: AirtableValue): string | null {
+  if (typeof value !== "string") return null;
+  // Long text arrives with whatever line breaks the officer typed. Collapsing
+  // them is what makes the character count mean the same thing as the count
+  // the card will lay out.
+  const collapsed = value.trim().replace(/\s+/g, " ");
+  return collapsed === "" ? null : collapsed;
+}
+
+/**
+ * The closed list of meeting kinds.
+ *
+ * Deliberately short, because `Kind` is an OVERRIDE and not a label for every
+ * night. A meeting that runs workshops already derives as a workshop night
+ * from its own structure, and a meeting that judges a competition derives as
+ * judging — naming those here would create two sources for one fact. What is
+ * left is the set of nights whose structure cannot describe them: there is
+ * nothing in the schema that distinguishes a social from an empty calendar
+ * entry.
+ */
+export const MEETING_KIND_CHOICES = [
+  "Social",
+  "Career",
+  "Info session",
+  "Open lab",
+] as const;
+
+export type MeetingKind = (typeof MEETING_KIND_CHOICES)[number];
+
+// Derived from the tuple rather than retyped, so the Airtable dropdown, the
+// parser and the database constraint cannot drift apart.
+const MEETING_KINDS: ReadonlySet<string> = new Set(MEETING_KIND_CHOICES);
+
+/** The value if it is one of `MEETING_KIND_CHOICES`, else null. */
+export function parseMeetingKind(value: AirtableValue): MeetingKind | null {
+  if (typeof value !== "string") return null;
+  return MEETING_KINDS.has(value) ? (value as MeetingKind) : null;
+}
+
+/**
+ * Hosts an RSVP link may point at.
+ *
+ * Seeded with the UGA Involvement Network, which is where the club's events
+ * already live — the same origin as `INVOLVEMENT_NETWORK_URL` in
+ * `apps/platform/src/config/nav.ts`. It is retyped rather than imported
+ * because this package is upstream of the app and importing downward would
+ * invert the dependency; keep the two in step by hand if the Involvement
+ * Network ever moves.
+ *
+ * An allowlist rather than a scheme check, because the value is rendered as an
+ * href on a public page under the club's name. "https and well-formed" still
+ * lets one mispaste point every member at somewhere else entirely.
+ */
+export const RSVP_URL_ALLOWED_HOSTS: readonly string[] = ["uga.campuslabs.com"];
+
+/**
+ * The shape an accepted RSVP link must have, character for character.
+ *
+ * The host allowlist alone is not enough, because `new URL()` accepts a great
+ * deal this must not store: `https://someone@uga.campuslabs.com/x` has the
+ * allowed hostname and is still a credential-carrying URL. This is also the
+ * JavaScript twin of the `meetings_rsvpUrl_host` check constraint — the parser
+ * has to be at least as strict as the database, or a value it accepts becomes
+ * an insert the constraint rejects, which takes down the whole sync pass.
+ *
+ * Tested against the CANONICALIZED url rather than the officer's text, so the
+ * string this approves is exactly the string that gets stored.
+ */
+const RSVP_URL_SHAPE = /^https:\/\/[A-Za-z0-9.-]+(\/[A-Za-z0-9/_?=&.%#:~-]*)?$/;
+
+/**
+ * An RSVP link in canonical form, or null if it is not one this may publish.
+ *
+ * `https:` only and an allowlisted host. Anything else — `http:`, a
+ * `javascript:` URI, a link to somebody's Google Form, a half-typed address —
+ * is null, and the app's refusal rule turns that null into a message in the
+ * officer's grid so the rejection is visible where the paste happened.
+ *
+ * ## It returns `url.toString()`, not the officer's text, and that matters
+ *
+ * A host comparison is case-insensitive and a regex is not, so
+ * `https://UGA.CampusLabs.com/engage` passes the allowlist and fails the
+ * `meetings_rsvpUrl_host` constraint — the parser would accept a value the
+ * insert then rejects, and a constraint violation inside the pull takes down
+ * the whole sync pass rather than refusing one field. Storing what `URL`
+ * canonicalized (lowercased host, default port dropped) closes that gap by
+ * construction: the string tested is the string stored.
+ */
+export function parseRsvpUrl(value: AirtableValue): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    // `new URL` throws on garbage, and garbage is exactly what a mispaste
+    // produces. Throwing here would fail the pass for every table.
+    return null;
+  }
+
+  if (url.protocol !== "https:") return null;
+  if (url.username !== "" || url.password !== "") return null;
+  if (!RSVP_URL_ALLOWED_HOSTS.includes(url.hostname.toLowerCase())) return null;
+
+  const canonical = url.toString();
+  if (!RSVP_URL_SHAPE.test(canonical)) return null;
+
+  return canonical;
+}
+
 // ── Tables ───────────────────────────────────────────────────────────────────
 //
 // The `⚙️` prefix marks a field the platform writes. It is a naming convention
@@ -196,6 +340,37 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
   attendanceForm: field
     .url("fldZT0taFyXVb7Bls", "Attendance form")
     .pull((v) => (typeof v === "string" ? v : null)),
+  // What the night is about, in an officer's own words.
+  //
+  // Null is the ordinary state, not an error: the events page derives an
+  // agenda from the meeting's workshops when there is no summary, so most
+  // weeks need nothing written here at all. `parse` returns null for a summary
+  // that is too long as well — see `MEETING_SUMMARY_MAX_LENGTH`. It never
+  // TRUNCATES, because publishing the first 240 characters puts half a
+  // sentence under an officer's name on a public page with no way for them to
+  // know it happened. `checkMeeting` in the app turns that null into a message
+  // in this row's `⚙️ Sync status` instead.
+  summary: field.longText("fld2t0yGBtegiryKy", "Summary").pull((v) => {
+    const text = normalizeMeetingSummary(v);
+    if (text === null) return null;
+    return text.length > MEETING_SUMMARY_MAX_LENGTH ? null : text;
+  }),
+
+  // An override for a night whose STRUCTURE cannot describe it.
+  //
+  // Not a label for every meeting: a night with workshops already derives as a
+  // workshop night, and giving it a Kind as well would be two answers to one
+  // question. See `MEETING_KIND_CHOICES` for why the list is four values long.
+  kind: field
+    .singleSelect("fldsGXvpFlZenWEPq", "Kind", MEETING_KIND_CHOICES)
+    .pull((v) => parseMeetingKind(v)),
+
+  // Per-meeting RSVP link, normally an Involvement Network event page.
+  //
+  // Host-allowlisted rather than merely well-formed, because this is rendered
+  // as an href on a public page under the club's name.
+  rsvpUrl: field.url("fldjHxkT7AqSFxm1o", "RSVP").pull((v) => parseRsvpUrl(v)),
+
   attendanceCount: field
     .number("fld9RRuEB6SpnqPLP", "⚙️ Attendance")
     .push((m: MeetingRow) => m.attendanceCount),

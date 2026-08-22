@@ -1,3 +1,10 @@
+import {
+  MEETING_SUMMARY_MAX_LENGTH,
+  normalizeMeetingSummary,
+  RSVP_URL_ALLOWED_HOSTS,
+  type AirtableValue,
+} from "@devdogsuga/airtable";
+
 /**
  * The rules that make this a sync rather than a mirror.
  *
@@ -10,6 +17,23 @@
  * with no database and no Airtable client anywhere near it, because these are
  * the rules that most need a test each and the least need a fixture base to
  * test against.
+ *
+ * ## Two classes of rule live here, and they are not the same thing
+ *
+ * The workshop and competition rules mean **"this edit would destroy
+ * something already earned"**: attendance credit attached to a workshop,
+ * arithmetic already published under a competition. They are refusals about
+ * HISTORY, and what they protect is a row that is already correct.
+ *
+ * `checkMeeting` is the other kind. It means **"this value cannot be
+ * published"** — a summary that will not fit the card it is laid out in, an
+ * RSVP link pointing somewhere the club is not. Nothing has been earned and
+ * nothing is at risk; the value simply cannot go on a public page as written.
+ *
+ * Both write to `⚙️ Sync status`, and they should, because the officer's
+ * question is the same in both cases: I edited this and the site did not
+ * change — why. But the reasoning does not transfer. A rule of the first kind
+ * asks what already exists; a rule of the second kind asks only what arrived.
  */
 
 /** What the sync refused, and why, in words an officer can act on. */
@@ -23,6 +47,8 @@ export interface Refusal {
 }
 
 export type RefusalCode =
+  | "meeting_summary_too_long"
+  | "meeting_rsvp_host"
   | "workshop_meeting_changed"
   | "workshop_project_changed"
   | "requirement_count_after_finalize"
@@ -48,6 +74,123 @@ export interface RuleResult {
 
 function empty(): RuleResult {
   return { refusals: [], rejectedFields: new Set() };
+}
+
+// ── Meetings ─────────────────────────────────────────────────────────────────
+
+export interface MeetingFacts {
+  airtableRecordId: string;
+  /**
+   * Exactly what Airtable returned for `Summary`, before any parsing.
+   *
+   * See the note on `checkMeeting` for why the raw cell is needed alongside
+   * the parsed value.
+   */
+  rawSummary: AirtableValue;
+  /** What the registry parser made of it — null if it refused the value. */
+  summary: string | null;
+  /** Exactly what Airtable returned for `RSVP`, before any parsing. */
+  rawRsvpUrl: AirtableValue;
+  /** What the registry parser made of it — null if it refused the value. */
+  rsvpUrl: string | null;
+}
+
+/**
+ * The values a meeting cannot publish.
+ *
+ * ## Empty is not malformed
+ *
+ * This is the rule the whole thing turns on. A blank Summary and a blank RSVP
+ * are the ORDINARY state of a meeting: most weeks have neither, the events
+ * page derives an agenda instead, and an officer who never fills them in has
+ * done nothing wrong. A blank field must therefore stay silent forever, not
+ * just until somebody notices the noise — otherwise every meeting in the base
+ * carries a permanent complaint and `⚙️ Sync status` stops being a signal.
+ *
+ * Only a value that is PRESENT and WRONG produces a refusal.
+ *
+ * ## Which is why the raw cell is a parameter
+ *
+ * The parser cannot answer this on its own. It returns `null` for both
+ * "nothing was written" and "something was written and I will not publish it",
+ * and those two are the entire distinction this rule is made of. Collapsing
+ * them would either silence every real refusal or complain about every empty
+ * field, depending on which way you guessed.
+ *
+ * So the caller hands over both halves: the raw Airtable cell, which answers
+ * "did the officer write anything", and the parsed value, which answers "was
+ * it publishable". A refusal is exactly the pair (present, null) — and the
+ * verdict stays with the parser rather than being re-derived here, so there is
+ * no second definition of "acceptable" to drift out of step with the first.
+ *
+ * Note what is absent: there is no rule for `Kind`. It is a single select in
+ * Airtable, so an out-of-list value is close to unrepresentable at the source,
+ * and there is no wrong-but-plausible value for an officer to be told about —
+ * they picked from a dropdown or they did not.
+ */
+export function checkMeeting(facts: MeetingFacts): RuleResult {
+  const result = empty();
+
+  // Normalized here rather than trimmed, so the length quoted back at the
+  // officer is the length the rule actually measured. A message naming a
+  // different number than the rule applied is worse than no message.
+  const summaryText = normalizeMeetingSummary(facts.rawSummary);
+  if (summaryText !== null && facts.summary === null) {
+    result.rejectedFields.add("summary");
+    result.refusals.push({
+      table: "meetings",
+      airtableRecordId: facts.airtableRecordId,
+      code: "meeting_summary_too_long",
+      message:
+        `Summary is ${summaryText.length} characters; the card fits about ` +
+        `${MEETING_SUMMARY_MAX_LENGTH}. It has not been published — shorten ` +
+        "it and it will appear within fifteen minutes. It was not cut short " +
+        "for you on purpose: half a sentence under your name on the events " +
+        "page is worse than none.",
+    });
+  }
+
+  const rsvpText = presentText(facts.rawRsvpUrl);
+  if (rsvpText !== null && facts.rsvpUrl === null) {
+    result.rejectedFields.add("rsvpUrl");
+    result.refusals.push({
+      table: "meetings",
+      airtableRecordId: facts.airtableRecordId,
+      code: "meeting_rsvp_host",
+      message:
+        `RSVP is "${rsvpText}", which is not a link this can publish. It has ` +
+        "not been published — the events page links members straight to it, " +
+        "so it has to be an https:// address on " +
+        `${RSVP_ALLOWED_HOSTS_TEXT}. Paste the meeting's event page from the ` +
+        "Involvement Network and it will appear within fifteen minutes.",
+    });
+  }
+
+  return result;
+}
+
+/** The allowlist as a phrase, so the message names what is actually accepted. */
+const RSVP_ALLOWED_HOSTS_TEXT = RSVP_URL_ALLOWED_HOSTS.join(" or ");
+
+/**
+ * The cell's text if the officer wrote something, else null.
+ *
+ * "Wrote something" and not "wrote a string": Airtable omits an empty field
+ * from a record's `fields` object entirely rather than returning null, so
+ * `undefined` is the shape absence usually arrives in. A cell holding only
+ * whitespace is absence too — nobody meant it, and refusing it would be a
+ * complaint about a stray keystroke.
+ *
+ * Anything present and not a string is stringified rather than treated as
+ * absent. A `url` field will never return one, but the failure modes are not
+ * symmetric: a value wrongly called absent is silently dropped, while a value
+ * wrongly called present is at worst a refusal an officer can read and ignore.
+ */
+function presentText(raw: AirtableValue): string | null {
+  if (raw === null || raw === undefined) return null;
+  const text = typeof raw === "string" ? raw : String(raw);
+  const trimmed = text.trim();
+  return trimmed === "" ? null : trimmed;
 }
 
 // ── Workshops ────────────────────────────────────────────────────────────────

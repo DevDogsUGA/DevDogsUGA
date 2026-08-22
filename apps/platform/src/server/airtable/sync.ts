@@ -17,7 +17,12 @@ import {
   teams,
   workshops,
 } from "~/server/db/schema";
-import { checkCompetition, checkWorkshop, type Refusal } from "./refusals";
+import {
+  checkCompetition,
+  checkMeeting,
+  checkWorkshop,
+  type Refusal,
+} from "./refusals";
 
 /**
  * The pull half of the sync: Airtable is the CMS, so this is where officer
@@ -71,16 +76,46 @@ interface MeetingValues {
   startsAt: string | null;
   endsAt: string | null;
   attendanceForm: string | null;
+  summary: string | null;
+  kind: string | null;
+  rsvpUrl: string | null;
 }
 
 /**
- * Meetings have no refusal rules — nothing downstream of a meeting can be
- * invalidated by renaming it or moving it an hour later, because attendance
- * hangs off the row rather than off its schedule.
+ * Slugs a meeting may not take, because a static route already answers them.
+ *
+ * `/events/directions` is a page, and meeting pages live at `/events/<slug>`.
+ * A meeting named "Directions" would slug to `directions` and be shadowed by
+ * that route forever — the URL would render the directions page, and the
+ * meeting would be unreachable at the only address anybody had for it. The
+ * slug is derived once on insert and never recomputed, so this is not a
+ * problem that fixes itself on the next pass.
+ *
+ * Reserving it here makes `uniqueSlug` pick `directions-2` instead, which is
+ * ugly and works, rather than pretty and gone.
+ */
+const RESERVED_MEETING_SLUGS = ["directions"] as const;
+
+/**
+ * Meetings have no refusal rules of the destructive kind — nothing downstream
+ * of a meeting can be invalidated by renaming it or moving it an hour later,
+ * because attendance hangs off the row rather than off its schedule.
+ *
+ * `checkMeeting` is a different class of rule and does not contradict that.
+ * It refuses VALUES that cannot be published — a summary too long for the card
+ * it is laid out in, an RSVP link pointing off the allowlisted host — rather
+ * than edits that would destroy something already earned. See the note at the
+ * top of `refusals.ts`.
  *
  * What it does have is a required shape: `name`, `startsAt`, `endsAt` and
  * `endsAt` are both NOT NULL, and `endsAt > startsAt` is a check
  * constraint. A half-filled row is skipped until it is whole.
+ *
+ * The three officer-authored copy fields are deliberately NOT part of that
+ * shape. All three are optional, and an incomplete row is skipped rather than
+ * refused: officers fill Airtable fields one at a time, and a pass landing
+ * between two keystrokes must not complain about a field nobody has reached
+ * yet.
  */
 export async function pullMeetings(
   records: AirtableRecord[],
@@ -101,10 +136,35 @@ export async function pullMeetings(
       .filter((m) => m.airtableRecordId !== null)
       .map((m) => [m.airtableRecordId!, m]),
   );
-  const usedSlugs = new Set(existing.map((m) => m.slug));
+  const usedSlugs = new Set([
+    ...existing.map((m) => m.slug),
+    ...RESERVED_MEETING_SLUGS,
+  ]);
+
+  // `checkMeeting` needs the RAW cell alongside the parsed value, because the
+  // parser returns null both for "the officer wrote nothing" and for "the
+  // officer wrote something unpublishable" — and only the second is a refusal.
+  // Keyed by record id rather than zipped by index, so the correspondence is
+  // stated rather than inherited from `applyPull` happening to use `.map()`.
+  const rawByRecordId = new Map(records.map((r) => [r.id, r.fields]));
 
   for (const record of parsed) {
     const v = record.values;
+
+    // Before the completeness gate on purpose. These rules are about the VALUE
+    // that arrived, not about the state of the row: a summary too long to
+    // publish is just as unpublishable on a half-made meeting, and the officer
+    // who just typed it is the person best placed to fix it now.
+    const raw = rawByRecordId.get(record.airtableRecordId) ?? {};
+    const rules = checkMeeting({
+      airtableRecordId: record.airtableRecordId,
+      rawSummary: raw[meetingsSpec.fields.summary.id],
+      summary: v.summary,
+      rawRsvpUrl: raw[meetingsSpec.fields.rsvpUrl.id],
+      rsvpUrl: v.rsvpUrl,
+    });
+    out.refusals.push(...rules.refusals);
+
     const complete =
       v.name !== null &&
       v.startsAt !== null &&
@@ -119,7 +179,16 @@ export async function pullMeetings(
       continue;
     }
 
-    const values = {
+    const values: {
+      name: string;
+      location: string | null;
+      startsAt: Date;
+      endsAt: Date;
+      attendanceFormUrl: string | null;
+      summary?: string | null;
+      kind?: string | null;
+      rsvpUrl?: string | null;
+    } = {
       name: v.name!,
       location: v.location,
       startsAt: new Date(v.startsAt!),
@@ -129,7 +198,19 @@ export async function pullMeetings(
       // yet is a meeting that exists. So it is written through rather than
       // gating `complete`.
       attendanceFormUrl: v.attendanceForm,
+      // Same reasoning, three more times. Null clears, because an officer
+      // deleting a summary means the page should stop showing it.
+      summary: v.summary,
+      kind: v.kind,
+      rsvpUrl: v.rsvpUrl,
     };
+
+    // A refused field is DROPPED from the write rather than written as null.
+    // The message says the value has not been published; blanking a summary
+    // that was already published, because the replacement is too long, would
+    // punish the edit twice. The old text stays up until the new one fits.
+    if (rules.rejectedFields.has("summary")) delete values.summary;
+    if (rules.rejectedFields.has("rsvpUrl")) delete values.rsvpUrl;
 
     if (current) {
       await db.update(meetings).set(values).where(eq(meetings.id, current.id));

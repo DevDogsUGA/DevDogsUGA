@@ -54,6 +54,13 @@ export {
 export {
   registry,
   isPlaceholder,
+  MEETING_KIND_CHOICES,
+  MEETING_SUMMARY_MAX_LENGTH,
+  RSVP_URL_ALLOWED_HOSTS,
+  normalizeMeetingSummary,
+  parseMeetingKind,
+  parseRsvpUrl,
+  type MeetingKind,
   members,
   projects,
   meetings,
@@ -84,6 +91,7 @@ export { applyPull, type PullResult } from "./pull.js";
 
 export {
   verifyBase,
+  choiceFindings,
   duplicateKeyFindings,
   formatVerifyResult,
   type Finding,

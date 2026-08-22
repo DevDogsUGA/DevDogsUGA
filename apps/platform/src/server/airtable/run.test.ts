@@ -128,7 +128,22 @@ function matchingSchema() {
         id: spec.id,
         name: spec.name,
         primaryFieldId: fields[0]!.id,
-        fields: fields.map((f) => ({ id: f.id, name: f.name, type: f.type })),
+        // A field that declares choices only "matches" the registry when the
+        // base carries the same ones — `verifyBase` compares choice names for
+        // exactly those fields. So the fixture has to mirror what the Meta API
+        // returns for a select, or every test built on "a base that matches"
+        // fails with `schema_invalid` the moment any field declares a list.
+        // Colour and choice id are deliberately absent: the check compares
+        // names only, and a fixture carrying more than the check reads would
+        // imply a stricter comparison than there is.
+        fields: fields.map((f) => ({
+          id: f.id,
+          name: f.name,
+          type: f.type,
+          ...(f.choices
+            ? { options: { choices: f.choices.map((name) => ({ name })) } }
+            : {}),
+        })),
       };
     }),
   };

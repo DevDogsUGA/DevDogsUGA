@@ -115,6 +115,27 @@
           "type": "dateTime"
         },
         {
+          "id": "fldsGXvpFlZenWEPq",
+          "name": "Kind",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "Career"
+              },
+              {
+                "name": "Info session"
+              },
+              {
+                "name": "Open lab"
+              },
+              {
+                "name": "Social"
+              }
+            ]
+          }
+        },
+        {
           "id": "fld3MRTF42aS6c3PX",
           "name": "Location",
           "type": "singleLineText"
@@ -125,9 +146,19 @@
           "type": "singleLineText"
         },
         {
+          "id": "fldjHxkT7AqSFxm1o",
+          "name": "RSVP",
+          "type": "url"
+        },
+        {
           "id": "fld0iXyGZpgW7zJWF",
           "name": "Starts at",
           "type": "dateTime"
+        },
+        {
+          "id": "fld2t0yGBtegiryKy",
+          "name": "Summary",
+          "type": "multilineText"
         },
         {
           "id": "fldANNjZaqMsRkgQZ",
