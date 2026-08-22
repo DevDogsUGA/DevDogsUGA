@@ -24,7 +24,12 @@ import { registry } from "./registry.js";
  *
  * These are creation-time defaults, not a claim about what the field must look
  * like forever. An officer restyling a date format is not drift: `verify.ts`
- * compares `type`, never `options`.
+ * compares `type`, and of `options` it compares exactly one thing -- the choice
+ * NAMES of a select field whose spec declares `choices`, because those strings
+ * are ones the platform's own code branches on. Colours, date formats,
+ * precision, icons and everything else in `options` remain the officers' to
+ * change, unchecked and unreported. That widening is deliberate and narrow; it
+ * is not the start of comparing `options` generally.
  */
 export function createOptionsFor(
   spec: FieldSpec,
@@ -61,10 +66,35 @@ export function createOptionsFor(
 
     case "singleSelect":
     case "multipleSelects":
-      // No registry field uses these yet. Creating one with an empty choice
-      // list is legal and immediately useful, since Airtable lets an officer
-      // add choices in the UI.
-      return { choices: [] };
+      // Two cases, and the difference is who owns the vocabulary.
+      //
+      // A spec that DECLARES choices owns it: the field is created holding
+      // exactly those, so Airtable's dropdown never offers a value the
+      // platform cannot render, and `verify.ts` checks the live names against
+      // the same list.
+      //
+      // A spec that declares none leaves the vocabulary to the officers.
+      // Creating a select with an empty choice list is legal and immediately
+      // useful, since Airtable lets them add choices in the UI -- that is the
+      // point of the empty list, not a placeholder for a list nobody wrote.
+      //
+      // `{ name }` and no colour, deliberately. The create endpoint takes
+      // choices as `[{ name: "..." }]` with `color` optional, and assigns one
+      // itself when it is left out. Sending our own would make an officer
+      // restyling a choice a permanent disagreement between the base and this
+      // file, over something that is theirs to decide.
+      //
+      // LIMITATION, and the thing to know if you are here to add a choice:
+      // this only ever runs at CREATION. `scaffoldBase` creates what is
+      // missing and nothing else, and the client has no `updateField`, so
+      // adding a name to a spec's `choices` does NOT reach a field that
+      // already exists -- a re-run skips it entirely. Adding a choice to a
+      // live base is a manual edit in the Airtable UI; `verify.ts`'s choice
+      // check is what tells you the edit is still outstanding, which is why it
+      // is fatal rather than a warning.
+      return spec.choices
+        ? { choices: spec.choices.map((name) => ({ name })) }
+        : { choices: [] };
 
     case "multipleRecordLinks":
       if (!linkedTableId) {

@@ -17,7 +17,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { LiveTable } from "./client.js";
+import type { LiveField, LiveTable } from "./client.js";
 import { planScaffold } from "./scaffold.js";
 
 /**
@@ -40,9 +40,24 @@ export interface SchemaSnapshot {
  *
  * `findTable` matches on table id or name and `hasField` on field id or name,
  * so nothing else is load-bearing. Field `options` is dropped deliberately --
- * it carries choice lists and colours that change without the shape changing,
- * and every such edit would otherwise show up as a diff in a file whose whole
- * value is that a diff means something.
+ * it carries colours, date formats and precisions that change without the
+ * shape changing, and every such edit would otherwise show up as a diff in a
+ * file whose whole value is that a diff means something.
+ *
+ * ONE exception, added alongside `verify.ts`'s choice check: the NAMES of a
+ * select field's choices survive. Those are strings the platform branches on
+ * rather than styling, so they are schema in the sense this file cares about,
+ * and a choice renamed in the UI SHOULD show up here as a diff.
+ *
+ * Keeping them is a precondition, not the check itself: `snapshotDrift` still
+ * compares presence only, and adding an offline choice comparison to it is a
+ * one-function change once the data is in the file. It is here because the
+ * file can only be refreshed with a live credential -- so a snapshot written
+ * without the names would make that later change need a base run first, which
+ * is exactly the dependency the snapshot exists to remove.
+ *
+ * Colours are still dropped, and so is every other key in the bag; this is not
+ * the start of snapshotting `options` generally.
  *
  * Sorted because the Meta API makes no ordering promise, and an unsorted
  * snapshot would re-order itself on refresh and bury the real change.
@@ -56,8 +71,40 @@ export function normalize(tables: LiveTable[]): LiveTable[] {
       primaryFieldId: table.primaryFieldId,
       fields: [...table.fields]
         .sort((a, b) => a.name.localeCompare(b.name))
-        .map((field) => ({ id: field.id, name: field.name, type: field.type })),
+        .map((field) => ({
+          id: field.id,
+          name: field.name,
+          type: field.type,
+          ...choiceOptions(field),
+        })),
     }));
+}
+
+/**
+ * The surviving sliver of `options`: choice names only, sorted, or nothing.
+ *
+ * Sorted for the same reason the tables and fields are -- choice order is the
+ * officer's to arrange in the UI, and an unsorted list would rewrite itself on
+ * the next refresh over a change nobody made.
+ *
+ * A field with no choices at all emits no `options` key rather than an empty
+ * one, so every field the base has ever held keeps the exact shape it had
+ * before this existed. Read defensively, like `verify.ts`'s copy: a snapshot
+ * refresh that throws on an unfamiliar option bag would leave the committed
+ * file stale, which is the one state in which the offline check silently
+ * passes forever.
+ */
+function choiceOptions(field: LiveField): Pick<LiveField, "options"> | object {
+  const raw = (field.options as { choices?: unknown } | undefined)?.choices;
+  if (!Array.isArray(raw)) return {};
+
+  const names = raw
+    .map((choice) => (choice as { name?: unknown } | null | undefined)?.name)
+    .filter((name): name is string => typeof name === "string")
+    .sort((a, b) => a.localeCompare(b));
+
+  if (names.length === 0) return {};
+  return { options: { choices: names.map((name) => ({ name })) } };
 }
 
 export function writeSnapshot(

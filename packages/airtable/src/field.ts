@@ -66,6 +66,22 @@ export interface FieldSpec<TType extends FieldType = FieldType> {
    * thing this integration treats as changeable.
    */
   readonly linkTo?: string;
+  /**
+   * For `singleSelect`/`multipleSelects` only: the closed list of choice names
+   * the field is allowed to hold.
+   *
+   * Declaring them buys two things no parser can. The scaffolder creates the
+   * field with exactly these choices, so Airtable's own dropdown refuses a
+   * value the platform cannot render -- enforcement moves from a pull parser,
+   * which learns about a bad value only after somebody typed it, to the moment
+   * of typing. And `verify.ts` can then compare the live choice names against
+   * this list, which is the one and only part of `options` it reads.
+   *
+   * Optional, unlike `linkTo`, because a select with no declared choices is a
+   * real declaration rather than an oversight: it says the platform reads or
+   * writes the column and leaves the vocabulary to the officers.
+   */
+  readonly choices?: readonly string[];
   /** Present only when direction is "push". */
   readonly project?: (row: never) => AirtableValue;
   /** Present only when direction is "pull". */
@@ -136,6 +152,7 @@ export class UndirectedField<TType extends FieldType> {
     readonly name: string,
     readonly isMatchKey: boolean = false,
     readonly linkTo?: string,
+    readonly choices?: readonly string[],
   ) {}
 
   /**
@@ -155,6 +172,7 @@ export class UndirectedField<TType extends FieldType> {
       this.name,
       true,
       this.linkTo,
+      this.choices,
     );
   }
 
@@ -165,6 +183,7 @@ export class UndirectedField<TType extends FieldType> {
       name: this.name,
       isMatchKey: this.isMatchKey,
       linkTo: this.linkTo,
+      choices: this.choices,
       direction: "push",
       project,
     };
@@ -177,6 +196,7 @@ export class UndirectedField<TType extends FieldType> {
       name: this.name,
       isMatchKey: this.isMatchKey,
       linkTo: this.linkTo,
+      choices: this.choices,
       direction: "pull",
       parse,
     };
@@ -196,6 +216,7 @@ export class UndirectedField<TType extends FieldType> {
       name: this.name,
       isMatchKey: this.isMatchKey,
       linkTo: this.linkTo,
+      choices: this.choices,
       direction: "ignore",
     };
   }
@@ -208,11 +229,20 @@ export class UndirectedField<TType extends FieldType> {
       name: this.name,
       isMatchKey: this.isMatchKey,
       linkTo: this.linkTo,
+      choices: this.choices,
       direction: "status",
     };
   }
 }
 
+/**
+ * The factory for every type whose declaration is just an id and a name.
+ *
+ * `link`, `singleSelect` and `multipleSelects` are written out below instead,
+ * because each takes an argument that is meaningless for the other types --
+ * routing them through `make` would mean offering a third parameter on
+ * `field.checkbox` that silently does nothing.
+ */
 function make<TType extends FieldType>(type: TType) {
   return (id: string, name: string) => new UndirectedField(id, type, name);
 }
@@ -228,8 +258,45 @@ export const field = {
   date: make("date"),
   dateTime: make("dateTime"),
   checkbox: make("checkbox"),
-  singleSelect: make("singleSelect"),
-  multipleSelects: make("multipleSelects"),
+  /**
+   * A single select, and optionally the closed list of choices it may hold.
+   *
+   * Optional rather than required -- unlike `link`'s target, which the Meta API
+   * demands before it will create anything -- because both cases are real. A
+   * declared list is the platform saying "these strings are the ones my code
+   * branches on, and Airtable should refuse the rest"; an undeclared one is the
+   * platform saying the column is the officers' to fill however they like.
+   *
+   * Pass the list `as const` at the call site. The declaration is then the
+   * single source for the scaffolder's choice list, the verifier's comparison
+   * and whatever union type the caller derives from it, so the three cannot
+   * disagree.
+   */
+  singleSelect: (id: string, name: string, choices?: readonly string[]) =>
+    new UndirectedField(
+      id,
+      "singleSelect" as const,
+      name,
+      false,
+      undefined,
+      choices,
+    ),
+  /**
+   * The same declaration as {@link field.singleSelect}, for a column that holds
+   * several of the choices at once. Symmetric on purpose: the two types take
+   * identical `options` at creation and differ only in cardinality, so a
+   * closed list that could be declared on one and not the other would be a
+   * distinction with no cause.
+   */
+  multipleSelects: (id: string, name: string, choices?: readonly string[]) =>
+    new UndirectedField(
+      id,
+      "multipleSelects" as const,
+      name,
+      false,
+      undefined,
+      choices,
+    ),
   /**
    * A link, and the registry key of what it links to.
    *

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AirtableClient, type AirtableRecord } from "./client.js";
 import { field, table } from "./field.js";
 import { isPlaceholder, registry } from "./registry.js";
-import { duplicateKeyFindings, verifyBase } from "./verify.js";
+import { choiceFindings, duplicateKeyFindings, verifyBase } from "./verify.js";
 
 /**
  * verify.ts against a fixture base, asserting each check fires on a
@@ -18,7 +18,13 @@ interface StubTable {
   id: string;
   name: string;
   primaryFieldId: string;
-  fields: { id: string; name: string; type: string }[];
+  fields: {
+    id: string;
+    name: string;
+    type: string;
+    /** Only ever `choices`, and only for check 6. */
+    options?: Record<string, unknown>;
+  }[];
 }
 
 function stubClient(
@@ -268,5 +274,181 @@ describe("the five checks, against a broken base", () => {
         message: expect.stringContaining("not present in the base"),
       }),
     );
+  });
+});
+
+/**
+ * Check 6, against a base whose choice list is wrong in one way at a time.
+ *
+ * The check exists because a renamed or deleted choice fails silently in the
+ * worst way available: nothing errors, no write is rejected, and rows keep
+ * holding a string no branch in the platform matches — which renders as an
+ * empty slot on a page that otherwise works. Nothing else in the verifier
+ * looks at `options`, so if this does not fire, nothing does.
+ */
+describe("check 6 — declared select choices", () => {
+  const KIND = ["Workshop", "Social", "Meeting"] as const;
+
+  const fixture = table("Meetings", "tblM", {
+    platformId: field
+      .text("fldId", "⚙️ Platform ID")
+      .matchKey()
+      .push((m: { id: string }) => m.id),
+    kind: field.singleSelect("fldKind", "Kind", KIND).pull((v) => v),
+  });
+
+  const live = (choices: unknown): StubTable[] => [
+    {
+      id: "tblM",
+      name: "Meetings",
+      primaryFieldId: "fldId",
+      fields: [
+        { id: "fldId", name: "⚙️ Platform ID", type: "singleLineText" },
+        {
+          id: "fldKind",
+          name: "Kind",
+          type: "singleSelect",
+          ...(choices === undefined
+            ? {}
+            : { options: { choices } as Record<string, unknown> }),
+        },
+      ],
+    },
+  ];
+
+  const run = (tables: StubTable[]) =>
+    verifyBase(stubClient(tables), {
+      checkDuplicates: false,
+      tables: { meetings: fixture },
+    });
+
+  const named = (...names: string[]) =>
+    names.map((name, i) => ({ id: `sel${i}`, name, color: "blueLight2" }));
+
+  it("passes when the base holds exactly the declared choices", async () => {
+    const result = await run(live(named(...KIND)));
+    expect(result.ok).toBe(true);
+    expect(result.findings.filter((f) => f.severity !== "report")).toEqual([]);
+  });
+
+  it("ignores order and colour, which are the officer's to arrange", async () => {
+    // Dragging a choice up the list, or recolouring it, is the base being used
+    // as intended. Reporting either would train people to ignore the verifier,
+    // which costs more than it could ever catch.
+    const result = await run(
+      live([
+        { id: "s2", name: "Meeting", color: "redBright" },
+        { id: "s0", name: "Workshop", color: "purpleDark1" },
+        { id: "s1", name: "Social", color: "greenLight2" },
+      ]),
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("is fatal when a declared choice is missing from the base", async () => {
+    // How this actually arrives: a choice added to the registry, and the
+    // scaffolder cannot add it to a field that already exists. The finding is
+    // the reminder that the manual edit is still outstanding.
+    const result = await run(live(named("Workshop", "Social")));
+    expect(result.ok).toBe(false);
+    expect(result.findings).toContainEqual(
+      expect.objectContaining({
+        severity: "fatal",
+        field: "kind",
+        message: expect.stringContaining('missing from the base "Meeting"'),
+      }),
+    );
+  });
+
+  it("is fatal when the base holds a choice the registry does not", async () => {
+    const result = await run(live(named(...KIND, "Hackathon")));
+    expect(result.ok).toBe(false);
+    expect(result.findings).toContainEqual(
+      expect.objectContaining({
+        severity: "fatal",
+        message: expect.stringContaining(
+          'present only in the base "Hackathon"',
+        ),
+      }),
+    );
+  });
+
+  it("names both halves when the lists have diverged in both directions", async () => {
+    // A rename in the UI is exactly this: one missing, one extra. The message
+    // has to say both, because "missing Meeting" alone reads as deleted rather
+    // than renamed and sends the officer to the wrong repair.
+    const result = await run(live(named("Workshop", "Social", "Meetings")));
+    expect(result.ok).toBe(false);
+    const finding = result.findings.find((f) => f.field === "kind")!;
+    expect(finding.message).toContain('missing from the base "Meeting"');
+    expect(finding.message).toContain('present only in the base "Meetings"');
+  });
+
+  it("reports rather than throws when the base has no choice list at all", async () => {
+    // A verifier that dies mid-pass says nothing about the tables it had not
+    // reached yet, so an unfamiliar shape must degrade into a finding.
+    const result = await run(live(undefined));
+    expect(result.ok).toBe(false);
+    expect(result.findings).toContainEqual(
+      expect.objectContaining({
+        severity: "fatal",
+        message: expect.stringContaining("no choice list"),
+      }),
+    );
+  });
+
+  it("reports rather than throws on a malformed choice list", async () => {
+    for (const malformed of [
+      "Workshop",
+      [null],
+      [{ id: "sel0" }],
+      [{ name: 7 }],
+      { choices: named("Workshop") },
+    ]) {
+      const result = await run(live(malformed));
+      expect(result.ok, JSON.stringify(malformed)).toBe(false);
+      expect(
+        result.findings.some(
+          (f) => f.field === "kind" && f.severity === "fatal",
+        ),
+        JSON.stringify(malformed),
+      ).toBe(true);
+    }
+  });
+
+  it("says nothing about a select whose spec declares no choices", async () => {
+    // The narrowness is the point. An undeclared select leaves the vocabulary
+    // to the officers, and comparing it would reverse the rule this check was
+    // carefully widened around rather than replacing.
+    const undeclared = table("Meetings", "tblM", {
+      platformId: field
+        .text("fldId", "⚙️ Platform ID")
+        .matchKey()
+        .push((m: { id: string }) => m.id),
+      kind: field.singleSelect("fldKind", "Kind").pull((v) => v),
+    });
+
+    const result = await verifyBase(
+      stubClient(live(named("Anything", "At all"))),
+      { checkDuplicates: false, tables: { meetings: undeclared } },
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("compares nothing else in the options bag", () => {
+    // Driven straight at the comparison, because a date format is the case
+    // that must keep passing: `verify.ts` reads `choices` out of `options` and
+    // nothing else, forever.
+    const spec = field.singleSelect("fldKind", "Kind", KIND).ignore();
+    expect(
+      choiceFindings("Meetings", "kind", spec, {
+        name: "Kind",
+        options: {
+          choices: named(...KIND),
+          dateFormat: { name: "us" },
+          somethingAirtableAddedLater: true,
+        },
+      }),
+    ).toEqual([]);
   });
 });

@@ -39,14 +39,21 @@ describe("normalize", () => {
   });
 
   it("drops field options, which change without the shape changing", () => {
+    // A date format, a precision, a checkbox icon: all of them are the
+    // officers' to change, and every such edit would otherwise land as a diff
+    // in a file whose whole value is that a diff means something.
     const withOptions: LiveTable = {
-      ...live("Members", [["fld1", "Status"]]),
+      ...live("Members", [["fld1", "Joined"]]),
       fields: [
         {
           id: "fld1",
-          name: "Status",
-          type: "singleSelect",
-          options: { choices: [{ name: "Active", color: "green" }] },
+          name: "Joined",
+          type: "dateTime",
+          options: {
+            timeZone: "utc",
+            dateFormat: { name: "iso" },
+            timeFormat: { name: "24hour" },
+          },
         },
       ],
     };
@@ -54,10 +61,87 @@ describe("normalize", () => {
     const [table] = normalize([withOptions]);
     expect(table?.fields[0]).toEqual({
       id: "fld1",
-      name: "Status",
-      type: "singleSelect",
+      name: "Joined",
+      type: "dateTime",
     });
     expect(table?.fields[0]).not.toHaveProperty("options");
+  });
+
+  /**
+   * The one exception, and the reason it is worth carving out: `verify.ts`
+   * compares a declared choice list against the base, and a choice renamed in
+   * the UI is a schema change in the sense this file cares about rather than a
+   * restyle. `snapshotDrift` does not compare them yet -- these assertions are
+   * about the data being present and stable, which is what a later offline
+   * comparison would need and what a refresh cannot be re-run to add.
+   */
+  describe("choice names", () => {
+    const select = (options: Record<string, unknown>): LiveTable => ({
+      ...live("Meetings", [["fld1", "Kind"]]),
+      fields: [{ id: "fld1", name: "Kind", type: "singleSelect", options }],
+    });
+
+    it("keeps the names, drops the colours and ids around them", () => {
+      const [table] = normalize([
+        select({
+          choices: [
+            { id: "sel0", name: "Workshop", color: "blueLight2" },
+            { id: "sel1", name: "Social", color: "redBright" },
+          ],
+        }),
+      ]);
+
+      expect(table?.fields[0]).toEqual({
+        id: "fld1",
+        name: "Kind",
+        type: "singleSelect",
+        options: { choices: [{ name: "Social" }, { name: "Workshop" }] },
+      });
+    });
+
+    it("sorts them, so a drag in the UI is not a diff", () => {
+      // Choice order is the officer's to arrange and nothing reads it, so an
+      // unsorted list would rewrite itself on the next refresh and bury the
+      // real change underneath.
+      const [table] = normalize([
+        select({ choices: [{ name: "Zeta" }, { name: "Alpha" }] }),
+      ]);
+      expect(
+        (table?.fields[0]?.options?.choices as { name: string }[]).map(
+          (c) => c.name,
+        ),
+      ).toEqual(["Alpha", "Zeta"]);
+    });
+
+    it("keeps only the choices out of a bag that holds more", () => {
+      const [table] = normalize([
+        select({
+          choices: [{ id: "sel0", name: "Workshop", color: "grayLight1" }],
+          somethingAirtableAddedLater: true,
+        }),
+      ]);
+      expect(table?.fields[0]?.options).toEqual({
+        choices: [{ name: "Workshop" }],
+      });
+    });
+
+    it("emits no options at all for a select with an empty list", () => {
+      // An undeclared select starts empty and stays the officers' to fill, so
+      // it keeps exactly the shape every field had before choices were kept.
+      const [table] = normalize([select({ choices: [] })]);
+      expect(table?.fields[0]).not.toHaveProperty("options");
+    });
+
+    it("degrades rather than throwing on an unfamiliar shape", () => {
+      // A refresh that throws leaves the committed snapshot stale, which is
+      // the one state in which the offline check passes forever over a
+      // registry that has drifted.
+      for (const choices of ["Workshop", [null], [{ id: "sel0" }], 7]) {
+        expect(() => normalize([select({ choices })])).not.toThrow();
+      }
+      const [table] = normalize([select({ choices: [{ id: "sel0" }] })]);
+      expect(table?.fields[0]).not.toHaveProperty("options");
+    });
   });
 });
 

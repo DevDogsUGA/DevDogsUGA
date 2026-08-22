@@ -81,6 +81,33 @@ describe("createOptionsFor", () => {
     ).toMatchObject({ timeZone: "utc", dateFormat: { name: "iso" } });
   });
 
+  it("creates a select with the choices its spec declares", () => {
+    // The whole point of declaring them: the field arrives holding exactly
+    // these, so Airtable's dropdown refuses a value the platform cannot
+    // render. `toEqual` rather than `toMatchObject` because a colour smuggled
+    // in here would be a permanent disagreement with any officer who restyles
+    // the choice -- the create endpoint assigns one itself when it is left
+    // out, and that is the version we want.
+    const spec = field
+      .singleSelect("fldX", "Kind", ["Workshop", "Social"] as const)
+      .ignore();
+    expect(createOptionsFor(spec)).toEqual({
+      choices: [{ name: "Workshop" }, { name: "Social" }],
+    });
+  });
+
+  it("still creates an empty select when no choices are declared", () => {
+    // Deliberate, not a gap. An undeclared select says the vocabulary belongs
+    // to the officers, and Airtable lets them add choices in the UI -- so the
+    // empty list is the useful thing to create, and this asserts the two cases
+    // stay distinguishable.
+    for (const t of ["singleSelect", "multipleSelects"] as const) {
+      expect(createOptionsFor(field[t]("fldX", "X").ignore())).toEqual({
+        choices: [],
+      });
+    }
+  });
+
   it("refuses a link with no resolved target", () => {
     // The failure this prevents is silent: Airtable rejects the create, but
     // only after the table it belonged to has been made.
@@ -209,6 +236,83 @@ describe("scaffoldBase", () => {
 
     expect(second.calls).toEqual([]);
     expect(result.created).toEqual([]);
+  });
+
+  it("creates a select holding its declared choices", async () => {
+    // `createOptionsFor` being right is not enough -- `newField` decides
+    // whether the options reach the create call at all, and a select created
+    // with no choices accepts anything and looks perfectly fine.
+    const specs = {
+      meetings: table("Meetings", "tblTODO_m", {
+        key: field.text("fldTODO_m_key", "⚙️ Platform ID").matchKey().ignore(),
+        kind: field
+          .singleSelect("fldTODO_m_kind", "Kind", [
+            "Workshop",
+            "Social",
+          ] as const)
+          .ignore(),
+      }),
+    };
+
+    const { client } = fakeBase();
+    const result = await scaffoldBase(client, { tables: specs });
+    const kind = result.schema
+      .find((t) => t.name === "Meetings")!
+      .fields.find((f) => f.name === "Kind")!;
+
+    expect(kind.options).toEqual({
+      choices: [{ name: "Workshop" }, { name: "Social" }],
+    });
+  });
+
+  it("does NOT add a choice to a field that already exists", async () => {
+    // Pinning the limitation rather than the behaviour anyone wants.
+    // `scaffoldBase` creates what is missing and the client has no
+    // `updateField`, so adding a name to a spec's `choices` never reaches a
+    // live field. Asserted so that whoever changes that has to change this
+    // test too, and so nobody reads a green scaffold run as "the base now has
+    // my new choice" -- `verify.ts`'s choice check is what says otherwise.
+    const before = {
+      meetings: table("Meetings", "tblTODO_m", {
+        key: field.text("fldTODO_m_key", "⚙️ Platform ID").matchKey().ignore(),
+        kind: field
+          .singleSelect("fldTODO_m_kind", "Kind", ["Workshop"] as const)
+          .ignore(),
+      }),
+    };
+    const first = fakeBase();
+    const built = await scaffoldBase(first.client, { tables: before });
+
+    const live = built.schema.find((t) => t.name === "Meetings")!;
+    const after = {
+      meetings: table("Meetings", live.id, {
+        key: field
+          .text(
+            live.fields.find((f) => f.name === "⚙️ Platform ID")!.id,
+            "⚙️ Platform ID",
+          )
+          .matchKey()
+          .ignore(),
+        kind: field
+          .singleSelect(
+            live.fields.find((f) => f.name === "Kind")!.id,
+            "Kind",
+            ["Workshop", "Social"] as const,
+          )
+          .ignore(),
+      }),
+    };
+
+    const second = fakeBase(built.schema);
+    const result = await scaffoldBase(second.client, { tables: after });
+
+    expect(second.calls).toEqual([]);
+    expect(result.created).toEqual([]);
+    expect(
+      result.schema
+        .find((t) => t.name === "Meetings")!
+        .fields.find((f) => f.name === "Kind")!.options,
+    ).toEqual({ choices: [{ name: "Workshop" }] });
   });
 
   it("refuses a link whose target is not in the registry", async () => {

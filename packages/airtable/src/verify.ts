@@ -41,11 +41,23 @@ export interface VerifyResult {
 interface LiveTable {
   id: string;
   name: string;
-  fields: { id: string; name: string; type: string }[];
+  fields: {
+    id: string;
+    name: string;
+    type: string;
+    /**
+     * Widened for check 6 alone. The Meta API returns the whole option bag
+     * here -- colours, date formats, precision -- and the verifier reads one
+     * key out of it, `choices`, and only for a field whose spec declares its
+     * own. Everything else in here is deliberately not looked at; see the note
+     * on `createOptionsFor` in `scaffold.ts`.
+     */
+    options?: Record<string, unknown>;
+  }[];
 }
 
 /**
- * The five checks, in order of how badly each fails.
+ * The six checks.
  *
  *   1. Every registered field ID exists       FATAL — writes into nothing
  *   2. Field types match the registry         FATAL — a text field where a
@@ -56,6 +68,14 @@ interface LiveTable {
  *                                             uniqueness on most field types
  *   5. Live fields absent from the registry   REPORT — officers may add their
  *                                             own; just list them
+ *   6. Declared select choices match the base FATAL — a value the page cannot
+ *                                             render is worse than no value
+ *
+ * The list read as most-severe-first until check 6 was added, which is fatal
+ * and still numbered last. The numbers are kept as stable identities rather
+ * than a ranking: renumbering would quietly repoint every inline comment and
+ * test name that says "check 4" at a different check, and a renamed test is
+ * indistinguishable from a deleted one in a diff.
  */
 export async function verifyBase(
   client: AirtableClient,
@@ -168,6 +188,20 @@ export async function verifyBase(
           message: `Match key is ${fieldSpec.type}, which fieldsToMergeOn does not accept`,
         });
       }
+
+      // Check 6 — the choice list of a select field that declares one.
+      //
+      // A narrow widening of "compare type, never options", and it is meant to
+      // stay narrow: only choice NAMES, only for fields whose spec declares
+      // them. A colour, a date format, a precision is still the officers' to
+      // change and still not drift. See the same note on `createOptionsFor`.
+      //
+      // Fatal rather than a warning because the platform branches on these
+      // strings. A choice renamed in the UI does not blank the column and does
+      // not fail a write -- it leaves rows holding a value no branch matches,
+      // which surfaces as an empty slot on a page that is otherwise working,
+      // and that is worse than the field having no value at all.
+      findings.push(...choiceFindings(spec.name, key, fieldSpec, liveField));
     }
 
     // Check 5 — live fields the registry does not mention. A report, not an
@@ -197,6 +231,73 @@ export async function verifyBase(
     pushChecklist,
     ok: !findings.some((f) => f.severity === "fatal"),
   };
+}
+
+/**
+ * Compares a select field's live choice names against the ones its spec
+ * declares.
+ *
+ * A set comparison, not a sequence one: Airtable's choice ORDER is the
+ * officer's to arrange in the UI, nothing in the platform reads it, and
+ * treating a drag-and-drop reorder as schema drift would train people to
+ * ignore the verifier. Colours are likewise not looked at.
+ *
+ * Defensive about the shape because this is the only place the verifier reaches
+ * into `options`, which the Meta API types as an open bag and the docs describe
+ * loosely. Anything unrecognisable becomes a finding rather than a throw: a
+ * verifier that dies mid-pass reports nothing at all about the tables it had
+ * not reached, which is strictly less useful than a bad base plus a clear
+ * message.
+ *
+ * Exported for the same reason `duplicateKeyFindings` is -- so the comparison
+ * can be driven directly against a deliberately broken live shape, without
+ * standing up a whole fixture base for each one.
+ */
+export function choiceFindings(
+  table: string,
+  field: string,
+  spec: FieldSpec,
+  live: { name: string; options?: Record<string, unknown> },
+): Finding[] {
+  const declared = spec.choices;
+  if (!declared) return [];
+
+  const fatal = (message: string): Finding[] => [
+    { severity: "fatal", table, field, message },
+  ];
+  const list = (names: readonly string[]) =>
+    names.map((n) => `"${n}"`).join(", ");
+
+  const raw = (live.options as { choices?: unknown } | undefined)?.choices;
+  if (!Array.isArray(raw)) {
+    return fatal(
+      `Field "${live.name}" declares choices ${list(declared)} in the registry, but the base reports no choice list for it`,
+    );
+  }
+
+  const names: string[] = [];
+  for (const choice of raw) {
+    const name = (choice as { name?: unknown } | null | undefined)?.name;
+    if (typeof name !== "string") {
+      return fatal(
+        `Field "${live.name}" has a choice the base did not name (${JSON.stringify(choice)}) — cannot compare against the registry's ${list(declared)}`,
+      );
+    }
+    names.push(name);
+  }
+
+  const liveNames = new Set(names);
+  const declaredNames = new Set(declared);
+  const missing = declared.filter((c) => !liveNames.has(c));
+  const extra = names.filter((n) => !declaredNames.has(n));
+  if (missing.length === 0 && extra.length === 0) return [];
+
+  const parts: string[] = [];
+  if (missing.length > 0) parts.push(`missing from the base ${list(missing)}`);
+  if (extra.length > 0) parts.push(`present only in the base ${list(extra)}`);
+  return fatal(
+    `Field "${live.name}" choices disagree with the registry — ${parts.join("; ")}`,
+  );
 }
 
 /**

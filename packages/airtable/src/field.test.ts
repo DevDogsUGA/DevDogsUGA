@@ -101,3 +101,64 @@ describe("matchKey", () => {
     expect(() => matchKeyField(two)).toThrow(/exactly one/);
   });
 });
+
+/**
+ * A closed choice list is the only thing in a spec that Airtable itself can
+ * enforce, and it can only do so if the list survives all the way from the
+ * declaration to the scaffolder. Every direction method rebuilds the spec by
+ * hand rather than spreading it, so a new property is carried through four
+ * places or silently dropped in whichever one was missed -- and a dropped list
+ * scaffolds a select with NO choices, which accepts anything and looks fine.
+ */
+describe("choices", () => {
+  const KIND = ["Workshop", "Social", "Meeting"] as const;
+
+  it("carries a declared list onto the spec", () => {
+    const spec = field.singleSelect("fldK", "Kind", KIND).ignore();
+    expect(spec.choices).toEqual(["Workshop", "Social", "Meeting"]);
+  });
+
+  it("leaves choices undefined when none are declared", () => {
+    // Not an empty array: undeclared means "the officers own this
+    // vocabulary", and `createOptionsFor` and `verify.ts` both branch on the
+    // difference.
+    expect(field.singleSelect("fldK", "Kind").ignore().choices).toBeUndefined();
+    expect(field.text("fldT", "Name").ignore().choices).toBeUndefined();
+  });
+
+  it("survives every direction method, and .matchKey() before them", () => {
+    const undirected = field.singleSelect("fldK", "Kind", KIND);
+
+    expect(undirected.push((r: { k: string }) => r.k).choices).toEqual(KIND);
+    expect(undirected.pull((v) => v).choices).toEqual(KIND);
+    expect(undirected.ignore().choices).toEqual(KIND);
+    expect(undirected.status().choices).toEqual(KIND);
+
+    // `.matchKey()` returns a new UndirectedField, so it is the one place the
+    // list can be lost before a direction is even chosen. singleSelect is
+    // merge-eligible, so this is a legal chain rather than a contrived one.
+    const keyed = undirected.matchKey();
+    expect(keyed.choices).toEqual(KIND);
+    expect(keyed.ignore().choices).toEqual(KIND);
+    expect(keyed.ignore().isMatchKey).toBe(true);
+  });
+
+  it("treats multipleSelects the same way", () => {
+    // The two types take identical options at creation and differ only in
+    // cardinality, so a list declarable on one and not the other would be a
+    // distinction with no cause.
+    const spec = field.multipleSelects("fldT", "Tracks", KIND).ignore();
+    expect(spec.type).toBe("multipleSelects");
+    expect(spec.choices).toEqual(KIND);
+  });
+
+  it("accepts a readonly array declared as const at the call site", () => {
+    // The signature other code is written against. `as const` gives a
+    // `readonly string[]`, which a `string[]` parameter would reject -- so
+    // this is a compile-time assertion wearing a runtime test's clothes.
+    const choices = ["Workshop", "Social"] as const;
+    expect(
+      field.singleSelect("fldK", "Kind", choices).ignore().choices,
+    ).toEqual(choices);
+  });
+});
