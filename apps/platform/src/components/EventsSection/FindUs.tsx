@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "~/ui/dialog";
 import {
+  DLW_CENTER,
   DLW_FOOTPRINT,
   FOOTPRINTS,
   MAJOR_ROADS,
@@ -22,14 +23,13 @@ import {
 } from "./campusMapData";
 
 /**
- * The destination is passed as a place query rather than coordinates: the DLW
- * only opened in August 2026, and a hardcoded lat/lng guessed before the map
- * providers finish indexing it would drop the pin on the wrong roof forever.
- * A name query self-corrects as their data catches up.
+ * The destination is a coordinate pin, not a place query: the DLW only opened
+ * in August 2026, and searching either app for it by name still lands on the
+ * wrong building or nothing at all. The pin is the centroid of the same OSM
+ * footprint the map highlights, so regenerating the map data moves both
+ * together if the mapping ever improves.
  */
-const DESTINATION = encodeURIComponent(
-  "Dining, Learning, and Well-Being Center, University of Georgia, Athens, GA",
-);
+const DESTINATION = `${DLW_CENTER.lat},${DLW_CENTER.lon}`;
 const GOOGLE_MAPS_URL = `https://www.google.com/maps/dir/?api=1&destination=${DESTINATION}`;
 const APPLE_MAPS_URL = `https://maps.apple.com/?daddr=${DESTINATION}`;
 
@@ -204,18 +204,21 @@ function CampusMap() {
       <rect width={VIEW.w} height={VIEW.h} className="fill-orange-50" />
 
       {/* Roads: minor drives first and thin, then the cased streets — each
-          tier's black casing before its white surface, so surfaces run
-          together at junctions instead of butting into casings */}
+          tier's casing before its white surface, so surfaces run together at
+          junctions instead of butting into casings. The base map is drawn in
+          muted mauve throughout; black is reserved for the DLW, its pin, and
+          the callout, so the one building that matters is the one that
+          reads first. */}
       <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-        <path d={MINOR_ROADS} className="stroke-mauve-200" strokeWidth="2" />
-        <path d={MAJOR_ROADS} className="stroke-black" strokeWidth="10" />
-        <path d={MAJOR_ROADS} className="stroke-white" strokeWidth="6.5" />
+        <path d={MINOR_ROADS} className="stroke-mauve-200" strokeWidth="1.5" />
+        <path d={MAJOR_ROADS} className="stroke-mauve-300" strokeWidth="9" />
+        <path d={MAJOR_ROADS} className="stroke-white" strokeWidth="6" />
       </g>
 
       {/* Every building footprint in the frame, then the DLW's on top */}
       <path
         d={FOOTPRINTS}
-        className="fill-white stroke-black"
+        className="fill-white stroke-mauve-300"
         strokeWidth="1"
       />
       <path
@@ -231,7 +234,7 @@ function CampusMap() {
         fontSize="8"
         strokeWidth="2.5"
         strokeLinejoin="round"
-        className="fill-mauve-600 stroke-white font-semibold [paint-order:stroke]"
+        className="fill-mauve-500 stroke-white font-semibold [paint-order:stroke]"
       >
         {BUILDING_LABELS.map((l) => (
           <text key={l.text} x={l.x} y={l.y}>
@@ -295,7 +298,7 @@ function CampusMap() {
         fontSize="9"
         strokeWidth="2.5"
         strokeLinejoin="round"
-        className="fill-mauve-700 stroke-white font-bold [paint-order:stroke]"
+        className="fill-mauve-600 stroke-white font-bold [paint-order:stroke]"
       >
         <text x="32" y="95" transform="rotate(-12.5 32 95)">
           Baxter St

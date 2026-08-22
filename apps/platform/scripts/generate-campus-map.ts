@@ -5,7 +5,9 @@
  * The Directions dialog's campus map is real geometry, not a sketch: every
  * building footprint and road in the frame, pulled via Overpass and projected
  * equirectangular into an SVG viewBox. The DLW's own footprint is exported
- * separately so the component can highlight it. Rerun this when OSM improves
+ * separately so the component can highlight it, along with its centroid in
+ * lat/lon — the pin the Google/Apple Maps links drop, since the building is
+ * too new for a name search to resolve reliably. Rerun this when OSM improves
  * the area (the DLW is brand new) or to reframe; the landmark labels live in
  * FindUs.tsx and are placed by eye against these coordinates, so check the
  * rendered map after regenerating — the script prints each labeled building's
@@ -161,16 +163,38 @@ for (const e of elements) {
     roadPaths.minor.push(toPath(e.geometry, false));
 }
 
+/** Area-weighted polygon centroid in lat/lon — a vertex average would drift
+ * toward whichever wall OSM mapped with the most nodes. */
+function centroid(geom: OsmGeomPoint[]): { lat: number; lon: number } {
+  let a = 0,
+    cx = 0,
+    cy = 0;
+  for (let i = 0, j = geom.length - 1; i < geom.length; j = i++) {
+    const p = geom[j]!,
+      q = geom[i]!;
+    const f = p.lon * q.lat - q.lon * p.lat;
+    a += f;
+    cx += (p.lon + q.lon) * f;
+    cy += (p.lat + q.lat) * f;
+  }
+  const round = (n: number) => Math.round(n * 1e6) / 1e6;
+  return { lat: round(cy / (3 * a)), lon: round(cx / (3 * a)) };
+}
+
 let dlw = "";
+let dlwCenter: { lat: number; lon: number } | undefined;
 const footprints: string[] = [];
 for (const e of elements) {
   // Sanford Stadium is tagged leisure=stadium rather than building.
   if (!(e.tags?.building ?? e.tags?.leisure === "stadium")) continue;
   if (!inFrame(e.geometry) || area(e.geometry) < 12) continue;
-  if (e.tags?.name === DLW_NAME) dlw = toPath(e.geometry, true);
-  else footprints.push(toPath(e.geometry, true));
+  if (e.tags?.name === DLW_NAME) {
+    dlw = toPath(e.geometry, true);
+    dlwCenter = centroid(e.geometry);
+  } else footprints.push(toPath(e.geometry, true));
 }
-if (!dlw) throw new Error(`no OSM footprint found for "${DLW_NAME}"`);
+if (!dlw || !dlwCenter)
+  throw new Error(`no OSM footprint found for "${DLW_NAME}"`);
 
 const labeled = LABELED_BUILDINGS.map((name) => {
   const b = elements.find(
@@ -206,6 +230,9 @@ export const FOOTPRINTS = ${JSON.stringify(footprints.join(""))};
 
 /** The Dining, Learning and Well-being Center, highlighted by the map. */
 export const DLW_FOOTPRINT = ${JSON.stringify(dlw)};
+
+/** Centroid of that footprint — where the Google/Apple Maps links drop their pin. */
+export const DLW_CENTER = ${JSON.stringify(dlwCenter)};
 `;
 
 const target = join(
@@ -218,3 +245,4 @@ console.log(
   `viewBox 0 0 ${VW} ${VH} | ${roadPaths.major.length} major ways, ${roadPaths.minor.length} minor ways, ${footprints.length + 1} footprints`,
 );
 for (const b of labeled) console.log(`  ${b.name} → ${b.cx},${b.cy}`);
+console.log(`DLW centroid ${dlwCenter.lat},${dlwCenter.lon}`);

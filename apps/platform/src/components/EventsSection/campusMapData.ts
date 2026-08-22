@@ -19,3 +19,6 @@ export const FOOTPRINTS =
 /** The Dining, Learning and Well-being Center, highlighted by the map. */
 export const DLW_FOOTPRINT =
   "M136 188.5L159.8 198.8L163.2 198.5L167.9 187.5L142.4 176.5L139.4 173.2L133.8 178.6L138.3 183.4L136 188.5Z";
+
+/** Centroid of that footprint — where the Google/Apple Maps links drop their pin. */
+export const DLW_CENTER = { lat: 33.948708, lon: -83.379511 };
