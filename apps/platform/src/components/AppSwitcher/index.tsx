@@ -53,21 +53,27 @@ export default function AppSwitcher() {
             DevDogs
           </span>
         </Link>
-        <div className="flex items-center gap-2 md:gap-3">
+        {/* Mirrors the navbar's trailing cluster so the close button lands
+            exactly where the grid trigger was: same gap, same size-9 box, same
+            size-4.5 bold icon, and the same neighbour to its right — the Sign
+            In button, or a spacer the width of the avatar. */}
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={close}
             aria-label="Close app switcher"
-            className="flex size-10 items-center justify-center rounded-sm text-xl text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white"
+            className="flex size-9 items-center justify-center rounded-sm text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white"
           >
-            <XIcon />
+            <XIcon weight="bold" className="size-4.5" />
           </button>
           {/* The overlay only mounts on a click, well after the streamed user
               cluster has hydrated the context — so a signed-in visitor never
               sees this flash before `navUser` arrives. Hidden below md, where
               the navbar has already folded into the drawer: the overlay's Join
               CTA is the pitch there, not signing in. */}
-          {!navUser && (
+          {navUser ? (
+            <span aria-hidden className="hidden w-7.5 md:block" />
+          ) : (
             <div className="hidden md:block">
               <SignInButton />
             </div>
