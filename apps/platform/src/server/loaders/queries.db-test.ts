@@ -7,6 +7,7 @@ import {
   getWorkshopDetail,
   getCompetitionBySlug,
   getMeetingWorkshops,
+  getMeetingsInRange,
 } from "./meetings";
 import {
   getTeamsForCompetition,
@@ -59,6 +60,27 @@ describe("every loader is valid SQL", () => {
     await getWorkshopDetail("nope", "nope");
     await getCompetitionBySlug("nope");
     await getMeetingWorkshops(NIL);
+    expect(true).toBe(true);
+  });
+
+  it("the calendar's range query, on an empty window and a populated one", async () => {
+    // Two calls, because the loader has two code paths and only one of them
+    // reaches the child statements. A window with no meetings short-circuits
+    // before the workshop and judging queries run, so a far-future range would
+    // prove those parse — which is exactly the class of bug this suite exists
+    // for, the judging join being the riskiest expression in the file: it
+    // joins ON two timestamp comparisons rather than on a key.
+    const far = new Date("2999-01-01T00:00:00Z");
+    await getMeetingsInRange(far, new Date("2999-04-01T00:00:00Z"));
+
+    // Three months either side of now, which is the shape the page asks for
+    // and the one that will actually have rows in a seeded database.
+    const now = new Date();
+    const from = new Date(now);
+    from.setUTCMonth(from.getUTCMonth() - 3);
+    const to = new Date(now);
+    to.setUTCMonth(to.getUTCMonth() + 3);
+    await getMeetingsInRange(from, to);
     expect(true).toBe(true);
   });
   it("teams", async () => {
