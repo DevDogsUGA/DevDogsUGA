@@ -1,29 +1,19 @@
-import {
-  ArrowRightIcon,
-  ArrowUpRightIcon,
-  MapPinIcon,
-} from "@phosphor-icons/react/ssr";
+import { ArrowRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
 import SectionBackground, {
   type BlobDef,
   type EdgeType,
 } from "~/ui/section-background";
 import LinkButton from "~/ui/link-button";
-import EventsGrid from "./EventsGrid";
-import FindUs, { FindUsLink } from "./FindUs";
-import { getCalendarMonth } from "~/app/(site)/calendarMonth";
-import { INVOLVEMENT_NETWORK_EVENTS_URL } from "~/config/nav";
+import { getMeetingsInRange } from "~/server/loaders/meetings";
+import type { MeetingInRange } from "~/server/loaders/meetings";
+import FindUs from "./FindUs";
+import Marquee from "./Marquee";
+import HowItWorks from "./HowItWorks";
 
 const EVENTS_BLOBS: BlobDef[] = [
   { cx: "25%", cy: "30%", rx: "55%", ry: "50%", fill: "#fecdd3" }, // rose
   { cx: "80%", cy: "65%", rx: "50%", ry: "55%", fill: "#fb7185", opacity: 0.6 }, // rose
-  {
-    cx: "72%",
-    cy: "10%",
-    rx: "40%",
-    ry: "35%",
-    fill: "#fed7aa",
-    opacity: 0.55,
-  }, // amber
+  { cx: "72%", cy: "10%", rx: "40%", ry: "35%", fill: "#fed7aa", opacity: 0.55 }, // amber
   { cx: "12%", cy: "78%", rx: "38%", ry: "32%", fill: "#fdba74", opacity: 0.5 }, // amber
 ];
 
@@ -33,20 +23,24 @@ const FOOTER_LINK_CLS =
 interface Props {
   topEdge: EdgeType;
   bottomEdge: EdgeType;
-  /**
-   * Rendered as the /events page itself rather than the homepage's section:
-   * the heading becomes the page's h1, the directions trigger becomes a link
-   * to /events/directions (which the page's `@modal` slot intercepts into the
-   * same dialog), and the All Events button — pointless on the page it points
-   * to — gives its corner to the Involvement Network, where RSVPs live.
-   */
-  page?: boolean;
 }
 
-export default function EventsSection({ topEdge, bottomEdge, page }: Props) {
-  const month = getCalendarMonth();
-  const Heading = page ? "h1" : "h2";
-
+/**
+ * The homepage's events section: the next meeting, how the week works, and a
+ * way through to the rest.
+ *
+ * Deliberately smaller than it was. This used to render the whole calendar and
+ * four cards, which made the homepage and `/events` near-duplicates of each
+ * other — and the cards were fabricated anyway. The homepage's job is to
+ * convince somebody the club meets and is worth turning up to; the schedule
+ * belongs on the page named after it.
+ *
+ * The directions trigger here is the IN-PLACE dialog rather than the link to
+ * `/events/directions`: on the events page that URL opens over a calendar that
+ * stays mounted, but from the homepage it would be a full navigation away from
+ * everything else somebody was reading.
+ */
+export default async function EventsSection({ topEdge, bottomEdge }: Props) {
   return (
     <div className="mx-4 overflow-hidden rounded-xl md:mx-6">
       <section
@@ -62,45 +56,70 @@ export default function EventsSection({ topEdge, bottomEdge, page }: Props) {
         />
         <div className="relative z-10 mx-auto max-w-6xl space-y-8 px-6 py-8 md:px-12">
           <div className="max-w-prose text-left">
-            <Heading className="font-display mb-4 text-4xl font-extrabold text-black md:text-5xl">
+            <h2 className="font-display mb-4 text-4xl font-extrabold text-black md:text-5xl">
               Events
-            </Heading>
+            </h2>
             <p className="text-base/relaxed text-balance text-mauve-700">
               Every week, rain or shine: workshops that teach a feature area,
-              week-long competitions to build it, and open build sessions on
-              Wednesdays in between.
+              week-long competitions to build it, and open build sessions in
+              between.
             </p>
-            {/* One room for everything, so it is said once here rather than
-                repeated on all four cards. */}
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
               <p className="flex items-center gap-2 text-sm font-semibold text-black">
                 <MapPinIcon className="shrink-0 text-mauve-500" weight="fill" />
                 DLW 124 — the new Dining, Learning &amp; Well-Being center
               </p>
-              {page ? <FindUsLink /> : <FindUs />}
+              <FindUs />
             </div>
           </div>
 
-          <EventsGrid month={month} />
+          <Marquee meeting={await nextMeeting()} now={new Date()} />
 
-          <div className="mt-6 flex justify-end">
-            {page ? (
-              <a
-                href={INVOLVEMENT_NETWORK_EVENTS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={FOOTER_LINK_CLS}
-              >
-                RSVP on the Involvement Network <ArrowUpRightIcon />
-              </a>
-            ) : (
-              <LinkButton href="/events" className={FOOTER_LINK_CLS}>
-                All Events <ArrowRightIcon />
-              </LinkButton>
-            )}
+          <HowItWorks />
+
+          <div className="flex justify-end">
+            <LinkButton href="/events" className={FOOTER_LINK_CLS}>
+              All Events <ArrowRightIcon />
+            </LinkButton>
           </div>
         </div>
       </section>
     </div>
+  );
+}
+
+/**
+ * The soonest meeting that has not ended, or null.
+ *
+ * Catches its own failure and degrades to null rather than throwing. The
+ * homepage is the club's front door and has no error boundary of its own — a
+ * connection blip must cost the visitor a date, not the whole page — and null
+ * is a state the marquee already renders properly, because an empty summer is
+ * the ordinary case for months at a time.
+ *
+ * Bounded on `endsAt` like every other "upcoming" read here: a meeting already
+ * in progress is still the one worth naming.
+ */
+async function nextMeeting(): Promise<MeetingInRange | null> {
+  const now = new Date();
+  const horizon = new Date(now);
+  horizon.setUTCMonth(horizon.getUTCMonth() + 3);
+
+  try {
+    const meetings = await getMeetingsInRange(startOfDay(now), horizon);
+    return meetings.find((m) => m.endsAt >= now) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Midnight UTC on `at`'s day, so a meeting happening *right now* is inside the
+ * window. Starting the range at the current instant would exclude the very
+ * meeting this function exists to find, an hour into it.
+ */
+function startOfDay(at: Date): Date {
+  return new Date(
+    Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()),
   );
 }
