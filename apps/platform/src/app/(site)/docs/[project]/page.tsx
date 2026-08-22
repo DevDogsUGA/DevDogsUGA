@@ -24,13 +24,16 @@ export default async function DocsProjectPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-12">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-1.5 px-6 py-10 lg:px-10">
       <h1 className="font-display text-2xl font-bold text-white">
         Nothing here yet
       </h1>
-      <p className="mt-2 text-mauve-300">
+      <p className="max-w-prose text-sm text-mauve-400">
         This project hasn&rsquo;t published any documentation. Add markdown
-        files under its <code className="font-mono">docs/{projectSlug}/</code>{" "}
+        files under its{" "}
+        <code className="rounded-sm border border-mauve-700 bg-mauve-800 px-1.5 py-0.5 font-mono text-xs text-white">
+          docs/{projectSlug}/
+        </code>{" "}
         directory to get started.
       </p>
     </div>

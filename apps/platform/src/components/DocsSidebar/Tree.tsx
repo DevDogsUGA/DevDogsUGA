@@ -64,7 +64,7 @@ function Nodes({ nodes, ctx }: { nodes: DocsTreeNode[]; ctx: TreeContext }) {
               data-active={node.path === ctx.activePath || undefined}
               className={cn(
                 "flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white",
-                "data-active:bg-mauve-800/70 data-active:font-medium data-active:text-white",
+                "data-active:bg-mauve-800/60 data-active:font-medium data-active:text-white",
               )}
             >
               <FileTextIcon className="size-3.5 shrink-0 text-mauve-500" />

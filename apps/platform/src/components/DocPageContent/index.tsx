@@ -1,3 +1,4 @@
+import { GithubLogoIcon } from "@phosphor-icons/react/ssr";
 import DocsMarkdown from "~/components/DocsMarkdown";
 import InlineTableOfContents from "~/components/InlineTableOfContents";
 import TableOfContents from "~/components/TableOfContents";
@@ -30,13 +31,17 @@ export default async function DocPageContent({
           <InlineTableOfContents items={toc} />
 
           {(breadcrumbs && breadcrumbs.length > 0) || githubUrl ? (
-            <div className="mb-4 flex items-center justify-between gap-4">
+            <div className="mx-auto mb-4 flex max-w-3xl items-center justify-between gap-4">
               {breadcrumbs && breadcrumbs.length > 0 && (
                 <nav aria-label="Breadcrumb">
-                  <ol className="text-muted-foreground flex flex-wrap items-center gap-1 text-sm">
+                  <ol className="flex flex-wrap items-center gap-1 text-sm text-mauve-400">
                     {breadcrumbs.map((crumb, i) => (
                       <li key={i} className="flex items-center gap-1">
-                        {i > 0 && <span aria-hidden>/</span>}
+                        {i > 0 && (
+                          <span aria-hidden className="text-mauve-600">
+                            /
+                          </span>
+                        )}
                         <span>{crumb}</span>
                       </li>
                     ))}
@@ -44,12 +49,15 @@ export default async function DocPageContent({
                 </nav>
               )}
               {githubUrl && (
+                // The navbar link treatment, so it reads as chrome around the
+                // article rather than a link inside it.
                 <a
                   href={githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground shrink-0 text-sm transition-colors"
+                  className="-mr-2 flex shrink-0 items-center gap-1.5 rounded-sm px-2 py-1 text-sm font-medium text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white"
                 >
+                  <GithubLogoIcon className="size-4" />
                   Edit on GitHub
                 </a>
               )}
@@ -63,7 +71,7 @@ export default async function DocPageContent({
 
         {toc.length > 0 && (
           <div className="hidden w-52 shrink-0 lg:block xl:w-64">
-            <div className="sticky top-0 overflow-auto py-10 pr-4">
+            <div className="sticky top-16 max-h-[calc(100vh-var(--spacing)*16)] overflow-auto py-10 pr-4">
               <TableOfContents items={toc} />
             </div>
           </div>

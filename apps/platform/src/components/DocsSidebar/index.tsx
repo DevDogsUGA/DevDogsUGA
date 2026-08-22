@@ -49,7 +49,13 @@ function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
     <div className="flex flex-col gap-4">
       {projects.length > 1 && (
         <Select value={project} onValueChange={onProjectChange}>
-          <SelectTrigger aria-label="Project" className="w-full">
+          {/* The color is explicit because the trigger otherwise inherits
+              <body>'s text-mauve-950, and the chosen project's name painted
+              invisibly against the sidebar. */}
+          <SelectTrigger
+            aria-label="Project"
+            className="w-full font-medium text-white"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

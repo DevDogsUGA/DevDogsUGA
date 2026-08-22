@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BookOpenIcon } from "@phosphor-icons/react/ssr";
+import ConsolePageShell from "~/components/ConsolePageShell";
 import { getDocsProjects } from "~/server/docs/queries";
 
 export const metadata: Metadata = {
@@ -12,40 +13,49 @@ export default function DocsLandingPage() {
   const projects = getDocsProjects();
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-12">
-      <h1 className="font-display text-3xl font-bold text-white">
-        Documentation
-      </h1>
-      <p className="mt-2 text-mauve-300">
-        Guides and references for DevDogs projects, published straight from the
-        monorepo.
-      </p>
-
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+    <ConsolePageShell
+      accent="cyan"
+      title="Documentation"
+      description="Guides and references for DevDogs projects, published straight from the monorepo."
+    >
+      {/* The same tile the app switcher uses for a project: a block-shadowed
+          mark beside the name and a one-line blurb, on a flat tile that lifts
+          on hover. The link stretches over the whole tile with its own
+          ::after, so the tile is one control without nesting block content
+          inside an anchor. */}
+      <ul className="grid gap-4 sm:grid-cols-2">
         {projects.map((project) => (
-          <Link
+          <li
             key={project.slug}
-            href={`/docs/${encodeURIComponent(project.slug)}`}
-            className="group flex flex-col gap-2 rounded-md border border-mauve-800 bg-mauve-900/50 p-5 transition-colors hover:border-mauve-600 hover:bg-mauve-900"
+            className="group relative flex items-center gap-4 rounded-md border border-mauve-700 bg-mauve-800 px-4 py-3 transition-colors hover:border-mauve-500 hover:bg-mauve-700"
           >
-            <span className="flex items-center gap-2 font-semibold text-white">
-              <BookOpenIcon className="size-5 text-cyan-400" />
-              {project.name}
-            </span>
-            {project.description && (
-              <span className="text-sm text-mauve-300">
-                {project.description}
-              </span>
-            )}
-          </Link>
+            <div className="shadow-block-sm flex size-12 shrink-0 items-center justify-center rounded-xl border-2 border-black bg-cyan-400 text-2xl text-black shadow-black transition-transform group-hover:-translate-y-0.5">
+              <BookOpenIcon weight="bold" />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+              <h3 className="font-display leading-none font-bold text-white">
+                <Link
+                  href={`/docs/${encodeURIComponent(project.slug)}`}
+                  className="rounded-sm outline-none after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  {project.name}
+                </Link>
+              </h3>
+              {project.description && (
+                <p className="text-xs/relaxed text-balance text-mauve-400">
+                  {project.description}
+                </p>
+              )}
+            </div>
+          </li>
         ))}
-      </div>
+      </ul>
 
       {projects.length === 0 && (
-        <p className="mt-8 text-mauve-400">
+        <p className="text-sm text-mauve-400">
           No documentation has been published yet.
         </p>
       )}
-    </div>
+    </ConsolePageShell>
   );
 }

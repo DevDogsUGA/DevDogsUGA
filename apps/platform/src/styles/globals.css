@@ -911,6 +911,31 @@
   --tw-prose-invert-td-borders: var(--border);
 }
 
+/* Headings carry the display face, as every other title on the site does
+   (PageHeader, the hero, the section marquees); the plugin leaves them in the
+   body font, which is the single biggest reason a docs page reads as a
+   different site from the one around it. */
+.prose :where(h1, h2, h3, h4) {
+  font-family: var(--font-display);
+  text-wrap: balance;
+}
+
+/* rehype-autolink-headings wraps each heading's text in an <a> so the heading
+   is its own permalink — and the plugin's link rule then underlined every
+   heading on every page in white. The anchor inherits the heading instead and
+   only shows its hand on hover. */
+.prose :where(h1, h2, h3, h4) :where(a) {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+}
+
+.prose :where(h1, h2, h3, h4) :where(a:hover) {
+  text-decoration: underline;
+  text-decoration-color: var(--color-mauve-500);
+  text-underline-offset: 0.2em;
+}
+
 /* Inline code. The plugin colors `<code>` but gives it no chrome, so it reads
    as plain bold text; the chip treatment is what matches the rest of the UI.
    `:not(pre &)` keeps it off the Shiki-highlighted tokens inside code blocks. */
