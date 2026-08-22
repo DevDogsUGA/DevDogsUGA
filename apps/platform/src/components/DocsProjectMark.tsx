@@ -1,26 +1,27 @@
+import type { ComponentType } from "react";
 import * as icons from "~/config/icons";
 import { docsProjectMark } from "~/config/docs";
 
-interface Props {
-  /** The docs slug, i.e. the project's workspace directory name. */
-  slug: string;
+type MarkSize = "sm" | "lg";
+
+interface MarkProps {
+  icon: ComponentType<{ className?: string; weight?: "bold" }>;
+  /** The fill behind the glyph — a solid, saturated Tailwind background. */
+  iconBg: string;
   /**
-   * `sm` for a row in a menu or a select; `lg` for the landing page's tiles,
-   * where the mark is the thing you look at and carries the block shadow the
-   * app switcher's icons do.
+   * `sm` for a row in a menu or a select; `lg` for a tile, where the mark is
+   * the thing you look at and carries the block shadow the app switcher's
+   * icons do.
    */
-  size?: "sm" | "lg";
+  size?: MarkSize;
 }
 
 /**
- * A documented project's app icon, drawn on its own fill — the same mark the
- * fullscreen switcher gives that project, so it is recognisable wherever the
- * docs list it. The rim and shadow stay black, as everywhere else on the site.
+ * An app-icon-shaped mark. The rim and shadow stay black, as everywhere else
+ * on the site — it is the surface beneath that lifts, to give them something
+ * to read against.
  */
-export default function DocsProjectMark({ slug, size = "sm" }: Props) {
-  const { icon, iconBg } = docsProjectMark(slug);
-  const Icon = icons[icon];
-
+export function Mark({ icon: Icon, iconBg, size = "sm" }: MarkProps) {
   const box =
     size === "lg"
       ? "shadow-block-sm size-12 rounded-xl border-2 text-2xl shadow-black"
@@ -34,4 +35,21 @@ export default function DocsProjectMark({ slug, size = "sm" }: Props) {
       <Icon weight="bold" />
     </span>
   );
+}
+
+/**
+ * A documented project's mark — the same app icon that project wears in the
+ * fullscreen switcher, so it is recognisable wherever the docs list it.
+ */
+export default function DocsProjectMark({
+  slug,
+  size,
+}: {
+  /** The docs slug, i.e. the project's workspace directory name. */
+  slug: string;
+  size?: MarkSize;
+}) {
+  const { icon, iconBg } = docsProjectMark(slug);
+
+  return <Mark icon={icons[icon]} iconBg={iconBg} size={size} />;
 }

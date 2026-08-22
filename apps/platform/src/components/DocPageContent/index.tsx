@@ -1,4 +1,5 @@
 import { GithubLogoIcon } from "@phosphor-icons/react/ssr";
+import DocsBreadcrumbs from "~/components/DocsBreadcrumbs";
 import DocsMarkdown from "~/components/DocsMarkdown";
 import TableOfContents, {
   InlineTableOfContents,
@@ -33,22 +34,7 @@ export default async function DocPageContent({
 
           {(breadcrumbs && breadcrumbs.length > 0) || githubUrl ? (
             <div className="mx-auto mb-4 flex max-w-3xl items-center justify-between gap-4">
-              {breadcrumbs && breadcrumbs.length > 0 && (
-                <nav aria-label="Breadcrumb">
-                  <ol className="flex flex-wrap items-center gap-1 text-sm text-mauve-400">
-                    {breadcrumbs.map((crumb, i) => (
-                      <li key={i} className="flex items-center gap-1">
-                        {i > 0 && (
-                          <span aria-hidden className="text-mauve-600">
-                            /
-                          </span>
-                        )}
-                        <span>{crumb}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </nav>
-              )}
+              {breadcrumbs && <DocsBreadcrumbs items={breadcrumbs} />}
               {githubUrl && (
                 // The navbar link treatment, so it reads as chrome around the
                 // article rather than a link inside it.

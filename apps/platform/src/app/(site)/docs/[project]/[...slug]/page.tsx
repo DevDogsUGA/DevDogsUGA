@@ -1,21 +1,25 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import DocPageContent from "~/components/DocPageContent";
+import DocsFolderContents from "~/components/DocsFolderContents";
 import { DOCS_BRANCH, DOCS_REPO } from "~/config/docs";
 import { env } from "~/env";
-import { projectPath } from "~/lib/docsSlug";
+import { docsHref, projectPath } from "~/lib/docsSlug";
 import { toTitleCase } from "~/lib/toTitleCase";
-import type { DocsTreeNode } from "~/lib/docsTree";
+import { allFolders, indexPageOf, type DocsTreeNode } from "~/lib/docsTree";
 import {
+  getDocsFolder,
+  getDocsFolderEntries,
   getDocsPage,
   getDocsProjects,
   getDocsTree,
 } from "~/server/docs/queries";
 
-// Every docs page is enumerated below and prerendered at build time. Anything
-// else renders on demand and 404s via notFound() — safe on Workers because the
-// lookup reads a bundled constant, not the filesystem. (`dynamicParams` can't
-// express that here: Cache Components rejects the route segment config.)
+// Every docs page AND every folder is enumerated below and prerendered at
+// build time. Anything else renders on demand and 404s via notFound() — safe
+// on Workers because the lookup reads a bundled constant, not the filesystem.
+// (`dynamicParams` can't express that here: Cache Components rejects the route
+// segment config.)
 export function generateStaticParams() {
   const params: { project: string; slug: string[] }[] = [];
 
@@ -30,7 +34,13 @@ export function generateStaticParams() {
   }
 
   for (const project of getDocsProjects()) {
-    collect(project.slug, getDocsTree(project.slug));
+    const tree = getDocsTree(project.slug);
+    collect(project.slug, tree);
+    // A folder is a destination of its own — the sidebar's section headings
+    // link to one, and it answers with its index page or with its contents.
+    for (const folder of allFolders(tree)) {
+      params.push({ project: project.slug, slug: folder.path.split("/") });
+    }
   }
 
   return params;
@@ -40,16 +50,21 @@ export async function generateMetadata({
   params,
 }: PageProps<"/docs/[project]/[...slug]">): Promise<Metadata> {
   const { project, slug } = await params;
-  const page = getDocsPage(
-    decodeURIComponent(project),
-    slug.map(decodeURIComponent).join("/"),
-  );
-  if (!page) return {};
+  const projectSlug = decodeURIComponent(project);
+  const path = slug.map(decodeURIComponent).join("/");
 
-  return {
-    title: `${page.title} | DevDogs Docs`,
-    description: page.description ?? undefined,
-  };
+  const page = getDocsPage(projectSlug, path);
+  if (page) {
+    return {
+      title: `${page.title} | DevDogs Docs`,
+      description: page.description ?? undefined,
+    };
+  }
+
+  const folder = getDocsFolder(projectSlug, path);
+  if (folder) return { title: `${folder.name} | DevDogs Docs` };
+
+  return {};
 }
 
 export default async function DocsPage({
@@ -60,12 +75,31 @@ export default async function DocsPage({
   const path = slug.map(decodeURIComponent);
 
   const page = getDocsPage(projectSlug, path.join("/"));
-  if (!page) notFound();
-
   const breadcrumbs = [
     toTitleCase(projectSlug),
     ...path.slice(0, -1).map(toTitleCase),
   ];
+
+  if (!page) {
+    // Not a page — but the sidebar links folders too, so it may be one.
+    const folder = getDocsFolder(projectSlug, path.join("/"));
+    if (!folder) notFound();
+
+    // A folder with an index page has something better to show than a list of
+    // itself, and that page is what the section means.
+    const index = indexPageOf(folder);
+    if (index) redirect(docsHref(projectSlug, index.path.split("/")));
+
+    return (
+      <DocsFolderContents
+        project={projectSlug}
+        title={folder.name}
+        breadcrumbs={breadcrumbs}
+        entries={getDocsFolderEntries(projectSlug, folder)}
+      />
+    );
+  }
+
   const githubUrl = `https://github.com/${env.GITHUB_ORG}/${DOCS_REPO}/blob/${DOCS_BRANCH}/docs/${projectPath(projectSlug, path.join("/"))}.md`;
 
   return (

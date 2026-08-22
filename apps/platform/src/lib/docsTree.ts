@@ -13,6 +13,12 @@ export interface DocsTreeFolder {
   name: string;
   /** The path segment this folder occupies. */
   segment: string;
+  /**
+   * Slash-joined project-relative path to this folder, e.g.
+   * "guides/deployment" — the same shape a page's `path` has, and what the
+   * folder's own URL is built from.
+   */
+  path: string;
   children: DocsTreeNode[];
 }
 
@@ -50,6 +56,7 @@ export function buildDocsTree(
         type: "folder",
         name: toTitleCase(segments.at(-1)!),
         segment: segments.at(-1)!,
+        path: key,
         children: [],
       };
       folders.set(key, folder);
@@ -69,6 +76,50 @@ export function buildDocsTree(
 
   for (const folder of folders.values()) sortNodes(folder.children);
   return sortNodes(root);
+}
+
+/** The folder at a project-relative path, or null if no such folder exists. */
+export function findFolder(
+  nodes: DocsTreeNode[],
+  path: string,
+): DocsTreeFolder | null {
+  if (!path) return null;
+
+  let level = nodes;
+  let found: DocsTreeFolder | null = null;
+
+  for (const segment of path.split("/")) {
+    const next = level.find(
+      (node): node is DocsTreeFolder =>
+        node.type === "folder" && node.segment === segment,
+    );
+    if (!next) return null;
+    found = next;
+    level = next.children;
+  }
+
+  return found;
+}
+
+/**
+ * The index page sitting directly inside a folder, if it has one — the page a
+ * reader should land on when they select the folder itself. A folder without
+ * one has nothing to show but its contents, which is what the folder route
+ * renders as a grid.
+ */
+export function indexPageOf(folder: DocsTreeFolder): DocsTreePage | null {
+  return (
+    folder.children.find(
+      (node): node is DocsTreePage => node.type === "page" && isIndexPage(node),
+    ) ?? null
+  );
+}
+
+/** Every folder in the tree, at any depth — one per prerendered folder route. */
+export function allFolders(nodes: DocsTreeNode[]): DocsTreeFolder[] {
+  return nodes.flatMap((node) =>
+    node.type === "folder" ? [node, ...allFolders(node.children)] : [],
+  );
 }
 
 /** Depth-first first page — the landing target for a repo or branch root. */

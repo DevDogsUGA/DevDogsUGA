@@ -5,7 +5,12 @@ import {
   type DocsProject,
 } from "@devdogsuga/docs";
 import { projectPath, splitProjectPath } from "~/lib/docsSlug";
-import { buildDocsTree, type DocsTreeNode } from "~/lib/docsTree";
+import {
+  buildDocsTree,
+  findFolder,
+  type DocsTreeFolder,
+  type DocsTreeNode,
+} from "~/lib/docsTree";
 import type { DocHeading } from "~/lib/toc";
 
 // Docs are parsed from the repo's `docs/` folder at build time by
@@ -37,6 +42,51 @@ export function getDocsTree(project: string): DocsTreeNode[] {
         path: splitProjectPath(page.path).path,
         title: page.title,
       })),
+  );
+}
+
+/** The folder at a project-relative path, or null if there is none. */
+export function getDocsFolder(
+  project: string,
+  path: string,
+): DocsTreeFolder | null {
+  return findFolder(getDocsTree(project), path);
+}
+
+/** One entry in a folder's contents grid. */
+export interface DocsFolderEntry {
+  kind: "page" | "folder";
+  /** Project-relative path — the page's own, or the subfolder's. */
+  path: string;
+  title: string;
+  description: string | null;
+}
+
+/**
+ * What a folder holds, in sidebar order. Descriptions come from the pages
+ * themselves, which the tree does not carry — it stores only what the sidebar
+ * needs, and a one-line summary is not that.
+ */
+export function getDocsFolderEntries(
+  project: string,
+  folder: DocsTreeFolder,
+): DocsFolderEntry[] {
+  return folder.children.map((node) =>
+    node.type === "folder"
+      ? {
+          kind: "folder" as const,
+          path: node.path,
+          title: node.name,
+          description: null,
+        }
+      : {
+          kind: "page" as const,
+          path: node.path,
+          title: node.title,
+          description:
+            pagesByPath.get(projectPath(project, node.path))?.description ??
+            null,
+        },
   );
 }
 
