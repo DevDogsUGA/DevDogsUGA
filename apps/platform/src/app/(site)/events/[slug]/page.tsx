@@ -7,7 +7,12 @@ import {
   ClipboardTextIcon,
   MapPinIcon,
 } from "@phosphor-icons/react/ssr";
-import { eventBadge } from "~/components/EventsSection/EventsGrid/eventBadge";
+import {
+  ACTION_CLS,
+  CHIP_CLS,
+  isAtDlw,
+  segmentBadge,
+} from "~/components/EventsSection/meetingView";
 import FindUs from "~/components/EventsSection/FindUs";
 import {
   formatEventSpan,
@@ -21,7 +26,6 @@ import {
   getMeetingJudging,
   resolveMeetingSegments,
   type MeetingRangeJudging,
-  type MeetingSegment,
   type MeetingWorkshop,
 } from "~/server/loaders/meetings";
 
@@ -35,54 +39,6 @@ import {
  * its own description of a meeting would go stale the moment the schedule
  * moved, and this URL exists to be pasted into Discord weeks in advance.
  */
-
-const CHIP_CLS =
-  "rounded-sm px-2 py-0.5 text-xs font-bold tracking-wide uppercase";
-
-const ACTION_CLS =
-  "hover:shadow-block-md transition-lift flex w-fit items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5";
-
-/**
- * A segment's chip, borrowing the calendar's colours rather than inventing a
- * second palette — a cyan chip here and a cyan dot on the grid have to mean
- * the same kind of night, and they cannot drift if they read the same module.
- *
- * `judging` and `kickoff` share the competition colour on purpose: they are
- * the two ends of one competition — the night it opens and the night it is
- * presented — so the label, not the hue, is what separates them. `open` takes
- * the build-session colour, which is what an open night actually is.
- */
-const segmentBadge: Record<
-  MeetingSegment,
-  { bg: string; text: string; label: string }
-> = {
-  judging: { ...eventBadge.hackathon, label: "Judging" },
-  kickoff: { ...eventBadge.hackathon, label: "Kickoff" },
-  workshop: { ...eventBadge.workshop, label: "Workshop" },
-  open: { ...eventBadge.build, label: "Open build" },
-};
-
-/**
- * Whether `location` names the DLW, the one building this site can give
- * walking directions to.
- *
- * Free text written by an officer in Airtable, so this matches loosely: "DLW
- * 124", "dlw", "Dining, Learning & Well-Being 124". It deliberately does NOT
- * try to be clever about anything else — every unrecognised location falls
- * through to plain text, because a Directions button that walks somebody to
- * the wrong building is far worse than one that makes them read an address.
- * Failing closed is the whole design of this predicate.
- *
- * `\bdlw\b` rather than a substring test so "middlware" in a note cannot trip
- * it; "DLW124" written without the space fails and prints as text, which is
- * the safe direction to be wrong in.
- */
-const DLW_PATTERNS = [/\bdlw\b/i, /\bdining,?\s+learning\b/i];
-
-function isAtDlw(location: string | null): boolean {
-  if (location === null) return false;
-  return DLW_PATTERNS.some((pattern) => pattern.test(location));
-}
 
 /**
  * Its own metadata because this URL is made to be handed around — pasted into
