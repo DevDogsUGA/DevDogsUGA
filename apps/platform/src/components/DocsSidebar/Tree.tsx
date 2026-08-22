@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CaretRightIcon, FileTextIcon } from "@phosphor-icons/react/ssr";
+import { CaretRightIcon } from "@phosphor-icons/react/ssr";
 import { docsHref } from "~/lib/docsSlug";
 import type { DocsTreeFolder, DocsTreeNode } from "~/lib/docsTree";
 import { cn } from "~/lib/cn";
@@ -67,7 +67,6 @@ function Nodes({ nodes, ctx }: { nodes: DocsTreeNode[]; ctx: TreeContext }) {
                 "data-active:bg-mauve-800/60 data-active:font-medium data-active:text-white",
               )}
             >
-              <FileTextIcon className="size-3.5 shrink-0 text-mauve-500" />
               {node.title}
             </Link>
           </li>

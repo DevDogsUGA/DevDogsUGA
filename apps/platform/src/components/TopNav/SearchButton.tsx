@@ -30,7 +30,14 @@ export default function SearchButton() {
         type="button"
         aria-label="Search"
         onClick={() => setOpen(true)}
-        className="hidden w-48 items-center gap-2 rounded-md border border-mauve-700 bg-mauve-900 px-2 py-1.5 text-sm text-mauve-400 transition-colors hover:bg-mauve-800 hover:text-white md:flex"
+        // `lg`, not `md`. At `md` the navbar turns everything on at once —
+        // logo, the four nav links, and this cluster — and the row then needs
+        // ~845px against a 768px viewport, so every page on the site scrolled
+        // sideways from 768 up to ~845. This pill is the widest discretionary
+        // thing in the row at 192px; holding it back to `lg` buys the range
+        // 156px and leaves the icon button below in its place, which is what
+        // the phone layout already shows.
+        className="hidden w-48 items-center gap-2 rounded-md border border-mauve-700 bg-mauve-900 px-2 py-1.5 text-sm text-mauve-400 transition-colors hover:bg-mauve-800 hover:text-white lg:flex"
       >
         <MagnifyingGlassIcon className="size-4 shrink-0" />
         <span className="flex-1 text-left">Search</span>
@@ -44,7 +51,7 @@ export default function SearchButton() {
         type="button"
         aria-label="Search"
         onClick={() => setOpen(true)}
-        className="flex size-9 items-center justify-center rounded-sm text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white md:hidden"
+        className="flex size-9 items-center justify-center rounded-sm text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white lg:hidden"
       >
         <MagnifyingGlassIcon className="size-4.5" />
       </button>

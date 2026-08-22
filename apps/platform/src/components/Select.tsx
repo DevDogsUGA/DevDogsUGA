@@ -59,20 +59,65 @@ function Select({
   );
 }
 
-type ItemProps = ComponentPropsWithoutRef<typeof SelectPrimitive.Item>;
+interface ItemProps extends ComponentPropsWithoutRef<
+  typeof SelectPrimitive.Item
+> {
+  /**
+   * Drawn before the label, inside ItemText — so the trigger shows the mark
+   * beside the chosen value rather than the label alone.
+   */
+  icon?: React.ReactNode;
+  /**
+   * One line under the label. Deliberately outside ItemText: Radix clones
+   * that node into the trigger, and a description belongs in the open list,
+   * not in the closed control.
+   */
+  description?: string;
+}
 
-function SelectItem({ children, ...props }: ItemProps) {
+function SelectItem({ children, icon, description, ...props }: ItemProps) {
   return (
     <SelectPrimitive.Item
-      className="relative flex cursor-default items-center gap-2 py-1.5 pr-3 pl-8 text-sm text-white select-none focus:bg-mauve-700 focus:outline-none data-disabled:pointer-events-none data-disabled:opacity-40"
+      className={cn(
+        "relative flex cursor-default gap-2 py-1.5 pr-3 pl-8 text-sm text-white select-none focus:bg-mauve-700 focus:outline-none data-disabled:pointer-events-none data-disabled:opacity-40",
+        // A described row is two lines tall, so its check and mark align to
+        // the label rather than to the middle of the pair.
+        description ? "items-start" : "items-center",
+      )}
       {...props}
     >
-      <span className="absolute left-2.5 flex items-center">
+      <span
+        className={cn(
+          "absolute left-2.5 flex items-center",
+          description && "top-2",
+        )}
+      >
         <SelectPrimitive.ItemIndicator>
           <CheckIcon className="size-3.5 text-mauve-400" />
         </SelectPrimitive.ItemIndicator>
       </span>
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      {/* Bounded, or the popover grows to fit the longest description on one
+          line — well past the sidebar and the mobile sheet it opens inside. */}
+      <span
+        className={cn(
+          "flex min-w-0 flex-col gap-0.5",
+          description && "max-w-56",
+        )}
+      >
+        <SelectPrimitive.ItemText>
+          {icon ? (
+            <span className="flex items-center gap-2">
+              {icon}
+              {children}
+            </span>
+          ) : (
+            children
+          )}
+        </SelectPrimitive.ItemText>
+        {description && (
+          <span className="text-xs/relaxed text-mauve-400">{description}</span>
+        )}
+      </span>
     </SelectPrimitive.Item>
   );
 }

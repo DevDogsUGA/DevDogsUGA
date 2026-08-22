@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpenIcon } from "@phosphor-icons/react/ssr";
 import ConsolePageShell from "~/components/ConsolePageShell";
+import DocsProjectMark from "~/components/DocsProjectMark";
 import { getDocsProjects } from "~/server/docs/queries";
 
 export const metadata: Metadata = {
@@ -29,9 +29,9 @@ export default function DocsLandingPage() {
             key={project.slug}
             className="group relative flex items-center gap-4 rounded-md border border-mauve-700 bg-mauve-800 px-4 py-3 transition-colors hover:border-mauve-500 hover:bg-mauve-700"
           >
-            <div className="shadow-block-sm flex size-12 shrink-0 items-center justify-center rounded-xl border-2 border-black bg-cyan-400 text-2xl text-black shadow-black transition-transform group-hover:-translate-y-0.5">
-              <BookOpenIcon weight="bold" />
-            </div>
+            <span className="transition-transform group-hover:-translate-y-0.5">
+              <DocsProjectMark slug={project.slug} size="lg" />
+            </span>
             <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
               <h3 className="font-display leading-none font-bold text-white">
                 <Link

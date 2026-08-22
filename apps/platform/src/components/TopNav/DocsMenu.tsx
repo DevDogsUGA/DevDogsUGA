@@ -3,6 +3,7 @@
 import { CaretDownIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import DocsProjectMark from "~/components/DocsProjectMark";
 
 /** One docs project, as listed in the navbar menu. */
 export interface DocsProjectLink {
@@ -102,16 +103,19 @@ export default function DocsMenu({
                 href={`/docs/${encodeURIComponent(project.slug)}`}
                 aria-current={project.slug === activeSlug ? "page" : undefined}
                 onClick={() => setOpen(false)}
-                className="flex flex-col gap-0.5 rounded-md px-2.5 py-2 transition-colors outline-none hover:bg-mauve-800 focus-visible:bg-mauve-800 aria-[current=page]:bg-mauve-800/60"
+                className="flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors outline-none hover:bg-mauve-800 focus-visible:bg-mauve-800 aria-[current=page]:bg-mauve-800/60"
               >
-                <span className="text-sm font-medium text-white">
-                  {project.name}
-                </span>
-                {project.description && (
-                  <span className="text-xs text-mauve-400">
-                    {project.description}
+                <DocsProjectMark slug={project.slug} />
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-sm font-medium text-white">
+                    {project.name}
                   </span>
-                )}
+                  {project.description && (
+                    <span className="text-xs/relaxed text-mauve-400">
+                      {project.description}
+                    </span>
+                  )}
+                </span>
               </Link>
             ))}
           </div>

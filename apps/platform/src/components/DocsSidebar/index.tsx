@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { SidebarIcon } from "@phosphor-icons/react/ssr";
 import type { DocsTreeNode } from "~/lib/docsTree";
+import DocsProjectMark from "~/components/DocsProjectMark";
 import Select from "~/components/Select";
 import {
   Sheet,
@@ -15,7 +16,7 @@ import {
 import Tree from "./Tree";
 
 export interface DocsSidebarProps {
-  projects: { slug: string; name: string }[];
+  projects: { slug: string; name: string; description: string | null }[];
   project: string;
   tree: DocsTreeNode[];
 }
@@ -53,7 +54,12 @@ function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
           className="w-full"
         >
           {projects.map((p) => (
-            <Select.Item key={p.slug} value={p.slug}>
+            <Select.Item
+              key={p.slug}
+              value={p.slug}
+              icon={<DocsProjectMark slug={p.slug} />}
+              description={p.description ?? undefined}
+            >
               {p.name}
             </Select.Item>
           ))}

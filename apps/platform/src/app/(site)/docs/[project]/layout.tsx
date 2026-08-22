@@ -18,7 +18,11 @@ export default async function DocsProjectLayout({
   return (
     <div className="flex min-w-0 flex-1 items-start max-lg:flex-col">
       <DocsSidebar
-        projects={projects.map(({ slug, name }) => ({ slug, name }))}
+        projects={projects.map(({ slug, name, description }) => ({
+          slug,
+          name,
+          description,
+        }))}
         project={projectSlug}
         tree={getDocsTree(projectSlug)}
       />
