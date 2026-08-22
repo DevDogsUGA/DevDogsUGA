@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MapTrifoldIcon } from "@phosphor-icons/react/ssr";
 import FindUsDialog from "./FindUsDialog";
 import FindUsContent, { preloadCampusMap } from "./FindUsContent";
+import { markOpenedInApp } from "./openedInApp";
 
 const TRIGGER_CLS =
   "hover:shadow-block-md transition-lift flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5";
@@ -35,17 +36,22 @@ export default function FindUs() {
 }
 
 /**
- * The events page's trigger: the same dialog, reached through a URL. Under
- * `/events` the link is intercepted into the page's `@modal` slot, so it opens
- * as the dialog over the calendar — but `/events/directions` is also a real
- * page, which is what a shared or refreshed link lands on. `scroll={false}`
- * because opening a dialog should not scroll the page behind it to the top.
+ * The events page's trigger: the same dialog, reached through a URL.
+ * `/events/directions` is a route under the events layout, which keeps the
+ * calendar mounted behind it, so following this swaps only the leaf — no
+ * remount of the page underneath, and the URL is shareable.
+ *
+ * `scroll={false}` because opening a dialog should not scroll the page behind
+ * it to the top. `onNavigate` fires only when the router handles the click, so
+ * it marks precisely the case where closing can safely go back (see
+ * {@link markOpenedInApp}).
  */
 export function FindUsLink() {
   return (
     <Link
       href="/events/directions"
       scroll={false}
+      onNavigate={markOpenedInApp}
       className={TRIGGER_CLS}
       {...INTENT_HANDLERS}
     >
