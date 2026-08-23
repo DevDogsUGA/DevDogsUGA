@@ -49,6 +49,7 @@
   --animate-march-dashes: march-dashes 1.4s linear infinite;
   --animate-spin-slow: spin 10s linear infinite;
   --animate-spin-slower: spin 20s linear infinite;
+  --animate-star-spark: star-spark 3s cubic-bezier(0.4, 0, 0.9, 0.55) infinite;
   --animate-modal-overlay-in: modal-overlay-in 180ms ease-out;
   --animate-modal-overlay-out: modal-overlay-out 150ms ease-in;
   --animate-modal-content-in: modal-content-in 220ms
@@ -459,6 +460,33 @@
   to {
     stroke-dashoffset: -9;
     stroke-dasharray: 6 3;
+  }
+}
+
+/* Sparks shed by the mission section's spinning star. Each one fades in at its
+   spawn point on the star, then falls --spark-fall while drifting
+   --spark-drift sideways. The vertical stretch is what sells it as a shooting
+   star: without it each spark reads as a dot being slid down the page. Per-spark
+   distance, delay and duration come from the call site so the shower never
+   drops in step. */
+@keyframes star-spark {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scaleY(0.4);
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  65% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--spark-drift, 0), var(--spark-fall, 3rem), 0)
+      scaleY(1.5);
   }
 }
 
