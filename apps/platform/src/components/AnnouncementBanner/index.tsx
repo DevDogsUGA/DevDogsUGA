@@ -205,6 +205,13 @@ export default function AnnouncementBanner() {
           The gutter is pointer-events-none: it spans the whole viewport width
           and would otherwise swallow clicks on whatever sits behind it.
 
+          The side padding does not step down on a narrow screen the way the
+          vertical padding does. The card's border is black and the page it
+          floats over is near-black, so a thin gutter reads as no gutter at
+          all — the border runs into the background and the card loses its
+          edge. The sides hold 1.5rem everywhere; only the top and bottom
+          tighten on mobile, where vertical space is the scarce one.
+
           The right padding carries an extra --block-shadow-xl because the
           block shadow falls outside the card's box: mx-auto would centre the
           box and leave the thing you actually see sitting half the offset
@@ -216,7 +223,7 @@ export default function AnnouncementBanner() {
           rather than a literal keeps it true if the offset changes. */}
       <div
         data-slot="announcement-banner"
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 p-4 pr-[calc(1rem+var(--block-shadow-xl))] pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6 md:pr-[calc(1.5rem+var(--block-shadow-xl))] md:pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-6 pt-4 pr-[calc(1.5rem+var(--block-shadow-xl))] pb-[max(1rem,env(safe-area-inset-bottom))] md:pt-6 md:pb-[max(1.5rem,env(safe-area-inset-bottom))]"
       >
         {/* Scrim. It grounds the notice against whatever is scrolling under it
             and gives the card's black border something other than page text
