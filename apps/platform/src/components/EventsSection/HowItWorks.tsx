@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import type { StaticImageData } from "next/image";
 import type { ReactNode } from "react";
+import CrtTv from "./CrtTv";
 import bruceAlmighty from "~/assets/bruce-almighty.gif";
 import charlieConspiracy from "~/assets/charlie-conspiracy.gif";
 import informationGif from "~/assets/information.gif";
@@ -137,9 +137,26 @@ export default function HowItWorks() {
             {BEATS.map((beat, i) => (
               <li
                 key={beat.title}
-                className={`shadow-block-md flex gap-4 rounded-sm border-2 border-black bg-white p-5 transition-[opacity,scale] hover:scale-100 hover:opacity-100 ${
-                  hovered === i ? "scale-100 opacity-100" : "lg:opacity-75"
-                }`}
+                /* Which beat is live is a data attribute, and the class list is
+                   a constant. It cannot be derived from `hovered`, because
+                   `[data-animate]` starts at `opacity: 0` in globals.css and
+                   only becomes visible when AnimationInit adds `.is-visible` —
+                   a class, added outside React, to an element React believes it
+                   owns. Re-deriving className from state made React rewrite the
+                   whole class attribute, which deleted `is-visible`; the
+                   observer had already unobserved the node, so nothing ever put
+                   it back. Hovering a beat deleted the beat.
+
+                   Only the shadow moves. The obvious emphasis — dimming the
+                   other two — is not available here: `[data-animate]` sets
+                   opacity, transform and transition unlayered, so it outranks
+                   every Tailwind utility for those three properties, and the
+                   `opacity-75` this used to carry was inert long before it was
+                   removed. box-shadow is untouched by that rule, so it is the
+                   one thing that can actually respond. The real feedback is the
+                   television changing channel. */
+                data-active={hovered === i}
+                className="shadow-block-md data-[active=true]:shadow-block-xl flex gap-4 rounded-sm border-2 border-black bg-white p-5"
                 onMouseEnter={() => setHovered(i)}
                 onMouseLeave={() => setHovered(null)}
                 data-animate="fade-up"
@@ -162,26 +179,16 @@ export default function HowItWorks() {
             ))}
           </ol>
 
-          <div
-            aria-hidden
-            className="shadow-block-md relative aspect-video overflow-hidden rounded-sm border-2 border-black lg:col-span-2 lg:aspect-auto"
-          >
-            <Image
-              alt=""
-              className="absolute inset-0 size-full object-cover"
-              src={staticGif}
+          {/* Centred rather than stretched. The panel used to be a rectangle
+              told to fill the column, which is as tall as the three beats
+              beside it; a television given the same instruction would be a
+              television two feet deep. It keeps its proportions and sits in
+              the middle of whatever height the row ends up with. */}
+          <div className="flex items-center justify-center lg:col-span-2">
+            <CrtTv
+              noSignal={staticGif}
+              showing={active ? { key: active.title, image: active.gif } : null}
             />
-            {active && (
-              // Keyed on the title so React remounts rather than swapping the
-              // src on one element: a GIF that is only re-pointed keeps playing
-              // from wherever the last one left off.
-              <Image
-                key={active.title}
-                alt=""
-                className="absolute inset-0 size-full object-cover"
-                src={active.gif}
-              />
-            )}
           </div>
         </div>
 
