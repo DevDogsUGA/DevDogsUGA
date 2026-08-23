@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import range from "~/lib/range";
 
 // Jagged right edge used by stat cards. Cards overlap by CHEVRON_DEPTH so
@@ -26,8 +27,10 @@ const STAT_CLIP_INNER = `polygon(0 0, calc(100% - ${CHEVRON_DEPTH + BORDER_W}px)
   .join()}, 0 100%)`;
 
 interface Props {
-  num: string;
-  label: string;
+  title: string;
+  description: string;
+  /** The section's unique "go read it" line, paired with an arrow icon. */
+  cta: string;
   bg: string;
   darkBg: string;
   href: string;
@@ -35,8 +38,9 @@ interface Props {
 }
 
 export default function StatCard({
-  num,
-  label,
+  title,
+  description,
+  cta,
   bg,
   darkBg,
   href,
@@ -57,10 +61,14 @@ export default function StatCard({
         style={{ clipPath: STAT_CLIP_INNER }}
       />
       <div className="relative z-10 py-6 text-center sm:py-8">
-        <p className="font-display text-3xl font-extrabold sm:text-5xl">
-          {num}
+        <p className="text-sm font-semibold sm:text-base">{description}</p>
+        <p className="font-display mt-1 text-2xl font-extrabold sm:text-4xl">
+          {title}
         </p>
-        <p className="mt-1 text-sm font-semibold sm:text-base">{label}</p>
+        <p className="mt-2 flex items-center justify-center gap-1 text-xs font-bold sm:text-sm">
+          {cta}
+          <ArrowRightIcon className="text-xs" />
+        </p>
       </div>
     </Link>
   );

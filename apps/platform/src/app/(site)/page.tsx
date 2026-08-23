@@ -56,24 +56,27 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         aria-label="Homepage sections"
       >
         <StatCard
-          num="Mission"
-          label="Learn By Doing"
+          description="Learn By Doing"
+          title="Mission"
+          cta="Read the Mission"
           bg="bg-rose-400"
           darkBg="bg-rose-600"
           href="#mission"
           zIndex={3}
         />
         <StatCard
-          num="Events"
-          label="Weekly Workshops"
+          description="Weekly Workshops"
+          title="Events"
+          cta="See the Schedule"
           bg="bg-cyan-400"
           darkBg="bg-cyan-600"
           href="#events"
           zIndex={2}
         />
         <StatCard
-          num="Projects"
-          label="Real Products"
+          description="Real Products"
+          title="Projects"
+          cta="Browse Projects"
           bg="bg-amber-400"
           darkBg="bg-amber-600"
           href="#projects"
