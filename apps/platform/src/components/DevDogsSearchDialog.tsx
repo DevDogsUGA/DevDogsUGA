@@ -112,6 +112,14 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
             className="text-base"
             fieldClassName="h-11! *:data-[slot=input-group-addon]:pl-3! [&_[data-slot=input-group-addon]_svg]:size-5!"
           />
+          <div
+            aria-hidden
+            className="mx-2 mt-1 h-0.5 overflow-hidden rounded-full"
+          >
+            {isLoading && (
+              <div className="animate-search-progress h-full w-1/3 rounded-full bg-gradient-to-r from-amber-400 to-rose-500" />
+            )}
+          </div>
           <CommandList className="max-h-96">
             {!search.trim() && (
               <div className="text-muted-foreground flex flex-col items-center gap-1.5 px-6 py-14 text-center">
