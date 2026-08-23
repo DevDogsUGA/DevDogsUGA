@@ -44,19 +44,36 @@ const HERO_BLOBS: BlobDef[] = [
   { cx: "68%", cy: "88%", rx: "44%", ry: "30%", fill: "#083344", opacity: 0.6 }, // teal
 ];
 
+// Outline plus offset block. Both are drop-shadows, so both paint outside the
+// clipped shape's box — 2px each side, and --gem-offset down-and-right.
+// HeroPhotoFrame reserves exactly that much as padding.
 const GEM_BORDER_SHADOW = {
   filter: [
     "drop-shadow(2px 0 0 #e11d48)",
     "drop-shadow(-2px 0 0 #e11d48)",
     "drop-shadow(0 2px 0 #e11d48)",
     "drop-shadow(0 -2px 0 #e11d48)",
-    "drop-shadow(20px 20px 0 #fbbf24)",
+    "drop-shadow(var(--gem-offset) var(--gem-offset) 0 #fbbf24)",
   ].join(" "),
 };
 
+/* The shadows above overhang the gem's box, and the frame reserves that
+   overhang as padding rather than clipping it (`overflow-hidden`, as it used to
+   below md) or letting it escape (`md:overflow-visible`, as above md). Clipping
+   cut the outline flat where the gem meets its box — which it does on all four
+   sides — and left the offset block showing only in the concave notches;
+   letting it escape put 22px of block through the container's 24px px-6 gutter.
+
+   `md:shrink` is the other half. The copy column is `flex-1`, so `min-width:
+   auto` floors it at the headline's min-content width — "SOFTWARE." set solid.
+   Against a frame pinned to half the row that refused to shrink, that floor
+   overran the container from md up to ~870px, and again right at lg where the
+   headline steps up a size. The row spilled and the section's `overflow-hidden`
+   sliced whatever crossed its edge. Shrinking hands the deficit to the only
+   item that can absorb it. */
 function HeroPhotoFrame() {
   return (
-    <div className="w-full shrink-0 overflow-hidden md:w-1/2 md:max-w-xl md:overflow-visible">
+    <div className="w-full shrink-0 pt-0.5 pr-[calc(var(--gem-offset)+2px)] pb-[calc(var(--gem-offset)+2px)] pl-0.5 [--gem-offset:12px] md:w-1/2 md:max-w-xl md:shrink md:[--gem-offset:20px]">
       <div style={GEM_BORDER_SHADOW}>
         <div className="relative aspect-4/3" style={{ clipPath: GEM_CLIP }}>
           <Image
