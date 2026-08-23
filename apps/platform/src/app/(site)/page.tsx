@@ -1,4 +1,9 @@
 import type { ReactNode } from "react";
+import {
+  CalendarDotsIcon,
+  CompassIcon,
+  RocketIcon,
+} from "@phosphor-icons/react/ssr";
 import HeroSection from "~/components/HeroSection";
 import SectionMarquee, { MarqueeItem } from "~/components/SectionMarquee";
 import MissionSection from "~/components/MissionSection";
@@ -50,7 +55,6 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
 
       <SectionMarquee
         slope="bs"
-        className="text-black"
         duration={50}
         copyZBase={10}
         aria-label="Homepage sections"
@@ -59,6 +63,8 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
           description="Learn By Doing"
           title="Mission"
           cta="Read the Mission"
+          icon={CompassIcon}
+          textColor="text-rose-950"
           bg="bg-rose-400"
           darkBg="bg-rose-600"
           href="#mission"
@@ -68,6 +74,8 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
           description="Weekly Workshops"
           title="Events"
           cta="See the Schedule"
+          icon={CalendarDotsIcon}
+          textColor="text-cyan-950"
           bg="bg-cyan-400"
           darkBg="bg-cyan-600"
           href="#events"
@@ -77,6 +85,8 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
           description="Real Products"
           title="Projects"
           cta="Browse Projects"
+          icon={RocketIcon}
+          textColor="text-amber-950"
           bg="bg-amber-400"
           darkBg="bg-amber-600"
           href="#projects"

@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import Link from "next/link";
 import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import range from "~/lib/range";
@@ -31,6 +32,16 @@ interface Props {
   description: string;
   /** The section's unique "go read it" line, paired with an arrow icon. */
   cta: string;
+  /** Drawn above the copy, filled, in {@link textColor}. What makes the card. */
+  icon: ComponentType<{ className?: string; weight?: "fill" }>;
+  /**
+   * One literal Tailwind color class (e.g. `"text-rose-950"`), applied to the
+   * whole text block so the icon — which draws in `currentColor` — and every
+   * line of copy pick up the same accent. Kept literal, not built from a hue
+   * prop: Tailwind's scanner only generates classes it can see spelled out in
+   * source, and `bg`/`darkBg` below follow the same rule.
+   */
+  textColor: string;
   bg: string;
   darkBg: string;
   href: string;
@@ -41,6 +52,8 @@ export default function StatCard({
   title,
   description,
   cta,
+  icon: Icon,
+  textColor,
   bg,
   darkBg,
   href,
@@ -60,14 +73,19 @@ export default function StatCard({
         className={`${bg} absolute inset-0`}
         style={{ clipPath: STAT_CLIP_INNER }}
       />
-      <div className="relative z-10 py-6 text-center sm:py-8">
-        <p className="text-sm font-semibold sm:text-base">{description}</p>
-        <p className="font-display mt-1 text-2xl font-extrabold sm:text-4xl">
+      <div
+        className={`relative z-10 flex flex-col items-center gap-3 px-4 py-8 text-center sm:gap-4 sm:px-6 sm:py-10 ${textColor}`}
+      >
+        <Icon className="size-8 sm:size-10" weight="fill" />
+        <p className="text-base font-semibold opacity-80 sm:text-lg">
+          {description}
+        </p>
+        <p className="font-display text-3xl font-extrabold sm:text-5xl">
           {title}
         </p>
-        <p className="mt-2 flex items-center justify-center gap-1 text-xs font-bold sm:text-sm">
+        <p className="flex items-center gap-1.5 text-sm font-bold sm:text-base">
           {cta}
-          <ArrowRightIcon className="text-xs" />
+          <ArrowRightIcon className="text-sm" />
         </p>
       </div>
     </Link>
