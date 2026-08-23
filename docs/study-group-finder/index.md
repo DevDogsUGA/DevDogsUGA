@@ -1,6 +1,7 @@
 ---
 name: Study Group Finder
 description: The Flutter mobile app for finding and forming study groups at UGA.
+order: 40
 ---
 
 # Study Group Finder

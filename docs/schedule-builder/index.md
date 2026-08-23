@@ -1,6 +1,7 @@
 ---
 name: Schedule Builder
 description: Course schedule planning for UGA students, built on the registrar scrape pipeline.
+order: 30
 ---
 
 # Schedule Builder
