@@ -182,12 +182,17 @@
   @apply shadow-(--tw-shadow-block);
 }
 
-/* Block-style drop shadow — composes with other filter utilities via --tw-drop-shadow. */
+/* Block-style drop shadow — composes with other filter utilities via --tw-drop-shadow.
+
+   The custom property holds a bare shadow VALUE, not a drop-shadow() call, the
+   same as its shadow-block-* and text-shadow-block-* siblings above. It used to
+   wrap the value itself, and `drop-shadow-(--var)` wraps whatever it is handed —
+   so the filter came out as drop-shadow(drop-shadow(4px 4px 0 black)), which is
+   not a valid filter, and the whole `filter` declaration was dropped. Every
+   drop-shadow-block-* on the site computed to `filter: none`. */
 @utility drop-shadow-block-* {
-  --tw-drop-shadow-block: drop-shadow(
-    --value(--block-shadow-*) --value(--block-shadow-*) 0
-      var(--tw-shadow-color, black)
-  );
+  --tw-drop-shadow-block: --value(--block-shadow-*) --value(--block-shadow-*) 0
+    var(--tw-shadow-color, black);
   @apply drop-shadow-(--tw-drop-shadow-block);
 }
 
