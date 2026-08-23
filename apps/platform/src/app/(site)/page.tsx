@@ -53,27 +53,27 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         className="text-black"
         duration={50}
         copyZBase={10}
-        aria-label="Club statistics"
+        aria-label="Homepage sections"
       >
         <StatCard
-          num="350+"
-          label="Active Members"
+          num="Mission"
+          label="Learn By Doing"
           bg="bg-rose-400"
           darkBg="bg-rose-600"
           href="#mission"
           zIndex={3}
         />
         <StatCard
-          num="3×"
-          label="Weekly Events"
+          num="Events"
+          label="Weekly Workshops"
           bg="bg-cyan-400"
           darkBg="bg-cyan-600"
           href="#events"
           zIndex={2}
         />
         <StatCard
-          num="4+"
-          label="Projects Shipped"
+          num="Projects"
+          label="Real Products"
           bg="bg-amber-400"
           darkBg="bg-amber-600"
           href="#projects"
