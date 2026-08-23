@@ -9,6 +9,13 @@ export interface DocHeading {
 export interface ParsedDocFile {
   title: string;
   description: string | null;
+  /**
+   * Where the page sits among its siblings, from `order:` in the frontmatter.
+   * Null when it declares none, which is the normal case for a hand-written
+   * guide: the generated reference numbers every page it writes, and written
+   * pages opt in one at a time.
+   */
+  order: number | null;
   frontmatter: Record<string, unknown>;
   headings: DocHeading[];
   /** Markdown with frontmatter stripped. */
@@ -30,4 +37,6 @@ export interface DocsProject {
   slug: string;
   name: string;
   description: string | null;
+  /** Where the project sits in the listing, from its own `index.md`. */
+  order: number | null;
 }

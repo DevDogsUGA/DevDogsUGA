@@ -44,12 +44,33 @@ description: The DevDogs web platform — the site, console, docs, and public AP
 
 - **`name`** — the project's display name, and the page's own title.
 - **`description`** — the card subtitle on `/docs`, and the page description used for search results and `<meta name="description">`.
+- **`order`** — where the project sits among the cards on `/docs`, in the sidebar's project selector, and in the top nav's docs menu, all three of which list projects in the same order. Projects that declare no `order` sit at 100 and sort by name; none does today, so the listing is alphabetical until one opts in.
 
-On ordinary pages `description` still feeds search results and page metadata, so it is worth adding to substantial pages. Front matter is stripped before rendering, so it never appears in the page body.
+On ordinary pages `description` still feeds search results and page metadata, and `order` places the page in the sidebar — see [Sidebar ordering](#sidebar-ordering) — so both are worth adding to substantial pages. Front matter is stripped before rendering, so it never appears in the page body.
 
 ## Sidebar ordering
 
-The sidebar is built from the file tree. Within each folder, `index.md` (or `readme.md`) sorts first and everything else follows **alphabetically by title** — not by filename. There is no ordering manifest; rename or retitle a page to move it.
+The sidebar is built from the file tree. Within each folder, `index.md` (or `readme.md`) sorts first, then whatever `order` says, then **alphabetically by title** — not by filename. A page that declares no `order` sits at **100**, the middle of the range: a smaller number promotes a page above the pages nobody has numbered, a larger one demotes it below them. The numbers are only ever compared against the page's own siblings, so the same value means something different in each folder.
+
+### Sections are always last
+
+A **top-level** folder is drawn as a section heading, and every section heading comes below every loose page in the project — this is the sidebar's own layout and no `order` overrides it. That is why `reference/` sits under the hand-written guides rather than between Navigation System and Reporting, and it was already true before `order` existed.
+
+What `order` decides up there is which section precedes which, and the only way to say it is an `order` on the section's own `index.md`. Sections that say nothing sort by name. A number buried inside a section is deliberately ignored at this level: `reference/server-actions.md` carries `order: 1` meaning "read this first _of everything in reference/_", and reading that as a claim about the guides beside it would hoist the whole generated reference above Getting Started.
+
+### Folders inside a section
+
+Below the top level a folder is an ordinary row, and it is placed by a number it does not carry itself:
+
+1. the `order` on its own `index.md`, which is the deliberate way to move it;
+2. otherwise the **smallest** `order` anything inside it declares, which lands it where its contents begin — the generated `reference/server/` folder follows the `reference/server.md` page because the pages inside it start numbering just after that page does;
+3. otherwise nothing, and it sorts at the default like any other row.
+
+An unnumbered page counts at the default for rule 2, and the folder takes the smaller of the two. So a folder holding one unnumbered page and one page at `order: 1` answers 1 — the number wins because it is smaller — while a folder holding one unnumbered page and one page at `order: 300` answers 100, not 300, because the row a reader meets on opening it is the unnumbered one.
+
+### One more place the number is read
+
+`/docs/<project>` renders nothing of its own — it redirects to the first page in the tree, descending into folders in the order above. A project with an `index.md` always lands there, because an index page leads its folder. A project without one lands wherever the ordering puts it, so renumbering can move that URL: `/docs/toolkit` opens the components reference because `reference/components/` is numbered ahead of `reference/api/`.
 
 ## Supported syntax
 

@@ -91,6 +91,18 @@ export function parseDocFile(source: string, fileName: string): ParsedDocFile {
       typeof frontmatter.description === "string"
         ? frontmatter.description
         : null,
+    // Finite, or nothing. YAML has literals for NaN and infinity (`.nan`,
+    // `.inf`), and either one poisons every comparison in the sidebar sort —
+    // NaN makes the comparator answer 0 to everything, which leaves the
+    // surrounding pages in whatever order the engine happened to have them in.
+    // Anything that is not a number at all — `order: first`, `order: "3"` — is
+    // a typo rather than an instruction, and a page with a typo sorting where
+    // an undeclared page sorts is the outcome an author will notice.
+    order:
+      typeof frontmatter.order === "number" &&
+      Number.isFinite(frontmatter.order)
+        ? frontmatter.order
+        : null,
     frontmatter,
     headings,
     content,

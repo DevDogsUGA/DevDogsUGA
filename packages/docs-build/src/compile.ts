@@ -6,6 +6,17 @@ import type { DocsPage, DocsProject } from "./types.js";
 /** Package machinery that sits alongside the content and is never a project. */
 const NOT_A_PROJECT = new Set(["dist", "node_modules", ".turbo"]);
 
+/**
+ * Where something that declares no `order` sits. The middle of the range, so
+ * that a page can be promoted above the pages that never think about ordering
+ * as well as demoted below them — the generator uses both directions, giving
+ * the routes and server-actions overviews single digits and the symbol groups
+ * 100 and up. `apps/platform`'s sidebar builder carries the same number for
+ * the same reason; it takes plain rows rather than this package's types, so
+ * the two are kept in step by hand.
+ */
+const DEFAULT_ORDER = 100;
+
 /** Markdown paths below `dir`, relative to it, extension stripped, slash-separated. */
 function walk(dir: string, prefix = ""): string[] {
   const found: string[] = [];
@@ -58,6 +69,7 @@ export function compileDocs(contentRoot: string): {
       slug,
       name: toTitleCase(slug),
       description: null,
+      order: null,
     };
 
     for (const rel of relPaths) {
@@ -68,20 +80,34 @@ export function compileDocs(contentRoot: string): {
       const parsed = parseDocFile(source, rel.split("/").at(-1)!);
       pages.push({ ...parsed, project: slug, path: `${slug}/${rel}` });
 
-      // The project's own index page seeds its display name + description on
-      // the docs landing page. A nested folder's index page doesn't.
+      // The project's own index page seeds its display name, description and
+      // position on the docs landing page. A nested folder's index page
+      // doesn't — that one positions its own folder in the sidebar, which is
+      // `buildDocsTree`'s business rather than this loop's.
       if (isIndexPath(rel) && !rel.includes("/")) {
         if (typeof parsed.frontmatter.name === "string") {
           project.name = parsed.frontmatter.name;
         }
         project.description = parsed.description;
+        project.order = parsed.order;
       }
     }
 
     projects.push(project);
   }
 
-  projects.sort((a, b) => a.name.localeCompare(b.name));
+  projects.sort(
+    (a, b) =>
+      (a.order ?? DEFAULT_ORDER) - (b.order ?? DEFAULT_ORDER) ||
+      a.name.localeCompare(b.name),
+  );
+
+  // Pages stay in path order, which `order` has no business disturbing: this
+  // array is the lookup table every consumer indexes by path, and a page's
+  // `order` positions it among its siblings in one folder — a meaning that
+  // only survives inside the sidebar tree, where the siblings are what it is
+  // compared against. Sorting the flat list by it would interleave folders and
+  // produce a sequence that is not the reading order of anything.
   pages.sort((a, b) => a.path.localeCompare(b.path));
 
   return { projects, pages };

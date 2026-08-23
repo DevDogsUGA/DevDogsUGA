@@ -41,6 +41,7 @@ export function getDocsTree(project: string): DocsTreeNode[] {
       .map((page) => ({
         path: splitProjectPath(page.path).path,
         title: page.title,
+        order: page.order,
       })),
   );
 }
