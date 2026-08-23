@@ -53,8 +53,8 @@ export default function UnderConstruction() {
               CONSTRUCTION.
             </h1>
             <p className="max-w-md text-lg text-balance text-mauve-300">
-              We&rsquo;re in the process of redesigning our website. This page
-              isn&rsquo;t quite ready yet — check back soon!
+              We&rsquo;re redesigning our website. This page isn&rsquo;t ready
+              yet — check back soon!
             </p>
             <LinkButton
               href="/"

@@ -76,14 +76,14 @@ export default function PartnersSection({ topEdge, bottomEdge }: Props) {
                 Partners
               </h2>
               <p className="text-base/relaxed text-mauve-700">
-                DevDogs is a student-run software development club at UGA with
-                350+ active members. We build real products shipped to the
-                community each semester — not toy apps.
+                DevDogs is a student-run software club at UGA with 350+ active
+                members, building real products for the community every
+                semester.
               </p>
               <p className="text-base/relaxed text-mauve-700">
-                Partnering with DevDogs puts your brand directly in front of
-                driven students. We offer sponsorship tiers, recruiting access,
-                and mentorship opportunities.
+                Partnering with DevDogs puts your brand in front of driven
+                students, with sponsorship, recruiting, and mentorship
+                opportunities.
               </p>
               <LinkButton
                 href="mailto:devdogs@uga.edu"

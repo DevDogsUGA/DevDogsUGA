@@ -122,7 +122,7 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-teal-100 shadow-teal-900`}
       >
         <MarqueeItem>Weekly Workshops</MarqueeItem>
-        <MarqueeItem>Hackathon Presentations</MarqueeItem>
+        <MarqueeItem>Competition Judging</MarqueeItem>
         <MarqueeItem>Build Sessions</MarqueeItem>
         <MarqueeItem>Build Every Week</MarqueeItem>
         <MarqueeItem>All Skill Levels Welcome</MarqueeItem>

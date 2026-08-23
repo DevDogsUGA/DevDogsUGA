@@ -74,9 +74,9 @@ export default function MissionSection({ topEdge, bottomEdge }: Props) {
               skills and build software that matters.
             </p>
             <p>
-              Every week, we run workshops on the technical concepts behind our
-              current project, followed by hackathon sessions where you apply
-              what you learned and ship features directly to the codebase.
+              Every week: a workshop on the concepts behind our project, then a
+              competition where you ship what you learned straight to the
+              codebase.
             </p>
             <p>
               Whether you&rsquo;re writing your first line of code or your

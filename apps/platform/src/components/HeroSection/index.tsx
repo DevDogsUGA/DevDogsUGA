@@ -111,8 +111,9 @@ export default function HeroSection() {
                 EVERY WEEK.
               </h1>
               <p className="max-w-md text-lg text-balance text-mauve-300">
-                DevDogs runs weekly workshops and hackathons where UGA students
-                apply real skills and ship features for community projects.
+                DevDogs runs weekly workshops and competitions where UGA
+                students apply real skills and ship features for community
+                projects.
               </p>
               <div className="flex flex-wrap gap-3">
                 <LinkButton
