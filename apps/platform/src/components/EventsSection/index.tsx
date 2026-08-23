@@ -7,7 +7,7 @@ import LinkButton from "~/ui/link-button";
 import { getMeetingsInRange } from "~/server/loaders/meetings";
 import type { MeetingInRange } from "~/server/loaders/meetings";
 import FindUs from "./FindUs";
-import Marquee from "./Marquee";
+import NextMeetingStrip from "./NextMeetingStrip";
 import HowItWorks from "./HowItWorks";
 
 const EVENTS_BLOBS: BlobDef[] = [
@@ -29,11 +29,20 @@ interface Props {
  * The homepage's events section: the next meeting, how the week works, and a
  * way through to the rest.
  *
- * Deliberately smaller than it was. This used to render the whole calendar and
- * four cards, which made the homepage and `/events` near-duplicates of each
- * other — and the cards were fabricated anyway. The homepage's job is to
- * convince somebody the club meets and is worth turning up to; the schedule
- * belongs on the page named after it.
+ * Deliberately smaller than it was, and deliberately not built out of the
+ * events page's bands. This used to render the whole calendar and four cards,
+ * which made the homepage and `/events` near-duplicates of each other — and
+ * the cards were fabricated anyway.
+ *
+ * The split between the two is by question rather than by size. `/events`
+ * answers *when*: a marquee, a calendar, the schedule and the archive, and
+ * nothing that is not a date. The homepage answers *what happens if I turn
+ * up*: the format, the room, and one line of proof that there is a next
+ * meeting at all. So the explainer lives here and only here, the schedule
+ * lives there and only there, and the one fact they share — the next meeting —
+ * is rendered at two sizes that could not be mistaken for each other. Neither
+ * page is a subset of the other, which is what stops them drifting into two
+ * maintained copies of the same page.
  *
  * The directions trigger here is the IN-PLACE dialog rather than the link to
  * `/events/directions`: on the events page that URL opens over a calendar that
@@ -60,9 +69,10 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
               Events
             </h2>
             <p className="text-base/relaxed text-balance text-mauve-700">
-              Every week, rain or shine: workshops that teach a feature area,
-              week-long competitions to build it, and open build sessions in
-              between.
+              The club meets every week of the semester, and the shape of a
+              night is always the same: a workshop teaches a feature area, a
+              week-long competition puts it into practice, and the following
+              meeting judges what got built. Turn up to any of it.
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
               <p className="flex items-center gap-2 text-sm font-semibold text-black">
@@ -73,7 +83,7 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
             </div>
           </div>
 
-          <Marquee meeting={await nextMeeting()} now={new Date()} />
+          <NextMeetingStrip meeting={await nextMeeting()} now={new Date()} />
 
           <HowItWorks />
 
@@ -94,7 +104,7 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
  * Catches its own failure and degrades to null rather than throwing. The
  * homepage is the club's front door and has no error boundary of its own — a
  * connection blip must cost the visitor a date, not the whole page — and null
- * is a state the marquee already renders properly, because an empty summer is
+ * is a state the strip already renders properly, because an empty summer is
  * the ordinary case for months at a time.
  *
  * Bounded on `endsAt` like every other "upcoming" read here: a meeting already

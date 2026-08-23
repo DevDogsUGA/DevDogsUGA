@@ -76,6 +76,12 @@ const BEATS: Beat[] = [
  * competitions — it judges last week's and opens next week's.
  * Writing it as "the workshop, then the hackathon" would be the exact mistake
  * the schema was designed to rule out.
+ *
+ * It lives on the homepage and nowhere else. `/events` used to render it too,
+ * which made the bottom half of the two pages the same page; a visitor there
+ * came for a date and gets the vocabulary in one sentence in the header plus a
+ * link back to this. The band is the answer to "is this club worth turning up
+ * to", which is the homepage's question, not the schedule's.
  */
 export default function HowItWorks() {
   // `null` is the resting state, not "beat 0": static.gif plays underneath
@@ -88,10 +94,26 @@ export default function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      // The band carries its own ground: the events page lays its sections on
-      // black, so mauve-on-white copy needs the rose plate underneath it rather
-      // than inheriting whatever the page happens to be.
-      className="mx-4 overflow-hidden rounded-xl border-2 border-black bg-rose-50 md:mx-6"
+      // The band carries its own ground rather than inheriting the section's:
+      // mauve-on-white copy needs a known plate under it, and the blobs behind
+      // the section run from rose to amber, which is not one.
+      //
+      // No horizontal margin of its own — it sits inside the section's padded
+      // column and lines up with the strip above it. It used to be inset,
+      // which read as deliberate when the band was one of five and as a
+      // misalignment when it is one of two.
+      //
+      // scroll-mt clears the sticky TopNav, the same idea as `ui/card` — but a
+      // much larger number than the 20 that uses, because what has to clear is
+      // the *heading*, not the border. That sits 40-60px inside the card's own
+      // padding, and the homepage's reveal animations settle after the jump,
+      // reflowing the anchor another ~50px upward on a phone. Measured against
+      // a production build at 1440 and 390: at 20 the heading landed under the
+      // nav at both widths.
+      //
+      // This is a jump target now because /events links back to
+      // `/#how-it-works` rather than rendering its own copy of the band.
+      className="scroll-mt-48 overflow-hidden rounded-xl border-2 border-black bg-rose-50"
       data-animate="fade-up"
     >
       <div className="mx-auto max-w-6xl space-y-8 px-6 py-10 md:px-12 md:py-14">

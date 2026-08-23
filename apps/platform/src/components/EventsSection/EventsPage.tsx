@@ -1,12 +1,16 @@
 import type { ReactNode } from "react";
-import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
+import Link from "next/link";
+import {
+  ArrowRightIcon,
+  ArrowUpRightIcon,
+  MapPinIcon,
+} from "@phosphor-icons/react/ssr";
 import SectionBackground, { type BlobDef } from "~/ui/section-background";
 import { INVOLVEMENT_NETWORK_EVENTS_URL } from "~/config/nav";
 import type { MeetingInRange, MeetingSummary } from "~/server/loaders/meetings";
 import MonthCalendar from "./MonthCalendar";
 import Marquee from "./Marquee";
 import ScheduleList from "./ScheduleList";
-import HowItWorks from "./HowItWorks";
 import PastMeetings from "./PastMeetings";
 
 const EVENTS_BLOBS: BlobDef[] = [
@@ -45,14 +49,22 @@ export interface EventsPageProps {
 }
 
 /**
- * The events page: five bands over one background.
+ * The events page: four bands over one background, and every one of them a
+ * date.
  *
  * The order is an argument, not a layout. A visitor arrives wanting one fact —
- * when is the next one — so the marquee answers that before anything else and
- * every band below it is context. The explainer sits *after* the schedule
- * because somebody who already knows how the club works should not have to
- * scroll past an explanation to reach a date, and the archive sits last
- * because it is the only band nobody arrives for.
+ * when is the next one — so the marquee answers that before anything else, the
+ * calendar and the schedule widen that answer to the month, and the archive
+ * sits last because it is the only band nobody arrives for.
+ *
+ * What is NOT here is the explainer. It used to sit between the schedule and
+ * the archive, and it is the homepage's band now: this page is for somebody
+ * who wants a date, and the homepage is for somebody deciding whether the
+ * dates are worth having. Keeping one copy on the page whose question it
+ * answers is what keeps the two pages from being versions of each other. The
+ * vocabulary the badges below use still has to mean something to a first-time
+ * reader, so it is defined once in the header, in one sentence, with a link
+ * through to the long version.
  *
  * Every band is presentational and takes data as props. Nothing here reads the
  * clock or the database; `now` and `today` are resolved once by the layout so
@@ -97,10 +109,32 @@ export default function EventsPage({
               Events
             </h1>
             <p className="text-base/relaxed text-balance text-mauve-700">
-              Every week, rain or shine: workshops that teach a feature area,
-              week-long competitions to build it, and open build sessions in
-              between.
+              Every meeting the club has on the books — the next one first, then
+              the rest of the month, then the ones already behind us.
             </p>
+            {/* The badge vocabulary, defined once. The three-beat version of
+                this with the diagrams is on the homepage; a reader who came
+                here for a date should not have to scroll past it, but a reader
+                seeing "Kickoff" for the first time still needs it to mean
+                something. */}
+            <p className="mt-3 text-sm/relaxed text-mauve-600">
+              A night is named for what happens on it: a{" "}
+              <strong className="font-semibold text-black">workshop</strong>{" "}
+              teaches a feature area, a{" "}
+              <strong className="font-semibold text-black">kickoff</strong>{" "}
+              opens the week-long competition that follows it,{" "}
+              <strong className="font-semibold text-black">judging</strong> is
+              where the previous one is presented, and an{" "}
+              <strong className="font-semibold text-black">open build</strong>{" "}
+              is the room with no agenda. Most nights are more than one of
+              these.
+            </p>
+            <Link
+              href="/#how-it-works"
+              className="mt-2 flex w-fit items-center gap-1.5 text-sm font-semibold text-black underline underline-offset-4 hover:no-underline"
+            >
+              How a competition works <ArrowRightIcon />
+            </Link>
             {/* One room for almost everything, so it is said once here rather
                 than repeated on every row. A meeting somewhere else says so on
                 its own row — see ScheduleList's "Not the usual room". */}
@@ -133,8 +167,6 @@ export default function EventsPage({
               <ScheduleList meetings={rest} now={now} />
             </div>
           </div>
-
-          <HowItWorks />
 
           <PastMeetings
             meetings={past}
