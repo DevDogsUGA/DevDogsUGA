@@ -9,9 +9,9 @@ import type { StaticImageData } from "next/image";
  * ## Why it is a drawing and not an image
  *
  * A photo or a stock render would be the only piece of the site not built out
- * of the same parts as everything else: flat fills, black outlines, offset
- * block shadows. Vector also means the screen aperture is a *known shape* at
- * every size, which is the thing that actually makes this work — see below.
+ * of the same parts as everything else. Vector also means the screen aperture
+ * is a *known shape* at every size, which is the thing that actually makes this
+ * work — see below.
  *
  * ## Why the GIF is an SVG `<image>` and not `next/image`
  *
@@ -29,6 +29,22 @@ import type { StaticImageData } from "next/image";
  * the optimiser passes animated files through untouched — so the bytes on the
  * wire are identical either way. The static import is kept for its `.src`,
  * which is still the hashed, immutably-cacheable URL the build emits.
+ *
+ * ## How the volume is built
+ *
+ * Two pieces, not three faces. The whole silhouette is drawn once as a rounded
+ * shell and the front face is laid on top of it, so the top and the right side
+ * are simply the parts of the shell the front does not cover. One gradient
+ * therefore lights both of them, running down-right along the axis
+ * perpendicular to the crease — which puts the top face in the light half and
+ * the side face in the dark half without either being painted separately. It
+ * is also what makes the rounding tractable: one path to round rather than
+ * three that have to agree at every seam.
+ *
+ * Value is what carries the form, so the three surfaces are separated by
+ * lightness first and hue second: top light, front middle, side dark. Cyan
+ * appears only on the fittings, where it is the mascot's teal against the
+ * mascot's red rather than a second thing competing to be the body colour.
  *
  * ## The no-signal state is the design
  *
@@ -55,24 +71,64 @@ interface Props {
 }
 
 /*
- * The chassis, in viewBox units. Written down rather than inlined because the
- * three faces have to agree: the top and side are the front face translated
- * along one depth vector, and an edge that disagrees by a unit reads as a
- * dent rather than as a corner.
+ * Geometry, in viewBox units.
  *
- * Front face:  x 18…300, y 84…300
- * Depth:       +56 x, −34 y  (back and up, so the tube is seen from below-left)
+ * Front face:  x 18…300, y 84…300, corner radius 16
+ * Depth:       +56 x, −34 y  (back and up, so the set is seen from below-left)
+ *
+ * The silhouette is the convex hull of the front face and that same rectangle
+ * pushed along the depth vector. Its corners are rounded by walking 16 units
+ * back down each incoming edge, curving through the vertex, and landing 16
+ * units along the outgoing one — the radius is uniform even though the angles
+ * are not, which is what stops the two oblique corners at the back from
+ * looking sharper than the four square ones.
  */
-const TOP_FACE = "18,84 300,84 356,50 74,50";
-const SIDE_FACE = "300,84 356,50 356,266 300,300";
-const SILHOUETTE = "18,84 74,50 356,50 356,266 300,300 18,300";
+const CORNER = 16;
+const SHELL = [
+  "M 18,100",
+  "Q 18,84 31.7,75.7",
+  "L 60.3,58.3",
+  "Q 74,50 90,50",
+  "L 340,50",
+  "Q 356,50 356,66",
+  "L 356,250",
+  "Q 356,266 342.3,274.3",
+  "L 313.7,291.7",
+  "Q 300,300 284,300",
+  "L 34,300",
+  "Q 18,300 18,284",
+  "Z",
+].join(" ");
+
+/**
+ * The top face, laid over the shell so that what is left of the shell is the
+ * right side and nothing else.
+ *
+ * Its own right edge IS the crease between top and side, which is why there is
+ * no separate crease element: an edge drawn twice is an edge that can disagree
+ * with itself. It closes below the front face's top edge rather than along it,
+ * because the front is drawn afterwards and covers the overshoot — and at the
+ * two top corners, where the front face rounds away, the overshoot is exactly
+ * what should be visible. That is the top of the cabinet curving over.
+ */
+const TOP = [
+  "M 18,100",
+  "Q 18,84 31.7,75.7",
+  "L 60.3,58.3",
+  "Q 74,50 90,50",
+  "L 340,50",
+  "Q 356,50 350,62",
+  "L 300,90",
+  "Z",
+].join(" ");
 
 /**
  * The aperture: four quadratic curves, one per edge, each bowing outward.
  *
  * The corners are deliberately left as corners. A tube is not a rounded
  * rectangle — it is a rectangle pushed out from behind — and rounding the
- * joins here turns it into a bar of soap.
+ * joins here turns it into a bar of soap. This is the one part of the drawing
+ * that does *not* get rounded off with the rest.
  */
 const SCREEN =
   "M 52,110 Q 130,96 208,110 Q 234,177 208,245 Q 130,259 52,245 Q 26,177 52,110 Z";
@@ -88,26 +144,37 @@ const BEZEL =
  */
 const PICTURE = { x: 36, y: 98, width: 188, height: 158 } as const;
 
-// Flat fills, one per face, doing all of the work that a light source would do
-// in a render. Mauve rather than anything warmer on purpose: `meetingView`
-// spends real colour on meaning — cyan is a competition, amber is a workshop —
-// and a big amber television parked beside an amber Workshop chip would read
-// as a third kind of badge. The one saturated thing on it is the power lamp,
-// in rose, which is not a segment colour anywhere.
-const FACE_TOP = "#f3f1f3"; // mauve-100
-const FACE_FRONT = "#e7e4e7"; // mauve-200
-const FACE_SIDE = "#a89ea9"; // mauve-400
-const TRIM = "#d7d0d7"; // mauve-300
-const GRILLE = "#79697b"; // mauve-500
-const LAMP = "#f43f5e"; // rose-500
+/*
+ * The club's colours, used as light rather than as decoration.
+ *
+ * Rose is the body and cyan is the fittings, which is the mascot: red glasses
+ * and a red laptop against teal. Amber is the third of the three the homepage's
+ * stat cards already use, and it is here exactly once, on the power lamp, where
+ * a colour nothing else on the set is wearing is the whole point.
+ *
+ * Each ramp is a single hue darkening, never a hue shift, because lightness is
+ * what the eye reads as form. A gradient that changed hue across a face would
+ * look like two materials meeting rather than one surface turning away.
+ */
+const ROSE = {
+  50: "#fff1f2",
+  100: "#ffe4e6",
+  200: "#fecdd3",
+  300: "#fda4af",
+  500: "#f43f5e",
+  600: "#e11d48",
+  700: "#be123c",
+  900: "#881337",
+} as const;
+const CYAN = { 100: "#cffafe", 200: "#a5f3fc", 400: "#22d3ee", 700: "#0e7490" };
+const LAMP = "#fbbf24"; // amber-400
 
 export default function CrtTv({ noSignal, showing, className }: Props) {
   // Strip everything that is not alphanumeric rather than just the colons the
   // rest of the codebase strips: React 19 hands back `«r0»`, not `:r0:`, so a
   // colon-only replace is now a no-op and these ids end up inside `url(#…)`.
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
-  const screenClip = `crt-screen-${uid}`;
-  const scanlines = `crt-scanlines-${uid}`;
+  const id = (name: string) => `crt-${name}-${uid}`;
 
   return (
     <svg
@@ -121,15 +188,119 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
       className={`drop-shadow-block-md h-auto w-full ${className ?? ""}`}
     >
       <defs>
-        <clipPath id={screenClip}>
+        <clipPath id={id("screen")}>
           <path d={SCREEN} />
         </clipPath>
+
+        {/* Every gradient here is userSpaceOnUse and aimed along the light,
+            not along its own element's box. objectBoundingBox would restart
+            each ramp inside whatever it fills, so two neighbouring parts of
+            one cabinet would each run light-to-dark independently and the set
+            would read as a collage of separately lit pieces. */}
+
+        {/* The shell is only ever seen as the right side, since the top face
+            and then the front are laid over the rest of it — so this is the
+            side's ramp, and it is the darkest thing on the cabinet. The three
+            surfaces are pulled apart by VALUE first: a viewer reads a form
+            from light and dark long before they read it from an outline, and
+            three faces at one lightness would be a flat pink shape with some
+            lines on it however carefully the lines were drawn. */}
+        <linearGradient
+          id={id("shell")}
+          gradientUnits="userSpaceOnUse"
+          x1="300"
+          y1="70"
+          x2="360"
+          y2="300"
+        >
+          <stop offset="0" stopColor={ROSE[600]} />
+          <stop offset="1" stopColor={ROSE[900]} />
+        </linearGradient>
+
+        {/* The top, lightest, brightest at the front-left corner nearest the
+            light and falling away toward the back. */}
+        <linearGradient
+          id={id("top")}
+          gradientUnits="userSpaceOnUse"
+          x1="18"
+          y1="84"
+          x2="356"
+          y2="50"
+        >
+          <stop offset="0" stopColor={ROSE[50]} />
+          <stop offset="1" stopColor={ROSE[200]} />
+        </linearGradient>
+
+        {/* The front, the middle value: lighter than the side it turns away
+            from, darker than the top it sits under. */}
+        <linearGradient
+          id={id("front")}
+          gradientUnits="userSpaceOnUse"
+          x1="18"
+          y1="84"
+          x2="300"
+          y2="300"
+        >
+          <stop offset="0" stopColor={ROSE[200]} />
+          <stop offset="1" stopColor={ROSE[500]} />
+        </linearGradient>
+
+        <linearGradient
+          id={id("trim")}
+          gradientUnits="userSpaceOnUse"
+          x1="244"
+          y1="100"
+          x2="288"
+          y2="288"
+        >
+          <stop offset="0" stopColor={CYAN[200]} />
+          <stop offset="1" stopColor={CYAN[700]} />
+        </linearGradient>
+
+        <linearGradient
+          id={id("knob")}
+          gradientUnits="userSpaceOnUse"
+          x1="251"
+          y1="125"
+          x2="281"
+          y2="211"
+        >
+          <stop offset="0" stopColor={ROSE[50]} />
+          <stop offset="1" stopColor={CYAN[100]} />
+        </linearGradient>
+
+        {/* The tube surround stays near-black whatever the cabinet is wearing:
+            it is the one part of the set that must not compete with the
+            picture sitting inside it. */}
+        <linearGradient
+          id={id("rim")}
+          gradientUnits="userSpaceOnUse"
+          x1="16"
+          y1="86"
+          x2="244"
+          y2="269"
+        >
+          <stop offset="0" stopColor="#463947" />
+          <stop offset="1" stopColor="#0c090c" />
+        </linearGradient>
+
+        <linearGradient
+          id={id("foot")}
+          gradientUnits="userSpaceOnUse"
+          x1="0"
+          y1="292"
+          x2="0"
+          y2="318"
+        >
+          <stop offset="0" stopColor={ROSE[700]} />
+          <stop offset="1" stopColor={ROSE[900]} />
+        </linearGradient>
 
         {/* Every 4 units, which lands near 3px at the size this renders — fine
             enough to read as a raster and coarse enough to survive the scale
             down to a phone. */}
         <pattern
-          id={scanlines}
+          id={id("scanlines")}
           width="4"
           height="4"
           patternUnits="userSpaceOnUse"
@@ -146,56 +317,65 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
           <line x1="212" y1="64" x2="118" y2="12" />
           <line x1="212" y1="64" x2="306" y2="18" />
         </g>
-        <circle cx="118" cy="12" r="8" fill={FACE_FRONT} strokeWidth="4.5" />
-        <circle cx="306" cy="18" r="8" fill={FACE_FRONT} strokeWidth="4.5" />
+        <circle cx="118" cy="12" r="8" fill={CYAN[400]} strokeWidth="4.5" />
+        <circle cx="306" cy="18" r="8" fill={CYAN[400]} strokeWidth="4.5" />
 
         {/* ── Feet ─────────────────────────────────────────────────────────
             Started above the cabinet's bottom edge so the front face covers
-            their tops: a foot butted exactly against the edge shows a seam the
-            moment the stroke rounds a join. */}
-        <polygon
-          points="46,292 88,292 82,318 52,318"
-          fill={FACE_SIDE}
+            their tops, and darker than anything above them: they are the one
+            part of the set the light does not reach at all. */}
+        <rect
+          x="46"
+          y="292"
+          width="42"
+          height="26"
+          rx="8"
+          fill={`url(#${id("foot")})`}
           strokeWidth="4"
         />
-        <polygon
-          points="238,292 280,292 274,318 244,318"
-          fill={FACE_SIDE}
+        <rect
+          x="238"
+          y="292"
+          width="42"
+          height="26"
+          rx="8"
+          fill={`url(#${id("foot")})`}
           strokeWidth="4"
         />
 
-        {/* ── Chassis ──────────────────────────────────────────────────────
-            Painted face by face, then outlined once around the whole
-            silhouette, so the outer edge is a single unbroken weight and the
-            two internal creases sit lighter inside it. */}
-        <polygon points={TOP_FACE} fill={FACE_TOP} strokeWidth="4" />
-        <polygon points={SIDE_FACE} fill={FACE_SIDE} strokeWidth="4" />
+        {/* ── Cabinet ──────────────────────────────────────────────────────
+            Three paints, back to front: the whole silhouette, then the top
+            face over it, then the front over that. Each one only has to be
+            right where it is still visible, which is what keeps three surfaces
+            meeting along two creases from needing six edges to agree. */}
+        <path d={SHELL} fill={`url(#${id("shell")})`} strokeWidth="6" />
+        <path d={TOP} fill={`url(#${id("top")})`} strokeWidth="5" />
         <rect
           x="18"
           y="84"
           width="282"
           height="216"
-          fill={FACE_FRONT}
-          strokeWidth="4"
+          rx={CORNER}
+          fill={`url(#${id("front")})`}
+          strokeWidth="5"
         />
-        <polygon points={SILHOUETTE} fill="none" strokeWidth="6" />
 
-        {/* The antenna's mount, a parallelogram sharing the chassis' depth
-            vector so it lies flat on the top face instead of floating over
-            it. */}
-        <polygon
-          points="190,72 230,72 246,62 206,62"
-          fill={TRIM}
+        {/* The antenna's mount, sharing the chassis' depth vector so it lies
+            flat on the top face instead of floating over it, and rounded off
+            like everything else. */}
+        <path
+          d="M 196,72 L 226,72 Q 232,72 236,69 L 250,60 Q 254,57 248,57 L 218,57 Q 212,57 208,60 L 194,69 Q 190,72 196,72 Z"
+          fill={`url(#${id("trim")})`}
           strokeWidth="4"
         />
 
         {/* ── Screen ───────────────────────────────────────────────────────*/}
-        <path d={BEZEL} fill={TRIM} strokeWidth="4" />
+        <path d={BEZEL} fill={`url(#${id("rim")})`} strokeWidth="5" />
         {/* Black underneath the picture, so the tube still reads as a tube in
             the moment before a GIF has decoded. */}
         <path d={SCREEN} fill="black" strokeWidth="0" />
 
-        <g clipPath={`url(#${screenClip})`} stroke="none">
+        <g clipPath={`url(#${id("screen")})`} stroke="none">
           <image
             href={noSignal.src}
             x={PICTURE.x}
@@ -221,12 +401,13 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
             y={PICTURE.y}
             width={PICTURE.width}
             height={PICTURE.height}
-            fill={`url(#${scanlines})`}
+            fill={`url(#${id("scanlines")})`}
           />
 
-          {/* Two hard-edged bands rather than a soft gradient: the rest of the
-              page has no gradients in it, and a blurred highlight would be the
-              only soft thing on a page of flat fills and hard outlines. */}
+          {/* Two hard-edged bands rather than a soft one. The gradients on the
+              cabinet describe a surface turning away from a light; glass does
+              not do that, it throws the light straight back, and a blurred
+              smear here would read as dirt on the tube instead. */}
           <polygon
             points="35,90 95,90 170,265 110,265"
             fill="white"
@@ -250,55 +431,42 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
           y="100"
           width="44"
           height="188"
-          rx="6"
-          fill={TRIM}
+          rx="14"
+          fill={`url(#${id("trim")})`}
           strokeWidth="4"
         />
-        {[134, 180].map((cy) => (
+        {[140, 196].map((cy) => (
           <g key={cy}>
-            <circle cx="266" cy={cy} r="15" fill={FACE_TOP} strokeWidth="4" />
+            <circle
+              cx="266"
+              cy={cy}
+              r="15"
+              fill={`url(#${id("knob")})`}
+              strokeWidth="4"
+            />
             {/* Pointing somewhere specific — a knob with no indicator is a
                 button. The two disagree so the set does not look printed. */}
             <line
               x1="266"
               y1={cy}
-              x2={cy === 134 ? 275 : 258}
-              y2={cy === 134 ? 145 : 190}
+              x2={cy === 140 ? 275 : 258}
+              y2={cy === 140 ? 151 : 206}
               strokeWidth="4"
             />
           </g>
         ))}
-        <g stroke={GRILLE} strokeWidth="5">
-          {[212, 224, 236, 248].map((y) => (
-            <line key={y} x1="254" y1={y} x2="278" y2={y} />
+        <circle cx="266" cy="252" r="7" fill={LAMP} strokeWidth="3.5" />
+
+        {/* ── Speaker ──────────────────────────────────────────────────────
+            Across the chin, which is where the badge used to be. A blank strip
+            under a tube reads as a mistake; a grille is what is actually
+            behind it. */}
+        <g stroke={ROSE[900]} strokeWidth="7" opacity="0.55">
+          {[272, 283, 294].map((y) => (
+            <line key={y} x1="48" y1={y} x2="212" y2={y} />
           ))}
         </g>
-        <circle cx="266" cy="270" r="6" fill={LAMP} strokeWidth="3.5" />
-
-        {/* ── Badge ────────────────────────────────────────────────────────*/}
-        <rect
-          x="40"
-          y="270"
-          width="112"
-          height="21"
-          rx="4"
-          fill={TRIM}
-          strokeWidth="4"
-        />
       </g>
-
-      <text
-        x="96"
-        y="285"
-        textAnchor="middle"
-        className="font-display"
-        fontSize="13"
-        fontWeight="800"
-        letterSpacing="2"
-        fill={GRILLE}
-      >
-        DEVDOGS
-      </text>
     </svg>
   );
 }
