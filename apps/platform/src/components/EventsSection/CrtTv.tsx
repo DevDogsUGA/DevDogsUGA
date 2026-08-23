@@ -33,26 +33,29 @@ import type { StaticImageData } from "next/image";
  * ## How the volume is built
  *
  * Two pieces, not three faces. The whole silhouette is drawn once as a rounded
- * shell and the front face is laid on top of it, so the top and the right side
- * are simply the parts of the shell the front does not cover. One gradient
- * therefore lights both of them, running down-right along the axis
- * perpendicular to the crease — which puts the top face in the light half and
- * the side face in the dark half without either being painted separately. It
- * is also what makes the rounding tractable: one path to round rather than
- * three that have to agree at every seam.
+ * shell and the front face is laid over it, so the top and the right side are
+ * simply the parts of the shell the front does not cover. Each paint only has
+ * to be correct where it is still visible, which is what keeps three surfaces
+ * meeting along two creases from needing six edges to agree — and it is what
+ * makes the rounding tractable, since there is one path to round rather than
+ * three that have to line up at every seam.
  *
  * Value is what carries the form, so the three surfaces are separated by
- * lightness first and hue second: top light, front middle, side dark. Cyan
- * appears only on the fittings, where it is the mascot's teal against the
- * mascot's red rather than a second thing competing to be the body colour.
+ * lightness first and hue second: top light, front middle, side dark.
  *
- * ## The no-signal state is the design
+ * ## The outline is drawn last
  *
- * `noSignal` plays underneath the whole time and shows through whenever
- * nothing is selected. That was already true of the panel this replaces — it
- * was static.gif under a stack — but on a rectangle it read as a placeholder,
- * and on a tube it reads as a television that is on and tuned to nothing,
- * which is what it always was.
+ * The silhouette is stroked in a final pass over everything else rather than
+ * as part of the shell's own paint, because it has to be one unbroken weight
+ * and the outer edge is shared between three elements — the shell's back, the
+ * front face's left and bottom, the top face's corners. Stroking each of them
+ * individually puts three strokes end to end along one edge, and they show
+ * every place they meet.
+ *
+ * It carries no drop shadow. The set is already a solid under a light, with a
+ * lit top and a shadowed side; a flat offset block behind it would be a second
+ * lighting model disagreeing with the first, and the volume is doing the work
+ * the shadow was there for.
  */
 
 interface Props {
@@ -147,26 +150,27 @@ const PICTURE = { x: 36, y: 98, width: 188, height: 158 } as const;
 /*
  * The club's colours, used as light rather than as decoration.
  *
- * Rose is the body and cyan is the fittings, which is the mascot: red glasses
- * and a red laptop against teal. Amber is the third of the three the homepage's
- * stat cards already use, and it is here exactly once, on the power lamp, where
- * a colour nothing else on the set is wearing is the whole point.
+ * Cyan is the body and rose is the fittings and the outline. Amber is the
+ * third of the three the homepage's stat cards already use, and it is here
+ * exactly once, on the power lamp, where a colour nothing else on the set is
+ * wearing is the whole point.
  *
  * Each ramp is a single hue darkening, never a hue shift, because lightness is
  * what the eye reads as form. A gradient that changed hue across a face would
  * look like two materials meeting rather than one surface turning away.
  */
+const CYAN = {
+  50: "#ecfeff",
+  200: "#a5f3fc",
+  500: "#06b6d4",
+  600: "#0891b2",
+  900: "#164e63",
+} as const;
 const ROSE = {
-  50: "#fff1f2",
   100: "#ffe4e6",
   200: "#fecdd3",
-  300: "#fda4af",
-  500: "#f43f5e",
-  600: "#e11d48",
   700: "#be123c",
-  900: "#881337",
 } as const;
-const CYAN = { 100: "#cffafe", 200: "#a5f3fc", 400: "#22d3ee", 700: "#0e7490" };
 const LAMP = "#fbbf24"; // amber-400
 
 export default function CrtTv({ noSignal, showing, className }: Props) {
@@ -178,14 +182,19 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
 
   return (
     <svg
-      viewBox="0 0 400 380"
+      // Cropped to the cabinet and a stroke's worth of margin. It used to carry
+      // an antenna above and feet below; with those gone the old box was a
+      // third empty, and an SVG's empty space is not free — `meet` scales to
+      // fit the whole viewBox, so the padding would have shrunk the set inside
+      // its column rather than sitting around it.
+      viewBox="8 40 356 274"
       // meet, not slice: the column this sits in is as tall as the list of
       // beats beside it, which is much taller than a television. Fitting would
       // stretch the chassis; this keeps it in proportion and lets the caller
       // decide where the spare height goes.
       preserveAspectRatio="xMidYMid meet"
       aria-hidden
-      className={`drop-shadow-block-md h-auto w-full ${className ?? ""}`}
+      className={`h-auto w-full ${className ?? ""}`}
     >
       <defs>
         <clipPath id={id("screen")}>
@@ -203,8 +212,8 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
             side's ramp, and it is the darkest thing on the cabinet. The three
             surfaces are pulled apart by VALUE first: a viewer reads a form
             from light and dark long before they read it from an outline, and
-            three faces at one lightness would be a flat pink shape with some
-            lines on it however carefully the lines were drawn. */}
+            three faces at one lightness would be a flat shape with some lines
+            on it however carefully the lines were drawn. */}
         <linearGradient
           id={id("shell")}
           gradientUnits="userSpaceOnUse"
@@ -213,8 +222,8 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
           x2="360"
           y2="300"
         >
-          <stop offset="0" stopColor={ROSE[600]} />
-          <stop offset="1" stopColor={ROSE[900]} />
+          <stop offset="0" stopColor={CYAN[600]} />
+          <stop offset="1" stopColor={CYAN[900]} />
         </linearGradient>
 
         {/* The top, lightest, brightest at the front-left corner nearest the
@@ -227,8 +236,8 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
           x2="356"
           y2="50"
         >
-          <stop offset="0" stopColor={ROSE[50]} />
-          <stop offset="1" stopColor={ROSE[200]} />
+          <stop offset="0" stopColor={CYAN[50]} />
+          <stop offset="1" stopColor={CYAN[200]} />
         </linearGradient>
 
         {/* The front, the middle value: lighter than the side it turns away
@@ -241,8 +250,8 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
           x2="300"
           y2="300"
         >
-          <stop offset="0" stopColor={ROSE[200]} />
-          <stop offset="1" stopColor={ROSE[500]} />
+          <stop offset="0" stopColor={CYAN[200]} />
+          <stop offset="1" stopColor={CYAN[500]} />
         </linearGradient>
 
         <linearGradient
@@ -253,8 +262,8 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
           x2="288"
           y2="288"
         >
-          <stop offset="0" stopColor={CYAN[200]} />
-          <stop offset="1" stopColor={CYAN[700]} />
+          <stop offset="0" stopColor={ROSE[200]} />
+          <stop offset="1" stopColor={ROSE[700]} />
         </linearGradient>
 
         <linearGradient
@@ -265,8 +274,8 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
           x2="281"
           y2="211"
         >
-          <stop offset="0" stopColor={ROSE[50]} />
-          <stop offset="1" stopColor={CYAN[100]} />
+          <stop offset="0" stopColor={CYAN[50]} />
+          <stop offset="1" stopColor={ROSE[100]} />
         </linearGradient>
 
         {/* The tube surround stays near-black whatever the cabinet is wearing:
@@ -284,18 +293,6 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
           <stop offset="1" stopColor="#0c090c" />
         </linearGradient>
 
-        <linearGradient
-          id={id("foot")}
-          gradientUnits="userSpaceOnUse"
-          x1="0"
-          y1="292"
-          x2="0"
-          y2="318"
-        >
-          <stop offset="0" stopColor={ROSE[700]} />
-          <stop offset="1" stopColor={ROSE[900]} />
-        </linearGradient>
-
         {/* Every 4 units, which lands near 3px at the size this renders — fine
             enough to read as a raster and coarse enough to survive the scale
             down to a phone. */}
@@ -310,45 +307,11 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
       </defs>
 
       <g stroke="black" strokeLinejoin="round" strokeLinecap="round">
-        {/* ── Antenna ──────────────────────────────────────────────────────
-            Drawn first so the rods pass behind the chassis rather than over
-            it, which is what puts their feet inside the cabinet. */}
-        <g strokeWidth="6">
-          <line x1="212" y1="64" x2="118" y2="12" />
-          <line x1="212" y1="64" x2="306" y2="18" />
-        </g>
-        <circle cx="118" cy="12" r="8" fill={CYAN[400]} strokeWidth="4.5" />
-        <circle cx="306" cy="18" r="8" fill={CYAN[400]} strokeWidth="4.5" />
-
-        {/* ── Feet ─────────────────────────────────────────────────────────
-            Started above the cabinet's bottom edge so the front face covers
-            their tops, and darker than anything above them: they are the one
-            part of the set the light does not reach at all. */}
-        <rect
-          x="46"
-          y="292"
-          width="42"
-          height="26"
-          rx="8"
-          fill={`url(#${id("foot")})`}
-          strokeWidth="4"
-        />
-        <rect
-          x="238"
-          y="292"
-          width="42"
-          height="26"
-          rx="8"
-          fill={`url(#${id("foot")})`}
-          strokeWidth="4"
-        />
-
         {/* ── Cabinet ──────────────────────────────────────────────────────
-            Three paints, back to front: the whole silhouette, then the top
-            face over it, then the front over that. Each one only has to be
-            right where it is still visible, which is what keeps three surfaces
-            meeting along two creases from needing six edges to agree. */}
-        <path d={SHELL} fill={`url(#${id("shell")})`} strokeWidth="6" />
+            Back to front: the whole silhouette, then the top face over it,
+            then the front over that. The silhouette carries no stroke here —
+            the outline is a separate pass at the end, in a different colour. */}
+        <path d={SHELL} fill={`url(#${id("shell")})`} stroke="none" />
         <path d={TOP} fill={`url(#${id("top")})`} strokeWidth="5" />
         <rect
           x="18"
@@ -358,15 +321,6 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
           rx={CORNER}
           fill={`url(#${id("front")})`}
           strokeWidth="5"
-        />
-
-        {/* The antenna's mount, sharing the chassis' depth vector so it lies
-            flat on the top face instead of floating over it, and rounded off
-            like everything else. */}
-        <path
-          d="M 196,72 L 226,72 Q 232,72 236,69 L 250,60 Q 254,57 248,57 L 218,57 Q 212,57 208,60 L 194,69 Q 190,72 196,72 Z"
-          fill={`url(#${id("trim")})`}
-          strokeWidth="4"
         />
 
         {/* ── Screen ───────────────────────────────────────────────────────*/}
@@ -458,14 +412,27 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
         <circle cx="266" cy="252" r="7" fill={LAMP} strokeWidth="3.5" />
 
         {/* ── Speaker ──────────────────────────────────────────────────────
-            Across the chin, which is where the badge used to be. A blank strip
-            under a tube reads as a mistake; a grille is what is actually
-            behind it. */}
-        <g stroke={ROSE[900]} strokeWidth="7" opacity="0.55">
-          {[272, 283, 294].map((y) => (
+            Across the chin. A blank strip under a tube reads as a mistake; a
+            grille is what is actually behind it.
+
+            The chin is only ~38 units deep and three of its edges are strokes
+            rather than lines — the bezel's bottom reaches y≈262, and the
+            outline is 7 wide centred on y=300, so it eats up to 296.5. The
+            lines are placed against those inner edges, not against the
+            nominal ones. */}
+        <g stroke={CYAN[900]} strokeWidth="6" opacity="0.5">
+          {[269, 280, 291].map((y) => (
             <line key={y} x1="48" y1={y} x2="212" y2={y} />
           ))}
         </g>
+
+        {/* ── Outline ──────────────────────────────────────────────────────
+            Last, over everything, so the outer edge is one unbroken weight
+            rather than three elements' strokes meeting along it. Wider than
+            the strokes it covers, so none of them survives at the shared
+            edges — the front face's left and bottom, and the top face's back
+            corners, all sit on this same path. */}
+        <path d={SHELL} fill="none" strokeWidth="7" />
       </g>
     </svg>
   );
