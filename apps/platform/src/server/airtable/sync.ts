@@ -72,6 +72,7 @@ function emptyOutcome(): PullOutcome {
 
 interface MeetingValues {
   name: string | null;
+  building: string | null;
   location: string | null;
   startsAt: string | null;
   endsAt: string | null;
@@ -181,6 +182,7 @@ export async function pullMeetings(
 
     const values: {
       name: string;
+      building?: string | null;
       location: string | null;
       startsAt: Date;
       endsAt: Date;
@@ -190,6 +192,10 @@ export async function pullMeetings(
       rsvpUrl?: string | null;
     } = {
       name: v.name!,
+      // Not part of `complete`, like the three below it: a meeting whose
+      // officer has not picked a building yet is a meeting, and a pass landing
+      // between two of their keystrokes must not refuse the whole row.
+      building: v.building,
       location: v.location,
       startsAt: new Date(v.startsAt!),
       endsAt: new Date(v.endsAt!),

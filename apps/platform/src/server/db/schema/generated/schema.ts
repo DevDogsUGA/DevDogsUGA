@@ -386,6 +386,7 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	id: uuid().defaultRandom().primaryKey(),
 	slug: text().notNull(),
 	name: text().notNull(),
+	building: text(),
 	location: text(),
 	startsAt: timestamp({ withTimezone: true }).notNull(),
 	endsAt: timestamp({ withTimezone: true }).notNull(),
@@ -405,7 +406,7 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-check("meetings_attendanceFormUrl_airtable", sql`(("attendanceFormUrl" IS NULL) OR ("attendanceFormUrl" ~ '^https://airtable\.com/[A-Za-z0-9/_?=&.-]+$'::text))`),check("meetings_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),check("meetings_kind_choices", sql`(("kind" IS NULL) OR ("kind" = ANY (ARRAY['Social'::text, 'Career'::text, 'Info session'::text, 'Open lab'::text])))`),check("meetings_rsvpUrl_host", sql`(("rsvpUrl" IS NULL) OR ("rsvpUrl" ~ '^https://uga\.campuslabs\.com(/[A-Za-z0-9/_?=&.%#:~-]*)?$'::text))`),check("meetings_summary_length", sql`(("summary" IS NULL) OR (char_length("summary") <= 240))`),]);
+check("meetings_building_choices", sql`(("building" IS NULL) OR ("building" = ANY (ARRAY['DLW'::text, 'Driftmier'::text, 'Plant Sciences'::text, 'Boyd'::text, 'MLC'::text, 'Science Learning Center'::text, 'Science Library'::text, 'Poultry Science'::text, 'Main Library'::text, 'Tate'::text, 'Other'::text])))`),check("meetings_attendanceFormUrl_airtable", sql`(("attendanceFormUrl" IS NULL) OR ("attendanceFormUrl" ~ '^https://airtable\.com/[A-Za-z0-9/_?=&.-]+$'::text))`),check("meetings_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),check("meetings_kind_choices", sql`(("kind" IS NULL) OR ("kind" = ANY (ARRAY['Social'::text, 'Career'::text, 'Info session'::text, 'Open lab'::text])))`),check("meetings_rsvpUrl_host", sql`(("rsvpUrl" IS NULL) OR ("rsvpUrl" ~ '^https://uga\.campuslabs\.com(/[A-Za-z0-9/_?=&.%#:~-]*)?$'::text))`),check("meetings_summary_length", sql`(("summary" IS NULL) OR (char_length("summary") <= 240))`),]);
 
 export const oauthRegistrationsInPlatform = platform.table.withRLS("oauthRegistrations", {
 	clientId: uuid().primaryKey().references(() => oauthClients.id, { onDelete: "cascade", onUpdate: "cascade" } ),

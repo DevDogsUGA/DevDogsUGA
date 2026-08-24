@@ -3,7 +3,8 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { ArrowUpRightIcon } from "@phosphor-icons/react/ssr";
-import { DLW_CENTER, VIEW } from "./campusMapMeta";
+import { BUILDING_CENTERS, VIEW, type BuildingKey } from "./campusMapMeta";
+import { BUILDING_NAME } from "./buildings";
 import FloorPlan, { ROOM_STEPS } from "./FloorPlan";
 
 /**
@@ -24,40 +25,93 @@ export function preloadCampusMap() {
 /**
  * The destination is a coordinate pin, not a place query: the DLW only opened
  * in August 2026, and searching either app for it by name still lands on the
- * wrong building or nothing at all. The pin is the centroid of the same OSM
- * footprint the map highlights, so regenerating the map data moves both
- * together if the mapping ever improves.
+ * wrong building or nothing at all. A coordinate behaves the same for all ten
+ * buildings, so the rule that was written for the newest one is simply the
+ * rule. The pin is the centroid of the same OSM footprint the map highlights,
+ * so regenerating the map data moves both together.
  */
-const DESTINATION = `${DLW_CENTER.lat},${DLW_CENTER.lon}`;
-const GOOGLE_MAPS_URL = `https://www.google.com/maps/dir/?api=1&destination=${DESTINATION}`;
-const APPLE_MAPS_URL = `https://maps.apple.com/?daddr=${DESTINATION}`;
+function mapUrls(building: BuildingKey) {
+  const { lat, lon } = BUILDING_CENTERS[building];
+  const destination = `${lat},${lon}`;
+  return {
+    google: `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
+    apple: `https://maps.apple.com/?daddr=${destination}`,
+  };
+}
+
+/**
+ * The room the floor plan describes, or null if this meeting is not in it.
+ *
+ * The drawing is not "a plan of the DLW", it is the walk to room 124 —
+ * `ROOM_STEPS` names its doors and its staircase — so it is offered for that
+ * room and nothing else. A meeting in DLW 148 gets the campus map and no
+ * second tab, which is the honest answer rather than a drawing of the wrong
+ * corridor.
+ *
+ * This does read the free-text room, which the `building` column exists to
+ * stop anything doing. It is a different kind of read: getting it wrong hides
+ * a drawing rather than asserting a false one, and there is no room list to
+ * match against — rooms are typed, and always will be. It returns the number
+ * rather than a boolean so the tab's label comes from the same test that
+ * decided there is a tab.
+ */
+const FLOOR_PLAN_ROOM = "124";
+
+function floorPlanRoom(building: BuildingKey, room: string | null) {
+  if (building !== "DLW" || room === null) return null;
+  return new RegExp(`\\b${FLOOR_PLAN_ROOM}\\b`).test(room)
+    ? FLOOR_PLAN_ROOM
+    : null;
+}
 
 const STEP_CHIP_CLS =
   "mt-px flex size-4 shrink-0 items-center justify-center rounded-full bg-rose-400 text-[0.625rem] font-bold text-black";
 
-const TABS = [
-  { id: "building", label: "To the building" },
-  { id: "room", label: "To Room 124" },
-] as const;
-type TabId = (typeof TABS)[number]["id"];
+type TabId = "building" | "room";
+
+interface Props {
+  /** The building to draw. Defaults to the club's usual one. */
+  building?: BuildingKey;
+  /** The room inside it, as an officer typed it. */
+  room?: string | null;
+}
 
 /** The tabs and their panels — everything inside the dialog below its title. */
-export default function FindUsContent() {
+export default function FindUsContent({
+  building = "DLW",
+  room = "124",
+}: Props = {}) {
   const [tab, setTab] = useState<TabId>("building");
+  const urls = mapUrls(building);
+  // One tab is not a tablist, it is a heading with extra steps — so when there
+  // is no room-level drawing the whole control disappears rather than sitting
+  // there as a single permanently-selected button.
+  const planRoom = floorPlanRoom(building, room);
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "building", label: "To the building" },
+    ...(planRoom === null
+      ? []
+      : [{ id: "room" as const, label: `To Room ${planRoom}` }]),
+  ];
+  const active = tabs.some((t) => t.id === tab) ? tab : "building";
 
   return (
     <>
-      <div role="tablist" aria-label="Directions" className="flex gap-2">
-        {TABS.map((t) => (
+      <div
+        role="tablist"
+        aria-label="Directions"
+        className={`flex gap-2 ${tabs.length > 1 ? "" : "hidden"}`}
+      >
+        {tabs.map((t) => (
           <button
             key={t.id}
             role="tab"
             id={`findus-tab-${t.id}`}
-            aria-selected={tab === t.id}
+            aria-selected={active === t.id}
             aria-controls={`findus-panel-${t.id}`}
             onClick={() => setTab(t.id)}
             className={`rounded-sm border-2 border-black px-3 py-1.5 text-xs font-bold transition-[background-color,box-shadow] ${
-              tab === t.id
+              active === t.id
                 ? "shadow-block-sm bg-rose-400 text-black"
                 : "bg-white text-mauve-600 hover:bg-rose-50"
             }`}
@@ -69,28 +123,37 @@ export default function FindUsContent() {
 
       <div
         role="tabpanel"
-        id={`findus-panel-${tab}`}
-        aria-labelledby={`findus-tab-${tab}`}
+        id={`findus-panel-${active}`}
+        aria-labelledby={`findus-tab-${active}`}
         className="flex flex-col gap-3"
       >
-        {tab === "building" ? (
+        {active === "building" ? (
           <>
-            <CampusMap />
+            <CampusMap building={building} />
             {/* No turn-by-turn here: people start from all over campus, so
                 the map just places the building and the buttons below hand
                 off to a navigation app for the door-to-door part. */}
             <div className="flex flex-wrap gap-2">
-              <DirectionsLink href={GOOGLE_MAPS_URL}>
-                Google Maps
-              </DirectionsLink>
-              <DirectionsLink href={APPLE_MAPS_URL}>Apple Maps</DirectionsLink>
+              <DirectionsLink href={urls.google}>Google Maps</DirectionsLink>
+              <DirectionsLink href={urls.apple}>Apple Maps</DirectionsLink>
             </div>
-            <p className="text-sm/relaxed text-mauve-600">
-              The DLW sits at the corner of E. Cloverhurst Ave and University
-              Court — just below the Hill dorms, across from O-House, and
-              downhill from the Tate Center. Driving? The Tate Deck is the
-              closest visitor parking, about a five-minute walk away.
-            </p>
+            {building === "DLW" ? (
+              <p className="text-sm/relaxed text-mauve-600">
+                The DLW sits at the corner of E. Cloverhurst Ave and University
+                Court — just below the Hill dorms, across from O-House, and
+                downhill from the Tate Center. Driving? The Tate Deck is the
+                closest visitor parking, about a five-minute walk away.
+              </p>
+            ) : (
+              /* One sentence rather than the DLW's paragraph of landmarks.
+                 Writing nine more of those is writing nine more things that
+                 can go stale, and the map above already says where it is. */
+              <p className="text-sm/relaxed text-mauve-600">
+                {room === null
+                  ? `This meeting is in ${BUILDING_NAME[building]}, highlighted above.`
+                  : `This meeting is in ${room}, ${BUILDING_NAME[building]} — highlighted above.`}
+              </p>
+            )}
           </>
         ) : (
           <>

@@ -10,9 +10,12 @@ import {
 import {
   ACTION_CLS,
   CHIP_CLS,
-  isAtDlw,
   segmentBadge,
 } from "~/components/EventsSection/meetingView";
+import {
+  isMappedBuilding,
+  locationLine,
+} from "~/components/EventsSection/FindUs/buildings";
 import FindUs from "~/components/EventsSection/FindUs";
 import {
   formatEventSpan,
@@ -64,9 +67,11 @@ export async function generateMetadata({
 
   const span = formatEventSpan(meeting.startsAt, meeting.endsAt);
 
+  const where = locationLine(meeting.building, meeting.location);
+
   return {
     title: `${meeting.name} | DevDogs`,
-    description: meeting.location ? `${span} — ${meeting.location}` : span,
+    description: where ? `${span} — ${where}` : span,
   };
 }
 
@@ -109,7 +114,7 @@ export default async function MeetingPage({
   const now = new Date();
   const happeningNow = now >= meeting.startsAt && now < meeting.endsAt;
   const ended = now >= meeting.endsAt;
-  const atDlw = isAtDlw(meeting.location);
+  const where = locationLine(meeting.building, meeting.location);
 
   return (
     <>
@@ -162,14 +167,16 @@ export default async function MeetingPage({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <p className="flex items-center gap-2 text-sm text-mauve-700">
           <MapPinIcon className="shrink-0 text-mauve-500" weight="fill" />
-          {meeting.location ?? "Room to be announced"}
+          {where ?? "Room to be announced"}
         </p>
         {/* The in-place trigger, not `FindUsLink`: following the link would
             navigate away from this meeting, and a cold-loaded directions
             dialog closes to /events, so a member who only wanted walking
             directions would lose the meeting they were reading. Nested
             dialogs stack, and closing the inner one leaves this one open. */}
-        {atDlw && <FindUs />}
+        {isMappedBuilding(meeting.building) && (
+          <FindUs building={meeting.building} room={meeting.location} />
+        )}
       </div>
 
       {/* Plain text from Airtable, rendered as text. Never as markup: it is

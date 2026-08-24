@@ -27,15 +27,28 @@ import { join } from "node:path";
 
 /** Query bbox (S, W, N, E) — generous so roads at the frame's edge arrive
  * whole instead of clipped mid-way. */
-const QUERY_BBOX = [33.9425, -83.387, 33.9535, -83.369] as const;
+const QUERY_BBOX = [33.9355, -83.39, 33.957, -83.363] as const;
 
-/** Rendered frame: Brumby west, into Sanford Stadium east, Baxter north,
- * Snelling south — wide enough that the central/south-campus buildings CS
- * students actually walk from sit on the map. */
-const S = 33.9441,
-  N = 33.9525,
-  W = -83.3832,
-  E = -83.3715;
+/**
+ * Rendered frame: the Main Library north, Driftmier south, Brumby west, past
+ * Sanford Stadium east.
+ *
+ * The south edge is what set this. A meeting can now name the building it is
+ * in, and the list runs from the Main Library at 33.9540 down to Driftmier at
+ * 33.9388 — 1.7 km of campus, against the 930 m the old frame covered. Every
+ * building an officer can pick has to be ON the map, or the highlight has
+ * nothing to point at, so the frame is a consequence of that list rather than
+ * a composition choice.
+ *
+ * That makes the map portrait where it used to be landscape. The longitude
+ * span is widened past what the buildings strictly need — there is real campus
+ * out to the east, and none of it is wasted — to keep the aspect near 1.13
+ * rather than the 1.55 the buildings alone would force.
+ */
+const S = 33.9372,
+  N = 33.9552,
+  W = -83.3861,
+  E = -83.3668;
 const VW = 480;
 
 /** Roads drawn with full casing, vs. thin service/pedestrian connectors. */
@@ -48,27 +61,74 @@ const MAJOR_HIGHWAYS = new Set([
 ]);
 const MINOR_HIGHWAYS = new Set(["service", "pedestrian"]);
 
-/** OSM's name for the building the map highlights. */
-const DLW_NAME = "Dining, Learning and Well-being Center";
+/**
+ * Every building a meeting can name, and what OSM calls it.
+ *
+ * `key` is the value stored in `platform.meetings.building` and offered in the
+ * Airtable dropdown — students' shorthand, because an officer picking from a
+ * list should see what they would say out loud. `osm` is the name tag, which
+ * is frequently neither ("Miller Plant Science", "Shirley Mathis McBay Science
+ * Library"), and the two are mapped here rather than anywhere else so the
+ * dropdown never has to spell a building the way a mapper did.
+ *
+ * `via` is load-bearing. OSM models a building either as a closed way or as a
+ * multipolygon relation over several ways, and this script only ever asked for
+ * ways — so Driftmier, Brooks Hall, the Ramsey Center, Lamar Dodd, Ecology and
+ * the vet school have been silently absent from the map, not merely
+ * un-highlighted. A relation's geometry does not come back from `out geom`
+ * either (Overpass returns its tags and an empty member list), so those are
+ * fetched a second time through their member ways. See `fetchRelationWays`.
+ */
+const HIGHLIGHTS = [
+  { key: "DLW", osm: "Dining, Learning and Well-being Center", via: "way" },
+  { key: "Driftmier", osm: "Driftmier Engineering Center", via: "relation" },
+  { key: "Plant Sciences", osm: "Miller Plant Science", via: "way" },
+  { key: "Boyd", osm: "Boyd Graduate Research Center", via: "way" },
+  { key: "MLC", osm: "Zell B. Miller Student Learning Center", via: "way" },
+  {
+    key: "Science Learning Center",
+    osm: "Science Learning Center",
+    via: "way",
+  },
+  {
+    key: "Science Library",
+    osm: "Shirley Mathis McBay Science Library",
+    via: "way",
+  },
+  { key: "Poultry Science", osm: "Poultry Science Building", via: "way" },
+  { key: "Main Library", osm: "UGA Main Library", via: "way" },
+  { key: "Tate", osm: "Tate Student Center", via: "way" },
+] as const satisfies readonly {
+  key: string;
+  osm: string;
+  via: "way" | "relation";
+}[];
 
-/** Buildings CampusMap.tsx labels — listed here only so the script prints their
- * centroids for placing those labels. */
-const LABELED_BUILDINGS = [
-  DLW_NAME,
+/**
+ * Buildings CampusMap.tsx labels that are not already highlightable — the
+ * landmarks somebody orients by rather than meets in.
+ *
+ * Every highlightable building is labelled too; they are not repeated here.
+ * The script prints a centroid for each name in both lists, which is what
+ * those labels are placed against.
+ */
+const LANDMARKS = [
   "Brumby Hall",
   "Russell Hall",
   "Creswell Hall",
   "Bolton Dining Commons",
-  "Tate Student Center",
   "Tate Center Parking Deck",
-  "Zell B. Miller Student Learning Center",
   "Oglethorpe House",
-  "Boyd Graduate Research Center",
-  "Shirley Mathis McBay Science Library",
   "Physics Building",
   "Snelling Dining Commons",
   "Journalism Building",
   "Sanford Stadium",
+  "Stegeman Coliseum",
+  "Aderhold Hall",
+  "Food Science Building",
+  "Paul D. Coverdell Center",
+  "Conner Hall",
+  "Memorial Hall",
 ];
 
 interface OsmGeomPoint {
@@ -134,28 +194,83 @@ function area(geom: OsmGeomPoint[]): number {
   return Math.abs(a / 2);
 }
 
-async function fetchOsm(): Promise<OsmWay[]> {
-  const query = `[out:json][timeout:60];
-(
-  way["highway"~"${[...MAJOR_HIGHWAYS, ...MINOR_HIGHWAYS].join("|")}"](${QUERY_BBOX.join(",")});
-  way["building"](${QUERY_BBOX.join(",")});
-  way["leisure"="stadium"](${QUERY_BBOX.join(",")});
-);
-out geom tags;`;
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      // Overpass 406s requests that don't identify themselves.
-      "User-Agent": "devdogs-platform-campus-map (devdogsuga.org)",
-    },
-    body: "data=" + encodeURIComponent(query),
-  });
-  if (!res.ok) throw new Error(`Overpass responded ${res.status}`);
-  const data = (await res.json()) as { elements: OsmWay[] };
-  return data.elements;
+/**
+ * One Overpass round trip, with retries.
+ *
+ * The public instance answers 504 or hands back an XML error page under load
+ * often enough that a single attempt is not a reliable build step, and the
+ * failure is not always an HTTP status — a 200 whose body starts with `<?xml`
+ * is an error too, so the body is checked rather than only `res.ok`.
+ */
+async function overpass(query: string): Promise<OsmWay[]> {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 8000 * attempt));
+    const res = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        // Overpass 406s requests that don't identify themselves.
+        "User-Agent": "devdogs-platform-campus-map (devdogsuga.org)",
+      },
+      body: "data=" + encodeURIComponent(query),
+    });
+    const text = await res.text();
+    if (!res.ok || text.startsWith("<")) {
+      console.warn(
+        `  overpass attempt ${attempt + 1} failed (${res.status})${text.startsWith("<") ? " — XML error body" : ""}`,
+      );
+      continue;
+    }
+    return (JSON.parse(text) as { elements: OsmWay[] }).elements;
+  }
+  throw new Error("Overpass did not answer after 4 attempts");
 }
 
+/** Ways, plus the member ways of every building relation, as plain footprints. */
+async function fetchOsm(): Promise<OsmWay[]> {
+  const bbox = QUERY_BBOX.join(",");
+  const ways = await overpass(`[out:json][timeout:90];
+(
+  way["highway"~"${[...MAJOR_HIGHWAYS, ...MINOR_HIGHWAYS].join("|")}"](${bbox});
+  way["building"](${bbox});
+  way["leisure"="stadium"](${bbox});
+);
+out geom tags;`);
+
+  // A multipolygon's members carry no name and usually no `building` tag, so
+  // they arrive here tagged by hand — enough to be drawn as ordinary
+  // footprints. Which relation each one belonged to is not recoverable from
+  // this query and is not needed: the named ones are fetched again below.
+  const relWays = await overpass(`[out:json][timeout:90];
+relation["building"](${bbox});
+way(r);
+out geom;`);
+
+  const seen = new Set(ways.map((w) => w.id));
+  for (const w of relWays) {
+    if (seen.has(w.id)) continue;
+    seen.add(w.id);
+    ways.push({ ...w, tags: { ...w.tags, building: "yes" } });
+  }
+  return ways;
+}
+
+/**
+ * The member ways of one named building relation.
+ *
+ * Needed because `out geom` on a relation returns its tags and an EMPTY member
+ * list — verified against the public instance — so there is no single query
+ * that yields a named multipolygon's geometry. Asking for the relation and
+ * then its ways is the way through.
+ */
+async function fetchRelationWays(name: string): Promise<OsmWay[]> {
+  return overpass(`[out:json][timeout:90];
+relation["building"]["name"="${name}"](${QUERY_BBOX.join(",")});
+way(r);
+out geom;`);
+}
+
+console.log("fetching OSM…");
 const elements = await fetchOsm();
 
 const roadPaths = { major: [] as string[], minor: [] as string[] };
@@ -187,28 +302,71 @@ function centroid(geom: OsmGeomPoint[]): { lat: number; lon: number } {
   return { lat: round(cy / (3 * a)), lon: round(cx / (3 * a)) };
 }
 
-let dlw = "";
-let dlwCenter: { lat: number; lon: number } | undefined;
+/**
+ * Every footprint in the frame, highlightable ones INCLUDED.
+ *
+ * The old script held the DLW out of this set because the DLW was the only
+ * building the map could highlight, and it was always highlighted. Now that
+ * the highlight moves, a building left out of here would vanish from the map
+ * entirely on every meeting held somewhere else. So everything is drawn once
+ * as an ordinary footprint and the highlight is painted over the top of it.
+ */
 const footprints: string[] = [];
 for (const e of elements) {
   // Sanford Stadium is tagged leisure=stadium rather than building.
   if (!(e.tags?.building ?? e.tags?.leisure === "stadium")) continue;
   if (!inFrame(e.geometry) || area(e.geometry) < 12) continue;
-  if (e.tags?.name === DLW_NAME) {
-    dlw = toPath(e.geometry, true);
-    dlwCenter = centroid(e.geometry);
-  } else footprints.push(toPath(e.geometry, true));
+  footprints.push(toPath(e.geometry, true));
 }
-if (!dlw || !dlwCenter)
-  throw new Error(`no OSM footprint found for "${DLW_NAME}"`);
 
-const labeled = LABELED_BUILDINGS.map((name) => {
+interface Highlight {
+  path: string;
+  center: { lat: number; lon: number };
+  pin: { x: number; y: number };
+}
+
+const highlights: Record<string, Highlight> = {};
+for (const b of HIGHLIGHTS) {
+  // A relation's ways are several pieces of one building, so the path is all
+  // of them and the centre comes from the biggest — averaging across an
+  // L-shaped building's wings puts the pin in the courtyard between them.
+  const geoms: OsmGeomPoint[][] =
+    b.via === "relation"
+      ? (await fetchRelationWays(b.osm)).map((w) => w.geometry)
+      : elements
+          .filter(
+            (e) =>
+              (e.tags?.building ?? e.tags?.leisure === "stadium") &&
+              e.tags?.name === b.osm,
+          )
+          .map((e) => e.geometry);
+
+  if (geoms.length === 0) throw new Error(`no OSM footprint for "${b.osm}"`);
+
+  const biggest = geoms.reduce((a, g) => (area(g) > area(a) ? g : a));
+  const center = centroid(biggest);
+  const [pinX, pinY] = px(center.lon, center.lat).map(fmt) as [number, number];
+  highlights[b.key] = {
+    path: geoms.map((g) => toPath(g, true)).join(""),
+    center,
+    pin: { x: pinX, y: pinY },
+  };
+}
+
+const labeled = [...HIGHLIGHTS.map((b) => b.osm), ...LANDMARKS].map((name) => {
   const b = elements.find(
     (e) =>
       (e.tags?.building ?? e.tags?.leisure === "stadium") &&
       e.tags?.name === name,
   );
-  if (!b) throw new Error(`no OSM building found for "${name}"`);
+  // A relation-backed building has no named way, so fall back to the pin the
+  // highlight pass already resolved rather than failing the run.
+  if (!b) {
+    const h = HIGHLIGHTS.find((x) => x.osm === name);
+    const pin = h ? highlights[h.key]?.pin : undefined;
+    if (!pin) throw new Error(`no OSM building found for "${name}"`);
+    return { name, cx: pin.x, cy: pin.y };
+  }
   const c = b.geometry.reduce<[number, number]>(
     (a, g) => [a[0] + g.lon, a[1] + g.lat],
     [0, 0],
@@ -224,12 +382,33 @@ const header = `// GENERATED by scripts/generate-campus-map.ts — do not edit b
 // Frame: lat ${S}..${N}, lon ${W}..${E}, equirectangular, ${VW}x${VH}.
 `;
 
+const keys = HIGHLIGHTS.map((b) => b.key);
+const entries = (pick: (h: Highlight) => unknown) =>
+  JSON.stringify(
+    Object.fromEntries(keys.map((k) => [k, pick(highlights[k]!)])),
+    null,
+    2,
+  );
+
 const meta = `${header}
 /** The map's viewBox — also what sizes its placeholder before it loads. */
 export const VIEW = { w: ${VW}, h: ${VH} };
 
-/** Centroid of the DLW's footprint — where the Google/Apple Maps links drop their pin. */
-export const DLW_CENTER = ${JSON.stringify(dlwCenter)};
+/** Every building a meeting can name. The map highlights exactly one of them. */
+export const BUILDING_KEYS = ${JSON.stringify(keys)} as const;
+
+export type BuildingKey = (typeof BUILDING_KEYS)[number];
+
+/**
+ * Each building's footprint centroid — where the Google/Apple Maps links drop
+ * their pin. A coordinate rather than a place query because the DLW is too new
+ * for either app to resolve by name, and a coordinate behaves the same for all
+ * ten.
+ */
+export const BUILDING_CENTERS: Record<
+  BuildingKey,
+  { lat: number; lon: number }
+> = ${entries((h) => h.center)};
 `;
 
 const out = `${header}
@@ -239,11 +418,14 @@ export const MAJOR_ROADS = ${JSON.stringify(roadPaths.major.join(""))};
 /** Service drives and pedestrian connectors, drawn thin. */
 export const MINOR_ROADS = ${JSON.stringify(roadPaths.minor.join(""))};
 
-/** Every building footprint in the frame except the DLW's. */
+/** Every building footprint in the frame, highlightable ones included. */
 export const FOOTPRINTS = ${JSON.stringify(footprints.join(""))};
 
-/** The Dining, Learning and Well-being Center, highlighted by the map. */
-export const DLW_FOOTPRINT = ${JSON.stringify(dlw)};
+/** The footprint the map paints on top, one per building a meeting can name. */
+export const HIGHLIGHT_PATHS: Record<string, string> = ${entries((h) => h.path)};
+
+/** Where the pin goes, in viewBox units — the centroid of the same footprint. */
+export const HIGHLIGHT_PINS: Record<string, { x: number; y: number }> = ${entries((h) => h.pin)};
 `;
 
 const dir = join(import.meta.dirname, "../src/components/EventsSection/FindUs");
@@ -253,7 +435,8 @@ console.log(
   `wrote ${dir}/campusMapData.ts (${(out.length / 1024).toFixed(1)}KB) + campusMapMeta.ts`,
 );
 console.log(
-  `viewBox 0 0 ${VW} ${VH} | ${roadPaths.major.length} major ways, ${roadPaths.minor.length} minor ways, ${footprints.length + 1} footprints`,
+  `viewBox 0 0 ${VW} ${VH} | ${roadPaths.major.length} major ways, ${roadPaths.minor.length} minor ways, ${footprints.length} footprints`,
 );
-for (const b of labeled) console.log(`  ${b.name} → ${b.cx},${b.cy}`);
-console.log(`DLW centroid ${dlwCenter.lat},${dlwCenter.lon}`);
+for (const b of labeled) console.log(`  LABEL ${b.name} → ${b.cx},${b.cy}`);
+for (const k of keys)
+  console.log(`  PIN ${k} → ${highlights[k]!.pin.x},${highlights[k]!.pin.y}`);

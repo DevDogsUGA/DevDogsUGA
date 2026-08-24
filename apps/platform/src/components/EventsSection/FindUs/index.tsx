@@ -4,6 +4,7 @@ import { MapTrifoldIcon } from "@phosphor-icons/react/ssr";
 import { RouteDialogLink } from "~/ui/route-dialog";
 import FindUsDialog from "./FindUsDialog";
 import FindUsContent, { preloadCampusMap } from "./FindUsContent";
+import type { BuildingKey } from "./campusMapMeta";
 
 const TRIGGER_CLS =
   "hover:shadow-block-md transition-lift flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5";
@@ -23,17 +24,31 @@ const INTENT_HANDLERS = {
   onTouchStart: preloadCampusMap,
 };
 
-/** The homepage's trigger: a button that opens the dialog in place. */
-export default function FindUs() {
+/**
+ * The homepage's trigger: a button that opens the dialog in place.
+ *
+ * `building` defaults to the DLW because the homepage's trigger is not about
+ * any one meeting — it answers "where is this club", and the answer to that is
+ * still the DLW.
+ */
+export default function FindUs({
+  building = "DLW",
+  room = "124",
+}: {
+  building?: BuildingKey;
+  room?: string | null;
+} = {}) {
   return (
     <FindUsDialog
+      building={building}
+      room={room}
       trigger={
         <button className={TRIGGER_CLS} {...INTENT_HANDLERS}>
           <MapTrifoldIcon /> Directions
         </button>
       }
     >
-      <FindUsContent />
+      <FindUsContent building={building} room={room} />
     </FindUsDialog>
   );
 }
@@ -48,10 +63,23 @@ export default function FindUs() {
  * dialog rather than a page — no scroll to the top, and the mark that lets
  * closing go back instead of pushing.
  */
-export function FindUsLink() {
+export function FindUsLink({
+  building = "DLW",
+  room,
+}: {
+  building?: BuildingKey;
+  room?: string | null;
+} = {}) {
+  // The building rides in the URL rather than in a second route segment, so
+  // one page keeps serving every building and the link stays pasteable. The
+  // room goes too: without it the dialog would open on "the DLW" for a link
+  // that was clicked from a meeting in DLW 148.
+  const params = new URLSearchParams({ b: building });
+  if (room !== null && room !== undefined) params.set("r", room);
+
   return (
     <RouteDialogLink
-      href="/events/directions"
+      href={`/events/directions?${params}`}
       className={TRIGGER_CLS}
       {...INTENT_HANDLERS}
     >

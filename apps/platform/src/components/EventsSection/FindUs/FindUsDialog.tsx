@@ -4,12 +4,17 @@ import type { ReactNode } from "react";
 import { MapPinIcon } from "@phosphor-icons/react/ssr";
 import { DialogDescription, DialogTitle } from "~/ui/dialog";
 import DialogShell from "~/ui/dialog-shell";
-import { FIND_US_BLURB, FIND_US_TITLE } from "./copy";
+import { findUsBlurb, FIND_US_TITLE } from "./copy";
+import type { BuildingKey } from "./campusMapMeta";
 
 interface Props {
   /** Omit both to let the dialog own its state (the homepage trigger). */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Which building the blurb describes. */
+  building?: BuildingKey;
+  /** The room inside it, for the same sentence. */
+  room?: string | null;
   /** The element that opens it; none when a route decides that instead. */
   trigger?: ReactNode;
   /** The body below the title — normally {@link FindUsContent}. */
@@ -23,7 +28,13 @@ interface Props {
  * owns the close behaviour a route dialog needs. Both get the same title from
  * the same place instead of two copies drifting apart.
  */
-export function FindUsHeader() {
+export function FindUsHeader({
+  building = "DLW",
+  room = "124",
+}: {
+  building?: BuildingKey;
+  room?: string | null;
+} = {}) {
   return (
     <div className="flex flex-col gap-2">
       <DialogTitle className="font-display flex items-center gap-2 text-2xl leading-none font-extrabold text-black">
@@ -31,7 +42,7 @@ export function FindUsHeader() {
         {FIND_US_TITLE}
       </DialogTitle>
       <DialogDescription className="text-sm text-mauve-600">
-        {FIND_US_BLURB}
+        {findUsBlurb(building, room)}
       </DialogDescription>
     </div>
   );
@@ -44,6 +55,8 @@ export function FindUsHeader() {
 export default function FindUsDialog({
   open,
   onOpenChange,
+  building,
+  room,
   trigger,
   children,
 }: Props) {
@@ -52,7 +65,7 @@ export default function FindUsDialog({
       open={open}
       onOpenChange={onOpenChange}
       trigger={trigger}
-      header={<FindUsHeader />}
+      header={<FindUsHeader building={building} room={room} />}
     >
       {children}
     </DialogShell>

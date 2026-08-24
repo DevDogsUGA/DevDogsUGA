@@ -25,6 +25,18 @@ export interface MeetingSummary {
   id: string;
   slug: string;
   name: string;
+  /**
+   * Which building, from the closed list the campus map can draw — or `Other`
+   * for somewhere it cannot, or null when nobody has picked one.
+   *
+   * Typed as free text rather than a union for the same reason `kind` is: it
+   * is an Airtable single-select, and while the parser and a check constraint
+   * both hold it to the list, a union here would make widening that list a
+   * type error in every consumer rather than a value one of them renders as
+   * itself. `isMappedBuilding` narrows it where the narrowing matters.
+   */
+  building: string | null;
+  /** The room or space inside {@link building}. Free text; never parsed. */
   location: string | null;
   startsAt: Date;
   endsAt: Date;
@@ -95,6 +107,7 @@ const summaryColumns = {
   id: meetings.id,
   slug: meetings.slug,
   name: meetings.name,
+  building: meetings.building,
   location: meetings.location,
   startsAt: meetings.startsAt,
   endsAt: meetings.endsAt,
@@ -220,6 +233,7 @@ export const getWorkshopDetail = cache(
         id: row.id,
         slug: row.slug,
         name: row.name,
+        building: row.building,
         location: row.location,
         startsAt: row.startsAt,
         endsAt: row.endsAt,

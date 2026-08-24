@@ -74,24 +74,3 @@ export const CHIP_CLS =
 /** A bordered action — the Directions trigger, RSVP, check-in. */
 export const ACTION_CLS =
   "hover:shadow-block-md transition-lift flex w-fit items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5";
-
-/**
- * Whether `location` names the DLW, the one building this site can draw.
- *
- * The location is free text an officer typed into Airtable, so this matches
- * loosely: "DLW 124", "dlw", "Dining, Learning & Well-Being 124". It
- * deliberately does NOT try to be clever about anything else — every
- * unrecognised location falls through to plain text, because a Directions
- * button that walks somebody to the wrong building is far worse than one that
- * makes them read an address. Failing closed is the whole design.
- *
- * Word-bounded rather than a substring test, so "middlware" in a note cannot
- * trip it. "DLW124" written without the space fails and prints as text, which
- * is the safe direction to be wrong in.
- */
-const DLW_PATTERNS = [/\bdlw\b/i, /\bdining,?\s+learning\b/i];
-
-export function isAtDlw(location: string | null): boolean {
-  if (location === null) return false;
-  return DLW_PATTERNS.some((pattern) => pattern.test(location));
-}

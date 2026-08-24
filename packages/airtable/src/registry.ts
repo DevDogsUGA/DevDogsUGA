@@ -65,6 +65,7 @@ export interface MeetingRow {
   id: string;
   slug: string;
   name: string;
+  building: string | null;
   location: string | null;
   startsAt: string;
   endsAt: string;
@@ -177,6 +178,55 @@ const MEETING_KINDS: ReadonlySet<string> = new Set(MEETING_KIND_CHOICES);
 export function parseMeetingKind(value: AirtableValue): MeetingKind | null {
   if (typeof value !== "string") return null;
   return MEETING_KINDS.has(value) ? (value as MeetingKind) : null;
+}
+
+/**
+ * The buildings a meeting can be held in.
+ *
+ * A closed list, unlike the free text it sits beside, because this value has a
+ * job beyond being printed: the directions dialog highlights the building on a
+ * campus map, and a highlight needs a footprint. Every key here has one, drawn
+ * from OpenStreetMap by `scripts/generate-campus-map.ts` in the app — which is
+ * where the real list lives. This is a copy, because this package is upstream
+ * of the app and importing downward would invert the dependency.
+ *
+ * The two are held together by `buildings.test.ts` in the app rather than by
+ * anyone remembering, since the failure mode is quiet: a building the map
+ * cannot draw produces a dialog with a pin over nothing, and nobody finds out
+ * until a meeting is actually scheduled there.
+ *
+ * `Other` is not a building, it is the absence of one — the escape hatch for a
+ * room the map does not cover. It stores fine and draws nothing; the free-text
+ * Location beside it carries the detail.
+ */
+export const MEETING_BUILDING_CHOICES = [
+  "DLW",
+  "Driftmier",
+  "Plant Sciences",
+  "Boyd",
+  "MLC",
+  "Science Learning Center",
+  "Science Library",
+  "Poultry Science",
+  "Main Library",
+  "Tate",
+  "Other",
+] as const;
+
+export type MeetingBuilding = (typeof MEETING_BUILDING_CHOICES)[number];
+
+// Derived from the tuple rather than retyped, so the Airtable dropdown, the
+// parser and the database constraint cannot drift apart.
+const MEETING_BUILDINGS: ReadonlySet<string> = new Set(
+  MEETING_BUILDING_CHOICES,
+);
+
+/** The value if it is one of `MEETING_BUILDING_CHOICES`, else null. */
+export function parseMeetingBuilding(
+  value: AirtableValue,
+): MeetingBuilding | null {
+  if (typeof value !== "string") return null;
+  return MEETING_BUILDINGS.has(value) ? (value as MeetingBuilding) : null;
 }
 
 /**
@@ -322,6 +372,24 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
   name: field
     .text("fldc0NfTHVxHk8Za0", "Name")
     .pull((v) => (typeof v === "string" ? v : null)),
+  // Which building, from a list the campus map can actually draw.
+  //
+  // Null is ordinary and means two different things that do not need telling
+  // apart here: nobody has picked one yet, or the officer picked a value this
+  // side does not know. Either way the dialog falls back to the free-text
+  // Location below and offers no map, which is the honest answer.
+  building: field
+    .singleSelect("fldZoHoKMT4JE2R1C", "Building", MEETING_BUILDING_CHOICES)
+    .pull((v) => parseMeetingBuilding(v)),
+
+  // Where inside the building — "124", "Room 148", "the second-floor lounge".
+  //
+  // Deliberately still free text and deliberately still called Location: rooms
+  // are not a list anyone wants to maintain, and the pair reads as one address
+  // in the officer's grid. It is no longer the whole answer, though. Anything
+  // that needs to KNOW where a meeting is — the map highlight, the floor plan,
+  // the "not the usual room" flag — reads `building`, because sniffing a
+  // building's name out of typed text is a guess and this is not.
   location: field
     .text("fld3MRTF42aS6c3PX", "Location")
     .pull((v) => (typeof v === "string" ? v : null)),

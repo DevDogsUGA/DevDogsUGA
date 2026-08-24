@@ -3,9 +3,9 @@ import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
 import {
   ACTION_CLS,
   CHIP_CLS,
-  isAtDlw,
   segmentBadge,
 } from "~/components/EventsSection/meetingView";
+import { locationLine } from "~/components/EventsSection/FindUs/buildings";
 import { INVOLVEMENT_NETWORK_EVENTS_URL } from "~/config/nav";
 import { EVENT_TZ, formatEventSpan, formatRelative } from "~/lib/eventTime";
 import {
@@ -133,12 +133,12 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
   const happeningNow = now >= meeting.startsAt && now < meeting.endsAt;
 
   // The usual room is said once at the top of the page, so a row only earns
-  // its own note when the answer is *not* the usual room. `isAtDlw` fails
-  // closed on anything it does not recognise, which points the wrong way here:
-  // an unrecognised location would flag a room change that may not have
-  // happened. Requiring a location to be set at all is what keeps that quiet —
-  // a null location prints its own "to be announced" and claims nothing.
-  const elsewhere = meeting.location !== null && !isAtDlw(meeting.location);
+  // its own note when the answer is *not* the usual room. This used to be a
+  // regex over the typed location, which failed closed — an unrecognised
+  // string flagged a room change that might not have happened — and needed a
+  // second guard to stay quiet. A picked building answers it outright, and a
+  // null one still says nothing rather than guessing.
+  const elsewhere = meeting.building !== null && meeting.building !== "DLW";
 
   return (
     <li className="shadow-block-md hover:shadow-block-lg transition-lift relative flex gap-3 rounded-sm border-2 border-black bg-white p-3 hover:-translate-x-0.5 hover:-translate-y-0.5 md:gap-4 md:p-4">
@@ -195,7 +195,8 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
 
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mauve-700 md:text-sm">
           <MapPinIcon className="shrink-0 text-mauve-500" weight="fill" />
-          {meeting.location ?? "Room to be announced"}
+          {locationLine(meeting.building, meeting.location) ??
+            "Room to be announced"}
           {elsewhere && (
             <span
               className={`border-2 border-black bg-white text-black ${CHIP_CLS}`}

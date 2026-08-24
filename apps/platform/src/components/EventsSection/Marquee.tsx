@@ -18,7 +18,8 @@ import {
 } from "~/server/loaders/meetings";
 import { RouteDialogLink } from "~/ui/route-dialog";
 import { FindUsLink } from "~/components/EventsSection/FindUs";
-import { ACTION_CLS, CHIP_CLS, isAtDlw, segmentBadge } from "./meetingView";
+import { ACTION_CLS, CHIP_CLS, segmentBadge } from "./meetingView";
+import { isMappedBuilding, locationLine } from "./FindUs/buildings";
 
 /**
  * The top band of /events: the next meeting, at the size of the only thing on
@@ -189,18 +190,21 @@ export default function Marquee({ meeting, now, checkIn }: Props) {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <p className="flex min-w-0 items-center gap-2 text-sm text-mauve-700">
               <MapPinIcon className="shrink-0 text-mauve-500" weight="fill" />
-              {meeting.location ?? "Room to be announced"}
+              {locationLine(meeting.building, meeting.location) ??
+                "Room to be announced"}
             </p>
-            {/* Only for the one building this site can draw. Every other
-                location falls through to plain text, because directions that
-                walk somebody to the wrong building are worse than an address
-                they have to read — see `isAtDlw`.
+            {/* Only for a building this site can draw. `Other` and null fall
+                through to plain text, because directions that walk somebody to
+                the wrong building are worse than an address
+                they have to read — see `isMappedBuilding`.
 
                 `FindUsLink`, not the in-place `FindUs` dialog: on this page
                 /events/directions is a sibling route under the layout holding
                 the calendar, so following it swaps only the leaf and the
                 calendar behind stays mounted. */}
-            {isAtDlw(meeting.location) && <FindUsLink />}
+            {isMappedBuilding(meeting.building) && (
+              <FindUsLink building={meeting.building} room={meeting.location} />
+            )}
           </div>
 
           {/* Plain text from Airtable, rendered as text. Never as markup: an
