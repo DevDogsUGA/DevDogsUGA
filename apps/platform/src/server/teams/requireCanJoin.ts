@@ -10,12 +10,20 @@ import { isLocked } from "./lockState";
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
- * The one join path, called from `joinTeam`, `respondToMembership` and
- * `reformTeam`.
+ * The join path a member takes, called from `joinTeam` and
+ * `respondToMembership`.
  *
- * Every path that adds a member runs the same checks in the same order.
- * Drift between copies is how somebody ends up on two teams, so there is one
- * copy and the three callers share it.
+ * Both run the same checks in the same order. Drift between copies is how
+ * somebody ends up on two teams, so there is one copy and the two callers
+ * share it.
+ *
+ * `reformTeam` is the exception, and deliberately: it re-creates a team for
+ * the next competition with its lead already inside, so it calls `requireLead`
+ * and `requireOpenCompetition` and then `insertMembership` directly. The lead
+ * it inserts is therefore not checked here — the unique constraint is what
+ * stops that row being a second team, rather than check 4. Everyone else on
+ * the previous roster is INVITED rather than inserted, and their answers come
+ * back through `respondToMembership`, which does run these checks.
  *
  * It takes the TRANSACTION HANDLE, not the db. A relationship check answered
  * outside the transaction that acts on the answer is a TOCTOU window: the

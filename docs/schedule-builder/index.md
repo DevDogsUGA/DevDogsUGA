@@ -16,4 +16,4 @@ Schedule Builder helps UGA students plan their semester around real registrar da
 
 The app lives at `apps/schedule-builder`. It shares the monorepo's Supabase project
 and owns its own Postgres schema, following the same conventions as the platform app —
-see [Database & Migrations](/docs/platform/database) for the shared rules.
+see [Database & Migrations](/docs/platform/guides/database) for the shared rules.

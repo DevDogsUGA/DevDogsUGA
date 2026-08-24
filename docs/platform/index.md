@@ -4,36 +4,23 @@ description: The DevDogs web platform — the site, console, docs, and public AP
 order: 10
 ---
 
-# DevDogs Website
+# Platform
 
-Welcome to the documentation for the DevDogs Website — the open-source web platform for the DevDogs club at the University of Georgia.
+`apps/platform` is the Next.js app behind the DevDogs site: the public pages, the officer console, these docs, and the OAuth server sibling projects sign in against. Read a guide here when you are working on one of its subsystems. If you are still getting the repository running, or want a technology's version and conventions, start at [Monorepo](/docs/monorepo) — nothing on this page repeats it.
 
-## What's in here
+## Guides
 
-**Working on it**
+| Guide                                                              | What it covers                                                                    |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| [Meetings & Teams](/docs/platform/guides/meetings-and-teams)       | Meetings, workshops, competitions, teams, attendance, stars, and awards           |
+| [Elections](/docs/platform/guides/elections)                       | Ranked ballots over competing implementations, and how a competition is scored    |
+| [Airtable](/docs/platform/guides/airtable)                         | The officer base, the field registry, and what syncs in which direction           |
+| [Reporting](/docs/platform/guides/reporting)                       | The `platform` RPC contract every app calls to report content                     |
+| [Moderation](/docs/platform/guides/moderation)                     | How a table becomes reportable and quarantinable, and the traps that hides        |
+| [Identity](/docs/platform/guides/identity)                         | Sign in with DevDogs, and the GitHub App the platform authenticates as            |
+| [Database](/docs/platform/guides/database)                         | SQL migrations own the schema — the change loop, and how one reaches each project |
+| [Navigation](/docs/platform/guides/navigation)                     | The top nav, the docs sidebar, and permission-gated console items                 |
 
-- [Getting started](./getting-started.md) — prerequisites, the two ways to run it, and what a local reset seeds
-- [Contributing](./contributing.md) — the PR workflow and the checks CI runs
-- [Database & migrations](./database.md) — SQL is the source of truth; Drizzle types are generated from it
-- [Caching](./caching.md) and [Navigation](./navigation.md)
+## Reference
 
-**Subsystems**
-
-- [Reporting & feedback](./reporting-and-feedback.md) — the RPC contract every app calls, and how a table becomes moderatable
-- [Moderatable content](./moderatable-content.md) — how content becomes reportable, and the traps integration hides
-- [Sandbox environments](./sandbox-environments.md) — one shared Supabase instance per competition team (unrelated to the above, despite the name)
-- [Meetings & teams](./meetings-and-teams.md), [Elections](./elections.md), [Airtable setup](./airtable-setup.md)
-- [OAuth setup](./oauth-setup.md) — how a sibling project gets **Sign in with DevDogs**
-- [The GitHub App](./github-app.md) — the identity the platform authenticates as, and why it is **not** the OAuth app above
-- [Env](./env.md) — one env file per target, synced to Bitwarden and GitHub, with a drift audit
-- [The documentation system](./documentation-system/architecture.md) — how this page is built
-
-## Tech stack
-
-| Layer     | Technology              |
-| --------- | ----------------------- |
-| Framework | Next.js 16 (App Router) |
-| Database  | Supabase (Postgres)     |
-| ORM       | Drizzle ORM             |
-| Styling   | Tailwind CSS v4         |
-| Auth      | Supabase Auth           |
+[Platform reference](/docs/platform/reference) enumerates the app itself: every route and API route, the server actions, the components and hooks, and the Supabase surface. Those pages are generated from the source tree by `docs-build gen` and overwritten on every build, so a correction belongs in the doc comment it was read from, not in the page.
