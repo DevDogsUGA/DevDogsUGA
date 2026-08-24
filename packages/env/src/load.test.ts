@@ -98,11 +98,11 @@ describe("missing env files", () => {
     expect((thrown as Error).message).not.toContain("--env ");
   });
 
-  it("fails for development pointing at pnpm devtools setup", async () => {
+  it("fails for development pointing at pnpm setup", async () => {
     const attempt = selectEnvFiles(ctx({ exists: () => false }));
     await expect(attempt).rejects.toThrow(MissingEnvFileError);
     await expect(selectEnvFiles(ctx({ exists: () => false }))).rejects.toThrow(
-      /\.env does not exist.*pnpm devtools setup/,
+      /\.env does not exist.*pnpm setup/,
     );
   });
 });

@@ -14,7 +14,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "sb": "pnpm --filter @devdogsuga/devtools run cli",
-    "setup": "pnpm --filter @devdogsuga/devtools run cli setup",
+    "setup": "pnpm --filter @devdogsuga/devtools run cli:no-env setup",
     "airtable:scaffold": "pnpm --filter @devdogsuga/devtools run cli airtable scaffold",
     "airtable:pull-ids": "pnpm --filter @devdogsuga/devtools run cli airtable pull-ids",
     "airtable:verify": "pnpm --filter @devdogsuga/devtools run cli airtable verify",

@@ -23,11 +23,8 @@ The setup command below checks all four for you. Docker and Flutter report as `I
 git clone https://github.com/DevDogsUGA/DevDogsUGA.git
 cd DevDogsUGA
 corepack enable && pnpm install
-pnpm --filter @devdogsuga/devtools run cli:no-env setup
+pnpm setup
 ```
-
-> [!IMPORTANT]
-> The last line is long on purpose, and the shorter `pnpm setup` does not work in its place on a fresh clone. Nearly every script here runs through `with-env`, which stops when the root `.env` is missing, and `pnpm setup` is one of them — so it fails on the very file it exists to create. `cli:no-env` is the same command unwrapped. Once `.env` exists, `pnpm setup` and `pnpm devtools` work as their names suggest.
 
 Setup asks which projects you are on and writes a root `.env` carrying only those sections. An existing `.env` is left untouched. The file starts blank — the local stack fills the connection block in for you, and only a hosted project needs values typed in.
 

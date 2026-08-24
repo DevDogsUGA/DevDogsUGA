@@ -12,7 +12,7 @@ There is one env file per **target**, not one file with modes. This page is the 
 
 `.env` at the repo root **is** the development target. Every script that needs it goes through `with-env`, the wrapper from `@devdogsuga/env`, which loads the file and prints on every run which files it actually loaded.
 
-Creating it is the one thing `with-env` cannot do. On a fresh clone there is no `.env`, so every wrapped script stops before it starts — `pnpm setup` included. `pnpm --filter @devdogsuga/devtools run cli:no-env setup` is the unwrapped script that writes it; [Quickstart](/docs/monorepo/guides/quickstart) has the full order.
+Creating it is the one thing `with-env` cannot do, so `pnpm setup` deliberately runs outside the wrapper — it is the one command that works with no `.env` present. [Quickstart](/docs/monorepo/guides/quickstart) has the full order.
 
 When the local Docker stack is up, `with-env` layers `.env.generated` — the stack's own connection block, written by `pnpm sb link` — on top of `.env`, first file wins. There is no flag for this: `with-env` probes port 54321 every run, so starting the stack switches you onto it and stopping it switches you back.
 
@@ -37,7 +37,7 @@ The order above — least dangerous to most — is the order the interactive pic
 
 `with-env` refuses and names the command that materialises it:
 
-- `.env` → the message names `pnpm devtools setup`, which is itself wrapped; with no `.env` at all, use `pnpm --filter @devdogsuga/devtools run cli:no-env setup`
+- `.env` → `pnpm setup`
 - any other target → `pnpm devtools env pull --target <target>`
 
 ## Where the detail lives

@@ -46,7 +46,12 @@ export class MissingEnvFileError extends Error {
   ) {
     super(
       environment === "development"
-        ? `${file} does not exist. Run \`pnpm devtools setup\` to create it.`
+        ? // `pnpm setup`, NOT `pnpm devtools setup`: this message is only ever
+          // seen when there is no `.env`, and `pnpm devtools` is the `with-env`
+          // wrapped entry point, so it would fail here exactly as its caller
+          // just did. The root `setup` script runs the CLI unwrapped for that
+          // reason, and is the one command that works from a clean clone.
+          `${file} does not exist. Run \`pnpm setup\` to create it.`
         : `${file} does not exist. Run ` +
             `\`pnpm devtools env pull --target ${environment}\` to fetch it.`,
     );
