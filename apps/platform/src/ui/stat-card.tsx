@@ -120,6 +120,14 @@ export default function StatCard({
           className={`${bg} absolute inset-0`}
           style={{ clipPath: STAT_CLIP_INNER }}
         />
+        {/* Dots in the card's own accent, since `bg-dot-grid-dense` draws in
+            `currentColor`. Clipped to the fill rather than the outer shape so
+            the texture stops at the border instead of stippling it. */}
+        <div
+          aria-hidden
+          className={`bg-dot-grid-dense absolute inset-0 opacity-15 ${textColor}`}
+          style={{ clipPath: STAT_CLIP_INNER }}
+        />
         <div
           className={`relative z-10 flex flex-col items-center gap-1.5 px-5 py-6 text-center sm:gap-2.5 sm:px-7 sm:py-7 ${textColor}`}
         >
@@ -156,33 +164,32 @@ export default function StatCard({
  * edge to the shaft's end, with the apex drawn on that edge, is what makes the
  * two one stroke — no offset to keep in sync with the head's size.
  *
- * Its own size stays fixed at every breakpoint: the stroke weight is chosen to
- * land on the shaft's 2.5px at 14px tall — a 24-unit box drawn 14px tall scales
- * by 14/24, so the shaft's weight times 24/14 is the stroke that matches it.
- * Let the head resize at a breakpoint and the two weights drift apart, and the
- * join between them shows.
+ * The head is Phosphor's own `ArrowRight` at bold weight with its shaft cut
+ * out, so it matches the icons used everywhere else on the card rather than
+ * being a chevron drawn to look approximately like them. Phosphor's glyph is
+ * one filled path — the bar runs `H40`, out to the round cap at the far end,
+ * and back — so removing that run and closing the outline straight down at
+ * x=187 leaves the head alone, on its original coordinates. The window onto it
+ * is the viewBox: x stops at 228, the tip of the rounded point, which puts the
+ * tip exactly on the box's right edge and therefore on the shaft's end.
+ *
+ * Nothing has to line up by hand as a result. The head's own back edge sits
+ * over the shaft in the same colour, so where they meet is invisible, and the
+ * arm weight follows the height: a 168-unit-tall window drawn 17.5px tall
+ * renders Phosphor's 24-unit bar at 2.5px, which is the shaft.
  */
 function CtaArrow() {
   return (
     <span
       aria-hidden
-      className="relative inline-block h-[2.5px] w-2.5 shrink-0 rounded-full bg-current transition-[width] group-hover:w-5 group-hover:delay-300 motion-reduce:transition-none sm:w-3 sm:group-hover:w-6"
+      className="relative inline-block h-[2.5px] w-2.5 shrink-0 rounded-full bg-current transition-[width] delay-0 group-hover:w-5 group-hover:delay-[450ms] motion-reduce:transition-none sm:w-3 sm:group-hover:w-6"
     >
-      {/* overflow-visible so the round join at the apex isn't shaved off by
-          the viewBox edge it sits on. */}
       <svg
-        viewBox="0 0 11 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={4.29}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="absolute top-1/2 right-0 h-3.5 w-auto -translate-y-1/2 overflow-visible"
+        viewBox="132 44 96 168"
+        fill="currentColor"
+        className="absolute top-1/2 right-0 h-[17.5px] w-auto -translate-y-1/2"
       >
-        {/* Apex on the box's right edge — that is the join with the shaft. The
-            arms are longer than the old ones: at this weight a shorter chevron
-            closes up into a blob rather than reading as an arrowhead. */}
-        <polyline points="2 5 11 12 2 19" />
+        <path d="M224.49,136.49l-72,72a12,12,0,0,1-17-17L187,140L187,116L135.51,64.48a12,12,0,0,1,17-17l72,72A12,12,0,0,1,224.49,136.49Z" />
       </svg>
     </span>
   );

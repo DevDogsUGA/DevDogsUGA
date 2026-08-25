@@ -332,6 +332,16 @@
   z-index: 40;
 }
 
+/* A card the viewport has mostly eaten stops answering the pointer, so it can
+   neither be hovered nor start a scroll — MarqueeTrack sets the attribute from
+   an IntersectionObserver. This is what keeps hovering near the edge from
+   chain-scrolling: each scroll leaves only a sliver of the next card behind
+   it, and a sliver is not hoverable, so the chain stops. Sliver cards are also
+   the ones nobody is aiming at, so nothing clickable is lost. */
+[data-clipped] {
+  pointer-events: none;
+}
+
 @keyframes dialog-slide-in {
   from {
     transform: translateX(-100%);

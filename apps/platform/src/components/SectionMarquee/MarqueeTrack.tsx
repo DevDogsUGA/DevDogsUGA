@@ -20,12 +20,16 @@ const EASE = 0.12;
 const EDGE_MARGIN = 24;
 
 /**
- * How much card has to stay on the pointer's side of the pointer when a scroll
- * finishes. The scroll moves the card, not the cursor, so without this a card
- * can be delivered into view having stepped out from under the hand that asked
- * for it — which is how the scroll ends up provoking the next one.
+ * How much of a card has to be on screen before it will answer the pointer at
+ * all. Below this it is marked `data-clipped` and CSS takes its pointer events
+ * away, which is what keeps a scroll from provoking the next one: bringing a
+ * card to EDGE_MARGIN leaves whatever slides in behind it barely a sliver
+ * wide, and a sliver cannot be hovered, so the chain has nowhere to go.
  */
-const POINTER_KEEP = 12;
+const MIN_VISIBLE = 0.5;
+
+/** Ratios to be told about. Fine enough that the flip lands within ~5%. */
+const VISIBILITY_STEPS = Array.from({ length: 21 }, (_, i) => i / 20);
 
 interface Props {
   /** Content to scroll. Rendered `COPIES` times for a seamless loop. */
@@ -121,12 +125,12 @@ export default function MarqueeTrack({
     };
 
     /**
-     * Scrolls the strip so `card` clears both edges of the viewport, as far as
-     * it can without sliding out from under the pointer. Done by moving the
-     * animation's own clock rather than adding a transform, so the loop stays
-     * seamless and there is nothing to undo when the pointer leaves.
+     * Scrolls the strip so `card` clears both edges of the viewport. Done by
+     * moving the animation's own clock rather than adding a transform, so the
+     * loop stays seamless and there is nothing to undo when the pointer
+     * leaves.
      */
-    const bringIntoView = (card: Element, pointerX: number) => {
+    const bringIntoView = (card: Element) => {
       const anim = track.getAnimations()[0];
       if (!anim) return;
 
@@ -137,27 +141,13 @@ export default function MarqueeTrack({
 
       const rect = card.getBoundingClientRect();
       const viewport = document.documentElement.clientWidth;
-      const want =
+      const dx =
         rect.left < EDGE_MARGIN
           ? EDGE_MARGIN - rect.left
           : rect.right > viewport - EDGE_MARGIN
             ? viewport - EDGE_MARGIN - rect.right
             : 0;
-      if (want === 0) return;
-
-      // The card must not travel out from under the pointer that asked for it.
-      // Hovering within EDGE_MARGIN of the edge used to do exactly that: the
-      // card landed at the margin, past a pointer nearer the edge than that,
-      // and whichever card arrived in its place asked to be scrolled too —
-      // each correction handing off to the next, forever.
-      const dx =
-        want > 0
-          ? Math.min(want, pointerX - rect.left - POINTER_KEEP)
-          : Math.max(want, pointerX - rect.right + POINTER_KEEP);
-
-      // Clamped past zero: the pointer is closer to the edge than the card can
-      // be brought, so any move at all would drop the hover.
-      if (want > 0 ? dx <= 0 : dx >= 0) return;
+      if (dx === 0) return;
 
       // Advancing the clock walks the strip left, except under `reverse`,
       // where the keyframes are read back to front and it walks right.
@@ -167,26 +157,35 @@ export default function MarqueeTrack({
       raf ??= requestAnimationFrame(step);
     };
 
-    // `mouseover` repeats for every child the pointer passes over, and fires
-    // again for whatever the scroll slides underneath it — so a scroll can
-    // provoke the next one. Two guards: nothing starts while a scroll is still
-    // running, and nothing starts unless the pointer itself actually moved,
-    // which is what separates a real hover from the strip moving under a hand
-    // holding still.
+    // A card too far off screen to be hovered cannot start a scroll, and
+    // bringing one to EDGE_MARGIN leaves only a sliver of its neighbour
+    // behind it — so the scroll has nothing to hand off to. `shift === 0` is
+    // ordinary hygiene on top: no stacking a correction onto a running one.
     let hovered: Element | null = null;
-    let lastX = NaN;
-    let lastY = NaN;
     const onMouseOver = (event: MouseEvent) => {
-      const moved = event.clientX !== lastX || event.clientY !== lastY;
-      lastX = event.clientX;
-      lastY = event.clientY;
-
       const card = (event.target as Element | null)?.closest("a") ?? null;
       if (card === hovered) return;
       hovered = card;
-
-      if (card && moved && shift === 0) bringIntoView(card, event.clientX);
+      if (card && shift === 0) bringIntoView(card);
     };
+
+    // Ratios, not rects: the observer already intersects with every clipping
+    // ancestor on the way up, so the strip's own overflow counts as much as
+    // the viewport edge does, and it costs nothing per frame.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          entry.target.toggleAttribute(
+            "data-clipped",
+            entry.intersectionRatio < MIN_VISIBLE,
+          );
+        }
+      },
+      { threshold: VISIBILITY_STEPS },
+    );
+    if (keepHoveredInView) {
+      for (const card of root.querySelectorAll("a")) observer.observe(card);
+    }
 
     const onMouseEnter = () => rampTo(0);
     const onMouseLeave = () => {
@@ -202,6 +201,7 @@ export default function MarqueeTrack({
       root.removeEventListener("mouseenter", onMouseEnter);
       root.removeEventListener("mouseleave", onMouseLeave);
       root.removeEventListener("mouseover", onMouseOver);
+      observer.disconnect();
       if (raf !== undefined) cancelAnimationFrame(raf);
     };
   }, [duration, direction, keepHoveredInView]);
