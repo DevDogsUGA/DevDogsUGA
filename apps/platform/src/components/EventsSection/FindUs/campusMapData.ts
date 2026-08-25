@@ -34,47 +34,64 @@ export const HIGHLIGHT_PATHS: Record<string, string> = {
   Tate: "M264.2 138.2L268.9 139.4L270.3 133.5L271.7 130.7L278.7 131.5L279.7 135L281.4 138.1L287 139.5L287.3 143.4L283.1 154L276.7 152.4L273.4 151.6L263.9 149.4L265.1 144.5L262.3 143.9L260.1 146.4L256 145.4L251 144.6L253.6 134L251.8 132L252.6 129.5L251.8 126.4L255.4 127.1L260 128.7L262.5 128.8L265.1 129.8L265.9 132.3L264.2 138.2Z",
 };
 
-/** Where the pin goes, in viewBox units — the centroid of the same footprint. */
-export const HIGHLIGHT_PINS: Record<string, { x: number; y: number }> = {
+/**
+ * What the marker is pointing at: the footprint's horizontal centre, and how
+ * far it reaches up and down the frame. The map hangs the pin off `top` or
+ * `bottom` so it stands beside the building rather than over it.
+ */
+export const HIGHLIGHT_PINS: Record<
+  string,
+  { x: number; top: number; bottom: number }
+> = {
   DLW: {
     x: 163.9,
-    y: 194.8,
+    top: 186.2,
+    bottom: 201.7,
   },
   Driftmier: {
     x: 273.1,
-    y: 490.8,
+    top: 482.9,
+    bottom: 500,
   },
   "Plant Sciences": {
     x: 273.3,
-    y: 383.8,
+    top: 371.7,
+    bottom: 394.7,
   },
   Boyd: {
     x: 276.7,
-    y: 278.1,
+    top: 266,
+    bottom: 287.6,
   },
   MLC: {
     x: 256,
-    y: 104.7,
+    top: 91.2,
+    bottom: 117.6,
   },
   "Science Learning Center": {
     x: 244,
-    y: 373.3,
+    top: 360.6,
+    bottom: 387.8,
   },
   "Science Library": {
     x: 266.6,
-    y: 274.1,
+    top: 266,
+    bottom: 283.5,
   },
   "Poultry Science": {
     x: 286.3,
-    y: 254.8,
+    top: 247.2,
+    bottom: 263.9,
   },
   "Main Library": {
     x: 307.3,
-    y: 35.3,
+    top: 21.7,
+    bottom: 47.8,
   },
   Tate: {
     x: 269.2,
-    y: 140.5,
+    top: 126.4,
+    bottom: 154,
   },
 };
 

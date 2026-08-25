@@ -65,6 +65,56 @@ interface Props {
   building: BuildingKey;
 }
 
+type Pin = (typeof HIGHLIGHT_PINS)[string];
+interface Box {
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+}
+
+/**
+ * Roughly where a label's glyphs land.
+ *
+ * Estimated from the character count rather than measured, because measuring
+ * means getBBox, and getBBox means this drawing can only be laid out in a
+ * browser after it has already been painted wrong once. The widest character
+ * on the map runs about 0.74em and the narrowest about 0.41em; 0.62 is set
+ * high on purpose, since the cost of over-estimating is dropping a landmark
+ * name that would have just fitted, and the cost of under-estimating is the
+ * collision this exists to prevent.
+ */
+function labelBox(text: string, x: number, y: number, size: number): Box {
+  const w = text.length * size * 0.62;
+  return {
+    x0: x - w / 2,
+    x1: x + w / 2,
+    // Tall enough to count a name on the line above as being in the way: the
+    // two sets of glyphs miss each other by a pixel, but each is painted with
+    // a halo half that wide again, so they arrive as one smudge.
+    y0: y - size * 0.92,
+    y1: y + size * 0.3,
+  };
+}
+
+/** The same, for text turned along a road: the upright box around it. */
+function rotatedBox(
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  angle: number,
+): Box {
+  const w = text.length * size * 0.62;
+  const cos = Math.abs(Math.cos((angle * Math.PI) / 180));
+  const sin = Math.abs(Math.sin((angle * Math.PI) / 180));
+  const [bw, bh] = [w * cos + size * sin, w * sin + size * cos];
+  return { x0: x - bw / 2, x1: x + bw / 2, y0: y - bh / 2, y1: y + bh / 2 };
+}
+
+const overlaps = (a: Box, b: Box) =>
+  a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+
 /**
  * Real geometry, not a sketch: road centerlines and building footprints come
  * from OpenStreetMap via scripts/generate-campus-map.ts, projected into the
@@ -78,6 +128,30 @@ interface Props {
 export default function CampusMap({ building }: Props) {
   const pin = HIGHLIGHT_PINS[building];
   const footprint = HIGHLIGHT_PATHS[building];
+
+  /**
+   * What the callout occupies, and so what has to get out of its way.
+   *
+   * Ten destinations means ten arrangements of this map, and the dense corner
+   * of it — Boyd, the Science Library, Poultry Science and Food Science within
+   * 40px of each other — cannot be hand-placed to survive all ten. Whichever
+   * building is being pointed at wins; a context label the callout lands on is
+   * dropped for that one rendering rather than printed underneath it.
+   */
+  const placed = pin === undefined ? undefined : placeCallout(pin);
+  const claimed: Box[] =
+    pin === undefined || placed === undefined
+      ? []
+      : [
+          labelBox(BUILDING_LABEL[building], pin.x, placed.labelY, 13),
+          {
+            x0: pin.x - PIN_R - 1,
+            x1: pin.x + PIN_R + 1,
+            y0: Math.min(placed.tipY, placed.cy - PIN_R),
+            y1: Math.max(placed.tipY, placed.cy + PIN_R),
+          },
+        ];
+  const clear = (box: Box) => !claimed.some((c) => overlaps(c, box));
 
   return (
     <svg
@@ -130,14 +204,16 @@ export default function CampusMap({ building }: Props) {
         strokeLinejoin="round"
         className="fill-mauve-700 stroke-white font-semibold [paint-order:stroke]"
       >
-        {LABELS.filter((l) => l.key !== building).map((l) => (
+        {LABELS.filter(
+          (l) => l.key !== building && clear(labelBox(l.text, l.x, l.y, 9)),
+        ).map((l) => (
           <text key={l.text} x={l.x} y={l.y}>
             {l.text}
           </text>
         ))}
       </g>
 
-      {pin && <Callout building={building} x={pin.x} y={pin.y} />}
+      {pin && <Callout building={building} pin={pin} />}
 
       {/* Street names, sitting on their own centrelines at their own angle:
           position and rotation are generated from the road geometry, not
@@ -157,7 +233,9 @@ export default function CampusMap({ building }: Props) {
         dominantBaseline="central"
         className="fill-mauve-400 stroke-white font-semibold [paint-order:stroke]"
       >
-        {ROAD_LABELS.map((r) => (
+        {ROAD_LABELS.filter((r) =>
+          clear(rotatedBox(r.text, r.x, r.y, 7, r.angle)),
+        ).map((r) => (
           <text
             key={r.text}
             x={r.x}
@@ -196,48 +274,84 @@ export default function CampusMap({ building }: Props) {
   );
 }
 
+/** Tip to crown, and the radius of the balloon on top of it. */
+const PIN_H = 22;
+const PIN_R = 7;
+
 /**
  * The pin and the destination's name, at the one size on the map that is not
  * cartographic furniture.
  *
- * Placed relative to the pin rather than hand-positioned per building. The old
- * map could afford a hand-tuned callout with a leader line because there was
- * exactly one destination and it never moved; ten destinations means ten sets
- * of coordinates to keep true through every reframing, which is ten chances
- * for one of them to be quietly wrong. A rule that reads the generated pin
- * cannot drift from it.
+ * Placed relative to the footprint rather than hand-positioned per building.
+ * The old map could afford a hand-tuned callout with a leader line because
+ * there was exactly one destination and it never moved; ten destinations means
+ * ten sets of coordinates to keep true through every reframing, which is ten
+ * chances for one of them to be quietly wrong. A rule that reads the generated
+ * footprint cannot drift from it.
  *
- * The name goes below the pin unless the pin is near the bottom edge, where
- * below would run off the map.
+ * The pin stands OFF the building, tip on its edge, rather than on its
+ * centroid. A campus building at this scale is 15-20px tall and the marker is
+ * 22px, so a centred pin hid most of what it was pointing at — worst on the
+ * DLW, which is both the smallest of the ten and the one people actually need
+ * to find. It hangs above the building where there is room above, below it
+ * where there is not.
+ *
+ * The name then goes on the far side of the building from the pin, so the two
+ * frame the destination instead of stacking on one edge of it.
  */
-function Callout({
-  building,
-  x,
-  y,
-}: {
-  building: BuildingKey;
-  x: number;
-  y: number;
-}) {
-  const below = y < VIEW.h - 46;
-  const labelY = below ? y + 30 : y - 24;
+function placeCallout({ top, bottom }: Pin) {
+  const above = top - PIN_H >= 10;
+  // Which way the tip points, as a sign on y.
+  const d = above ? 1 : -1;
+  const tipY = above ? top - 1 : bottom + 1;
+  const cy = tipY - d * (PIN_H - PIN_R);
+  // Clamped rather than flipped back over the pin: a building at the very top
+  // of the frame has nowhere above it to put a name, and pushing the name to
+  // the pin's side instead stacks the two and shoves the name into whatever
+  // landmark is there — which is what Main Library did to Journalism.
+  const labelY = Math.min(
+    Math.max(above ? bottom + 15 : top - 11, 14),
+    VIEW.h - 8,
+  );
+  return { d, tipY, cy, labelY };
+}
+
+function Callout({ building, pin }: { building: BuildingKey; pin: Pin }) {
+  const { x } = pin;
+  const { d, tipY, cy, labelY } = placeCallout(pin);
+  const reach = PIN_H - PIN_R;
+
+  // The teardrop as one closed path: the major arc of the disc, then the two
+  // lines that run from where the disc's tangents leave it down to the tip.
+  // Drawn in one piece because a disc plus a separate triangle has to be a
+  // filled triangle over a stroked disc, which puts a seam across the pin.
+  const spread = Math.acos(PIN_R / reach);
+  const aim = (d * Math.PI) / 2;
+  const rim = (t: number) =>
+    `${(x + PIN_R * Math.cos(t)).toFixed(2)} ${(cy + PIN_R * Math.sin(t)).toFixed(2)}`;
+  const teardrop =
+    `M ${rim(aim - spread)} ` +
+    `A ${PIN_R} ${PIN_R} 0 1 0 ${rim(aim + spread)} ` +
+    `L ${x} ${tipY} Z`;
 
   return (
     <>
       {/* The teardrop: a disc with a triangle hanging off it, drawn from the
-          pin's own coordinates so it lands on the footprint the generator
-          measured rather than near it. */}
-      <circle
-        cx={x}
-        cy={y - 10}
-        r="7"
-        className="fill-rose-600 stroke-black"
-        strokeWidth="2"
-      />
+          footprint's own edge so it lands on the building the generator
+          measured rather than near it.
+
+          Cyan against the rose footprint, which is the pairing the rest of
+          the site uses. It was rose-600 on rose-400 — one step apart on one
+          ramp, so the marker and the building it marks were the same colour
+          at a glance, which is the one distinction this drawing exists to
+          make. */}
       <path
-        d={`M ${x - 5.4} ${y - 6} L ${x + 5.4} ${y - 6} L ${x} ${y + 5} Z`}
-        className="fill-rose-600"
+        d={teardrop}
+        className="fill-cyan-500 stroke-black"
+        strokeWidth="2"
+        strokeLinejoin="round"
       />
+      <circle cx={x} cy={cy} r="2.4" className="fill-black" />
       <text
         x={x}
         y={labelY}

@@ -45,8 +45,9 @@ describe("the building list", () => {
       const pin = HIGHLIGHT_PINS[key]!;
       expect(pin.x, `${key} pin x`).toBeGreaterThan(0);
       expect(pin.x, `${key} pin x`).toBeLessThan(VIEW.w);
-      expect(pin.y, `${key} pin y`).toBeGreaterThan(0);
-      expect(pin.y, `${key} pin y`).toBeLessThan(VIEW.h);
+      expect(pin.top, `${key} footprint top`).toBeGreaterThan(0);
+      expect(pin.bottom, `${key} footprint bottom`).toBeLessThan(VIEW.h);
+      expect(pin.top, `${key} footprint`).toBeLessThan(pin.bottom);
     }
   });
 

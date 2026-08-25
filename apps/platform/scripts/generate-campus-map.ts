@@ -536,7 +536,7 @@ for (const e of elements) {
 interface Highlight {
   path: string;
   center: { lat: number; lon: number };
-  pin: { x: number; y: number };
+  pin: { x: number; top: number; bottom: number };
 }
 
 const highlights: Record<string, Highlight> = {};
@@ -559,11 +559,16 @@ for (const b of HIGHLIGHTS) {
 
   const biggest = geoms.reduce((a, g) => (area(g) > area(a) ? g : a));
   const center = centroid(biggest);
-  const [pinX, pinY] = px(center.lon, center.lat).map(fmt) as [number, number];
+  const [pinX] = px(center.lon, center.lat).map(fmt) as [number, number];
+  // How far the footprint reaches up and down the frame, so the map can stand
+  // a marker off the edge of the building instead of on top of it. The pin
+  // used to sit on the centroid, which on a building the size of the DLW meant
+  // the marker covered most of what it was pointing at.
+  const ys = geoms.flatMap((g) => proj(g).map((pt) => pt[1]));
   highlights[b.key] = {
     path: geoms.map((g) => toPath(g, true)).join(""),
     center,
-    pin: { x: pinX, y: pinY },
+    pin: { x: pinX, top: fmt(Math.min(...ys)), bottom: fmt(Math.max(...ys)) },
   };
 }
 
@@ -579,7 +584,7 @@ const labeled = [...HIGHLIGHTS.map((b) => b.osm), ...LANDMARKS].map((name) => {
     const h = HIGHLIGHTS.find((x) => x.osm === name);
     const pin = h ? highlights[h.key]?.pin : undefined;
     if (!pin) throw new Error(`no OSM building found for "${name}"`);
-    return { name, cx: pin.x, cy: pin.y };
+    return { name, cx: pin.x, cy: fmt((pin.top + pin.bottom) / 2) };
   }
   const c = b.geometry.reduce<[number, number]>(
     (a, g) => [a[0] + g.lon, a[1] + g.lat],
@@ -638,8 +643,15 @@ export const FOOTPRINTS = ${JSON.stringify(footprints.join(""))};
 /** The footprint the map paints on top, one per building a meeting can name. */
 export const HIGHLIGHT_PATHS: Record<string, string> = ${entries((h) => h.path)};
 
-/** Where the pin goes, in viewBox units — the centroid of the same footprint. */
-export const HIGHLIGHT_PINS: Record<string, { x: number; y: number }> = ${entries((h) => h.pin)};
+/**
+ * What the marker is pointing at: the footprint's horizontal centre, and how
+ * far it reaches up and down the frame. The map hangs the pin off \`top\` or
+ * \`bottom\` so it stands beside the building rather than over it.
+ */
+export const HIGHLIGHT_PINS: Record<
+  string,
+  { x: number; top: number; bottom: number }
+> = ${entries((h) => h.pin)};
 
 /** Street names, on the centreline they name and turned to match it. */
 export const ROAD_LABELS: {
@@ -667,8 +679,10 @@ console.log(
   `viewBox 0 0 ${VW} ${VH} | ${roadPaths.major.length} major ways, ${roadPaths.minor.length} minor ways, ${footprints.length} footprints`,
 );
 for (const b of labeled) console.log(`  LABEL ${b.name} → ${b.cx},${b.cy}`);
-for (const k of keys)
-  console.log(`  PIN ${k} → ${highlights[k]!.pin.x},${highlights[k]!.pin.y}`);
+for (const k of keys) {
+  const { x, top, bottom } = highlights[k]!.pin;
+  console.log(`  PIN ${k} → x ${x}, y ${top}..${bottom}`);
+}
 for (const r of roadLabels)
   console.log(
     `  ROAD ${r.text} → ${r.x},${r.y} @ ${r.angle}° (${r.run}px visible)`,
