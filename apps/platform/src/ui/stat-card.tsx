@@ -157,26 +157,28 @@ export default function StatCard({
  * and the line would never move — and it cannot grow one axis of an arrowhead
  * without shearing it either, which is why the head stays a fixed glyph.
  *
- * The head is positioned rather than laid out beside the shaft, because a
- * chevron only has material at its apex along the centreline the shaft runs
- * down. Set side by side, the shaft stopped at the head's *box* and the ~5px
- * from there to the apex read as a gap in the arrow. Anchoring the box's right
- * edge to the shaft's end, with the apex drawn on that edge, is what makes the
- * two one stroke — no offset to keep in sync with the head's size.
+ * The head is positioned rather than laid out beside the shaft. Set side by
+ * side, the shaft stops at the head's *box*, and a head that narrows to a
+ * point leaves the distance from that box edge to the tip reading as a gap in
+ * the arrow. Overlaying the two instead — the box's right edge on the shaft's
+ * end, the tip drawn on that edge — makes them one shape at any head size,
+ * with no offset to keep in sync.
  *
- * The head is Phosphor's own `ArrowRight` at bold weight with its shaft cut
- * out, so it matches the icons used everywhere else on the card rather than
- * being a chevron drawn to look approximately like them. Phosphor's glyph is
- * one filled path — the bar runs `H40`, out to the round cap at the far end,
- * and back — so removing that run and closing the outline straight down at
- * x=187 leaves the head alone, on its original coordinates. The window onto it
- * is the viewBox: x stops at 228, the tip of the rounded point, which puts the
- * tip exactly on the box's right edge and therefore on the shaft's end.
+ * The head is Phosphor's own `ArrowRight` with its shaft cut out of the path,
+ * so it belongs to the same set as the icons above it — and at `fill` weight,
+ * matching the card's other icons, which is also what makes it sizeable. The
+ * bold head is drawn as two arms of a fixed thickness, so matching those arms
+ * to the shaft pins the head's height to seven times it: 17.5px against a
+ * 2.5px line, taller than the text beside it. A solid head has no arm to
+ * match, so its size is free and set by what looks right next to the label.
  *
- * Nothing has to line up by hand as a result. The head's own back edge sits
- * over the shaft in the same colour, so where they meet is invisible, and the
- * arm weight follows the height: a 168-unit-tall window drawn 17.5px tall
- * renders Phosphor's 24-unit bar at 2.5px, which is the shaft.
+ * Phosphor's glyph is one filled path whose bar runs out to the round cap at
+ * the far end and back; removing that run and closing the outline straight up
+ * the back at x=136 leaves the head alone, on its original coordinates. The
+ * window onto it is the viewBox, ending at x=224 — the tip of the rounded
+ * point — which puts the tip on the box's right edge and therefore exactly on
+ * the shaft's end, with the head's back edge sitting over the shaft in the
+ * same colour so the meeting point is invisible.
  */
 function CtaArrow() {
   return (
@@ -185,11 +187,11 @@ function CtaArrow() {
       className="relative inline-block h-[2.5px] w-2.5 shrink-0 rounded-full bg-current transition-[width] delay-0 group-hover:w-5 group-hover:delay-[450ms] motion-reduce:transition-none sm:w-3 sm:group-hover:w-6"
     >
       <svg
-        viewBox="132 44 96 168"
+        viewBox="136 48 88 160"
         fill="currentColor"
-        className="absolute top-1/2 right-0 h-[17.5px] w-auto -translate-y-1/2"
+        className="absolute top-1/2 right-0 h-[11px] w-auto -translate-y-1/2"
       >
-        <path d="M224.49,136.49l-72,72a12,12,0,0,1-17-17L187,140L187,116L135.51,64.48a12,12,0,0,1,17-17l72,72A12,12,0,0,1,224.49,136.49Z" />
+        <path d="M221.66,133.66l-72,72A8,8,0,0,1,136,200V56A8,8,0,0,1,149.66,50.34l72,72A8,8,0,0,1,221.66,133.66Z" />
       </svg>
     </span>
   );
