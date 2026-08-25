@@ -53,7 +53,7 @@ export default function SectionMarquee({
 
   return (
     <div
-      className={`w-full overflow-hidden ${bg} relative z-10 ${skewCls}`}
+      className={`w-full overflow-x-hidden overflow-y-visible ${bg} relative z-10 ${skewCls}`}
       aria-label={ariaLabel}
       data-hover-invert={hoverInvert ?? undefined}
     >

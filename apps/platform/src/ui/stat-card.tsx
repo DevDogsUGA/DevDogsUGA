@@ -45,7 +45,15 @@ interface Props {
   bg: string;
   darkBg: string;
   href: string;
-  zIndex: number;
+  /**
+   * One literal Tailwind `z-*` class (e.g. `"z-30"`), descending left to
+   * right so each card's teeth sit above the next card's flat edge. Kept as
+   * a class rather than an inline `zIndex` number so `hover:z-50` below —
+   * which needs to outrank a card to its *left* despite that card's higher
+   * resting z — can win on cascade order instead of losing to inline-style
+   * specificity.
+   */
+  zIndexClass: string;
 }
 
 export default function StatCard({
@@ -57,12 +65,12 @@ export default function StatCard({
   bg,
   darkBg,
   href,
-  zIndex,
+  zIndexClass,
 }: Props) {
   return (
     <div
-      className="relative inline-block w-65 sm:w-85"
-      style={{ marginRight: `-${CHEVRON_DEPTH}px`, zIndex }}
+      className={`relative inline-block w-65 sm:w-85 ${zIndexClass} hover:z-50`}
+      style={{ marginRight: `-${CHEVRON_DEPTH}px` }}
     >
       {/* Sits at the card's resting slot so lifting it on hover reveals a
           block instead of a gap — a stand-in for `shadow-block-*`, which
@@ -70,12 +78,12 @@ export default function StatCard({
           chevron's own edge. */}
       <div
         aria-hidden
-        className="absolute inset-0 bg-mauve-800"
+        className="absolute inset-0 bg-mauve-200"
         style={{ clipPath: STAT_CLIP }}
       />
       <Link
         href={href}
-        className={`${darkBg} relative block h-full w-full transition-[translate,filter] hover:-translate-x-1 hover:-translate-y-1`}
+        className={`${darkBg} relative block h-full w-full transition-[translate,filter] hover:-translate-x-3 hover:-translate-y-3`}
         style={{ clipPath: STAT_CLIP }}
       >
         <div
@@ -83,7 +91,7 @@ export default function StatCard({
           style={{ clipPath: STAT_CLIP_INNER }}
         />
         <div
-          className={`relative z-10 flex flex-col items-center gap-2 px-4 py-8 text-center sm:gap-3 sm:px-6 sm:py-10 ${textColor}`}
+          className={`relative z-10 flex flex-col items-center gap-2 px-4 py-6 text-center sm:gap-3 sm:px-6 sm:py-8 ${textColor}`}
         >
           <Icon className="size-8 sm:size-10" weight="fill" />
           <p className="text-base font-semibold opacity-80 sm:text-lg">

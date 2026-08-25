@@ -69,7 +69,7 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
           bg="bg-rose-400"
           darkBg="bg-rose-600"
           href="#mission"
-          zIndex={3}
+          zIndexClass="z-30"
         />
         <StatCard
           description="Weekly Workshops"
@@ -80,7 +80,7 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
           bg="bg-cyan-400"
           darkBg="bg-cyan-600"
           href="#events"
-          zIndex={2}
+          zIndexClass="z-20"
         />
         <StatCard
           description="Real Products"
@@ -91,7 +91,7 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
           bg="bg-amber-400"
           darkBg="bg-amber-600"
           href="#projects"
-          zIndex={1}
+          zIndexClass="z-10"
         />
       </SectionMarquee>
 

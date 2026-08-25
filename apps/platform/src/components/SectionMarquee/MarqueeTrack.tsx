@@ -79,7 +79,13 @@ export default function MarqueeTrack({
   }, []);
 
   return (
-    <div ref={rootRef} className={`overflow-hidden ${className ?? ""}`}>
+    // y stays visible so a hovered stat-card's lift isn't clipped at the
+    // strip's top/bottom edge; x stays hidden — that's what makes the loop
+    // read as an endless strip instead of COPIES stacked side by side.
+    <div
+      ref={rootRef}
+      className={`overflow-x-hidden overflow-y-visible ${className ?? ""}`}
+    >
       <div
         ref={trackRef}
         className="flex w-max"
