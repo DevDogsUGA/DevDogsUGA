@@ -16,6 +16,14 @@ interface SectionMarqueeProps {
   className?: string;
   duration?: number;
   copyZBase?: number;
+  /**
+   * Opts this marquee into the hover-invert interaction defined in
+   * globals.css: hovering one item dims every other item, in every looped
+   * copy. Meant for marquees whose items are individually meaningful links
+   * (e.g. the homepage's section-highlight cards), not the plain scrolling
+   * text strips.
+   */
+  hoverInvert?: boolean;
   children: ReactNode[];
   "aria-label"?: string;
 }
@@ -26,6 +34,7 @@ export default function SectionMarquee({
   className,
   duration = 100,
   copyZBase,
+  hoverInvert,
   children,
   "aria-label": ariaLabel,
 }: SectionMarqueeProps) {
@@ -46,6 +55,7 @@ export default function SectionMarquee({
     <div
       className={`w-full overflow-hidden ${bg} relative z-10 ${skewCls}`}
       aria-label={ariaLabel}
+      data-hover-invert={hoverInvert ?? undefined}
     >
       <MarqueeTrack
         duration={duration}

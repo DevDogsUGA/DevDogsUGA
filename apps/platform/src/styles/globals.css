@@ -306,6 +306,15 @@
   }
 }
 
+/* Hover-invert marquee: hovering one item dims every other item, across every
+   looped copy in the track. Plain `:has()` because Tailwind's `group-hover`
+   can only express "every descendant reacts the same way" — not "every
+   descendant except the one being hovered". Scoped by `data-hover-invert`
+   rather than a bare class so it opts in per `SectionMarquee` instance. */
+[data-hover-invert]:has(a:hover) a:not(:hover) {
+  filter: brightness(0.4);
+}
+
 @keyframes dialog-slide-in {
   from {
     transform: translateX(-100%);

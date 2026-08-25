@@ -57,6 +57,7 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         slope="bs"
         duration={50}
         copyZBase={10}
+        hoverInvert
         aria-label="Homepage sections"
       >
         <StatCard

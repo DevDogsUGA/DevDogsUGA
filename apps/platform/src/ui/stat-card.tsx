@@ -60,34 +60,44 @@ export default function StatCard({
   zIndex,
 }: Props) {
   return (
-    <Link
-      href={href}
-      className={`${darkBg} relative inline-block w-65 transition hover:brightness-95 sm:w-85`}
-      style={{
-        clipPath: STAT_CLIP,
-        marginRight: `-${CHEVRON_DEPTH}px`,
-        zIndex,
-      }}
+    <div
+      className="relative inline-block w-65 sm:w-85"
+      style={{ marginRight: `-${CHEVRON_DEPTH}px`, zIndex }}
     >
+      {/* Sits at the card's resting slot so lifting it on hover reveals a
+          block instead of a gap — a stand-in for `shadow-block-*`, which
+          `clip-path` would clip away before it ever pokes out past the
+          chevron's own edge. */}
       <div
-        className={`${bg} absolute inset-0`}
-        style={{ clipPath: STAT_CLIP_INNER }}
+        aria-hidden
+        className="absolute inset-0 bg-mauve-800"
+        style={{ clipPath: STAT_CLIP }}
       />
-      <div
-        className={`relative z-10 flex flex-col items-center gap-3 px-4 py-8 text-center sm:gap-4 sm:px-6 sm:py-10 ${textColor}`}
+      <Link
+        href={href}
+        className={`${darkBg} relative block h-full w-full transition-[translate,filter] hover:-translate-x-1 hover:-translate-y-1`}
+        style={{ clipPath: STAT_CLIP }}
       >
-        <Icon className="size-8 sm:size-10" weight="fill" />
-        <p className="text-base font-semibold opacity-80 sm:text-lg">
-          {description}
-        </p>
-        <p className="font-display text-3xl font-extrabold sm:text-5xl">
-          {title}
-        </p>
-        <p className="flex items-center gap-1.5 text-sm font-bold sm:text-base">
-          {cta}
-          <ArrowRightIcon className="text-sm" />
-        </p>
-      </div>
-    </Link>
+        <div
+          className={`${bg} absolute inset-0`}
+          style={{ clipPath: STAT_CLIP_INNER }}
+        />
+        <div
+          className={`relative z-10 flex flex-col items-center gap-2 px-4 py-8 text-center sm:gap-3 sm:px-6 sm:py-10 ${textColor}`}
+        >
+          <Icon className="size-8 sm:size-10" weight="fill" />
+          <p className="text-base font-semibold opacity-80 sm:text-lg">
+            {description}
+          </p>
+          <p className="font-display text-2xl font-extrabold sm:text-4xl">
+            {title}
+          </p>
+          <p className="flex items-center gap-1.5 text-sm font-bold sm:text-base">
+            {cta}
+            <ArrowRightIcon className="text-sm" />
+          </p>
+        </div>
+      </Link>
+    </div>
   );
 }
