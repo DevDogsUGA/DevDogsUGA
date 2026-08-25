@@ -56,6 +56,16 @@ function chevronClip(inset: number) {
 const STAT_CLIP = chevronClip(0);
 const STAT_CLIP_INNER = chevronClip(BORDER_W);
 
+/**
+ * Everything above the CTA steps back while the card is hovered, leaving the
+ * one line that says what the click does as the only thing at full strength.
+ * It waits out the lift on the arrow's delay and drops the moment the pointer
+ * goes, the same way round, so the arrow and the copy read as a single move
+ * rather than two effects that happen to overlap.
+ */
+const RECEDE_ON_HOVER =
+  "transition-opacity delay-0 group-hover:opacity-70 group-hover:delay-[450ms] motion-reduce:transition-none";
+
 interface Props {
   title: string;
   description: string;
@@ -131,8 +141,13 @@ export default function StatCard({
         <div
           className={`relative z-10 flex flex-col items-center gap-1.5 px-5 py-6 text-center sm:gap-2.5 sm:px-7 sm:py-7 ${textColor}`}
         >
-          <Icon className="size-8 sm:size-10" weight="fill" />
-          <p className="font-display flex flex-col items-center gap-0.5 sm:gap-1">
+          <Icon
+            className={`size-8 sm:size-10 ${RECEDE_ON_HOVER}`}
+            weight="fill"
+          />
+          <p
+            className={`font-display flex flex-col items-center gap-0.5 sm:gap-1 ${RECEDE_ON_HOVER}`}
+          >
             <span className="text-2xl font-extrabold sm:text-4xl">{title}</span>
             <span className="text-xs font-bold uppercase italic opacity-80 sm:text-sm">
               &ldquo;{description}&rdquo;
