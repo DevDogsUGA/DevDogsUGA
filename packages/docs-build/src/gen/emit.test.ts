@@ -491,7 +491,10 @@ describe("renderGroupPage", () => {
     expect(page).toContain("generated: true");
     // Exactly one h1 — it becomes the first entry of the page's TOC.
     expect(page.match(/^# /gm)).toHaveLength(1);
-    expect(page).toContain("**Generated**");
+    // A GitHub alert, not a bare blockquote: the marker has to be alone on
+    // the first line of the quote or the plugin leaves it as literal text in
+    // the paragraph, which looks like a typo rather than a callout.
+    expect(page).toContain("> [!NOTE]\n> **Generated**");
   });
 
   it("adds kind headings only when a page holds more than one kind", () => {

@@ -45,3 +45,37 @@ describe("parseDocFile order", () => {
     expect(parsed.frontmatter.order).toBe("first");
   });
 });
+
+/**
+ * `plainText` is what the search index is built from and what `ts_headline`
+ * cuts snippets out of, so anything reaching it unrendered surfaces in search
+ * results as literal markup. Every generated reference page opens with an
+ * alert, which made this the first thing a reader would see in those results.
+ */
+describe("parseDocFile plainText", () => {
+  it("drops the alert marker and keeps the alert's prose", () => {
+    const source =
+      "---\nname: Env\n---\n\n# Env\n\n> [!NOTE]\n> Generated from source.\n";
+    const { plainText } = parseDocFile(source, "env.md");
+
+    expect(plainText).not.toContain("[!NOTE]");
+    expect(plainText).toContain("Generated from source.");
+  });
+
+  it("drops every marker the renderer understands", () => {
+    for (const kind of ["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"]) {
+      const source = `---\nname: Env\n---\n\n# Env\n\n> [!${kind}]\n> Body.\n`;
+      const { plainText } = parseDocFile(source, "env.md");
+
+      expect(plainText).not.toContain("[!");
+      expect(plainText).toContain("Body.");
+    }
+  });
+
+  it("leaves a bracketed phrase that is not a marker alone", () => {
+    const source = "---\nname: Env\n---\n\n# Env\n\n> [!MAYBE] a quote.\n";
+    const { plainText } = parseDocFile(source, "env.md");
+
+    expect(plainText).toContain("[!MAYBE]");
+  });
+});

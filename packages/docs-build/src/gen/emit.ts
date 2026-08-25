@@ -239,9 +239,25 @@ function quote(value: string): string {
 /**
  * The line that makes a generated page legible as one. A reader who cannot
  * tell which pages are written will not trust either kind.
+ *
+ * A GitHub alert rather than a bare blockquote. Every hand-written aside in
+ * the corpus is one of these, so a plain `>` was the only quote-shaped thing
+ * on the site that rendered as an unstyled rule-and-indent — it read as
+ * something the author had quoted rather than as the page telling you what it
+ * is.
+ *
+ * NOTE, not WARNING or CAUTION, even though the sentence is about losing work.
+ * This banner is on all hundred-odd generated pages, and a red or amber bar at
+ * the top of every one of them is a thing readers learn to look past within a
+ * day — at which point the loud styling has cost the warning its audience. Its
+ * first job is to say what kind of page this is; the instruction follows from
+ * that.
  */
 function generatedNotice(sourceHint: string): string {
-  return `> **Generated** from ${sourceHint} by \`docs-build gen\`. Edits to this page are overwritten on the next build — change the doc comments in the source instead.`;
+  return [
+    "> [!NOTE]",
+    `> **Generated** from ${sourceHint} by \`docs-build gen\`. Edits to this page are overwritten on the next build — change the doc comments in the source instead.`,
+  ].join("\n");
 }
 
 function sourceLink(ref: SourceRef, options: EmitOptions): string {

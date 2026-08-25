@@ -44,6 +44,28 @@ const BLOCK_TYPES = new Set([
  * garbles ts_headline snippets. Recursing until the children are inline keeps
  * `toString`'s handling of emphasis, links, and inline code intact.
  */
+/**
+ * The GitHub alert markers, which are prose to this parser and a callout to
+ * the renderer.
+ *
+ * `remark-github-blockquote-alert` runs in the PLATFORM's pipeline, not this
+ * one — rendering is not this package's job — so a `> [!NOTE]` blockquote
+ * reaches `blockText` as a paragraph whose first line is the literal text
+ * `[!NOTE]`. Left in, it lands in `plainText`, which is what the search index
+ * is built from and what `ts_headline` cuts snippets out of, so a result for
+ * any generated reference page would open with `[!NOTE]` where its first
+ * sentence should be. Every one of those pages starts with an alert.
+ *
+ * Dropped rather than translated to "Note": the word is chrome the renderer
+ * draws, it is not something anybody searches for, and putting it in the index
+ * would only move the noise from the marker to the label.
+ */
+const ALERT_MARKER = /^\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\n?/gim;
+
+function stripAlertMarkers(text: string): string {
+  return text.replace(ALERT_MARKER, "");
+}
+
 function blockText(node: Node): string {
   const children = (node as Parent).children as Node[] | undefined;
   if (children?.some((child) => BLOCK_TYPES.has(child.type))) {
@@ -106,6 +128,6 @@ export function parseDocFile(source: string, fileName: string): ParsedDocFile {
     frontmatter,
     headings,
     content,
-    plainText: blockText(tree),
+    plainText: stripAlertMarkers(blockText(tree)),
   };
 }
