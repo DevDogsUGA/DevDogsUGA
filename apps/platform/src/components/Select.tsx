@@ -79,17 +79,31 @@ function SelectItem({ children, icon, description, ...props }: ItemProps) {
   return (
     <SelectPrimitive.Item
       className={cn(
-        "relative flex cursor-default gap-2 py-1.5 pr-3 pl-8 text-sm text-white select-none focus:bg-mauve-700 focus:outline-none data-disabled:pointer-events-none data-disabled:opacity-40",
+        "relative flex cursor-default gap-2 pr-3 pl-8 text-sm text-white select-none focus:outline-none data-disabled:pointer-events-none data-disabled:opacity-40",
         // A described row is two lines tall, so its check and mark align to
         // the label rather than to the middle of the pair.
-        description ? "items-start" : "items-center",
+        description
+          ? // Matched to the navbar's Docs menu row, so the two project lists
+            // read as one control in two places: same vertical rhythm, same
+            // rounded highlight inset from the panel edge, same hover fill.
+            // The check gutter is the one thing that does not carry over — a
+            // menu of links marks the current page with a background, and a
+            // select has to say which option is chosen even while another is
+            // hovered.
+            "mx-1 items-start rounded-md py-2 focus:bg-mauve-800"
+          : "items-center py-1.5 focus:bg-mauve-700",
       )}
       {...props}
     >
       <span
         className={cn(
           "absolute left-2.5 flex items-center",
-          description && "top-2",
+          // Boxed to the first row's height and aligned to its top, rather
+          // than nudged down by a magic offset: the row is as tall as the
+          // mark when there is one and as tall as the label when there is
+          // not, and centring inside that box lands the check on the label
+          // either way.
+          description && "top-2 h-6",
         )}
       >
         <SelectPrimitive.ItemIndicator>
@@ -106,7 +120,15 @@ function SelectItem({ children, icon, description, ...props }: ItemProps) {
       >
         <SelectPrimitive.ItemText>
           {icon ? (
-            <span className="flex items-center gap-2">
+            // gap-2.5 and `font-medium` are the navbar row's, not this
+            // component's own taste — the two lists sit one above the other on
+            // a docs page and any difference reads as a mistake.
+            <span
+              className={cn(
+                "flex items-center gap-2.5",
+                description && "font-medium",
+              )}
+            >
               {icon}
               {children}
             </span>
@@ -115,7 +137,20 @@ function SelectItem({ children, icon, description, ...props }: ItemProps) {
           )}
         </SelectPrimitive.ItemText>
         {description && (
-          <span className="text-xs/relaxed text-mauve-400">{description}</span>
+          <span
+            className={cn(
+              "text-xs/relaxed text-mauve-400",
+              // Under the NAME, not under the mark. The navbar puts its mark
+              // beside a name+description column, so both lines share a left
+              // edge; here the mark has to live inside ItemText to reach the
+              // trigger, which would otherwise leave the description starting
+              // a mark-width to the left of the name it belongs to. 2.125rem
+              // is the mark (size-6) plus the gap-2.5 above.
+              icon && "pl-[2.125rem]",
+            )}
+          >
+            {description}
+          </span>
         )}
       </span>
     </SelectPrimitive.Item>
@@ -138,7 +173,11 @@ function SelectGroup({
 }) {
   return (
     <SelectPrimitive.Group>
-      <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
+      {/* `pl-9` lands the heading over the marks below it, the way the navbar
+          menu's heading sits over its own: 4px of item margin plus the 32px
+          check gutter. Aligning it to the panel edge instead would leave every
+          heading a gutter-width left of everything it labels. */}
+      <SelectPrimitive.Label className="pt-2 pr-3 pb-1 pl-9 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
         {label}
       </SelectPrimitive.Label>
       {children}
