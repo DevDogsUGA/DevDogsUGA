@@ -141,36 +141,41 @@ export default function StatCard({
 }
 
 /**
- * The CTA arrow: a shaft that is an ordinary box and a head that stays an SVG.
+ * The CTA arrow: the shaft *is* the element, and the head hangs off its end.
  *
- * Split that way because the growth has to move the text. The shaft's *width*
- * is what animates, so the flex row above genuinely gets wider and, being
- * centred, pushes the label out to the left as the arrow reaches right. The
- * earlier version scaled the shaft with a transform, which paints longer
- * without occupying more space — the line never moved. A transform also cannot
- * grow one axis of an arrowhead without shearing it, which is why only the
- * shaft stretches and the head stays a fixed, undistorted glyph.
+ * The shaft's width is what animates, so the flex row above genuinely gets
+ * wider and, being centred, pushes the label out to the left as the arrow
+ * reaches right. A transform would paint longer without occupying more space
+ * and the line would never move — and it cannot grow one axis of an arrowhead
+ * without shearing it either, which is why the head stays a fixed glyph.
  *
- * The head keeps its own aspect ratio: give it a height and no width, and the
- * viewBox sizes it. Stroke weight is tuned so it lands on the shaft's 1.5px —
- * 2.6 units of a 24-unit box drawn 14px tall — which is why the head has no
- * responsive size of its own. The two would drift apart at the breakpoint and
- * the join would show.
+ * The head is positioned rather than laid out beside the shaft, because a
+ * chevron only has material at its apex along the centreline the shaft runs
+ * down. Set side by side, the shaft stopped at the head's *box* and the ~5px
+ * from there to the apex read as a gap in the arrow. Anchoring the box's right
+ * edge to the shaft's end, with the apex drawn on that edge, is what makes the
+ * two one stroke — no offset to keep in sync with the head's size.
+ *
+ * Its own size stays fixed at every breakpoint: the stroke weight is chosen to
+ * land on the shaft's 1.75px at 14px tall (3 units of a 24-unit box), and the
+ * two would drift apart at a breakpoint and show the join.
  */
 function CtaArrow() {
   return (
-    <span aria-hidden className="inline-flex shrink-0 items-center">
-      {/* Rounded on both ends; the head overlaps it by a pixel so the cap
-          never reads as a seam. */}
-      <span className="h-[1.5px] w-2.5 shrink-0 rounded-full bg-current transition-[width] group-hover:w-5 motion-reduce:transition-none sm:w-3 sm:group-hover:w-6" />
+    <span
+      aria-hidden
+      className="relative inline-block h-[1.75px] w-2.5 shrink-0 rounded-full bg-current transition-[width] group-hover:w-5 group-hover:delay-150 motion-reduce:transition-none sm:w-3 sm:group-hover:w-6"
+    >
+      {/* overflow-visible so the round join at the apex isn't shaved off by
+          the viewBox edge it sits on. */}
       <svg
-        viewBox="0 0 11 24"
+        viewBox="0 0 9 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth={2.6}
+        strokeWidth={3}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="-ml-px h-3.5 w-auto shrink-0"
+        className="absolute top-1/2 right-0 h-3.5 w-auto -translate-y-1/2 overflow-visible"
       >
         <polyline points="2 5.5 9 12 2 18.5" />
       </svg>

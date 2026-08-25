@@ -24,6 +24,8 @@ interface SectionMarqueeProps {
    * text strips.
    */
   hoverInvert?: boolean;
+  /** See {@link MarqueeTrack}'s prop of the same name. */
+  keepHoveredInView?: boolean;
   children: ReactNode[];
   "aria-label"?: string;
 }
@@ -35,6 +37,7 @@ export default function SectionMarquee({
   duration = 100,
   copyZBase,
   hoverInvert,
+  keepHoveredInView,
   children,
   "aria-label": ariaLabel,
 }: SectionMarqueeProps) {
@@ -61,6 +64,7 @@ export default function SectionMarquee({
         duration={duration}
         direction={direction}
         copyZBase={copyZBase}
+        keepHoveredInView={keepHoveredInView}
         className={className}
       >
         {indexedChildren}

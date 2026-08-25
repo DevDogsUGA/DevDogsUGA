@@ -58,6 +58,7 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         duration={50}
         copyZBase={10}
         hoverInvert
+        keepHoveredInView
         aria-label="Homepage sections"
       >
         <StatCard
