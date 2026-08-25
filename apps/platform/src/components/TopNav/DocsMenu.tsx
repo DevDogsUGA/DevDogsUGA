@@ -2,8 +2,9 @@
 
 import { CaretDownIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DocsProjectMark from "~/components/DocsProjectMark";
+import { groupDocsProjects } from "~/config/docs";
 
 /** One docs project, as listed in the navbar menu. */
 export interface DocsProjectLink {
@@ -38,6 +39,7 @@ export default function DocsMenu({
   className,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const groups = useMemo(() => groupDocsProjects(projects), [projects]);
   const triggerRef = useRef<HTMLAnchorElement>(null);
   // Escape hands focus back to the trigger, and focus is what opens the menu —
   // so it stays dismissed until the pointer or focus leaves and comes back.
@@ -97,26 +99,39 @@ export default function DocsMenu({
       {open && (
         <div className="absolute top-full left-0 pt-2">
           <div className="animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 w-80 origin-top rounded-lg border border-mauve-800 bg-mauve-950 p-1 shadow-lg duration-150 ease-out">
-            {projects.map((project) => (
-              <Link
-                key={project.slug}
-                href={`/docs/${encodeURIComponent(project.slug)}`}
-                aria-current={project.slug === activeSlug ? "page" : undefined}
-                onClick={() => setOpen(false)}
-                className="flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors outline-none hover:bg-mauve-800 focus-visible:bg-mauve-800 aria-[current=page]:bg-mauve-800/60"
-              >
-                <DocsProjectMark slug={project.slug} />
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="text-sm font-medium text-white">
-                    {project.name}
-                  </span>
-                  {project.description && (
-                    <span className="text-xs/relaxed text-mauve-400">
-                      {project.description}
+            {groups.map((group) => (
+              // A plain group + label rather than a role="menu" tree: these are
+              // links the tab order already walks in this order, and naming
+              // them menuitems would promise arrow-key navigation the trigger
+              // deliberately does not implement.
+              <div key={group.id} role="group" aria-label={group.label}>
+                <p className="px-2.5 pt-2 pb-1 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
+                  {group.label}
+                </p>
+                {group.projects.map((project) => (
+                  <Link
+                    key={project.slug}
+                    href={`/docs/${encodeURIComponent(project.slug)}`}
+                    aria-current={
+                      project.slug === activeSlug ? "page" : undefined
+                    }
+                    onClick={() => setOpen(false)}
+                    className="flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors outline-none hover:bg-mauve-800 focus-visible:bg-mauve-800 aria-[current=page]:bg-mauve-800/60"
+                  >
+                    <DocsProjectMark slug={project.slug} />
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-sm font-medium text-white">
+                        {project.name}
+                      </span>
+                      {project.description && (
+                        <span className="text-xs/relaxed text-mauve-400">
+                          {project.description}
+                        </span>
+                      )}
                     </span>
-                  )}
-                </span>
-              </Link>
+                  </Link>
+                ))}
+              </div>
             ))}
           </div>
         </div>
