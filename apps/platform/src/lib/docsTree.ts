@@ -38,7 +38,14 @@ export type DocsTreeNode = DocsTreePage | DocsTreeFolder;
  */
 const DEFAULT_ORDER = 100;
 
-function isIndexPage(node: DocsTreeNode): boolean {
+/**
+ * Whether a node is the page its folder itself resolves to.
+ *
+ * Exported because the sidebar relabels exactly these rows — see
+ * `DOCS_INDEX_LABEL` — and a second definition of "is this the index" would be
+ * free to disagree with the one that decides sort order right below.
+ */
+export function isIndexPage(node: DocsTreeNode): boolean {
   if (node.type !== "page") return false;
   const name = node.path.split("/").at(-1)!.toLowerCase();
   return name === "index" || name === "readme";

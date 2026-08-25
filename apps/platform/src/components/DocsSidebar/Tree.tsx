@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import { CaretRightIcon } from "@phosphor-icons/react/ssr";
+import { DOCS_INDEX_LABEL } from "~/config/docs";
 import { docsHref } from "~/lib/docsSlug";
-import type { DocsTreeFolder, DocsTreeNode } from "~/lib/docsTree";
+import {
+  isIndexPage,
+  type DocsTreeFolder,
+  type DocsTreeNode,
+} from "~/lib/docsTree";
 import { cn } from "~/lib/cn";
 import {
   Collapsible,
@@ -27,10 +32,46 @@ function contains(folder: DocsTreeFolder, activePath: string) {
 }
 
 /**
+ * The disclosure control, drawn AFTER the label so it lands on the right edge
+ * of the row — the label is `flex-1`, so the caret is pushed to the rail every
+ * row shares. Left of the label it sat at a different x on every nesting
+ * level, which read as ragged rather than as depth; the indent already says
+ * how deep a row is, and the caret only has to say whether it opens.
+ *
+ * It stays a separate control from the link beside it, which is the reason
+ * this is not simply a `<summary>`: the label navigates and the caret expands,
+ * and a reader who wants the section's own page should not have to avoid a
+ * toggle to reach it.
+ */
+function Caret({ label, className }: { label: string; className: string }) {
+  return (
+    <CollapsibleTrigger
+      aria-label={`Toggle ${label}`}
+      className="group flex size-5 shrink-0 items-center justify-center rounded-sm text-mauve-500 transition-colors hover:bg-mauve-800 hover:text-white"
+    >
+      <CaretRightIcon
+        className={cn(
+          "transition-transform group-data-[state=open]:rotate-90",
+          className,
+        )}
+      />
+    </CollapsibleTrigger>
+  );
+}
+
+/**
  * A first-level folder: a section heading over the pages it holds, rather
  * than another row in the list. The caret is its own control so the label can
  * stay a link — selecting the section itself shows what is inside it, which
  * for a folder with no index page of its own is a grid of its contents.
+ *
+ * Open by default, always, rather than only when it holds the current page.
+ * A tree that opens exactly one section shows a reader the part they already
+ * found and hides the rest behind carets they have to think to press; the
+ * sections are the table of contents, and a table of contents that is closed
+ * is not doing its job. Deeper folders still open on the active path only —
+ * see `Folder` — because those are where the page counts get large enough for
+ * open-everything to become its own kind of unreadable.
  */
 function Section({
   folder,
@@ -42,14 +83,8 @@ function Section({
   const active = ctx.activePath === folder.path;
 
   return (
-    <Collapsible defaultOpen={contains(folder, ctx.activePath)}>
+    <Collapsible defaultOpen>
       <div className="flex items-center gap-0.5">
-        <CollapsibleTrigger
-          aria-label={`Toggle ${folder.name}`}
-          className="group flex size-5 shrink-0 items-center justify-center rounded-sm text-mauve-500 transition-colors hover:bg-mauve-800 hover:text-white"
-        >
-          <CaretRightIcon className="size-3 transition-transform group-data-[state=open]:rotate-90" />
-        </CollapsibleTrigger>
         <Link
           href={docsHref(ctx.project, folder.path.split("/"))}
           data-active={active || undefined}
@@ -60,6 +95,7 @@ function Section({
         >
           {folder.name}
         </Link>
+        <Caret label={folder.name} className="size-3" />
       </div>
       <CollapsibleContent>
         <Nodes nodes={folder.children} ctx={ctx} depth={1} />
@@ -83,12 +119,6 @@ function Folder({
   return (
     <Collapsible defaultOpen={contains(folder, ctx.activePath)}>
       <div className="flex items-center gap-0.5">
-        <CollapsibleTrigger
-          aria-label={`Toggle ${folder.name}`}
-          className="group flex size-5 shrink-0 items-center justify-center rounded-sm text-mauve-500 transition-colors hover:bg-mauve-800 hover:text-white"
-        >
-          <CaretRightIcon className="size-3.5 transition-transform group-data-[state=open]:rotate-90" />
-        </CollapsibleTrigger>
         <Link
           href={docsHref(ctx.project, folder.path.split("/"))}
           data-active={active || undefined}
@@ -99,6 +129,7 @@ function Folder({
         >
           {folder.name}
         </Link>
+        <Caret label={folder.name} className="size-3.5" />
       </div>
       <CollapsibleContent className="ml-3 border-l border-mauve-800 pl-1.5">
         <Nodes nodes={folder.children} ctx={ctx} depth={depth + 1} />
@@ -114,13 +145,21 @@ function Page({
   page: DocsTreeNode & { type: "page" };
   ctx: TreeContext;
 }) {
+  // An index page keeps its real title everywhere else and gives it up here;
+  // in the sidebar that title is already on the folder row above it, or in the
+  // project switcher when the page is the project's own root.
+  const label = isIndexPage(page) ? DOCS_INDEX_LABEL : page.title;
+
   return (
     <Link
       href={docsHref(ctx.project, page.path.split("/"))}
       data-active={page.path === ctx.activePath || undefined}
+      // The relabelled row is the one place the sidebar shows a name the page
+      // does not answer to, so the real one stays reachable on hover.
+      title={label === page.title ? undefined : page.title}
       className={cn(PAGE_LINK, ACTIVE_LINK)}
     >
-      {page.title}
+      {label}
     </Link>
   );
 }

@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { SidebarIcon } from "@phosphor-icons/react/ssr";
+import { groupDocsProjects } from "~/config/docs";
 import type { DocsTreeNode } from "~/lib/docsTree";
 import DocsProjectMark from "~/components/DocsProjectMark";
 import Select from "~/components/Select";
@@ -36,6 +37,8 @@ function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
     [pathname],
   );
 
+  const groups = useMemo(() => groupDocsProjects(projects), [projects]);
+
   function onProjectChange(slug: string) {
     router.push(`/docs/${encodeURIComponent(slug)}`);
   }
@@ -53,15 +56,19 @@ function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
           aria-label="Project"
           className="w-full"
         >
-          {projects.map((p) => (
-            <Select.Item
-              key={p.slug}
-              value={p.slug}
-              icon={<DocsProjectMark slug={p.slug} />}
-              description={p.description ?? undefined}
-            >
-              {p.name}
-            </Select.Item>
+          {groups.map((group) => (
+            <Select.Group key={group.id} label={group.label}>
+              {group.projects.map((p) => (
+                <Select.Item
+                  key={p.slug}
+                  value={p.slug}
+                  icon={<DocsProjectMark slug={p.slug} />}
+                  description={p.description ?? undefined}
+                >
+                  {p.name}
+                </Select.Item>
+              ))}
+            </Select.Group>
           ))}
         </Select>
       )}

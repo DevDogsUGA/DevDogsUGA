@@ -1110,3 +1110,117 @@
 .prose .markdown-alert-caution {
   --alert-accent: var(--destructive);
 }
+
+/* Collapsibles (`<details>`), which every guide uses to hold the layer of
+   detail a first read should skip. Styled as a callout in the same family as
+   the alerts above — same radius, same tinted fill, same optical weight — so
+   the page reads as one system rather than as prose with a raw browser widget
+   dropped into it. The distinction from an alert is deliberate and carried by
+   one property: alerts have a heavy left border because they interrupt, and
+   these are outlined on all four sides because they are a container you open.
+
+   Neutral, and only neutral. The alert colors encode severity, and a
+   collapsible has none — coloring one would say "this is important" about the
+   material the author specifically set aside. */
+.prose details {
+  --details-accent: var(--color-mauve-400);
+  margin-block: 1.25em;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 4px);
+  background-color: color-mix(
+    in oklch,
+    var(--details-accent),
+    var(--background) 92%
+  );
+  /* Horizontal only. The summary cancels it to span the full width, and the
+     bottom gap belongs to the last child so a closed box is exactly the height
+     of its own summary. */
+  padding-inline: 1rem;
+}
+
+.prose details > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-inline: -1rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--foreground);
+  cursor: pointer;
+  /* Both spellings: `::marker` is the standard and `::-webkit-details-marker`
+     is what older WebKit still draws. Missing either leaves a stray triangle
+     beside the caret below. */
+  list-style: none;
+}
+
+.prose details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.prose details > summary::marker {
+  content: "";
+}
+
+.prose details > summary:hover {
+  color: var(--details-accent);
+}
+
+.prose details > summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+  border-radius: calc(var(--radius) - 6px);
+}
+
+/* The caret, drawn from two borders rather than shipped as an icon: this
+   stylesheet is reached by markdown that React never sees as components, so
+   there is nowhere to hang an SVG. Rotating the square moves its optical
+   centre off the text baseline, which the translate puts back. */
+.prose details > summary::before {
+  content: "";
+  flex: none;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-right: 2px solid var(--details-accent);
+  border-bottom: 2px solid var(--details-accent);
+  transform: translateY(-0.125rem) rotate(-45deg);
+  transition: transform 150ms ease;
+}
+
+.prose details[open] > summary::before {
+  transform: translateY(-0.0625rem) rotate(45deg);
+}
+
+/* The rule under an OPEN summary only. Closed, it would draw a line across the
+   bottom of a box with nothing under it. */
+.prose details[open] > summary {
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.prose details > summary + * {
+  margin-top: 0;
+}
+
+.prose details > :last-child {
+  margin-bottom: 1rem;
+}
+
+/* A summary is a heading in every way but tag, and inline code inside one
+   should not fight the weight it sits in. */
+.prose details > summary code {
+  font-weight: 500;
+}
+
+/* Nested collapsibles step the fill one shade further from the page so the
+   inner box is still visible against the outer one. */
+.prose details details {
+  --details-accent: var(--color-mauve-500);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prose details > summary::before {
+    transition: none;
+  }
+}

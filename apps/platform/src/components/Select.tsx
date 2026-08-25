@@ -122,4 +122,28 @@ function SelectItem({ children, icon, description, ...props }: ItemProps) {
   );
 }
 
-export default Object.assign(Select, { Item: SelectItem });
+/**
+ * A labelled run of items.
+ *
+ * Radix's Group is what ties the heading to its rows for assistive tech — the
+ * Label is announced as the group's name rather than read as another option —
+ * so this is a real grouping and not a styled separator row.
+ */
+function SelectGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <SelectPrimitive.Group>
+      <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
+        {label}
+      </SelectPrimitive.Label>
+      {children}
+    </SelectPrimitive.Group>
+  );
+}
+
+export default Object.assign(Select, { Item: SelectItem, Group: SelectGroup });
