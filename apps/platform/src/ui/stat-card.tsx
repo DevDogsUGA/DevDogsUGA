@@ -109,7 +109,7 @@ export default function StatCard({
           chevron's own edge. */}
       <div
         aria-hidden
-        className="absolute inset-0 bg-mauve-200"
+        className="absolute inset-0 bg-mauve-800"
         style={{ clipPath: STAT_CLIP }}
       />
       <Link
