@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "next build",
-    "dev": "with-env next dev",
+    "dev": "with-env next dev --experimental-https",
     "start": "next start",
     "preview": "next build && next start",
     "lint": "eslint src",

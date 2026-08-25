@@ -23,103 +23,79 @@ const MISSION_BLOBS: BlobDef[] = [
 const STAR_BOX =
   "pointer-events-none absolute inset-1/2 aspect-square size-[min(100cqh,100cqw)] -mt-4 -translate-1/2 md:-mt-6";
 
-/** One falling spark. Positions are percentages of the star's own box; `fall`
-    and `drift` are the distance travelled before it burns out. */
-interface SparkDef {
-  left: string;
-  top: string;
-  width: string;
-  height: string;
-  drift: string;
-  fall: string;
-  delay: string;
-  duration: string;
-  color: string;
+/* ── The shadow, and everything aimed along it ────────────────────────────
+   These three offsets are the only place the star's shadow direction is
+   written down. CSS filter functions pipe each result into the next, so the
+   drop-shadow copies compound rather than overlap: the outermost one lands at
+   the running sum, (12px, 30px) -- measured, by rendering the chain and
+   scanning the raster, not just derived. Both the filter string and the angle
+   the sparks fall at come from this array, so retuning the shadow re-aims the
+   shower and the two can never disagree. */
+const SHADOW_STEPS = [
+  { x: 3, y: 8, color: "var(--color-cyan-500)" },
+  { x: 4, y: 10, color: "var(--color-indigo-700)" },
+  { x: 5, y: 12, color: "var(--color-mauve-800)" },
+] as const;
+
+const STAR_SHADOW_FILTER = SHADOW_STEPS.map(
+  (step) => `drop-shadow(${step.x}px ${step.y}px 0 ${step.color})`,
+).join(" ");
+
+const SHADOW_TIP = SHADOW_STEPS.reduce(
+  (tip, step) => ({ x: tip.x + step.x, y: tip.y + step.y }),
+  { x: 0, y: 0 },
+);
+
+/* Negated on purpose. CSS rotate(a) resolves to matrix(cos a, sin a, -sin a,
+   cos a, 0, 0), so rotating a straight-down vector by a POSITIVE angle moves it
+   left: rotate(21.8deg) translate3d(0, 120px, 0) comes out at dx = -44.6. The
+   shadow leans right, so the sparks rotate by -21.8deg to lean right with it. */
+const SPARK_ANGLE_DEG =
+  (-Math.atan2(SHADOW_TIP.x, SHADOW_TIP.y) * 180) / Math.PI;
+
+/* Pale bodies with white heads, and a dark rim from the CSS below. The first
+   version painted its sparks in the same three colours as the shadow slab they
+   fall through, so a cyan-500 spark crossing the cyan-500 band measured 1.00:1
+   -- invisible by construction, however big it got. This pairing clears 8:1
+   against every backdrop in the section: the white head carries the dark
+   indigo/mauve bands, the rim carries the near-white base and the cyan one. */
+const SPARK_TINTS = [
+  "var(--color-cyan-200)",
+  "var(--color-indigo-200)",
+  "var(--color-white)",
+] as const;
+
+/* Fixed-seed PRNG rather than Math.random: server and browser have to emit
+   byte-identical markup or React throws the tree away as a hydration mismatch.
+   Deterministic also means the shower looks the same on every deploy, so
+   tuning it stays a code change rather than a coin flip. */
+function mulberry32(seed: number) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-/* Spawn points sit on the star's lower half and the colours are the same three
-   the block shadow casts, so the shower reads as the star shedding itself.
-   Every spark carries its own delay and duration -- shared timing makes a rank
-   of dots dropping in unison, not a shower. */
-const STAR_SPARKS: SparkDef[] = [
-  {
-    left: "24%",
-    top: "60%",
-    width: "0.3rem",
-    height: "1.1rem",
-    drift: "-0.7rem",
-    fall: "3.6rem",
-    delay: "0s",
-    duration: "3.4s",
-    color: "var(--color-cyan-500)",
-  },
-  {
-    left: "38%",
-    top: "72%",
-    width: "0.25rem",
-    height: "0.9rem",
-    drift: "0.5rem",
-    fall: "2.8rem",
-    delay: "0.9s",
-    duration: "2.8s",
-    color: "var(--color-indigo-700)",
-  },
-  {
-    left: "50%",
-    top: "78%",
-    width: "0.35rem",
-    height: "1.4rem",
-    drift: "-0.3rem",
-    fall: "4.4rem",
-    delay: "0.4s",
-    duration: "3.9s",
-    color: "var(--color-mauve-800)",
-  },
-  {
-    left: "61%",
-    top: "68%",
-    width: "0.3rem",
-    height: "1rem",
-    drift: "0.9rem",
-    fall: "3.2rem",
-    delay: "1.7s",
-    duration: "3.1s",
-    color: "var(--color-cyan-500)",
-  },
-  {
-    left: "74%",
-    top: "58%",
-    width: "0.25rem",
-    height: "1.2rem",
-    drift: "0.4rem",
-    fall: "4rem",
-    delay: "2.3s",
-    duration: "3.6s",
-    color: "var(--color-indigo-700)",
-  },
-  {
-    left: "32%",
-    top: "84%",
-    width: "0.25rem",
-    height: "0.8rem",
-    drift: "-1rem",
-    fall: "2.4rem",
-    delay: "1.3s",
-    duration: "2.6s",
-    color: "var(--color-mauve-800)",
-  },
-  {
-    left: "68%",
-    top: "82%",
-    width: "0.3rem",
-    height: "1rem",
-    drift: "0.2rem",
-    fall: "3rem",
-    delay: "2.9s",
-    duration: "3.3s",
-    color: "var(--color-cyan-500)",
-  },
-];
+const spark = mulberry32(0x5eed);
+
+/* Every dimension is in cqmin -- percent of the star's own box -- because the
+   star is sized in container units and the first version's sparks were sized in
+   rem. They stayed 4px wide while the star grew from 256px to 336px, so the
+   shower quietly shrank to a third of a percent of the viewport on desktop. */
+const STAR_SPARKS = Array.from({ length: 16 }, (_, i) => ({
+  left: `${(16 + spark() * 68).toFixed(1)}%`,
+  top: `${(38 + spark() * 46).toFixed(1)}%`,
+  width: `${(2 + spark() * 1.2).toFixed(2)}cqmin`,
+  height: `${(8.5 + spark() * 6.5).toFixed(2)}cqmin`,
+  fall: `${(40 + spark() * 34).toFixed(1)}cqmin`,
+  duration: `${(1.6 + spark() * 0.9).toFixed(2)}s`,
+  delay: `${(spark() * 2.6).toFixed(2)}s`,
+  // Where a frozen spark sits when the viewer asks for reduced motion.
+  rest: (0.25 + spark() * 0.5).toFixed(2),
+  tint: SPARK_TINTS[i % SPARK_TINTS.length]!,
+}));
 
 function SpinStarImage() {
   return (
@@ -127,13 +103,56 @@ function SpinStarImage() {
       className="@container-[size] relative h-64 min-w-64 grow md:-my-6 md:h-auto"
       aria-hidden="true"
     >
-      {/* Weighted downward rather than evenly diagonal: chained drop-shadows
-          compound, so these three stack to a 12px sideways / 30px vertical
-          offset -- the same depth as before, read as the star hanging over the
-          section instead of leaning out of it. */}
+      {/* Deliberately a sibling of the star rather than a child: a filter
+          applies to the whole subtree, so sparks nested under the drop-shadow
+          would each trail three offset copies of themselves.
+
+          It sits before the star in the DOM on purpose. Both layers are
+          positioned at z-index auto, so document order is what decides which
+          one paints on top -- putting the sparks first drops them behind the
+          star and its shadow with no z-index anywhere. The star is clipped to
+          its polygon, so sparks show through the gaps between the arms and
+          duck behind the arms themselves as it turns. */}
       <div
-        className={`${STAR_BOX} drop-shadow-[3px_8px_0_var(--color-cyan-500),4px_10px_0_var(--color-indigo-700),5px_12px_0_var(--color-mauve-800)]`}
+        className={STAR_BOX}
+        style={
+          {
+            "--spark-angle": `${SPARK_ANGLE_DEG.toFixed(2)}deg`,
+          } as CSSProperties
+        }
       >
+        {STAR_SPARKS.map((s, i) => (
+          <span
+            key={i}
+            data-spark
+            className="absolute rounded-full"
+            style={
+              {
+                left: s.left,
+                top: s.top,
+                width: s.width,
+                height: s.height,
+                // Never starts at zero alpha: the rim below is drawn around the
+                // whole capsule, so a fully transparent tail would leave a
+                // hollow outline chasing the head.
+                backgroundImage: `linear-gradient(to bottom, color-mix(in oklab, ${s.tint} 40%, transparent), ${s.tint} 55%, var(--color-white))`,
+                // Dark rim so a pale spark still reads against the pale section,
+                // faint bloom so it separates from the mid-tone blobs.
+                boxShadow:
+                  "0 0 0 1px var(--color-mauve-950), 0 0 6px color-mix(in oklab, var(--color-cyan-100) 60%, transparent)",
+                "--spark-fall": s.fall,
+                "--spark-duration": s.duration,
+                "--spark-delay": s.delay,
+                "--spark-rest": s.rest,
+              } as CSSProperties
+            }
+          />
+        ))}
+      </div>
+      {/* Weighted downward rather than evenly diagonal: the chained offsets
+          stack to 12px sideways against 30px down, so the star reads as
+          hanging over the section instead of leaning out of it. */}
+      <div className={STAR_BOX} style={{ filter: STAR_SHADOW_FILTER }}>
         <svg
           viewBox="0 0 100 100"
           xmlns="http://www.w3.org/2000/svg"
@@ -155,33 +174,6 @@ function SpinStarImage() {
             clipPath="url(#todo-replaceme-clipPath)"
           />
         </svg>
-      </div>
-
-      {/* Deliberately a sibling of the star rather than a child: a filter
-          applies to the whole subtree, so sparks nested under the drop-shadow
-          would each trail three offset copies of themselves. */}
-      <div className={`${STAR_BOX} motion-reduce:hidden`}>
-        {STAR_SPARKS.map((spark, i) => (
-          <span
-            key={i}
-            className="animate-star-spark absolute rounded-full"
-            style={
-              {
-                left: spark.left,
-                top: spark.top,
-                width: spark.width,
-                height: spark.height,
-                // Transparent at the tail, solid at the head, so the spark
-                // points the way it is falling.
-                backgroundImage: `linear-gradient(to bottom, transparent, ${spark.color})`,
-                animationDelay: spark.delay,
-                animationDuration: spark.duration,
-                "--spark-drift": spark.drift,
-                "--spark-fall": spark.fall,
-              } as CSSProperties
-            }
-          />
-        ))}
       </div>
     </div>
   );

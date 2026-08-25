@@ -49,7 +49,6 @@
   --animate-march-dashes: march-dashes 1.4s linear infinite;
   --animate-spin-slow: spin 10s linear infinite;
   --animate-spin-slower: spin 20s linear infinite;
-  --animate-star-spark: star-spark 3s cubic-bezier(0.4, 0, 0.9, 0.55) infinite;
   --animate-modal-overlay-in: modal-overlay-in 180ms ease-out;
   --animate-modal-overlay-out: modal-overlay-out 150ms ease-in;
   --animate-modal-content-in: modal-content-in 220ms
@@ -499,30 +498,69 @@
   }
 }
 
-/* Sparks shed by the mission section's spinning star. Each one fades in at its
-   spawn point on the star, then falls --spark-fall while drifting
-   --spark-drift sideways. The vertical stretch is what sells it as a shooting
-   star: without it each spark reads as a dot being slid down the page. Per-spark
-   distance, delay and duration come from the call site so the shower never
-   drops in step. */
-@keyframes star-spark {
-  0% {
-    opacity: 0;
-    transform: translate3d(0, 0, 0) scaleY(0.4);
+/* ── Mission-section star sparks ───────────────────────────────────────────
+   The star sheds sparks along the same axis its block shadow falls on.
+   MissionSection computes that angle from the shadow offsets themselves and
+   passes it in as --spark-angle, ALREADY NEGATED: CSS rotate(a) maps (0, fall)
+   to (-sin a · fall, cos a · fall), so a positive angle drives the spark left,
+   away from the very shadow it is meant to trace.
+
+   Travel and fade are two animations rather than one because a single
+   @keyframes rule applies one timing function to every property it touches.
+   That is what killed the first version: on an ease-in curve the spark covered
+   only 4%→37% of its path during the window it was fully opaque, so it was
+   bright while nearly stationary and did all its travelling while fading out.
+   Travel is linear; the fade keeps its own curve.
+
+   Rotating before translating puts both the travel and the scaleY stretch in
+   the spark's own frame, so it always points down the axis it is falling.
+
+   backwards fill matters more than it looks. Without it, a spark spends its
+   stagger delay -- up to 2.6s -- painted at its own untransformed, fully
+   opaque resting state: sixteen bright capsules parked on the star before any
+   of them move. backwards borrows the from keyframe during the delay, so each
+   spark waits invisible and arrives on cue. */
+[data-spark] {
+  animation:
+    star-spark-travel var(--spark-duration) linear var(--spark-delay) infinite,
+    star-spark-fade var(--spark-duration) ease-out var(--spark-delay) infinite;
+  animation-fill-mode: backwards;
+}
+
+@keyframes star-spark-travel {
+  from {
+    transform: rotate(var(--spark-angle)) translate3d(0, 0, 0) scaleY(0.6);
   }
 
-  20% {
-    opacity: 1;
+  to {
+    transform: rotate(var(--spark-angle)) translate3d(0, var(--spark-fall), 0)
+      scaleY(1.15);
   }
+}
 
-  65% {
-    opacity: 1;
-  }
-
+@keyframes star-spark-fade {
+  0%,
   100% {
     opacity: 0;
-    transform: translate3d(var(--spark-drift, 0), var(--spark-fall, 3rem), 0)
-      scaleY(1.5);
+  }
+
+  10%,
+  85% {
+    opacity: 1;
+  }
+}
+
+/* Reduced motion freezes the shower part-way down its axis rather than
+   deleting it. display: none on the whole layer -- which is what the first
+   version did -- leaves a spinning star shedding nothing, which reads as
+   broken rather than as calm, and it hides the effect completely from anyone
+   whose OS has animations switched off. */
+@media (prefers-reduced-motion: reduce) {
+  [data-spark] {
+    animation: none;
+    opacity: 0.55;
+    transform: rotate(var(--spark-angle))
+      translate3d(0, calc(var(--spark-fall) * var(--spark-rest)), 0);
   }
 }
 
