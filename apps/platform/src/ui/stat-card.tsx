@@ -157,27 +157,32 @@ export default function StatCard({
  * two one stroke — no offset to keep in sync with the head's size.
  *
  * Its own size stays fixed at every breakpoint: the stroke weight is chosen to
- * land on the shaft's 1.75px at 14px tall (3 units of a 24-unit box), and the
- * two would drift apart at a breakpoint and show the join.
+ * land on the shaft's 2.5px at 14px tall — a 24-unit box drawn 14px tall scales
+ * by 14/24, so the shaft's weight times 24/14 is the stroke that matches it.
+ * Let the head resize at a breakpoint and the two weights drift apart, and the
+ * join between them shows.
  */
 function CtaArrow() {
   return (
     <span
       aria-hidden
-      className="relative inline-block h-[1.75px] w-2.5 shrink-0 rounded-full bg-current transition-[width] group-hover:w-5 group-hover:delay-150 motion-reduce:transition-none sm:w-3 sm:group-hover:w-6"
+      className="relative inline-block h-[2.5px] w-2.5 shrink-0 rounded-full bg-current transition-[width] group-hover:w-5 group-hover:delay-300 motion-reduce:transition-none sm:w-3 sm:group-hover:w-6"
     >
       {/* overflow-visible so the round join at the apex isn't shaved off by
           the viewBox edge it sits on. */}
       <svg
-        viewBox="0 0 9 24"
+        viewBox="0 0 11 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth={3}
+        strokeWidth={4.29}
         strokeLinecap="round"
         strokeLinejoin="round"
         className="absolute top-1/2 right-0 h-3.5 w-auto -translate-y-1/2 overflow-visible"
       >
-        <polyline points="2 5.5 9 12 2 18.5" />
+        {/* Apex on the box's right edge — that is the join with the shaft. The
+            arms are longer than the old ones: at this weight a shorter chevron
+            closes up into a blob rather than reading as an arrowhead. */}
+        <polyline points="2 5 11 12 2 19" />
       </svg>
     </span>
   );
