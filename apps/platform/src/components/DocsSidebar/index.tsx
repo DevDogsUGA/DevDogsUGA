@@ -17,7 +17,9 @@ import {
 import Tree from "./Tree";
 
 export interface DocsSidebarProps {
-  projects: { slug: string; name: string; description: string | null }[];
+  // No `description`: the switcher renders names only, and a field nothing
+  // reads is the kind of drift that later reads as an intent.
+  projects: { slug: string; name: string }[];
   project: string;
   tree: DocsTreeNode[];
 }
@@ -56,6 +58,12 @@ function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
           aria-label="Project"
           className="w-full"
         >
+          {/* Names only. The switcher sits above the tree in a 18rem rail, and
+              a description under every row turned six choices into a wall of
+              prose in the one place the reader has already decided what they
+              want — the group headings carry the sorting this control needs.
+              The navbar menu keeps its descriptions, because that one is where
+              somebody is still choosing. */}
           {groups.map((group) => (
             <Select.Group key={group.id} label={group.label}>
               {group.projects.map((p) => (
@@ -63,7 +71,6 @@ function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
                   key={p.slug}
                   value={p.slug}
                   icon={<DocsProjectMark slug={p.slug} />}
-                  description={p.description ?? undefined}
                 >
                   {p.name}
                 </Select.Item>

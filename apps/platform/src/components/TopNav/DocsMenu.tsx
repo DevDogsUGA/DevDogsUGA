@@ -98,7 +98,12 @@ export default function DocsMenu({
           travel from the trigger into the menu without closing it. */}
       {open && (
         <div className="absolute top-full left-0 pt-2">
-          <div className="animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 w-80 origin-top rounded-lg border border-mauve-800 bg-mauve-950 p-1 shadow-lg duration-150 ease-out">
+          {/* Two columns from `lg`, not from `md`. The nav itself appears at
+              `md`, but this panel is anchored to its trigger with `left-0`, and
+              at 768px a 36rem panel opening from a trigger that sits well into
+              the bar would run off the right of the viewport. Below `lg` it
+              stays the single 20rem column it was. */}
+          <div className="animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 w-80 origin-top rounded-lg border border-mauve-800 bg-mauve-950 p-1 shadow-lg duration-150 ease-out lg:w-[36rem]">
             {groups.map((group) => (
               // A plain group + label rather than a role="menu" tree: these are
               // links the tab order already walks in this order, and naming
@@ -108,29 +113,38 @@ export default function DocsMenu({
                 <p className="px-2.5 pt-2 pb-1 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
                   {group.label}
                 </p>
-                {group.projects.map((project) => (
-                  <Link
-                    key={project.slug}
-                    href={`/docs/${encodeURIComponent(project.slug)}`}
-                    aria-current={
-                      project.slug === activeSlug ? "page" : undefined
-                    }
-                    onClick={() => setOpen(false)}
-                    className="flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors outline-none hover:bg-mauve-800 focus-visible:bg-mauve-800 aria-[current=page]:bg-mauve-800/60"
-                  >
-                    <DocsProjectMark slug={project.slug} />
-                    <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className="text-sm font-medium text-white">
-                        {project.name}
-                      </span>
-                      {project.description && (
-                        <span className="text-xs/relaxed text-mauve-400">
-                          {project.description}
+                {/* The ITEMS split, not the groups. Laying the three groups
+                    into two columns would size every column to the tallest —
+                    Apps holds four projects and the other two hold one each,
+                    so two of the three would sit under most of a column of
+                    whitespace. Splitting within a group keeps each heading
+                    over the projects it names, halves the panel's height, and
+                    goes on working whatever sizes the groups grow into. */}
+                <div className="grid grid-cols-1 lg:grid-cols-2">
+                  {group.projects.map((project) => (
+                    <Link
+                      key={project.slug}
+                      href={`/docs/${encodeURIComponent(project.slug)}`}
+                      aria-current={
+                        project.slug === activeSlug ? "page" : undefined
+                      }
+                      onClick={() => setOpen(false)}
+                      className="flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors outline-none hover:bg-mauve-800 focus-visible:bg-mauve-800 aria-[current=page]:bg-mauve-800/60"
+                    >
+                      <DocsProjectMark slug={project.slug} />
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="text-sm font-medium text-white">
+                          {project.name}
                         </span>
-                      )}
-                    </span>
-                  </Link>
-                ))}
+                        {project.description && (
+                          <span className="text-xs/relaxed text-mauve-400">
+                            {project.description}
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
