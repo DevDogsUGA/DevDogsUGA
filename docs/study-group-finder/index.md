@@ -1,6 +1,6 @@
 ---
 name: Study Group Finder
-description: The Flutter app for forming study groups at UGA — what exists today, and the codegen constraint that shapes the whole Supabase config.
+description: The Flutter app for finding study groups.
 order: 40
 ---
 

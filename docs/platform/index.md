@@ -1,6 +1,6 @@
 ---
 name: Platform
-description: The DevDogs web platform — the site, console, docs, and public APIs.
+description: The site, console, docs, and OAuth server.
 order: 10
 ---
 

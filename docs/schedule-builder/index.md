@@ -1,6 +1,6 @@
 ---
 name: Schedule Builder
-description: Course schedule planning for UGA students — the registrar scrape, the generator, and the one place this app diverges from the shared schema workflow.
+description: Course planning on real registrar data.
 order: 30
 ---
 

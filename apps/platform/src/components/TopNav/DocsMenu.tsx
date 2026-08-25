@@ -41,6 +41,51 @@ export default function DocsMenu({
   const [open, setOpen] = useState(false);
   const groups = useMemo(() => groupDocsProjects(projects), [projects]);
   const triggerRef = useRef<HTMLAnchorElement>(null);
+
+  // Two containers rather than one grid with per-item column placement: a
+  // single grid sizes each ROW to its tallest cell, so the short left-hand
+  // groups would each be followed by a band of whitespace as tall as Apps.
+  // Separate columns let each side stack at its own height.
+  const leftGroups = groups.filter((group) => group.column === "left");
+  const rightGroups = groups.filter((group) => group.column === "right");
+
+  // A render function, not a component: called inline it produces the same
+  // element tree React would diff anyway, where a component declared here
+  // would be a new type on every render and remount the whole column.
+  //
+  // A plain group + label rather than a role="menu" tree — these are links the
+  // tab order already walks in order, and calling them menuitems would promise
+  // arrow-key navigation the trigger deliberately does not implement.
+  function renderGroup(group: (typeof groups)[number]) {
+    return (
+      <div key={group.id} role="group" aria-label={group.label}>
+        <p className="px-2.5 pt-2 pb-1 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
+          {group.label}
+        </p>
+        {group.projects.map((project) => (
+          <Link
+            key={project.slug}
+            href={`/docs/${encodeURIComponent(project.slug)}`}
+            aria-current={project.slug === activeSlug ? "page" : undefined}
+            onClick={() => setOpen(false)}
+            className="flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors outline-none hover:bg-mauve-800 focus-visible:bg-mauve-800 aria-[current=page]:bg-mauve-800/60"
+          >
+            <DocsProjectMark slug={project.slug} />
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-sm font-medium text-white">
+                {project.name}
+              </span>
+              {project.description && (
+                <span className="text-xs/relaxed text-mauve-400">
+                  {project.description}
+                </span>
+              )}
+            </span>
+          </Link>
+        ))}
+      </div>
+    );
+  }
   // Escape hands focus back to the trigger, and focus is what opens the menu —
   // so it stays dismissed until the pointer or focus leaves and comes back.
   const dismissed = useRef(false);
@@ -103,50 +148,12 @@ export default function DocsMenu({
               at 768px a 36rem panel opening from a trigger that sits well into
               the bar would run off the right of the viewport. Below `lg` it
               stays the single 20rem column it was. */}
-          <div className="animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 w-80 origin-top rounded-lg border border-mauve-800 bg-mauve-950 p-1 shadow-lg duration-150 ease-out lg:w-[36rem]">
-            {groups.map((group) => (
-              // A plain group + label rather than a role="menu" tree: these are
-              // links the tab order already walks in this order, and naming
-              // them menuitems would promise arrow-key navigation the trigger
-              // deliberately does not implement.
-              <div key={group.id} role="group" aria-label={group.label}>
-                <p className="px-2.5 pt-2 pb-1 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
-                  {group.label}
-                </p>
-                {/* The ITEMS split, not the groups. Laying the three groups
-                    into two columns would size every column to the tallest —
-                    Apps holds four projects and the other two hold one each,
-                    so two of the three would sit under most of a column of
-                    whitespace. Splitting within a group keeps each heading
-                    over the projects it names, halves the panel's height, and
-                    goes on working whatever sizes the groups grow into. */}
-                <div className="grid grid-cols-1 lg:grid-cols-2">
-                  {group.projects.map((project) => (
-                    <Link
-                      key={project.slug}
-                      href={`/docs/${encodeURIComponent(project.slug)}`}
-                      aria-current={
-                        project.slug === activeSlug ? "page" : undefined
-                      }
-                      onClick={() => setOpen(false)}
-                      className="flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors outline-none hover:bg-mauve-800 focus-visible:bg-mauve-800 aria-[current=page]:bg-mauve-800/60"
-                    >
-                      <DocsProjectMark slug={project.slug} />
-                      <span className="flex min-w-0 flex-col gap-0.5">
-                        <span className="text-sm font-medium text-white">
-                          {project.name}
-                        </span>
-                        {project.description && (
-                          <span className="text-xs/relaxed text-mauve-400">
-                            {project.description}
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 w-80 origin-top rounded-lg border border-mauve-800 bg-mauve-950 p-1 shadow-lg duration-150 ease-out lg:grid lg:w-[36rem] lg:grid-cols-2 lg:items-start lg:gap-x-1">
+            {/* Below `lg` this is one column and the two halves stack, so the
+                left-hand groups come first and Apps follows. Reading order
+                stays sensible; only the side-by-side arrangement is lost. */}
+            <div>{leftGroups.map(renderGroup)}</div>
+            <div>{rightGroups.map(renderGroup)}</div>
           </div>
         </div>
       )}

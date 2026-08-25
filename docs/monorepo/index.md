@@ -1,6 +1,6 @@
 ---
 name: Monorepo
-description: Start here — what the monorepo holds, which app owns which database schema, and where to go next.
+description: Setup, conventions, and the shared stack.
 order: 0
 ---
 

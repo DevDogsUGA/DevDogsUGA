@@ -83,12 +83,19 @@ export const DOCS_INDEX_LABEL = "Overview";
 export const DOCS_GROUPS: readonly {
   id: string;
   label: string;
+  /**
+   * Which side of the navbar menu's two-column layout this group takes.
+   * Omitted means left. Only the wide menu reads it — the sidebar switcher
+   * and the landing page stack their groups in one column and ignore it.
+   */
+  column?: "left" | "right";
   slugs: readonly string[];
 }[] = [
   { id: "start", label: "Start here", slugs: ["monorepo"] },
   {
     id: "apps",
     label: "Apps",
+    column: "right",
     slugs: ["platform", "sandbox", "schedule-builder", "study-group-finder"],
   },
   { id: "shared", label: "Shared packages", slugs: ["toolkit"] },
@@ -100,6 +107,7 @@ export const UNGROUPED_LABEL = "Everything else";
 export interface DocsProjectGroup<T> {
   id: string;
   label: string;
+  column: "left" | "right";
   projects: T[];
 }
 
@@ -118,6 +126,9 @@ export function groupDocsProjects<T extends { slug: string }>(
   const groups = DOCS_GROUPS.map((group) => ({
     id: group.id,
     label: group.label,
+    // Resolved here rather than left optional, so every consumer reads one
+    // shape and "no side declared" is answered in one place.
+    column: group.column ?? ("left" as const),
     projects: projects.filter((project) => {
       if (!group.slugs.includes(project.slug)) return false;
       claimed.add(project.slug);
@@ -127,7 +138,12 @@ export function groupDocsProjects<T extends { slug: string }>(
 
   const rest = projects.filter((project) => !claimed.has(project.slug));
   if (rest.length > 0) {
-    groups.push({ id: "ungrouped", label: UNGROUPED_LABEL, projects: rest });
+    groups.push({
+      id: "ungrouped",
+      label: UNGROUPED_LABEL,
+      column: "left" as const,
+      projects: rest,
+    });
   }
 
   return groups.filter((group) => group.projects.length > 0);

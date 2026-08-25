@@ -1,6 +1,6 @@
 ---
 name: Toolkit
-description: The shared packages every app builds on — what each one is for, and which to reach for when.
+description: The shared packages every app builds on.
 order: 50
 ---
 

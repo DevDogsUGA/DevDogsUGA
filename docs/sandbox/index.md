@@ -1,6 +1,6 @@
 ---
 name: Sandbox
-description: The per-team Supabase instance behind a proxy — how a competition team gets a database of its own, and what stands between it and the real one.
+description: Per-team Supabase behind a Worker proxy.
 order: 20
 ---
 
