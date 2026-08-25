@@ -1,6 +1,5 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
-import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 
 // Both vertical edges of a card are the SAME zigzag, in phase, exactly
 // CHEVRON_DEPTH apart — which is what the -CHEVRON_DEPTH margin on the wrapper
@@ -114,7 +113,7 @@ export default function StatCard({
       />
       <Link
         href={href}
-        className={`${darkBg} relative block h-full w-full transition-[translate,filter] hover:-translate-x-3 hover:-translate-y-3`}
+        className={`${darkBg} group relative block h-full w-full transition-[translate,filter] hover:-translate-x-3 hover:-translate-y-3`}
         style={{ clipPath: STAT_CLIP }}
       >
         <div
@@ -122,21 +121,52 @@ export default function StatCard({
           style={{ clipPath: STAT_CLIP_INNER }}
         />
         <div
-          className={`relative z-10 flex flex-col items-center gap-2 px-5 py-6 text-center sm:gap-3 sm:px-7 sm:py-8 ${textColor}`}
+          className={`relative z-10 flex flex-col items-center gap-1.5 px-5 py-6 text-center sm:gap-2.5 sm:px-7 sm:py-7 ${textColor}`}
         >
           <Icon className="size-8 sm:size-10" weight="fill" />
-          <p className="text-base font-semibold opacity-80 sm:text-lg">
-            {description}
+          <p className="font-display flex flex-col items-center gap-0.5 sm:gap-1">
+            <span className="text-2xl font-extrabold sm:text-4xl">{title}</span>
+            <span className="text-xs font-bold uppercase italic opacity-80 sm:text-sm">
+              &ldquo;{description}&rdquo;
+            </span>
           </p>
-          <p className="font-display text-2xl font-extrabold sm:text-4xl">
-            {title}
-          </p>
-          <p className="flex items-center gap-1.5 text-sm font-bold sm:text-base">
+          <p className="flex items-center gap-1.5 font-bold group-hover:underline sm:text-lg">
             {cta}
-            <ArrowRightIcon className="text-sm" />
+            <CtaArrow />
           </p>
         </div>
       </Link>
     </div>
+  );
+}
+
+/**
+ * The CTA arrow, drawn here rather than taken from Phosphor because it has to
+ * come apart: hovering the card grows the shaft while the head stays put, and
+ * a single glyph can only be scaled whole.
+ *
+ * The shaft is the element the stylesheet animates — see `[data-cta-arrow]` in
+ * globals.css, which scales it from the head end so the arrow lengthens
+ * backwards. Growing it forwards instead would either push the arrow out of
+ * the card's padding or shove the CTA text left on every hover.
+ *
+ * The apex of the head and the end of the shaft are the same point (21, 12),
+ * so the two strokes read as one arrow at any length.
+ */
+function CtaArrow() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="size-4 shrink-0 sm:size-5"
+    >
+      <line data-cta-arrow x1="3" y1="12" x2="21" y2="12" />
+      <polyline points="13.5 4.5 21 12 13.5 19.5" />
+    </svg>
   );
 }

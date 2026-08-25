@@ -332,6 +332,34 @@
   z-index: 40;
 }
 
+/* Stat-card CTA arrow: hovering the card grows the shaft out of the back of
+   the arrowhead. Written here rather than as `group-hover:scale-x-100` because
+   the transform origin has to be a point in the SVG's own coordinate system —
+   (21, 12), where the head's apex sits — and `transform-box` is spelled out so
+   it never resolves against the element's (zero-height) fill box instead.
+
+   scaleX only ever shortens the shaft here, so the stroke keeps its drawn
+   weight: scaling a horizontal line along x leaves its thickness alone. */
+[data-cta-arrow] {
+  transform-box: view-box;
+  transform-origin: 21px 12px;
+  transform: scaleX(0.45);
+  transition: transform var(--default-transition-duration)
+    var(--default-transition-timing-function);
+}
+
+a:hover [data-cta-arrow] {
+  transform: scaleX(1);
+}
+
+/* Matching the sparks above: keep the end state, drop the travel. The long
+   arrow still marks the hovered card, it just arrives without the sweep. */
+@media (prefers-reduced-motion: reduce) {
+  [data-cta-arrow] {
+    transition: none;
+  }
+}
+
 @keyframes dialog-slide-in {
   from {
     transform: translateX(-100%);
