@@ -113,7 +113,7 @@ The layout that follows is two shapes from `server/github/naming.ts`: `comp/<com
 <details>
 <summary>Why are writes server actions rather than <code>security definer</code> RPCs?</summary>
 
-Moderation and feedback put every write behind an RPC because they are client-agnostic: an integrating app reaches them over PostgREST with its own Supabase client, so the rules have to live where every client necessarily passes through.
+Moderation puts every write behind an RPC because it is client-agnostic: an integrating app reaches it over PostgREST with its own Supabase client, so the rules have to live where every client necessarily passes through.
 
 None of that applies here. Meetings, teams and attendance are consumed by the platform and nothing else, so an RPC would buy an independence no caller wants and pay for it by splitting logic that belongs together — a join is a database write and a GitHub API call, and only the first can happen in Postgres.
 

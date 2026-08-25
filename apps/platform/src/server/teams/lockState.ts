@@ -75,6 +75,15 @@ export function canUnlockByClosingPr(
  *
  * Requires `teams` joined to `competitions`. Kept adjacent to the TypeScript
  * version above so a change to one is visibly a change to the other.
+ *
+ * CURRENTLY UNCALLED, and worth knowing why before reaching for it or deleting
+ * it. The one query that should use it — `freezeParticipation` in
+ * `judgingPass.ts` — instead spells its own filter out, and that filter is NOT
+ * this predicate: it omits `lockedManuallyAt`, so the freeze runs against a
+ * manually locked roster. Whether that is a bug or the intended narrowing has
+ * not been decided. Until it is, this is the honest state: two spellings of
+ * "locked" that nothing forces to agree, and the adjacency above is doing no
+ * work because only one of them has a caller.
  */
 export function lockedSql(): SQL {
   return or(

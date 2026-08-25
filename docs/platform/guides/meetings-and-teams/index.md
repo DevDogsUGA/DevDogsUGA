@@ -41,7 +41,7 @@ Four constraints carry most of the meaning:
 
 ## Where it lives
 
-The schema is migrations `20260803000001_platform_meetings_core.sql` through `20260803000006_platform_airtable_sync.sql`, amended by `20260806000000`–`20260806000002` (attendance from Airtable, check-in codes removed, the attendance form URL) and `20260808000001` (a meeting's summary, kind and RSVP link). The code is `apps/platform/src/server/` under `teams/`, `airtable/`, `loaders/` and `actions/`, with the scheduled passes under `app/(api)/cron/`.
+The schema is migrations `20260803000001_platform_meetings_core.sql` through `20260803000006_platform_airtable_sync.sql`, amended by `20260806000000`–`20260806000002` (attendance from Airtable, check-in codes removed, the attendance form URL) and `20260808000001` (a meeting's summary, kind and RSVP link). The code is `apps/platform/src/server/` under `teams/`, `airtable/`, `loaders/` and `actions/`. Most scheduled passes are routes under `app/(api)/cron/`, but the fifteen-minute Airtable pull is not — it is `app/(api)/airtable/sync/`. `cloudflare/scheduled.ts` is the one file that maps every cron expression to its route, so read it rather than guessing a path from a schedule.
 
 ## Read next
 
@@ -74,7 +74,10 @@ Presentations are their own occasion. They happen at a meeting, but they are not
 
 - **Two competitions judged at one meeting can be judged at different times** — study group finder at 18:00, scheduler at 18:40. Deriving from the meeting would give both the same instant and lock both rosters at once.
 - **Judging need not be at a workshop meeting at all.** A dedicated presentations night is a `meetings` row with no workshops and a competition pointing at it.
-- **The lock predicate reads one row** rather than joining `teams → competitions → meetings`, and it is evaluated on every join attempt, every team page render, and inside the freeze query.
+- **The lock predicate reads one row** rather than joining `teams → competitions → meetings`. `isLocked` is evaluated on every join attempt and every team page render.
+
+> [!WARNING]
+> The freeze query does **not** use that predicate. `freezeParticipation` spells its filter out in SQL — `submissionState = 'open'` and `judgingStartsAt <= now()` — and so ignores the predicate's third term, `lockedManuallyAt`. A manually locked roster is still frozen by the pass. `lockState.ts` exports `lockedSql()` and `teamLockFilter()` for exactly this case and **nothing calls either of them**, so the two spellings can drift without anything failing.
 
 A null `judgingStartsAt` means "not scheduled yet", and everything downstream treats it as _not yet_ rather than _never_: the roster stays open, the freeze skips the competition, and no star is awarded.
 
