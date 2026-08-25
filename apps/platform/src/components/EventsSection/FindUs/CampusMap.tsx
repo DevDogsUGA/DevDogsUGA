@@ -10,6 +10,7 @@ import {
   HIGHLIGHT_PINS,
   MAJOR_ROADS,
   MINOR_ROADS,
+  ROAD_LABELS,
 } from "./campusMapData";
 import { VIEW, type BuildingKey } from "./campusMapMeta";
 import { BUILDING_LABEL } from "./buildings";
@@ -34,8 +35,8 @@ const LABELS: { text: string; x: number; y: number; key?: BuildingKey }[] = [
   { text: "Tate Deck", x: 224, y: 152 },
   // ── Central / West ──
   { text: "Brumby", x: 74, y: 161 },
-  { text: "Russell", x: 112, y: 150 },
-  { text: "Creswell", x: 150, y: 150 },
+  { text: "Russell", x: 110, y: 152 },
+  { text: "Creswell", x: 152, y: 140 },
   { text: "Sanford Stadium", x: 341, y: 168 },
   { text: "Physics", x: 240, y: 206 },
   { text: "O-House", x: 172, y: 276 },
@@ -115,15 +116,19 @@ export default function CampusMap({ building }: Props) {
         />
       )}
 
-      {/* paint-order:stroke turns each label's white stroke into a halo
+      {/* Building names, and the loudest thing on the map after the
+          destination itself — somebody reading this is looking for a
+          building, so the streets are what they scan past.
+
+          paint-order:stroke turns each label's white stroke into a halo
           behind the glyphs — the standard cartographic trick that keeps text
-          readable over footprints and parking aisles */}
+          readable over footprints and parking aisles. */}
       <g
         textAnchor="middle"
-        fontSize="8"
-        strokeWidth="2.5"
+        fontSize="9"
+        strokeWidth="3"
         strokeLinejoin="round"
-        className="fill-mauve-500 stroke-white font-semibold [paint-order:stroke]"
+        className="fill-mauve-700 stroke-white font-semibold [paint-order:stroke]"
       >
         {LABELS.filter((l) => l.key !== building).map((l) => (
           <text key={l.text} x={l.x} y={l.y}>
@@ -134,31 +139,34 @@ export default function CampusMap({ building }: Props) {
 
       {pin && <Callout building={building} x={pin.x} y={pin.y} />}
 
-      {/* Road labels, angled along their roads */}
+      {/* Street names, sitting on their own centrelines at their own angle:
+          position and rotation are generated from the road geometry, not
+          typed here, because the six that were typed here were placed against
+          a landscape frame and every one of them was left behind when the map
+          went portrait.
+
+          Smaller and paler than the building names on purpose. A street name
+          is orientation — it should be there when looked for and quiet when
+          not, and it is competing with the labels that actually answer the
+          question. */}
       <g
-        fontSize="9"
+        fontSize="7"
         strokeWidth="2.5"
         strokeLinejoin="round"
-        className="fill-mauve-600 stroke-white font-bold [paint-order:stroke]"
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="fill-mauve-400 stroke-white font-semibold [paint-order:stroke]"
       >
-        <text x="86" y="92" transform="rotate(-12.5 86 92)">
-          Baxter St
-        </text>
-        <text x="240" y="196" transform="rotate(-76 240 196)">
-          S. Lumpkin St
-        </text>
-        <text x="104" y="300" transform="rotate(-67.5 104 300)">
-          E. Cloverhurst Ave
-        </text>
-        <text x="182" y="246" fontSize="8" transform="rotate(23 182 246)">
-          University Ct
-        </text>
-        <text x="252" y="332" fontSize="8" transform="rotate(-78 252 332)">
-          Sanford Dr
-        </text>
-        <text x="316" y="452" fontSize="8" transform="rotate(-84 316 452)">
-          D.W. Brooks Dr
-        </text>
+        {ROAD_LABELS.map((r) => (
+          <text
+            key={r.text}
+            x={r.x}
+            y={r.y}
+            transform={`rotate(${r.angle} ${r.x} ${r.y})`}
+          >
+            {r.text}
+          </text>
+        ))}
       </g>
 
       {/* Compass + the ODbL attribution OSM data requires */}

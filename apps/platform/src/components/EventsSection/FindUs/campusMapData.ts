@@ -77,3 +77,48 @@ export const HIGHLIGHT_PINS: Record<string, { x: number; y: number }> = {
     y: 140.5,
   },
 };
+
+/** Street names, on the centreline they name and turned to match it. */
+export const ROAD_LABELS: {
+  text: string;
+  x: number;
+  y: number;
+  angle: number;
+}[] = [
+  {
+    text: "Baxter St",
+    x: 150.3,
+    y: 126.3,
+    angle: -16.1,
+  },
+  {
+    text: "S. Lumpkin St",
+    x: 210.4,
+    y: 185.9,
+    angle: -75.9,
+  },
+  {
+    text: "East Campus Rd",
+    x: 373.9,
+    y: 302.4,
+    angle: 77.2,
+  },
+  {
+    text: "E. Cloverhurst Ave",
+    x: 112.7,
+    y: 268.2,
+    angle: -42.9,
+  },
+  {
+    text: "Sanford Dr",
+    x: 281.2,
+    y: 166.2,
+    angle: -53.8,
+  },
+  {
+    text: "D.W. Brooks Dr",
+    x: 241.8,
+    y: 450.3,
+    angle: -84.2,
+  },
+];

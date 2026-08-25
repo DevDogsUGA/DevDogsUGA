@@ -9,10 +9,14 @@
  * separately so the component can highlight it, along with its centroid in
  * lat/lon — the pin the Google/Apple Maps links drop, since the building is
  * too new for a name search to resolve reliably. Rerun this when OSM improves
- * the area (the DLW is brand new) or to reframe; the landmark labels live in
- * CampusMap.tsx and are placed by eye against these coordinates, so check the
- * rendered map after regenerating — the script prints each labeled building's
- * centroid to help.
+ * the area (the DLW is brand new) or to reframe.
+ *
+ * Street names come out of here already placed, on the centreline they name
+ * and turned to match it. Building labels do not: they still live in
+ * CampusMap.tsx, positioned by eye, because a building's name belongs beside
+ * its footprint and which side is free depends on its neighbours. So re-check
+ * those against the rendered map after regenerating — the script prints every
+ * labelled building's centroid, and every street's placement, to help.
  *
  * Two output files because the map is loaded on demand: the path strings are
  * the weight, so they live in campusMapData.ts behind a dynamic import, while
@@ -131,6 +135,31 @@ const LANDMARKS = [
   "Memorial Hall",
 ];
 
+/**
+ * The streets worth naming, and what a student would call them.
+ *
+ * `at` is the only knob here: how far along the street's longest run inside
+ * the frame its name sits, 0 at one end and 1 at the other. Where the text
+ * lands and what angle it turns are measured off the centreline the map
+ * actually draws. The alternative is what used to be in CampusMap.tsx — six
+ * hand-typed x/y/rotate triples, true for the landscape frame and quietly
+ * wrong the moment the map went portrait, because nothing connected them to
+ * the roads they named. A label that reads its own centreline cannot come
+ * loose from it.
+ *
+ * University Court is deliberately absent. Its visible run is 78px, a name
+ * for it is 47px, and all 78 of those pixels are directly under the DLW's
+ * callout — the one label on the map that must never be crowded.
+ */
+const STREETS = [
+  { osm: "Baxter Street", text: "Baxter St", at: 0.35 },
+  { osm: "South Lumpkin Street", text: "S. Lumpkin St", at: 0.65 },
+  { osm: "East Campus Road", text: "East Campus Rd", at: 0.5 },
+  { osm: "East Cloverhurst Avenue", text: "E. Cloverhurst Ave", at: 0.35 },
+  { osm: "Sanford Drive", text: "Sanford Dr", at: 0.5 },
+  { osm: "D. W. Brooks Drive", text: "D.W. Brooks Dr", at: 0.35 },
+];
+
 interface OsmGeomPoint {
   lat: number;
   lon: number;
@@ -192,6 +221,149 @@ function area(geom: OsmGeomPoint[]): number {
     a += (pts[j]![0] + pts[i]![0]) * (pts[j]![1] - pts[i]![1]);
   }
   return Math.abs(a / 2);
+}
+
+type Pt = [number, number];
+
+const lineLength = (line: Pt[]) =>
+  line
+    .slice(1)
+    .reduce(
+      (a, p, i) => a + Math.hypot(p[0] - line[i]![0], p[1] - line[i]![1]),
+      0,
+    );
+
+/**
+ * OSM starts a new way at every junction, so "Sanford Drive" arrives as a
+ * dozen fragments of a few dozen metres each and not one of them is long
+ * enough to hang a name on. Fragments that meet share a node, so their
+ * projected endpoints are identical and the pieces join back up by matching
+ * them.
+ */
+function chain(lines: Pt[][]): Pt[][] {
+  const key = (p: Pt) => `${p[0]},${p[1]}`;
+  const pool = lines.filter((l) => l.length > 1);
+  const runs: Pt[][] = [];
+
+  while (pool.length > 0) {
+    const run = pool.pop()!;
+    for (let grew = true; grew;) {
+      grew = false;
+      for (let i = 0; i < pool.length; i++) {
+        const c = pool[i]!;
+        const head = key(run[0]!);
+        const tail = key(run[run.length - 1]!);
+        if (tail === key(c[0]!)) run.push(...c.slice(1));
+        else if (tail === key(c[c.length - 1]!))
+          run.push(...c.slice(0, -1).reverse());
+        else if (head === key(c[c.length - 1]!)) run.unshift(...c.slice(0, -1));
+        else if (head === key(c[0]!)) run.unshift(...c.slice(1).reverse());
+        else continue;
+        pool.splice(i, 1);
+        grew = true;
+        break;
+      }
+    }
+    runs.push(run);
+  }
+  return runs;
+}
+
+/**
+ * The parts of a polyline inside the frame, as separate runs.
+ *
+ * Liang-Barsky per segment rather than "keep the points that are inside",
+ * because a straight stretch of road can be two nodes a kilometre apart: drop
+ * the outside one and the road appears to end where its last node happened to
+ * fall, which would put a name in the wrong place for the most ordinary
+ * possible reason.
+ */
+function clipToFrame(line: Pt[], margin = 8): Pt[][] {
+  const [minX, minY] = [margin, margin];
+  const [maxX, maxY] = [VW - margin, VH - margin];
+  const runs: Pt[][] = [];
+  let run: Pt[] = [];
+  const flush = () => {
+    if (run.length > 1) runs.push(run);
+    run = [];
+  };
+
+  for (let i = 1; i < line.length; i++) {
+    const a = line[i - 1]!;
+    const b = line[i]!;
+    const [dx, dy] = [b[0] - a[0], b[1] - a[1]];
+    let t0 = 0;
+    let t1 = 1;
+    let hit = true;
+
+    for (const [p, q] of [
+      [-dx, a[0] - minX],
+      [dx, maxX - a[0]],
+      [-dy, a[1] - minY],
+      [dy, maxY - a[1]],
+    ] as [number, number][]) {
+      if (p === 0) {
+        if (q < 0) hit = false;
+        continue;
+      }
+      const r = q / p;
+      if (p < 0 ? r > t1 : r < t0) hit = false;
+      else if (p < 0) t0 = Math.max(t0, r);
+      else t1 = Math.min(t1, r);
+      if (!hit) break;
+    }
+
+    if (!hit) {
+      flush();
+      continue;
+    }
+    const at = (t: number): Pt => [a[0] + dx * t, a[1] + dy * t];
+    if (t0 > 0) flush();
+    if (run.length === 0) run.push(at(t0));
+    run.push(at(t1));
+    if (t1 < 1) flush();
+  }
+  flush();
+  return runs;
+}
+
+/** Where along a run to write a name, and at what angle. */
+function placeAlong(run: Pt[], frac: number, span: number) {
+  const seg = run
+    .slice(1)
+    .map((p, i) => Math.hypot(p[0] - run[i]![0], p[1] - run[i]![1]));
+  const total = seg.reduce((a, b) => a + b, 0);
+
+  const at = (dist: number): Pt => {
+    let d = Math.max(0, Math.min(total, dist));
+    for (let i = 0; i < seg.length; i++) {
+      if (d <= seg[i]!) {
+        const t = seg[i] === 0 ? 0 : d / seg[i]!;
+        return [
+          run[i]![0] + (run[i + 1]![0] - run[i]![0]) * t,
+          run[i]![1] + (run[i + 1]![1] - run[i]![1]) * t,
+        ];
+      }
+      d -= seg[i]!;
+    }
+    return run[run.length - 1]!;
+  };
+
+  // The angle comes from the chord the text will actually span, not from
+  // whichever segment the midpoint lands on — a name reading across a bend
+  // should follow the bend, not the one metre of asphalt under its centre.
+  const mid = total * frac;
+  const half = Math.min(span, total) / 2;
+  const [x, y] = at(mid);
+  const [ax, ay] = at(mid - half);
+  const [bx, by] = at(mid + half);
+  let angle = (Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
+  // Past +/-90 degrees is the same line walked backwards; flip it rather than
+  // setting the name upside down.
+  if (angle > 90) angle -= 180;
+  if (angle < -90) angle += 180;
+
+  return { x: fmt(x), y: fmt(y), angle: fmt(angle) };
 }
 
 /**
@@ -274,6 +446,8 @@ console.log("fetching OSM…");
 const elements = await fetchOsm();
 
 const roadPaths = { major: [] as string[], minor: [] as string[] };
+/** Centrelines by street name, kept unsimplified — these carry the labels. */
+const namedRoads = new Map<string, Pt[][]>();
 for (const e of elements) {
   const hw = e.tags?.highway;
   if (!hw || !inFrame(e.geometry)) continue;
@@ -282,7 +456,47 @@ for (const e of elements) {
   if (MAJOR_HIGHWAYS.has(hw)) roadPaths.major.push(toPath(e.geometry, false));
   else if (MINOR_HIGHWAYS.has(hw))
     roadPaths.minor.push(toPath(e.geometry, false));
+  const name = e.tags?.name;
+  if (name === undefined) continue;
+  const parts = namedRoads.get(name) ?? [];
+  parts.push(proj(e.geometry));
+  namedRoads.set(name, parts);
 }
+
+/**
+ * A street name on the street, at the street's angle.
+ *
+ * Every one of these is derived, so reframing the map moves the names with
+ * the roads instead of leaving them stranded where the last frame put them.
+ * The width estimate is deliberately rough — it only decides how much of the
+ * road the angle is averaged over, and being a few pixels out there changes
+ * a bearing by a fraction of a degree.
+ */
+const roadLabels = STREETS.map((street) => {
+  const parts = namedRoads.get(street.osm);
+  if (parts === undefined)
+    throw new Error(`no OSM way named "${street.osm}" reaches the frame`);
+
+  const runs = chain(parts).flatMap((line) => clipToFrame(line));
+  if (runs.length === 0)
+    throw new Error(`"${street.osm}" has no centreline inside the frame`);
+
+  const longest = runs.reduce((a, r) =>
+    lineLength(r) > lineLength(a) ? r : a,
+  );
+  const width = street.text.length * 3.6;
+  if (lineLength(longest) < width)
+    console.warn(
+      `  ! "${street.text}" is wider than its longest visible run ` +
+        `(${fmt(lineLength(longest))}px) — it will overhang both ends`,
+    );
+
+  return {
+    text: street.text,
+    ...placeAlong(longest, street.at, width),
+    run: fmt(lineLength(longest)),
+  };
+});
 
 /** Area-weighted polygon centroid in lat/lon — a vertex average would drift
  * toward whichever wall OSM mapped with the most nodes. */
@@ -426,6 +640,18 @@ export const HIGHLIGHT_PATHS: Record<string, string> = ${entries((h) => h.path)}
 
 /** Where the pin goes, in viewBox units — the centroid of the same footprint. */
 export const HIGHLIGHT_PINS: Record<string, { x: number; y: number }> = ${entries((h) => h.pin)};
+
+/** Street names, on the centreline they name and turned to match it. */
+export const ROAD_LABELS: {
+  text: string;
+  x: number;
+  y: number;
+  angle: number;
+}[] = ${JSON.stringify(
+  roadLabels.map(({ text, x, y, angle }) => ({ text, x, y, angle })),
+  null,
+  2,
+)};
 `;
 
 const dir = join(import.meta.dirname, "../src/components/EventsSection/FindUs");
@@ -434,9 +660,16 @@ writeFileSync(join(dir, "campusMapMeta.ts"), meta);
 console.log(
   `wrote ${dir}/campusMapData.ts (${(out.length / 1024).toFixed(1)}KB) + campusMapMeta.ts`,
 );
+// Written straight from JSON.stringify, so both land unformatted and the next
+// commit is a diff of the whole file against itself.
+console.log("run prettier --write on both before committing them");
 console.log(
   `viewBox 0 0 ${VW} ${VH} | ${roadPaths.major.length} major ways, ${roadPaths.minor.length} minor ways, ${footprints.length} footprints`,
 );
 for (const b of labeled) console.log(`  LABEL ${b.name} → ${b.cx},${b.cy}`);
 for (const k of keys)
   console.log(`  PIN ${k} → ${highlights[k]!.pin.x},${highlights[k]!.pin.y}`);
+for (const r of roadLabels)
+  console.log(
+    `  ROAD ${r.text} → ${r.x},${r.y} @ ${r.angle}° (${r.run}px visible)`,
+  );
