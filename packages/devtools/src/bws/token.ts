@@ -63,7 +63,7 @@ export async function resolveToken(sources: TokenSources): Promise<string> {
     throw new NoAccessTokenError(
       "No access token. Put BWS_ACCESS_TOKEN in your .env (an interactive " +
         "run offers to do this for you), pass --access-token, or store one " +
-        "in your Bitwarden vault. See docs/platform/env.md.",
+        "in your Bitwarden vault. See docs/toolkit/guides/env/commands.md.",
     );
   }
   announce("prompt");

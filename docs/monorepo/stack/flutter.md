@@ -13,7 +13,7 @@ order: 7
 The app has a `package.json` that runs no JavaScript. It exists so turbo can see `dev`, `build`, `test`, `lint`, `typecheck` and `generate-types` for this app like any other. Three of them — `build`, `dev` and `generate-types` — shell out to Flutter through `with-env -c`:
 
 ```bash
-pnpm --filter study-group-finder dev   # local stack auto-detected, else remote
+pnpm dev --filter study-group-finder   # local stack auto-detected, else remote
 ```
 
 `-c` is load-bearing. The scripts need `$API_URL`, `$PUBLISHABLE_KEY` and `$SECRET_KEY` to expand from the loaded `.env` rather than from the ambient environment, and `-c` defers expansion until after `with-env` has loaded the files. Values reach Dart as `--dart-define`s: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `AUTH_MODE` from `NEXT_PUBLIC_AUTH_MODE`.

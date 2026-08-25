@@ -33,8 +33,18 @@ interface ClientOptions<S extends DatabaseSchema> {
 }
 
 /**
- * Browser (anon) client, scoped to `schema` as its default. Memoized by
- * `@supabase/ssr` on its arguments, so repeated calls return one instance.
+ * Browser (anon) client, scoped to `schema` as its default.
+ *
+ * `@supabase/ssr` caches this in the browser, but NOT on the arguments: it
+ * keeps ONE module-level slot and returns whatever landed there first, without
+ * comparing url, key or schema. So a second call with a different `schema`
+ * silently hands back the first client, still pointed at the first schema.
+ *
+ * That is survivable here only because each app runs in its own page and calls
+ * this with one schema — the constant from its own `./schema`. Calling it with
+ * two different schemas in one app would not fail; it would quietly query the
+ * wrong one. Use a separate client from `@supabase/supabase-js` if a second
+ * schema is ever genuinely needed on the client.
  */
 export function createBrowserClient<S extends DatabaseSchema>(
   opts: ClientOptions<S>,

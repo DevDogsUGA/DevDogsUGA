@@ -6,7 +6,7 @@ order: 3
 
 # Runbook
 
-Standing a base up from nothing, in order — several of these fail confusingly out of order. Follow it once per base; after that, adding a field is the two-step scaffold in [Base setup](/docs/platform/guides/airtable/base-setup). For what a field declaration means, start at the [registry](/docs/platform/guides/airtable). Every credential named here is routed by [Env](/docs/platform/env).
+Standing a base up from nothing, in order — several of these fail confusingly out of order. Follow it once per base; after that, adding a field is the two-step scaffold in [Base setup](/docs/platform/guides/airtable/base-setup). For what a field declaration means, start at the [registry](/docs/platform/guides/airtable). Every credential named here is routed by [Env](/docs/toolkit/guides/env).
 
 ## The order
 

@@ -8,9 +8,10 @@ reserved by `supabase/migrations/*_study_group_finder_init.sql` and
 exposed in `config.toml`; tables are added as the app is built.
 
 Branded **Dog Pack**, with `dogpack.dev` reserved for its eventual web
-deployment — `STUDY_GROUP_FINDER_URL` / `_CALLBACK` are already declared in
-the env registry and `config.toml`'s auth redirect allowlist, unset until the
-deploy exists. In-app branding is unchanged for now, by decision.
+deployment — `STUDY_GROUP_FINDER_URL` and `STUDY_GROUP_FINDER_URL_CALLBACK` are
+already declared in `supabase/env.ts` and in `config.toml`'s auth redirect
+allowlist, unset until the deploy exists. In-app branding is unchanged for now,
+by decision.
 
 ## Prerequisites
 
@@ -24,7 +25,7 @@ deploy exists. In-app branding is unchanged for now, by decision.
 Run through the workspace so Supabase config comes from the shared root `.env`:
 
 ```bash
-pnpm --filter study-group-finder dev   # local stack auto-detected, else remote
+pnpm dev --filter study-group-finder   # local stack auto-detected, else remote
 ```
 
 These pass `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `AUTH_MODE` to Flutter

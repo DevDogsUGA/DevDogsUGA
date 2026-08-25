@@ -5,20 +5,21 @@ Next.js app on the shared DevDogs Supabase project, owning the
 **`schedule_builder`** Postgres schema
 (`supabase/migrations/*_schedule_builder_init.sql`).
 
-For monorepo setup, env handling, and the contribution workflow, see the repo
-README and `docs/platform/contributing.md`; project-facing docs are in
-`docs/schedule-builder/`.
+For monorepo setup, env handling, and the contribution workflow, see
+[Monorepo](../../docs/monorepo/index.md); project-facing docs are
+[Schedule Builder](../../docs/schedule-builder/index.md).
 
 ## Develop
 
 ```bash
-pnpm --filter schedule-builder dev   # local stack auto-detected, else remote
+pnpm dev --filter schedule-builder   # local stack auto-detected, else remote
 ```
 
-Schema changes follow the shared workflow in `docs/platform/database.md`, with
-one twist: this app drafts its migrations from the Drizzle schema —
-`db:generate` (drizzle-kit, via `drizzle-migrations.config.ts`) writes draft
-SQL to `drizzle-generated/`, which is then carried into a real migration in
+Schema changes follow the shared workflow in
+[Database](../../docs/platform/guides/database.md), with one twist: this app
+drafts its migrations from the Drizzle schema — `db:generate` (drizzle-kit,
+via `drizzle-migrations.config.ts`) writes draft SQL to `drizzle-generated/`,
+which is then carried into a real migration in
 `supabase/migrations/` (the source of truth). `db:pull` regenerates the
 Drizzle schema from the live DB.
 

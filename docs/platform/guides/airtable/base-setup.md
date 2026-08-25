@@ -108,6 +108,6 @@ The two axes are independent in Airtable: a records read/write token cannot alte
 
 ⚠️ **Mint the scaffolding token as whoever created the workspace.** `POST /v0/meta/bases` requires the workspace creator role, a person-level permission a token inherits and no scope can grant. A collaborator's token does everything else and fails only at base creation.
 
-`AIRTABLE_BASE_ID`, and how each of these variables is routed to its target, live in [Env](/docs/platform/env).
+`AIRTABLE_BASE_ID`, and how each of these variables is routed to its target, live in [Env](/docs/toolkit/guides/env).
 
 </details>

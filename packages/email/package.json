@@ -16,7 +16,6 @@
   "scripts": {
     "build": "tsx scripts/compile.tsx && tsc -p tsconfig.build.json",
     "compile": "tsx scripts/compile.tsx",
-    "preview": "email dev --dir src/templates",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

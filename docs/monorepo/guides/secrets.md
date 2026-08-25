@@ -42,7 +42,7 @@ The order above — least dangerous to most — is the order the interactive pic
 
 ## Where the detail lives
 
-`pnpm devtools env --help` lists the six subcommands (`pull`, `push`, `audit`, `init`, `example`, `reset`) and the options each takes; `pnpm devtools` with no arguments walks you through them interactively. Bitwarden Secrets Manager is the source of truth and GitHub environment secrets are a derived copy — [Env](/docs/platform/env) is the reference for how the two are kept in step and what `audit` compares.
+`pnpm devtools env --help` lists the six subcommands (`pull`, `push`, `audit`, `init`, `example`, `reset`) and the options each takes; `pnpm devtools` with no arguments walks you through them interactively. Bitwarden Secrets Manager is the source of truth and GitHub environment secrets are a derived copy — [Env](/docs/toolkit/guides/env) is the reference for how the two are kept in step, and [the commands](/docs/toolkit/guides/env/commands) is what `audit` compares.
 
 Two things worth knowing before you touch any of it:
 
