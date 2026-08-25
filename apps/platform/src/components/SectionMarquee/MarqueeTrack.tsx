@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 
 /**
  * Copies of `children` rendered side by side. Must be EVEN: the keyframe
@@ -24,6 +24,13 @@ interface Props {
    * with z-index descending from `copyZBase`. This keeps the left copy on top of
    * the right one at every seam, so cards whose z-index descends within a copy
    * also overlap correctly across the loop point.
+   *
+   * Only the `--copy-z` custom property is set here; `[data-marquee-copy]` in
+   * globals.css turns it into the actual `position`/`z-index`. That indirection
+   * is what lets the hover rule beside it lift whichever copy holds the hovered
+   * card above the rest — an inline `z-index` would outrank that rule on
+   * specificity, and a card hovered at a seam could never rise above the copy
+   * to its left.
    */
   copyZBase?: number;
 }
@@ -79,12 +86,16 @@ export default function MarqueeTrack({
   }, []);
 
   return (
-    // y stays visible so a hovered stat-card's lift isn't clipped at the
-    // strip's top/bottom edge; x stays hidden — that's what makes the loop
-    // read as an endless strip instead of COPIES stacked side by side.
+    // `clip`, not `hidden`. Per CSS Overflow 3, `visible` on one axis computes
+    // to `auto` when the other axis is `hidden` — so `overflow-x-hidden
+    // overflow-y-visible` quietly became `overflow-y: auto` and went on
+    // clipping a hovered card's lift at the strip's top edge. `clip` is the
+    // documented exception: paired with it, `visible` stays visible. x still
+    // clips, which is what makes the loop read as an endless strip rather than
+    // COPIES laid out side by side.
     <div
       ref={rootRef}
-      className={`overflow-x-hidden overflow-y-visible ${className ?? ""}`}
+      className={`overflow-x-clip overflow-y-visible ${className ?? ""}`}
     >
       <div
         ref={trackRef}
@@ -99,10 +110,11 @@ export default function MarqueeTrack({
             key={i}
             className="flex"
             aria-hidden={i > 0 || undefined}
+            data-marquee-copy={copyZBase === undefined ? undefined : ""}
             style={
-              copyZBase !== undefined
-                ? { position: "relative", zIndex: copyZBase - i }
-                : undefined
+              copyZBase === undefined
+                ? undefined
+                : ({ "--copy-z": copyZBase - i } as CSSProperties)
             }
           >
             {children}

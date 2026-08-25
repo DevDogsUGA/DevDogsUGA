@@ -315,6 +315,23 @@
   filter: brightness(0.4);
 }
 
+/* MarqueeTrack sets only --copy-z inline; the stacking itself is declared here
+   so the hover rule below can outrank it. Inline, it would win on specificity
+   no matter what this file says. */
+[data-marquee-copy] {
+  position: relative;
+  z-index: var(--copy-z);
+}
+
+/* Each looped copy is its own stacking context, so a card's `hover:z-50` only
+   ever sorts it against its siblings *inside* that copy — at a seam it stayed
+   pinned under the whole copy to its left, which is every third card here.
+   Lifting the copy itself clears the hovered card over the seam. 40 sits above
+   any copyZBase the callers use and below the dialog layers. */
+[data-hover-invert] [data-marquee-copy]:has(a:hover) {
+  z-index: 40;
+}
+
 @keyframes dialog-slide-in {
   from {
     transform: translateX(-100%);
