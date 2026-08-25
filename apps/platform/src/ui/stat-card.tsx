@@ -130,7 +130,7 @@ export default function StatCard({
               &ldquo;{description}&rdquo;
             </span>
           </p>
-          <p className="flex items-center gap-1.5 font-bold group-hover:underline sm:text-lg">
+          <p className="flex items-center gap-1.5 font-bold sm:text-lg">
             {cta}
             <CtaArrow />
           </p>
@@ -141,32 +141,39 @@ export default function StatCard({
 }
 
 /**
- * The CTA arrow, drawn here rather than taken from Phosphor because it has to
- * come apart: hovering the card grows the shaft while the head stays put, and
- * a single glyph can only be scaled whole.
+ * The CTA arrow: a shaft that is an ordinary box and a head that stays an SVG.
  *
- * The shaft is the element the stylesheet animates — see `[data-cta-arrow]` in
- * globals.css, which scales it from the head end so the arrow lengthens
- * backwards. Growing it forwards instead would either push the arrow out of
- * the card's padding or shove the CTA text left on every hover.
+ * Split that way because the growth has to move the text. The shaft's *width*
+ * is what animates, so the flex row above genuinely gets wider and, being
+ * centred, pushes the label out to the left as the arrow reaches right. The
+ * earlier version scaled the shaft with a transform, which paints longer
+ * without occupying more space — the line never moved. A transform also cannot
+ * grow one axis of an arrowhead without shearing it, which is why only the
+ * shaft stretches and the head stays a fixed, undistorted glyph.
  *
- * The apex of the head and the end of the shaft are the same point (21, 12),
- * so the two strokes read as one arrow at any length.
+ * The head keeps its own aspect ratio: give it a height and no width, and the
+ * viewBox sizes it. Stroke weight is tuned so it lands on the shaft's 1.5px —
+ * 2.6 units of a 24-unit box drawn 14px tall — which is why the head has no
+ * responsive size of its own. The two would drift apart at the breakpoint and
+ * the join would show.
  */
 function CtaArrow() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={3}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className="size-4 shrink-0 sm:size-5"
-    >
-      <line data-cta-arrow x1="3" y1="12" x2="21" y2="12" />
-      <polyline points="13.5 4.5 21 12 13.5 19.5" />
-    </svg>
+    <span aria-hidden className="inline-flex shrink-0 items-center">
+      {/* Rounded on both ends; the head overlaps it by a pixel so the cap
+          never reads as a seam. */}
+      <span className="h-[1.5px] w-2.5 shrink-0 rounded-full bg-current transition-[width] group-hover:w-5 motion-reduce:transition-none sm:w-3 sm:group-hover:w-6" />
+      <svg
+        viewBox="0 0 11 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="-ml-px h-3.5 w-auto shrink-0"
+      >
+        <polyline points="2 5.5 9 12 2 18.5" />
+      </svg>
+    </span>
   );
 }
