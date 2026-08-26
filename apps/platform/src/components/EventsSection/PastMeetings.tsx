@@ -7,11 +7,14 @@ import type { MeetingSummary } from "~/server/loaders/meetings";
 /**
  * The archive — every night that already happened.
  *
- * A **table**, deliberately. The band above this one is cards because a member
- * is deciding whether to come; nobody decides anything here. This is the
- * club's record, read by whoever wants to check that DevDogs actually meets
- * every week, and the question they are asking is answered by four columns
- * lining up down the page rather than by forty cards they have to scroll.
+ * A **table**, deliberately. The rows above this one carry chips and a
+ * countdown because a member is deciding whether to come; nobody decides
+ * anything here. This is the club's record, read by whoever wants to check
+ * that DevDogs actually meets every week, and the question they are asking is
+ * answered by four columns lining up down the page rather than by forty cards
+ * they have to scroll. It is ruled like the rows above it rather than boxed,
+ * so the two halves of the ledger read as one list that changes shape where
+ * the nights stop being decisions and start being records.
  *
  * The attendance column is the reason the band exists. Everything else on the
  * events page is authored — an officer typed the name, the summary, the room —
@@ -49,12 +52,12 @@ export default function PastMeetings({
       data-animate="fade-up"
       aria-labelledby="past-meetings-heading"
     >
-      <h2
+      <h3
         id="past-meetings-heading"
-        className="font-display text-2xl font-extrabold text-black md:text-3xl"
+        className="font-display text-xl font-extrabold text-black md:text-2xl"
       >
-        Past meetings
-      </h2>
+        Already happened
+      </h3>
 
       {meetings.length === 0 ? (
         // Short, and no card around it. An empty archive is a fact about a new
@@ -65,16 +68,15 @@ export default function PastMeetings({
       ) : (
         <>
           {/*
-            The scroll container is the bordered box, not the table. A table
-            sizes to its content and four columns of real meeting names exceed
-            390px, so without this the *page* scrolls sideways and every other
-            band goes with it. Putting the border here also means the shadow
-            stays put while the columns move under it.
+            The scroll container is a wrapper, not the table. A table sizes to
+            its content and four columns of real meeting names exceed 390px,
+            so without this the *page* scrolls sideways and every other band
+            goes with it.
           */}
-          <div className="shadow-block-md overflow-x-auto rounded-sm border-2 border-black bg-white">
+          <div className="overflow-x-auto">
             <table className="w-full min-w-[30rem] border-collapse text-left">
               <thead>
-                <tr className="border-b-2 border-black">
+                <tr className="border-y-2 border-black">
                   <Th>Date</Th>
                   <Th>Meeting</Th>
                   {/* Right-aligned with their cells: two number columns read as
@@ -87,7 +89,7 @@ export default function PastMeetings({
                 {meetings.map((meeting) => (
                   <tr
                     key={meeting.id}
-                    className="border-b-2 border-mauve-200 last:border-b-0"
+                    className="border-b-2 border-mauve-200 last:border-b-black"
                   >
                     <Td className="whitespace-nowrap text-mauve-700 tabular-nums">
                       <time dateTime={meeting.startsAt.toISOString()}>
@@ -145,7 +147,7 @@ export default function PastMeetings({
   );
 }
 
-const CELL_CLS = "px-3 py-2 text-sm md:px-4";
+const CELL_CLS = "px-2 py-2.5 text-sm md:px-3";
 
 function Th({
   children,
