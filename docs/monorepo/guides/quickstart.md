@@ -36,7 +36,7 @@ pnpm sb reset     # replays the migrations, then the seeds, then regenerates typ
 pnpm dev --filter platform
 ```
 
-Stop it with `pnpm --filter @devdogsuga/supabase stop-local-stack`, which also removes `.env.generated`.
+Stop it with `pnpm sb stop`, which also removes `.env.generated`. `pnpm sb restart` is the stop/start pair under one name, which is how a changed `config.toml` lands.
 
 ## Or: a hosted project
 

@@ -11,14 +11,31 @@
  * get asked and what argv comes out, not how a terminal renders them.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Environment } from "./environment.js";
 
 const answers: unknown[] = [];
 const asked: string[] = [];
 
+/** Every entry each screen actually drew, for the adaptation tests below. */
+interface Entry {
+  label?: string;
+  hint?: string;
+}
+const shown: Entry[][] = [];
+
 vi.mock("@clack/prompts", () => {
-  /** Each prompt takes the next scripted answer and records its message. */
-  const next = (options: { message?: string }): Promise<unknown> => {
+  /** Each prompt takes the next scripted answer and records what it drew. */
+  const next = (options: {
+    message?: string;
+    options?: Entry[];
+  }): Promise<unknown> => {
     asked.push(options.message ?? "");
+    // Recorded BEFORE the throw below, so a walk that runs out of answers
+    // still leaves the screen it stopped on available to inspect. That is how
+    // the filtering tests read one screen without scripting a whole walk.
+    if (options.options) {
+      shown.push(options.options.map(({ label, hint }) => ({ label, hint })));
+    }
     if (answers.length === 0) throw new Error(`unanswered: ${options.message}`);
     return Promise.resolve(answers.shift());
   };
@@ -36,18 +53,31 @@ vi.mock("@clack/prompts", () => {
 const { runMenu } = await import("./menu.js");
 const { GROUPS, TOP_LEVEL, allPaths, findCommand, groupOf } =
   await import("./commands.js");
+const { UNKNOWN_ENVIRONMENT } = await import("./environment.js");
 
-/** Runs one walk with the given answers, returning the argv it dispatched. */
-async function walk(scripted: unknown[]): Promise<string[] | null> {
+/**
+ * Runs one walk with the given answers, returning the argv it dispatched.
+ *
+ * The environment is injected, and defaults to the one that adapts nothing —
+ * so every test below describes the machine it means rather than inheriting
+ * whichever machine happens to be running the suite. Letting `runMenu` probe
+ * for real would make the reachability claim depend on whether the developer
+ * had Docker open.
+ */
+async function walk(
+  scripted: unknown[],
+  env: Environment = UNKNOWN_ENVIRONMENT,
+): Promise<string[] | null> {
   answers.length = 0;
   asked.length = 0;
+  shown.length = 0;
   answers.push(...scripted);
 
   let dispatched: string[] | null = null;
   await runMenu((argv) => {
     dispatched = argv;
     return Promise.resolve("Done.");
-  });
+  }, env);
   return dispatched;
 }
 
@@ -70,6 +100,7 @@ function answersFor(path: string[]): unknown[] {
 beforeEach(() => {
   answers.length = 0;
   asked.length = 0;
+  shown.length = 0;
 });
 
 describe("reach", () => {
@@ -199,6 +230,79 @@ describe("navigation", () => {
 
   it("dispatches nothing when the reader quits", async () => {
     expect(await walk([null])).toBeNull();
+  });
+});
+
+describe("adapts to the machine", () => {
+  const RUNNING: Environment = {
+    docker: "yes",
+    stack: "yes",
+    envFile: "yes",
+  };
+  const STOPPED: Environment = { docker: "yes", stack: "no", envFile: "yes" };
+
+  /**
+   * The entries one screen drew, for a machine in the given state.
+   *
+   * Walks far enough to open the screen and then runs out of answers on
+   * purpose: the mock records what it drew before it gives up, so this reads
+   * the rendered list without having to script a complete walk to a leaf.
+   */
+  async function screen(env: Environment, to: string[]): Promise<Entry[]> {
+    await walk(
+      to.map((name, i) => (i === 0 ? groupOf(name)! : findCommand([name])!)),
+      env,
+    ).catch(() => null);
+    return shown.at(-1) ?? [];
+  }
+
+  const labels = (entries: Entry[]): (string | undefined)[] =>
+    entries.map((entry) => entry.label);
+
+  it("offers stop and restart only while the stack is running", async () => {
+    expect(labels(await screen(RUNNING, ["link"]))).toContain("stop");
+    expect(labels(await screen(RUNNING, ["link"]))).toContain("restart");
+
+    expect(labels(await screen(STOPPED, ["link"]))).not.toContain("stop");
+    expect(labels(await screen(STOPPED, ["link"]))).not.toContain("restart");
+  });
+
+  /**
+   * The property that keeps a failed probe from becoming a missing command.
+   *
+   * `docker ps` can time out, Docker can be absent, a future probe can fail
+   * in a way nobody predicted. In every one of those cases the menu is the
+   * one it was before any of this existed.
+   */
+  it("hides nothing when it cannot read the machine", async () => {
+    const drawn = labels(await screen(UNKNOWN_ENVIRONMENT, ["link"]));
+    for (const command of groupOf("link")!.commands) {
+      expect(drawn, command.name).toContain(command.name);
+    }
+  });
+
+  it("says why a command will not work rather than hiding it", async () => {
+    const drawn = await screen(STOPPED, ["catalog"]);
+    const roundtrip = drawn.find((entry) => entry.label === "roundtrip");
+
+    // Still on screen — `needs` explains, it does not remove.
+    expect(roundtrip).toBeDefined();
+    expect(roundtrip!.hint).toContain("the local stack is not running");
+  });
+
+  it("leaves the hint alone when nothing is in the way", async () => {
+    const drawn = await screen(RUNNING, ["catalog"]);
+    const roundtrip = drawn.find((entry) => entry.label === "roundtrip");
+
+    expect(roundtrip!.hint).toBe(findCommand(["roundtrip"])!.hint);
+  });
+
+  it("names only the offered commands in a group's hint", async () => {
+    await walk([], STOPPED).catch(() => null);
+    const database = shown[0]!.find((entry) => entry.label === "Your database");
+
+    expect(database!.hint).not.toContain("stop");
+    expect(database!.hint).toContain("link");
   });
 });
 

@@ -29,6 +29,13 @@ import {
   type CommandNode,
   type CommandOption,
 } from "./commands.js";
+import {
+  blockedBecause,
+  describeEnvironment,
+  isOffered,
+  probeEnvironment,
+  type Environment,
+} from "./environment.js";
 import { unwrap } from "./ui.js";
 
 /** Chosen when a submenu should return to the screen above it. */
@@ -47,19 +54,60 @@ const BACK_OPTION = { value: BACK, label: "← Back" } as const;
  */
 const NO_ENV_ENTRY = "pnpm --filter @devdogsuga/devtools run cli:no-env deploy";
 
+// ── What this machine is offered ─────────────────────────────────────────────
+
+/**
+ * The commands at one level that are worth showing right now.
+ *
+ * `when` is the only thing that removes an entry, and it removes very few —
+ * see `isOffered`. Everything else stays on screen and explains itself
+ * through `hintFor` below, because the menu's job is to help someone who does
+ * not know a command's name, and it cannot do that for a command it declined
+ * to draw.
+ */
+function offered(
+  nodes: readonly CommandNode[],
+  env: Environment,
+): CommandNode[] {
+  return nodes.filter((node) => isOffered(node, env));
+}
+
+/**
+ * The line beside a name, with whatever is standing in this command's way.
+ *
+ * The reader learns that `roundtrip` needs a stack that is not up *before*
+ * choosing it, instead of after a spinner and a connection error. The command
+ * stays selectable: the check is a probe, the probe can be wrong, and the
+ * command's own failure message is the authority on whether it can run.
+ */
+function hintFor(node: CommandNode, env: Environment): string {
+  const base = node.hint ?? node.summary;
+  const blocked = blockedBecause(node, env);
+  return blocked ? `${base} — ${blocked}` : base;
+}
+
 // ── Screens ──────────────────────────────────────────────────────────────────
 
-async function pickGroup(): Promise<CommandGroup | null> {
+async function pickGroup(env: Environment): Promise<CommandGroup | null> {
+  // A group whose every command is hidden has nothing behind its door, so the
+  // door is not drawn. No group in the tree can empty out today; this is here
+  // so that a later `when` cannot leave a dead entry on the first screen.
+  const groups = GROUPS.filter(
+    (group) => offered(group.commands, env).length > 0,
+  );
+
   const choice = unwrap(
     await select<CommandGroup | null>({
       message: "What would you like to do?",
       options: [
-        ...GROUPS.map((group) => ({
+        ...groups.map((group) => ({
           value: group,
           label: group.title,
           // The group's own commands, so the first screen says what is behind
           // each door rather than making the reader open all six to find out.
-          hint: group.commands.map((command) => command.name).join(", "),
+          hint: offered(group.commands, env)
+            .map((command) => command.name)
+            .join(", "),
         })),
         { value: null, label: "Quit" },
       ],
@@ -68,19 +116,24 @@ async function pickGroup(): Promise<CommandGroup | null> {
   return choice;
 }
 
-async function pickCommand(group: CommandGroup): Promise<CommandNode | Back> {
+async function pickCommand(
+  group: CommandGroup,
+  env: Environment,
+): Promise<CommandNode | Back> {
+  const commands = offered(group.commands, env);
+
   // A group with one command has nothing to choose; asking would be a screen
   // whose only real option is the one already implied by the group's title.
-  if (group.commands.length === 1) return group.commands[0]!;
+  if (commands.length === 1) return commands[0]!;
 
   return unwrap(
     await select<CommandNode | Back>({
       message: `${group.title}:`,
       options: [
-        ...group.commands.map((command) => ({
+        ...commands.map((command) => ({
           value: command,
           label: command.name,
-          hint: command.hint ?? command.summary,
+          hint: hintFor(command, env),
         })),
         BACK_OPTION,
       ],
@@ -88,15 +141,18 @@ async function pickCommand(group: CommandGroup): Promise<CommandNode | Back> {
   );
 }
 
-async function pickSubcommand(node: CommandNode): Promise<CommandNode | Back> {
+async function pickSubcommand(
+  node: CommandNode,
+  env: Environment,
+): Promise<CommandNode | Back> {
   return unwrap(
     await select<CommandNode | Back>({
       message: `${node.name}:`,
       options: [
-        ...(node.subcommands ?? []).map((child) => ({
+        ...offered(node.subcommands ?? [], env).map((child) => ({
           value: child,
           label: child.name,
-          hint: child.hint ?? child.summary,
+          hint: hintFor(child, env),
         })),
         BACK_OPTION,
       ],
@@ -187,12 +243,12 @@ interface Chosen {
   argv: string[];
 }
 
-async function walk(): Promise<Chosen | null> {
+async function walk(env: Environment): Promise<Chosen | null> {
   for (;;) {
-    const group = await pickGroup();
+    const group = await pickGroup(env);
     if (!group) return null;
 
-    const first = await pickCommand(group);
+    const first = await pickCommand(group, env);
     if (first === BACK) continue;
 
     let node = first;
@@ -200,9 +256,11 @@ async function walk(): Promise<Chosen | null> {
     let backedOut = false;
 
     // `while` rather than a single step: the tree is two deep today and this
-    // does not care.
-    while (node.subcommands && node.subcommands.length > 0) {
-      const child = await pickSubcommand(node);
+    // does not care. The condition counts the OFFERED children rather than
+    // all of them, so a node whose every subcommand is hidden is treated as
+    // the leaf it has become instead of opening a screen holding only "Back".
+    while (offered(node.subcommands ?? [], env).length > 0) {
+      const child = await pickSubcommand(node, env);
       if (child === BACK) {
         backedOut = true;
         break;
@@ -231,8 +289,16 @@ async function walk(): Promise<Chosen | null> {
  */
 export async function runMenu(
   dispatch: (argv: string[]) => Promise<string | null>,
+  env: Environment = probeEnvironment(),
 ): Promise<string | null> {
-  const chosen = await walk();
+  // Before the first question, not after a failure. Three lines that say what
+  // this machine currently is are the whole explanation for why the database
+  // commands below are flagged — or, on a healthy machine, one glance and
+  // gone. Injected rather than probed inside `walk` so the tests can drive a
+  // machine they describe instead of the one they happen to run on.
+  note(describeEnvironment(env), "This machine");
+
+  const chosen = await walk(env);
   // Quitting is not a failure, but it has nothing to announce either.
   if (!chosen) return null;
 

@@ -46,7 +46,7 @@ An app that hides should freeze as well. Without it an author can rewrite quaran
 7. Add the schema to `[api] schemas` in `supabase/config.toml` and to the exclusion list in `drizzle-introspection.config.ts`. See Trap 2.
 8. Verify with `pnpm devtools doctor --app <slug>`, then `pnpm devtools roundtrip` — the step that matters, because it exercises _your_ policy.
 
-⚠️ **`config.toml` changes need a restart, not a reset.** `[api] schemas` becomes PostgREST's `db-schemas` at `supabase start`, so `supabase db reset` leaves the old list in place — and a schema on it that no longer exists stops PostgREST building its schema cache at all: every request returns `PGRST002`. Run `stop-local-stack`, then `start-local-stack`, in `@devdogsuga/supabase`.
+⚠️ **`config.toml` changes need a restart, not a reset.** `[api] schemas` becomes PostgREST's `db-schemas` at `supabase start`, so `supabase db reset` leaves the old list in place — and a schema on it that no longer exists stops PostgREST building its schema cache at all: every request returns `PGRST002`. Run `pnpm sb restart`, which is exactly that stop/start pair.
 
 ## Trap 1: column-level `REVOKE` does not work the way it reads
 

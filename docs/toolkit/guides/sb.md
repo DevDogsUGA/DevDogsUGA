@@ -1,13 +1,13 @@
 ---
 name: sb
-description: Four database commands over three targets — your local Docker stack, the linked Supabase project, or a team sandbox.
+description: Six database commands — four over three targets (your local Docker stack, the linked Supabase project, or a team sandbox) and two that only ever act on your own stack.
 order: 4
 ---
 
 # sb
 
 `pnpm sb` and `pnpm devtools` are the same binary; `sb` is the shorter name for
-the four database commands. Each takes one target:
+the database commands. Four of them take a target:
 
 ```bash
 pnpm sb link                 # --local is the default
@@ -15,12 +15,21 @@ pnpm sb reset --remote
 pnpm sb status --team lantern
 ```
 
-| Command  | `--local`                                     | `--remote`                                | `--team <slug>`                        |
-| -------- | --------------------------------------------- | ----------------------------------------- | -------------------------------------- |
+| Command  | `--local`                                       | `--remote`                                 | `--team <slug>`                                   |
+| -------- | ----------------------------------------------- | ------------------------------------------ | ------------------------------------------------- |
 | `link`   | boots the Docker stack, writes `.env.generated` | `supabase link --project-ref $PROJECT_REF` | asks the platform for tokens, writes `.env.local` |
-| `push`   | `supabase db push`, then regenerate the types | the same one script                       | asks the platform to apply them        |
-| `reset`  | ⚠️ erases, replays migrations, then seeds      | ⚠️ same, against the linked project       | ⚠️ asks the platform to rebuild it     |
-| `status` | tells you to run `supabase status`             | points at the Supabase dashboard          | reports state, and the wake-up ETA     |
+| `push`   | `supabase db push`, then regenerate the types   | the same one script                        | asks the platform to apply them                   |
+| `reset`  | ⚠️ erases, replays migrations, then seeds       | ⚠️ same, against the linked project        | ⚠️ asks the platform to rebuild it                |
+| `status` | reports Docker, the stack and `.env`            | points at the Supabase dashboard           | reports state, and the wake-up ETA                |
+
+`stop` and `restart` are the other two. They act on the Docker stack on this
+machine, so they take no target and refuse one — a hosted project has no
+container here to act on:
+
+| Command   | What it does                                               |
+| --------- | ---------------------------------------------------------- |
+| `stop`    | `supabase stop`, and removes `.env.generated`              |
+| `restart` | stop, then start again — how a changed `config.toml` lands |
 
 The `--local` and `--remote` paths delegate to the scripts in
 `@devdogsuga/supabase` **by name**, so those scripts stay the single definition
@@ -32,9 +41,11 @@ of what "reset" means and this CLI never reimplements one.
 `.env.generated`, and seeds the storage buckets. Nothing switches you between a
 local stack and a hosted project by flag: `with-env` probes port 54321 on every
 run, so a listening stack layers `.env.generated` over `.env` and a stopped one
-falls back to the linked project. Stop it with
-`pnpm --filter @devdogsuga/supabase stop-local-stack`, which removes
-`.env.generated` too.
+falls back to the linked project. Stop it with `pnpm sb stop`, which removes
+`.env.generated` too, and use `pnpm sb restart` to pick up a `config.toml`
+change — there is no `supabase restart`, so it is the stop/start pair under one
+name. Both delegate to `stop-local-stack` and `start-local-stack`, which are
+still reachable directly.
 
 `--remote` links the CLI to the project named by `PROJECT_REF` and writes
 nothing else; fill the Supabase values into `.env` first.
@@ -64,8 +75,15 @@ also the command that puts a new migration into your database:
 
 ## status
 
-Against `--local` and `--remote` this is a signpost rather than a probe: it
-names `supabase status` or the dashboard, because both already answer the
+Against `--local` this reports what the menu reads before it draws itself:
+whether Docker answers, whether this project's containers are up, and whether a
+root `.env` exists — then names the next command. It used to print "Run
+`supabase status`", which made it a status command whose whole output was the
+name of another status command. It still stops short of printing the stack's
+URLs and keys: `supabase status` does that, it is one line away, and a status
+check is not a reason to fill your scrollback with credentials.
+
+`--remote` is still a signpost, and deliberately: the dashboard answers that
 question better than a wrapper could.
 
 `--team` is the one that really reports. Sandbox instances pause to free a slot,

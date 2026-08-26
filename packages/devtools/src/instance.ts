@@ -7,8 +7,8 @@
  * tool feel like homework.
  */
 import { execFileSync } from "node:child_process";
-import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { PROJECT_ROOT } from "./environment.js";
 
 /**
  * The repo root, which is where `supabase/config.toml` lives.
@@ -17,10 +17,15 @@ import { createClient } from "@supabase/supabase-js";
  * and falls back to `basename(cwd)` as the project name when it finds none --
  * so running it from the wrong place fails with "No such container:
  * supabase_db_<whatever directory you were in>", which is a confusing thing to
- * hand someone. Resolved from this file rather than from `cwd` so it does not
- * matter where the contributor invoked the tool.
+ * hand someone. Resolved from a source file rather than from `cwd` so it does
+ * not matter where the contributor invoked the tool.
+ *
+ * Defined in `environment.ts` and re-exported here, where it used to live:
+ * the probe that runs before the menu's first frame needs this path, and
+ * importing it from this module would drag `@supabase/supabase-js` onto that
+ * path with it. Every existing importer keeps working.
  */
-export const PROJECT_ROOT = join(import.meta.dirname, "..", "..", "..");
+export { PROJECT_ROOT };
 
 /**
  * Every client here goes through this one factory so they all share a type.

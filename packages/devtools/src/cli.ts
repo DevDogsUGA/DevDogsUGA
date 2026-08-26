@@ -196,9 +196,16 @@ async function runStack(command: StackCommand, target: Target): Promise<void> {
     const { code, lines } = await runStackCommand(command, target);
     for (const line of lines) log.message(line);
     if (code !== 0) {
-      explain(`\`${command}\` did not finish cleanly.`, "", [
-        "Scroll up for the output from the Supabase CLI.",
-      ]);
+      // Lines on a failure ARE the explanation — that is the contract with
+      // `runStackCommand`. "Scroll up for the Supabase CLI's output" is only
+      // true when a delegated script ran, and pointing a reader at output
+      // that does not exist is worse than adding nothing. A failure that has
+      // scrollback worth reading says so in its own line.
+      if (lines.length === 0) {
+        explain(`\`${command}\` did not finish cleanly.`, "", [
+          "Scroll up for the output from the Supabase CLI.",
+        ]);
+      }
       process.exitCode = code;
     }
   } catch (err) {
