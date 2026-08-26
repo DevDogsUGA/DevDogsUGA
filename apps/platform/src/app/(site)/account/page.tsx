@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Fragment, Suspense } from "react";
 import AccentBlobs from "~/ui/accent-blobs";
 import AvatarField from "~/components/AvatarField";
@@ -18,6 +19,17 @@ import RoleDescriptionField from "~/components/RoleDescriptionField";
 import { CardSkeleton } from "~/components/Skeletons";
 import VerificationStatusField from "~/components/VerificationStatusField";
 import { getProfilePageData } from "~/server/loaders/console";
+
+/**
+ * One person's own profile — nothing here is the same page for two visitors,
+ * which is the whole reason for the `noindex`. There is no description, on
+ * purpose: a description exists to be shown in a result, and there should not
+ * be a result.
+ */
+export const metadata: Metadata = {
+  title: "Account | DevDogs",
+  robots: { index: false },
+};
 
 async function AccountContent() {
   const data = await getProfilePageData();

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -13,6 +14,17 @@ import { createTeam, joinTeam, requestToJoin } from "~/server/actions/teams";
 import { expectSession } from "~/server/auth";
 import { getCompetitionBySlug } from "~/server/loaders/meetings";
 import { getMyTeam, getTeamsForCompetition } from "~/server/loaders/teams";
+
+/**
+ * `expectSession()` below sends an anonymous visitor to `/auth`, so this route
+ * has no public rendering — unlike its sibling `results/`, which is public and
+ * carries a real description. The `noindex` says the same thing to a crawler
+ * that reached the URL without following a link.
+ */
+export const metadata: Metadata = {
+  title: "Teams | DevDogs",
+  robots: { index: false },
+};
 
 /**
  * /competitions/[slug]/teams — every team, and the two ways onto one.

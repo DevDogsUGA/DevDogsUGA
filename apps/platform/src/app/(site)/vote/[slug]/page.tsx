@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -13,6 +14,20 @@ import {
   getEligibility,
   getMyBallot,
 } from "~/server/loaders/elections";
+
+/**
+ * A ballot, and one that is shuffled per voter — see below. Indexing it would
+ * publish a presented order that is only true for whoever the crawler was, on
+ * a page nobody can open without a session anyway.
+ *
+ * Static rather than a `generateMetadata` reading the election's name: naming
+ * the election in a tab title would cost a query on a page that already makes
+ * four, and buys nothing a `noindex` route can use.
+ */
+export const metadata: Metadata = {
+  title: "Ballot | DevDogs",
+  robots: { index: false },
+};
 
 /**
  * /vote/[slug] — one ballot.

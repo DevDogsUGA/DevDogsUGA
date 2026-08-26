@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { approveAuthorization } from "~/server/actions/consent";
 import type { TestAccount } from "~/server/actions/testAccounts";
@@ -5,6 +6,18 @@ import { expectSession, expectUserWith } from "~/server/auth";
 import { db } from "~/server/db";
 import { createSupabaseServerClient } from "~/supabase/server";
 import ConsentForm from "~/components/ConsentForm";
+
+/**
+ * A step inside an authorization flow, reachable only with a live
+ * `authorization_id` — without one it 404s, and with a stale one it 404s too.
+ * There is nothing here that is the same twice, let alone worth indexing, and
+ * the query string it needs is a credential-adjacent identifier that should not
+ * end up in a search result.
+ */
+export const metadata: Metadata = {
+  title: "Authorize | DevDogs",
+  robots: { index: false },
+};
 
 interface Props {
   searchParams: Promise<Record<string, string>>;
