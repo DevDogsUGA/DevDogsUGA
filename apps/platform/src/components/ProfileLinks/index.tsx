@@ -32,30 +32,37 @@ import {
   useState,
 } from "react";
 import { PencilSimpleIcon, PlusIcon } from "@phosphor-icons/react/ssr";
-import { useProfileLinks } from "~/hooks/useProfileLinks";
-import { useSaveShortcut } from "~/hooks/useSaveShortcut";
-import { useUnsavedChangesWarning } from "~/hooks/useUnsavedChangesWarning";
+import { useProfileLinks, type DraftLink } from "~/hooks/useProfileLinks";
+import {
+  isValidLinkUrl,
+  PROFILE_LIMITS,
+  validateLinks,
+  validateLinkUrl,
+} from "~/lib/validation/profile";
 import type { profileLinks } from "~/server/db/schema";
 import DropTarget from "~/ui/drop-target";
-import InlineSave from "~/ui/inline-save";
+import {
+  FieldError,
+  useBlurredError,
+  useSettingsField,
+} from "~/ui/settings-form";
 import LinkCard from "./LinkCard";
-import { isValidLinkUrl } from "./LinkCard";
 import AddLinkInput from "./AddLinkInput";
 
+/** Identity of the card that mirrors whatever is currently in the add-link box. */
 const PREVIEW_ID = "__preview__";
 
 interface Props {
   initialLinks: (typeof profileLinks.$inferSelect)[];
 }
 
-// LinkCard is now in ./LinkCard.tsx
 // Merges dnd-kit's sortable ref + transform with Framer Motion's height/opacity animation.
 // setNodeRef must be on the motion.div (not a child) so the entire clipped box moves as a
 // unit during sorting — applying the transform inside an overflow:hidden parent would clip it.
 interface SortableMotionItemProps {
   id: string;
   isJustAdded: boolean;
-  link: typeof profileLinks.$inferSelect;
+  link: DraftLink;
   isEditing: boolean;
   actionsDisabled: boolean;
   multipleLinks: boolean;
@@ -138,13 +145,11 @@ function SortablePreviewItem({
   multipleLinks,
   listHovered,
   isDroppingTarget,
-  pendingSubmit,
 }: {
   link: { url: string; title?: string | null };
   multipleLinks: boolean;
   listHovered: boolean;
   isDroppingTarget: boolean;
-  pendingSubmit: boolean;
 }) {
   const {
     setNodeRef,
@@ -153,18 +158,14 @@ function SortablePreviewItem({
     isDragging,
     attributes,
     listeners,
-  } = useSortable({ id: PREVIEW_ID, disabled: pendingSubmit });
+  } = useSortable({ id: PREVIEW_ID });
 
   return (
     <motion.div
       ref={setNodeRef}
       initial={{ height: 0, opacity: 0 }}
       animate={{ height: "auto", opacity: 1 }}
-      exit={
-        pendingSubmit
-          ? { height: "auto", opacity: 1, transition: { duration: 0 } }
-          : { height: 0, opacity: 0 }
-      }
+      exit={{ height: 0, opacity: 0 }}
       transition={{ duration: 0.2, ease: "easeInOut" }}
       style={{
         overflow: "hidden",
@@ -180,7 +181,7 @@ function SortablePreviewItem({
             link={link}
             isPreview
             actionsDisabled
-            multipleLinks={multipleLinks && !pendingSubmit}
+            multipleLinks={multipleLinks}
             listHovered={listHovered}
             dragListeners={listeners}
             dragAttributes={attributes}
@@ -191,21 +192,26 @@ function SortablePreviewItem({
   );
 }
 
+/**
+ * The links list, staged.
+ *
+ * Nothing here writes. Every add, edit, delete and drag edits a local draft
+ * (see ~/hooks/useProfileLinks) and the page's save bar commits the lot. The
+ * card that appears while a URL is being typed is not decoration any more —
+ * it is a real entry in the list this component hands to `save`, which is why
+ * a member can type a URL and press Save without pressing Add first.
+ */
 export default function ProfileLinks({ initialLinks }: Props) {
   const urlInputId = useId();
   const {
     links,
-    error,
-    hasPendingStructural,
+    isDirtyFor,
     addLink,
     removeLink,
     updateLink,
     reorderLink,
-    saveStructuralChanges,
-    cancelStructuralChanges,
-    isAddingLink,
-    isUpdatingLink,
-    isSavingStructural,
+    save,
+    reset,
   } = useProfileLinks(initialLinks);
 
   const [urlInput, setUrlInput] = useState("");
@@ -226,10 +232,6 @@ export default function ProfileLinks({ initialLinks }: Props) {
     }),
     [],
   );
-  const [pendingSubmit, setPendingSubmit] = useState<{
-    url: string;
-    title: string | null;
-  } | null>(null);
   const justAddedIdRef = useRef<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -301,70 +303,138 @@ export default function ProfileLinks({ initialLinks }: Props) {
     }
   }, []);
 
-  const atMax = links.length >= 5;
   const urlIsValid = isValidLinkUrl(urlInput);
+  const trimmedTitle = titleInput.trim();
 
-  const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, {
-      activationConstraint: { delay: 250, tolerance: 5 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
+  /**
+   * The draft with the add-link box folded in — what is on screen, and what
+   * `save` commits. While editing, the typed values replace that link in
+   * place; otherwise a valid URL becomes a new card at `previewIndex`.
+   */
+  const stagedLinks = useMemo<DraftLink[]>(() => {
+    if (!urlIsValid) return links;
 
-  // Preview data: frozen submitted values while mutation is pending, else live input values
-  const previewData =
-    pendingSubmit ??
-    (urlIsValid && !editingLinkId
-      ? { url: urlInput, title: titleInput || null }
-      : null);
+    if (editingLinkId) {
+      return links.map((l) =>
+        l.id === editingLinkId
+          ? { ...l, url: urlInput, title: trimmedTitle || null }
+          : l,
+      );
+    }
 
-  // Insert the preview card at previewIndex (or end by default)
-  const effectivePreviewIndex = previewIndex ?? links.length;
-  const previewItem = previewData
-    ? ({
+    const insertAt = previewIndex ?? links.length;
+    const left = links[insertAt - 1];
+    const right = links[insertAt];
+    const sortOrder =
+      left === undefined
+        ? (right?.sortOrder ?? 1) - 1
+        : right === undefined
+          ? left.sortOrder + 1
+          : (left.sortOrder + right.sortOrder) / 2;
+
+    return [
+      ...links.slice(0, insertAt),
+      {
         id: PREVIEW_ID,
-        url: previewData.url,
-        title: previewData.title,
-        sortOrder: Infinity,
-        createdAt: null as unknown as Date,
-        userId: "",
-        _isPreview: true as const,
-      } as const)
-    : null;
+        url: urlInput,
+        title: trimmedTitle || null,
+        sortOrder,
+        isNew: true,
+      },
+      ...links.slice(insertAt),
+    ];
+  }, [links, editingLinkId, urlInput, trimmedTitle, urlIsValid, previewIndex]);
 
-  const displayLinks = [
-    ...links
-      .slice(0, effectivePreviewIndex)
-      .map((l) => ({ ...l, _isPreview: false as const })),
-    ...(previewItem ? [previewItem] : []),
-    ...links
-      .slice(effectivePreviewIndex)
-      .map((l) => ({ ...l, _isPreview: false as const })),
-  ];
+  const atMax = links.length >= PROFILE_LIMITS.linkCount;
 
-  // Keep a ref so handleDragEnd always reads the latest list without needing it
-  // as a dep (updated after commit, not during render).
-  const displayLinksRef = useRef(displayLinks);
-  useEffect(() => {
-    displayLinksRef.current = displayLinks;
+  // A URL half-typed into the box is not in `stagedLinks`, so without this the
+  // page-wide save would quietly drop it. Blocking the save is the honest
+  // alternative: the message says what to do and the bar names the field.
+  const pendingUrlError =
+    urlInput.trim().length > 0 && !urlIsValid ? validateLinkUrl(urlInput) : null;
+  const listError = validateLinks(stagedLinks);
+  const error = listError ?? pendingUrlError;
+
+  // The list-level message ("You can only add up to five links.") is about the
+  // list, not about what is being typed, so it shows straight away. The URL
+  // message waits for blur — nobody needs to be told a URL is invalid while
+  // they are still on the third character of it.
+  const blurred = useBlurredError(pendingUrlError);
+  const visibleError = listError ?? blurred.error;
+
+  const clearInput = useCallback(() => {
+    setUrlInput("");
+    setTitleInput("");
+    setPreviewIndex(null);
+    setEditingLinkId(null);
+    setMobileInputOpen(false);
+  }, []);
+
+  /**
+   * Moves whatever is in the add-link box into the draft and empties the box.
+   * Local and instant — nothing is written. Returns the list to commit, which
+   * differs from `stagedLinks` in one way that matters: the preview card's
+   * placeholder id is swapped for the real draft id it was just given.
+   *
+   * Both callers need this. Pressing Add is the obvious one. The page-wide
+   * save is the important one: a member who types a URL and reaches straight
+   * for Save should not lose it, and folding the box in first means that if
+   * the write fails the link is sitting in the list rather than in an input
+   * that has since been cleared. It also keeps `PREVIEW_ID` out of the draft,
+   * where it would collide with the next thing typed.
+   */
+  const materializePending = useCallback((): DraftLink[] => {
+    if (editingLinkId) {
+      if (urlIsValid) {
+        updateLink(editingLinkId, urlInput, trimmedTitle || null);
+      }
+      clearInput();
+      return stagedLinks;
+    }
+
+    const preview = stagedLinks.find((l) => l.id === PREVIEW_ID);
+    if (!preview) {
+      clearInput();
+      return stagedLinks;
+    }
+
+    // The preview card is already on screen, so mark the new draft entry as
+    // just-added: AnimatePresence should see a rename, not an exit and a birth.
+    const realId = addLink(preview.url, preview.title, preview.sortOrder);
+    justAddedIdRef.current = realId;
+    clearInput();
+    return stagedLinks.map((l) =>
+      l.id === PREVIEW_ID ? { ...l, id: realId } : l,
+    );
+  }, [
+    editingLinkId,
+    urlIsValid,
+    urlInput,
+    trimmedTitle,
+    stagedLinks,
+    addLink,
+    updateLink,
+    clearInput,
+  ]);
+
+  const { isSaving } = useSettingsField({
+    id: "links",
+    label: "Links",
+    isDirty: isDirtyFor(stagedLinks) || pendingUrlError !== null,
+    error,
+    save: () => save(materializePending()),
+    reset: () => {
+      reset();
+      clearInput();
+    },
   });
 
-  const multipleItems = displayLinks.length > 1;
-  // Exclude preview from sortable items while submission is pending (frozen state)
-  const sortableItems = [
-    ...links.slice(0, effectivePreviewIndex).map((l) => l.id),
-    ...(previewItem && !pendingSubmit ? [PREVIEW_ID] : []),
-    ...links.slice(effectivePreviewIndex).map((l) => l.id),
-  ];
-  const activeLink =
-    activeId === PREVIEW_ID
-      ? previewData
-      : (links.find((l) => l.id === activeId) ?? null);
+  const handleAdd = useCallback(() => {
+    if (!urlIsValid) return;
+    materializePending();
+  }, [urlIsValid, materializePending]);
 
-  const handleEdit = useCallback((link: typeof profileLinks.$inferSelect) => {
+  const handleEdit = useCallback((link: DraftLink) => {
     setMobileEditSelectOpen(false);
     setEditingLinkId(link.id);
     setUrlInput(link.url);
@@ -375,83 +445,8 @@ export default function ProfileLinks({ initialLinks }: Props) {
   const handleMobileDelete = useCallback(() => {
     if (!editingLinkId) return;
     removeLink(editingLinkId);
-    setEditingLinkId(null);
-    setUrlInput("");
-    setTitleInput("");
-  }, [editingLinkId, removeLink]);
-
-  const handleSave = useCallback(() => {
-    if (editingLinkId) {
-      updateLink(editingLinkId, urlInput, titleInput.trim() || undefined);
-      if (hasPendingStructural) saveStructuralChanges(links);
-      setEditingLinkId(null);
-      setUrlInput("");
-      setTitleInput("");
-    } else if (urlIsValid) {
-      const url = urlInput;
-      const title = titleInput.trim() || undefined;
-      setPendingSubmit({ url, title: title ?? null });
-      setUrlInput("");
-      setTitleInput("");
-
-      const insertAt = previewIndex ?? links.length;
-      const left = links[insertAt - 1];
-      const right = links[insertAt];
-      const sortOrder =
-        left === undefined
-          ? (right?.sortOrder ?? 1) - 1
-          : right === undefined
-            ? (left.sortOrder ?? 0) + 1
-            : ((left.sortOrder ?? 0) + (right.sortOrder ?? 0)) / 2;
-
-      addLink(
-        url,
-        title,
-        sortOrder,
-        (link: typeof profileLinks.$inferSelect) => {
-          justAddedIdRef.current = link.id;
-          setPendingSubmit(null);
-          setPreviewIndex(null);
-          setMobileInputOpen(false);
-        },
-        () => {
-          setPendingSubmit(null);
-          setMobileInputOpen(false);
-        },
-      );
-      if (hasPendingStructural) saveStructuralChanges(links);
-    } else {
-      saveStructuralChanges(links);
-    }
-  }, [
-    editingLinkId,
-    urlInput,
-    urlIsValid,
-    titleInput,
-    previewIndex,
-    links,
-    updateLink,
-    addLink,
-    hasPendingStructural,
-    saveStructuralChanges,
-  ]);
-
-  const handleReset = useCallback(() => {
-    if (editingLinkId) {
-      setEditingLinkId(null);
-      setUrlInput("");
-      setTitleInput("");
-    } else if (urlInput !== "") {
-      setUrlInput("");
-      setTitleInput("");
-      setPreviewIndex(null);
-      setMobileInputOpen(false);
-    } else {
-      setPreviewIndex(null);
-      cancelStructuralChanges();
-      setMobileInputOpen(false);
-    }
-  }, [editingLinkId, urlInput, cancelStructuralChanges]);
+    clearInput();
+  }, [editingLinkId, removeLink, clearInput]);
 
   const recoverHover = useCallback(() => {
     // CSS :hover state may not re-fire after pointer capture releases on drag end.
@@ -459,6 +454,13 @@ export default function ProfileLinks({ initialLinks }: Props) {
       setListHovered(listRef.current?.matches(":hover") ?? false),
     );
   }, []);
+
+  // Keep a ref so handleDragEnd always reads the latest list without needing it
+  // as a dep (updated after commit, not during render).
+  const stagedLinksRef = useRef(stagedLinks);
+  useEffect(() => {
+    stagedLinksRef.current = stagedLinks;
+  });
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -468,7 +470,7 @@ export default function ProfileLinks({ initialLinks }: Props) {
       recoverHover();
       if (!over || active.id === over.id) return;
 
-      const current = displayLinksRef.current;
+      const current = stagedLinksRef.current;
       const fromIndex = current.findIndex((l) => l.id === active.id);
       const toIndex = current.findIndex((l) => l.id === over.id);
       if (fromIndex === -1 || toIndex === -1) return;
@@ -495,29 +497,32 @@ export default function ProfileLinks({ initialLinks }: Props) {
         left === undefined
           ? (right?.sortOrder ?? 1) - 1
           : right === undefined
-            ? (left.sortOrder ?? 0) + 1
-            : ((left.sortOrder ?? 0) + (right.sortOrder ?? 0)) / 2;
+            ? left.sortOrder + 1
+            : (left.sortOrder + right.sortOrder) / 2;
 
       reorderLink(active.id as string, newSortOrder);
     },
     [reorderLink, recoverHover],
   );
 
-  useUnsavedChangesWarning(
-    !!(urlInput !== "" || !!editingLinkId || hasPendingStructural),
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
-  const inputDisabled = editingLinkId
-    ? isUpdatingLink
-    : pendingSubmit !== null || atMax || isAddingLink;
-  const saveShow =
-    urlIsValid && !pendingSubmit && (editingLinkId ? true : !atMax);
-  const isSaving = isAddingLink || isUpdatingLink || !!isSavingStructural;
-  const saveDisabled = !saveShow && !hasPendingStructural;
-  const shortcut = useSaveShortcut(handleSave, !saveDisabled && !isSaving);
+  const multipleItems = stagedLinks.length > 1;
+  const sortableItems = stagedLinks.map((l) => l.id);
+  const activeLink = stagedLinks.find((l) => l.id === activeId) ?? null;
+  const inputDisabled = isSaving || (!editingLinkId && atMax);
+  const previewPresent = stagedLinks.some((l) => l.id === PREVIEW_ID);
 
   return (
-    <div onFocus={shortcut.onFocus} onBlur={shortcut.onBlur}>
+    <div onBlur={blurred.onBlur}>
       <div className="flex flex-col gap-2.5">
         <DndContext
           sensors={sensors}
@@ -539,12 +544,12 @@ export default function ProfileLinks({ initialLinks }: Props) {
             <SortableContext
               items={sortableItems}
               strategy={verticalListSortingStrategy}
-              disabled={sortableItems.length <= 1}
+              disabled={sortableItems.length <= 1 || isSaving}
             >
               <AnimatePresence initial={false}>
                 {/* eslint-disable-next-line react-hooks/refs -- consume-once entrance-animation flag (read/cleared during render) */}
-                {displayLinks.map((link) => {
-                  if (link._isPreview) {
+                {stagedLinks.map((link) => {
+                  if (link.id === PREVIEW_ID) {
                     return (
                       <SortablePreviewItem
                         key={link.id}
@@ -552,7 +557,6 @@ export default function ProfileLinks({ initialLinks }: Props) {
                         multipleLinks={multipleItems}
                         listHovered={listHovered}
                         isDroppingTarget={link.id === droppingId}
-                        pendingSubmit={pendingSubmit !== null}
                       />
                     );
                   }
@@ -571,13 +575,13 @@ export default function ProfileLinks({ initialLinks }: Props) {
                       link={link}
                       isEditing={link.id === editingLinkId}
                       actionsDisabled={
-                        !!editingLinkId || !!previewData || !!isSavingStructural
+                        !!editingLinkId || previewPresent || isSaving
                       }
                       multipleLinks={multipleItems}
                       listHovered={listHovered}
                       isDroppingTarget={link.id === droppingId}
                       isActiveDrag={activeId !== null || droppingId !== null}
-                      anyEditing={!!editingLinkId || !!previewData}
+                      anyEditing={!!editingLinkId || previewPresent}
                       elevated={mobileEditSelectPresent}
                       onEdit={() => handleEdit(link)}
                       onDelete={() => removeLink(link.id)}
@@ -650,8 +654,8 @@ export default function ProfileLinks({ initialLinks }: Props) {
             {editingLinkId
               ? "Editing link…"
               : atMax
-                ? "You can't add more than five links."
-                : `${links.length} of 5 links used. Add another below.`}
+                ? `You can't add more than ${PROFILE_LIMITS.linkCount} links.`
+                : `${links.length} of ${PROFILE_LIMITS.linkCount} links used. Add another below.`}
           </p>
         </div>
 
@@ -670,7 +674,9 @@ export default function ProfileLinks({ initialLinks }: Props) {
               }}
               titleValue={titleInput}
               onTitleChange={setTitleInput}
-              onSubmit={handleSave}
+              onSubmit={handleAdd}
+              submitLabel={editingLinkId ? "Apply" : "Add"}
+              canSubmit={urlIsValid && !isSaving}
               disabled={inputDisabled}
               titleInputRef={titleInputRef}
               urlInputRef={urlInputRef}
@@ -678,15 +684,19 @@ export default function ProfileLinks({ initialLinks }: Props) {
           </div>
         )}
 
-        {/* `useProfileLinks` has always returned this and nothing rendered it,
-            so a save that the server refused failed silently — the link simply
-            did not appear and the reason went nowhere. `role="alert"` because
-            it arrives after the interaction that caused it. */}
-        {error && (
-          <p role="alert" className="text-sm text-rose-700">
-            {error}
-          </p>
+        {editingLinkId && (
+          <button
+            type="button"
+            onClick={handleMobileDelete}
+            disabled={isSaving}
+            aria-label="Delete link"
+            className="flex w-fit items-center gap-[1ch] rounded-sm border-2 border-rose-700 bg-rose-700 px-4 py-1.5 text-sm font-medium text-white transition outline-none focus-visible:ring-2 focus-visible:ring-rose-700 focus-visible:ring-offset-2 enabled:hover:bg-rose-50 enabled:hover:text-rose-700 enabled:hover:shadow-sm enabled:hover:shadow-rose-700/15 disabled:cursor-not-allowed disabled:opacity-50 md:hidden"
+          >
+            Delete
+          </button>
         )}
+
+        <FieldError error={visibleError} />
       </div>
 
       {/* Full-screen overlay + title — portalled to body to escape any parent stacking context */}
@@ -724,34 +734,6 @@ export default function ProfileLinks({ initialLinks }: Props) {
         </AnimatePresence>,
         document.body,
       )}
-
-      <InlineSave
-        show={
-          saveShow ||
-          !!hasPendingStructural ||
-          (mobileInputOpen && !editingLinkId)
-        }
-        disabled={saveDisabled}
-        isPending={isSaving}
-        onSave={handleSave}
-        onReset={handleReset}
-        focused={shortcut.focused}
-        left={
-          editingLinkId ? (
-            <button
-              type="button"
-              onClick={handleMobileDelete}
-              disabled={isUpdatingLink}
-              aria-label="Delete link"
-              className="flex items-center gap-[1ch] rounded-sm border-2 border-rose-700 bg-rose-700 px-4 py-1.5 text-sm font-medium text-white transition outline-none focus-visible:ring-2 focus-visible:ring-rose-700 focus-visible:ring-offset-2 enabled:hover:bg-rose-50 enabled:hover:text-rose-700 enabled:hover:shadow-sm enabled:hover:shadow-rose-700/15 disabled:cursor-not-allowed disabled:opacity-50 md:hidden"
-            >
-              Delete
-            </button>
-          ) : undefined
-        }
-      >
-        Save
-      </InlineSave>
     </div>
   );
 }
