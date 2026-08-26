@@ -1,8 +1,9 @@
-import Link from "next/link";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react/ssr";
 import SectionBackground, {
   type BlobDef,
   type EdgeType,
 } from "~/ui/section-background";
+import LinkButton from "~/ui/link-button";
 import LeaderCluster from "./LeaderCluster";
 import { execBoard } from "~/app/(site)/homeData";
 
@@ -52,19 +53,29 @@ export default function LeadershipSection({ topEdge, bottomEdge }: Props) {
 
           <LeaderCluster profiles={execBoard} />
 
-          <p className="mx-auto mt-12 max-w-2xl border-t border-amber-200 pt-8 text-center text-sm text-balance text-mauve-600">
-            DevDogs leadership is elected each spring semester from the active
-            member pool.{" "}
-            <Link
-              href="/join"
-              // Redirects off-site, not a page — never prefetch.
+          {/* Says the same thing as the announcement notice, in the same
+              words, behind the same button. The notice is dismissible and
+              scoped to a session; this is the standing copy that outlives it,
+              so the two have to agree. See ~/config/announcement.ts. */}
+          <div className="mx-auto mt-12 max-w-2xl border-t border-amber-200 pt-8 text-center">
+            <p className="text-sm text-balance text-mauve-600">
+              DevDogs leadership is elected each spring semester, and
+              applications for the 2026–27 executive board are open to all
+              students.
+            </p>
+            <LinkButton
+              href="/leadership"
+              // A next.config redirect onto the application form, not a page —
+              // never prefetch. It leaves the site, so it leaves this tab
+              // alone: the notice's button does the same.
               prefetch={false}
-              className="font-semibold text-amber-700 hover:underline"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:shadow-block-md transition-lift mx-auto mt-6 flex w-fit items-center gap-2 rounded-sm border-2 border-black bg-white px-4 py-2 text-sm font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5"
             >
-              Get involved
-            </Link>{" "}
-            and grow with us.
-          </p>
+              Apply Now <ArrowSquareOutIcon />
+            </LinkButton>
+          </div>
         </div>
       </section>
     </div>

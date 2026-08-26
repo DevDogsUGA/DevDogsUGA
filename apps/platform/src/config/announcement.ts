@@ -67,17 +67,20 @@ const NON_PUBLIC_PREFIXES = [
 /**
  * The live notice, or `null` for none.
  *
- * ⚠️ `action.href` points at the Leadership section of the homepage because
- * that is the truthful destination today. Point it at the application form the
- * moment one exists — a notice whose button does less than the notice
- * promises is worse than no notice.
+ * `action.href` is `/leadership`, a next.config redirect onto the form that
+ * takes applications. It is `external` despite the leading slash: the path is
+ * ours, the page at the end of it is not, so it opens in a new tab and wears
+ * the outbound arrow rather than pretending to stay on the site. The homepage's Leadership section carries the same claim
+ * behind the same button, so a change to this copy belongs there too — the
+ * notice is dismissible and session-scoped, that section is the standing copy
+ * that outlives it. See ~/components/LeadershipSection.
  */
 export const ANNOUNCEMENT: Announcement | null = {
   id: "leadership-applications-2026",
   eyebrow: "Now open",
   message:
-    "Leadership applications for the 2026–27 executive board are open to every active member.",
-  action: { label: "Apply now", href: "/#leadership" },
+    "Leadership applications for the 2026–27 executive board are open to all students!",
+  action: { label: "Apply Now", href: "/leadership", external: true },
   tone: "urgent",
 };
 
