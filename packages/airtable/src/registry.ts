@@ -41,6 +41,29 @@ export function isPlaceholder(id: string): boolean {
   return id.startsWith("fldTODO_") || id.startsWith("tblTODO_");
 }
 
+/**
+ * The officers' base, committed like every `tbl` and `fld` id below it.
+ *
+ * It was an `environment`-scoped variable routed through Bitwarden to a GitHub
+ * environment VARIABLE in all four environments, plus a `narrowed` opt-in to
+ * reach `preflight`. That was machinery for a value that has exactly one
+ * possible setting: there is one base, and staging deliberately shares it.
+ *
+ * The argument that settles it is one file down. Every field id in this
+ * registry belongs to THIS base, so a second base would need a second
+ * registry — parameterising the base id alone never bought the portability it
+ * looked like it was buying. Committing it puts the base's identity in one
+ * place instead of three, and retires the failure mode that bit us on
+ * 2026-08-17: a hand-set repository variable silently shadowed by an
+ * environment one, invisible until somebody deletes the environment copy.
+ *
+ * Public rather than secret — it is in every Airtable dashboard URL, and it
+ * identifies without authorising. Every capability belongs to the token.
+ * `AIRTABLE_BASE_ID` survives as an override for anyone pointing the tooling
+ * at a scratch base; unset, which is now the ordinary case, this is the value.
+ */
+export const BASE_ID = "appt422RNi98uAqwX";
+
 // ── Row shapes the platform maps onto ────────────────────────────────────────
 //
 // Deliberately not the Drizzle row types. The registry is the boundary, and

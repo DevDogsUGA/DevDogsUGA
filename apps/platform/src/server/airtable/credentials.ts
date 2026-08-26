@@ -1,4 +1,4 @@
-import { AirtableClient } from "@devdogsuga/airtable";
+import { AirtableClient, BASE_ID } from "@devdogsuga/airtable";
 import { env } from "~/env";
 
 /**
@@ -43,17 +43,34 @@ export function getAirtableToken(): string {
  * vendor.
  */
 export async function getAirtableClient(): Promise<AirtableClient> {
-  const baseId = env.AIRTABLE_BASE_ID;
-  if (!baseId) {
-    throw new AirtableNotConfiguredError(
-      "AIRTABLE_BASE_ID is not set. See docs/platform/airtable-setup.md.",
-    );
-  }
-
-  return new AirtableClient({ baseId, token: getAirtableToken() });
+  return new AirtableClient({
+    baseId: resolveBaseId(),
+    token: getAirtableToken(),
+  });
 }
 
-/** Whether a sync could run at all, for the console to branch on. */
+/**
+ * The committed base, unless something is deliberately pointing elsewhere.
+ *
+ * `BASE_ID` is a constant in the registry rather than a value routed through
+ * the env system, because there is one base and every field id beside it
+ * belongs to that base. `AIRTABLE_BASE_ID` stays readable so a scratch base
+ * can be aimed at without a code change, and is empty in every ordinary
+ * deployment.
+ */
+function resolveBaseId(): string {
+  return env.AIRTABLE_BASE_ID || BASE_ID;
+}
+
+/**
+ * Whether a sync could run at all, for the console to branch on.
+ *
+ * One condition now, not two. The base is always known — it is committed — so
+ * "is Airtable configured" collapses to the one question that still has two
+ * answers: do we hold a token. That is worth stating rather than quietly
+ * dropping a conjunct, because it also means an unconfigured install is now
+ * unambiguously a MISSING CREDENTIAL rather than "one of two things".
+ */
 export function isAirtableConfigured(): boolean {
-  return Boolean(env.AIRTABLE_BASE_ID) && Boolean(env.AIRTABLE_SYNC_PAT);
+  return Boolean(env.AIRTABLE_SYNC_PAT);
 }

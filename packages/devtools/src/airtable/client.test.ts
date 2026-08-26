@@ -14,6 +14,7 @@
  * rather than by whatever the runner happens to hold.
  */
 import { describe, expect, it } from "vitest";
+import { BASE_ID } from "@devdogsuga/airtable";
 import {
   AirtableCredentialError,
   CREDENTIAL_PREFERENCE,
@@ -154,15 +155,42 @@ describe("the refusal names what it looked at", () => {
       resolve("read", { AIRTABLE_PLAN_PAT: "", AIRTABLE_PAT: "full" }).variable,
     ).toBe("AIRTABLE_PAT");
   });
+});
 
-  it("refuses a missing base id by name, before any token question", () => {
-    expect(() =>
+describe("the base id comes from the registry", () => {
+  it("falls back to the committed base when nothing overrides it", () => {
+    // This used to refuse by name: the base id was an environment variable, so
+    // an unset one meant there was no base to talk to. It is `BASE_ID` in the
+    // registry now, beside the field ids belonging to that same base, so the
+    // ordinary case is an env with no base id in it at all.
+    expect(
       resolveAirtableCredentials({
         need: "read",
         env: { AIRTABLE_PLAN_PAT: "plan" },
         fetch: noFetch,
-      }),
-    ).toThrow(/AIRTABLE_BASE_ID is not set/);
+      }).baseId,
+    ).toBe(BASE_ID);
+  });
+
+  it("still honours an override, so a scratch base can be aimed at", () => {
+    // The half that keeps the constant from being a hard-coding. Empty is not
+    // an override — a workflow referencing a variable the environment does not
+    // hold interpolates to "", and that must read as "unset" rather than
+    // sending the tooling at a base called "".
+    expect(
+      resolveAirtableCredentials({
+        need: "read",
+        env: { AIRTABLE_PLAN_PAT: "plan", AIRTABLE_BASE_ID: "appSCRATCH" },
+        fetch: noFetch,
+      }).baseId,
+    ).toBe("appSCRATCH");
+    expect(
+      resolveAirtableCredentials({
+        need: "read",
+        env: { AIRTABLE_PLAN_PAT: "plan", AIRTABLE_BASE_ID: "" },
+        fetch: noFetch,
+      }).baseId,
+    ).toBe(BASE_ID);
   });
 });
 
