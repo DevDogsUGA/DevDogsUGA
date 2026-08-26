@@ -7,7 +7,7 @@ import { getDocsProjects } from "~/server/docs/queries";
 import AppSwitcherButton from "./AppSwitcherButton";
 import NavLinks, { NavLinksFallback } from "./NavLinks";
 import SearchButton from "./SearchButton";
-import { TopNavConsole, TopNavMobile, TopNavProfile } from "./TopNavUser";
+import { TopNavMobile, TopNavProfile } from "./TopNavUser";
 import UserClusterSkeleton from "./UserClusterSkeleton";
 
 export default function TopNav() {
@@ -36,10 +36,6 @@ export default function TopNav() {
         </Suspense>
 
         <div className="ml-auto flex items-center gap-1.5">
-          <Suspense>
-            <TopNavConsole />
-          </Suspense>
-
           <SearchButton />
           <AppSwitcherButton />
 
