@@ -69,7 +69,11 @@ export default function ProjectsSection({
     <div className="mx-4 overflow-hidden rounded-xl md:mx-6">
       <section
         id="projects"
-        className="relative w-full overflow-hidden pt-(--section-skew-slope) pb-(--section-skew-slope)"
+        // scroll-mt clears the h-16 sticky TopNav when a marquee card jumps
+        // to #id — the same idea as `ui/card`. It is measured from the border
+        // box, whose top is where pt-(--section-skew-slope) begins, so the
+        // slanted top edge clears the nav too and not just the copy below it.
+        className="relative w-full scroll-mt-20 overflow-hidden pt-(--section-skew-slope) pb-(--section-skew-slope)"
         data-animate="fade-up"
       >
         <SectionBackground
