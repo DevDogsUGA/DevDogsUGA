@@ -4,12 +4,10 @@ import { ComboboxPopover } from "~/ui/combobox";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { XIcon } from "@phosphor-icons/react/ssr";
-import InlineSave from "~/ui/inline-save";
+import SettingsField from "~/ui/settings-field";
 import type { getProfilePageData } from "~/server/loaders/console";
 import { createClient } from "~/supabase/client";
-import { useSaveShortcut } from "~/hooks/useSaveShortcut";
-import { useUnsavedChangesWarning } from "~/hooks/useUnsavedChangesWarning";
-import { toast } from "~/lib/toast";
+import { PROFILE_LIMITS, validatePronouns } from "~/lib/validation/profile";
 
 type ProfileData = Awaited<ReturnType<typeof getProfilePageData>>;
 
@@ -25,6 +23,9 @@ const PRONOUN_SUGGESTIONS = [
   "theirs",
 ];
 const SEPARATOR_KEYS = [" ", "/", "-", ","];
+
+const MAX_PRONOUNS = PROFILE_LIMITS.pronounCount;
+const MAX_PRONOUN_CHARS = PROFILE_LIMITS.pronounChars;
 
 export default function PronounsField({ id, profile }: ProfileData) {
   const [pronouns, setPronouns] = useState<string[]>(profile.pronouns ?? []);
@@ -46,32 +47,25 @@ export default function PronounsField({ id, profile }: ProfileData) {
         .update({ pronouns: values })
         .eq("userId", id);
       if (error) throw error;
+      return values;
     },
-    onSuccess: () => {
-      setSaved([...pronouns]);
-      toast.success("Pronouns saved");
-    },
-    onError: () => toast.error("Failed to save pronouns"),
+    onSuccess: (values) => setSaved([...values]),
   });
 
   const dirty = JSON.stringify(pronouns) !== JSON.stringify(saved);
-  useUnsavedChangesWarning(dirty);
-  const shortcut = useSaveShortcut(
-    () => mutation.mutate(pronouns),
-    dirty && !mutation.isPending,
-  );
+  const error = validatePronouns(pronouns);
   const q = input.toLowerCase().trim();
   const suggestions = PRONOUN_SUGGESTIONS.filter(
     (s) => s.startsWith(q) && !pronouns.includes(s),
   );
   const canAddCustom =
     q.length > 0 &&
-    q.length <= 6 &&
+    q.length <= MAX_PRONOUN_CHARS &&
     !pronouns.includes(q) &&
     !PRONOUN_SUGGESTIONS.includes(q);
   const allOptions = [...suggestions, ...(canAddCustom ? [q] : [])];
   const showPopover =
-    popoverOpen && allOptions.length > 0 && pronouns.length < 4;
+    popoverOpen && allOptions.length > 0 && pronouns.length < MAX_PRONOUNS;
 
   useEffect(() => {
     listRef.current
@@ -80,7 +74,7 @@ export default function PronounsField({ id, profile }: ProfileData) {
   }, [activeIndex]);
 
   function addPronoun(p: string) {
-    if (pronouns.length < 4) setPronouns((prev) => [...prev, p]);
+    if (pronouns.length < MAX_PRONOUNS) setPronouns((prev) => [...prev, p]);
     setInput("");
     setActiveIndex(0);
     setPopoverOpen(false);
@@ -92,7 +86,14 @@ export default function PronounsField({ id, profile }: ProfileData) {
   }
 
   return (
-    <div onFocus={shortcut.onFocus} onBlur={shortcut.onBlur}>
+    <SettingsField
+      id="pronouns"
+      label="Pronouns"
+      isDirty={dirty}
+      error={error}
+      save={() => mutation.mutateAsync(pronouns)}
+      reset={() => setPronouns([...saved])}
+    >
       <ComboboxPopover.Root open={showPopover} onOpenChange={setPopoverOpen}>
         <ComboboxPopover.Anchor asChild>
           <span className="group focus-within:shadow-block-sm relative flex max-w-sm cursor-text flex-wrap items-center gap-0.5 rounded-sm border border-mauve-600 bg-mauve-800 p-2 text-sm transition-shadow focus-within:inset-shadow-sm hover:border-mauve-500 hover:inset-shadow-sm">
@@ -114,7 +115,7 @@ export default function PronounsField({ id, profile }: ProfileData) {
                 </button>
               </span>
             ))}
-            {pronouns.length < 4 && (
+            {pronouns.length < MAX_PRONOUNS && (
               <input
                 ref={inputRef}
                 type="text"
@@ -130,7 +131,7 @@ export default function PronounsField({ id, profile }: ProfileData) {
                 }
                 id={inputId}
                 value={input}
-                maxLength={6}
+                maxLength={MAX_PRONOUN_CHARS}
                 placeholder={pronouns.length === 0 ? "Add pronouns…" : ""}
                 className="min-w-16 flex-1 border-0 bg-transparent p-0 px-1 text-sm text-white placeholder:text-mauve-500 focus:ring-0 focus:outline-none"
                 onChange={(e) => {
@@ -170,7 +171,11 @@ export default function PronounsField({ id, profile }: ProfileData) {
                   }
                   if (SEPARATOR_KEYS.includes(e.key)) {
                     e.preventDefault();
-                    if (q.length > 0 && q.length <= 6 && !pronouns.includes(q))
+                    if (
+                      q.length > 0 &&
+                      q.length <= MAX_PRONOUN_CHARS &&
+                      !pronouns.includes(q)
+                    )
                       addPronoun(q);
                     return;
                   }
@@ -180,7 +185,7 @@ export default function PronounsField({ id, profile }: ProfileData) {
                     if (active) addPronoun(active);
                     else if (
                       q.length > 0 &&
-                      q.length <= 6 &&
+                      q.length <= MAX_PRONOUN_CHARS &&
                       !pronouns.includes(q)
                     )
                       addPronoun(q);
@@ -250,14 +255,6 @@ export default function PronounsField({ id, profile }: ProfileData) {
           </ComboboxPopover.Content>
         </ComboboxPopover.Portal>
       </ComboboxPopover.Root>
-
-      <InlineSave
-        show={dirty}
-        isPending={mutation.isPending}
-        onSave={() => mutation.mutate(pronouns)}
-        onReset={() => setPronouns([...saved])}
-        focused={shortcut.focused}
-      />
-    </div>
+    </SettingsField>
   );
 }

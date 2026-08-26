@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type RefObject } from "react";
-import { LinkIcon, TagIcon } from "@phosphor-icons/react/ssr";
-import { isValidLinkUrl } from "./LinkCard";
+import { CheckIcon, LinkIcon, PlusIcon, TagIcon } from "@phosphor-icons/react/ssr";
+import { isValidLinkUrl, PROFILE_LIMITS } from "~/lib/validation/profile";
 
 interface AddLinkInputProps {
   id?: string;
@@ -10,7 +10,11 @@ interface AddLinkInputProps {
   onUrlChange: (v: string) => void;
   titleValue: string;
   onTitleChange: (v: string) => void;
+  /** Stages the typed link into the draft list. Local; nothing is written. */
   onSubmit: () => void;
+  /** "Add" for a new link, "Apply" when editing an existing one. */
+  submitLabel: string;
+  canSubmit: boolean;
   disabled: boolean;
   titleInputRef?: RefObject<HTMLInputElement | null>;
   urlInputRef?: RefObject<HTMLInputElement | null>;
@@ -23,6 +27,8 @@ export default function AddLinkInput({
   titleValue,
   onTitleChange,
   onSubmit,
+  submitLabel,
+  canSubmit,
   disabled,
   titleInputRef,
   urlInputRef,
@@ -77,7 +83,9 @@ export default function AddLinkInput({
               onFocus={() => setFocusedField("title")}
               onBlur={() => setFocusedField(null)}
               placeholder="Title (optional)"
-              maxLength={100}
+              // Matches `profileLinks.title`, which is varchar(64). It used to
+              // allow 100, which the insert then refused.
+              maxLength={PROFILE_LIMITS.linkTitle}
               disabled={disabled}
               tabIndex={split ? 0 : -1}
               aria-hidden={!split}
@@ -117,6 +125,32 @@ export default function AddLinkInput({
           aria-label="Link URL"
           className={`${inputBase} font-mono`}
         />
+
+        {/* Stages the link into the list. It is not a save — the page's save
+            bar is still the only thing that writes — so it reads "Add", and it
+            collapses to nothing until the URL is one we can actually use. */}
+        <span
+          className={`grid shrink-0 overflow-hidden transition-[grid-template-columns] duration-200 ease-in-out ${
+            canSubmit ? "grid-cols-[1fr]" : "grid-cols-[0fr]"
+          }`}
+        >
+          <span className="overflow-hidden">
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={!canSubmit || disabled}
+              tabIndex={canSubmit ? 0 : -1}
+              className="m-1 flex items-center gap-[0.5ch] rounded-sm border border-mauve-600 bg-mauve-700 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-mauve-100 transition-colors outline-none hover:border-mauve-500 hover:bg-mauve-600 hover:text-white focus-visible:ring-2 focus-visible:ring-mauve-400 disabled:pointer-events-none disabled:opacity-50"
+            >
+              {submitLabel === "Apply" ? (
+                <CheckIcon size={12} aria-hidden />
+              ) : (
+                <PlusIcon size={12} aria-hidden />
+              )}
+              {submitLabel}
+            </button>
+          </span>
+        </span>
       </div>
     </div>
   );

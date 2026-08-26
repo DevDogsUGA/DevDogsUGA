@@ -4,24 +4,14 @@ import { eq } from "drizzle-orm";
 import { authenticate, expectSession } from "../auth";
 import { db } from "../db";
 import { profiles } from "../db/schema";
+import { validateGraduation, type Semester } from "~/lib/validation/profile";
 
-type Semester = "spring" | "summer" | "fall";
-
-const SEMESTER_END_MONTH: Record<Semester, number> = {
-  spring: 5,
-  summer: 8,
-  fall: 12,
-};
-
-function isGraduationInPast(semester: Semester, year: number): boolean {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
-  if (year < currentYear) return true;
-  if (year > currentYear) return false;
-  return SEMESTER_END_MONTH[semester] <= currentMonth;
-}
-
+/**
+ * The both-or-neither rule and the not-in-the-past rule live in
+ * ~/lib/validation/profile, which is also what GraduationDateField checks
+ * against on blur. Sharing them is what keeps this from being the thing that
+ * fails a page-wide save: the client refuses the same pairs this does.
+ */
 export default async function updateGraduation(
   semester: Semester | null,
   year: number | null,
@@ -30,17 +20,8 @@ export default async function updateGraduation(
     authenticate("google", "/account"),
   );
 
-  if ((semester === null) !== (year === null)) {
-    return { error: "Both semester and year must be provided together." };
-  }
-
-  if (
-    semester !== null &&
-    year !== null &&
-    isGraduationInPast(semester, year)
-  ) {
-    return { error: "Graduation date must be in the future." };
-  }
+  const error = validateGraduation(semester, year);
+  if (error) return { error };
 
   await db
     .update(profiles)

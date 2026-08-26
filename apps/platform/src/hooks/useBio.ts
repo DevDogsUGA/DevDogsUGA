@@ -3,11 +3,15 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { normalizeShortText, sanitizeShortTextInput } from "~/lib/shortText";
-import { toast } from "~/lib/toast";
 import { createClient } from "~/supabase/client";
+import { validateBio } from "~/lib/validation/profile";
 
 export const normalizeBio = normalizeShortText;
 
+/**
+ * `saveBio` neither catches nor toasts: the page-wide save bar awaits it
+ * alongside every other dirty field and reports the outcome once.
+ */
 export function useBio(userId: string, initialBio: string | null) {
   const initial = initialBio ? normalizeShortText(initialBio) : "";
   const [bio, setBioRaw] = useState(initial);
@@ -26,10 +30,6 @@ export function useBio(userId: string, initialBio: string | null) {
     onSuccess: (value) => {
       setBioRaw(value);
       setSavedBio(value);
-      toast.success("Bio saved");
-    },
-    onError: () => {
-      toast.error("Failed to save bio");
     },
   });
 
@@ -37,15 +37,12 @@ export function useBio(userId: string, initialBio: string | null) {
     setBioRaw(sanitizeShortTextInput(raw));
   }
 
-  function saveBio() {
-    mutation.mutate(normalizeShortText(bio));
-  }
-
   return {
     bio,
     setBio,
     bioDirty: bio !== savedBio,
-    saveBio,
+    bioError: validateBio(bio),
+    saveBio: () => mutation.mutateAsync(normalizeShortText(bio)),
     resetBio: () => setBioRaw(savedBio),
     isBioPending: mutation.isPending,
   };

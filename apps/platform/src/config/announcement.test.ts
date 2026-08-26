@@ -48,6 +48,27 @@ describe("showsAnnouncement", () => {
   });
 });
 
+/**
+ * The settings save bar (~/ui/settings-save-bar) is fixed to the bottom of the
+ * viewport, which is exactly where the announcement card sits. Two things
+ * stacked in the same corner, one of them the only way to save the form, is a
+ * confusing page at best and an unreachable button at worst.
+ *
+ * They are kept apart by route rather than by z-index: every page that mounts
+ * a save bar is a signed-in surface, and `showsAnnouncement` already refuses
+ * those. This pins that down so adding a save bar to a page the notice DOES
+ * reach fails here rather than in someone's browser.
+ *
+ * Add the route below when you add a `<SettingsSaveBar />` to a page.
+ */
+describe("the announcement stays off pages with a settings save bar", () => {
+  const saveBarPaths = ["/account"];
+
+  it.each(saveBarPaths)("stays off %s", (pathname) => {
+    expect(showsAnnouncement(pathname)).toBe(false);
+  });
+});
+
 describe("ANNOUNCEMENT", () => {
   it("carries an action, since a notice with nothing to do is noise", () => {
     if (!ANNOUNCEMENT) return;

@@ -3,8 +3,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { createClient } from "~/supabase/client";
-import { toast } from "~/lib/toast";
+import { validatePreferredName } from "~/lib/validation/profile";
 
+/**
+ * `saveName` deliberately does not catch, and does not toast. The account
+ * page's save bar awaits every dirty field at once and needs the rejection to
+ * know which ones failed — see ~/ui/settings-form.
+ */
 export function useProfileIdentity(userId: string, initialName: string) {
   const [name, setName] = useState(initialName);
   const [savedName, setSavedName] = useState(initialName);
@@ -21,11 +26,8 @@ export function useProfileIdentity(userId: string, initialName: string) {
       return preferredName;
     },
     onSuccess: (preferredName) => {
+      setName(preferredName);
       setSavedName(preferredName);
-      toast.success("Profile saved");
-    },
-    onError: () => {
-      toast.error("Failed to save profile");
     },
   });
 
@@ -33,7 +35,10 @@ export function useProfileIdentity(userId: string, initialName: string) {
     name,
     setName,
     nameDirty: name !== savedName,
-    saveName: () => nameMutation.mutateAsync(name),
+    nameError: validatePreferredName(name),
+    // The trimmed value is the one that gets written, so it is also the one
+    // validation ran against.
+    saveName: () => nameMutation.mutateAsync(name.trim()),
     resetName: () => setName(savedName),
     isNamePending: nameMutation.isPending,
   };
