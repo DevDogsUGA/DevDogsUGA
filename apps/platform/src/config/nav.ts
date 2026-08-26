@@ -208,7 +208,6 @@ export const PROFILE_ITEMS: NavItem[] = [
  */
 export interface NavGroup {
   label: string;
-  icon: NavIcon;
   iconBg: string;
   items: NavItem[];
   /**
@@ -222,19 +221,17 @@ export interface NavGroup {
 /** The competition sub-menu, as the profile popover renders it. */
 export const COMPETITION_GROUP: NavGroup = {
   label: "Competitions",
-  icon: "TrophyIcon",
   iconBg: "bg-amber-300",
   items: COMPETITION_ITEMS,
 };
 
 /**
- * The Console sub-menu's label and mark. Its items are missing because they
+ * The Console sub-menu's label and fill. Its items are missing because they
  * are permission-filtered per request — `visibleConsoleItems` resolves them
  * server-side and they reach the popover as props.
  */
 export const CONSOLE_GROUP: Omit<NavGroup, "items"> = {
   label: "Console",
-  icon: "WrenchIcon",
   iconBg: "bg-mauve-300",
   twoColumn: true,
 };

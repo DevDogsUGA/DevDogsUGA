@@ -30,15 +30,12 @@ import { POPOVER_ROW, POPOVER_ROW_CARET } from "./popoverRow";
  */
 export default function NavSubMenu({
   label,
-  icon,
   iconBg,
   items,
   twoColumn,
 }: NavGroup) {
   // An empty Console is the ordinary case for a member with no permissions.
   if (items.length === 0) return null;
-
-  const GroupIcon = icons[icon];
 
   // Two containers rather than one grid with per-item placement, for the
   // reason the Docs menu splits its own: a single grid sizes each ROW to its
@@ -80,11 +77,14 @@ export default function NavSubMenu({
 
   return (
     <Dropdown.Sub>
+      {/* The caret is the row's only glyph, standing where a plain row's icon
+          stands. A group has no one page to be the icon of, and giving it one
+          anyway put two marks on the rows that open something and one on the
+          rows that do not — the caret alone is the difference worth drawing. */}
       <Dropdown.SubTrigger
         className={`${POPOVER_ROW} cursor-default select-none data-highlighted:bg-mauve-800 data-[state=open]:bg-mauve-800`}
       >
         <CaretLeftIcon className={POPOVER_ROW_CARET} />
-        <GroupIcon />
         {label}
       </Dropdown.SubTrigger>
 
