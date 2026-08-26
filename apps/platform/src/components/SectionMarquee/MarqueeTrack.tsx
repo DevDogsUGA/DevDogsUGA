@@ -222,7 +222,14 @@ export default function MarqueeTrack({
       // pixel is visible, rather than starting as the user arrives at it.
       { rootMargin: "200px 0px" },
     );
-    visibility.observe(root);
+    // The track, not the root. `skew-section` gives the strip a negative
+    // top margin and a skew, so the track paints well outside its parent --
+    // measured at 1440x900, track #1 spans y[803,1665] while its root sits at
+    // y[1523,1680]. The root is `overflow-y-visible`, so those 700-odd pixels
+    // above it are on screen. Observing the root would leave a visible sliver
+    // of a frozen strip at the bottom of the first viewport; observing the
+    // track matches what a reader can actually see.
+    visibility.observe(track);
     reduced.addEventListener("change", applyMotionState);
     // The animation does not exist until after first paint on some routes.
     requestAnimationFrame(applyMotionState);
