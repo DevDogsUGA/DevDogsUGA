@@ -13,6 +13,11 @@ const config = {
         destination: "/settings/profile",
         permanent: false,
       },
+      {
+        source: "/leadership",
+        destination: "https://forms.gle/WS4NNd72zMAy6VXn6",
+        permanent: false,
+      },
     ];
   },
   turbopack: {
