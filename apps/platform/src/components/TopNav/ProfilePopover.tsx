@@ -9,17 +9,26 @@ import {
 } from "@phosphor-icons/react/ssr";
 import Avatar from "~/components/AvatarField/Avatar";
 import * as icons from "~/config/icons";
-import type { NavItem } from "~/config/nav";
+import {
+  COMPETITION_GROUP,
+  CONSOLE_GROUP,
+  type ConsoleItem,
+  type NavItem,
+} from "~/config/nav";
 import signOut from "~/server/actions/signOut";
+import NavSubMenu from "./NavSubMenu";
 import { useVerification, type NavUserClientData } from "./NavUserProvider";
 import VerificationAlert from "./VerificationAlert";
 
 interface Props {
   user: NavUserClientData;
+  /** The viewer's own pages, listed flat under the sub-menus. */
   items: NavItem[];
+  /** Console pages this viewer may see — already filtered server-side. */
+  consoleItems: ConsoleItem[];
 }
 
-export default function ProfilePopover({ user, items }: Props) {
+export default function ProfilePopover({ user, items, consoleItems }: Props) {
   const verification = useVerification();
 
   return (
@@ -69,6 +78,9 @@ export default function ProfilePopover({ user, items }: Props) {
                 </div>
               </Dropdown.Item>
             )}
+
+            <NavSubMenu {...COMPETITION_GROUP} />
+            <NavSubMenu {...CONSOLE_GROUP} items={consoleItems} />
 
             {items.map((item) => {
               const Icon = icons[item.icon];

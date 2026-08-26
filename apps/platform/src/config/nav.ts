@@ -146,8 +146,13 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
   },
 ];
 
-/** Signed-in-only pages, listed inside the profile popover. */
-export const PROFILE_ITEMS: NavItem[] = [
+/**
+ * The competition program's personal pages. Voting and team requests are two
+ * halves of one question — what is a competition waiting on me for — so the
+ * profile popover nests them in one sub-menu rather than listing them beside
+ * Account, which is about the viewer rather than about a competition.
+ */
+export const COMPETITION_ITEMS: NavItem[] = [
   {
     label: "Vote",
     href: "/vote",
@@ -162,6 +167,10 @@ export const PROFILE_ITEMS: NavItem[] = [
     description:
       "Invitations addressed to you, and join requests on teams you lead.",
   },
+];
+
+/** Signed-in-only pages listed at the top level of the profile popover. */
+export const ACCOUNT_ITEMS: NavItem[] = [
   {
     label: "Account",
     href: "/account",
@@ -177,6 +186,51 @@ export const PROFILE_ITEMS: NavItem[] = [
       "Set up a local OAuth client to test DevDogs sign-in from your own project.",
   },
 ];
+
+/**
+ * Every signed-in-only page, in menu order. The profile popover splits these
+ * back apart; the surfaces that want one flat list — search and the mobile
+ * sheet — read this, so a page added to either half above is picked up by both
+ * without a second edit.
+ */
+export const PROFILE_ITEMS: NavItem[] = [
+  ...COMPETITION_ITEMS,
+  ...ACCOUNT_ITEMS,
+];
+
+/**
+ * A named sub-menu inside the profile popover.
+ *
+ * `iconBg` is the fill behind every row's mark, so a sub-menu's rows read as
+ * one set the way a docs project's mark reads as one project — the fill is per
+ * group rather than per item, since these pages have no identity of their own
+ * to carry a colour for.
+ */
+export interface NavGroup {
+  label: string;
+  icon: NavIcon;
+  iconBg: string;
+  items: NavItem[];
+}
+
+/** The competition sub-menu, as the profile popover renders it. */
+export const COMPETITION_GROUP: NavGroup = {
+  label: "Competitions",
+  icon: "TrophyIcon",
+  iconBg: "bg-amber-300",
+  items: COMPETITION_ITEMS,
+};
+
+/**
+ * The Console sub-menu's label and mark. Its items are missing because they
+ * are permission-filtered per request — `visibleConsoleItems` resolves them
+ * server-side and they reach the popover as props.
+ */
+export const CONSOLE_GROUP: Omit<NavGroup, "items"> = {
+  label: "Console",
+  icon: "WrenchIcon",
+  iconBg: "bg-mauve-300",
+};
 
 /** Primary call-to-action in the app switcher. */
 export const SWITCHER_PRIMARY: SwitcherEntry = {

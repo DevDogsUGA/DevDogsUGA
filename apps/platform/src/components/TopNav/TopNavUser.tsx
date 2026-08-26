@@ -1,5 +1,8 @@
-import { PROFILE_ITEMS, visibleConsoleItems } from "~/config/nav";
-import ConsoleDropdown from "./ConsoleDropdown";
+import {
+  ACCOUNT_ITEMS,
+  PROFILE_ITEMS,
+  visibleConsoleItems,
+} from "~/config/nav";
 import MobileSheet from "./MobileSheet";
 import { NavUserHydrator } from "./NavUserProvider";
 import ProfilePopover from "./ProfilePopover";
@@ -11,17 +14,6 @@ import { getNavUser } from "./data";
  * boundary so the rest of the page stays statically prerenderable. Console
  * items are filtered server-side; clients only ever receive what they may see.
  */
-export async function TopNavConsole() {
-  const user = await getNavUser();
-  if (!user) return null;
-
-  return (
-    <ConsoleDropdown
-      items={visibleConsoleItems(user.permissions, user.credentialsAccess)}
-    />
-  );
-}
-
 export async function TopNavProfile() {
   const user = await getNavUser();
 
@@ -38,7 +30,11 @@ export async function TopNavProfile() {
     <>
       <ProfilePopover
         user={{ profile: user.profile, highestRole: user.highestRole }}
-        items={PROFILE_ITEMS}
+        items={ACCOUNT_ITEMS}
+        consoleItems={visibleConsoleItems(
+          user.permissions,
+          user.credentialsAccess,
+        )}
       />
       <NavUserHydrator
         navUser={{ profile: user.profile, highestRole: user.highestRole }}

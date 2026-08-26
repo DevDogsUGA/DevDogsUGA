@@ -346,10 +346,10 @@ export default function AnnouncementBanner() {
             <Link
               href={action.href}
               {...(action.external
-                ? { target: "_blank", rel: "noreferrer" }
+                ? { target: "_blank", rel: "noopener noreferrer" }
                 : {})}
               className={cn(
-                "hover:shadow-block-sm transition-lift flex shrink-0 items-center gap-2 self-end rounded-sm border-2 border-black bg-black px-3.5 py-1.5 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5 sm:self-auto",
+                "hover:shadow-block-[3px] transition-lift flex shrink-0 items-center gap-2 self-end rounded-sm border-2 border-black bg-black px-3.5 py-1.5 text-sm font-semibold text-white hover:-translate-x-0.75 hover:-translate-y-0.75 sm:self-auto",
                 toneClasses.blockShadow,
               )}
             >
@@ -357,7 +357,7 @@ export default function AnnouncementBanner() {
               {action.external ? (
                 <ArrowSquareOutIcon className="size-4" />
               ) : (
-                <ArrowRightIcon className="size-4" />
+                <ArrowRightIcon weight="bold" className="size-4" />
               )}
             </Link>
           </div>

@@ -128,7 +128,19 @@ export default function RootLayout({
         mono.variable,
         "font-sans",
         sans.variable,
+        // In-page anchors (the homepage section marquee, the hero's "#events")
+        // glide instead of teleporting. Only the document scroller is affected:
+        // scroll-behavior is not inherited, so nested scrollers such as the
+        // PronounsField listbox keep their instant scrollIntoView.
+        "scroll-smooth motion-reduce:scroll-auto",
       )}
+      // How Next is told the page opted into smooth scrolling. A same-page hash
+      // change keeps it; a route transition temporarily forces
+      // `scroll-behavior: auto`, so arriving on a new page — the footer's
+      // "/#projects", say — snaps rather than animating the whole way down.
+      // Without the attribute Next skips that override and dev-warns.
+      // https://nextjs.org/docs/messages/missing-data-scroll-behavior
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <body className="bg-black text-mauve-950">
