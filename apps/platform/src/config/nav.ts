@@ -211,6 +211,12 @@ export interface NavGroup {
   icon: NavIcon;
   iconBg: string;
   items: NavItem[];
+  /**
+   * Split the panel into two columns where the viewport is wide enough to
+   * take it. For a group long enough to want it — the Console's six — one
+   * 20rem column of described rows is a scroll masquerading as a menu.
+   */
+  twoColumn?: boolean;
 }
 
 /** The competition sub-menu, as the profile popover renders it. */
@@ -230,6 +236,7 @@ export const CONSOLE_GROUP: Omit<NavGroup, "items"> = {
   label: "Console",
   icon: "WrenchIcon",
   iconBg: "bg-mauve-300",
+  twoColumn: true,
 };
 
 /** Primary call-to-action in the app switcher. */

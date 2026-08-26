@@ -18,6 +18,7 @@ import {
 import signOut from "~/server/actions/signOut";
 import NavSubMenu from "./NavSubMenu";
 import { useVerification, type NavUserClientData } from "./NavUserProvider";
+import { POPOVER_ROW, POPOVER_ROW_GUTTER } from "./popoverRow";
 import VerificationAlert from "./VerificationAlert";
 
 interface Props {
@@ -86,12 +87,10 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
               const Icon = icons[item.icon];
               return (
                 <Dropdown.Item key={item.href} asChild>
-                  <Link
-                    href={item.href}
-                    className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors hover:bg-mauve-800 focus:outline-none"
-                  >
-                    {item.label}
+                  <Link href={item.href} className={POPOVER_ROW}>
+                    <span aria-hidden className={POPOVER_ROW_GUTTER} />
                     <Icon />
+                    {item.label}
                   </Link>
                 </Dropdown.Item>
               );
@@ -103,10 +102,12 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
               <input name="callbackPath" value="/" type="hidden" />
               <Dropdown.Item asChild>
                 <button
-                  className="flex w-full items-center gap-2 px-3 py-1.5 text-rose-300 transition-colors hover:bg-rose-950 hover:text-rose-50"
+                  className={`${POPOVER_ROW} text-rose-300 hover:bg-rose-950 hover:text-rose-50`}
                   type="submit"
                 >
-                  <SignOutIcon /> Sign Out
+                  <span aria-hidden className={POPOVER_ROW_GUTTER} />
+                  <SignOutIcon />
+                  Sign Out
                 </button>
               </Dropdown.Item>
             </form>
