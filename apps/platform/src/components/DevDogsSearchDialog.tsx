@@ -1,8 +1,10 @@
 "use client";
 
 import { Fragment } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CaretRightIcon, MagnifyingGlassIcon } from "@phosphor-icons/react/ssr";
+import { CaretRightIcon } from "@phosphor-icons/react/ssr";
+import devdog from "~/assets/devdog.png";
 import {
   Command,
   CommandEmpty,
@@ -123,7 +125,9 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
           <CommandList className="max-h-96">
             {!search.trim() && (
               <div className="text-muted-foreground flex flex-col items-center gap-1.5 px-6 py-14 text-center">
-                <MagnifyingGlassIcon className="size-6 opacity-40" />
+                <figure className="size-8 shrink-0 opacity-40">
+                  <Image alt="" src={devdog} />
+                </figure>
                 <p className="text-foreground text-sm font-medium">
                   Search DevDogs
                 </p>
