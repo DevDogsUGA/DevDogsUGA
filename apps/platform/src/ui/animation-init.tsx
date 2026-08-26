@@ -99,7 +99,17 @@ export default function AnimationInit() {
       }
     });
 
-    mutations.observe(document.body, { childList: true, subtree: true });
+    // Scoped to the page-content landmark rather than `document.body`. Watching
+    // the body meant every DOM mutation anywhere in the document paid this
+    // callback -- toasts, Radix portals, the nav's dropdowns, the announcement
+    // banner, every dialog that opens and closes -- when `[data-animate]` only
+    // ever lives inside the page content. `#main-content` is the wrapper
+    // `(site)/layout.tsx` puts around `children`, and it is the same node the
+    // page streams into, so the race this observer exists to close is still
+    // covered. Falling back to the body keeps behaviour correct on any route
+    // that does not render that landmark.
+    const watchRoot = document.getElementById("main-content") ?? document.body;
+    mutations.observe(watchRoot, { childList: true, subtree: true });
 
     return () => {
       mutations.disconnect();

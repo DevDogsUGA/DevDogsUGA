@@ -187,6 +187,46 @@ export default function MarqueeTrack({
       for (const card of root.querySelectorAll("a")) observer.observe(card);
     }
 
+    /**
+     * A strip only costs anything while it is on screen, and at 5,950–13,180px
+     * wide these are the largest animated surfaces on the site — the homepage
+     * runs five of them and never shows more than two at once. Pausing the
+     * off-screen ones is invisible and, unlike lowering COPIES, actually
+     * removes work: cutting the copy count measured 13.9 -> 13.9 FPS, because
+     * the cost tracks animated area rather than how many copies fill it.
+     *
+     * Paused through the Animation object rather than `animation-play-state`,
+     * because the strip's own animation is an inline style that a stylesheet
+     * cannot reach, and because `step` above already owns this object via
+     * `playbackRate`/`currentTime`. Pausing composes with both: the hover ramp
+     * survives a scroll past, and resuming picks the clock back up where it
+     * stopped, so the loop never jumps.
+     *
+     * Reduced motion holds it paused for good. The stylesheet stops the other
+     * expensive animations, but it cannot stop this one for the same reason.
+     */
+    const applyMotionState = () => {
+      const anim = track.getAnimations()[0];
+      if (!anim) return;
+      if (reduced.matches || !onScreen) anim.pause();
+      else anim.play();
+    };
+
+    let onScreen = true;
+    const visibility = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) onScreen = entry.isIntersecting;
+        applyMotionState();
+      },
+      // A little margin so a strip is already running by the time its first
+      // pixel is visible, rather than starting as the user arrives at it.
+      { rootMargin: "200px 0px" },
+    );
+    visibility.observe(root);
+    reduced.addEventListener("change", applyMotionState);
+    // The animation does not exist until after first paint on some routes.
+    requestAnimationFrame(applyMotionState);
+
     const onMouseEnter = () => rampTo(0);
     const onMouseLeave = () => {
       hovered = null;
@@ -202,6 +242,8 @@ export default function MarqueeTrack({
       root.removeEventListener("mouseleave", onMouseLeave);
       root.removeEventListener("mouseover", onMouseOver);
       observer.disconnect();
+      visibility.disconnect();
+      reduced.removeEventListener("change", applyMotionState);
       if (raf !== undefined) cancelAnimationFrame(raf);
     };
   }, [duration, direction, keepHoveredInView]);
