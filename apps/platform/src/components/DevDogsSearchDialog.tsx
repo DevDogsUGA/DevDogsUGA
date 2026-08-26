@@ -125,7 +125,7 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
           <CommandList className="max-h-96">
             {!search.trim() && (
               <div className="text-muted-foreground flex flex-col items-center gap-1.5 px-6 py-14 text-center">
-                <figure className="size-8 shrink-0 opacity-40">
+                <figure className="size-8 shrink-0 opacity-70">
                   <Image alt="" src={devdog} />
                 </figure>
                 <p className="text-foreground text-sm font-medium">
