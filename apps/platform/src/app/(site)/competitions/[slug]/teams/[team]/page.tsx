@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -10,6 +11,17 @@ import { expectSession } from "~/server/auth";
 import { getCompetitionBySlug } from "~/server/loaders/meetings";
 import { getMyTeam, getTeamDetail } from "~/server/loaders/teams";
 import { canUnlockByClosingPr } from "~/server/teams/lockState";
+
+/**
+ * "Public" in the comment below means public to members — the page exists so
+ * somebody can find a team they are not on — and `expectSession()` is still the
+ * door. What a crawler would get is the `/auth` redirect, and what it must
+ * never get is the join code the loader reveals to a member.
+ */
+export const metadata: Metadata = {
+  title: "Team | DevDogs",
+  robots: { index: false },
+};
 
 /**
  * /competitions/[slug]/teams/[team] — one team.

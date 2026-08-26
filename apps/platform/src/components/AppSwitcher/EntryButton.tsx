@@ -23,6 +23,10 @@ export default function EntryButton({ entry }: { entry: SwitcherEntry }) {
             alt=""
             className="size-4 shrink-0"
             // Rendered at 16px from a 64px source — no pipeline pass needed.
+            // Which is also why there is no `sizes` to go with it: `unoptimized`
+            // emits a bare src and drops srcset and sizes both, so one here
+            // would be dead weight. The static import still carries its
+            // intrinsic 64×64, so the box is reserved before the file lands.
             unoptimized
           />
         )}

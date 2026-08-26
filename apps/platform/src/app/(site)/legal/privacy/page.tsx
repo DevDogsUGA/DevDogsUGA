@@ -1,6 +1,24 @@
-"use cache";
+import type { Metadata } from "next";
 
+/**
+ * The description is the one `config/nav.ts` gives this page under
+ * `SEARCH_ONLY_PAGES` — the list of routes that are public and indexed but not
+ * in the navbar, which is exactly what this is.
+ *
+ * The title says "Privacy Policy" rather than the heading's "DevDogs x GDG On
+ * Campus Privacy Policy": the policy covers the joint system, and the h1 is
+ * where that belongs, but a 55-character title is what a search result and a
+ * browser tab can actually show.
+ */
+export const metadata: Metadata = {
+  title: "Privacy Policy | DevDogs",
+  description: "How DevDogs collects, uses, and protects your data.",
+};
+
+/** `"use cache"` moved onto the component — see `/community` for why. */
 export default async function Privacy() {
+  "use cache";
+
   return (
     <div className="prose-sm prose-headings:text-balance mx-auto mt-19 max-w-xl px-3 pt-12 pb-24">
       <h1 id="-devdogs-x-gdg-on-campus-privacy-policy-">

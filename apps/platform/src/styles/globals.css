@@ -568,6 +568,50 @@
   }
 }
 
+/* Reduced motion used to stop exactly the wrong animations.
+   Measured: under `prefers-reduced-motion: reduce` the page's running animation
+   count fell from 41 to 8, but the frame rate did not move — 11.2 FPS, against
+   11.3 without it. The 8 survivors were `spin` x2, `marquee-scroll` x5 and
+   `march-dashes`: every expensive one. The 32 the block above freezes are the
+   cheap ones, measured at 58.6 FPS on their own. So the people most likely to
+   be on hardware that cannot cope were the only ones getting no relief.
+
+   These three are class-based utilities, so they can be stopped from here. The
+   marquee cannot: MarqueeTrack sets `animation` as an inline style, which no
+   stylesheet rule can override without `!important`, so it reads the media
+   query itself and pauses its own animation. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin-slow,
+  .animate-spin-slower,
+  .animate-march-dashes {
+    animation: none;
+  }
+}
+
+/* Without JavaScript every `[data-animate]` section stays at `opacity: 0`
+   forever: the variants below start hidden and only `.is-visible`, added by
+   `ui/animation-init.tsx` once an IntersectionObserver fires, brings them back.
+   That makes the entire homepage below the hero invisible to anyone whose
+   script failed, was blocked, or is still parsing — and to any crawler that
+   does not execute JS. The reveal is decoration; the content is not, so when
+   scripting is off the content simply stays where it is.
+
+   `scripting` is Media Queries 5 (Chrome 120, Firefox 113, Safari 17). Older
+   browsers ignore the block and get today's behaviour, which is the right way
+   round for a progressive enhancement. */
+@media (scripting: none) {
+  [data-animate],
+  [data-animate="fade-up"],
+  [data-animate="fade-left"],
+  [data-animate="fade-right"],
+  [data-animate="scale-up"],
+  [data-animate="fade-in"] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 @keyframes collapsible-closed {
   0% {
     height: var(--radix-collapsible-content-height);

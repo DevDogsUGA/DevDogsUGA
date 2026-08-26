@@ -40,6 +40,8 @@ function MobileContent({ profile }: { profile: LeaderProfile }) {
             fill
             alt={profile.name}
             src={profile.imageSrc}
+            // `size-20`, fixed — this sheet only ever opens below md.
+            sizes="80px"
             className="object-cover object-center"
           />
         </div>

@@ -1,7 +1,4 @@
 import { Suspense, type ReactNode } from "react";
-// Parked with `RotatedImage` below — restore both together.
-// import Image from "next/image";
-// import ibm from "~/assets/ibm.gif";
 import SectionBackground, {
   type BlobDef,
   type EdgeType,
@@ -27,8 +24,12 @@ const PROJECTS_BLOBS: BlobDef[] = [
 ];
 
 /* Parked, not deleted: the header is centered copy for now, with no room for
-   the rotated diamond beside it. Uncomment this, its two imports above, and
-   the call in the header to bring it back.
+   the rotated diamond beside it. Uncommenting this and the call in the header
+   brings it back — but it needs a picture and a `next/image` import first. The
+   638 KB `ibm.gif` it used to point at was deleted rather than shipped to
+   every visitor of a page that has not rendered it in months; whatever
+   replaces it should not be an animated GIF, which `next/image` cannot
+   optimise and passes through whole.
 
 function RotatedImage() {
   return (

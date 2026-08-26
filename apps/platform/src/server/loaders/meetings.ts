@@ -1,4 +1,15 @@
-import { and, asc, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  sql,
+} from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "~/server/db";
@@ -645,3 +656,65 @@ export function attendanceFormIsLive(
     now < meeting.endsAt
   );
 }
+
+/**
+ * Every meeting slug that resolves to a page, newest first — for `sitemap.ts`.
+ *
+ * Deliberately not `getUpcomingMeetings` + `getPastMeetings`. Those two select
+ * `summaryColumns`, which carries a correlated COUNT over `attendance` and
+ * another over `workshops` for every row, and the sitemap wants neither; they
+ * are also both bounded by a `limit` the sitemap would have to guess at, and a
+ * guess that came in low would silently drop URLs off the end of the list
+ * rather than fail. One column and the same `deletedAt is null` filter the
+ * meeting page itself applies is the whole of what a `<loc>` needs.
+ */
+export const getMeetingSlugs = cache(async (): Promise<string[]> => {
+  const rows = await db
+    .select({ slug: meetings.slug })
+    .from(meetings)
+    .where(isNull(meetings.deletedAt))
+    .orderBy(desc(meetings.startsAt));
+
+  return rows.map((row) => row.slug);
+});
+
+/**
+ * Competition slugs whose results page is worth crawling — for `sitemap.ts`.
+ *
+ * `/competitions/[slug]/results` is the only competition route not behind
+ * `expectSession()`, so it is the only one a sitemap may name; the two under
+ * `teams/` redirect an anonymous crawler to `/auth`.
+ *
+ * The joins are not decoration. `getCompetitionBySlug` — which the results
+ * page calls before anything else, and 404s on — reaches the competition's
+ * name through `workshops → projects` and its `openedOn` through
+ * `workshops → meetings`, and requires all three rows to be live. A slug list
+ * that skipped them would put URLs in the sitemap that answer 404, so this
+ * mirrors that query's filters exactly and selects one column.
+ *
+ * `judgingStartsAt <= now` is the second filter, and it is about what the page
+ * has to say rather than about whether it exists: standings are written by the
+ * tally, and the RLS policy on `competitionStandings` only reveals them once
+ * an election is tallied. Before judging the route renders "not scored yet",
+ * which is a real answer for somebody who followed a link and thin content for
+ * a crawler. Null (never scheduled) is excluded by the comparison, which is
+ * the intended reading.
+ */
+export const getJudgedCompetitionSlugs = cache(async (): Promise<string[]> => {
+  const rows = await db
+    .select({ slug: competitions.slug })
+    .from(competitions)
+    .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
+    .innerJoin(meetings, eq(meetings.id, workshops.meetingId))
+    .where(
+      and(
+        isNull(competitions.deletedAt),
+        isNull(workshops.deletedAt),
+        isNull(meetings.deletedAt),
+        lte(competitions.judgingStartsAt, new Date()),
+      ),
+    )
+    .orderBy(desc(competitions.judgingStartsAt));
+
+  return rows.map((row) => row.slug);
+});

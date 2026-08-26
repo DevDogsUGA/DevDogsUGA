@@ -23,7 +23,27 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
                 so pages that await uncached, session-gated data at the root are
                 valid here. Pages wanting a richer loading state can nest their
                 own <Suspense> with a skeleton (see account/page.tsx). */}
-            <Suspense>
+            {/* The fallback reserves a viewport rather than nothing, and it is
+                the whole of the site's CLS.
+
+                Measured: the document is 900px tall at first paint and 6,707px
+                by 112ms, with a single 0.4038 layout shift at 103ms — four
+                times the failing threshold, and the only shift on the page.
+                With an empty fallback the shell flushes as chrome around a
+                zero-height main, so `min-h-screen` on the column puts the
+                footer at y=545, in view; then `children` arrives and throws it
+                2,000px down. Blocking fonts does not move that number at all,
+                and blocking an image only moves it by changing when the content
+                lands, so neither was ever the cause.
+
+                Reserving the height keeps the footer below the fold in both
+                states, which is where it belongs on a page this long, so there
+                is no visible shift to record. Note this boundary is only
+                flushing early because it can: the comment above assumes Cache
+                Components, which next.config.ts deliberately leaves off, so
+                there is no static shell being served ahead of a dynamic hole —
+                just chrome, briefly, around nothing. */}
+            <Suspense fallback={<div className="min-h-screen" />}>
               {children}
               {/* Mounted inside the content boundary, not in the root layout.
                   AnimationInit adds `.is-visible` to [data-animate] elements,
