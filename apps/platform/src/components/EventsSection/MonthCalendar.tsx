@@ -461,7 +461,9 @@ export default function MonthCalendar({
   return (
     <>
       <div
-        className="shadow-block-lg flex flex-col gap-4 rounded-sm border-2 border-black bg-white p-4"
+        // A ruled panel rather than a box: the top rule matches the rows and
+        // the table beside it, so the three read as one section.
+        className="flex flex-col gap-4 border-t-2 border-black pt-4"
         onMouseEnter={() => clearTimeout(closeTimer.current)}
         onMouseLeave={handleClose}
       >

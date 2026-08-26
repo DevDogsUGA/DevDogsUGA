@@ -1,17 +1,13 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
-import {
-  ArrowRightIcon,
-  ArrowUpRightIcon,
-  MapPinIcon,
-} from "@phosphor-icons/react/ssr";
+import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
 import SectionBackground, { type BlobDef } from "~/ui/section-background";
 import { INVOLVEMENT_NETWORK_EVENTS_URL } from "~/config/nav";
 import type { MeetingInRange, MeetingSummary } from "~/server/loaders/meetings";
 import MonthCalendar from "./MonthCalendar";
-import Marquee from "./Marquee";
+import NextMeeting from "./NextMeeting";
 import ScheduleList from "./ScheduleList";
 import PastMeetings from "./PastMeetings";
+import HowItWorks from "./HowItWorks";
 
 const EVENTS_BLOBS: BlobDef[] = [
   { cx: "25%", cy: "30%", rx: "55%", ry: "50%", fill: "#fecdd3" },
@@ -49,27 +45,26 @@ export interface EventsPageProps {
 }
 
 /**
- * The events page: four bands over one background, and every one of them a
- * date.
+ * The events page: three sections over one background, separated by rules.
  *
  * The order is an argument, not a layout. A visitor arrives wanting one fact —
- * when is the next one — so the marquee answers that before anything else, the
- * calendar and the schedule widen that answer to the month, and the archive
- * sits last because it is the only band nobody arrives for.
+ * when is the next one — so the first section is that meeting and nothing
+ * else. The second is every meeting the club has on the books, coming and
+ * gone, with the calendar beside it: the same list widened to the semester.
+ * The third explains what the chips in the first two mean — a kickoff, a
+ * judging, an open build — and it sits last because a reader who already
+ * knows can stop scrolling before it.
  *
- * What is NOT here is the explainer. It used to sit between the schedule and
- * the archive, and it is the homepage's band now: this page is for somebody
- * who wants a date, and the homepage is for somebody deciding whether the
- * dates are worth having. Keeping one copy on the page whose question it
- * answers is what keeps the two pages from being versions of each other. The
- * vocabulary the badges below use still has to mean something to a first-time
- * reader, so it is defined once in the header, in one sentence, with a link
- * through to the long version.
+ * Nothing here is a card. The previous page was a card for the next meeting,
+ * a card for the calendar, a card per upcoming night and a boxed table, on a
+ * site where the card is already the answer to everything else; the rules
+ * between sections and down the ledger are all the structure the page needs,
+ * and the next meeting's type size does the rest.
  *
- * Every band is presentational and takes data as props. Nothing here reads the
- * clock or the database; `now` and `today` are resolved once by the layout so
- * the marquee, the schedule and the calendar cannot disagree about what day it
- * is halfway down the page.
+ * Every band is presentational and takes data as props. Nothing here reads
+ * the clock or the database; `now` and `today` are resolved once by the
+ * layout so the first section, the rows and the calendar cannot disagree
+ * about what day it is halfway down the page.
  */
 export default function EventsPage({
   meetings,
@@ -86,8 +81,8 @@ export default function EventsPage({
   // about, which is the same rule `getUpcomingMeetings` uses.
   const upcoming = meetings.filter((m) => m.endsAt >= now);
   const next = upcoming[0] ?? null;
-  // The marquee has the first one in full, so the list starts after it rather
-  // than printing the same night twice under two different treatments.
+  // The first section has the next one in full, so the ledger starts after it
+  // rather than printing the same night twice under two different treatments.
   const rest = next ? upcoming.slice(1) : upcoming;
 
   return (
@@ -103,38 +98,15 @@ export default function EventsPage({
           base="#fff1f2"
           blobs={EVENTS_BLOBS}
         />
-        <div className="relative z-10 mx-auto max-w-6xl space-y-10 px-6 py-8 md:px-12">
+        <div className="relative z-10 mx-auto flex max-w-6xl flex-col gap-12 px-6 py-8 md:gap-16 md:px-12">
           <div className="max-w-prose text-left">
             <h1 className="font-display mb-4 text-4xl font-extrabold text-black md:text-5xl">
               Events
             </h1>
             <p className="text-base/relaxed text-balance text-mauve-700">
               Every meeting the club has on the books — the next one first, then
-              the rest of the month, then the ones already behind us.
+              all of them, then how a week of it fits together.
             </p>
-            {/* The badge vocabulary, defined once. The three-beat version of
-                this with the diagrams is on the homepage; a reader who came
-                here for a date should not have to scroll past it, but a reader
-                seeing "Kickoff" for the first time still needs it to mean
-                something. */}
-            <p className="mt-3 text-sm/relaxed text-mauve-600">
-              A night is named for what happens on it: a{" "}
-              <strong className="font-semibold text-black">workshop</strong>{" "}
-              teaches a feature area, a{" "}
-              <strong className="font-semibold text-black">kickoff</strong>{" "}
-              opens the week-long competition that follows it,{" "}
-              <strong className="font-semibold text-black">judging</strong> is
-              where the previous one is presented, and an{" "}
-              <strong className="font-semibold text-black">open build</strong>{" "}
-              is the room with no agenda. Most nights are more than one of
-              these.
-            </p>
-            <Link
-              href="/#how-it-works"
-              className="mt-2 flex w-fit items-center gap-1.5 text-sm font-semibold text-black underline underline-offset-4 hover:no-underline"
-            >
-              How a competition works <ArrowRightIcon />
-            </Link>
             {/* One room for almost everything, so it is said once here rather
                 than repeated on every row. A meeting somewhere else says so on
                 its own row — see ScheduleList's "Not the usual room". */}
@@ -144,35 +116,42 @@ export default function EventsPage({
             </p>
           </div>
 
-          <Marquee meeting={next} now={now} checkIn={checkIn} />
+          <PageSection id="next" number="01" title="Next meeting">
+            <NextMeeting meeting={next} now={now} checkIn={checkIn} />
+          </PageSection>
 
-          {/* The calendar is the narrower column: it answers "what does the
-              month look like", which is a glance, while the list answers "what
-              is actually on", which is reading. */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-            <div className="lg:col-span-2" data-animate="fade-up">
-              {/* Opens on the CURRENT month, not the window's first — the
-                  window reaches a month back so somebody can page to what just
-                  happened, and opening there would show a month of past
-                  meetings to a visitor asking what is next. */}
-              <MonthCalendar
-                meetings={meetings}
-                initialYear={today?.year ?? bounds.from.year}
-                initialMonth={today?.month ?? bounds.from.month}
-                today={today}
-                bounds={bounds}
-              />
+          <PageSection id="all" number="02" title="All meetings">
+            {/* The calendar is the narrower column: it answers "what does the
+                month look like", which is a glance, while the ledger answers
+                "what is actually on", which is reading. */}
+            <div className="grid grid-cols-1 gap-x-10 gap-y-10 lg:grid-cols-5">
+              <div className="lg:col-span-2" data-animate="fade-up">
+                {/* Opens on the CURRENT month, not the window's first — the
+                    window reaches a month back so somebody can page to what
+                    just happened, and opening there would show a month of past
+                    meetings to a visitor asking what is next. */}
+                <MonthCalendar
+                  meetings={meetings}
+                  initialYear={today?.year ?? bounds.from.year}
+                  initialMonth={today?.month ?? bounds.from.month}
+                  today={today}
+                  bounds={bounds}
+                />
+              </div>
+              <div className="flex flex-col gap-10 lg:col-span-3">
+                <ScheduleList meetings={rest} now={now} />
+                <PastMeetings
+                  meetings={past}
+                  moreCount={pastMoreCount}
+                  page={pastPage}
+                />
+              </div>
             </div>
-            <div className="lg:col-span-3">
-              <ScheduleList meetings={rest} now={now} />
-            </div>
-          </div>
+          </PageSection>
 
-          <PastMeetings
-            meetings={past}
-            moreCount={pastMoreCount}
-            page={pastPage}
-          />
+          <PageSection id="how-it-works" number="03" bare>
+            <HowItWorks id="how-it-works" />
+          </PageSection>
 
           <div className="flex justify-end">
             <a
@@ -187,5 +166,50 @@ export default function EventsPage({
         </div>
       </section>
     </div>
+  );
+}
+
+/**
+ * One of the page's three sections: a heavy rule, a number, a heading.
+ *
+ * The number is the section's only ornament, and it is there so the three
+ * read as a sequence rather than three unrelated bands stacked on one plate.
+ * `bare` is for a child that brings its own heading — `HowItWorks` is shared
+ * with the homepage and titles itself — so the wrapper draws the rule and the
+ * number and nothing else.
+ */
+function PageSection({
+  id,
+  number,
+  title,
+  bare = false,
+  children,
+}: {
+  id: string;
+  number: string;
+  title?: string;
+  bare?: boolean;
+  children: ReactNode;
+}) {
+  const headingId = `${id}-heading`;
+  return (
+    <section
+      id={bare ? undefined : id}
+      aria-labelledby={bare ? undefined : headingId}
+      className="flex scroll-mt-28 flex-col gap-6 border-t-2 border-black pt-6 md:gap-8"
+    >
+      <p className="font-display text-xs font-extrabold tracking-widest text-mauve-500 uppercase">
+        {number}
+      </p>
+      {!bare && title !== undefined && (
+        <h2
+          id={headingId}
+          className="font-display text-3xl font-extrabold text-black md:text-4xl"
+        >
+          {title}
+        </h2>
+      )}
+      {children}
+    </section>
   );
 }

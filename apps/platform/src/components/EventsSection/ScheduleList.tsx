@@ -18,12 +18,12 @@ import {
 /**
  * The upcoming nights, as a list.
  *
- * A **list**, not a grid, and that is the point of the rewrite. The four
- * squares this replaces existed to hold four fabricated event *types* — a
- * fixed shape for fixed content. Real semesters do not have four nights: they
- * have eleven, or three, or none in July, and a grid built for four either
- * pads itself with filler or hides the twelfth. A list has no opinion about
- * how many there are.
+ * A **list**, not a grid: real semesters do not have four nights, they have
+ * eleven, or three, or none in July, and a list has no opinion about how many
+ * there are. And a list of **rows**, not of cards — each night is a ruled row
+ * with the date down the left edge, so twelve of them read as one schedule
+ * rather than twelve panels. This is the "coming up" half of the page's
+ * ledger; {@link PastMeetings} is the other half, in the same rows.
  *
  * Fetches nothing. Every meeting here was already loaded by whoever renders
  * the page — the marquee above needs the same rows to pick its headline from,
@@ -69,17 +69,17 @@ export default function ScheduleList({ meetings, now }: Props) {
       data-animate="fade-up"
       aria-labelledby="schedule-heading"
     >
-      <h2
+      <h3
         id="schedule-heading"
-        className="font-display text-2xl font-extrabold text-black md:text-3xl"
+        className="font-display text-xl font-extrabold text-black md:text-2xl"
       >
-        What&rsquo;s coming up
-      </h2>
+        Coming up
+      </h3>
 
       {meetings.length === 0 ? (
         <EmptySchedule />
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col divide-y-2 divide-mauve-200 border-y-2 border-black">
           {meetings.map((meeting) => (
             <ScheduleRow key={meeting.id} meeting={meeting} now={now} />
           ))}
@@ -100,7 +100,7 @@ export default function ScheduleList({ meetings, now }: Props) {
  */
 function EmptySchedule() {
   return (
-    <div className="shadow-block-md flex flex-col items-start gap-3 rounded-sm border-2 border-black bg-white p-5">
+    <div className="flex flex-col items-start gap-3 border-y-2 border-black py-5">
       <p className="font-display text-lg font-extrabold text-black">
         Nothing on the calendar yet
       </p>
@@ -141,7 +141,7 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
   const elsewhere = meeting.building !== null && meeting.building !== "DLW";
 
   return (
-    <li className="shadow-block-md hover:shadow-block-lg transition-lift relative flex gap-3 rounded-sm border-2 border-black bg-white p-3 hover:-translate-x-0.5 hover:-translate-y-0.5 md:gap-4 md:p-4">
+    <li className="relative flex gap-4 py-4 md:gap-5">
       {/*
         Hidden from assistive tech: the span below prints the same date in full,
         so announcing "Wed 10" first only makes every row take twice as long to
@@ -149,12 +149,12 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
       */}
       <div
         aria-hidden
-        className="flex w-12 shrink-0 flex-col items-center justify-center rounded-sm border-2 border-black bg-mauve-100 py-1.5 md:w-14"
+        className="flex w-12 shrink-0 flex-col items-center leading-none md:w-14"
       >
-        <span className="text-[0.625rem] font-bold tracking-wide text-mauve-600 uppercase">
+        <span className="font-display text-[0.625rem] font-extrabold tracking-widest text-mauve-500 uppercase">
           {WEEKDAY_FORMAT.format(meeting.startsAt)}
         </span>
-        <span className="font-display text-xl font-extrabold text-black tabular-nums md:text-2xl">
+        <span className="font-display text-2xl font-extrabold text-black tabular-nums md:text-3xl">
           {DAY_FORMAT.format(meeting.startsAt)}
         </span>
       </div>
