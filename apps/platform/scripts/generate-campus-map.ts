@@ -536,7 +536,13 @@ for (const e of elements) {
 interface Highlight {
   path: string;
   center: { lat: number; lon: number };
-  pin: { x: number; top: number; bottom: number };
+  pin: {
+    x: number;
+    top: number;
+    bottom: number;
+    tipTop: number;
+    tipBottom: number;
+  };
 }
 
 const highlights: Record<string, Highlight> = {};
@@ -560,15 +566,44 @@ for (const b of HIGHLIGHTS) {
   const biggest = geoms.reduce((a, g) => (area(g) > area(a) ? g : a));
   const center = centroid(biggest);
   const [pinX] = px(center.lon, center.lat).map(fmt) as [number, number];
-  // How far the footprint reaches up and down the frame, so the map can stand
-  // a marker off the edge of the building instead of on top of it. The pin
-  // used to sit on the centroid, which on a building the size of the DLW meant
-  // the marker covered most of what it was pointing at.
-  const ys = geoms.flatMap((g) => proj(g).map((pt) => pt[1]));
+
+  // Two measurements, because the marker and the name want different edges.
+  //
+  // The name has to clear the whole building, so it goes off the outermost
+  // point: `top` and `bottom`. The pin's tip has to touch the wall directly
+  // under it, which on anything that is not an axis-aligned box is somewhere
+  // else entirely — the DLW is a parallelogram whose highest corner is 6px
+  // above its roofline at the centre, so a tip placed off the bounding box
+  // floated over open ground. `tipTop` and `tipBottom` are where a vertical
+  // line through the pin crosses the outline it is pointing at.
+  const rings = geoms.map((g) => simplify(proj(g)));
+  const ys = rings.flat().map((pt) => pt[1]);
+  const crossings = rings.flatMap((ring) => {
+    const hits: number[] = [];
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [ax, ay] = ring[j]!;
+      const [bx, by] = ring[i]!;
+      if (ax === bx) continue;
+      if (pinX < Math.min(ax, bx) || pinX >= Math.max(ax, bx)) continue;
+      hits.push(ay + ((pinX - ax) / (bx - ax)) * (by - ay));
+    }
+    return hits;
+  });
+  // A footprint the vertical line misses entirely is possible in principle —
+  // an L whose centroid falls in the notch — and the outer edge is the honest
+  // answer when it happens.
+  const spans = crossings.length > 0 ? crossings : ys;
+
   highlights[b.key] = {
     path: geoms.map((g) => toPath(g, true)).join(""),
     center,
-    pin: { x: pinX, top: fmt(Math.min(...ys)), bottom: fmt(Math.max(...ys)) },
+    pin: {
+      x: pinX,
+      top: fmt(Math.min(...ys)),
+      bottom: fmt(Math.max(...ys)),
+      tipTop: fmt(Math.min(...spans)),
+      tipBottom: fmt(Math.max(...spans)),
+    },
   };
 }
 
@@ -644,13 +679,23 @@ export const FOOTPRINTS = ${JSON.stringify(footprints.join(""))};
 export const HIGHLIGHT_PATHS: Record<string, string> = ${entries((h) => h.path)};
 
 /**
- * What the marker is pointing at: the footprint's horizontal centre, and how
- * far it reaches up and down the frame. The map hangs the pin off \`top\` or
- * \`bottom\` so it stands beside the building rather than over it.
+ * What the marker is pointing at, in viewBox units.
+ *
+ * \`x\` is the footprint's horizontal centre. \`top\` and \`bottom\` are its full
+ * vertical extent, which is what the name has to clear. \`tipTop\` and
+ * \`tipBottom\` are where a vertical line through \`x\` crosses the outline —
+ * where the pin's point has to land to touch the wall beneath it rather than
+ * the corner of a box drawn around the building.
  */
 export const HIGHLIGHT_PINS: Record<
   string,
-  { x: number; top: number; bottom: number }
+  {
+    x: number;
+    top: number;
+    bottom: number;
+    tipTop: number;
+    tipBottom: number;
+  }
 > = ${entries((h) => h.pin)};
 
 /** Street names, on the centreline they name and turned to match it. */
@@ -680,8 +725,10 @@ console.log(
 );
 for (const b of labeled) console.log(`  LABEL ${b.name} → ${b.cx},${b.cy}`);
 for (const k of keys) {
-  const { x, top, bottom } = highlights[k]!.pin;
-  console.log(`  PIN ${k} → x ${x}, y ${top}..${bottom}`);
+  const { x, top, bottom, tipTop, tipBottom } = highlights[k]!.pin;
+  console.log(
+    `  PIN ${k} → x ${x}, y ${top}..${bottom}, tip ${tipTop}..${tipBottom}`,
+  );
 }
 for (const r of roadLabels)
   console.log(

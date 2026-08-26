@@ -48,6 +48,15 @@ describe("the building list", () => {
       expect(pin.top, `${key} footprint top`).toBeGreaterThan(0);
       expect(pin.bottom, `${key} footprint bottom`).toBeLessThan(VIEW.h);
       expect(pin.top, `${key} footprint`).toBeLessThan(pin.bottom);
+
+      // Where the pin's tip goes: on the outline under the pin, which is
+      // inside the outermost edges of the same footprint by definition. A tip
+      // outside them is a marker planted next to the building.
+      expect(pin.tipTop, `${key} tip top`).toBeGreaterThanOrEqual(pin.top);
+      expect(pin.tipBottom, `${key} tip bottom`).toBeLessThanOrEqual(
+        pin.bottom,
+      );
+      expect(pin.tipTop, `${key} tip`).toBeLessThan(pin.tipBottom);
     }
   });
 
