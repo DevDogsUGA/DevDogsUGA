@@ -25,8 +25,8 @@ import { cn } from "~/lib/cn";
 interface ToneClasses {
   /** The card itself. */
   card: string;
-  /** The pulse behind the megaphone. */
-  pulse: string;
+  /** The disc behind the megaphone. */
+  dot: string;
   /** The tab that carries the eyebrow, notched onto the card's top edge. */
   chip: string;
   /** The tab under the cursor. One step lighter — it is a close button. */
@@ -53,14 +53,14 @@ interface ToneClasses {
 const TONES: Record<AnnouncementTone, ToneClasses> = {
   urgent: {
     card: "bg-amber-300",
-    pulse: "bg-rose-600/50",
+    dot: "bg-rose-600/50",
     chip: "bg-rose-600 text-white",
     chipHover: "hover:bg-rose-500",
     blockShadow: "shadow-rose-600",
   },
   info: {
     card: "bg-sky-300",
-    pulse: "bg-sky-700/40",
+    dot: "bg-sky-700/40",
     chip: "bg-sky-800 text-white",
     chipHover: "hover:bg-sky-700",
     blockShadow: "shadow-sky-800",
@@ -305,11 +305,24 @@ export default function AnnouncementBanner() {
 
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <span className="relative flex size-7 shrink-0 items-center justify-center">
+                {/* Still, not `animate-ping`. The disc is only 54px across and
+                  would cost nothing on its own, but it sits in a fixed banner
+                  right beside the scrim's `backdrop-filter`, and repainting it
+                  every frame forces that 1440x144 surface to re-filter behind
+                  it: the banner measured 19.5 FPS with the ping running, and
+                  21.7 with the blur taken away instead. The glass is the half
+                  worth keeping, so the animation is the half that goes.
+                  Tailwind's `ping` keyframes open at full size and full
+                  opacity, so what is left is exactly its first frame.
+
+                  No `motion-reduce:hidden` with it: nothing moves any more,
+                  and keeping the class would leave the people who asked for
+                  less motion as the only ones with no dot at all. */}
                 <span
                   aria-hidden
                   className={cn(
-                    "absolute inset-0 animate-ping rounded-full motion-reduce:hidden",
-                    toneClasses.pulse,
+                    "absolute inset-0 rounded-full",
+                    toneClasses.dot,
                   )}
                 />
                 {/* Mirrored: Phosphor's megaphone points right, which aims it

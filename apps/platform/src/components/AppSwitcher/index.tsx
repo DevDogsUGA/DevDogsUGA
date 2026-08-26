@@ -47,7 +47,8 @@ export default function AppSwitcher() {
           className="flex items-center gap-2 lg:gap-2.5"
         >
           <figure className="size-7 shrink-0">
-            <Image alt="" src={devdog} />
+            {/* Same `size-7` box as the navbar's, which this header mirrors. */}
+            <Image alt="" src={devdog} sizes="28px" />
           </figure>
           <span className="font-display text-lg font-semibold text-white">
             DevDogs

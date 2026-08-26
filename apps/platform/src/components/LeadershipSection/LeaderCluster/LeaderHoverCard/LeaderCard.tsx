@@ -47,6 +47,12 @@ export default function LeaderCard({
             fill
             alt={profile.name}
             src={profile.imageSrc}
+            // The circle above is `size-28` at every breakpoint, so this is a
+            // constant, not a viewport fraction. It matters more here than
+            // anywhere else on the page: without it `fill` defaults to `100vw`
+            // and each of these headshots — several of them 3000-4000px wide —
+            // was fetched at w=1920 to fill 112 CSS pixels.
+            sizes="112px"
             className="object-cover object-center"
           />
         </div>

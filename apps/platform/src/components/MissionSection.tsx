@@ -166,6 +166,14 @@ function SpinStarImage() {
               />
             </clipPath>
           </defs>
+          {/* No `sizes` here, deliberately — it would make this worse, not
+              better. An SVG <image> takes a single href, so only `.props.src`
+              survives and the srcset is thrown away; Next builds that one URL
+              from the LARGEST candidate it generated. With no `sizes` the
+              candidates are the 1x/2x pair around `height`, so `src` comes out
+              at w=828 — a sane 2x for the ~400px the star renders at. Add a
+              `sizes` and the candidate list becomes every configured width,
+              and this single href jumps to w=3840. */}
           <image
             href={
               getImageProps({ alt: "", src: lecture, height: 400 }).props.src

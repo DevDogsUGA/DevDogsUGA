@@ -24,7 +24,10 @@ export default function TopNav() {
       <div className="flex h-16 items-center gap-4 px-4 md:px-6">
         <Link href="/" className="flex shrink-0 items-center gap-2 lg:gap-2.5">
           <figure className="size-7 shrink-0">
-            <Image alt="" src={devdog} />
+            {/* `size-7`, and the figure never grows. Without `sizes` Next sizes
+                the srcset off the 299px source instead of the 28px box, so the
+                logo on every page of the site downloaded at w=384. */}
+            <Image alt="" src={devdog} sizes="28px" />
           </figure>
           <span className="font-display text-lg font-semibold text-white">
             DevDogs

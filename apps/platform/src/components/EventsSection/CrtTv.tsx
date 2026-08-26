@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import type { StaticImageData } from "next/image";
+import { useTvStatic } from "./useTvStatic";
 
 /**
  * A CRT television, drawn rather than photographed, with a live screen.
@@ -13,7 +14,7 @@ import type { StaticImageData } from "next/image";
  * is a *known shape* at every size, which is the thing that actually makes this
  * work — see below.
  *
- * ## Why the GIF is an SVG `<image>` and not `next/image`
+ * ## Why the picture is an SVG `<image>` and not `next/image`
  *
  * The screen is not a rectangle. A real tube bulges, so the aperture here is
  * four quadratic curves, and the picture has to be clipped to exactly that
@@ -25,10 +26,17 @@ import type { StaticImageData } from "next/image";
  * incorrectly in WebKit. An SVG `<image>` inside a `<clipPath>` group is the
  * boring option that is correct at every size in every engine.
  *
- * Nothing is lost by giving up `next/image` here. These are animated GIFs, and
- * the optimiser passes animated files through untouched — so the bytes on the
- * wire are identical either way. The static import is kept for its `.src`,
+ * Nothing is lost by giving up `next/image` here. The clips are animated GIFs,
+ * and the optimiser passes animated files through untouched — so the bytes on
+ * the wire are identical either way. The static import is kept for its `.src`,
  * which is still the hashed, immutably-cacheable URL the build emits.
+ *
+ * ## The snow underneath is drawn, not fetched
+ *
+ * The no-signal layer used to be a 1.8 MB GIF loaded on every homepage visit.
+ * It is now generated a frame at a time into the same `<image>` — see
+ * `useTvStatic`, which also owns the two gates that keep it from costing
+ * anything off screen or under reduced motion.
  *
  * ## How the volume is built
  *
@@ -59,8 +67,6 @@ import type { StaticImageData } from "next/image";
  */
 
 interface Props {
-  /** Plays underneath, always. Shows through when `showing` is null. */
-  noSignal: StaticImageData;
   /**
    * What is on screen, or null.
    *
@@ -173,12 +179,13 @@ const ROSE = {
 } as const;
 const LAMP = "#fbbf24"; // amber-400
 
-export default function CrtTv({ noSignal, showing, className }: Props) {
+export default function CrtTv({ showing, className }: Props) {
   // Strip everything that is not alphanumeric rather than just the colons the
   // rest of the codebase strips: React 19 hands back `«r0»`, not `:r0:`, so a
   // colon-only replace is now a no-op and these ids end up inside `url(#…)`.
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const id = (name: string) => `crt-${name}-${uid}`;
+  const noSignal = useTvStatic();
 
   return (
     <svg
@@ -330,8 +337,13 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
         <path d={SCREEN} fill="black" strokeWidth="0" />
 
         <g clipPath={`url(#${id("screen")})`} stroke="none">
+          {/* The snow, underneath everything and running whenever the set is
+              in view. It ships with no `href` at all: the frames are painted
+              on the client, so the server renders an empty element over the
+              black above and the tube reads correctly until the first one
+              lands. */}
           <image
-            href={noSignal.src}
+            ref={noSignal}
             x={PICTURE.x}
             y={PICTURE.y}
             width={PICTURE.width}

@@ -7,7 +7,6 @@ import CrtTv from "./CrtTv";
 import bruceAlmighty from "~/assets/bruce-almighty.gif";
 import charlieConspiracy from "~/assets/charlie-conspiracy.gif";
 import informationGif from "~/assets/information.gif";
-import staticGif from "~/assets/static.gif";
 
 interface Beat {
   title: string;
@@ -17,6 +16,13 @@ interface Beat {
    * 2.4 MB, and next/image passes animated files through unoptimized, so
    * rendering all three up front would put megabytes on a marketing page that
    * most visitors never hover at all.
+   *
+   * A static import is what makes that work rather than what defeats it: the
+   * build emits the file to its own hashed URL and the import evaluates to the
+   * URL, not the bytes. Nothing is fetched until `CrtTv` puts one of these in
+   * an `href` — which it does for exactly one at a time, on hover. Do not
+   * preload them, and do not render a hidden copy to "warm" the cache; that
+   * would hand every visitor all three.
    */
   gif: StaticImageData;
 }
@@ -84,8 +90,8 @@ const BEATS: Beat[] = [
  * to", which is the homepage's question, not the schedule's.
  */
 export default function HowItWorks() {
-  // `null` is the resting state, not "beat 0": static.gif plays underneath
-  // until a pointer lands on a beat.
+  // `null` is the resting state, not "beat 0": the set plays its own snow
+  // underneath until a pointer lands on a beat.
   const [hovered, setHovered] = useState<number | null>(null);
   // noUncheckedIndexedAccess is on, so this is Beat | undefined either way —
   // which is what the panel wants anyway, since undefined *is* the rest state.
@@ -186,7 +192,6 @@ export default function HowItWorks() {
               the middle of whatever height the row ends up with. */}
           <div className="flex items-center justify-center lg:col-span-2">
             <CrtTv
-              noSignal={staticGif}
               showing={active ? { key: active.title, image: active.gif } : null}
             />
           </div>
