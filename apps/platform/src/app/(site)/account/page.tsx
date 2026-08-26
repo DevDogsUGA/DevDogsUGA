@@ -16,6 +16,8 @@ import PreferredNameField from "~/components/PreferredNameField";
 import ProfileLinks from "~/components/ProfileLinks";
 import PronounsField from "~/components/PronounsField";
 import RoleDescriptionField from "~/components/RoleDescriptionField";
+import { SettingsFormProvider } from "~/ui/settings-form";
+import SettingsSaveBar from "~/ui/settings-save-bar";
 import { CardSkeleton } from "~/components/Skeletons";
 import VerificationStatusField from "~/components/VerificationStatusField";
 import { getProfilePageData } from "~/server/loaders/console";
@@ -190,17 +192,30 @@ export default function ProfilePage() {
           accent="amber"
         />
 
-        <Suspense
-          fallback={
-            <>
-              <CardSkeleton rows={6} />
-              <CardSkeleton rows={4} />
-              <CardSkeleton rows={2} />
-            </>
-          }
-        >
-          <AccountContent />
-        </Suspense>
+        {/* Every editable field on this page registers with the provider, and
+            the bar at the bottom saves and resets all of them at once. It
+            renders itself away when nothing is dirty, so a quarantined profile
+            never sees it: FrozenFields marks the whole subtree `inert`, which
+            means no field can be edited, which means nothing is ever dirty.
+
+            The bar is fixed to the bottom of the viewport, which is also where
+            AnnouncementBanner sits. They cannot collide — `showsAnnouncement`
+            keeps the notice off /account along with the rest of the signed-in
+            surfaces, and announcement.test.ts pins that down. */}
+        <SettingsFormProvider>
+          <Suspense
+            fallback={
+              <>
+                <CardSkeleton rows={6} />
+                <CardSkeleton rows={4} />
+                <CardSkeleton rows={2} />
+              </>
+            }
+          >
+            <AccountContent />
+          </Suspense>
+          <SettingsSaveBar />
+        </SettingsFormProvider>
       </div>
     </div>
   );

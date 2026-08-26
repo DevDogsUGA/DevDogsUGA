@@ -1,4 +1,4 @@
-import { ArrowRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
+import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import SectionBackground, {
   type BlobDef,
   type EdgeType,
@@ -6,14 +6,20 @@ import SectionBackground, {
 import LinkButton from "~/ui/link-button";
 import { getMeetingsInRange } from "~/server/loaders/meetings";
 import type { MeetingInRange } from "~/server/loaders/meetings";
-import FindUs from "./FindUs";
 import NextMeetingStrip from "./NextMeetingStrip";
 import HowItWorks from "./HowItWorks";
 
 const EVENTS_BLOBS: BlobDef[] = [
   { cx: "25%", cy: "30%", rx: "55%", ry: "50%", fill: "#fecdd3" }, // rose
   { cx: "80%", cy: "65%", rx: "50%", ry: "55%", fill: "#fb7185", opacity: 0.6 }, // rose
-  { cx: "72%", cy: "10%", rx: "40%", ry: "35%", fill: "#fed7aa", opacity: 0.55 }, // amber
+  {
+    cx: "72%",
+    cy: "10%",
+    rx: "40%",
+    ry: "35%",
+    fill: "#fed7aa",
+    opacity: 0.55,
+  }, // amber
   { cx: "12%", cy: "78%", rx: "38%", ry: "32%", fill: "#fdba74", opacity: 0.5 }, // amber
 ];
 
@@ -26,28 +32,29 @@ interface Props {
 }
 
 /**
- * The homepage's events section: the next meeting, how the week works, and a
- * way through to the rest.
+ * The homepage's events section: the next meeting, how a competition works,
+ * and a way through to the rest.
  *
- * Deliberately smaller than it was, and deliberately not built out of the
- * events page's bands. This used to render the whole calendar and four cards,
- * which made the homepage and `/events` near-duplicates of each other — and
- * the cards were fabricated anyway.
+ * Deliberately smaller than `/events`, and deliberately not built out of its
+ * bands. This used to render the whole calendar and four cards, which made
+ * the homepage and `/events` near-duplicates of each other — and the cards
+ * were fabricated anyway.
  *
- * The split between the two is by question rather than by size. `/events`
- * answers *when*: a marquee, a calendar, the schedule and the archive, and
- * nothing that is not a date. The homepage answers *what happens if I turn
- * up*: the format, the room, and one line of proof that there is a next
- * meeting at all. So the explainer lives here and only here, the schedule
- * lives there and only there, and the one fact they share — the next meeting —
- * is rendered at two sizes that could not be mistaken for each other. Neither
- * page is a subset of the other, which is what stops them drifting into two
- * maintained copies of the same page.
+ * The split between the two is by question. `/events` answers *when*: the next
+ * meeting in full, every meeting past and coming, and the calendar. The
+ * homepage answers *what happens if I turn up*: one line of proof that there
+ * is a next meeting at all, and the format. The explainer renders on both —
+ * it is the same component — but here it is the subject and there it is the
+ * legend for the chips; the schedule lives there and only there.
  *
- * The directions trigger here is the IN-PLACE dialog rather than the link to
- * `/events/directions`: on the events page that URL opens over a calendar that
- * stays mounted, but from the homepage it would be a full navigation away from
- * everything else somebody was reading.
+ * Nothing in here is boxed. The section used to stack a black strip, a rose
+ * panel and three white cards inside it, on a site where the card is already
+ * the answer to everything; now the next meeting is a ruled row and the
+ * explainer is a heading, a timeline and a list, all straight on the plate.
+ *
+ * The room is not named here any more either. Where the club meets is a fact
+ * about a meeting, and every meeting on `/events` says its own; the homepage
+ * only has to prove there is one.
  */
 export default async function EventsSection({ topEdge, bottomEdge }: Props) {
   return (
@@ -78,13 +85,6 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
               week-long competition puts it into practice, and the following
               meeting judges what got built. Turn up to any of it.
             </p>
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <p className="flex items-center gap-2 text-sm font-semibold text-black">
-                <MapPinIcon className="shrink-0 text-mauve-500" weight="fill" />
-                DLW 124 — the new Dining, Learning &amp; Well-Being center
-              </p>
-              <FindUs />
-            </div>
           </div>
 
           <NextMeetingStrip meeting={await nextMeeting()} now={new Date()} />

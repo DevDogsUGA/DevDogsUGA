@@ -11,12 +11,32 @@
 import { spawn } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { describeEnvironment, probeEnvironment } from "./environment.js";
 
 export type Target =
   { kind: "local" } | { kind: "remote" } | { kind: "team"; slug: string };
 
-export const STACK_COMMANDS = ["link", "push", "reset", "status"] as const;
+export const STACK_COMMANDS = [
+  "link",
+  "stop",
+  "restart",
+  "push",
+  "reset",
+  "status",
+] as const;
 export type StackCommand = (typeof STACK_COMMANDS)[number];
+
+/**
+ * Everything except the lifecycle pair.
+ *
+ * `stop` and `restart` act on the Docker stack on this machine, so they have
+ * no `--remote` or `--team` meaning — there is no container to stop on a
+ * hosted project. Derived with `Exclude` rather than written out a second
+ * time, so `teamCommand` below cannot silently fall out of step with
+ * `STACK_COMMANDS`: adding a command to that tuple and forgetting it here is a
+ * type error at the `switch`, which is where it should be.
+ */
+export type TeamCommand = Exclude<StackCommand, "stop" | "restart">;
 
 const DELEGATED: Partial<
   Record<StackCommand, Record<"local" | "remote", string>>
@@ -140,7 +160,7 @@ async function writeEnv(response: LinkResponse): Promise<string[]> {
 }
 
 async function teamCommand(
-  command: StackCommand,
+  command: TeamCommand,
   slug: string,
 ): Promise<{ code: number; lines: string[] }> {
   switch (command) {
@@ -187,21 +207,97 @@ async function teamCommand(
   }
 }
 
+// ── The local stack's lifecycle ──────────────────────────────────────────────
+
+/**
+ * Stop, then start again.
+ *
+ * Two delegated scripts rather than one, because `supabase restart` does not
+ * exist — the CLI's own answer to a changed `config.toml` is a stop/start
+ * pair. Doing it here turns that into one menu entry, rather than two
+ * commands the contributor has to know to run in that order.
+ *
+ * A failed stop short-circuits. Starting a stack that never went down would
+ * report success and leave the config change unapplied, which is the one
+ * outcome worse than a visible failure.
+ */
+async function restartLocal(): Promise<{ code: number; lines: string[] }> {
+  const code = await runScript("stop-local-stack");
+  if (code !== 0) {
+    // Names its own scrollback, because a failure that arrives with lines is
+    // taken by `cli.ts` to have explained itself — see the contract there.
+    return {
+      code,
+      lines: [
+        "Stopping failed, so nothing was restarted. " +
+          "Scroll up for the output from the Supabase CLI.",
+      ],
+    };
+  }
+  return { code: await runScript("start-local-stack"), lines: [] };
+}
+
+/**
+ * What `status --local` says now that it can answer for itself.
+ *
+ * It used to print "Run `supabase status` for the local stack" — a status
+ * command whose entire output was the name of a different status command.
+ * `environment.ts` already reads the two facts that question is really
+ * asking about, so this reports them and names the next step.
+ *
+ * It stops short of printing the stack's URLs and keys. `supabase status`
+ * does that, it is one line away, and a status check is not a reason to spray
+ * credentials into a terminal's scrollback.
+ */
+function localStatus(): { code: number; lines: string[] } {
+  const env = probeEnvironment();
+
+  let next: string;
+  if (env.docker === "no") {
+    next = "Start Docker, then `pnpm devtools link` to bring the stack up.";
+  } else if (env.stack === "yes") {
+    next = "The stack is up. `supabase status` prints its URLs and keys.";
+  } else if (env.stack === "no") {
+    next = "Nothing is running. `pnpm devtools link` starts it.";
+  } else {
+    next = "Could not read Docker. `supabase status` asks the stack directly.";
+  }
+
+  // Two entries, not three with a blank between them: the caller prints each
+  // through `log.message`, which already spaces them.
+  return { code: 0, lines: [describeEnvironment(env), next] };
+}
+
 /** Runs a stack command, returning its exit code and anything to report. */
 export async function runStackCommand(
   command: StackCommand,
   target: Target,
 ): Promise<{ code: number; lines: string[] }> {
+  // The lifecycle pair is handled first, and every branch returns — which is
+  // also what narrows `command` to `TeamCommand` for the dispatch below.
+  if (command === "stop" || command === "restart") {
+    if (target.kind !== "local") {
+      return {
+        code: 1,
+        lines: [
+          `\`${command}\` acts on the Docker stack on this machine.`,
+          `A ${target.kind} project has no container here to ${command}.`,
+        ],
+      };
+    }
+    if (command === "restart") return restartLocal();
+    // Delegated by name like the rest; it is simply not in `DELEGATED`,
+    // which maps a command across both targets and this one has only the one.
+    return { code: await runScript("stop-local-stack"), lines: [] };
+  }
+
   if (target.kind === "team") return teamCommand(command, target.slug);
 
   if (command === "status") {
+    if (target.kind === "local") return localStatus();
     return {
       code: 0,
-      lines: [
-        target.kind === "local"
-          ? "Run `supabase status` for the local stack."
-          : "Check the Supabase dashboard for the linked project.",
-      ],
+      lines: ["Check the Supabase dashboard for the linked project."],
     };
   }
 

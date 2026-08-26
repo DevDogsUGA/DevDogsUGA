@@ -6,6 +6,7 @@ import {
   TrashIcon,
 } from "@phosphor-icons/react/ssr";
 import type { useSortable } from "@dnd-kit/sortable";
+import { isValidLinkUrl } from "~/lib/validation/profile";
 
 function faviconUrl(url: string): string {
   try {
@@ -13,15 +14,6 @@ function faviconUrl(url: string): string {
     return `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
   } catch {
     return "";
-  }
-}
-
-export function isValidLinkUrl(url: string): boolean {
-  try {
-    const { protocol } = new URL(url);
-    return protocol === "http:" || protocol === "https:";
-  } catch {
-    return false;
   }
 }
 

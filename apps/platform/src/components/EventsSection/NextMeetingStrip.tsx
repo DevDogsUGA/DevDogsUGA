@@ -16,22 +16,24 @@ import { CHIP_CLS, segmentBadge } from "./meetingView";
 /**
  * The homepage's one line about the next meeting.
  *
- * Deliberately NOT `Marquee`, which is the same fact at ten times the size.
- * The two pages have different jobs and should not look like each other doing
- * them: `/events` exists to answer "when", so its top band is a card at the
- * scale of the only thing anybody came for, with directions, RSVP, check-in
- * and a summary. The homepage is not answering that question — it is making
- * the case that the club meets at all — so the date belongs here as *evidence*
- * rather than as the subject, one row deep, with a single way through.
+ * Deliberately NOT `NextMeeting`, which is the same fact at ten times the
+ * size. The two pages have different jobs and should not look like each other
+ * doing them: `/events` exists to answer "when", so its top band is the next
+ * meeting at the scale of the only thing anybody came for, with directions,
+ * RSVP, check-in and a summary. The homepage is not answering that question —
+ * it is making the case that the club meets at all — so the date belongs here
+ * as *evidence* rather than as the subject, one row deep, with a single way
+ * through.
  *
- * The inversion is the point. Every other band on the homepage's events
- * section sits on the rose plate in a white card; this one is black, so it
- * reads as a notice pinned to the section rather than as its content.
+ * A ruled row, not a card. It used to be a black box with a block shadow, and
+ * the section it sits in was three boxes deep by the time the explainer's
+ * cards were counted; the rules above and below are all the frame it needs to
+ * read as a notice pinned to the section rather than as a fourth panel.
  *
  * Like every band under `/events`, it never reads the clock — `now` arrives
  * from the caller, resolved once — and every zone-aware string goes through
- * `Intl` with an explicit `timeZone`. See {@link Marquee} for why that matters
- * more than it looks like it should.
+ * `Intl` with an explicit `timeZone`. See {@link NextMeeting} for why that
+ * matters more than it looks like it should.
  */
 
 interface Props {
@@ -51,15 +53,15 @@ const DAY_FMT = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
-/**
- * White on black, the inverse of the actions everywhere else on the page —
- * because everywhere else is on the rose plate and this sits on the notice.
- */
-const STRIP_ACTION_CLS =
-  "hover:shadow-block-md transition-lift flex w-fit shrink-0 items-center gap-2 rounded-sm border-2 border-white bg-black px-4 py-2 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-white/40";
+const ROW_CLS =
+  "flex flex-col gap-4 border-y-2 border-black py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6";
 
-const STRIP_CLS =
-  "shadow-block-md flex flex-col gap-4 rounded-sm border-2 border-black bg-black p-5 shadow-black sm:flex-row sm:items-center sm:justify-between sm:gap-6";
+const EYEBROW_CLS =
+  "font-display text-xs font-extrabold tracking-widest text-mauve-500 uppercase";
+
+/** A text link with an arrow — the one way through, and not a button. */
+const ROW_LINK_CLS =
+  "flex w-fit shrink-0 items-center gap-1.5 text-sm font-semibold text-black underline decoration-2 underline-offset-4 hover:no-underline";
 
 export default function NextMeetingStrip({ meeting, now }: Props) {
   // Months at a time, every summer — a state of the club, not of the query.
@@ -76,40 +78,41 @@ export default function NextMeetingStrip({ meeting, now }: Props) {
   const ended = now >= meeting.endsAt;
 
   return (
-    <div className={STRIP_CLS} data-animate="fade-up">
+    <div className={ROW_CLS} data-animate="fade-up">
       {/* `min-w-0` so a long meeting name truncates instead of refusing to
           shrink below its longest word, which is how a 390px viewport gets a
           horizontal scrollbar. */}
-      <div className="flex min-w-0 items-center gap-4">
+      <div className="flex min-w-0 items-center gap-5">
         {/* Through `Intl` with an explicit zone rather than `getDate()`, which
             answers in the *server's* zone — and a 20:00 Eastern meeting is
             already tomorrow in UTC, so the number would be wrong for every
             evening meeting on a UTC host. */}
         <time
           dateTime={meeting.startsAt.toISOString()}
-          className="flex w-12 shrink-0 flex-col items-center leading-none"
+          className="flex w-14 shrink-0 flex-col items-center leading-none"
         >
-          <span className="font-display text-xs font-extrabold tracking-widest text-mauve-400 uppercase">
+          <span className={EYEBROW_CLS}>
             {WEEKDAY_FMT.format(meeting.startsAt)}
           </span>
-          <span className="font-display text-3xl font-extrabold text-white tabular-nums">
+          <span className="font-display text-4xl font-extrabold text-black tabular-nums">
             {DAY_FMT.format(meeting.startsAt)}
           </span>
         </time>
 
         <div className="flex min-w-0 flex-col gap-1.5">
-          <p className="font-display truncate text-lg font-extrabold text-white">
+          <p className={EYEBROW_CLS}>Next meeting</p>
+          <p className="font-display truncate text-xl font-extrabold text-black">
             {meeting.name}
           </p>
 
-          <p className="text-xs text-mauve-300">
+          <p className="text-xs text-mauve-700">
             <time dateTime={meeting.startsAt.toISOString()}>
               {formatEventSpan(meeting.startsAt, meeting.endsAt)}
             </time>
             <span className="mx-1.5" aria-hidden>
               &middot;
             </span>
-            <span className="font-semibold text-white">
+            <span className="font-semibold text-black">
               {happeningNow ? (
                 <>Happening now — until {formatEventTime(meeting.endsAt)}</>
               ) : ended ? (
@@ -138,7 +141,7 @@ export default function NextMeetingStrip({ meeting, now }: Props) {
                   never heard of renders as itself. */}
               {kindOverride !== null && (
                 <span
-                  className={`border-2 border-white bg-black text-white ${CHIP_CLS}`}
+                  className={`border-2 border-black bg-white text-black ${CHIP_CLS}`}
                 >
                   {kindOverride}
                 </span>
@@ -154,7 +157,7 @@ export default function NextMeetingStrip({ meeting, now }: Props) {
           from here is an ordinary navigation to /events with the meeting's
           dialog already open — which is exactly what somebody clicking a date
           on the homepage wants. */}
-      <Link href={`/events/${meeting.slug}`} className={STRIP_ACTION_CLS}>
+      <Link href={`/events/${meeting.slug}`} className={ROW_LINK_CLS}>
         Details <ArrowRightIcon />
       </Link>
     </div>
@@ -172,12 +175,13 @@ export default function NextMeetingStrip({ meeting, now }: Props) {
  */
 function NothingScheduled() {
   return (
-    <div className={STRIP_CLS} data-animate="fade-up">
-      <div className="min-w-0 space-y-1">
-        <p className="font-display text-lg font-extrabold text-white">
+    <div className={ROW_CLS} data-animate="fade-up">
+      <div className="min-w-0 space-y-1.5">
+        <p className={EYEBROW_CLS}>Next meeting</p>
+        <p className="font-display text-xl font-extrabold text-black">
           Nothing on the calendar yet
         </p>
-        <p className="text-xs text-mauve-300">
+        <p className="text-xs text-mauve-700">
           The fall schedule goes up in August. The Involvement Network is where
           RSVPs live, so it is the first place a new date shows up.
         </p>
@@ -187,7 +191,7 @@ function NothingScheduled() {
         href={INVOLVEMENT_NETWORK_EVENTS_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className={STRIP_ACTION_CLS}
+        className={ROW_LINK_CLS}
       >
         Involvement Network <ArrowUpRightIcon />
       </a>

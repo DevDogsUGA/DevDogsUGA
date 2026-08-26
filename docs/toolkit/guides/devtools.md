@@ -17,6 +17,20 @@ walks the command tree, builds an argv, and hands it to the same dispatcher a
 typed command line reaches, so what the menu covers and what the CLI does cannot
 drift apart.
 
+**It reads the machine first.** Before the first screen it checks whether Docker
+answers, whether this project's containers are up and whether a root `.env`
+exists, and shows you those three lines. Commands that would be meaningless are
+left out — `stop` and `restart` appear only while a stack is actually running —
+and commands that need something you do not have stay on screen with the reason
+on the line, so you learn that `roundtrip` wants a stack before choosing it
+rather than after a connection error. A probe that fails changes nothing: a
+machine the CLI cannot read gets the whole menu, because hiding a command
+because `docker ps` timed out would hide the command you were looking for.
+
+Adapting is the menu's job alone. `--help`, the dispatcher and the generated
+reference always carry every command — the menu is a guide to right now, and
+those three are the reference.
+
 Help prints one level at a time: `pnpm devtools --help` lists the groups,
 `pnpm devtools env --help` lists env's subcommands, `pnpm devtools env pull
 --help` lists that command's options. Depth is reached by asking for it.
@@ -37,14 +51,16 @@ Other callers use `cli:no-env` for the same reason, CI mostly, where there is
 no `.env` either.
 
 **Your database** — `link`, `push`, `reset` and `status`, each over
-`--local | --remote | --team <slug>`. `pnpm sb` is the same binary and the same
-four commands: see [sb](/docs/toolkit/guides/sb).
+`--local | --remote | --team <slug>`, plus `stop` and `restart`, which act on
+the Docker stack on this machine and take no target. `pnpm sb` is the same
+binary and the same six commands: see [sb](/docs/toolkit/guides/sb).
 
 **Moderation** — `catalog` lists the report reasons and content types in your
 database, `doctor --app <slug>` checks one app's moderation integration,
 `roundtrip` files a report, quarantines it, checks the freeze and cleans up
 after itself, and `grant-root --user <email>` gives an account every permission
-on your own database. All four run against the local stack and nothing else.
+on your own database. All four run against the local stack and nothing else,
+which is why the menu flags all four when that stack is not up.
 
 **Project setup** — `oauth` configures "Sign in with DevDogs" for the directory
 you run it in. `airtable` holds the officers' base commands: `verify` diffs the
@@ -74,6 +90,11 @@ names, one-line summaries, and option shapes, importing nothing that runs.
 `help.ts` renders it, the wizard walks it, and the docs build reads it. There is
 no second list of commands anywhere, which is why a command added there is in
 the menu and in `--help` the same day.
+
+The environment conditions live there too, and they are strings rather than
+predicates for the same reason: `when: "stack-running"` is data the docs build
+can render, where a function would be something only the wizard could run.
+`environment.ts` is the single place that knows what those strings mean.
 
 That is also why the summaries are one line each. Rationale, target tables and
 credential lookup order live in these pages: `--help` is a map, and a map that

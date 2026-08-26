@@ -1,18 +1,17 @@
 "use client";
 
 import { useId, useLayoutEffect, useRef } from "react";
-import { useBio, normalizeBio } from "~/hooks/useBio";
+import { useBio } from "~/hooks/useBio";
 import type { getProfilePageData } from "~/server/loaders/console";
-import SaveableField from "~/ui/saveable-field";
+import SettingsField from "~/ui/settings-field";
+import { PROFILE_LIMITS } from "~/lib/validation/profile";
 
 type ProfileData = Awaited<ReturnType<typeof getProfilePageData>>;
-
-const MAX_CHARS = 127;
 
 export default function BioField({ id, profile }: ProfileData) {
   const textareaId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { bio, setBio, bioDirty, saveBio, resetBio, isBioPending } = useBio(
+  const { bio, setBio, bioDirty, bioError, saveBio, resetBio } = useBio(
     id,
     profile.bio ?? null,
   );
@@ -24,22 +23,22 @@ export default function BioField({ id, profile }: ProfileData) {
     el.style.height = `${el.scrollHeight}px`;
   }, [bio]);
 
-  const normalized = normalizeBio(bio);
-  const hasError = normalized.length > MAX_CHARS;
   const lineCount = bio.split("\n").length;
 
   return (
-    <SaveableField
+    <SettingsField
+      id="bio"
+      label="Bio"
       className="max-w-sm"
-      isDirty={bioDirty && !hasError}
-      isPending={isBioPending}
-      onSave={saveBio}
-      onReset={resetBio}
-      meta={`${bio.length} / ${MAX_CHARS} characters`}
+      isDirty={bioDirty}
+      error={bioError}
+      save={saveBio}
+      reset={resetBio}
+      meta={`${bio.length} / ${PROFILE_LIMITS.shortText} characters`}
       secondaryMeta={lineCount > 1 ? `${lineCount} / 3 lines` : undefined}
     >
       <div
-        className={`group focus-within:shadow-block-sm relative flex overflow-hidden rounded-sm border bg-mauve-900 text-sm transition-shadow ${hasError ? "border-rose-400" : "border-mauve-600 hover:border-mauve-500"}`}
+        className={`group focus-within:shadow-block-sm relative flex overflow-hidden rounded-sm border bg-mauve-900 text-sm transition-shadow ${bioError ? "border-rose-400" : "border-mauve-600 hover:border-mauve-500"}`}
       >
         <textarea
           ref={textareaRef}
@@ -47,11 +46,12 @@ export default function BioField({ id, profile }: ProfileData) {
           className="form-textarea w-full resize-none overflow-hidden border-0 bg-mauve-800 px-3 text-sm text-white transition-[height] duration-200 ease-in-out group-hover:inset-shadow-sm placeholder:text-mauve-500 focus:ring-0 focus:inset-shadow-sm"
           value={bio}
           onChange={(e) => setBio(e.target.value)}
+          aria-invalid={bioError ? true : undefined}
           rows={1}
           name="bio"
           placeholder="Tell people a bit about yourself…"
         />
       </div>
-    </SaveableField>
+    </SettingsField>
   );
 }

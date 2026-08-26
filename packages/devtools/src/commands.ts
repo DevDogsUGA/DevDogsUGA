@@ -84,6 +84,16 @@ export interface CommandOption {
   prompt?: OptionPrompt;
 }
 
+/**
+ * Something about the machine that a command cares about.
+ *
+ * A string rather than a predicate, so this file stays what its header says it
+ * is: data. `environment.ts` is the only module that knows what these mean,
+ * `menu.ts` acts on them, and the docs build can render "shown when the local
+ * stack is running" without being able to run anything.
+ */
+export type Condition = "docker" | "stack-running" | "stack-stopped";
+
 export interface CommandNode {
   name: string;
   /** One line. See the header. */
@@ -92,6 +102,28 @@ export interface CommandNode {
   hint?: string;
   options?: readonly CommandOption[];
   subcommands?: readonly CommandNode[];
+  /**
+   * Offer this in the wizard only while the condition holds.
+   *
+   * For commands that are *meaningless* otherwise, not merely inconvenient:
+   * stopping a stack that is already stopped is the whole of the category.
+   * A command that would run and fail with a good message gets `needs`
+   * instead — see the two-line rule on `isOffered` in `environment.ts` for
+   * why hiding is the rarer of the two.
+   *
+   * Wizard-only. `--help`, the dispatcher and the generated reference all
+   * ignore this, so nothing here removes a command from the CLI.
+   */
+  when?: Condition;
+  /**
+   * Offer this always, but say on the line why it will not work right now.
+   *
+   * The four moderation commands carry it: each one opens a client against
+   * the local stack and has no remote path at all, so with the stack down
+   * they are a spinner followed by a connection error. The hint turns that
+   * into a sentence the reader sees before choosing.
+   */
+  needs?: Condition;
   /**
    * `"show"` means the wizard prints the invocation instead of running it.
    *
@@ -213,6 +245,20 @@ export const GROUPS: readonly CommandGroup[] = [
         options: [DATABASE_TARGET],
       },
       {
+        name: "stop",
+        summary: "Shut the local stack down, freeing its containers.",
+        hint: "local only — your data survives",
+        // Not offered while nothing is running: "stop" against a stopped
+        // stack is the one shape of question a menu should never ask.
+        when: "stack-running",
+      },
+      {
+        name: "restart",
+        summary: "Stop the local stack, then start it again.",
+        hint: "picks up config.toml changes",
+        when: "stack-running",
+      },
+      {
         name: "push",
         summary: "Apply new migrations.",
         hint: "without erasing anything",
@@ -238,11 +284,13 @@ export const GROUPS: readonly CommandGroup[] = [
         name: "catalog",
         summary: "List the report reasons and content types in the database.",
         hint: "what can be reported here",
+        needs: "stack-running",
       },
       {
         name: "doctor",
         summary: "Check an app's moderation integration.",
         hint: "and whether the catalog holds up",
+        needs: "stack-running",
         options: [
           {
             flag: "--app",
@@ -255,10 +303,12 @@ export const GROUPS: readonly CommandGroup[] = [
         name: "roundtrip",
         summary: "File a report, quarantine it, and check the freeze.",
         hint: "end to end, then cleans up",
+        needs: "stack-running",
       },
       {
         name: "grant-root",
         summary: "Give an account every permission on your own database.",
+        needs: "stack-running",
         options: [
           {
             flag: "--user",

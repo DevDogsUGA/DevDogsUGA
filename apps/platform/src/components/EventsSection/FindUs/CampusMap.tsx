@@ -299,11 +299,16 @@ const PIN_R = 7;
  * The name then goes on the far side of the building from the pin, so the two
  * frame the destination instead of stacking on one edge of it.
  */
-function placeCallout({ top, bottom }: Pin) {
+function placeCallout({ top, bottom, tipTop, tipBottom }: Pin) {
   const above = top - PIN_H >= 10;
   // Which way the tip points, as a sign on y.
   const d = above ? 1 : -1;
-  const tipY = above ? top - 1 : bottom + 1;
+  // Two pixels INSIDE the outline, not resting against it. The footprint's own
+  // stroke is 2.5px wide and the pin's is 2, so a tip parked exactly on the
+  // edge leaves the two strokes butting against each other with a pale seam
+  // between them, and reads as a marker hovering over the building rather than
+  // planted on it.
+  const tipY = above ? tipTop + 2 : tipBottom - 2;
   const cy = tipY - d * (PIN_H - PIN_R);
   // Clamped rather than flipped back over the pin: a building at the very top
   // of the frame has nowhere above it to put a name, and pushing the name to

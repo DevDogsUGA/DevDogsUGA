@@ -48,14 +48,15 @@ untouched and there is no repair path to write.
 <details>
 <summary>What does <code>pnpm sb</code> cover, across all three targets?</summary>
 
-`packages/devtools/src/stack.ts` dispatches four commands over three targets:
+`packages/devtools/src/stack.ts` dispatches four commands over three targets
+(`stop` and `restart` are the other two, and are local-only):
 
 | Command  | `--local` / `--remote`                            | `--team <slug>`                                         |
 | -------- | ------------------------------------------------- | ------------------------------------------------------- |
 | `link`   | starts the local stack / links the remote project | `POST /sandbox/link` — both tokens, writes `.env.local` |
 | `push`   | `push-migrations`                                 | `POST /sandbox/push` — every migration as one payload   |
 | `reset`  | `reset-local-database` / `reset-remote-database`  | `POST /sandbox/reset` — drop `public`, re-apply         |
-| `status` | points at `supabase status` or the dashboard      | `POST /sandbox/status` — reports, and wakes if paused   |
+| `status` | reads Docker locally / points at the dashboard    | `POST /sandbox/status` — reports, and wakes if paused   |
 
 A team reset drops the `public` schema only. `auth` survives, because the members
 signed into that project are federated against their real DevDogs accounts, and a

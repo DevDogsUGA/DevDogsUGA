@@ -18,6 +18,7 @@ import {
 import signOut from "~/server/actions/signOut";
 import NavSubMenu from "./NavSubMenu";
 import { useVerification, type NavUserClientData } from "./NavUserProvider";
+import { POPOVER_DIVIDER, POPOVER_ROW } from "./popoverRow";
 import VerificationAlert from "./VerificationAlert";
 
 interface Props {
@@ -57,7 +58,7 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
             side="bottom"
             align="end"
             sideOffset={10}
-            className="z-100 w-3xs max-w-(--radix-popper-available-width) rounded-md border-2 bg-black/80 py-1.5 text-sm font-medium text-white backdrop-blur-xs"
+            className="z-100 w-3xs max-w-(--radix-popper-available-width) rounded-md border-2 bg-mauve-950/90 py-1.5 text-sm font-medium text-white backdrop-blur"
           >
             <div className="flex flex-col px-3 pt-1 pb-2">
               <span className="truncate text-sm text-white">
@@ -82,31 +83,34 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
             <NavSubMenu {...COMPETITION_GROUP} />
             <NavSubMenu {...CONSOLE_GROUP} items={consoleItems} />
 
+            {/* Competitions is two static pages, so there is always a row
+                above this even where an unpermissioned Console renders
+                nothing and the band collapses to one. */}
+            <div className={POPOVER_DIVIDER} />
+
             {items.map((item) => {
               const Icon = icons[item.icon];
               return (
                 <Dropdown.Item key={item.href} asChild>
-                  <Link
-                    href={item.href}
-                    className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors hover:bg-mauve-800 focus:outline-none"
-                  >
-                    {item.label}
+                  <Link href={item.href} className={POPOVER_ROW}>
                     <Icon />
+                    {item.label}
                   </Link>
                 </Dropdown.Item>
               );
             })}
 
-            <div className="mx-1.5 my-1.5 h-px w-[calc(100%-var(--spacing)*3)] bg-mauve-700" />
+            <div className={POPOVER_DIVIDER} />
 
             <form action={signOut}>
               <input name="callbackPath" value="/" type="hidden" />
               <Dropdown.Item asChild>
                 <button
-                  className="flex w-full items-center gap-2 px-3 py-1.5 text-rose-300 transition-colors hover:bg-rose-950 hover:text-rose-50"
+                  className={`${POPOVER_ROW} text-rose-300 hover:bg-rose-950 hover:text-rose-50`}
                   type="submit"
                 >
-                  <SignOutIcon /> Sign Out
+                  <SignOutIcon />
+                  Sign Out
                 </button>
               </Dropdown.Item>
             </form>

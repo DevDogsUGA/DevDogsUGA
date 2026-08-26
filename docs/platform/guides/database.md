@@ -98,7 +98,7 @@ Staging is **not** migrated by that workflow. `staging-preflight` only classifie
 
 `pnpm devtools` with no arguments opens a grouped menu of every command the CLI has, with the options each one takes — the shortest path when you do not already know the name. `pnpm sb` is the same CLI under its older name.
 
-Four database commands — `link`, `push`, `reset`, `status` — each take one target: `--local` (the default), `--remote` (the linked Supabase project), or `--team <slug>` (a team's sandbox, reached through the platform). `link`, `push`, and `reset` delegate to the `@devdogsuga/supabase` package scripts by name, so those scripts stay the single definition of what a reset is.
+Four database commands — `link`, `push`, `reset`, `status` — each take one target: `--local` (the default), `--remote` (the linked Supabase project), or `--team <slug>` (a team's sandbox, reached through the platform). `stop` and `restart` are the other two; they act on the Docker stack on this machine, so they take no target. `link`, `push`, `reset` and `stop` delegate to the `@devdogsuga/supabase` package scripts by name, so those scripts stay the single definition of what a reset is.
 
 The package scripts worth knowing directly:
 

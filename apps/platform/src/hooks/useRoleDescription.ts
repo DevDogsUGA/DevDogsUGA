@@ -3,11 +3,15 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { normalizeShortText, sanitizeShortTextInput } from "~/lib/shortText";
-import { toast } from "~/lib/toast";
 import { createClient } from "~/supabase/client";
+import { validateRoleDescription } from "~/lib/validation/profile";
 
 export const normalizeRoleDescription = normalizeShortText;
 
+/**
+ * `saveRoleDescription` neither catches nor toasts: the page-wide save bar
+ * awaits it alongside every other dirty field and reports the outcome once.
+ */
 export function useRoleDescription(
   userId: string,
   initialRoleDescription: string | null,
@@ -31,10 +35,6 @@ export function useRoleDescription(
     onSuccess: (value) => {
       setRoleDescriptionRaw(value);
       setSavedRoleDescription(value);
-      toast.success("Role description saved");
-    },
-    onError: () => {
-      toast.error("Failed to save role description");
     },
   });
 
@@ -42,15 +42,13 @@ export function useRoleDescription(
     setRoleDescriptionRaw(sanitizeShortTextInput(raw));
   }
 
-  function saveRoleDescription() {
-    mutation.mutate(normalizeShortText(roleDescription));
-  }
-
   return {
     roleDescription,
     setRoleDescription,
     roleDescriptionDirty: roleDescription !== savedRoleDescription,
-    saveRoleDescription,
+    roleDescriptionError: validateRoleDescription(roleDescription),
+    saveRoleDescription: () =>
+      mutation.mutateAsync(normalizeShortText(roleDescription)),
     resetRoleDescription: () => setRoleDescriptionRaw(savedRoleDescription),
     isRoleDescriptionPending: mutation.isPending,
   };
