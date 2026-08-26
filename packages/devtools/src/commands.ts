@@ -94,6 +94,36 @@ export interface CommandOption {
  */
 export type Condition = "docker" | "stack-running" | "stack-stopped";
 
+/**
+ * Which layer of the Supabase group a command acts on.
+ *
+ * "Supabase" is one word covering two things a contributor has to tell apart:
+ * the *stack* — the Docker containers, the auth server, PostgREST, Studio, the
+ * CLI that runs them — and the *Postgres database* those containers wrap.
+ * Starting and stopping act on the first; migrations and seeds act on the
+ * second, and stay put across a restart.
+ *
+ * Getting that backwards is the mistake this labels away from: `reset` looks
+ * like the way to pick up a `config.toml` change and is not (the config is
+ * read at `supabase start`, so a reset replays migrations into containers
+ * still holding the old settings). `restart` is. The moderation guide had to
+ * spell that trap out in a warning box; naming the layer on the line is the
+ * cheaper version of the same lesson.
+ */
+export type Scope = "supabase" | "postgres";
+
+/**
+ * How each scope reads, in the two places that draw it.
+ *
+ * `menu` sits inline in a hint, so it is one word. `help` heads a block of
+ * commands, so it can be a phrase. Both live here rather than in the
+ * renderers, because they are labels — the same kind of data as a group title.
+ */
+export const SCOPES: Record<Scope, { menu: string; help: string }> = {
+  supabase: { menu: "Supabase", help: "the stack" },
+  postgres: { menu: "Postgres", help: "the database inside it" },
+};
+
 export interface CommandNode {
   name: string;
   /** One line. See the header. */
@@ -124,6 +154,14 @@ export interface CommandNode {
    * into a sentence the reader sees before choosing.
    */
   needs?: Condition;
+  /**
+   * Which layer this acts on, for a group that spans two. See `Scope`.
+   *
+   * Only the Supabase group sets it, because it is the only group where one
+   * heading covers both a set of containers and the database inside them.
+   * `--help` heads a block with it; the wizard puts it on the line.
+   */
+  scope?: Scope;
   /**
    * `"show"` means the wizard prints the invocation instead of running it.
    *
@@ -236,18 +274,24 @@ export const GROUPS: readonly CommandGroup[] = [
     ],
   },
   {
-    title: "Your database",
+    title: "Supabase",
+    // Declared in scope order — the four that act on the stack, then the two
+    // that act on the database inside it. `--help` heads each run with its
+    // scope, so declaration order is what puts those headings in the right
+    // place; interleaving them would produce four one-line blocks.
     commands: [
       {
         name: "link",
-        summary: "Start (or connect to) a database and write .env.",
-        hint: "boots the local stack",
+        summary: "Start the local stack, or connect a hosted project.",
+        hint: "boots Docker Supabase",
+        scope: "supabase",
         options: [DATABASE_TARGET],
       },
       {
         name: "stop",
         summary: "Shut the local stack down, freeing its containers.",
         hint: "local only — your data survives",
+        scope: "supabase",
         // Not offered while nothing is running: "stop" against a stopped
         // stack is the one shape of question a menu should never ask.
         when: "stack-running",
@@ -255,24 +299,32 @@ export const GROUPS: readonly CommandGroup[] = [
       {
         name: "restart",
         summary: "Stop the local stack, then start it again.",
+        // The reason this exists rather than being a footnote on `reset`:
+        // `config.toml` is read at `supabase start`, so a reset replays
+        // migrations into containers still holding the old settings.
         hint: "picks up config.toml changes",
+        scope: "supabase",
         when: "stack-running",
-      },
-      {
-        name: "push",
-        summary: "Apply new migrations.",
-        hint: "without erasing anything",
-        options: [DATABASE_TARGET],
-      },
-      {
-        name: "reset",
-        summary: "Rebuild from migrations, then seeds.",
-        hint: "⚠️  erases the database first",
-        options: [DATABASE_TARGET],
       },
       {
         name: "status",
         summary: "Report the target's health.",
+        hint: "reads only",
+        scope: "supabase",
+        options: [DATABASE_TARGET],
+      },
+      {
+        name: "push",
+        summary: "Apply new migrations to the database.",
+        hint: "without erasing anything",
+        scope: "postgres",
+        options: [DATABASE_TARGET],
+      },
+      {
+        name: "reset",
+        summary: "Rebuild the database from migrations, then seeds.",
+        hint: "⚠️  erases the database first",
+        scope: "postgres",
         options: [DATABASE_TARGET],
       },
     ],

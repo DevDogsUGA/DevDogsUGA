@@ -110,8 +110,8 @@ export async function runSetup(): Promise<void> {
   note(
     [
       "1. Run `pnpm devtools` again and choose:",
-      "     Start my database   — boots the local Docker stack and writes",
-      "                           .env.generated (no credentials needed)",
+      "     Supabase → link   — boots the local Docker stack and writes",
+      "                         .env.generated (no credentials needed)",
       "",
       "2. pnpm dev --filter platform",
       "",

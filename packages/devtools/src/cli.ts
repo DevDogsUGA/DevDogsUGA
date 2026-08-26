@@ -154,7 +154,7 @@ async function connect(): Promise<Instance | null> {
     s.stop("Could not find a running database");
     explain("The local Supabase stack is not reachable.", errorMessage(err), [
       "1. Make sure Docker is running",
-      "2. Run `pnpm devtools link` (or choose Start database from the menu)",
+      "2. Run `pnpm devtools link` (or choose Supabase → link in the menu)",
       "3. Confirm with `supabase status`",
     ]);
     return null;

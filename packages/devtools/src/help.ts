@@ -26,8 +26,10 @@
 import {
   findCommand,
   GROUPS,
+  SCOPES,
   type CommandNode,
   type CommandOption,
+  type Scope,
 } from "./commands.js";
 
 const INDENT = "  ";
@@ -52,6 +54,42 @@ function columns(rows: readonly [string, string][]): string[] {
   );
 }
 
+/**
+ * A group's commands, split into scope blocks when it declares any.
+ *
+ * Only the Supabase group does. "Supabase" is one word covering the stack and
+ * the Postgres database inside it, and a flat list of six leaves the reader to
+ * work out which of `restart` and `reset` is which — the distinction that
+ * actually costs people an afternoon. A group with no scopes renders exactly
+ * as it did: one block, one indent, no headings.
+ *
+ * The blocks follow declaration order rather than `SCOPES` order, so the tree
+ * stays the one place that decides how the group reads. The gutter is sized
+ * across the whole group, not per block, so the two blocks line up with each
+ * other rather than each finding its own column.
+ */
+function groupBody(commands: readonly CommandNode[]): string[] {
+  if (!commands.some((command) => command.scope)) {
+    return columns(childRows(commands));
+  }
+
+  const width = Math.max(...commands.map((command) => command.name.length));
+  const lines: string[] = [];
+  let open: Scope | undefined;
+
+  for (const command of commands) {
+    if (command.scope && command.scope !== open) {
+      open = command.scope;
+      lines.push(`${INDENT}${SCOPES[open].help}:`);
+    }
+    lines.push(
+      `${INDENT.repeat(2)}${command.name.padEnd(width)}  ${command.summary}`,
+    );
+  }
+
+  return lines;
+}
+
 function optionRows(options: readonly CommandOption[]): [string, string][] {
   return options.map((option) => [optionLabel(option), option.summary]);
 }
@@ -71,7 +109,7 @@ function renderRoot(): string {
   ];
 
   for (const group of GROUPS) {
-    lines.push("", `${group.title}:`, ...columns(childRows(group.commands)));
+    lines.push("", `${group.title}:`, ...groupBody(group.commands));
   }
 
   lines.push(

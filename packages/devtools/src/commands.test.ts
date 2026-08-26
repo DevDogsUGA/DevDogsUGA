@@ -17,10 +17,12 @@ import {
   allPaths,
   findCommand,
   GROUPS,
+  SCOPES,
   subcommandList,
   subcommandNames,
   TOP_LEVEL,
   type CommandNode,
+  type Scope,
 } from "./commands.js";
 import { STACK_COMMANDS } from "./stack.js";
 
@@ -231,6 +233,61 @@ describe("coverage of what the CLI dispatches", () => {
     for (const { path, node } of everyNode()) {
       const isDeploy = path[0] === "deploy";
       expect(node.wizard === "show", path.join(" ")).toBe(isDeploy);
+    }
+  });
+});
+
+describe("scopes", () => {
+  const supabase = GROUPS.find((group) => group.title === "Supabase")!;
+
+  it("has a group that spans two layers", () => {
+    expect(supabase).toBeDefined();
+  });
+
+  /**
+   * Pinned as "all of them" rather than "the ones that have one": an
+   * unlabelled command in this group is the exact confusion the scopes exist
+   * to remove, and it would render as a stray line under whichever heading
+   * happened to be open.
+   */
+  it("labels every command in it", () => {
+    for (const command of supabase.commands) {
+      expect(command.scope, command.name).toBeDefined();
+    }
+  });
+
+  it("labels nothing outside it", () => {
+    const inGroup = new Set<CommandNode>(supabase.commands);
+    for (const { path, node } of everyNode()) {
+      if (inGroup.has(node)) continue;
+      expect(node.scope, path.join(" ")).toBeUndefined();
+    }
+  });
+
+  /**
+   * `--help` opens a heading every time the scope changes as it walks the
+   * group, so scopes that interleaved would render as four one-line blocks
+   * rather than two readable ones. Declaration order carries that.
+   */
+  it("declares each scope in one contiguous run", () => {
+    const opened = new Set<Scope>();
+    let open: Scope | undefined;
+
+    for (const command of supabase.commands) {
+      if (command.scope === open) continue;
+      expect(
+        opened.has(command.scope!),
+        `${command.name} reopens ${command.scope}`,
+      ).toBe(false);
+      opened.add(command.scope!);
+      open = command.scope;
+    }
+  });
+
+  it("gives every scope a label for both renderers", () => {
+    for (const scope of Object.keys(SCOPES) as Scope[]) {
+      expect(SCOPES[scope].menu, scope).not.toBe("");
+      expect(SCOPES[scope].help, scope).not.toBe("");
     }
   });
 });

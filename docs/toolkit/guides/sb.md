@@ -35,6 +35,17 @@ The `--local` and `--remote` paths delegate to the scripts in
 `@devdogsuga/supabase` **by name**, so those scripts stay the single definition
 of what "reset" means and this CLI never reimplements one.
 
+## Two layers under one name
+
+"Supabase" covers both the **stack** — the Docker containers, the auth server,
+PostgREST, Studio — and the **Postgres database** inside it. `link`, `stop`,
+`restart` and `status` act on the stack; `push` and `reset` act on the
+database, and survive a restart. `pnpm devtools --help` and the menu both label
+which is which, because the distinction is the one that costs people an
+afternoon: `config.toml` is read at `supabase start`, so `reset` replays
+migrations into containers still holding the old settings. `restart` is what
+picks a config change up.
+
 ## link
 
 `pnpm sb link` runs `supabase start`, writes the stack's own connection block to
