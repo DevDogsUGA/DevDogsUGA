@@ -6,7 +6,7 @@ import { NavigationMenu } from "radix-ui";
 import { Mark } from "~/components/DocsProjectMark";
 import * as icons from "~/config/icons";
 import type { NavGroup, NavItem } from "~/config/nav";
-import { NAV_CONTENT } from "./navPanel";
+import { NAV_SUB_CONTENT } from "./navPanel";
 import { POPOVER_ROW, POPOVER_ROW_CARET } from "./popoverRow";
 
 /**
@@ -29,7 +29,11 @@ export default function NavSubMenu({
   iconBg,
   items,
   twoColumn,
-}: NavGroup) {
+  panelRef,
+}: NavGroup & {
+  /** Tells the popover this panel has been hoisted, so it can measure it. */
+  panelRef: (node: HTMLElement | null) => void;
+}) {
   // An empty Console is the ordinary case for a member with no permissions.
   if (items.length === 0) return null;
 
@@ -72,13 +76,18 @@ export default function NavSubMenu({
   return (
     <NavigationMenu.Item value={label}>
       <NavigationMenu.Trigger
+        data-nav-sub-trigger=""
         className={`${POPOVER_ROW} cursor-default select-none data-[state=open]:bg-mauve-800`}
       >
         <CaretLeftIcon className={POPOVER_ROW_CARET} />
         {label}
       </NavigationMenu.Trigger>
 
-      <NavigationMenu.Content data-slot="nav-content" className={NAV_CONTENT}>
+      <NavigationMenu.Content
+        ref={panelRef}
+        data-slot="nav-content"
+        className={NAV_SUB_CONTENT}
+      >
         {/* Two columns only from `lg`, and only where a group asked for them.
             The whole row — sub-panel plus card — has to clear the left of the
             bar, so 36rem of sub-panel wants roughly 60rem of viewport; below

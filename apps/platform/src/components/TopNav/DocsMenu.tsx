@@ -7,7 +7,7 @@ import { useMemo } from "react";
 import DocsProjectMark from "~/components/DocsProjectMark";
 import { groupDocsProjects } from "~/config/docs";
 import NavMenuTrigger from "./NavMenuTrigger";
-import { DOCS_MENU } from "./NavShell";
+import { DOCS_MENU, useNavPanelRef } from "./NavShell";
 import { NAV_CONTENT } from "./navPanel";
 
 /** One docs project, as listed in the navbar menu. */
@@ -46,6 +46,7 @@ export default function DocsMenu({
   projects,
   className,
 }: Props) {
+  const panelRef = useNavPanelRef();
   const groups = useMemo(() => groupDocsProjects(projects), [projects]);
 
   // Two containers rather than one grid with per-item column placement: a
@@ -99,13 +100,17 @@ export default function DocsMenu({
         href={href}
         value={DOCS_MENU}
         active={active}
-        className={`${className} flex items-center gap-2`}
+        className={`${className} gap-2`}
       >
         {label}
         <CaretDownIcon aria-hidden className="size-3.5" />
       </NavMenuTrigger>
 
-      <NavigationMenu.Content data-slot="nav-content" className={NAV_CONTENT}>
+      <NavigationMenu.Content
+        ref={panelRef}
+        data-slot="nav-content"
+        className={NAV_CONTENT}
+      >
         {/* Two columns from `lg`, not from `md`. The panel is anchored to its
             trigger, and at 768px a 36rem panel opening from a trigger that
             sits well into the bar would be pushed back off it by the

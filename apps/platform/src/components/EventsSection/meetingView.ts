@@ -39,52 +39,52 @@ export interface SegmentBadge {
 }
 
 /**
- * `judging` and `kickoff` deliberately share the competition colour: they are
- * the two ends of one competition — the night it opens and the night it is
- * presented — so the *label* separates them and the hue ties them together.
- *
- * `open` takes the build-session colour, which is what an open night is.
+ * `judging` is rose; `workshop` and `kickoff` share emerald, because a kickoff
+ * IS the end of a workshop — the same night, the same room, the same people
+ * — and the timeline draws them as one dot. Rose against emerald is what
+ * makes the loop legible on Monday: the rose end of last week's bar beside
+ * the emerald start of this week's. `open` is amber, the one warm colour, for
+ * the one night with nothing scheduled.
  */
 export const segmentBadge: Record<MeetingSegment, SegmentBadge> = {
   judging: {
-    bg: "bg-cyan-400",
+    bg: "bg-rose-400",
     text: "text-black",
-    dot: "bg-cyan-500",
-    chipDark: "border-cyan-400/30 bg-cyan-500/10 text-cyan-300",
-    dotDark: "bg-cyan-400",
+    dot: "bg-rose-500",
+    chipDark: "border-rose-400/30 bg-rose-500/10 text-rose-300",
+    dotDark: "bg-rose-400",
     label: "Judging",
   },
   kickoff: {
-    bg: "bg-cyan-400",
+    bg: "bg-emerald-400",
     text: "text-black",
-    dot: "bg-cyan-500",
-    chipDark: "border-cyan-400/30 bg-cyan-500/10 text-cyan-300",
-    dotDark: "bg-cyan-400",
+    dot: "bg-emerald-500",
+    chipDark: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
+    dotDark: "bg-emerald-400",
     label: "Kickoff",
   },
   workshop: {
+    bg: "bg-emerald-400",
+    text: "text-black",
+    dot: "bg-emerald-500",
+    chipDark: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
+    dotDark: "bg-emerald-400",
+    label: "Workshop",
+  },
+  open: {
     bg: "bg-amber-400",
     text: "text-black",
     dot: "bg-amber-400",
     chipDark: "border-amber-400/30 bg-amber-500/10 text-amber-300",
     dotDark: "bg-amber-400",
-    label: "Workshop",
-  },
-  open: {
-    bg: "bg-mauve-800",
-    text: "text-white",
-    dot: "bg-mauve-800",
-    chipDark: "border-white/15 bg-white/5 text-mauve-300",
-    dotDark: "bg-mauve-400",
     label: "Open build",
   },
 };
 
 /**
- * The legend under the calendar grid, in the segment order the resolver
- * returns. `kickoff` is left out on purpose — it shares a colour with
- * `judging`, so a legend listing both would show two identical swatches and
- * imply the reader can tell them apart at a glance, which they cannot.
+ * The legend under the calendar grid. `kickoff` is left out on purpose — it
+ * shares emerald with `workshop`, so listing both would show two identical
+ * swatches and imply the reader can tell them apart at a glance.
  */
 export const SEGMENT_LEGEND: MeetingSegment[] = ["judging", "workshop", "open"];
 

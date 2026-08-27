@@ -27,20 +27,21 @@ import {
  * {@link PastMeetings} is the other half, as a table.
  *
  * Fetches nothing. Every meeting here was already loaded by whoever renders
- * the page — the marquee above needs the same rows to pick its headline from,
- * and a second query would be the same data read twice at a different instant.
+ * the page — the calendar beside it draws the same rows, and a second query
+ * would be the same data read twice at a different instant.
  */
 
 interface Props {
-  /** Ascending, and already missing whichever meeting the marquee took. */
+  /** Ascending. The first one is the next meeting; there is no separate
+   *  band for it any more, so this list is where it lives. */
   meetings: MeetingInRange[];
   /**
    * The instant the page is rendering at, passed in rather than read here.
    *
    * A `new Date()` in this tree would drop the whole route out of the static
    * shell with no build warning at all — see `docs/platform/caching.md`. It is
-   * also the only way the countdown on every row can agree with the marquee's:
-   * one read, threaded down, instead of a dozen reads a few milliseconds apart.
+   * also the only way the countdown on every row can agree with the calendar's
+   * "today": one read, threaded down, instead of a dozen a few ms apart.
    */
   now: Date;
 }
@@ -103,12 +104,11 @@ function EmptySchedule() {
     // list, rather than an apology.
     <div className="flex flex-col items-start gap-3 rounded-xl border-2 border-dashed border-mauve-700 bg-white/5 px-5 py-6">
       <p className="font-display text-lg font-extrabold text-white">
-        Nothing on the calendar yet
+        Nothing on the books yet
       </p>
       <p className="max-w-prose text-sm/relaxed text-mauve-300">
-        The fall schedule goes up in August, once officers have the room
-        bookings. Until then the Involvement Network is where anything one-off —
-        a callout, an interest meeting — gets posted.
+        The fall schedule lands in August. Until then, anything one-off shows up
+        on the Involvement Network first.
       </p>
       <a
         href={INVOLVEMENT_NETWORK_EVENTS_URL}
@@ -133,8 +133,8 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
   // answer than saying it is on right now.
   const happeningNow = now >= meeting.startsAt && now < meeting.endsAt;
 
-  // The usual room is said once at the top of the page, so a row only earns
-  // its own note when the answer is *not* the usual room. This used to be a
+  // Every row prints its room, but only one *not* in the usual room earns a
+  // chip saying so, which is how a room change stands out. This used to be a
   // regex over the typed location, which failed closed — an unrecognised
   // string flagged a room change that might not have happened — and needed a
   // second guard to stay quiet. A picked building answers it outright, and a

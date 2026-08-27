@@ -48,6 +48,7 @@
   --animate-dialog-slide-in: dialog-slide-in 200ms ease-in;
   --animate-dialog-slide-out: dialog-slide-out 200ms ease-out;
   --animate-march-dashes: march-dashes 1.4s linear infinite;
+  --animate-slants: slants 0.8s linear infinite;
   --animate-spin-slow: spin 10s linear infinite;
   --animate-spin-slower: spin 20s linear infinite;
   --animate-modal-overlay-in: modal-overlay-in 180ms ease-out;
@@ -60,8 +61,22 @@
   --animate-nav-fold-out: nav-fold-out 140ms ease-in;
   --animate-nav-sub-fold-in: nav-sub-fold-in 180ms ease-out;
   --animate-nav-sub-fold-out: nav-sub-fold-out 140ms ease-in;
-  --animate-nav-content-in: nav-content-in 160ms ease-out;
-  --animate-nav-content-out: nav-content-out 120ms ease-in;
+  --animate-nav-content-in-left: nav-content-in-left 160ms ease-out;
+  --animate-nav-content-in-right: nav-content-in-right 160ms ease-out;
+  --animate-nav-content-in-up: nav-content-in-up 160ms ease-out;
+  --animate-nav-content-in-down: nav-content-in-down 160ms ease-out;
+  --animate-nav-content-out-left: nav-content-out-left 120ms ease-in;
+  --animate-nav-content-out-right: nav-content-out-right 120ms ease-in;
+  --animate-nav-content-out-up: nav-content-out-up 120ms ease-in;
+  --animate-nav-content-out-down: nav-content-out-down 120ms ease-in;
+  --animate-nav-fade-in: nav-fade-in 160ms ease-out;
+  /* Deliberately the fold's own timings. The arrow is not folding — an
+     animation touching `transform` would throw away the inline one Radix
+     positions it with, and drop it back to the start of the bar — but it has
+     to arrive and leave on exactly the fold's schedule, or it is a second
+     thing happening near the first. */
+  --animate-nav-arrow-in: nav-fade-in 180ms ease-out;
+  --animate-nav-arrow-out: nav-fade-out 140ms ease-in;
 }
 
 @property --sidebar-width {
@@ -505,6 +520,20 @@
 }
 
 /* Marching-ants SVG stroke — dasharray sum must match offset for seamless loop */
+/* The competition timeline's track: a striped bar whose slants crawl along
+   it, so a diagram of a week in progress looks like one. The tile is square
+   and the stripes are at 45°, which is what makes a one-tile shift seamless.
+   Paired with `.slants` below, which paints the stripes. */
+@keyframes slants {
+  from {
+    background-position-x: 0;
+  }
+
+  to {
+    background-position-x: 1rem;
+  }
+}
+
 @keyframes march-dashes {
   from {
     stroke-dashoffset: 0;
@@ -1371,10 +1400,14 @@
   }
 }
 
+/* The same fold, about the other axis and the other edge. Same angles too:
+   a sub-menu swinging further than the panel it comes out of would read as a
+   different kind of thing opening, when it is meant to read as the same
+   surface one tier down. */
 @keyframes nav-sub-fold-in {
   from {
     opacity: 0;
-    transform: perspective(800px) rotateY(-16deg);
+    transform: perspective(800px) rotateY(-12deg);
   }
 
   to {
@@ -1391,14 +1424,115 @@
 
   to {
     opacity: 0;
-    transform: perspective(800px) rotateY(-10deg);
+    transform: perspective(800px) rotateY(-8deg);
   }
 }
 
 /* Swapping one panel for another inside a viewport that is already open. The
-   viewport carries the movement — it slides and resizes across to the new
-   trigger — so the panels themselves only have to hand over, not travel. */
-@keyframes nav-content-in {
+   viewport carries the distance — it slides and resizes across to the new
+   trigger — so the panels themselves only lean the way the pointer is going
+   and hand over. Half a rem, because this is a hint about direction and not a
+   journey; the journey is the viewport's.
+
+   `translate` rather than a `transform`, so this composes with the fold rather
+   than overwriting it on any panel that happens to be doing both. */
+@keyframes nav-content-in-left {
+  from {
+    opacity: 0;
+    translate: -0.5rem 0;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes nav-content-in-right {
+  from {
+    opacity: 0;
+    translate: 0.5rem 0;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes nav-content-in-up {
+  from {
+    opacity: 0;
+    translate: 0 -0.5rem;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes nav-content-in-down {
+  from {
+    opacity: 0;
+    translate: 0 0.5rem;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes nav-content-out-left {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  to {
+    opacity: 0;
+    translate: -0.5rem 0;
+  }
+}
+
+@keyframes nav-content-out-right {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  to {
+    opacity: 0;
+    translate: 0.5rem 0;
+  }
+}
+
+@keyframes nav-content-out-up {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  to {
+    opacity: 0;
+    translate: 0 -0.5rem;
+  }
+}
+
+@keyframes nav-content-out-down {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  to {
+    opacity: 0;
+    translate: 0 0.5rem;
+  }
+}
+
+@keyframes nav-fade-in {
   from {
     opacity: 0;
   }
@@ -1408,7 +1542,7 @@
   }
 }
 
-@keyframes nav-content-out {
+@keyframes nav-fade-out {
   from {
     opacity: 1;
   }
@@ -1423,13 +1557,30 @@
    viewport's slide, which are what make it feel like it flew there. */
 @media (prefers-reduced-motion: reduce) {
   [data-slot="nav-viewport"],
-  [data-slot="nav-sub-viewport"] {
+  [data-slot="nav-sub-viewport"],
+  [data-slot="nav-indicator"],
+  [data-slot="nav-sub-indicator"] {
     transition: none;
   }
 
   [data-slot="nav-viewport"],
   [data-slot="nav-sub-viewport"],
   [data-slot="nav-content"] {
-    animation-name: nav-content-in;
+    animation-name: nav-fade-in;
   }
+}
+
+/* Diagonal stripes over whatever background colour the element already has —
+   the competition timeline's bars. Animate with `motion-safe:animate-slants`. */
+@utility slants {
+  background-image: linear-gradient(
+    45deg,
+    rgb(255 255 255 / 0.28) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgb(255 255 255 / 0.28) 50%,
+    rgb(255 255 255 / 0.28) 75%,
+    transparent 75%
+  );
+  background-size: 1rem 1rem;
 }

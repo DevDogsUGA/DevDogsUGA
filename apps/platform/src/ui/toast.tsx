@@ -12,8 +12,14 @@ interface Props {
 interface ToneClasses {
   /** The card itself. */
   card: string;
-  /** The disc behind the icon. */
-  dot: string;
+  /**
+   * The disc behind the glyph. Solid and dark, so the glyph inverts to white
+   * and the icon reads as one mark rather than a stroke lying on the fill.
+   * Success pairs a sky disc against its cyan card, the same two-hue move the
+   * notice's urgent tone makes with rose on amber; error stays in one family,
+   * as the notice's info tone does.
+   */
+  iconBg: string;
   /**
    * The block the card rests on. `shadow-block-outlined-lg`, the same
    * construction the announcement notice uses and for the same reason: the
@@ -35,12 +41,12 @@ interface ToneClasses {
 const TONES: Record<Props["type"], ToneClasses> = {
   success: {
     card: "bg-cyan-300",
-    dot: "bg-cyan-700/40",
+    iconBg: "bg-sky-700",
     blockShadow: "shadow-cyan-600",
   },
   error: {
     card: "bg-rose-300",
-    dot: "bg-rose-700/40",
+    iconBg: "bg-rose-700",
     blockShadow: "shadow-rose-600",
   },
 };
@@ -54,43 +60,47 @@ export default function Toast({ id, message, type }: Props) {
     // colour with nothing to colour. Every block-shadow call site on the site
     // concatenates for this reason.
     <div
-      className={`shadow-block-outlined-lg relative isolate flex w-90 items-start gap-3 overflow-hidden rounded-lg border-2 border-black px-4 py-3 text-black ${tone.card} ${tone.blockShadow}`}
+      className={`shadow-block-outlined-lg flex w-90 items-start gap-3 rounded-lg border-2 border-black px-4 py-3 text-black ${tone.card} ${tone.blockShadow}`}
     >
-      {/* The site's dot texture, dialled to the same 0.07 as the notice, where
-          it reads as paper grain rather than as a pattern of its own. */}
+      {/* A disc, not the notice's corner badge: a badge says "something new
+          arrived", which is the notice's whole job and none of a toast's — a
+          toast is already the arrival. The glyph sits at two thirds of the
+          disc, the proportion the nav's avatar badge holds. */}
       <span
-        aria-hidden
-        className="bg-dot-grid-dense pointer-events-none absolute inset-0 -z-10 opacity-[0.07]"
-      />
-
-      {/* A filled glyph on a translucent disc of the tone, as on the notice.
-          Neither glyph is round: a circled icon inside the disc would read as
-          two concentric rings, so the check keeps its bare stroke and the
-          warning takes the triangle it used to wear as a circle. */}
-      <span className="relative flex size-7 shrink-0 items-center justify-center">
-        <span
-          aria-hidden
-          className={`absolute inset-0 rounded-full ${tone.dot}`}
-        />
+        className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-white ${tone.iconBg}`}
+      >
         {type === "success" ? (
-          <CheckIcon weight="bold" className="relative size-4" />
+          <CheckIcon weight="bold" className="size-4" />
         ) : (
-          <WarningIcon weight="fill" className="relative size-4" />
+          <WarningIcon weight="bold" className="size-4" />
         )}
       </span>
 
-      <p className="mt-1 flex-1 text-sm leading-snug font-semibold text-balance">
+      <p className="flex-1 text-sm leading-snug font-semibold text-balance">
         {message}
       </p>
 
       <button
         onClick={() => sonnerToast.dismiss(id)}
-        className="mt-1.5 shrink-0 rounded-sm transition-transform hover:scale-125 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none"
+        className="group/dismiss relative mt-0.5 shrink-0 rounded-sm focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none"
         aria-label="Dismiss"
       >
-        {/* `fill` to match the notice's dismiss tab, whose stroke weights
-            topped out lighter than the type beside them. */}
-        <XIcon aria-hidden weight="fill" className="size-3.5" />
+        {/* The hover state, as a square that grows in behind the cross rather
+            than the cross itself growing. Scaling the glyph moved the one
+            thing the eye was aiming at; this leaves it still and puts the
+            feedback behind it. Tinted from the card's own black text colour,
+            so it darkens the fill by the same amount whichever tone it is.
+
+            `-inset-1` squares a size-4 glyph to 24px. It is behind the cross
+            in paint order, which is what `relative` on the cross buys. */}
+        <span
+          aria-hidden
+          className="absolute -inset-1 scale-50 rounded-sm bg-black/10 opacity-0 transition duration-150 ease-out group-hover/dismiss:scale-100 group-hover/dismiss:opacity-100 motion-reduce:transition-none"
+        />
+        {/* Not `fill`: Phosphor draws X at fill weight as a rounded square
+            with the cross knocked out of it, which would collide with the
+            square this button grows on its own. `bold` is the bare cross. */}
+        <XIcon aria-hidden weight="bold" className="relative size-4" />
       </button>
     </div>
   );

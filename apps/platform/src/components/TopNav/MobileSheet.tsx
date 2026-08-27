@@ -80,7 +80,7 @@ export default function MobileSheet({
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         aria-label="Open menu"
-        className="flex size-9 items-center justify-center rounded-sm text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white md:hidden"
+        className="relative z-10 flex size-9 items-center justify-center rounded-sm text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white md:hidden"
       >
         <ListIcon className="size-5" />
       </SheetTrigger>
