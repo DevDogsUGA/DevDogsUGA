@@ -19,6 +19,7 @@ import {
   showsAnnouncement,
   type AnnouncementTone,
 } from "~/config/announcement";
+import { blobsBackgroundImage, type BlobDef } from "~/ui/blob-gradient";
 import { cn } from "~/lib/cn";
 
 interface ToneClasses {
@@ -38,10 +39,9 @@ interface ToneClasses {
    */
   chipHover: string;
   /**
-   * The cross on the tab. The 950 of the tab's own family, not the label's
-   * white — it reads as a mark cut into the fill rather than a second word
-   * beside the eyebrow, which is what an equal-weight white cross looked
-   * like.
+   * The cross on the tab. The 100 of the tab's own family: a step off the
+   * label's white, so the cross sits under the eyebrow rather than level with
+   * it, without going dark enough to read as a second colour on the tab.
    */
   chipIcon: string;
   /**
@@ -69,7 +69,7 @@ const TONES: Record<AnnouncementTone, ToneClasses> = {
     badge: "bg-rose-600 ring-amber-300",
     chip: "bg-rose-600 text-white",
     chipHover: "hover:bg-rose-700",
-    chipIcon: "text-rose-950",
+    chipIcon: "text-rose-100",
     blockShadow: "shadow-rose-600",
   },
   info: {
@@ -77,9 +77,68 @@ const TONES: Record<AnnouncementTone, ToneClasses> = {
     badge: "bg-sky-800 ring-sky-300",
     chip: "bg-sky-800 text-white",
     chipHover: "hover:bg-sky-900",
-    chipIcon: "text-sky-950",
+    chipIcon: "text-sky-100",
     blockShadow: "shadow-sky-800",
   },
+};
+
+/**
+ * The card's wash, in the tone's own two colours — the accent it already wears
+ * on the badge and the block, and one step up from the fill for the lift.
+ * Nothing new enters the palette; the card just stops being flat.
+ *
+ * The blobs are wider than the card and far taller than it, so what reads is a
+ * drift across the width rather than a circle sitting in a notice 60px high.
+ */
+const TONE_BLOBS: Record<AnnouncementTone, BlobDef[]> = {
+  urgent: [
+    {
+      cx: "6%",
+      cy: "0%",
+      rx: "46%",
+      ry: "165%",
+      fill: "#fb7185",
+      opacity: 0.34,
+    },
+    {
+      cx: "97%",
+      cy: "100%",
+      rx: "42%",
+      ry: "175%",
+      fill: "#fde68a",
+      opacity: 0.6,
+    },
+  ],
+  info: [
+    {
+      cx: "6%",
+      cy: "0%",
+      rx: "46%",
+      ry: "165%",
+      fill: "#0ea5e9",
+      opacity: 0.3,
+    },
+    {
+      cx: "97%",
+      cy: "100%",
+      rx: "42%",
+      ry: "175%",
+      fill: "#bae6fd",
+      opacity: 0.6,
+    },
+  ],
+};
+
+/**
+ * Built at module load, not per render. The gradient is a fixed function of a
+ * constant, and this component re-renders on every pointermove of a swipe —
+ * rebuilding sixteen `color-mix` stops per frame, mid-gesture, beside the
+ * scrim's `backdrop-filter`, is the one place on this card that cost has
+ * already been measured and refused once.
+ */
+const TONE_BACKGROUND: Record<AnnouncementTone, string> = {
+  urgent: blobsBackgroundImage(TONE_BLOBS.urgent),
+  info: blobsBackgroundImage(TONE_BLOBS.info),
 };
 
 /**
@@ -337,7 +396,11 @@ export default function AnnouncementBanner() {
               site (EventCard, PartnersSection, LeaderCard) concatenates for
               the same reason. There is nothing here for a merge to resolve
               anyway — no caller passes a className in. */}
+          {/* The wash goes on the card's own background, over the fill the
+              tone's `card` class sets — no extra element and nothing to clip,
+              since a background is already cut to the border radius. */}
           <div
+            style={{ backgroundImage: TONE_BACKGROUND[tone] }}
             className={`shadow-block-outlined-xl flex flex-col gap-2.5 rounded-lg border-2 border-black px-4 py-3 text-black sm:flex-row sm:items-center sm:gap-4 ${toneClasses.card} ${toneClasses.blockShadow}`}
           >
             <div className="flex min-w-0 flex-1 items-center gap-3">

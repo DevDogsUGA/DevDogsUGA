@@ -2,6 +2,7 @@
 
 import { toast as sonnerToast } from "sonner";
 import { CheckIcon, WarningIcon, XIcon } from "@phosphor-icons/react/ssr";
+import { blobsBackgroundImage, type BlobDef } from "./blob-gradient";
 
 interface Props {
   id: string | number;
@@ -36,8 +37,59 @@ interface ToneClasses {
  * near-black chrome, and a saturated light card is what the site uses to sit
  * on top of it. The tones stay in the families the toast already spoke — cyan
  * for done, rose for wrong — pitched up to the notice's 300-level fill so
- * black type sits on them. See ~/components/AnnouncementBanner.
+ * black type sits on them. The wash over each is the tone's own two colours,
+ * so nothing new enters the palette — the card just stops being flat. See
+ * ~/components/AnnouncementBanner.
  */
+const TONE_BLOBS: Record<Props["type"], BlobDef[]> = {
+  success: [
+    {
+      cx: "8%",
+      cy: "0%",
+      rx: "52%",
+      ry: "160%",
+      fill: "#38bdf8",
+      opacity: 0.36,
+    },
+    {
+      cx: "96%",
+      cy: "100%",
+      rx: "48%",
+      ry: "170%",
+      fill: "#a5f3fc",
+      opacity: 0.6,
+    },
+  ],
+  error: [
+    {
+      cx: "8%",
+      cy: "0%",
+      rx: "52%",
+      ry: "160%",
+      fill: "#fb7185",
+      opacity: 0.34,
+    },
+    {
+      cx: "96%",
+      cy: "100%",
+      rx: "48%",
+      ry: "170%",
+      fill: "#fecdd3",
+      opacity: 0.6,
+    },
+  ],
+};
+
+/**
+ * Built once at module load rather than per toast. The gradient is a fixed
+ * function of a constant, and a burst of toasts would otherwise rebuild the
+ * same sixteen `color-mix` stops for each one.
+ */
+const TONE_BACKGROUND: Record<Props["type"], string> = {
+  success: blobsBackgroundImage(TONE_BLOBS.success),
+  error: blobsBackgroundImage(TONE_BLOBS.error),
+};
+
 const TONES: Record<Props["type"], ToneClasses> = {
   success: {
     card: "bg-cyan-300",
@@ -60,6 +112,11 @@ export default function Toast({ id, message, type }: Props) {
     // colour with nothing to colour. Every block-shadow call site on the site
     // concatenates for this reason.
     <div
+      // The wash the sections and the stat cards draw, over the fill the tone's
+      // `card` class sets. It goes on the card's own background rather than a
+      // layer of its own: nothing here parallaxes, and a background is already
+      // cut to the border radius.
+      style={{ backgroundImage: TONE_BACKGROUND[type] }}
       className={`shadow-block-outlined-lg flex w-90 items-start gap-3 rounded-lg border-2 border-black px-4 py-3 text-black ${tone.card} ${tone.blockShadow}`}
     >
       {/* A disc, not the notice's corner badge: a badge says "something new
