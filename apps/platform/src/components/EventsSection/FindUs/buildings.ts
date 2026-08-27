@@ -87,6 +87,50 @@ export const BUILDING_NAME: Record<BuildingKey, string> = {
 };
 
 /**
+ * The building's name on its own, for a heading: no article, no sentence.
+ * Kept beside {@link BUILDING_NAME} rather than derived from it, because
+ * "the" is not the only thing that differs — a heading gets the Oxford comma
+ * the running text drops.
+ */
+export const BUILDING_FULL_NAME: Record<BuildingKey, string> = {
+  DLW: "Dining, Learning, and Well-Being Center",
+  Driftmier: "Driftmier Engineering Center",
+  "Plant Sciences": "Miller Plant Sciences Building",
+  Boyd: "Boyd Research Center",
+  MLC: "Zell B. Miller Learning Center",
+  "Science Learning Center": "Science Learning Center",
+  "Science Library": "Science Library",
+  "Poultry Science": "Poultry Science Building",
+  "Main Library": "Main Library",
+  Tate: "Tate Student Center",
+};
+
+/**
+ * Street addresses, for the line under the building's name in the directions
+ * dialog and for anyone pasting one into a maps app by hand. Typed here, not
+ * fetched: they change on the order of decades, and a lookup at render time
+ * would be a network dependency for ten strings.
+ *
+ * Sourced from the buildings' own UGA pages and cross-checked against the
+ * OpenStreetMap footprints the map is drawn from. The DLW's is the least
+ * settled — the building opened in August 2026 on the old Hillside site,
+ * whose address this is — so it is the one to re-check first if a member
+ * reports a maps app sending them somewhere odd.
+ */
+export const BUILDING_ADDRESS: Record<BuildingKey, string> = {
+  DLW: "301 E Cloverhurst Ave, Athens, GA 30605",
+  Driftmier: "597 D. W. Brooks Dr, Athens, GA 30602",
+  "Plant Sciences": "120 Carlton St, Athens, GA 30602",
+  Boyd: "200 D. W. Brooks Dr, Athens, GA 30602",
+  MLC: "48 Baxter St, Athens, GA 30602",
+  "Science Learning Center": "130 Carlton St, Athens, GA 30602",
+  "Science Library": "210 D. W. Brooks Dr, Athens, GA 30602",
+  "Poultry Science": "110 Cedar St, Athens, GA 30602",
+  "Main Library": "320 S Jackson St, Athens, GA 30602",
+  Tate: "45 Baxter St, Athens, GA 30602",
+};
+
+/**
  * Where a meeting is, in one line: the building's short name and the room.
  *
  * Either half can be missing and the answer is still useful — a building with

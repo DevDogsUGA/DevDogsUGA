@@ -10,10 +10,10 @@ import { segmentBadge } from "./meetingView";
  * judging is done, that same night's workshop kicks off the next one. So the
  * strip is not one bar with two ends; it is the middle of a chain. Last
  * week's bar arrives from the left in grey and ends in rose at the first
- * Monday, this week's runs cyan from there to the next Monday, and the one
- * after that leaves to the right in grey again with a grey dot for a kickoff
- * that may not happen — some weeks there is no competition, only a workshop.
- * Grey is "not the week in view".
+ * Monday, this week's runs cyan from there to the next Monday, where an
+ * emerald kickoff dot starts the one after, whose bar leaves to the right in
+ * grey. Grey is "not the week in view"; the dots on the Monday in view are
+ * always coloured, because that Monday's meeting always happens.
  *
  * The bars are striped and the stripes crawl: a diagram of something in
  * progress, drawn as a progress bar. `motion-safe` gates the crawl.
@@ -74,7 +74,6 @@ const TONES = {
     otherDay: "text-mauve-600",
     dotRing: "border-black",
     tail: "bg-mauve-400",
-    tailDot: "bg-mauve-400",
     halo: "bg-black/25",
   },
   dark: {
@@ -82,7 +81,6 @@ const TONES = {
     otherDay: "text-mauve-400",
     dotRing: "border-mauve-950",
     tail: "bg-mauve-600",
-    tailDot: "bg-mauve-500",
     halo: "bg-white/30",
   },
 } satisfies Record<Tone, Record<string, string>>;
@@ -232,9 +230,9 @@ export default function CompetitionTimeline({
             label="Next Monday: this week's competition is judged"
           />
           <Dot
-            dot={t.tailDot}
+            dot={segmentBadge.kickoff.dot}
             ring={t.dotRing}
-            label="Next Monday: the next one kicks off, some weeks"
+            label="Next Monday: the next one kicks off"
           />
         </Cell>
       </div>
