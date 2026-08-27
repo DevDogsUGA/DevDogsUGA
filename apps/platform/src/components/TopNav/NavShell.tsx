@@ -7,7 +7,6 @@ import {
   useLayoutEffect,
   useRef,
   useState,
-  type CSSProperties,
   type ReactNode,
 } from "react";
 
@@ -47,12 +46,24 @@ export function useNavShell() {
  * panel's measurements as `--radix-navigation-menu-viewport-{width,height}`.
  *
  * What Radix does NOT do is place the viewport horizontally; the viewport it
- * gives you is a box you position yourself. That is the `--nav-x` below: the
- * open trigger's offset within the bar, measured before paint, clamped in CSS
- * so a panel wider than the space left of the viewport's right edge slides
- * back inside instead of running off. The clamp is what right-aligns the
- * profile panel under an avatar that sits against the right edge, without the
- * two triggers needing to declare different alignments.
+ * gives you is a box you position yourself. That is the positioner below — an
+ * absolutely placed wrapper pinned to the open trigger's offset within the bar,
+ * measured before paint.
+ *
+ * Nothing in that placement may read the panel's width, which is the trap this
+ * fell into once already. Radix measures the panel a commit AFTER the viewport
+ * mounts, so on the opening frame `--radix-navigation-menu-viewport-width` does
+ * not exist yet; a position computed from it is computed from the fallback, and
+ * the panel visibly jumps when the real number lands. So a trigger that wants
+ * its panel's far edge aligned to it says so — `data-nav-align="end"` — and the
+ * positioner pulls itself back by `-translate-x-full`. That is a percentage of
+ * the element's own box, which the browser resolves at paint from whatever
+ * width the panel currently has: right on the first frame, still right after
+ * the measurement, still right if the panel resizes later.
+ *
+ * The fold lives on the viewport inside, not here, because an animation's
+ * `transform` would otherwise overwrite that translate for the length of the
+ * animation and drag an end-aligned panel across to start-aligned mid-fold.
  *
  * The travel is deliberately conditional. Sliding is only honest between two
  * panels the viewer saw in one sequence — the box really did move from one to
@@ -63,7 +74,7 @@ export function useNavShell() {
  */
 export default function NavShell({ children }: { children: ReactNode }) {
   const [value, setValue] = useState("");
-  const [x, setX] = useState(0);
+  const [anchor, setAnchor] = useState({ x: 0, align: "start" });
   const [travelling, setTravelling] = useState(false);
   const rootRef = useRef<HTMLElement>(null);
   const previousValue = useRef("");
@@ -91,10 +102,18 @@ export default function NavShell({ children }: { children: ReactNode }) {
     );
     if (trigger === null) return;
 
+    // The trigger's own edge, not the panel's: `end` anchors the panel's right
+    // edge to the trigger's right edge, and the positioner does the pulling
+    // back with a percentage of itself. No width is read here on purpose.
+    const align = trigger.dataset.navAlign === "end" ? "end" : "start";
+    const rect = trigger.getBoundingClientRect();
+    const rootLeft = root.getBoundingClientRect().left;
+
     setTravelling(wasOpen);
-    setX(
-      trigger.getBoundingClientRect().left - root.getBoundingClientRect().left,
-    );
+    setAnchor({
+      align,
+      x: (align === "end" ? rect.right : rect.left) - rootLeft,
+    });
   }, [value]);
 
   return (
@@ -106,36 +125,41 @@ export default function NavShell({ children }: { children: ReactNode }) {
         aria-label="Main"
         className="relative"
       >
-        <NavigationMenu.List className="flex h-16 items-center gap-4 px-4 md:px-6">
+        <NavigationMenu.List className="flex h-16 items-center gap-1 px-4 md:px-6">
           {children}
         </NavigationMenu.List>
 
-        {/* Spans the bar so `--nav-x` and the clamp share one coordinate
-            space, and lets nothing through — an inert full-width strip under
-            the header would otherwise eat the top of every page. */}
-        <div
-          className="pointer-events-none absolute inset-x-0 top-full"
-          style={{ "--nav-x": `${x}px` } as CSSProperties}
-        >
-          <NavigationMenu.Viewport
-            data-slot="nav-viewport"
+        {/* Spans the bar so the anchor offset is measured in the same
+            coordinate space it is applied in, and lets nothing through — an
+            inert full-width strip under the header would otherwise eat the top
+            of every page. */}
+        <div className="pointer-events-none absolute inset-x-0 top-full">
+          {/* `w-max` so the wrapper is exactly as wide as the panel, which is
+              what makes `-translate-x-full` land the panel's right edge on the
+              trigger. `max-w` keeps a wide panel on screen without anyone
+              having to know how wide it is. */}
+          <div
+            data-align={anchor.align}
             data-travelling={travelling || undefined}
-            // Once the fold-in has finished, the viewport is on screen and
-            // every later move is a move the viewer can follow — including a
-            // profile sub-menu widening it, which changes the box without
-            // changing `value`. Waiting for the animation rather than a frame
-            // also waits out Radix measuring the panel, which arrives a
-            // commit or two after the mount and would otherwise animate the
-            // box open from zero. Child panels animate too and their events
-            // bubble, hence the target check.
-            onAnimationEnd={(event) => {
-              if (event.target === event.currentTarget) setTravelling(true);
-            }}
-            style={{
-              left: "clamp(0.75rem, var(--nav-x), calc(100% - var(--radix-navigation-menu-viewport-width, 20rem) - 0.75rem))",
-            }}
-            className="data-[state=closed]:animate-nav-fold-out data-[state=open]:animate-nav-fold-in pointer-events-auto absolute top-2 h-(--radix-navigation-menu-viewport-height) w-(--radix-navigation-menu-viewport-width) origin-top transition-none data-[travelling]:transition-[left,width,height] data-[travelling]:duration-200 data-[travelling]:ease-out"
-          />
+            style={{ left: `${anchor.x}px` }}
+            className="absolute top-2 w-max max-w-[calc(100vw-1.5rem)] transition-none data-[align=end]:-translate-x-full data-[travelling]:transition-[left,translate] data-[travelling]:duration-200 data-[travelling]:ease-out"
+          >
+            <NavigationMenu.Viewport
+              data-slot="nav-viewport"
+              data-travelling={travelling || undefined}
+              // Once the fold-in has finished the viewport is on screen, and
+              // any later change of size is one the viewer can follow. Waiting
+              // for the animation rather than a frame also waits out Radix
+              // measuring the panel, which lands a commit or two after the
+              // mount and would otherwise animate the box open from nothing.
+              // Panels inside animate too and their events bubble, hence the
+              // target check.
+              onAnimationEnd={(event) => {
+                if (event.target === event.currentTarget) setTravelling(true);
+              }}
+              className="data-[state=closed]:animate-nav-fold-out data-[state=open]:animate-nav-fold-in pointer-events-auto h-(--radix-navigation-menu-viewport-height) w-(--radix-navigation-menu-viewport-width) origin-top transition-none data-[travelling]:transition-[width,height] data-[travelling]:duration-200 data-[travelling]:ease-out"
+            />
+          </div>
         </div>
       </NavigationMenu.Root>
     </Context.Provider>

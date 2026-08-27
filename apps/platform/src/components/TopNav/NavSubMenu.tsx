@@ -20,9 +20,9 @@ import { POPOVER_ROW, POPOVER_ROW_CARET } from "./popoverRow";
  * two that swap.
  *
  * The caret points and sits LEFT, which is where the panel lands — the
- * sub-viewport is the flex item before the card, so it can only extend that
- * way. That used to be a claim about collision detection; now it is the
- * layout, which is a better guarantee than a measurement.
+ * sub-viewport is pinned off the card's left edge, so it can only go that way.
+ * That used to be a claim about collision detection; now it is the layout,
+ * which is a better guarantee than a measurement.
  */
 export default function NavSubMenu({
   label,

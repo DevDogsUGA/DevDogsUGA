@@ -13,6 +13,14 @@ interface Props {
   value: string;
   /** Whether the viewer is on this trigger's own section right now. */
   active?: boolean;
+  /**
+   * Which of the panel's edges lines up with this trigger. "start" is the
+   * default and the usual answer; a trigger sitting against the right of the
+   * bar wants "end", so its panel opens back across the bar rather than off
+   * the side of it. NavShell reads this off the DOM when it places the
+   * viewport — see the note there about never measuring the panel.
+   */
+  align?: "start" | "end";
   className?: string;
   children: ReactNode;
 }
@@ -38,6 +46,7 @@ export default function NavMenuTrigger({
   href,
   value,
   active,
+  align = "start",
   className,
   children,
 }: Props) {
@@ -50,6 +59,7 @@ export default function NavMenuTrigger({
       <Link
         href={href}
         data-active={active === true ? "" : undefined}
+        data-nav-align={align}
         className={className}
         onClick={(event) => {
           const modified =

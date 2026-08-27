@@ -28,7 +28,13 @@ export default function TopNav() {
           menus — the brand, search, the app switcher, the mobile trigger —
           are plain <li>s, which Radix's collection ignores. */}
       <NavShell>
-        <li className="shrink-0">
+        {/* The list is spaced like the row of links it mostly is, and the two
+            ends restore the wider gaps they had before there was a list: the
+            brand pushes a full 1rem off the first link, and the right-hand
+            cluster keeps its own tighter rhythm inside one item. Spacing every
+            child off the list itself would set one number for three groups
+            that never shared one. */}
+        <li className="mr-3 shrink-0">
           <Link href="/" className="flex items-center gap-2 lg:gap-2.5">
             <figure className="size-7 shrink-0">
               <Image alt="" src={devdog} />
@@ -43,16 +49,18 @@ export default function TopNav() {
           <NavLinks docsProjects={docsProjects} />
         </Suspense>
 
+        {/* One item, four controls. The avatar is a menu and so has to be a
+            NavigationMenu.Item, but an <li> inside an <li> is not markup, so
+            that item renders as a div here — Radix's collection is context,
+            not DOM shape, and does not mind. */}
         <li className="ml-auto flex items-center gap-1.5">
           <SearchButton />
           <AppSwitcherButton />
-        </li>
 
-        <Suspense fallback={<UserClusterSkeleton />}>
-          <TopNavProfile />
-        </Suspense>
+          <Suspense fallback={<UserClusterSkeleton />}>
+            <TopNavProfile />
+          </Suspense>
 
-        <li className="flex items-center">
           <Suspense
             fallback={
               <span
