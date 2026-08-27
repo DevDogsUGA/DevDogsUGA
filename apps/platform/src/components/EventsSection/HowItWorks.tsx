@@ -55,9 +55,16 @@ interface Beat {
    * static show through. Mounted only while hovered — see the note above.
    */
   gif: StaticImageData | null;
-  /** Where the pointer up at the strip goes: over the card's first column,
-   *  its second, or nowhere (the async window has no dot to point at). */
-  caret: "start" | "end" | null;
+  /**
+   * Where the card sits on the strip's eight columns from `lg`: above or
+   * below the track, starting on which column, and which of its two columns
+   * its caret points from — or none, for the async window, which has no dot.
+   */
+  place: {
+    side: "above" | "below";
+    col: 1 | 3 | 5 | 7;
+    caret: "start" | "end" | null;
+  };
 }
 
 const BEATS: Beat[] = [
@@ -72,7 +79,7 @@ const BEATS: Beat[] = [
     ),
     segments: ["workshop", "kickoff"],
     gif: informationGif,
-    caret: "start",
+    place: { side: "above", col: 1, caret: "start" },
   },
   {
     day: "Wednesday",
@@ -86,7 +93,7 @@ const BEATS: Beat[] = [
     segments: ["open"],
     // No programme for a night with no agenda — the static IS the channel.
     gif: null,
-    caret: "start",
+    place: { side: "below", col: 3, caret: "start" },
   },
   {
     day: "All week",
@@ -99,7 +106,7 @@ const BEATS: Beat[] = [
     ),
     segments: [],
     gif: bruceAlmighty,
-    caret: null,
+    place: { side: "above", col: 5, caret: null },
   },
   {
     day: "Next Monday",
@@ -113,7 +120,7 @@ const BEATS: Beat[] = [
     ),
     segments: ["judging"],
     gif: charlieConspiracy,
-    caret: "end",
+    place: { side: "below", col: 7, caret: "end" },
   },
 ];
 
@@ -127,38 +134,70 @@ const BEATS: Beat[] = [
  * already unobserved the node, so nothing ever puts it back — hovering a card
  * deletes the card.
  *
- * The caret is a CSS triangle in the card's border colour, drawn by `before:`
- * at 25% or 75% of the card's width — the centres of its two columns — and
- * only from `lg`, where the cards actually sit on the strip's columns.
+ * The caret is part of the card: a rotated square in the card's own fill,
+ * with two of its borders drawn, laid over the card's edge so the border
+ * appears to run out around the point and back. That only works with an
+ * OPAQUE fill — a translucent one would show the edge through the square —
+ * which is why the dark card is solid `mauve-900` rather than the console's
+ * usual `white/5`. It sits at 25% or 75% of the card's width, the centres of
+ * its two strip columns, and only from `lg`, where the cards are on the
+ * columns at all. Cards above the track point down; cards below point up.
+ *
+ * While any card is hovered the others step back — a little smaller, a
+ * little dimmer — so the live one reads as the channel that is on.
  */
-const CARET_CLS =
-  "lg:before:absolute lg:before:-top-2 lg:before:size-0 lg:before:-translate-x-1/2 lg:before:border-x-8 lg:before:border-b-8 lg:before:border-x-transparent";
+const CARET_BASE =
+  "lg:before:absolute lg:before:size-3.5 lg:before:-translate-x-1/2 lg:before:rotate-45 lg:before:transition-colors";
+
+const STEP_BACK =
+  "transition-[opacity,scale,border-color] duration-200 group-data-[hovering=true]/beats:data-[active=false]:scale-[0.97] group-data-[hovering=true]/beats:data-[active=false]:opacity-60";
 
 const TONES = {
   light: {
     heading: "text-black",
     intro: "text-mauve-700",
-    beat: `relative flex flex-col gap-2 border-t-2 border-black pt-3 transition-colors ${CARET_CLS} lg:before:border-b-black`,
+    beat: `relative flex flex-col gap-2 rounded-sm border-2 border-black bg-white p-4 ${CARET_BASE} lg:before:border-black lg:before:bg-white ${STEP_BACK}`,
     beatDay:
       "font-display text-xs font-extrabold tracking-widest text-mauve-600 uppercase",
     beatTitle: "font-display text-lg leading-tight font-extrabold text-black",
     beatBody: "text-sm/relaxed text-mauve-700",
+    // Two borders, 2px, at the top-left of the rotated square (pointing up)
+    // or the bottom-right (pointing down).
+    caretUp: "lg:before:-top-2 lg:before:border-t-2 lg:before:border-l-2",
+    caretDown: "lg:before:-bottom-2 lg:before:border-b-2 lg:before:border-r-2",
   },
   dark: {
     heading: "text-white",
     intro: "text-mauve-300",
-    beat: `relative flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 p-4 transition-colors data-[active=true]:border-white/40 ${CARET_CLS} lg:before:border-b-white/20`,
+    beat: `relative flex flex-col gap-2 rounded-lg border border-mauve-700 bg-mauve-900 p-4 data-[active=true]:border-white/60 lg:data-[active=true]:before:border-white/60 ${CARET_BASE} lg:before:border-mauve-700 lg:before:bg-mauve-900 ${STEP_BACK}`,
     beatDay:
       "font-display text-xs font-extrabold tracking-widest text-mauve-400 uppercase",
     beatTitle: "font-display text-lg leading-tight font-extrabold text-white",
     beatBody: "text-sm/relaxed text-mauve-300",
+    caretUp:
+      "lg:before:-top-[calc(0.4375rem+1px)] lg:before:border-t lg:before:border-l",
+    caretDown:
+      "lg:before:-bottom-[calc(0.4375rem+1px)] lg:before:border-b lg:before:border-r",
   },
 } satisfies Record<Tone, Record<string, string>>;
 
-const CARET_POS = {
+/** Static class lookups, so Tailwind sees every utility it has to emit. */
+const CARET_X = {
   start: "lg:before:left-1/4",
   end: "lg:before:left-3/4",
   null: "lg:before:hidden",
+} as const;
+
+const COL_START = {
+  1: "lg:col-start-1",
+  3: "lg:col-start-3",
+  5: "lg:col-start-5",
+  7: "lg:col-start-7",
+} as const;
+
+const SIDE = {
+  above: "lg:row-start-1 lg:self-end",
+  below: "lg:row-start-3 lg:self-start",
 } as const;
 
 export default function HowItWorks({
@@ -211,19 +250,25 @@ export default function HowItWorks({
         </div>
       </div>
 
-      <div className="flex flex-col gap-6">
-        <CompetitionTimeline tone={tone} />
+      {/* One grid, three rows from `lg`: cards above, the strip, cards
+          below — on the strip's own eight columns, so each card starts under
+          (or over) the day it is about. The `<ol>` keeps its chronological
+          DOM order and dissolves into the grid with `contents`; below `lg`
+          it is a plain stack after the strip. */}
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-8 lg:gap-x-4 lg:gap-y-5">
+        <div className="lg:col-span-8 lg:row-start-2">
+          <CompetitionTimeline tone={tone} />
+        </div>
 
-        {/* The same eight columns as the strip, so each card starts under
-            its day. Two columns each, in order: Mon (1–2), Wed (3–4), the
-            rest of the week (5–6) and next Mon (7–8), whose caret sits on
-            the strip's last column. The order of BEATS IS the layout. */}
-        <ol className="grid grid-cols-1 gap-4 lg:grid-cols-8">
+        <ol
+          className="group/beats flex flex-col gap-4 lg:contents"
+          data-hovering={hovered !== null}
+        >
           {BEATS.map((beat, i) => (
             <li
               key={beat.title}
               data-active={hovered === i}
-              className={`${t.beat} ${CARET_POS[beat.caret ?? "null"]} lg:col-span-2`}
+              className={`${t.beat} ${beat.place.side === "above" ? t.caretDown : t.caretUp} ${CARET_X[beat.place.caret ?? "null"]} ${COL_START[beat.place.col]} ${SIDE[beat.place.side]} lg:col-span-2`}
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
             >

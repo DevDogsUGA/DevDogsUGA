@@ -9,10 +9,11 @@ import { segmentBadge } from "./meetingView";
  * Monday's workshop kicks it off, the next Monday judges it — and the moment
  * judging is done, that same night's workshop kicks off the next one. So the
  * strip is not one bar with two ends; it is the middle of a chain. Last
- * week's bar arrives from the left and ends in rose at the first Monday, this
- * week's bar runs cyan from there to the next Monday, and the one after that
- * leaves to the right, drawn hollow, because some weeks there is no
- * competition and only a workshop.
+ * week's bar arrives from the left in grey and ends in rose at the first
+ * Monday, this week's runs cyan from there to the next Monday, and the one
+ * after that leaves to the right in grey again with a grey dot for a kickoff
+ * that may not happen — some weeks there is no competition, only a workshop.
+ * Grey is "not the week in view".
  *
  * The bars are striped and the stripes crawl: a diagram of something in
  * progress, drawn as a progress bar. `motion-safe` gates the crawl.
@@ -60,8 +61,8 @@ const TONES = {
     label: "text-black",
     windowLabel: "text-mauve-700",
     dotRing: "border-black",
-    openDot: segmentBadge.open.bg,
-    ghostRing: "border-black/40",
+    tail: "bg-mauve-400",
+    tailDot: "bg-mauve-400",
   },
   dark: {
     meetingDay: "text-white",
@@ -69,8 +70,8 @@ const TONES = {
     label: "text-white",
     windowLabel: "text-mauve-300",
     dotRing: "border-mauve-950",
-    openDot: segmentBadge.open.dotDark,
-    ghostRing: "border-white/40",
+    tail: "bg-mauve-600",
+    tailDot: "bg-mauve-500",
   },
 } satisfies Record<Tone, Record<string, string>>;
 
@@ -82,19 +83,16 @@ function Dot({
   dot,
   ring,
   label,
-  ghost = false,
 }: {
   dot: string;
   ring: string;
   label: string;
-  /** Hollow: the kickoff that may or may not happen next Monday. */
-  ghost?: boolean;
 }) {
   return (
     <span
       role="img"
       aria-label={label}
-      className={`size-4 rounded-full border-2 ${ghost ? "border-dashed" : ""} ${ring} ${ghost ? "" : dot}`}
+      className={`size-4 rounded-full border-2 ${ring} ${dot}`}
     />
   );
 }
@@ -199,23 +197,23 @@ export default function CompetitionTimeline({
 
       {/* The track. */}
       <div className="relative col-span-8 grid h-6 grid-cols-8 items-center">
-        {/* Last week's competition, arriving: it fades in from the left edge
-            and ends at Monday's rose dot. */}
+        {/* Last week's competition, arriving: grey, fading in from the left
+            edge, ending at Monday's rose dot. */}
         <span
           aria-hidden
-          className={`${BAR_CLS} left-0 bg-rose-500 [mask-image:linear-gradient(to_right,transparent,black_70%)]`}
+          className={`${BAR_CLS} left-0 ${t.tail} [mask-image:linear-gradient(to_right,transparent,black_70%)]`}
           style={{ right: `calc(100% - ${HALF})` } satisfies CSSProperties}
         />
-        {/* This week's: Monday's cyan dot to next Monday's rose one. */}
+        {/* This week's: Monday's emerald dot to next Monday's rose one. */}
         <span
           aria-hidden
           className={`${BAR_CLS} bg-cyan-500`}
           style={{ left: HALF, right: HALF }}
         />
-        {/* Next week's, if there is one: hollow and dashed, fading out. */}
+        {/* Next week's, if there is one: grey, fading out to the right. */}
         <span
           aria-hidden
-          className={`absolute top-1/2 h-3 -translate-y-1/2 rounded-full border-2 border-dashed border-cyan-500 [mask-image:linear-gradient(to_right,black_30%,transparent)]`}
+          className={`${BAR_CLS} ${t.tail} [mask-image:linear-gradient(to_right,black_30%,transparent)]`}
           style={{ left: `calc(100% - ${HALF})`, right: 0 }}
         />
 
@@ -232,7 +230,11 @@ export default function CompetitionTimeline({
           />
         </Cell>
         <Cell col={OPEN_BUILD_COL}>
-          <Dot dot={t.openDot} ring={t.dotRing} label="Wednesday: open build" />
+          <Dot
+            dot={segmentBadge.open.dot}
+            ring={t.dotRing}
+            label="Wednesday: open build"
+          />
         </Cell>
         <Cell col={JUDGING_COL}>
           <Dot
@@ -241,9 +243,8 @@ export default function CompetitionTimeline({
             label="Next Monday: this week's competition is judged"
           />
           <Dot
-            dot={segmentBadge.kickoff.dot}
-            ring={t.ghostRing}
-            ghost
+            dot={t.tailDot}
+            ring={t.dotRing}
             label="Next Monday: the next one kicks off, some weeks"
           />
         </Cell>
