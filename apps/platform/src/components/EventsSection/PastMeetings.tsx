@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
-import { ACTION_CLS } from "~/components/EventsSection/meetingView";
+import { ACTION_DARK_CLS } from "~/components/EventsSection/meetingView";
 import { formatEventDate } from "~/lib/eventTime";
 import type { MeetingSummary } from "~/server/loaders/meetings";
 
@@ -49,12 +49,11 @@ export default function PastMeetings({
   return (
     <section
       className="flex flex-col gap-4"
-      data-animate="fade-up"
       aria-labelledby="past-meetings-heading"
     >
       <h3
         id="past-meetings-heading"
-        className="font-display text-xl font-extrabold text-black md:text-2xl"
+        className="font-display text-xl font-extrabold text-white md:text-2xl"
       >
         Already happened
       </h3>
@@ -62,7 +61,7 @@ export default function PastMeetings({
       {meetings.length === 0 ? (
         // Short, and no card around it. An empty archive is a fact about a new
         // semester, not a state worth building a panel for.
-        <p className="text-sm text-mauve-700">
+        <p className="text-sm text-mauve-400">
           No meetings have happened yet this semester.
         </p>
       ) : (
@@ -76,7 +75,7 @@ export default function PastMeetings({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[30rem] border-collapse text-left">
               <thead>
-                <tr className="border-y-2 border-black">
+                <tr className="border-y border-mauve-800">
                   <Th>Date</Th>
                   <Th>Meeting</Th>
                   {/* Right-aligned with their cells: two number columns read as
@@ -89,9 +88,9 @@ export default function PastMeetings({
                 {meetings.map((meeting) => (
                   <tr
                     key={meeting.id}
-                    className="border-b-2 border-mauve-200 last:border-b-black"
+                    className="border-b border-mauve-800/50 last:border-b-mauve-800"
                   >
-                    <Td className="whitespace-nowrap text-mauve-700 tabular-nums">
+                    <Td className="whitespace-nowrap text-mauve-400 tabular-nums">
                       <time dateTime={meeting.startsAt.toISOString()}>
                         {formatEventDate(meeting.startsAt)}
                       </time>
@@ -99,7 +98,7 @@ export default function PastMeetings({
                     <Td>
                       <Link
                         href={`/events/${meeting.slug}`}
-                        className="font-semibold text-black underline decoration-2 underline-offset-2 hover:no-underline"
+                        className="font-semibold text-white underline decoration-2 underline-offset-2 hover:no-underline"
                       >
                         {meeting.name}
                       </Link>
@@ -108,7 +107,7 @@ export default function PastMeetings({
                     {/* `tabular-nums` on both number columns, so 7 and 112 sit
                         under each other instead of drifting with the width of
                         the glyphs — the whole reason a table beats cards here. */}
-                    <Td numeric className="font-semibold text-black">
+                    <Td numeric className="font-semibold text-white">
                       {meeting.attendanceCount}
                     </Td>
                   </tr>
@@ -132,7 +131,7 @@ export default function PastMeetings({
               <Link
                 href={`?${pageParam}=${page + 1}`}
                 scroll={false}
-                className={ACTION_CLS}
+                className={ACTION_DARK_CLS}
               >
                 {moreCount === 1
                   ? "1 older meeting"
@@ -159,7 +158,7 @@ function Th({
   return (
     <th
       scope="col"
-      className={`${CELL_CLS} font-display text-xs font-extrabold tracking-wide text-mauve-500 uppercase ${numeric ? "text-right" : ""}`}
+      className={`${CELL_CLS} font-display text-xs font-extrabold tracking-wide text-mauve-400 uppercase ${numeric ? "text-right" : ""}`}
     >
       {children}
     </th>
@@ -177,7 +176,7 @@ function Td({
 }) {
   return (
     <td
-      className={`${CELL_CLS} ${numeric ? "text-right text-mauve-700 tabular-nums" : ""} ${className}`}
+      className={`${CELL_CLS} ${numeric ? "text-right text-mauve-300 tabular-nums" : ""} ${className}`}
     >
       {children}
     </td>

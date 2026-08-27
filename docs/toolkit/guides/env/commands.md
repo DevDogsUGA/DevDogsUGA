@@ -46,8 +46,10 @@ argv. `BWS_ORG_ID` gets the same first-run prompt with no destination question;
 it is a public identifier with one sensible home.
 
 The road out of `.env` stays closed either way: `push` refuses
-`BWS_ACCESS_TOKEN` and `AIRTABLE_PAT` **by name**, `pull` will not write them
-back, and `audit` reports either one in any remote store as an error.
+`BWS_ACCESS_TOKEN` **by name**, `pull` will not write it back, and `audit`
+reports it in any remote store as an error. It is the only `never-store` key
+left — `AIRTABLE_PAT` was the other, and it was removed rather than
+reclassified.
 
 </details>
 

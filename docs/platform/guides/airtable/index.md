@@ -31,12 +31,12 @@ Three consumers read those declarations and no other source: the push builder, t
 
 ## Direction is per field, and the type enforces it
 
-| Declaration  | Meaning                                                     |
-| ------------ | ----------------------------------------------------------- |
-| `.push()`    | Platform-owned. A projection of Postgres state              |
-| `.pull()`    | Officer-authored. Parsed into Postgres                      |
-| `.ignore()`  | Officers' own column, deliberately untouched                |
-| `.status()`  | A refusal message the sync writes outside the push engine   |
+| Declaration | Meaning                                                   |
+| ----------- | --------------------------------------------------------- |
+| `.push()`   | Platform-owned. A projection of Postgres state            |
+| `.pull()`   | Officer-authored. Parsed into Postgres                    |
+| `.ignore()` | Officers' own column, deliberately untouched              |
+| `.status()` | A refusal message the sync writes outside the push engine |
 
 `.push()` and `.pull()` return different types, neither carrying the other method, so a field declared with both **fails to compile**. That turns the rule the whole integration rests on — never create a field both sides write — from a convention somebody has to remember into a type error. A field with no direction must say `.ignore()` out loud, so "does the sync know about Notes?" has an answer: absent means nobody looked, `.ignore()` means somebody decided.
 

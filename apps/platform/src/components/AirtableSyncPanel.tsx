@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Callout from "~/ui/callout";
+import { ConsoleCard } from "~/ui/card";
 import { formatEventDateTime } from "~/lib/eventTime";
 import type { SyncStateSnapshot } from "~/server/airtable/lease";
 import type { SyncReport } from "~/server/airtable/run";
@@ -25,58 +27,63 @@ export default function AirtableSyncPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <section className="rounded-sm border-2 border-black bg-white p-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="text-sm">
-            {initial === null ? (
-              <p>The sync has never run.</p>
-            ) : (
-              <>
-                <p>
-                  Last run{" "}
-                  <strong>
-                    {/* `formatEventDateTime` rather than a bare
-                        `toLocaleString`: this is a client component, so an
-                        implicit zone would render one string on the server and
-                        a different one after hydration. Pinning the zone makes
-                        it deterministic — and it is the club's zone, which is
-                        the one an officer is thinking in anyway. */}
-                    {initial.lastSyncedAt
-                      ? formatEventDateTime(initial.lastSyncedAt)
-                      : "never"}
-                  </strong>
-                  {initial.lastStatus && ` — ${initial.lastStatus}`}
-                </p>
-                <p className="opacity-70">
-                  {initial.rowsUpserted} updated · {initial.rowsRefused} refused
-                  · {initial.rowsArchived} archived
-                </p>
-              </>
+      <ConsoleCard.Root id="sync-status">
+        <ConsoleCard.Content>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="text-sm text-mauve-300">
+                {initial === null ? (
+                  <p>The sync has never run.</p>
+                ) : (
+                  <>
+                    <p>
+                      Last run{" "}
+                      <strong className="font-semibold text-white">
+                        {/* `formatEventDateTime` rather than a bare
+                            `toLocaleString`: this is a client component, so an
+                            implicit zone would render one string on the server
+                            and a different one after hydration. Pinning the
+                            zone makes it deterministic — and it is the club's
+                            zone, which is the one an officer is thinking in
+                            anyway. */}
+                        {initial.lastSyncedAt
+                          ? formatEventDateTime(initial.lastSyncedAt)
+                          : "never"}
+                      </strong>
+                      {initial.lastStatus && ` — ${initial.lastStatus}`}
+                    </p>
+                    <p className="text-mauve-400">
+                      {initial.rowsUpserted} updated · {initial.rowsRefused}{" "}
+                      refused · {initial.rowsArchived} archived
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <button
+                type="button"
+                disabled={isPending || initial?.running}
+                onClick={() =>
+                  startTransition(async () => setReport(await runSync()))
+                }
+                className="rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 disabled:opacity-40"
+              >
+                {isPending
+                  ? "Syncing…"
+                  : initial?.running
+                    ? "Already running"
+                    : "Sync now"}
+              </button>
+            </div>
+
+            {/* Not an `alert`: this is the previous pass's failure, already on
+                the page when it loads, not something the reader just did. */}
+            {initial?.lastError && (
+              <Callout tone="critical">{initial.lastError}</Callout>
             )}
           </div>
-
-          <button
-            type="button"
-            disabled={isPending || initial?.running}
-            onClick={() =>
-              startTransition(async () => setReport(await runSync()))
-            }
-            className="rounded-sm border-2 border-black bg-black px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-          >
-            {isPending
-              ? "Syncing…"
-              : initial?.running
-                ? "Already running"
-                : "Sync now"}
-          </button>
-        </div>
-
-        {initial?.lastError && (
-          <p className="mt-3 rounded-sm bg-red-50 p-2 text-sm text-red-800">
-            {initial.lastError}
-          </p>
-        )}
-      </section>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
 
       {report && <ReportPanel report={report} />}
 
@@ -93,64 +100,61 @@ export default function AirtableSyncPanel({
 function ReportPanel({ report }: { report: SyncReport }) {
   if (report.skipped) {
     return (
-      <p
-        role="status"
-        className="rounded-sm border-2 border-black bg-amber-50 p-4 text-sm"
-      >
+      <Callout tone="warning" alert>
         {SKIPPED[report.skipped]}
         {report.retryAfter ? ` Try again in ${report.retryAfter}s.` : ""}
-      </p>
+      </Callout>
     );
   }
 
   return (
-    <section className="rounded-sm border-2 border-black bg-white p-4 text-sm">
-      <h2 className="font-semibold">
-        {report.ok ? "Sync complete" : "Sync failed"}
-      </h2>
-      <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
-        <Stat label="Updated from Airtable" value={report.pulled.upserted} />
-        <Stat label="Archived" value={report.pulled.archived} />
-        <Stat label="Skipped (incomplete)" value={report.pulled.skipped} />
-        <Stat
-          label="Written to Airtable"
-          value={report.pushed.created + report.pushed.updated}
-        />
-        <Stat label="Already up to date" value={report.pushed.unchanged} />
-        <Stat label="Grades applied" value={report.gradesApplied} />
-        {/* Only when it happened. A standing "0" reads as a dial somebody
-            could turn; a number appearing the week a workshop runs is the
-            signal -- these are rows in auth.users, created from a form field
-            nobody has verified. */}
-        {report.accountsCreated > 0 && (
-          <Stat label="Accounts created" value={report.accountsCreated} />
+    <ConsoleCard.Root id="sync-report">
+      <ConsoleCard.Header title={report.ok ? "Sync complete" : "Sync failed"} />
+      <ConsoleCard.Content>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
+          <Stat label="Updated from Airtable" value={report.pulled.upserted} />
+          <Stat label="Archived" value={report.pulled.archived} />
+          <Stat label="Skipped (incomplete)" value={report.pulled.skipped} />
+          <Stat
+            label="Written to Airtable"
+            value={report.pushed.created + report.pushed.updated}
+          />
+          <Stat label="Already up to date" value={report.pushed.unchanged} />
+          <Stat label="Grades applied" value={report.gradesApplied} />
+          {/* Only when it happened. A standing "0" reads as a dial somebody
+              could turn; a number appearing the week a workshop runs is the
+              signal -- these are rows in auth.users, created from a form field
+              nobody has verified. */}
+          {report.accountsCreated > 0 && (
+            <Stat label="Accounts created" value={report.accountsCreated} />
+          )}
+          {/* Shown only when it happened, like accounts created, and for a
+              sharper reason: this is the one irreversible thing a pass does, so
+              a standing "0" would train an officer to stop reading it. */}
+          {report.attendanceRemoved > 0 && (
+            <Stat label="Attendance removed" value={report.attendanceRemoved} />
+          )}
+        </dl>
+        {report.error && (
+          <Callout tone="critical" alert>
+            {report.error}
+          </Callout>
         )}
-        {/* Shown only when it happened, like accounts created, and for a
-            sharper reason: this is the one irreversible thing a pass does, so
-            a standing "0" would train an officer to stop reading it. */}
-        {report.attendanceRemoved > 0 && (
-          <Stat label="Attendance removed" value={report.attendanceRemoved} />
-        )}
-      </dl>
-      {report.error && (
-        <p className="mt-3 rounded-sm bg-red-50 p-2 text-red-800">
-          {report.error}
-        </p>
-      )}
-      {report.refusals.length > 0 && (
-        <div className="mt-4">
+        {report.refusals.length > 0 && (
           <RefusalList refusals={report.refusals} />
-        </div>
-      )}
-    </section>
+        )}
+      </ConsoleCard.Content>
+    </ConsoleCard.Root>
   );
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <dt className="text-xs tracking-wide uppercase opacity-60">{label}</dt>
-      <dd className="text-lg font-bold tabular-nums">{value}</dd>
+      <dt className="text-xs tracking-wide text-mauve-400 uppercase">
+        {label}
+      </dt>
+      <dd className="text-lg font-bold text-white tabular-nums">{value}</dd>
     </div>
   );
 }
@@ -170,11 +174,16 @@ function RefusalList({
 }) {
   return (
     <div>
-      <h3 className="font-semibold">Refused ({refusals.length})</h3>
-      <ul className="mt-2 flex flex-col gap-2 text-sm">
+      <h3 className="text-sm font-semibold text-white">
+        Refused ({refusals.length})
+      </h3>
+      <ul className="mt-2 flex flex-col gap-2">
         {refusals.map((refusal, index) => (
-          <li key={index} className="rounded-sm bg-amber-50 p-2">
-            <strong>{refusal.table}</strong> — {refusal.message}
+          <li key={index}>
+            <Callout tone="warning">
+              <strong className="font-semibold">{refusal.table}</strong> —{" "}
+              {refusal.message}
+            </Callout>
           </li>
         ))}
       </ul>

@@ -17,6 +17,8 @@ import { getNavUser } from "./data";
 export async function TopNavProfile() {
   const user = await getNavUser();
 
+  // These land inside the navbar's right-hand cluster, which is already one
+  // <li>, so they render plainly. The hydrator renders nothing at all.
   if (!user) {
     return (
       <>

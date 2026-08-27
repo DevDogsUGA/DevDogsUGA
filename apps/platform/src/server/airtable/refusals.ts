@@ -34,7 +34,70 @@ import {
  * question is the same in both cases: I edited this and the site did not
  * change — why. But the reasoning does not transfer. A rule of the first kind
  * asks what already exists; a rule of the second kind asks only what arrived.
+ *
+ * ## And one entry that is not a rule at all
+ *
+ * `meeting_incomplete` is a STATE, not a refusal: nothing was rejected, the
+ * row simply does not have enough in it to become a meeting yet. It travels
+ * with the refusals because it has the same destination and answers the same
+ * officer question, and because the field is called `⚙️ Sync status` rather
+ * than `⚙️ Sync errors`.
+ *
+ * ⚠️ It must stay worded as a state. The reason this row was silent for so
+ * long is a good one — officers fill fields one at a time, and a pass landing
+ * between two keystrokes must not COMPLAIN about a row that will be finished
+ * in a minute. Saying where the row stands is not complaining; saying it did
+ * something wrong would be. `.status()` clears on the next pass once the row
+ * is whole, so a transient message costs nothing.
  */
+
+/**
+ * What to put in `⚙️ Sync status` for a row that is not a meeting yet.
+ *
+ * Names what is actually missing rather than restating the rule, because the
+ * officer reading it is looking at the row and wants to know the next
+ * keystroke, not the schema. Phrased as a state rather than a complaint — see
+ * the third class of entry in this file's header for why that is
+ * load-bearing.
+ *
+ * The two halves differ on one fact worth being accurate about: whether
+ * anything of this meeting is already published. A row that exists in Postgres
+ * keeps serving its previous values, so "not on the site yet" would be false
+ * there, and would send an officer looking for a page that is up.
+ */
+export function describeIncompleteMeeting(
+  values: {
+    name: string | null;
+    startsAt: string | null;
+    endsAt: string | null;
+  },
+  published: boolean,
+): string {
+  const missing: string[] = [];
+  if (values.name === null) missing.push("a name");
+  if (values.startsAt === null) missing.push("a start time");
+  if (values.endsAt === null) missing.push("an end time");
+
+  // Empty means every field arrived and the ORDER is what failed, which is the
+  // one case here that is a wrong value rather than an absent one.
+  const problem =
+    missing.length > 0
+      ? `still needs ${formatList(missing)}`
+      : "has an end time at or before its start time";
+
+  return published
+    ? `Not applied: this meeting ${problem}. What is on the site is the ` +
+        "previous version, and it stays up until the row is complete again."
+    : `Not on the site yet: this meeting ${problem}. Nothing is wrong with ` +
+        "what you have entered so far — it appears within fifteen minutes of " +
+        "being complete.";
+}
+
+/** "a name, a start time and an end time", the way an officer would write it. */
+function formatList(items: string[]): string {
+  if (items.length === 1) return items[0]!;
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]!}`;
+}
 
 /** What the sync refused, and why, in words an officer can act on. */
 export interface Refusal {
@@ -47,6 +110,8 @@ export interface Refusal {
 }
 
 export type RefusalCode =
+  // Not a refusal — see the note on the third class above.
+  | "meeting_incomplete"
   | "meeting_summary_too_long"
   | "meeting_rsvp_host"
   | "workshop_meeting_changed"

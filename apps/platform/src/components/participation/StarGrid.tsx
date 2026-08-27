@@ -41,10 +41,10 @@ export default function StarGrid({ cells }: { cells: StarCell[] }) {
       {groupByMeeting(cells).map((meeting) => (
         <section
           key={meeting.meetingId}
-          className="rounded-sm border-2 border-black bg-white p-4"
+          className="rounded-lg border border-white/10 bg-white/5 p-4"
         >
-          <h3 className="font-semibold">{meeting.meetingName}</h3>
-          <p className="text-xs opacity-70">
+          <h3 className="font-semibold text-white">{meeting.meetingName}</h3>
+          <p className="text-xs text-mauve-400">
             <time dateTime={meeting.meetingStartsAt.toISOString()}>
               {formatEventDate(meeting.meetingStartsAt)}
             </time>
@@ -81,21 +81,21 @@ export default function StarGrid({ cells }: { cells: StarCell[] }) {
  */
 function Legend() {
   return (
-    <dl className="flex flex-wrap gap-x-6 gap-y-1 px-1 text-xs opacity-70">
+    <dl className="flex flex-wrap gap-x-6 gap-y-1 px-1 text-xs text-mauve-400">
       <div className="flex gap-1.5">
-        <dt aria-hidden className="text-amber-500">
+        <dt aria-hidden className="text-amber-300">
           ★
         </dt>
         <dd>Attended the workshop, or competed in it</dd>
       </div>
       <div className="flex gap-1.5">
-        <dt aria-hidden className="text-amber-500">
+        <dt aria-hidden className="text-amber-300">
           ★
         </dt>
         <dd>Competed — the entry was frozen at judging</dd>
       </div>
       <div className="flex gap-1.5">
-        <dt aria-hidden className="text-amber-500">
+        <dt aria-hidden className="text-amber-300">
           ♛
         </dt>
         <dd>Won</dd>

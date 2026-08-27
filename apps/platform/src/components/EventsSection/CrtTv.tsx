@@ -33,10 +33,11 @@ import { useTvStatic } from "./useTvStatic";
  *
  * ## The snow underneath is drawn, not fetched
  *
- * The no-signal layer used to be a 1.8 MB GIF loaded on every homepage visit.
- * It is now generated a frame at a time into the same `<image>` — see
- * `useTvStatic`, which also owns the two gates that keep it from costing
- * anything off screen or under reduced motion.
+ * The no-signal layer used to be a 1.8 MB GIF — sixty per cent of the
+ * homepage's image payload, spent on the picture that is up when the set is
+ * showing nothing. It is now generated a frame at a time into the same
+ * `<image>`; see `useTvStatic`, which also owns the two gates that keep it from
+ * costing anything off screen or under reduced motion.
  *
  * ## How the volume is built
  *
@@ -338,10 +339,9 @@ export default function CrtTv({ showing, className }: Props) {
 
         <g clipPath={`url(#${id("screen")})`} stroke="none">
           {/* The snow, underneath everything and running whenever the set is
-              in view. It ships with no `href` at all: the frames are painted
-              on the client, so the server renders an empty element over the
-              black above and the tube reads correctly until the first one
-              lands. */}
+              in view. It ships with no `href` at all: the frames are painted on
+              the client, so the server renders an empty element over the black
+              above and the tube reads correctly until the first one lands. */}
           <image
             ref={noSignal}
             x={PICTURE.x}

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Fragment, Suspense } from "react";
-import AccentBlobs from "~/ui/accent-blobs";
 import AvatarField from "~/components/AvatarField";
 import BioField from "~/components/BioField";
 import { ConsoleCard } from "~/ui/card";
@@ -11,7 +10,7 @@ import { FrozenFields, FrozenProfileNotice } from "~/components/FrozenProfile";
 import GithubField from "~/components/ConnectedAccountField/GithubField";
 import GraduationDateField from "~/components/GraduationDateField";
 import LinkedinField from "~/components/ConnectedAccountField/LinkedinField";
-import PageHeader from "~/components/PageHeader";
+import PageShell from "~/components/PageShell";
 import PreferredNameField from "~/components/PreferredNameField";
 import ProfileLinks from "~/components/ProfileLinks";
 import PronounsField from "~/components/PronounsField";
@@ -142,11 +141,17 @@ async function AccountContent() {
                 <span
                   key={role.roleId}
                   className="rounded-sm px-2 py-1 text-sm font-medium text-white"
-                  style={
-                    role.roleColor
-                      ? { backgroundColor: role.roleColor }
-                      : { backgroundColor: "#6b7280" }
-                  }
+                  // mauve-800 rather than a gray when a role has no colour of
+                  // its own; `text-white` above keeps the label legible either
+                  // way, including against a dark custom colour. Tested for
+                  // emptiness rather than `??`-ed: the column is nullable AND
+                  // free text, so "" is a reachable value that would otherwise
+                  // reach `backgroundColor` and paint the chip transparent.
+                  style={{
+                    backgroundColor: role.roleColor?.trim()
+                      ? role.roleColor
+                      : "#2a212c",
+                  }}
                 >
                   {role.roleTitle}
                 </span>
@@ -183,15 +188,11 @@ async function AccountContent() {
 export default function ProfilePage() {
   return (
     <div className="flex min-w-0 flex-1 flex-col bg-mauve-900">
-      <div className="relative isolate mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 @sm:px-6">
-        <AccentBlobs accent="amber" />
-
-        <PageHeader
-          title="Account"
-          description="Manage your profile information, connected accounts, and verification status."
-          accent="amber"
-        />
-
+      <PageShell
+        accent="amber"
+        title="Account"
+        description="Manage your profile information, connected accounts, and verification status."
+      >
         {/* Every editable field on this page registers with the provider, and
             the bar at the bottom saves and resets all of them at once. It
             renders itself away when nothing is dirty, so a quarantined profile
@@ -216,7 +217,7 @@ export default function ProfilePage() {
           </Suspense>
           <SettingsSaveBar />
         </SettingsFormProvider>
-      </div>
+      </PageShell>
     </div>
   );
 }

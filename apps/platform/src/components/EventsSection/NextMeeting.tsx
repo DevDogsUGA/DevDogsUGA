@@ -18,7 +18,12 @@ import {
 } from "~/server/loaders/meetings";
 import { RouteDialogLink } from "~/ui/route-dialog";
 import { FindUsLink } from "~/components/EventsSection/FindUs";
-import { ACTION_CLS, CHIP_CLS, segmentBadge } from "./meetingView";
+import {
+  ACTION_DARK_CLS,
+  CHIP_DARK_CLS,
+  NEUTRAL_CHIP_DARK_CLS,
+  segmentBadge,
+} from "./meetingView";
 import { isMappedBuilding, locationLine } from "./FindUs/buildings";
 
 /**
@@ -26,11 +31,11 @@ import { isMappedBuilding, locationLine } from "./FindUs/buildings";
  * thing on the page anybody came for. Everything below it — the ledger, the
  * calendar, the explainer — is context for this one night.
  *
- * Not a card. It used to be a white box with a block shadow, and the page
- * below it was a calendar box, a column of row boxes and a table box; the
- * next meeting is the biggest type on the page and needs no frame to be
- * found. The section's own rule above it, drawn by the page, is the only
- * chrome.
+ * Speaks the console dialect: it renders inside the page's first
+ * `ConsoleCard`, so the card is the frame and everything in here is type on
+ * dark mauve — white for the facts, `mauve-300/400` for the supporting lines,
+ * and the segment chips in the same translucent tints the gated pages use.
+ * The next meeting is still the biggest type on the page.
  *
  * ## It never reads the clock
  *
@@ -104,16 +109,16 @@ const NAME_LIST_FMT = new Intl.ListFormat("en-US", {
 });
 
 /**
- * The band's primary action, at the size the page footer uses.
+ * The band's primary action: the console's filled-white button (`FormButton`'s
+ * "black" theme, as a link), which inverts on hover.
  *
- * Deliberately the same neutral bordered white as every other action on the
- * page rather than a filled accent: `meetingView` treats colour as
- * information — cyan means competition, amber means workshop — and a cyan
- * button sitting a few pixels from a cyan Judging chip would read as a third
- * kind of segment rather than as a link.
+ * Deliberately neutral rather than a filled accent: `meetingView` treats
+ * colour as information — cyan means competition, amber means workshop — and a
+ * cyan button sitting a few pixels from a cyan Judging chip would read as a
+ * third kind of segment rather than as a link.
  */
 const PRIMARY_ACTION_CLS =
-  "hover:shadow-block-md transition-lift flex w-fit items-center gap-2 rounded-sm border-2 border-black bg-white px-4 py-2 text-sm font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5";
+  "flex w-fit items-center gap-2 rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-950";
 
 export default function NextMeeting({ meeting, now, checkIn }: Props) {
   // Not an error state, and not a rare one: this is what the page looks like
@@ -136,10 +141,7 @@ export default function NextMeeting({ meeting, now, checkIn }: Props) {
   const agenda = agendaLine(meeting);
 
   return (
-    <article
-      className="flex flex-col gap-6 md:flex-row md:items-start md:gap-12"
-      data-animate="fade-up"
-    >
+    <article className="flex flex-col gap-6 md:flex-row md:items-start md:gap-12">
       <DateBlock at={meeting.startsAt} />
 
       {/* `min-w-0` on the text column: a flex child defaults to
@@ -148,7 +150,7 @@ export default function NextMeeting({ meeting, now, checkIn }: Props) {
           scroll. */}
       <div className="flex min-w-0 flex-1 flex-col gap-5">
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-semibold text-black">
+          <p className="text-sm font-semibold text-white">
             {happeningNow ? (
               <>Happening now — until {formatEventTime(meeting.endsAt)}</>
             ) : ended ? (
@@ -158,11 +160,11 @@ export default function NextMeeting({ meeting, now, checkIn }: Props) {
             )}
           </p>
 
-          <h3 className="font-display text-4xl font-extrabold text-balance break-words text-black md:text-6xl">
+          <h3 className="font-display text-4xl font-extrabold text-balance break-words text-white md:text-6xl">
             {meeting.name}
           </h3>
 
-          <p className="text-sm text-mauve-700">
+          <p className="text-sm text-mauve-300">
             <time dateTime={meeting.startsAt.toISOString()}>
               {formatEventSpan(meeting.startsAt, meeting.endsAt)}
             </time>
@@ -176,7 +178,7 @@ export default function NextMeeting({ meeting, now, checkIn }: Props) {
               return (
                 <span
                   key={segment}
-                  className={`${badge.bg} ${badge.text} ${CHIP_CLS}`}
+                  className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
                 >
                   {badge.label}
                 </span>
@@ -187,9 +189,7 @@ export default function NextMeeting({ meeting, now, checkIn }: Props) {
                 repo, so a value this side has never heard of has to render
                 as itself rather than fall through to a blank badge. */}
             {kindOverride !== null && (
-              <span
-                className={`border-2 border-black bg-white text-black ${CHIP_CLS}`}
-              >
+              <span className={`${NEUTRAL_CHIP_DARK_CLS} ${CHIP_DARK_CLS}`}>
                 {kindOverride}
               </span>
             )}
@@ -197,8 +197,8 @@ export default function NextMeeting({ meeting, now, checkIn }: Props) {
         )}
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <p className="flex min-w-0 items-center gap-2 text-sm text-mauve-700">
-            <MapPinIcon className="shrink-0 text-mauve-500" weight="fill" />
+          <p className="flex min-w-0 items-center gap-2 text-sm text-mauve-300">
+            <MapPinIcon className="shrink-0 text-mauve-400" weight="fill" />
             {locationLine(meeting.building, meeting.location) ??
               "Room to be announced"}
           </p>
@@ -212,14 +212,18 @@ export default function NextMeeting({ meeting, now, checkIn }: Props) {
               the calendar, so following it swaps only the leaf and the
               calendar behind stays mounted. */}
           {isMappedBuilding(meeting.building) && (
-            <FindUsLink building={meeting.building} room={meeting.location} />
+            <FindUsLink
+              building={meeting.building}
+              room={meeting.location}
+              className={ACTION_DARK_CLS}
+            />
           )}
         </div>
 
         {/* Plain text from Airtable, rendered as text. Never as markup: an
             officer typed it into a form field, it was not authored here. */}
         {meeting.summary !== null && (
-          <p className="max-w-prose text-sm/relaxed text-mauve-700">
+          <p className="max-w-prose text-sm/relaxed text-mauve-300">
             {meeting.summary}
           </p>
         )}
@@ -229,8 +233,8 @@ export default function NextMeeting({ meeting, now, checkIn }: Props) {
             duplicating it here would give the band two jobs and make the
             detail link pointless. */}
         {agenda !== null && (
-          <p className="line-clamp-2 max-w-prose text-sm text-mauve-600">
-            <span className="font-semibold text-black">On the night: </span>
+          <p className="line-clamp-2 max-w-prose text-sm text-mauve-400">
+            <span className="font-semibold text-white">On the night: </span>
             {agenda}
           </p>
         )}
@@ -251,7 +255,7 @@ export default function NextMeeting({ meeting, now, checkIn }: Props) {
               href={meeting.rsvpUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={ACTION_CLS}
+              className={ACTION_DARK_CLS}
             >
               RSVP <ArrowUpRightIcon />
             </a>
@@ -284,13 +288,13 @@ function DateBlock({ at }: { at: Date }) {
       dateTime={at.toISOString()}
       className="flex shrink-0 flex-col leading-none md:w-36 md:items-center md:text-center"
     >
-      <span className="font-display text-sm font-extrabold tracking-widest text-mauve-500 uppercase">
+      <span className="font-display text-sm font-extrabold tracking-widest text-mauve-400 uppercase">
         {WEEKDAY_FMT.format(at)}
       </span>
-      <span className="font-display text-7xl font-extrabold text-black tabular-nums md:text-8xl">
+      <span className="font-display text-7xl font-extrabold text-white tabular-nums md:text-8xl">
         {DAY_FMT.format(at)}
       </span>
-      <span className="font-display text-sm font-extrabold tracking-widest text-mauve-500 uppercase">
+      <span className="font-display text-sm font-extrabold tracking-widest text-mauve-400 uppercase">
         {MONTH_FMT.format(at)}
       </span>
     </time>
@@ -342,24 +346,24 @@ function agendaLine(meeting: MeetingInRange): string | null {
  */
 function NothingScheduled() {
   return (
-    <article className="flex flex-col gap-4" data-animate="fade-up">
-      <p className="font-display flex items-center gap-2 text-sm font-extrabold tracking-widest text-mauve-500 uppercase">
+    <article className="flex flex-col gap-4">
+      <p className="font-display flex items-center gap-2 text-sm font-extrabold tracking-widest text-mauve-400 uppercase">
         <CalendarDotsIcon className="shrink-0" weight="fill" />
         Between semesters
       </p>
 
-      <h3 className="font-display text-4xl font-extrabold text-balance text-black md:text-6xl">
+      <h3 className="font-display text-4xl font-extrabold text-balance text-white md:text-6xl">
         Nothing on the calendar yet
       </h3>
 
-      <p className="max-w-prose text-base/relaxed text-mauve-700">
+      <p className="max-w-prose text-base/relaxed text-mauve-300">
         The fall schedule goes up in August, and once it does there is something
         every week: a workshop that teaches a feature, a week-long competition
         to build it, and an open build session on the Wednesday in between.
         Everything happens in DLW 124.
       </p>
 
-      <p className="max-w-prose text-sm/relaxed text-mauve-600">
+      <p className="max-w-prose text-sm/relaxed text-mauve-400">
         The Involvement Network lists every DevDogs event UGA knows about, and
         it is where RSVPs live — so it is the first place a new date shows up.
       </p>

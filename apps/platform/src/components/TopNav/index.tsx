@@ -6,6 +6,7 @@ import devdog from "~/assets/devdog.png";
 import { getDocsProjects } from "~/server/docs/queries";
 import AppSwitcherButton from "./AppSwitcherButton";
 import NavLinks, { NavLinksFallback } from "./NavLinks";
+import NavShell from "./NavShell";
 import SearchButton from "./SearchButton";
 import { TopNavMobile, TopNavProfile } from "./TopNavUser";
 import UserClusterSkeleton from "./UserClusterSkeleton";
@@ -21,24 +22,38 @@ export default function TopNav() {
 
   return (
     <header className="sticky top-0 z-50 border-b-2 border-mauve-800 bg-mauve-950/90 backdrop-blur">
-      <div className="flex h-16 items-center gap-4 px-4 md:px-6">
-        <Link href="/" className="flex shrink-0 items-center gap-2 lg:gap-2.5">
-          <figure className="size-7 shrink-0">
-            {/* `size-7`, and the figure never grows. Without `sizes` Next sizes
-                the srcset off the 299px source instead of the 28px box, so the
-                logo on every page of the site downloaded at w=384. */}
-            <Image alt="" src={devdog} sizes="28px" />
-          </figure>
-          <span className="font-display text-lg font-semibold text-white">
-            DevDogs
-          </span>
-        </Link>
+      {/* One list across the whole bar, not one on each side. Docs and the
+          avatar have to sit in the same Radix collection for their panels to
+          share a viewport, and a collection is a list. The items that are not
+          menus — the brand, search, the app switcher, the mobile trigger —
+          are plain <li>s, which Radix's collection ignores. */}
+      <NavShell>
+        {/* The list is spaced like the row of links it mostly is, and the two
+            ends restore the wider gaps they had before there was a list: the
+            brand pushes a full 1rem off the first link, and the right-hand
+            cluster keeps its own tighter rhythm inside one item. Spacing every
+            child off the list itself would set one number for three groups
+            that never shared one. */}
+        <li className="mr-3 shrink-0">
+          <Link href="/" className="flex items-center gap-2 lg:gap-2.5">
+            <figure className="size-7 shrink-0">
+              <Image alt="" src={devdog} />
+            </figure>
+            <span className="font-display text-lg font-semibold text-white">
+              DevDogs
+            </span>
+          </Link>
+        </li>
 
         <Suspense fallback={<NavLinksFallback docsProjects={docsProjects} />}>
           <NavLinks docsProjects={docsProjects} />
         </Suspense>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        {/* One item, four controls. The avatar is a menu and so has to be a
+            NavigationMenu.Item, but an <li> inside an <li> is not markup, so
+            that item renders as a div here — Radix's collection is context,
+            not DOM shape, and does not mind. */}
+        <li className="ml-auto flex items-center gap-1.5">
           <SearchButton />
           <AppSwitcherButton />
 
@@ -58,8 +73,8 @@ export default function TopNav() {
           >
             <TopNavMobile />
           </Suspense>
-        </div>
-      </div>
+        </li>
+      </NavShell>
     </header>
   );
 }

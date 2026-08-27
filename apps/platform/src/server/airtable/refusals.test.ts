@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  describeIncompleteMeeting,
   checkCompetition,
   checkMeeting,
   checkWorkshop,
@@ -437,5 +438,73 @@ describe("both rules on one record", () => {
     expect(result.rejectedFields).toEqual(
       new Set(["requirementCount", "judgingStartsAt"]),
     );
+  });
+});
+
+describe("describeIncompleteMeeting", () => {
+  /**
+   * A row below the completeness bar used to be skipped in total silence, so
+   * a half-filled meeting and one the sync had never reached looked identical
+   * in the grid: clean status, nothing on the site, no way to tell which.
+   *
+   * These assertions are mostly about WORDING, which is unusual for a test and
+   * deliberate here. The reason the row was silent is a good one — officers
+   * fill fields one at a time and a pass landing between two keystrokes must
+   * not complain — and the only thing separating "a state" from "a complaint"
+   * is how it reads.
+   */
+  const missingEnd = {
+    name: "Sprint 2",
+    startsAt: "2026-09-01T22:00",
+    endsAt: null,
+  };
+
+  it("names what is missing, not the rule that rejected it", () => {
+    const message = describeIncompleteMeeting(missingEnd, false);
+    expect(message).toContain("an end time");
+    // The fields that ARE filled in go unmentioned: the officer is looking at
+    // the row and wants the next keystroke.
+    expect(message).not.toContain("a name");
+    expect(message).not.toContain("a start time");
+  });
+
+  it("lists several missing fields the way a person would write them", () => {
+    const message = describeIncompleteMeeting(
+      { name: null, startsAt: null, endsAt: null },
+      false,
+    );
+    expect(message).toContain("a name, a start time and an end time");
+  });
+
+  it("describes a bad ORDER rather than claiming something is absent", () => {
+    // Every field arrived; the end is not after the start. Saying "still needs
+    // an end time" here would send an officer to a field that is filled in.
+    const message = describeIncompleteMeeting(
+      {
+        name: "Sprint 2",
+        startsAt: "2026-09-01T23:00",
+        endsAt: "2026-09-01T22:00",
+      },
+      false,
+    );
+    expect(message).toContain("end time at or before its start time");
+    expect(message).not.toContain("still needs");
+  });
+
+  it("does not say a published meeting is missing from the site", () => {
+    // ⚠️ The half that is easy to get wrong. A row already in Postgres keeps
+    // serving its previous values, so "not on the site yet" would be false and
+    // would send somebody looking for a page that is up.
+    const published = describeIncompleteMeeting(missingEnd, true);
+    expect(published).not.toContain("Not on the site yet");
+    expect(published).toContain("previous version");
+  });
+
+  it("reads as a state rather than a complaint", () => {
+    // The distinction the whole entry rests on: nothing was rejected, and the
+    // officer has not done anything wrong.
+    const message = describeIncompleteMeeting(missingEnd, false);
+    expect(message).toContain("Nothing is wrong with what you have entered");
+    expect(message).not.toMatch(/refus|reject|invalid|error/i);
   });
 });

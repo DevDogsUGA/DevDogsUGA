@@ -20,6 +20,7 @@ import {
 import {
   checkCompetition,
   checkMeeting,
+  describeIncompleteMeeting,
   checkWorkshop,
   type Refusal,
 } from "./refusals";
@@ -110,13 +111,20 @@ const RESERVED_MEETING_SLUGS = ["directions"] as const;
  *
  * What it does have is a required shape: `name`, `startsAt`, `endsAt` and
  * `endsAt` are both NOT NULL, and `endsAt > startsAt` is a check
- * constraint. A half-filled row is skipped until it is whole.
+ * constraint. A half-filled row is skipped until it is whole — and SAYS SO in
+ * `⚙️ Sync status`, which it did not used to do. Silence there meant a
+ * half-filled row and a row the sync had never reached looked identical in the
+ * grid: clean status, nothing on the site, no way to tell which.
+ *
+ * That is a state, not a refusal, and the wording carries the difference. The
+ * reason for the old silence still holds — officers fill Airtable fields one
+ * at a time, and a pass landing between two keystrokes must not COMPLAIN about
+ * a field nobody has reached yet — but saying where the row stands is not
+ * complaining, and `.status()` clears itself on the pass after the row becomes
+ * whole.
  *
  * The three officer-authored copy fields are deliberately NOT part of that
- * shape. All three are optional, and an incomplete row is skipped rather than
- * refused: officers fill Airtable fields one at a time, and a pass landing
- * between two keystrokes must not complain about a field nobody has reached
- * yet.
+ * shape. All three are optional, and their absence says nothing at all.
  */
 export async function pullMeetings(
   records: AirtableRecord[],
@@ -177,6 +185,24 @@ export async function pullMeetings(
     if (!complete) {
       out.skipped += 1;
       if (current) out.idMap.set(record.airtableRecordId, current.id);
+      // Skipped, and now SAID SO. This was silent, which meant a half-filled
+      // row looked identical in the grid to one the sync had never reached:
+      // clean status, nothing on the site, no way to tell which. The field
+      // already exists on this table and is already written a few lines up for
+      // the value refusals, so this is wiring rather than machinery.
+      out.refusals.push({
+        table: "meetings",
+        airtableRecordId: record.airtableRecordId,
+        code: "meeting_incomplete",
+        message: describeIncompleteMeeting(
+          {
+            name: v.name,
+            startsAt: v.startsAt,
+            endsAt: v.endsAt,
+          },
+          current !== undefined,
+        ),
+      });
       continue;
     }
 

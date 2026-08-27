@@ -25,17 +25,20 @@ export default function UserRoleForm({
     });
   }
 
-  const selectClass =
-    "rounded-sm border border-black bg-white px-2 py-1.5 text-sm text-mauve-950 focus:outline-none focus:ring-1 focus:ring-black";
+  // Both controls, one string: this form only ever renders on the console's
+  // dark ground, where the light control it used to be was white text on a
+  // white field.
+  const controlClass =
+    "rounded-sm border border-mauve-600 bg-mauve-800 px-2 py-1.5 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950";
 
   return (
     <form action={handleSubmit} className="flex flex-col gap-3">
       <div className="flex gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-mauve-500">Role</span>
+          <span className="text-xs text-mauve-400">Role</span>
           <select
             name="role"
-            className={selectClass}
+            className={controlClass}
             defaultValue={currentRole}
           >
             <option value="member">Member</option>
@@ -45,13 +48,13 @@ export default function UserRoleForm({
         </label>
 
         <label className="flex flex-1 flex-col gap-1">
-          <span className="text-xs text-mauve-500">
+          <span className="text-xs text-mauve-400">
             Reason (optional, shown to client apps)
           </span>
           <input
             name="reason"
             type="text"
-            className="rounded-sm border border-black bg-white px-2 py-1.5 text-sm focus:ring-1 focus:ring-black focus:outline-none"
+            className={`${controlClass} placeholder:text-mauve-500`}
             placeholder="e.g. Repeated harassment"
           />
         </label>

@@ -130,7 +130,12 @@ describe("stdout stays clean for every deploy command", () => {
       "airtable-plan",
     ]);
     expect(stdout).toBe("");
-    expect(stderr).toContain("AIRTABLE_BASE_ID is not set");
+    // The refusal names the missing TOKEN now. It used to name the missing
+    // base id, which came first and so was what an empty environment hit —
+    // the base id is a committed constant, so the credential is the only
+    // thing left that can be absent. The property under test is unchanged:
+    // a missing credential is red and says which variable.
+    expect(stderr).toContain("No Airtable token that can read");
     expect(code).toBe(1);
   });
 
@@ -140,7 +145,7 @@ describe("stdout stays clean for every deploy command", () => {
       "airtable-apply",
     ]);
     expect(stdout).toBe("");
-    expect(stderr).toContain("AIRTABLE_BASE_ID is not set");
+    expect(stderr).toContain("No Airtable token that can write");
     expect(code).toBe(1);
   });
 
@@ -152,19 +157,28 @@ describe("stdout stays clean for every deploy command", () => {
       AIRTABLE_BASE_ID: "appTESTTESTTEST01",
     });
     expect(plan.stdout).toBe("");
-    expect(plan.stderr).toContain("AIRTABLE_PLAN_PAT, AIRTABLE_PAT");
+    // Anchored on the preference LINE rather than the bare token name. Both
+    // refusals also mention the other row's token in prose — naming what was
+    // deliberately not consulted is half the message — so a bare
+    // `toContain("AIRTABLE_APPLY_PAT")` would match that sentence and the
+    // negative control below would be unsatisfiable.
+    expect(plan.stderr).toContain(
+      "preference order: AIRTABLE_PLAN_PAT, AIRTABLE_SYNC_PAT.",
+    );
     expect(plan.code).toBe(1);
 
     const apply = await devtools(["deploy", "airtable-apply"], {
       AIRTABLE_BASE_ID: "appTESTTESTTEST01",
     });
     expect(apply.stdout).toBe("");
-    expect(apply.stderr).toContain("AIRTABLE_APPLY_PAT, AIRTABLE_PAT");
+    // One name, because the write row has one entry: there is no operator
+    // token behind AIRTABLE_APPLY_PAT to fall back to.
+    expect(apply.stderr).toContain("preference order: AIRTABLE_APPLY_PAT.");
     expect(apply.code).toBe(1);
-    // POSITIVE CONTROL on the pairing: neither refusal offers the other's
+    // POSITIVE CONTROL on the pairing: neither refusal OFFERS the other's
     // token as a way out, which is the whole point of two disjoint rows.
-    expect(plan.stderr).not.toContain("AIRTABLE_APPLY_PAT, AIRTABLE_PAT");
-    expect(apply.stderr).not.toContain("AIRTABLE_PLAN_PAT, AIRTABLE_PAT");
+    expect(plan.stderr).not.toContain("preference order: AIRTABLE_APPLY_PAT");
+    expect(apply.stderr).not.toContain("preference order: AIRTABLE_PLAN_PAT");
   });
 });
 

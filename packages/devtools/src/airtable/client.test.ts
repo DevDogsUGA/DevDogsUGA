@@ -3,17 +3,22 @@
  *
  * The decision is one line of `find()`, and it is the line that decides whether
  * the §3.5 dry run — which runs from `main` — holds a credential that can
- * restructure the officers' base. An operator at a terminal usually has the
- * full `AIRTABLE_PAT`, which satisfies BOTH capabilities, so "prefers the
- * narrower" is not observable from the happy path: every assertion below sets
- * more than one variable on purpose, because a lookup that ignored the ordering
- * would pass every single-variable test.
+ * restructure the officers' base. `AIRTABLE_SYNC_PAT` satisfies a read as well
+ * as the plan token does, so "prefers the narrower" is not observable from the
+ * happy path: the read assertions below set more than one variable on purpose,
+ * because a lookup that ignored the ordering would pass every single-variable
+ * test.
+ *
+ * The write row has one entry since `AIRTABLE_PAT` was removed, so there is no
+ * ordering left to get wrong there — only a fallback that must not reappear,
+ * which is what the disjointness test pins.
  *
  * Nothing here opens a socket. `resolveAirtableCredentials` takes both the
  * environment and the fetch, so the branch under test is chosen by the test
  * rather than by whatever the runner happens to hold.
  */
 import { describe, expect, it } from "vitest";
+import { BASE_ID } from "@devdogsuga/airtable";
 import {
   AirtableCredentialError,
   CREDENTIAL_PREFERENCE,
@@ -38,46 +43,58 @@ function resolve(need: AirtableCapability, env: NodeJS.ProcessEnv) {
 }
 
 describe("prefer the narrower token", () => {
-  it("reads with AIRTABLE_PLAN_PAT even when AIRTABLE_PAT is also set", () => {
-    // THE test. Both are set — which is the ordinary state on an operator's
-    // laptop and the state the §3.5 plan job would be in if somebody exported
-    // their own token — and the read-only one has to win.
+  it("reads with AIRTABLE_PLAN_PAT even when AIRTABLE_SYNC_PAT is also set", () => {
+    // THE test. Both are set — the state a laptop is in if somebody has pulled
+    // a CI credential into their env file — and the schema-only one has to win.
     const { variable } = resolve("read", {
       AIRTABLE_PLAN_PAT: "plan",
-      AIRTABLE_PAT: "full",
+      AIRTABLE_SYNC_PAT: "sync",
     });
     expect(variable).toBe("AIRTABLE_PLAN_PAT");
   });
 
-  it("writes with AIRTABLE_APPLY_PAT even when AIRTABLE_PAT is also set", () => {
-    const { variable } = resolve("write", {
-      AIRTABLE_APPLY_PAT: "apply",
-      AIRTABLE_PAT: "full",
-    });
-    expect(variable).toBe("AIRTABLE_APPLY_PAT");
-  });
-
   it("prefers the narrower one whichever order the environment lists them", () => {
     // Object key order is not the preference — the array is. Written out
-    // because `find()` over `Object.keys(env)` would pass both tests above on
-    // a differently-ordered environment and fail on a real one.
+    // because `find()` over `Object.keys(env)` would pass the test above on a
+    // differently-ordered environment and fail on a real one.
     const { variable } = resolve("read", {
-      AIRTABLE_PAT: "full",
+      AIRTABLE_SYNC_PAT: "sync",
       AIRTABLE_PLAN_PAT: "plan",
     });
     expect(variable).toBe("AIRTABLE_PLAN_PAT");
   });
 });
 
-describe("fall back to the operator token, and only to it", () => {
-  it("reads with AIRTABLE_PAT when no plan token is set", () => {
-    const { variable } = resolve("read", { AIRTABLE_PAT: "full" });
-    expect(variable).toBe("AIRTABLE_PAT");
+describe("the split between reading and writing", () => {
+  it("reads with AIRTABLE_SYNC_PAT when no plan token is set", () => {
+    // The ordinary laptop case: no CI credential present, and the token the
+    // running platform uses is the one that can also see records.
+    const { variable } = resolve("read", { AIRTABLE_SYNC_PAT: "sync" });
+    expect(variable).toBe("AIRTABLE_SYNC_PAT");
   });
 
-  it("writes with AIRTABLE_PAT when no apply token is set", () => {
-    const { variable } = resolve("write", { AIRTABLE_PAT: "full" });
-    expect(variable).toBe("AIRTABLE_PAT");
+  it("refuses a write with only the sync token, which can read every record", () => {
+    // ⚠️ The reason the write row has one entry. AIRTABLE_SYNC_PAT carries
+    // `data.records:read`/`:write` and `schema.bases:read` — enough to rewrite
+    // every dues record and nowhere near enough to reshape the base. Letting
+    // it satisfy a write would turn a named refusal into a 403 partway through
+    // a schema change, and would put a schema-change path on any machine
+    // holding the runtime token.
+    expect(() => resolve("write", { AIRTABLE_SYNC_PAT: "sync" })).toThrow(
+      AirtableCredentialError,
+    );
+  });
+
+  it("has no operator token left to fall back to", () => {
+    // The removal, asserted rather than assumed. `AIRTABLE_PAT` used to sit at
+    // the end of both rows and satisfy either capability; a reintroduction
+    // would otherwise be silent.
+    expect(() => resolve("read", { AIRTABLE_PAT: "full" })).toThrow(
+      AirtableCredentialError,
+    );
+    expect(() => resolve("write", { AIRTABLE_PAT: "full" })).toThrow(
+      AirtableCredentialError,
+    );
   });
 
   it("never reaches for the write token to satisfy a read", () => {
@@ -99,17 +116,19 @@ describe("fall back to the operator token, and only to it", () => {
     );
   });
 
-  it("keeps the two preference lists disjoint apart from AIRTABLE_PAT", () => {
-    // The structural statement of the two tests above, so a fifth token added
-    // to one row cannot silently join the other.
+  it("keeps the two preference lists fully disjoint", () => {
+    // The structural statement of the tests above, so a token added to one row
+    // cannot silently join the other. They share no member at all now — the
+    // one they used to share was AIRTABLE_PAT.
     expect(CREDENTIAL_PREFERENCE.read).toEqual([
       "AIRTABLE_PLAN_PAT",
-      "AIRTABLE_PAT",
+      "AIRTABLE_SYNC_PAT",
     ]);
-    expect(CREDENTIAL_PREFERENCE.write).toEqual([
-      "AIRTABLE_APPLY_PAT",
-      "AIRTABLE_PAT",
-    ]);
+    expect(CREDENTIAL_PREFERENCE.write).toEqual(["AIRTABLE_APPLY_PAT"]);
+    const shared = CREDENTIAL_PREFERENCE.read.filter((n) =>
+      CREDENTIAL_PREFERENCE.write.includes(n),
+    );
+    expect(shared).toEqual([]);
   });
 });
 
@@ -123,7 +142,7 @@ describe("the refusal names what it looked at", () => {
     }
     expect(error).toBeInstanceOf(AirtableCredentialError);
     const detail = (error as AirtableCredentialError).detail.join("\n");
-    expect(detail).toContain("AIRTABLE_PLAN_PAT, AIRTABLE_PAT");
+    expect(detail).toContain("AIRTABLE_PLAN_PAT, AIRTABLE_SYNC_PAT");
     // Named in the prose as the token deliberately NOT consulted, which is the
     // question somebody staring at a red plan job will actually have.
     expect(detail).toContain("AIRTABLE_APPLY_PAT is NOT consulted");
@@ -137,7 +156,7 @@ describe("the refusal names what it looked at", () => {
       error = e;
     }
     const detail = (error as AirtableCredentialError).detail.join("\n");
-    expect(detail).toContain("AIRTABLE_APPLY_PAT, AIRTABLE_PAT");
+    expect(detail).toContain("AIRTABLE_APPLY_PAT");
     expect(detail).toContain("AIRTABLE_PLAN_PAT is NOT consulted");
   });
 
@@ -151,18 +170,46 @@ describe("the refusal names what it looked at", () => {
     );
     // And it falls THROUGH an empty one to a set one rather than stopping.
     expect(
-      resolve("read", { AIRTABLE_PLAN_PAT: "", AIRTABLE_PAT: "full" }).variable,
-    ).toBe("AIRTABLE_PAT");
+      resolve("read", { AIRTABLE_PLAN_PAT: "", AIRTABLE_SYNC_PAT: "sync" })
+        .variable,
+    ).toBe("AIRTABLE_SYNC_PAT");
   });
+});
 
-  it("refuses a missing base id by name, before any token question", () => {
-    expect(() =>
+describe("the base id comes from the registry", () => {
+  it("falls back to the committed base when nothing overrides it", () => {
+    // This used to refuse by name: the base id was an environment variable, so
+    // an unset one meant there was no base to talk to. It is `BASE_ID` in the
+    // registry now, beside the field ids belonging to that same base, so the
+    // ordinary case is an env with no base id in it at all.
+    expect(
       resolveAirtableCredentials({
         need: "read",
         env: { AIRTABLE_PLAN_PAT: "plan" },
         fetch: noFetch,
-      }),
-    ).toThrow(/AIRTABLE_BASE_ID is not set/);
+      }).baseId,
+    ).toBe(BASE_ID);
+  });
+
+  it("still honours an override, so a scratch base can be aimed at", () => {
+    // The half that keeps the constant from being a hard-coding. Empty is not
+    // an override — a workflow referencing a variable the environment does not
+    // hold interpolates to "", and that must read as "unset" rather than
+    // sending the tooling at a base called "".
+    expect(
+      resolveAirtableCredentials({
+        need: "read",
+        env: { AIRTABLE_PLAN_PAT: "plan", AIRTABLE_BASE_ID: "appSCRATCH" },
+        fetch: noFetch,
+      }).baseId,
+    ).toBe("appSCRATCH");
+    expect(
+      resolveAirtableCredentials({
+        need: "read",
+        env: { AIRTABLE_PLAN_PAT: "plan", AIRTABLE_BASE_ID: "" },
+        fetch: noFetch,
+      }).baseId,
+    ).toBe(BASE_ID);
   });
 });
 

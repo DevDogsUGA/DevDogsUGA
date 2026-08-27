@@ -93,22 +93,14 @@ export default async function ConsentPage({ searchParams }: Props) {
       }) satisfies TestAccount,
   );
 
+  // The centring and the full-viewport ground belong to `(auth)/layout.tsx`;
+  // all that is left here is the card the decision sits on.
   return (
-    <ConsentLayout>
+    <div className="w-full max-w-sm rounded-xl border-2 border-mauve-800 bg-mauve-900 p-8 shadow-lg shadow-black/30">
       <ConsentForm
         authorizationId={authorizationId}
         testAccounts={testAccounts}
       />
-    </ConsentLayout>
-  );
-}
-
-function ConsentLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <main className="bg-dot-grid flex min-h-dvh flex-col items-center justify-center px-4">
-      <div className="shadow-block w-full max-w-sm border border-black bg-white p-8">
-        {children}
-      </div>
-    </main>
+    </div>
   );
 }

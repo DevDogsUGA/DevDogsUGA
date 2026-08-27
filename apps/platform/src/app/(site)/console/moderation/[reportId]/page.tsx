@@ -1,6 +1,14 @@
 import Link from "next/link";
+import PageShell from "~/components/PageShell";
 import ReportActionForm from "~/components/ReportActionForm";
+import { StandingBadge, standingOf } from "~/components/StatusBadges";
 import { getReportDetailData } from "~/server/loaders/moderation";
+import Badge from "~/ui/badge";
+import { ConsoleCard } from "~/ui/card";
+
+/** Every standalone link on this page: quiet until hovered or focused. */
+const LINK_CLASS =
+  "rounded-sm text-mauve-400 transition-colors outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950";
 
 export default async function ReportDetail({
   params,
@@ -19,140 +27,142 @@ export default async function ReportDetail({
   } = await getReportDetailData(reportId);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-      <div className="mb-4">
-        <Link
-          href="/console/moderation"
-          className="text-sm text-mauve-500 hover:text-mauve-800"
-        >
+    <PageShell
+      accent="rose"
+      title="Report"
+      // The id is the page's identity but not its name -- it is a uuid, and as
+      // a heading it pushed the one word that says what this page is off to
+      // the side. It reads first in the description instead, where the rest of
+      // the report's standing metadata already lives.
+      description={
+        <>
+          <span className="font-mono text-mauve-300">{reportId}</span> &middot;{" "}
+          {new Date(report.createdAt).toLocaleString()} &middot; status:{" "}
+          <span className="capitalize">{report.status}</span>
+          {corroborationCount > 0 && (
+            <>
+              {" "}
+              &middot; +{corroborationCount} corroboration
+              {corroborationCount !== 1 ? "s" : ""}
+            </>
+          )}
+        </>
+      }
+      actions={
+        <Link href="/console/moderation" className={`text-sm ${LINK_CLASS}`}>
           &larr; Back to dashboard
         </Link>
+      }
+    >
+      <ConsoleCard.Root id="content">
+        <ConsoleCard.Header title="Content">
+          <Badge>{report.contentType}</Badge>
+        </ConsoleCard.Header>
+        <ConsoleCard.Content>
+          {/* One wrapper child: ConsoleCard.Content rules between its direct
+              children, and a divider between an id, a link and a snapshot of
+              the same piece of content would be drawing lines through one
+              thought. */}
+          <div className="flex flex-col gap-2">
+            <p className="font-mono text-xs text-mauve-400">
+              ID: {report.contentRef}
+            </p>
+            {report.contentUrl && (
+              <a
+                href={report.contentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-sm text-xs text-blue-300 transition-colors outline-none hover:text-blue-200 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
+              >
+                View live &rarr;
+              </a>
+            )}
+            <pre className="mt-1 overflow-x-auto rounded-lg border border-white/10 bg-black/40 p-3 font-mono text-xs whitespace-pre-wrap text-mauve-200">
+              {report.contentSnapshot}
+            </pre>
+          </div>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <ConsoleCard.Root id="reporter">
+          <ConsoleCard.Header title="Reporter" />
+          <ConsoleCard.Content>
+            <div className="flex flex-col gap-1">
+              <p className="font-medium text-white">{reporterName}</p>
+              <p className="font-mono text-xs text-mauve-400">
+                {report.reporterUserId}
+              </p>
+              {report.reason && (
+                <p className="mt-1 text-xs text-mauve-400">
+                  Reason: <span>{report.reasonDetail.title}</span>
+                </p>
+              )}
+              {report.description && (
+                <p className="mt-1 text-xs text-mauve-300">
+                  &ldquo;{report.description}&rdquo;
+                </p>
+              )}
+            </div>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
+
+        <ConsoleCard.Root id="reported-user">
+          <ConsoleCard.Header title="Reported User" />
+          <ConsoleCard.Content>
+            <div className="flex flex-col gap-1">
+              <p className="font-medium text-white">{reportedName}</p>
+              <p className="font-mono text-xs text-mauve-400">
+                {report.reportedUserId}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <StandingBadge standing={standingOf(isBanned, suspension)} />
+                <Link
+                  href={`/console/moderation/users/${report.reportedUserId}`}
+                  className={`text-xs ${LINK_CLASS}`}
+                >
+                  View history &rarr;
+                </Link>
+              </div>
+            </div>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
       </div>
 
-      <h1 className="mb-1 text-xl font-bold">
-        Report{" "}
-        <span className="font-mono text-base text-mauve-400">{reportId}</span>
-      </h1>
-      <p className="mb-6 text-sm text-mauve-500">
-        {new Date(report.createdAt).toLocaleString()} &middot; status:{" "}
-        <span className="capitalize">{report.status}</span>
-        {corroborationCount > 0 && (
-          <>
-            {" "}
-            &middot; +{corroborationCount} corroboration
-            {corroborationCount !== 1 ? "s" : ""}
-          </>
-        )}
-      </p>
-
-      <section className="shadow-block-sm relative mb-6 border border-black bg-white p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-semibold">Content</h2>
-          <span className="rounded-sm bg-mauve-100 px-2 py-0.5 text-xs text-mauve-600">
-            {report.contentType}
-          </span>
-        </div>
-        <p className="mb-1 font-mono text-xs text-mauve-400">
-          ID: {report.contentRef}
-        </p>
-        {report.contentUrl && (
-          <a
-            href={report.contentUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mb-2 block text-xs text-blue-400 hover:text-blue-300"
-          >
-            View live &rarr;
-          </a>
-        )}
-        <pre className="mt-2 border border-black bg-mauve-50 p-3 font-mono text-sm whitespace-pre-wrap text-mauve-800">
-          {report.contentSnapshot}
-        </pre>
-      </section>
-
-      <section className="mb-6 grid grid-cols-2 gap-3">
-        <div className="shadow-block-sm border border-black bg-white p-4">
-          <h2 className="mb-1 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
-            Reporter
-          </h2>
-          <p className="font-medium">{reporterName}</p>
-          <p className="font-mono text-xs text-mauve-500">
-            {report.reporterUserId}
-          </p>
-          {report.reason && (
-            <p className="mt-1 text-xs text-mauve-400">
-              Reason: <span>{report.reasonDetail.title}</span>
-            </p>
-          )}
-          {report.description && (
-            <p className="mt-1 text-xs text-mauve-700">
-              &ldquo;{report.description}&rdquo;
-            </p>
-          )}
-        </div>
-
-        <div className="shadow-block-sm border border-black bg-white p-4">
-          <h2 className="mb-1 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
-            Reported User
-          </h2>
-          <p className="font-medium">{reportedName}</p>
-          <p className="font-mono text-xs text-mauve-500">
-            {report.reportedUserId}
-          </p>
-          <div className="mt-1 flex items-center gap-1.5">
-            {isBanned ? (
-              <span className="rounded-sm bg-red-100 px-2 py-0.5 text-xs text-red-700">
-                Banned
-              </span>
-            ) : suspension ? (
-              <span className="rounded-sm bg-orange-100 px-2 py-0.5 text-xs text-orange-700">
-                Suspended
-              </span>
-            ) : (
-              <span className="rounded-sm bg-mauve-100 px-2 py-0.5 text-xs text-mauve-600">
-                Member
-              </span>
-            )}
-            <Link
-              href={`/console/moderation/users/${report.reportedUserId}`}
-              className="text-xs text-mauve-500 hover:text-mauve-800"
-            >
-              View history &rarr;
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {report.resolution ? (
-        <section className="shadow-block-sm border border-black bg-white p-4">
-          <h2 className="mb-2 font-semibold">Resolution</h2>
-          <dl className="grid grid-cols-3 gap-2 text-sm">
-            <div>
-              <dt className="text-xs text-mauve-500">Subject action</dt>
-              <dd className="capitalize">
-                {report.resolution.subjectAction.replace(/_/g, " ")}
-              </dd>
+        <ConsoleCard.Root id="resolution">
+          <ConsoleCard.Header title="Resolution" />
+          <ConsoleCard.Content>
+            <div className="flex flex-col gap-2">
+              <dl className="grid gap-3 text-sm sm:grid-cols-3">
+                <div>
+                  <dt className="text-xs text-mauve-400">Subject action</dt>
+                  <dd className="text-white capitalize">
+                    {report.resolution.subjectAction.replace(/_/g, " ")}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-mauve-400">Filer action</dt>
+                  <dd className="text-white capitalize">
+                    {report.resolution.filerAction.replace(/_/g, " ")}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-mauve-400">Content action</dt>
+                  <dd className="text-white capitalize">
+                    {report.resolution.contentAction.replace(/_/g, " ")}
+                  </dd>
+                </div>
+              </dl>
+              {report.resolution.appliedGlobally && (
+                <p className="text-xs text-amber-300">Applied globally</p>
+              )}
             </div>
-            <div>
-              <dt className="text-xs text-mauve-500">Filer action</dt>
-              <dd className="capitalize">
-                {report.resolution.filerAction.replace(/_/g, " ")}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-mauve-500">Content action</dt>
-              <dd className="capitalize">
-                {report.resolution.contentAction.replace(/_/g, " ")}
-              </dd>
-            </div>
-          </dl>
-          {report.resolution.appliedGlobally && (
-            <p className="mt-2 text-xs text-amber-600">Applied globally</p>
-          )}
-        </section>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
       ) : (
         <ReportActionForm reportId={reportId} quarantinable={quarantinable} />
       )}
-    </main>
+    </PageShell>
   );
 }

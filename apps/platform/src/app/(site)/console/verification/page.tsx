@@ -1,14 +1,13 @@
 import { Suspense } from "react";
-import AccentBlobs from "~/ui/accent-blobs";
 import { ConsoleCard } from "~/ui/card";
 import Field from "~/ui/field";
-import PageHeader from "~/components/PageHeader";
+import PageShell from "~/components/PageShell";
 import { CardSkeleton } from "~/components/Skeletons";
 import VerificationImportForm from "~/components/VerificationImportForm";
-import { getVerificationPageData } from "~/server/loaders/verification";
+import { requireVerificationAccess } from "~/server/loaders/verification";
 
 async function VerificationData() {
-  await getVerificationPageData();
+  await requireVerificationAccess();
 
   return (
     <ConsoleCard.Root id="import-involvement">
@@ -28,18 +27,14 @@ async function VerificationData() {
 
 export default function VerificationPage() {
   return (
-    <div className="relative isolate mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 @sm:px-6">
-      <AccentBlobs accent="emerald" />
-
-      <PageHeader
-        title="Verification"
-        description="Upload the UGA Involvement Network roster to verify member profiles and unlock community page visibility."
-        accent="emerald"
-      />
-
+    <PageShell
+      accent="emerald"
+      title="Verification"
+      description="Upload the UGA Involvement Network roster to verify member profiles and unlock community page visibility."
+    >
       <Suspense fallback={<CardSkeleton rows={1} />}>
         <VerificationData />
       </Suspense>
-    </div>
+    </PageShell>
   );
 }

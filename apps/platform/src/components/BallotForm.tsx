@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Callout from "~/ui/callout";
 import type {
   CastBallotError,
   CastBallotResult,
@@ -34,6 +35,15 @@ const PROBLEM_MESSAGES: Record<CastBallotError, string> = {
   unknown_team: "That ranking includes a team not on this ballot.",
   untouched: "Put the teams in the order you want before submitting.",
 };
+
+/**
+ * The move buttons are the only controls on the page a voter uses repeatedly,
+ * so the focus ring matters more here than anywhere else in this family: the
+ * keyboard path through a ranking is tab-to-a-row, arrow it into place, tab
+ * on, and that is unusable if the ring vanishes between presses.
+ */
+const MOVE_BUTTON =
+  "rounded-lg border border-mauve-600 bg-mauve-800 px-3 py-1 text-sm font-medium text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 disabled:opacity-30";
 
 export default function BallotForm({
   electionId,
@@ -73,12 +83,9 @@ export default function BallotForm({
 
   if (done) {
     return (
-      <p
-        role="status"
-        className="rounded-sm border-2 border-black bg-green-50 p-4 text-sm"
-      >
+      <Callout tone="success" alert>
         Ballot cast. You can see what you submitted below.
-      </p>
+      </Callout>
     );
   }
 
@@ -103,20 +110,20 @@ export default function BallotForm({
         {order.map((option, index) => (
           <li
             key={option.teamId}
-            className="flex items-center gap-3 rounded-sm border-2 border-black bg-white p-3"
+            className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm"
           >
             <span
               aria-hidden
-              className="w-6 shrink-0 text-center text-lg font-bold tabular-nums"
+              className="w-6 shrink-0 text-center text-lg font-bold text-white tabular-nums"
             >
               {index + 1}
             </span>
 
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate font-semibold">
+              <span className="truncate font-semibold text-white">
                 {option.teamName}
                 {option.isOwnTeam && (
-                  <span className="ml-2 text-xs font-normal opacity-70">
+                  <span className="ml-2 text-xs font-normal text-mauve-400">
                     your team
                   </span>
                 )}
@@ -126,7 +133,7 @@ export default function BallotForm({
                   href={option.submissionUrl}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="truncate text-xs underline opacity-70"
+                  className="truncate text-xs text-mauve-400 underline transition-colors outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
                 >
                   View the submission
                 </a>
@@ -142,7 +149,7 @@ export default function BallotForm({
                 // "move up" alone tells a screen reader nothing about what
                 // just happened or what will.
                 aria-label={`Move ${option.teamName} to position ${index}`}
-                className="rounded-sm border-2 border-black px-2 py-1 text-sm disabled:opacity-30"
+                className={MOVE_BUTTON}
               >
                 ↑
               </button>
@@ -151,7 +158,7 @@ export default function BallotForm({
                 onClick={() => move(index, 1)}
                 disabled={index === order.length - 1}
                 aria-label={`Move ${option.teamName} to position ${index + 2}`}
-                className="rounded-sm border-2 border-black px-2 py-1 text-sm disabled:opacity-30"
+                className={MOVE_BUTTON}
               >
                 ↓
               </button>
@@ -161,12 +168,12 @@ export default function BallotForm({
       </ol>
 
       {!touched && (
-        <label className="flex items-start gap-2 text-sm">
+        <label className="flex items-start gap-2 text-sm text-mauve-300">
           <input
             type="checkbox"
             checked={confirmed}
             onChange={(event) => setConfirmed(event.target.checked)}
-            className="mt-0.5"
+            className="mt-0.5 accent-white"
           />
           <span>
             This order is what I want. (The list started in a random order, so
@@ -176,20 +183,20 @@ export default function BallotForm({
       )}
 
       {error && (
-        <p role="alert" className="text-sm font-semibold text-red-700">
+        <Callout tone="critical" alert>
           {error}
-        </p>
+        </Callout>
       )}
 
       <button
         type="submit"
         disabled={!canSubmit}
-        className="self-start rounded-sm border-2 border-black bg-black px-4 py-2 font-semibold text-white disabled:opacity-40"
+        className="self-start rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 disabled:opacity-40"
       >
         {isPending ? "Casting…" : "Cast ballot"}
       </button>
 
-      <p className="text-xs opacity-70">
+      <p className="text-xs text-mauve-400">
         A ballot cannot be changed once cast.
       </p>
     </form>

@@ -182,7 +182,7 @@ describe("registry completeness", () => {
     expect(mintedKeys()).toEqual(["SANDBOX_PROXY_TOKEN"]);
   });
 
-  it("pins the narrowed set to the dry run's two credentials and its base id", () => {
+  it("pins the narrowed set to the dry run's two credentials", () => {
     // Pinned for the same reason as the two lists above, and with the sharpest
     // consequence of the three: `narrowed` is what lets a key into
     // `preflight`, whose GitHub environment is reachable from `main`.
@@ -191,25 +191,26 @@ describe("registry completeness", () => {
     // that no type can check, so the reviewer of that change should have to
     // touch this line.
     //
-    // The three are the three SHAPES of the marker, which is why each is named
-    // here rather than counted: `DB_URL` is one key name carrying a weaker
-    // credential in preflight than in the deployed targets,
-    // `AIRTABLE_PLAN_PAT` is a key that is only ever the narrow one — the wider
-    // Airtable tokens are separate declarations — and `AIRTABLE_BASE_ID` is not
-    // a credential at all, a public identifier that names which base the plan
-    // PAT may read and confers no access to it. See `EnvMeta.narrowed`.
+    // Both are named here rather than counted, because each is a different
+    // SHAPE of the marker: `DB_URL` is one key name carrying a weaker
+    // credential in preflight than in the deployed targets, and
+    // `AIRTABLE_PLAN_PAT` is a key that is only ever the narrow one — the
+    // wider Airtable tokens are separate declarations. See `EnvMeta.narrowed`.
     //
-    // ⚠️ The third shape is the one to be suspicious of on a fourth key. The
-    // test is "would a preflight job fail without it", not "is it public" —
-    // most public keys are neither needed there nor safe to add by reflex.
-    expect(narrowedKeys()).toEqual([
-      "AIRTABLE_BASE_ID",
-      "AIRTABLE_PLAN_PAT",
-      "DB_URL",
-    ]);
+    // The third shape — a non-credential — no longer has a member. It was
+    // `AIRTABLE_BASE_ID`, a public identifier naming which base the plan PAT
+    // may read, and it is now a committed constant in packages/airtable
+    // rather than a routed value, so nothing has to opt it into preflight.
+    //
+    // ⚠️ That shape remains the one to be suspicious of if a fourth key ever
+    // claims it. The test is "would a preflight job fail without it", not "is
+    // it public" — most public keys are neither needed there nor safe to add
+    // by reflex, and the one that was here turned out not to need routing at
+    // all.
+    expect(narrowedKeys()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
   });
 
-  it("keeps the four Airtable tokens four separate declarations", () => {
+  it("keeps the three Airtable tokens three separate declarations", () => {
     // The property that makes `AIRTABLE_PLAN_PAT`'s `narrowed` claim checkable
     // at all. If the scopes were values of ONE key, "the plan token
     // cannot write" would be a fact about whichever value a target happened to
@@ -217,9 +218,13 @@ describe("registry completeness", () => {
     // here — rather than a property of the key.
     //
     // AIRTABLE_SYNC_PAT joined 2026-08-19, when the runtime data token moved
-    // out of Supabase Vault into the platform manifest — the fourth scope
-    // (records read/write), still its own key for the same reason as the
-    // other three.
+    // out of Supabase Vault into the platform manifest — the records
+    // read/write scope, still its own key for the same reason as the others.
+    //
+    // AIRTABLE_PAT then left: it carried `schema.bases:write` on an operator's
+    // laptop, and `deploy airtable-apply` does that write behind required
+    // reviewers. Removing it took the last shared member out of the two
+    // credential preference rows, so a schema change has exactly one path.
     //
     // Their routing is the other half, and it is what the split buys:
     const airtable = [...variables().keys()].filter((k) =>
@@ -228,13 +233,12 @@ describe("registry completeness", () => {
     expect(airtable.sort()).toEqual([
       "AIRTABLE_APPLY_PAT",
       "AIRTABLE_BASE_ID",
-      "AIRTABLE_PAT",
       "AIRTABLE_PLAN_PAT",
       "AIRTABLE_SYNC_PAT",
     ]);
 
-    // never-store: the operator's own token, refused every remote store.
-    expect(neverStoreKeys()).toContain("AIRTABLE_PAT");
+    // No Airtable key is never-store any more; the one that was is gone.
+    expect(neverStoreKeys()).not.toContain("AIRTABLE_PAT");
     // apply-tier: production-apply alone, behind required reviewers.
     expect(applyOnlyKeys()).toContain("AIRTABLE_APPLY_PAT");
     // narrowed AND plan-tier: reaches preflight (where the `main` dry run
@@ -414,7 +418,7 @@ describe("registry completeness", () => {
     }
     // Non-vacuous: an empty `neverStoreKeys()` would pass this trivially, and
     // an empty one is exactly the fail-open state discovery.ts guards against.
-    expect(neverStoreKeys()).toEqual(["AIRTABLE_PAT", "BWS_ACCESS_TOKEN"]);
+    expect(neverStoreKeys()).toEqual(["BWS_ACCESS_TOKEN"]);
   });
 
   it("declares every uncommented key in .env.example", async () => {

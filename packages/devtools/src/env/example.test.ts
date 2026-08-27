@@ -382,11 +382,7 @@ describe("preflight", () => {
 
   it("carries the narrowed keys and nothing else", () => {
     const { active } = target("preflight");
-    expect([...active.keys()].sort()).toEqual([
-      "AIRTABLE_BASE_ID",
-      "AIRTABLE_PLAN_PAT",
-      "DB_URL",
-    ]);
+    expect([...active.keys()].sort()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
   });
 
   it("carries none of the three credentials the finding named", () => {
@@ -430,9 +426,16 @@ describe("preflight", () => {
     // The Dog Pack rebrand (dogpack.dev) moved staging and production by two
     // (STUDY_GROUP_FINDER_URL + _CALLBACK), and AIRTABLE_SYNC_PAT — moved from
     // Supabase Vault into the platform manifest — by one more (2026-08-19).
-    expect(target("preflight").active.size).toBe(3);
-    expect(target("staging").active.size).toBe(48);
-    expect(target("production").active.size).toBe(51);
+    //
+    // Then ALL THREE dropped by one: `AIRTABLE_BASE_ID` became a committed
+    // constant with `scope: "default"`, which is pushed nowhere. Unlike every
+    // move above it, this one is a key leaving the routing entirely rather
+    // than changing which targets it reaches — so the three counts move
+    // together, and a change that moved only preflight would mean the marker
+    // came off without the scope change.
+    expect(target("preflight").active.size).toBe(2);
+    expect(target("staging").active.size).toBe(47);
+    expect(target("production").active.size).toBe(50);
   });
 
   it("says in the file itself why it is short, and that nothing is hand-set", () => {
@@ -445,20 +448,23 @@ describe("preflight", () => {
     // ⚠️ THE INSTRUCTION THAT HAD TO GO. Until 2026-08-17 this header said
     // AIRTABLE_BASE_ID was "NOT here" and told the reader to set a REPOSITORY
     // variable by hand — visible to every environment, and wider than the
-    // routing it stood in for. `narrowed` routes it now, so the instruction is
-    // not merely stale, it is wrong.
+    // routing it stood in for.
+    //
+    // The key is genuinely absent again now, and the distinction matters
+    // enough to keep both assertions: it is absent because the value is a
+    // committed constant, NOT because a human is expected to go and set it
+    // somewhere. The old instruction must never come back on the strength of
+    // "the key is missing from this file again".
     expect(text).not.toContain("AIRTABLE_BASE_ID is NOT here");
     expect(text).not.toMatch(/REPOSITORY variable/);
-    // It is in the BODY instead, as an assignable line a push reads. Both
-    // halves asserted, because "the header stopped saying it" and "the file
-    // carries it" are different claims and only the second is the fix.
-    expect(text).toMatch(/^AIRTABLE_BASE_ID=""$/m);
+    expect(text).not.toMatch(/^AIRTABLE_BASE_ID=/m);
+    expect(text).toMatch(/committed constant/);
     // POSITIVE CONTROL: the key that was always here still renders, so the
-    // line above is not a generator that started emitting everything.
+    // line above is an absence rather than a generator that stopped emitting.
     expect(text).toMatch(/^AIRTABLE_PLAN_PAT=""$/m);
     expect(text).not.toMatch(/^SUPABASE_JWT_SIGNING_KEY=/m);
     // And the count in the prose agrees with the body, plural and all.
-    expect(text).toContain("The 3 keys a");
+    expect(text).toContain("The 2 keys a");
   });
 });
 
@@ -535,8 +541,11 @@ describe("development", () => {
     const file = mentioned(development());
     // The never-store and minted keys are excluded because they get
     // documentation and NO assignable line anywhere — asserted separately
-    // below. `AIRTABLE_PAT` is both `scope: developer` and never-store, so it
-    // would otherwise be expected in two contradictory places.
+    // below. The overlap this guarded against was `AIRTABLE_PAT`, both
+    // `scope: developer` and never-store, which would otherwise have been
+    // expected in two contradictory places; it has since been removed, and the
+    // filter stays because the next key in that position should not have to
+    // rediscover the clash.
     const withoutLines = new Set([...mintedKeys(), ...neverStoreKeys()]);
     for (const key of [
       ...scoped("default"),

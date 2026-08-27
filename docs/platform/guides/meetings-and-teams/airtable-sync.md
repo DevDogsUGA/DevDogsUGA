@@ -14,15 +14,15 @@ The split exists because `attendance."meetingId"` needs something that keeps its
 
 Seven tables, and the direction is **per field, never per table**:
 
-| Table            | Officers author                          | The platform writes                                     |
-| ---------------- | ---------------------------------------- | ------------------------------------------------------- |
-| **Meetings**     | name, times, location, form link, summary, kind, RSVP | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status |
-| **Workshops**    | Meeting and Project _(links)_            | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status          |
-| **Competitions** | Branch slug, Workshop _(link)_, Judging starts, Requirements, Max team size | ⚙️ Platform ID, ⚙️ Teams, ⚙️ Sync status |
-| **Teams**        | Requirements met                         | ⚙️ Platform ID, ⚙️ Name, ⚙️ Members, ⚙️ Submission, ⚙️ Competed, ⚙️ Points |
-| **Members**      | Dues paid                                | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended |
-| **Projects**     | nothing — a platform-owned mirror        | ⚙️ Platform ID, ⚙️ Slug, Name                           |
-| **Attendance**   | the rows themselves: MyID, Workshop, Source | ⚙️ Platform ID, ⚙️ Sync status                        |
+| Table            | Officers author                                                             | The platform writes                                                        |
+| ---------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Meetings**     | name, times, location, form link, summary, kind, RSVP                       | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                              |
+| **Workshops**    | Meeting and Project _(links)_                                               | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                              |
+| **Competitions** | Branch slug, Workshop _(link)_, Judging starts, Requirements, Max team size | ⚙️ Platform ID, ⚙️ Teams, ⚙️ Sync status                                   |
+| **Teams**        | Requirements met                                                            | ⚙️ Platform ID, ⚙️ Name, ⚙️ Members, ⚙️ Submission, ⚙️ Competed, ⚙️ Points |
+| **Members**      | Dues paid                                                                   | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended                |
+| **Projects**     | nothing — a platform-owned mirror                                           | ⚙️ Platform ID, ⚙️ Slug, Name                                              |
+| **Attendance**   | the rows themselves: MyID, Workshop, Source                                 | ⚙️ Platform ID, ⚙️ Sync status                                             |
 
 One rule governs the right-hand column: **push only fields the platform owns exclusively, and never create a field both sides write.** Two writers have no conflict-resolution story, and last-writer-wins destroys work silently. Teams is where both directions meet — the grade is an input, the points an output — and the discipline is to resist the Airtable formula between them, which would put the scoring rule in two places that drift. The `⚙️` prefix warns officers off a field; the field editing permissions set by hand enforce it.
 
@@ -33,18 +33,18 @@ Attendance is the one table Airtable **creates** rows in — see [Attendance](/d
 
 Only officers have Airtable access, so the base is the officer console for anything it can hold — an admin screen not built is a screen not maintained. The line is not "officer-only work", it is **what Airtable can key a row to**.
 
-| Task                                                            | Where                          |
-| --------------------------------------------------------------- | ------------------------------ |
-| Create or edit a meeting or a workshop                          | Airtable                       |
-| Open a competition, by linking its workshop                     | Airtable                       |
-| Set `Judging starts`, the requirement count, the max team size  | Airtable                       |
-| Grade a team's requirements met                                 | Airtable                       |
-| Record dues                                                     | Airtable                       |
-| Correct an attendance row                                       | Platform — `setAttendance`     |
-| Record a team's entry when there is no PR                       | Platform — `setSubmission`     |
-| Freeze a roster early                                           | Platform — `setManualLock`     |
-| Give a team a named award                                       | Platform — `awardTeam`         |
-| Run a pass now                                                  | Either — `requestAirtableSync`, or the base's button |
+| Task                                                           | Where                                                |
+| -------------------------------------------------------------- | ---------------------------------------------------- |
+| Create or edit a meeting or a workshop                         | Airtable                                             |
+| Open a competition, by linking its workshop                    | Airtable                                             |
+| Set `Judging starts`, the requirement count, the max team size | Airtable                                             |
+| Grade a team's requirements met                                | Airtable                                             |
+| Record dues                                                    | Airtable                                             |
+| Correct an attendance row                                      | Platform — `setAttendance`                           |
+| Record a team's entry when there is no PR                      | Platform — `setSubmission`                           |
+| Freeze a roster early                                          | Platform — `setManualLock`                           |
+| Give a team a named award                                      | Platform — `awardTeam`                               |
+| Run a pass now                                                 | Either — `requestAirtableSync`, or the base's button |
 
 Everything on the platform side needs a member or team identity that Airtable holds only as a mirror, and each is a server action gated on the same permission as roster edits — except the sync trigger, which has its own, and the `winner` award, which nobody authors at all: the election tally writes it.
 
@@ -72,17 +72,21 @@ A record missing from the base is a **soft archive**: `deletedAt` is set, the ro
 
 A refusal is per **field**, not per record: fixing a project link and a max team size in one edit applies the second and complains about the first. The reason is written back where the edit was made, because otherwise a refused edit looks exactly like a sync that has not run yet.
 
-| Refused                                            | Because                                                                    |
-| -------------------------------------------------- | -------------------------------------------------------------------------- |
-| A workshop's Meeting or Project, once it has attendance | It re-attributes credit people already earned                    |
-| `Requirements` on a finalized competition          | It is the denominator of a score already published                    |
-| `Judging starts` at or before the opening workshop's meeting | Every roster would lock the moment the competition was created |
-| `Judging starts` moving once participation is frozen | Later reopens settled rosters; earlier locks people out of days they spent joining |
-| A Summary over 240 characters, or an RSVP link off the allowlisted host | It cannot go on a public page as written             |
+| Refused                                                                 | Because                                                                            |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| A workshop's Meeting or Project, once it has attendance                 | It re-attributes credit people already earned                                      |
+| `Requirements` on a finalized competition                               | It is the denominator of a score already published                                 |
+| `Judging starts` at or before the opening workshop's meeting            | Every roster would lock the moment the competition was created                     |
+| `Judging starts` moving once participation is frozen                    | Later reopens settled rosters; earlier locks people out of days they spent joining |
+| A Summary over 240 characters, or an RSVP link off the allowlisted host | It cannot go on a public page as written                                           |
 
 The first four protect **history**. The last is a different kind — nothing is at risk, the value simply cannot be published — so the refused field is dropped from the write rather than blanked, and whatever was already up stays up until the replacement fits.
 
 A workshop with **no** attendance is still fully editable, and a null incoming value is never a change: officers fill fields one at a time, and a pass landing between two keystrokes must not complain about a row that will be complete shortly.
+
+A meeting below the required shape — `name`, `startsAt`, `endsAt`, and the end after the start — is skipped rather than refused, and writes a **state** into `⚙️ Sync status` saying which field it is waiting on. That is not a complaint and is worded not to read as one; it exists because the silence was indistinguishable from a sync that had never run, which is precisely the question the column is there to answer. It clears itself on the pass after the row is whole.
+
+Workshops and competitions have the same silent branch and deliberately keep it: an unresolvable link there usually means the linked _meeting_ was incomplete, which now carries its own message — saying it twice would point the officer at the wrong row.
 
 ## Why it's like this
 
@@ -113,6 +117,8 @@ One pass is seven list calls plus a schema read, and the pushes on top of whatev
 
 `AIRTABLE_SYNC_PAT`, from the environment. It was moved out of Supabase Vault — where it lived as `airtable_pat` — on 2026-08-19, which bought one storage mechanism instead of two, made the copy on the Worker visible to `env audit`, and put the token on the same Bitwarden → GitHub → Worker path as every other secret.
 
-What that traded away is worth knowing before somebody needs it in a hurry: an officer can no longer rotate the token from the console without a deploy. Rotation is Bitwarden, then `env push`, then the next deploy's secrets file. A base the platform has no token for is not an error state — the pass returns `not_configured` and does nothing, because the platform has to boot and run without Airtable.
+What that traded away is worth knowing before somebody needs it in a hurry: an officer can no longer rotate the token from the console without a deploy. Rotation is Bitwarden, then `env push`, then the next deploy's secrets file. A base the platform has no token for still does not fail a boot — the pass returns `not_configured` and touches nothing, because the platform has to run without Airtable. It is no longer _silent_, though: a **scheduled** pass in that state records `not_configured` on the state row the console reads and alerts Discord once, on the transition, exactly as a drifted base does.
+
+That distinction only became available when the base id became a committed constant. Before it, "no token" and "nobody has configured this yet" were indistinguishable — an unset base id looked like a fresh clone — so the branch stayed quiet to avoid claiming a base had been contacted when none had. Now the token is the only thing that can be missing, and a cron finding none is a misconfiguration. Manual runs are exempt: `requestAirtableSync` returns the reason to the console on screen, and alerting there would fire on a button press.
 
 </details>

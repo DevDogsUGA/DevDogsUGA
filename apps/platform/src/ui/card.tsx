@@ -1,4 +1,8 @@
-import type { ComponentPropsWithoutRef, PropsWithChildren } from "react";
+import type {
+  ComponentPropsWithoutRef,
+  PropsWithChildren,
+  ReactNode,
+} from "react";
 
 function Root({
   children,
@@ -16,13 +20,29 @@ function Root({
   );
 }
 
-function Header({ title, children }: PropsWithChildren<{ title: string }>) {
+/**
+ * A card's title, and the `h2` under the page's `h1`.
+ *
+ * `description` exists because the alternative was passing a `<p>` as the
+ * action child, which put a summary line into a flex row built for a title and
+ * a button — the audit log did exactly that. Actions still go in `children`.
+ */
+function Header({
+  title,
+  description,
+  children,
+}: PropsWithChildren<{ title: string; description?: ReactNode }>) {
   return (
-    <div className="flex items-center justify-between gap-4 py-2">
-      <span className="text-xs font-extrabold tracking-widest text-mauve-500 uppercase">
-        {title}
-      </span>
-      {children}
+    <div className="flex flex-col gap-1 py-2">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-xs font-extrabold tracking-widest text-mauve-500 uppercase">
+          {title}
+        </h2>
+        {children}
+      </div>
+      {description && (
+        <p className="max-w-prose text-sm text-mauve-400">{description}</p>
+      )}
     </div>
   );
 }

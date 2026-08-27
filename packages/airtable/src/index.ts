@@ -53,6 +53,7 @@ export {
 
 export {
   registry,
+  BASE_ID,
   isPlaceholder,
   MEETING_BUILDING_CHOICES,
   MEETING_KIND_CHOICES,

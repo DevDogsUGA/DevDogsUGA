@@ -1,11 +1,11 @@
 import { count, desc, eq, sql } from "drizzle-orm";
 import { cache } from "react";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import {
   canUserManageSuspensions,
   canUserModerate,
 } from "~/server/actions/permissions";
-import { expectSession } from "~/server/auth";
+import { requirePermission } from "~/server/auth/require";
 import { db } from "~/server/db";
 import {
   apps,
@@ -32,20 +32,15 @@ export type ReportListEntry = {
  *
  * Scoped by `canModerate` alone. Moderation is centralised, so there is no
  * per-app grant to intersect with and a moderator sees every app's reports.
+ *
+ * The gate is enforced here rather than reported back as a flag. Returning an
+ * empty queue plus `canModerate: false` and leaving the page to redirect meant
+ * the one loader in the tree whose answer the caller had to check before
+ * trusting it — and a second caller that forgot would have rendered an empty
+ * dashboard to somebody with no business seeing one.
  */
 export const getModerationPageData = cache(async () => {
-  const userId = await expectSession().catch(() => redirect("/auth"));
-  const canModerate = await canUserModerate(userId);
-
-  if (!canModerate) {
-    return {
-      userId,
-      canModerate,
-      openReports: [] as ReportListEntry[],
-      resolvedReports: [] as ReportListEntry[],
-      appNames: {},
-    };
-  }
+  const userId = await requirePermission(canUserModerate);
 
   const corroborationSq = db
     .select({
@@ -97,7 +92,6 @@ export const getModerationPageData = cache(async () => {
 
   return {
     userId,
-    canModerate,
     openReports: mapped.filter((r) => r.status === "open"),
     resolvedReports: mapped.filter((r) => r.status !== "open"),
     appNames,
@@ -105,9 +99,7 @@ export const getModerationPageData = cache(async () => {
 });
 
 export const getReportDetailData = cache(async (reportId: string) => {
-  const userId = await expectSession().catch(() => redirect("/auth"));
-
-  if (!(await canUserModerate(userId))) redirect("/");
+  await requirePermission(canUserModerate);
 
   const report = await db.query.reports.findFirst({
     where: { id: reportId },
@@ -199,9 +191,7 @@ async function isQuarantinable(
 }
 
 export const getUserModerationData = cache(async (targetUserId: string) => {
-  const callerUserId = await expectSession().catch(() => redirect("/auth"));
-
-  if (!(await canUserManageSuspensions(callerUserId))) redirect("/");
+  await requirePermission(canUserManageSuspensions);
 
   const { data: userData } =
     await supabaseAdmin.auth.admin.getUserById(targetUserId);
