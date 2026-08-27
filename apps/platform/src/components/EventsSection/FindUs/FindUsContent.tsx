@@ -3,6 +3,8 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { ArrowUpRightIcon } from "@phosphor-icons/react/ssr";
+import type { DialogTone } from "~/ui/dialog-shell";
+import { ACTION_DARK_CLS } from "../meetingView";
 import { BUILDING_CENTERS, VIEW, type BuildingKey } from "./campusMapMeta";
 import { BUILDING_NAME } from "./buildings";
 import FloorPlan, { ROOM_STEPS } from "./FloorPlan";
@@ -74,14 +76,36 @@ interface Props {
   building?: BuildingKey;
   /** The room inside it, as an officer typed it. */
   room?: string | null;
+  /** The plate the dialog is on. The drawings are the same on both — a map
+   *  is a map — only the chrome around them changes. */
+  tone?: DialogTone;
 }
+
+const TONES = {
+  light: {
+    tab: "rounded-sm border-2 border-black transition-[background-color,box-shadow]",
+    tabOn: "shadow-block-sm bg-rose-400 text-black",
+    tabOff: "bg-white text-mauve-600 hover:bg-rose-50",
+    prose: "text-mauve-600",
+    link: "hover:shadow-block-md transition-lift flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5",
+  },
+  dark: {
+    tab: "rounded-lg border transition-colors",
+    tabOn: "border-white bg-white text-black",
+    tabOff: "border-mauve-600 bg-mauve-800 text-white hover:border-white",
+    prose: "text-mauve-300",
+    link: ACTION_DARK_CLS,
+  },
+} satisfies Record<DialogTone, Record<string, string>>;
 
 /** The tabs and their panels — everything inside the dialog below its title. */
 export default function FindUsContent({
   building = "DLW",
   room = "124",
+  tone = "light",
 }: Props = {}) {
   const [tab, setTab] = useState<TabId>("building");
+  const t = TONES[tone];
   const urls = mapUrls(building);
   // One tab is not a tablist, it is a heading with extra steps — so when there
   // is no room-level drawing the whole control disappears rather than sitting
@@ -93,7 +117,9 @@ export default function FindUsContent({
       ? []
       : [{ id: "room" as const, label: `To Room ${planRoom}` }]),
   ];
-  const active = tabs.some((t) => t.id === tab) ? tab : "building";
+  const active = tabs.some((candidate) => candidate.id === tab)
+    ? tab
+    : "building";
 
   return (
     <>
@@ -102,21 +128,19 @@ export default function FindUsContent({
         aria-label="Directions"
         className={`flex gap-2 ${tabs.length > 1 ? "" : "hidden"}`}
       >
-        {tabs.map((t) => (
+        {tabs.map((entry) => (
           <button
-            key={t.id}
+            key={entry.id}
             role="tab"
-            id={`findus-tab-${t.id}`}
-            aria-selected={active === t.id}
-            aria-controls={`findus-panel-${t.id}`}
-            onClick={() => setTab(t.id)}
-            className={`rounded-sm border-2 border-black px-3 py-1.5 text-xs font-bold transition-[background-color,box-shadow] ${
-              active === t.id
-                ? "shadow-block-sm bg-rose-400 text-black"
-                : "bg-white text-mauve-600 hover:bg-rose-50"
+            id={`findus-tab-${entry.id}`}
+            aria-selected={active === entry.id}
+            aria-controls={`findus-panel-${entry.id}`}
+            onClick={() => setTab(entry.id)}
+            className={`px-3 py-1.5 text-xs font-bold ${t.tab} ${
+              active === entry.id ? t.tabOn : t.tabOff
             }`}
           >
-            {t.label}
+            {entry.label}
           </button>
         ))}
       </div>
@@ -134,11 +158,15 @@ export default function FindUsContent({
                 the map just places the building and the buttons below hand
                 off to a navigation app for the door-to-door part. */}
             <div className="flex flex-wrap gap-2">
-              <DirectionsLink href={urls.google}>Google Maps</DirectionsLink>
-              <DirectionsLink href={urls.apple}>Apple Maps</DirectionsLink>
+              <DirectionsLink href={urls.google} className={t.link}>
+                Google Maps
+              </DirectionsLink>
+              <DirectionsLink href={urls.apple} className={t.link}>
+                Apple Maps
+              </DirectionsLink>
             </div>
             {building === "DLW" ? (
-              <p className="text-sm/relaxed text-mauve-600">
+              <p className={`text-sm/relaxed ${t.prose}`}>
                 The DLW sits at the corner of E. Cloverhurst Ave and University
                 Court — just below the Hill dorms, across from O-House, and
                 downhill from the Tate Center. Driving? The Tate Deck is the
@@ -148,7 +176,7 @@ export default function FindUsContent({
               /* One sentence rather than the DLW's paragraph of landmarks.
                  Writing nine more of those is writing nine more things that
                  can go stale, and the map above already says where it is. */
-              <p className="text-sm/relaxed text-mauve-600">
+              <p className={`text-sm/relaxed ${t.prose}`}>
                 {room === null
                   ? `This meeting is in ${BUILDING_NAME[building]}, highlighted above.`
                   : `This meeting is in ${room}, ${BUILDING_NAME[building]} — highlighted above.`}
@@ -158,7 +186,7 @@ export default function FindUsContent({
         ) : (
           <>
             <FloorPlan />
-            <StepList steps={ROOM_STEPS} />
+            <StepList steps={ROOM_STEPS} className={t.prose} />
           </>
         )}
       </div>
@@ -175,7 +203,10 @@ export function MapPlaceholder() {
     <div
       aria-hidden
       style={{ aspectRatio: `${VIEW.w} / ${VIEW.h}` }}
-      className="w-full animate-pulse rounded-sm border-2 border-black bg-orange-50"
+      // Neutral on purpose: this renders inside the dynamic import, which has
+      // no tone to read, so it has to sit quietly on a white plate and a dark
+      // one alike.
+      className="w-full animate-pulse rounded-sm border-2 border-mauve-500/40 bg-mauve-500/20"
     />
   );
 }
@@ -198,11 +229,17 @@ export function FindUsSkeleton() {
   );
 }
 
-function StepList({ steps }: { steps: string[] }) {
+function StepList({
+  steps,
+  className,
+}: {
+  steps: string[];
+  className: string;
+}) {
   return (
     /* The list, not the drawing, is the accessible version of the route —
        both SVGs are aria-hidden so screen readers get one copy, not two. */
-    <ol className="flex flex-col gap-1.5 text-sm/relaxed text-mauve-600">
+    <ol className={`flex flex-col gap-1.5 text-sm/relaxed ${className}`}>
       {steps.map((step, i) => (
         <li key={step} className="flex items-start gap-2">
           <span aria-hidden className={STEP_CHIP_CLS}>
@@ -217,9 +254,11 @@ function StepList({ steps }: { steps: string[] }) {
 
 function DirectionsLink({
   href,
+  className,
   children,
 }: {
   href: string;
+  className: string;
   children: React.ReactNode;
 }) {
   return (
@@ -227,7 +266,7 @@ function DirectionsLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="hover:shadow-block-md transition-lift flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5"
+      className={className}
     >
       {children} <ArrowUpRightIcon />
     </a>

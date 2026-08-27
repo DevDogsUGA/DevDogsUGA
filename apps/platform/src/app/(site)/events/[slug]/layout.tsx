@@ -50,7 +50,15 @@ export default async function MeetingModalLayout({
   const meeting = await getMeetingBySlug(slug);
 
   return (
-    <RouteDialog header={<MeetingHeader meeting={meeting} />} closeTo="/events">
+    // `pair="primary"`: the Directions button in the body opens a nested
+    // dialog, and on a wide viewport the two sit side by side — see
+    // DialogShell for the choreography.
+    <RouteDialog
+      header={<MeetingHeader meeting={meeting} />}
+      closeTo="/events"
+      tone="dark"
+      pair="primary"
+    >
       {children}
     </RouteDialog>
   );
@@ -65,14 +73,14 @@ export default async function MeetingModalLayout({
 function MeetingHeader({ meeting }: { meeting: MeetingSummary | null }) {
   return (
     <div className="flex flex-col gap-2">
-      <DialogTitle className="font-display flex items-start gap-2 text-2xl leading-tight font-extrabold text-black">
+      <DialogTitle className="font-display flex items-start gap-2 text-2xl leading-tight font-extrabold text-white">
         <CalendarDotsIcon
-          className="mt-0.5 shrink-0 text-mauve-500"
+          className="mt-0.5 shrink-0 text-mauve-400"
           weight="fill"
         />
         {meeting?.name ?? "Meeting not found"}
       </DialogTitle>
-      <DialogDescription className="text-sm text-mauve-600">
+      <DialogDescription className="text-sm text-mauve-400">
         {meeting
           ? formatEventSpan(meeting.startsAt, meeting.endsAt)
           : "No meeting on the schedule matches this link."}
