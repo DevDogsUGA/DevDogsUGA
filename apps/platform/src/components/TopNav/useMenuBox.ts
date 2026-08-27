@@ -11,8 +11,20 @@ import {
 /** Where the open panel is and how big it is, in its container's coordinates. */
 export interface MenuBox {
   left: number;
+  /** Only meaningful for a centred tier; zero everywhere else. */
+  top: number;
   width: number;
   height: number;
+  /** From the panel's right edge to the container's, for anything that has to
+   * reach the edge of the window rather than the edge of the panel. */
+  rightGap: number;
+  /**
+   * The left edge of the row the open trigger sits in, in the same
+   * coordinates as `left`. A panel is often wider than its own group of
+   * controls, so anything that wants to cover "the trigger's end of the bar"
+   * has to stop here rather than at the panel's edge.
+   */
+  rowLeft: number;
 }
 
 interface Options {
@@ -32,6 +44,12 @@ interface Options {
   revision: number;
   /** Whether this tier positions itself. A right-anchored tier does not. */
   place?: boolean;
+  /**
+   * Centre the panel against its container's height rather than hanging it
+   * from the top — clamped, because a panel taller than what it is centred
+   * on would otherwise rise out of the top of it and into the navbar.
+   */
+  centre?: boolean;
   /** How close a placed panel may come to the container's edges. */
   margin?: number;
 }
@@ -69,6 +87,7 @@ export function useMenuBox({
   triggerSelector,
   revision,
   place = false,
+  centre = false,
   margin = 12,
 }: Options) {
   const [box, setBox] = useState<MenuBox | null>(null);
@@ -97,9 +116,13 @@ export function useMenuBox({
     const height = panel.offsetHeight;
 
     let left = 0;
+    let rowLeft = 0;
     if (place) {
       const rect = trigger.getBoundingClientRect();
       const containerLeft = container.getBoundingClientRect().left;
+      const row = trigger.closest("li");
+      rowLeft =
+        row === null ? 0 : row.getBoundingClientRect().left - containerLeft;
       // The trigger's own edge, never the panel's: "end" lines the panel's
       // right edge up with the trigger's right edge.
       const aligned =
@@ -113,18 +136,38 @@ export function useMenuBox({
       );
     }
 
+    // Centred against the container, but never above it. A sub-panel taller
+    // than the card it belongs to has no centred position that does not put
+    // its top edge inside the navbar, so past that point it hangs from the top
+    // and grows downward, which is the only direction with room in it.
+    const top = centre
+      ? Math.max(0, Math.round((container.offsetHeight - height) / 2))
+      : 0;
+
+    const next = {
+      left,
+      top,
+      width,
+      height,
+      rightGap: place ? container.clientWidth - left - width : 0,
+      rowLeft,
+    };
+
     const last = measured.current;
     if (
       last !== null &&
-      last.left === left &&
-      last.width === width &&
-      last.height === height
+      last.left === next.left &&
+      last.top === next.top &&
+      last.width === next.width &&
+      last.height === next.height &&
+      last.rightGap === next.rightGap &&
+      last.rowLeft === next.rowLeft
     ) {
       return;
     }
-    measured.current = { left, width, height };
-    setBox(measured.current);
-  }, [containerRef, triggerSelector, place, margin]);
+    measured.current = next;
+    setBox(next);
+  }, [containerRef, triggerSelector, place, centre, margin]);
 
   useLayoutEffect(() => {
     const wasOpen = previousValue.current !== "";

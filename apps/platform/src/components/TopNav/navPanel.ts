@@ -20,12 +20,30 @@
  * so a menu read left to right hands over horizontally and one read top to
  * bottom hands over vertically, each in the direction the reader is moving.
  */
-const PANEL = "absolute top-0 left-0";
+export const NAV_CONTENT = `absolute top-0 left-0 data-[motion=from-start]:animate-nav-content-in-left data-[motion=from-end]:animate-nav-content-in-right data-[motion=to-start]:animate-nav-content-out-left data-[motion=to-end]:animate-nav-content-out-right`;
 
-export const NAV_CONTENT = `${PANEL} data-[motion=from-start]:animate-nav-content-in-left data-[motion=from-end]:animate-nav-content-in-right data-[motion=to-start]:animate-nav-content-out-left data-[motion=to-end]:animate-nav-content-out-right`;
-
-/** The same hand-over for a vertical tier, where the reader moves up and down. */
-export const NAV_SUB_CONTENT = `${PANEL} data-[motion=from-start]:animate-nav-content-in-up data-[motion=from-end]:animate-nav-content-in-down data-[motion=to-start]:animate-nav-content-out-up data-[motion=to-end]:animate-nav-content-out-down`;
+/**
+ * The same hand-over one tier down, where the reader moves up and down instead
+ * of left and right — and where the panel hangs off the edge it is anchored
+ * by, rather than the edge that moves.
+ *
+ * A sub-panel's viewport is pinned by its RIGHT edge, against the card, and
+ * resizes by moving its left edge. A panel pinned to the left edge therefore
+ * rode that resize: switching from the wide Console panel to the narrow
+ * Competitions one dropped the new panel in at the old one's left edge and
+ * slid it 256px right, which is a card flying across the screen to say that a
+ * box behind it got smaller. Pinned right, it arrives where it belongs and the
+ * only thing that moves is the size.
+ *
+ * `right-2` rather than `right-0` because the viewport carries the gap to the
+ * card as padding, and an absolutely positioned box measures its offsets from
+ * the padding box's edge — which is outside the padding, not inside it.
+ *
+ * `inset-y-0 my-auto` centres it without a transform. Centring with one would
+ * be shorter, but `translate` is what the hand-over animations move, and they
+ * would overwrite it the moment either played.
+ */
+export const NAV_SUB_CONTENT = `absolute inset-y-0 right-2 my-auto h-fit data-[motion=from-start]:animate-nav-content-in-up data-[motion=from-end]:animate-nav-content-in-down data-[motion=to-start]:animate-nav-content-out-up data-[motion=to-end]:animate-nav-content-out-down`;
 
 /**
  * The arrow tying a panel to the trigger it belongs to.
@@ -61,9 +79,16 @@ export const NAV_SUB_ARROW = `${ARROW} -translate-x-1/2 border-t border-r`;
  *
  * No height, so it takes part in none of the bar's layout: it is a line to
  * hang the arrow off, and the arrow is pulled back onto it by half itself.
+ *
+ * It arrives and leaves on an animation rather than a transition, and that is
+ * the whole point of it. Radix keeps the indicator mounted only while an
+ * animation is running on it; a transition to zero opacity is not one, so it
+ * was being torn out of the DOM the instant the menu closed, while the panel
+ * was still a hundred and forty milliseconds from finishing its fold. The
+ * arrow left, and then the panel it was pointing at left.
  */
 export const NAV_ARROW_TRACK =
-  "top-full mt-2 flex h-0 justify-center transition-[transform,width] duration-200 ease-out data-[state=hidden]:opacity-0";
+  "top-full mt-2 flex h-0 justify-center transition-[transform,width] duration-200 ease-out data-[state=visible]:animate-nav-arrow-in data-[state=hidden]:animate-nav-arrow-out";
 
 /**
  * The tier-2 arrow's track, which is the same idea rotated: a vertical tier
@@ -72,4 +97,4 @@ export const NAV_ARROW_TRACK =
  * edge — the card's two-pixel border plus the gap the panel keeps from it.
  */
 export const NAV_SUB_ARROW_TRACK =
-  "left-0 -ml-2.5 flex w-0 flex-col justify-center transition-[transform,height] duration-200 ease-out data-[state=hidden]:opacity-0";
+  "left-0 -ml-2.5 flex w-0 flex-col justify-center transition-[transform,height] duration-200 ease-out data-[state=visible]:animate-nav-arrow-in data-[state=hidden]:animate-nav-arrow-out";

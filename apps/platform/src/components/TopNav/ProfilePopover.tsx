@@ -91,6 +91,7 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
     value: subValue,
     triggerSelector: "[data-nav-sub-trigger]",
     revision: subRevision,
+    centre: true,
   });
 
   useEffect(() => () => window.clearTimeout(closeTimer.current), []);
@@ -118,7 +119,9 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
           href="/account"
           value={PROFILE_MENU}
           align="end"
-          className="flex shrink-0 items-center rounded-full text-3xl/0 transition-opacity hover:opacity-85"
+          // Above the band below, or the band would cover the avatar itself
+          // and swallow the second click that follows the link.
+          className="z-10 flex shrink-0 items-center rounded-full text-3xl/0 transition-opacity hover:opacity-85"
         >
           {/* The link's accessible name. Radix puts `aria-expanded` alongside
               it, so a screen reader gets both what it goes to and that it also
@@ -140,6 +143,40 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
           data-slot="nav-content"
           className={NAV_CONTENT}
         >
+          {/* The bar's right-hand end, held open.
+
+              An avatar is a thirty-pixel target in a sixty-four-pixel bar, and
+              the panel it opens hangs a long way below and to the left of it.
+              Every path from one to the other crosses somewhere that is
+              neither, and the close timer does not care why the pointer is
+              where it is. So while the menu is open, the whole right end of
+              the bar counts as part of it.
+
+              This works by being inside the Content, and therefore inside the
+              viewport: pointerenter fires on an element when the pointer
+              enters any of its descendants, and Radix cancels its close timer
+              on the viewport's. A plain div rather than a pseudo-element on
+              the trigger, which would have been fewer lines but would have
+              made the whole band a link to /account.
+
+              The controls that live in that band opt back out by painting
+              above it, so hovering one of them is hovering it and not this,
+              and the menu closes as it should. It spans the cluster the avatar
+              belongs to, out to the window's edge; both bounds are measured
+              and published by the shell, because both depend on the
+              breakpoint. Guessing the right one either leaves a live strip
+              uncovered or pushes the page wider than the window, and guessing
+              the left one puts a transparent sheet over the navigation links
+              at exactly the width where the card is wider than the cluster. */}
+          <div
+            aria-hidden
+            style={{
+              left: "var(--nav-band-left, 0px)",
+              right: "calc(-1 * var(--nav-right-gap, 0px))",
+            }}
+            className="absolute bottom-full h-18"
+          />
+
           <NavigationMenu.Sub
             ref={subRef}
             orientation="vertical"
@@ -216,10 +253,20 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
               <span className={NAV_SUB_ARROW} />
             </NavigationMenu.Indicator>
 
-            {/* Out of flow, off the card's left edge. In flow it was measured
-                as part of this panel, so opening a sub-menu grew the panel and
-                the viewport above resized and slid to match — the card visibly
-                moved when nothing about the card had changed.
+            {/* Out of flow, off the card's left edge, and centred against it.
+                In flow it was measured as part of this panel, so opening a
+                sub-menu grew the panel and the viewport above resized and slid
+                to match — the card visibly moved when nothing about the card
+                had changed.
+
+                Centred rather than aligned to the card's top: the two
+                sub-panels are different heights, and hung from the top they
+                grow downward off a fixed corner, which reads as the panel
+                being extended rather than exchanged. The offset is measured
+                rather than done with auto margins or a translate — a margin
+                would happily centre a panel taller than the card by giving it
+                a negative one, which puts its top edge inside the navbar, and
+                a translate is what the hand-over animations move.
 
                 After the card in the DOM, so the sub-panel paints over the
                 arrow and hides the half of it that is not a chevron. And
@@ -236,9 +283,13 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
               style={
                 box === null
                   ? { visibility: "hidden" }
-                  : { width: `${box.width}px`, height: `${box.height}px` }
+                  : {
+                      top: `${box.top}px`,
+                      width: `${box.width}px`,
+                      height: `${box.height}px`,
+                    }
               }
-              className="data-[state=closed]:animate-nav-sub-fold-out data-[state=open]:animate-nav-sub-fold-in absolute top-0 right-full box-content origin-right pr-2 transition-none data-[travelling]:transition-[width,height] data-[travelling]:duration-200 data-[travelling]:ease-out"
+              className="data-[state=closed]:animate-nav-sub-fold-out data-[state=open]:animate-nav-sub-fold-in absolute right-full box-content origin-right pr-2 transition-none data-[travelling]:transition-[top,width,height] data-[travelling]:duration-200 data-[travelling]:ease-out"
             />
           </NavigationMenu.Sub>
         </NavigationMenu.Content>

@@ -69,12 +69,13 @@ export function useNavPanelRef() {
  * Two smaller things this owns. The arrow is a Radix Indicator, which is
  * portalled into a track spanning the list and told which trigger is active,
  * so it needs no measuring of its own and moves on the same 200ms the panel
- * travels on. And the viewport's padding is a hover bridge: the panel sits
- * clear of the bar, and a gap you can lose the menu in by crossing slowly is
- * a gap the pointer should never actually leave. Padding rather than a margin
- * puts that space inside the viewport's own box, and Radix cancels its close
- * timer on the viewport's pointerenter, so crossing it keeps the menu open.
- * The trigger covers the other half of the same gap — see NavMenuTrigger.
+ * travels on. And the viewport grows a lip above itself: the panel sits clear
+ * of the bar, and a gap you can lose the menu in by crossing slowly is a gap
+ * the pointer should never actually leave. Radix cancels its close timer on
+ * the viewport's pointerenter, so a lip that is part of the viewport's own box
+ * makes that gap crossable. The trigger covers the other half of it, and the
+ * profile menu covers the whole end of the bar — see NavMenuTrigger and the
+ * band in ProfilePopover.
  */
 export default function NavShell({ children }: { children: ReactNode }) {
   const [value, setValue] = useState("");
@@ -131,6 +132,22 @@ export default function NavShell({ children }: { children: ReactNode }) {
             style={{
               left: box === null ? 0 : `${box.left}px`,
               visibility: box === null ? "hidden" : undefined,
+              // Published for anything inside a panel that needs to reach the
+              // window's edge rather than the panel's — the profile menu's
+              // hover band. The distance varies with the breakpoint's gutter
+              // and with what happens to sit right of the trigger, so it is
+              // measured rather than assumed.
+              ["--nav-right-gap" as string]:
+                box === null ? "0px" : `${box.rightGap}px`,
+              // And where that band must stop on the way in. A panel is wider
+              // than the group of controls it opens from, so a band running
+              // the panel's full width reaches back past them and over the
+              // navigation links, which are triggers of their own and would
+              // stop responding to the pointer entirely.
+              ["--nav-band-left" as string]:
+                box === null
+                  ? "0px"
+                  : `${Math.max(0, box.rowLeft - box.left)}px`,
             }}
             className="absolute top-2 transition-none data-[travelling]:transition-[left] data-[travelling]:duration-200 data-[travelling]:ease-out"
           >
