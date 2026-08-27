@@ -25,8 +25,12 @@ import { cn } from "~/lib/cn";
 interface ToneClasses {
   /** The card itself. */
   card: string;
-  /** The disc behind the megaphone. */
-  dot: string;
+  /**
+   * The badge pinned to the megaphone's corner: fill, plus a ring in the
+   * card's own colour so it separates from the icon's strokes the way the
+   * avatar's badge separates from the avatar.
+   */
+  badge: string;
   /** The tab that carries the eyebrow, notched onto the card's top edge. */
   chip: string;
   /** The tab under the cursor. One step lighter — it is a close button. */
@@ -53,14 +57,14 @@ interface ToneClasses {
 const TONES: Record<AnnouncementTone, ToneClasses> = {
   urgent: {
     card: "bg-amber-300",
-    dot: "bg-rose-600/50",
+    badge: "bg-rose-600 ring-amber-300",
     chip: "bg-rose-600 text-white",
     chipHover: "hover:bg-rose-500",
     blockShadow: "shadow-rose-600",
   },
   info: {
     card: "bg-sky-300",
-    dot: "bg-sky-700/40",
+    badge: "bg-sky-800 ring-sky-300",
     chip: "bg-sky-800 text-white",
     chipHover: "hover:bg-sky-700",
     blockShadow: "shadow-sky-800",
@@ -294,42 +298,28 @@ export default function AnnouncementBanner() {
               the same reason. There is nothing here for a merge to resolve
               anyway — no caller passes a className in. */}
           <div
-            className={`shadow-block-outlined-xl relative isolate flex flex-col gap-2.5 overflow-hidden rounded-lg border-2 border-black px-4 py-3 text-black sm:flex-row sm:items-center sm:gap-4 ${toneClasses.card} ${toneClasses.blockShadow}`}
+            className={`shadow-block-outlined-xl flex flex-col gap-2.5 rounded-lg border-2 border-black px-4 py-3 text-black sm:flex-row sm:items-center sm:gap-4 ${toneClasses.card} ${toneClasses.blockShadow}`}
           >
-            {/* The site's dot texture, dialled down so it reads as paper grain
-              rather than as a second pattern competing with the copy. */}
-            <span
-              aria-hidden
-              className="bg-dot-grid-dense pointer-events-none absolute inset-0 -z-10 opacity-[0.07]"
-            />
-
             <div className="flex min-w-0 flex-1 items-center gap-3">
-              <span className="relative flex size-7 shrink-0 items-center justify-center">
-                {/* Still, not `animate-ping`. The disc is only 54px across and
-                  would cost nothing on its own, but it sits in a fixed banner
-                  right beside the scrim's `backdrop-filter`, and repainting it
-                  every frame forces that 1440x144 surface to re-filter behind
-                  it: the banner measured 19.5 FPS with the ping running, and
-                  21.7 with the blur taken away instead. The glass is the half
-                  worth keeping, so the animation is the half that goes.
-                  Tailwind's `ping` keyframes open at full size and full
-                  opacity, so what is left is exactly its first frame.
+              <span className="relative flex shrink-0">
+                {/* Mirrored: Phosphor's megaphone points right, which aims it
+                  off the edge of the card. Flipped, it points into the copy. */}
+                <MegaphoneIcon weight="bold" className="size-6 -scale-x-100" />
+                {/* Unread-style badge, as over the user avatar in the nav.
 
-                  No `motion-reduce:hidden` with it: nothing moves any more,
-                  and keeping the class would leave the people who asked for
-                  less motion as the only ones with no dot at all. */}
+                  Do not animate it. It used to be a full disc behind the icon
+                  that pulsed with `animate-ping`, and the pulse had to go: the
+                  badge sits in a fixed banner right beside the scrim's
+                  `backdrop-filter`, and repainting it every frame forces that
+                  1440x144 surface to re-filter behind it. The banner measured
+                  19.5 FPS with the ping running and 21.7 with the blur taken
+                  away instead — the glass is the half worth keeping. */}
                 <span
                   aria-hidden
                   className={cn(
-                    "absolute inset-0 rounded-full",
-                    toneClasses.dot,
+                    "absolute -top-0.5 -right-0.5 size-2.5 rounded-full ring-2",
+                    toneClasses.badge,
                   )}
-                />
-                {/* Mirrored: Phosphor's megaphone points right, which aims it
-                  off the edge of the card. Flipped, it points into the copy. */}
-                <MegaphoneIcon
-                  weight="fill"
-                  className="relative size-5 shrink-0 -scale-x-100"
                 />
               </span>
 
@@ -355,7 +345,7 @@ export default function AnnouncementBanner() {
             >
               {action.label}
               {action.external ? (
-                <ArrowSquareOutIcon className="size-4" />
+                <ArrowSquareOutIcon weight="bold" className="size-4" />
               ) : (
                 <ArrowRightIcon weight="bold" className="size-4" />
               )}
@@ -386,18 +376,19 @@ export default function AnnouncementBanner() {
                eyebrow from the accessible name entirely. */
             aria-label={`${eyebrow} — dismiss announcement`}
             className={cn(
-              "group/tab absolute bottom-full left-4 flex translate-y-[2px] items-center gap-1.5 rounded-t-lg border-2 border-b-0 border-black px-2.5 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none",
+              "group/tab absolute bottom-full left-4 flex translate-y-[2px] items-center gap-2 rounded-t-lg border-2 border-b-0 border-black px-2.5 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none",
               toneClasses.chip,
               toneClasses.chipHover,
             )}
           >
-            {/* `fill` rather than `bold`: the label beside it is extrabold and
-                Phosphor's stroke weights top out lighter than that.
+            {/* Not `fill`: Phosphor draws X at fill weight as a rounded
+                square with the cross knocked out of it, which reads as a
+                button inside the button. `bold` is the bare cross.
                 aria-hidden because the button's label already says
                 "dismiss". */}
             <XIcon
               aria-hidden
-              weight="fill"
+              weight="bold"
               className="size-3 transition-transform group-hover/tab:scale-125"
             />
             <span className="font-display text-[0.7rem] font-extrabold tracking-widest uppercase">
