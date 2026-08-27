@@ -10,17 +10,17 @@ import NextMeetingStrip from "./NextMeetingStrip";
 import HowItWorks from "./HowItWorks";
 
 export const EVENTS_BLOBS: BlobDef[] = [
-  { cx: "25%", cy: "30%", rx: "55%", ry: "50%", fill: "#fecdd3" }, // rose
-  { cx: "80%", cy: "65%", rx: "50%", ry: "55%", fill: "#fb7185", opacity: 0.6 }, // rose
+  { cx: "25%", cy: "30%", rx: "55%", ry: "50%", fill: "#a5f3fc" }, // cyan
+  { cx: "80%", cy: "65%", rx: "50%", ry: "55%", fill: "#22d3ee", opacity: 0.6 }, // cyan
   {
     cx: "72%",
     cy: "10%",
     rx: "40%",
     ry: "35%",
-    fill: "#fed7aa",
+    fill: "#c4b5fd",
     opacity: 0.55,
-  }, // amber
-  { cx: "12%", cy: "78%", rx: "38%", ry: "32%", fill: "#fdba74", opacity: 0.5 }, // amber
+  }, // violet
+  { cx: "12%", cy: "78%", rx: "38%", ry: "32%", fill: "#a78bfa", opacity: 0.5 }, // violet
 ];
 
 const FOOTER_LINK_CLS =
@@ -70,7 +70,7 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
         <SectionBackground
           topEdge={topEdge}
           bottomEdge={bottomEdge}
-          base="#fff1f2"
+          base="#f0fdff"
           blobs={EVENTS_BLOBS}
         />
         <div className="relative z-10 mx-auto max-w-6xl space-y-10 px-6 py-8 md:px-12">

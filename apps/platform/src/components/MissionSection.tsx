@@ -10,10 +10,10 @@ const STAR_POINTS =
   "50,8 62.9,32.2 90,37 70.9,56.8 74.7,84 50,72 25.3,84 29.1,56.8 10,37 37.1,32.2";
 
 export const MISSION_BLOBS: BlobDef[] = [
-  { cx: "15%", cy: "25%", rx: "50%", ry: "55%", fill: "#a5f3fc" }, // cyan
-  { cx: "80%", cy: "75%", rx: "60%", ry: "50%", fill: "#22d3ee", opacity: 0.7 }, // cyan
-  { cx: "78%", cy: "12%", rx: "42%", ry: "38%", fill: "#c4b5fd", opacity: 0.5 }, // violet
-  { cx: "20%", cy: "80%", rx: "38%", ry: "32%", fill: "#a78bfa", opacity: 0.4 }, // violet
+  { cx: "15%", cy: "25%", rx: "50%", ry: "55%", fill: "#fecdd3" }, // rose
+  { cx: "80%", cy: "75%", rx: "60%", ry: "50%", fill: "#fb7185", opacity: 0.7 }, // rose
+  { cx: "78%", cy: "12%", rx: "42%", ry: "38%", fill: "#fed7aa", opacity: 0.5 }, // amber
+  { cx: "20%", cy: "80%", rx: "38%", ry: "32%", fill: "#fdba74", opacity: 0.4 }, // amber
 ];
 
 /* The star and the spark shower share this box, so the sparks track the star's
@@ -207,7 +207,7 @@ export default function MissionSection({ topEdge, bottomEdge }: Props) {
         <SectionBackground
           topEdge={topEdge}
           bottomEdge={bottomEdge}
-          base="#f0fdff"
+          base="#fff1f2"
           blobs={MISSION_BLOBS}
         />
         <div className="relative z-10 mx-auto flex max-w-6xl flex-col gap-10 px-6 py-14 md:flex-row md:gap-4 md:px-12 md:py-20">

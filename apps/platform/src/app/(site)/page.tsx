@@ -91,9 +91,9 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
           title="Mission"
           cta="Read the Mission"
           icon={CompassIcon}
-          textColor="text-cyan-950"
-          bg="bg-cyan-400"
-          darkBg="bg-cyan-600"
+          textColor="text-rose-950"
+          bg="bg-rose-400"
+          darkBg="bg-rose-600"
           blobs={MISSION_BLOBS}
           href="#mission"
           zIndexClass="z-30"
@@ -115,9 +115,9 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
           title="Events"
           cta="See the Schedule"
           icon={CalendarDotsIcon}
-          textColor="text-rose-950"
-          bg="bg-rose-400"
-          darkBg="bg-rose-600"
+          textColor="text-cyan-950"
+          bg="bg-cyan-400"
+          darkBg="bg-cyan-600"
           blobs={EVENTS_BLOBS}
           href="#events"
           zIndexClass="z-10"

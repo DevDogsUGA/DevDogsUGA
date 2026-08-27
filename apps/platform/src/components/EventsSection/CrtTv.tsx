@@ -158,10 +158,12 @@ const PICTURE = { x: 36, y: 98, width: 188, height: 158 } as const;
  * The club's colours, used as light rather than as decoration.
  *
  * Cyan is the body and mauve is the fittings — the bezel, the trim, the knobs.
- * The fittings used to be rose, but the set now sits on plates that are
- * already rose (the homepage) or already mauve (the console), and a rose
- * bezel on a rose plate was a television with no edge. Grey fittings are
- * also just what the real thing had. Amber is here exactly once, on the
+ * The fittings used to be rose, chosen back when the plates under the set were
+ * already rose or already mauve, and a rose bezel on a rose plate was a
+ * television with no edge. The homepage plate is cyan now, which puts the body
+ * on its own colour instead; what holds the set off its background either way
+ * is the black stroke around every face, not a contrast of hue. Grey fittings
+ * are also just what the real thing had. Amber is here exactly once, on the
  * power lamp, where a colour nothing else on the set is wearing is the whole
  * point.
  *
