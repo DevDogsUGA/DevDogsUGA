@@ -10,8 +10,10 @@ import ScheduleList from "./ScheduleList";
 import PastMeetings from "./PastMeetings";
 import HowItWorks from "./HowItWorks";
 
+/** `h-9` is the `text-3xl` line height, so the button centres on the h1's
+ *  line rather than hanging from the header's top edge. */
 const HEADER_LINK_CLS =
-  "flex items-center gap-2 rounded-lg border border-mauve-600 bg-mauve-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:border-white";
+  "flex h-9 items-center gap-2 rounded-lg border border-mauve-600 bg-mauve-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:border-white";
 
 export interface EventsPageProps {
   /** Every meeting in the loaded window, ascending. Usually three months. */

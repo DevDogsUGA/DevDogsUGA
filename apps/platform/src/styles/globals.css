@@ -51,6 +51,13 @@
   /* Duration through a variable so a hovered card can hurry the stripes
      without a second keyframe set: see CompetitionTimeline. */
   --animate-slants: slants var(--slants-duration, 0.8s) linear infinite;
+  /* A paired dialog's aside being dealt out from behind its primary, and
+     back; the primary's tilt as it slides over. See ui/dialog-shell. */
+  --animate-pair-aside-in: pair-aside-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1)
+    both;
+  --animate-pair-aside-out: pair-aside-out 260ms cubic-bezier(0.4, 0, 0.7, 1)
+    both;
+  --animate-pair-primary: pair-primary 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-spin-slow: spin 10s linear infinite;
   --animate-spin-slower: spin 20s linear infinite;
   --animate-modal-overlay-in: modal-overlay-in 180ms ease-out;
@@ -526,6 +533,57 @@
 
   to {
     background-position-x: 1rem;
+  }
+}
+
+/* The card shuffle. The aside starts a full panel to the left — under the
+   primary — tilted back like a card being slid out of a deck, swings past
+   level as it clears, and settles. `--pair-travel` is set by the panel;
+   `transform` is used rather than `translate` so Radix's centring
+   (`translate: -50% -50%`) is untouched. */
+@keyframes pair-aside-in {
+  0% {
+    transform: translateX(calc(-1 * var(--pair-travel, 37rem))) rotate(-6deg)
+      scale(0.94);
+    opacity: 0.4;
+  }
+
+  60% {
+    transform: translateX(calc(-0.1 * var(--pair-travel, 37rem))) rotate(2.5deg)
+      scale(1.02);
+    opacity: 1;
+  }
+
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes pair-aside-out {
+  from {
+    transform: none;
+    opacity: 1;
+  }
+
+  to {
+    transform: translateX(calc(-1 * var(--pair-travel, 37rem))) rotate(-6deg)
+      scale(0.94);
+    opacity: 0;
+  }
+}
+
+@keyframes pair-primary {
+  0% {
+    transform: none;
+  }
+
+  40% {
+    transform: rotate(-2deg);
+  }
+
+  100% {
+    transform: none;
   }
 }
 

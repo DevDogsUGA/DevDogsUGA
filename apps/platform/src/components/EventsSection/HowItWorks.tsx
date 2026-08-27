@@ -157,14 +157,15 @@ const BEATS: Beat[] = [
  * purpose: a filter follows the painted shape, caret included, where a box
  * shadow would stop at the rectangle and leave the point casting nothing.
  *
- * While any card is hovered the live one lifts and the others step back — a
- * little smaller, a little dimmer — so it reads as the channel that is on.
+ * While any card is hovered the live one leans in toward the strip and the
+ * others step back from it — a little smaller, a little dimmer — so it reads
+ * as the channel that is on. See `SIDE` for the direction.
  */
 const CARET_BASE =
   "lg:before:absolute lg:before:size-3.5 lg:before:-translate-x-1/2 lg:before:rotate-45 lg:before:transition-colors";
 
 const HOVER =
-  "transition-[opacity,scale,translate,border-color] duration-200 data-[active=true]:-translate-y-1 group-data-[hovering=true]/beats:data-[active=false]:scale-[0.97] group-data-[hovering=true]/beats:data-[active=false]:opacity-60";
+  "transition-[opacity,scale,translate,border-color] duration-200 group-data-[hovering=true]/beats:data-[active=false]:scale-[0.97] group-data-[hovering=true]/beats:data-[active=false]:opacity-60";
 
 const TONES = {
   light: {
@@ -178,9 +179,9 @@ const TONES = {
     // Two borders, 2px, at the top-left of the rotated square (pointing up)
     // or the bottom-right (pointing down), with that corner rounded.
     caretUp:
-      "lg:before:-top-2 lg:before:rounded-tl-sm lg:before:border-t-2 lg:before:border-l-2",
+      "lg:before:-top-2 lg:before:rounded-tl-[2px] lg:before:border-t-2 lg:before:border-l-2",
     caretDown:
-      "lg:before:-bottom-2 lg:before:rounded-br-sm lg:before:border-b-2 lg:before:border-r-2",
+      "lg:before:-bottom-2 lg:before:rounded-br-[2px] lg:before:border-b-2 lg:before:border-r-2",
   },
   dark: {
     heading: "text-white",
@@ -191,9 +192,9 @@ const TONES = {
     beatTitle: "font-display text-lg leading-tight font-extrabold text-white",
     beatBody: "text-sm/relaxed text-mauve-300",
     caretUp:
-      "lg:before:-top-[calc(0.4375rem+1px)] lg:before:rounded-tl-sm lg:before:border-t lg:before:border-l",
+      "lg:before:-top-[calc(0.4375rem+1px)] lg:before:rounded-tl-[2px] lg:before:border-t lg:before:border-l",
     caretDown:
-      "lg:before:-bottom-[calc(0.4375rem+1px)] lg:before:rounded-br-sm lg:before:border-b lg:before:border-r",
+      "lg:before:-bottom-[calc(0.4375rem+1px)] lg:before:rounded-br-[2px] lg:before:border-b lg:before:border-r",
   },
 } satisfies Record<Tone, Record<string, string>>;
 
@@ -211,9 +212,19 @@ const COL_START = {
   7: "lg:col-start-7",
 } as const;
 
+/**
+ * Placement, plus the direction of the hover: the live card moves TOWARD the
+ * strip and the others shrink AWAY from it, which is a matter of where each
+ * card's transform origin sits. A card above the strip scales about its top
+ * edge, so getting smaller pulls its bottom — the strip-facing edge — away;
+ * a card below scales about its bottom. Below `lg` every card is under the
+ * strip, so "toward" is up for all of them.
+ */
 const SIDE = {
-  above: "lg:row-start-1 lg:self-end",
-  below: "lg:row-start-3 lg:self-start",
+  above:
+    "lg:row-start-1 lg:self-end data-[active=true]:-translate-y-1 lg:origin-top lg:data-[active=true]:translate-y-1 lg:group-data-[hovering=true]/beats:data-[active=false]:-translate-y-0.5",
+  below:
+    "lg:row-start-3 lg:self-start data-[active=true]:-translate-y-1 lg:origin-bottom lg:group-data-[hovering=true]/beats:data-[active=false]:translate-y-0.5",
 } as const;
 
 export default function HowItWorks({
@@ -244,7 +255,7 @@ export default function HowItWorks({
     <section
       id={id}
       aria-labelledby={`${id}-heading`}
-      className="flex scroll-mt-28 flex-col gap-4"
+      className="flex scroll-mt-28 flex-col gap-6"
       // The console page reveals nothing on scroll — that is the marketing
       // pages' idiom — so the attribute only exists on the light plate.
       data-animate={tone === "light" ? "fade-up" : undefined}
@@ -259,17 +270,15 @@ export default function HowItWorks({
             Feature Sprints
           </h2>
           <p className={`text-base/relaxed text-balance ${t.intro}`}>
-            A competition is a week, not a night. Monday&rsquo;s workshop kicks
-            it off, teams build all week, and next Monday judges it — then kicks
-            off the next one. Some weeks are just a workshop.
+            One feature, one week, every team at once. Monday&rsquo;s workshop
+            teaches the tools and hands out the build; teams ship a pull request
+            by the next Monday; we demo, one merges, and that night&rsquo;s
+            workshop kicks off the next one.
           </p>
           <p className={`text-base/relaxed text-balance ${t.intro}`}>
-            Most weeks, every project grows one feature this way. The workshop
-            teaches the part of the stack that feature needs; the competition is
-            that same feature, built for real, by every team at once. Each
-            team&rsquo;s pull request is a candidate, judging picks one, and it
-            merges into the project — so by the next workshop, it&rsquo;s what
-            you&rsquo;re building on.
+            That&rsquo;s a sprint — and it&rsquo;s how every project on the
+            platform grows, one merged feature at a time. Some weeks are just
+            the workshop. Those count too.
           </p>
         </div>
         <div className="mx-auto w-full max-w-sm lg:col-span-3 lg:max-w-none">
@@ -286,7 +295,7 @@ export default function HowItWorks({
           (or over) the day it is about. The `<ol>` keeps its chronological
           DOM order and dissolves into the grid with `contents`; below `lg`
           it is a plain stack after the strip. */}
-      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-8 lg:gap-x-4 lg:gap-y-5">
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-8 lg:gap-x-4 lg:gap-y-3">
         <div className="relative py-5 lg:col-span-8 lg:row-start-2">
           {cutout && <Cutout />}
           {/* Inside a cutout the strip sits on the page's black, whatever

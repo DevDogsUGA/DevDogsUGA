@@ -16,6 +16,44 @@ import { VIEW, type BuildingKey } from "./campusMapMeta";
 import { BUILDING_LABEL } from "./buildings";
 
 /**
+ * The two plates the map is drawn on. Land, roads and the other buildings
+ * are the quiet layers and swap wholesale; the rose footprint and the cyan
+ * pin are the loud ones and do not — they are the answer, and the answer
+ * looks the same on both plates. Label halos follow the land colour, since
+ * a halo is the land showing through around the glyphs.
+ */
+const MAP_TONES = {
+  light: {
+    frame: "border-2 border-black",
+    land: "fill-orange-50",
+    minorRoad: "stroke-mauve-200",
+    majorCasing: "stroke-mauve-300",
+    majorSurface: "stroke-white",
+    footprint: "fill-white stroke-mauve-300",
+    label: "fill-mauve-700 stroke-white",
+    roadLabel: "fill-mauve-400 stroke-white",
+    compass: "fill-black stroke-white",
+    credit: "fill-mauve-500 stroke-white",
+    callout: "fill-black stroke-white",
+  },
+  dark: {
+    frame: "border border-mauve-700",
+    land: "fill-mauve-950",
+    minorRoad: "stroke-mauve-800",
+    majorCasing: "stroke-mauve-700",
+    majorSurface: "stroke-mauve-900",
+    footprint: "fill-mauve-900 stroke-mauve-700",
+    label: "fill-mauve-200 stroke-mauve-950",
+    roadLabel: "fill-mauve-400 stroke-mauve-950",
+    compass: "fill-white stroke-mauve-950",
+    credit: "fill-mauve-400 stroke-mauve-950",
+    callout: "fill-white stroke-mauve-950",
+  },
+} as const;
+
+export type MapTone = keyof typeof MAP_TONES;
+
+/**
  * Label anchors placed by eye against the generated footprint coordinates
  * (each building's centroid is printed when the generator runs) — nudged off
  * roads and off each other, so re-check after regenerating campusMapData.
@@ -63,6 +101,8 @@ const LABELS: { text: string; x: number; y: number; key?: BuildingKey }[] = [
 interface Props {
   /** Which building to highlight. Everything else is drawn as context. */
   building: BuildingKey;
+  /** The plate the map sits on; see MAP_TONES. */
+  tone?: MapTone;
 }
 
 type Pin = (typeof HIGHLIGHT_PINS)[string];
@@ -125,7 +165,7 @@ const overlaps = (a: Box, b: Box) =>
  * portrait rather than landscape: every building a meeting can name has to be
  * ON it, and that list spans 1.7 km of campus.
  */
-export default function CampusMap({ building }: Props) {
+export default function CampusMap({ building, tone = "light" }: Props) {
   const pin = HIGHLIGHT_PINS[building];
   const footprint = HIGHLIGHT_PATHS[building];
 
@@ -152,14 +192,15 @@ export default function CampusMap({ building }: Props) {
           },
         ];
   const clear = (box: Box) => !claimed.some((c) => overlaps(c, box));
+  const m = MAP_TONES[tone];
 
   return (
     <svg
       aria-hidden
       viewBox={`0 0 ${VIEW.w} ${VIEW.h}`}
-      className="w-full rounded-sm border-2 border-black"
+      className={`w-full rounded-sm ${m.frame}`}
     >
-      <rect width={VIEW.w} height={VIEW.h} className="fill-orange-50" />
+      <rect width={VIEW.w} height={VIEW.h} className={m.land} />
 
       {/* Roads: minor drives first and thin, then the cased streets — each
           tier's casing before its white surface, so surfaces run together at
@@ -168,20 +209,16 @@ export default function CampusMap({ building }: Props) {
           building, its pin, and the callout, so the one building that matters
           is the one that reads first. */}
       <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-        <path d={MINOR_ROADS} className="stroke-mauve-200" strokeWidth="1.5" />
-        <path d={MAJOR_ROADS} className="stroke-mauve-300" strokeWidth="9" />
-        <path d={MAJOR_ROADS} className="stroke-white" strokeWidth="6" />
+        <path d={MINOR_ROADS} className={m.minorRoad} strokeWidth="1.5" />
+        <path d={MAJOR_ROADS} className={m.majorCasing} strokeWidth="9" />
+        <path d={MAJOR_ROADS} className={m.majorSurface} strokeWidth="6" />
       </g>
 
       {/* Every footprint in the frame, then the highlighted one over the top.
           Every highlightable building is in FOOTPRINTS too, so the nine that
           are not the destination still draw as ordinary buildings rather than
           disappearing whenever the meeting is somewhere else. */}
-      <path
-        d={FOOTPRINTS}
-        className="fill-white stroke-mauve-300"
-        strokeWidth="1.3"
-      />
+      <path d={FOOTPRINTS} className={m.footprint} strokeWidth="1.3" />
       {footprint && (
         <path
           d={footprint}
@@ -202,7 +239,7 @@ export default function CampusMap({ building }: Props) {
         fontSize="9"
         strokeWidth="3"
         strokeLinejoin="round"
-        className="fill-mauve-700 stroke-white font-semibold [paint-order:stroke]"
+        className={`font-semibold [paint-order:stroke] ${m.label}`}
       >
         {LABELS.filter(
           (l) => l.key !== building && clear(labelBox(l.text, l.x, l.y, 9)),
@@ -213,7 +250,7 @@ export default function CampusMap({ building }: Props) {
         ))}
       </g>
 
-      {pin && <Callout building={building} pin={pin} />}
+      {pin && <Callout building={building} pin={pin} className={m.callout} />}
 
       {/* Street names, sitting on their own centrelines at their own angle:
           position and rotation are generated from the road geometry, not
@@ -231,7 +268,7 @@ export default function CampusMap({ building }: Props) {
         strokeLinejoin="round"
         textAnchor="middle"
         dominantBaseline="central"
-        className="fill-mauve-400 stroke-white font-semibold [paint-order:stroke]"
+        className={`font-semibold [paint-order:stroke] ${m.roadLabel}`}
       >
         {ROAD_LABELS.filter((r) =>
           clear(rotatedBox(r.text, r.x, r.y, 7, r.angle)),
@@ -255,7 +292,7 @@ export default function CampusMap({ building }: Props) {
         fontSize="13"
         strokeWidth="3"
         strokeLinejoin="round"
-        className="font-display fill-black stroke-white font-extrabold [paint-order:stroke]"
+        className={`font-display font-extrabold [paint-order:stroke] ${m.compass}`}
       >
         N ↑
       </text>
@@ -266,7 +303,7 @@ export default function CampusMap({ building }: Props) {
         fontSize="6.5"
         strokeWidth="2"
         strokeLinejoin="round"
-        className="fill-mauve-500 stroke-white [paint-order:stroke]"
+        className={`[paint-order:stroke] ${m.credit}`}
       >
         Map data © OpenStreetMap
       </text>
@@ -321,7 +358,16 @@ function placeCallout({ top, bottom, tipTop, tipBottom }: Pin) {
   return { d, tipY, cy, labelY };
 }
 
-function Callout({ building, pin }: { building: BuildingKey; pin: Pin }) {
+function Callout({
+  building,
+  pin,
+  className,
+}: {
+  building: BuildingKey;
+  pin: Pin;
+  /** The name's fill and halo, from the plate's tone. */
+  className: string;
+}) {
   const { x } = pin;
   const { d, tipY, cy, labelY } = placeCallout(pin);
   const reach = PIN_H - PIN_R;
@@ -364,7 +410,7 @@ function Callout({ building, pin }: { building: BuildingKey; pin: Pin }) {
         fontSize="13"
         strokeWidth="3"
         strokeLinejoin="round"
-        className="font-display fill-black stroke-white font-extrabold [paint-order:stroke]"
+        className={`font-display font-extrabold [paint-order:stroke] ${className}`}
       >
         {BUILDING_LABEL[building]}
       </text>

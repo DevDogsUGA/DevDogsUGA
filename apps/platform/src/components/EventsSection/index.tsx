@@ -48,8 +48,9 @@ interface Props {
  * is the section's; there is no separate "Events" heading and no general
  * paragraph about the club meeting, because the explainer says all of that
  * better and the section has one job after it, which is to hand the reader
- * to `/events`. That is the funnel: explainer, next meeting, "All events",
- * right-justified so it is where the eye leaves the section.
+ * to `/events`. That is the funnel: explainer, then an "Upcoming Events"
+ * heading over the next meeting and "All events", centred as the section's
+ * closing beat.
  *
  * The room is not named here. Where the club meets is a fact about a
  * meeting, and every meeting on `/events` says its own; the homepage only has
@@ -76,11 +77,17 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
         <div className="relative z-10 mx-auto max-w-6xl space-y-10 px-6 py-8 md:px-12">
           <HowItWorks cutout />
 
-          {/* The funnel: the one concrete date, then the door to all of them.
-              Right-justified, so the eye that just read the explainer left
-              to right lands on it on the way out of the section, and the
-              link under the card is the last thing before the next plate. */}
-          <div className="flex flex-col items-end gap-4" data-animate="fade-up">
+          {/* The funnel: its own heading, the one concrete date, then the
+              door to all of them — centred, so it reads as the section's
+              closing beat rather than a footnote to the cards above it, and
+              padded away from the strip so the two do not read as one grid. */}
+          <div
+            className="flex flex-col items-center gap-5 pt-8"
+            data-animate="fade-up"
+          >
+            <h2 className="font-display text-3xl font-extrabold text-black md:text-4xl">
+              Upcoming Events
+            </h2>
             <NextMeetingStrip meeting={await nextMeeting()} now={new Date()} />
             <LinkButton href="/events" className={FOOTER_LINK_CLS}>
               All events <ArrowRightIcon />

@@ -13,6 +13,15 @@ const TRIGGER_CLS =
   "hover:shadow-block-md transition-lift flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5";
 
 /**
+ * While the dialog it opens is open, the trigger steps out of sight: the
+ * meeting dialog beside (or beneath) the map has no second thing to offer.
+ * `invisible` rather than `hidden`, so the button keeps its place in the row
+ * and is back — and focusable — the instant the dialog reports closed, which
+ * is before Radix returns focus to it.
+ */
+const HIDE_WHILE_OPEN = "data-[state=open]:invisible";
+
+/**
  * Every way of showing intent short of clicking: a pointer arriving, a
  * keyboard focus, a finger landing. Each starts the map chunk downloading so
  * it is normally already here when the dialog opens. Calling it twice is free.
@@ -30,12 +39,10 @@ const INTENT_HANDLERS = {
 /**
  * A button that opens the dialog in place.
  *
- * `building` defaults to the DLW because the homepage's trigger is not about
- * any one meeting — it answers "where is this club", and the answer to that is
- * still the DLW. The meeting dialog renders it too, `tone="dark"` and as the
- * `aside` of a pair, so that on a wide screen the map opens beside the meeting
- * rather than on top of it; that is why `open` is held here rather than left
- * to Radix — an aside has to be able to say when it is open.
+ * The meeting dialog renders it `tone="dark"` and as the `aside` of a pair,
+ * so that on a wide screen the map opens beside the meeting rather than on
+ * top of it; that is why `open` is held here rather than left to Radix — an
+ * aside has to be able to say when it is open.
  */
 export default function FindUs({
   building = "DLW",
@@ -59,7 +66,8 @@ export default function FindUs({
       pair={pair}
       trigger={
         <button
-          className={tone === "dark" ? ACTION_DARK_CLS : TRIGGER_CLS}
+          type="button"
+          className={`${tone === "dark" ? ACTION_DARK_CLS : TRIGGER_CLS} ${HIDE_WHILE_OPEN}`}
           {...INTENT_HANDLERS}
         >
           <MapTrifoldIcon /> Directions
@@ -72,10 +80,10 @@ export default function FindUs({
 }
 
 /**
- * The events page's trigger: the same dialog, reached through a URL.
- * `/events/directions` is a route under the events layout, which keeps the
- * calendar mounted behind it, so following this swaps only the leaf — no
- * remount of the page underneath, and the URL is shareable.
+ * The same dialog, reached through a URL. `/events/directions` is a route
+ * under the events layout, which keeps the calendar mounted behind it, so
+ * following this swaps only the leaf — no remount of the page underneath, and
+ * the URL is shareable.
  *
  * {@link RouteDialogLink} carries the props that make that URL behave like a
  * dialog rather than a page — no scroll to the top, and the mark that lets
