@@ -6,9 +6,11 @@ import {
 } from "@phosphor-icons/react/ssr";
 import HeroSection from "~/components/HeroSection";
 import SectionMarquee, { MarqueeItem } from "~/components/SectionMarquee";
-import MissionSection from "~/components/MissionSection";
-import ProjectsSection from "~/components/ProjectsSection";
-import EventsSection from "~/components/EventsSection";
+import MissionSection, { MISSION_BLOBS } from "~/components/MissionSection";
+import ProjectsSection, {
+  PROJECTS_BLOBS,
+} from "~/components/ProjectsSection";
+import EventsSection, { EVENTS_BLOBS } from "~/components/EventsSection";
 import PartnersSection from "~/components/PartnersSection";
 import LeadershipSection from "~/components/LeadershipSection";
 import StatCard from "~/ui/stat-card";
@@ -87,6 +89,7 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
           textColor="text-rose-950"
           bg="bg-rose-400"
           darkBg="bg-rose-600"
+          blobs={MISSION_BLOBS}
           href="#mission"
           zIndexClass="z-30"
         />
@@ -98,6 +101,7 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
           textColor="text-cyan-950"
           bg="bg-cyan-400"
           darkBg="bg-cyan-600"
+          blobs={EVENTS_BLOBS}
           href="#events"
           zIndexClass="z-20"
         />
@@ -109,6 +113,7 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
           textColor="text-amber-950"
           bg="bg-amber-400"
           darkBg="bg-amber-600"
+          blobs={PROJECTS_BLOBS}
           href="#projects"
           zIndexClass="z-10"
         />

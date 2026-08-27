@@ -8,16 +8,20 @@ import {
   type RefObject,
 } from "react";
 
+import {
+  blobStops,
+  blurGeometry,
+  f,
+  LENGTH,
+  scaleLength,
+  type BlobDef,
+} from "./blob-gradient";
+
 export type EdgeType = "flat" | "bs" | "fs";
 
-export interface BlobDef {
-  cx: string;
-  cy: string;
-  rx: string;
-  ry: string;
-  fill: string;
-  opacity?: number;
-}
+// Re-exported so the sections that define blobs keep importing the type from
+// the component they hand them to.
+export type { BlobDef };
 
 interface Props {
   topEdge: EdgeType;
@@ -329,56 +333,18 @@ export function buildSectionPath(
 // ── internal helpers ─────────────────────────────────────────────────────────
 
 /**
- * Alpha profile of a hard-edged ellipse pushed through a Gaussian blur, which is
- * exactly the normal CDF: α(d) = Φ(-d/σ), where d is the distance outward from
- * the ellipse edge. Sampled here as [distance in standard deviations, alpha].
+ * One blob as its own parallax layer: the gradient from {@link blobStops},
+ * given a box that can travel without its edges showing.
  *
- * The first entry is where the blur is still effectively opaque and the last is
- * where the tail is close enough to nothing to stop drawing it.
- */
-const BLUR_TAIL: [sigmas: number, alpha: number][] = [
-  [-2, 1],
-  [-1, 0.84],
-  [-0.5, 0.69],
-  [0, 0.5],
-  [0.5, 0.31],
-  [1, 0.16],
-  [1.5, 0.07],
-  [2.2, 0],
-];
-
-const TAIL_REACH = BLUR_TAIL[BLUR_TAIL.length - 1]![0];
-
-/**
- * One standard deviation of the falloff, as a fraction of the blob's own radius,
- * at the default blurSd of 45.
- *
- * The old filter blurred in pixels, so its softness relative to a blob depended
- * on which axis you looked along: 45px is ~6% of a 700px rx but ~16% of a 275px
- * ry. A gradient's stops are in normalised ellipse space and cannot be
- * anisotropic, so this is the geometric middle of that range — the value that
- * looks like the old blur from both directions at once.
- */
-const SOFTNESS_AT_45 = 0.11;
-
-/**
- * Turns one blob into a radial-gradient background layer.
- *
- * The gradient is grown past the blob's stated radius so the whole falloff fits
- * inside it (a gradient paints nothing beyond its extent, so a tail that ran off
- * the end would be chopped into a visible ring). The stops are then placed so
- * α = 0.5 lands back on the original radius, which is where a blurred edge sits
- * — the blob keeps the size it has today, it just gains a soft rim.
+ * {@link blobsBackgroundImage} is the same blobs without any of that, for the
+ * cards, which don't move.
  */
 function blobLayerStyle(
   b: BlobDef,
   blurSd: number,
   index: number,
 ): CSSProperties {
-  const sigma = SOFTNESS_AT_45 * (blurSd / 45);
-  const grow = 1 + TAIL_REACH * sigma; // extent that fits the whole tail
-  const edge = 100 / grow; // the stated radius, as a % of that extent
-  const sd = (sigma / grow) * 100; // one σ, likewise
+  const { grow, edge, sd } = blurGeometry(blurSd);
 
   // This layer's own share of the parallax span — see `parallaxSpan`. Kept as
   // a fraction of one shared custom property rather than five of them, so a
@@ -386,12 +352,7 @@ function blobLayerStyle(
   const reach = Math.abs(PARALLAX_FACTORS[index % PARALLAX_FACTORS.length]!);
   const m = `calc(var(--bg-span, 0px) * ${reach})`;
 
-  const stops = [
-    `${b.fill} 0%`,
-    ...BLUR_TAIL.map(
-      ([k, a]) => `${withAlpha(b.fill, a)} ${f(edge + k * sd)}%`,
-    ),
-  ].join(", ");
+  const stops = blobStops(b.fill, edge, sd, 1);
 
   return {
     // ## Why the layer is taller than the section it fills
@@ -441,34 +402,6 @@ function blobLayerStyle(
     opacity: b.opacity ?? 0.65,
   };
 }
-
-// color-mix rather than parsing the hex, because BlobDef.fill is any CSS colour.
-// Mixing with `transparent` in sRGB is premultiplied, so this is the fill at the
-// given alpha with no shift toward grey.
-const withAlpha = (color: string, a: number) =>
-  a >= 1
-    ? color
-    : a <= 0
-      ? "transparent"
-      : `color-mix(in srgb, ${color} ${f(a * 100)}%, transparent)`;
-
-/**
- * Scales a CSS length, keeping its unit. Percentages resolve against the same
- * axis in a radial-gradient as they did on an SVG ellipse — width for rx/cx,
- * height for ry/cy — so a percentage blob needs no conversion, only this.
- *
- * Anything the regex can't read (calc(), var()) is passed through untouched: the
- * blob then keeps its stated extent and the soft rim falls just inside the
- * radius rather than straddling it.
- */
-function scaleLength(value: string, k: number): string {
-  const m = LENGTH.exec(value);
-  return m ? `${f(parseFloat(m[1]!) * k)}${m[2] ?? "px"}` : value;
-}
-
-// The unit group is optional rather than possibly-empty, so an absent unit
-// reads as undefined and both call sites can default it with `??`.
-const LENGTH = /^\s*(-?\d*\.?\d+)\s*([a-z%]+)?\s*$/i;
 
 /**
  * The same, for a length down the page — where the gradient image is taller
@@ -544,5 +477,3 @@ function buildPath(
   }
   return parts.join(" ") + " Z";
 }
-
-const f = (n: number) => Math.round(n * 10) / 10;

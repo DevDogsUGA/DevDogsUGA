@@ -9,7 +9,7 @@ import ProjectCard from "./ProjectCard";
 const OPEN_PROJECTS = PROJECTS.filter((p) => p.contributions === "open");
 const CLOSED_PROJECTS = PROJECTS.filter((p) => p.contributions === "closed");
 
-const PROJECTS_BLOBS: BlobDef[] = [
+export const PROJECTS_BLOBS: BlobDef[] = [
   { cx: "20%", cy: "30%", rx: "55%", ry: "50%", fill: "#a7f3d0" }, // emerald
   { cx: "78%", cy: "65%", rx: "50%", ry: "55%", fill: "#34d399", opacity: 0.6 }, // emerald
   { cx: "74%", cy: "12%", rx: "44%", ry: "36%", fill: "#a5b4fc", opacity: 0.5 }, // indigo

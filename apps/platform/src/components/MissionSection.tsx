@@ -9,7 +9,7 @@ import SectionBackground, {
 const STAR_POINTS =
   "50,8 62.9,32.2 90,37 70.9,56.8 74.7,84 50,72 25.3,84 29.1,56.8 10,37 37.1,32.2";
 
-const MISSION_BLOBS: BlobDef[] = [
+export const MISSION_BLOBS: BlobDef[] = [
   { cx: "15%", cy: "25%", rx: "50%", ry: "55%", fill: "#a5f3fc" }, // cyan
   { cx: "80%", cy: "75%", rx: "60%", ry: "50%", fill: "#22d3ee", opacity: 0.7 }, // cyan
   { cx: "78%", cy: "12%", rx: "42%", ry: "38%", fill: "#c4b5fd", opacity: 0.5 }, // violet

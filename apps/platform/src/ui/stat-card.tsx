@@ -1,6 +1,8 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
 
+import { blobsBackgroundImage, type BlobDef } from "./blob-gradient";
+
 // Both vertical edges of a card are the SAME zigzag, in phase, exactly
 // CHEVRON_DEPTH apart — which is what the -CHEVRON_DEPTH margin on the wrapper
 // below pays for: a card's right-hand teeth drop precisely into the next
@@ -66,6 +68,15 @@ const STAT_CLIP_INNER = chevronClip(BORDER_W);
 const RECEDE_ON_HOVER =
   "transition-opacity delay-0 group-hover:opacity-70 group-hover:delay-[450ms] motion-reduce:transition-none";
 
+/**
+ * How strongly the section's wash reads on the card.
+ *
+ * The blobs are drawn for a near-white section base and land here on a 400-level
+ * fill, so at full strength they wash it out rather than tint it. This is the
+ * texture's share of the card, the way `opacity-15` was the dot grid's.
+ */
+const BLOB_OPACITY = 0.45;
+
 interface Props {
   title: string;
   description: string;
@@ -83,6 +94,12 @@ interface Props {
   textColor: string;
   bg: string;
   darkBg: string;
+  /**
+   * The blobs of the section {@link href} points at — the same array that
+   * section hands `SectionBackground`, so the card cannot drift from the place
+   * it is a door to.
+   */
+  blobs: BlobDef[];
   href: string;
   /**
    * One literal Tailwind `z-*` class (e.g. `"z-30"`), descending left to
@@ -104,6 +121,7 @@ export default function StatCard({
   textColor,
   bg,
   darkBg,
+  blobs,
   href,
   zIndexClass,
 }: Props) {
@@ -130,13 +148,22 @@ export default function StatCard({
           className={`${bg} absolute inset-0`}
           style={{ clipPath: STAT_CLIP_INNER }}
         />
-        {/* Dots in the card's own accent, since `bg-dot-grid-dense` draws in
-            `currentColor`. Clipped to the fill rather than the outer shape so
-            the texture stops at the border instead of stippling it. */}
+        {/* The wash from the section this card opens, so the two read as one
+            place. Clipped to the fill rather than the outer shape, the same way
+            the dot grid it replaced was, so it stops at the border instead of
+            tinting it.
+
+            One element for the whole set rather than SectionBackground's layer
+            each: nothing here has a parallax rate to keep them apart, and this
+            strip renders its children six times. */}
         <div
           aria-hidden
-          className={`bg-dot-grid-dense absolute inset-0 opacity-15 ${textColor}`}
-          style={{ clipPath: STAT_CLIP_INNER }}
+          className="absolute inset-0"
+          style={{
+            clipPath: STAT_CLIP_INNER,
+            backgroundImage: blobsBackgroundImage(blobs),
+            opacity: BLOB_OPACITY,
+          }}
         />
         <div
           className={`relative z-10 flex flex-col items-center gap-1.5 px-5 py-6 text-center sm:gap-2.5 sm:px-7 sm:py-7 ${textColor}`}

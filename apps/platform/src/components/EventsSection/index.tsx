@@ -9,7 +9,7 @@ import type { MeetingInRange } from "~/server/loaders/meetings";
 import NextMeetingStrip from "./NextMeetingStrip";
 import HowItWorks from "./HowItWorks";
 
-const EVENTS_BLOBS: BlobDef[] = [
+export const EVENTS_BLOBS: BlobDef[] = [
   { cx: "25%", cy: "30%", rx: "55%", ry: "50%", fill: "#fecdd3" }, // rose
   { cx: "80%", cy: "65%", rx: "50%", ry: "55%", fill: "#fb7185", opacity: 0.6 }, // rose
   {
