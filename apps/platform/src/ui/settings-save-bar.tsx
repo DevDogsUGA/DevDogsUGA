@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { SpinnerGapIcon, WarningCircleIcon } from "@phosphor-icons/react/ssr";
 import { useSettingsForm } from "~/ui/settings-form";
@@ -71,6 +71,13 @@ function ShortcutHint() {
   );
 }
 
+/**
+ * The mount check below never updates after its first read, so there is nothing
+ * to subscribe to. Defined at module scope because useSyncExternalStore
+ * re-subscribes whenever this identity changes.
+ */
+const subscribeToNothing = () => () => undefined;
+
 const listFormatter = new Intl.ListFormat("en", {
   style: "long",
   type: "conjunction",
@@ -85,15 +92,25 @@ export default function SettingsSaveBar() {
   const cardRef = useRef<HTMLDivElement>(null);
 
   /**
-   * `document` does not exist while this renders on the server, so the target
-   * is picked up after mount and the bar renders nothing before then.
+   * Has this mounted on the client yet? `document` does not exist during the
+   * server render, so the portal cannot be created until it does, and the two
+   * renders have to agree or hydration mismatches.
    *
-   * Nothing is lost by that. The bar is only ever on screen once a field is
-   * dirty, and a field can only become dirty from a client interaction — so
-   * there was never any meaningful server markup here to give up.
+   * useSyncExternalStore is how React answers that without a `useState` +
+   * `useEffect` pair — a store that never changes, reading `false` on the
+   * server and `true` on the client. The pair would set state synchronously
+   * inside an effect, which lint rejects as a cascading render, and it is:
+   * every mount would render twice.
+   *
+   * Rendering nothing before mount costs nothing here. The bar is only on
+   * screen once a field is dirty, and a field only becomes dirty from a client
+   * interaction, so there was never server markup worth keeping.
    */
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
-  useEffect(() => setPortalTarget(document.body), []);
+  const mounted = useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  );
 
   /**
    * Answer a swallowed link click.
@@ -156,7 +173,7 @@ export default function SettingsSaveBar() {
     return () => clearTimeout(clear);
   }, [blockedAt, dirtyCount]);
 
-  if (!portalTarget) return null;
+  if (!mounted) return null;
 
   return createPortal(
     /* Kept mounted so it can animate both ways, and `inert` while hidden so a
@@ -269,6 +286,6 @@ export default function SettingsSaveBar() {
         </div>
       </div>
     </div>,
-    portalTarget,
+    document.body,
   );
 }
