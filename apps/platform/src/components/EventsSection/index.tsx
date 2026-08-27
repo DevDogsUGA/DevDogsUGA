@@ -47,10 +47,10 @@ interface Props {
  * it is the same component — but here it is the subject and there it is the
  * legend for the chips; the schedule lives there and only there.
  *
- * Nothing in here is boxed. The section used to stack a black strip, a rose
- * panel and three white cards inside it, on a site where the card is already
- * the answer to everything; now the next meeting is a ruled row and the
- * explainer is a heading, a timeline and a list, all straight on the plate.
+ * One box: the next meeting is a white card with the site's block shadow,
+ * with the way through to `/events` directly under it. The explainer is a
+ * heading, a television, a timeline and a row of day cards, straight on the
+ * plate — the section used to be three panels deep and is not going back.
  *
  * The room is not named here any more either. Where the club meets is a fact
  * about a meeting, and every meeting on `/events` says its own; the homepage
@@ -80,22 +80,22 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
               Events
             </h2>
             <p className="text-base/relaxed text-balance text-mauve-700">
-              The club meets every week of the semester, and the shape of a
-              night is always the same: a workshop teaches a feature area, a
-              week-long competition puts it into practice, and the following
-              meeting judges what got built. Turn up to any of it.
+              Every Monday of the semester. A workshop teaches something, a
+              week-long competition uses it, and next Monday judges it. Turn up
+              to any of it.
             </p>
           </div>
 
-          <NextMeetingStrip meeting={await nextMeeting()} now={new Date()} />
-
-          <HowItWorks />
-
-          <div className="flex justify-end">
+          <div className="flex flex-col items-start gap-4">
+            <NextMeetingStrip meeting={await nextMeeting()} now={new Date()} />
+            {/* Directly under the card, so it reads as the card's way
+                through to the rest rather than as the section's sign-off. */}
             <LinkButton href="/events" className={FOOTER_LINK_CLS}>
-              All Events <ArrowRightIcon />
+              All events <ArrowRightIcon />
             </LinkButton>
           </div>
+
+          <HowItWorks />
         </div>
       </section>
     </div>

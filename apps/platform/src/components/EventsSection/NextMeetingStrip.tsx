@@ -25,10 +25,10 @@ import { CHIP_CLS, segmentBadge } from "./meetingView";
  * as *evidence* rather than as the subject, one row deep, with a single way
  * through.
  *
- * A ruled row, not a card. It used to be a black box with a block shadow, and
- * the section it sits in was three boxes deep by the time the explainer's
- * cards were counted; the rules above and below are all the frame it needs to
- * read as a notice pinned to the section rather than as a fourth panel.
+ * A card — the site's white plate with a block shadow — and the only box in
+ * the section. It was briefly a ruled row, but a row on a plate full of
+ * headings read as another heading; the one fact the section has to prove
+ * deserves the one frame the section has.
  *
  * Like every band under `/events`, it never reads the clock — `now` arrives
  * from the caller, resolved once — and every zone-aware string goes through
@@ -54,7 +54,7 @@ const DAY_FMT = new Intl.DateTimeFormat("en-US", {
 });
 
 const ROW_CLS =
-  "flex flex-col gap-4 border-y-2 border-black py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6";
+  "shadow-block-lg flex w-full max-w-2xl flex-col gap-4 rounded-sm border-2 border-black bg-white px-5 py-5 shadow-black sm:flex-row sm:items-center sm:justify-between sm:gap-6 md:px-6";
 
 const EYEBROW_CLS =
   "font-display text-xs font-extrabold tracking-widest text-mauve-600 uppercase";
@@ -182,8 +182,8 @@ function NothingScheduled() {
           Nothing on the calendar yet
         </p>
         <p className="text-xs text-mauve-700">
-          The fall schedule goes up in August. The Involvement Network is where
-          RSVPs live, so it is the first place a new date shows up.
+          The fall schedule lands in August. New dates hit the Involvement
+          Network first.
         </p>
       </div>
 

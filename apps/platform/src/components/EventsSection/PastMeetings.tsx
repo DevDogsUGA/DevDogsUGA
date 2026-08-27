@@ -62,7 +62,7 @@ export default function PastMeetings({
         // Short, and no card around it. An empty archive is a fact about a new
         // semester, not a state worth building a panel for.
         <p className="text-sm text-mauve-400">
-          No meetings have happened yet this semester.
+          None yet this semester. Give it a Monday.
         </p>
       ) : (
         <>
