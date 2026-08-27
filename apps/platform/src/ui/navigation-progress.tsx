@@ -28,6 +28,15 @@ export default function NavigationProgress() {
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
+      // Someone ahead of us already cancelled this navigation, so there is no
+      // page load to report. This listener is on the bubble phase, so anything
+      // that ran in capture — the account page's unsaved-changes guard, say
+      // (see ~/ui/settings-form) — has already had its say by now.
+      //
+      // Without this the bar starts a load that will never finish: it only
+      // clears when `pathname` changes, and a cancelled click never changes it,
+      // so it creeps to 85% and sits there for the rest of the session.
+      if (e.defaultPrevented) return;
       if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
       const a = (e.target as Element).closest("a");
       if (!a?.getAttribute("href") || a.getAttribute("target")) return;
@@ -50,6 +59,7 @@ export default function NavigationProgress() {
 
   return (
     <div
+      data-slot="navigation-progress"
       className="pointer-events-none fixed top-0 right-0 left-0 z-[9999] h-[2px]"
       aria-hidden="true"
     >
