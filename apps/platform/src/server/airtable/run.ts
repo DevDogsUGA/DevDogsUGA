@@ -14,7 +14,7 @@ import { pullAttendance } from "./attendance";
 import { AirtableNotConfiguredError, getAirtableClient } from "./credentials";
 import {
   claimSyncLease,
-  recordSchemaRefusal,
+  recordRefusal,
   releaseSyncLease,
   type ClaimResult,
 } from "./lease";
@@ -80,9 +80,49 @@ export async function runAirtableSync(
     client = options.client ?? (await getAirtableClient());
   } catch (error) {
     if (error instanceof AirtableNotConfiguredError) {
-      // Not an error state. The platform has to boot and run without Airtable,
-      // so a base that does not exist yet is a pass that does nothing rather
-      // than a cron that fails every fifteen minutes.
+      // Still not a reason to fail a boot: the platform has to run without
+      // Airtable, and a checkout nobody has configured must not have a cron
+      // that goes red every fifteen minutes.
+      //
+      // But it stopped being a reason to say NOTHING. This branch used to
+      // return in silence, on the argument that an unconfigured install should
+      // not touch the state row at all -- otherwise `lastStatus` would read
+      // "ok" for a base that had never been contacted. That argument conflated
+      // two states it could not then tell apart, because an unset base id
+      // looked exactly like a fresh clone.
+      //
+      // It can tell them apart now. The base id is a committed constant, so
+      // the only thing left that can be missing is the token, and a SCHEDULED
+      // pass finding none is a misconfiguration rather than a fresh clone. The
+      // silence is what let this run 96 times a day for days with no record
+      // anywhere -- the exact shape of failure the schema refusal below was
+      // built to stop.
+      //
+      // Manual runs are exempt: `requestAirtableSync` hands this report
+      // straight back to the console, which says so on screen. Alerting there
+      // would fire on an officer's button press.
+      if (trigger === "cron") {
+        const { previous, persisted } = await recordRefusal("not_configured", [
+          "AIRTABLE_SYNC_PAT is not set on this worker.",
+        ]);
+
+        // Only the transition, for the same reason as `schema_invalid`: a
+        // missing credential is missing on every pass until somebody fixes it,
+        // and an alert 96 times a day is one people mute.
+        if (persisted && previous !== "not_configured") {
+          await postAlert(
+            "Airtable sync stopped: there is no sync token",
+            ["AIRTABLE_SYNC_PAT is unset on this worker."],
+            "Nothing is being read from or written to the base, and no data " +
+              "has been lost -- the pass refuses before it claims the lease. " +
+              "The token reaches the worker like every other secret, so " +
+              "rotating or restoring it is Bitwarden -> `env push` -> the " +
+              "next deploy. This will not be repeated until it is set and " +
+              "goes missing again.",
+          );
+        }
+      }
+
       return blank(started, "not_configured");
     }
     throw error;
@@ -113,7 +153,10 @@ export async function runAirtableSync(
     // nothing to Airtable -- this touches only the state row the console reads,
     // which until now showed the last *successful* pass with no sign that every
     // pass since had refused.
-    const { previous, persisted } = await recordSchemaRefusal(fatal);
+    const { previous, persisted } = await recordRefusal(
+      "schema_invalid",
+      fatal,
+    );
 
     // Only the transition is news. The cron refuses 96 times a day, and an
     // alert on every pass is one people mute -- which is worse than no alert,
@@ -134,9 +177,12 @@ export async function runAirtableSync(
     return report;
   }
 
-  // The lease is claimed AFTER the client resolves so an unconfigured install
-  // never touches the state row at all — otherwise `lastStatus` would read
-  // "ok" on a base that has never been contacted.
+  // The lease is still claimed AFTER the client resolves, so a pass that never
+  // reached the base cannot leave `lastStatus` reading "ok". What changed is
+  // what an unconfigured install writes INSTEAD: a cron pass now records
+  // `not_configured` above rather than nothing at all. Both refusals sit on
+  // the same side of this line for the same reason — they are decisions taken
+  // before any work, so neither may look like the outcome of work.
   const claim: ClaimResult = await claimSyncLease(
     trigger,
     options.triggeredBy ?? null,

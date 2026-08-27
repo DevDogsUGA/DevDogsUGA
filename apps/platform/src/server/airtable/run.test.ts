@@ -23,7 +23,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const lease = vi.hoisted(() => ({
   claimSyncLease: vi.fn(() => Promise.resolve({ ok: true as const })),
   releaseSyncLease: vi.fn(() => Promise.resolve()),
-  recordSchemaRefusal: vi.fn(() =>
+  recordRefusal: vi.fn(() =>
     Promise.resolve({ previous: "ok", persisted: true }),
   ),
 }));
@@ -57,12 +57,16 @@ const writes = vi.hoisted(() => ({
 // environment, and reaches Vault through `~/server/db`. Every test here passes
 // its own client, so the whole module is off the path anyway -- mocking it is
 // what keeps this a unit test rather than a database one.
-vi.mock("./credentials", () => ({
-  getAirtableClient: vi.fn(() =>
-    Promise.reject(new Error("tests must pass their own client")),
-  ),
-  AirtableNotConfiguredError: class extends Error {},
-}));
+const credentials = vi.hoisted(() => {
+  class AirtableNotConfiguredError extends Error {}
+  return {
+    AirtableNotConfiguredError,
+    getAirtableClient: vi.fn((): Promise<unknown> =>
+      Promise.reject(new Error("tests must pass their own client")),
+    ),
+  };
+});
+vi.mock("./credentials", () => credentials);
 
 vi.mock("./attendance", () => ({
   pullAttendance: vi.fn(() =>
@@ -162,6 +166,9 @@ function clientWith(schema: ReturnType<typeof matchingSchema>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  credentials.getAirtableClient.mockImplementation(() =>
+    Promise.reject(new Error("tests must pass their own client")),
+  );
 });
 
 describe("runAirtableSync schema precondition", () => {
@@ -249,7 +256,7 @@ describe("runAirtableSync drift alerting", () => {
   };
 
   it("alerts on the transition into drift", async () => {
-    lease.recordSchemaRefusal.mockResolvedValueOnce({
+    lease.recordRefusal.mockResolvedValueOnce({
       previous: "ok",
       persisted: true,
     });
@@ -266,7 +273,7 @@ describe("runAirtableSync drift alerting", () => {
 
   it("stays silent while the base is still drifted", async () => {
     // The 95 other passes that day.
-    lease.recordSchemaRefusal.mockResolvedValueOnce({
+    lease.recordRefusal.mockResolvedValueOnce({
       previous: "schema_invalid",
       persisted: true,
     });
@@ -279,7 +286,7 @@ describe("runAirtableSync drift alerting", () => {
   it("alerts again once the base is fixed and drifts a second time", async () => {
     // A successful pass sets `lastStatus` back to 'ok' via releaseSyncLease, so
     // the next drift is a fresh transition and genuinely is news.
-    lease.recordSchemaRefusal.mockResolvedValueOnce({
+    lease.recordRefusal.mockResolvedValueOnce({
       previous: "ok",
       persisted: true,
     });
@@ -292,7 +299,7 @@ describe("runAirtableSync drift alerting", () => {
   it("stays silent when a concurrent run held the lease", async () => {
     // Nothing was written, so the transition check has no state behind it.
     // Alerting anyway would fire on every interleaved pass.
-    lease.recordSchemaRefusal.mockResolvedValueOnce({
+    lease.recordRefusal.mockResolvedValueOnce({
       previous: "ok",
       persisted: false,
     });
@@ -305,7 +312,7 @@ describe("runAirtableSync drift alerting", () => {
   it("records the refusal even though it claims no lease", async () => {
     await runAirtableSync({ client: drifted() });
 
-    expect(lease.recordSchemaRefusal).toHaveBeenCalledOnce();
+    expect(lease.recordRefusal).toHaveBeenCalledOnce();
     expect(lease.claimSyncLease).not.toHaveBeenCalled();
   });
 
@@ -313,6 +320,102 @@ describe("runAirtableSync drift alerting", () => {
     await runAirtableSync({ client: clientWith(matchingSchema()) });
 
     expect(alerts.postAlert).not.toHaveBeenCalled();
-    expect(lease.recordSchemaRefusal).not.toHaveBeenCalled();
+    expect(lease.recordRefusal).not.toHaveBeenCalled();
+  });
+});
+
+describe("runAirtableSync with no token", () => {
+  /**
+   * A pass that cannot find `AIRTABLE_SYNC_PAT` is a REFUSAL, not a no-op.
+   *
+   * This branch used to return in silence, and the silence is what let the
+   * cron run every fifteen minutes for days with nothing recorded anywhere.
+   * The argument for the silence was that an unconfigured install should not
+   * touch the state row — but that conflated "nobody has set this up" with
+   * "this was set up and the credential is gone", two states it could not then
+   * distinguish because an unset base id looked like a fresh clone. The base id
+   * is committed now, so the token is the only thing that can be missing.
+   */
+  const unconfigured = () => {
+    credentials.getAirtableClient.mockImplementation(() =>
+      Promise.reject(
+        new credentials.AirtableNotConfiguredError("AIRTABLE_SYNC_PAT unset"),
+      ),
+    );
+  };
+
+  it("records the refusal and alerts on the transition", async () => {
+    unconfigured();
+    lease.recordRefusal.mockResolvedValueOnce({
+      previous: "ok",
+      persisted: true,
+    });
+
+    const report = await runAirtableSync({ trigger: "cron" });
+
+    expect(report.skipped).toBe("not_configured");
+    expect(lease.recordRefusal).toHaveBeenCalledWith(
+      "not_configured",
+      expect.arrayContaining([expect.stringMatching(/AIRTABLE_SYNC_PAT/)]),
+    );
+    expect(alerts.postAlert).toHaveBeenCalledOnce();
+    expect(alerts.postAlert).toHaveBeenCalledWith(
+      expect.stringMatching(/no sync token/),
+      expect.arrayContaining([expect.stringMatching(/AIRTABLE_SYNC_PAT/)]),
+      // The fix belongs in the alert: the token moved out of Vault, so
+      // "rotate it from the console" is no longer the answer and the path
+      // that replaced it is not guessable.
+      expect.stringMatching(/env push/),
+    );
+  });
+
+  it("stays silent while it is still unconfigured", async () => {
+    // The 95 other passes that day.
+    unconfigured();
+    lease.recordRefusal.mockResolvedValueOnce({
+      previous: "not_configured",
+      persisted: true,
+    });
+
+    await runAirtableSync({ trigger: "cron" });
+
+    expect(lease.recordRefusal).toHaveBeenCalledOnce();
+    expect(alerts.postAlert).not.toHaveBeenCalled();
+  });
+
+  it("stays silent when a concurrent run held the lease", async () => {
+    // Nothing was written, so the transition check has no state behind it.
+    unconfigured();
+    lease.recordRefusal.mockResolvedValueOnce({
+      previous: "ok",
+      persisted: false,
+    });
+
+    await runAirtableSync({ trigger: "cron" });
+
+    expect(alerts.postAlert).not.toHaveBeenCalled();
+  });
+
+  it("records and alerts NOTHING for a manual run", async () => {
+    // ⚠️ The exemption that keeps this from firing on a button press.
+    // `requestAirtableSync` hands this report straight to the console, which
+    // says "not configured" on screen — an officer clicking twice must not
+    // post twice to the officers' channel.
+    unconfigured();
+
+    const report = await runAirtableSync({ trigger: "manual" });
+
+    expect(report.skipped).toBe("not_configured");
+    expect(lease.recordRefusal).not.toHaveBeenCalled();
+    expect(alerts.postAlert).not.toHaveBeenCalled();
+  });
+
+  it("claims no lease and reaches no table", async () => {
+    unconfigured();
+
+    await runAirtableSync({ trigger: "cron" });
+
+    expect(lease.claimSyncLease).not.toHaveBeenCalled();
+    expect(writes.pushProjects).not.toHaveBeenCalled();
   });
 });

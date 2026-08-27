@@ -156,8 +156,15 @@ export async function releaseSyncLease(result: LeaseRelease): Promise<void> {
 }
 
 /**
- * Records a schema refusal on the state row, and reports what the status was
- * before.
+ * The states a pass can refuse in, both recorded before the lease is claimed.
+ *
+ * `schema_invalid` — the base no longer matches the registry.
+ * `not_configured` — there is no sync token to talk to it with.
+ */
+export type RefusalStatus = "schema_invalid" | "not_configured";
+
+/**
+ * Records a refusal on the state row, and reports what the status was before.
  *
  * A refusal happens BEFORE the lease is claimed and deliberately stays that way
  * (see `runAirtableSync`) — but that left the console showing the last
@@ -173,14 +180,16 @@ export async function releaseSyncLease(result: LeaseRelease): Promise<void> {
  * a running pass can interleave, and clobbering `lastStatus = 'running'` would
  * make a live sync look finished.
  */
-export async function recordSchemaRefusal(
-  findings: string[],
+export async function recordRefusal(
+  status: RefusalStatus,
+  detail: string[],
 ): Promise<SchemaRefusalRecord> {
+  const findings = detail;
   // `prev` and `upd` share one snapshot, so `prev` reads the value from before
   // the update. `RETURNING` alone would not do it: without `OLD` (Postgres 18)
-  // it yields the row as updated, which here is always 'schema_invalid' -- a
-  // transition check that reports "no change" every single time, i.e. an alert
-  // that never fires.
+  // it yields the row as updated, which here is always the status being
+  // written -- a transition check that reports "no change" every single time,
+  // i.e. an alert that never fires.
   const [row] = await db.execute<{
     previous: string | null;
     persisted: boolean;
@@ -191,7 +200,7 @@ export async function recordSchemaRefusal(
       where "id"
     ), upd as (
       update "platform"."airtableSyncState"
-      set "lastStatus" = 'schema_invalid',
+      set "lastStatus" = ${status},
           "lastError"  = ${findings.join("; ")}
       where "id"
         and ("runExpiresAt" is null or "runExpiresAt" < now())
