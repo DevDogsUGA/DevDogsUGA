@@ -16,11 +16,21 @@ import { VIEW, type BuildingKey } from "./campusMapMeta";
 import { BUILDING_LABEL } from "./buildings";
 
 /**
- * The two plates the map is drawn on. Land, roads and the other buildings
- * are the quiet layers and swap wholesale; the rose footprint and the cyan
- * pin are the loud ones and do not — they are the answer, and the answer
- * looks the same on both plates. Label halos follow the land colour, since
- * a halo is the land showing through around the glyphs.
+ * The two plates the map is drawn on.
+ *
+ * The dark plate is a night map, not the light map with the values flipped.
+ * It is drawn in slate rather than the dialog's mauve so the ground reads as
+ * *ground* and not as more panel, and it keeps the one rule every dark map
+ * shares: roads are lighter than land, buildings lighter still, and the
+ * casing around a road is darker than the ground so the surface reads as a
+ * ribbon rather than a smear. Every label is white or near it with a halo
+ * of the ground colour — a halo is the land showing through around the
+ * glyphs, so it follows the land.
+ *
+ * The rose footprint and the cyan pin are the answer and keep their hue on
+ * both plates; only their outlines change, black on the light ground and
+ * white on the dark one, because an outline is there to separate the shape
+ * from what it sits on.
  */
 const MAP_TONES = {
   light: {
@@ -30,6 +40,9 @@ const MAP_TONES = {
     majorCasing: "stroke-mauve-300",
     majorSurface: "stroke-white",
     footprint: "fill-white stroke-mauve-300",
+    highlight: "fill-rose-400 stroke-black",
+    pin: "fill-cyan-500 stroke-black",
+    pinDot: "fill-black",
     label: "fill-mauve-700 stroke-white",
     roadLabel: "fill-mauve-400 stroke-white",
     compass: "fill-black stroke-white",
@@ -37,17 +50,20 @@ const MAP_TONES = {
     callout: "fill-black stroke-white",
   },
   dark: {
-    frame: "border border-mauve-700",
-    land: "fill-mauve-950",
-    minorRoad: "stroke-mauve-800",
-    majorCasing: "stroke-mauve-700",
-    majorSurface: "stroke-mauve-900",
-    footprint: "fill-mauve-900 stroke-mauve-700",
-    label: "fill-mauve-200 stroke-mauve-950",
-    roadLabel: "fill-mauve-400 stroke-mauve-950",
-    compass: "fill-white stroke-mauve-950",
-    credit: "fill-mauve-400 stroke-mauve-950",
-    callout: "fill-white stroke-mauve-950",
+    frame: "border border-slate-600",
+    land: "fill-slate-900",
+    minorRoad: "stroke-slate-600",
+    majorCasing: "stroke-slate-950",
+    majorSurface: "stroke-slate-500",
+    footprint: "fill-slate-700 stroke-slate-500",
+    highlight: "fill-rose-400 stroke-white",
+    pin: "fill-cyan-400 stroke-white",
+    pinDot: "fill-slate-950",
+    label: "fill-white stroke-slate-900",
+    roadLabel: "fill-slate-300 stroke-slate-900",
+    compass: "fill-white stroke-slate-900",
+    credit: "fill-slate-400 stroke-slate-900",
+    callout: "fill-white stroke-slate-900",
   },
 } as const;
 
@@ -220,11 +236,7 @@ export default function CampusMap({ building, tone = "light" }: Props) {
           disappearing whenever the meeting is somewhere else. */}
       <path d={FOOTPRINTS} className={m.footprint} strokeWidth="1.3" />
       {footprint && (
-        <path
-          d={footprint}
-          className="fill-rose-400 stroke-black"
-          strokeWidth="2.5"
-        />
+        <path d={footprint} className={m.highlight} strokeWidth="2.5" />
       )}
 
       {/* Building names, and the loudest thing on the map after the
@@ -250,7 +262,15 @@ export default function CampusMap({ building, tone = "light" }: Props) {
         ))}
       </g>
 
-      {pin && <Callout building={building} pin={pin} className={m.callout} />}
+      {pin && (
+        <Callout
+          building={building}
+          pin={pin}
+          className={m.callout}
+          pinClassName={m.pin}
+          pinDotClassName={m.pinDot}
+        />
+      )}
 
       {/* Street names, sitting on their own centrelines at their own angle:
           position and rotation are generated from the road geometry, not
@@ -362,11 +382,16 @@ function Callout({
   building,
   pin,
   className,
+  pinClassName,
+  pinDotClassName,
 }: {
   building: BuildingKey;
   pin: Pin;
   /** The name's fill and halo, from the plate's tone. */
   className: string;
+  /** The teardrop's fill and outline, and the dot in it — same source. */
+  pinClassName: string;
+  pinDotClassName: string;
 }) {
   const { x } = pin;
   const { d, tipY, cy, labelY } = placeCallout(pin);
@@ -398,11 +423,11 @@ function Callout({
           make. */}
       <path
         d={teardrop}
-        className="fill-cyan-500 stroke-black"
+        className={pinClassName}
         strokeWidth="2"
         strokeLinejoin="round"
       />
-      <circle cx={x} cy={cy} r="2.4" className="fill-black" />
+      <circle cx={x} cy={cy} r="2.4" className={pinDotClassName} />
       <text
         x={x}
         y={labelY}
