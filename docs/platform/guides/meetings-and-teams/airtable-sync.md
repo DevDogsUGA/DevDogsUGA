@@ -84,6 +84,10 @@ The first four protect **history**. The last is a different kind — nothing is 
 
 A workshop with **no** attendance is still fully editable, and a null incoming value is never a change: officers fill fields one at a time, and a pass landing between two keystrokes must not complain about a row that will be complete shortly.
 
+A meeting below the required shape — `name`, `startsAt`, `endsAt`, and the end after the start — is skipped rather than refused, and writes a **state** into `⚙️ Sync status` saying which field it is waiting on. That is not a complaint and is worded not to read as one; it exists because the silence was indistinguishable from a sync that had never run, which is precisely the question the column is there to answer. It clears itself on the pass after the row is whole.
+
+Workshops and competitions have the same silent branch and deliberately keep it: an unresolvable link there usually means the linked _meeting_ was incomplete, which now carries its own message — saying it twice would point the officer at the wrong row.
+
 ## Why it's like this
 
 <details>
