@@ -81,40 +81,45 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         keepHoveredInView
         aria-label="Homepage sections"
       >
+        {/* In the order the sections themselves run, and each card in its own
+            section's hue — the fill is the 400 its blobs are drawn from, so a
+            card is a small piece of the place it opens rather than a differently
+            coloured door onto it. `zIndexClass` stays with the *slot*, not the
+            card: it descends left to right for the hover lift alone. */}
         <StatCard
           description="Learn By Doing"
           title="Mission"
           cta="Read the Mission"
           icon={CompassIcon}
-          textColor="text-rose-950"
-          bg="bg-rose-400"
-          darkBg="bg-rose-600"
+          textColor="text-cyan-950"
+          bg="bg-cyan-400"
+          darkBg="bg-cyan-600"
           blobs={MISSION_BLOBS}
           href="#mission"
           zIndexClass="z-30"
+        />
+        <StatCard
+          description="Real Applications"
+          title="Projects"
+          cta="Browse Projects"
+          icon={RocketIcon}
+          textColor="text-emerald-950"
+          bg="bg-emerald-400"
+          darkBg="bg-emerald-600"
+          blobs={PROJECTS_BLOBS}
+          href="#projects"
+          zIndexClass="z-20"
         />
         <StatCard
           description="Weekly Workshops"
           title="Events"
           cta="See the Schedule"
           icon={CalendarDotsIcon}
-          textColor="text-cyan-950"
-          bg="bg-cyan-400"
-          darkBg="bg-cyan-600"
+          textColor="text-rose-950"
+          bg="bg-rose-400"
+          darkBg="bg-rose-600"
           blobs={EVENTS_BLOBS}
           href="#events"
-          zIndexClass="z-20"
-        />
-        <StatCard
-          description="Real Products"
-          title="Projects"
-          cta="Browse Projects"
-          icon={RocketIcon}
-          textColor="text-amber-950"
-          bg="bg-amber-400"
-          darkBg="bg-amber-600"
-          blobs={PROJECTS_BLOBS}
-          href="#projects"
           zIndexClass="z-10"
         />
       </SectionMarquee>
