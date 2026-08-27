@@ -68,7 +68,10 @@ async function EventsBody({ checkIn }: { checkIn: React.ReactNode }) {
   }
 
   return (
-    <div className="flex flex-col bg-black py-4 md:py-6">
+    // The console wrapper, verbatim from the gated layouts: the page body is
+    // `mauve-900`, one shade lighter than the cards that sit on it, and
+    // `flex-1` so a short semester still paints to the footer.
+    <div className="flex min-w-0 flex-1 flex-col bg-mauve-900">
       <EventsPage {...data} checkIn={checkIn} />
     </div>
   );

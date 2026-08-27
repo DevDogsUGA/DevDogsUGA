@@ -57,7 +57,7 @@ const ROW_CLS =
   "flex flex-col gap-4 border-y-2 border-black py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6";
 
 const EYEBROW_CLS =
-  "font-display text-xs font-extrabold tracking-widest text-mauve-500 uppercase";
+  "font-display text-xs font-extrabold tracking-widest text-mauve-600 uppercase";
 
 /** A text link with an arrow — the one way through, and not a button. */
 const ROW_LINK_CLS =

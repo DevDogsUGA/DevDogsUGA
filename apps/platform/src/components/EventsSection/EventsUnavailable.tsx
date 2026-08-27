@@ -42,21 +42,18 @@ export default function EventsUnavailable({
   retry?: () => void;
 }) {
   return (
-    <div className="mx-4 md:mx-6">
-      <section
-        className="shadow-block-lg overflow-hidden rounded-xl border-2 border-black bg-white"
-        data-animate="fade-up"
-      >
-        <div className="mx-auto max-w-6xl space-y-6 px-6 py-10 md:px-12 md:py-14">
+    <div className="mx-auto w-full max-w-5xl px-4 py-6 @sm:px-6">
+      <section className="overflow-hidden rounded-xl border-2 border-mauve-800 bg-mauve-950 shadow-lg shadow-black/30">
+        <div className="space-y-6 px-6 py-10 md:px-12 md:py-14">
           <div className="max-w-prose space-y-4">
-            <h2 className="font-display text-3xl font-extrabold text-black md:text-4xl">
+            <h2 className="font-display text-3xl font-extrabold text-white md:text-4xl">
               The schedule could not be loaded
             </h2>
-            <p className="text-base/relaxed text-mauve-700">
+            <p className="text-base/relaxed text-mauve-300">
               This page reads meetings from the club database, and that read
               failed. Nothing has changed about the meetings themselves.
             </p>
-            <p className="text-base/relaxed text-mauve-700">
+            <p className="text-base/relaxed text-mauve-300">
               Try again in a moment, or read the same schedule on the UGA
               Involvement Network, which is where RSVPs live anyway.
             </p>
@@ -71,7 +68,7 @@ export default function EventsUnavailable({
               <button
                 type="button"
                 onClick={() => retry()}
-                className="hover:shadow-block-md transition-lift flex items-center gap-2 rounded-sm border-2 border-black bg-black px-4 py-2 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5"
+                className="flex items-center gap-2 rounded-sm border-2 border-white bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-transparent hover:text-white"
               >
                 <ArrowClockwiseIcon /> Try again
               </button>
@@ -84,7 +81,7 @@ export default function EventsUnavailable({
                  right default and the wrong tool for retrying a failed read. */
               <a
                 href="/events"
-                className="hover:shadow-block-md transition-lift flex items-center gap-2 rounded-sm border-2 border-black bg-black px-4 py-2 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5"
+                className="flex items-center gap-2 rounded-sm border-2 border-white bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-transparent hover:text-white"
               >
                 <ArrowClockwiseIcon /> Reload the page
               </a>
@@ -93,7 +90,7 @@ export default function EventsUnavailable({
               href={INVOLVEMENT_NETWORK_EVENTS_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:shadow-block-md transition-lift flex items-center gap-2 rounded-sm border-2 border-black bg-white px-4 py-2 text-sm font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5"
+              className="flex items-center gap-2 rounded-lg border border-mauve-600 bg-mauve-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:border-white"
             >
               Events on the Involvement Network <ArrowUpRightIcon />
             </a>
@@ -104,7 +101,7 @@ export default function EventsUnavailable({
               line in the server logs. Worth printing small; the message and the
               stack are not, and in production the message is a placeholder. */}
           {digest && (
-            <p className="font-mono text-xs text-mauve-500">
+            <p className="font-mono text-xs text-mauve-400">
               Reference {digest} — quote this if you email us about it.
             </p>
           )}

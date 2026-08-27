@@ -37,7 +37,8 @@ import type { MeetingInRange } from "~/server/loaders/meetings";
 import type { MeetingSegment } from "~/lib/meetingSegments";
 import { resolveMeetingSegments } from "~/lib/meetingSegments";
 import {
-  CHIP_CLS,
+  CHIP_DARK_CLS,
+  NEUTRAL_CHIP_DARK_CLS,
   SEGMENT_LEGEND,
   segmentBadge,
 } from "~/components/EventsSection/meetingView";
@@ -130,7 +131,7 @@ function MeetingDetail({ meeting }: { meeting: MeetingInRange }) {
           return (
             <span
               key={segment}
-              className={`${badge.bg} ${badge.text} ${CHIP_CLS}`}
+              className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
             >
               {badge.label}
             </span>
@@ -142,27 +143,25 @@ function MeetingDetail({ meeting }: { meeting: MeetingInRange }) {
             verbatim in a neutral chip because `kind` is an Airtable
             single-select an officer can extend without touching this repo. */}
         {kindOverride !== null && (
-          <span
-            className={`border-2 border-black bg-white text-black ${CHIP_CLS}`}
-          >
+          <span className={`${NEUTRAL_CHIP_DARK_CLS} ${CHIP_DARK_CLS}`}>
             {kindOverride}
           </span>
         )}
       </div>
-      <p className="font-display leading-tight font-extrabold text-black">
+      <p className="font-display leading-tight font-extrabold text-white">
         {meeting.name}
       </p>
       {/* A dated row, so it says when this one is. The old fabricated events
           carried a recurrence rule and printed "Weekly on Mondays"; real
           meetings are individual rows and there is no rule to state. */}
-      <p className="text-xs/snug font-semibold text-black">
+      <p className="text-xs/snug font-semibold text-white">
         {formatEventSpan(meeting.startsAt, meeting.endsAt)}
       </p>
       {meeting.location !== null && (
-        <p className="text-xs/snug text-mauve-500">{meeting.location}</p>
+        <p className="text-xs/snug text-mauve-400">{meeting.location}</p>
       )}
       {meeting.summary !== null && (
-        <p className="border-t border-mauve-200 pt-2 text-xs/relaxed text-mauve-600">
+        <p className="border-t border-white/10 pt-2 text-xs/relaxed text-mauve-300">
           {meeting.summary}
         </p>
       )}
@@ -173,7 +172,7 @@ function MeetingDetail({ meeting }: { meeting: MeetingInRange }) {
           reloads the whole route. */}
       <Link
         href={`/events/${meeting.slug}`}
-        className="inline-flex w-fit items-center gap-1 text-xs font-semibold text-black hover:underline"
+        className="inline-flex w-fit items-center gap-1 text-xs font-semibold text-white hover:underline"
       >
         Event details <ArrowUpRightIcon />
       </Link>
@@ -216,7 +215,7 @@ function MultiMeetingMenu({ meetings }: { meetings: MeetingInRange[] }) {
             key={meeting.id}
             type="button"
             role="menuitem"
-            className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs font-medium text-black transition-colors hover:bg-mauve-50 ${activeMeeting?.id === meeting.id ? "bg-mauve-50" : ""}`}
+            className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs font-medium text-white transition-colors hover:bg-white/10 ${activeMeeting?.id === meeting.id ? "bg-white/10" : ""}`}
             onMouseEnter={() => handleEnter(meeting, idx)}
             // Focus reveals the same pane hover does, so tabbing through the
             // list is not a walk past buttons that visibly do nothing.
@@ -224,7 +223,7 @@ function MultiMeetingMenu({ meetings }: { meetings: MeetingInRange[] }) {
           >
             <span className="flex items-center gap-1.5">
               <span
-                className={`size-1.5 shrink-0 rounded-full ${segmentBadge[primarySegment(meeting)].dot}`}
+                className={`size-1.5 shrink-0 rounded-full ${segmentBadge[primarySegment(meeting)].dotDark}`}
               />
               {meeting.name}
             </span>
@@ -242,7 +241,7 @@ function MultiMeetingMenu({ meetings }: { meetings: MeetingInRange[] }) {
             style={{ overflow: "hidden" }}
             transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
           >
-            <div className="relative ml-2 overflow-hidden border-l border-mauve-200 pl-3">
+            <div className="relative ml-2 overflow-hidden border-l border-white/10 pl-3">
               <AnimatePresence mode="popLayout" initial={false}>
                 <motion.div
                   key={activeMeeting.id}
@@ -263,7 +262,7 @@ function MultiMeetingMenu({ meetings }: { meetings: MeetingInRange[] }) {
 }
 
 const PAGE_BUTTON_CLS =
-  "flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm border-2 border-black bg-white text-black transition-colors hover:bg-mauve-50 disabled:cursor-not-allowed disabled:border-mauve-300 disabled:text-mauve-300 disabled:hover:bg-white";
+  "flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm border border-mauve-600 bg-mauve-800 text-white transition-colors hover:border-white disabled:cursor-not-allowed disabled:border-mauve-800 disabled:text-mauve-600 disabled:hover:border-mauve-800";
 
 interface Props {
   /** Every meeting in the loaded window, ascending. Usually three months. */
@@ -461,16 +460,15 @@ export default function MonthCalendar({
   return (
     <>
       <div
-        // A ruled panel rather than a box: the top rule matches the rows and
-        // the table beside it, so the three read as one section.
-        className="flex flex-col gap-4 border-t-2 border-black pt-4"
+        // No frame of its own: the console card this sits in is the frame.
+        className="flex flex-col gap-4"
         onMouseEnter={() => clearTimeout(closeTimer.current)}
         onMouseLeave={handleClose}
       >
         <div className="flex items-center justify-between gap-2">
           {/* Live so a keyboard user who just pressed Previous hears which
               month they landed on — the grid below re-renders silently. */}
-          <h3 aria-live="polite" className="font-display font-bold text-black">
+          <h3 aria-live="polite" className="font-display font-bold text-white">
             {monthName} {year}
           </h3>
           {/* Real buttons with their own labels, not icon-only div handlers:
@@ -498,7 +496,7 @@ export default function MonthCalendar({
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-7 gap-0.5 text-center text-xs font-bold text-mauve-500">
+        <div className="grid grid-cols-7 gap-0.5 text-center text-xs font-bold text-mauve-400">
           {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
             <div key={d} className="py-1">
               {d}
@@ -517,7 +515,7 @@ export default function MonthCalendar({
                     {dayMeetings.map((meeting) => (
                       <span
                         key={meeting.id}
-                        className={`size-1 rounded-full ${segmentBadge[primarySegment(meeting)].dot}`}
+                        className={`size-1 rounded-full ${segmentBadge[primarySegment(meeting)].dotDark}`}
                       />
                     ))}
                   </div>
@@ -525,7 +523,7 @@ export default function MonthCalendar({
               </>
             );
 
-            const baseClass = `flex h-8.5 flex-col items-center justify-start py-1.5 text-xs ${day === todayDay ? "font-black text-black" : "text-mauve-700"} ${!day ? "invisible" : ""}`;
+            const baseClass = `flex h-8.5 flex-col items-center justify-start py-1.5 text-xs ${day === todayDay ? "font-black text-white" : "text-mauve-300"} ${!day ? "invisible" : ""}`;
 
             if (dayMeetings.length === 0 || !day) {
               return (
@@ -542,7 +540,7 @@ export default function MonthCalendar({
                 // cell mounted across a month change with new contents.
                 key={`${year}-${month}-${idx}`}
                 type="button"
-                className={`${baseClass} relative cursor-pointer rounded before:absolute before:-inset-x-2 before:-inset-y-1.5 before:content-[''] hover:bg-mauve-50`}
+                className={`${baseClass} relative cursor-pointer rounded before:absolute before:-inset-x-2 before:-inset-y-1.5 before:content-[''] hover:bg-white/10`}
                 aria-expanded={open && active?.day === day}
                 aria-haspopup="dialog"
                 onMouseEnter={(e) =>
@@ -561,11 +559,11 @@ export default function MonthCalendar({
         {/* Built from SEGMENT_LEGEND rather than hardcoded, so the legend and
             the dots it explains cannot drift apart — and so a segment added to
             the model shows up here without anybody remembering to add it. */}
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-mauve-200 pt-3 text-xs text-mauve-600">
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-white/10 pt-3 text-xs text-mauve-400">
           {SEGMENT_LEGEND.map((segment) => (
             <span key={segment} className="flex items-center gap-1.5">
               <span
-                className={`inline-block size-2 rounded-full ${segmentBadge[segment].dot}`}
+                className={`inline-block size-2 rounded-full ${segmentBadge[segment].dotDark}`}
               />
               {segmentBadge[segment].label}
             </span>
@@ -615,7 +613,7 @@ export default function MonthCalendar({
                 onMouseEnter={() => clearTimeout(closeTimer.current)}
                 onMouseLeave={handleClose}
               >
-                <div className="shadow-block-md rounded-sm border-2 border-black bg-white p-3 text-sm">
+                <div className="rounded-lg border border-mauve-600 bg-mauve-800 p-3 text-sm shadow-2xl shadow-black/60">
                   <AnimatePresence mode="popLayout" initial={false}>
                     <motion.div
                       key={`${year}-${month}-${active?.day}`}
