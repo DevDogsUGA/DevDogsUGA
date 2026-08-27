@@ -18,16 +18,17 @@ import { BUILDING_LABEL } from "./buildings";
 /**
  * The two plates the map is drawn on.
  *
- * The dark plate is a night map, not the light map with the values flipped,
- * and each layer gets its own HUE, because on a dark ground lightness alone
- * does not separate them — a first draft in one slate ramp had roads and
- * buildings reading as the same grey. So: near-black navy ground; buildings
- * as cool grey blocks; roads as warm yellow ribbons, the way night
- * navigation maps draw them, with a casing the colour of the ground so a
- * ribbon has an edge where it crosses a building; street names in the road
- * colour and building names in white, each haloed in the ground colour.
- * Five layers, five colours, none of them the rose of the destination or the
- * cyan of its pin.
+ * The dark plate is drawn the way Apple Maps draws its dark mode: one
+ * charcoal ramp with a faint blue cast (zinc), and the layers told apart by
+ * a few deliberate steps of lightness rather than by hue. The ground is the
+ * darkest thing; buildings are one step up with a hairline a step above
+ * that, so they read as blocks without shouting; drives are a mid-grey
+ * hairline and streets a lighter ribbon over a casing the colour of the
+ * ground, so a road has an edge where it crosses a building. Building
+ * names are near-white, street names a quiet grey, both haloed in the
+ * ground. Restraint is the point — the map is context, and the only
+ * saturated things on it are the rose footprint and the cyan pin, which is
+ * how the eye finds them first.
  *
  * The rose footprint and the cyan pin are the answer and keep their hue on
  * both plates; only their outlines change, black on the light ground and
@@ -52,20 +53,20 @@ const MAP_TONES = {
     callout: "fill-black stroke-white",
   },
   dark: {
-    frame: "border border-slate-600",
-    land: "fill-slate-950",
-    minorRoad: "stroke-amber-200/35",
-    majorCasing: "stroke-slate-950",
-    majorSurface: "stroke-amber-200/70",
-    footprint: "fill-slate-700 stroke-slate-500",
+    frame: "border border-zinc-700",
+    land: "fill-zinc-900",
+    minorRoad: "stroke-zinc-600",
+    majorCasing: "stroke-zinc-900",
+    majorSurface: "stroke-zinc-500",
+    footprint: "fill-zinc-800 stroke-zinc-700",
     highlight: "fill-rose-400 stroke-white",
     pin: "fill-cyan-400 stroke-white",
-    pinDot: "fill-slate-950",
-    label: "fill-white stroke-slate-950",
-    roadLabel: "fill-amber-100 stroke-slate-950",
-    compass: "fill-white stroke-slate-950",
-    credit: "fill-slate-400 stroke-slate-950",
-    callout: "fill-white stroke-slate-950",
+    pinDot: "fill-zinc-900",
+    label: "fill-zinc-100 stroke-zinc-900",
+    roadLabel: "fill-zinc-400 stroke-zinc-900",
+    compass: "fill-zinc-100 stroke-zinc-900",
+    credit: "fill-zinc-500 stroke-zinc-900",
+    callout: "fill-white stroke-zinc-900",
   },
 } as const;
 
