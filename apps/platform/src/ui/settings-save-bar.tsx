@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  SpinnerGapIcon,
-  TrashSimpleIcon,
-  WarningCircleIcon,
-} from "@phosphor-icons/react/ssr";
+import { SpinnerGapIcon, WarningCircleIcon } from "@phosphor-icons/react/ssr";
 import { useSettingsForm } from "~/ui/settings-form";
 
 /**
@@ -154,7 +150,13 @@ export default function SettingsSaveBar() {
           plus the deeper drop shadow sell the "floating" half of that. */}
       <div
         ref={cardRef}
-        className="pointer-events-auto relative mx-auto grid w-full max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-x-3 rounded-lg border-2 border-mauve-600 bg-mauve-800 px-3 py-3 shadow-2xl shadow-black/60 inset-ring-1 inset-ring-white/10 @sm:gap-x-4 @sm:px-4"
+        /* Narrower than PageShell's max-w-5xl on purpose. At the same width it
+           lined up edge-to-edge with the cards above it and read as the last
+           one in the stack; pulled in, it stops sharing their gridlines and
+           sits over the page as its own object. The border thinned to 1px for
+           the same reason — at 2px the edge competed with the card borders
+           instead of just containing the bar. */
+        className="pointer-events-auto relative mx-auto flex w-full max-w-3xl items-center justify-between gap-x-3 rounded-lg border border-mauve-600 bg-mauve-800 px-3 py-3 shadow-2xl shadow-black/60 inset-ring-1 inset-ring-white/10 @sm:gap-x-4 @sm:px-4"
       >
         {/* The shake is the whole feedback for a cancelled click, and it is
             invisible to a screen reader. This is the same news, spoken. */}
@@ -162,32 +164,19 @@ export default function SettingsSaveBar() {
           {blockedMessage}
         </span>
 
-        <button
-          type="button"
-          onClick={resetAll}
-          disabled={isSaving}
-          /* Destructive, and dressed like it. This throws away everything the
-             member has typed since their last save with no undo behind it, so
-             it carries the same rose the delete controls use rather than the
-             neutral grey it had — a quiet secondary button next to Save is an
-             invitation to press it to "cancel out" of the bar. The label says
-             what goes, too: "Reset" reads like a form control, "Discard" reads
-             like a loss. */
-          className="flex shrink-0 items-center gap-[1ch] rounded-sm border-2 border-rose-800 bg-rose-950/60 px-3 py-1.5 text-sm font-medium text-rose-300 transition outline-none hover:border-rose-600 hover:bg-rose-700 hover:text-white hover:shadow-sm hover:shadow-rose-700/20 focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-800 disabled:pointer-events-none disabled:opacity-50"
-        >
-          <TrashSimpleIcon size={14} aria-hidden />
-          <span className="hidden @sm:inline">Discard changes</span>
-          <span className="@sm:hidden">Discard</span>
-        </button>
-
+        {/* Leads the bar now. It is the reason the bar is on screen at all, so
+            it reads first and carries the weight — the two controls that follow
+            are what you do about it. `text-left` rather than centred: with the
+            actions gathered on the right there is no second edge to balance
+            against, and a centred count next to a left edge just looks adrift. */}
         <p
           role="status"
-          className={`min-w-0 text-center text-sm leading-tight text-balance ${
-            blocked ? "text-rose-300" : "text-mauve-200"
+          className={`min-w-0 text-left text-sm leading-tight font-semibold ${
+            blocked ? "text-rose-300" : "text-mauve-100"
           }`}
         >
           {blocked ? (
-            <span className="flex items-center justify-center gap-1.5">
+            <span className="flex items-center gap-1.5">
               <WarningCircleIcon
                 weight="fill"
                 aria-hidden
@@ -202,21 +191,45 @@ export default function SettingsSaveBar() {
           )}
         </p>
 
-        <button
-          type="button"
-          onClick={saveAll}
-          disabled={isSaving || blocked}
-          className="relative flex shrink-0 items-center justify-center rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-800 enabled:hover:bg-transparent enabled:hover:text-white enabled:hover:shadow-sm enabled:hover:shadow-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isSaving ? (
-            <SpinnerGapIcon className="animate-spin [animation-duration:750ms]" />
-          ) : (
-            <>
-              Save
-              {!blocked && <ShortcutHint />}
-            </>
-          )}
-        </button>
+        {/* Both actions live on the right, discard nearest the text so Save
+            keeps the outer corner — the far edge is the easiest target in the
+            bar and it should belong to the safe action, not the destructive
+            one. */}
+        <div className="flex shrink-0 items-center gap-3 @sm:gap-4">
+          <button
+            type="button"
+            onClick={resetAll}
+            disabled={isSaving}
+            /* A link, not a button: two buttons side by side asked to be read
+               as a pair of equal options, and discarding is not the equal of
+               saving. Demoting it to text puts Save alone at button weight.
+               Still rose, and still says "Discard" rather than "Reset" —
+               losing the box is not licence to lose the warning, since this
+               throws away everything typed since the last save with no undo
+               behind it. Underline only on hover/focus, so it announces itself
+               as clickable at the moment it is about to be clicked. */
+            className="shrink-0 rounded-xs text-sm font-medium text-rose-400 underline-offset-4 transition outline-none hover:text-rose-300 hover:underline focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-800 focus-visible:underline disabled:pointer-events-none disabled:opacity-50"
+          >
+            <span className="hidden @sm:inline">Discard changes</span>
+            <span className="@sm:hidden">Discard</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={saveAll}
+            disabled={isSaving || blocked}
+            className="relative flex shrink-0 items-center justify-center rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-800 enabled:hover:bg-transparent enabled:hover:text-white enabled:hover:shadow-sm enabled:hover:shadow-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSaving ? (
+              <SpinnerGapIcon className="animate-spin [animation-duration:750ms]" />
+            ) : (
+              <>
+                Save
+                {!blocked && <ShortcutHint />}
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
