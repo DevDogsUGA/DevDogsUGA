@@ -18,14 +18,16 @@ import { BUILDING_LABEL } from "./buildings";
 /**
  * The two plates the map is drawn on.
  *
- * The dark plate is a night map, not the light map with the values flipped.
- * It is drawn in slate rather than the dialog's mauve so the ground reads as
- * *ground* and not as more panel, and it keeps the one rule every dark map
- * shares: roads are lighter than land, buildings lighter still, and the
- * casing around a road is darker than the ground so the surface reads as a
- * ribbon rather than a smear. Every label is white or near it with a halo
- * of the ground colour — a halo is the land showing through around the
- * glyphs, so it follows the land.
+ * The dark plate is a night map, not the light map with the values flipped,
+ * and each layer gets its own HUE, because on a dark ground lightness alone
+ * does not separate them — a first draft in one slate ramp had roads and
+ * buildings reading as the same grey. So: near-black navy ground; buildings
+ * as cool grey blocks; roads as warm yellow ribbons, the way night
+ * navigation maps draw them, with a casing the colour of the ground so a
+ * ribbon has an edge where it crosses a building; street names in the road
+ * colour and building names in white, each haloed in the ground colour.
+ * Five layers, five colours, none of them the rose of the destination or the
+ * cyan of its pin.
  *
  * The rose footprint and the cyan pin are the answer and keep their hue on
  * both plates; only their outlines change, black on the light ground and
@@ -51,19 +53,19 @@ const MAP_TONES = {
   },
   dark: {
     frame: "border border-slate-600",
-    land: "fill-slate-900",
-    minorRoad: "stroke-slate-600",
+    land: "fill-slate-950",
+    minorRoad: "stroke-amber-200/35",
     majorCasing: "stroke-slate-950",
-    majorSurface: "stroke-slate-500",
+    majorSurface: "stroke-amber-200/70",
     footprint: "fill-slate-700 stroke-slate-500",
     highlight: "fill-rose-400 stroke-white",
     pin: "fill-cyan-400 stroke-white",
     pinDot: "fill-slate-950",
-    label: "fill-white stroke-slate-900",
-    roadLabel: "fill-slate-300 stroke-slate-900",
-    compass: "fill-white stroke-slate-900",
-    credit: "fill-slate-400 stroke-slate-900",
-    callout: "fill-white stroke-slate-900",
+    label: "fill-white stroke-slate-950",
+    roadLabel: "fill-amber-100 stroke-slate-950",
+    compass: "fill-white stroke-slate-950",
+    credit: "fill-slate-400 stroke-slate-950",
+    callout: "fill-white stroke-slate-950",
   },
 } as const;
 
