@@ -210,7 +210,7 @@ describe("registry completeness", () => {
     expect(narrowedKeys()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
   });
 
-  it("keeps the four Airtable tokens four separate declarations", () => {
+  it("keeps the three Airtable tokens three separate declarations", () => {
     // The property that makes `AIRTABLE_PLAN_PAT`'s `narrowed` claim checkable
     // at all. If the scopes were values of ONE key, "the plan token
     // cannot write" would be a fact about whichever value a target happened to
@@ -218,9 +218,13 @@ describe("registry completeness", () => {
     // here — rather than a property of the key.
     //
     // AIRTABLE_SYNC_PAT joined 2026-08-19, when the runtime data token moved
-    // out of Supabase Vault into the platform manifest — the fourth scope
-    // (records read/write), still its own key for the same reason as the
-    // other three.
+    // out of Supabase Vault into the platform manifest — the records
+    // read/write scope, still its own key for the same reason as the others.
+    //
+    // AIRTABLE_PAT then left: it carried `schema.bases:write` on an operator's
+    // laptop, and `deploy airtable-apply` does that write behind required
+    // reviewers. Removing it took the last shared member out of the two
+    // credential preference rows, so a schema change has exactly one path.
     //
     // Their routing is the other half, and it is what the split buys:
     const airtable = [...variables().keys()].filter((k) =>
@@ -229,13 +233,12 @@ describe("registry completeness", () => {
     expect(airtable.sort()).toEqual([
       "AIRTABLE_APPLY_PAT",
       "AIRTABLE_BASE_ID",
-      "AIRTABLE_PAT",
       "AIRTABLE_PLAN_PAT",
       "AIRTABLE_SYNC_PAT",
     ]);
 
-    // never-store: the operator's own token, refused every remote store.
-    expect(neverStoreKeys()).toContain("AIRTABLE_PAT");
+    // No Airtable key is never-store any more; the one that was is gone.
+    expect(neverStoreKeys()).not.toContain("AIRTABLE_PAT");
     // apply-tier: production-apply alone, behind required reviewers.
     expect(applyOnlyKeys()).toContain("AIRTABLE_APPLY_PAT");
     // narrowed AND plan-tier: reaches preflight (where the `main` dry run
@@ -415,7 +418,7 @@ describe("registry completeness", () => {
     }
     // Non-vacuous: an empty `neverStoreKeys()` would pass this trivially, and
     // an empty one is exactly the fail-open state discovery.ts guards against.
-    expect(neverStoreKeys()).toEqual(["AIRTABLE_PAT", "BWS_ACCESS_TOKEN"]);
+    expect(neverStoreKeys()).toEqual(["BWS_ACCESS_TOKEN"]);
   });
 
   it("declares every uncommented key in .env.example", async () => {

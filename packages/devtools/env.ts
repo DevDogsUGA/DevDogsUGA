@@ -8,10 +8,18 @@
  * the `.env.example` generator, the `env push` routing — and the
  * package's `typecheck` script is what keeps the metadata honest.
  *
- * This is also where the two `never-store` credentials are declared, and the
- * classification is the entire point: they are the MOST sensitive values in
- * the repository, refused storage precisely because storing them defeats the
- * thing they protect. See the long-form reasoning in `src/bws/environments.ts`.
+ * This is also where the `never-store` credential is declared, and the
+ * classification is the entire point: it is the MOST sensitive value in the
+ * repository, refused storage precisely because storing it defeats the thing
+ * it protects. See the long-form reasoning in `src/bws/environments.ts`.
+ *
+ * There were two until `AIRTABLE_PAT` was removed. It was the bootstrap
+ * Airtable token, and it earned `never-store` by carrying `schema.bases:write`
+ * on an operator's laptop — which is also why it stopped earning a
+ * declaration at all: `deploy airtable-apply` does that write behind required
+ * reviewers, and every other command it served needs only a read. Creating a
+ * base from nothing still needs a person and a token, but that is a one-off
+ * with a documented revoke rather than a key the registry carries.
  */
 import { declare, define } from "@devdogsuga/env";
 import { z } from "zod";
@@ -46,22 +54,17 @@ declare({
       scope: "environment",
       secrecy: "never-store",
     }),
-    AIRTABLE_PAT: define(z.string().min(1).optional(), {
-      doc:
-        "Bootstrap-only Airtable token for the scaffolding scripts. The " +
-        "runtime reads its own narrower token, AIRTABLE_SYNC_PAT — a " +
-        "separate key, so this one can never shadow it. This one stays in " +
-        "the operator's password vault, in .env only while shaping the base.",
-      scope: "developer",
-      secrecy: "never-store",
-    }),
     // The narrowest of the three Airtable tokens, and the only one CI may
     // hold outside the reviewer gate. §3.5's stage-1 dry run answers "what
     // would this commit do to the base" from `main`, so whatever it
     // authenticates with is reachable from the `main` trust tier -- which
-    // rules out AIRTABLE_PAT (never-store, and write-capable) and rules out
+    // rules out AIRTABLE_SYNC_PAT (it can rewrite every record) and rules out
     // AIRTABLE_APPLY_PAT (that is what the reviewer gate is for). A token
     // that can read a schema and do nothing else is what is left.
+    //
+    // It also ruled out AIRTABLE_PAT, the write-capable bootstrap token, until
+    // that key was removed outright -- so the argument now has one fewer
+    // candidate to reject rather than a different conclusion.
     //
     // ⚠️ `narrowed: true` here is the SECOND shape of that marker, not the
     // DB_URL one. There is no wider credential under this name in any target

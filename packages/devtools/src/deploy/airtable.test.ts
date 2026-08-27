@@ -165,7 +165,7 @@ describe("airtable-plan cannot mutate", () => {
     // The detail is where the variable names go, and naming them is the
     // difference between a job somebody can fix and one they re-run.
     expect((error as DeployError).detail.join("\n")).toContain(
-      "AIRTABLE_PLAN_PAT, AIRTABLE_PAT",
+      "AIRTABLE_PLAN_PAT, AIRTABLE_SYNC_PAT",
     );
   });
 });
@@ -257,7 +257,7 @@ describe("airtable-apply", () => {
     );
     expect(error).toBeInstanceOf(DeployError);
     expect((error as DeployError).detail.join("\n")).toContain(
-      "AIRTABLE_APPLY_PAT, AIRTABLE_PAT",
+      "AIRTABLE_APPLY_PAT",
     );
     expect(calls).toEqual([]);
   });

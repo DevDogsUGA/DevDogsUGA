@@ -541,8 +541,11 @@ describe("development", () => {
     const file = mentioned(development());
     // The never-store and minted keys are excluded because they get
     // documentation and NO assignable line anywhere — asserted separately
-    // below. `AIRTABLE_PAT` is both `scope: developer` and never-store, so it
-    // would otherwise be expected in two contradictory places.
+    // below. The overlap this guarded against was `AIRTABLE_PAT`, both
+    // `scope: developer` and never-store, which would otherwise have been
+    // expected in two contradictory places; it has since been removed, and the
+    // filter stays because the next key in that position should not have to
+    // rediscover the clash.
     const withoutLines = new Set([...mintedKeys(), ...neverStoreKeys()]);
     for (const key of [
       ...scoped("default"),

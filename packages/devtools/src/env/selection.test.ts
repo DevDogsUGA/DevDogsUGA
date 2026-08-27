@@ -36,7 +36,10 @@ const env = (o: Record<string, string>) => Object.entries(o);
 // completeness test pins both derived sets to exactly these keys, and the
 // first test below re-asserts the tie so a drifted literal fails loudly here
 // rather than silently testing the wrong key.
-const NEVER_STORE = ["AIRTABLE_PAT", "BWS_ACCESS_TOKEN"] as const;
+// One member since `AIRTABLE_PAT` was removed. It stays an array rather
+// than collapsing to a single constant: `never-store` is a class, and the
+// loop below is what makes adding a second member automatically tested.
+const NEVER_STORE = ["BWS_ACCESS_TOKEN"] as const;
 const APPLY_ONLY = ["AIRTABLE_APPLY_PAT", "SUPABASE_ACCESS_TOKEN"] as const;
 
 /**

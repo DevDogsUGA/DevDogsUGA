@@ -93,20 +93,21 @@ The base is shaped by a person holding a write-capable token and synced at run t
 <details>
 <summary>Which token carries which scopes, and where does each live?</summary>
 
-| Token           | Scopes                                                           | Lives in                                   | Used by                            |
-| --------------- | ---------------------------------------------------------------- | ------------------------------------------ | ---------------------------------- |
-| **Sync**        | `schema.bases:read` · `data.records:read` · `data.records:write` | `AIRTABLE_SYNC_PAT`, the env registry      | the runtime sync, every pass       |
-| **Scaffolding** | the same, **plus `schema.bases:write`**                          | `AIRTABLE_PAT` in your `.env`, transiently | `scaffold` · `pull-ids` · `verify` |
-| **Plan**        | `schema.bases:read` **only**                                     | `AIRTABLE_PLAN_PAT`, CI environments       | `deploy airtable-plan`             |
-| **Apply**       | the scaffolding scopes                                           | `AIRTABLE_APPLY_PAT`, behind reviewers     | `deploy airtable-apply`            |
+| Token     | Scopes                                                           | Lives in                               | Used by                                             |
+| --------- | ---------------------------------------------------------------- | -------------------------------------- | --------------------------------------------------- |
+| **Sync**  | `schema.bases:read` · `data.records:read` · `data.records:write` | `AIRTABLE_SYNC_PAT`, the env registry  | the runtime sync, and `pull-ids` · `verify` locally |
+| **Plan**  | `schema.bases:read` **only**                                     | `AIRTABLE_PLAN_PAT`, CI environments   | `deploy airtable-plan`                              |
+| **Apply** | `schema.bases:write` and the sync scopes                         | `AIRTABLE_APPLY_PAT`, behind reviewers | `deploy airtable-apply` · `scaffold`                |
 
 The two axes are independent in Airtable: a records read/write token cannot alter tables or fields, whatever it does to rows. That independence is the whole reason a compromised runtime cannot rebuild the base, and it costs one extra token to keep.
 
-**Which token a command picks is a function of what it does**, not of what is set. `airtableClient({ need })` walks a preference list per capability: `read` tries `AIRTABLE_PLAN_PAT` then `AIRTABLE_PAT`; `write` tries `AIRTABLE_APPLY_PAT` then `AIRTABLE_PAT`. Narrowest first, deliberately — an operator at a terminal usually holds the full scaffolding token, which satisfies both rows, so an unordered lookup would authenticate every dry run with a token that can restructure the base. Neither row crosses the split: a plan quietly running on the write token would make the reviewer gate decorative, and a write falling back to the plan token would turn a missing credential into a 403 halfway through a schema change.
+There were four. **A separate scaffolding token, `AIRTABLE_PAT`, was removed** once `deploy airtable-apply` existed to do the schema write behind required reviewers: it carried `schema.bases:write` on an operator's laptop indefinitely, and every other command it served — `pull-ids`, `verify` — needs only a read. A schema change now has exactly one path, and it is the one with reviewers in front of it.
 
-⚠️ **On a machine holding both `AIRTABLE_PLAN_PAT` and `AIRTABLE_PAT`, a verify with duplicate checking will 403.** Duplicate detection reads _records_, and the plan token has no `data.records:read`. Keep `AIRTABLE_PLAN_PAT` out of your `.env` — it is a CI credential.
+**Which token a command picks is a function of what it does**, not of what is set. `airtableClient({ need })` walks a preference list per capability: `read` tries `AIRTABLE_PLAN_PAT` then `AIRTABLE_SYNC_PAT`; `write` tries `AIRTABLE_APPLY_PAT` and nothing else. Narrowest first, deliberately — the plan token holds `schema.bases:read` alone, so a dry run authenticated with it is structurally unable to write rather than merely uninterested in writing. Neither row crosses the split: a plan quietly running on the write token would make the reviewer gate decorative, and a write falling back to a token that cannot write would turn a named refusal into a 403 halfway through a schema change.
 
-⚠️ **Mint the scaffolding token as whoever created the workspace.** `POST /v0/meta/bases` requires the workspace creator role, a person-level permission a token inherits and no scope can grant. A collaborator's token does everything else and fails only at base creation.
+⚠️ **On a machine holding both `AIRTABLE_PLAN_PAT` and `AIRTABLE_SYNC_PAT`, a verify with duplicate checking will 403.** Duplicate detection reads _records_, and the plan token has no `data.records:read`. Keep `AIRTABLE_PLAN_PAT` out of your `.env` — it is a CI credential — and the preference ordering never bites.
+
+⚠️ **Creating a base from nothing is the one thing no routed credential can do.** `POST /v0/meta/bases` requires the workspace creator role, a person-level permission a token inherits and no scope can grant. It is a once-per-base act: mint a token as the workspace creator, export it as `AIRTABLE_APPLY_PAT` for that single `scaffold` run, and revoke it afterwards. Everything after step 4 of the runbook needs only a read.
 
 The base id is not one of these. It is `BASE_ID`, a committed constant in `packages/airtable/src/registry.ts` beside the `tbl` and `fld` ids of the same base — there is one base, staging deliberately shares it, and every field id in that file belongs to it, so a second base would need a second registry rather than a second value. `AIRTABLE_BASE_ID` survives only as an override for aiming the tooling at a scratch base, and is empty in every ordinary deployment. How the four tokens are routed to their targets lives in [Env](/docs/toolkit/guides/env).
 

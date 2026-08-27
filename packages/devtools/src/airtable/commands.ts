@@ -177,8 +177,13 @@ export async function runVerify(checkDuplicates: boolean): Promise<void> {
   // ⚠️ `read` covers the schema half only. Duplicate detection also reads
   // RECORDS (`data.records:read`), which `AIRTABLE_PLAN_PAT` deliberately
   // cannot do — so on a machine holding both tokens, `verify` with duplicate
-  // checking on needs `AIRTABLE_PAT` and says so through `runAirtable`'s hint
-  // rather than through a bare 403.
+  // checking on needs `AIRTABLE_SYNC_PAT`, the second entry in the read row,
+  // and says so through `runAirtable`'s hint rather than through a bare 403.
+  //
+  // That second entry used to be `AIRTABLE_PAT`. Nothing about this hazard
+  // changed with it: the plan token is still first because it is narrower, and
+  // it still cannot see a record. Keep `AIRTABLE_PLAN_PAT` out of a laptop
+  // `.env` — it is a CI credential — and the ordering never bites.
   const credentials = airtableClient({ need: "read" });
   if (!credentials) {
     process.exitCode = 1;

@@ -277,13 +277,14 @@ const server = {
     doc:
       "The runtime sync token: schema.bases:read, data.records:read and " +
       "data.records:write on the one officers' base, and nothing else -- it " +
-      "can rewrite every dues record, which is why it is the narrowest of " +
-      "the four Airtable tokens that still touches data. Empty means the " +
+      "can rewrite every dues record, which is why it is the only one of " +
+      "the three Airtable tokens that touches data at all. Empty means the " +
       "sync refuses with a named error (the platform boots without it). " +
       "Reaches the Worker like every other secret; rotating it is " +
-      "Bitwarden -> `env push` -> next deploy. NOT the scaffolding token " +
-      "(AIRTABLE_PAT, never stored) and NOT the CI pair (PLAN/APPLY, " +
-      "schema-only).",
+      "Bitwarden -> `env push` -> next deploy. NOT the CI pair (PLAN/APPLY, " +
+      "schema-only) -- though devtools reads this one for a local " +
+      "`verify --duplicates`, which needs a record read the plan token " +
+      "does not carry.",
     scope: "environment",
     secrecy: "secret",
     commented: true,

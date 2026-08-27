@@ -16,19 +16,24 @@ import { explain } from "../ui.js";
  *
  * ## The caller states a CAPABILITY, not a variable
  *
- * There are three Airtable tokens now (docs/platform/airtable-setup.md lists
- * them with their scopes), and which one a command should reach for is a
- * property of what the command DOES:
+ * Which token a command reaches for is a property of what the command DOES:
  *
- *   need: "read"    AIRTABLE_PLAN_PAT, then AIRTABLE_PAT
- *   need: "write"   AIRTABLE_APPLY_PAT, then AIRTABLE_PAT
+ *   need: "read"    AIRTABLE_PLAN_PAT, then AIRTABLE_SYNC_PAT
+ *   need: "write"   AIRTABLE_APPLY_PAT, and nothing else
  *
- * ⚠️ **Prefer the narrower, and that ordering is the point.** An operator at a
- * terminal usually holds the full `AIRTABLE_PAT`, which satisfies both rows —
- * so an unordered lookup would authenticate every dry run with a token that
- * can restructure the base. Reading with a read-only token when one is present
- * is what makes `scaffold --dry-run` structurally unable to write rather than
- * merely uninterested in writing.
+ * ⚠️ **Prefer the narrower, and that ordering is the point.** `PLAN_PAT` holds
+ * `schema.bases:read` alone, so a dry run authenticated with it is
+ * structurally unable to write rather than merely uninterested in writing.
+ * `SYNC_PAT` is behind it because it can read records too, which the schema
+ * read does not need but `verify --duplicates` does.
+ *
+ * ⚠️ **The write row has ONE entry, and the empty second slot is deliberate.**
+ * There is no operator token any more. `AIRTABLE_PAT` — the bootstrap
+ * credential that used to sit at the end of both rows — was removed once
+ * `deploy airtable-apply` existed: it carried `schema.bases:write` on a laptop
+ * indefinitely, and every job it served is now either a read or the
+ * reviewer-gated apply. A schema change therefore has exactly one path, and it
+ * is the one with reviewers in front of it.
  *
  * ⚠️ **Neither row falls back across the split.** `AIRTABLE_PLAN_PAT` is absent
  * from the write row because it cannot do the job — falling back to it would
@@ -37,6 +42,11 @@ import { explain } from "../ui.js";
  * read row because it CAN do the job, and that is exactly the reason not to
  * use it: a plan that quietly ran on the write token would make the reviewer
  * gate in front of it decorative.
+ *
+ * ⚠️ **A brand-new base is the one thing this cannot do.** `POST /v0/meta/bases`
+ * needs the workspace-creator role, which no scope grants, so creating a base
+ * from nothing is a documented one-off: export `AIRTABLE_APPLY_PAT` locally for
+ * that single `scaffold` run and revoke it after. See the runbook.
  *
  * ⚠️ **And never Vault.** The reasoning is above; the practical half is that a
  * `null` from a failed Vault read is indistinguishable from "nothing stored",
@@ -57,8 +67,8 @@ export const CREDENTIAL_PREFERENCE: Record<
   AirtableCapability,
   readonly string[]
 > = {
-  read: ["AIRTABLE_PLAN_PAT", "AIRTABLE_PAT"],
-  write: ["AIRTABLE_APPLY_PAT", "AIRTABLE_PAT"],
+  read: ["AIRTABLE_PLAN_PAT", "AIRTABLE_SYNC_PAT"],
+  write: ["AIRTABLE_APPLY_PAT"],
 };
 
 /** For the refusal text, so it says what the missing token would have to be. */
@@ -156,8 +166,17 @@ export function resolveAirtableCredentials(
           ? "front of that credential decorative."
           : "through a schema change.",
         "",
-        "See docs/platform/airtable-setup.md for the three tokens and their",
-        "scopes.",
+        ...(need === "write"
+          ? [
+              "There is no operator token to fall back to any more. A schema",
+              "write happens in the reviewer-gated `deploy airtable-apply` job;",
+              "if you are creating a base from nothing, that is the documented",
+              "one-off in the runbook.",
+              "",
+            ]
+          : []),
+        "See docs/platform/guides/airtable/base-setup.md for the three tokens",
+        "and their scopes.",
       ],
     );
   }
