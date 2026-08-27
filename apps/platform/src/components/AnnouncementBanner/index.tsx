@@ -500,6 +500,21 @@ export default function AnnouncementBanner() {
               doubled line. `border-b-0` leaves its own outline open at the
               bottom, so the two borders read as one silhouette.
 
+              Hovering lifts it back out: `translate-y-0` is the whole of the
+              gesture, and 2px is not a chosen distance but the only one
+              available. The tab is `bottom-full`, so at 0 its lower edge is
+              already flush with the card's — lift it any further and the 2px
+              it was overlapping becomes a transparent gap with the scrim
+              showing through, and the tab reads as detached rather than
+              raised. Landing exactly on 0 hands the erased span back to the
+              card, so what appears under a lifted tab is the card's own top
+              border running unbroken beneath it.
+
+              Straight up, with no sideways component and no shadow growing
+              under it, unlike the buttons inside the card. Those two go
+              together — the diagonal exists to uncover a block — and this is
+              a tab hinged on an edge, which only has one direction to go.
+
               No block shadow here on purpose: the card's falls down and to the
               right, away from the tab, while a shadow on the tab itself would
               land squarely on the card's face. */}
@@ -512,7 +527,7 @@ export default function AnnouncementBanner() {
                eyebrow from the accessible name entirely. */
             aria-label={`${eyebrow} — dismiss announcement`}
             className={cn(
-              "absolute bottom-full left-4 flex translate-y-[2px] items-center gap-2 rounded-t-lg border-2 border-b-0 border-black px-2.5 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none",
+              "absolute bottom-full left-4 flex translate-y-[2px] items-center gap-2 rounded-t-lg border-2 border-b-0 border-black px-2.5 py-1.5 transition-[background-color,translate] hover:translate-y-0 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none",
               toneClasses.chip,
               toneClasses.chipHover,
             )}
