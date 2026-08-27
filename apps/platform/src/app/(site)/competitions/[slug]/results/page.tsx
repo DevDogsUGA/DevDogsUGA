@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Callout from "~/ui/callout";
@@ -28,6 +29,45 @@ import { getStandings, type StandingRow } from "~/server/loaders/points";
  * `connection()` and the page is a plain uncached read inside the site layout's
  * content boundary.
  */
+
+/**
+ * The only competition route that is not behind `expectSession()`, so the only
+ * one worth describing to anything but a browser tab — the two under `teams/`
+ * redirect an anonymous visitor to `/auth` and carry `robots: { index: false }`
+ * instead of this.
+ *
+ * `getCompetitionBySlug` is called here as well as in the page body; React's
+ * `cache()` wrapper on the loader is what stops that being a second query
+ * within the same request.
+ *
+ * A competition has no name of its own — it is called after its project — which
+ * is why the title is built rather than stored, and why the miss branch cannot
+ * name anything: an unknown slug has no project behind it to name.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const competition = await getCompetitionBySlug(slug);
+
+  if (!competition) {
+    return {
+      title: "Competition not found | DevDogs",
+      description: "No DevDogs competition matches this link.",
+    };
+  }
+
+  return {
+    title: `${competition.name} results | DevDogs`,
+    // The scoring split is the description rather than a placing, because the
+    // page refuses to reduce a team to one number and an unfurl that led with
+    // a winner would undo that in the one place nobody proofreads.
+    description: `Final standings for the DevDogs ${competition.name} competition, scored out of 1000 — 600 for requirements met and 400 from the member elections.`,
+  };
+}
+
 export default async function ResultsPage({
   params,
 }: {

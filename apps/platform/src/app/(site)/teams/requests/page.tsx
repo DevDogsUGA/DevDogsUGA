@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import PageShell from "~/components/PageShell";
@@ -17,6 +18,16 @@ import {
 } from "~/server/loaders/teams";
 import type { LockReason } from "~/server/teams/lockState";
 import Callout from "~/ui/callout";
+
+/**
+ * A queue addressed to one person: `expectSession()` below redirects anonymous
+ * visitors to `/auth`, and what a signed-in member sees is theirs alone. The
+ * title is the label `config/nav.ts` gives it in the profile popover.
+ */
+export const metadata: Metadata = {
+  title: "Team requests | DevDogs",
+  robots: { index: false },
+};
 
 /**
  * /teams/requests — everything waiting on the viewer to decide.

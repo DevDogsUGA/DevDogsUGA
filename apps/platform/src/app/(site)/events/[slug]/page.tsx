@@ -22,6 +22,7 @@ import {
   formatEventTime,
   formatRelative,
 } from "~/lib/eventTime";
+import JsonLd, { eventLd } from "~/lib/structuredData";
 import {
   attendanceFormIsLive,
   getMeetingBySlug,
@@ -118,6 +119,23 @@ export default async function MeetingPage({
 
   return (
     <>
+      {/* The facts the dialog prints, in the vocabulary a crawler reads —
+          which is what lets this URL show up as an event, with its date, rather
+          than as one more page. `where` is the value already computed above
+          rather than a second call, so the structured location and the visible
+          one are the same string by construction. Nothing here is authored:
+          every field comes off the meeting row, and `eventLd` omits the ones it
+          cannot fill rather than guessing at them. */}
+      <JsonLd
+        data={eventLd({
+          slug,
+          name: meeting.name,
+          startsAt: meeting.startsAt,
+          endsAt: meeting.endsAt,
+          summary: meeting.summary,
+          where,
+        })}
+      />
       <div className="flex flex-wrap items-center gap-2">
         {segments.map((segment) => {
           const badge = segmentBadge[segment];

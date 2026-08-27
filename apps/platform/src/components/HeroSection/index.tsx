@@ -80,6 +80,22 @@ function HeroPhotoFrame() {
             fill
             alt="DevDogs team planning session"
             src={backendDiscussion}
+            // Worked back from the chain above rather than guessed: the row is
+            // `min(100vw - 96px, 1104px)` wide — the viewport less this
+            // wrapper's `md:mx-6` and the container's `px-6`, capped by
+            // `max-w-6xl` — and the frame is `md:w-1/2` of it, so it pins at
+            // 552px from 1200px up (`md:max-w-xl` never binds; half of 1104 is
+            // already under 576). Off that comes the padding this frame
+            // reserves for the gem's shadow overhang: 24px above md, 16px
+            // below. Without this, `fill` defaults to `100vw` and a 4000px
+            // source ships at w=1920 for a box never wider than 528.
+            sizes="(min-width: 1200px) 528px, (min-width: 768px) calc(50vw - 72px), calc(100vw - 96px)"
+            // The one image on the site that gets this. It is the largest
+            // above-the-fold element on desktop, so it is the LCP candidate,
+            // and the preload <link> beats the body parse to it. `preload`
+            // rather than `priority`: the latter is deprecated as of Next 16 —
+            // same effect, clearer name.
+            preload
             className="object-cover object-center"
           />
         </div>

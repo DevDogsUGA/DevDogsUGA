@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  ArrowCounterClockwiseIcon,
   SpinnerGapIcon,
+  TrashSimpleIcon,
   WarningCircleIcon,
 } from "@phosphor-icons/react/ssr";
 import { useSettingsForm } from "~/ui/settings-form";
@@ -21,8 +21,12 @@ import { useSettingsForm } from "~/ui/settings-form";
  * `announcement.test.ts` pins that down so they cannot start to.
  */
 
-/** Animated "⌘ S" / "Ctrl S" hint, shown inside the button while there is something to save. */
-function ShortcutHint({ show }: { show: boolean }) {
+/**
+ * Static "⌘ S" / "Ctrl S" hint. It used to slide open, which meant a hint about
+ * a keyboard shortcut animating every time the button re-rendered — motion
+ * spent on the least urgent thing in the bar.
+ */
+function ShortcutHint() {
   const [isMac] = useState(
     () =>
       typeof navigator !== "undefined" &&
@@ -30,24 +34,13 @@ function ShortcutHint({ show }: { show: boolean }) {
   );
 
   return (
-    <span
-      aria-hidden="true"
-      className={`grid shrink-0 overflow-hidden transition-[grid-template-columns] duration-200 ease-in-out ${
-        show ? "grid-cols-[1fr]" : "grid-cols-[0fr]"
-      }`}
-    >
-      <span
-        className={`mt-px ml-[1ch] flex items-center gap-0.5 overflow-hidden transition-opacity duration-200 ease-in-out ${
-          show ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <kbd className="rounded-sm border border-b-2 border-current/20 bg-current/10 px-1 font-mono text-[0.6875rem] font-normal whitespace-nowrap">
-          {isMac ? "⌘" : "Ctrl"}
-        </kbd>
-        <kbd className="rounded-sm border border-b-2 border-current/20 bg-current/10 px-1 font-mono text-[0.6875rem] font-normal whitespace-nowrap">
-          S
-        </kbd>
-      </span>
+    <span aria-hidden="true" className="ml-[1ch] flex items-center gap-0.5">
+      <kbd className="rounded-sm border border-b-2 border-current/20 bg-current/10 px-1 font-mono text-[0.6875rem] font-normal whitespace-nowrap">
+        {isMac ? "⌘" : "Ctrl"}
+      </kbd>
+      <kbd className="rounded-sm border border-b-2 border-current/20 bg-current/10 px-1 font-mono text-[0.6875rem] font-normal whitespace-nowrap">
+        S
+      </kbd>
     </span>
   );
 }
@@ -58,11 +51,79 @@ const listFormatter = new Intl.ListFormat("en", {
 });
 
 export default function SettingsSaveBar() {
-  const { dirtyCount, invalidLabels, isSaving, saveAll, resetAll } =
-    useSettingsForm();
+  const {
+    dirtyCount,
+    invalidLabels,
+    isSaving,
+    saveAll,
+    resetAll,
+    blockedAt,
+  } = useSettingsForm();
 
   const show = dirtyCount > 0;
   const blocked = invalidLabels.length > 0;
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Answer a swallowed link click.
+   *
+   * Driven from JS rather than a CSS class because it has to be able to fire
+   * twice in a row — a member who clicks the same dead link again should get
+   * the same shake, and re-adding a class that is already there animates
+   * nothing. The Web Animations API restarts cleanly every call and needs no
+   * keyframes in the global stylesheet.
+   *
+   * Skipped on the first render: `blockedAt` starts at 0 and nothing has been
+   * blocked yet.
+   */
+  const previousBlockedAt = useRef(blockedAt);
+  const [blockedMessage, setBlockedMessage] = useState("");
+  useEffect(() => {
+    if (blockedAt === previousBlockedAt.current) return;
+    previousBlockedAt.current = blockedAt;
+
+    // The shake says nothing to a screen reader, and a link that simply does
+    // not fire is the most confusing possible outcome there. Re-set on every
+    // block so a repeat click re-announces.
+    setBlockedMessage(
+      `Navigation cancelled. Save or discard your ${dirtyCount === 1 ? "change" : "changes"} first.`,
+    );
+    const clear = setTimeout(() => setBlockedMessage(""), 4000);
+
+    const card = cardRef.current;
+    if (!card?.animate) return () => clearTimeout(clear);
+
+    const reduced = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    // `transform` rather than the `translate` property: universally animatable,
+    // and the outer wrapper owns the bar's own translate-y so there is nothing
+    // here to fight over.
+    //
+    // Reduced motion gets the same message without the movement — the edge
+    // flares instead. Deliberately NOT boxShadow, which would blow away the
+    // card's drop shadow for the length of the animation and read as a flicker.
+    card.animate(
+      reduced
+        ? [
+            { borderColor: "var(--color-mauve-600)" },
+            { borderColor: "var(--color-white)" },
+            { borderColor: "var(--color-mauve-600)" },
+          ]
+        : [
+            { transform: "translateX(0)" },
+            { transform: "translateX(-7px)" },
+            { transform: "translateX(6px)" },
+            { transform: "translateX(-4px)" },
+            { transform: "translateX(3px)" },
+            { transform: "translateX(0)" },
+          ],
+      { duration: reduced ? 600 : 400, easing: "ease-in-out" },
+    );
+
+    return () => clearTimeout(clear);
+  }, [blockedAt, dirtyCount]);
 
   return (
     /* Kept mounted so it can animate both ways, and `inert` while hidden so a
@@ -84,58 +145,78 @@ export default function SettingsSaveBar() {
         className="pointer-events-none absolute inset-x-0 -top-6 bottom-0 bg-black/50 [mask-image:linear-gradient(to_top,#000_0%,#000_20%,transparent_100%)] supports-backdrop-filter:backdrop-blur-sm"
       />
 
-      <div className="pointer-events-auto relative mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border-2 border-mauve-700 bg-mauve-950 px-4 py-3 shadow-lg shadow-black/40">
+      {/* The surface deliberately does NOT match either thing behind it. The
+          page is mauve-900 and the cards are mauve-950 inside a mauve-800
+          border, so a dark bar with a dim edge read as one more card that
+          happened to be stuck to the bottom of the window. Going lighter than
+          both — mauve-800 on a mauve-600 edge — is what makes it chrome
+          floating over the page rather than part of it, and the inset highlight
+          plus the deeper drop shadow sell the "floating" half of that. */}
+      <div
+        ref={cardRef}
+        className="pointer-events-auto relative mx-auto grid w-full max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-x-3 rounded-lg border-2 border-mauve-600 bg-mauve-800 px-3 py-3 shadow-2xl shadow-black/60 inset-ring-1 inset-ring-white/10 @sm:gap-x-4 @sm:px-4"
+      >
+        {/* The shake is the whole feedback for a cancelled click, and it is
+            invisible to a screen reader. This is the same news, spoken. */}
+        <span aria-live="assertive" className="sr-only">
+          {blockedMessage}
+        </span>
+
+        <button
+          type="button"
+          onClick={resetAll}
+          disabled={isSaving}
+          /* Destructive, and dressed like it. This throws away everything the
+             member has typed since their last save with no undo behind it, so
+             it carries the same rose the delete controls use rather than the
+             neutral grey it had — a quiet secondary button next to Save is an
+             invitation to press it to "cancel out" of the bar. The label says
+             what goes, too: "Reset" reads like a form control, "Discard" reads
+             like a loss. */
+          className="flex shrink-0 items-center gap-[1ch] rounded-sm border-2 border-rose-800 bg-rose-950/60 px-3 py-1.5 text-sm font-medium text-rose-300 transition outline-none hover:border-rose-600 hover:bg-rose-700 hover:text-white hover:shadow-sm hover:shadow-rose-700/20 focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-800 disabled:pointer-events-none disabled:opacity-50"
+        >
+          <TrashSimpleIcon size={14} aria-hidden />
+          <span className="hidden @sm:inline">Discard changes</span>
+          <span className="@sm:hidden">Discard</span>
+        </button>
+
         <p
           role="status"
-          className={`min-w-0 flex-1 text-sm leading-tight text-balance ${
-            blocked ? "text-rose-300" : "text-mauve-300"
+          className={`min-w-0 text-center text-sm leading-tight text-balance ${
+            blocked ? "text-rose-300" : "text-mauve-200"
           }`}
         >
           {blocked ? (
-            <span className="flex items-start gap-2">
+            <span className="flex items-center justify-center gap-1.5">
               <WarningCircleIcon
                 weight="fill"
                 aria-hidden
-                className="mt-0.5 size-4 shrink-0"
+                className="hidden size-4 shrink-0 @sm:inline"
               />
-              <span>
-                Fix {listFormatter.format(invalidLabels)} before saving.
-              </span>
+              <span>Fix {listFormatter.format(invalidLabels)} before saving.</span>
             </span>
           ) : (
             <>
-              {dirtyCount} unsaved{" "}
-              {dirtyCount === 1 ? "change" : "changes"}
+              {dirtyCount} unsaved {dirtyCount === 1 ? "change" : "changes"}
             </>
           )}
         </p>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={resetAll}
-            disabled={isSaving}
-            className="flex shrink-0 items-center gap-[1ch] self-stretch rounded-sm border border-mauve-700 bg-mauve-800 px-3 py-1.5 text-sm font-medium text-mauve-300 inset-ring-mauve-600 transition-colors outline-none hover:border-mauve-500 hover:bg-mauve-700 hover:text-white hover:inset-ring-1 focus-visible:ring-2 focus-visible:ring-mauve-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-          >
-            <ArrowCounterClockwiseIcon size={14} aria-hidden />
-            Reset
-          </button>
-          <button
-            type="button"
-            onClick={saveAll}
-            disabled={isSaving || blocked}
-            className="relative flex items-center justify-center rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 enabled:hover:bg-transparent enabled:hover:text-white enabled:hover:shadow-sm enabled:hover:shadow-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSaving ? (
-              <SpinnerGapIcon className="animate-spin [animation-duration:750ms]" />
-            ) : (
-              <>
-                Save
-                <ShortcutHint show={show && !blocked} />
-              </>
-            )}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={saveAll}
+          disabled={isSaving || blocked}
+          className="relative flex shrink-0 items-center justify-center rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-800 enabled:hover:bg-transparent enabled:hover:text-white enabled:hover:shadow-sm enabled:hover:shadow-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isSaving ? (
+            <SpinnerGapIcon className="animate-spin [animation-duration:750ms]" />
+          ) : (
+            <>
+              Save
+              {!blocked && <ShortcutHint />}
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

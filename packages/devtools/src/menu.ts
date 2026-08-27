@@ -25,6 +25,7 @@
 import { confirm, log, note, select, text } from "@clack/prompts";
 import {
   GROUPS,
+  SCOPES,
   type CommandGroup,
   type CommandNode,
   type CommandOption,
@@ -83,7 +84,12 @@ function offered(
 function hintFor(node: CommandNode, env: Environment): string {
   const base = node.hint ?? node.summary;
   const blocked = blockedBecause(node, env);
-  return blocked ? `${base} — ${blocked}` : base;
+  const said = blocked ? `${base} — ${blocked}` : base;
+
+  // The scope leads, because in the one group that has scopes it is the thing
+  // the reader is actually choosing between: `restart` and `reset` sit four
+  // lines apart and act on different layers.
+  return node.scope ? `${SCOPES[node.scope].menu} · ${said}` : said;
 }
 
 // ── Screens ──────────────────────────────────────────────────────────────────

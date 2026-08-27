@@ -299,10 +299,35 @@ describe("adapts to the machine", () => {
 
   it("names only the offered commands in a group's hint", async () => {
     await walk([], STOPPED).catch(() => null);
-    const database = shown[0]!.find((entry) => entry.label === "Your database");
+    const database = shown[0]!.find((entry) => entry.label === "Supabase");
 
     expect(database!.hint).not.toContain("stop");
     expect(database!.hint).toContain("link");
+  });
+
+  /**
+   * The two layers "Supabase" covers, told apart on the line.
+   *
+   * `restart` and `reset` sit four entries apart and act on different things
+   * — the containers, and the database inside them. A reader choosing between
+   * them should not have to already know that.
+   */
+  it("says which layer each Supabase command acts on", async () => {
+    const drawn = await screen(RUNNING, ["link"]);
+    const hintOf = (name: string) =>
+      drawn.find((entry) => entry.label === name)?.hint ?? "";
+
+    expect(hintOf("restart")).toContain("Supabase · ");
+    expect(hintOf("stop")).toContain("Supabase · ");
+    expect(hintOf("reset")).toContain("Postgres · ");
+    expect(hintOf("push")).toContain("Postgres · ");
+  });
+
+  it("leaves a group without scopes unlabelled", async () => {
+    const drawn = await screen(RUNNING, ["catalog"]);
+    for (const entry of drawn) {
+      expect(entry.hint ?? "", entry.label).not.toContain(" · ");
+    }
   });
 });
 

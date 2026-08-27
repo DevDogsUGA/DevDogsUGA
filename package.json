@@ -4,13 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
+    "build": "node scripts/pick.mjs build",
+    "dev": "node scripts/pick.mjs dev",
     "dev:docs": "turbo watch build --filter=@devdogsuga/docs",
-    "typecheck": "turbo run typecheck",
-    "lint": "turbo run lint",
-    "lint:fix": "turbo run lint:fix",
-    "test": "turbo run test",
+    "typecheck": "node scripts/pick.mjs typecheck",
+    "lint": "node scripts/pick.mjs lint",
+    "lint:fix": "node scripts/pick.mjs lint:fix",
+    "test": "node scripts/pick.mjs test",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "sb": "pnpm --filter @devdogsuga/devtools run cli",
@@ -28,6 +28,7 @@
     "node": ">=22.12"
   },
   "devDependencies": {
+    "@clack/prompts": "catalog:",
     "@devdogsuga/env": "workspace:*",
     "@types/node": "catalog:",
     "prettier": "3.9.6",

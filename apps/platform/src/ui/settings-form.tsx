@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { useUnsavedChangesWarning } from "~/hooks/useUnsavedChangesWarning";
+import { shouldInterceptNavigation } from "~/lib/navigationGuard";
 import { toast } from "~/lib/toast";
 
 /**
@@ -79,6 +80,12 @@ interface SettingsFormContextValue {
   invalidLabels: string[];
   saveAll: () => void;
   resetAll: () => void;
+  /**
+   * Bumped each time a link click was swallowed to protect unsaved changes.
+   * The bar watches it and draws attention to itself — the click has to be
+   * answered with something, or it reads as the page having ignored it.
+   */
+  blockedAt: number;
 }
 
 const SettingsFormContext = createContext<SettingsFormContextValue | null>(
@@ -140,6 +147,55 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
   const dirtyCount = dirty.length;
   const isDirty = dirtyCount > 0;
   useUnsavedChangesWarning(isDirty);
+
+  // Client-side navigation away from unsaved work.
+  //
+  // `useUnsavedChangesWarning` above only fires when the document itself is
+  // going away. A `<Link>` click never unloads anything — the router swaps the
+  // tree, this page unmounts, and the edits vanish with no prompt at all. This
+  // catches the click on the way down, before Link's own handler sees it, and
+  // answers it by making the bar ask for attention instead.
+  //
+  // Only while dirty: a clean form must never make a link feel broken. See
+  // ~/lib/navigationGuard for which clicks are eligible.
+  const [blockedAt, setBlockedAt] = useState(0);
+  useEffect(() => {
+    if (!isDirty) return;
+
+    function handleClick(event: MouseEvent) {
+      if (event.defaultPrevented) return;
+      const anchor = (event.target as Element | null)?.closest?.("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+
+      const intercept = shouldInterceptNavigation(
+        {
+          href: anchor.href,
+          target: anchor.getAttribute("target"),
+          hasDownload: anchor.hasAttribute("download"),
+          button: event.button,
+          metaKey: event.metaKey,
+          ctrlKey: event.ctrlKey,
+          shiftKey: event.shiftKey,
+          altKey: event.altKey,
+        },
+        window.location.href,
+      );
+      if (!intercept) return;
+
+      // preventDefault alone is enough, and deliberately not stopPropagation:
+      // Link's own click handler ends with `if (e.defaultPrevented) return`
+      // before it navigates (see next/dist/client/app-dir/link.js), and this
+      // listener is on the document in the capture phase, so it has already run
+      // by the time React builds the synthetic event. Killing propagation as
+      // well would also silence every unrelated handler on the way down — the
+      // menu that wanted to close itself when its link was clicked, say.
+      event.preventDefault();
+      setBlockedAt((n) => n + 1);
+    }
+
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [isDirty]);
 
   const saveAll = useCallback(() => {
     if (dirty.length === 0 || isSaving) return;
@@ -217,6 +273,7 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
       invalidLabels,
       saveAll,
       resetAll,
+      blockedAt,
     }),
     [
       setSummary,
@@ -227,6 +284,7 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
       invalidLabels,
       saveAll,
       resetAll,
+      blockedAt,
     ],
   );
 

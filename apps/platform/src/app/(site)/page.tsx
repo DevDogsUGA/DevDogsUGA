@@ -14,6 +14,7 @@ import LeadershipSection from "~/components/LeadershipSection";
 import StatCard from "~/ui/stat-card";
 import StreakCTA from "~/components/ProjectsSection/StreakCTA";
 import UnderConstruction from "~/components/UnderConstruction";
+import JsonLd, { siteGraph } from "~/lib/structuredData";
 
 const MARQUEE_TEXT_CLS =
   "py-4 font-display text-base font-bold tracking-widest uppercase";
@@ -30,7 +31,24 @@ const MARQUEE_TEXT_CLS =
  * with "used `cookies()` inside \"use cache\"".
  */
 export default function HomePage() {
-  return <HomeSections streakCta={<StreakCTA />} />;
+  return (
+    <>
+      {/* The Organization and WebSite nodes, on the homepage and nowhere else.
+          Both describe the site rather than this page, so repeating them on
+          every route would be the same two claims made 28 times over — and a
+          crawler that finds several copies of a node has to pick one. The apex
+          is where a search engine looks for them.
+
+          It sits out here rather than inside {@link HomeSections} because that
+          function returns `<UnderConstruction />` and nothing else in a
+          production build. Which of the two branches ships is not a question
+          about who the club is, and putting the graph inside would have made
+          production — the only deployment anybody crawls — the one place it
+          went missing. */}
+      <JsonLd data={siteGraph()} />
+      <HomeSections streakCta={<StreakCTA />} />
+    </>
+  );
 }
 
 /**

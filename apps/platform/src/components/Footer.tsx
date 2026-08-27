@@ -76,7 +76,10 @@ export default async function Footer() {
               className="flex items-center gap-2 text-lg md:text-xl lg:gap-2.5"
             >
               <figure className="size-[1.5em]">
-                <Image alt="Home" src={devdog} />
+                {/* `1.5em` against the link's `text-lg md:text-xl` — 27px, then
+                    30px. Both land on the same 32px candidate, so one value
+                    covers the pair. */}
+                <Image alt="Home" src={devdog} sizes="30px" />
               </figure>
               {/* Not a heading: this renders on every page now, and the site's
                   one <h1> belongs to the page content. Matches TopNav. */}

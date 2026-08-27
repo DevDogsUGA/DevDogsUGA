@@ -10,7 +10,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { helpPath, renderHelp } from "./help.js";
-import { allPaths, findCommand, TOP_LEVEL } from "./commands.js";
+import { allPaths, findCommand, SCOPES, TOP_LEVEL } from "./commands.js";
 
 describe("the top level", () => {
   const root = renderHelp();
@@ -27,6 +27,43 @@ describe("the top level", () => {
     }
   });
 
+  /**
+   * "Supabase" names both the containers and the database inside them, and
+   * `restart` and `reset` act on one each. The headings are what stop a
+   * six-line list from making the reader guess which is which.
+   */
+  it("heads each layer of the Supabase group", () => {
+    for (const scope of Object.values(SCOPES)) {
+      expect(root).toContain(`  ${scope.help}:`);
+    }
+
+    const supabase = root.slice(root.indexOf("\nSupabase:"));
+    const stack = supabase.indexOf(SCOPES.supabase.help);
+    const database = supabase.indexOf(SCOPES.postgres.help);
+
+    // The stack's own commands come first; the database sits inside it.
+    expect(stack).toBeGreaterThan(-1);
+    expect(database).toBeGreaterThan(stack);
+  });
+
+  it("leaves a group with one layer unheaded", () => {
+    // Only the Supabase group splits. Every other group is a flat block, and
+    // adding a heading to one would be a change nobody asked this to make.
+    // Structural rather than "contains no colon": a summary may hold one.
+    const body = root
+      .slice(root.indexOf("\nModeration:") + 1)
+      .split("\n\n")[0]!
+      .split("\n")
+      .slice(1);
+
+    expect(body.length).toBeGreaterThan(0);
+    for (const line of body) {
+      // Two spaces, a name, the gutter, then prose — an entry, not a heading
+      // and not a deeper indent.
+      expect(line, line).toMatch(/^ {2}\S+ {2,}\S/);
+    }
+  });
+
   it("lists no subcommand as an entry of its own", () => {
     // The reason the old help was unreadable: it printed all 31 of them.
     //
@@ -34,9 +71,12 @@ describe("the top level", () => {
     // legitimately contain a subcommand's word ("Report the target's health"
     // holds `status`). What must not appear is a subcommand as a LISTED
     // entry, which is what the reader scans.
+    // Two indents or four: a group that splits into scope blocks (Supabase)
+    // lists its commands one level deeper, and they are still entries the
+    // reader scans. Matching only ` {2}` would quietly stop guarding them.
     const entries = root
       .split("\n")
-      .map((line) => /^ {2}(\S+)/.exec(line)?.[1])
+      .map((line) => /^ {2,4}(\S+)/.exec(line)?.[1])
       .filter((name): name is string => name !== undefined);
 
     const topLevel = new Set(TOP_LEVEL.map((node) => node.name));

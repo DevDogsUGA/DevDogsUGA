@@ -16,13 +16,15 @@ import { describeEnvironment, probeEnvironment } from "./environment.js";
 export type Target =
   { kind: "local" } | { kind: "remote" } | { kind: "team"; slug: string };
 
+// Scope order, matching the tree in `commands.ts`: the four that act on the
+// Supabase stack, then the two that act on the Postgres database inside it.
 export const STACK_COMMANDS = [
   "link",
   "stop",
   "restart",
+  "status",
   "push",
   "reset",
-  "status",
 ] as const;
 export type StackCommand = (typeof STACK_COMMANDS)[number];
 

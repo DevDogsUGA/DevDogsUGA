@@ -1,9 +1,38 @@
 import type { CSSProperties } from "react";
+import hypno from "~/assets/hypno.webp";
 
+/**
+ * The hero's slowly turning spiral.
+ *
+ * This used to be the 24-path SVG inline, wrapped in `blur-sm` and rotated by
+ * `animate-spin-slower`. Measured on a production build, that one element held
+ * the whole page to 36.8 FPS at idle; hiding it restored 60.4. The expense is
+ * the live filter, not the geometry — a rotating element under `filter` cannot
+ * be handed to the compositor, because the filter's input changes every frame,
+ * so Skia re-blurs roughly 12.5 megapixels sixty times a second. Shrinking the
+ * surface sixfold bought 3 FPS; removing the blur at full size bought 25.
+ *
+ * So the blur is baked in instead. `scripts/generate-hypno.mjs` renders the same
+ * paths, blurs them once, and writes `hypno.webp`; the browser now rotates a
+ * finished texture, which is a compositor transform and costs nothing. The look
+ * is unchanged and so is the motion.
+ *
+ * The source is deliberately small — 512px for 58 KB, upscaled ~7x here. That
+ * is invisible precisely because the image is blurred: the sweep in the
+ * generator found 1024px cost twice the bytes for no visible gain. It is a
+ * plain `<img>` rather than `next/image` on purpose, so the optimizer does not
+ * re-encode a blurred texture back up to a larger candidate.
+ *
+ * One honest difference: the SVG carried `vector-effect: non-scaling-stroke`,
+ * so its line stayed 2px at any viewport. A raster's line scales with the
+ * image, so on a much wider viewport the spiral reads slightly heavier than it
+ * used to. On a blurred background decoration that is not a difference anyone
+ * can name.
+ */
 export default function Hypno() {
   return (
     <div
-      className="@container absolute size-full blur-sm"
+      className="@container absolute size-full"
       style={
         {
           "--pos-x": "2/3",
@@ -11,16 +40,12 @@ export default function Hypno() {
         } as CSSProperties
       }
     >
-      <svg
-        version="1.1"
-        id="Warstwa_1"
-        xmlns="http://www.w3.org/2000/svg"
-        xmlnsXlink="http://www.w3.org/1999/xlink"
-        x="0px"
-        y="0px"
-        viewBox="0 0 1926.25 1926.25"
-        className="animate-spin-slower absolute aspect-square"
-        xmlSpace="preserve"
+      <img
+        src={hypno.src}
+        alt=""
+        aria-hidden="true"
+        decoding="async"
+        className="animate-spin-slower absolute aspect-square max-w-none"
         style={{
           top: "calc(var(--pos-y)*100%)",
           left: "calc(var(--pos-x)*100%)",
@@ -31,44 +56,7 @@ export default function Hypno() {
             "max(calc((1 - var(--pos-x)) * 200% * sqrt(2)), calc(var(--pos-x)) * 200% * sqrt(2))",
           aspectRatio: "1/1",
         }}
-      >
-        {/* Inherited presentation attributes rather than <style jsx>: styled-jsx
-            only injects its rules after hydration, so the paths defaulted to
-            fill:black and covered the section background on the first paint.
-            vector-effect does not inherit, hence the child variant. */}
-        <g
-          fill="none"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="*:stroke-purple-300/75 *:[vector-effect:non-scaling-stroke]"
-        >
-          <path d="M282.7,282.7c375.79,0,680.43,304.64,680.43,680.43" />
-          <path d="M129.78,481.99c362.98-97.26,736.09,118.15,833.35,481.13" />
-          <path d="M33.65,714.07c325.44-187.89,741.58-76.39,929.48,249.05" />
-          <path d="M0.86,963.13c265.72-265.72,696.54-265.72,962.27,0" />
-          <path d="M33.65,1212.18c187.89-325.44,604.04-436.95,929.48-249.05" />
-          <path d="M129.78,1444.26c97.26-362.98,470.36-578.39,833.35-481.13" />
-          <path d="M282.7,1643.55c0-375.79,304.64-680.42,680.43-680.42" />
-          <path d="M481.99,1796.47c-97.26-362.98,118.15-736.09,481.13-833.35" />
-          <path d="M714.07,1892.6c-187.89-325.44-76.39-741.58,249.05-929.48" />
-          <path d="M963.13,1925.39c-265.72-265.72-265.72-696.54,0-962.27" />
-          <path d="M1212.18,1892.6c-325.44-187.89-436.95-604.04-249.05-929.48" />
-          <path d="M1444.26,1796.47c-362.98-97.26-578.39-470.36-481.13-833.35" />
-          <path d="M1643.55,1643.55c-375.79,0-680.42-304.64-680.42-680.42" />
-          <path d="M1796.47,1444.26c-362.98,97.26-736.09-118.15-833.35-481.13" />
-          <path d="M1892.6,1212.18c-325.44,187.89-741.58,76.39-929.48-249.05" />
-          <path d="M1925.39,963.13c-265.72,265.72-696.54,265.72-962.27,0" />
-          <path d="M1892.6,714.07c-187.89,325.44-604.04,436.95-929.48,249.05" />
-          <path d="M1796.47,481.99c-97.26,362.98-470.36,578.39-833.35,481.13" />
-          <path d="M1643.55,282.7c0,375.79-304.64,680.43-680.42,680.43" />
-          <path d="M1444.26,129.78c97.26,362.98-118.15,736.09-481.13,833.35" />
-          <path d="M1212.18,33.65c187.89,325.44,76.39,741.58-249.05,929.48" />
-          <path d="M963.13,0.86c265.72,265.72,265.72,696.54,0,962.27" />
-          <path d="M714.07,33.65c325.44,187.89,436.95,604.04,249.05,929.48" />
-          <path d="M481.99,129.78c362.98,97.26,578.39,470.36,481.13,833.35" />
-        </g>
-      </svg>
+      />
     </div>
   );
 }

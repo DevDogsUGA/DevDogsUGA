@@ -39,9 +39,36 @@ pnpm --filter @devdogsuga/supabase test:rls
 
 Every case there asserts an allow **and** a deny. A test that only checks the allow side passes just as happily when the policy is missing entirely.
 
+### Which apps a root task runs against
+
+Every root turbo script — `dev`, `build`, `test`, `lint`, `lint:fix`, `typecheck` — asks which apps you mean before it runs:
+
+```
+$ pnpm dev
+◆  `dev` — which apps?
+│  ◼ platform            with-env next dev --experimental-https
+│  ◻ schedule-builder    with-env next dev
+│  ◻ study-group-finder  with-env -c 'flutter run …'
+│  ◻ everything          every package in the workspace, unfiltered
+```
+
+`pnpm dev` used to start all three at once — two dev servers and a Flutter run — when almost nobody is working on more than one. The picker is preselected with your last answer for that task, so the common case is Enter.
+
+Three ways past it, each skipping the question entirely:
+
+| Command                      | What it does                                   |
+| ---------------------------- | ---------------------------------------------- |
+| `pnpm dev --filter platform` | any turbo filter — you have already said which |
+| `pnpm dev --all`             | every package, the old behaviour               |
+| `CI=1 pnpm dev`              | what CI does                                   |
+
+**CI never sees a prompt.** `scripts/pick.mjs` passes straight through to turbo when `CI` is set, when stdin is not a TTY, or when a filter is already present — which covers workflows, piped output and editor task runners alike. It is plain Node with no build step, and imports nothing until it has decided to ask, so the cost of it sitting in front of `build` and `lint` is one process spawn.
+
+`pnpm dev:docs` is unchanged: it carries its own filter already.
+
 ## What CI actually runs
 
-`.github/workflows/ci.yaml` runs on every pull request and holds no secrets at all — on `pull_request` GitHub runs the workflow definition *from the pull request*, so any credential in scope would be readable by whoever opened it. Four jobs:
+`.github/workflows/ci.yaml` runs on every pull request and holds no secrets at all — on `pull_request` GitHub runs the workflow definition _from the pull request_, so any credential in scope would be readable by whoever opened it. Four jobs:
 
 - **validate** — `lint`, `typecheck` and `test` across the affected packages, plus two unconditional comparisons that need no credential: the Airtable registry against its committed schema snapshot (`pnpm airtable:snapshot:check`), and `.env.example` against the env manifests (`pnpm env:example:check`).
 - **database** — starts the real local Supabase stack on an empty volume, which makes it the "every migration applies from scratch" check too. Then: the committed `database.types.ts` still matches the migrations, the RLS suite, the platform query and privilege-surface suite, and a production build of both Next apps with env validation **enforced**.

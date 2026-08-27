@@ -50,9 +50,16 @@ job is to create that file cannot be wrapped in something that requires it.
 Other callers use `cli:no-env` for the same reason, CI mostly, where there is
 no `.env` either.
 
-**Your database** — `link`, `push`, `reset` and `status`, each over
-`--local | --remote | --team <slug>`, plus `stop` and `restart`, which act on
-the Docker stack on this machine and take no target. `pnpm sb` is the same
+**Supabase** — one heading over two layers, and the menu says which on every
+line. `link`, `stop`, `restart` and `status` act on **the stack**: the Docker
+containers, the auth server, PostgREST, Studio. `push` and `reset` act on **the
+Postgres database inside it**, and survive a restart. `link`, `status`, `push`
+and `reset` each take `--local | --remote | --team <slug>`; `stop` and
+`restart` act on this machine's containers and take no target.
+
+That split is not pedantry — `config.toml` is read at `supabase start`, so
+`reset` replays migrations into containers still holding the old settings and
+`restart` is what actually picks a config change up. `pnpm sb` is the same
 binary and the same six commands: see [sb](/docs/toolkit/guides/sb).
 
 **Moderation** — `catalog` lists the report reasons and content types in your

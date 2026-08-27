@@ -105,6 +105,48 @@
           "type": "url"
         },
         {
+          "id": "fldZoHoKMT4JE2R1C",
+          "name": "Building",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "Boyd"
+              },
+              {
+                "name": "DLW"
+              },
+              {
+                "name": "Driftmier"
+              },
+              {
+                "name": "Main Library"
+              },
+              {
+                "name": "MLC"
+              },
+              {
+                "name": "Other"
+              },
+              {
+                "name": "Plant Sciences"
+              },
+              {
+                "name": "Poultry Science"
+              },
+              {
+                "name": "Science Learning Center"
+              },
+              {
+                "name": "Science Library"
+              },
+              {
+                "name": "Tate"
+              }
+            ]
+          }
+        },
+        {
           "id": "fldmhd0w0I2h88UTZ",
           "name": "Check-in closes",
           "type": "dateTime"

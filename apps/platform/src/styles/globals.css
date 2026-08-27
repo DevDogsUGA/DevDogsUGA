@@ -5,6 +5,7 @@
 
 @custom-variant dark (&:is(.dark *));
 @plugin "@tailwindcss/typography";
+
 /* Opt-in only. The default strategy also emits a base layer that restyles every
    bare input/select/textarea (white background, gray border, square corners,
    .5rem/.75rem padding, blue focus ring), which fights any shadcn component
@@ -51,8 +52,7 @@
   --animate-spin-slower: spin 20s linear infinite;
   --animate-modal-overlay-in: modal-overlay-in 180ms ease-out;
   --animate-modal-overlay-out: modal-overlay-out 150ms ease-in;
-  --animate-modal-content-in: modal-content-in 220ms
-    cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-modal-content-in: modal-content-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
   --animate-modal-content-out: modal-content-out 150ms ease-in;
   --animate-search-progress: search-progress 1.1s ease-in-out infinite;
 }
@@ -158,8 +158,9 @@
 
 /* Block shadows — flat offset shadow. Size via sm/md/lg; color via shadow-{color}. */
 @utility shadow-block-* {
-  --tw-shadow-block: --value(--block-shadow-*) --value(--block-shadow-*) 0 0
-    var(--tw-shadow-color, black);
+  --tw-shadow-block: --value(--block-shadow-*) --value(--block-shadow-*) 0 0 var(--tw-shadow-color, black);
+  --tw-shadow-block:
+    --value([length]) --value([length]) 0 0 var(--tw-shadow-color, black);
   @apply shadow-(--tw-shadow-block);
 }
 
@@ -176,9 +177,11 @@
    sm/md/lg/xl; block color via shadow-{color}. */
 @utility shadow-block-outlined-* {
   --tw-shadow-block:
-    --value(--block-shadow-*) --value(--block-shadow-*) 0 -2px
-      var(--tw-shadow-color, black),
+    --value(--block-shadow-*) --value(--block-shadow-*) 0 -2px var(--tw-shadow-color, black),
     --value(--block-shadow-*) --value(--block-shadow-*) 0 0 black;
+  --tw-shadow-block:
+    --value([length]) --value([length]) 0 -2px var(--tw-shadow-color, black),
+    --value([length]) --value([length]) 0 0 black;
   @apply shadow-(--tw-shadow-block);
 }
 
@@ -191,8 +194,8 @@
    not a valid filter, and the whole `filter` declaration was dropped. Every
    drop-shadow-block-* on the site computed to `filter: none`. */
 @utility drop-shadow-block-* {
-  --tw-drop-shadow-block: --value(--block-shadow-*) --value(--block-shadow-*) 0
-    var(--tw-shadow-color, black);
+  --tw-drop-shadow-block: --value(--block-shadow-*) --value(--block-shadow-*) 0 var(--tw-shadow-color, black);
+  --tw-drop-shadow-block: --value([length]) --value([length]) 0 var(--tw-shadow-color, black);
   @apply drop-shadow-(--tw-drop-shadow-block);
 }
 
@@ -218,18 +221,15 @@
 
 /* Block-style text shadow — text-shadow-block-{color} e.g. text-shadow-block-rose-900 */
 @utility text-shadow-block-* {
-  --tw-text-shadow-block: --value(--block-shadow-*) --value(--block-shadow-*) 0
-    var(--tw-shadow-color, black);
+  --tw-text-shadow-block: --value(--block-shadow-*) --value(--block-shadow-*) 0 var(--tw-shadow-color, black);
   @apply text-shadow-(--tw-text-shadow-block);
 }
 
 /* Dense dot-grid for nav/footer corners */
 @utility bg-dot-grid {
-  background-image: radial-gradient(
-    circle,
-    theme(--color-mauve-300) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(circle,
+      theme(--color-mauve-300) 1px,
+      transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -293,6 +293,7 @@
   from {
     translate: -100% 0;
   }
+
   to {
     translate: 300% 0;
   }
@@ -369,6 +370,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -378,6 +380,7 @@
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0;
   }
@@ -388,6 +391,7 @@
     opacity: 0;
     transform: translateY(12px) scale(0.97);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -399,6 +403,7 @@
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+
   to {
     opacity: 0;
     transform: translateY(8px) scale(0.97);
@@ -533,12 +538,12 @@
   }
 
   to {
-    transform: rotate(var(--spark-angle)) translate3d(0, var(--spark-fall), 0)
-      scaleY(1.15);
+    transform: rotate(var(--spark-angle)) translate3d(0, var(--spark-fall), 0) scaleY(1.15);
   }
 }
 
 @keyframes star-spark-fade {
+
   0%,
   100% {
     opacity: 0;
@@ -559,8 +564,51 @@
   [data-spark] {
     animation: none;
     opacity: 0.55;
-    transform: rotate(var(--spark-angle))
-      translate3d(0, calc(var(--spark-fall) * var(--spark-rest)), 0);
+    transform: rotate(var(--spark-angle)) translate3d(0, calc(var(--spark-fall) * var(--spark-rest)), 0);
+  }
+}
+
+/* Reduced motion used to stop exactly the wrong animations.
+   Measured: under `prefers-reduced-motion: reduce` the page's running animation
+   count fell from 41 to 8, but the frame rate did not move — 11.2 FPS, against
+   11.3 without it. The 8 survivors were `spin` x2, `marquee-scroll` x5 and
+   `march-dashes`: every expensive one. The 32 the block above freezes are the
+   cheap ones, measured at 58.6 FPS on their own. So the people most likely to
+   be on hardware that cannot cope were the only ones getting no relief.
+
+   These three are class-based utilities, so they can be stopped from here. The
+   marquee cannot: MarqueeTrack sets `animation` as an inline style, which no
+   stylesheet rule can override without `!important`, so it reads the media
+   query itself and pauses its own animation. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin-slow,
+  .animate-spin-slower,
+  .animate-march-dashes {
+    animation: none;
+  }
+}
+
+/* Without JavaScript every `[data-animate]` section stays at `opacity: 0`
+   forever: the variants below start hidden and only `.is-visible`, added by
+   `ui/animation-init.tsx` once an IntersectionObserver fires, brings them back.
+   That makes the entire homepage below the hero invisible to anyone whose
+   script failed, was blocked, or is still parsing — and to any crawler that
+   does not execute JS. The reveal is decoration; the content is not, so when
+   scripting is off the content simply stays where it is.
+
+   `scripting` is Media Queries 5 (Chrome 120, Firefox 113, Safari 17). Older
+   browsers ignore the block and get today's behaviour, which is the right way
+   round for a progressive enhancement. */
+@media (scripting: none) {
+  [data-animate],
+  [data-animate="fade-up"],
+  [data-animate="fade-left"],
+  [data-animate="fade-right"],
+  [data-animate="scale-up"],
+  [data-animate="fade-in"] {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 
@@ -760,8 +808,7 @@
 @keyframes combobox-open {
   from {
     opacity: 0;
-    transform: perspective(1200px) rotateX(var(--combobox-animation-x))
-      rotateY(var(--combobox-animation-y));
+    transform: perspective(1200px) rotateX(var(--combobox-animation-x)) rotateY(var(--combobox-animation-y));
   }
 
   to {
@@ -771,6 +818,7 @@
 }
 
 @utility combobox-popover {
+
   /* transform-origin: edge closest to the trigger — same convention as leader-hover-card */
   &[data-side="bottom"] {
     --combobox-animation-x: -8deg;
@@ -861,23 +909,17 @@
 /* Scroll shadow for sidebar nav list — fades edges when content overflows */
 @utility sidebar-scroll-shadow {
   background:
-    linear-gradient(var(--color-mauve-950), transparent) top / 100% 20px
-      no-repeat scroll,
-    linear-gradient(transparent, var(--color-mauve-950)) bottom / 100% 20px
-      no-repeat scroll,
-    radial-gradient(farthest-side at 50% 0%, rgb(0 0 0 / 0.15), transparent)
-      top / 100% 10px no-repeat local,
-    radial-gradient(farthest-side at 50% 100%, rgb(0 0 0 / 0.15), transparent)
-      bottom / 100% 10px no-repeat local,
+    linear-gradient(var(--color-mauve-950), transparent) top / 100% 20px no-repeat scroll,
+    linear-gradient(transparent, var(--color-mauve-950)) bottom / 100% 20px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 0%, rgb(0 0 0 / 0.15), transparent) top / 100% 10px no-repeat local,
+    radial-gradient(farthest-side at 50% 100%, rgb(0 0 0 / 0.15), transparent) bottom / 100% 10px no-repeat local,
     var(--color-mauve-950);
 }
 
 /* Custom toasts: hide content of background stack items so only the front    */
 /* toast is legible when collapsed. Sonner handles this for styled toasts     */
 /* via [data-styled='true'], but our toasts are custom (data-styled='false'). */
-[data-sonner-toaster]
-  [data-sonner-toast][data-expanded="false"][data-front="false"]
-  > * {
+[data-sonner-toaster] [data-sonner-toast][data-expanded="false"][data-front="false"]>* {
   opacity: 0;
 }
 
@@ -977,9 +1019,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
@@ -1018,11 +1062,9 @@
   --tw-prose-invert-quote-borders: var(--border);
   --tw-prose-invert-captions: var(--muted-foreground);
   --tw-prose-invert-kbd: var(--foreground);
-  --tw-prose-invert-kbd-shadows: color-mix(
-    in oklch,
-    var(--foreground),
-    transparent 90%
-  );
+  --tw-prose-invert-kbd-shadows: color-mix(in oklch,
+      var(--foreground),
+      transparent 90%);
   --tw-prose-invert-code: var(--foreground);
   --tw-prose-invert-pre-code: var(--color-mauve-200);
   --tw-prose-invert-pre-bg: var(--card);
@@ -1101,20 +1143,18 @@
 .prose .markdown-alert {
   border-left: 0.25rem solid var(--alert-accent, var(--border));
   border-radius: calc(var(--radius) - 4px);
-  background-color: color-mix(
-    in oklch,
-    var(--alert-accent, var(--border)),
-    var(--background) 88%
-  );
+  background-color: color-mix(in oklch,
+      var(--alert-accent, var(--border)),
+      var(--background) 88%);
   margin-block: 1.25em;
   padding: 0.75rem 1rem;
 }
 
-.prose .markdown-alert > :first-child {
+.prose .markdown-alert> :first-child {
   margin-top: 0;
 }
 
-.prose .markdown-alert > :last-child {
+.prose .markdown-alert> :last-child {
   margin-bottom: 0;
 }
 
@@ -1136,15 +1176,19 @@
 .prose .markdown-alert-note {
   --alert-accent: var(--color-sky-400);
 }
+
 .prose .markdown-alert-tip {
   --alert-accent: var(--color-emerald-400);
 }
+
 .prose .markdown-alert-important {
   --alert-accent: var(--color-violet-400);
 }
+
 .prose .markdown-alert-warning {
   --alert-accent: var(--color-amber-400);
 }
+
 .prose .markdown-alert-caution {
   --alert-accent: var(--destructive);
 }
@@ -1165,18 +1209,16 @@
   margin-block: 1.25em;
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) - 4px);
-  background-color: color-mix(
-    in oklch,
-    var(--details-accent),
-    var(--background) 92%
-  );
+  background-color: color-mix(in oklch,
+      var(--details-accent),
+      var(--background) 92%);
   /* Horizontal only. The summary cancels it to span the full width, and the
      bottom gap belongs to the last child so a closed box is exactly the height
      of its own summary. */
   padding-inline: 1rem;
 }
 
-.prose details > summary {
+.prose details>summary {
   display: flex;
   align-items: center;
   gap: 0.625rem;
@@ -1193,19 +1235,19 @@
   list-style: none;
 }
 
-.prose details > summary::-webkit-details-marker {
+.prose details>summary::-webkit-details-marker {
   display: none;
 }
 
-.prose details > summary::marker {
+.prose details>summary::marker {
   content: "";
 }
 
-.prose details > summary:hover {
+.prose details>summary:hover {
   color: var(--details-accent);
 }
 
-.prose details > summary:focus-visible {
+.prose details>summary:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: -2px;
   border-radius: calc(var(--radius) - 6px);
@@ -1215,7 +1257,7 @@
    stylesheet is reached by markdown that React never sees as components, so
    there is nowhere to hang an SVG. Rotating the square moves its optical
    centre off the text baseline, which the translate puts back. */
-.prose details > summary::before {
+.prose details>summary::before {
   content: "";
   flex: none;
   width: 0.4375rem;
@@ -1226,28 +1268,28 @@
   transition: transform 150ms ease;
 }
 
-.prose details[open] > summary::before {
+.prose details[open]>summary::before {
   transform: translateY(-0.0625rem) rotate(45deg);
 }
 
 /* The rule under an OPEN summary only. Closed, it would draw a line across the
    bottom of a box with nothing under it. */
-.prose details[open] > summary {
+.prose details[open]>summary {
   margin-bottom: 0.75rem;
   border-bottom: 1px solid var(--border);
 }
 
-.prose details > summary + * {
+.prose details>summary+* {
   margin-top: 0;
 }
 
-.prose details > :last-child {
+.prose details> :last-child {
   margin-bottom: 1rem;
 }
 
 /* A summary is a heading in every way but tag, and inline code inside one
    should not fight the weight it sits in. */
-.prose details > summary code {
+.prose details>summary code {
   font-weight: 500;
 }
 
@@ -1258,7 +1300,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .prose details > summary::before {
+  .prose details>summary::before {
     transition: none;
   }
 }

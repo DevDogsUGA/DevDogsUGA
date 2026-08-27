@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import Badge from "~/ui/badge";
@@ -6,6 +7,16 @@ import EmptyState from "~/components/participation/EmptyState";
 import { formatEventDateTime, formatRelative } from "~/lib/eventTime";
 import { requireSession } from "~/server/auth/require";
 import { getEligibility, getOpenElections } from "~/server/loaders/elections";
+
+/**
+ * Behind `expectSession()`, and the list is filtered by what the viewer is
+ * eligible to vote in — so there is no such thing as the anonymous version of
+ * this page for a crawler to hold.
+ */
+export const metadata: Metadata = {
+  title: "Vote | DevDogs",
+  robots: { index: false },
+};
 
 /**
  * /vote — everything open right now.
