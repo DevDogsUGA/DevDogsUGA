@@ -1,3 +1,5 @@
+import Badge from "~/ui/badge";
+import Callout from "~/ui/callout";
 import type { LockReason } from "~/server/teams/lockState";
 
 /**
@@ -57,31 +59,22 @@ export default function LockNotice({
   const copy = LOCK_COPY[reason];
 
   return (
-    <aside
-      className="rounded-sm border-2 border-black bg-amber-50 p-4"
-      aria-labelledby={`lock-${reason}`}
+    <Callout
+      tone="warning"
+      title={copy.title}
+      className="[&>p]:font-semibold"
+      id={`lock-${reason}`}
     >
-      <h2 id={`lock-${reason}`} className="font-semibold">
-        {copy.title}
-      </h2>
-      <p className="mt-1 text-sm">
-        {reason === "entry" && canUnlockByClosingPr === false
-          ? LOCK_COPY.judging.body
-          : copy.body}
-      </p>
-    </aside>
+      {reason === "entry" && canUnlockByClosingPr === false
+        ? LOCK_COPY.judging.body
+        : copy.body}
+    </Callout>
   );
 }
 
 /** The one-word version, for a list where a paragraph would not fit. */
 export function LockChip({ reason }: { reason: LockReason | null }) {
-  if (reason === null) {
-    return (
-      <span className="rounded-full border border-green-700 px-2 py-0.5 text-xs text-green-800">
-        Open
-      </span>
-    );
-  }
+  if (reason === null) return <Badge variant="success">Open</Badge>;
 
   const label =
     reason === "entry"
@@ -91,8 +84,8 @@ export function LockChip({ reason }: { reason: LockReason | null }) {
         : "Locked";
 
   return (
-    <span className="rounded-full border border-black/40 px-2 py-0.5 text-xs opacity-70">
+    <Badge variant={reason === "judging" ? "default" : "warning"}>
       {label}
-    </span>
+    </Badge>
   );
 }

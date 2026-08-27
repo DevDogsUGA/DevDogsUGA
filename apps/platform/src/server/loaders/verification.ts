@@ -1,14 +1,19 @@
 import { eq } from "drizzle-orm";
 import { cache } from "react";
-import { notFound, redirect } from "next/navigation";
 import { canUserManageVerification } from "~/server/actions/permissions";
-import { expectSession } from "~/server/auth";
+import { requirePermission } from "~/server/auth/require";
 import { db } from "~/server/db";
 import { profileWithVerification, type profiles } from "~/server/db/schema";
 
-export const getVerificationPageData = cache(async () => {
-  const userId = await expectSession().catch(() => redirect("/auth"));
-  if (!(await canUserManageVerification(userId))) notFound();
+/**
+ * The verification console's gate.
+ *
+ * Named for what it does. It was `getVerificationPageData`, which returned
+ * nothing at all — a loader in name that loaded no data, so the page called it
+ * for its side effect and read as though it were awaiting something.
+ */
+export const requireVerificationAccess = cache(async () => {
+  await requirePermission(canUserManageVerification);
 });
 
 // ── Profile verification checklist ───────────────────────────────────────────

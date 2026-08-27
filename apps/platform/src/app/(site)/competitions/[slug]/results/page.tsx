@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ConsolePageShell from "~/components/ConsolePageShell";
+import Callout from "~/ui/callout";
+import { ConsoleCard } from "~/ui/card";
+import PageShell from "~/components/PageShell";
 import EmptyState from "~/components/participation/EmptyState";
 import { formatEventDate } from "~/lib/eventTime";
 import {
@@ -33,12 +35,21 @@ export default async function ResultsPage({
 }) {
   const { slug } = await params;
 
+  // The competition is the one read that has to land alone: it decides whether
+  // there is a page at all, and it supplies the id the other three are keyed on.
   const competition = await getCompetitionBySlug(slug);
   if (!competition) notFound();
 
-  const standings = await getStandings(slug);
-  const disclosures = await getTiebreakDisclosures(competition.id);
-  const pointsElections = await getPointsElections(competition.id);
+  // The other three depend on the competition and on nothing each other
+  // returns, so they go out together rather than three round trips deep. The
+  // election results below are a genuine second wave: their ids come from
+  // `pointsElections` and cannot be asked for before it answers.
+  const [standings, disclosures, pointsElections] = await Promise.all([
+    getStandings(slug),
+    getTiebreakDisclosures(competition.id),
+    getPointsElections(competition.id),
+  ]);
+
   const electionResults = await Promise.all(
     pointsElections.map(async (election) => ({
       election,
@@ -52,7 +63,7 @@ export default async function ResultsPage({
   const teamNames = new Map(standings.map((row) => [row.teamId, row.teamName]));
 
   return (
-    <ConsolePageShell
+    <PageShell
       accent="amber"
       title={`${competition.name} — results`}
       description={`Judged ${formatEventDate(competition.judgingStartsAt ?? competition.openedOn)}. Scored out of 1000: 600 for requirements met, 400 from the elections.`}
@@ -71,15 +82,25 @@ export default async function ResultsPage({
           }
         />
       ) : (
-        <ol className="flex flex-col gap-3">
-          {standings.map((row) => (
-            <StandingCard
-              key={row.teamId}
-              row={row}
-              competitionSlug={competition.slug}
-            />
-          ))}
-        </ol>
+        <ConsoleCard.Root id="standings">
+          <ConsoleCard.Header title="Standings" />
+          <ConsoleCard.Content>
+            {/* The legend and the list are one child: a divider between a key
+                and the thing it is a key for would read as two sections. */}
+            <div className="flex flex-col gap-4">
+              <SplitLegend />
+              <ol className="flex flex-col gap-3">
+                {standings.map((row) => (
+                  <StandingCard
+                    key={row.teamId}
+                    row={row}
+                    competitionSlug={competition.slug}
+                  />
+                ))}
+              </ol>
+            </div>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
       )}
 
       {disclosures.length > 0 && (
@@ -98,7 +119,29 @@ export default async function ResultsPage({
           results={results}
         />
       ))}
-    </ConsolePageShell>
+    </PageShell>
+  );
+}
+
+/**
+ * What the two colours on every bar mean, said once.
+ *
+ * Once, and above the list, because the alternative is a swatch on both halves
+ * of every row — two facts repeated as many times as there are teams, in the
+ * one place on the page where the numbers should be doing the talking.
+ */
+function SplitLegend() {
+  return (
+    <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-mauve-400">
+      <span className="flex items-center gap-1.5">
+        <span aria-hidden className="h-2 w-4 rounded-full bg-emerald-400/70" />
+        Requirements, out of 600
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span aria-hidden className="h-2 w-4 rounded-full bg-amber-400/70" />
+        Elections, out of 400
+      </span>
+    </p>
   );
 }
 
@@ -118,27 +161,50 @@ function StandingCard({
   competitionSlug: string;
 }) {
   return (
-    <li className="rounded-sm border-2 border-black bg-white p-4">
+    <li className="rounded-lg border border-white/10 bg-white/5 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <span className="flex items-baseline gap-3">
-          <span className="text-2xl font-bold tabular-nums">
+          <span className="text-2xl font-bold text-white tabular-nums">
             #{row.placement}
           </span>
           <Link
             href={`/competitions/${competitionSlug}/teams/${row.teamSlug}`}
-            className="font-semibold underline"
+            className="rounded-sm font-semibold text-white underline outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
           >
             {row.teamName}
           </Link>
-          <span className="text-xs opacity-70">
+          <span className="text-xs text-mauve-400">
             {row.memberCount} {row.memberCount === 1 ? "member" : "members"}
           </span>
         </span>
 
-        <span className="text-lg font-bold tabular-nums">
+        <span className="text-lg font-bold text-white tabular-nums">
           {row.totalPoints}
-          <span className="text-sm font-normal opacity-70"> / 1000</span>
+          <span className="text-sm font-normal text-mauve-400"> / 1000</span>
         </span>
+      </div>
+
+      {/* Both blocks on one track, drawn against 1000 rather than each against
+          its own ceiling. Two bars each filled to their own maximum put a team
+          that met every requirement level with one that swept the vote, which
+          is precisely the equivalence the 600/400 split exists to deny. On a
+          shared track the halves keep their real sizes, and nothing needs
+          clamping: a renormalized block — a competition with no elections, so
+          requirements are worth the full 1000 — is already measured against
+          the same denominator, and the two widths cannot sum past the track.
+          It is `aria-hidden` because it draws the numbers printed beneath it. */}
+      <div
+        aria-hidden
+        className="mt-4 flex h-2 w-full overflow-hidden rounded-full bg-white/10"
+      >
+        <div
+          className="h-full bg-emerald-400/70"
+          style={{ width: widthOf(row.requirementPoints) }}
+        />
+        <div
+          className="h-full bg-amber-400/70"
+          style={{ width: widthOf(row.electionPoints) }}
+        />
       </div>
 
       {/* The split, always both halves. The captions carry the inputs rather
@@ -166,13 +232,25 @@ function StandingCard({
       </dl>
 
       {row.resolvedBy !== null && row.resolvedBy !== "points" && (
-        <p className="mt-3 rounded-sm border-2 border-black bg-amber-50 p-2 text-xs">
+        <Callout tone="info" className="mt-4">
           {RESOLVED_BY_COPY[row.resolvedBy] ??
             "A tiebreak decided this placement."}
-        </p>
+        </Callout>
       )}
     </li>
   );
+}
+
+/**
+ * A block's share of the whole 1000, as a CSS width.
+ *
+ * Divided by ten rather than run through `points / 1000 * 100`, which lands on
+ * values like 38.300000000000004 and writes them into the markup. Not rounded
+ * either: two segments rounded independently can sum past 100 and push the
+ * elections half off the end of the track it shares with requirements.
+ */
+function widthOf(points: number): string {
+  return `${points / 10}%`;
 }
 
 /**
@@ -204,29 +282,17 @@ function Block({
   outOf: number;
   caption: string;
 }) {
-  // Clamped because a renormalized block (a competition with no elections, or
-  // none by design) is scored out of 1000 and would otherwise overrun the bar
-  // it is drawn in.
-  const filled = Math.min(100, Math.round((points / outOf) * 100));
-
   return (
     <div>
-      <dt className="text-xs tracking-wide uppercase opacity-60">{label}</dt>
+      <dt className="text-xs tracking-wide text-mauve-500 uppercase">
+        {label}
+      </dt>
       <dd>
-        <span className="text-xl font-bold tabular-nums">
+        <span className="text-xl font-bold text-white tabular-nums">
           {points}
-          <span className="text-sm font-normal opacity-70"> / {outOf}</span>
+          <span className="text-sm font-normal text-mauve-400"> / {outOf}</span>
         </span>
-        <span
-          aria-hidden
-          className="mt-1 block h-1.5 w-full rounded-full bg-black/10"
-        >
-          <span
-            className="block h-full rounded-full bg-black"
-            style={{ width: `${filled}%` }}
-          />
-        </span>
-        <span className="mt-1 block max-w-prose text-xs opacity-70">
+        <span className="mt-1 block max-w-prose text-xs text-mauve-400">
           {caption}
         </span>
       </dd>
@@ -236,20 +302,28 @@ function Block({
 
 function ScoringExplainer() {
   return (
-    <section className="rounded-sm border-2 border-black bg-white p-4 text-sm">
-      <p>
-        A competition is scored out of 1000. Six hundred come from requirements
-        met, which is objective and self-determined — do the work and the points
-        are yours no matter what anyone else built. Four hundred come from the
-        elections, which are comparative and can only be earned at another
-        team&rsquo;s expense.
-      </p>
-      <p className="mt-2 opacity-70">
-        Both halves are shown for every team on purpose. The bulk of a score
-        sits in a team&rsquo;s own hands, and a single total would hide a team
-        that met every requirement and finished behind on the vote.
-      </p>
-    </section>
+    <ConsoleCard.Root id="scoring">
+      <ConsoleCard.Header title="Scoring" />
+      <ConsoleCard.Content>
+        {/* One child: the second paragraph is the reason for the first, and a
+            divider between them would announce a section break that is not
+            there. */}
+        <div className="flex flex-col gap-2 text-sm">
+          <p className="max-w-prose text-mauve-300">
+            A competition is scored out of 1000. Six hundred come from
+            requirements met, which is objective and self-determined — do the
+            work and the points are yours no matter what anyone else built. Four
+            hundred come from the elections, which are comparative and can only
+            be earned at another team&rsquo;s expense.
+          </p>
+          <p className="max-w-prose text-mauve-400">
+            Both halves are shown for every team on purpose. The bulk of a score
+            sits in a team&rsquo;s own hands, and a single total would hide a
+            team that met every requirement and finished behind on the vote.
+          </p>
+        </div>
+      </ConsoleCard.Content>
+    </ConsoleCard.Root>
   );
 }
 
@@ -273,42 +347,42 @@ function TiebreakDisclosures({
   hasCopeland: boolean;
 }) {
   return (
-    <section
-      className="rounded-sm border-2 border-black bg-white p-4"
-      aria-labelledby="tiebreaks"
-    >
-      <h2 id="tiebreaks" className="font-semibold">
-        Tiebreaks
-      </h2>
-      <p className="mt-1 max-w-prose text-sm opacity-70">
-        Teams that tied on points, and on the head-to-head count that is tried
-        next, were separated by the officers&rsquo; tiebreak ranking. Only the
-        comparisons that decided a placement are published — the ranking itself
-        is not.
-      </p>
+    // The section keeps the accessible name it had. `ConsoleCard.Header` owns
+    // the `h2` and gives it no id, so there is nothing for `aria-labelledby` to
+    // point at; `aria-label` names the region with the same word instead.
+    <ConsoleCard.Root id="tiebreaks" aria-label="Tiebreaks">
+      <ConsoleCard.Header
+        title="Tiebreaks"
+        description="Teams that tied on points, and on the head-to-head count that is tried next, were separated by the officers’ tiebreak ranking. Only the comparisons that decided a placement are published — the ranking itself is not."
+      />
+      <ConsoleCard.Content>
+        <ul className="flex flex-col gap-2 text-sm text-mauve-300">
+          {pairs.map((pair) => (
+            <li key={`${pair.higherTeamId}-${pair.lowerTeamId}`}>
+              Officers ranked{" "}
+              <strong className="font-semibold text-white">
+                {teamNames.get(pair.higherTeamId) ?? "a team"}
+              </strong>{" "}
+              above{" "}
+              <strong className="font-semibold text-white">
+                {teamNames.get(pair.lowerTeamId) ?? "another team"}
+              </strong>
+              .
+            </li>
+          ))}
+        </ul>
 
-      <ul className="mt-3 flex flex-col gap-1 text-sm">
-        {pairs.map((pair) => (
-          <li key={`${pair.higherTeamId}-${pair.lowerTeamId}`}>
-            Officers ranked{" "}
-            <strong>{teamNames.get(pair.higherTeamId) ?? "a team"}</strong>{" "}
-            above{" "}
-            <strong>{teamNames.get(pair.lowerTeamId) ?? "another team"}</strong>
-            .
-          </li>
-        ))}
-      </ul>
-
-      {hasCopeland && (
-        <p className="mt-3 text-xs opacity-70">
-          Other placements on this page were tied on points and settled
-          head-to-head, before the officers&rsquo; ranking was reached. Those
-          are marked on the team rather than listed here, because they were
-          decided by the ballots already cast rather than by a comparison held
-          back for the purpose.
-        </p>
-      )}
-    </section>
+        {hasCopeland && (
+          <p className="max-w-prose text-xs text-mauve-400">
+            Other placements on this page were tied on points and settled
+            head-to-head, before the officers&rsquo; ranking was reached. Those
+            are marked on the team rather than listed here, because they were
+            decided by the ballots already cast rather than by a comparison held
+            back for the purpose.
+          </p>
+        )}
+      </ConsoleCard.Content>
+    </ConsoleCard.Root>
   );
 }
 
@@ -332,38 +406,41 @@ function ElectionCard({
   if (results.length === 0) return null;
 
   return (
-    <section className="rounded-sm border-2 border-black bg-white p-4">
-      <h2 className="font-semibold">{title}</h2>
-      <p className="text-xs opacity-70">
-        {electorate === "officers"
-          ? "Officer ballot"
-          : "One ballot per competing team"}
-      </p>
-
-      <ol className="mt-3 flex flex-col gap-1 text-sm">
-        {results.map((result) => (
-          <li key={result.teamId} className="flex items-baseline gap-3">
-            <span className="w-6 text-right tabular-nums opacity-70">
-              {result.placement}
-            </span>
-            <span className="flex-1">{result.teamName}</span>
-            <span className="tabular-nums">
-              {formatScaled(result.scaled)}
-              <span className="opacity-70">
-                {" "}
-                of the ceiling · Borda {result.bordaScore}
+    <ConsoleCard.Root>
+      <ConsoleCard.Header
+        title={title}
+        description={
+          electorate === "officers"
+            ? "Officer ballot"
+            : "One ballot per competing team"
+        }
+      />
+      <ConsoleCard.Content>
+        <ol className="flex flex-col gap-2 text-sm">
+          {results.map((result) => (
+            <li key={result.teamId} className="flex items-baseline gap-3">
+              <span className="w-6 shrink-0 text-right text-mauve-400 tabular-nums">
+                {result.placement}
               </span>
-            </span>
-          </li>
-        ))}
-      </ol>
+              <span className="flex-1 text-white">{result.teamName}</span>
+              <span className="text-mauve-300 tabular-nums">
+                {formatScaled(result.scaled)}
+                <span className="text-mauve-400">
+                  {" "}
+                  of the ceiling · Borda {result.bordaScore}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ol>
 
-      <p className="mt-3 max-w-prose text-xs opacity-70">
-        Teams share a placement when they tie exactly — a tie here needs no
-        resolution, because placement in an election awards nothing on its own.
-        Points come from the share above.
-      </p>
-    </section>
+        <p className="max-w-prose text-xs text-mauve-400">
+          Teams share a placement when they tie exactly — a tie here needs no
+          resolution, because placement in an election awards nothing on its
+          own. Points come from the share above.
+        </p>
+      </ConsoleCard.Content>
+    </ConsoleCard.Root>
   );
 }
 

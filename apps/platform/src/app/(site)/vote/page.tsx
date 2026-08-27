@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import ConsolePageShell from "~/components/ConsolePageShell";
+import Badge from "~/ui/badge";
+import PageShell from "~/components/PageShell";
+import EmptyState from "~/components/participation/EmptyState";
 import { formatEventDateTime, formatRelative } from "~/lib/eventTime";
-import { expectSession } from "~/server/auth";
+import { requireSession } from "~/server/auth/require";
 import { getEligibility, getOpenElections } from "~/server/loaders/elections";
 
 /**
@@ -19,7 +20,7 @@ export default async function VotePage() {
   // election that closed a minute ago must not still be listed as open.
   await connection();
 
-  const userId = await expectSession().catch(() => redirect("/auth"));
+  const userId = await requireSession();
   const open = await getOpenElections();
 
   const withEligibility = await Promise.all(
@@ -30,26 +31,28 @@ export default async function VotePage() {
   );
 
   return (
-    <ConsolePageShell
+    <PageShell
       accent="blue"
       title="Vote"
       description="Rank the competing implementations. Every ballot ranks every entry."
     >
       {withEligibility.length === 0 ? (
-        <p className="rounded-sm border-2 border-black bg-white p-6 text-sm">
-          Nothing is open for voting right now. Elections open once judging
-          begins for a competition.
-        </p>
+        <EmptyState
+          title="Nothing open to vote on"
+          body="Nothing is open for voting right now. Elections open once judging begins for a competition."
+        />
       ) : (
         <ul className="flex flex-col gap-3">
           {withEligibility.map(({ election, eligibility }) => (
             <li
               key={election.id}
-              className="flex flex-wrap items-center justify-between gap-4 rounded-sm border-2 border-black bg-white p-4"
+              className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm"
             >
               <span className="flex flex-col">
-                <span className="font-semibold">{election.title}</span>
-                <span className="text-xs opacity-70">
+                <span className="font-semibold text-white">
+                  {election.title}
+                </span>
+                <span className="text-xs text-mauve-400">
                   {election.electorate === "officers"
                     ? "Officer ballot"
                     : "One ballot per team"}
@@ -64,20 +67,23 @@ export default async function VotePage() {
               {eligibility.canVote ? (
                 <Link
                   href={`/vote/${election.slug}`}
-                  className="rounded-sm border-2 border-black bg-black px-3 py-1.5 text-sm font-semibold text-white"
+                  className="rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
                 >
                   Cast ballot
                 </Link>
               ) : (
-                <span className="text-sm opacity-70">
+                // The reason a ballot is not castable is a standing status, not
+                // prose — a chip reads as one at the same glance as the button
+                // it stands in for.
+                <Badge variant="default">
                   {BLOCK_LABELS[eligibility.reason ?? "not_eligible"]}
-                </span>
+                </Badge>
               )}
             </li>
           ))}
         </ul>
       )}
-    </ConsolePageShell>
+    </PageShell>
   );
 }
 

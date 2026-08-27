@@ -1,10 +1,13 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import ConsolePageShell from "~/components/ConsolePageShell";
+import type { ComponentProps } from "react";
+import Badge from "~/ui/badge";
+import Callout from "~/ui/callout";
+import { ConsoleCard } from "~/ui/card";
+import PageShell from "~/components/PageShell";
 import EmptyState from "~/components/participation/EmptyState";
 import { formatEventDateTime, formatRelative } from "~/lib/eventTime";
-import { expectSession } from "~/server/auth";
+import { requireSession } from "~/server/auth/require";
 import {
   getConnection,
   getEnvironmentsForMember,
@@ -30,38 +33,43 @@ export default async function SandboxConsolePage({
   // "paused" versus "active" is the whole question this page answers.
   await connection();
 
-  const userId = await expectSession().catch(() => redirect("/auth"));
+  const userId = await requireSession();
   const { connected, error } = await searchParams;
 
   const configured = isConfigured();
-  const connection_ = await getConnection(userId);
-  const environments = await getEnvironmentsForMember(userId);
-  const awaiting = await getTeamsAwaitingEnvironment(userId);
+  // Three independent reads of the same session's access: awaited together so
+  // the page waits once rather than three times in a row.
+  const [connection_, environments, awaiting] = await Promise.all([
+    getConnection(userId),
+    getEnvironmentsForMember(userId),
+    getTeamsAwaitingEnvironment(userId),
+  ]);
 
   return (
-    <ConsolePageShell
+    <PageShell
       accent="blue"
       title="Sandbox environments"
       description="One Supabase instance your whole team builds against, with each of you signed in as yourself."
     >
       {error && <Problem code={error} />}
       {connected && (
-        <p className="rounded-sm border-2 border-black bg-emerald-50 p-4 text-sm font-semibold">
-          Supabase account connected.
-        </p>
+        <Callout tone="success">Supabase account connected.</Callout>
       )}
 
       {!configured ? (
-        <section className="rounded-sm border-2 border-black bg-white p-6 text-sm">
-          <h2 className="font-semibold">Not configured yet</h2>
-          <p className="mt-2 opacity-80">
-            Sandbox environments need a registered Supabase OAuth application.
-            Until <code>SUPABASE_OAUTH_CLIENT_ID</code> and{" "}
-            <code>SUPABASE_OAUTH_CLIENT_SECRET</code> are set, nothing on this
-            page can provision anything — which is why it says so rather than
-            offering a button that would fail.
-          </p>
-        </section>
+        <Callout tone="warning" title="Not configured yet">
+          Sandbox environments need a registered Supabase OAuth application.
+          Until{" "}
+          <code className="rounded-sm bg-white/10 px-1 py-0.5 font-mono text-xs text-mauve-200">
+            SUPABASE_OAUTH_CLIENT_ID
+          </code>{" "}
+          and{" "}
+          <code className="rounded-sm bg-white/10 px-1 py-0.5 font-mono text-xs text-mauve-200">
+            SUPABASE_OAUTH_CLIENT_SECRET
+          </code>{" "}
+          are set, nothing on this page can provision anything — which is why it
+          says so rather than offering a button that would fail.
+        </Callout>
       ) : (
         <ConnectionCard state={connection_} />
       )}
@@ -76,20 +84,22 @@ export default async function SandboxConsolePage({
           {environments.map((env) => (
             <li
               key={env.id}
-              className="flex flex-col gap-2 rounded-sm border-2 border-black bg-white p-4"
+              className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm"
             >
               <span className="flex flex-wrap items-center justify-between gap-3">
-                <span className="font-semibold">{env.name}</span>
+                <span className="font-semibold text-white">{env.name}</span>
                 <StatusChip status={env.status} />
               </span>
-              <code className="text-xs opacity-70">{env.proxyHostname}</code>
-              <span className="text-xs opacity-70">
+              <code className="self-start rounded-sm bg-white/10 px-1 py-0.5 font-mono text-xs text-mauve-200">
+                {env.proxyHostname}
+              </code>
+              <span className="text-xs text-mauve-400">
                 {env.teamNames.join(", ")} · {env.memberCount}{" "}
                 {env.memberCount === 1 ? "member" : "members"} with access
                 {env.isOwner && " · you own this project"}
               </span>
               {env.lastSeenActiveAt && (
-                <span className="text-xs opacity-70">
+                <span className="text-xs text-mauve-400">
                   Last active{" "}
                   <time dateTime={env.lastSeenActiveAt.toISOString()}>
                     {formatEventDateTime(env.lastSeenActiveAt)} (
@@ -103,31 +113,41 @@ export default async function SandboxConsolePage({
       )}
 
       {awaiting.length > 0 && configured && connection_.connected && (
-        <section className="rounded-sm border-2 border-black bg-white p-4 text-sm">
-          <h2 className="font-semibold">Teams without an environment</h2>
-          <ul className="mt-2 flex flex-col gap-1">
-            {awaiting.map((team) => (
-              <li key={team.id} className="opacity-80">
-                {team.name}
-              </li>
-            ))}
-          </ul>
-        </section>
+        <ConsoleCard.Root id="teams-without-an-environment">
+          <ConsoleCard.Header title="Teams without an environment" />
+          <ConsoleCard.Content>
+            <ul className="flex flex-col gap-1 text-sm">
+              {awaiting.map((team) => (
+                <li key={team.id} className="text-mauve-300">
+                  {team.name}
+                </li>
+              ))}
+            </ul>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
       )}
 
-      <section className="rounded-sm border-2 border-black bg-white p-4 text-sm">
-        <h2 className="font-semibold">Getting connected from your machine</h2>
-        <pre className="mt-2 overflow-x-auto rounded-sm bg-black p-3 text-xs text-white">
-          pnpm sb link --team &lt;your-team-slug&gt;
-        </pre>
-        <p className="mt-2 opacity-80">
-          That writes both keys into <code>.env.local</code> under the names a
-          real Supabase project uses. Use the publishable one in anything that
-          runs in a browser; the secret one bypasses row-level security, and the
-          proxy refuses it from a browser exactly as Supabase does.
-        </p>
-      </section>
-    </ConsolePageShell>
+      <ConsoleCard.Root id="getting-connected">
+        <ConsoleCard.Header title="Getting connected from your machine" />
+        <ConsoleCard.Content>
+          <div className="flex flex-col gap-3">
+            <pre className="overflow-x-auto rounded-lg border border-white/10 bg-black/40 p-3 font-mono text-xs text-mauve-200">
+              pnpm sb link --team &lt;your-team-slug&gt;
+            </pre>
+            <p className="text-sm text-mauve-300">
+              That writes both keys into{" "}
+              <code className="rounded-sm bg-white/10 px-1 py-0.5 font-mono text-xs text-mauve-200">
+                .env.local
+              </code>{" "}
+              under the names a real Supabase project uses. Use the publishable
+              one in anything that runs in a browser; the secret one bypasses
+              row-level security, and the proxy refuses it from a browser
+              exactly as Supabase does.
+            </p>
+          </div>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
+    </PageShell>
   );
 }
 
@@ -138,37 +158,40 @@ function ConnectionCard({
 }) {
   if (!state.connected) {
     return (
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-sm border-2 border-black bg-white p-4">
-        <span className="flex flex-col text-sm">
-          <span className="font-semibold">Connect your Supabase account</span>
-          <span className="opacity-70">
-            The project is created under your own free account — two projects,
-            no card. You keep it after the event.
-          </span>
-        </span>
-        <Link
-          href="/supabase/authorize"
-          className="rounded-sm border-2 border-black bg-black px-3 py-1.5 text-sm font-semibold text-white"
+      <ConsoleCard.Root id="connect-supabase">
+        <ConsoleCard.Header
+          title="Connect your Supabase account"
+          description="The project is created under your own free account — two projects, no card. You keep it after the event."
         >
-          Connect Supabase
-        </Link>
-      </section>
+          <Link
+            href="/supabase/authorize"
+            className="rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
+          >
+            Connect Supabase
+          </Link>
+        </ConsoleCard.Header>
+      </ConsoleCard.Root>
     );
   }
 
   return (
-    <section className="rounded-sm border-2 border-black bg-white p-4 text-sm">
-      <span className="font-semibold">Supabase account connected</span>
-      {state.orgSlug && (
-        <span className="ml-2 opacity-70">({state.orgSlug})</span>
-      )}
-      {state.expiresAt && (
-        <p className="mt-1 text-xs opacity-70">
-          Access refreshes automatically; the current grant runs to{" "}
-          {formatEventDateTime(state.expiresAt)}.
-        </p>
-      )}
-    </section>
+    <ConsoleCard.Root id="supabase-connection">
+      <ConsoleCard.Header
+        title="Supabase account connected"
+        description={
+          state.expiresAt ? (
+            <>
+              Access refreshes automatically; the current grant runs to{" "}
+              {formatEventDateTime(state.expiresAt)}.
+            </>
+          ) : undefined
+        }
+      >
+        {state.orgSlug && (
+          <span className="text-sm text-mauve-400">({state.orgSlug})</span>
+        )}
+      </ConsoleCard.Header>
+    </ConsoleCard.Root>
   );
 }
 
@@ -190,10 +213,21 @@ function StatusChip({ status }: { status: string }) {
     revoked: "Ended",
     orphaned: "Project no longer exists",
   };
+  // The colour draws the same line the copy does: green is reachable now, blue
+  // is on its way there, amber needs waking, red is over.
+  const VARIANT: Record<string, ComponentProps<typeof Badge>["variant"]> = {
+    provisioning: "info",
+    active: "success",
+    paused: "warning",
+    restoring: "info",
+    detached: "default",
+    revoked: "danger",
+    orphaned: "danger",
+  };
   return (
-    <span className="rounded-sm border-2 border-black px-2 py-0.5 text-xs font-semibold">
+    <Badge variant={VARIANT[status] ?? "default"}>
       {COPY[status] ?? status}
-    </span>
+    </Badge>
   );
 }
 
@@ -208,8 +242,8 @@ function Problem({ code }: { code: string }) {
     access_denied: "You declined the connection, so nothing was changed.",
   };
   return (
-    <p role="alert" className="text-sm font-semibold text-red-700">
+    <Callout tone="critical" alert>
       {COPY[code] ?? "Something went wrong connecting your Supabase account."}
-    </p>
+    </Callout>
   );
 }

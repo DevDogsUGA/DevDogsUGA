@@ -1,25 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ConsoleCard } from "~/ui/card";
+import Pagination from "~/ui/pagination";
+import { ReportStatusBadge } from "~/components/StatusBadges";
 import type { AuditLogPageData } from "~/server/loaders/auditLog";
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-amber-500/10 text-amber-300",
-  resolved: "bg-emerald-500/10 text-emerald-300",
-  dismissed: "bg-white/5 text-mauve-400",
-};
-
-function StatusBadge({ status }: { status: string }) {
-  return (
-    <span
-      className={`shrink-0 rounded-sm px-2 py-0.5 text-xs capitalize ${STATUS_COLORS[status] ?? "bg-white/5 text-mauve-400"}`}
-    >
-      {status}
-    </span>
-  );
-}
 
 export default function AuditLogContent({
   entries,
@@ -37,13 +22,11 @@ export default function AuditLogContent({
   }
 
   return (
-    <ConsoleCard.Root>
-      <ConsoleCard.Header title="Production Report Events">
-        <p className="mt-1 pb-4 text-sm text-mauve-400">
-          {totalCount} total event{totalCount !== 1 ? "s" : ""} across all
-          production clients
-        </p>
-      </ConsoleCard.Header>
+    <ConsoleCard.Root id="production-report-events">
+      <ConsoleCard.Header
+        title="Production Report Events"
+        description={`${totalCount} total event${totalCount !== 1 ? "s" : ""} across all production clients`}
+      />
       <ConsoleCard.Content>
         <div>
           {entries.length === 0 ? (
@@ -52,8 +35,16 @@ export default function AuditLogContent({
             <ul className="flex flex-col gap-2">
               {entries.map((entry) => (
                 <li key={entry.id}>
-                  <div className="flex items-start justify-between gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm">
-                    <div className="flex min-w-0 flex-col gap-0.5">
+                  {/*
+                    Deliberately not `ReportListItem`, which every other list of
+                    reports now uses. This one carries a resolution date the
+                    shared row has no place for, and dropping it would lose the
+                    only thing the audit log says that the report itself does
+                    not. The classes below are that row's, minus its link — an
+                    entry here is a record, not somewhere to go.
+                  */}
+                  <div className="flex items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm">
+                    <span className="flex min-w-0 flex-col gap-0.5">
                       <span className="truncate font-mono text-xs text-white/80">
                         {entry.contentType}: {entry.contentRef}
                       </span>
@@ -71,37 +62,23 @@ export default function AuditLogContent({
                           </>
                         )}
                       </span>
-                    </div>
-                    <StatusBadge status={entry.status} />
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <ReportStatusBadge status={entry.status} />
+                    </span>
                   </div>
                 </li>
               ))}
             </ul>
           )}
         </div>
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-sm text-mauve-400">
-            Page {page} of {totalPages}
-          </p>
-          <div className="flex gap-2">
-            {page > 1 && (
-              <Link
-                href={buildPageHref(page - 1)}
-                className="rounded-lg border border-mauve-600 bg-mauve-800 px-3 py-1 text-sm font-medium text-white transition-colors hover:border-white"
-              >
-                ← Prev
-              </Link>
-            )}
-            {page < totalPages && (
-              <Link
-                href={buildPageHref(page + 1)}
-                className="rounded-lg border border-mauve-600 bg-mauve-800 px-3 py-1 text-sm font-medium text-white transition-colors hover:border-white"
-              >
-                Next →
-              </Link>
-            )}
-          </div>
-        </div>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          buildHref={buildPageHref}
+          label="events"
+          totalCount={totalCount}
+        />
       </ConsoleCard.Content>
     </ConsoleCard.Root>
   );

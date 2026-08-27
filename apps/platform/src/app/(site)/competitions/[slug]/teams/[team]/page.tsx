@@ -1,15 +1,18 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import ConsolePageShell from "~/components/ConsolePageShell";
+import PageShell from "~/components/PageShell";
 import LockNotice from "~/components/participation/LockNotice";
 import JoinByCodeForm from "~/components/teams/JoinByCodeForm";
 import { formatEventDateTime } from "~/lib/eventTime";
 import { joinTeam, requestToJoin } from "~/server/actions/teams";
-import { expectSession } from "~/server/auth";
+import { requireSession } from "~/server/auth/require";
 import { getCompetitionBySlug } from "~/server/loaders/meetings";
 import { getMyTeam, getTeamDetail } from "~/server/loaders/teams";
 import { canUnlockByClosingPr } from "~/server/teams/lockState";
+import Badge from "~/ui/badge";
+import Callout from "~/ui/callout";
+import { ConsoleCard } from "~/ui/card";
 
 /**
  * /competitions/[slug]/teams/[team] — one team.
@@ -29,7 +32,7 @@ export default async function TeamPage({
   await connection();
 
   const { slug, team: teamSlug } = await params;
-  const userId = await expectSession().catch(() => redirect("/auth"));
+  const userId = await requireSession();
 
   const team = await getTeamDetail(slug, teamSlug, userId);
   if (!team) notFound();
@@ -57,7 +60,7 @@ export default async function TeamPage({
     });
 
   return (
-    <ConsolePageShell
+    <PageShell
       accent="emerald"
       title={team.name}
       description={
@@ -65,7 +68,10 @@ export default async function TeamPage({
           {team.members.length}{" "}
           {team.members.length === 1 ? "member" : "members"}
           {team.maxTeamSize !== null && ` of ${team.maxTeamSize}`} ·{" "}
-          <Link href={`/competitions/${slug}/teams`} className="underline">
+          <Link
+            href={`/competitions/${slug}/teams`}
+            className="text-white underline"
+          >
             every team in {competition?.name ?? "this competition"}
           </Link>
         </>
@@ -78,40 +84,42 @@ export default async function TeamPage({
         />
       )}
 
-      <section className="rounded-sm border-2 border-black bg-white p-4">
-        <h2 className="mb-3 font-semibold">Roster</h2>
-        <ul className="flex flex-col gap-2 text-sm">
-          {team.members.map((member) => (
-            <li
-              key={member.userId}
-              className="flex flex-wrap items-baseline justify-between gap-2"
-            >
-              <span className="font-semibold">
-                {/* A profile with no preferred name set is a real state — the
-                    field is optional — and showing a raw user id instead would
-                    be both uglier and more identifying than saying nothing. */}
-                {member.preferredName ?? "Member"}
-                {member.userId === userId && (
-                  <span className="ml-2 text-xs font-normal opacity-70">
-                    you
-                  </span>
-                )}
-                {member.role === "lead" && (
-                  <span className="ml-2 rounded-full border border-black/40 px-2 py-0.5 text-xs font-normal opacity-70">
-                    Lead
-                  </span>
-                )}
-              </span>
-              <time
-                dateTime={member.joinedAt.toISOString()}
-                className="text-xs opacity-70"
+      <ConsoleCard.Root id="roster">
+        <ConsoleCard.Header title="Roster" />
+        <ConsoleCard.Content>
+          <ul className="flex flex-col gap-2">
+            {team.members.map((member) => (
+              <li
+                key={member.userId}
+                className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm"
               >
-                joined {formatEventDateTime(member.joinedAt)}
-              </time>
-            </li>
-          ))}
-        </ul>
-      </section>
+                <span className="font-semibold text-white">
+                  {/* A profile with no preferred name set is a real state — the
+                      field is optional — and showing a raw user id instead would
+                      be both uglier and more identifying than saying nothing. */}
+                  {member.preferredName ?? "Member"}
+                  {member.userId === userId && (
+                    <span className="ml-2 text-xs font-normal text-mauve-400">
+                      you
+                    </span>
+                  )}
+                  {member.role === "lead" && (
+                    <Badge variant="info" className="ml-2 font-normal">
+                      Lead
+                    </Badge>
+                  )}
+                </span>
+                <time
+                  dateTime={member.joinedAt.toISOString()}
+                  className="text-xs text-mauve-400"
+                >
+                  joined {formatEventDateTime(member.joinedAt)}
+                </time>
+              </li>
+            ))}
+          </ul>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
 
       <Entry team={team} />
 
@@ -121,43 +129,54 @@ export default async function TeamPage({
           the single decision rather than re-deciding "is this person a member"
           here, where it could get the answer wrong. */}
       {team.joinCode !== null && (
-        <section className="rounded-sm border-2 border-black bg-white p-4">
-          <h2 className="font-semibold">Join code</h2>
-          <p className="my-2 font-mono text-2xl font-bold tracking-widest">
-            {team.joinCode}
-          </p>
-          <p className="text-sm opacity-70">
-            Anybody holding this can walk onto the team while the roster is
-            open, so give it out rather than post it. No characters that get
-            misheard — no zero, no letter O.
-          </p>
-        </section>
+        <ConsoleCard.Root id="join-code">
+          <ConsoleCard.Header title="Join Code" />
+          <ConsoleCard.Content>
+            <div>
+              <p>
+                {/* Rendered as code rather than as a heading: it is a literal
+                    string somebody retypes into a form, and it gets read aloud
+                    in a room, so it stays monospaced and wide-tracked. */}
+                <code className="rounded-sm bg-white/10 px-2 py-1 font-mono text-2xl font-bold tracking-widest text-mauve-200">
+                  {team.joinCode}
+                </code>
+              </p>
+              <p className="mt-3 max-w-prose text-sm text-mauve-400">
+                Anybody holding this can walk onto the team while the roster is
+                open, so give it out rather than post it. No characters that get
+                misheard — no zero, no letter O.
+              </p>
+            </div>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
       )}
 
       {team.standing !== null && (
-        <section className="rounded-sm border-2 border-black bg-white p-4">
-          <h2 className="mb-3 font-semibold">
-            Finished {ordinal(team.standing.placement)}
-          </h2>
-          <dl className="flex flex-wrap gap-6 text-sm">
-            <Figure
-              label="Requirements"
-              value={team.standing.requirementPoints}
-            >
-              points
-            </Figure>
-            <Figure label="Election" value={team.standing.electionPoints}>
-              points
-            </Figure>
-            <Figure label="Total" value={team.standing.totalPoints}>
-              points
-            </Figure>
-          </dl>
-        </section>
+        <ConsoleCard.Root id="standing">
+          <ConsoleCard.Header
+            title={`Finished ${ordinal(team.standing.placement)}`}
+          />
+          <ConsoleCard.Content>
+            <dl className="flex flex-wrap gap-6">
+              <Figure
+                label="Requirements"
+                value={team.standing.requirementPoints}
+              >
+                points
+              </Figure>
+              <Figure label="Election" value={team.standing.electionPoints}>
+                points
+              </Figure>
+              <Figure label="Total" value={team.standing.totalPoints}>
+                points
+              </Figure>
+            </dl>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
       )}
 
       {!isMember && <JoinPanel {...{ team, mine, slug }} />}
-    </ConsolePageShell>
+    </PageShell>
   );
 }
 
@@ -173,53 +192,70 @@ type TeamDetail = NonNullable<Awaited<ReturnType<typeof getTeamDetail>>>;
  */
 function Entry({ team }: { team: TeamDetail }) {
   return (
-    <section className="rounded-sm border-2 border-black bg-white p-4 text-sm">
-      <h2 className="mb-2 font-semibold">Entry</h2>
+    <ConsoleCard.Root id="entry">
+      <ConsoleCard.Header title="Entry" />
+      {/* Two children on purpose: the divider then falls between the state of
+          the pull request and the requirement count, which is graded
+          separately and long afterwards. */}
+      <ConsoleCard.Content>
+        <div className="flex flex-col gap-2 text-sm">
+          {team.submissionState === null ? (
+            <p className="text-mauve-400">
+              No pull request yet. Opening one from the team&rsquo;s branch is
+              how a team enters — and it closes the roster while it is open.
+            </p>
+          ) : (
+            <p className="text-mauve-300">
+              {ENTRY_COPY[team.submissionState]}
+              {team.submissionUrl !== null && (
+                <>
+                  {" "}
+                  <a
+                    href={team.submissionUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="text-white underline"
+                  >
+                    View the pull request
+                  </a>
+                  .
+                </>
+              )}
+            </p>
+          )}
 
-      {team.submissionState === null ? (
-        <p className="opacity-70">
-          No pull request yet. Opening one from the team&rsquo;s branch is how a
-          team enters — and it closes the roster while it is open.
-        </p>
-      ) : (
-        <p>
-          {ENTRY_COPY[team.submissionState]}
-          {team.submissionUrl !== null && (
+          {team.competedAt !== null && (
+            <p className="text-mauve-300">
+              Frozen at judging on{" "}
+              <time dateTime={team.competedAt.toISOString()}>
+                {formatEventDateTime(team.competedAt)}
+              </time>
+              . Everybody on the roster at that moment competed, and closing the
+              pull request afterwards does not take that away.
+            </p>
+          )}
+        </div>
+
+        <p className="text-sm text-mauve-400">
+          {/* Null is "not graded yet", not zero. Officers fill this in after the
+              fact, so an unscored team must not read as one that met nothing —
+              which is also why only the counted branch gets a badge. */}
+          {team.requirementsMet === null ? (
+            "Requirements have not been graded yet."
+          ) : (
             <>
-              {" "}
-              <a
-                href={team.submissionUrl}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="underline"
+              <Badge
+                variant="success"
+                className="mr-1.5 align-middle tabular-nums"
               >
-                View the pull request
-              </a>
-              .
+                {team.requirementsMet}
+              </Badge>
+              requirements met.
             </>
           )}
         </p>
-      )}
-
-      {team.competedAt !== null && (
-        <p className="mt-2">
-          Frozen at judging on{" "}
-          <time dateTime={team.competedAt.toISOString()}>
-            {formatEventDateTime(team.competedAt)}
-          </time>
-          . Everybody on the roster at that moment competed, and closing the
-          pull request afterwards does not take that away.
-        </p>
-      )}
-
-      <p className="mt-2 opacity-70">
-        {/* Null is "not graded yet", not zero. Officers fill this in after the
-            fact, so an unscored team must not read as one that met nothing. */}
-        {team.requirementsMet === null
-          ? "Requirements have not been graded yet."
-          : `${team.requirementsMet} requirements met.`}
-      </p>
-    </section>
+      </ConsoleCard.Content>
+    </ConsoleCard.Root>
   );
 }
 
@@ -249,7 +285,7 @@ function JoinPanel({
 }) {
   if (mine !== null) {
     return (
-      <p className="rounded-sm border-2 border-black bg-white p-4 text-sm">
+      <Callout tone="info">
         You are already on a team for this competition — it is one per member —
         so this one is not open to you.{" "}
         <Link
@@ -259,7 +295,7 @@ function JoinPanel({
           Open your team
         </Link>
         .
-      </p>
+      </Callout>
     );
   }
 
@@ -294,10 +330,14 @@ function Figure({
 }) {
   return (
     <div className="flex flex-col">
-      <dt className="text-xs tracking-wide uppercase opacity-60">{label}</dt>
-      <dd className="text-2xl font-bold tabular-nums">
+      <dt className="text-xs tracking-wide text-mauve-500 uppercase">
+        {label}
+      </dt>
+      <dd className="text-2xl font-bold text-white tabular-nums">
         {value}
-        <span className="ml-1 text-xs font-normal opacity-60">{children}</span>
+        <span className="ml-1 text-xs font-normal text-mauve-400">
+          {children}
+        </span>
       </dd>
     </div>
   );

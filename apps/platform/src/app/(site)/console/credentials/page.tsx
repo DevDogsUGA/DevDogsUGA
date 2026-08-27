@@ -1,40 +1,47 @@
 import { Suspense } from "react";
-import AccentBlobs from "~/ui/accent-blobs";
 import CreateCredentialDialog from "~/components/Credentials/CreateCredentialDialog";
 import CredentialsList from "~/components/Credentials/CredentialsList";
-import PageHeader from "~/components/PageHeader";
+import PageShell from "~/components/PageShell";
 import { TableSkeleton } from "~/components/Skeletons";
 import { getCredentialsPageData } from "~/server/loaders/credentials";
 
-async function CredentialsData() {
-  const { credentials, canCreate, allRoles } = await getCredentialsPageData();
+/**
+ * The create button, resolved apart from the list.
+ *
+ * It belongs in the header's row, but whether it exists at all depends on
+ * `canCreate`, which is a permission read this page deliberately streams. Its
+ * own Suspense boundary keeps the title instant instead of holding the whole
+ * page on a permission check, and `getCredentialsPageData` is `cache`d, so the
+ * two boundaries share one read rather than doubling it.
+ */
+async function CreateCredentialAction() {
+  const { canCreate, allRoles } = await getCredentialsPageData();
+  if (!canCreate) return null;
 
-  return (
-    <>
-      {canCreate && (
-        <div className="-mt-4 flex justify-end">
-          <CreateCredentialDialog allRoles={allRoles} />
-        </div>
-      )}
-      <CredentialsList credentials={credentials} canCreate={canCreate} />
-    </>
-  );
+  return <CreateCredentialDialog allRoles={allRoles} />;
+}
+
+async function CredentialsData() {
+  const { credentials, canCreate } = await getCredentialsPageData();
+
+  return <CredentialsList credentials={credentials} canCreate={canCreate} />;
 }
 
 export default function CredentialsPage() {
   return (
-    <div className="relative isolate mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 @sm:px-6">
-      <AccentBlobs accent="rose" />
-
-      <PageHeader
-        title="Credentials"
-        description="Shared accounts and secrets used for testing integrations, visible only to roles you grant access to."
-        accent="rose"
-      />
-
+    <PageShell
+      accent="rose"
+      title="Credentials"
+      description="Shared accounts and secrets used for testing integrations, visible only to roles you grant access to."
+      actions={
+        <Suspense fallback={null}>
+          <CreateCredentialAction />
+        </Suspense>
+      }
+    >
       <Suspense fallback={<TableSkeleton />}>
         <CredentialsData />
       </Suspense>
-    </div>
+    </PageShell>
   );
 }

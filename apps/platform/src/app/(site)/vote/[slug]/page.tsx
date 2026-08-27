@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import Callout from "~/ui/callout";
+import { ConsoleCard } from "~/ui/card";
 import BallotForm, { type BallotOptionView } from "~/components/BallotForm";
-import ConsolePageShell from "~/components/ConsolePageShell";
+import PageShell from "~/components/PageShell";
 import { formatEventDateTime, formatRelative } from "~/lib/eventTime";
 import { castBallot } from "~/server/actions/elections";
-import { expectSession } from "~/server/auth";
+import { requireSession } from "~/server/auth/require";
 import { presentedOrder, seedFrom } from "~/server/elections/ballotOrder";
 import {
   getBallotOptions,
@@ -32,7 +34,7 @@ export default async function BallotPage({
   await connection();
 
   const { slug } = await params;
-  const userId = await expectSession().catch(() => redirect("/auth"));
+  const userId = await requireSession();
 
   const election = await getElectionBySlug(slug);
   if (!election) notFound();
@@ -50,7 +52,7 @@ export default async function BallotPage({
   const byId = new Map(options.map((o) => [o.teamId, o]));
 
   return (
-    <ConsolePageShell
+    <PageShell
       accent="blue"
       title={election.title}
       description={
@@ -64,18 +66,25 @@ export default async function BallotPage({
         </>
       }
     >
-      <section className="rounded-sm border-2 border-black bg-white p-4 text-sm">
-        <p>
-          {election.electorate === "officers"
-            ? "This is the officer ballot. It is one ballot, and it carries the weight of an entire category."
-            : "One ballot per team, cast by the lead."}
-        </p>
-        <p className="mt-2 opacity-70">
-          The list below started in an order chosen at random for you — every
-          voter sees a different one, so leaving it alone says nothing about
-          what you think.
-        </p>
-      </section>
+      <ConsoleCard.Root id="how-voting-works">
+        <ConsoleCard.Header title="How voting works" />
+        <ConsoleCard.Content>
+          {/* Both sentences are one thought, so they are one child — a second
+              direct child would put a divider through the middle of it. */}
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-mauve-300">
+              {election.electorate === "officers"
+                ? "This is the officer ballot. It is one ballot, and it carries the weight of an entire category."
+                : "One ballot per team, cast by the lead."}
+            </p>
+            <p className="text-sm text-mauve-400">
+              The list below started in an order chosen at random for you —
+              every voter sees a different one, so leaving it alone says nothing
+              about what you think.
+            </p>
+          </div>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
 
       {existing.length > 0 ? (
         <CastBallot existing={existing} byId={byId} />
@@ -91,15 +100,18 @@ export default async function BallotPage({
           castBallot={castBallot}
         />
       ) : (
-        <p className="rounded-sm border-2 border-black bg-white p-6 text-sm">
+        <Callout tone="info">
           {BLOCK_MESSAGES[eligibility.reason ?? "not_eligible"]}
-        </p>
+        </Callout>
       )}
 
-      <Link href="/vote" className="text-sm underline">
+      <Link
+        href="/vote"
+        className="self-start text-sm text-mauve-400 underline transition-colors outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
+      >
         Back to open elections
       </Link>
-    </ConsolePageShell>
+    </PageShell>
   );
 }
 
@@ -127,21 +139,29 @@ function CastBallot({
   byId: Map<string, { teamName: string }>;
 }) {
   return (
-    <section className="rounded-sm border-2 border-black bg-white p-4">
-      <h2 className="mb-3 font-semibold">Your ballot</h2>
-      <ol className="flex flex-col gap-1 text-sm">
-        {existing.map((entry) => (
-          <li key={entry.teamId} className="flex gap-3">
-            <span className="w-6 text-right tabular-nums opacity-70">
-              {entry.rank}
-            </span>
-            <span>{byId.get(entry.teamId)?.teamName ?? "Unknown team"}</span>
-          </li>
-        ))}
-      </ol>
-      <p className="mt-3 text-xs opacity-70">
-        A ballot cannot be changed once cast.
-      </p>
-    </section>
+    <ConsoleCard.Root id="your-ballot">
+      <ConsoleCard.Header title="Your ballot" />
+      <ConsoleCard.Content>
+        {/* The ranking and the caveat about it are one child: a divider
+            between them would read as two unrelated sections. */}
+        <div className="flex flex-col gap-3">
+          <ol className="flex flex-col gap-1 text-sm">
+            {existing.map((entry) => (
+              <li key={entry.teamId} className="flex gap-3">
+                <span className="w-6 shrink-0 text-right text-mauve-400 tabular-nums">
+                  {entry.rank}
+                </span>
+                <span className="text-white">
+                  {byId.get(entry.teamId)?.teamName ?? "Unknown team"}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <p className="text-xs text-mauve-400">
+            A ballot cannot be changed once cast.
+          </p>
+        </div>
+      </ConsoleCard.Content>
+    </ConsoleCard.Root>
   );
 }

@@ -18,9 +18,9 @@ export default function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-start gap-3 rounded-sm border-2 border-dashed border-black/30 bg-white/60 p-6">
-      <h2 className="font-semibold">{title}</h2>
-      <p className="max-w-prose text-sm opacity-70">{body}</p>
+    <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-mauve-700 bg-mauve-950/60 p-6">
+      <h2 className="font-semibold text-white">{title}</h2>
+      <p className="max-w-prose text-sm text-mauve-400">{body}</p>
       {action}
     </div>
   );

@@ -1,8 +1,7 @@
 import { count, desc, eq } from "drizzle-orm";
 import { cache } from "react";
-import { redirect } from "next/navigation";
 import { canUserViewAuditLog } from "~/server/actions/permissions";
-import { expectSession } from "~/server/auth";
+import { requirePermission } from "~/server/auth/require";
 import { db } from "~/server/db";
 import { apps, reportReasons, reports } from "~/server/db/schema";
 
@@ -29,9 +28,7 @@ export type AuditLogPageData = {
 
 export const getAuditLogPageData = cache(
   async (page: number): Promise<AuditLogPageData> => {
-    const userId = await expectSession().catch(() => redirect("/auth"));
-    const canView = await canUserViewAuditLog(userId);
-    if (!canView) redirect("/");
+    await requirePermission(canUserViewAuditLog);
 
     const offset = (page - 1) * PAGE_SIZE;
 

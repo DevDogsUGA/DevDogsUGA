@@ -61,9 +61,13 @@ export default function JoinByCodeForm({
 
   if (requested) {
     return (
+      // `role="status"` rather than `<Callout alert>`: this is the polite half
+      // of the pair. The request succeeded and nothing is waiting on the
+      // reader, so it should be announced at the next pause rather than cut
+      // across whatever the screen reader is already saying.
       <p
         role="status"
-        className="rounded-sm border-2 border-black bg-green-50 p-4 text-sm"
+        className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm text-emerald-200"
       >
         Your request is with {selected.name}&rsquo;s lead. They get an email,
         and you will get one back when they answer — nothing is reserved for you
@@ -73,19 +77,19 @@ export default function JoinByCodeForm({
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-sm border-2 border-black bg-white p-4">
-      <h2 className="font-semibold">Join a team</h2>
+    <div className="flex flex-col gap-4 rounded-lg border border-white/10 bg-white/5 p-4">
+      <h2 className="font-semibold text-white">Join a team</h2>
 
       {targets.length > 1 ? (
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-semibold">Which team</span>
+          <span className="font-semibold text-white">Which team</span>
           <select
             value={selected.id}
             onChange={(event) => {
               setTeamId(event.target.value);
               setProblem(null);
             }}
-            className="rounded-sm border-2 border-black bg-white px-3 py-2"
+            className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-2 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
           >
             {targets.map((target) => (
               <option key={target.id} value={target.id}>
@@ -95,8 +99,9 @@ export default function JoinByCodeForm({
           </select>
         </label>
       ) : (
-        <p className="text-sm opacity-70">
-          Joining <span className="font-semibold">{selected.name}</span>.
+        <p className="text-sm text-mauve-400">
+          Joining{" "}
+          <span className="font-semibold text-white">{selected.name}</span>.
         </p>
       )}
 
@@ -120,7 +125,7 @@ export default function JoinByCodeForm({
         className="flex flex-col gap-3"
       >
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-semibold">Join code</span>
+          <span className="font-semibold text-white">Join code</span>
           <input
             value={code}
             onChange={(event) => setCode(event.target.value)}
@@ -133,14 +138,14 @@ export default function JoinByCodeForm({
             maxLength={12}
             required
             placeholder="ABC234"
-            className="rounded-sm border-2 border-black px-3 py-2 font-mono tracking-widest uppercase"
+            className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-2 font-mono text-sm tracking-widest text-white uppercase outline-none placeholder:text-mauve-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
           />
         </label>
 
         <button
           type="submit"
           disabled={code.trim().length === 0 || isPending}
-          className="self-start rounded-sm border-2 border-black bg-black px-4 py-2 font-semibold text-white disabled:opacity-40"
+          className="self-start rounded-sm border-2 border-white bg-white px-4 py-2 text-sm font-medium text-black transition outline-none hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 disabled:opacity-40"
         >
           {isPending ? "Joining…" : "Join with code"}
         </button>
@@ -157,29 +162,31 @@ export default function JoinByCodeForm({
               else setProblem(result.code);
             });
           }}
-          className="flex flex-col gap-3 border-t-2 border-black/10 pt-4"
+          className="flex flex-col gap-3 border-t border-mauve-800 pt-4"
         >
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">No code? Ask the lead</span>
+            <span className="font-semibold text-white">
+              No code? Ask the lead
+            </span>
             <textarea
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               rows={2}
               maxLength={280}
               placeholder="Optional — what you are hoping to work on."
-              className="rounded-sm border-2 border-black px-3 py-2"
+              className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-2 text-sm text-white outline-none placeholder:text-mauve-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
             />
           </label>
           <button
             type="submit"
             disabled={isPending}
-            className="self-start rounded-sm border-2 border-black px-4 py-2 font-semibold disabled:opacity-40"
+            className="self-start rounded-lg border border-mauve-600 bg-mauve-800 px-4 py-2 text-sm font-medium text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 disabled:opacity-40"
           >
             {isPending ? "Sending…" : "Ask to join"}
           </button>
         </form>
       ) : (
-        <p className="border-t-2 border-black/10 pt-4 text-sm opacity-70">
+        <p className="border-t border-mauve-800 pt-4 text-sm text-mauve-400">
           {selected.name} is not taking join requests, so the code is the only
           way in. Ask somebody on the team for it.
         </p>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import ConsolePageShell from "~/components/ConsolePageShell";
+import PageShell from "~/components/PageShell";
 import DocsProjectMark from "~/components/DocsProjectMark";
 import DocsTileGrid from "~/components/DocsTileGrid";
 import { groupDocsProjects } from "~/config/docs";
@@ -14,7 +14,7 @@ export default function DocsLandingPage() {
   const projects = getDocsProjects();
 
   return (
-    <ConsolePageShell
+    <PageShell
       accent="cyan"
       title="Documentation"
       description="Guides and references for DevDogs projects, published straight from the monorepo."
@@ -47,6 +47,6 @@ export default function DocsLandingPage() {
           No documentation has been published yet.
         </p>
       )}
-    </ConsolePageShell>
+    </PageShell>
   );
 }

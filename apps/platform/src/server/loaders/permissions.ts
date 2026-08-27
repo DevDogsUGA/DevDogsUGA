@@ -1,8 +1,8 @@
 import { asc, eq } from "drizzle-orm";
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import type { APIRole } from "discord-api-types/v10";
-import { expectSession } from "~/server/auth";
+import { requireSession } from "~/server/auth/require";
 import { db } from "~/server/db";
 import { profiles, roles } from "~/server/db/schema";
 import {
@@ -56,9 +56,12 @@ export type PermissionsPageData = {
 
 export const getPermissionsPageData = cache(
   async (): Promise<PermissionsPageData> => {
-    const userId = await expectSession().catch(() => redirect("/auth"));
+    // Not `requirePermission` — the caller context is needed in full further
+    // down, so re-deriving it behind a `canUser*` predicate would resolve the
+    // same roles twice. The denial is the shared one either way.
+    const userId = await requireSession();
     const ctx = await getCallerContext(userId);
-    if (!ctx.resolvedPermissions.canManageRoles) redirect("/");
+    if (!ctx.resolvedPermissions.canManageRoles) notFound();
 
     const discordSyncErrors: string[] = [];
 

@@ -20,16 +20,16 @@ export default function PointsSummary({
   competitionsScored,
 }: MemberPointsTotals) {
   return (
-    <div className="rounded-sm border-2 border-black bg-white p-4">
+    <div className="rounded-lg border border-white/10 bg-white/5 p-4">
       <dl className="flex gap-6">
         <div className="flex flex-col">
-          <dt className="text-xs tracking-wide uppercase opacity-60">
+          <dt className="text-xs tracking-wide text-mauve-400 uppercase">
             Lifetime points
           </dt>
           <dd className="text-2xl font-bold tabular-nums">{lifetimePoints}</dd>
         </div>
         <div className="flex flex-col">
-          <dt className="text-xs tracking-wide uppercase opacity-60">
+          <dt className="text-xs tracking-wide text-mauve-400 uppercase">
             Competitions scored
           </dt>
           <dd className="text-2xl font-bold tabular-nums">
@@ -38,7 +38,7 @@ export default function PointsSummary({
         </div>
       </dl>
 
-      <p className="mt-3 max-w-prose text-xs opacity-70">
+      <p className="mt-3 max-w-prose text-xs text-mauve-400">
         {competitionsScored === 0
           ? "No competition has been finalized for this member yet. Points are awarded in one pass when a competition is scored, so a competition still being judged shows nothing here."
           : `Each competition is worth up to 1000 — 600 for the requirements the team met, up to 400 from the elections. That is a ceiling of ${(

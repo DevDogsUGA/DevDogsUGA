@@ -1,88 +1,74 @@
-import { redirect } from "next/navigation";
-import Link from "next/link";
+import PageShell from "~/components/PageShell";
+import ReportListItem from "~/components/ReportListItem";
 import { getModerationPageData } from "~/server/loaders/moderation";
+import { ConsoleCard } from "~/ui/card";
 
 export default async function ModerationDashboard() {
-  const data = await getModerationPageData();
-
-  if (!data.canModerate) redirect("/");
-
-  const { openReports: open, resolvedReports: resolved, appNames } = data;
+  // The loader is the gate — it refuses anybody without `canModerate` rather
+  // than handing back an empty queue for the page to check.
+  const {
+    openReports: open,
+    resolvedReports: resolved,
+    appNames,
+  } = await getModerationPageData();
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold">Moderation Dashboard</h1>
-
-      <section>
-        <h2 className="mb-3 text-lg font-semibold text-mauve-800">
-          Open Reports{" "}
-          {open.length > 0 && (
-            <span className="ml-1 rounded-sm bg-rose-600 px-2 py-0.5 text-sm font-normal text-white">
-              {open.length}
-            </span>
+    <PageShell
+      accent="rose"
+      title="Moderation"
+      description="Review content reports filed against community profiles and resolve them with the appropriate action."
+    >
+      <ConsoleCard.Root id="open-reports">
+        <ConsoleCard.Header title="Open Reports" />
+        <ConsoleCard.Content>
+          {open.length === 0 ? (
+            <p className="text-sm text-mauve-400">No open reports.</p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {open.map((report) => (
+                <li key={report.id}>
+                  <ReportListItem
+                    id={report.id}
+                    contentId={report.contentRef}
+                    contentTypeLabel={report.contentType}
+                    reasonTitle={report.reasonTitle}
+                    status={report.status}
+                    createdAt={report.createdAt}
+                    corroborationCount={report.corroborationCount}
+                    clientName={appNames[report.appId] ?? report.appId}
+                  />
+                </li>
+              ))}
+            </ul>
           )}
-        </h2>
-
-        {open.length === 0 ? (
-          <p className="text-mauve-400">No open reports.</p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {open.map((report) => (
-              <li key={report.id}>
-                <Link
-                  href={`/console/moderation/${report.id}`}
-                  className="shadow-block-sm flex items-center justify-between border border-black bg-white px-4 py-3 transition-[translate,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-mono text-sm text-mauve-700">
-                      {report.contentType}: {report.contentRef}
-                    </span>
-                    <span className="text-xs text-mauve-500">
-                      {appNames[report.appId] ?? report.appId} &middot;{" "}
-                      {report.reasonTitle ?? "Unknown reason"} &middot;{" "}
-                      {new Date(report.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    {report.corroborationCount > 0 && (
-                      <span className="rounded-sm bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
-                        +{report.corroborationCount} corroboration
-                        {report.corroborationCount !== 1 ? "s" : ""}
-                      </span>
-                    )}
-                    <span className="text-mauve-400">&rarr;</span>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
 
       {resolved.length > 0 && (
-        <section className="mt-10">
-          <h2 className="mb-3 text-lg font-semibold text-mauve-600">
-            Recent Resolved
-          </h2>
-          <ul className="flex flex-col gap-2">
-            {resolved.slice(0, 20).map((report) => (
-              <li key={report.id}>
-                <Link
-                  href={`/console/moderation/${report.id}`}
-                  className="shadow-block-sm flex items-center justify-between border border-black bg-mauve-50 px-4 py-2.5 text-sm text-mauve-500 transition-[translate,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:text-mauve-800"
-                >
-                  <span className="font-mono">
-                    {report.contentType}: {report.contentRef}
-                  </span>
-                  <span className="text-mauve-500 capitalize">
-                    {report.status}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <ConsoleCard.Root id="recent-resolved">
+          <ConsoleCard.Header title="Recent Resolved" />
+          <ConsoleCard.Content>
+            <ul className="flex flex-col gap-2">
+              {resolved.slice(0, 20).map((report) => (
+                <li key={report.id}>
+                  {/* Compact, because this list is context for the queue above
+                      rather than work: it drops the reason line and the
+                      corroboration count and keeps only the status. */}
+                  <ReportListItem
+                    id={report.id}
+                    contentId={report.contentRef}
+                    contentTypeLabel={report.contentType}
+                    reasonTitle={report.reasonTitle}
+                    status={report.status}
+                    createdAt={report.createdAt}
+                    variant="compact"
+                  />
+                </li>
+              ))}
+            </ul>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
       )}
-    </main>
+    </PageShell>
   );
 }
