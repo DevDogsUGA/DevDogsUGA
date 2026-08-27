@@ -47,5 +47,5 @@ export default async function DirectionsPage({
         ? USUAL_ROOM
         : null;
 
-  return <FindUsContent building={building} room={room} />;
+  return <FindUsContent building={building} room={room} tone="dark" />;
 }

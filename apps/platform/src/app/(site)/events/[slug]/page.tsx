@@ -8,8 +8,9 @@ import {
   MapPinIcon,
 } from "@phosphor-icons/react/ssr";
 import {
-  ACTION_CLS,
-  CHIP_CLS,
+  ACTION_DARK_CLS,
+  CHIP_DARK_CLS,
+  NEUTRAL_CHIP_DARK_CLS,
   segmentBadge,
 } from "~/components/EventsSection/meetingView";
 import {
@@ -142,7 +143,7 @@ export default async function MeetingPage({
           return (
             <span
               key={segment}
-              className={`${badge.bg} ${badge.text} ${CHIP_CLS}`}
+              className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
             >
               {badge.label}
             </span>
@@ -152,9 +153,7 @@ export default async function MeetingPage({
             single-select an officer can extend without touching this repo, so
             a value this side has never heard of has to render as itself. */}
         {kindOverride !== null && (
-          <span
-            className={`border-2 border-black bg-white text-black ${CHIP_CLS}`}
-          >
+          <span className={`${NEUTRAL_CHIP_DARK_CLS} ${CHIP_DARK_CLS}`}>
             {kindOverride}
           </span>
         )}
@@ -162,7 +161,7 @@ export default async function MeetingPage({
 
       {/* The span itself is in the dialog header, where it stays put while
           this scrolls; what belongs here is the bit that needs the clock. */}
-      <p className="text-sm font-semibold text-black">
+      <p className="text-sm font-semibold text-white">
         {happeningNow ? (
           <>Happening now — until {formatEventTime(meeting.endsAt)}</>
         ) : ended ? (
@@ -183,24 +182,31 @@ export default async function MeetingPage({
       </p>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <p className="flex items-center gap-2 text-sm text-mauve-700">
-          <MapPinIcon className="shrink-0 text-mauve-500" weight="fill" />
+        <p className="flex items-center gap-2 text-sm text-mauve-300">
+          <MapPinIcon className="shrink-0 text-mauve-400" weight="fill" />
           {where ?? "Room to be announced"}
         </p>
         {/* The in-place trigger, not `FindUsLink`: following the link would
             navigate away from this meeting, and a cold-loaded directions
             dialog closes to /events, so a member who only wanted walking
             directions would lose the meeting they were reading. Nested
-            dialogs stack, and closing the inner one leaves this one open. */}
+            dialogs stack, and closing the inner one leaves this one open —
+            and as the `aside` of this dialog's pair, on a wide screen it
+            opens beside the meeting instead of over it. */}
         {isMappedBuilding(meeting.building) && (
-          <FindUs building={meeting.building} room={meeting.location} />
+          <FindUs
+            building={meeting.building}
+            room={meeting.location}
+            tone="dark"
+            pair="aside"
+          />
         )}
       </div>
 
       {/* Plain text from Airtable, rendered as text. Never as markup: it is
           typed into a form field by an officer, not authored in this repo. */}
       {meeting.summary !== null && (
-        <p className="text-sm/relaxed text-mauve-700">{meeting.summary}</p>
+        <p className="text-sm/relaxed text-mauve-300">{meeting.summary}</p>
       )}
 
       <section className="flex flex-col gap-2">
@@ -209,13 +215,13 @@ export default async function MeetingPage({
             section inside the body has to sit a level below it rather than
             beside it, or a screen reader reads the agenda as a sibling of the
             meeting rather than part of it. */}
-        <h3 className="font-display text-xs font-extrabold tracking-wide text-mauve-500 uppercase">
+        <h3 className="font-display text-xs font-extrabold tracking-wide text-mauve-400 uppercase">
           Agenda
         </h3>
         {judged.length === 0 && workshops.length === 0 ? (
-          <p className="rounded-sm border-2 border-black bg-white p-3 text-sm text-mauve-700">
-            Nothing is scheduled for this night yet — come build whatever you
-            are working on.
+          <p className="rounded-lg border border-dashed border-mauve-700 bg-white/5 p-3 text-sm text-mauve-300">
+            Nothing on the agenda yet — come build whatever you&rsquo;re working
+            on.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -248,7 +254,7 @@ export default async function MeetingPage({
                 href={meeting.rsvpUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={ACTION_CLS}
+                className={ACTION_DARK_CLS}
               >
                 RSVP <ArrowUpRightIcon />
               </a>
@@ -265,7 +271,7 @@ export default async function MeetingPage({
                   href={meeting.attendanceFormUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={ACTION_CLS}
+                  className={ACTION_DARK_CLS}
                 >
                   <ClipboardTextIcon /> Check in <ArrowUpRightIcon />
                 </a>
@@ -273,7 +279,7 @@ export default async function MeetingPage({
           </div>
           {meeting.attendanceFormUrl !== null &&
             attendanceFormIsLive(meeting, now) && (
-              <p className="text-xs text-mauve-500">
+              <p className="text-xs text-mauve-400">
                 Officers open and close the check-in form themselves, so it may
                 not be taking responses yet.
               </p>
@@ -282,7 +288,7 @@ export default async function MeetingPage({
       )}
 
       {ended && (
-        <p className="border-t-2 border-mauve-200 pt-3 text-sm text-mauve-600">
+        <p className="border-t border-mauve-800 pt-3 text-sm text-mauve-400">
           {meeting.attendanceCount === 0
             ? "No check-ins were recorded for this meeting."
             : `${meeting.attendanceCount} ${meeting.attendanceCount === 1 ? "member" : "members"} checked in.`}
@@ -293,7 +299,7 @@ export default async function MeetingPage({
 }
 
 const ROW_CLS =
-  "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-sm border-2 border-black bg-white p-3";
+  "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-white/10 bg-white/5 p-3";
 
 function JudgingRow({ judging }: { judging: MeetingRangeJudging }) {
   const badge = segmentBadge.judging;
@@ -302,17 +308,17 @@ function JudgingRow({ judging }: { judging: MeetingRangeJudging }) {
     <li className={ROW_CLS}>
       <time
         dateTime={judging.judgingStartsAt.toISOString()}
-        className="font-display text-sm font-extrabold text-black tabular-nums"
+        className="font-display text-sm font-extrabold text-white tabular-nums"
       >
         {formatEventTime(judging.judgingStartsAt)}
       </time>
       <Link
         href={`/competitions/${judging.competitionSlug}/teams`}
-        className="text-sm font-semibold text-black underline"
+        className="text-sm font-semibold text-white underline decoration-2 underline-offset-2 hover:no-underline"
       >
         {judging.projectName}
       </Link>
-      <span className={`${badge.bg} ${badge.text} ${CHIP_CLS} ml-auto`}>
+      <span className={`${badge.chipDark} ${CHIP_DARK_CLS} ml-auto`}>
         {badge.label}
       </span>
     </li>
@@ -334,18 +340,18 @@ function WorkshopRow({ workshop }: { workshop: MeetingWorkshop }) {
     <li className={ROW_CLS}>
       <span className="flex flex-col">
         {workshop.competitionSlug === null ? (
-          <span className="text-sm font-semibold text-black">
+          <span className="text-sm font-semibold text-white">
             {workshop.projectName}
           </span>
         ) : (
           <Link
             href={`/competitions/${workshop.competitionSlug}/teams`}
-            className="text-sm font-semibold text-black underline"
+            className="text-sm font-semibold text-white underline decoration-2 underline-offset-2 hover:no-underline"
           >
             {workshop.projectName}
           </Link>
         )}
-        <span className="text-xs text-mauve-500">
+        <span className="text-xs text-mauve-400">
           {workshop.competitionSlug === null
             ? "Supplementary session"
             : workshop.teamCount === 1
@@ -353,7 +359,7 @@ function WorkshopRow({ workshop }: { workshop: MeetingWorkshop }) {
               : `${workshop.teamCount} teams so far`}
         </span>
       </span>
-      <span className={`${badge.bg} ${badge.text} ${CHIP_CLS} ml-auto`}>
+      <span className={`${badge.chipDark} ${CHIP_DARK_CLS} ml-auto`}>
         {badge.label}
       </span>
     </li>

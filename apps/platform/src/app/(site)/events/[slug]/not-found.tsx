@@ -1,5 +1,6 @@
 import { ArrowLeftIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
+import { ACTION_DARK_CLS } from "~/components/EventsSection/meetingView";
 
 /**
  * An unknown slug, rendered as the dialog's body.
@@ -16,15 +17,11 @@ import Link from "next/link";
 export default function MeetingNotFound() {
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm/relaxed text-mauve-700">
-        There is no meeting at this link. It may have been removed from the
-        schedule, or the address may have a typo in it.
+      <p className="text-sm/relaxed text-mauve-300">
+        No meeting lives at this link. It may have left the schedule, or the
+        address has a typo.
       </p>
-      <Link
-        href="/events"
-        scroll={false}
-        className="hover:shadow-block-md transition-lift flex w-fit items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5"
-      >
+      <Link href="/events" scroll={false} className={ACTION_DARK_CLS}>
         <ArrowLeftIcon /> Back to the schedule
       </Link>
     </div>

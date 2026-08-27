@@ -219,20 +219,19 @@ export default function HowItWorks({
     <section
       id={id}
       aria-labelledby={`${id}-heading`}
-      className="flex scroll-mt-28 flex-col gap-8"
+      className="flex scroll-mt-28 flex-col gap-4"
       // The console page reveals nothing on scroll — that is the marketing
       // pages' idiom — so the attribute only exists on the light plate.
       data-animate={tone === "light" ? "fade-up" : undefined}
     >
-      {/* Heading and television in one row, the set level with the words
-          rather than floating beside a list twice its height. */}
-      <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-8">
+      {/* Heading and television in one row, both hung from the top edge. */}
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-8">
         <div className="max-w-prose text-left lg:col-span-5">
           <h2
             id={`${id}-heading`}
             className={`font-display mb-4 text-3xl font-extrabold md:text-4xl ${t.heading}`}
           >
-            How a week works
+            How a Week Works
           </h2>
           <p className={`text-base/relaxed text-balance ${t.intro}`}>
             A competition is a week, not a night. Monday&rsquo;s workshop kicks

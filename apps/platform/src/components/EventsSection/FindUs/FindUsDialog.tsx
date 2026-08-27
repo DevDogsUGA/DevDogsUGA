@@ -3,7 +3,10 @@
 import type { ReactNode } from "react";
 import { MapPinIcon } from "@phosphor-icons/react/ssr";
 import { DialogDescription, DialogTitle } from "~/ui/dialog";
-import DialogShell from "~/ui/dialog-shell";
+import DialogShell, {
+  type DialogPairRole,
+  type DialogTone,
+} from "~/ui/dialog-shell";
 import { findUsBlurb, FIND_US_TITLE } from "./copy";
 import type { BuildingKey } from "./campusMapMeta";
 
@@ -19,7 +22,23 @@ interface Props {
   trigger?: ReactNode;
   /** The body below the title — normally {@link FindUsContent}. */
   children: ReactNode;
+  /** Passed to the shell; the header follows it. */
+  tone?: DialogTone;
+  pair?: DialogPairRole;
 }
+
+const HEADER_TONES = {
+  light: {
+    title: "text-black",
+    icon: "text-mauve-500",
+    blurb: "text-mauve-600",
+  },
+  dark: {
+    title: "text-white",
+    icon: "text-mauve-400",
+    blurb: "text-mauve-400",
+  },
+} satisfies Record<DialogTone, Record<string, string>>;
 
 /**
  * The directions dialog's header, exported on its own because the two ways in
@@ -31,17 +50,22 @@ interface Props {
 export function FindUsHeader({
   building = "DLW",
   room = "124",
+  tone = "light",
 }: {
   building?: BuildingKey;
   room?: string | null;
+  tone?: DialogTone;
 } = {}) {
+  const t = HEADER_TONES[tone];
   return (
     <div className="flex flex-col gap-2">
-      <DialogTitle className="font-display flex items-center gap-2 text-2xl leading-none font-extrabold text-black">
-        <MapPinIcon className="text-mauve-500" weight="fill" />
+      <DialogTitle
+        className={`font-display flex items-center gap-2 text-2xl leading-none font-extrabold ${t.title}`}
+      >
+        <MapPinIcon className={t.icon} weight="fill" />
         {FIND_US_TITLE}
       </DialogTitle>
-      <DialogDescription className="text-sm text-mauve-600">
+      <DialogDescription className={`text-sm ${t.blurb}`}>
         {findUsBlurb(building, room)}
       </DialogDescription>
     </div>
@@ -59,13 +83,17 @@ export default function FindUsDialog({
   room,
   trigger,
   children,
+  tone = "light",
+  pair,
 }: Props) {
   return (
     <DialogShell
       open={open}
       onOpenChange={onOpenChange}
       trigger={trigger}
-      header={<FindUsHeader building={building} room={room} />}
+      header={<FindUsHeader building={building} room={room} tone={tone} />}
+      tone={tone}
+      pair={pair}
     >
       {children}
     </DialogShell>
