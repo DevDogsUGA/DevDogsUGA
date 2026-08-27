@@ -48,7 +48,9 @@
   --animate-dialog-slide-in: dialog-slide-in 200ms ease-in;
   --animate-dialog-slide-out: dialog-slide-out 200ms ease-out;
   --animate-march-dashes: march-dashes 1.4s linear infinite;
-  --animate-slants: slants 0.8s linear infinite;
+  /* Duration through a variable so a hovered card can hurry the stripes
+     without a second keyframe set: see CompetitionTimeline. */
+  --animate-slants: slants var(--slants-duration, 0.8s) linear infinite;
   --animate-spin-slow: spin 10s linear infinite;
   --animate-spin-slower: spin 20s linear infinite;
   --animate-modal-overlay-in: modal-overlay-in 180ms ease-out;

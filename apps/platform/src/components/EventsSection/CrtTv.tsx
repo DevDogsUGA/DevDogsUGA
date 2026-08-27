@@ -433,7 +433,7 @@ export default function CrtTv({ showing, className }: Props) {
 
             The chin is only ~38 units deep and three of its edges are strokes
             rather than lines — the bezel's bottom reaches y≈262, and the
-            outline is 7 wide centred on y=300, so it eats up to 296.5. The
+            outline is 5 wide centred on y=300, so it eats up to 297.5. The
             lines are placed against those inner edges, not against the
             nominal ones. */}
         <g stroke={CYAN[900]} strokeWidth="6" opacity="0.5">
@@ -444,11 +444,14 @@ export default function CrtTv({ showing, className }: Props) {
 
         {/* ── Outline ──────────────────────────────────────────────────────
             Last, over everything, so the outer edge is one unbroken weight
-            rather than three elements' strokes meeting along it. Wider than
-            the strokes it covers, so none of them survives at the shared
-            edges — the front face's left and bottom, and the top face's back
-            corners, all sit on this same path. */}
-        <path d={SHELL} fill="none" strokeWidth="7" />
+            rather than three elements' strokes meeting along it. The SAME
+            weight as the strokes it covers — the front face's left and
+            bottom, and the top face's back corners, all sit on this same
+            path, and drawing it heavier made the set look inked twice over
+            at the edge and once inside. Since it is painted last it still
+            owns the shared edges; being no wider, it just no longer bulges
+            past them. */}
+        <path d={SHELL} fill="none" strokeWidth="5" />
       </g>
     </svg>
   );
