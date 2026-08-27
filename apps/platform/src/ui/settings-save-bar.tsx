@@ -1,11 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import {
-  SpinnerGapIcon,
-  TrashSimpleIcon,
-  WarningCircleIcon,
-} from "@phosphor-icons/react/ssr";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
+import { SpinnerGapIcon, WarningCircleIcon } from "@phosphor-icons/react/ssr";
 import { useSettingsForm } from "~/ui/settings-form";
 
 /**
@@ -19,6 +16,35 @@ import { useSettingsForm } from "~/ui/settings-form";
  * and under sonner's toasts. The two never share a page (`showsAnnouncement`
  * keeps the notice off `/account` and every other signed-in surface), and
  * `announcement.test.ts` pins that down so they cannot start to.
+ *
+ * Rendered through a portal to <body>, because z-40 alone was not enough to
+ * clear the footer. The bar is written in the account page's tree, which puts
+ * it under two elements that trap it:
+ *
+ *   <main className="@container relative">   <- container-type: inline-size
+ *     <div className="relative isolate">     <- PageShell
+ *
+ * `isolation: isolate` creates a stacking context outright, and
+ * `container-type` applies layout containment, which creates one too — so the
+ * bar's z-40 was only ever ordering it against its siblings inside PageShell,
+ * never against the page. <footer> is positioned and comes after <main> in
+ * document order, so with both at the default z-index the footer painted last
+ * and won. Layout containment also makes <main> the containing block for
+ * fixed-position descendants, so "fixed to the viewport" was not strictly true
+ * either.
+ *
+ * Portalling to <body> steps outside both, which is exactly where
+ * AnnouncementBanner and AppSwitcher already sit for the same reason: the site
+ * layout mounts them last in the document, outside the flex column.
+ *
+ * Note the breakpoints below are `sm:`, not `@sm:`. Leaving <main> leaves its
+ * `@container` behind, and a container query with no container above it never
+ * matches — the bar would have been pinned to its narrowest styles at every
+ * width. Viewport breakpoints are the honest unit for something fixed to the
+ * viewport anyway, which is why AnnouncementBanner uses them too. They also
+ * land later: `@sm` was resolving against <main>, so it flipped at 384px where
+ * `sm:` flips at 640px. All that rides on it is padding, the gap between the
+ * two controls, and whether the validation warning shows its icon.
  */
 
 /**
@@ -45,24 +71,46 @@ function ShortcutHint() {
   );
 }
 
+/**
+ * The mount check below never updates after its first read, so there is nothing
+ * to subscribe to. Defined at module scope because useSyncExternalStore
+ * re-subscribes whenever this identity changes.
+ */
+const subscribeToNothing = () => () => undefined;
+
 const listFormatter = new Intl.ListFormat("en", {
   style: "long",
   type: "conjunction",
 });
 
 export default function SettingsSaveBar() {
-  const {
-    dirtyCount,
-    invalidLabels,
-    isSaving,
-    saveAll,
-    resetAll,
-    blockedAt,
-  } = useSettingsForm();
+  const { dirtyCount, invalidLabels, isSaving, saveAll, resetAll, blockedAt } =
+    useSettingsForm();
 
   const show = dirtyCount > 0;
   const blocked = invalidLabels.length > 0;
   const cardRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Has this mounted on the client yet? `document` does not exist during the
+   * server render, so the portal cannot be created until it does, and the two
+   * renders have to agree or hydration mismatches.
+   *
+   * useSyncExternalStore is how React answers that without a `useState` +
+   * `useEffect` pair — a store that never changes, reading `false` on the
+   * server and `true` on the client. The pair would set state synchronously
+   * inside an effect, which lint rejects as a cascading render, and it is:
+   * every mount would render twice.
+   *
+   * Rendering nothing before mount costs nothing here. The bar is only on
+   * screen once a field is dirty, and a field only becomes dirty from a client
+   * interaction, so there was never server markup worth keeping.
+   */
+  const mounted = useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  );
 
   /**
    * Answer a swallowed link click.
@@ -125,7 +173,9 @@ export default function SettingsSaveBar() {
     return () => clearTimeout(clear);
   }, [blockedAt, dirtyCount]);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     /* Kept mounted so it can animate both ways, and `inert` while hidden so a
        bar nobody can see is not in the tab order. The gutter is
        pointer-events-none for the same reason as the announcement's: it spans
@@ -133,7 +183,7 @@ export default function SettingsSaveBar() {
     <div
       inert={!show}
       aria-hidden={!show}
-      className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[translate,opacity] duration-200 ease-out @sm:px-6 ${
+      className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[translate,opacity] duration-200 ease-out sm:px-6 ${
         show ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
       }`}
     >
@@ -154,7 +204,13 @@ export default function SettingsSaveBar() {
           plus the deeper drop shadow sell the "floating" half of that. */}
       <div
         ref={cardRef}
-        className="pointer-events-auto relative mx-auto grid w-full max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-x-3 rounded-lg border-2 border-mauve-600 bg-mauve-800 px-3 py-3 shadow-2xl shadow-black/60 inset-ring-1 inset-ring-white/10 @sm:gap-x-4 @sm:px-4"
+        /* Narrower than PageShell's max-w-5xl on purpose. At the same width it
+           lined up edge-to-edge with the cards above it and read as the last
+           one in the stack; pulled in, it stops sharing their gridlines and
+           sits over the page as its own object. The border thinned to 1px for
+           the same reason — at 2px the edge competed with the card borders
+           instead of just containing the bar. */
+        className="pointer-events-auto relative mx-auto flex w-full max-w-3xl items-center justify-between gap-x-3 rounded-lg border border-mauve-600 bg-mauve-800 px-3 py-3 shadow-2xl inset-ring-1 shadow-black/60 inset-ring-white/10 sm:gap-x-4 sm:px-4"
       >
         {/* The shake is the whole feedback for a cancelled click, and it is
             invisible to a screen reader. This is the same news, spoken. */}
@@ -162,38 +218,27 @@ export default function SettingsSaveBar() {
           {blockedMessage}
         </span>
 
-        <button
-          type="button"
-          onClick={resetAll}
-          disabled={isSaving}
-          /* Destructive, and dressed like it. This throws away everything the
-             member has typed since their last save with no undo behind it, so
-             it carries the same rose the delete controls use rather than the
-             neutral grey it had — a quiet secondary button next to Save is an
-             invitation to press it to "cancel out" of the bar. The label says
-             what goes, too: "Reset" reads like a form control, "Discard" reads
-             like a loss. */
-          className="flex shrink-0 items-center gap-[1ch] rounded-sm border-2 border-rose-800 bg-rose-950/60 px-3 py-1.5 text-sm font-medium text-rose-300 transition outline-none hover:border-rose-600 hover:bg-rose-700 hover:text-white hover:shadow-sm hover:shadow-rose-700/20 focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-800 disabled:pointer-events-none disabled:opacity-50"
-        >
-          <TrashSimpleIcon size={14} aria-hidden />
-          <span className="hidden @sm:inline">Discard changes</span>
-          <span className="@sm:hidden">Discard</span>
-        </button>
-
+        {/* Leads the bar now. It is the reason the bar is on screen at all, so
+            it reads first and carries the weight — the two controls that follow
+            are what you do about it. `text-left` rather than centred: with the
+            actions gathered on the right there is no second edge to balance
+            against, and a centred count next to a left edge just looks adrift. */}
         <p
           role="status"
-          className={`min-w-0 text-center text-sm leading-tight text-balance ${
-            blocked ? "text-rose-300" : "text-mauve-200"
+          className={`min-w-0 text-left text-sm leading-tight font-semibold ${
+            blocked ? "text-rose-300" : "text-mauve-100"
           }`}
         >
           {blocked ? (
-            <span className="flex items-center justify-center gap-1.5">
+            <span className="flex items-center gap-1.5">
               <WarningCircleIcon
                 weight="fill"
                 aria-hidden
-                className="hidden size-4 shrink-0 @sm:inline"
+                className="hidden size-4 shrink-0 sm:inline"
               />
-              <span>Fix {listFormatter.format(invalidLabels)} before saving.</span>
+              <span>
+                Fix {listFormatter.format(invalidLabels)} before saving.
+              </span>
             </span>
           ) : (
             <>
@@ -202,22 +247,45 @@ export default function SettingsSaveBar() {
           )}
         </p>
 
-        <button
-          type="button"
-          onClick={saveAll}
-          disabled={isSaving || blocked}
-          className="relative flex shrink-0 items-center justify-center rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-800 enabled:hover:bg-transparent enabled:hover:text-white enabled:hover:shadow-sm enabled:hover:shadow-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isSaving ? (
-            <SpinnerGapIcon className="animate-spin [animation-duration:750ms]" />
-          ) : (
-            <>
-              Save
-              {!blocked && <ShortcutHint />}
-            </>
-          )}
-        </button>
+        {/* Both actions live on the right, discard nearest the text so Save
+            keeps the outer corner — the far edge is the easiest target in the
+            bar and it should belong to the safe action, not the destructive
+            one. */}
+        <div className="flex shrink-0 items-center gap-4 sm:gap-6">
+          <button
+            type="button"
+            onClick={resetAll}
+            disabled={isSaving}
+            /* A link, not a button: two buttons side by side asked to be read
+               as a pair of equal options, and discarding is not the equal of
+               saving. Demoting it to text puts Save alone at button weight.
+               Rose is what carries the warning now that the box is gone — this
+               throws away everything typed since the last save with no undo
+               behind it. Underline only on hover/focus, so it announces itself
+               as clickable at the moment it is about to be clicked. */
+            className="shrink-0 rounded-xs text-sm font-medium text-rose-400 underline-offset-4 transition outline-none hover:text-rose-300 hover:underline focus-visible:underline focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-800 disabled:pointer-events-none disabled:opacity-50"
+          >
+            Reset
+          </button>
+
+          <button
+            type="button"
+            onClick={saveAll}
+            disabled={isSaving || blocked}
+            className="relative flex shrink-0 items-center justify-center rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-800 enabled:hover:bg-transparent enabled:hover:text-white enabled:hover:shadow-sm enabled:hover:shadow-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSaving ? (
+              <SpinnerGapIcon className="animate-spin [animation-duration:750ms]" />
+            ) : (
+              <>
+                Save
+                {!blocked && <ShortcutHint />}
+              </>
+            )}
+          </button>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
