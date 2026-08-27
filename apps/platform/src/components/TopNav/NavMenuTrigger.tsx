@@ -41,6 +41,14 @@ interface Props {
  * click must not do. Navigation is then pushed by hand. Modified clicks return
  * before any of that, so cmd-click and middle-click still open a tab, which is
  * the reason this is an anchor and not a button.
+ *
+ * While it is open the trigger also grows an invisible skirt below itself, to
+ * the bottom of the bar. Triggers are shorter than the bar they are centred
+ * in, so a pointer heading straight down from one leaves it well before it
+ * reaches the panel, and a close timer that runs out in that dead strip takes
+ * the menu with it. The skirt covers the half of the gap inside the bar; the
+ * viewport's padding covers the half below it. Only while open, so a strip of
+ * page under every trigger is not permanently swallowing clicks.
  */
 export default function NavMenuTrigger({
   href,
@@ -60,7 +68,7 @@ export default function NavMenuTrigger({
         href={href}
         data-active={active === true ? "" : undefined}
         data-nav-align={align}
-        className={className}
+        className={`${className} relative after:absolute after:inset-x-0 after:top-full after:hidden after:h-6 after:content-[''] data-[state=open]:after:block`}
         onClick={(event) => {
           const modified =
             event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;

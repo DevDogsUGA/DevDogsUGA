@@ -60,8 +60,15 @@
   --animate-nav-fold-out: nav-fold-out 140ms ease-in;
   --animate-nav-sub-fold-in: nav-sub-fold-in 180ms ease-out;
   --animate-nav-sub-fold-out: nav-sub-fold-out 140ms ease-in;
-  --animate-nav-content-in: nav-content-in 160ms ease-out;
-  --animate-nav-content-out: nav-content-out 120ms ease-in;
+  --animate-nav-content-in-left: nav-content-in-left 160ms ease-out;
+  --animate-nav-content-in-right: nav-content-in-right 160ms ease-out;
+  --animate-nav-content-in-up: nav-content-in-up 160ms ease-out;
+  --animate-nav-content-in-down: nav-content-in-down 160ms ease-out;
+  --animate-nav-content-out-left: nav-content-out-left 120ms ease-in;
+  --animate-nav-content-out-right: nav-content-out-right 120ms ease-in;
+  --animate-nav-content-out-up: nav-content-out-up 120ms ease-in;
+  --animate-nav-content-out-down: nav-content-out-down 120ms ease-in;
+  --animate-nav-fade-in: nav-fade-in 160ms ease-out;
 }
 
 @property --sidebar-width {
@@ -1371,10 +1378,14 @@
   }
 }
 
+/* The same fold, about the other axis and the other edge. Same angles too:
+   a sub-menu swinging further than the panel it comes out of would read as a
+   different kind of thing opening, when it is meant to read as the same
+   surface one tier down. */
 @keyframes nav-sub-fold-in {
   from {
     opacity: 0;
-    transform: perspective(800px) rotateY(-16deg);
+    transform: perspective(800px) rotateY(-12deg);
   }
 
   to {
@@ -1391,30 +1402,121 @@
 
   to {
     opacity: 0;
-    transform: perspective(800px) rotateY(-10deg);
+    transform: perspective(800px) rotateY(-8deg);
   }
 }
 
 /* Swapping one panel for another inside a viewport that is already open. The
-   viewport carries the movement — it slides and resizes across to the new
-   trigger — so the panels themselves only have to hand over, not travel. */
-@keyframes nav-content-in {
+   viewport carries the distance — it slides and resizes across to the new
+   trigger — so the panels themselves only lean the way the pointer is going
+   and hand over. Half a rem, because this is a hint about direction and not a
+   journey; the journey is the viewport's.
+
+   `translate` rather than a `transform`, so this composes with the fold rather
+   than overwriting it on any panel that happens to be doing both. */
+@keyframes nav-content-in-left {
   from {
     opacity: 0;
+    translate: -0.5rem 0;
   }
 
   to {
     opacity: 1;
+    translate: 0 0;
   }
 }
 
-@keyframes nav-content-out {
+@keyframes nav-content-in-right {
+  from {
+    opacity: 0;
+    translate: 0.5rem 0;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes nav-content-in-up {
+  from {
+    opacity: 0;
+    translate: 0 -0.5rem;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes nav-content-in-down {
+  from {
+    opacity: 0;
+    translate: 0 0.5rem;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes nav-content-out-left {
   from {
     opacity: 1;
+    translate: 0 0;
   }
 
   to {
     opacity: 0;
+    translate: -0.5rem 0;
+  }
+}
+
+@keyframes nav-content-out-right {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  to {
+    opacity: 0;
+    translate: 0.5rem 0;
+  }
+}
+
+@keyframes nav-content-out-up {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  to {
+    opacity: 0;
+    translate: 0 -0.5rem;
+  }
+}
+
+@keyframes nav-content-out-down {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  to {
+    opacity: 0;
+    translate: 0 0.5rem;
+  }
+}
+
+@keyframes nav-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
   }
 }
 
@@ -1423,13 +1525,15 @@
    viewport's slide, which are what make it feel like it flew there. */
 @media (prefers-reduced-motion: reduce) {
   [data-slot="nav-viewport"],
-  [data-slot="nav-sub-viewport"] {
+  [data-slot="nav-sub-viewport"],
+  [data-slot="nav-indicator"],
+  [data-slot="nav-sub-indicator"] {
     transition: none;
   }
 
   [data-slot="nav-viewport"],
   [data-slot="nav-sub-viewport"],
   [data-slot="nav-content"] {
-    animation-name: nav-content-in;
+    animation-name: nav-fade-in;
   }
 }

@@ -6,8 +6,16 @@ import { NavigationMenu } from "radix-ui";
 import { PUBLIC_LINKS } from "~/config/nav";
 import DocsMenu, { type DocsProjectLink } from "./DocsMenu";
 
+/**
+ * `inline-flex` is what makes Docs line up with the rest. A plain inline
+ * anchor's padding does not grow its line box, so these sat 30px tall inside
+ * 24px items, while Docs — a flex row, because it carries a caret — sat 32px
+ * tall inside 32px. Two pixels of height and one of offset, on the hover fill,
+ * on the one link in the row that opens something. Giving every link the same
+ * box makes them the same box.
+ */
 const LINK_CLASS =
-  "rounded-sm px-2.5 py-1.5 text-sm font-medium text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white data-active:bg-mauve-800/60 data-active:text-white";
+  "inline-flex items-center rounded-sm px-2.5 py-1.5 text-sm font-medium text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white data-active:bg-mauve-800/60 data-active:text-white";
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
