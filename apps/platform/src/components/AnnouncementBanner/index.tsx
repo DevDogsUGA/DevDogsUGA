@@ -83,48 +83,74 @@ const TONES: Record<AnnouncementTone, ToneClasses> = {
 };
 
 /**
- * The card's wash, in the tone's own two colours — the accent it already wears
- * on the badge and the block, and one step up from the fill for the lift.
- * Nothing new enters the palette; the card just stops being flat.
+ * The card's wash, in the tone's own colours — two steps up from the fill for
+ * the light end, and the accent it already wears on the badge and the block
+ * for the far end. Nothing new enters the palette.
  *
- * The blobs are wider than the card and far taller than it, so what reads is a
- * drift across the width rather than a circle sitting in a notice 60px high.
+ * Three pools running light to accent across the width, rather than the two
+ * half-card blobs this started as: those were each wide enough to cover their
+ * side outright, so what read was a gradient from one edge to the other and
+ * not a blob anywhere. At a quarter of the width they leave base showing
+ * between them, which is what makes them read as shapes.
+ *
+ * `ry` is well over 100 for the same reason it is on the homepage's blobs and
+ * not for a different one: a percentage is of its own axis, and this card is
+ * an order of magnitude wider than it is tall. 150% of ~60px is about 90px
+ * against an `rx` of ~230px — an ellipse a little wider than it is tall, which
+ * is the shape the sections use. Set `ry` near the `rx` number and the pool
+ * flattens into the band this was trying to stop being.
  */
 const TONE_BLOBS: Record<AnnouncementTone, BlobDef[]> = {
   urgent: [
     {
-      cx: "6%",
-      cy: "0%",
-      rx: "46%",
-      ry: "165%",
-      fill: "#fb7185",
-      opacity: 0.34,
+      cx: "10%",
+      cy: "20%",
+      rx: "28%",
+      ry: "150%",
+      fill: "#fef3c7",
+      opacity: 0.75,
     },
     {
-      cx: "97%",
+      cx: "48%",
       cy: "100%",
-      rx: "42%",
-      ry: "175%",
+      rx: "24%",
+      ry: "140%",
       fill: "#fde68a",
       opacity: 0.6,
+    },
+    {
+      cx: "90%",
+      cy: "5%",
+      rx: "26%",
+      ry: "155%",
+      fill: "#fb7185",
+      opacity: 0.38,
     },
   ],
   info: [
     {
-      cx: "6%",
-      cy: "0%",
-      rx: "46%",
-      ry: "165%",
-      fill: "#0ea5e9",
-      opacity: 0.3,
+      cx: "10%",
+      cy: "20%",
+      rx: "28%",
+      ry: "150%",
+      fill: "#e0f2fe",
+      opacity: 0.7,
     },
     {
-      cx: "97%",
+      cx: "48%",
       cy: "100%",
-      rx: "42%",
-      ry: "175%",
+      rx: "24%",
+      ry: "140%",
       fill: "#bae6fd",
       opacity: 0.6,
+    },
+    {
+      cx: "90%",
+      cy: "5%",
+      rx: "26%",
+      ry: "155%",
+      fill: "#0ea5e9",
+      opacity: 0.34,
     },
   ],
 };

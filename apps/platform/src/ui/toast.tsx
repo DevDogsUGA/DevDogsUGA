@@ -33,49 +33,63 @@ interface ToneClasses {
 }
 
 /**
- * Dark-on-bright, matching the announcement notice. Toasts land over the same
- * near-black chrome, and a saturated light card is what the site uses to sit
- * on top of it. The tones stay in the families the toast already spoke — cyan
- * for done, rose for wrong — pitched up to the notice's 300-level fill so
- * black type sits on them. The wash over each is the tone's own two colours,
- * so nothing new enters the palette — the card just stops being flat. See
- * ~/components/AnnouncementBanner.
+ * The card's wash: three pools running light to accent across the width, in
+ * the tone's own colours, so nothing new enters the palette and the card just
+ * stops being flat. Same shape the notice carries — see
+ * ~/components/AnnouncementBanner for why `ry` runs past 100 while `rx` stays
+ * under 30.
  */
 const TONE_BLOBS: Record<Props["type"], BlobDef[]> = {
   success: [
     {
-      cx: "8%",
-      cy: "0%",
-      rx: "52%",
-      ry: "160%",
-      fill: "#38bdf8",
-      opacity: 0.36,
+      cx: "10%",
+      cy: "18%",
+      rx: "30%",
+      ry: "145%",
+      fill: "#cffafe",
+      opacity: 0.7,
     },
     {
-      cx: "96%",
+      cx: "50%",
       cy: "100%",
-      rx: "48%",
-      ry: "170%",
+      rx: "26%",
+      ry: "135%",
       fill: "#a5f3fc",
       opacity: 0.6,
+    },
+    {
+      cx: "92%",
+      cy: "5%",
+      rx: "28%",
+      ry: "150%",
+      fill: "#38bdf8",
+      opacity: 0.4,
     },
   ],
   error: [
     {
-      cx: "8%",
-      cy: "0%",
-      rx: "52%",
-      ry: "160%",
-      fill: "#fb7185",
-      opacity: 0.34,
+      cx: "10%",
+      cy: "18%",
+      rx: "30%",
+      ry: "145%",
+      fill: "#ffe4e6",
+      opacity: 0.7,
     },
     {
-      cx: "96%",
+      cx: "50%",
       cy: "100%",
-      rx: "48%",
-      ry: "170%",
+      rx: "26%",
+      ry: "135%",
       fill: "#fecdd3",
       opacity: 0.6,
+    },
+    {
+      cx: "92%",
+      cy: "5%",
+      rx: "28%",
+      ry: "150%",
+      fill: "#fb7185",
+      opacity: 0.38,
     },
   ],
 };
@@ -90,6 +104,13 @@ const TONE_BACKGROUND: Record<Props["type"], string> = {
   error: blobsBackgroundImage(TONE_BLOBS.error),
 };
 
+/**
+ * Dark-on-bright, matching the announcement notice. Toasts land over the same
+ * near-black chrome, and a saturated light card is what the site uses to sit
+ * on top of it. The tones stay in the families the toast already spoke — cyan
+ * for done, rose for wrong — pitched up to the notice's 300-level fill so
+ * black type sits on them. See ~/components/AnnouncementBanner.
+ */
 const TONES: Record<Props["type"], ToneClasses> = {
   success: {
     card: "bg-cyan-300",
