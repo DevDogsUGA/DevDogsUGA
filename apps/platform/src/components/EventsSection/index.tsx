@@ -32,29 +32,28 @@ interface Props {
 }
 
 /**
- * The homepage's events section: the next meeting, how a competition works,
- * and a way through to the rest.
+ * The homepage's events section: how a feature sprint works, then the next
+ * meeting, then the way through to the rest.
  *
  * Deliberately smaller than `/events`, and deliberately not built out of its
  * bands. This used to render the whole calendar and four cards, which made
  * the homepage and `/events` near-duplicates of each other — and the cards
  * were fabricated anyway.
  *
- * The split between the two is by question. `/events` answers *when*: the next
- * meeting in full, every meeting past and coming, and the calendar. The
- * homepage answers *what happens if I turn up*: one line of proof that there
- * is a next meeting at all, and the format. The explainer renders on both —
- * it is the same component — but here it is the subject and there it is the
- * legend for the chips; the schedule lives there and only there.
+ * The split between the two is by question. `/events` answers *when*: every
+ * meeting past and coming, and the calendar. The homepage answers *what
+ * happens if I turn up*: the format, and one line of proof that there is a
+ * next meeting at all. The explainer renders on both — it is the same
+ * component — but here it is the subject, and its "Feature Sprints" heading
+ * is the section's; there is no separate "Events" heading and no general
+ * paragraph about the club meeting, because the explainer says all of that
+ * better and the section has one job after it, which is to hand the reader
+ * to `/events`. That is the funnel: explainer, next meeting, "All events",
+ * right-justified so it is where the eye leaves the section.
  *
- * One box: the next meeting is a white card with the site's block shadow,
- * with the way through to `/events` directly under it. The explainer is a
- * heading, a television, a timeline and a row of day cards, straight on the
- * plate — the section used to be three panels deep and is not going back.
- *
- * The room is not named here any more either. Where the club meets is a fact
- * about a meeting, and every meeting on `/events` says its own; the homepage
- * only has to prove there is one.
+ * The room is not named here. Where the club meets is a fact about a
+ * meeting, and every meeting on `/events` says its own; the homepage only has
+ * to prove there is one.
  */
 export default async function EventsSection({ topEdge, bottomEdge }: Props) {
   return (
@@ -74,28 +73,19 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
           base="#fff1f2"
           blobs={EVENTS_BLOBS}
         />
-        <div className="relative z-10 mx-auto max-w-6xl space-y-8 px-6 py-8 md:px-12">
-          <div className="max-w-prose text-left">
-            <h2 className="font-display mb-4 text-4xl font-extrabold text-black md:text-5xl">
-              Events
-            </h2>
-            <p className="text-base/relaxed text-balance text-mauve-700">
-              Every Monday of the semester. A workshop teaches something, a
-              week-long competition uses it, and next Monday judges it. Turn up
-              to any of it.
-            </p>
-          </div>
+        <div className="relative z-10 mx-auto max-w-6xl space-y-10 px-6 py-8 md:px-12">
+          <HowItWorks cutout />
 
-          <div className="flex flex-col items-start gap-4">
+          {/* The funnel: the one concrete date, then the door to all of them.
+              Right-justified, so the eye that just read the explainer left
+              to right lands on it on the way out of the section, and the
+              link under the card is the last thing before the next plate. */}
+          <div className="flex flex-col items-end gap-4" data-animate="fade-up">
             <NextMeetingStrip meeting={await nextMeeting()} now={new Date()} />
-            {/* Directly under the card, so it reads as the card's way
-                through to the rest rather than as the section's sign-off. */}
             <LinkButton href="/events" className={FOOTER_LINK_CLS}>
               All events <ArrowRightIcon />
             </LinkButton>
           </div>
-
-          <HowItWorks />
         </div>
       </section>
     </div>
