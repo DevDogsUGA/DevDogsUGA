@@ -4,8 +4,8 @@
  * Every case asserts both an allow and a deny. A policy test that only checks
  * the allow side passes just as happily when the policy is missing entirely.
  *
- * Requires the local stack (`pnpm sb link`) with migrations and
- * seeds applied (`pnpm sb reset`). Run via
+ * Requires the local stack (`pnpm devtools link`) with migrations and
+ * seeds applied (`pnpm devtools reset`). Run via
  * `pnpm --filter @devdogsuga/supabase test:rls`, which supplies the local credentials.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

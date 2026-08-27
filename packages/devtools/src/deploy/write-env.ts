@@ -22,7 +22,7 @@
  *     pnpm --filter @devdogsuga/devtools run cli:no-env deploy write-env
  *
  * — which is the same entry point with the `with-env` wrapper removed, and is
- * how `deploy.yaml` invokes it. (`pnpm env:example:check` already routes
+ * how `deploy.yaml` invokes it. (`pnpm devtools env example --check` already routes
  * through `cli:no-env` for the mirror-image reason: it must run in a job that
  * deliberately has no env file.) Nothing here reads the ambient environment
  * apart from `DEPLOY_ENV` and the two context variables the workflow sets on

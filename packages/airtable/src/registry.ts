@@ -10,12 +10,12 @@ import { field, table, type AirtableValue } from "./field.js";
  *
  * ## The IDs below are real, and are the wire format
  *
- * Written by `pnpm airtable:pull-ids` from the live base. Every read and write
+ * Written by `pnpm devtools airtable pull-ids` from the live base. Every read and write
  * goes over the wire with these rather than with field NAMES, which is what
  * lets an officer rename a column without breaking the sync.
  *
  * To add a field: declare it here with a `todo("slug")` id, run
- * `pnpm airtable:scaffold` to create it, then `pnpm airtable:pull-ids` to fill
+ * `pnpm devtools airtable scaffold` to create it, then `pnpm devtools airtable pull-ids` to fill
  * the real id in. `verify.ts` FAILS on any remaining placeholder rather than
  * warning, because a placeholder that reaches a live sync writes into nothing
  * and reports success.
@@ -26,7 +26,7 @@ import { field, table, type AirtableValue } from "./field.js";
  *
  * Exported, and stays exported after the base is scaffolded, because adding a
  * field later uses the same two-step: declare it with a `todo()` id, run
- * `pnpm airtable:scaffold` to create it, then `pnpm airtable:pull-ids` to
+ * `pnpm devtools airtable scaffold` to create it, then `pnpm devtools airtable pull-ids` to
  * replace this call with the real one.
  */
 export function todo(slug: string): string {

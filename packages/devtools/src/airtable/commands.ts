@@ -34,16 +34,21 @@ const REGISTRY = join(PROJECT_ROOT, "packages/airtable/src/registry.ts");
 /**
  * Where the runbook goes next, printed at the end of each step.
  *
- * The `pnpm airtable:*` aliases rather than `pnpm devtools airtable *`: both
- * work, but the short form is what the runbook, the registry header and the
- * sync panel's error text all say, and a tool that prints a fourth spelling of
- * its own name is a tool people stop trusting the output of.
+ * These used to print the `pnpm airtable:*` root aliases, on the grounds that
+ * one spelling everywhere beats a shorter one here — the runbook, the registry
+ * header and the sync panel's error text all said the short form, and a tool
+ * that prints a fourth spelling of its own name is a tool people stop trusting
+ * the output of.
+ *
+ * That argument survives the aliases being removed; it just picks the other
+ * spelling now. `pnpm devtools airtable …` is the only one that exists, so it
+ * is the one every caller says.
  */
 const NEXT_STEPS = {
-  scaffold: "Next: `pnpm airtable:pull-ids`, then commit registry.ts.",
+  scaffold: "Next: `pnpm devtools airtable pull-ids`, then commit registry.ts.",
   pullIds: [
     "pnpm prettier --write packages/airtable/src/registry.ts",
-    "pnpm airtable:verify",
+    "pnpm devtools airtable verify",
     "git add packages/airtable/src/registry.ts && git commit",
   ].join("\n"),
 };
@@ -143,7 +148,7 @@ export async function runPullIds(): Promise<void> {
 
   if (found.missing.length > 0) {
     explain(`Base ${baseId} is missing:`, found.missing.join("\n"), [
-      "Run `pnpm airtable:scaffold` first.",
+      "Run `pnpm devtools airtable scaffold` first.",
     ]);
     process.exitCode = 1;
     return;
@@ -236,7 +241,7 @@ export async function runSnapshot(check: boolean): Promise<void> {
       snapshot = readSnapshot();
     } catch (err) {
       explain("No schema snapshot to check against.", errorMessage(err), [
-        "Create one with `pnpm airtable:snapshot` and commit it.",
+        "Create one with `pnpm devtools airtable snapshot` and commit it.",
       ]);
       process.exitCode = 1;
       return;
@@ -262,7 +267,7 @@ export async function runSnapshot(check: boolean): Promise<void> {
     );
     explain("The registry and the snapshot disagree.", "", [
       "If you edited registry.ts by hand, check the ids against the base.",
-      "If the base genuinely changed, run `pnpm airtable:snapshot` and",
+      "If the base genuinely changed, run `pnpm devtools airtable snapshot` and",
       "commit the result alongside the registry change.",
     ]);
     process.exitCode = 1;

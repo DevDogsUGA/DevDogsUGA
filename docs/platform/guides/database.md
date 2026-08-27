@@ -29,11 +29,11 @@ alter table "platform"."profile" add column "website" text;
 Then replay it, and regenerate the two type artifacts it can affect:
 
 ```bash
-pnpm sb reset                    # drop, replay every migration, run the seeds
+pnpm devtools reset                    # drop, replay every migration, run the seeds
 pnpm --filter platform db:pull   # re-introspect the Drizzle schema
 ```
 
-`pnpm sb reset` regenerates `packages/supabase/src/database.types.ts`, the `Database` types `supabase-js` uses. It does **not** touch the Drizzle schema — that is `db:pull`, which runs both configs and then `scripts/post-pull.ts`. If you added tables or foreign keys, add the matching relations to `src/server/db/relations.ts` by hand.
+`pnpm devtools reset` regenerates `packages/supabase/src/database.types.ts`, the `Database` types `supabase-js` uses. It does **not** touch the Drizzle schema — that is `db:pull`, which runs both configs and then `scripts/post-pull.ts`. If you added tables or foreign keys, add the matching relations to `src/server/db/relations.ts` by hand.
 
 Commit the migration, the regenerated types, and the relations change together. CI regenerates `database.types.ts` against your migrations and fails on any diff.
 
@@ -62,31 +62,31 @@ Row-Level Security is the whole isolation boundary between app schemas — every
 
 ## Seeds
 
-`supabase/seed/*.sql` runs on `pnpm sb reset` and only there — `config.toml`'s `[db.seed]` block points at those files, and `db push` applies migrations without them. `01_roles.sql` defines the built-in Member and Root roles; `02_moderation.sql` creates three sign-in-able personas and one open report filed against a real `platform."profile"` row. [Quickstart](/docs/monorepo/guides/quickstart) lists the personas and their password.
+`supabase/seed/*.sql` runs on `pnpm devtools reset` and only there — `config.toml`'s `[db.seed]` block points at those files, and `db push` applies migrations without them. `01_roles.sql` defines the built-in Member and Root roles; `02_moderation.sql` creates three sign-in-able personas and one open report filed against a real `platform."profile"` row. [Quickstart](/docs/monorepo/guides/quickstart) lists the personas and their password.
 
 Seeds are the right home for anything that must never exist in production, precisely because the reset they ride on is never pointed there. Migrations are the wrong home for the same reason.
 
 ## Sharing a migration history
 
-**Generate the file late.** Iterate with `pnpm sb reset` while you work the schema out, and create the migration once the branch is ready to merge — after rebasing — so it is written against the current baseline rather than a stale one:
+**Generate the file late.** Iterate with `pnpm devtools reset` while you work the schema out, and create the migration once the branch is ready to merge — after rebasing — so it is written against the current baseline rather than a stale one:
 
 ```bash
 git fetch && git rebase origin/main
-pnpm sb reset
+pnpm devtools reset
 ```
 
-**One migration per pull request**, covering every schema change in it. If two branches generate migrations from the same baseline and touch the same tables, whoever merges second reconciles by hand; a `pnpm sb reset` after the merge surfaces it immediately. CI's `database` job starts a stack on an empty volume for every pull request, so "every migration still applies from scratch" is checked whether or not you thought to.
+**One migration per pull request**, covering every schema change in it. If two branches generate migrations from the same baseline and touch the same tables, whoever merges second reconciles by hand; a `pnpm devtools reset` after the merge surfaces it immediately. CI's `database` job starts a stack on an empty volume for every pull request, so "every migration still applies from scratch" is checked whether or not you thought to.
 
 ## Applying a migration
 
 | Target                 | How                                                     |
 | ---------------------- | ------------------------------------------------------- |
-| your own stack         | `pnpm sb reset`                                         |
-| a team sandbox         | `pnpm sb push --team <slug>`                            |
-| the shared dev project | `pnpm sb push --remote`, by hand                        |
+| your own stack         | `pnpm devtools reset`                                   |
+| a team sandbox         | `pnpm devtools push --team <slug>`                      |
+| the shared dev project | `pnpm devtools push --remote`, by hand                  |
 | production             | `production-migrate` in `.github/workflows/deploy.yaml` |
 
-`pnpm sb push --remote` runs `supabase db push` against the linked project — only the migrations its history table has not recorded — and then regenerates the `Database` types. Production is pushed by CI behind two dry runs: `main-plan` prints the plan on every merge to `main`, and `production-plan` recomputes it seconds before the real push, because the first goes stale as soon as another promotion lands.
+`pnpm devtools push --remote` runs `supabase db push` against the linked project — only the migrations its history table has not recorded — and then regenerates the `Database` types. Production is pushed by CI behind two dry runs: `main-plan` prints the plan on every merge to `main`, and `production-plan` recomputes it seconds before the real push, because the first goes stale as soon as another promotion lands.
 
 Staging is **not** migrated by that workflow. `staging-preflight` only classifies the project as awake or paused, and `staging-deploy` builds and deploys the Workers.
 
@@ -96,7 +96,7 @@ Staging is **not** migrated by that workflow. `staging-preflight` only classifie
 <details>
 <summary>Which command am I actually looking for?</summary>
 
-`pnpm devtools` with no arguments opens a grouped menu of every command the CLI has, with the options each one takes — the shortest path when you do not already know the name. `pnpm sb` is the same CLI under its older name.
+`pnpm devtools` with no arguments opens a grouped menu of every command the CLI has, with the options each one takes — the shortest path when you do not already know the name.
 
 Four database commands — `link`, `push`, `reset`, `status` — each take one target: `--local` (the default), `--remote` (the linked Supabase project), or `--team <slug>` (a team's sandbox, reached through the platform). `stop` and `restart` are the other two; they act on the Docker stack on this machine, so they take no target. `link`, `push`, `reset` and `stop` delegate to the `@devdogsuga/supabase` package scripts by name, so those scripts stay the single definition of what a reset is.
 

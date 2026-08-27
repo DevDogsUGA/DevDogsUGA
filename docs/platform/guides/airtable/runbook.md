@@ -13,10 +13,10 @@ Standing a base up from nothing, in order — several of these fail confusingly 
 1. **Create the workspace**, separate from other club Airtable use, so the sync's call budget is not shared with project management.
 2. **Create the bootstrap token** on that workspace: `schema.bases:read`, `schema.bases:write`, `data.records:read`, `data.records:write`. ⚠️ **Mint it as whoever created the workspace** — base creation needs the workspace creator role, which no scope can grant; a collaborator's token fails only at step 4.
 3. **Put it in `.env` as `AIRTABLE_APPLY_PAT`.** That is the write-capable name the tooling resolves, and it stays in your file only until step 11. There is no separate scaffolding key: a fourth token existed for this and was removed, because the only job it kept after step 4 was one a read can do.
-4. **`pnpm airtable:scaffold`** creates the seven tables and their fields. Use `--dry-run` first: the first real run is against a base somebody cares about.
-5. **`pnpm airtable:pull-ids`**, then format and commit `registry.ts`. Steps 4 and 5 are what replace `fldTODO_*` placeholders. Record the new base's id as `BASE_ID` in the same file while you are there — it is committed beside the ids this step writes, not routed through the env system.
+4. **`pnpm devtools airtable scaffold`** creates the seven tables and their fields. Use `--dry-run` first: the first real run is against a base somebody cares about.
+5. **`pnpm devtools airtable pull-ids`**, then format and commit `registry.ts`. Steps 4 and 5 are what replace `fldTODO_*` placeholders. Record the new base's id as `BASE_ID` in the same file while you are there — it is committed beside the ids this step writes, not routed through the env system.
 6. **Walk the manual checklist** `verify` prints — field editing permissions first, since nothing can check them for you. Airtable's default `Table 1` is deleted here too.
-7. **`pnpm airtable:verify`** must exit clean. If it does not, fix the base rather than the registry: the registry is what the code agrees with.
+7. **`pnpm devtools airtable verify`** must exit clean. If it does not, fix the base rather than the registry: the registry is what the code agrees with.
 8. **Seed Projects** with one sync pass. Projects are platform-owned and pushed, so the table populates itself and officers get a linked-record list.
 9. **Build the attendance form** against the Attendance table — a MyID field and a Workshop link at minimum. `Source` distinguishes a form response from a co-branded import.
 10. **Only then author a meeting.** Earlier produces a workshop linked to nothing.
@@ -44,7 +44,7 @@ Members is push-only apart from dues, and carries the most identifying data of a
 
 ## When a pass refuses
 
-A pass that finds the base no longer matching the registry writes nothing, claims no lease, and records `schema_invalid` on the state row the console reads. Run `pnpm airtable:verify`, then fix the base.
+A pass that finds the base no longer matching the registry writes nothing, claims no lease, and records `schema_invalid` on the state row the console reads. Run `pnpm devtools airtable verify`, then fix the base.
 
 <details>
 <summary>Why does the alert fire only once, not on every refused pass?</summary>

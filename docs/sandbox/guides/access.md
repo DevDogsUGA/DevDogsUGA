@@ -17,7 +17,7 @@ behaviour rather than the credential model, read
 ## One hostname, two tokens per member
 
 The hostname identifies the **environment**; a token identifies the **member**
-and the authority they are asking for. `pnpm sb link --team <slug>` calls the
+and the authority they are asking for. `pnpm devtools link --team <slug>` calls the
 platform, which issues both tokens and writes `.env.local`:
 
 ```

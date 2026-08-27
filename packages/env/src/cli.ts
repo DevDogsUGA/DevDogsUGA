@@ -141,14 +141,36 @@ try {
   );
   envFiles = selection.files;
 } catch (err) {
-  if (
-    err instanceof UnknownEnvironmentError ||
-    err instanceof MissingEnvFileError
-  ) {
+  // A missing file is reported and survived, NOT refused.
+  //
+  // It used to exit(1), which is why `@devdogsuga/devtools` carried a second
+  // entry point: `pnpm devtools` runs under this wrapper, and the commands
+  // that run before there IS an environment — `setup`, which creates `.env`,
+  // and the two checks CI runs on a clean checkout — could only reach the CLI
+  // by going around it. That made the wrapper, rather than the command,
+  // the thing that decided whether an environment was needed.
+  //
+  // Now there is one door. A command that genuinely needs a variable still
+  // fails, and fails naming the variable — @t3-oss validates the environment
+  // at import time and says which key is missing, which is a better error than
+  // this one could give. What is gone is the case where a command needing
+  // nothing was refused for the absence of a file it would never have read.
+  //
+  // `UnknownEnvironmentError` is NOT downgraded with it. A missing file is an
+  // absence; a `DEPLOY_ENV` naming an environment that does not exist is a
+  // typo pointing at the wrong database, and running "as development" because
+  // `production` was misspelled is the silent lie this package exists to
+  // prevent.
+  if (err instanceof MissingEnvFileError) {
+    console.error(`with-env: ${err.message}`);
+    console.error("with-env: continuing with no env file loaded.");
+    envFiles = [];
+  } else if (err instanceof UnknownEnvironmentError) {
     console.error(`with-env: ${err.message}`);
     process.exit(1);
+  } else {
+    throw err;
   }
-  throw err;
 }
 
 // Both dotenvx and @yarnpkg/shell want a string-only map, so drop the unset
@@ -166,6 +188,12 @@ for (const [key, value] of Object.entries(process.env)) {
  * the CLI produce the same environment.
  */
 async function loadEnv(): Promise<void> {
+  // Nothing selected means the file is absent and we said so above. Returning
+  // here rather than calling `config({ path: [] })` keeps dotenvx from falling
+  // back to its own default `.env` lookup and reporting the same absence a
+  // second time, in its own words.
+  if (envFiles.length === 0) return;
+
   const { default: dx } = await import("@dotenvx/dotenvx");
   dx.config({
     path: envFiles.map((f) => join(root, f)),
@@ -241,6 +269,12 @@ const child = spawn(
         dotenvxCli(),
         "run",
         "--quiet",
+        // With no file selected, dotenvx would fall back to looking for its
+        // own default `.env` and print a MISSING_ENV_FILE banner for the
+        // absence this wrapper has already reported in its own words. The
+        // delegation is still needed here — it is what spawns a `.cmd` shim —
+        // so silence the duplicate rather than skipping the hop.
+        ...(envFiles.length === 0 ? ["--ignore=MISSING_ENV_FILE"] : []),
         ...envFiles.flatMap((f) => ["-f", join(root, f)]),
         "--",
         ...args,

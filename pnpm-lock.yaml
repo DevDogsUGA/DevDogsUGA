@@ -158,9 +158,6 @@ importers:
 
   .:
     devDependencies:
-      '@clack/prompts':
-        specifier: 'catalog:'
-        version: 1.7.0
       '@devdogsuga/env':
         specifier: workspace:*
         version: link:packages/env

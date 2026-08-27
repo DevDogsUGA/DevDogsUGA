@@ -8,7 +8,7 @@ import { restoreEnvironment } from "~/server/supabase/provision";
  * Reports an environment's state, and wakes it if it is paused.
  *
  * Waking on a status check rather than making people ask separately: somebody
- * running `pnpm sb status` at the start of a session wants to work, and a
+ * running `pnpm devtools status` at the start of a session wants to work, and a
  * command that reports "paused" and stops has made them wait for a restore they
  * then have to trigger by hand.
  */

@@ -33,7 +33,7 @@ pnpm format:check # Prettier
 **Touching a policy, a grant, or a `security definer` function?** Run the RLS persona suite as well. It needs a live stack, so `pnpm test` does not reach it:
 
 ```bash
-pnpm sb link && pnpm sb reset
+pnpm devtools link && pnpm devtools reset
 pnpm --filter @devdogsuga/supabase test:rls
 ```
 
@@ -62,7 +62,9 @@ Three ways past it, each skipping the question entirely:
 | `pnpm dev --all`             | every package, the old behaviour               |
 | `CI=1 pnpm dev`              | what CI does                                   |
 
-**CI never sees a prompt.** `scripts/pick.mjs` passes straight through to turbo when `CI` is set, when stdin is not a TTY, or when a filter is already present — which covers workflows, piped output and editor task runners alike. It is plain Node with no build step, and imports nothing until it has decided to ask, so the cost of it sitting in front of `build` and `lint` is one process spawn.
+**CI never sees a prompt**, and in fact never reaches the picker at all: every workflow calls `pnpm turbo run …` directly rather than going through a root alias. The guard is there regardless — `pnpm devtools run` passes straight through to turbo when `CI` is set, when stdin is not a TTY, or when a filter is already present, which covers workflows, piped output and editor task runners alike.
+
+Each root task is a thin alias for the same thing: `pnpm build` is `pnpm devtools run build`. The picker lives in `packages/devtools/src/run/pick.ts` with every other prompt in the repo.
 
 `pnpm dev:docs` is unchanged: it carries its own filter already.
 
@@ -70,7 +72,7 @@ Three ways past it, each skipping the question entirely:
 
 `.github/workflows/ci.yaml` runs on every pull request and holds no secrets at all — on `pull_request` GitHub runs the workflow definition _from the pull request_, so any credential in scope would be readable by whoever opened it. Four jobs:
 
-- **validate** — `lint`, `typecheck` and `test` across the affected packages, plus two unconditional comparisons that need no credential: the Airtable registry against its committed schema snapshot (`pnpm airtable:snapshot:check`), and `.env.example` against the env manifests (`pnpm env:example:check`).
+- **validate** — `lint`, `typecheck` and `test` across the affected packages, plus two unconditional comparisons that need no credential: the Airtable registry against its committed schema snapshot (`pnpm devtools airtable snapshot --check`), and `.env.example` against the env manifests (`pnpm devtools env example --check`).
 - **database** — starts the real local Supabase stack on an empty volume, which makes it the "every migration applies from scratch" check too. Then: the committed `database.types.ts` still matches the migrations, the RLS suite, the platform query and privilege-surface suite, and a production build of both Next apps with env validation **enforced**.
 - **format** — `pnpm format:check` over the whole repo.
 - **flutter** — `flutter analyze` and `flutter test`, only when `study-group-finder` is affected.
@@ -83,9 +85,9 @@ SQL is the source of truth; the generated Drizzle schema is regenerated from the
 
 ```bash
 pnpm --filter @devdogsuga/supabase new-migration <name>
-pnpm sb reset                             # replay everything locally
+pnpm devtools reset                             # replay everything locally
 pnpm --filter platform db:pull            # refresh Drizzle from the database
-pnpm sb push --remote                     # apply to the linked project
+pnpm devtools push --remote                     # apply to the linked project
 ```
 
 ## Documentation

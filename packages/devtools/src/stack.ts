@@ -4,7 +4,7 @@
  * Moved here from `packages/supabase/scripts/sb.ts` unchanged in behaviour: the
  * `--local` and `--remote` paths still delegate to the package scripts in
  * `@devdogsuga/supabase` **by name** rather than reimplementing them, so those
- * scripts remain the single definition of what "reset" means. `pnpm sb` is
+ * scripts remain the single definition of what "reset" means. `pnpm devtools` is
  * still wired to this, so existing muscle memory and every doc that mentions it
  * keep working.
  */

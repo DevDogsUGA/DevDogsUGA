@@ -267,7 +267,7 @@ describe("runAirtableSync drift alerting", () => {
     expect(alerts.postAlert).toHaveBeenCalledWith(
       expect.stringMatching(/no longer matches the registry/),
       expect.arrayContaining([expect.stringMatching(/Teams/)]),
-      expect.stringMatching(/airtable:verify/),
+      expect.stringMatching(/airtable verify/),
     );
   });
 

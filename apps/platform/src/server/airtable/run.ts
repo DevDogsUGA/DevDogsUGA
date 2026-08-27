@@ -167,7 +167,7 @@ export async function runAirtableSync(
         fatal,
         "The sync refused rather than writing into fields that no longer exist, " +
           "so nothing has been lost — but nothing is flowing either. " +
-          "Run `pnpm airtable:verify` to see which field, then fix it in Airtable. " +
+          "Run `pnpm devtools airtable verify` to see which field, then fix it in Airtable. " +
           "This will not be repeated until the base is fixed and drifts again.",
       );
     }

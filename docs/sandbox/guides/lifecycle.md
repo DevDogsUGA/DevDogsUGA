@@ -175,7 +175,7 @@ discover it at wake time.
 
 Free projects pause after a week of inactivity, so a team returning from a week
 off meets a paused instance — the standard cold path, not an edge case.
-`pnpm sb status --team <slug>` reports and wakes in one command; a restore takes
+`pnpm devtools status --team <slug>` reports and wakes in one command; a restore takes
 about 196 seconds, which is why it says "about four minutes" rather than
 spinning.
 

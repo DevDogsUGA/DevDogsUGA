@@ -123,7 +123,7 @@ export function readSnapshot(file: string = snapshotPath): SchemaSnapshot {
     raw = readFileSync(file, "utf8");
   } catch {
     throw new SnapshotMissingError(
-      `No schema snapshot at ${file}. Create one with \`pnpm airtable:snapshot\`.`,
+      `No schema snapshot at ${file}. Create one with \`pnpm devtools airtable snapshot\`.`,
     );
   }
   return JSON.parse(raw) as SchemaSnapshot;

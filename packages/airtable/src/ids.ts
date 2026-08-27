@@ -44,10 +44,10 @@ export const HEADER_PLACEHOLDER_SECTION = ` * ## Field IDs are placeholders unti
  * Every \`id\` below is a PLACEHOLDER. The base has not been scaffolded yet, and
  * the bootstrapping order is deliberately circular-looking:
  *
- *   1. \`pnpm airtable:scaffold\` reads the shape below — table names, field
+ *   1. \`pnpm devtools airtable scaffold\` reads the shape below — table names, field
  *      names, types — and creates what is missing through the Meta API.
  *   2. It reads the schema back and prints the real field IDs.
- *   3. \`pnpm airtable:pull-ids\` writes them in here, and the result is
+ *   3. \`pnpm devtools airtable pull-ids\` writes them in here, and the result is
  *      committed.
  *
  * After that first run the IDs are source. \`verify.ts\` FAILS on any remaining
@@ -57,12 +57,12 @@ export const HEADER_PLACEHOLDER_SECTION = ` * ## Field IDs are placeholders unti
 
 export const HEADER_REAL_SECTION = ` * ## The IDs below are real, and are the wire format
  *
- * Written by \`pnpm airtable:pull-ids\` from the live base. Every read and write
+ * Written by \`pnpm devtools airtable pull-ids\` from the live base. Every read and write
  * goes over the wire with these rather than with field NAMES, which is what
  * lets an officer rename a column without breaking the sync.
  *
  * To add a field: declare it here with a \`todo("slug")\` id, run
- * \`pnpm airtable:scaffold\` to create it, then \`pnpm airtable:pull-ids\` to fill
+ * \`pnpm devtools airtable scaffold\` to create it, then \`pnpm devtools airtable pull-ids\` to fill
  * the real id in. \`verify.ts\` FAILS on any remaining placeholder rather than
  * warning, because a placeholder that reaches a live sync writes into nothing
  * and reports success.

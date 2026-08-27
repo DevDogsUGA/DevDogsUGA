@@ -113,7 +113,7 @@ export async function accessToken(): Promise<string> {
             {
               value: "vault" as const,
               label: "yes — into my Bitwarden vault",
-              hint: "needs `pnpm bw login`; follows you across machines",
+              hint: "needs `pnpm devtools bw login`; follows you across machines",
             },
             { value: "no" as const, label: "no — ask me again next time" },
           ],

@@ -63,7 +63,7 @@ Write the reason enum by hand and check it against `pnpm devtools catalog`; Post
 
 ## Testing it
 
-Everything below runs on your own database. `pnpm devtools` opens a menu whose Moderation group holds `catalog`, `doctor`, `roundtrip` and `grant-root`; `pnpm sb` is the same tool under its older name. None of it can be aimed at live data, and that is structural rather than a check: these commands find their database by reading `supabase status`, which describes the Docker stack on this machine and nothing else.
+Everything below runs on your own database. `pnpm devtools` opens a menu whose Moderation group holds `catalog`, `doctor`, `roundtrip` and `grant-root`. None of it can be aimed at live data, and that is structural rather than a check: these commands find their database by reading `supabase status`, which describes the Docker stack on this machine and nothing else.
 
 **The conformance check.** `pnpm devtools doctor --app <slug>` runs `platform.conformance_check()` as the seeded moderator and answers "did I declare my content correctly?" before you write any app code. Per content type it reports whether rows are addressable, whether an author can be derived, whether `resolve_content` works against a real row, whether quarantine has a column to write to, whether clients can still write that column, and whether your policies mention it. The last two read policy text and say so — a false alarm gets looked at, a false pass does not.
 

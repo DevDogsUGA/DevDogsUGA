@@ -93,19 +93,23 @@ jobs:
       # after `pull-ids`, and a hand-edited id is exactly the mistake with no
       # other detection. It costs no network and about a second.
       - name: Registry agrees with the schema snapshot
-        run: pnpm airtable:snapshot:check
+        run: pnpm devtools airtable snapshot --check
       # .env.example is GENERATED from the env manifests; this regenerates it
       # in memory and byte-compares -- the same pattern the database job uses
       # for database.types.ts. Credential-free by construction: the generator
-      # is registry-only (no Bitwarden token, no network, no Docker), and the
-      # script routes through cli:no-env because with-env would demand a .env
-      # this job deliberately does not have.
+      # is registry-only (no Bitwarden token, no network, no Docker).
+      #
+      # This and the check above used to be root aliases (`env:example:check`,
+      # `airtable:snapshot:check`) that reached devtools through `cli:no-env`,
+      # because `with-env` refused to start without a `.env` this job
+      # deliberately does not have. The wrapper reports that absence and
+      # continues now, so both call the one front door like everything else.
       #
       # Unconditional rather than --affected, like the snapshot check above:
       # any manifest edit anywhere can change the output, and it costs about
       # a second.
       - name: .env.example agrees with the env manifests
-        run: pnpm env:example:check
+        run: pnpm devtools env example --check
       # REMOVED: "Typecheck the deploy scripts" (`tsc -p scripts/tsconfig.json`).
       #
       # It existed because `scripts/` was not a workspace package, so `turbo run

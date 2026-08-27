@@ -9,7 +9,7 @@ import {
 import { supabaseAdmin } from "~/supabase/admin";
 
 /**
- * Authenticating `pnpm sb --team` calls.
+ * Authenticating `pnpm devtools --team` calls.
  *
  * The CLI has no cookies, so these routes take a bearer token rather than a
  * session. It is the member's own Supabase access token — verified against

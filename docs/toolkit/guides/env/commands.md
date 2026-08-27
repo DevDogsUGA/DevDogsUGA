@@ -33,7 +33,7 @@ offers to save.
 Four places, in order, stopping at the first hit: `--access-token`;
 `BWS_ACCESS_TOKEN`, which includes your `.env`, since `with-env` loads it for
 every command; your Bitwarden Password Manager vault, through the `bw` CLI that
-ships as a devtools dependency (`pnpm bw login` once); and finally asking you —
+ships as a devtools dependency (`pnpm devtools bw login` once); and finally asking you —
 masked, with an offer to save it to `.env` or to the vault as _"DevDogs Secrets
 Manager access token (admin)"_.
 

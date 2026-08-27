@@ -23,7 +23,7 @@
  * declared, and `conformance_report` checks the right policy accordingly.
  *
  * Requires the local stack with migrations and seeds applied
- * (`pnpm sb reset`). Run via `pnpm --filter @devdogsuga/supabase test:rls`.
+ * (`pnpm devtools reset`). Run via `pnpm --filter @devdogsuga/supabase test:rls`.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {

@@ -504,7 +504,7 @@ describe("across the targets", () => {
 describe("development", () => {
   it("renders the same body as .env.example", () => {
     // The tightest pin available: `.env.example` is byte-compared in CI
-    // (`pnpm env:example:check`), so tying the development file to it means
+    // (`pnpm devtools env example --check`), so tying the development file to it means
     // any drift in either shows up in one of the two checks.
     expect(bodyOf(renderInit("development", DATE))).toBe(
       bodyOf(renderExample()),

@@ -46,12 +46,18 @@ export class MissingEnvFileError extends Error {
   ) {
     super(
       environment === "development"
-        ? // `pnpm setup`, NOT `pnpm devtools setup`: this message is only ever
-          // seen when there is no `.env`, and `pnpm devtools` is the `with-env`
-          // wrapped entry point, so it would fail here exactly as its caller
-          // just did. The root `setup` script runs the CLI unwrapped for that
-          // reason, and is the one command that works from a clean clone.
-          `${file} does not exist. Run \`pnpm setup\` to create it.`
+        ? // `pnpm devtools setup` now, and the change is not cosmetic. This
+          // message used to name the root `setup` alias BECAUSE it is only
+          // ever seen when there is no `.env`, and `pnpm devtools` ran under
+          // the `with-env` wrapper — which, back when a missing file was
+          // fatal, would have failed here exactly as its caller just did. So
+          // the advice had to point at an unwrapped entry point.
+          //
+          // The wrapper reports the absence and continues (see `cli.ts`), so
+          // the wrapped entry reaches `setup` fine and there is one door to
+          // name. Naming it matters most in precisely this message: it is one
+          // of the first things a clean clone prints.
+          `${file} does not exist. Run \`pnpm devtools setup\` to create it.`
         : `${file} does not exist. Run ` +
             `\`pnpm devtools env pull --target ${environment}\` to fetch it.`,
     );

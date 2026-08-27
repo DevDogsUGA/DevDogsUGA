@@ -1,18 +1,18 @@
 ---
-name: sb
+name: database
 description: Six database commands — four over three targets (your local Docker stack, the linked Supabase project, or a team sandbox) and two that only ever act on your own stack.
 order: 4
 ---
 
-# sb
+# Database commands
 
-`pnpm sb` and `pnpm devtools` are the same binary; `sb` is the shorter name for
-the database commands. Four of them take a target:
+The Supabase group of [devtools](/docs/toolkit/guides/devtools). Four of them
+take a target:
 
 ```bash
-pnpm sb link                 # --local is the default
-pnpm sb reset --remote
-pnpm sb status --team lantern
+pnpm devtools link                 # --local is the default
+pnpm devtools reset --remote
+pnpm devtools status --team lantern
 ```
 
 | Command  | `--local`                                       | `--remote`                                 | `--team <slug>`                                   |
@@ -48,12 +48,12 @@ picks a config change up.
 
 ## link
 
-`pnpm sb link` runs `supabase start`, writes the stack's own connection block to
+`pnpm devtools link` runs `supabase start`, writes the stack's own connection block to
 `.env.generated`, and seeds the storage buckets. Nothing switches you between a
 local stack and a hosted project by flag: `with-env` probes port 54321 on every
 run, so a listening stack layers `.env.generated` over `.env` and a stopped one
-falls back to the linked project. Stop it with `pnpm sb stop`, which removes
-`.env.generated` too, and use `pnpm sb restart` to pick up a `config.toml`
+falls back to the linked project. Stop it with `pnpm devtools stop`, which removes
+`.env.generated` too, and use `pnpm devtools restart` to pick up a `config.toml`
 change — there is no `supabase restart`, so it is the stop/start pair under one
 name. Both delegate to `stop-local-stack` and `start-local-stack`, which are
 still reachable directly.

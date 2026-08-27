@@ -23,7 +23,7 @@ The setup command below checks all four for you. Docker and Flutter report as `I
 git clone https://github.com/DevDogsUGA/DevDogsUGA.git
 cd DevDogsUGA
 corepack enable && pnpm install
-pnpm setup
+pnpm devtools setup
 ```
 
 Setup asks which projects you are on and writes a root `.env` carrying only those sections. An existing `.env` is left untouched. The file starts blank — the local stack fills the connection block in for you, and only a hosted project needs values typed in.
@@ -31,19 +31,19 @@ Setup asks which projects you are on and writes a root `.env` carrying only thos
 ## Then either: a local stack
 
 ```bash
-pnpm sb link      # boots Docker Supabase, writes .env.generated
-pnpm sb reset     # replays the migrations, then the seeds, then regenerates types
+pnpm devtools link      # boots Docker Supabase, writes .env.generated
+pnpm devtools reset     # replays the migrations, then the seeds, then regenerates types
 pnpm dev --filter platform
 ```
 
-Stop it with `pnpm sb stop`, which also removes `.env.generated`. `pnpm sb restart` is the stop/start pair under one name, which is how a changed `config.toml` lands.
+Stop it with `pnpm devtools stop`, which also removes `.env.generated`. `pnpm devtools restart` is the stop/start pair under one name, which is how a changed `config.toml` lands.
 
 ## Or: a hosted project
 
 Fill in the Supabase values in `.env`, then:
 
 ```bash
-pnpm sb link --remote
+pnpm devtools link --remote
 pnpm --filter @devdogsuga/supabase generate-types
 pnpm dev --filter platform
 ```
@@ -57,9 +57,9 @@ Nothing switches between the two by flag. `with-env` probes port 54321 on every 
 > `pnpm dev --filter platform` and `pnpm --filter platform dev` are not the same command. The first goes through turbo, whose `dev` task depends on `^build`, so workspace packages — the compiled docs among them — are built first. The second bypasses turbo entirely.
 
 <details>
-<summary>What does <code>pnpm sb reset</code> seed?</summary>
+<summary>What does <code>pnpm devtools reset</code> seed?</summary>
 
-Two files under `supabase/seed/`, and only on a reset — seeds never run on `pnpm sb push`.
+Two files under `supabase/seed/`, and only on a reset — seeds never run on `pnpm devtools push`.
 
 **`01_roles.sql`** defines the built-in Member and Root roles, so `pnpm devtools grant-root --user <email>` works on a freshly reset instance without a second command.
 

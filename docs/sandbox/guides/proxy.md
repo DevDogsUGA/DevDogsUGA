@@ -32,21 +32,21 @@ Worker cannot carry it. The platform runs SQL through the Management API instead
 under the owner's OAuth token:
 
 ```
-pnpm sb push --team lantern
+pnpm devtools push --team lantern
   → POST /sandbox/push on the platform
   → the member's own DevDogs session identifies them; membership is checked
   → POST /v1/projects/{ref}/database/query, under the owner's OAuth token
 ```
 
-Every member of an attached team gets full DDL, migrations and reset (`pnpm sb
-push --team <slug>`, `pnpm sb reset --team <slug>`) without holding a key, and
+Every member of an attached team gets full DDL, migrations and reset (`pnpm devtools
+push --team <slug>`, `pnpm devtools reset --team <slug>`) without holding a key, and
 the owner never opens the dashboard. `applyMigrations` sends every file in
 `supabase/migrations` as **one payload**, because `database/query` is atomic: an
 error partway through rolls it all back, so a failed migration leaves the schema
 untouched and there is no repair path to write.
 
 <details>
-<summary>What does <code>pnpm sb</code> cover, across all three targets?</summary>
+<summary>What does <code>pnpm devtools</code> cover, across all three targets?</summary>
 
 `packages/devtools/src/stack.ts` dispatches four commands over three targets
 (`stop` and `restart` are the other two, and are local-only):

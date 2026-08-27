@@ -37,7 +37,7 @@ That indexes your working copy into the local stack, so a page you just wrote is
 The command itself is `pnpm devtools docs index`. The `pnpm --filter platform docs:index` spelling is an alias that builds the docs artifact first and then runs it, which is why it is the one to reach for — the bare command reads whatever was last built.
 
 > [!WARNING]
-> Without the local stack running, `pnpm dev` and `docs index` point at the **deployed** database. Pages still render from your working copy, but search results come from whatever that database has indexed. Boot the local stack (`pnpm sb link`) when you care about search.
+> Without the local stack running, `pnpm dev` and `docs index` point at the **deployed** database. Pages still render from your working copy, but search results come from whatever that database has indexed. Boot the local stack (`pnpm devtools link`) when you care about search.
 >
 > The indexer will not write to a non-local database on its own. It deletes the rows for pages that no longer exist, so running it against a deployed database from a working copy would replace the live search index with your local state. At a terminal it asks first; with no TTY — in a script or a CI job, where there is nobody to ask — it refuses and exits non-zero unless given `--force`. That flag is how the deploy scripts say yes.
 

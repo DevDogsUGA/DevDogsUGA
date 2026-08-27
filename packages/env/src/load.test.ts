@@ -98,11 +98,14 @@ describe("missing env files", () => {
     expect((thrown as Error).message).not.toContain("--env ");
   });
 
-  it("fails for development pointing at pnpm setup", async () => {
+  // Selection still throws. It is `with-env` that now reports the absence and
+  // carries on, so this stays the one place that decides a file is missing —
+  // and the advice it carries is the first thing a clean clone reads.
+  it("fails for development pointing at pnpm devtools setup", async () => {
     const attempt = selectEnvFiles(ctx({ exists: () => false }));
     await expect(attempt).rejects.toThrow(MissingEnvFileError);
     await expect(selectEnvFiles(ctx({ exists: () => false }))).rejects.toThrow(
-      /\.env does not exist.*pnpm setup/,
+      /\.env does not exist.*pnpm devtools setup/,
     );
   });
 });

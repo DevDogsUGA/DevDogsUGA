@@ -34,9 +34,9 @@ docs/                  Markdown for every project, rendered on the platform site
 git clone https://github.com/DevDogsUGA/DevDogsUGA.git
 cd DevDogsUGA
 corepack enable && pnpm install
-pnpm setup
-pnpm sb link      # boots the local Docker stack; --remote links a hosted project instead
-pnpm sb reset
+pnpm devtools setup
+pnpm devtools link      # boots the local Docker stack; --remote links a hosted project instead
+pnpm devtools reset
 pnpm dev --filter platform
 ```
 

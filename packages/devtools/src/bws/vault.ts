@@ -212,7 +212,7 @@ export function explainVault(status: VaultStatus): string | undefined {
   if (status === "unavailable") {
     return (
       "The `bw` CLI is not installed, so the vault could not be checked. " +
-      "`pnpm bw login` — the CLI is a devtools dependency, nothing to install."
+      "`pnpm devtools bw login` — the CLI is a devtools dependency, nothing to install."
     );
   }
   if (status === "unauthenticated") {

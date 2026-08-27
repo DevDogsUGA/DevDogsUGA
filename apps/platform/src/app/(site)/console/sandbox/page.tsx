@@ -132,7 +132,7 @@ export default async function SandboxConsolePage({
         <ConsoleCard.Content>
           <div className="flex flex-col gap-3">
             <pre className="overflow-x-auto rounded-lg border border-white/10 bg-black/40 p-3 font-mono text-xs text-mauve-200">
-              pnpm sb link --team &lt;your-team-slug&gt;
+              pnpm devtools link --team &lt;your-team-slug&gt;
             </pre>
             <p className="text-sm text-mauve-300">
               That writes both keys into{" "}

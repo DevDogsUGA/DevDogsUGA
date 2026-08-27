@@ -218,6 +218,30 @@ const VAULT_TARGET: CommandOption = {
   // Duplicating it here would put production one keystroke closer.
 };
 
+/**
+ * The two flags every `run` task takes.
+ *
+ * Neither carries a `prompt`, and that is the point rather than an omission.
+ * `run` opens a multiselect of the apps defining the task, so a wizard that
+ * asked "every package?" and "which filter?" first would ask the same question
+ * three times and let two of the answers contradict the third. `--help` still
+ * documents both, which is where someone scripting this will look.
+ *
+ * Same reasoning as `VAULT_TARGET` above: the command already owns the
+ * question, so the tree declares the flag and stays quiet.
+ */
+const TURBO_OPTIONS: readonly CommandOption[] = [
+  {
+    flag: "--filter",
+    value: "<pkg>",
+    summary: "Limit to a package. Turbo's own flag; skips the question.",
+  },
+  {
+    flag: "--all",
+    summary: "Every package, unfiltered, with nothing asked.",
+  },
+];
+
 const ENV_FILE: CommandOption = {
   flag: "--file",
   value: "<path>",
@@ -270,6 +294,53 @@ export const GROUPS: readonly CommandGroup[] = [
         name: "setup",
         summary: "Check prerequisites and seed .env.",
         hint: "run this first",
+      },
+    ],
+  },
+  {
+    title: "Workspace",
+    commands: [
+      {
+        name: "run",
+        summary: "Run a Turborepo task, asking which apps first.",
+        hint: "build, dev, lint…",
+        // The six with a root alias, which are the six a contributor types.
+        // NOT a mirror of `turbo.json`: `run` forwards whatever name it is
+        // given, so `docs:gen` and `test:coverage` work without being listed,
+        // and turbo's own `deploy` task stays out of a menu where it would sit
+        // one line from this CLI's unrelated `deploy` group.
+        subcommands: [
+          {
+            name: "build",
+            summary: "Compile every package an app needs.",
+            options: TURBO_OPTIONS,
+          },
+          {
+            name: "dev",
+            summary: "Start the development servers.",
+            options: TURBO_OPTIONS,
+          },
+          {
+            name: "typecheck",
+            summary: "Run tsc across the workspace.",
+            options: TURBO_OPTIONS,
+          },
+          {
+            name: "lint",
+            summary: "Run ESLint across the workspace.",
+            options: TURBO_OPTIONS,
+          },
+          {
+            name: "lint:fix",
+            summary: "Run ESLint and write what it can fix.",
+            options: TURBO_OPTIONS,
+          },
+          {
+            name: "test",
+            summary: "Run the unit tests.",
+            options: TURBO_OPTIONS,
+          },
+        ],
       },
     ],
   },
@@ -600,6 +671,18 @@ export const GROUPS: readonly CommandGroup[] = [
             options: [SIGNING_TARGET],
           },
         ],
+      },
+      {
+        // The Bitwarden CLI, not a command of this one: everything after `bw`
+        // is handed to it untouched. It is here because it is the login that
+        // `env pull` depends on, it ships as a devtools dependency, and the
+        // root `bw` alias it replaces was the last thing at the workspace root
+        // reaching into this package. Declaring no subcommands is deliberate —
+        // Bitwarden's surface is its own to document, and mirroring a slice of
+        // it here would go stale on their release schedule, not ours.
+        name: "bw",
+        summary: "Run the Bitwarden CLI. `bw login` is the one you want.",
+        hint: "passes everything through",
       },
     ],
   },

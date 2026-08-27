@@ -122,8 +122,9 @@ describe("prompts", () => {
   /**
    * An option with no prompt here is one the wizard does not ask about on its
    * own screen. Every entry below is asked SOMEWHERE — by the command itself
-   * from live data (`--app`, `--user`, `--target`, `--apps`), or deliberately
-   * never (`--yes`, `--access-token`, `--file`). See `CommandOption.prompt`.
+   * from live data (`--app`, `--user`, `--target`, `--apps`, `--filter`), or
+   * deliberately never (`--yes`, `--access-token`, `--file`, `--all`). See
+   * `CommandOption.prompt`.
    *
    * Pinned as an exact set, not a subset: a new promptless flag is either one
    * of these cases and belongs in the list with a reason, or it is an option
@@ -138,6 +139,11 @@ describe("prompts", () => {
       "--yes",
       "--access-token",
       "--file",
+      // `run`'s two. The multiselect it opens IS this question, asked against
+      // the apps that actually define the task — so a screen asking "which
+      // filter?" first would ask it twice and let the answers disagree.
+      "--filter",
+      "--all",
     ]);
     const unasked = new Set<string>();
 
@@ -181,6 +187,11 @@ describe("coverage of what the CLI dispatches", () => {
     "planner",
     "signing-key",
     "deploy",
+    // Both are dispatched twice: once in `main()` ahead of `intro()`, which is
+    // what a typed command line reaches, and once in `dispatch` for the walk
+    // the wizard hands back. They belong here for the second of those.
+    "run",
+    "bw",
   ];
 
   it("declares exactly the top-level commands the CLI accepts", () => {

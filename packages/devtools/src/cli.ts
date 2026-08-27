@@ -94,6 +94,8 @@ import { helpPath, renderHelp } from "./help.js";
 import { findCommand, subcommandList, subcommandNames } from "./commands.js";
 import { runMenu } from "./menu.js";
 import { runDocsIndex } from "./docs/index-pages.js";
+import { runTask } from "./run/pick.js";
+import { runBw } from "./bws/bw.js";
 
 const DOCTOR_COMMANDS = [
   "doctor",
@@ -935,6 +937,15 @@ async function dispatch(argv: string[]): Promise<string | null> {
     return DONE;
   }
 
+  // Reached only from the wizard — a typed `run` or `bw` is handled in
+  // `main()` before `intro()`. Both exit with their child's status, so
+  // neither returns and `outro()` is never reached. That is right: by the
+  // time a menu walk gets here the banner is already on screen, above the
+  // menu it introduced, rather than wedged between this CLI and turbo's
+  // output.
+  if (first === "run") return runTask(rest);
+  if (first === "bw") return runBw(rest);
+
   if (first === "oauth") {
     await runOAuthSetup(flagValue(rest, "--base-url"));
     return 'All done! You\'re ready to "Sign in with DevDogs".';
@@ -1017,6 +1028,15 @@ async function dispatch(argv: string[]): Promise<string | null> {
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
 
+  // ⚠️ BEFORE the `--help` check, unlike everything else here. `bw` is a
+  // passthrough, so `pnpm devtools bw --help` is a request for Bitwarden's
+  // help, not for ours — answering it with our own would be this CLI talking
+  // over a tool it promised to get out of the way of.
+  if (argv[0] === "bw") {
+    await runBw(argv.slice(1));
+    return;
+  }
+
   // `helpPath` so that `env pull --help` answers about `env pull` rather than
   // reprinting the top level, which is the whole point of the split.
   if (argv.includes("--help") || argv.includes("-h")) {
@@ -1031,6 +1051,17 @@ async function main(): Promise<void> {
   // reason.
   if (argv[0] === "deploy") {
     await runDeployCommand(argv.slice(1));
+    return;
+  }
+
+  // Also before `intro()`, for the neighbouring reason: this one hands stdout
+  // to turbo, and through it to a Next dev server or a Flutter run that owns
+  // the terminal until Ctrl-C. A banner above that output would be this CLI
+  // announcing itself over somebody else's, and the `outro()` below would
+  // print "Done." after a dev server was interrupted. `runTask` exits with
+  // turbo's own status and never comes back.
+  if (argv[0] === "run") {
+    await runTask(argv.slice(1));
     return;
   }
 

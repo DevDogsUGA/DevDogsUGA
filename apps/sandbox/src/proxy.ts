@@ -104,7 +104,7 @@ export async function handleProxyRequest(
     return jsonError(
       401,
       "no_credential",
-      "This sandbox is reached with a DevDogs member token. Run `pnpm sb link --team <slug>` to get one.",
+      "This sandbox is reached with a DevDogs member token. Run `pnpm devtools link --team <slug>` to get one.",
     );
   }
 

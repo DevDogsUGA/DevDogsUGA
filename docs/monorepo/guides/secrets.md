@@ -12,18 +12,18 @@ There is one env file per **target**, not one file with modes. This page is the 
 
 `.env` at the repo root **is** the development target. Every script that needs it goes through `with-env`, the wrapper from `@devdogsuga/env`, which loads the file and prints on every run which files it actually loaded.
 
-Creating it is the one thing `with-env` cannot do, so `pnpm setup` deliberately runs outside the wrapper — it is the one command that works with no `.env` present. [Quickstart](/docs/monorepo/guides/quickstart) has the full order.
+Creating it is the one thing `with-env` cannot do, so `pnpm devtools setup` deliberately runs outside the wrapper — it is the one command that works with no `.env` present. [Quickstart](/docs/monorepo/guides/quickstart) has the full order.
 
-When the local Docker stack is up, `with-env` layers `.env.generated` — the stack's own connection block, written by `pnpm sb link` — on top of `.env`, first file wins. There is no flag for this: `with-env` probes port 54321 every run, so starting the stack switches you onto it and stopping it switches you back.
+When the local Docker stack is up, `with-env` layers `.env.generated` — the stack's own connection block, written by `pnpm devtools link` — on top of `.env`, first file wins. There is no flag for this: `with-env` probes port 54321 every run, so starting the stack switches you onto it and stopping it switches you back.
 
 ## The four targets
 
-| `--target` | File | Bitwarden project | Can boot an app |
-| --- | --- | --- | --- |
-| `development` | `.env` | none — it is your own file | yes |
-| `preflight` | `.env.preflight` | `preflight` | no |
-| `staging` | `.env.staging` | `staging` | yes |
-| `production` | `.env.production` | `production` | yes |
+| `--target`    | File              | Bitwarden project          | Can boot an app |
+| ------------- | ----------------- | -------------------------- | --------------- |
+| `development` | `.env`            | none — it is your own file | yes             |
+| `preflight`   | `.env.preflight`  | `preflight`                | no              |
+| `staging`     | `.env.staging`    | `staging`                  | yes             |
+| `production`  | `.env.production` | `production`               | yes             |
 
 These are standalone files, not layers over a shared base. A variable present in `.env` and forgotten in `.env.production` would otherwise fall through to the development value while `DEPLOY_ENV` says production; separate files turn that into a validation error instead of a wrong answer.
 
@@ -37,7 +37,7 @@ The order above — least dangerous to most — is the order the interactive pic
 
 `with-env` refuses and names the command that materialises it:
 
-- `.env` → `pnpm setup`
+- `.env` → `pnpm devtools setup`
 - any other target → `pnpm devtools env pull --target <target>`
 
 ## Where the detail lives
@@ -47,4 +47,4 @@ The order above — least dangerous to most — is the order the interactive pic
 Two things worth knowing before you touch any of it:
 
 - `.env.example` is **generated** from the env manifests, and CI byte-compares it. A new variable is declared in its app's manifest; it is never typed into the example by hand.
-- A variable is filed under whoever *reads* it, not whoever it sounds like it belongs to. An app's manifest is what the deploy uploads to that app's Worker, so filing an operator credential under an app would put it on an internet-facing Worker that never asked for it.
+- A variable is filed under whoever _reads_ it, not whoever it sounds like it belongs to. An app's manifest is what the deploy uploads to that app's Worker, so filing an operator credential under an app would put it on an internet-facing Worker that never asked for it.

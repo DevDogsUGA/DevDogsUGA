@@ -46,12 +46,21 @@ type Back = typeof BACK;
 const BACK_OPTION = { value: BACK, label: "← Back" } as const;
 
 /**
- * The wrapper-free entry point the `deploy` steps need.
+ * The wrapper-free entry point the `deploy` steps use.
  *
  * `pnpm devtools` is `with-env tsx src/cli.ts`, and most of these run in jobs
- * that have no env file yet — write-env is what CREATES it. Through the
- * wrapper they would report a missing FILE rather than the missing token,
- * the paused project or the missing credential.
+ * that have no env file yet — write-env is what CREATES it.
+ *
+ * This used to be a hard requirement: the wrapper exited on a missing file, so
+ * a wrapped `write-env` died on the very file it was about to compose, and the
+ * others reported a missing FILE rather than the missing token, the paused
+ * project or the missing credential. `with-env` reports the absence and
+ * carries on now, so either entry point would work.
+ *
+ * It still prints THIS one, because the line's whole job is to be pasted into
+ * a job step, and `deploy.yaml` invokes `cli:no-env` at every one of those
+ * steps. Advice that does not match the workflow it is advice about is worse
+ * than advice one hop longer than it needs to be.
  */
 const NO_ENV_ENTRY = "pnpm --filter @devdogsuga/devtools run cli:no-env deploy";
 

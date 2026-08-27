@@ -43,12 +43,19 @@ you say you are on. Node and corepack are warnings when they are wrong; Docker
 and Flutter report as information, because a contributor without either is not
 misconfigured, just not working on that part of the repo.
 
-`pnpm setup` is the shortcut, and it routes through `cli:no-env` — the
-devtools entry point that skips the `with-env` wrapper. It has to: `with-env`
-exits when there is no `.env`, and a clean clone has none, so the command whose
-job is to create that file cannot be wrapped in something that requires it.
-Other callers use `cli:no-env` for the same reason, CI mostly, where there is
-no `.env` either.
+`pnpm devtools setup` works on a clean clone, which is not something the
+wrapper it runs under used to allow. `pnpm devtools` is `with-env tsx
+src/cli.ts`, and `with-env` once exited when there was no `.env` — so the one
+command whose job is to create that file could not be reached through the
+wrapper that demanded it. That is why a second entry point, `cli:no-env`,
+existed and why the root `setup` alias pointed at it.
+
+`with-env` now reports the absence and carries on, so there is one front door.
+A command that genuinely needs a variable still fails, and fails naming the
+variable rather than naming a file. `cli:no-env` survives as the seam every
+[deploy](/docs/toolkit/reference/api/devtools/deploy) step uses, where the
+point is not surviving a missing file but declining to load one that is
+present.
 
 **Supabase** — one heading over two layers, and the menu says which on every
 line. `link`, `stop`, `restart` and `status` act on **the stack**: the Docker
@@ -59,8 +66,8 @@ and `reset` each take `--local | --remote | --team <slug>`; `stop` and
 
 That split is not pedantry — `config.toml` is read at `supabase start`, so
 `reset` replays migrations into containers still holding the old settings and
-`restart` is what actually picks a config change up. `pnpm sb` is the same
-binary and the same six commands: see [sb](/docs/toolkit/guides/sb).
+`restart` is what actually picks a config change up. All six are laid out
+target by target in [Database commands](/docs/toolkit/guides/database).
 
 **Moderation** — `catalog` lists the report reasons and content types in your
 database, `doctor --app <slug>` checks one app's moderation integration,

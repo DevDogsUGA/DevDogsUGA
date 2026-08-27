@@ -46,7 +46,7 @@ The same restriction rules out merging on anything computed. `⚙️ Meetings at
 
 ## The scripts
 
-`packages/airtable/src` holds everything that decides anything — `scaffold.ts` creates what is missing, `verify.ts` diffs live against registry, `ids.ts` rewrites `todo("slug")` placeholders with real IDs, `snapshot.ts` refreshes or checks the committed schema snapshot. `packages/devtools/src/airtable` holds only prompting, file I/O, and exit codes. Run them as `pnpm airtable:scaffold` (which takes `--dry-run`), `pnpm airtable:pull-ids`, `pnpm airtable:verify`, and `pnpm airtable:snapshot`.
+`packages/airtable/src` holds everything that decides anything — `scaffold.ts` creates what is missing, `verify.ts` diffs live against registry, `ids.ts` rewrites `todo("slug")` placeholders with real IDs, `snapshot.ts` refreshes or checks the committed schema snapshot. `packages/devtools/src/airtable` holds only prompting, file I/O, and exit codes. Run them as `pnpm devtools airtable scaffold` (which takes `--dry-run`), `pnpm devtools airtable pull-ids`, `pnpm devtools airtable verify`, and `pnpm devtools airtable snapshot`.
 
 Scaffolding is idempotent — everything it does is "create what is missing" — and runs in **two passes**: tables and their non-link fields first, links second, once every target table has an ID. Ordering tables by dependency would break the first time two of them link to each other.
 
@@ -54,7 +54,7 @@ Scaffolding is idempotent — everything it does is "create what is missing" —
 
 ## Verifying the base
 
-`verify.ts` runs in three places — by hand, in CI as the credential-free `pnpm airtable:snapshot:check`, and inside `runAirtableSync` **before the lease is claimed**, where a fatal finding refuses the whole pass with `schema_invalid` rather than writing into a shape it does not recognise.
+`verify.ts` runs in three places — by hand, in CI as the credential-free `pnpm devtools airtable snapshot --check`, and inside `runAirtableSync` **before the lease is claimed**, where a fatal finding refuses the whole pass with `schema_invalid` rather than writing into a shape it does not recognise.
 
 <details>
 <summary>What are the six checks, and how badly does each fail?</summary>

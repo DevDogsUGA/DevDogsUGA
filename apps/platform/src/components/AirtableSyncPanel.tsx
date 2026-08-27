@@ -198,7 +198,7 @@ const SKIPPED: Record<NonNullable<SyncReport["skipped"]>, string> = {
     "Airtable is not configured — set AIRTABLE_BASE_ID and store the token in Vault.",
   // Names the base as the thing to fix, not the platform. The registry is what
   // the code agrees with, so a mismatch is repaired in Airtable — usually a
-  // deleted or retyped column. `pnpm airtable:verify` prints which one.
+  // deleted or retyped column. `pnpm devtools airtable verify` prints which one.
   schema_invalid:
-    "The base no longer matches the registry, so the sync refused to run rather than write into nothing. Run `pnpm airtable:verify` to see which field.",
+    "The base no longer matches the registry, so the sync refused to run rather than write into nothing. Run `pnpm devtools airtable verify` to see which field.",
 };
