@@ -1,4 +1,4 @@
-import { AirtableClient } from "@devdogsuga/airtable";
+import { AirtableClient, BASE_ID } from "@devdogsuga/airtable";
 import { explain } from "../ui.js";
 
 /**
@@ -118,8 +118,8 @@ export interface AirtableCredentialOptions {
 /**
  * Resolves the credential for a capability, or throws naming what it looked at.
  *
- * @throws {AirtableCredentialError} when `AIRTABLE_BASE_ID` is unset, or when
- *   none of the variables for `need` holds a value.
+ * @throws {AirtableCredentialError} when none of the variables for `need`
+ *   holds a value. The base id can no longer be missing — it is committed.
  */
 export function resolveAirtableCredentials(
   options: AirtableCredentialOptions,
@@ -127,19 +127,12 @@ export function resolveAirtableCredentials(
   const { need, env = process.env, fetch } = options;
   const checked = CREDENTIAL_PREFERENCE[need];
 
-  const baseId = env.AIRTABLE_BASE_ID;
-  if (!baseId) {
-    throw new AirtableCredentialError(
-      "AIRTABLE_BASE_ID is not set — there is no base to talk to.",
-      [
-        "It is the `appXXXXXXXXXXXXXX` id, public rather than secret, and it",
-        "is declared in apps/platform/env.ts. In a deploy job it arrives as a",
-        "GitHub environment VARIABLE; on a laptop it belongs in the root .env.",
-        "",
-        "See docs/platform/airtable-setup.md.",
-      ],
-    );
-  }
+  // The committed base unless something is deliberately pointing elsewhere.
+  // This cannot fail any more: `BASE_ID` is a constant in the registry, beside
+  // the field ids that belong to that same base, so there is no configuration
+  // step between a checkout and knowing which base to talk to. `AIRTABLE_BASE_ID`
+  // remains readable for a scratch base and is unset in every ordinary run.
+  const baseId = env.AIRTABLE_BASE_ID || BASE_ID;
 
   // First non-empty wins, and the array order IS the preference. An empty
   // string counts as unset: a workflow that references a secret the

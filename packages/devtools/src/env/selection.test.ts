@@ -471,22 +471,21 @@ describe("preflight, the target no app boots from", () => {
 
   it("routes exactly the keys that opted in", () => {
     expect([...keysRoutedTo("preflight")].sort()).toEqual([
-      "AIRTABLE_BASE_ID",
       "AIRTABLE_PLAN_PAT",
       "DB_URL",
     ]);
-    // Tied to the registry, so "three keys" is the marker's doing rather than a
-    // filter that happened to leave three behind. Two are the credentials §3.5
-    // stage 1 needs and the only two — a Postgres role that sees the migrations
-    // table, and a PAT that can read one base's schema — and the third is the
-    // public base id that says which base the PAT may read, which the schema
-    // plan cannot run without and which used to be a hand-set repository
-    // variable for exactly that reason.
-    expect(narrowedKeys()).toEqual([
-      "AIRTABLE_BASE_ID",
-      "AIRTABLE_PLAN_PAT",
-      "DB_URL",
-    ]);
+    // Tied to the registry, so "two keys" is the marker's doing rather than a
+    // filter that happened to leave two behind. They are the credentials §3.5
+    // stage 1 needs and the only two — a Postgres role that sees the
+    // migrations table, and a PAT that can read one base's schema.
+    //
+    // It was three until the base id stopped being routed at all: `BASE_ID` is
+    // committed in the registry beside the field ids of the same base, so the
+    // schema plan no longer needs to be TOLD which base the PAT may read. That
+    // is the third key leaving, not a marker being read differently — the two
+    // that remain are both credentials, which is the shape this set should
+    // have had all along.
+    expect(narrowedKeys()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
   });
 
   it("routes the plan PAT here and NOT the two write-capable Airtable ones", () => {
@@ -513,10 +512,13 @@ describe("preflight, the target no app boots from", () => {
     // second read-only token to rotate for no benefit. Before the tier it
     // rode along because the default routed everywhere an app boots from.
     expect(keysRoutedTo("staging").has("AIRTABLE_PLAN_PAT")).toBe(false);
-    // POSITIVE CONTROL: the narrowed PUBLIC value beside it still routes to
-    // staging — `narrowed` alone must not become a staging exclusion, or
-    // DB_URL (narrowed shape one) would vanish from every deployed target.
-    expect(keysRoutedTo("staging").has("AIRTABLE_BASE_ID")).toBe(true);
+    // POSITIVE CONTROL: the other narrowed key still routes to staging —
+    // `narrowed` alone must not become a staging exclusion, or DB_URL
+    // (narrowed shape one) would vanish from every deployed target.
+    //
+    // AIRTABLE_BASE_ID used to be the second control here. It is no longer
+    // routed anywhere, so DB_URL carries the control alone; if that ever
+    // stops being narrowed, this test needs a new one rather than none.
     expect(keysRoutedTo("staging").has("DB_URL")).toBe(true);
   });
 
@@ -577,9 +579,17 @@ describe("preflight, the target no app boots from", () => {
     // _CALLBACK, the Dog Pack redirect reservation), and by one more when
     // AIRTABLE_SYNC_PAT moved from Supabase Vault into the platform manifest
     // (2026-08-19) — one storage mechanism, auditable, Worker-delivered.
-    expect(keysRoutedTo("staging").size).toBe(48);
-    expect(keysRoutedTo("production").size).toBe(51);
-    expect(keysRoutedTo("preflight").size).toBe(3);
+    //
+    // Then all three dropped by one, which is the shape a key leaving the
+    // registry's routing entirely should have: `AIRTABLE_BASE_ID` became
+    // `scope: "default"` and its value a committed constant in
+    // packages/airtable, so it is pushed nowhere and opted into nothing. A
+    // change that moved only preflight here would mean the `narrowed` marker
+    // had been dropped without the scope change, leaving the key still routed
+    // to the two deployed targets.
+    expect(keysRoutedTo("staging").size).toBe(47);
+    expect(keysRoutedTo("production").size).toBe(50);
+    expect(keysRoutedTo("preflight").size).toBe(2);
   });
 });
 

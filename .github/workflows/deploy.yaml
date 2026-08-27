@@ -88,8 +88,9 @@ env:
 # compose no env file at all, so the wrapped entry point would exit reporting a
 # missing FILE rather than the missing TOKEN, the paused project or the missing
 # Airtable credential, which is the one thing those jobs exist to say. Note
-# that the Airtable pair take their two variables from the step's own `env:`
-# block precisely so that stays true: nothing composes a file for them. This is
+# that the Airtable pair take their single token from the step's own `env:`
+# block precisely so that stays true: nothing composes a file for them, and
+# the base id they used to need beside it is now a committed constant. This is
 # NOT about the two nested cases: inside `with-env -c '…'` the wrapper would be
 # value-neutral anyway, because dotenvx leaves an already-set value alone. It
 # is about the BARE runs in the orphan-audit and prune jobs, and the same entry
@@ -309,21 +310,15 @@ jobs:
       # command REFUSES by name when the credential is missing, and a red job
       # saying which variable is unset is the entire value of the step.
       #
-      # AIRTABLE_BASE_ID is an ENVIRONMENT variable on `preflight`, written by
-      # `env push --target preflight` like everything else this job reads. It
-      # is public (§A.4), so it lands in the variable store rather than the
-      # secret one — hence `vars.` rather than `secrets.` — and it is declared
-      # `narrowed`, which is what routes it to a target no app boots from.
-      #
-      # It was a hand-set REPOSITORY variable until 2026-08-17, because nothing
-      # routed it here. A repository variable is visible to every environment,
-      # so the workaround for a routing gap had a wider reach than the routing
-      # it stood in for. If one is still set, delete it: an environment copy
-      # shadows it, so a stale repository value is invisible until the day
-      # somebody removes the environment one.
+      # No AIRTABLE_BASE_ID here any more. It is committed as `BASE_ID` in
+      # packages/airtable/src/registry.ts, beside the field ids of the same
+      # base, so this job needs one credential and nothing else. It was an
+      # environment variable routed by `env push`, and before 2026-08-17 a
+      # hand-set REPOSITORY variable visible to every environment — a stale
+      # copy of which stayed invisible behind the environment one. A constant
+      # cannot be shadowed by a store nobody thought to check.
       - name: What would this commit do to the Airtable base?
         env:
-          AIRTABLE_BASE_ID: ${{ vars.AIRTABLE_BASE_ID }}
           AIRTABLE_PLAN_PAT: ${{ secrets.AIRTABLE_PLAN_PAT }}
         # cli:no-env, like the other steps in jobs that hold one narrow
         # credential and compose no env file: `with-env` would report a missing
@@ -407,7 +402,6 @@ jobs:
       - name: What will this promotion do to the Airtable base?
         id: airtable
         env:
-          AIRTABLE_BASE_ID: ${{ vars.AIRTABLE_BASE_ID }}
           AIRTABLE_PLAN_PAT: ${{ secrets.AIRTABLE_PLAN_PAT }}
         run: >-
           pnpm --filter @devdogsuga/devtools run cli:no-env deploy airtable-plan
@@ -544,11 +538,11 @@ jobs:
       # one token — the plan PAT is never in the process environment, so
       # capability selection has nothing to get wrong here.
       #
-      # AIRTABLE_BASE_ID is an environment variable, written by
-      # `env push --target production` like every other value this job reads.
+      # AIRTABLE_BASE_ID is not passed: the base id is committed in the
+      # registry, so the only thing this step needs from the environment is
+      # the one token whose reach the reviewer gate exists to bound.
       - name: Apply the Airtable schema
         env:
-          AIRTABLE_BASE_ID: ${{ vars.AIRTABLE_BASE_ID }}
           AIRTABLE_APPLY_PAT: ${{ secrets.AIRTABLE_APPLY_PAT }}
         run: >-
           pnpm --filter @devdogsuga/devtools run cli:no-env deploy airtable-apply

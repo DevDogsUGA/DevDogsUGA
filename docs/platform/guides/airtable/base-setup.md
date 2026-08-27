@@ -59,14 +59,14 @@ Scaffolding is idempotent — everything it does is "create what is missing" —
 <details>
 <summary>What are the six checks, and how badly does each fail?</summary>
 
-| Check                                      | On failure                                                          |
-| ------------------------------------------ | ------------------------------------------------------------------- |
-| Every registered field ID exists           | **Fatal** — the sync would write into nothing                       |
-| Field types match the registry             | **Fatal** — a text field where a date is expected coerces silently  |
-| The `.matchKey()` field is merge-eligible  | **Fatal** — upsert rejects `email`, computed, and other types       |
-| Declared select choices match the base     | **Fatal** — a value the page cannot render is worse than no value   |
-| Match keys are unique-ish                  | **Warn** — Airtable cannot enforce uniqueness on most field types   |
-| Live fields absent from the registry       | **Report** — officers may add their own; just list them             |
+| Check                                     | On failure                                                         |
+| ----------------------------------------- | ------------------------------------------------------------------ |
+| Every registered field ID exists          | **Fatal** — the sync would write into nothing                      |
+| Field types match the registry            | **Fatal** — a text field where a date is expected coerces silently |
+| The `.matchKey()` field is merge-eligible | **Fatal** — upsert rejects `email`, computed, and other types      |
+| Declared select choices match the base    | **Fatal** — a value the page cannot render is worse than no value  |
+| Match keys are unique-ish                 | **Warn** — Airtable cannot enforce uniqueness on most field types  |
+| Live fields absent from the registry      | **Report** — officers may add their own; just list them            |
 
 The numbers in the source are stable identities rather than a ranking, which is why the fatal choice check is numbered last: renumbering would quietly repoint every comment and test name that says "check 4" at a different check.
 
@@ -93,8 +93,8 @@ The base is shaped by a person holding a write-capable token and synced at run t
 <details>
 <summary>Which token carries which scopes, and where does each live?</summary>
 
-| Token           | Scopes                                                          | Lives in                                   | Used by                            |
-| --------------- | --------------------------------------------------------------- | ------------------------------------------ | ---------------------------------- |
+| Token           | Scopes                                                           | Lives in                                   | Used by                            |
+| --------------- | ---------------------------------------------------------------- | ------------------------------------------ | ---------------------------------- |
 | **Sync**        | `schema.bases:read` · `data.records:read` · `data.records:write` | `AIRTABLE_SYNC_PAT`, the env registry      | the runtime sync, every pass       |
 | **Scaffolding** | the same, **plus `schema.bases:write`**                          | `AIRTABLE_PAT` in your `.env`, transiently | `scaffold` · `pull-ids` · `verify` |
 | **Plan**        | `schema.bases:read` **only**                                     | `AIRTABLE_PLAN_PAT`, CI environments       | `deploy airtable-plan`             |
@@ -108,6 +108,6 @@ The two axes are independent in Airtable: a records read/write token cannot alte
 
 ⚠️ **Mint the scaffolding token as whoever created the workspace.** `POST /v0/meta/bases` requires the workspace creator role, a person-level permission a token inherits and no scope can grant. A collaborator's token does everything else and fails only at base creation.
 
-`AIRTABLE_BASE_ID`, and how each of these variables is routed to its target, live in [Env](/docs/toolkit/guides/env).
+The base id is not one of these. It is `BASE_ID`, a committed constant in `packages/airtable/src/registry.ts` beside the `tbl` and `fld` ids of the same base — there is one base, staging deliberately shares it, and every field id in that file belongs to it, so a second base would need a second registry rather than a second value. `AIRTABLE_BASE_ID` survives only as an override for aiming the tooling at a scratch base, and is empty in every ordinary deployment. How the four tokens are routed to their targets lives in [Env](/docs/toolkit/guides/env).
 
 </details>

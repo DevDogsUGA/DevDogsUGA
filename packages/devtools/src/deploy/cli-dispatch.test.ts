@@ -130,7 +130,12 @@ describe("stdout stays clean for every deploy command", () => {
       "airtable-plan",
     ]);
     expect(stdout).toBe("");
-    expect(stderr).toContain("AIRTABLE_BASE_ID is not set");
+    // The refusal names the missing TOKEN now. It used to name the missing
+    // base id, which came first and so was what an empty environment hit —
+    // the base id is a committed constant, so the credential is the only
+    // thing left that can be absent. The property under test is unchanged:
+    // a missing credential is red and says which variable.
+    expect(stderr).toContain("No Airtable token that can read");
     expect(code).toBe(1);
   });
 
@@ -140,7 +145,7 @@ describe("stdout stays clean for every deploy command", () => {
       "airtable-apply",
     ]);
     expect(stdout).toBe("");
-    expect(stderr).toContain("AIRTABLE_BASE_ID is not set");
+    expect(stderr).toContain("No Airtable token that can write");
     expect(code).toBe(1);
   });
 

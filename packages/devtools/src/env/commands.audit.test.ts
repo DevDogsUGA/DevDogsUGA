@@ -130,17 +130,25 @@ describe("env audit, at the repository scope", () => {
   });
 
   it("reports a collision it found, by name", async () => {
-    // `AIRTABLE_BASE_ID` is the real case: users were told to set it by hand
-    // at repository level before push started routing it.
+    // `PROJECT_REF` stands in for the shape: a PUBLIC key the registry routes
+    // to this target, so a repository-level copy of it is shadowed by the
+    // environment one and invisible until that copy is deleted.
+    //
+    // `AIRTABLE_BASE_ID` was the exemplar here — users really were told to set
+    // it by hand at repository level before push started routing it — and it
+    // stopped being one when the base id became a committed constant. It is no
+    // longer routed anywhere, so a repository variable holding it is now the
+    // `GITHUB_ORG` case the branch below deliberately exempts: somebody
+    // mirroring a constant, which nothing reads and nothing breaks.
     vi.mocked(listRepositoryVariables).mockResolvedValue([
-      { name: "AIRTABLE_BASE_ID", updatedAt: "2026-01-01T00:00:00Z" },
+      { name: "PROJECT_REF", updatedAt: "2026-01-01T00:00:00Z" },
     ]);
 
     await runEnvAudit({ target: "staging", yes: true });
 
-    expect(printed()).toContain("AIRTABLE_BASE_ID");
+    expect(printed()).toContain("PROJECT_REF");
     expect(printed()).toMatch(/shadows it/);
-    expect(printed()).toContain("gh variable delete AIRTABLE_BASE_ID");
+    expect(printed()).toContain("gh variable delete PROJECT_REF");
   });
 
   it("says the check RAN when it found nothing", async () => {
