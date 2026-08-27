@@ -150,10 +150,13 @@ const PICTURE = { x: 36, y: 98, width: 188, height: 158 } as const;
 /*
  * The club's colours, used as light rather than as decoration.
  *
- * Cyan is the body and rose is the fittings and the outline. Amber is the
- * third of the three the homepage's stat cards already use, and it is here
- * exactly once, on the power lamp, where a colour nothing else on the set is
- * wearing is the whole point.
+ * Cyan is the body and mauve is the fittings — the bezel, the trim, the knobs.
+ * The fittings used to be rose, but the set now sits on plates that are
+ * already rose (the homepage) or already mauve (the console), and a rose
+ * bezel on a rose plate was a television with no edge. Grey fittings are
+ * also just what the real thing had. Amber is here exactly once, on the
+ * power lamp, where a colour nothing else on the set is wearing is the whole
+ * point.
  *
  * Each ramp is a single hue darkening, never a hue shift, because lightness is
  * what the eye reads as form. A gradient that changed hue across a face would
@@ -166,10 +169,11 @@ const CYAN = {
   600: "#0891b2",
   900: "#164e63",
 } as const;
-const ROSE = {
-  100: "#ffe4e6",
-  200: "#fecdd3",
-  700: "#be123c",
+/** Tailwind's `mauve` ramp, the same one the console pages are painted in. */
+const MAUVE = {
+  100: "oklch(96% 0.003 325.6)",
+  200: "oklch(86.5% 0.012 325.68)",
+  700: "oklch(43.5% 0.029 321.78)",
 } as const;
 const LAMP = "#fbbf24"; // amber-400
 
@@ -262,8 +266,8 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
           x2="288"
           y2="288"
         >
-          <stop offset="0" stopColor={ROSE[200]} />
-          <stop offset="1" stopColor={ROSE[700]} />
+          <stop offset="0" stopColor={MAUVE[200]} />
+          <stop offset="1" stopColor={MAUVE[700]} />
         </linearGradient>
 
         <linearGradient
@@ -275,7 +279,7 @@ export default function CrtTv({ noSignal, showing, className }: Props) {
           y2="211"
         >
           <stop offset="0" stopColor={CYAN[50]} />
-          <stop offset="1" stopColor={ROSE[100]} />
+          <stop offset="1" stopColor={MAUVE[100]} />
         </linearGradient>
 
         {/* The tube surround stays near-black whatever the cabinet is wearing:

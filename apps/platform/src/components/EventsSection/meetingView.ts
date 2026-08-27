@@ -39,19 +39,22 @@ export interface SegmentBadge {
 }
 
 /**
- * `judging` and `kickoff` deliberately share the competition colour: they are
- * the two ends of one competition — the night it opens and the night it is
- * presented — so the *label* separates them and the hue ties them together.
+ * `judging` is rose and `kickoff` is cyan — the two ends of one competition,
+ * told apart by hue because the timeline draws them side by side on the same
+ * Monday: the rose end of last week's bar and the cyan start of this week's.
+ * They used to share cyan; once the diagram had to show the *cycle* — judge,
+ * then kick off, every week — one colour for both ends made the loop
+ * unreadable.
  *
  * `open` takes the build-session colour, which is what an open night is.
  */
 export const segmentBadge: Record<MeetingSegment, SegmentBadge> = {
   judging: {
-    bg: "bg-cyan-400",
+    bg: "bg-rose-400",
     text: "text-black",
-    dot: "bg-cyan-500",
-    chipDark: "border-cyan-400/30 bg-cyan-500/10 text-cyan-300",
-    dotDark: "bg-cyan-400",
+    dot: "bg-rose-500",
+    chipDark: "border-rose-400/30 bg-rose-500/10 text-rose-300",
+    dotDark: "bg-rose-400",
     label: "Judging",
   },
   kickoff: {
@@ -82,11 +85,14 @@ export const segmentBadge: Record<MeetingSegment, SegmentBadge> = {
 
 /**
  * The legend under the calendar grid, in the segment order the resolver
- * returns. `kickoff` is left out on purpose — it shares a colour with
- * `judging`, so a legend listing both would show two identical swatches and
- * imply the reader can tell them apart at a glance, which they cannot.
+ * returns. Every segment has its own hue now, so every one is listed.
  */
-export const SEGMENT_LEGEND: MeetingSegment[] = ["judging", "workshop", "open"];
+export const SEGMENT_LEGEND: MeetingSegment[] = [
+  "judging",
+  "kickoff",
+  "workshop",
+  "open",
+];
 
 /** The chip shape every light band uses, so padding and weight cannot drift. */
 export const CHIP_CLS =

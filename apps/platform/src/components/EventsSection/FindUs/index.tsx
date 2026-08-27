@@ -66,13 +66,9 @@ export default function FindUs({
 export function FindUsLink({
   building = "DLW",
   room,
-  className = TRIGGER_CLS,
 }: {
   building?: BuildingKey;
   room?: string | null;
-  /** The default is the light plates' bordered action; the console-dark
-   *  events page passes its own dialect's button instead. */
-  className?: string;
 } = {}) {
   // The building rides in the URL rather than in a second route segment, so
   // one page keeps serving every building and the link stays pasteable. The
@@ -84,7 +80,7 @@ export function FindUsLink({
   return (
     <RouteDialogLink
       href={`/events/directions?${params}`}
-      className={className}
+      className={TRIGGER_CLS}
       {...INTENT_HANDLERS}
     >
       <MapTrifoldIcon /> Directions
