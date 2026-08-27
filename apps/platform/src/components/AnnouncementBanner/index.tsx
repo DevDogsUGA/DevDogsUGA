@@ -467,8 +467,15 @@ export default function AnnouncementBanner() {
               {...(action.external
                 ? { target: "_blank", rel: "noopener noreferrer" }
                 : {})}
+              /* The house lift, as every other button on the page wears it:
+                 `shadow-block-md` against a `translate` of 0.5. This used to
+                 be 3px against 0.75, which is the geometrically exact version
+                 — the block grows by the same distance the button travels, so
+                 its far corner stays put — but it was the only one on the
+                 site, and a notice that floats over the page is the last
+                 place to run a second lift. */
               className={cn(
-                "hover:shadow-block-[3px] transition-lift flex shrink-0 items-center gap-2 self-end rounded-sm border-2 border-black bg-black px-3.5 py-1.5 text-sm font-semibold text-white hover:-translate-x-0.75 hover:-translate-y-0.75 sm:self-auto",
+                "hover:shadow-block-md transition-lift flex shrink-0 items-center gap-2 self-end rounded-sm border-2 border-black bg-black px-3.5 py-1.5 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5 sm:self-auto",
                 toneClasses.blockShadow,
               )}
             >
