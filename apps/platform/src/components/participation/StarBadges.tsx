@@ -103,11 +103,11 @@ export function StarTotalsRow({ totals }: { totals: StarTotals }) {
     <dl className="flex gap-6">
       {entries.map(([label, value, glyph]) => (
         <div key={label} className="flex flex-col">
-          <dt className="text-xs tracking-wide uppercase opacity-60">
+          <dt className="text-xs tracking-wide text-mauve-400 uppercase">
             {label}
           </dt>
           <dd className="flex items-baseline gap-1.5 text-2xl font-bold tabular-nums">
-            <span aria-hidden className="text-amber-500">
+            <span aria-hidden className="text-amber-300">
               {glyph}
             </span>
             {value}

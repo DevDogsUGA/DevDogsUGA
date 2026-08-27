@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { TeamProblemCode } from "~/server/teams/errors";
+import Callout from "~/ui/callout";
 
 /**
  * The team actions' failures, said out loud.
@@ -52,10 +53,13 @@ export const TEAM_PROBLEM_MESSAGES: Record<TeamProblemCode, string> = {
  * link: it is the single most likely first-join failure — nothing before this
  * point in the platform requires GitHub — and "link your account" without a
  * route to do it in is an instruction to go hunting.
+ *
+ * `alert` because every one of these is the answer to a button the reader just
+ * pressed, which is exactly the case the flag is for.
  */
 export function TeamProblem({ code }: { code: TeamProblemCode }) {
   return (
-    <p role="alert" className="text-sm font-semibold text-red-700">
+    <Callout tone="critical" alert>
       {TEAM_PROBLEM_MESSAGES[code]}
       {code === "github_not_linked" && (
         <>
@@ -66,6 +70,6 @@ export function TeamProblem({ code }: { code: TeamProblemCode }) {
           .
         </>
       )}
-    </p>
+    </Callout>
   );
 }

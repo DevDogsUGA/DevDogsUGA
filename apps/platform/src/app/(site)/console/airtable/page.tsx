@@ -1,13 +1,13 @@
-import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import { ConsoleCard } from "~/ui/card";
 import AirtableSyncPanel from "~/components/AirtableSyncPanel";
-import ConsolePageShell from "~/components/ConsolePageShell";
+import PageShell from "~/components/PageShell";
 import {
   getAirtableSyncState,
   requestAirtableSync,
 } from "~/server/actions/airtable";
 import { canUserTriggerSync } from "~/server/actions/permissions";
-import { expectSession } from "~/server/auth";
+import { requirePermission } from "~/server/auth/require";
 
 /**
  * /console/airtable
@@ -27,45 +27,54 @@ export default async function AirtableConsolePage() {
   // point, and a cached page would report a pass that has since happened.
   await connection();
 
-  const callerId = await expectSession().catch(() => redirect("/auth"));
-  if (!(await canUserTriggerSync(callerId))) redirect("/");
+  await requirePermission(canUserTriggerSync);
 
   const state = await getAirtableSyncState();
 
   return (
-    <ConsolePageShell
+    <PageShell
       accent="blue"
       title="Airtable Sync"
       description="Pull officer edits out of Airtable and push derived values back. Runs every 15 minutes on its own."
     >
       <AirtableSyncPanel initial={state} runSync={requestAirtableSync} />
 
-      <section className="rounded-sm border-2 border-black bg-white p-4 text-sm">
-        <h2 className="font-semibold">What the sync will not do</h2>
-        <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 opacity-80">
-          <li>
-            Change a workshop&apos;s meeting or project once anybody has
-            attended it — that would move credit people already earned.
-          </li>
-          <li>
-            Change a finalized competition&apos;s requirement count, because
-            every team&apos;s score is computed against that number.
-          </li>
-          <li>
-            Move <code>Judging starts</code> once participation has frozen, in
-            either direction.
-          </li>
-          <li>
-            Delete anything. A row deleted in Airtable is archived here, and its
-            attendance survives.
-          </li>
-        </ul>
-        <p className="mt-3 opacity-70">
-          Each refusal is also written into that record&apos;s{" "}
-          <code>Sync status</code> field, so the officer who made the edit sees
-          it where they made it.
-        </p>
-      </section>
-    </ConsolePageShell>
+      <ConsoleCard.Root id="what-the-sync-will-not-do">
+        <ConsoleCard.Header title="What the sync will not do" />
+        <ConsoleCard.Content>
+          <div className="flex flex-col gap-3 text-sm">
+            <ul className="flex list-disc flex-col gap-1 pl-5 text-mauve-300">
+              <li>
+                Change a workshop&apos;s meeting or project once anybody has
+                attended it — that would move credit people already earned.
+              </li>
+              <li>
+                Change a finalized competition&apos;s requirement count, because
+                every team&apos;s score is computed against that number.
+              </li>
+              <li>
+                Move{" "}
+                <code className="rounded-sm bg-white/10 px-1 py-0.5 font-mono text-xs text-mauve-200">
+                  Judging starts
+                </code>{" "}
+                once participation has frozen, in either direction.
+              </li>
+              <li>
+                Delete anything. A row deleted in Airtable is archived here, and
+                its attendance survives.
+              </li>
+            </ul>
+            <p className="text-mauve-400">
+              Each refusal is also written into that record&apos;s{" "}
+              <code className="rounded-sm bg-white/10 px-1 py-0.5 font-mono text-xs text-mauve-200">
+                Sync status
+              </code>{" "}
+              field, so the officer who made the edit sees it where they made
+              it.
+            </p>
+          </div>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
+    </PageShell>
   );
 }

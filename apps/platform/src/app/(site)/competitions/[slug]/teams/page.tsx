@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import ConsolePageShell from "~/components/ConsolePageShell";
+import PageShell from "~/components/PageShell";
 import EmptyState from "~/components/participation/EmptyState";
 import { LockChip } from "~/components/participation/LockNotice";
 import CreateTeamForm from "~/components/teams/CreateTeamForm";
 import JoinByCodeForm, {
   type JoinTarget,
 } from "~/components/teams/JoinByCodeForm";
+import Callout from "~/ui/callout";
 import { formatEventDateTime, formatRelative } from "~/lib/eventTime";
 import { createTeam, joinTeam, requestToJoin } from "~/server/actions/teams";
-import { expectSession } from "~/server/auth";
+import { requireSession } from "~/server/auth/require";
 import { getCompetitionBySlug } from "~/server/loaders/meetings";
 import { getMyTeam, getTeamsForCompetition } from "~/server/loaders/teams";
 
@@ -48,7 +49,7 @@ export default async function CompetitionTeamsPage({
   await connection();
 
   const { slug } = await params;
-  const userId = await expectSession().catch(() => redirect("/auth"));
+  const userId = await requireSession();
 
   // Identity first, and separately: `getTeamsForCompetition` answers "no such
   // competition" and "no teams yet" with the same empty array, and those need
@@ -74,8 +75,13 @@ export default async function CompetitionTeamsPage({
   const now = Date.now();
   const closed = judgingStartsAt !== null && judgingStartsAt.getTime() <= now;
 
-  const teams = await getTeamsForCompetition(slug);
-  const mine = await getMyTeam(slug, userId);
+  // Neither read consults the other's answer — the roster list is about the
+  // competition and `getMyTeam` is about the viewer — so they go out together
+  // rather than one waiting on the other.
+  const [teams, mine] = await Promise.all([
+    getTeamsForCompetition(slug),
+    getMyTeam(slug, userId),
+  ]);
 
   // A locked roster is not somewhere anybody can be added, so it is not a
   // target for either affordance — offering it and failing on submit would be
@@ -89,7 +95,7 @@ export default async function CompetitionTeamsPage({
     }));
 
   return (
-    <ConsolePageShell
+    <PageShell
       accent="emerald"
       title={`${competition.name} — teams`}
       description={
@@ -113,12 +119,12 @@ export default async function CompetitionTeamsPage({
       }
     >
       {mine ? (
-        <section className="flex flex-wrap items-center justify-between gap-4 rounded-sm border-2 border-black bg-white p-4">
+        <section className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/5 p-4">
           <span className="flex flex-col">
-            <span className="font-semibold">
+            <span className="font-semibold text-white">
               You are on a team for this competition
             </span>
-            <span className="text-xs opacity-70">
+            <span className="text-xs text-mauve-400">
               {mine.role === "lead"
                 ? "You lead it — join requests and your team's ballot are yours to answer."
                 : "One team per member per competition, so this is the one."}
@@ -126,16 +132,16 @@ export default async function CompetitionTeamsPage({
           </span>
           <Link
             href={`/competitions/${slug}/teams/${mine.teamSlug}`}
-            className="rounded-sm border-2 border-black bg-black px-3 py-1.5 text-sm font-semibold text-white"
+            className="rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
           >
             Open your team
           </Link>
         </section>
       ) : closed ? (
-        <p className="rounded-sm border-2 border-black bg-white p-6 text-sm">
+        <Callout tone="warning">
           Judging has started for this competition, so teams can no longer be
           created or joined. The rosters below are the ones that competed.
-        </p>
+        </Callout>
       ) : (
         <div className="grid gap-4 @2xl:grid-cols-2">
           <CreateTeamForm
@@ -149,10 +155,10 @@ export default async function CompetitionTeamsPage({
               requestToJoin={requestToJoin}
             />
           ) : (
-            <p className="rounded-sm border-2 border-black bg-white p-4 text-sm opacity-70">
+            <Callout tone="info">
               No team here has an open roster right now, so there is nothing to
               join yet. Starting one is the way in.
-            </p>
+            </Callout>
           )}
         </div>
       )}
@@ -167,16 +173,16 @@ export default async function CompetitionTeamsPage({
           {teams.map((team) => (
             <li
               key={team.id}
-              className="flex flex-wrap items-center justify-between gap-4 rounded-sm border-2 border-black bg-white p-4"
+              className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/5 p-4"
             >
               <span className="flex flex-col">
                 <Link
                   href={`/competitions/${slug}/teams/${team.slug}`}
-                  className="font-semibold underline"
+                  className="font-semibold text-white underline underline-offset-4 outline-none hover:text-mauve-200 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
                 >
                   {team.name}
                 </Link>
-                <span className="text-xs opacity-70">
+                <span className="text-xs text-mauve-400">
                   {`${team.memberCount} of ${maxTeamSize} members`}
                   {team.lock === null &&
                     !team.acceptingRequests &&
@@ -188,6 +194,6 @@ export default async function CompetitionTeamsPage({
           ))}
         </ul>
       )}
-    </ConsolePageShell>
+    </PageShell>
   );
 }

@@ -1,8 +1,8 @@
 import { cache } from "react";
-import { redirect } from "next/navigation";
-import { expectSession } from "~/server/auth";
+import { requirePermission } from "~/server/auth/require";
 import { canUserCreateCredentials } from "~/server/actions/permissions";
 import {
+  canSeeCredentialsPage,
   getAccessibleCredentials,
   type CredentialRow,
 } from "~/server/actions/credentials";
@@ -18,7 +18,13 @@ export type CredentialsPageData = {
 
 export const getCredentialsPageData = cache(
   async (): Promise<CredentialsPageData> => {
-    const userId = await expectSession().catch(() => redirect("/auth"));
+    // The navbar hides this page behind `canSeeCredentialsPage`, but until now
+    // the page itself asked only for a session — so a member with no
+    // credential-granting role who typed the URL got the full Credentials page
+    // with an empty list. Nothing leaked (`getAccessibleCredentials` filters by
+    // role), but a page that renders its own emptiness is a worse answer than
+    // not being there, and it disagreed with the menu about whether it exists.
+    const userId = await requirePermission(canSeeCredentialsPage);
 
     const [credentialsList, canCreate, roleRows] = await Promise.all([
       getAccessibleCredentials(userId),

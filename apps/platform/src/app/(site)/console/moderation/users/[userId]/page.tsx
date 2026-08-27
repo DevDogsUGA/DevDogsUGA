@@ -1,6 +1,10 @@
 import Link from "next/link";
+import PageShell from "~/components/PageShell";
+import ReportListItem from "~/components/ReportListItem";
+import { StandingBadge, standingOf } from "~/components/StatusBadges";
 import UserRoleForm from "~/components/UserRoleForm";
 import { getUserModerationData } from "~/server/loaders/moderation";
+import { ConsoleCard } from "~/ui/card";
 
 export default async function UserModerationPage({
   params,
@@ -12,102 +16,64 @@ export default async function UserModerationPage({
     await getUserModerationData(targetUserId);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-      <div className="mb-4">
+    <PageShell
+      accent="rose"
+      title={displayName}
+      description={<span className="font-mono">{targetUserId}</span>}
+      actions={
         <Link
           href="/console/moderation"
-          className="text-sm text-mauve-500 hover:text-mauve-800"
+          className="rounded-sm text-sm text-mauve-400 transition-colors outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
         >
           &larr; Back to dashboard
         </Link>
-      </div>
+      }
+    >
+      <ConsoleCard.Root id="current-standing">
+        <ConsoleCard.Header title="Current Standing" />
+        <ConsoleCard.Content>
+          <StandingBadge
+            standing={standingOf(isBanned, suspension)}
+            detail={suspension?.reason}
+          />
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
 
-      <h1 className="mb-1 text-xl font-bold">{displayName}</h1>
-      <p className="mb-6 font-mono text-sm text-mauve-500">{targetUserId}</p>
+      <ConsoleCard.Root id="update-role">
+        <ConsoleCard.Header title="Update Role" />
+        <ConsoleCard.Content>
+          <UserRoleForm
+            targetUserId={targetUserId}
+            currentRole={
+              isBanned ? "banned" : suspension ? "suspended" : "member"
+            }
+          />
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
 
-      <section className="shadow-block-sm relative mb-6 border border-black bg-white p-4">
-        <h2 className="mb-3 font-semibold">Current Standing</h2>
-        <div className="flex items-center gap-2 text-sm">
-          {isBanned ? (
-            <span className="rounded-sm bg-red-100 px-2.5 py-0.5 text-xs text-red-700">
-              Banned
-            </span>
-          ) : suspension ? (
-            <span className="rounded-sm bg-orange-100 px-2.5 py-0.5 text-xs text-orange-700">
-              Suspended
-            </span>
+      <ConsoleCard.Root id="report-history">
+        <ConsoleCard.Header title={`Report History (${reports.length})`} />
+        <ConsoleCard.Content>
+          {reports.length === 0 ? (
+            <p className="text-sm text-mauve-400">No reports found.</p>
           ) : (
-            <span className="rounded-sm bg-mauve-100 px-2.5 py-0.5 text-xs text-mauve-600">
-              Member
-            </span>
+            <ul className="flex flex-col gap-2">
+              {reports.map((report) => (
+                <li key={report.id}>
+                  <ReportListItem
+                    id={report.id}
+                    contentId={report.contentRef}
+                    contentTypeLabel={report.contentType}
+                    reasonTitle={report.reasonDetail?.title}
+                    status={report.status}
+                    createdAt={report.createdAt}
+                  />
+                </li>
+              ))}
+            </ul>
           )}
-          {suspension?.reason && (
-            <span className="text-xs text-mauve-400">
-              &mdash; {suspension.reason}
-            </span>
-          )}
-        </div>
-      </section>
-
-      <section className="shadow-block-sm relative mb-6 border border-black bg-white p-4">
-        <h2 className="mb-3 font-semibold">Update Role</h2>
-        <UserRoleForm
-          targetUserId={targetUserId}
-          currentRole={
-            isBanned ? "banned" : suspension ? "suspended" : "member"
-          }
-        />
-      </section>
-
-      <section>
-        <h2 className="mb-3 font-semibold">
-          Report History ({reports.length})
-        </h2>
-
-        {reports.length === 0 ? (
-          <p className="text-sm text-mauve-400">No reports found.</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {reports.map((report) => (
-              <li key={report.id}>
-                <Link
-                  href={`/console/moderation/${report.id}`}
-                  className="shadow-block-sm flex items-center justify-between border border-black bg-white px-4 py-2.5 text-sm transition-[translate,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-mono text-xs text-mauve-700">
-                      {report.contentType}: {report.contentRef}
-                    </span>
-                    <span className="text-xs text-mauve-500">
-                      {report.reasonDetail?.title ?? "Unknown reason"} &middot;{" "}
-                      {new Date(report.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded-sm px-2 py-0.5 text-xs capitalize ${
-                        report.status === "open"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : report.status === "resolved"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-mauve-100 text-mauve-600"
-                      }`}
-                    >
-                      {report.status}
-                    </span>
-                    {report.resolution?.subjectAction &&
-                      report.resolution.subjectAction !== "no_action" && (
-                        <span className="rounded-sm bg-rose-100 px-2 py-0.5 text-xs text-rose-700 capitalize">
-                          {report.resolution.subjectAction}
-                        </span>
-                      )}
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </main>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
+    </PageShell>
   );
 }

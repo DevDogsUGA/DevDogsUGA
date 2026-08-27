@@ -1,4 +1,8 @@
 import Link from "next/link";
+import {
+  CorroborationBadge,
+  ReportStatusBadge,
+} from "~/components/StatusBadges";
 
 interface ReportListItemProps {
   id: string;
@@ -9,9 +13,18 @@ interface ReportListItemProps {
   createdAt: string | Date;
   corroborationCount?: number;
   clientName?: string;
+  /** `compact` drops the second line, for a list that is context rather than work. */
   variant?: "default" | "compact";
 }
 
+/**
+ * One report, as a row in any list of them.
+ *
+ * Written to be shared and then never imported: the dashboard, the report
+ * history, and the audit log each grew their own row instead, which is why the
+ * same report could read three different ways. All three now come through
+ * here.
+ */
 export default function ReportListItem({
   id,
   contentId,
@@ -29,37 +42,26 @@ export default function ReportListItem({
   return (
     <Link
       href={`/console/moderation/${id}`}
-      className={`shadow-block-sm flex items-center justify-between border border-black bg-white text-sm transition-[translate,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 ${
-        isCompact
-          ? "px-4 py-2.5 text-mauve-500 hover:text-mauve-800"
-          : "px-4 py-3"
+      className={`flex items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/5 text-sm transition-colors outline-none hover:border-white/25 hover:bg-white/[0.07] focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 ${
+        isCompact ? "px-4 py-2.5" : "px-4 py-3"
       }`}
     >
-      <div className="flex flex-col gap-0.5">
-        <span className="font-mono text-xs text-mauve-700">
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate font-mono text-xs text-white/80">
           {contentTypeLabel ? `${contentTypeLabel}: ` : ""}
           {contentId}
         </span>
         {!isCompact && (
-          <span className="text-xs text-mauve-500">
+          <span className="text-xs text-mauve-400">
             {clientName ? `${clientName} · ` : ""}
             {reasonTitle ?? "Unknown reason"} · {date}
           </span>
         )}
-      </div>
-      <div className="flex items-center gap-2">
-        {corroborationCount > 0 && !isCompact && (
-          <span className="rounded-sm bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
-            +{corroborationCount} corroboration
-            {corroborationCount !== 1 ? "s" : ""}
-          </span>
-        )}
-        {isCompact ? (
-          <span className="capitalize">{status}</span>
-        ) : (
-          <span className="text-mauve-400">&rarr;</span>
-        )}
-      </div>
+      </span>
+      <span className="flex shrink-0 items-center gap-2">
+        <CorroborationBadge count={isCompact ? 0 : corroborationCount} />
+        <ReportStatusBadge status={status} />
+      </span>
     </Link>
   );
 }

@@ -1,7 +1,6 @@
 import { Suspense } from "react";
-import AccentBlobs from "~/ui/accent-blobs";
 import AuditLogContent from "~/components/AuditLogContent";
-import PageHeader from "~/components/PageHeader";
+import PageShell from "~/components/PageShell";
 import { TableSkeleton } from "~/components/Skeletons";
 import { getAuditLogPageData } from "~/server/loaders/auditLog";
 
@@ -20,18 +19,14 @@ export default async function AuditLogPage({
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
 
   return (
-    <div className="relative isolate mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 @sm:px-6">
-      <AccentBlobs accent="blue" />
-
-      <PageHeader
-        title="Audit Log"
-        description="A record of moderation actions and content reports filed across all production OAuth clients."
-        accent="blue"
-      />
-
+    <PageShell
+      accent="blue"
+      title="Audit Log"
+      description="A record of moderation actions and content reports filed across all production OAuth clients."
+    >
       <Suspense fallback={<TableSkeleton />}>
         <AuditLogData page={page} />
       </Suspense>
-    </div>
+    </PageShell>
   );
 }

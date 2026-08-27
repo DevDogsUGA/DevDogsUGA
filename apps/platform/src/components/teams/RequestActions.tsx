@@ -56,7 +56,7 @@ export default function RequestActions({
 
   if (settled === "accepted") {
     return (
-      <p role="status" className="text-sm font-semibold">
+      <p role="status" className="text-sm font-semibold text-white">
         {direction === "invite" ? (
           <>
             You are on {subject}.{" "}
@@ -74,7 +74,7 @@ export default function RequestActions({
 
   if (settled === "declined") {
     return (
-      <p role="status" className="text-sm opacity-70">
+      <p role="status" className="text-sm text-mauve-400">
         Declined.
       </p>
     );
@@ -88,7 +88,7 @@ export default function RequestActions({
             type="button"
             onClick={() => answer(true)}
             disabled={isPending}
-            className="rounded-sm border-2 border-black bg-black px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
+            className="rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 disabled:opacity-40"
           >
             {isPending ? "Working…" : "Accept"}
           </button>
@@ -97,7 +97,7 @@ export default function RequestActions({
           type="button"
           onClick={() => answer(false)}
           disabled={isPending}
-          className="rounded-sm border-2 border-black px-3 py-1.5 text-sm font-semibold disabled:opacity-40"
+          className="rounded-lg border border-mauve-600 bg-mauve-800 px-3 py-1 text-sm font-medium text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 disabled:opacity-40"
         >
           {blocked ? "Dismiss" : "Decline"}
         </button>

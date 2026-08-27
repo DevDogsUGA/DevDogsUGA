@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import ConsolePageShell from "~/components/ConsolePageShell";
+import PageShell from "~/components/PageShell";
 import EmptyState from "~/components/participation/EmptyState";
 import { LOCK_COPY } from "~/components/participation/LockNotice";
 import RequestActions from "~/components/teams/RequestActions";
 import { formatEventDateTime, formatRelative } from "~/lib/eventTime";
 import { respondToMembership } from "~/server/actions/teams";
-import { expectSession } from "~/server/auth";
+import { requireSession } from "~/server/auth/require";
 import { getCompetitionBySlug } from "~/server/loaders/meetings";
 import {
   getMyTeam,
@@ -18,6 +17,7 @@ import {
   type TeamCard,
 } from "~/server/loaders/teams";
 import type { LockReason } from "~/server/teams/lockState";
+import Callout from "~/ui/callout";
 
 /**
  * A queue addressed to one person: `expectSession()` below redirects anonymous
@@ -60,26 +60,30 @@ export default async function TeamRequestsPage() {
   // the team pages opt out of prerendering.
   await connection();
 
-  const userId = await expectSession().catch(() => redirect("/auth"));
+  const userId = await requireSession();
   const pending = await getPendingForUser(userId);
 
   const rows: Row[] = await Promise.all(
     pending.map(async (request) => {
       // The pending row carries a team id and a name but no team SLUG, so the
-      // competition's list is also what makes each of these linkable. Both
-      // loaders are `cache`d per argument, so several rows in one competition
-      // cost one query between them.
-      const cards = await getTeamsForCompetition(request.competitionSlug);
-      const competition = await getCompetitionBySlug(request.competitionSlug);
-      return {
-        request,
-        card: cards.find((card) => card.id === request.teamId) ?? null,
-        competitionName: competition?.name ?? request.competitionSlug,
+      // competition's list is also what makes each of these linkable. All
+      // three loaders are `cache`d per argument, so several rows in one
+      // competition cost one query between them — and none of the three reads
+      // another's answer, so they go out together rather than in sequence.
+      const [cards, competition, joinerTeam] = await Promise.all([
+        getTeamsForCompetition(request.competitionSlug),
+        getCompetitionBySlug(request.competitionSlug),
         // Asked about the person the row would ADD, not about the viewer. For
         // an invitation those are the same person; for a join request the
         // difference is the whole check — the asker may have joined somebody
         // else while the lead was deciding.
-        joinerTeam: await getMyTeam(request.competitionSlug, request.userId),
+        getMyTeam(request.competitionSlug, request.userId),
+      ]);
+      return {
+        request,
+        card: cards.find((card) => card.id === request.teamId) ?? null,
+        competitionName: competition?.name ?? request.competitionSlug,
+        joinerTeam,
       };
     }),
   );
@@ -88,7 +92,7 @@ export default async function TeamRequestsPage() {
   const requests = rows.filter((row) => row.request.direction === "request");
 
   return (
-    <ConsolePageShell
+    <PageShell
       accent="amber"
       title="Invitations and requests"
       description="Invitations to you, and people asking to join a team you lead."
@@ -102,14 +106,16 @@ export default async function TeamRequestsPage() {
         <>
           {invitations.length > 0 && (
             <section className="flex flex-col gap-3">
-              <h2 className="px-1 font-semibold">Invitations to you</h2>
+              <h2 className="px-1 font-semibold text-white">
+                Invitations to you
+              </h2>
               {/* Deliberately does not promise that accepting withdraws the
                   rest. The design says it should; `respondToMembership` marks
                   only the row it answered, so the others stay pending and turn
                   into the blocked rows below. Describing the intent rather
                   than the behaviour would leave a member waiting for teams to
                   hear something the platform never sent. */}
-              <p className="max-w-prose px-1 text-sm opacity-70">
+              <p className="max-w-prose px-1 text-sm text-mauve-400">
                 Several at once is fine and rather the point — ask a few, join
                 whichever answers first. You can only be on one team per
                 competition, so the moment you accept one the rest stop being
@@ -125,7 +131,9 @@ export default async function TeamRequestsPage() {
 
           {requests.length > 0 && (
             <section className="flex flex-col gap-3">
-              <h2 className="px-1 font-semibold">Asking to join your team</h2>
+              <h2 className="px-1 font-semibold text-white">
+                Asking to join your team
+              </h2>
               <ul className="flex flex-col gap-3">
                 {requests.map((row) => (
                   <RequestCard key={row.request.id} row={row} />
@@ -135,7 +143,7 @@ export default async function TeamRequestsPage() {
           )}
         </>
       )}
-    </ConsolePageShell>
+    </PageShell>
   );
 }
 
@@ -151,9 +159,9 @@ function RequestCard({ row }: { row: Row }) {
   const blocker = blockerFor(row);
 
   return (
-    <li className="flex flex-col gap-3 rounded-sm border-2 border-black bg-white p-4">
+    <li className="flex flex-col gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-sm">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="font-semibold">
+        <span className="font-semibold text-white">
           {isInvite ? (
             <>
               <Link href={teamHref} className="underline">
@@ -170,7 +178,7 @@ function RequestCard({ row }: { row: Row }) {
             </>
           )}
         </span>
-        <span className="text-xs opacity-70">
+        <span className="text-xs text-mauve-400">
           {/* Named, because "you were invited to a team" is not enough to
               decide with — which competition it is for is half the question,
               and a member may be looking at two weeks' worth at once. */}
@@ -183,23 +191,22 @@ function RequestCard({ row }: { row: Row }) {
       </div>
 
       {request.message !== null && (
-        <blockquote className="border-l-2 border-black/20 pl-3 text-sm">
+        <blockquote className="border-l-2 border-mauve-700 pl-3 text-sm text-mauve-300">
           {request.message}
         </blockquote>
       )}
 
       {card !== null && (
-        <p className="text-xs opacity-70">
+        <p className="text-xs text-mauve-400">
           {card.memberCount} {card.memberCount === 1 ? "member" : "members"} on
           the roster right now.
         </p>
       )}
 
       {blocker !== null && (
-        <div className="rounded-sm border-2 border-black bg-amber-50 p-3">
-          <p className="text-sm font-semibold">{blocker.title}</p>
-          <p className="mt-1 text-sm">{blocker.body}</p>
-        </div>
+        <Callout tone="warning" title={blocker.title}>
+          {blocker.body}
+        </Callout>
       )}
 
       <RequestActions
