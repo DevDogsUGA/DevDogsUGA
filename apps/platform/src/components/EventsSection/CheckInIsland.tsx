@@ -3,7 +3,7 @@ import {
   attendanceFormIsLive,
   getUpcomingMeetings,
 } from "~/server/loaders/meetings";
-import { ACTION_CLS } from "./meetingView";
+import { ACTION_DARK_CLS } from "./meetingView";
 
 /**
  * The check-in link, and the one thing on this page that cannot be cached.
@@ -46,7 +46,7 @@ export default async function CheckInIsland() {
       href={meeting.attendanceFormUrl!}
       target="_blank"
       rel="noopener noreferrer"
-      className={ACTION_CLS}
+      className={ACTION_DARK_CLS}
     >
       <ClipboardTextIcon /> Check in
     </a>

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
 import {
-  ACTION_CLS,
-  CHIP_CLS,
+  ACTION_DARK_CLS,
+  CHIP_DARK_CLS,
+  NEUTRAL_CHIP_DARK_CLS,
   segmentBadge,
 } from "~/components/EventsSection/meetingView";
 import { locationLine } from "~/components/EventsSection/FindUs/buildings";
@@ -20,10 +21,10 @@ import {
  *
  * A **list**, not a grid: real semesters do not have four nights, they have
  * eleven, or three, or none in July, and a list has no opinion about how many
- * there are. And a list of **rows**, not of cards — each night is a ruled row
- * with the date down the left edge, so twelve of them read as one schedule
- * rather than twelve panels. This is the "coming up" half of the page's
- * ledger; {@link PastMeetings} is the other half, in the same rows.
+ * there are. Each night is a console tile — the same bordered translucent row
+ * the audit log uses — with the date down the left edge, so twelve of them
+ * read as one schedule. This is the "coming up" half of the page's ledger;
+ * {@link PastMeetings} is the other half, as a table.
  *
  * Fetches nothing. Every meeting here was already loaded by whoever renders
  * the page — the marquee above needs the same rows to pick its headline from,
@@ -64,14 +65,10 @@ const DAY_FORMAT = new Intl.DateTimeFormat("en-US", {
 
 export default function ScheduleList({ meetings, now }: Props) {
   return (
-    <section
-      className="flex flex-col gap-4"
-      data-animate="fade-up"
-      aria-labelledby="schedule-heading"
-    >
+    <section className="flex flex-col gap-4" aria-labelledby="schedule-heading">
       <h3
         id="schedule-heading"
-        className="font-display text-xl font-extrabold text-black md:text-2xl"
+        className="font-display text-xl font-extrabold text-white md:text-2xl"
       >
         Coming up
       </h3>
@@ -79,7 +76,9 @@ export default function ScheduleList({ meetings, now }: Props) {
       {meetings.length === 0 ? (
         <EmptySchedule />
       ) : (
-        <ul className="flex flex-col divide-y-2 divide-mauve-200 border-y-2 border-black">
+        // The console's list idiom: a stack of bordered tiles, like the audit
+        // log's rows, rather than the ruled ledger the light dialect draws.
+        <ul className="flex flex-col gap-2">
           {meetings.map((meeting) => (
             <ScheduleRow key={meeting.id} meeting={meeting} now={now} />
           ))}
@@ -100,11 +99,13 @@ export default function ScheduleList({ meetings, now }: Props) {
  */
 function EmptySchedule() {
   return (
-    <div className="flex flex-col items-start gap-3 border-y-2 border-black py-5">
-      <p className="font-display text-lg font-extrabold text-black">
+    // The console's empty state: a dashed well, like an empty credentials
+    // list, rather than an apology.
+    <div className="flex flex-col items-start gap-3 rounded-xl border-2 border-dashed border-mauve-700 bg-white/5 px-5 py-6">
+      <p className="font-display text-lg font-extrabold text-white">
         Nothing on the calendar yet
       </p>
-      <p className="max-w-prose text-sm/relaxed text-mauve-700">
+      <p className="max-w-prose text-sm/relaxed text-mauve-300">
         The fall schedule goes up in August, once officers have the room
         bookings. Until then the Involvement Network is where anything one-off —
         a callout, an interest meeting — gets posted.
@@ -113,7 +114,7 @@ function EmptySchedule() {
         href={INVOLVEMENT_NETWORK_EVENTS_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className={ACTION_CLS}
+        className={ACTION_DARK_CLS}
       >
         DevDogs on the Involvement Network <ArrowUpRightIcon />
       </a>
@@ -141,7 +142,7 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
   const elsewhere = meeting.building !== null && meeting.building !== "DLW";
 
   return (
-    <li className="relative flex gap-4 py-4 md:gap-5">
+    <li className="relative flex gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-4 md:gap-5">
       {/*
         Hidden from assistive tech: the span below prints the same date in full,
         so announcing "Wed 10" first only makes every row take twice as long to
@@ -151,10 +152,10 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
         aria-hidden
         className="flex w-12 shrink-0 flex-col items-center leading-none md:w-14"
       >
-        <span className="font-display text-[0.625rem] font-extrabold tracking-widest text-mauve-500 uppercase">
+        <span className="font-display text-[0.625rem] font-extrabold tracking-widest text-mauve-400 uppercase">
           {WEEKDAY_FORMAT.format(meeting.startsAt)}
         </span>
-        <span className="font-display text-2xl font-extrabold text-black tabular-nums md:text-3xl">
+        <span className="font-display text-2xl font-extrabold text-white tabular-nums md:text-3xl">
           {DAY_FORMAT.format(meeting.startsAt)}
         </span>
       </div>
@@ -163,7 +164,7 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
           wider than the viewport — the phone case this band is built for. */}
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <h3 className="font-display text-base leading-tight font-extrabold text-black md:text-lg">
+          <h3 className="font-display text-base leading-tight font-extrabold text-white md:text-lg">
             {/*
               A stretched link, not a wrapper: the row also carries links to
               competition pages, and an <a> inside an <a> is invalid markup the
@@ -173,12 +174,12 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
             */}
             <Link
               href={`/events/${meeting.slug}`}
-              className="rounded-sm after:absolute after:inset-0 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+              className="rounded-sm after:absolute after:inset-0 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             >
               {meeting.name}
             </Link>
           </h3>
-          <span className="text-xs font-semibold text-mauve-600">
+          <span className="text-xs font-semibold text-mauve-400">
             {happeningNow ? (
               "Happening now"
             ) : (
@@ -189,18 +190,16 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
           </span>
         </div>
 
-        <p className="text-xs text-mauve-700 md:text-sm">
+        <p className="text-xs text-mauve-300 md:text-sm">
           {formatEventSpan(meeting.startsAt, meeting.endsAt)}
         </p>
 
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mauve-700 md:text-sm">
-          <MapPinIcon className="shrink-0 text-mauve-500" weight="fill" />
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mauve-300 md:text-sm">
+          <MapPinIcon className="shrink-0 text-mauve-400" weight="fill" />
           {locationLine(meeting.building, meeting.location) ??
             "Room to be announced"}
           {elsewhere && (
-            <span
-              className={`border-2 border-black bg-white text-black ${CHIP_CLS}`}
-            >
+            <span className={`${NEUTRAL_CHIP_DARK_CLS} ${CHIP_DARK_CLS}`}>
               Not the usual room
             </span>
           )}
@@ -212,7 +211,7 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
             return (
               <span
                 key={segment}
-                className={`${badge.bg} ${badge.text} ${CHIP_CLS}`}
+                className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
               >
                 {badge.label}
               </span>
@@ -225,9 +224,7 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
             switched on, which is how it would arrive here as a blank badge.
           */}
           {kindOverride !== null && (
-            <span
-              className={`border-2 border-black bg-white text-black ${CHIP_CLS}`}
-            >
+            <span className={`${NEUTRAL_CHIP_DARK_CLS} ${CHIP_DARK_CLS}`}>
               {kindOverride}
             </span>
           )}
@@ -263,7 +260,7 @@ function JudgingChip({ judging }: { judging: MeetingRangeJudging }) {
   return (
     <Link
       href={`/competitions/${judging.competitionSlug}/teams`}
-      className={`${badge.bg} ${badge.text} ${CHIP_CLS} ${CHIP_LINK_CLS}`}
+      className={`${badge.chipDark} ${CHIP_DARK_CLS} ${CHIP_LINK_CLS}`}
     >
       Judging: {judging.projectName}
     </Link>
@@ -282,7 +279,7 @@ function WorkshopChip({ workshop }: { workshop: MeetingRangeWorkshop }) {
     workshop.competitionSlug === null
       ? segmentBadge.workshop
       : segmentBadge.kickoff;
-  const chipCls = `${badge.bg} ${badge.text} ${CHIP_CLS}`;
+  const chipCls = `${badge.chipDark} ${CHIP_DARK_CLS}`;
 
   if (workshop.competitionSlug === null) {
     return <span className={chipCls}>{workshop.projectName}</span>;
