@@ -12,7 +12,6 @@ import {
   ArrowRightIcon,
   ArrowSquareOutIcon,
   MegaphoneIcon,
-  XIcon,
 } from "@phosphor-icons/react/ssr";
 import {
   ANNOUNCEMENT,
@@ -33,8 +32,18 @@ interface ToneClasses {
   badge: string;
   /** The tab that carries the eyebrow, notched onto the card's top edge. */
   chip: string;
-  /** The tab under the cursor. One step lighter — it is a close button. */
+  /**
+   * The tab under the cursor. One step darker: the tab is the close control
+   * in its entirety, so pressing in is the gesture it should look like.
+   */
   chipHover: string;
+  /**
+   * The cross on the tab. The 950 of the tab's own family, not the label's
+   * white — it reads as a mark cut into the fill rather than a second word
+   * beside the eyebrow, which is what an equal-weight white cross looked
+   * like.
+   */
+  chipIcon: string;
   /**
    * The block shadow the card rests on, and the one the action button throws
    * on hover. The card takes `shadow-block-outlined-xl`: a step past the size
@@ -59,14 +68,16 @@ const TONES: Record<AnnouncementTone, ToneClasses> = {
     card: "bg-amber-300",
     badge: "bg-rose-600 ring-amber-300",
     chip: "bg-rose-600 text-white",
-    chipHover: "hover:bg-rose-500",
+    chipHover: "hover:bg-rose-700",
+    chipIcon: "text-rose-950",
     blockShadow: "shadow-rose-600",
   },
   info: {
     card: "bg-sky-300",
     badge: "bg-sky-800 ring-sky-300",
     chip: "bg-sky-800 text-white",
-    chipHover: "hover:bg-sky-700",
+    chipHover: "hover:bg-sky-900",
+    chipIcon: "text-sky-950",
     blockShadow: "shadow-sky-800",
   },
 };
@@ -104,6 +115,35 @@ const EXIT_MS = 200;
 
 /** Travel before a press counts as a drag rather than a tap. */
 const DRAG_SLOP = 4;
+
+/**
+ * The dismiss cross, drawn here rather than taken from Phosphor.
+ *
+ * Phosphor's ladder tops out at `bold`, and beside the tab's display type
+ * that still read as the lighter of the two. Its weights are 8 / 12 / 16 / 24
+ * of stroke in a 256 box; at the tab's `size-3` a 24 renders about 1.1px
+ * against a stem of roughly 1.5px in the eyebrow beside it, which is the gap
+ * you can see. 32 is the next rung on Phosphor's own ratio and lands on that
+ * stem.
+ *
+ * The arms run 64 to 192 so the round caps put the extent at 48–208 — exactly
+ * where Phosphor's X sits, so this drops in at the same optical size.
+ */
+function DismissCross({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 256 256"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={32}
+      strokeLinecap="round"
+      className={className}
+    >
+      <path d="M64 64 192 192M192 64 64 192" />
+    </svg>
+  );
+}
 
 export default function AnnouncementBanner() {
   const pathname = usePathname();
@@ -376,22 +416,18 @@ export default function AnnouncementBanner() {
                eyebrow from the accessible name entirely. */
             aria-label={`${eyebrow} — dismiss announcement`}
             className={cn(
-              "group/tab absolute bottom-full left-4 flex translate-y-[2px] items-center gap-2 rounded-t-lg border-2 border-b-0 border-black px-2.5 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none",
+              "absolute bottom-full left-4 flex translate-y-[2px] items-center gap-2 rounded-t-lg border-2 border-b-0 border-black px-2.5 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none",
               toneClasses.chip,
               toneClasses.chipHover,
             )}
           >
-            {/* Not `fill`: Phosphor draws X at fill weight as a rounded
-                square with the cross knocked out of it, which reads as a
-                button inside the button. `bold` is the bare cross.
-                aria-hidden because the button's label already says
-                "dismiss". */}
-            <XIcon
-              aria-hidden
-              weight="bold"
-              className="size-3 transition-transform group-hover/tab:scale-125"
-            />
-            <span className="font-display text-[0.7rem] font-extrabold tracking-widest uppercase">
+            {/* No hover of its own. The whole tab is the close control, so the
+                feedback belongs to the whole tab — `chipHover` darkens the
+                fill under both the cross and the label together, and singling
+                the cross out for an animation implied it was the only part
+                worth aiming at. */}
+            <DismissCross className={cn("size-3", toneClasses.chipIcon)} />
+            <span className="font-display text-[0.7rem] font-bold tracking-widest uppercase">
               {eyebrow}
             </span>
           </button>
