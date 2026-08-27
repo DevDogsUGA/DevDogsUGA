@@ -11,7 +11,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { NAV_ARROW, NAV_ARROW_TRACK } from "./navPanel";
+import { NAV_ARROW, NAV_ARROW_TRACK, NAV_SURFACE } from "./navPanel";
 import { useMenuBox } from "./useMenuBox";
 
 /** The item values the navbar's top tier can hold. */
@@ -65,6 +65,13 @@ export function useNavPanelRef() {
  * gives you is a box you position yourself. That is the positioner below, and
  * `useMenuBox` is where its numbers come from — see the note there about why
  * they are measured off the panel rather than read from Radix's variables.
+ *
+ * The viewport is also the card — the border, the fill, the shadow. That is
+ * deliberate and it is what makes any of the movement above worth doing: put
+ * the surface on the panels instead and the viewport is an invisible box, so
+ * the travelling and the resizing happen to nothing at all, and what a viewer
+ * sees is one card vanishing and a differently sized one appearing elsewhere.
+ * The panels inside it are transparent and clipped — see navPanel.
  *
  * Two smaller things this owns. The arrow is a Radix Indicator, which is
  * portalled into a track spanning the list and told which trigger is active,
@@ -166,7 +173,7 @@ export default function NavShell({ children }: { children: ReactNode }) {
               // inside the border and above the padding — so the padding
               // widens the box without moving the panel down off the bar, and
               // the gap it was meant to fill stays exactly where it was.
-              className="data-[state=closed]:animate-nav-fold-out data-[state=open]:animate-nav-fold-in pointer-events-auto relative origin-top transition-none before:absolute before:inset-x-0 before:-top-2 before:h-2 before:content-[''] data-[travelling]:transition-[width,height] data-[travelling]:duration-200 data-[travelling]:ease-out"
+              className={`data-[state=closed]:animate-nav-fold-out data-[state=open]:animate-nav-fold-in pointer-events-auto relative origin-top transition-none before:absolute before:inset-x-0 before:-top-2 before:h-2 before:content-[''] data-[travelling]:transition-[width,height] data-[travelling]:duration-200 data-[travelling]:ease-out ${NAV_SURFACE}`}
             />
           </div>
         </div>

@@ -111,11 +111,18 @@ export default function DocsMenu({
         data-slot="nav-content"
         className={NAV_CONTENT}
       >
-        {/* Two columns from `lg`, not from `md`. The panel is anchored to its
+        {/* The one element here with a size of its own, which is why the shell
+            measures this rather than the panel around it — the panel is
+            stretched to whatever the viewport currently is.
+
+            Two columns from `lg`, not from `md`. The panel is anchored to its
             trigger, and at 768px a 36rem panel opening from a trigger that
             sits well into the bar would be pushed back off it by the
             viewport's clamp. Below `lg` it stays one 20rem column. */}
-        <div className="w-80 rounded-lg border border-mauve-800 bg-mauve-950 p-1 shadow-lg lg:grid lg:w-[36rem] lg:grid-cols-2 lg:items-start lg:gap-x-1">
+        <div
+          data-nav-sizer
+          className="w-80 p-1 lg:grid lg:w-[36rem] lg:grid-cols-2 lg:items-start lg:gap-x-1"
+        >
           {/* Below `lg` this is one column and the two halves stack, so the
               left-hand groups come first and Apps follows. Reading order
               stays sensible; only the side-by-side arrangement is lost. */}

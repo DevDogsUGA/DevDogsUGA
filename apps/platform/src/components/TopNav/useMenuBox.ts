@@ -25,6 +25,11 @@ export interface MenuBox {
    * has to stop here rather than at the panel's edge.
    */
   rowLeft: number;
+  /**
+   * The middle of the open trigger, measured down from the container's top.
+   * Only a vertical tier needs it, to aim an arrow at the row it came from.
+   */
+  triggerY: number;
 }
 
 interface Options {
@@ -112,8 +117,13 @@ export function useMenuBox({
         : document.getElementById(panelId);
     if (trigger === null || panel === null) return;
 
-    const width = panel.offsetWidth;
-    const height = panel.offsetHeight;
+    // The panel fills its viewport, so measuring the panel would be measuring
+    // the answer we are trying to work out. The sizer inside it is the part
+    // with a width of its own, and its height follows from that width, so it
+    // is the same number on every frame no matter what the viewport is doing.
+    const sizer = panel.querySelector<HTMLElement>("[data-nav-sizer]") ?? panel;
+    const width = sizer.offsetWidth;
+    const height = sizer.offsetHeight;
 
     let left = 0;
     let rowLeft = 0;
@@ -144,6 +154,15 @@ export function useMenuBox({
       ? Math.max(0, Math.round((container.offsetHeight - height) / 2))
       : 0;
 
+    const triggerRect = trigger.getBoundingClientRect();
+    const triggerY = centre
+      ? Math.round(
+          triggerRect.top +
+            triggerRect.height / 2 -
+            container.getBoundingClientRect().top,
+        )
+      : 0;
+
     const next = {
       left,
       top,
@@ -151,6 +170,7 @@ export function useMenuBox({
       height,
       rightGap: place ? container.clientWidth - left - width : 0,
       rowLeft,
+      triggerY,
     };
 
     const last = measured.current;
@@ -161,7 +181,8 @@ export function useMenuBox({
       last.width === next.width &&
       last.height === next.height &&
       last.rightGap === next.rightGap &&
-      last.rowLeft === next.rowLeft
+      last.rowLeft === next.rowLeft &&
+      last.triggerY === next.triggerY
     ) {
       return;
     }

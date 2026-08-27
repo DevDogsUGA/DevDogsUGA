@@ -27,7 +27,12 @@ import signOut from "~/server/actions/signOut";
 import NavMenuTrigger from "./NavMenuTrigger";
 import NavSubMenu from "./NavSubMenu";
 import { PROFILE_MENU, useNavPanelRef, useNavShell } from "./NavShell";
-import { NAV_CONTENT, NAV_SUB_ARROW, NAV_SUB_ARROW_TRACK } from "./navPanel";
+import {
+  NAV_CLIP,
+  NAV_OPEN_CONTENT,
+  NAV_SUB_ARROW,
+  NAV_SURFACE,
+} from "./navPanel";
 import { useVerification, type NavUserClientData } from "./NavUserProvider";
 import { POPOVER_DIVIDER, POPOVER_ROW } from "./popoverRow";
 import { useMenuBox } from "./useMenuBox";
@@ -141,7 +146,7 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
         <NavigationMenu.Content
           ref={panelRef}
           data-slot="nav-content"
-          className={NAV_CONTENT}
+          className={NAV_OPEN_CONTENT}
         >
           {/* The bar's right-hand end, held open.
 
@@ -182,76 +187,90 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
             orientation="vertical"
             value={subValue}
             onValueChange={setSubValue}
-            className="relative"
+            className="absolute inset-0"
           >
-            <div className="w-3xs rounded-md border-2 bg-mauve-950/90 py-1.5 text-sm font-medium text-white backdrop-blur">
-              <div className="flex flex-col px-3 pt-1 pb-2">
-                <span className="truncate text-sm text-white">
-                  {user.profile.preferredName}
-                </span>
-                <span className="flex items-center gap-1 text-xs text-mauve-400">
-                  {user.highestRole.title}
-                  {verification?.isVerified && (
-                    <SealCheckIcon className="size-3 text-emerald-400" />
-                  )}
-                </span>
-              </div>
-
-              {verification && !verification.isVerified && (
-                <div className="px-1.5 pb-1.5">
-                  <VerificationAlert />
-                </div>
-              )}
-
-              <NavigationMenu.List
-                onPointerEnter={keepOpen}
-                onPointerLeave={closeSoon}
+            {/* The clip the panel above cannot do for itself, wrapped around
+                the card's contents alone so that everything the sub-menu needs
+                to hang outside the card stays outside it. */}
+            <div className={NAV_CLIP}>
+              <div
+                data-nav-sizer
+                className="w-3xs py-1.5 text-sm font-medium text-white"
               >
-                <NavSubMenu {...COMPETITION_GROUP} panelRef={subPanelRef} />
-                <NavSubMenu
-                  {...CONSOLE_GROUP}
-                  items={consoleItems}
-                  panelRef={subPanelRef}
-                />
-              </NavigationMenu.List>
+                <div className="flex flex-col px-3 pt-1 pb-2">
+                  <span className="truncate text-sm text-white">
+                    {user.profile.preferredName}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs text-mauve-400">
+                    {user.highestRole.title}
+                    {verification?.isVerified && (
+                      <SealCheckIcon className="size-3 text-emerald-400" />
+                    )}
+                  </span>
+                </div>
 
-              {/* Competitions is two static pages, so there is always a row
+                {verification && !verification.isVerified && (
+                  <div className="px-1.5 pb-1.5">
+                    <VerificationAlert />
+                  </div>
+                )}
+
+                <NavigationMenu.List
+                  onPointerEnter={keepOpen}
+                  onPointerLeave={closeSoon}
+                >
+                  <NavSubMenu {...COMPETITION_GROUP} panelRef={subPanelRef} />
+                  <NavSubMenu
+                    {...CONSOLE_GROUP}
+                    items={consoleItems}
+                    panelRef={subPanelRef}
+                  />
+                </NavigationMenu.List>
+
+                {/* Competitions is two static pages, so there is always a row
                   above this even where an unpermissioned Console renders
                   nothing and the band collapses to one. */}
-              <div className={POPOVER_DIVIDER} />
+                <div className={POPOVER_DIVIDER} />
 
-              {items.map((item) => {
-                const Icon = icons[item.icon];
-                return (
-                  <NavigationMenu.Link key={item.href} asChild>
-                    <Link href={item.href} className={POPOVER_ROW}>
-                      <Icon />
-                      {item.label}
-                    </Link>
-                  </NavigationMenu.Link>
-                );
-              })}
+                {items.map((item) => {
+                  const Icon = icons[item.icon];
+                  return (
+                    <NavigationMenu.Link key={item.href} asChild>
+                      <Link href={item.href} className={POPOVER_ROW}>
+                        <Icon />
+                        {item.label}
+                      </Link>
+                    </NavigationMenu.Link>
+                  );
+                })}
 
-              <div className={POPOVER_DIVIDER} />
+                <div className={POPOVER_DIVIDER} />
 
-              <form action={signOut}>
-                <input name="callbackPath" value="/" type="hidden" />
-                <button
-                  className={`${POPOVER_ROW} text-rose-300 hover:bg-rose-950 hover:text-rose-50`}
-                  type="submit"
-                >
-                  <SignOutIcon />
-                  Sign Out
-                </button>
-              </form>
+                <form action={signOut}>
+                  <input name="callbackPath" value="/" type="hidden" />
+                  <button
+                    className={`${POPOVER_ROW} text-rose-300 hover:bg-rose-950 hover:text-rose-50`}
+                    type="submit"
+                  >
+                    <SignOutIcon />
+                    Sign Out
+                  </button>
+                </form>
+              </div>
             </div>
 
-            <NavigationMenu.Indicator
+            {/* Aimed at the row it belongs to rather than tracked by Radix's
+                Indicator, which portals itself into the wrapper around its
+                tier's list — and that list is inside the card, which clips.
+                An arrow whose whole job is to stick out past the card's edge
+                cannot live inside the thing doing the clipping. */}
+            <span
+              aria-hidden
               data-slot="nav-sub-indicator"
-              className={NAV_SUB_ARROW_TRACK}
-            >
-              <span className={NAV_SUB_ARROW} />
-            </NavigationMenu.Indicator>
+              data-state={subValue === "" ? "hidden" : "visible"}
+              style={{ top: `${box?.triggerY ?? 0}px` }}
+              className={NAV_SUB_ARROW}
+            />
 
             {/* Out of flow, off the card's left edge, and centred against it.
                 In flow it was measured as part of this panel, so opening a
@@ -269,11 +288,16 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
                 a translate is what the hand-over animations move.
 
                 After the card in the DOM, so the sub-panel paints over the
-                arrow and hides the half of it that is not a chevron. And
-                `box-content pr-2` rather than `mr-2`, so the gap the arrow
-                crosses is inside the viewport's own box: Radix cancels its
-                close timer on the viewport's pointerenter, which is what makes
-                that gap crossable rather than a trapdoor. */}
+                arrow and hides the half of it that is not a chevron.
+
+                It carries the surface, for the same reason the tier above
+                does: it is the thing that moves and resizes, so it had better
+                be the thing you can see. The gap it keeps from the card is a
+                pseudo-element rather than padding, so the border and the fill
+                stop at the panel's edge while the pointer's path across the
+                gap stays inside the viewport's own box — Radix cancels its
+                close timer on the viewport's pointerenter, and that is what
+                makes the gap crossable rather than a trapdoor. */}
             <NavigationMenu.Viewport
               data-slot="nav-sub-viewport"
               data-travelling={travelling || undefined}
@@ -289,7 +313,7 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
                       height: `${box.height}px`,
                     }
               }
-              className="data-[state=closed]:animate-nav-sub-fold-out data-[state=open]:animate-nav-sub-fold-in absolute right-full box-content origin-right pr-2 transition-none data-[travelling]:transition-[top,width,height] data-[travelling]:duration-200 data-[travelling]:ease-out"
+              className={`data-[state=closed]:animate-nav-sub-fold-out data-[state=open]:animate-nav-sub-fold-in absolute right-[calc(100%+0.5rem)] origin-right transition-none after:absolute after:inset-y-0 after:-right-2 after:w-2 after:content-[''] data-[travelling]:transition-[top,width,height] data-[travelling]:duration-200 data-[travelling]:ease-out ${NAV_SURFACE}`}
             />
           </NavigationMenu.Sub>
         </NavigationMenu.Content>
