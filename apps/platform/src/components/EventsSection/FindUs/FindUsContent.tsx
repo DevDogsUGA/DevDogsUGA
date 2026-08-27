@@ -1,21 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import dynamic from "next/dynamic";
 import { ArrowUpRightIcon } from "@phosphor-icons/react/ssr";
 import type { DialogTone } from "~/ui/dialog-shell";
 import { ACTION_DARK_CLS } from "../meetingView";
 import { BUILDING_CENTERS, VIEW, type BuildingKey } from "./campusMapMeta";
 import { BUILDING_NAME } from "./buildings";
-import FloorPlan, { ROOM_STEPS } from "./FloorPlan";
 
 /**
- * The map is the heavy part of the dialog — the floor plan is a few dozen
- * rects, the map is 46 KB of OSM paths — so it is a chunk of its own, fetched
- * when the building tab first renders. `preloadCampusMap` shares the same
- * `import()`, which the bundler resolves to the same chunk, so a trigger can
- * start that fetch the moment someone shows intent and the map is usually
- * already here by the time the dialog opens.
+ * The map is the heavy part of the dialog — 46 KB of OSM paths — so it is a
+ * chunk of its own, fetched when the dialog first renders. `preloadCampusMap`
+ * shares the same `import()`, which the bundler resolves to the same chunk,
+ * so a trigger can start that fetch the moment someone shows intent and the
+ * map is usually already here by the time the dialog opens.
  */
 const CampusMap = dynamic(() => import("./CampusMap"), {
   loading: () => <MapPlaceholder />,
@@ -41,156 +38,83 @@ function mapUrls(building: BuildingKey) {
   };
 }
 
-/**
- * The room the floor plan describes, or null if this meeting is not in it.
- *
- * The drawing is not "a plan of the DLW", it is the walk to room 124 —
- * `ROOM_STEPS` names its doors and its staircase — so it is offered for that
- * room and nothing else. A meeting in DLW 148 gets the campus map and no
- * second tab, which is the honest answer rather than a drawing of the wrong
- * corridor.
- *
- * This does read the free-text room, which the `building` column exists to
- * stop anything doing. It is a different kind of read: getting it wrong hides
- * a drawing rather than asserting a false one, and there is no room list to
- * match against — rooms are typed, and always will be. It returns the number
- * rather than a boolean so the tab's label comes from the same test that
- * decided there is a tab.
- */
-const FLOOR_PLAN_ROOM = "124";
-
-function floorPlanRoom(building: BuildingKey, room: string | null) {
-  if (building !== "DLW" || room === null) return null;
-  return new RegExp(`\\b${FLOOR_PLAN_ROOM}\\b`).test(room)
-    ? FLOOR_PLAN_ROOM
-    : null;
-}
-
-const STEP_CHIP_CLS =
-  "mt-px flex size-4 shrink-0 items-center justify-center rounded-full bg-rose-400 text-[0.625rem] font-bold text-black";
-
-type TabId = "building" | "room";
-
 interface Props {
   /** The building to draw. Defaults to the club's usual one. */
   building?: BuildingKey;
   /** The room inside it, as an officer typed it. */
   room?: string | null;
-  /** The plate the dialog is on. The drawings are the same on both — a map
-   *  is a map — only the chrome around them changes. */
+  /** The plate the dialog is on. */
   tone?: DialogTone;
 }
 
 const TONES = {
   light: {
-    tab: "rounded-sm border-2 border-black transition-[background-color,box-shadow]",
-    tabOn: "shadow-block-sm bg-rose-400 text-black",
-    tabOff: "bg-white text-mauve-600 hover:bg-rose-50",
     prose: "text-mauve-600",
     link: "hover:shadow-block-md transition-lift flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5",
   },
   dark: {
-    tab: "rounded-lg border transition-colors",
-    tabOn: "border-white bg-white text-black",
-    tabOff: "border-mauve-600 bg-mauve-800 text-white hover:border-white",
     prose: "text-mauve-300",
     link: ACTION_DARK_CLS,
   },
 } satisfies Record<DialogTone, Record<string, string>>;
 
-/** The tabs and their panels — everything inside the dialog below its title. */
+/**
+ * Everything inside the dialog below its title: the campus map with the
+ * building highlighted, a line about where it is, and the hand-off to a
+ * navigation app for the door-to-door part — at the bottom, on the right,
+ * where a dialog's actions go.
+ *
+ * There used to be a second tab here, a floor plan of the walk to DLW 124
+ * (`FloorPlan.tsx`, still on disk with its `ROOM_STEPS`). It is parked
+ * rather than deleted: the drawing was hand-traced, and it comes back once
+ * there is a real plan of the building to draw from. Until then the room is
+ * in the dialog's title and the map answers the building.
+ */
 export default function FindUsContent({
   building = "DLW",
   room = "124",
   tone = "light",
 }: Props = {}) {
-  const [tab, setTab] = useState<TabId>("building");
   const t = TONES[tone];
   const urls = mapUrls(building);
-  // One tab is not a tablist, it is a heading with extra steps — so when there
-  // is no room-level drawing the whole control disappears rather than sitting
-  // there as a single permanently-selected button.
-  const planRoom = floorPlanRoom(building, room);
-  const tabs: { id: TabId; label: string }[] = [
-    { id: "building", label: "To the building" },
-    ...(planRoom === null
-      ? []
-      : [{ id: "room" as const, label: `To Room ${planRoom}` }]),
-  ];
-  const active = tabs.some((candidate) => candidate.id === tab)
-    ? tab
-    : "building";
 
   return (
-    <>
-      <div
-        role="tablist"
-        aria-label="Directions"
-        className={`flex gap-2 ${tabs.length > 1 ? "" : "hidden"}`}
-      >
-        {tabs.map((entry) => (
-          <button
-            key={entry.id}
-            role="tab"
-            id={`findus-tab-${entry.id}`}
-            aria-selected={active === entry.id}
-            aria-controls={`findus-panel-${entry.id}`}
-            onClick={() => setTab(entry.id)}
-            className={`px-3 py-1.5 text-xs font-bold ${t.tab} ${
-              active === entry.id ? t.tabOn : t.tabOff
-            }`}
-          >
-            {entry.label}
-          </button>
-        ))}
-      </div>
+    // A flex column rather than bare children of the shell's grid body: the
+    // map is an SVG sized by `width: 100%` and its viewBox, and as a direct
+    // grid item Chrome resolves its row to zero height and lets it paint
+    // over whatever follows. A flex column measures it properly.
+    <div className="flex flex-col gap-3">
+      <CampusMap building={building} tone={tone} />
 
-      <div
-        role="tabpanel"
-        id={`findus-panel-${active}`}
-        aria-labelledby={`findus-tab-${active}`}
-        className="flex flex-col gap-3"
-      >
-        {active === "building" ? (
-          <>
-            <CampusMap building={building} />
-            {/* No turn-by-turn here: people start from all over campus, so
-                the map just places the building and the buttons below hand
-                off to a navigation app for the door-to-door part. */}
-            <div className="flex flex-wrap gap-2">
-              <DirectionsLink href={urls.google} className={t.link}>
-                Google Maps
-              </DirectionsLink>
-              <DirectionsLink href={urls.apple} className={t.link}>
-                Apple Maps
-              </DirectionsLink>
-            </div>
-            {building === "DLW" ? (
-              <p className={`text-sm/relaxed ${t.prose}`}>
-                The DLW sits at the corner of E. Cloverhurst Ave and University
-                Court — just below the Hill dorms, across from O-House, and
-                downhill from the Tate Center. Driving? The Tate Deck is the
-                closest visitor parking, about a five-minute walk away.
-              </p>
-            ) : (
-              /* One sentence rather than the DLW's paragraph of landmarks.
-                 Writing nine more of those is writing nine more things that
-                 can go stale, and the map above already says where it is. */
-              <p className={`text-sm/relaxed ${t.prose}`}>
-                {room === null
-                  ? `This meeting is in ${BUILDING_NAME[building]}, highlighted above.`
-                  : `This meeting is in ${room}, ${BUILDING_NAME[building]} — highlighted above.`}
-              </p>
-            )}
-          </>
-        ) : (
-          <>
-            <FloorPlan />
-            <StepList steps={ROOM_STEPS} className={t.prose} />
-          </>
-        )}
+      {building === "DLW" ? (
+        <p className={`text-sm/relaxed ${t.prose}`}>
+          The DLW sits at the corner of E. Cloverhurst Ave and University Court
+          — just below the Hill dorms, across from O-House, and downhill from
+          the Tate Center. Driving? The Tate Deck is the closest visitor
+          parking, about a five-minute walk away.
+        </p>
+      ) : (
+        /* One sentence rather than the DLW's paragraph of landmarks. Writing
+           nine more of those is writing nine more things that can go stale,
+           and the map above already says where it is. */
+        <p className={`text-sm/relaxed ${t.prose}`}>
+          {room === null
+            ? `This meeting is in ${BUILDING_NAME[building]}, highlighted above.`
+            : `This meeting is in ${room}, ${BUILDING_NAME[building]} — highlighted above.`}
+        </p>
+      )}
+
+      {/* No turn-by-turn here: people start from all over campus, so the map
+          places the building and these hand off to a navigation app. */}
+      <div className="flex flex-wrap justify-end gap-2">
+        <DirectionsLink href={urls.google} className={t.link}>
+          Google Maps
+        </DirectionsLink>
+        <DirectionsLink href={urls.apple} className={t.link}>
+          Apple Maps
+        </DirectionsLink>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -213,42 +137,15 @@ export function MapPlaceholder() {
 
 /**
  * What the intercepted /events/directions route shows between the click and
- * its content arriving: the default tab's silhouette, since that is what the
- * content resolves to. Prefetching fetches the route down to this boundary,
- * so this — not a blank dialog — is what appears the instant the link is hit.
+ * its content arriving: the map's silhouette, since that is what the content
+ * resolves to. Prefetching fetches the route down to this boundary, so this —
+ * not a blank dialog — is what appears the instant the link is hit.
  */
 export function FindUsSkeleton() {
   return (
     <div aria-busy className="flex flex-col gap-3">
-      <div aria-hidden className="flex gap-2">
-        <div className="shadow-block-sm h-8 w-28 rounded-sm border-2 border-black bg-rose-400" />
-        <div className="h-8 w-24 rounded-sm border-2 border-black bg-white" />
-      </div>
       <MapPlaceholder />
     </div>
-  );
-}
-
-function StepList({
-  steps,
-  className,
-}: {
-  steps: string[];
-  className: string;
-}) {
-  return (
-    /* The list, not the drawing, is the accessible version of the route —
-       both SVGs are aria-hidden so screen readers get one copy, not two. */
-    <ol className={`flex flex-col gap-1.5 text-sm/relaxed ${className}`}>
-      {steps.map((step, i) => (
-        <li key={step} className="flex items-start gap-2">
-          <span aria-hidden className={STEP_CHIP_CLS}>
-            {i + 1}
-          </span>
-          {step}
-        </li>
-      ))}
-    </ol>
   );
 }
 

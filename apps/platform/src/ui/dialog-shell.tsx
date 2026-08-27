@@ -5,17 +5,19 @@ import {
   useContext,
   useEffect,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { Dialog, DialogContent, DialogTrigger } from "~/ui/dialog";
+import { ArrowLeftIcon } from "@phosphor-icons/react/ssr";
+import { Dialog, DialogClose, DialogContent, DialogTrigger } from "~/ui/dialog";
 
 export type DialogTone = "light" | "dark";
 
 /**
  * How a paired dialog takes part in the pair. A `primary` shifts left to make
  * room when its `aside` opens; an `aside` tells the primary it is open, and
- * slides out from behind it. Neither means anything below the pair
- * breakpoint, where the aside simply stacks on top as any nested dialog does.
+ * is dealt out from behind it. Below the pair breakpoint the aside simply
+ * stacks on top as any nested dialog does, with a way back instead of an X.
  */
 export type DialogPairRole = "primary" | "aside";
 
@@ -39,6 +41,8 @@ interface Props {
   tone?: DialogTone;
   /** See {@link DialogPairRole}. Omit for a dialog that stands alone. */
   pair?: DialogPairRole;
+  /** What the stacked aside's back button says it returns to. */
+  backLabel?: string;
 }
 
 /**
@@ -66,19 +70,32 @@ interface Props {
  * ## Pairs
  *
  * A dialog opened from inside another one is a nested Radix dialog: both stay
- * mounted, the inner one on top. From 76rem wide up, a `primary` and its
- * `aside` instead sit side by side. The primary keeps its centre until the
- * aside reports itself open (through {@link PairContext}), then transitions
- * `left` by half a panel plus half the gap; the aside is placed the same
- * distance to the right and enters by sliding a full panel-and-gap from the
- * left — which is exactly the primary's resting spot — while scaling and
- * fading up. The primary sits one z-index above it at that width, so the
- * aside is genuinely *behind* it as it emerges. Closing runs the same in
- * reverse. The aside's overlay goes transparent at that width too, since the
- * primary's is already there and a second would double-dim the page.
+ * mounted. From `lg` up (the same 64rem the layout breakpoint uses, read
+ * through `matchMedia` so the two cannot disagree) a `primary` and its
+ * `aside` sit side by side; the panels shrink to half the viewport less a
+ * margin when 36rem each will not fit. The primary hears the aside open
+ * through {@link PairContext} and transitions `left` by half a panel plus half
+ * the gap, with a small tilt; the aside is placed the same distance to the
+ * right and is dealt out from behind it — a full panel-and-gap of travel,
+ * which is exactly the primary's resting spot, with a rotation that swings
+ * through and settles, like a card pulled from a deck. The primary sits one
+ * z-index above it at that width, so the aside is genuinely *behind* it as
+ * it emerges. Closing runs the deal in reverse.
  *
- * Below the breakpoint none of those classes apply and the nested dialog
- * behaves as it always did.
+ * Side by side, the aside is NON-modal. That is what lets the primary stay
+ * live — a modal aside would make Radix put `pointer-events: none` on the
+ * primary — and it is why the dismiss rules are written by hand below:
+ *  - a click inside either panel keeps both open (each panel's outside-click
+ *    handler ignores targets inside any dialog content);
+ *  - a click on the overlay closes both, because it is outside both, and
+ *    each closes itself — nothing closes the other, so a route dialog's
+ *    `router.back()` runs exactly once;
+ *  - the primary's own close button closes both, since the aside lives in
+ *    the primary's body and unmounts with it.
+ *
+ * Stacked (below `lg`), the aside is an ordinary modal nested dialog: the
+ * primary is inert beneath it, the overlay closes only the aside, and the X
+ * is replaced by a back button that says where closing goes.
  */
 export default function DialogShell({
   open,
@@ -88,7 +105,15 @@ export default function DialogShell({
   children,
   tone = "light",
   pair,
+  backLabel = "Back",
 }: Props) {
+  const wide = useSideBySide();
+  const isAside = pair === "aside";
+  const isPrimary = pair === "primary";
+  // Pairing is a fact about the viewport, not about the props: below `lg`
+  // a paired dialog is just a nested one.
+  const paired = pair !== undefined && wide;
+
   const [asideOpen, setAsideOpen] = useState(false);
   const notifyPrimary = useContext(PairContext);
 
@@ -97,33 +122,48 @@ export default function DialogShell({
   // counts as closing, or a primary would stay shifted after its aside's
   // route went away underneath it.
   useEffect(() => {
-    if (pair !== "aside" || notifyPrimary === null) return;
+    if (!isAside || notifyPrimary === null) return;
     notifyPrimary(open === true);
     return () => notifyPrimary(false);
-  }, [pair, notifyPrimary, open]);
+  }, [isAside, notifyPrimary, open]);
 
   const t = TONES[tone];
-  const role = pair === "primary" ? PRIMARY : pair === "aside" ? ASIDE : NONE;
+  const role = isPrimary ? PRIMARY : isAside ? ASIDE : NONE;
+  const stackedAside = isAside && !paired;
 
   const content = (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      modal={!(isAside && paired)}
+    >
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent
-        data-aside={pair === "primary" ? asideOpen : undefined}
-        overlayClassName={`${t.overlay} ${role.overlay}`}
+        data-aside={isPrimary ? asideOpen : undefined}
+        // Stacked, the aside's way out is the back button below, not an X.
+        showCloseButton={!stackedAside}
+        onInteractOutside={paired ? keepPairOpen : undefined}
+        overlayClassName={t.overlay}
         className={`flex max-h-[85dvh] w-full flex-col gap-4 overflow-hidden p-5 ring-0 sm:max-w-xl ${t.panel} ${role.panel}`}
       >
-        {header}
+        {stackedAside ? <div className="pr-24">{header}</div> : header}
         <div className="-mx-5 grid min-h-0 gap-4 overflow-y-auto px-5">
           {children}
         </div>
+        {stackedAside && (
+          <DialogClose asChild>
+            <button type="button" className={t.back}>
+              <ArrowLeftIcon /> {backLabel}
+            </button>
+          </DialogClose>
+        )}
       </DialogContent>
     </Dialog>
   );
 
   // Only a primary provides — an aside inside an aside would otherwise report
   // to the wrong dialog.
-  return pair === "primary" ? (
+  return isPrimary ? (
     <PairContext.Provider value={setAsideOpen}>{content}</PairContext.Provider>
   ) : (
     content
@@ -134,37 +174,83 @@ export default function DialogShell({
 const PairContext = createContext<((open: boolean) => void) | null>(null);
 
 /**
- * Two `sm:max-w-xl` panels (36rem each) and a 1rem gap need 73rem; the
- * `min-[76rem]` gate leaves a little air on either side, and is written as a
- * bare arbitrary breakpoint because no theme breakpoint sits near it. The
- * offsets are half a panel plus half the gap (18.5rem) for where each panel
- * rests, and a whole panel plus the gap (37rem) for how far the aside
- * travels as it emerges. Spelled out literally in every class — Tailwind
- * finds utilities by scanning source text, so nothing here may be
- * interpolated.
+ * Side by side from `lg`. Tailwind's `lg` is 64rem; the query says the same
+ * thing in the same unit so the CSS classes below and this hook flip on the
+ * same pixel. Server-rendered as false — a dialog only opens on the client,
+ * and the first client snapshot corrects it before anyone can click.
  */
+const PAIR_QUERY = "(min-width: 64rem)";
+
+function subscribeToPairQuery(onChange: () => void) {
+  const query = window.matchMedia(PAIR_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function useSideBySide(): boolean {
+  return useSyncExternalStore(
+    subscribeToPairQuery,
+    () => window.matchMedia(PAIR_QUERY).matches,
+    () => false,
+  );
+}
+
+/**
+ * Outside-interaction handler for both panels of an open pair: anything that
+ * lands inside a dialog's content — the other panel — is not "outside" in
+ * any sense the user means, so it is swallowed. Anything else (the overlay)
+ * falls through to Radix's default and dismisses this panel; the other panel
+ * gets the same event and dismisses itself.
+ */
+function keepPairOpen(event: {
+  detail: { originalEvent: Event };
+  preventDefault: () => void;
+}) {
+  const target = event.detail.originalEvent.target;
+  if (
+    target instanceof Element &&
+    target.closest('[data-slot="dialog-content"]') !== null
+  ) {
+    event.preventDefault();
+  }
+}
+
+/**
+ * The pair geometry lives in three custom properties set on both panels:
+ * the panel width (36rem, or half the viewport less a margin when that will
+ * not fit — at `lg` itself two 36rem panels would need 73rem of a 64rem
+ * screen), how far each panel sits off centre, and how far the aside travels
+ * as it is dealt. The keyframes in globals.css read `--pair-travel`.
+ *
+ * Spelled out literally in every class — Tailwind finds utilities by
+ * scanning source text, so nothing here may be interpolated.
+ */
+const PAIR_VARS =
+  "lg:[--pair-panel:min(36rem,50vw_-_1.5rem)] lg:[--pair-offset:calc(var(--pair-panel)_/_2_+_0.5rem)] lg:[--pair-travel:calc(var(--pair-panel)_+_1rem)]";
+
 const TONES = {
   light: {
     panel: "rounded-sm border-2 border-black bg-white text-black",
     overlay: "",
+    back: "hover:shadow-block-md transition-lift absolute top-3 right-3 flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-2.5 py-1 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5",
   },
   dark: {
     panel:
       "rounded-xl border-2 border-mauve-800 bg-mauve-950 text-white shadow-2xl shadow-black/60",
     overlay: "bg-black/40",
+    back: "absolute top-3 right-3 flex items-center gap-1.5 rounded-lg border border-mauve-600 bg-mauve-800 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:border-white",
   },
-} satisfies Record<DialogTone, { panel: string; overlay: string }>;
+} satisfies Record<
+  DialogTone,
+  { panel: string; overlay: string; back: string }
+>;
 
-const NONE = { panel: "", overlay: "" };
+const NONE = { panel: "" };
 
 const PRIMARY = {
-  panel:
-    "min-[76rem]:z-[51] min-[76rem]:transition-[left] min-[76rem]:[transition-duration:300ms] min-[76rem]:ease-out min-[76rem]:data-[aside=true]:left-[calc(50%-18.5rem)]",
-  overlay: "",
+  panel: `${PAIR_VARS} lg:z-[51] lg:transition-[left,max-width] lg:[transition-duration:420ms] lg:ease-out lg:data-[aside=true]:left-[calc(50%_-_var(--pair-offset))] lg:data-[aside=true]:max-w-(--pair-panel) lg:data-[aside=true]:animate-pair-primary`,
 };
 
 const ASIDE = {
-  panel:
-    "min-[76rem]:left-[calc(50%+18.5rem)] min-[76rem]:duration-300 min-[76rem]:ease-out min-[76rem]:data-open:slide-in-from-left-[37rem] min-[76rem]:data-open:zoom-in-90 min-[76rem]:data-closed:slide-out-to-left-[37rem] min-[76rem]:data-closed:zoom-out-90",
-  overlay: "min-[76rem]:bg-transparent min-[76rem]:backdrop-blur-none",
+  panel: `${PAIR_VARS} lg:left-[calc(50%_+_var(--pair-offset))] lg:max-w-(--pair-panel) lg:data-open:animate-pair-aside-in lg:data-closed:animate-pair-aside-out`,
 };
