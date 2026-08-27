@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NavigationMenu } from "radix-ui";
 import { PUBLIC_LINKS } from "~/config/nav";
 import DocsMenu, { type DocsProjectLink } from "./DocsMenu";
 
@@ -19,6 +20,14 @@ function activeDocsSlug(pathname: string | null) {
   return first === "docs" && second ? decodeURIComponent(second) : null;
 }
 
+/**
+ * The left-hand links, as items of the navbar's single list.
+ *
+ * They are items rather than their own <nav> so that Docs sits in the same
+ * Radix collection as the profile menu on the far right: one collection is one
+ * viewport, and one viewport is what lets a panel travel from one to the other
+ * instead of blinking out and back.
+ */
 function Nav({
   pathname,
   docsProjects,
@@ -27,7 +36,7 @@ function Nav({
   docsProjects: DocsProjectLink[];
 }) {
   return (
-    <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
+    <>
       {PUBLIC_LINKS.map((link) => {
         const active = pathname !== null && isActive(pathname, link.href);
 
@@ -46,17 +55,24 @@ function Nav({
         }
 
         return (
-          <Link
+          <NavigationMenu.Item
             key={link.href}
-            href={link.href}
-            data-active={active || undefined}
-            className={LINK_CLASS}
+            value={link.href}
+            className="hidden md:block"
           >
-            {link.label}
-          </Link>
+            <NavigationMenu.Link asChild active={active}>
+              <Link
+                href={link.href}
+                data-active={active || undefined}
+                className={LINK_CLASS}
+              >
+                {link.label}
+              </Link>
+            </NavigationMenu.Link>
+          </NavigationMenu.Item>
         );
       })}
-    </nav>
+    </>
   );
 }
 

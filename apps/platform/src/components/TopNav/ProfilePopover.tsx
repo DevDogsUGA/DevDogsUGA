@@ -1,7 +1,7 @@
 "use client";
 
-import * as Dropdown from "@radix-ui/react-dropdown-menu";
 import Link from "next/link";
+import { NavigationMenu } from "radix-ui";
 import {
   SealCheckIcon,
   SignOutIcon,
@@ -16,7 +16,10 @@ import {
   type NavItem,
 } from "~/config/nav";
 import signOut from "~/server/actions/signOut";
+import NavMenuTrigger from "./NavMenuTrigger";
 import NavSubMenu from "./NavSubMenu";
+import { PROFILE_MENU } from "./NavShell";
+import { NAV_CONTENT } from "./navPanel";
 import { useVerification, type NavUserClientData } from "./NavUserProvider";
 import { POPOVER_DIVIDER, POPOVER_ROW } from "./popoverRow";
 import VerificationAlert from "./VerificationAlert";
@@ -29,37 +32,62 @@ interface Props {
   consoleItems: ConsoleItem[];
 }
 
+/**
+ * The avatar menu, as an item of the navbar's own list.
+ *
+ * It was a DropdownMenu, which opens on click and owns its own popper. Sharing
+ * the navbar's viewport means giving that up: the panel is now a Content that
+ * Radix hoists into the same box Docs renders into, so hovering from one to
+ * the other slides one surface across rather than swapping two.
+ *
+ * The cost is that this is navigation now, not a menu — no role="menu", no
+ * arrow-key roving between rows. That is the honest description of what it
+ * holds. Sign Out is the one exception, an action among links, and it stays a
+ * real form submit rather than being dressed as a link.
+ */
 export default function ProfilePopover({ user, items, consoleItems }: Props) {
   const verification = useVerification();
 
   return (
-    <>
-      <Dropdown.Root>
-        <Dropdown.Trigger asChild>
-          <button
-            type="button"
-            aria-label="Open profile menu"
-            className="relative flex shrink-0 items-center rounded-full text-3xl/0 transition-opacity hover:opacity-85"
-          >
-            <Avatar
-              userId={user.profile.userId}
-              preferredName={user.profile.preferredName}
-            />
-            {verification?.isVerified === false && (
-              <span className="absolute -right-0.5 -bottom-0.5 flex size-3 items-center justify-center rounded-full bg-mauve-950">
-                <WarningCircleIcon className="size-2.5 text-amber-400" />
-              </span>
-            )}
-          </button>
-        </Dropdown.Trigger>
+    <NavigationMenu.Item value={PROFILE_MENU}>
+      <NavMenuTrigger
+        href="/account"
+        value={PROFILE_MENU}
+        className="relative flex shrink-0 items-center rounded-full text-3xl/0 transition-opacity hover:opacity-85"
+      >
+        {/* The link's accessible name. Radix puts `aria-expanded` alongside
+            it, so a screen reader gets both what it goes to and that it also
+            opens something. */}
+        <span className="sr-only">{user.profile.preferredName}</span>
+        <Avatar
+          userId={user.profile.userId}
+          preferredName={user.profile.preferredName}
+        />
+        {verification?.isVerified === false && (
+          <span className="absolute -right-0.5 -bottom-0.5 flex size-3 items-center justify-center rounded-full bg-mauve-950">
+            <WarningCircleIcon className="size-2.5 text-amber-400" />
+          </span>
+        )}
+      </NavMenuTrigger>
 
-        <Dropdown.Portal>
-          <Dropdown.Content
-            side="bottom"
-            align="end"
-            sideOffset={10}
-            className="z-100 w-3xs max-w-(--radix-popper-available-width) rounded-md border-2 bg-mauve-950/90 py-1.5 text-sm font-medium text-white backdrop-blur"
-          >
+      <NavigationMenu.Content data-slot="nav-content" className={NAV_CONTENT}>
+        {/* The sub-menu viewport is a sibling of the card, in flow and to its
+            left, rather than floating over the page. It has to be: the tier-1
+            viewport sizes itself to this content, so a sub-panel positioned
+            out of flow would be measured as zero and clipped away. In flow,
+            opening a sub-menu simply makes this row wider, the tier-1 viewport
+            grows to match, and because that viewport is clamped against the
+            right edge it grows leftward and the card does not move. */}
+        <NavigationMenu.Sub
+          orientation="vertical"
+          className="flex items-start gap-2"
+        >
+          <NavigationMenu.Viewport
+            data-slot="nav-sub-viewport"
+            className="data-[state=closed]:animate-nav-sub-fold-out data-[state=open]:animate-nav-sub-fold-in h-(--radix-navigation-menu-viewport-height) w-(--radix-navigation-menu-viewport-width) origin-right transition-[width,height] duration-200 ease-out"
+          />
+
+          <div className="w-3xs rounded-md border-2 bg-mauve-950/90 py-1.5 text-sm font-medium text-white backdrop-blur">
             <div className="flex flex-col px-3 pt-1 pb-2">
               <span className="truncate text-sm text-white">
                 {user.profile.preferredName}
@@ -73,15 +101,15 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
             </div>
 
             {verification && !verification.isVerified && (
-              <Dropdown.Item asChild>
-                <div className="px-1.5 pb-1.5 focus:outline-none">
-                  <VerificationAlert />
-                </div>
-              </Dropdown.Item>
+              <div className="px-1.5 pb-1.5">
+                <VerificationAlert />
+              </div>
             )}
 
-            <NavSubMenu {...COMPETITION_GROUP} />
-            <NavSubMenu {...CONSOLE_GROUP} items={consoleItems} />
+            <NavigationMenu.List>
+              <NavSubMenu {...COMPETITION_GROUP} />
+              <NavSubMenu {...CONSOLE_GROUP} items={consoleItems} />
+            </NavigationMenu.List>
 
             {/* Competitions is two static pages, so there is always a row
                 above this even where an unpermissioned Console renders
@@ -91,12 +119,12 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
             {items.map((item) => {
               const Icon = icons[item.icon];
               return (
-                <Dropdown.Item key={item.href} asChild>
+                <NavigationMenu.Link key={item.href} asChild>
                   <Link href={item.href} className={POPOVER_ROW}>
                     <Icon />
                     {item.label}
                   </Link>
-                </Dropdown.Item>
+                </NavigationMenu.Link>
               );
             })}
 
@@ -104,19 +132,17 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
 
             <form action={signOut}>
               <input name="callbackPath" value="/" type="hidden" />
-              <Dropdown.Item asChild>
-                <button
-                  className={`${POPOVER_ROW} text-rose-300 hover:bg-rose-950 hover:text-rose-50`}
-                  type="submit"
-                >
-                  <SignOutIcon />
-                  Sign Out
-                </button>
-              </Dropdown.Item>
+              <button
+                className={`${POPOVER_ROW} text-rose-300 hover:bg-rose-950 hover:text-rose-50`}
+                type="submit"
+              >
+                <SignOutIcon />
+                Sign Out
+              </button>
             </form>
-          </Dropdown.Content>
-        </Dropdown.Portal>
-      </Dropdown.Root>
-    </>
+          </div>
+        </NavigationMenu.Sub>
+      </NavigationMenu.Content>
+    </NavigationMenu.Item>
   );
 }

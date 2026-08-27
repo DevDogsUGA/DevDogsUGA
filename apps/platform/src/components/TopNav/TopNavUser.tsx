@@ -17,10 +17,15 @@ import { getNavUser } from "./data";
 export async function TopNavProfile() {
   const user = await getNavUser();
 
+  // These land inside the navbar's single <ul>, so anything that is not
+  // already a NavigationMenu.Item needs its own <li>. ProfilePopover renders
+  // one itself; the hydrator renders nothing at all.
   if (!user) {
     return (
       <>
-        <SignInButton />
+        <li className="flex items-center">
+          <SignInButton />
+        </li>
         <NavUserHydrator navUser={null} verification={null} />
       </>
     );
