@@ -19,6 +19,7 @@ import {
   showsAnnouncement,
   type AnnouncementTone,
 } from "~/config/announcement";
+import { blobsBackgroundImage, type BlobDef } from "~/ui/blob-gradient";
 import { cn } from "~/lib/cn";
 
 interface ToneClasses {
@@ -38,10 +39,9 @@ interface ToneClasses {
    */
   chipHover: string;
   /**
-   * The cross on the tab. The 950 of the tab's own family, not the label's
-   * white — it reads as a mark cut into the fill rather than a second word
-   * beside the eyebrow, which is what an equal-weight white cross looked
-   * like.
+   * The cross on the tab. The 100 of the tab's own family: a step off the
+   * label's white, so the cross sits under the eyebrow rather than level with
+   * it, without going dark enough to read as a second colour on the tab.
    */
   chipIcon: string;
   /**
@@ -69,7 +69,7 @@ const TONES: Record<AnnouncementTone, ToneClasses> = {
     badge: "bg-rose-600 ring-amber-300",
     chip: "bg-rose-600 text-white",
     chipHover: "hover:bg-rose-700",
-    chipIcon: "text-rose-950",
+    chipIcon: "text-rose-100",
     blockShadow: "shadow-rose-600",
   },
   info: {
@@ -77,9 +77,94 @@ const TONES: Record<AnnouncementTone, ToneClasses> = {
     badge: "bg-sky-800 ring-sky-300",
     chip: "bg-sky-800 text-white",
     chipHover: "hover:bg-sky-900",
-    chipIcon: "text-sky-950",
+    chipIcon: "text-sky-100",
     blockShadow: "shadow-sky-800",
   },
+};
+
+/**
+ * The card's wash, in the tone's own colours — two steps up from the fill for
+ * the light end, and the accent it already wears on the badge and the block
+ * for the far end. Nothing new enters the palette.
+ *
+ * Three pools running light to accent across the width, rather than the two
+ * half-card blobs this started as: those were each wide enough to cover their
+ * side outright, so what read was a gradient from one edge to the other and
+ * not a blob anywhere. At a quarter of the width they leave base showing
+ * between them, which is what makes them read as shapes.
+ *
+ * `ry` is well over 100 for the same reason it is on the homepage's blobs and
+ * not for a different one: a percentage is of its own axis, and this card is
+ * an order of magnitude wider than it is tall. 150% of ~60px is about 90px
+ * against an `rx` of ~230px — an ellipse a little wider than it is tall, which
+ * is the shape the sections use. Set `ry` near the `rx` number and the pool
+ * flattens into the band this was trying to stop being.
+ */
+const TONE_BLOBS: Record<AnnouncementTone, BlobDef[]> = {
+  urgent: [
+    {
+      cx: "10%",
+      cy: "20%",
+      rx: "28%",
+      ry: "150%",
+      fill: "#fef3c7",
+      opacity: 0.75,
+    },
+    {
+      cx: "48%",
+      cy: "100%",
+      rx: "24%",
+      ry: "140%",
+      fill: "#fde68a",
+      opacity: 0.6,
+    },
+    {
+      cx: "90%",
+      cy: "5%",
+      rx: "26%",
+      ry: "155%",
+      fill: "#fb7185",
+      opacity: 0.38,
+    },
+  ],
+  info: [
+    {
+      cx: "10%",
+      cy: "20%",
+      rx: "28%",
+      ry: "150%",
+      fill: "#e0f2fe",
+      opacity: 0.7,
+    },
+    {
+      cx: "48%",
+      cy: "100%",
+      rx: "24%",
+      ry: "140%",
+      fill: "#bae6fd",
+      opacity: 0.6,
+    },
+    {
+      cx: "90%",
+      cy: "5%",
+      rx: "26%",
+      ry: "155%",
+      fill: "#0ea5e9",
+      opacity: 0.34,
+    },
+  ],
+};
+
+/**
+ * Built at module load, not per render. The gradient is a fixed function of a
+ * constant, and this component re-renders on every pointermove of a swipe —
+ * rebuilding sixteen `color-mix` stops per frame, mid-gesture, beside the
+ * scrim's `backdrop-filter`, is the one place on this card that cost has
+ * already been measured and refused once.
+ */
+const TONE_BACKGROUND: Record<AnnouncementTone, string> = {
+  urgent: blobsBackgroundImage(TONE_BLOBS.urgent),
+  info: blobsBackgroundImage(TONE_BLOBS.info),
 };
 
 /**
@@ -337,7 +422,11 @@ export default function AnnouncementBanner() {
               site (EventCard, PartnersSection, LeaderCard) concatenates for
               the same reason. There is nothing here for a merge to resolve
               anyway — no caller passes a className in. */}
+          {/* The wash goes on the card's own background, over the fill the
+              tone's `card` class sets — no extra element and nothing to clip,
+              since a background is already cut to the border radius. */}
           <div
+            style={{ backgroundImage: TONE_BACKGROUND[tone] }}
             className={`shadow-block-outlined-xl flex flex-col gap-2.5 rounded-lg border-2 border-black px-4 py-3 text-black sm:flex-row sm:items-center sm:gap-4 ${toneClasses.card} ${toneClasses.blockShadow}`}
           >
             <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -378,8 +467,15 @@ export default function AnnouncementBanner() {
               {...(action.external
                 ? { target: "_blank", rel: "noopener noreferrer" }
                 : {})}
+              /* The house lift, as every other button on the page wears it:
+                 `shadow-block-md` against a `translate` of 0.5. This used to
+                 be 3px against 0.75, which is the geometrically exact version
+                 — the block grows by the same distance the button travels, so
+                 its far corner stays put — but it was the only one on the
+                 site, and a notice that floats over the page is the last
+                 place to run a second lift. */
               className={cn(
-                "hover:shadow-block-[3px] transition-lift flex shrink-0 items-center gap-2 self-end rounded-sm border-2 border-black bg-black px-3.5 py-1.5 text-sm font-semibold text-white hover:-translate-x-0.75 hover:-translate-y-0.75 sm:self-auto",
+                "hover:shadow-block-md transition-lift flex shrink-0 items-center gap-2 self-end rounded-sm border-2 border-black bg-black px-3.5 py-1.5 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5 sm:self-auto",
                 toneClasses.blockShadow,
               )}
             >
@@ -404,6 +500,21 @@ export default function AnnouncementBanner() {
               doubled line. `border-b-0` leaves its own outline open at the
               bottom, so the two borders read as one silhouette.
 
+              Hovering lifts it back out: `translate-y-0` is the whole of the
+              gesture, and 2px is not a chosen distance but the only one
+              available. The tab is `bottom-full`, so at 0 its lower edge is
+              already flush with the card's — lift it any further and the 2px
+              it was overlapping becomes a transparent gap with the scrim
+              showing through, and the tab reads as detached rather than
+              raised. Landing exactly on 0 hands the erased span back to the
+              card, so what appears under a lifted tab is the card's own top
+              border running unbroken beneath it.
+
+              Straight up, with no sideways component and no shadow growing
+              under it, unlike the buttons inside the card. Those two go
+              together — the diagonal exists to uncover a block — and this is
+              a tab hinged on an edge, which only has one direction to go.
+
               No block shadow here on purpose: the card's falls down and to the
               right, away from the tab, while a shadow on the tab itself would
               land squarely on the card's face. */}
@@ -416,7 +527,7 @@ export default function AnnouncementBanner() {
                eyebrow from the accessible name entirely. */
             aria-label={`${eyebrow} — dismiss announcement`}
             className={cn(
-              "absolute bottom-full left-4 flex translate-y-[2px] items-center gap-2 rounded-t-lg border-2 border-b-0 border-black px-2.5 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none",
+              "absolute bottom-full left-4 flex translate-y-[2px] items-center gap-2 rounded-t-lg border-2 border-b-0 border-black px-2.5 py-1.5 transition-[background-color,translate] hover:translate-y-0 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none",
               toneClasses.chip,
               toneClasses.chipHover,
             )}

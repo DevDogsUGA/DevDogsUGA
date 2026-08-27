@@ -22,7 +22,11 @@ export default function DirectionsModalLayout({
   children: ReactNode;
 }) {
   return (
-    <RouteDialog header={<FindUsHeader />} closeTo="/events">
+    <RouteDialog
+      header={<FindUsHeader tone="dark" />}
+      closeTo="/events"
+      tone="dark"
+    >
       {children}
     </RouteDialog>
   );

@@ -14,14 +14,14 @@ export default function Loading() {
   return (
     <div aria-busy className="flex animate-pulse flex-col gap-4">
       <div aria-hidden className="flex gap-2">
-        <div className="h-5 w-20 rounded-sm bg-mauve-200" />
-        <div className="h-5 w-24 rounded-sm bg-mauve-200" />
+        <div className="h-5 w-20 rounded-full bg-white/10" />
+        <div className="h-5 w-24 rounded-full bg-white/10" />
       </div>
-      <div aria-hidden className="h-4 w-40 rounded-sm bg-mauve-200" />
-      <div aria-hidden className="h-4 w-2/3 rounded-sm bg-mauve-200" />
+      <div aria-hidden className="h-4 w-40 rounded-sm bg-white/10" />
+      <div aria-hidden className="h-4 w-2/3 rounded-sm bg-white/10" />
       <div aria-hidden className="flex flex-col gap-2">
-        <div className="h-14 rounded-sm border-2 border-black bg-white" />
-        <div className="h-14 rounded-sm border-2 border-black bg-white" />
+        <div className="h-14 rounded-lg border border-white/10 bg-white/5" />
+        <div className="h-14 rounded-lg border border-white/10 bg-white/5" />
       </div>
     </div>
   );

@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { MapTrifoldIcon } from "@phosphor-icons/react/ssr";
 import { RouteDialogLink } from "~/ui/route-dialog";
+import type { DialogTone } from "~/ui/dialog-shell";
+import { ACTION_DARK_CLS } from "../meetingView";
 import FindUsDialog from "./FindUsDialog";
 import FindUsContent, { preloadCampusMap } from "./FindUsContent";
 import type { BuildingKey } from "./campusMapMeta";
@@ -25,30 +28,45 @@ const INTENT_HANDLERS = {
 };
 
 /**
- * The homepage's trigger: a button that opens the dialog in place.
+ * A button that opens the dialog in place.
  *
  * `building` defaults to the DLW because the homepage's trigger is not about
  * any one meeting — it answers "where is this club", and the answer to that is
- * still the DLW.
+ * still the DLW. The meeting dialog renders it too, `tone="dark"` and as the
+ * `aside` of a pair, so that on a wide screen the map opens beside the meeting
+ * rather than on top of it; that is why `open` is held here rather than left
+ * to Radix — an aside has to be able to say when it is open.
  */
 export default function FindUs({
   building = "DLW",
   room = "124",
+  tone = "light",
+  pair,
 }: {
   building?: BuildingKey;
   room?: string | null;
+  tone?: DialogTone;
+  pair?: "aside";
 } = {}) {
+  const [open, setOpen] = useState(false);
   return (
     <FindUsDialog
+      open={open}
+      onOpenChange={setOpen}
       building={building}
       room={room}
+      tone={tone}
+      pair={pair}
       trigger={
-        <button className={TRIGGER_CLS} {...INTENT_HANDLERS}>
+        <button
+          className={tone === "dark" ? ACTION_DARK_CLS : TRIGGER_CLS}
+          {...INTENT_HANDLERS}
+        >
           <MapTrifoldIcon /> Directions
         </button>
       }
     >
-      <FindUsContent building={building} room={room} />
+      <FindUsContent building={building} room={room} tone={tone} />
     </FindUsDialog>
   );
 }

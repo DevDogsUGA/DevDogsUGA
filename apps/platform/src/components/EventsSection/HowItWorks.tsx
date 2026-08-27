@@ -4,12 +4,16 @@ import { useState } from "react";
 import type { StaticImageData } from "next/image";
 import type { ReactNode } from "react";
 import type { MeetingSegment } from "~/lib/meetingSegments";
-import CompetitionTimeline, { type Tone } from "./CompetitionTimeline";
+import CompetitionTimeline, {
+  type StripDay,
+  type Tone,
+} from "./CompetitionTimeline";
 import CrtTv from "./CrtTv";
 import { CHIP_CLS, CHIP_DARK_CLS, segmentBadge } from "./meetingView";
 import bruceAlmighty from "~/assets/bruce-almighty.gif";
 import charlieConspiracy from "~/assets/charlie-conspiracy.gif";
 import informationGif from "~/assets/information.gif";
+import muybridgeHorse from "~/assets/muybridge-horse.gif";
 
 /**
  * The club's format, said once and drawn twice.
@@ -17,20 +21,20 @@ import informationGif from "~/assets/information.gif";
  * The copy has to keep the model straight (see `docs/platform/guides/meetings-
  * and-teams`): a competition is a week bracketed by two Mondays, and every
  * Monday does both jobs — judges last week's, kicks off this week's. The
- * timeline strip draws that loop; the day cards under it carry the sentences,
- * and they sit on the strip's own eight columns so each card is under the day
- * it is about, with a little pointer up at its dot.
+ * timeline strip draws that loop; the day cards around it carry the
+ * sentences, and they sit on the strip's own eight columns, above and below
+ * it, so each card is beside the day it is about with a pointer at its dot.
  *
  * The television is the other drawing. It sits beside the heading, and
  * hovering a card changes the channel — the GIF on screen is that card's.
- * Static plays whenever no card is live, including on the open build night,
- * which has no agenda and so, fittingly, no programme. The set is a
- * hand-drawn SVG (see {@link CrtTv}) and the static is drawn too, a frame at
- * a time on the client (see {@link useTvStatic}) rather than the 1.8 MB GIF
- * it used to be. The clips are still GIFs, running from 200 KB to 2.4 MB, and
- * next/image passes animated files through unoptimized, so each mounts only
- * while its card is hovered rather than putting megabytes on a page most
- * visitors never hover at all.
+ * Static plays whenever no card is live. The set is a hand-drawn SVG (see
+ * {@link CrtTv}) and the static is drawn too, a frame at a time on the client
+ * (see {@link useTvStatic}) rather than the 1.8 MB GIF it used to be. The
+ * clips are still GIFs, running from 200 KB to 2.4 MB, and next/image passes
+ * animated files through unoptimized, so each mounts only while its card is
+ * hovered rather than putting megabytes on a page most visitors never hover
+ * at all. The build-week clip is Muybridge's 1878 race horse, public domain
+ * via Wikimedia Commons — the original "something running".
  *
  * Renders on both pages, in both dialects. The homepage uses it on its light
  * marketing plate; /events renders it `tone="dark"` inside a console card.
@@ -55,6 +59,8 @@ interface Beat {
    * static show through. Mounted only while hovered — see the note above.
    */
   gif: StaticImageData | null;
+  /** Which part of the strip this card is about — what lights up. */
+  strip: StripDay;
   /**
    * Where the card sits on the strip's eight columns from `lg`: above or
    * below the track, starting on which column, and which of its two columns
@@ -70,7 +76,7 @@ interface Beat {
 const BEATS: Beat[] = [
   {
     day: "Monday",
-    title: "Workshop, then kickoff",
+    title: "Workshop, Then Kickoff",
     body: (
       <>
         One workshop per project, all at once. Most end with &ldquo;now go build
@@ -79,11 +85,12 @@ const BEATS: Beat[] = [
     ),
     segments: ["workshop", "kickoff"],
     gif: informationGif,
+    strip: "monday",
     place: { side: "above", col: 1, caret: "start" },
   },
   {
     day: "Wednesday",
-    title: "Open build",
+    title: "Open Build",
     body: (
       <>
         No agenda. The room&rsquo;s open and officers are around. Build with
@@ -91,13 +98,13 @@ const BEATS: Beat[] = [
       </>
     ),
     segments: ["open"],
-    // No programme for a night with no agenda — the static IS the channel.
-    gif: null,
+    gif: bruceAlmighty,
+    strip: "wednesday",
     place: { side: "below", col: 3, caret: "start" },
   },
   {
     day: "All week",
-    title: "Build it",
+    title: "Build It",
     body: (
       <>
         Up to four per team, wherever and whenever. Open a pull request before
@@ -105,12 +112,13 @@ const BEATS: Beat[] = [
       </>
     ),
     segments: [],
-    gif: bruceAlmighty,
+    gif: muybridgeHorse,
+    strip: "week",
     place: { side: "above", col: 5, caret: null },
   },
   {
     day: "Next Monday",
-    title: "Judging, then it all starts again",
+    title: "Judging, Then It All Starts Again",
     body: (
       <>
         Teams demo, the winning pull request merges, the rest close. Showing up
@@ -120,6 +128,7 @@ const BEATS: Beat[] = [
     ),
     segments: ["judging"],
     gif: charlieConspiracy,
+    strip: "nextMonday",
     place: { side: "below", col: 7, caret: "end" },
   },
 ];
@@ -135,49 +144,56 @@ const BEATS: Beat[] = [
  * deletes the card.
  *
  * The caret is part of the card: a rotated square in the card's own fill,
- * with two of its borders drawn, laid over the card's edge so the border
- * appears to run out around the point and back. That only works with an
- * OPAQUE fill — a translucent one would show the edge through the square —
- * which is why the dark card is solid `mauve-900` rather than the console's
- * usual `white/5`. It sits at 25% or 75% of the card's width, the centres of
- * its two strip columns, and only from `lg`, where the cards are on the
- * columns at all. Cards above the track point down; cards below point up.
+ * with two of its borders drawn and the corner between them rounded off,
+ * laid over the card's edge so the border appears to run out around the
+ * point and back. That only works with an OPAQUE fill — a translucent one
+ * would show the edge through the square — which is why the dark card is
+ * solid `mauve-900` rather than the console's usual `white/5`. It sits at
+ * 25% or 75% of the card's width, the centres of its two strip columns, and
+ * only from `lg`, where the cards are on the columns at all. Cards above the
+ * track point down; cards below point up.
  *
- * While any card is hovered the others step back — a little smaller, a
- * little dimmer — so the live one reads as the channel that is on.
+ * The light card's shadow is a `drop-shadow`, not a `box-shadow`, on
+ * purpose: a filter follows the painted shape, caret included, where a box
+ * shadow would stop at the rectangle and leave the point casting nothing.
+ *
+ * While any card is hovered the live one lifts and the others step back — a
+ * little smaller, a little dimmer — so it reads as the channel that is on.
  */
 const CARET_BASE =
   "lg:before:absolute lg:before:size-3.5 lg:before:-translate-x-1/2 lg:before:rotate-45 lg:before:transition-colors";
 
-const STEP_BACK =
-  "transition-[opacity,scale,border-color] duration-200 group-data-[hovering=true]/beats:data-[active=false]:scale-[0.97] group-data-[hovering=true]/beats:data-[active=false]:opacity-60";
+const HOVER =
+  "transition-[opacity,scale,translate,border-color] duration-200 data-[active=true]:-translate-y-1 group-data-[hovering=true]/beats:data-[active=false]:scale-[0.97] group-data-[hovering=true]/beats:data-[active=false]:opacity-60";
 
 const TONES = {
   light: {
     heading: "text-black",
     intro: "text-mauve-700",
-    beat: `relative flex flex-col gap-2 rounded-sm border-2 border-black bg-white p-4 ${CARET_BASE} lg:before:border-black lg:before:bg-white ${STEP_BACK}`,
+    beat: `drop-shadow-block-md relative flex flex-col gap-2 rounded-sm border-2 border-black bg-white p-4 ${CARET_BASE} lg:before:border-black lg:before:bg-white ${HOVER}`,
     beatDay:
       "font-display text-xs font-extrabold tracking-widest text-mauve-600 uppercase",
     beatTitle: "font-display text-lg leading-tight font-extrabold text-black",
     beatBody: "text-sm/relaxed text-mauve-700",
     // Two borders, 2px, at the top-left of the rotated square (pointing up)
-    // or the bottom-right (pointing down).
-    caretUp: "lg:before:-top-2 lg:before:border-t-2 lg:before:border-l-2",
-    caretDown: "lg:before:-bottom-2 lg:before:border-b-2 lg:before:border-r-2",
+    // or the bottom-right (pointing down), with that corner rounded.
+    caretUp:
+      "lg:before:-top-2 lg:before:rounded-tl-sm lg:before:border-t-2 lg:before:border-l-2",
+    caretDown:
+      "lg:before:-bottom-2 lg:before:rounded-br-sm lg:before:border-b-2 lg:before:border-r-2",
   },
   dark: {
     heading: "text-white",
     intro: "text-mauve-300",
-    beat: `relative flex flex-col gap-2 rounded-lg border border-mauve-700 bg-mauve-900 p-4 data-[active=true]:border-white/60 lg:data-[active=true]:before:border-white/60 ${CARET_BASE} lg:before:border-mauve-700 lg:before:bg-mauve-900 ${STEP_BACK}`,
+    beat: `relative flex flex-col gap-2 rounded-lg border border-mauve-700 bg-mauve-900 p-4 data-[active=true]:border-white/60 lg:data-[active=true]:before:border-white/60 ${CARET_BASE} lg:before:border-mauve-700 lg:before:bg-mauve-900 ${HOVER}`,
     beatDay:
       "font-display text-xs font-extrabold tracking-widest text-mauve-400 uppercase",
     beatTitle: "font-display text-lg leading-tight font-extrabold text-white",
     beatBody: "text-sm/relaxed text-mauve-300",
     caretUp:
-      "lg:before:-top-[calc(0.4375rem+1px)] lg:before:border-t lg:before:border-l",
+      "lg:before:-top-[calc(0.4375rem+1px)] lg:before:rounded-tl-sm lg:before:border-t lg:before:border-l",
     caretDown:
-      "lg:before:-bottom-[calc(0.4375rem+1px)] lg:before:border-b lg:before:border-r",
+      "lg:before:-bottom-[calc(0.4375rem+1px)] lg:before:rounded-br-sm lg:before:border-b lg:before:border-r",
   },
 } satisfies Record<Tone, Record<string, string>>;
 
@@ -203,9 +219,18 @@ const SIDE = {
 export default function HowItWorks({
   id = "how-it-works",
   tone = "light",
+  cutout = false,
 }: {
   id?: string;
   tone?: Tone;
+  /**
+   * Cut the strip's band out of the plate behind it, edge to edge, so the
+   * timeline runs on the page's own black through a slot in the section.
+   * Homepage only — it assumes it is inside a `SectionBackground` plate
+   * that the `@container` site layout sizes, and draws the plate's rounded
+   * corners at the slot's four corners itself.
+   */
+  cutout?: boolean;
 }) {
   // `null` is the resting state, not "beat 0": static plays underneath until a
   // pointer lands on a card.
@@ -219,26 +244,32 @@ export default function HowItWorks({
     <section
       id={id}
       aria-labelledby={`${id}-heading`}
-      className="flex scroll-mt-28 flex-col gap-8"
+      className="flex scroll-mt-28 flex-col gap-4"
       // The console page reveals nothing on scroll — that is the marketing
       // pages' idiom — so the attribute only exists on the light plate.
       data-animate={tone === "light" ? "fade-up" : undefined}
     >
-      {/* Heading and television in one row, the set level with the words
-          rather than floating beside a list twice its height. */}
-      <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-8">
-        <div className="max-w-prose text-left lg:col-span-5">
+      {/* Heading and television in one row, both hung from the top edge. */}
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-8">
+        <div className="flex max-w-prose flex-col gap-4 text-left lg:col-span-5">
           <h2
             id={`${id}-heading`}
-            className={`font-display mb-4 text-3xl font-extrabold md:text-4xl ${t.heading}`}
+            className={`font-display text-3xl font-extrabold md:text-4xl ${t.heading}`}
           >
-            How a week works
+            Feature Sprints
           </h2>
           <p className={`text-base/relaxed text-balance ${t.intro}`}>
             A competition is a week, not a night. Monday&rsquo;s workshop kicks
             it off, teams build all week, and next Monday judges it — then kicks
-            off the next one. Some weeks are just a workshop. Hover a day to
-            change the channel.
+            off the next one. Some weeks are just a workshop.
+          </p>
+          <p className={`text-base/relaxed text-balance ${t.intro}`}>
+            Most weeks, every project grows one feature this way. The workshop
+            teaches the part of the stack that feature needs; the competition is
+            that same feature, built for real, by every team at once. Each
+            team&rsquo;s pull request is a candidate, judging picks one, and it
+            merges into the project — so by the next workshop, it&rsquo;s what
+            you&rsquo;re building on.
           </p>
         </div>
         <div className="mx-auto w-full max-w-sm lg:col-span-3 lg:max-w-none">
@@ -256,8 +287,15 @@ export default function HowItWorks({
           DOM order and dissolves into the grid with `contents`; below `lg`
           it is a plain stack after the strip. */}
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-8 lg:gap-x-4 lg:gap-y-5">
-        <div className="lg:col-span-8 lg:row-start-2">
-          <CompetitionTimeline tone={tone} />
+        <div className="relative py-5 lg:col-span-8 lg:row-start-2">
+          {cutout && <Cutout />}
+          {/* Inside a cutout the strip sits on the page's black, whatever
+              plate the rest of the section is on — so it takes the dark
+              neutrals there, or the day names would be black on black. */}
+          <CompetitionTimeline
+            tone={cutout ? "dark" : tone}
+            active={active?.strip ?? null}
+          />
         </div>
 
         <ol
@@ -299,5 +337,34 @@ export default function HowItWorks({
         </ol>
       </div>
     </section>
+  );
+}
+
+/**
+ * The slot in the plate that the strip runs through.
+ *
+ * A black band as wide as the section — the site layout is the `@container`,
+ * and a section is that width less its `mx-4` / `md:mx-6`, the same sum
+ * `--section-skew-slope` in globals.css is built from — centred on this
+ * wrapper, which is centred in the section because the content column is.
+ * It paints at `-z-10`, under the strip but inside the content's stacking
+ * context, which is above the plate.
+ *
+ * The four ears are what make it a cutout rather than a stripe: a square at
+ * each outer corner, black except for a quarter-circle of transparency
+ * where the plate above or below rounds off into the slot. Their radius is
+ * the section's own `rounded-xl`, so the slot's corners match the plate's.
+ */
+function Cutout() {
+  return (
+    <div
+      aria-hidden
+      className="absolute inset-y-0 left-1/2 -z-10 w-[calc(100cqw-2rem)] -translate-x-1/2 bg-black md:w-[calc(100cqw-3rem)]"
+    >
+      <span className="absolute bottom-full left-0 size-3 bg-[radial-gradient(circle_at_top_right,transparent_11.5px,black_12px)]" />
+      <span className="absolute right-0 bottom-full size-3 bg-[radial-gradient(circle_at_top_left,transparent_11.5px,black_12px)]" />
+      <span className="absolute top-full left-0 size-3 bg-[radial-gradient(circle_at_bottom_right,transparent_11.5px,black_12px)]" />
+      <span className="absolute top-full right-0 size-3 bg-[radial-gradient(circle_at_bottom_left,transparent_11.5px,black_12px)]" />
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { segmentBadge } from "./meetingView";
 
 /**
@@ -18,10 +18,13 @@ import { segmentBadge } from "./meetingView";
  * The bars are striped and the stripes crawl: a diagram of something in
  * progress, drawn as a progress bar. `motion-safe` gates the crawl.
  *
- * This is only the diagram. The sentences live in {@link HowItWorks}, whose
- * day cards sit under this strip on the *same eight columns*, so each card is
- * under the day it describes. On a phone the strip keeps its dots and bars
- * and drops its labels — the cards are where the words are at that width.
+ * No labels. The day cards in {@link HowItWorks} sit on this strip's own
+ * eight columns, above and below it, each pointing at its dot — they ARE the
+ * labels, so a second set on the strip only said everything twice. What the
+ * strip does instead is answer the cards: `active` names the card under the
+ * pointer, and the matching dots swell with a ring pulsing out behind them,
+ * the bar brightens and hurries when the build week is the one, and the
+ * other day names step back.
  *
  * Colour is the same information it is everywhere else on the events pages:
  * `segmentBadge` decides it. `tone` swaps the *neutrals* only.
@@ -53,25 +56,34 @@ export const JUDGING_COL = WEEK.length;
 
 export type Tone = "light" | "dark";
 
+/** The four things a card can be about, in the strip's vocabulary. */
+export type StripDay = "monday" | "wednesday" | "week" | "nextMonday";
+
+/** Which day-name columns each StripDay lights up (0-based into WEEK). */
+const DAY_COLUMNS: Record<StripDay, readonly number[]> = {
+  monday: [0],
+  wednesday: [2],
+  week: [3, 4, 5, 6],
+  nextMonday: [7],
+};
+
 /** The neutral colours per plate; the accent hues never change with tone. */
 const TONES = {
   light: {
     meetingDay: "text-black",
     otherDay: "text-mauve-600",
-    label: "text-black",
-    windowLabel: "text-mauve-700",
     dotRing: "border-black",
     tail: "bg-mauve-400",
     tailDot: "bg-mauve-400",
+    halo: "bg-black/25",
   },
   dark: {
     meetingDay: "text-white",
     otherDay: "text-mauve-400",
-    label: "text-white",
-    windowLabel: "text-mauve-300",
     dotRing: "border-mauve-950",
     tail: "bg-mauve-600",
     tailDot: "bg-mauve-500",
+    halo: "bg-white/30",
   },
 } satisfies Record<Tone, Record<string, string>>;
 
@@ -92,72 +104,63 @@ function Dot({
     <span
       role="img"
       aria-label={label}
-      className={`size-4 rounded-full border-2 ${ring} ${dot}`}
+      className={`size-4 rounded-full border-2 transition-transform duration-300 group-data-[active=true]/cell:scale-125 ${ring} ${dot}`}
     />
   );
 }
 
-/** A cell on the strip holding one or two dots, centred on its column. */
-function Cell({ col, children }: { col: number; children: ReactNode }) {
-  return (
-    <span
-      className="relative z-10 flex items-center justify-center gap-1"
-      style={{ gridColumnStart: col }}
-    >
-      {children}
-    </span>
-  );
-}
-
 /**
- * A label pinned to one column, allowed to be wider than the column: the grid
- * is `minmax(0, 1fr)` so the text overflows the cell rather than stretching
- * it, and `justify-self-center` keeps it centred on the dot beneath.
+ * A cell on the strip holding one or two dots, centred on its column. When
+ * it is the active one its dots swell and a ring pulses out from behind
+ * them — the strip's answer to a card being hovered.
  */
-function StripLabel({
+function Cell({
   col,
-  span = 1,
-  align = "center",
-  className,
+  active,
+  halo,
   children,
 }: {
   col: number;
-  span?: number;
-  /** The two Monday labels hug the strip's edges rather than centring on a
-   *  column they are wider than, which would push them out of the card. */
-  align?: "start" | "center" | "end";
-  className: string;
+  active: boolean;
+  halo: string;
   children: ReactNode;
 }) {
   return (
     <span
-      className={`hidden text-xs font-bold whitespace-nowrap md:block ${ALIGN[align]} ${className}`}
-      style={{ gridColumn: `${col} / span ${span}` }}
+      data-active={active}
+      className="group/cell relative z-10 flex items-center justify-center gap-1"
+      style={{ gridColumnStart: col }}
     >
+      <span
+        aria-hidden
+        className={`absolute top-1/2 left-1/2 size-8 -translate-1/2 rounded-full opacity-0 group-data-[active=true]/cell:opacity-100 motion-safe:group-data-[active=true]/cell:animate-ping ${halo}`}
+      />
       {children}
     </span>
   );
 }
 
-const ALIGN = {
-  start: "justify-self-start",
-  center: "justify-self-center",
-  end: "justify-self-end",
-} as const;
-
 const BAR_CLS =
   "slants motion-safe:animate-slants absolute top-1/2 h-3 -translate-y-1/2 rounded-full";
 
+const DAY_CLS =
+  "font-display text-center text-xs font-extrabold tracking-widest uppercase transition-[opacity,scale] duration-300 group-data-[hovering=true]/strip:opacity-40 group-data-[hovering=true]/strip:data-[active=true]:scale-110 group-data-[hovering=true]/strip:data-[active=true]:opacity-100";
+
 export default function CompetitionTimeline({
   tone = "light",
+  active = null,
 }: {
   tone?: Tone;
+  /** The card under the pointer, if any; the strip lights up to match. */
+  active?: StripDay | null;
 }) {
   const t = TONES[tone];
+  const lit = active === null ? [] : DAY_COLUMNS[active];
 
   return (
     <div
-      className="grid grid-cols-8 gap-y-2"
+      className="group/strip grid grid-cols-8 gap-y-2"
+      data-hovering={active !== null}
       role="figure"
       aria-label="A week of the club: last week's competition is judged on Monday and the next one kicks off the same night, teams build through the week with an open build on Wednesday, and the following Monday judges it and kicks off the next — if there is one."
     >
@@ -166,34 +169,13 @@ export default function CompetitionTimeline({
         return (
           <span
             key={i}
-            className={`font-display text-center text-xs font-extrabold tracking-widest uppercase ${
-              isMeeting ? t.meetingDay : t.otherDay
-            }`}
+            data-active={lit.includes(i)}
+            className={`${DAY_CLS} ${isMeeting ? t.meetingDay : t.otherDay}`}
           >
             {day}
           </span>
         );
       })}
-
-      {/* Above the track. */}
-      <div className="col-span-8 hidden h-5 grid-cols-8 items-end md:grid">
-        <StripLabel
-          col={MEETING_COL}
-          span={3}
-          align="start"
-          className={t.label}
-        >
-          Judging, then kickoff
-        </StripLabel>
-        <StripLabel
-          col={JUDGING_COL - 2}
-          span={3}
-          align="end"
-          className={t.label}
-        >
-          Judging, then the next one
-        </StripLabel>
-      </div>
 
       {/* The track. */}
       <div className="relative col-span-8 grid h-6 grid-cols-8 items-center">
@@ -202,12 +184,15 @@ export default function CompetitionTimeline({
         <span
           aria-hidden
           className={`${BAR_CLS} left-0 ${t.tail} [mask-image:linear-gradient(to_right,transparent,black_70%)]`}
-          style={{ right: `calc(100% - ${HALF})` } satisfies CSSProperties}
+          style={{ right: `calc(100% - ${HALF})` }}
         />
-        {/* This week's: Monday's emerald dot to next Monday's rose one. */}
+        {/* This week's: Monday's emerald dot to next Monday's rose one. When
+            the build-week card is hovered it brightens and the stripes hurry
+            — `--slants-duration` is what `animate-slants` reads. */}
         <span
           aria-hidden
-          className={`${BAR_CLS} bg-cyan-500`}
+          data-active={active === "week"}
+          className={`${BAR_CLS} bg-cyan-500 transition-[filter] duration-300 data-[active=true]:brightness-125 data-[active=true]:[--slants-duration:0.3s]`}
           style={{ left: HALF, right: HALF }}
         />
         {/* Next week's, if there is one: grey, fading out to the right. */}
@@ -217,7 +202,7 @@ export default function CompetitionTimeline({
           style={{ left: `calc(100% - ${HALF})`, right: 0 }}
         />
 
-        <Cell col={MEETING_COL}>
+        <Cell col={MEETING_COL} active={active === "monday"} halo={t.halo}>
           <Dot
             dot={segmentBadge.judging.dot}
             ring={t.dotRing}
@@ -229,14 +214,18 @@ export default function CompetitionTimeline({
             label="Monday: the workshop kicks off this week's"
           />
         </Cell>
-        <Cell col={OPEN_BUILD_COL}>
+        <Cell
+          col={OPEN_BUILD_COL}
+          active={active === "wednesday"}
+          halo={t.halo}
+        >
           <Dot
             dot={segmentBadge.open.dot}
             ring={t.dotRing}
             label="Wednesday: open build"
           />
         </Cell>
-        <Cell col={JUDGING_COL}>
+        <Cell col={JUDGING_COL} active={active === "nextMonday"} halo={t.halo}>
           <Dot
             dot={segmentBadge.judging.dot}
             ring={t.dotRing}
@@ -248,16 +237,6 @@ export default function CompetitionTimeline({
             label="Next Monday: the next one kicks off, some weeks"
           />
         </Cell>
-      </div>
-
-      {/* Below the track. */}
-      <div className="col-span-8 hidden h-5 grid-cols-8 items-start md:grid">
-        <StripLabel col={OPEN_BUILD_COL} className={t.label}>
-          Open build
-        </StripLabel>
-        <StripLabel col={OPEN_BUILD_COL + 1} span={4} className={t.windowLabel}>
-          Build all week
-        </StripLabel>
       </div>
     </div>
   );

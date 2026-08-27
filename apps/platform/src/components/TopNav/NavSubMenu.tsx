@@ -93,7 +93,8 @@ export default function NavSubMenu({
             bar, so 36rem of sub-panel wants roughly 60rem of viewport; below
             that it stays the single 20rem column it was. */}
         <div
-          className={`w-80 rounded-lg border border-mauve-800 bg-mauve-950 p-1 shadow-lg ${
+          data-nav-sizer
+          className={`w-80 p-1 ${
             twoColumn
               ? "lg:grid lg:w-[36rem] lg:grid-cols-2 lg:items-start lg:gap-x-1"
               : ""

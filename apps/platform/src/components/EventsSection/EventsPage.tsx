@@ -10,7 +10,7 @@ import ScheduleList from "./ScheduleList";
 import PastMeetings from "./PastMeetings";
 import HowItWorks from "./HowItWorks";
 
-const FOOTER_LINK_CLS =
+const HEADER_LINK_CLS =
   "flex items-center gap-2 rounded-lg border border-mauve-600 bg-mauve-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:border-white";
 
 export interface EventsPageProps {
@@ -74,9 +74,20 @@ export default function EventsPage({
       <AccentBlobs accent="cyan" />
       <PageHeader
         title="Events"
-        description="Every Monday of the semester. What's next, what's been, and how a week of it works."
+        description="What's next, what's been, and how a week of it works."
         accent="cyan"
-      />
+      >
+        {/* In the header's action slot, where the console puts a page's one
+            outward link: the Involvement Network is where RSVPs live. */}
+        <a
+          href={INVOLVEMENT_NETWORK_EVENTS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={HEADER_LINK_CLS}
+        >
+          View Us on the Involvement Network <ArrowUpRightIcon />
+        </a>
+      </PageHeader>
 
       <ConsoleCard.Root id="schedule">
         {/* The check-in link lives in the header's action slot: it is the
@@ -121,17 +132,6 @@ export default function EventsPage({
           <HowItWorks id="how-it-works" tone="dark" />
         </ConsoleCard.Content>
       </ConsoleCard.Root>
-
-      <div className="flex justify-end">
-        <a
-          href={INVOLVEMENT_NETWORK_EVENTS_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={FOOTER_LINK_CLS}
-        >
-          RSVP on the Involvement Network <ArrowUpRightIcon />
-        </a>
-      </div>
     </div>
   );
 }

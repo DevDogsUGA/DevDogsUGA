@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ComponentProps, type ReactNode } from "react";
-import DialogShell from "~/ui/dialog-shell";
+import DialogShell, {
+  type DialogPairRole,
+  type DialogTone,
+} from "~/ui/dialog-shell";
 import { markOpenedInApp, openedInApp } from "~/ui/opened-in-app";
 
 interface Props {
@@ -15,6 +18,9 @@ interface Props {
    * that closing is a soft navigation within that layout rather than a load.
    */
   closeTo: string;
+  /** Passed straight to {@link DialogShell}. */
+  tone?: DialogTone;
+  pair?: DialogPairRole;
   children: ReactNode;
 }
 
@@ -33,7 +39,13 @@ interface Props {
  * The local `open` flips first either way, so Radix gets to play its exit
  * animation in the moment before the navigation lands.
  */
-export default function RouteDialog({ header, closeTo, children }: Props) {
+export default function RouteDialog({
+  header,
+  closeTo,
+  tone,
+  pair,
+  children,
+}: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(true);
 
@@ -47,6 +59,8 @@ export default function RouteDialog({ header, closeTo, children }: Props) {
         else router.push(closeTo);
       }}
       header={header}
+      tone={tone}
+      pair={pair}
     >
       {children}
     </DialogShell>

@@ -2,6 +2,7 @@
 
 import { toast as sonnerToast } from "sonner";
 import { CheckIcon, WarningIcon, XIcon } from "@phosphor-icons/react/ssr";
+import { blobsBackgroundImage, type BlobDef } from "./blob-gradient";
 
 interface Props {
   id: string | number;
@@ -32,6 +33,78 @@ interface ToneClasses {
 }
 
 /**
+ * The card's wash: three pools running light to accent across the width, in
+ * the tone's own colours, so nothing new enters the palette and the card just
+ * stops being flat. Same shape the notice carries — see
+ * ~/components/AnnouncementBanner for why `ry` runs past 100 while `rx` stays
+ * under 30.
+ */
+const TONE_BLOBS: Record<Props["type"], BlobDef[]> = {
+  success: [
+    {
+      cx: "10%",
+      cy: "18%",
+      rx: "30%",
+      ry: "145%",
+      fill: "#cffafe",
+      opacity: 0.7,
+    },
+    {
+      cx: "50%",
+      cy: "100%",
+      rx: "26%",
+      ry: "135%",
+      fill: "#a5f3fc",
+      opacity: 0.6,
+    },
+    {
+      cx: "92%",
+      cy: "5%",
+      rx: "28%",
+      ry: "150%",
+      fill: "#38bdf8",
+      opacity: 0.4,
+    },
+  ],
+  error: [
+    {
+      cx: "10%",
+      cy: "18%",
+      rx: "30%",
+      ry: "145%",
+      fill: "#ffe4e6",
+      opacity: 0.7,
+    },
+    {
+      cx: "50%",
+      cy: "100%",
+      rx: "26%",
+      ry: "135%",
+      fill: "#fecdd3",
+      opacity: 0.6,
+    },
+    {
+      cx: "92%",
+      cy: "5%",
+      rx: "28%",
+      ry: "150%",
+      fill: "#fb7185",
+      opacity: 0.38,
+    },
+  ],
+};
+
+/**
+ * Built once at module load rather than per toast. The gradient is a fixed
+ * function of a constant, and a burst of toasts would otherwise rebuild the
+ * same sixteen `color-mix` stops for each one.
+ */
+const TONE_BACKGROUND: Record<Props["type"], string> = {
+  success: blobsBackgroundImage(TONE_BLOBS.success),
+  error: blobsBackgroundImage(TONE_BLOBS.error),
+};
+
+/**
  * Dark-on-bright, matching the announcement notice. Toasts land over the same
  * near-black chrome, and a saturated light card is what the site uses to sit
  * on top of it. The tones stay in the families the toast already spoke — cyan
@@ -60,6 +133,11 @@ export default function Toast({ id, message, type }: Props) {
     // colour with nothing to colour. Every block-shadow call site on the site
     // concatenates for this reason.
     <div
+      // The wash the sections and the stat cards draw, over the fill the tone's
+      // `card` class sets. It goes on the card's own background rather than a
+      // layer of its own: nothing here parallaxes, and a background is already
+      // cut to the border radius.
+      style={{ backgroundImage: TONE_BACKGROUND[type] }}
       className={`shadow-block-outlined-lg flex w-90 items-start gap-3 rounded-lg border-2 border-black px-4 py-3 text-black ${tone.card} ${tone.blockShadow}`}
     >
       {/* A disc, not the notice's corner badge: a badge says "something new
