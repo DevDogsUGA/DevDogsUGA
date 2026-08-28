@@ -1,6 +1,5 @@
 "use client";
 
-import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -11,47 +10,67 @@ import {
 } from "@phosphor-icons/react/ssr";
 import { Dialog, DialogContent, DialogTitle } from "~/ui/dialog";
 import LeaderCard from "./LeaderCard";
+import Headshot, { formatLeaderMeta } from "./Headshot";
 
+/**
+ * One officer, as the cards render them.
+ *
+ * Shaped by `~/server/loaders/officers.ts` out of `platform.officers`; it was
+ * a hand-maintained array of object literals until 20260827000000. Two
+ * consequences of that move show up in these types.
+ *
+ * `imageSrc` is a URL string rather than a `StaticImageData`, because the
+ * image is no longer a build-time import from `~/assets` — it lives in the
+ * `leadership` bucket and the row stores its key. That is also why
+ * `imageBlurDataUrl` exists: a static import carried a blur placeholder with
+ * it, and a runtime URL does not.
+ *
+ * Everything optional is now explicitly `| null` rather than `?`, because the
+ * database distinguishes "no answer" from "not asked" and the difference is
+ * load-bearing here — six of seven officers stated no pronouns, and a card
+ * must render that as silence rather than as a gap in a sentence.
+ */
 export interface LeaderProfile {
+  slug: string;
   name: string;
   titles: string[];
-  imageSrc: StaticImageData;
-  pronouns: string;
-  year: string;
+  imageSrc: string | null;
+  imageBlurDataUrl: string | null;
+  pronouns: string | null;
+  year: string | null;
   majors: string[];
-  minors?: string[];
-  certificates?: string[];
+  minors: string[];
+  certificates: string[];
   bio: string;
-  portfolioUrl?: string;
-  githubUrl?: string;
-  linkedinUrl?: string;
-  email?: string;
+  portfolioUrl: string | null;
+  githubUrl: string | null;
+  linkedinUrl: string | null;
+  email: string | null;
 }
 
 const linkCls =
   "flex items-center gap-1.5 rounded-sm border-2 border-black px-2.5 py-1 text-xs font-semibold text-black transition-lift hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-block-sm";
 
 function MobileContent({ profile }: { profile: LeaderProfile }) {
+  const meta = formatLeaderMeta(profile.pronouns, profile.year);
+
   return (
     <div className="flex flex-col gap-4 p-6 pt-10">
       <div className="flex items-start gap-4">
         <div className="shadow-block-md relative size-20 shrink-0 overflow-hidden rounded-full border-2 border-amber-900 shadow-amber-500">
-          <Image
-            fill
-            alt={profile.name}
+          <Headshot
+            name={profile.name}
             src={profile.imageSrc}
+            blurDataUrl={profile.imageBlurDataUrl}
             // `size-20`, fixed — this sheet only ever opens below md.
             sizes="80px"
-            className="object-cover object-center"
           />
         </div>
         <div>
           <p className="font-display text-base leading-tight font-extrabold text-black">
             {profile.name}
           </p>
-          <p className="mt-0.5 text-xs text-mauve-500">
-            {profile.pronouns} · Class of {profile.year}
-          </p>
+          {meta && <p className="mt-0.5 text-xs text-mauve-500">{meta}</p>}
           {profile.titles.map((t) => (
             <p key={t} className="mt-0.5 text-xs font-semibold text-amber-700">
               {t}
@@ -66,7 +85,7 @@ function MobileContent({ profile }: { profile: LeaderProfile }) {
           </span>{" "}
           {profile.majors.join(", ")}
         </p>
-        {profile.minors && profile.minors.length > 0 && (
+        {profile.minors.length > 0 && (
           <p>
             <span className="font-semibold text-mauve-800">
               Minor{profile.minors.length > 1 ? "s" : ""}:
@@ -74,7 +93,7 @@ function MobileContent({ profile }: { profile: LeaderProfile }) {
             {profile.minors.join(", ")}
           </p>
         )}
-        {profile.certificates && profile.certificates.length > 0 && (
+        {profile.certificates.length > 0 && (
           <p>
             <span className="font-semibold text-mauve-800">
               Cert{profile.certificates.length > 1 ? "s" : ""}:

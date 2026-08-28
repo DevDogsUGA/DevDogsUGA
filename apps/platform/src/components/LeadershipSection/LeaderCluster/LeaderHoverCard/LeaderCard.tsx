@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import * as HoverCard from "@radix-ui/react-hover-card";
 import type { LeaderProfile } from ".";
+import Headshot, { formatLeaderMeta } from "./Headshot";
 import Link from "next/link";
 import {
   ArrowSquareOutIcon,
@@ -31,6 +31,8 @@ export default function LeaderCard({
   onHoverEnd,
   onOpenChange,
 }: Props) {
+  const meta = formatLeaderMeta(profile.pronouns, profile.year);
+
   return (
     <HoverCard.Root
       open={open}
@@ -43,17 +45,16 @@ export default function LeaderCard({
         onMouseEnter={onHoverStart}
       >
         <div className="shadow-block-md relative size-28 overflow-hidden rounded-full border-3 border-mauve-950 shadow-rose-700">
-          <Image
-            fill
-            alt={profile.name}
+          <Headshot
+            name={profile.name}
             src={profile.imageSrc}
+            blurDataUrl={profile.imageBlurDataUrl}
             // The circle above is `size-28` at every breakpoint, so this is a
             // constant, not a viewport fraction. It matters more here than
             // anywhere else on the page: without it `fill` defaults to `100vw`
             // and each of these headshots — several of them 3000-4000px wide —
             // was fetched at w=1920 to fill 112 CSS pixels.
             sizes="112px"
-            className="object-cover object-center"
           />
         </div>
         <div>
@@ -76,9 +77,7 @@ export default function LeaderCard({
         onMouseLeave={onHoverEnd}
         avoidCollisions={false}
       >
-        <p className="text-xs text-mauve-500">
-          {profile.pronouns} · Class of {profile.year}
-        </p>
+        {meta && <p className="text-xs text-mauve-500">{meta}</p>}
         <div className="flex flex-col gap-0.5 text-xs text-mauve-600">
           <p>
             <span className="font-semibold text-mauve-800">
@@ -86,7 +85,7 @@ export default function LeaderCard({
             </span>{" "}
             {profile.majors.join(", ")}
           </p>
-          {profile.minors && profile.minors.length > 0 && (
+          {profile.minors.length > 0 && (
             <p>
               <span className="font-semibold text-mauve-800">
                 Minor{profile.minors.length > 1 ? "s" : ""}:
@@ -94,7 +93,7 @@ export default function LeaderCard({
               {profile.minors.join(", ")}
             </p>
           )}
-          {profile.certificates && profile.certificates.length > 0 && (
+          {profile.certificates.length > 0 && (
             <p>
               <span className="font-semibold text-mauve-800">
                 Cert{profile.certificates.length > 1 ? "s" : ""}:
