@@ -385,7 +385,7 @@ export const leaderboardProfilesInPlatform = platform.table.withRLS("leaderboard
 export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	id: uuid().defaultRandom().primaryKey(),
 	slug: text().notNull(),
-	name: text().notNull(),
+	nameOverride: text(),
 	building: text(),
 	location: text(),
 	startsAt: timestamp({ withTimezone: true }).notNull(),
@@ -396,6 +396,8 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	summary: text(),
 	kind: text(),
 	rsvpUrl: text(),
+	cancelledAt: timestamp({ withTimezone: true }),
+	cancellationReason: text(),
 }, (table) => [
 	index("meetings_live_idx").using("btree", table.startsAt.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	unique("meetings_airtableRecordId_key").on(table.airtableRecordId),	unique("meetings_slug_key").on(table.slug),
@@ -406,7 +408,7 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-check("meetings_building_choices", sql`(("building" IS NULL) OR ("building" = ANY (ARRAY['DLW'::text, 'Driftmier'::text, 'Plant Sciences'::text, 'Boyd'::text, 'MLC'::text, 'Science Learning Center'::text, 'Science Library'::text, 'Poultry Science'::text, 'Main Library'::text, 'Tate'::text, 'Other'::text])))`),check("meetings_attendanceFormUrl_airtable", sql`(("attendanceFormUrl" IS NULL) OR ("attendanceFormUrl" ~ '^https://airtable\.com/[A-Za-z0-9/_?=&.-]+$'::text))`),check("meetings_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),check("meetings_kind_choices", sql`(("kind" IS NULL) OR ("kind" = ANY (ARRAY['Social'::text, 'Career'::text, 'Info session'::text, 'Open lab'::text])))`),check("meetings_rsvpUrl_host", sql`(("rsvpUrl" IS NULL) OR ("rsvpUrl" ~ '^https://uga\.campuslabs\.com(/[A-Za-z0-9/_?=&.%#:~-]*)?$'::text))`),check("meetings_summary_length", sql`(("summary" IS NULL) OR (char_length("summary") <= 240))`),]);
+check("meetings_building_choices", sql`(("building" IS NULL) OR ("building" = ANY (ARRAY['DLW'::text, 'Driftmier'::text, 'Plant Sciences'::text, 'Boyd'::text, 'MLC'::text, 'Science Learning Center'::text, 'Science Library'::text, 'Poultry Science'::text, 'Main Library'::text, 'Tate'::text, 'Other'::text])))`),check("meetings_attendanceFormUrl_airtable", sql`(("attendanceFormUrl" IS NULL) OR ("attendanceFormUrl" ~ '^https://airtable\.com/[A-Za-z0-9/_?=&.-]+$'::text))`),check("meetings_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),check("meetings_cancellationReason_length", sql`(("cancellationReason" IS NULL) OR (char_length("cancellationReason") <= 160))`),check("meetings_cancellationReason_needs_cancellation", sql`(("cancellationReason" IS NULL) OR ("cancelledAt" IS NOT NULL))`),check("meetings_nameOverride_length", sql`(("nameOverride" IS NULL) OR (char_length("nameOverride") <= 80))`),check("meetings_kind_choices", sql`(("kind" IS NULL) OR ("kind" = ANY (ARRAY['Build session'::text, 'Study session'::text, 'Interest meeting'::text, 'Social'::text])))`),check("meetings_rsvpUrl_host", sql`(("rsvpUrl" IS NULL) OR ("rsvpUrl" ~ '^https://uga\.campuslabs\.com(/[A-Za-z0-9/_?=&.%#:~-]*)?$'::text))`),check("meetings_summary_length", sql`(("summary" IS NULL) OR (char_length("summary") <= 240))`),]);
 
 export const oauthRegistrationsInPlatform = platform.table.withRLS("oauthRegistrations", {
 	clientId: uuid().primaryKey().references(() => oauthClients.id, { onDelete: "cascade", onUpdate: "cascade" } ),
@@ -962,9 +964,11 @@ export const userSuspensionsInPlatform = platform.table.withRLS("userSuspensions
 export const workshopsInPlatform = platform.table.withRLS("workshops", {
 	id: uuid().defaultRandom().primaryKey(),
 	meetingId: uuid().notNull().references(() => meetingsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
-	projectId: uuid().notNull().references(() => projectsInPlatform.id, { onDelete: "restrict", onUpdate: "cascade" } ),
+	projectId: uuid().references(() => projectsInPlatform.id, { onDelete: "restrict", onUpdate: "cascade" } ),
 	airtableRecordId: text(),
 	deletedAt: timestamp({ withTimezone: true }),
+	title: text(),
+	description: text(),
 }, (table) => [
 	index("workshops_live_idx").using("btree", table.meetingId.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	unique("workshops_airtableRecordId_key").on(table.airtableRecordId),	unique("workshops_id_meetingId_key").on(table.id, table.meetingId),	unique("workshops_meetingId_projectId_key").on(table.meetingId, table.projectId),
@@ -975,7 +979,7 @@ export const workshopsInPlatform = platform.table.withRLS("workshops", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-]);
+check("workshops_description_length", sql`(("description" IS NULL) OR (char_length("description") <= 280))`),check("workshops_title_length", sql`(("title" IS NULL) OR (char_length("title") <= 80))`),]);
 export const memberPointsInPlatform = platform.view("memberPoints", {	userId: uuid(),
 	lifetimePoints: bigint({ mode: 'number' }),
 	competitionsScored: integer(),

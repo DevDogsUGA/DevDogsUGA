@@ -56,19 +56,19 @@ export interface MeetingStructure {
 
 export interface MeetingBilling {
   /**
-   * Never empty — `open` is the fallback, so there is always something to say.
-   * Ordered; see `resolveMeetingSegments`.
+   * What the STRUCTURE says, ordered; see `resolveMeetingSegments`.
+   *
+   * **Can be empty**, which it could not before. A night whose `kind` an
+   * officer authored — a build session, a study session — has no structure to
+   * derive from, and `open` is suppressed there precisely so the two do not
+   * both speak. A caller rendering chips must therefore render `meeting.kind`
+   * alongside this or such a night gets no chip at all.
+   *
+   * This does NOT carry the officer's `kind`. It used to, as a field named
+   * `kindOverride` that returned `meeting.kind` unchanged — a pure
+   * pass-through of something every call site already had in scope.
    */
   segments: MeetingSegment[];
-  /**
-   * The officer's `kind`, verbatim, or null.
-   *
-   * Kept SEPARATE from `segments` rather than replacing them, because the
-   * caller needs to know which it got. A social with a workshop attached is a
-   * real thing, and a page that swapped the derived set for the override would
-   * quietly stop listing the workshop.
-   */
-  kindOverride: string | null;
 }
 
 /**
@@ -104,30 +104,44 @@ export function isJudgedDuring(
 }
 
 /**
- * The segments a meeting shows, plus the officer's override if there is one.
+ * What a meeting's structure says it is.
  *
  * ## The ordering
  *
- * `judging` → `kickoff` → `workshop` → `open`, and callers take the first as
+ * `workshop` → `kickoff` → `judging` → `open`, and callers take the first as
  * the primary — the calendar's dot colour, the badge that fits on a narrow
- * card. The order is by consequence-of-missing-it, not by rarity:
+ * card.
  *
- * - `judging` is first because it is the only segment with a **deadline**
- *   behind it. Rosters lock and `competedAt` freezes at that instant, so a
- *   member who misreads that night loses something; nobody loses anything by
- *   misreading a teaching night.
- * - `kickoff` outranks `workshop` because it is where teams form and a
- *   week-long clock starts. Skipping it costs you the competition, not just
- *   the session.
- * - `workshop` last of the real three; `open` never appears alongside anything,
- *   so its position is only a formality.
+ * This used to run `judging` first, ranked by consequence-of-missing-it on the
+ * argument that judging is the only segment with a **deadline** behind it.
+ * That argument is sound, and it was answering the wrong question. The old
+ * comment conceded the consequence itself: mid-semester it made `judging`
+ * primary for *nearly every meeting*, because the model says a normal night
+ * straddles two competitions. A dot that is rose every single Monday carries
+ * no information — discriminating is the calendar's whole job, and
+ * consequence-ranking made it monochrome.
  *
- * Worth being explicit that mid-semester this makes `judging` the primary
- * segment for nearly every meeting, because the model says a meeting normally
- * straddles two competitions. That is not the ordering failing to
- * discriminate — it is the calendar correctly reporting that most club nights
- * carry a deadline. A page that wants variety should render the whole set,
- * which is why this returns one.
+ * The deeper reason is audience. Judging matters to somebody already on a
+ * team; the workshop is what somebody deciding whether to *turn up* is coming
+ * for, and this is a public schedule read by newcomers and members alike. So:
+ *
+ * - `workshop` first, because it is what the night teaches — the thing a
+ *   reader who does not yet know what a sprint is can act on.
+ * - `kickoff` next, adjacent to `workshop` on purpose. A kickoff *is* the end
+ *   of a workshop — same room, same hour, "now go build this" — and the two
+ *   share a hue, so putting rose between two emerald chips would draw a
+ *   boundary that is not there.
+ * - `judging` third. Still rendered, still rose, still carrying its deadline;
+ *   just no longer the thing that colours the dot on a night that also taught
+ *   something.
+ * - `open` last, and now genuinely rare — see the suppression below.
+ *
+ * A consequence the calendar legend depends on: **`kickoff` can never be
+ * primary.** It is pushed only when some workshop opens a competition, which
+ * means `workshops.length > 0`, which means `workshop` was already pushed
+ * ahead of it. A legend built from primary badges therefore excludes `kickoff`
+ * on its own, without the special case the hand-written `SEGMENT_LEGEND`
+ * needed.
  *
  * `judging` and `workshop` are not exclusive; neither are `workshop` and
  * `kickoff`. A kickoff is always also a workshop and both are returned, so a
@@ -138,17 +152,27 @@ export function resolveMeetingSegments(
 ): MeetingBilling {
   const segments: MeetingSegment[] = [];
 
-  if (meeting.judgedCompetitions.length > 0) segments.push("judging");
+  if (meeting.workshops.length > 0) segments.push("workshop");
   // A workshop with no competition is a supplementary session — a structural
   // fact worth exactly one star, not a missing row — so `workshop` without
   // `kickoff` is a normal, complete state rather than one to paper over.
   if (meeting.workshops.some((w) => w.competitionSlug !== null)) {
     segments.push("kickoff");
   }
-  if (meeting.workshops.length > 0) segments.push("workshop");
-  if (segments.length === 0) segments.push("open");
+  if (meeting.judgedCompetitions.length > 0) segments.push("judging");
 
-  return { segments, kindOverride: meeting.kind };
+  // `open` is what structural SILENCE looks like, and `kind` is the officer's
+  // word for a night the structure cannot describe — the same condition said
+  // the other way round. So they must never both speak: a build session would
+  // otherwise render "Unscheduled · Build session", the derived fallback
+  // contradicting the person who told us what the night was.
+  //
+  // This is why `segments` can now come back empty, which it never could
+  // before. A caller rendering only these and not `meeting.kind` gives an
+  // authored night no chip at all.
+  if (segments.length === 0 && meeting.kind === null) segments.push("open");
+
+  return { segments };
 }
 
 /**
