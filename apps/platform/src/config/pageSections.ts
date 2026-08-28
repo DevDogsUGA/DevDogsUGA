@@ -61,6 +61,12 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
             "Your expected graduation semester and year — used to verify your student status.",
         },
         {
+          id: "academics",
+          label: "Academics",
+          description:
+            "Your degree programs as the club has them recorded. Read-only for now — ask an officer if anything here is wrong.",
+        },
+        {
           id: "bio",
           label: "Bio",
           description: "A short description of yourself.",

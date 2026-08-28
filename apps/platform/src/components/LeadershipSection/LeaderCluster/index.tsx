@@ -102,7 +102,7 @@ export default function LeaderCluster({ profiles }: Props) {
           data-animate-stagger
         >
           {profiles.slice(0, 2).map((member) => (
-            <div key={member.name} data-animate="fade-up">
+            <div key={member.slug} data-animate="fade-up">
               <LeaderHoverCard {...member} />
             </div>
           ))}
@@ -112,7 +112,7 @@ export default function LeaderCluster({ profiles }: Props) {
           data-animate-stagger
         >
           {profiles.slice(2).map((member) => (
-            <div key={member.name} data-animate="fade-up">
+            <div key={member.slug} data-animate="fade-up">
               <LeaderHoverCard {...member} />
             </div>
           ))}
@@ -186,7 +186,7 @@ export default function LeaderCluster({ profiles }: Props) {
 
           return (
             <motion.div
-              key={member.name}
+              key={member.slug}
               className="absolute"
               style={{ left, top }}
               animate={{

@@ -5,7 +5,7 @@ import SectionBackground, {
 } from "~/ui/section-background";
 import LinkButton from "~/ui/link-button";
 import LeaderCluster from "./LeaderCluster";
-import { execBoard } from "~/app/(site)/homeData";
+import { getCurrentOfficers } from "~/server/loaders/officers";
 
 const LEADERSHIP_BLOBS: BlobDef[] = [
   { cx: "20%", cy: "28%", rx: "50%", ry: "55%", fill: "#fde68a" }, // amber
@@ -26,7 +26,15 @@ interface Props {
   bottomEdge: EdgeType;
 }
 
-export default function LeadershipSection({ topEdge, bottomEdge }: Props) {
+export default async function LeadershipSection({
+  topEdge,
+  bottomEdge,
+}: Props) {
+  // Cached in the loader, and this whole section renders inside the
+  // homepage's `"use cache"` scope, so the await does not make the page
+  // dynamic — it resolves once when the prerendered shell is built.
+  const officers = await getCurrentOfficers();
+
   return (
     <div className="mx-4 overflow-hidden rounded-xl md:mx-6">
       <section
@@ -51,7 +59,10 @@ export default function LeadershipSection({ topEdge, bottomEdge }: Props) {
             </p>
           </div>
 
-          <LeaderCluster profiles={execBoard} />
+          {/* An empty board is a seeding failure, not a state worth designing
+              for -- but rendering the cluster with nothing in it produces a
+              660px void under the heading, so the section closes up instead. */}
+          {officers.length > 0 && <LeaderCluster profiles={officers} />}
 
           {/* Says the same thing as the announcement notice, in the same
               words, behind the same button. The notice is dismissible and

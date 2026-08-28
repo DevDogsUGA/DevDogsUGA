@@ -1,57 +1,76 @@
 "use client";
 
-import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import {
-  ArrowSquareOutIcon,
-  GithubLogoIcon,
-  LinkedinLogoIcon,
-  EnvelopeIcon,
-} from "@phosphor-icons/react/ssr";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react/ssr";
 import { Dialog, DialogContent, DialogTitle } from "~/ui/dialog";
 import LeaderCard from "./LeaderCard";
+import Headshot, { formatLeaderMeta } from "./Headshot";
 
+/**
+ * One officer, as the cards render them.
+ *
+ * Shaped by `~/server/loaders/officers.ts` out of `platform.profile` and the
+ * leadership roles its holder has been given; it was a hand-maintained array
+ * of object literals until 20260827000000. Three consequences of that move
+ * show up in these types.
+ *
+ * `imageSrc` is a URL string rather than a `StaticImageData`, because the
+ * image is no longer a build-time import from `~/assets` — it is the
+ * officer's avatar, keyed by user id in the `avatars` bucket, and can 404.
+ * The blur placeholder a static import used to carry is simply gone: an
+ * avatar uploaded from /account has none to carry.
+ *
+ * `links` replaced the fixed portfolio/github/linkedin/email fields. Members
+ * curate `platform."profileLinks"` from /account, so what a card shows is
+ * whatever the officer put there, rather than four slots the data has to be
+ * bent into. GitHub, Discord and LinkedIn are separately modelled as linked
+ * identities gated on `showGithub`/`showDiscord`/`showLinkedin`, which this
+ * section does not read yet.
+ *
+ * Everything optional is explicitly `| null` rather than `?`, because the
+ * database distinguishes "no answer" from "not asked" and the difference is
+ * load-bearing here — no officer has stated pronouns, and a card must render
+ * that as silence rather than as a gap in a sentence.
+ */
 export interface LeaderProfile {
+  /** The officer's user id, which is also their avatar's key. */
+  slug: string;
   name: string;
   titles: string[];
-  imageSrc: StaticImageData;
-  pronouns: string;
-  year: string;
+  imageSrc: string | null;
+  pronouns: string | null;
+  year: string | null;
   majors: string[];
-  minors?: string[];
-  certificates?: string[];
-  bio: string;
-  portfolioUrl?: string;
-  githubUrl?: string;
-  linkedinUrl?: string;
-  email?: string;
+  minors: string[];
+  certificates: string[];
+  /** `profile.roleDescription`. Null until the officer writes one. */
+  bio: string | null;
+  links: { title: string; url: string }[];
 }
 
 const linkCls =
   "flex items-center gap-1.5 rounded-sm border-2 border-black px-2.5 py-1 text-xs font-semibold text-black transition-lift hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-block-sm";
 
 function MobileContent({ profile }: { profile: LeaderProfile }) {
+  const meta = formatLeaderMeta(profile.pronouns, profile.year);
+
   return (
     <div className="flex flex-col gap-4 p-6 pt-10">
       <div className="flex items-start gap-4">
         <div className="shadow-block-md relative size-20 shrink-0 overflow-hidden rounded-full border-2 border-amber-900 shadow-amber-500">
-          <Image
-            fill
-            alt={profile.name}
+          <Headshot
+            name={profile.name}
             src={profile.imageSrc}
             // `size-20`, fixed — this sheet only ever opens below md.
             sizes="80px"
-            className="object-cover object-center"
           />
         </div>
         <div>
           <p className="font-display text-base leading-tight font-extrabold text-black">
             {profile.name}
           </p>
-          <p className="mt-0.5 text-xs text-mauve-500">
-            {profile.pronouns} · Class of {profile.year}
-          </p>
+          {meta && <p className="mt-0.5 text-xs text-mauve-500">{meta}</p>}
           {profile.titles.map((t) => (
             <p key={t} className="mt-0.5 text-xs font-semibold text-amber-700">
               {t}
@@ -60,13 +79,15 @@ function MobileContent({ profile }: { profile: LeaderProfile }) {
         </div>
       </div>
       <div className="flex flex-col gap-0.5 text-xs text-mauve-600">
-        <p>
-          <span className="font-semibold text-mauve-800">
-            Major{profile.majors.length > 1 ? "s" : ""}:
-          </span>{" "}
-          {profile.majors.join(", ")}
-        </p>
-        {profile.minors && profile.minors.length > 0 && (
+        {profile.majors.length > 0 && (
+          <p>
+            <span className="font-semibold text-mauve-800">
+              Major{profile.majors.length > 1 ? "s" : ""}:
+            </span>{" "}
+            {profile.majors.join(", ")}
+          </p>
+        )}
+        {profile.minors.length > 0 && (
           <p>
             <span className="font-semibold text-mauve-800">
               Minor{profile.minors.length > 1 ? "s" : ""}:
@@ -74,7 +95,7 @@ function MobileContent({ profile }: { profile: LeaderProfile }) {
             {profile.minors.join(", ")}
           </p>
         )}
-        {profile.certificates && profile.certificates.length > 0 && (
+        {profile.certificates.length > 0 && (
           <p>
             <span className="font-semibold text-mauve-800">
               Cert{profile.certificates.length > 1 ? "s" : ""}:
@@ -83,29 +104,24 @@ function MobileContent({ profile }: { profile: LeaderProfile }) {
           </p>
         )}
       </div>
-      <p className="text-xs leading-relaxed text-mauve-700">{profile.bio}</p>
-      <div className="flex flex-wrap gap-2">
-        {profile.portfolioUrl && (
-          <Link href={profile.portfolioUrl} target="_blank" className={linkCls}>
-            <ArrowSquareOutIcon size={12} /> Portfolio
-          </Link>
-        )}
-        {profile.githubUrl && (
-          <Link href={profile.githubUrl} target="_blank" className={linkCls}>
-            <GithubLogoIcon size={12} /> GitHub
-          </Link>
-        )}
-        {profile.linkedinUrl && (
-          <Link href={profile.linkedinUrl} target="_blank" className={linkCls}>
-            <LinkedinLogoIcon size={12} /> LinkedIn
-          </Link>
-        )}
-        {profile.email && (
-          <Link href={`mailto:${profile.email}`} className={linkCls}>
-            <EnvelopeIcon size={12} /> Email
-          </Link>
-        )}
-      </div>
+      {profile.bio && (
+        <p className="text-xs leading-relaxed text-mauve-700">{profile.bio}</p>
+      )}
+      {profile.links.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {profile.links.map((link) => (
+            <Link
+              key={link.url}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={linkCls}
+            >
+              <ArrowSquareOutIcon size={12} /> {link.title}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

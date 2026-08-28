@@ -25,8 +25,16 @@ import { normalizeShortText } from "~/lib/shortText";
 export const PROFILE_LIMITS = {
   /** Stricter than the `varchar(255)` column on purpose — it is a display name. */
   preferredName: 32,
-  /** `platform.profile.bio` and `.roleDescription` are both `varchar(127)`. */
+  /** `platform.profile.bio` is `varchar(127)`. */
   shortText: 127,
+  /**
+   * `platform.profile.roleDescription` is `varchar(512)`. It shared
+   * `shortText` until 20260827000000 widened the column: it is the officer bio
+   * the homepage Leadership section prints, and 127 characters could not hold
+   * one. Still deliberately far short of an essay -- it renders in a hover
+   * card, which stops being a card if it grows.
+   */
+  roleDescription: 512,
   /** Length of a single pronoun, e.g. "theirs". */
   pronounChars: 6,
   pronounCount: 4,
@@ -80,7 +88,11 @@ export function validateBio(value: string): string | null {
 }
 
 export function validateRoleDescription(value: string): string | null {
-  return validateShortText(value, "role description");
+  const normalized = normalizeShortText(value);
+  if (normalized.length > PROFILE_LIMITS.roleDescription) {
+    return `Keep your role description to ${PROFILE_LIMITS.roleDescription} characters or fewer.`;
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------

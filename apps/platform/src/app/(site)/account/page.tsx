@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fragment, Suspense } from "react";
+import AcademicFields from "~/components/AcademicFields";
 import AvatarField from "~/components/AvatarField";
 import BioField from "~/components/BioField";
 import { ConsoleCard } from "~/ui/card";
@@ -75,6 +76,13 @@ async function AccountContent() {
               description="Your expected graduation semester and year — used to verify your student status."
             >
               <GraduationDateField {...data} />
+            </Field>
+            <Field
+              id="academics"
+              label="Academics"
+              description="Your degree programs as the club has them recorded. Read-only for now — ask an officer if anything here is wrong."
+            >
+              <AcademicFields {...data} />
             </Field>
             <Field
               id="bio"
