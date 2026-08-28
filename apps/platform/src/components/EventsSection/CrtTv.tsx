@@ -77,6 +77,13 @@ interface Props {
    * `<Image>` on the beat title.
    */
   showing: { key: string; image: StaticImageData } | null;
+  /**
+   * Draw the set the other way round — side face on the left, screen turned
+   * to the right — for a column it sits on the left of. The cabinet is
+   * mirrored as a whole and the picture is mirrored back inside it, so the
+   * chassis flips and what is on screen still reads the right way.
+   */
+  mirrored?: boolean;
   className?: string;
 }
 
@@ -154,6 +161,14 @@ const BEZEL =
  */
 const PICTURE = { x: 36, y: 98, width: 188, height: 158 } as const;
 
+/**
+ * The two reflections a mirrored set needs. The viewBox runs x = 8..364, so
+ * the cabinet reflects about x = 186; the picture reflects about its own
+ * centre so that, inside the reflected cabinet, it comes out un-reflected.
+ */
+const MIRROR_CABINET = "translate(372 0) scale(-1 1)";
+const MIRROR_PICTURE = `translate(${2 * (PICTURE.x + PICTURE.width / 2)} 0) scale(-1 1)`;
+
 /*
  * The club's colours, used as light rather than as decoration.
  *
@@ -186,7 +201,9 @@ const MAUVE = {
 } as const;
 const LAMP = "#fbbf24"; // amber-400
 
-export default function CrtTv({ showing, className }: Props) {
+export default function CrtTv({ showing, mirrored = false, className }: Props) {
+  const cabinet = mirrored ? MIRROR_CABINET : undefined;
+  const picture = mirrored ? MIRROR_PICTURE : undefined;
   // Strip everything that is not alphanumeric rather than just the colons the
   // rest of the codebase strips: React 19 hands back `«r0»`, not `:r0:`, so a
   // colon-only replace is now a no-op and these ids end up inside `url(#…)`.
@@ -320,7 +337,12 @@ export default function CrtTv({ showing, className }: Props) {
         </pattern>
       </defs>
 
-      <g stroke="black" strokeLinejoin="round" strokeLinecap="round">
+      <g
+        stroke="black"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        transform={cabinet}
+      >
         {/* ── Cabinet ──────────────────────────────────────────────────────
             Back to front: the whole silhouette, then the top face over it,
             then the front over that. The silhouette carries no stroke here —
@@ -354,6 +376,7 @@ export default function CrtTv({ showing, className }: Props) {
             y={PICTURE.y}
             width={PICTURE.width}
             height={PICTURE.height}
+            transform={picture}
             preserveAspectRatio="xMidYMid slice"
           />
           {showing && (
@@ -364,6 +387,7 @@ export default function CrtTv({ showing, className }: Props) {
               y={PICTURE.y}
               width={PICTURE.width}
               height={PICTURE.height}
+              transform={picture}
               preserveAspectRatio="xMidYMid slice"
             />
           )}

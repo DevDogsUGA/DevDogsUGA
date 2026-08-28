@@ -1,4 +1,8 @@
-import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
+import {
+  ArrowRightIcon,
+  CalendarDotsIcon,
+  SparkleIcon,
+} from "@phosphor-icons/react/ssr";
 import SectionBackground, {
   type BlobDef,
   type EdgeType,
@@ -77,17 +81,36 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
         <div className="relative z-10 mx-auto max-w-6xl space-y-10 px-6 py-8 md:px-12">
           <HowItWorks cutout />
 
-          {/* The funnel: its own heading, the one concrete date, then the
-              door to all of them — centred, so it reads as the section's
-              closing beat rather than a footnote to the cards above it, and
-              padded away from the strip so the two do not read as one grid. */}
+          {/* The funnel: its own band under a rule, with a chip straddling
+              the rule like a tab on a divider, a heading flanked by sparks,
+              a line of copy, the one concrete date, and the door to all of
+              them — centred, so it reads as the section's closing beat and
+              not as a fifth card. */}
           <div
-            className="flex flex-col items-center gap-5 pt-8"
+            className="relative mt-6 flex flex-col items-center gap-6 border-t-2 border-black/15 pt-14"
             data-animate="fade-up"
           >
-            <h2 className="font-display text-3xl font-extrabold text-black md:text-4xl">
-              Upcoming Events
-            </h2>
+            <p className="shadow-block-sm font-display absolute -top-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-sm border-2 border-black bg-rose-400 px-3 py-1 text-xs font-extrabold tracking-widest whitespace-nowrap text-black uppercase shadow-black">
+              <CalendarDotsIcon weight="fill" /> Mark your calendar
+            </p>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <h2 className="font-display flex items-center gap-3 text-3xl font-extrabold text-black md:text-4xl">
+                <SparkleIcon
+                  weight="fill"
+                  className="size-6 text-rose-500 md:size-7"
+                  aria-hidden
+                />
+                Upcoming Events
+                <SparkleIcon
+                  weight="fill"
+                  className="size-6 text-rose-500 md:size-7"
+                  aria-hidden
+                />
+              </h2>
+              <p className="max-w-prose text-base/relaxed text-balance text-mauve-700">
+                One night a week, all semester. Here&rsquo;s the next one.
+              </p>
+            </div>
             <NextMeetingStrip meeting={await nextMeeting()} now={new Date()} />
             <LinkButton href="/events" className={FOOTER_LINK_CLS}>
               All events <ArrowRightIcon />

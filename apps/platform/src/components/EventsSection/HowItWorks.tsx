@@ -260,7 +260,12 @@ export default function HowItWorks({
       // pages' idiom — so the attribute only exists on the light plate.
       data-animate={tone === "light" ? "fade-up" : undefined}
     >
-      {/* Heading and television in one row, both hung from the top edge. */}
+      {/* Television and heading in one row, both hung from the top edge. The
+          set comes first from `lg` — `order-first` rather than DOM order, so
+          a phone still reads the words before the picture — and is mirrored
+          so its screen turns toward the words. Its cell stretches to the
+          row and the SVG takes the cell's height, so the set can never be
+          taller than the text beside it; the row's height is the text's. */}
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-8">
         <div className="flex max-w-prose flex-col gap-4 text-left lg:col-span-5">
           <h2
@@ -281,12 +286,20 @@ export default function HowItWorks({
             the workshop. Those count too.
           </p>
         </div>
-        <div className="mx-auto w-full max-w-sm lg:col-span-3 lg:max-w-none">
-          <CrtTv
-            showing={
-              active?.gif ? { key: active.title, image: active.gif } : null
-            }
-          />
+        <div className="mx-auto w-full max-w-sm lg:relative lg:order-first lg:col-span-3 lg:max-w-none lg:self-stretch">
+          {/* Absolutely positioned inside the stretched cell from `lg`, so
+              the set's own height contributes NOTHING to the row: the row is
+              as tall as the words, and the set fits that. In flow, its
+              natural height would have set the row instead. */}
+          <div className="lg:absolute lg:inset-0 lg:flex lg:justify-center">
+            <CrtTv
+              mirrored
+              className="lg:h-full lg:w-auto lg:max-w-full"
+              showing={
+                active?.gif ? { key: active.title, image: active.gif } : null
+              }
+            />
+          </div>
         </div>
       </div>
 
