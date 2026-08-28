@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import {
   CalendarDotsIcon,
   CompassIcon,
+  HandshakeIcon,
   RocketIcon,
 } from "@phosphor-icons/react/ssr";
 import HeroSection from "~/components/HeroSection";
@@ -128,8 +129,9 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
 
       <SectionMarquee
         slope="fs"
-        bg="bg-indigo-600"
-        className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-indigo-100 shadow-indigo-900`}
+        bg="bg-rose-600"
+        className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-rose-100 shadow-rose-900`}
+        icon={CompassIcon}
       >
         <MarqueeItem>Real Software</MarqueeItem>
         <MarqueeItem>Real Users</MarqueeItem>
@@ -145,8 +147,9 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
 
       <SectionMarquee
         slope="bs"
-        bg="bg-rose-600"
-        className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-rose-100 shadow-rose-900`}
+        bg="bg-emerald-600"
+        className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-emerald-100 shadow-emerald-900`}
+        icon={RocketIcon}
       >
         <MarqueeItem>Ship every week</MarqueeItem>
         <MarqueeItem>Build your streak</MarqueeItem>
@@ -161,8 +164,9 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
 
       <SectionMarquee
         slope="bs"
-        bg="bg-teal-600"
-        className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-teal-100 shadow-teal-900`}
+        bg="bg-cyan-600"
+        className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-cyan-100 shadow-cyan-900`}
+        icon={CalendarDotsIcon}
       >
         <MarqueeItem>Weekly Workshops</MarqueeItem>
         <MarqueeItem>Competition Judging</MarqueeItem>
@@ -177,8 +181,9 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
 
       <SectionMarquee
         slope="fs"
-        bg="bg-rose-600"
-        className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-rose-100 shadow-rose-900`}
+        bg="bg-purple-600"
+        className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-purple-100 shadow-purple-900`}
+        icon={HandshakeIcon}
       >
         <MarqueeItem>Software Engineers</MarqueeItem>
         <MarqueeItem>UI Designers</MarqueeItem>

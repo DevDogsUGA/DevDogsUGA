@@ -5,10 +5,11 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import MarqueeItem from "./MarqueeItem";
+import MarqueeItem, { type MarqueeIcon } from "./MarqueeItem";
 import MarqueeTrack from "./MarqueeTrack";
 
 export { MarqueeItem };
+export type { MarqueeIcon };
 
 interface SectionMarqueeProps {
   slope: "bs" | "fs";
@@ -26,6 +27,12 @@ interface SectionMarqueeProps {
   hoverInvert?: boolean;
   /** See {@link MarqueeTrack}'s prop of the same name. */
   keepHoveredInView?: boolean;
+  /**
+   * The one glyph this strip puts between its items, injected into every
+   * {@link MarqueeItem} below. A strip of items wants one; a strip of cards has
+   * no dividers to draw, which is why this is optional rather than required.
+   */
+  icon?: MarqueeIcon;
   children: ReactNode[];
   "aria-label"?: string;
 }
@@ -38,21 +45,20 @@ export default function SectionMarquee({
   copyZBase,
   hoverInvert,
   keepHoveredInView,
+  icon,
   children,
   "aria-label": ariaLabel,
 }: SectionMarqueeProps) {
   const direction = slope === "bs" ? "right" : "left";
   const skewCls = slope === "bs" ? "skew-section" : "skew-section-neg";
 
-  let itemIndex = 0;
-  const indexedChildren = Children.map(children, (child) => {
-    if (isValidElement(child) && child.type === MarqueeItem) {
-      return cloneElement(child as ReactElement<{ index: number }>, {
-        index: itemIndex++,
-      });
-    }
-    return child;
-  });
+  // The divider is the strip's, not the item's, so it is handed down here
+  // rather than repeated at every call site.
+  const itemsWithIcon = Children.map(children, (child) =>
+    isValidElement(child) && child.type === MarqueeItem
+      ? cloneElement(child as ReactElement<{ icon?: MarqueeIcon }>, { icon })
+      : child,
+  );
 
   return (
     <div
@@ -67,7 +73,7 @@ export default function SectionMarquee({
         keepHoveredInView={keepHoveredInView}
         className={className}
       >
-        {indexedChildren}
+        {itemsWithIcon}
       </MarqueeTrack>
     </div>
   );

@@ -31,9 +31,16 @@ const STAR_BOX =
    scanning the raster, not just derived. Both the filter string and the angle
    the sparks fall at come from this array, so retuning the shadow re-aims the
    shower and the two can never disagree. */
+/* Amber first and rose under it, rather than the section's dominant rose first:
+   the slab has to separate from the plate it is cast on, and that plate is now
+   pale rose. A rose band on it reads as a smudge; the amber one reads as an
+   edge, and the dark rose behind it is what makes the stack look like depth
+   instead of an outline. Both hues are the section's own, which is the point.
+
+   The lightness spread is also what the sparks need — see SPARK_TINTS. */
 const SHADOW_STEPS = [
-  { x: 3, y: 8, color: "var(--color-cyan-500)" },
-  { x: 4, y: 10, color: "var(--color-indigo-700)" },
+  { x: 3, y: 8, color: "var(--color-amber-400)" },
+  { x: 4, y: 10, color: "var(--color-rose-900)" },
   { x: 5, y: 12, color: "var(--color-mauve-800)" },
 ] as const;
 
@@ -55,13 +62,28 @@ const SPARK_ANGLE_DEG =
 
 /* Pale bodies with white heads, and a dark rim from the CSS below. The first
    version painted its sparks in the same three colours as the shadow slab they
-   fall through, so a cyan-500 spark crossing the cyan-500 band measured 1.00:1
-   -- invisible by construction, however big it got. This pairing clears 8:1
-   against every backdrop in the section: the white head carries the dark
-   indigo/mauve bands, the rim carries the near-white base and the cyan one. */
+   fall through, so a spark crossing its own band measured 1.00:1 -- invisible
+   by construction, however big it got.
+
+   A spark is never one colour against a backdrop, it is a white head and a dark
+   rim, so what has to hold is that *one of those two* separates from whatever it
+   crosses. That is a fact about lightness, not hue, which is why the section
+   could trade its cyan/violet wash for rose/amber and keep it -- but only once
+   the bands were re-picked to sit at opposite ends of the range. Straight
+   hue-for-hue substitution put both of them mid-range and dropped the worst pair
+   to 5.2:1.
+
+   Measured on the built page, worst backdrop, better of head and rim:
+
+   - amber-400 band ........ 11.5:1  (rim carries it)
+   - rose-900 band ......... 9.61:1  (head carries it)
+   - mauve-800 band ....... 15.53:1  (head)
+   - the section base ..... 18.03:1  (rim)
+
+   So 9.61:1 at worst, against 8.38:1 for the cyan/violet original. */
 const SPARK_TINTS = [
-  "var(--color-cyan-200)",
-  "var(--color-indigo-200)",
+  "var(--color-rose-200)",
+  "var(--color-orange-200)",
   "var(--color-white)",
 ] as const;
 
@@ -139,7 +161,7 @@ function SpinStarImage() {
                 // Dark rim so a pale spark still reads against the pale section,
                 // faint bloom so it separates from the mid-tone blobs.
                 boxShadow:
-                  "0 0 0 1px var(--color-mauve-950), 0 0 6px color-mix(in oklab, var(--color-cyan-100) 60%, transparent)",
+                  "0 0 0 1px var(--color-mauve-950), 0 0 6px color-mix(in oklab, var(--color-rose-100) 60%, transparent)",
                 "--spark-fall": s.fall,
                 "--spark-duration": s.duration,
                 "--spark-delay": s.delay,
