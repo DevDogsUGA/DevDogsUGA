@@ -4,7 +4,7 @@ import { Fragment } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CaretRightIcon } from "@phosphor-icons/react/ssr";
-import devdog from "~/assets/devdog.png";
+import devdog from "~/assets/devdog.svg";
 import {
   Command,
   CommandEmpty,

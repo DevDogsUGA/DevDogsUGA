@@ -4,7 +4,7 @@ import Link from "next/link";
 import * as icons from "~/config/icons";
 import { PUBLIC_LINKS, SOCIAL_LINKS } from "~/config/nav";
 import { PROJECTS } from "~/config/projects";
-import devdog from "~/assets/devdog.png";
+import devdog from "~/assets/devdog.svg";
 
 /** Docs sits under Resources instead, alongside the rest of the reference links. */
 const EXPLORE_LINKS = PUBLIC_LINKS.filter((link) => link.href !== "/docs");

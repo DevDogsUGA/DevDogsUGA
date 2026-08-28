@@ -10,7 +10,7 @@ import {
   PiSignOut,
   PiXBold,
 } from "react-icons/pi";
-import devdog from "~/assets/devdog.png";
+import devdog from "~/assets/devdog.svg";
 import { TermSelector } from "~/components/TermSelector";
 import { UserAvatar } from "~/components/ui/UserAvatar";
 import signIn from "~/lib/signIn";

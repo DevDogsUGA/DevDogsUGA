@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon, XIcon } from "@phosphor-icons/react/ssr";
-import devdog from "~/assets/devdog.png";
+import devdog from "~/assets/devdog.svg";
 import { useNavUser } from "~/components/TopNav/NavUserProvider";
 import SignInButton from "~/components/TopNav/SignInButton";
 import * as icons from "~/config/icons";

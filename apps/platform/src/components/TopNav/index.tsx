@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ListIcon } from "@phosphor-icons/react/ssr";
 import { Suspense } from "react";
-import devdog from "~/assets/devdog.png";
+import devdog from "~/assets/devdog.svg";
 import { getDocsProjects } from "~/server/docs/queries";
 import AppSwitcherButton from "./AppSwitcherButton";
 import NavLinks, { NavLinksFallback } from "./NavLinks";
