@@ -49,13 +49,21 @@
 -- officer's original wording, is the copy of record in the private archive
 -- alongside their resumes and the original emails.
 --
--- No officer stated their pronouns, and a name is not evidence of them, so the
--- third-person rewrites lean on each officer's own name and use they/them
--- where a pronoun is unavoidable. Armani Peacox is the exception: hers was the
--- only bio submitted in the third person already, and it keeps her wording,
--- including the pronouns she chose for herself. `profile.pronouns` exists and
--- is empty for all seven; once officers fill it in, these sentences are worth
--- revisiting.
+-- Pronouns are set for exactly one officer, and that is not an oversight.
+--
+-- Armani Peacox has `she/her` because she wrote it herself: hers was the only
+-- bio submitted in the third person, and it says "She serves as the Campus
+-- Coordinator". That is a statement, not an inference, so it is recorded and
+-- her bio keeps her wording.
+--
+-- Everyone else is null. No resume states pronouns, no bio uses them, and a
+-- name is not evidence of them -- guessing from one is how a club's own
+-- website misgenders its officers in public, and the neutral default never
+-- does that. So the third-person rewrites lean on each officer's own name and
+-- use they/them where a pronoun is unavoidable, and the card omits the line
+-- entirely rather than printing a guess. `profile.pronouns` is editable from
+-- /account: once officers fill theirs in, these sentences are worth another
+-- pass.
 --
 -- ============================================================
 -- Graduation dates
@@ -122,6 +130,21 @@ create temporary table "officer_submissions" (
   -- the wrong account -- a mistake only discovered when somebody notices their
   -- card is a stranger's.
   "altEmails" text[] not null default '{}',
+  -- Only set where the officer has actually said. See the pronouns note above.
+  "pronouns" text[],
+  -- Flipped on for officers with a GitHub or LinkedIn on record. They gate
+  -- display of a LINKED OAuth identity, not the resume links seeded below, so
+  -- today they change nothing visible -- nothing reads them yet either. They
+  -- are set because the intent is recorded now, and whoever wires the display
+  -- should not have to re-derive who consented.
+  --
+  -- Applied on INSERT ONLY, like "preferredName" and for a sharper reason:
+  -- these are consent, and the column is `not null default false`, so a false
+  -- read cannot tell "never set" from "deliberately switched off". Re-asserting
+  -- on every replay would silently republish a link somebody had hidden. An
+  -- existing profile therefore keeps whatever its owner last chose.
+  "showGithub" boolean not null default false,
+  "showLinkedin" boolean not null default false,
   -- Deterministic, so a replay finds the same row and so the headshot key in
   -- the `avatars` bucket -- which is the bare user id -- is knowable before
   -- the upload. Same literal space as the moderation personas
@@ -133,14 +156,14 @@ create temporary table "officer_submissions" (
 insert into "officer_submissions" (
   "slug", "email", "preferredName", "title", "roleDescription",
   "majors", "minors", "certificates", "graduationYear", "graduationSemester",
-  "altEmails", "seededId"
+  "altEmails", "pronouns", "showGithub", "showLinkedin", "seededId"
 ) values
   (
     'jack-harrington', 'jbh36784@uga.edu', 'Jack Harrington',
     'Vice President',
     'Jack Harrington is a Computer Science student at the University of Georgia with a passion for building full-stack software that solves real-world problems. As Vice President, Jack helps coordinate the student-led software projects DevDogs runs for the UGA community. As a Software Engineer Intern with the U.S. Air Force, they have built production software in a collaborative engineering environment, and they contribute to SpectraGuru, an open-source spectrum analysis platform for research.',
     array['Computer Science']::text[], '{}', '{}', 2027, 'spring',
-    array['jackharrington290@gmail.com']::text[],
+    array['jackharrington290@gmail.com']::text[], null, true, true,
     '00000000-0000-4000-b000-000000000001'
   ),
   (
@@ -149,7 +172,7 @@ insert into "officer_submissions" (
     'Zayan Hoodani is a sophomore studying Computer Science while pursuing a certificate in Cybersecurity and Privacy. As Event Director, Zayan facilitates events and works to create a fun, collaborative environment. They are a NetOps Intern at GreenSky, architecting automated systems for cloud network segmentation on AWS and provisioning physical switch infrastructure, and Director of R&D at The Hack Pack. Zayan loves anything to do with cybersecurity and AI.',
     array['Computer Science']::text[], '{}',
     array['Cybersecurity and Privacy']::text[], 2028, 'spring',
-    array['zayanhoodani@gmail.com']::text[],
+    array['zayanhoodani@gmail.com']::text[], null, false, true,
     '00000000-0000-4000-b000-000000000002'
   ),
   (
@@ -157,7 +180,7 @@ insert into "officer_submissions" (
     'Flutter Project Head',
     'Nandan Praveen is a sophomore majoring in Computer Systems Engineering, currently serving as Flutter Project Head and formerly a Focus Lead at DevDogs. Their work spans Flutter, Next.js, MySQL, and Supabase, orchestrating both the UI/UX of the app and the backend while helping developers grow in core and advanced concepts. Outside DevDogs, Nandan does ML research with UGA''s VIPR lab, building image-based models using PyTorch and TensorFlow.',
     array['Computer Systems Engineering']::text[], '{}', '{}', 2029, 'spring',
-    array['nandan@uga.edu']::text[],
+    array['nandan@uga.edu']::text[], null, true, false,
     '00000000-0000-4000-b000-000000000003'
   ),
   (
@@ -166,6 +189,7 @@ insert into "officer_submissions" (
     'Shruti Mishra is a sophomore at the University of Georgia studying Computer Science with an emphasis in Artificial Intelligence. Shruti serves as the Focus Lead for Backend Integration on the DevDogs leadership team, is a member of the UGAHacks Tech Team helping develop the website for UGA''s annual hackathon, and serves on the Outreach Team for HackPack, UGA''s cybersecurity club. They are passionate about software engineering and AI.',
     array['Computer Science']::text[], '{}', '{}', 2027, 'spring',
     array['shruti.mishra@uga.edu', 'shrutibmishra1@gmail.com']::text[],
+    null, true, false,
     '00000000-0000-4000-b000-000000000004'
   ),
   (
@@ -177,6 +201,7 @@ insert into "officer_submissions" (
     array['Computer Science', 'Interdisciplinary Art']::text[], '{}',
     array['New Media']::text[], null, null,
     array['ashlee.peacox@uga.edu']::text[],
+    array['she', 'her']::text[], false, false,
     '00000000-0000-4000-b000-000000000005'
   ),
   (
@@ -184,16 +209,17 @@ insert into "officer_submissions" (
     'UI/UX Focus Lead',
     'Gabrielle Rose is pursuing a degree in Computer Science with a focus on front-end development, human-computer interaction, and UI/UX design, and is passionate about creating intuitive, user-centered technologies that solve real-world problems. In the future, Gabrielle aspires to bridge the gap between people and technology by designing digital solutions that create meaningful impact and empower communities to confidently engage with technology.',
     array['Computer Science']::text[], '{}', '{}', 2028, 'spring',
-    array['gabrielle.rose@uga.edu']::text[],
+    array['gabrielle.rose@uga.edu']::text[], null, false, true,
     '00000000-0000-4000-b000-000000000006'
   ),
   (
-    -- Submitted as Gia Khang Quach; Kyle is the name he goes by.
+    -- Submitted as Gia Khang Quach; Kyle is the name he goes by there --
+    -- his own resume prints linkedin.com/in/kyle-quach.
     'kyle-quach', 'gq72484@uga.edu', 'Kyle Quach',
     'Next.js Focus Lead',
     'Kyle Quach is a sophomore majoring in Computer Science at the University of Georgia. Kyle''s interests span software development to AI engineering, and they sometimes develop games on the side. They have built projects with tech stacks such as Java, C#, Python, and JavaScript, as well as frameworks like React and Spring. As an aspiring software developer, Kyle looks forward to building software that contributes meaningfully to people''s daily lives.',
     array['Computer Science']::text[], '{}', '{}', 2028, 'spring',
-    array['giakhang.quach@uga.edu']::text[],
+    array['giakhang.quach@uga.edu']::text[], null, true, true,
     '00000000-0000-4000-b000-000000000007'
   );
 
@@ -288,13 +314,15 @@ where lower(u."email") = s."email"
 insert into "platform"."profile" (
   "userId", "preferredName", "roleDescription",
   "majors", "minors", "certificates",
-  "graduationYear", "graduationSemester"
+  "graduationYear", "graduationSemester", "pronouns",
+  "showGithub", "showLinkedin"
 )
 select
   s."userId", s."preferredName", s."roleDescription",
   s."majors", s."minors", s."certificates",
   s."graduationYear",
-  s."graduationSemester"::"platform"."graduationSemester"
+  s."graduationSemester"::"platform"."graduationSemester",
+  s."pronouns", s."showGithub", s."showLinkedin"
 from "officer_submissions" s
 where s."userId" is not null
 on conflict ("userId") do update set
@@ -306,6 +334,9 @@ on conflict ("userId") do update set
   ),
   "graduationSemester" = coalesce(
     "platform"."profile"."graduationSemester", excluded."graduationSemester"
+  ),
+  "pronouns" = coalesce(
+    "platform"."profile"."pronouns", excluded."pronouns"
   ),
   "majors" = case
     when cardinality("platform"."profile"."majors") = 0
@@ -392,8 +423,8 @@ drop table "officer_submissions";
 -- confirmed directly -- the address, spring 2027, and the presidency -- plus a
 -- bio drafted for him and accepted as a placeholder he intends to rewrite.
 --
--- `majors` is left empty because nobody has said what they are. The card omits
--- the line rather than printing an empty label.
+-- No pronouns here either, for the same reason as everyone else: they have
+-- not been stated, and the president is owed the same default as the officers.
 --
 -- His headshot is the `apps/platform/src/assets/sloan.jpg` this branch deleted
 -- along with the other placeholder headshots, recovered into the archive and
@@ -418,7 +449,7 @@ on conflict ("id") do nothing;
 
 insert into "platform"."profile" (
   "userId", "preferredName", "roleDescription",
-  "graduationYear", "graduationSemester"
+  "majors", "graduationYear", "graduationSemester"
 )
 select u."id", 'Sloan Finger',
   'Sloan Finger is President of DevDogs, leading the executive board and the '
@@ -426,7 +457,7 @@ select u."id", 'Sloan Finger',
   'spring 2027, Sloan built and maintains the DevDogs platform -- this site '
   'and the console the club runs on -- and works on the developer tooling and '
   'deployment infrastructure behind them.',
-  2027, 'spring'
+  array['Computer Science', 'Sociology']::text[], 2027, 'spring'
 from "auth"."users" u
 where lower(u."email") = 'jsf51288@uga.edu'
 on conflict ("userId") do update set
