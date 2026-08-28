@@ -149,7 +149,18 @@ create temporary table "officer_submissions" (
   "showLinkedin" boolean not null default false,
   -- Deterministic, so a replay finds the same row and so the headshot key in
   -- the `avatars` bucket -- which is the bare user id -- is knowable before
-  -- the upload. Same literal space as the moderation personas
+  -- the upload. That upload is `supabase/seed/avatars/<id>`, carried into the
+  -- bucket by `objects_path` in config.toml, so `db reset` restores the images
+  -- with the rows. The two halves are named by the same literal: rename an id
+  -- here and the matching file has to move with it.
+  --
+  -- The exception is an officer who already has an account, since the profile
+  -- then hangs off their real user id and the file named for "seededId" is not
+  -- theirs. A reset cannot hit this -- it empties auth.users first -- but a
+  -- seed replayed over a live database can, and the symptom is one card back
+  -- to initials.
+  --
+  -- Same literal space as the moderation personas
   -- (00000000-0000-4000-a000-...), one block along so they cannot collide.
   "seededId" uuid not null,
   "userId" uuid
