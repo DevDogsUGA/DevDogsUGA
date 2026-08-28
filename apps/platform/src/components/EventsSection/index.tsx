@@ -42,16 +42,14 @@ interface Props {
  *
  * The split between the two is by question. `/events` answers *when*: every
  * meeting past and coming, and the calendar. The homepage answers *what
- * happens if I turn up*: the format, and one line of proof that there is a
- * next meeting at all. The explainer renders on both — it is the same
- * component — but here it is the subject, and its "Feature Sprints" heading
- * is the section's; there is no separate "Events" heading and no general
- * paragraph about the club meeting, because the explainer says all of that
- * better and the section has one job after it, which is to hand the reader
- * to `/events`. So the section opens with what is coming — "Upcoming
- * Events", the next three nights as a receding stack, "All events" — and
- * the explainer sits below a hairline cut across the plate, for whoever
- * wants to know what a night is like before turning up to one.
+ * happens if I turn up*: a few concrete dates, and the format. So the
+ * section opens the way the Projects section does — an "Events" heading
+ * over one short paragraph — then the next three nights as a receding
+ * stack and "All events", which is the job: handing the reader to
+ * `/events`. The explainer ("A Week in DevDogs", the same component
+ * `/events` renders as its legend) sits below a hairline cut across the
+ * plate, for whoever wants to know what a night is like before turning up
+ * to one.
  *
  * The room is not named here. Where the club meets is a fact about a
  * meeting, and every meeting on `/events` says its own; the homepage only has
@@ -76,17 +74,29 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
           blobs={EVENTS_BLOBS}
         />
         <div className="relative z-10 mx-auto max-w-6xl space-y-12 px-6 py-8 md:px-12">
-          {/* What is coming, first: the heading, the next three nights as a
-              short stack — each a step smaller than the one before it, so
-              the list recedes and the soonest is the one that reads — and
-              the door to the rest. */}
+          {/* What is coming, first: the section's header, the next three
+              nights as a short stack — each a step smaller than the one
+              before it, so the list recedes and the soonest is the one that
+              reads — and the door to the rest. */}
           <div
             className="flex flex-col items-center gap-6"
             data-animate="fade-up"
           >
-            <h2 className="font-display text-3xl font-extrabold text-black md:text-4xl">
-              Upcoming Events
-            </h2>
+            {/* The same header the Projects section uses — centred, the
+                heading two sizes up from the explainer's, one short
+                paragraph under it — so the two sections read as siblings. */}
+            <div className="mx-auto max-w-prose space-y-4 text-center text-balance">
+              <h2 className="font-display mb-8 text-4xl font-extrabold text-black md:text-5xl">
+                Events
+              </h2>
+              <div className="mx-auto flex max-w-2xl flex-col gap-3 text-base/relaxed text-mauve-700">
+                <p>
+                  DevDogs meets every Monday of the semester — workshops,
+                  competitions, and open build nights. Here&rsquo;s what&rsquo;s
+                  next.
+                </p>
+              </div>
+            </div>
             <UpcomingStack meetings={await nextMeetings(UPCOMING_COUNT)} />
             <LinkButton href="/events" className={FOOTER_LINK_CLS}>
               All events <ArrowRightIcon />

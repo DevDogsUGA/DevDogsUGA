@@ -171,6 +171,7 @@ const TONES = {
   light: {
     heading: "text-black",
     intro: "text-mauve-700",
+    tvShadow: "drop-shadow-block-md shadow-black",
     beat: `drop-shadow-block-md relative flex flex-col gap-2 rounded-sm border-2 border-black bg-white p-4 ${CARET_BASE} lg:before:border-black lg:before:bg-white ${HOVER}`,
     beatDay:
       "font-display text-xs font-extrabold tracking-widest text-mauve-600 uppercase",
@@ -186,6 +187,7 @@ const TONES = {
   dark: {
     heading: "text-white",
     intro: "text-mauve-300",
+    tvShadow: "drop-shadow-block-md shadow-black/60",
     beat: `relative flex flex-col gap-2 rounded-lg border border-mauve-700 bg-mauve-900 p-4 data-[active=true]:border-white/60 lg:data-[active=true]:before:border-white/60 ${CARET_BASE} lg:before:border-mauve-700 lg:before:bg-mauve-900 ${HOVER}`,
     beatDay:
       "font-display text-xs font-extrabold tracking-widest text-mauve-400 uppercase",
@@ -265,9 +267,9 @@ export default function HowItWorks({
         <div className="flex max-w-prose flex-col gap-4 text-left lg:col-span-5">
           <h2
             id={`${id}-heading`}
-            className={`font-display text-3xl font-extrabold md:text-4xl ${t.heading}`}
+            className={`font-display text-2xl font-extrabold md:text-3xl ${t.heading}`}
           >
-            Feature Sprints
+            A Week in DevDogs
           </h2>
           <p className={`text-base/relaxed text-balance ${t.intro}`}>
             One feature, one week, every team at once. Monday&rsquo;s workshop
@@ -281,12 +283,19 @@ export default function HowItWorks({
             the workshop. Those count too.
           </p>
         </div>
-        <div className="mx-auto w-full max-w-sm lg:col-span-3 lg:max-w-none">
-          <CrtTv
-            showing={
-              active?.gif ? { key: active.title, image: active.gif } : null
-            }
-          />
+        {/* The set's cell stretches to the row, and the set is absolutely
+            positioned inside it from `lg`, so its own height contributes
+            nothing: the row is as tall as the words and the set fits that,
+            never taller. In flow, its natural height would set the row. */}
+        <div className="mx-auto w-full max-w-sm lg:relative lg:col-span-3 lg:max-w-none lg:self-stretch">
+          <div className="lg:absolute lg:inset-0 lg:flex lg:justify-center">
+            <CrtTv
+              className={`lg:h-full lg:w-auto lg:max-w-full ${t.tvShadow}`}
+              showing={
+                active?.gif ? { key: active.title, image: active.gif } : null
+              }
+            />
+          </div>
         </div>
       </div>
 
