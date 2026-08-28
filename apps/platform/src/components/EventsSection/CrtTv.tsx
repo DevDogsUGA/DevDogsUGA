@@ -61,10 +61,13 @@ import { useTvStatic } from "./useTvStatic";
  * individually puts three strokes end to end along one edge, and they show
  * every place they meet.
  *
- * It carries no drop shadow. The set is already a solid under a light, with a
- * lit top and a shadowed side; a flat offset block behind it would be a second
- * lighting model disagreeing with the first, and the volume is doing the work
- * the shadow was there for.
+ * The outline and every black edge inside it are one weight, 3.5; the trim
+ * and knobs step down to 3 and the lamp to 2.5; the grille is 4 but at half
+ * opacity, so it reads as shading rather than as an edge. Thin enough that
+ * the set reads as a drawing on the page rather than a sticker, which
+ * matters now that it casts the site's block shadow: the caller adds
+ * `drop-shadow-block-*`, which follows the drawn silhouette rather than the
+ * SVG's box, and a heavy outline plus an offset block read as two outlines.
  */
 
 interface Props {
@@ -326,7 +329,7 @@ export default function CrtTv({ showing, className }: Props) {
             then the front over that. The silhouette carries no stroke here —
             the outline is a separate pass at the end, in a different colour. */}
         <path d={SHELL} fill={`url(#${id("shell")})`} stroke="none" />
-        <path d={TOP} fill={`url(#${id("top")})`} strokeWidth="5" />
+        <path d={TOP} fill={`url(#${id("top")})`} strokeWidth="3.5" />
         <rect
           x="18"
           y="84"
@@ -334,11 +337,11 @@ export default function CrtTv({ showing, className }: Props) {
           height="216"
           rx={CORNER}
           fill={`url(#${id("front")})`}
-          strokeWidth="5"
+          strokeWidth="3.5"
         />
 
         {/* ── Screen ───────────────────────────────────────────────────────*/}
-        <path d={BEZEL} fill={`url(#${id("rim")})`} strokeWidth="5" />
+        <path d={BEZEL} fill={`url(#${id("rim")})`} strokeWidth="3.5" />
         {/* Black underneath the picture, so the tube still reads as a tube in
             the moment before a GIF has decoded. */}
         <path d={SCREEN} fill="black" strokeWidth="0" />
@@ -395,7 +398,7 @@ export default function CrtTv({ showing, className }: Props) {
         {/* Re-struck over the picture, because the clip above cuts the image
             flush to the path and leaves the aperture with no edge of its
             own. */}
-        <path d={SCREEN} fill="none" strokeWidth="5" />
+        <path d={SCREEN} fill="none" strokeWidth="3.5" />
 
         {/* ── Controls ─────────────────────────────────────────────────────*/}
         <rect
@@ -405,7 +408,7 @@ export default function CrtTv({ showing, className }: Props) {
           height="188"
           rx="14"
           fill={`url(#${id("trim")})`}
-          strokeWidth="4"
+          strokeWidth="3"
         />
         {[140, 196].map((cy) => (
           <g key={cy}>
@@ -414,7 +417,7 @@ export default function CrtTv({ showing, className }: Props) {
               cy={cy}
               r="15"
               fill={`url(#${id("knob")})`}
-              strokeWidth="4"
+              strokeWidth="3"
             />
             {/* Pointing somewhere specific — a knob with no indicator is a
                 button. The two disagree so the set does not look printed. */}
@@ -423,11 +426,11 @@ export default function CrtTv({ showing, className }: Props) {
               y1={cy}
               x2={cy === 140 ? 275 : 258}
               y2={cy === 140 ? 151 : 206}
-              strokeWidth="4"
+              strokeWidth="3"
             />
           </g>
         ))}
-        <circle cx="266" cy="252" r="7" fill={LAMP} strokeWidth="3.5" />
+        <circle cx="266" cy="252" r="7" fill={LAMP} strokeWidth="2.5" />
 
         {/* ── Speaker ──────────────────────────────────────────────────────
             Across the chin. A blank strip under a tube reads as a mistake; a
@@ -435,10 +438,10 @@ export default function CrtTv({ showing, className }: Props) {
 
             The chin is only ~38 units deep and three of its edges are strokes
             rather than lines — the bezel's bottom reaches y≈262, and the
-            outline is 5 wide centred on y=300, so it eats up to 297.5. The
+            outline is 3.5 wide centred on y=300, so it eats up to 298. The
             lines are placed against those inner edges, not against the
             nominal ones. */}
-        <g stroke={CYAN[900]} strokeWidth="6" opacity="0.5">
+        <g stroke={CYAN[900]} strokeWidth="4" opacity="0.5">
           {[269, 280, 291].map((y) => (
             <line key={y} x1="48" y1={y} x2="212" y2={y} />
           ))}
@@ -453,7 +456,7 @@ export default function CrtTv({ showing, className }: Props) {
             at the edge and once inside. Since it is painted last it still
             owns the shared edges; being no wider, it just no longer bulges
             past them. */}
-        <path d={SHELL} fill="none" strokeWidth="5" />
+        <path d={SHELL} fill="none" strokeWidth="3.5" />
       </g>
     </svg>
   );
