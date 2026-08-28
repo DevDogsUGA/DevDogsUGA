@@ -9,11 +9,35 @@ import SectionBackground, {
 const STAR_POINTS =
   "50,8 62.9,32.2 90,37 70.9,56.8 74.7,84 50,72 25.3,84 29.1,56.8 10,37 37.1,32.2";
 
+/* The wash is two hues at two strengths each. Named rather than inlined
+   because the star's shadow reaches for BLOB_AMBER by name — see
+   SHADOW_STEPS — and that is the whole point of naming it: retint the blob
+   and the star's leading edge follows, instead of the two drifting a shade
+   apart the way they had. */
+const BLOB_ROSE_PALE = "#fecdd3";
+const BLOB_ROSE = "#fb7185";
+const BLOB_AMBER_PALE = "#fed7aa";
+const BLOB_AMBER = "#fdba74";
+
 export const MISSION_BLOBS: BlobDef[] = [
-  { cx: "15%", cy: "25%", rx: "50%", ry: "55%", fill: "#fecdd3" }, // rose
-  { cx: "80%", cy: "75%", rx: "60%", ry: "50%", fill: "#fb7185", opacity: 0.7 }, // rose
-  { cx: "78%", cy: "12%", rx: "42%", ry: "38%", fill: "#fed7aa", opacity: 0.5 }, // amber
-  { cx: "20%", cy: "80%", rx: "38%", ry: "32%", fill: "#fdba74", opacity: 0.4 }, // amber
+  { cx: "15%", cy: "25%", rx: "50%", ry: "55%", fill: BLOB_ROSE_PALE },
+  { cx: "80%", cy: "75%", rx: "60%", ry: "50%", fill: BLOB_ROSE, opacity: 0.7 },
+  {
+    cx: "78%",
+    cy: "12%",
+    rx: "42%",
+    ry: "38%",
+    fill: BLOB_AMBER_PALE,
+    opacity: 0.5,
+  },
+  {
+    cx: "20%",
+    cy: "80%",
+    rx: "38%",
+    ry: "32%",
+    fill: BLOB_AMBER,
+    opacity: 0.4,
+  },
 ];
 
 /* The star and the spark shower share this box, so the sparks track the star's
@@ -35,13 +59,27 @@ const STAR_BOX =
    the slab has to separate from the plate it is cast on, and that plate is now
    pale rose. A rose band on it reads as a smudge; the amber one reads as an
    edge, and the dark rose behind it is what makes the stack look like depth
-   instead of an outline. Both hues are the section's own, which is the point.
+   instead of an outline.
+
+   Every band is the wash's own, and now literally so. The bright one is
+   BLOB_AMBER itself rather than amber-400, which was a near-miss: amber-400 is
+   #fcbb00 here, a gold, against the #fdba74 the two warm blobs are actually
+   painted in, so the star's leading edge was the one warm thing on the section
+   that no blob could account for. The dark bands are the far end of the same
+   rose ramp the wash starts on — rose-900 into rose-950, where the outermost
+   used to be mauve-800, a near-black with a violet cast left over from the
+   cyan/violet palette this section used to wear. Nothing in the stack is off
+   the two hues any more.
+
+   None of that moves the stack's read, because the swaps are lightness-neutral:
+   the bright-to-dark step goes 5.6:1 -> 5.7:1 and the dark-to-darkest 1.62:1 ->
+   1.63:1, so the three bands separate exactly as far as they did.
 
    The lightness spread is also what the sparks need — see SPARK_TINTS. */
 const SHADOW_STEPS = [
-  { x: 3, y: 8, color: "var(--color-amber-400)" },
+  { x: 3, y: 8, color: BLOB_AMBER },
   { x: 4, y: 10, color: "var(--color-rose-900)" },
-  { x: 5, y: 12, color: "var(--color-mauve-800)" },
+  { x: 5, y: 12, color: "var(--color-rose-950)" },
 ] as const;
 
 const STAR_SHADOW_FILTER = SHADOW_STEPS.map(
@@ -75,12 +113,16 @@ const SPARK_ANGLE_DEG =
 
    Measured on the built page, worst backdrop, better of head and rim:
 
-   - amber-400 band ........ 11.5:1  (rim carries it)
-   - rose-900 band ......... 9.61:1  (head carries it)
-   - mauve-800 band ....... 15.53:1  (head)
-   - the section base ..... 18.03:1  (rim)
+   - BLOB_AMBER band ....... 11.75:1  (rim carries it)
+   - rose-900 band ......... 9.61:1   (head carries it)
+   - rose-950 band ........ 15.70:1   (head)
+   - the section base ..... 18.03:1   (rim)
 
-   So 9.61:1 at worst, against 8.38:1 for the cyan/violet original. */
+   So 9.61:1 at worst, against 8.38:1 for the cyan/violet original. Pulling the
+   outer bands onto the wash's exact hues did not cost the shower anything —
+   amber-400 -> BLOB_AMBER went 11.55 -> 11.75 and mauve-800 -> rose-950 went
+   15.53 -> 15.70 — because both swaps hold their lightness and it is lightness
+   this table is about. The worst pair is the rose-900 band either way. */
 const SPARK_TINTS = [
   "var(--color-rose-200)",
   "var(--color-orange-200)",
