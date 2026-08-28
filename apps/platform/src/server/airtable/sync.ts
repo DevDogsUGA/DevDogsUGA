@@ -73,7 +73,7 @@ function emptyOutcome(): PullOutcome {
 // ── Meetings ─────────────────────────────────────────────────────────────────
 
 interface MeetingValues {
-  name: string | null;
+  nameOverride: string | null;
   building: string | null;
   location: string | null;
   startsAt: string | null;
@@ -82,6 +82,8 @@ interface MeetingValues {
   summary: string | null;
   kind: string | null;
   rsvpUrl: string | null;
+  cancelledAt: string | null;
+  cancellationReason: string | null;
 }
 
 /**
@@ -220,6 +222,8 @@ export async function pullMeetings(
       summary?: string | null;
       kind?: string | null;
       rsvpUrl?: string | null;
+      cancelledAt?: Date | null;
+      cancellationReason?: string | null;
     } = {
       nameOverride: v.nameOverride,
       // Not part of `complete`, like the three below it: a meeting whose
@@ -239,6 +243,12 @@ export async function pullMeetings(
       summary: v.summary,
       kind: v.kind,
       rsvpUrl: v.rsvpUrl,
+      // Cancellation is written through the same way, and un-cancelling is the
+      // reason it must be: an officer clearing the Airtable date has to clear
+      // the column too, or the page keeps a night struck through after the
+      // club decided it was on again.
+      cancelledAt: v.cancelledAt === null ? null : new Date(v.cancelledAt),
+      cancellationReason: v.cancellationReason,
     };
 
     // A refused field is DROPPED from the write rather than written as null.
@@ -301,6 +311,8 @@ export async function pullMeetings(
 interface WorkshopValues {
   meeting: string | null;
   project: string | null;
+  title: string | null;
+  description: string | null;
 }
 
 /**
@@ -360,11 +372,26 @@ export async function pullWorkshops(
       );
       out.refusals.push(...rules.refusals);
 
-      const values: { meetingId?: string; projectId?: string } = {};
+      const values: {
+        meetingId?: string;
+        projectId?: string | null;
+        title?: string | null;
+        description?: string | null;
+      } = {
+        // Written through unconditionally, unlike the two links: clearing the
+        // Airtable cell has to clear the column, or the page keeps printing a
+        // title an officer deleted.
+        title: record.values.title,
+        description: record.values.description,
+      };
       if (meetingId !== null && !rules.rejectedFields.has("meetingId")) {
         values.meetingId = meetingId;
       }
-      if (projectId !== null && !rules.rejectedFields.has("projectId")) {
+      // `projectId` may now legitimately go to null: unlinking the project
+      // from a session that turned out to teach a skill rather than a codebase
+      // is a real edit, and the refusal rules still guard the case where
+      // attendance already hangs off the old one.
+      if (!rules.rejectedFields.has("projectId")) {
         values.projectId = projectId;
       }
 
@@ -383,9 +410,12 @@ export async function pullWorkshops(
       continue;
     }
 
-    // Both links are NOT NULL, so a workshop cannot be created until the
-    // officer has filled in both.
-    if (meetingId === null || projectId === null) {
+    // Only the MEETING link is still required. `projectId` became nullable
+    // with the events rework, so a career-readiness session -- which belongs to
+    // no codebase and never will -- can be created with its project cell empty
+    // rather than sitting in Airtable being skipped every pass with no
+    // explanation.
+    if (meetingId === null) {
       out.skipped += 1;
       continue;
     }
@@ -395,6 +425,8 @@ export async function pullWorkshops(
       .values({
         meetingId,
         projectId,
+        title: record.values.title,
+        description: record.values.description,
         airtableRecordId: record.airtableRecordId,
       })
       .returning({ id: workshops.id });

@@ -41,7 +41,7 @@ Four constraints carry most of the meaning:
 
 ## Where it lives
 
-The schema is migrations `20260803000001_platform_meetings_core.sql` through `20260803000006_platform_airtable_sync.sql`, amended by `20260806000000`–`20260806000002` (attendance from Airtable, check-in codes removed, the attendance form URL) and `20260808000001` (a meeting's summary, kind and RSVP link). The code is `apps/platform/src/server/` under `teams/`, `airtable/`, `loaders/` and `actions/`. Most scheduled passes are routes under `app/(api)/cron/`, but the fifteen-minute Airtable pull is not — it is `app/(api)/airtable/sync/`. `cloudflare/scheduled.ts` is the one file that maps every cron expression to its route, so read it rather than guessing a path from a schedule.
+The schema is migrations `20260803000001_platform_meetings_core.sql` through `20260803000006_platform_airtable_sync.sql`, amended by `20260806000000`–`20260806000002` (attendance from Airtable, check-in codes removed, the attendance form URL) `20260808000001` (a meeting's summary, kind and RSVP link) and `20260828000000` (the events rework: cancellation, a nullable `nameOverride` in place of the required `name`, workshop titles and descriptions, an optional `projectId`, and a new `kind` list). The code is `apps/platform/src/server/` under `teams/`, `airtable/`, `loaders/` and `actions/`. Most scheduled passes are routes under `app/(api)/cron/`, but the fifteen-minute Airtable pull is not — it is `app/(api)/airtable/sync/`. `cloudflare/scheduled.ts` is the one file that maps every cron expression to its route, so read it rather than guessing a path from a schedule.
 
 ## Read next
 

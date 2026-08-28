@@ -16,8 +16,8 @@ Seven tables, and the direction is **per field, never per table**:
 
 | Table            | Officers author                                                             | The platform writes                                                        |
 | ---------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| **Meetings**     | name, times, location, form link, summary, kind, RSVP                       | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                              |
-| **Workshops**    | Meeting and Project _(links)_                                               | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                              |
+| **Meetings**     | custom name, times, location, form link, summary, kind, RSVP, cancellation  | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                              |
+| **Workshops**    | Meeting _(link)_, Project _(link, optional)_, title, description            | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                              |
 | **Competitions** | Branch slug, Workshop _(link)_, Judging starts, Requirements, Max team size | ⚙️ Platform ID, ⚙️ Teams, ⚙️ Sync status                                   |
 | **Teams**        | Requirements met                                                            | ⚙️ Platform ID, ⚙️ Name, ⚙️ Members, ⚙️ Submission, ⚙️ Competed, ⚙️ Points |
 | **Members**      | Dues paid                                                                   | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended                |
@@ -84,7 +84,7 @@ The first four protect **history**. The last is a different kind — nothing is 
 
 A workshop with **no** attendance is still fully editable, and a null incoming value is never a change: officers fill fields one at a time, and a pass landing between two keystrokes must not complain about a row that will be complete shortly.
 
-A meeting below the required shape — `name`, `startsAt`, `endsAt`, and the end after the start — is skipped rather than refused, and writes a **state** into `⚙️ Sync status` saying which field it is waiting on. That is not a complaint and is worded not to read as one; it exists because the silence was indistinguishable from a sync that had never run, which is precisely the question the column is there to answer. It clears itself on the pass after the row is whole.
+A meeting below the required shape — `startsAt`, `endsAt`, and the end after the start — is skipped rather than refused, and writes a **state** into `⚙️ Sync status` saying which field it is waiting on. A **name is not required**, and asking for one would report the ordinary case as a fault: most nights have none, because the heading is derived from the workshops and the judging, and the slug comes from the meeting's date rather than its name. That is not a complaint and is worded not to read as one; it exists because the silence was indistinguishable from a sync that had never run, which is precisely the question the column is there to answer. It clears itself on the pass after the row is whole.
 
 Workshops and competitions have the same silent branch and deliberately keep it: an unresolvable link there usually means the linked _meeting_ was incomplete, which now carries its own message — saying it twice would point the officer at the wrong row.
 

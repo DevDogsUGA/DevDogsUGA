@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
 import {
@@ -9,13 +12,27 @@ import {
 } from "~/components/EventsSection/meetingView";
 import { locationLine } from "~/components/EventsSection/FindUs/buildings";
 import { INVOLVEMENT_NETWORK_EVENTS_URL } from "~/config/nav";
-import { EVENT_TZ, formatEventSpan, formatRelative } from "~/lib/eventTime";
-import { meetingTitle } from "~/lib/meetingTitle";
 import {
-  resolveMeetingSegments,
-  type MeetingInRange,
-  type MeetingRangeJudging,
-  type MeetingRangeWorkshop,
+  clubDateKey,
+  clubDay,
+  EVENT_TZ,
+  formatEventSpan,
+  formatRelative,
+} from "~/lib/eventTime";
+import { meetingTitle } from "~/lib/meetingTitle";
+// `resolveMeetingSegments` as a VALUE comes from `~/lib/meetingSegments`, not
+// from the loader that re-exports it. The loader's first import is
+// `~/server/db`, whose entry point runs `createDb(env.DB_URL, …)` at module
+// scope — an observable side effect a bundler cannot drop — so importing the
+// value through it from a client component pulls the database module into the
+// browser graph, where t3-env throws on `env.DB_URL`. During HYDRATION, not
+// SSR: the server render looks perfect and it breaks only in a visitor's
+// console. The types below are erased and were never the problem.
+import { resolveMeetingSegments } from "~/lib/meetingSegments";
+import type {
+  MeetingInRange,
+  MeetingRangeJudging,
+  MeetingRangeWorkshop,
 } from "~/server/loaders/meetings";
 
 /**
@@ -66,7 +83,91 @@ const DAY_FORMAT = new Intl.DateTimeFormat("en-US", {
   timeZone: EVENT_TZ,
 });
 
+/**
+ * One week of the schedule, as the reader experiences it.
+ *
+ * The week is the club's real unit: the Wednesday build session exists
+ * *because* of the Monday's sprint, and `CompetitionTimeline` has always drawn
+ * the format that way. Grouping by it also pays for itself once there are two
+ * nights most weeks — twice the rows, half as many headings.
+ *
+ * Keyed on the ISO date of the week's Monday in the club's zone. Never
+ * `getDay()`: a Monday 18:00 Athens meeting is Tuesday in UTC, so the ambient
+ * zone files it in the *next* week — and files it differently during SSR than
+ * during hydration, which is a wrong answer and a hydration mismatch at once.
+ */
+function weekKey(at: Date): string {
+  const { year, month, day } = clubDay(at);
+  // Built in UTC deliberately: this is calendar arithmetic on parts that have
+  // already been resolved in `EVENT_TZ`, so the zone is spent and using UTC
+  // keeps the subtraction from crossing a DST boundary and losing an hour.
+  const noon = new Date(Date.UTC(year, month, day, 12));
+  // getUTCDay: 0 is Sunday, and the club's week starts on Monday.
+  const offset = (noon.getUTCDay() + 6) % 7;
+  noon.setUTCDate(noon.getUTCDate() - offset);
+  return clubDateKey(noon);
+}
+
+const WEEK_OF_FORMAT = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  day: "numeric",
+  timeZone: "UTC",
+});
+
+/** "Week of September 21", from a `YYYY-MM-DD` key. */
+function weekLabel(key: string): string {
+  // Parsed as UTC noon rather than `new Date(key)`, which reads a bare
+  // `YYYY-MM-DD` as midnight UTC and would print the day before for any
+  // formatter west of Greenwich.
+  const [y, m, d] = key.split("-").map(Number);
+  return `Week of ${WEEK_OF_FORMAT.format(new Date(Date.UTC(y!, m! - 1, d!, 12)))}`;
+}
+
+/**
+ * The filters offered, derived from what is actually in the list.
+ *
+ * A fixed set of chips would offer "Build session" in a summer with none and
+ * hide a kind an officer added last week — `kind` is an open Airtable
+ * single-select, so the closed list this side knows is never the whole truth.
+ */
+function availableFilters(meetings: MeetingInRange[]): string[] {
+  const labels = new Set<string>();
+  for (const meeting of meetings) {
+    const { segments } = resolveMeetingSegments(meeting);
+    for (const badge of meetingBadges({ kind: meeting.kind, segments })) {
+      labels.add(badge.label);
+    }
+  }
+  return [...labels];
+}
+
 export default function ScheduleList({ meetings, now }: Props) {
+  const [active, setActive] = useState<string | null>(null);
+
+  const filters = availableFilters(meetings);
+  // Filter FIRST, then group. The order is the whole implementation of "an
+  // emptied week shows no heading": a week whose every night was filtered out
+  // never becomes a group, so there is nothing to render a heading for.
+  const shown =
+    active === null
+      ? meetings
+      : meetings.filter((meeting) => {
+          const { segments } = resolveMeetingSegments(meeting);
+          return meetingBadges({ kind: meeting.kind, segments }).some(
+            (badge) => badge.label === active,
+          );
+        });
+
+  const weeks: { key: string; meetings: MeetingInRange[] }[] = [];
+  for (const meeting of shown) {
+    const key = weekKey(meeting.startsAt);
+    const last = weeks[weeks.length - 1];
+    // `meetings` arrives ascending, so a run of the same key is contiguous and
+    // this never has to look further back than one group.
+    if (last && last.key === key) last.meetings.push(meeting);
+    else weeks.push({ key, meetings: [meeting] });
+  }
+
   return (
     <section className="flex flex-col gap-4" aria-labelledby="schedule-heading">
       <h3
@@ -76,16 +177,62 @@ export default function ScheduleList({ meetings, now }: Props) {
         Coming up
       </h3>
 
+      {/* Sits with the list it acts on rather than in the card header, where
+          the console puts a card's one ACTION and where check-in already
+          lives. Hidden when there is nothing to tell apart — a single chip
+          filters a list into itself. */}
+      {filters.length > 1 && (
+        <div
+          className="flex flex-wrap gap-1.5"
+          role="group"
+          aria-label="Filter the schedule"
+        >
+          {filters.map((label) => (
+            <button
+              key={label}
+              type="button"
+              aria-pressed={active === label}
+              onClick={() => setActive(active === label ? null : label)}
+              className={`${CHIP_DARK_CLS} cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                active === label
+                  ? "border-white bg-white text-black"
+                  : `${NEUTRAL_CHIP_DARK_CLS} hover:border-white/50`
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {meetings.length === 0 ? (
         <EmptySchedule />
+      ) : shown.length === 0 ? (
+        // A second empty state, distinct from the one above on purpose. That
+        // one is a fact about the club — there are no meetings — and this one
+        // is a fact about the filter, which the reader can undo. Saying "no
+        // meetings coming up" here would be a lie, and the chips stay visible
+        // above so there is a way back.
+        <NoMatches onClear={() => setActive(null)} />
       ) : (
-        // The console's list idiom: a stack of bordered tiles, like the audit
-        // log's rows, rather than the ruled ledger the light dialect draws.
-        <ul className="flex flex-col gap-2">
-          {meetings.map((meeting) => (
-            <ScheduleRow key={meeting.id} meeting={meeting} now={now} />
+        <div className="flex flex-col gap-6">
+          {weeks.map((week) => (
+            <div key={week.key} className="flex flex-col gap-2">
+              <h4 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
+                {weekLabel(week.key)}
+              </h4>
+              {/* The console's list idiom: a stack of bordered tiles, like the
+                  audit log's rows, rather than the ruled ledger the light
+                  dialect draws. Its own `ul` per week — an `h4` cannot be a
+                  child of `ul`, whose only legal children are `li`. */}
+              <ul className="flex flex-col gap-2">
+                {week.meetings.map((meeting) => (
+                  <ScheduleRow key={meeting.id} meeting={meeting} now={now} />
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </section>
   );
@@ -100,6 +247,28 @@ export default function ScheduleList({ meetings, now }: Props) {
  * meantime. An "unable to load events" framing would send members to Discord
  * to report a bug that is really just August.
  */
+/**
+ * The filter matched nothing — which is not the same state as an empty
+ * schedule, and must not borrow its copy.
+ *
+ * `EmptySchedule` says something true about the club; this says something true
+ * about a control the reader is holding, and its whole job is to hand back the
+ * way out. The same dashed well, deliberately quieter: this is a dead end the
+ * reader made and can undo in one click, not news.
+ */
+function NoMatches({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="flex flex-col items-start gap-3 rounded-xl border-2 border-dashed border-mauve-700 bg-white/5 px-5 py-6">
+      <p className="text-sm/relaxed text-mauve-300">
+        Nothing coming up matches that filter.
+      </p>
+      <button type="button" onClick={onClear} className={ACTION_DARK_CLS}>
+        Show everything
+      </button>
+    </div>
+  );
+}
+
 function EmptySchedule() {
   return (
     // The console's empty state: a dashed well, like an empty credentials
@@ -137,6 +306,11 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
   // answer than saying it is on right now.
   const happeningNow = now >= meeting.startsAt && now < meeting.endsAt;
 
+  // A cancelled night STAYS on the schedule, struck through. Deleting it in
+  // Airtable would remove it, and that is the failure this replaced: somebody
+  // with the date in their calendar sees nothing at all and walks over anyway.
+  const cancelled = meeting.cancelledAt !== null;
+
   // Every row prints its room, but only one *not* in the usual room earns a
   // chip saying so, which is how a room change stands out. This used to be a
   // regex over the typed location, which failed closed — an unrecognised
@@ -146,7 +320,14 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
   const elsewhere = meeting.building !== null && meeting.building !== "DLW";
 
   return (
-    <li className="relative flex gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-4 md:gap-5">
+    <li
+      className={`relative flex gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-4 md:gap-5 ${
+        // Dimmed rather than struck through as a whole: a line through an
+        // entire tile is unreadable, and the strike belongs on the title,
+        // where it reads as "this one, not happening" rather than as damage.
+        cancelled ? "opacity-60" : ""
+      }`}
+    >
       {/*
         Hidden from assistive tech: the span below prints the same date in full,
         so announcing "Wed 10" first only makes every row take twice as long to
@@ -190,13 +371,20 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
             */}
             <Link
               href={`/events/${meeting.slug}`}
-              className="rounded-sm after:absolute after:inset-0 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className={`rounded-sm after:absolute after:inset-0 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                cancelled ? "line-through decoration-2" : ""
+              }`}
             >
               {meetingTitle(meeting, meeting.workshops)}
             </Link>
           </h3>
+          {/* A cancelled night keeps its row and loses its countdown. "In two
+              days" beside a meeting that is not happening is the actively
+              wrong half; the strike-through and the word are the useful half. */}
           <span className="text-xs font-semibold text-mauve-400">
-            {happeningNow ? (
+            {cancelled ? (
+              <span className="text-rose-300">Cancelled</span>
+            ) : happeningNow ? (
               "Happening now"
             ) : (
               <time dateTime={meeting.startsAt.toISOString()}>
@@ -205,6 +393,12 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
             )}
           </span>
         </div>
+
+        {cancelled && meeting.cancellationReason !== null && (
+          <p className="text-xs text-rose-300 md:text-sm">
+            {meeting.cancellationReason}
+          </p>
+        )}
 
         <p className="text-xs text-mauve-300 md:text-sm">
           {formatEventSpan(meeting.startsAt, meeting.endsAt)}

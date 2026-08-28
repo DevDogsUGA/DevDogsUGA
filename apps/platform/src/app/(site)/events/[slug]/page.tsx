@@ -14,7 +14,7 @@ import {
   NEUTRAL_CHIP_DARK_CLS,
   segmentBadge,
 } from "~/components/EventsSection/meetingView";
-import { meetingTitle } from "~/lib/meetingTitle";
+import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
 import {
   isMappedBuilding,
   locationLine,
@@ -39,12 +39,21 @@ import {
 /**
  * /events/[slug] — one meeting, as the body of the dialog its layout opens.
  *
- * Everything here is derived. There is no authored copy about what a given
- * night is: the segments come from `resolveMeetingSegments`, the agenda from
- * the workshops and judging attached to the meeting, and the only sentence an
- * officer can write is `summary`. That is deliberate — a page that authored
- * its own description of a meeting would go stale the moment the schedule
- * moved, and this URL exists to be pasted into Discord weeks in advance.
+ * The STRUCTURE here is derived and stays that way: the segments come from
+ * `resolveMeetingSegments` and the agenda from the workshops and judging
+ * attached to the meeting. Nothing restates in prose what the schedule already
+ * knows, because that copy goes stale the moment the schedule moves and this
+ * URL exists to be pasted into Discord weeks in advance.
+ *
+ * Three authored sentences are allowed through, and the line between them and
+ * the rule above is what they are ABOUT. `summary` and `nameOverride` describe
+ * the night — timing-shaped, and so held to one or two sentences an officer
+ * rewrites when the night changes. `workshops.description` describes what a
+ * session TEACHES, which does not move when the calendar does: a Supabase
+ * workshop covers the same ground whichever Monday it lands on. It earns its
+ * place because "this is self-contained and assumes no prior work" is the
+ * single most useful thing a prospective member can read here, and no amount
+ * of derived structure can say it.
  */
 
 /**
@@ -345,16 +354,22 @@ function WorkshopRow({ workshop }: { workshop: MeetingWorkshop }) {
   return (
     <li className={ROW_CLS}>
       <span className="flex flex-col">
+        {/* `workshopLabel`, not `projectName`: officers name these sessions by
+            topic — "Supabase", "Career Fair Readiness" — and the schema named
+            them by project, so the page printed "Platform" where the published
+            schedule said "Next.js". A session with no project has only the
+            title, and one authored before the column existed has only the
+            project, so the fallback runs both ways. */}
         {workshop.competitionSlug === null ? (
           <span className="text-sm font-semibold text-white">
-            {workshop.projectName}
+            {workshopLabel(workshop) ?? "Workshop"}
           </span>
         ) : (
           <Link
             href={`/competitions/${workshop.competitionSlug}/teams`}
             className="text-sm font-semibold text-white underline decoration-2 underline-offset-2 hover:no-underline"
           >
-            {workshop.projectName}
+            {workshopLabel(workshop) ?? "Workshop"}
           </Link>
         )}
         <span className="text-xs text-mauve-400">
@@ -368,6 +383,15 @@ function WorkshopRow({ workshop }: { workshop: MeetingWorkshop }) {
       <span className={`${badge.chipDark} ${CHIP_DARK_CLS} ml-auto`}>
         {badge.label}
       </span>
+      {/* `basis-full` rather than a child of the flex-col above: `ROW_CLS` is
+          `flex flex-wrap items-center`, so this wraps onto its own line and
+          leaves the badge's `ml-auto` alignment intact. Putting it inside that
+          column would force `items-start` on a class `JudgingRow` shares. */}
+      {workshop.description !== null && (
+        <span className="basis-full text-xs/relaxed text-mauve-600">
+          {workshop.description}
+        </span>
+      )}
     </li>
   );
 }

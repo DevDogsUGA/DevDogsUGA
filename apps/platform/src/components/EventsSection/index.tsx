@@ -174,7 +174,14 @@ async function nextMeetings(count: number): Promise<MeetingInRange[]> {
 
   try {
     const meetings = await getMeetingsInRange(startOfDay(now), horizon);
-    return meetings.filter((m) => m.endsAt >= now).slice(0, count);
+    // Cancelled nights are skipped rather than shown struck through, and the
+    // homepage has to say so itself: this reads `getMeetingsInRange`, which
+    // deliberately keeps them because it feeds a SCHEDULE. This stack answers a
+    // different question — where should I go — and naming a cancelled meeting
+    // as the next one is worse than the vanishing the column was added to fix.
+    return meetings
+      .filter((m) => m.endsAt >= now && m.cancelledAt === null)
+      .slice(0, count);
   } catch {
     return [];
   }

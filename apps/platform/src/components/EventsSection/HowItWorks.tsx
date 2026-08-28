@@ -79,7 +79,8 @@ const BEATS: Beat[] = [
     title: "Workshop, Then Kickoff",
     body: (
       <>
-        One workshop per project, all at once. Most end with &ldquo;now go build
+        One workshop per project, all at once — each self-contained, and none
+        assuming you were here last week. Most end with &ldquo;now go build
         this&rdquo; — that&rsquo;s the kickoff.
       </>
     ),
@@ -90,14 +91,22 @@ const BEATS: Beat[] = [
   },
   {
     day: "Wednesday",
-    title: "Open Build",
+    // Named, because it is a night the club runs rather than a gap in the
+    // week. "Open Build" was the old label for the structural fallback, which
+    // is now called Unscheduled and means something else entirely.
+    title: "Build session",
     body: (
       <>
-        No agenda. The room&rsquo;s open and officers are around. Build with
-        your team, or just come work.
+        The room&rsquo;s open and officers are around. Build with your team,
+        get your laptop set up, or just come work.
       </>
     ),
-    segments: ["open"],
+    // No segment: a build session is AUTHORED on the meeting rather than
+    // derived from its structure, so there is no entry in `segmentBadge` to
+    // point at — its chip comes from `kindBadge` instead. The card carries the
+    // name on its own. It used to claim `open`, which is now the label for a
+    // night nobody scheduled at all.
+    segments: [],
     gif: bruceAlmighty,
     strip: "wednesday",
     place: { side: "below", col: 3, caret: "start" },

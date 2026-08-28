@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import { ACTION_DARK_CLS } from "~/components/EventsSection/meetingView";
@@ -47,6 +50,19 @@ export default function PastMeetings({
   pageParam = "past",
   page = 1,
 }: Props) {
+  const [query, setQuery] = useState("");
+
+  const needle = query.trim().toLowerCase();
+  // Matched against the rendered title rather than `nameOverride`, so a search
+  // finds the night by the words the page actually showed. Most have no
+  // authored name at all, so searching the column would find almost nothing.
+  const shown =
+    needle === ""
+      ? meetings
+      : meetings.filter((meeting) =>
+          meetingTitle(meeting).toLowerCase().includes(needle),
+        );
+
   return (
     <section
       className="flex flex-col gap-4"
@@ -58,6 +74,23 @@ export default function PastMeetings({
       >
         Already happened
       </h3>
+
+      {/* Only once the archive is long enough to be worth searching. Below
+          that a search box is a control that costs more room than the rows it
+          would filter — and it searches only the page in hand, which is the
+          honest limit of a client-side filter over a paged table. */}
+      {meetings.length > 5 && (
+        <label className="flex flex-col gap-1 text-xs text-mauve-400">
+          <span className="sr-only">Search past meetings</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search this page…"
+            className="w-full max-w-xs rounded-lg border border-mauve-600 bg-mauve-800 px-3 py-1.5 text-sm text-white placeholder:text-mauve-500 focus-visible:border-white focus-visible:outline-none"
+          />
+        </label>
+      )}
 
       {meetings.length === 0 ? (
         // Short, and no card around it. An empty archive is a fact about a new
@@ -86,7 +119,7 @@ export default function PastMeetings({
                 </tr>
               </thead>
               <tbody>
-                {meetings.map((meeting) => (
+                {shown.map((meeting) => (
                   <tr
                     key={meeting.id}
                     className="border-b border-mauve-800/50 last:border-b-mauve-800"
@@ -117,12 +150,26 @@ export default function PastMeetings({
             </table>
           </div>
 
+          {/* Distinct from the empty-archive copy above: that one is a fact
+              about the semester, this one is a fact about what the reader
+              typed — and it says which page was searched, because the filter
+              only sees the rows in hand. */}
+          {shown.length === 0 && (
+            <p className="text-sm text-mauve-400">
+              Nothing on this page matches &ldquo;{query.trim()}&rdquo;.
+            </p>
+          )}
+
           {/*
-            A link to a search param, never client state. The archive is the
-            part of this page somebody links to — "we met eleven times last
-            spring, see" — and a page number held in `useState` cannot be
-            pasted, cannot be crawled, and would drag the whole band into a
-            client component just to slice an array the server already sliced.
+            A link to a search param, never client state — and that still holds
+            now that this band IS a client component for the search box above,
+            because the reason was never the cost of the boundary. The archive
+            is the part of this page somebody links to — "we met eleven times
+            last spring, see" — and a page number in `useState` cannot be
+            pasted or crawled. The search query deliberately goes the other
+            way: it filters the page in hand, is nobody's permalink, and would
+            be noise in a URL.
+
             The caller owns reading the param back; this only names the next
             page. Relative href, so it keeps whatever path and other params the
             page is already on rather than assuming it lives at /events.

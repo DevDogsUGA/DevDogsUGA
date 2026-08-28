@@ -94,6 +94,10 @@ export interface MeetingRow {
    * duplication the rename removed.
    */
   nameOverride: string | null;
+  /** When this night was called off. Null is the ordinary case. */
+  cancelledAt: string | null;
+  /** Why, in a few words. Null even when cancelled. */
+  cancellationReason: string | null;
   building: string | null;
   location: string | null;
   startsAt: string;
@@ -104,6 +108,10 @@ export interface MeetingRow {
 
 export interface WorkshopRow {
   id: string;
+  /** Whatever the officers call this session; null falls back to its project. */
+  title: string | null;
+  /** What it teaches. Null renders nothing. */
+  description: string | null;
   meetingAirtableId: string | null;
   projectAirtableId: string | null;
   attendanceCount: number;
@@ -162,6 +170,20 @@ export interface TeamRow {
  * a card, it is an article, and the layout has nowhere to put it.
  */
 export const MEETING_SUMMARY_MAX_LENGTH = 240;
+
+/**
+ * Shorter than a summary because it renders inline beside a struck-through
+ * row rather than in a paragraph of its own. Must stay at or below the
+ * `meetings_cancellationReason_length` constraint — a parser looser than its
+ * constraint is a violation inside the pull, which takes down the whole pass.
+ */
+export const MEETING_CANCELLATION_REASON_MAX_LENGTH = 160;
+
+/** Matches `workshops_title_length`. A row label, so it is short by design. */
+export const WORKSHOP_TITLE_MAX_LENGTH = 80;
+
+/** Matches `workshops_description_length`. Two sentences in the dialog. */
+export const WORKSHOP_DESCRIPTION_MAX_LENGTH = 280;
 
 /**
  * Trims and collapses a summary, or null when the officer has written nothing.
@@ -475,6 +497,30 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
   // as an href on a public page under the club's name.
   rsvpUrl: field.url("fldjHxkT7AqSFxm1o", "RSVP").pull((v) => parseRsvpUrl(v)),
 
+  // When the night was called off. Emphatically not a way to DELETE a meeting:
+  // deleting the Airtable row soft-archives it and the page forgets it ever
+  // existed, which is exactly what leaves somebody walking to a building for a
+  // meeting that is not happening. Setting this keeps the row on the schedule,
+  // struck through.
+  cancelledAt: field
+    .dateTime("fldTODO_meetingCancelledAt", "Cancelled")
+    .pull((v) => (typeof v === "string" ? v : null)),
+
+  // Why. Null even when `cancelledAt` is set: the fact and the explanation
+  // arrive in separate keystrokes, and the page states the fact without it.
+  //
+  // Capped at the same 160 characters as the check constraint, and refused
+  // rather than truncated for the reason the summary is: publishing half a
+  // sentence under an officer's name with no signal anywhere is worse than
+  // putting a message in the cell they typed it into.
+  cancellationReason: field
+    .text("fldTODO_meetingCancellationReason", "Cancellation reason")
+    .pull((v) => {
+      const text = normalizeMeetingSummary(v);
+      if (text === null) return null;
+      return text.length > MEETING_CANCELLATION_REASON_MAX_LENGTH ? null : text;
+    }),
+
   attendanceCount: field
     .number("fld9RRuEB6SpnqPLP", "⚙️ Attendance")
     .push((m: MeetingRow) => m.attendanceCount),
@@ -489,9 +535,41 @@ export const workshops = table("Workshops", "tblSYPbmIagwyTFq1", {
   meeting: field
     .link("fldqxlHThMKBmhsiq", "Meeting", "meetings")
     .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
+  // Optional now. A workshop that teaches a SKILL rather than a codebase --
+  // career-fair readiness, say -- belongs to no project, and inventing one
+  // would put that session on the public Projects page as a body of work the
+  // club does not have.
   project: field
     .link("fldhUjEo0dq5BRZez", "Project", "projects")
     .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
+
+  // What the officers call this session -- "Supabase", "Career Fair
+  // Readiness". The published schedule has always named workshops by topic
+  // while the schema named them by project, so the page printed "Platform"
+  // where the officers wrote "Next.js". This is the officers' word winning.
+  //
+  // Null falls back to the project's name, so every workshop authored before
+  // this field existed keeps rendering exactly as it did.
+  title: field
+    .text("fldTODO_workshopTitle", "Title")
+    .pull((v) => {
+      const text = normalizeMeetingSummary(v);
+      if (text === null) return null;
+      return text.length > WORKSHOP_TITLE_MAX_LENGTH ? null : text;
+    }),
+
+  // What it teaches, for the meeting's detail dialog. Worth writing even when
+  // the title is self-explanatory: workshops are self-contained and assume no
+  // prior work, and that is the single most useful thing a prospective member
+  // can learn before deciding whether they are qualified to turn up.
+  description: field
+    .longText("fldTODO_workshopDescription", "Description")
+    .pull((v) => {
+      const text = normalizeMeetingSummary(v);
+      if (text === null) return null;
+      return text.length > WORKSHOP_DESCRIPTION_MAX_LENGTH ? null : text;
+    }),
+
   attendanceCount: field
     .number("fldxdsZmSNmR30O2J", "⚙️ Attendance")
     .push((w: WorkshopRow) => w.attendanceCount),

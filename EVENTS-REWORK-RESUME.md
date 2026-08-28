@@ -64,33 +64,59 @@ own hue.
    look like the `officer-seed` work. A pull from local therefore writes
    phantom schema, which is why the generated file was edited surgically.
 
+## Blocked on one command, not on code
+
+Four tests fail, all for the same reason, and the failure is a guard doing its
+job rather than a defect:
+
+```
+Meetings.cancelledAt: Field ID is still a placeholder
+Meetings.cancellationReason: Field ID is still a placeholder
+Workshops.title: Field ID is still a placeholder
+Workshops.description: Field ID is still a placeholder
+```
+
+The four new Airtable fields are declared in `packages/airtable/src/registry.ts`
+with `fldTODO_` ids, which is the documented transient state: `scaffold` reads
+those declarations to CREATE the fields, then `pull-ids` writes the real ids
+back. Removing them would remove the mechanism that creates the fields.
+
+Somebody with access to the officers' base runs:
+
+```
+pnpm airtable:scaffold && pnpm airtable:pull-ids
+```
+
+then commits the resulting ids. Until that happens `verify` refuses to sync at
+all rather than writing into a field that does not exist -- Airtable accepts a
+write to an unknown field id, the value lands nowhere, and the pass reports
+success, which is exactly the silent failure the guard exists to prevent.
+
+Also still manual, and not covered by the scaffolder (it is create-only): the
+Airtable UI needs the stale `Open lab`, `Career` and `Info session` choices
+removed from the Kind select, and the `Name` field relabelled to "Custom name
+-- irregular events only". That relabel has to move together with the label
+string in `registry.ts`, because `verify` matches the live base by field name.
+
 ## Remaining
 
-- **The page.** `ScheduleList` → client component (repoint its
-  `resolveMeetingSegments` import to `~/lib/meetingSegments` first, or
-  `~/server/db` reaches the browser and throws at hydration only); chip filters
-  in `useState`, *not* searchParams — the schedule renders in
-  `events/layout.tsx` and a layout cannot read them; week grouping with
-  filter-then-group so an emptied week shows no heading; an `h4` cannot child a
-  `ul`; a second empty state for "no events match these filters".
-- **Cancelled rendering** — struck through with its reason on schedule
-  surfaces. The loader carries the columns; nothing paints them yet. The
-  homepage stack needs its own filter: it calls `getMeetingsInRange` via
-  `nextMeetings()` in `EventsSection/index.tsx`, not `getUpcomingMeetings`.
-- **`workshops.description`** — `getMeetingWorkshops` carries it; render it in
-  `WorkshopRow` (`[slug]/page.tsx` ~:365) as a `basis-full` child after the
-  badge. While there, amend the route doc comment at ~:41 claiming `summary` is
-  the only sentence an officer can write.
-- **Airtable fields** for Cancelled at, Cancellation reason, workshop Title and
-  Description — nothing can populate those columns until the registry knows
-  them. Relabelling the `Name` field in the Airtable UI and in `registry.ts`
-  must happen together; `verify` matches by field name.
-- **Archive search and jump-to-week**, both unstarted. Note the archive's
-  `?past=2` link is already dead (`layout.tsx` hardcodes `pastPage: 1`).
-- **Copy** — remove `HowItWorks` from `/events`, rewrite the page description,
-  rename the Wednesday beat to "Build session", add the line that workshops are
-  self-contained.
-- **Docs** under `docs/platform/reference/components/EventsSection` and
-  `docs/platform/guides/meetings-and-teams`.
+- **`pnpm airtable:scaffold && pnpm airtable:pull-ids`**, plus the two manual
+  Airtable UI edits above. That is the only thing between this branch and a
+  green suite.
+- **The dead `?past=` link.** `PastMeetings` renders `?past=2` and
+  `events/layout.tsx:121` hardcodes `pastPage: 1`, so it navigates and nothing
+  changes. Pre-existing, and now more visible beside a working search box. The
+  layout cannot read search params, so fixing it means moving the archive's
+  paging into the client component it already is, or moving the band into a
+  page.
+- **Jump-to-week from the calendar**, which the plan wanted and this does not
+  do. The calendar keeps its hover popover; clicking a day still opens the
+  meeting rather than scrolling the list to that week.
+- **`/events/directions?b=Tate` shows a DLW header** — `directions/layout.tsx`
+  renders `FindUsHeader` with no props while the page resolves the real
+  building from `?b=`. Same root cause as the dead link: a layout cannot read
+  search params. Unrelated to this work.
+- **`FindUsLink` and `getWorkshopDetail` are both dead code**, discussed in
+  comments as if live. Wire up or delete.
 
 Delete this file when the branch lands.
