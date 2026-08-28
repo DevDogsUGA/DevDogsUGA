@@ -1,28 +1,30 @@
--- ============================================================
--- The 2026-27 executive board
--- ============================================================
+-- The 2026-27 executive board.
 --
--- Content in a migration, which needs justifying twice over -- once for being
--- content, and once for not being in supabase/seed/.
+-- Content, so it lives with the content. The schema this needs --
+-- `roleDescription` widened to 512, and the three academic array columns --
+-- is 20260827000000_platform_officer_profiles.sql, and it has to be: a
+-- migration is the only thing that reaches a database nobody is allowed to
+-- drop. The seven people are a different kind of fact, and a file called
+-- `03_officers.sql` says what it holds in a way a timestamped migration
+-- cannot.
 --
--- Not a seed, because a seed cannot get here. config.toml says it plainly:
--- "Seeds run on `supabase db reset` only, never on `db push`". The deploy
--- workflow applies the database with `supabase db push` (deploy.yaml), so a
--- file under supabase/seed/ reaches a contributor's laptop and nothing else.
--- This is the club's real leadership, and the homepage that reads it is the
--- deployed one.
+-- Seeds run on `supabase db reset` only, never on `db push` -- config.toml
+-- says so where it opens the development-only gate, and 02_moderation.sql
+-- leans on it. The board's plan is to reset before pushing to production,
+-- which is what makes this the delivery path rather than a local fixture.
 --
--- Not a script either. `seed-builtin-roles.ts` exists because Root has to be
--- bootstrapped onto whichever account happens to be first, which is a decision
--- no static file can make. Nothing here is that kind of decision -- it is a
--- fixed list of seven people -- and a migration already runs in every
--- environment automatically, including locally, since `db reset` replays
--- migrations before it runs seeds. A script would have added a step someone
--- has to remember instead.
+-- The consequence is worth stating once, because it arrives quietly: a reset
+-- erases the database. That is fine now, before launch, and it stops being
+-- fine the moment production carries attendance, ballots or teams that cannot
+-- be dropped. After that point an edit here reaches contributors and nothing
+-- else, and the officers' own content is maintained where they already
+-- maintain it -- `roleDescription` and links from /account, titles and role
+-- assignments from the console -- with a one-off migration for anything that
+-- has to be corrected centrally.
 --
--- Row inserts in a migration are established here: the app registry
--- (20260730000000), report reasons (20260807000000), docs (20260707000000)
--- and the Airtable sync tables (20260803000006) all do it.
+-- Seeds run after migrations on a reset, so the columns below always exist by
+-- the time this runs. Filename order puts it after 01_roles.sql, which is
+-- what guarantees the Member and Root definitions are already there.
 --
 -- ============================================================
 -- Filling gaps, never overwriting
@@ -34,8 +36,8 @@
 -- their own graduation year or picked their own preferred name keeps every bit
 -- of it. That matters more than it looks -- these submissions were emailed in
 -- July, `roleDescription` is editable from /account, and the account is the
--- newer source. It also makes this file safe to replay, which `db reset` does
--- on every contributor machine.
+-- newer source. It is also what makes the file safe to replay, which a reset
+-- does every time.
 --
 -- ============================================================
 -- The bios
@@ -44,15 +46,16 @@
 -- Third person throughout, and condensed to fit varchar(512) -- the submitted
 -- text ran 448 to 959 characters. Nothing is invented and no claim is added;
 -- where a sentence was cut it was cut whole. The full submitted text, in each
--- officer's original wording, is the copy of record in the private archive.
+-- officer's original wording, is the copy of record in the private archive
+-- alongside their resumes and the original emails.
 --
--- ⚠️ No officer stated their pronouns, and a name is not evidence of them, so
--- the third-person rewrites lean on each officer's own name and use they/them
+-- No officer stated their pronouns, and a name is not evidence of them, so the
+-- third-person rewrites lean on each officer's own name and use they/them
 -- where a pronoun is unavoidable. Armani Peacox is the exception: hers was the
--- only bio submitted in the third person already, and it is kept in her
--- wording, including the pronouns she chose for herself. `profile.pronouns`
--- exists and is empty for all seven; once officers fill it in, these
--- sentences are worth revisiting.
+-- only bio submitted in the third person already, and it keeps her wording,
+-- including the pronouns she chose for herself. `profile.pronouns` exists and
+-- is empty for all seven; once officers fill it in, these sentences are worth
+-- revisiting.
 --
 -- ============================================================
 -- Accounts, and the hazard in creating them
@@ -62,13 +65,16 @@
 -- case-insensitively, and one is created where there is no such user. A
 -- created row has no password and no `auth.identities` row, so it cannot sign
 -- in -- it is a container holding submitted content until the person arrives.
+-- The ids are in the same literal space as the moderation personas
+-- (00000000-0000-4000-a000-...), one block along, so the two seeds cannot
+-- collide.
 --
 -- Three officers wrote from personal Gmail, which is the only address known
 -- for them. If one of them later signs in through GitHub, Discord or LinkedIn
 -- under a different address, GoTrue mints a NEW user and the profile seeded
 -- here is orphaned: the card keeps the seeded content while the real account
--- has none. Correcting an address is a one-line follow-up migration; merging
--- two users afterwards is not.
+-- has none. Correcting an address here before a reset is cheap; merging two
+-- users afterwards is not.
 
 create temporary table "officer_submissions" (
   "slug" text primary key,
