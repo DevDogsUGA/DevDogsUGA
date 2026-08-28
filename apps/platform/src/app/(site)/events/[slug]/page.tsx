@@ -11,7 +11,6 @@ import {
   ACTION_DARK_CLS,
   CHIP_DARK_CLS,
   meetingBadges,
-  NEUTRAL_CHIP_DARK_CLS,
   segmentBadge,
 } from "~/components/EventsSection/meetingView";
 import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
