@@ -295,7 +295,9 @@ export default function HowItWorks({
           (or over) the day it is about. The `<ol>` keeps its chronological
           DOM order and dissolves into the grid with `contents`; below `lg`
           it is a plain stack after the strip. */}
-      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-8 lg:gap-x-4 lg:gap-y-3">
+      {/* `gap-y-5`: the light cards cast a block drop-shadow, and anything
+          tighter let it bleed into the strip's black cutout. */}
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-8 lg:gap-x-4 lg:gap-y-5">
         <div className="relative py-5 lg:col-span-8 lg:row-start-2">
           {cutout && <Cutout />}
           {/* Inside a cutout the strip sits on the page's black, whatever
