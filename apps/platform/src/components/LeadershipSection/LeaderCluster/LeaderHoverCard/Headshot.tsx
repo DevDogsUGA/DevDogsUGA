@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 
 /** "Jack Harrington" -> "JH". */
 function initials(name: string) {
@@ -33,7 +34,6 @@ export function formatLeaderMeta(
 interface Props {
   name: string;
   src: string | null;
-  blurDataUrl: string | null;
   /**
    * The circle's rendered width in CSS pixels. Always a constant, never a
    * viewport fraction: `fill` defaults `sizes` to `100vw`, which fetched these
@@ -43,14 +43,20 @@ interface Props {
 }
 
 /**
- * An officer's headshot, or their initials when there is not one yet.
+ * An officer's headshot, or their initials when there is not one.
  *
- * `headshotPath` is nullable in the database because officers join the board
- * before they send a photo, and a card that renders a broken image is worse
- * than one that renders a monogram.
+ * The `avatars` bucket is keyed by bare user id, so a URL can always be
+ * composed for an officer whether or not they have ever uploaded anything --
+ * "no avatar" is a 404, not a null. That is why the error branch matters as
+ * much as the missing-src one, and why it is the same branch: it mirrors what
+ * `ui/avatar.tsx` gets from Radix's `Avatar.Fallback` for every other avatar
+ * in the app. Officers join the board before they send a photo, and a card
+ * showing a broken image is worse than one showing a monogram.
  */
-export default function Headshot({ name, src, blurDataUrl, sizes }: Props) {
-  if (!src) {
+export default function Headshot({ name, src, sizes }: Props) {
+  const [failed, setFailed] = useState(false);
+
+  if (!src || failed) {
     return (
       <div
         aria-hidden
@@ -67,12 +73,7 @@ export default function Headshot({ name, src, blurDataUrl, sizes }: Props) {
       alt={name}
       src={src}
       sizes={sizes}
-      // Derived at seed time from the uploaded image. A static import would
-      // have given next/image one for free; a runtime URL gives it nothing,
-      // so it is stored beside the key and passed back in here.
-      {...(blurDataUrl
-        ? { placeholder: "blur" as const, blurDataURL: blurDataUrl }
-        : {})}
+      onError={() => setFailed(true)}
       className="object-cover object-center"
     />
   );

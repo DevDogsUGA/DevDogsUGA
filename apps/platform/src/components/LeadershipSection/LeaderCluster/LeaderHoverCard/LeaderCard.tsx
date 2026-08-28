@@ -4,12 +4,7 @@ import * as HoverCard from "@radix-ui/react-hover-card";
 import type { LeaderProfile } from ".";
 import Headshot, { formatLeaderMeta } from "./Headshot";
 import Link from "next/link";
-import {
-  ArrowSquareOutIcon,
-  GithubLogoIcon,
-  LinkedinLogoIcon,
-  EnvelopeIcon,
-} from "@phosphor-icons/react/ssr";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react/ssr";
 
 interface Props {
   profile: LeaderProfile;
@@ -48,7 +43,6 @@ export default function LeaderCard({
           <Headshot
             name={profile.name}
             src={profile.imageSrc}
-            blurDataUrl={profile.imageBlurDataUrl}
             // The circle above is `size-28` at every breakpoint, so this is a
             // constant, not a viewport fraction. It matters more here than
             // anywhere else on the page: without it `fill` defaults to `100vw`
@@ -102,37 +96,26 @@ export default function LeaderCard({
             </p>
           )}
         </div>
-        <p className="text-xs leading-relaxed text-mauve-700">{profile.bio}</p>
-        <div className="flex flex-wrap gap-2">
-          {profile.portfolioUrl && (
-            <Link
-              href={profile.portfolioUrl}
-              target="_blank"
-              className={linkCls}
-            >
-              <ArrowSquareOutIcon size={12} /> Portfolio
-            </Link>
-          )}
-          {profile.githubUrl && (
-            <Link href={profile.githubUrl} target="_blank" className={linkCls}>
-              <GithubLogoIcon size={12} /> GitHub
-            </Link>
-          )}
-          {profile.linkedinUrl && (
-            <Link
-              href={profile.linkedinUrl}
-              target="_blank"
-              className={linkCls}
-            >
-              <LinkedinLogoIcon size={12} /> LinkedIn
-            </Link>
-          )}
-          {profile.email && (
-            <Link href={`mailto:${profile.email}`} className={linkCls}>
-              <EnvelopeIcon size={12} /> Email
-            </Link>
-          )}
-        </div>
+        {profile.bio && (
+          <p className="text-xs leading-relaxed text-mauve-700">
+            {profile.bio}
+          </p>
+        )}
+        {profile.links.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {profile.links.map((link) => (
+              <Link
+                key={link.url}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={linkCls}
+              >
+                <ArrowSquareOutIcon size={12} /> {link.title}
+              </Link>
+            ))}
+          </div>
+        )}
       </HoverCard.Content>
     </HoverCard.Root>
   );

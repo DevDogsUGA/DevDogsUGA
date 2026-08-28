@@ -38,7 +38,7 @@ export default function RoleDescriptionField({ id, profile }: ProfileData) {
       error={roleDescriptionError}
       save={saveRoleDescription}
       reset={resetRoleDescription}
-      meta={`${roleDescription.length} / ${PROFILE_LIMITS.shortText} characters`}
+      meta={`${roleDescription.length} / ${PROFILE_LIMITS.roleDescription} characters`}
       secondaryMeta={lineCount > 1 ? `${lineCount} / 3 lines` : undefined}
     >
       <div

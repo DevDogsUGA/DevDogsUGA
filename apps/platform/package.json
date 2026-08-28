@@ -19,6 +19,7 @@
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "db:pull": "with-env drizzle-kit pull --config drizzle-introspection.config.ts && with-env drizzle-kit pull --config drizzle.config.ts && tsx scripts/post-pull.ts",
     "db:seed-roles": "with-env tsx scripts/seed-builtin-roles.ts",
+    "db:seed-officers": "with-env tsx scripts/seed-officers.ts",
     "docs:index": "pnpm --filter @devdogsuga/docs build && pnpm --filter @devdogsuga/devtools run cli docs index",
     "cf:preview": "with-env opennextjs-cloudflare preview",
     "cf:build:staging": "DEPLOY_ENV=staging with-env opennextjs-cloudflare build",

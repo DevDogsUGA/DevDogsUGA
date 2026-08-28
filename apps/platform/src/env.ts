@@ -462,14 +462,6 @@ const client = {
     secrecy: "public",
     example: "avatars",
   }),
-  // As above. Separate from AVATARS because officer headshots are club assets
-  // keyed by officer slug, not per-user uploads keyed by auth id.
-  NEXT_PUBLIC_LEADERSHIP_BUCKET: define(z.string().default("leadership"), {
-    doc: "Storage bucket for officer headshots. The same name in every environment.",
-    scope: "default",
-    secrecy: "public",
-    example: "leadership",
-  }),
 };
 
 /**
@@ -499,7 +491,6 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_AVATARS_BUCKET: process.env.NEXT_PUBLIC_AVATARS_BUCKET,
-    NEXT_PUBLIC_LEADERSHIP_BUCKET: process.env.NEXT_PUBLIC_LEADERSHIP_BUCKET,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

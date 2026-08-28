@@ -2,12 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import {
-  ArrowSquareOutIcon,
-  GithubLogoIcon,
-  LinkedinLogoIcon,
-  EnvelopeIcon,
-} from "@phosphor-icons/react/ssr";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react/ssr";
 import { Dialog, DialogContent, DialogTitle } from "~/ui/dialog";
 import LeaderCard from "./LeaderCard";
 import Headshot, { formatLeaderMeta } from "./Headshot";
@@ -15,37 +10,43 @@ import Headshot, { formatLeaderMeta } from "./Headshot";
 /**
  * One officer, as the cards render them.
  *
- * Shaped by `~/server/loaders/officers.ts` out of `platform.officers`; it was
- * a hand-maintained array of object literals until 20260827000000. Two
- * consequences of that move show up in these types.
+ * Shaped by `~/server/loaders/officers.ts` out of `platform.profile` and the
+ * leadership roles its holder has been given; it was a hand-maintained array
+ * of object literals until 20260827000000. Three consequences of that move
+ * show up in these types.
  *
  * `imageSrc` is a URL string rather than a `StaticImageData`, because the
- * image is no longer a build-time import from `~/assets` — it lives in the
- * `leadership` bucket and the row stores its key. That is also why
- * `imageBlurDataUrl` exists: a static import carried a blur placeholder with
- * it, and a runtime URL does not.
+ * image is no longer a build-time import from `~/assets` — it is the
+ * officer's avatar, keyed by user id in the `avatars` bucket, and can 404.
+ * The blur placeholder a static import used to carry is simply gone: an
+ * avatar uploaded from /account has none to carry.
  *
- * Everything optional is now explicitly `| null` rather than `?`, because the
+ * `links` replaced the fixed portfolio/github/linkedin/email fields. Members
+ * curate `platform."profileLinks"` from /account, so what a card shows is
+ * whatever the officer put there, rather than four slots the data has to be
+ * bent into. GitHub, Discord and LinkedIn are separately modelled as linked
+ * identities gated on `showGithub`/`showDiscord`/`showLinkedin`, which this
+ * section does not read yet.
+ *
+ * Everything optional is explicitly `| null` rather than `?`, because the
  * database distinguishes "no answer" from "not asked" and the difference is
- * load-bearing here — six of seven officers stated no pronouns, and a card
- * must render that as silence rather than as a gap in a sentence.
+ * load-bearing here — no officer has stated pronouns, and a card must render
+ * that as silence rather than as a gap in a sentence.
  */
 export interface LeaderProfile {
+  /** The officer's user id, which is also their avatar's key. */
   slug: string;
   name: string;
   titles: string[];
   imageSrc: string | null;
-  imageBlurDataUrl: string | null;
   pronouns: string | null;
   year: string | null;
   majors: string[];
   minors: string[];
   certificates: string[];
-  bio: string;
-  portfolioUrl: string | null;
-  githubUrl: string | null;
-  linkedinUrl: string | null;
-  email: string | null;
+  /** `profile.roleDescription`. Null until the officer writes one. */
+  bio: string | null;
+  links: { title: string; url: string }[];
 }
 
 const linkCls =
@@ -61,7 +62,6 @@ function MobileContent({ profile }: { profile: LeaderProfile }) {
           <Headshot
             name={profile.name}
             src={profile.imageSrc}
-            blurDataUrl={profile.imageBlurDataUrl}
             // `size-20`, fixed — this sheet only ever opens below md.
             sizes="80px"
           />
@@ -102,29 +102,24 @@ function MobileContent({ profile }: { profile: LeaderProfile }) {
           </p>
         )}
       </div>
-      <p className="text-xs leading-relaxed text-mauve-700">{profile.bio}</p>
-      <div className="flex flex-wrap gap-2">
-        {profile.portfolioUrl && (
-          <Link href={profile.portfolioUrl} target="_blank" className={linkCls}>
-            <ArrowSquareOutIcon size={12} /> Portfolio
-          </Link>
-        )}
-        {profile.githubUrl && (
-          <Link href={profile.githubUrl} target="_blank" className={linkCls}>
-            <GithubLogoIcon size={12} /> GitHub
-          </Link>
-        )}
-        {profile.linkedinUrl && (
-          <Link href={profile.linkedinUrl} target="_blank" className={linkCls}>
-            <LinkedinLogoIcon size={12} /> LinkedIn
-          </Link>
-        )}
-        {profile.email && (
-          <Link href={`mailto:${profile.email}`} className={linkCls}>
-            <EnvelopeIcon size={12} /> Email
-          </Link>
-        )}
-      </div>
+      {profile.bio && (
+        <p className="text-xs leading-relaxed text-mauve-700">{profile.bio}</p>
+      )}
+      {profile.links.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {profile.links.map((link) => (
+            <Link
+              key={link.url}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={linkCls}
+            >
+              <ArrowSquareOutIcon size={12} /> {link.title}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

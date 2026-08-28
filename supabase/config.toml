@@ -72,18 +72,6 @@ public = true
 file_size_limit = "256KiB"
 allowed_mime_types = ["image/webp"]
 
-# Officer headshots for the public Leadership section. Same shape as `avatars`
-# and for the same reasons — public, webp only, and small enough that nobody
-# can quietly land a 10MB phone photo on the front page. (One submission this
-# term was exactly that: a 10MB inline PNG.) Distinct from `avatars` because
-# these are club marketing assets keyed by officer slug, not per-user uploads
-# keyed by auth id, and the two have different lifetimes: an avatar dies with
-# the account, a headshot belongs to the term's record and outlives it.
-[storage.buckets.leadership]
-public = true
-file_size_limit = "256KiB"
-allowed_mime_types = ["image/webp"]
-
 [auth]
 enabled = true
 site_url = "env(BASE_URL)"

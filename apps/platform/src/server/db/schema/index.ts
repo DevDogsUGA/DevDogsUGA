@@ -1,11 +1,4 @@
-import {
-  uuid,
-  boolean,
-  doublePrecision,
-  text,
-  integer,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { uuid, boolean, doublePrecision } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { platform } from "./generated/schema";
 
@@ -15,45 +8,6 @@ export { profile as profiles } from "./generated/schema";
 
 export const MEMBER_ROLE_ID = "00000000-0000-0000-0000-000000000001";
 export const ROOT_ROLE_ID = "00000000-0000-0000-0000-000000000002";
-
-/** The board currently shown on the homepage. See `supabase/seed/03_officers.sql`. */
-export const CURRENT_OFFICER_TERM = "2026-27";
-
-/**
- * Hand-written for the same reason as `resolvedUserPermissions` below: the
- * generated schema is introspected from a live database by `drizzle-kit`, and
- * a table added by a migration that has not been pulled yet does not exist
- * there. Regenerating overwrites `generated/`, never this file, so declaring
- * it here is what keeps it from being erased by the next pull.
- *
- * Must stay in step with 20260827000000_platform_officers.sql, which is
- * authoritative — migrations are managed as Supabase SQL, not by drizzle push.
- */
-export const officers = platform.table("officers", {
-  id: uuid().defaultRandom().primaryKey().notNull(),
-  term: text().notNull(),
-  slug: text().notNull(),
-  displayName: text().notNull(),
-  titles: text().array().notNull(),
-  majors: text().array().notNull(),
-  minors: text().array().notNull(),
-  certificates: text().array().notNull(),
-  pronouns: text(),
-  gradYear: text(),
-  bio: text().notNull(),
-  headshotPath: text(),
-  headshotWidth: integer(),
-  headshotHeight: integer(),
-  headshotBlurDataUrl: text(),
-  portfolioUrl: text(),
-  githubUrl: text(),
-  linkedinUrl: text(),
-  email: text(),
-  sortOrder: integer().notNull(),
-  active: boolean().notNull(),
-  createdAt: timestamp({ withTimezone: true }).notNull(),
-  updatedAt: timestamp({ withTimezone: true }).notNull(),
-});
 
 // Lives in the `platform` schema so refreshMaterializedView targets
 // platform."resolvedUserPermissions". The SELECT body below is only for
