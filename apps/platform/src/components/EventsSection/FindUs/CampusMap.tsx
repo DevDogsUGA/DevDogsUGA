@@ -73,9 +73,16 @@ const MAP_TONES = {
 export type MapTone = keyof typeof MAP_TONES;
 
 /**
- * Label anchors placed by eye against the generated footprint coordinates
- * (each building's centroid is printed when the generator runs) — nudged off
- * roads and off each other, so re-check after regenerating campusMapData.
+ * Label anchors placed against the generated footprint coordinates (each
+ * building's centroid is printed when the generator runs) — nudged off roads
+ * and off each other, so re-check after regenerating campusMapData.
+ *
+ * "Off each other" is what makes these hand-placed rather than derived, and
+ * it is also how they go wrong: nudge a name clear of its neighbour and it
+ * can end up nearer some third building than the one it belongs to. Five of
+ * them were, and Journalism had drifted 54px onto Payne Hall. The check that
+ * catches it is to ask, for each name, which named footprint on campus its
+ * anchor is actually closest to — not whether the map looks tidy.
  *
  * The ten a meeting can name are labelled here like any other landmark. The
  * highlighted one is drawn again, bigger and in black, by {@link Callout} —
@@ -84,19 +91,19 @@ export type MapTone = keyof typeof MAP_TONES;
 const LABELS: { text: string; x: number; y: number; key?: BuildingKey }[] = [
   // ── North ──
   { text: "Main Library", x: 308, y: 30, key: "Main Library" },
-  { text: "Journalism", x: 356, y: 86 },
+  { text: "Journalism", x: 302, y: 80 },
   { text: "MLC", x: 253, y: 98, key: "MLC" },
   { text: "Memorial", x: 316, y: 118 },
   { text: "Bolton", x: 206, y: 118 },
   { text: "Tate Center", x: 275, y: 136, key: "Tate" },
-  { text: "Tate Deck", x: 224, y: 152 },
+  { text: "Tate Deck", x: 240, y: 152 },
   // ── Central / West ──
   { text: "Brumby", x: 74, y: 161 },
   { text: "Russell", x: 110, y: 152 },
-  { text: "Creswell", x: 152, y: 140 },
+  { text: "Creswell", x: 153, y: 166 },
   { text: "Sanford Stadium", x: 341, y: 168 },
   { text: "Physics", x: 240, y: 206 },
-  { text: "O-House", x: 172, y: 276 },
+  { text: "O-House", x: 168, y: 234 },
   { text: "Conner", x: 312, y: 227 },
   // ── South ──
   { text: "Poultry Science", x: 300, y: 248, key: "Poultry Science" },
@@ -104,11 +111,11 @@ const LABELS: { text: string; x: number; y: number; key?: BuildingKey }[] = [
   { text: "Boyd", x: 288, y: 285, key: "Boyd" },
   { text: "Food Science", x: 355, y: 272 },
   { text: "Snelling", x: 232, y: 310 },
-  { text: "Stegeman", x: 172, y: 384 },
+  { text: "Stegeman", x: 198, y: 378 },
   {
     text: "Science Learning Ctr",
-    x: 234,
-    y: 360,
+    x: 245,
+    y: 364,
     key: "Science Learning Center",
   },
   { text: "Plant Sciences", x: 258, y: 394, key: "Plant Sciences" },
