@@ -64,39 +64,28 @@ own hue.
    look like the `officer-seed` work. A pull from local therefore writes
    phantom schema, which is why the generated file was edited surgically.
 
-## Blocked on one command, not on code
+## One manual step left, in the Airtable UI
 
-Four tests fail, all for the same reason, and the failure is a guard doing its
-job rather than a defect:
+Scaffolding is done: the four new fields exist in the base and their real ids
+are committed. All suites pass.
 
-```
-Meetings.cancelledAt: Field ID is still a placeholder
-Meetings.cancellationReason: Field ID is still a placeholder
-Workshops.title: Field ID is still a placeholder
-Workshops.description: Field ID is still a placeholder
-```
+`pnpm airtable:verify` still reports one fatal, and it is the one thing the
+tooling cannot do — Airtable's Meta API can add a select choice but cannot
+delete one. In the **Kind** field on the Meetings table:
 
-The four new Airtable fields are declared in `packages/airtable/src/registry.ts`
-with `fldTODO_` ids, which is the documented transient state: `scaffold` reads
-those declarations to CREATE the fields, then `pull-ids` writes the real ids
-back. Removing them would remove the mechanism that creates the fields.
+1. **Rename** `Info session` → `Interest meeting`. Rename, do NOT delete: one
+   live meeting record currently uses it, and deleting the choice clears that
+   cell.
+2. **Delete** `Career` and `Open lab`. Both are unused — zero records.
+3. **Add** `Build session` and `Study session`.
+4. Keep `Social` as it is.
 
-Somebody with access to the officers' base runs:
+Then `pnpm airtable:verify` should come back clean and the sync will run.
 
-```
-pnpm airtable:scaffold && pnpm airtable:pull-ids
-```
-
-then commits the resulting ids. Until that happens `verify` refuses to sync at
-all rather than writing into a field that does not exist -- Airtable accepts a
-write to an unknown field id, the value lands nowhere, and the pass reports
-success, which is exactly the silent failure the guard exists to prevent.
-
-Also still manual, and not covered by the scaffolder (it is create-only): the
-Airtable UI needs the stale `Open lab`, `Career` and `Info session` choices
-removed from the Kind select, and the `Name` field relabelled to "Custom name
--- irregular events only". That relabel has to move together with the label
-string in `registry.ts`, because `verify` matches the live base by field name.
+While in there, the `Name` field wants relabelling to "Custom name — irregular
+events only". That one is cosmetic but it has a code half: the label string in
+`registry.ts` must change in the same commit, because `verify` matches the live
+base by field name and would fail on the mismatch otherwise.
 
 ## Remaining
 
