@@ -34,7 +34,6 @@ import {
   CaretRightIcon,
 } from "@phosphor-icons/react/ssr";
 import type { MeetingInRange } from "~/server/loaders/meetings";
-import type { MeetingSegment } from "~/lib/meetingSegments";
 import { resolveMeetingSegments } from "~/lib/meetingSegments";
 import type { SegmentBadge } from "~/components/EventsSection/meetingView";
 import {

@@ -119,8 +119,8 @@ function weekLabel(key: string): string {
   // Parsed as UTC noon rather than `new Date(key)`, which reads a bare
   // `YYYY-MM-DD` as midnight UTC and would print the day before for any
   // formatter west of Greenwich.
-  const [y, m, d] = key.split("-").map(Number);
-  return `Week of ${WEEK_OF_FORMAT.format(new Date(Date.UTC(y!, m! - 1, d!, 12)))}`;
+  const [y = 0, m = 1, d = 1] = key.split("-").map(Number);
+  return `Week of ${WEEK_OF_FORMAT.format(new Date(Date.UTC(y, m - 1, d, 12)))}`;
 }
 
 /**
@@ -164,7 +164,7 @@ export default function ScheduleList({ meetings, now }: Props) {
     const last = weeks[weeks.length - 1];
     // `meetings` arrives ascending, so a run of the same key is contiguous and
     // this never has to look further back than one group.
-    if (last && last.key === key) last.meetings.push(meeting);
+    if (last?.key === key) last.meetings.push(meeting);
     else weeks.push({ key, meetings: [meeting] });
   }
 
