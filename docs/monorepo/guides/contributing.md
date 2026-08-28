@@ -45,14 +45,13 @@ Every root turbo script — `dev`, `build`, `test`, `lint`, `lint:fix`, `typeche
 
 ```
 $ pnpm dev
-◆  `dev` — which apps?
+◆  `dev` — which apps? (a selects all; --all runs every package)
 │  ◼ platform            with-env next dev --experimental-https
 │  ◻ schedule-builder    with-env next dev
 │  ◻ study-group-finder  with-env -c 'flutter run …'
-│  ◻ everything          every package in the workspace, unfiltered
 ```
 
-`pnpm dev` used to start all three at once — two dev servers and a Flutter run — when almost nobody is working on more than one. The picker is preselected with your last answer for that task, so the common case is Enter.
+`pnpm dev` used to start all three at once — two dev servers and a Flutter run — when almost nobody is working on more than one. The picker is preselected with your last answer for that task, so the common case is Enter. `a` toggles every app in the list, `i` inverts the selection.
 
 Three ways past it, each skipping the question entirely:
 
@@ -61,6 +60,11 @@ Three ways past it, each skipping the question entirely:
 | `pnpm dev --filter platform` | any turbo filter — you have already said which |
 | `pnpm dev --all`             | every package, the old behaviour               |
 | `CI=1 pnpm dev`              | what CI does                                   |
+
+> [!IMPORTANT]
+> `a` and `--all` are not the same thing, and the gap matters most for the tasks you are most likely to run before pushing. `a` selects every app in the list, which is `apps/*`. `--all` passes turbo no filter at all, which is every package in the workspace.
+>
+> For `build` the two nearly coincide, because filtering to an app pulls its dependencies in through `^build`. For `test`, `lint` and `typecheck` they do not: those tasks declare `dependsOn: ["^build"]`, not `^test`, so selecting all four apps runs **four** test suites while `pnpm test --all` runs **ten** — every suite in `packages/*` is skipped by the first. If you want the whole workspace checked, use `--all`.
 
 **CI never sees a prompt**, and in fact never reaches the picker at all: every workflow calls `pnpm turbo run …` directly rather than going through a root alias. The guard is there regardless — `pnpm devtools run` passes straight through to turbo when `CI` is set, when stdin is not a TTY, or when a filter is already present, which covers workflows, piped output and editor task runners alike.
 

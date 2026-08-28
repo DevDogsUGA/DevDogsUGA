@@ -194,8 +194,6 @@ function remember(task: string, apps: string[]): void {
 
 // ── Entry ────────────────────────────────────────────────────────────────────
 
-const EVERYTHING = " everything";
-
 /**
  * Runs one root turbo task, asking which apps first where that makes sense.
  *
@@ -229,27 +227,36 @@ export async function runTask(argv: string[]): Promise<never> {
   const previous = remembered(task);
 
   const chosen = await multiselect({
-    message: `\`${task}\` — which apps?`,
-    options: [
-      ...apps.map((app) => ({
-        value: app.name,
-        label: app.name,
-        // The actual command, so the choice is made against what will run
-        // rather than against a name.
-        hint:
-          app.script.length > 58 ? `${app.script.slice(0, 57)}…` : app.script,
-      })),
-      {
-        value: EVERYTHING,
-        label: "everything",
-        hint: "every package in the workspace, unfiltered — the old default",
-      },
-    ],
-    // Only what was picked last time. Nothing preselected on a first run,
-    // which with `required` means the first answer is a real choice rather
-    // than an Enter through a preselected "all" — the default this replaces.
+    // The `--all` escape is named here rather than offered as an option.
+    //
+    // There used to be an "everything" entry alongside the apps, and `a` —
+    // clack's toggle-all — replaces most of what it was for. Not all of it,
+    // though, and the difference is worth the half-line it costs to say:
+    // `a` selects every app in THIS list, which is `apps/*`. `--all` passes
+    // no filter at all, which is every package in the workspace.
+    //
+    // For `build` those nearly coincide, since filtering to an app pulls its
+    // dependencies in through `^build`. For `test`, `lint` and `typecheck`
+    // they do not, and not by a little: those tasks declare `dependsOn:
+    // ["^build"]`, not `^test`, so filtering to the four apps runs four test
+    // tasks while an unfiltered run covers ten packages. Selecting every app
+    // and expecting a workspace-wide test run would quietly skip every suite
+    // in `packages/*`.
+    message: `\`${task}\` — which apps? (a selects all; --all runs every package)`,
+    options: apps.map((app) => ({
+      value: app.name,
+      label: app.name,
+      // The actual command, so the choice is made against what will run
+      // rather than against a name.
+      hint: app.script.length > 58 ? `${app.script.slice(0, 57)}…` : app.script,
+    })),
+    // Only what was picked last time, and only names still on offer — which
+    // also quietly drops the retired "everything" entry from an older cache
+    // rather than preselecting a value nothing would match. Nothing is
+    // preselected on a first run, so with `required` the first answer is a
+    // real choice rather than an Enter through a preselected default.
     initialValues: previous.filter((name) =>
-      [...apps.map((a) => a.name), EVERYTHING].includes(name),
+      apps.some((app) => app.name === name),
     ),
     required: true,
   });
@@ -260,8 +267,6 @@ export async function runTask(argv: string[]): Promise<never> {
   }
 
   remember(task, chosen);
-
-  if (chosen.includes(EVERYTHING)) passthrough(task, rest);
 
   passthrough(task, [...chosen.map((name) => `--filter=${name}`), ...rest]);
 }
