@@ -387,6 +387,10 @@ insert into "officer_links" ("slug", "title", "url", "sortOrder") values
   ('zayan-hoodani',   'Portfolio', 'https://zayan.hoodani.me/', 0),
   ('zayan-hoodani',   'LinkedIn',  'https://www.linkedin.com/in/zayanh1/', 1),
   ('nandan-praveen',  'Portfolio', 'https://nandanpraveen.github.io', 0),
+  -- Not printed on his resume as a github.com URL, but the resume's own
+  -- portfolio link is nandanpraveen.github.io, and that account resolves to
+  -- GitHub user 97852696 named "Nandan Praveen". Derived, then verified.
+  ('nandan-praveen',  'GitHub',    'https://github.com/nandanpraveen', 1),
   ('shruti-mishra',   'GitHub',    'https://github.com/smcodes612', 0),
   ('gabrielle-rose',  'LinkedIn',  'https://www.linkedin.com/in/gabrielle-rose-b79b00308/', 0),
   ('kyle-quach',      'LinkedIn',  'https://www.linkedin.com/in/kyle-quach/', 0),
