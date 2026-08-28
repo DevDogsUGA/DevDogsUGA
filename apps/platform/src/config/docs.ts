@@ -18,7 +18,7 @@ export const DOCS_BRANCH = "main";
  * Keyed by docs slug, which is the name of the project's workspace directory
  * (`docs/schedule-builder/` documents `apps/schedule-builder`). The icon and
  * fill are the ones that project already wears in the fullscreen app
- * switcher, so DogDays is the same red calendar wherever you meet it —
+ * switcher, so DogDays is the same red calendar-and-bone wherever you meet it —
  * ~/config/projects.ts holds those originals, and a project whose mark
  * changes there wants the matching change here.
  *
@@ -31,8 +31,8 @@ export const DOCS_PROJECT_MARKS: Record<
   { icon: NavIcon; iconBg: string }
 > = {
   platform: { icon: "HouseIcon", iconBg: "bg-cyan-400" },
-  "schedule-builder": { icon: "CalendarDotsIcon", iconBg: "bg-red-400" },
-  "study-group-finder": { icon: "UsersIcon", iconBg: "bg-purple-400" },
+  "schedule-builder": { icon: "DogDaysIcon", iconBg: "bg-red-400" },
+  "study-group-finder": { icon: "DogPackIcon", iconBg: "bg-purple-400" },
 };
 
 export const DOCS_FALLBACK_MARK = {

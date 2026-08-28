@@ -33,3 +33,10 @@ export {
   UsersIcon,
   WrenchIcon,
 } from "@phosphor-icons/react/ssr";
+
+// The DevDogs apps' own marks, alongside the Phosphor set so a switcher tile,
+// a docs mark or a menu row can name either kind and render it the same way.
+export {
+  DogDaysIcon,
+  DogPackIcon,
+} from "~/components/ProjectsSection/project-icons";

@@ -50,7 +50,6 @@ export default function ProjectCard({
         card: "gap-3 border-black/50 p-4",
         fill: "bg-mauve-100",
         title: "text-xl",
-        titleIcon: "size-5",
         label: "text-[0.65rem]",
         body: "text-xs/relaxed",
         meta: "bg-mauve-200",
@@ -66,7 +65,6 @@ export default function ProjectCard({
         card: "gap-4 border-black p-6",
         fill: "bg-white",
         title: "text-2xl",
-        titleIcon: "size-6",
         label: "text-xs",
         body: "text-sm/relaxed",
         meta: "bg-mauve-100",
@@ -84,7 +82,7 @@ export default function ProjectCard({
   const BadgeIcon = badge.icon;
 
   // Same guard, same reason: only the apps with a drawn mark carry one.
-  const Icon = icon ? PROJECT_ICONS[icon] : null;
+  const mark = icon ? PROJECT_ICONS[icon] : null;
 
   return (
     <div
@@ -104,10 +102,15 @@ export default function ProjectCard({
         </span>
       </div>
       <div className="space-y-1">
-        <h3
-          className={`font-display flex items-center gap-2 ${t.title} font-bold ${titleColor}`}
-        >
-          {Icon && <Icon className={`${t.titleIcon} shrink-0`} />}
+        <h3 className={`font-display ${t.title} font-bold ${titleColor}`}>
+          {/* Inline and baseline-aligned rather than flex-centered: the mark
+              is drawn to the font's metrics, so standing it on the baseline at
+              the height it asks for puts its body exactly at cap height. */}
+          {mark && (
+            <mark.Icon
+              className={`${mark.height} mr-2 inline-block w-auto align-baseline`}
+            />
+          )}
           {title}
         </h3>
         <p className={`${t.body} font-semibold text-mauve-500`}>{tagline}</p>
