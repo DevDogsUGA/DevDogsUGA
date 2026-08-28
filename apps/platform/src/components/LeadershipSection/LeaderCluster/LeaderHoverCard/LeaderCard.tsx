@@ -73,12 +73,14 @@ export default function LeaderCard({
       >
         {meta && <p className="text-xs text-mauve-500">{meta}</p>}
         <div className="flex flex-col gap-0.5 text-xs text-mauve-600">
-          <p>
-            <span className="font-semibold text-mauve-800">
-              Major{profile.majors.length > 1 ? "s" : ""}:
-            </span>{" "}
-            {profile.majors.join(", ")}
-          </p>
+          {profile.majors.length > 0 && (
+            <p>
+              <span className="font-semibold text-mauve-800">
+                Major{profile.majors.length > 1 ? "s" : ""}:
+              </span>{" "}
+              {profile.majors.join(", ")}
+            </p>
+          )}
           {profile.minors.length > 0 && (
             <p>
               <span className="font-semibold text-mauve-800">

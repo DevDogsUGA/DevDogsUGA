@@ -83,25 +83,26 @@
 -- Accounts, and the hazard in creating them
 -- ============================================================
 --
--- Officers are matched to `auth.users` on the address they submitted from,
--- case-insensitively, and one is created where there is no such user. A
+-- Officers are matched to `auth.users` case-insensitively, and one is created
+-- where there is no such user. A
 -- created row has no password and no `auth.identities` row, so it cannot sign
 -- in -- it is a container holding submitted content until the person arrives.
 -- The ids are in the same literal space as the moderation personas
 -- (00000000-0000-4000-a000-...), one block along, so the two seeds cannot
 -- collide.
 --
--- Three officers wrote from personal Gmail. If one of them later signs in
--- through GitHub, Discord or LinkedIn under a different address, GoTrue mints
--- a NEW user and the profile seeded here is orphaned: the card keeps the
--- seeded content while the real account has none. Correcting an address here
--- before a reset is cheap; merging two users afterwards is not.
+-- Every officer is matched on their UGA MyID address -- the initials-plus-digits
+-- form, supplied by the president -- because sign-in is UGA SSO and that is
+-- the address the account will carry. Three officers submitted from personal
+-- Gmail and two more from a uga.edu alias rather than the MyID; each of those
+-- is kept in "altEmails" so a match still lands if an account was made under
+-- one of them.
 --
--- Shruti Mishra is matched on shruti.mishra@uga.edu rather than the Gmail she
--- submitted from -- her resume carries it, and sign-in is UGA SSO, so the UGA
--- address is the one her account will have. Jack Harrington and Zayan Hoodani
--- print no UGA address on their resumes, so they are still matched on Gmail
--- and still carry the risk.
+-- That closes the orphaning hazard this file used to carry. It is worth
+-- keeping in view anyway: if an officer signs in under an address on neither
+-- list, GoTrue mints a NEW user and the profile seeded here is stranded --
+-- the card keeps the seeded content while the real account has none. Adding an
+-- address here before a reset is cheap; merging two users afterwards is not.
 
 create temporary table "officer_submissions" (
   "slug" text primary key,
@@ -116,8 +117,11 @@ create temporary table "officer_submissions" (
   -- 'spring' | 'summer' | 'fall'. Cast to the enum on the way into profile.
   -- Every date below reads "May 20xx" on the resume, which is spring.
   "graduationSemester" text,
-  "linkTitle" text,
-  "linkUrl" text,
+  -- Other addresses the same person may have signed in under. Matching checks
+  -- these too, which is the cheapest defence against attaching a profile to
+  -- the wrong account -- a mistake only discovered when somebody notices their
+  -- card is a stranger's.
+  "altEmails" text[] not null default '{}',
   -- Deterministic, so a replay finds the same row and so the headshot key in
   -- the `avatars` bucket -- which is the bare user id -- is knowable before
   -- the upload. Same literal space as the moderation personas
@@ -129,61 +133,68 @@ create temporary table "officer_submissions" (
 insert into "officer_submissions" (
   "slug", "email", "preferredName", "title", "roleDescription",
   "majors", "minors", "certificates", "graduationYear", "graduationSemester",
-  "linkTitle", "linkUrl", "seededId"
+  "altEmails", "seededId"
 ) values
   (
-    'jack-harrington', 'jackharrington290@gmail.com', 'Jack Harrington',
+    'jack-harrington', 'jbh36784@uga.edu', 'Jack Harrington',
     'Vice President',
     'Jack Harrington is a Computer Science student at the University of Georgia with a passion for building full-stack software that solves real-world problems. As Vice President, Jack helps coordinate the student-led software projects DevDogs runs for the UGA community. As a Software Engineer Intern with the U.S. Air Force, they have built production software in a collaborative engineering environment, and they contribute to SpectraGuru, an open-source spectrum analysis platform for research.',
     array['Computer Science']::text[], '{}', '{}', 2027, 'spring',
-    null, null, '00000000-0000-4000-b000-000000000001'
+    array['jackharrington290@gmail.com']::text[],
+    '00000000-0000-4000-b000-000000000001'
   ),
   (
-    'zayan-hoodani', 'zayanhoodani@gmail.com', 'Zayan Hoodani',
+    'zayan-hoodani', 'zkh27085@uga.edu', 'Zayan Hoodani',
     'Event Director',
     'Zayan Hoodani is a sophomore studying Computer Science while pursuing a certificate in Cybersecurity and Privacy. As Event Director, Zayan facilitates events and works to create a fun, collaborative environment. They are a NetOps Intern at GreenSky, architecting automated systems for cloud network segmentation on AWS and provisioning physical switch infrastructure, and Director of R&D at The Hack Pack. Zayan loves anything to do with cybersecurity and AI.',
     array['Computer Science']::text[], '{}',
     array['Cybersecurity and Privacy']::text[], 2028, 'spring',
-    'Portfolio', 'https://zayan.hoodani.me/', '00000000-0000-4000-b000-000000000002'
+    array['zayanhoodani@gmail.com']::text[],
+    '00000000-0000-4000-b000-000000000002'
   ),
   (
-    'nandan-praveen', 'nandan@uga.edu', 'Nandan Praveen',
+    'nandan-praveen', 'np43598@uga.edu', 'Nandan Praveen',
     'Flutter Project Head',
     'Nandan Praveen is a sophomore majoring in Computer Systems Engineering, currently serving as Flutter Project Head and formerly a Focus Lead at DevDogs. Their work spans Flutter, Next.js, MySQL, and Supabase, orchestrating both the UI/UX of the app and the backend while helping developers grow in core and advanced concepts. Outside DevDogs, Nandan does ML research with UGA''s VIPR lab, building image-based models using PyTorch and TensorFlow.',
     array['Computer Systems Engineering']::text[], '{}', '{}', 2029, 'spring',
-    null, null, '00000000-0000-4000-b000-000000000003'
+    array['nandan@uga.edu']::text[],
+    '00000000-0000-4000-b000-000000000003'
   ),
   (
-    'shruti-mishra', 'shruti.mishra@uga.edu', 'Shruti Mishra',
+    'shruti-mishra', 'sbm64430@uga.edu', 'Shruti Mishra',
     'Focus Lead, Backend Integration',
     'Shruti Mishra is a sophomore at the University of Georgia studying Computer Science with an emphasis in Artificial Intelligence. Shruti serves as the Focus Lead for Backend Integration on the DevDogs leadership team, is a member of the UGAHacks Tech Team helping develop the website for UGA''s annual hackathon, and serves on the Outreach Team for HackPack, UGA''s cybersecurity club. They are passionate about software engineering and AI.',
     array['Computer Science']::text[], '{}', '{}', 2027, 'spring',
-    null, null, '00000000-0000-4000-b000-000000000004'
+    array['shruti.mishra@uga.edu', 'shrutibmishra1@gmail.com']::text[],
+    '00000000-0000-4000-b000-000000000004'
   ),
   (
     -- Submitted as Ashlee Peacox; Armani is the name she goes by. Her wording,
     -- her pronouns -- see the note above.
-    'armani-peacox', 'ashlee.peacox@uga.edu', 'Armani Peacox',
+    'armani-peacox', 'aap86342@uga.edu', 'Armani Peacox',
     'Campus Coordinator',
     'Armani is a Computer Science and Interdisciplinary Art student at the University of Georgia with a passion for game development. She serves as the Campus Coordinator for UGA''s Dev Dogs chapter and is actively involved in TheHackPack, Girls Who Code, and the Powerlifting & Bodybuilding Club. Her interests include gameplay programming, game design, virtual and augmented reality, human-computer interaction, and digital art.',
     array['Computer Science', 'Interdisciplinary Art']::text[], '{}',
     array['New Media']::text[], null, null,
-    null, null, '00000000-0000-4000-b000-000000000005'
+    array['ashlee.peacox@uga.edu']::text[],
+    '00000000-0000-4000-b000-000000000005'
   ),
   (
-    'gabrielle-rose', 'gabrielle.rose@uga.edu', 'Gabrielle Rose',
+    'gabrielle-rose', 'glr26038@uga.edu', 'Gabrielle Rose',
     'UI/UX Focus Lead',
     'Gabrielle Rose is pursuing a degree in Computer Science with a focus on front-end development, human-computer interaction, and UI/UX design, and is passionate about creating intuitive, user-centered technologies that solve real-world problems. In the future, Gabrielle aspires to bridge the gap between people and technology by designing digital solutions that create meaningful impact and empower communities to confidently engage with technology.',
     array['Computer Science']::text[], '{}', '{}', 2028, 'spring',
-    null, null, '00000000-0000-4000-b000-000000000006'
+    array['gabrielle.rose@uga.edu']::text[],
+    '00000000-0000-4000-b000-000000000006'
   ),
   (
     -- Submitted as Gia Khang Quach; Kyle is the name he goes by.
-    'kyle-quach', 'giakhang.quach@uga.edu', 'Kyle Quach',
+    'kyle-quach', 'gq72484@uga.edu', 'Kyle Quach',
     'Next.js Focus Lead',
     'Kyle Quach is a sophomore majoring in Computer Science at the University of Georgia. Kyle''s interests span software development to AI engineering, and they sometimes develop games on the side. They have built projects with tech stacks such as Java, C#, Python, and JavaScript, as well as frameworks like React and Spring. As an aspiring software developer, Kyle looks forward to building software that contributes meaningfully to people''s daily lives.',
     array['Computer Science']::text[], '{}', '{}', 2028, 'spring',
-    null, null, '00000000-0000-4000-b000-000000000007'
+    array['giakhang.quach@uga.edu']::text[],
+    '00000000-0000-4000-b000-000000000007'
   );
 
 -- ============================================================
@@ -255,14 +266,17 @@ select
   '', '', '', '', now(), now()
 from "officer_submissions" s
 where not exists (
-  select 1 from "auth"."users" u where lower(u."email") = s."email"
+  select 1 from "auth"."users" u
+  where lower(u."email") = s."email"
+     or lower(u."email") = any (s."altEmails")
 )
 on conflict ("id") do nothing;
 
 update "officer_submissions" s
 set "userId" = u."id"
 from "auth"."users" u
-where lower(u."email") = s."email";
+where lower(u."email") = s."email"
+   or lower(u."email") = any (s."altEmails");
 
 -- ============================================================
 -- Profiles
@@ -303,17 +317,61 @@ on conflict ("userId") do update set
     when cardinality("platform"."profile"."certificates") = 0
     then excluded."certificates" else "platform"."profile"."certificates" end;
 
--- Links are gap-filled as a set: an officer who has added any link of their
--- own owns that list, and a submitted link does not push into it.
+-- ============================================================
+-- Links
+-- ============================================================
+--
+-- Every one of these is printed on the officer's own resume -- the document
+-- they sent to be used on the website. None was found by searching for them:
+-- attaching a profile to a named student on a public page on the strength of a
+-- name match is how the wrong person ends up on the site, and a resume is both
+-- certain and already offered.
+--
+-- Armani Peacox lists none. Her resume carries an email and a phone number and
+-- nothing else, so she has none here; asking her is the fix.
+--
+-- Note what is NOT taken from those resumes: phone numbers, street addresses
+-- and personal email. Gabrielle's LinkedIn shares a header line with her mobile
+-- number, and only the URL crossed over.
+--
+-- These go to `profileLinks`, the list members curate from /account, so an
+-- officer can delete or reorder any of them without asking anybody. GitHub and
+-- LinkedIn are separately modelled as linked OAuth identities gated on
+-- `showGithub`/`showLinkedin`, which is the better long-term home because it
+-- proves the account is theirs -- but it needs each officer to link it, and
+-- none has yet.
+--
+-- Gap-filled as a set: an officer who has added any link of their own owns
+-- that list, and these do not push into it.
+create temporary table "officer_links" (
+  "slug" text not null,
+  "title" text not null,
+  "url" text not null,
+  "sortOrder" integer not null
+);
+
+insert into "officer_links" ("slug", "title", "url", "sortOrder") values
+  ('jack-harrington', 'LinkedIn',  'https://www.linkedin.com/in/jackharrington2006/', 0),
+  ('jack-harrington', 'GitHub',    'https://github.com/JackHarrington3', 1),
+  ('zayan-hoodani',   'Portfolio', 'https://zayan.hoodani.me/', 0),
+  ('zayan-hoodani',   'LinkedIn',  'https://www.linkedin.com/in/zayanh1/', 1),
+  ('nandan-praveen',  'Portfolio', 'https://nandanpraveen.github.io', 0),
+  ('shruti-mishra',   'GitHub',    'https://github.com/smcodes612', 0),
+  ('gabrielle-rose',  'LinkedIn',  'https://www.linkedin.com/in/gabrielle-rose-b79b00308/', 0),
+  ('kyle-quach',      'LinkedIn',  'https://www.linkedin.com/in/kyle-quach/', 0),
+  ('kyle-quach',      'GitHub',    'https://github.com/kquakk', 1);
+
 insert into "platform"."profileLinks" ("userId", "title", "url", "sortOrder")
-select s."userId", s."linkTitle", s."linkUrl", 0
-from "officer_submissions" s
+select s."userId", l."title", l."url", l."sortOrder"
+from "officer_links" l
+join "officer_submissions" s on s."slug" = l."slug"
 where s."userId" is not null
-  and s."linkUrl" is not null
   and not exists (
-    select 1 from "platform"."profileLinks" l where l."userId" = s."userId"
+    select 1 from "platform"."profileLinks" p where p."userId" = s."userId"
   )
 on conflict do nothing;
+
+drop table "officer_links";
 
 -- Assignments. Officers who stated no title have none to assign.
 insert into "platform"."userRoles" ("userId", "roleId")
@@ -326,37 +384,64 @@ on conflict do nothing;
 drop table "officer_submissions";
 
 -- ============================================================
--- Sloan Finger, President -- pending
+-- Sloan Finger, President
 -- ============================================================
 --
--- Everything here is known except the address his account signs in with, and
--- a seeded placeholder address would create a junk account on the next reset,
--- so the row waits rather than guessing. Graduation is spring 2027, confirmed
--- directly. The headshot is ready: `sloan-finger.webp` in the archive's `web/`
--- directory, derived from the `apps/platform/src/assets/sloan.jpg` that this
--- branch deleted along with the other placeholder headshots.
+-- Separate from the block above because he sent no submission: there is no
+-- resume, no headshot email and no bio in his own words. What is here was
+-- confirmed directly -- the address, spring 2027, and the presidency -- plus a
+-- bio drafted for him and accepted as a placeholder he intends to rewrite.
 --
--- The bio below is a DRAFT awaiting his review, and it is short because very
--- little about him is on record: the majors are unfilled and the claim about
--- the platform is an inference from the repository, not something he wrote.
--- Do not uncomment it as it stands.
+-- `majors` is left empty because nobody has said what they are. The card omits
+-- the line rather than printing an empty label.
 --
--- insert into "platform"."profile" (
---   "userId", "preferredName", "roleDescription",
---   "majors", "graduationYear", "graduationSemester"
--- )
--- select u."id", 'Sloan Finger',
---   'Sloan Finger is President of DevDogs, leading the executive board and the '
---   'club''s software projects. A University of Georgia student graduating in '
---   'spring 2027, Sloan built and maintains the DevDogs platform -- this site '
---   'and the console the club runs on -- and works on the developer tooling '
---   'and deployment infrastructure behind them.',
---   array['<major>']::text[], 2027, 'spring'
--- from "auth"."users" u where lower(u."email") = '<his address>'
--- on conflict ("userId") do nothing;
---
--- insert into "platform"."userRoles" ("userId", "roleId")
--- select u."id", r."id"
--- from "auth"."users" u, "platform"."roles" r
--- where lower(u."email") = '<his address>' and r."title" = 'President'
--- on conflict do nothing;
+-- His headshot is the `apps/platform/src/assets/sloan.jpg` this branch deleted
+-- along with the other placeholder headshots, recovered into the archive and
+-- derived to `web/sloan-finger.webp` for the avatars bucket.
+insert into "auth"."users" (
+  "id", "instance_id", "aud", "role", "email",
+  "raw_app_meta_data", "raw_user_meta_data",
+  "confirmation_token", "recovery_token",
+  "email_change_token_new", "email_change",
+  "created_at", "updated_at"
+)
+select
+  '00000000-0000-4000-b000-000000000008',
+  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+  'jsf51288@uga.edu',
+  '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
+  '', '', '', '', now(), now()
+where not exists (
+  select 1 from "auth"."users" u where lower(u."email") = 'jsf51288@uga.edu'
+)
+on conflict ("id") do nothing;
+
+insert into "platform"."profile" (
+  "userId", "preferredName", "roleDescription",
+  "graduationYear", "graduationSemester"
+)
+select u."id", 'Sloan Finger',
+  'Sloan Finger is President of DevDogs, leading the executive board and the '
+  'club''s software projects. A University of Georgia student graduating in '
+  'spring 2027, Sloan built and maintains the DevDogs platform -- this site '
+  'and the console the club runs on -- and works on the developer tooling and '
+  'deployment infrastructure behind them.',
+  2027, 'spring'
+from "auth"."users" u
+where lower(u."email") = 'jsf51288@uga.edu'
+on conflict ("userId") do update set
+  "roleDescription" = coalesce(
+    "platform"."profile"."roleDescription", excluded."roleDescription"
+  ),
+  "graduationYear" = coalesce(
+    "platform"."profile"."graduationYear", excluded."graduationYear"
+  ),
+  "graduationSemester" = coalesce(
+    "platform"."profile"."graduationSemester", excluded."graduationSemester"
+  );
+
+insert into "platform"."userRoles" ("userId", "roleId")
+select u."id", r."id"
+from "auth"."users" u, "platform"."roles" r
+where lower(u."email") = 'jsf51288@uga.edu' and r."title" = 'President'
+on conflict do nothing;
