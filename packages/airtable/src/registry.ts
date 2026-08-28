@@ -503,7 +503,7 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
   // meeting that is not happening. Setting this keeps the row on the schedule,
   // struck through.
   cancelledAt: field
-    .dateTime("fldTODO_meetingCancelledAt", "Cancelled")
+    .dateTime("fld5JjWXM1om14UHs", "Cancelled")
     .pull((v) => (typeof v === "string" ? v : null)),
 
   // Why. Null even when `cancelledAt` is set: the fact and the explanation
@@ -514,7 +514,7 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
   // sentence under an officer's name with no signal anywhere is worse than
   // putting a message in the cell they typed it into.
   cancellationReason: field
-    .text("fldTODO_meetingCancellationReason", "Cancellation reason")
+    .text("fldJLfFhWGD3elJjg", "Cancellation reason")
     .pull((v) => {
       const text = normalizeMeetingSummary(v);
       if (text === null) return null;
@@ -550,25 +550,21 @@ export const workshops = table("Workshops", "tblSYPbmIagwyTFq1", {
   //
   // Null falls back to the project's name, so every workshop authored before
   // this field existed keeps rendering exactly as it did.
-  title: field
-    .text("fldTODO_workshopTitle", "Title")
-    .pull((v) => {
-      const text = normalizeMeetingSummary(v);
-      if (text === null) return null;
-      return text.length > WORKSHOP_TITLE_MAX_LENGTH ? null : text;
-    }),
+  title: field.text("fldaY1lWS1qBJsqrp", "Title").pull((v) => {
+    const text = normalizeMeetingSummary(v);
+    if (text === null) return null;
+    return text.length > WORKSHOP_TITLE_MAX_LENGTH ? null : text;
+  }),
 
   // What it teaches, for the meeting's detail dialog. Worth writing even when
   // the title is self-explanatory: workshops are self-contained and assume no
   // prior work, and that is the single most useful thing a prospective member
   // can learn before deciding whether they are qualified to turn up.
-  description: field
-    .longText("fldTODO_workshopDescription", "Description")
-    .pull((v) => {
-      const text = normalizeMeetingSummary(v);
-      if (text === null) return null;
-      return text.length > WORKSHOP_DESCRIPTION_MAX_LENGTH ? null : text;
-    }),
+  description: field.longText("fldEBAaKW0mjaiS8Q", "Description").pull((v) => {
+    const text = normalizeMeetingSummary(v);
+    if (text === null) return null;
+    return text.length > WORKSHOP_DESCRIPTION_MAX_LENGTH ? null : text;
+  }),
 
   attendanceCount: field
     .number("fldxdsZmSNmR30O2J", "⚙️ Attendance")
