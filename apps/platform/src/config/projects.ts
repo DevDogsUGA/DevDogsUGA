@@ -59,8 +59,13 @@ export interface ProjectSwitcher {
  * first, then the apps by how far along they are. The homepage regroups these
  * by `contributions` instead, so reordering here leaves it untouched.
  */
+/** Keys into PROJECT_ICONS — marks drawn for the apps that have one. */
+export type ProjectIconName = "dogdays" | "dogpack";
+
 export interface Project {
   badge: Badge;
+  /** Icon mark rendered beside the title, tinted by titleColor. */
+  icon?: ProjectIconName;
   year: string;
   title: string;
   titleColor: string;
@@ -145,6 +150,7 @@ export const PROJECTS: Project[] = [
   {
     badge: ACTIVE,
     year: "2024 – present",
+    icon: "dogdays",
     title: "DogDays",
     tagline: "Schedule Builder",
     titleColor: "text-red-700",
@@ -174,6 +180,7 @@ export const PROJECTS: Project[] = [
   {
     badge: ACTIVE,
     year: "2026 – present",
+    icon: "dogpack",
     title: "DogPack",
     tagline: "Study Group Finder",
     titleColor: "text-purple-700",

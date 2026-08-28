@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowSquareOutIcon, GithubLogoIcon } from "@phosphor-icons/react/ssr";
 import type { Project } from "~/config/projects";
 import { TECH } from "~/config/tech";
+import { PROJECT_ICONS } from "./project-icons";
 
 interface Props extends Project {
   /**
@@ -22,6 +23,7 @@ interface Props extends Project {
 
 export default function ProjectCard({
   badge,
+  icon,
   year,
   title,
   titleColor,
@@ -48,6 +50,7 @@ export default function ProjectCard({
         card: "gap-3 border-black/50 p-4",
         fill: "bg-mauve-100",
         title: "text-xl",
+        titleIcon: "size-5",
         label: "text-[0.65rem]",
         body: "text-xs/relaxed",
         meta: "bg-mauve-200",
@@ -63,6 +66,7 @@ export default function ProjectCard({
         card: "gap-4 border-black p-6",
         fill: "bg-white",
         title: "text-2xl",
+        titleIcon: "size-6",
         label: "text-xs",
         body: "text-sm/relaxed",
         meta: "bg-mauve-100",
@@ -78,6 +82,9 @@ export default function ProjectCard({
   // Capitalized so JSX reads it as a component, and guarded: `Badge.icon` is
   // optional, since the switcher's pills carry none.
   const BadgeIcon = badge.icon;
+
+  // Same guard, same reason: only the apps with a drawn mark carry one.
+  const Icon = icon ? PROJECT_ICONS[icon] : null;
 
   return (
     <div
@@ -97,7 +104,10 @@ export default function ProjectCard({
         </span>
       </div>
       <div className="space-y-1">
-        <h3 className={`font-display ${t.title} font-bold ${titleColor}`}>
+        <h3
+          className={`font-display flex items-center gap-2 ${t.title} font-bold ${titleColor}`}
+        >
+          {Icon && <Icon className={`${t.titleIcon} shrink-0`} />}
           {title}
         </h3>
         <p className={`${t.body} font-semibold text-mauve-500`}>{tagline}</p>
