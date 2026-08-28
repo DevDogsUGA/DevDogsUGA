@@ -41,6 +41,9 @@ interface Props {
   meeting: MeetingInRange | null;
   /** "Now", resolved by the caller. Never read in here. */
   now: Date;
+  /** The small label over the name. The homepage stacks three of these and
+   *  only the first is the next meeting. */
+  eyebrow?: string;
 }
 
 const WEEKDAY_FMT = new Intl.DateTimeFormat("en-US", {
@@ -63,7 +66,11 @@ const EYEBROW_CLS =
 const ROW_LINK_CLS =
   "flex w-fit shrink-0 items-center gap-1.5 text-sm font-semibold text-black underline decoration-2 underline-offset-4 hover:no-underline";
 
-export default function NextMeetingStrip({ meeting, now }: Props) {
+export default function NextMeetingStrip({
+  meeting,
+  now,
+  eyebrow = "Next meeting",
+}: Props) {
   // Months at a time, every summer — a state of the club, not of the query.
   if (meeting === null) return <NothingScheduled />;
 
@@ -100,7 +107,7 @@ export default function NextMeetingStrip({ meeting, now }: Props) {
         </time>
 
         <div className="flex min-w-0 flex-col gap-1.5">
-          <p className={EYEBROW_CLS}>Next meeting</p>
+          <p className={EYEBROW_CLS}>{eyebrow}</p>
           <p className="font-display truncate text-xl font-extrabold text-black">
             {meeting.name}
           </p>
