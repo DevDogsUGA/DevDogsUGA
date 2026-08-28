@@ -210,7 +210,19 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
     void Promise.allSettled(
       targets.map(({ id }) => {
         const handler = handlers.current.get(id);
-        return handler ? handler.save() : Promise.resolve();
+        // Wrapped because `save()` is a field's own closure and is only
+        // promised to return one — a synchronous throw from any single field
+        // would escape this `map` before `allSettled` was ever constructed,
+        // leaving `isSaving` stuck true. Every input on the page reads that
+        // flag to disable itself, so one bad field would freeze the whole
+        // form with no error and no way back except a reload.
+        try {
+          return handler ? handler.save() : Promise.resolve();
+        } catch (cause) {
+          return Promise.reject(
+            cause instanceof Error ? cause : new Error(String(cause)),
+          );
+        }
       }),
     ).then((results) => {
       setIsSaving(false);
@@ -291,6 +303,25 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
   return (
     <SettingsFormContext.Provider value={value}>
       {children}
+      {/* Floor for the save bar to hover over.
+
+          The bar is fixed to the bottom of the viewport and its card takes
+          pointer events, so while it is up it covers — and swallows clicks on
+          — whatever the last stretch of the page happens to be. That is worst
+          on the control the member is actually using, because the bar appears
+          in response to them using it: type into the last field on screen and
+          the answer is a bar landing on top of it.
+
+          Reserving the height at the end of the document means there is always
+          somewhere to scroll the covered thing to. It costs nothing while the
+          bar is down, and it grows rather than snapping so the page does not
+          lurch under the pointer the moment a field goes dirty. */}
+      <div
+        aria-hidden
+        className={`shrink-0 transition-[height] duration-200 ease-out ${
+          isDirty ? "h-24" : "h-0"
+        }`}
+      />
     </SettingsFormContext.Provider>
   );
 }
