@@ -257,7 +257,7 @@ export default function HowItWorks({
     <section
       id={id}
       aria-labelledby={`${id}-heading`}
-      className="flex scroll-mt-28 flex-col gap-6"
+      className="flex scroll-mt-28 flex-col gap-8"
       // The console page reveals nothing on scroll — that is the marketing
       // pages' idiom — so the attribute only exists on the light plate.
       data-animate={tone === "light" ? "fade-up" : undefined}
@@ -314,6 +314,7 @@ export default function HowItWorks({
               neutrals there, or the day names would be black on black. */}
           <CompetitionTimeline
             tone={cutout ? "dark" : tone}
+            bleed={cutout}
             active={active?.strip ?? null}
           />
         </div>

@@ -47,9 +47,8 @@ interface Props {
  * over one short paragraph — then the next three nights as a receding
  * stack and "All events", which is the job: handing the reader to
  * `/events`. The explainer ("A Week in DevDogs", the same component
- * `/events` renders as its legend) sits below a hairline cut across the
- * plate, for whoever wants to know what a night is like before turning up
- * to one.
+ * `/events` renders as its legend) sits a wide breath below, for whoever
+ * wants to know what a night is like before turning up to one.
  *
  * The room is not named here. Where the club meets is a fact about a
  * meeting, and every meeting on `/events` says its own; the homepage only has
@@ -73,7 +72,10 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
           base="#f0fdff"
           blobs={EVENTS_BLOBS}
         />
-        <div className="relative z-10 mx-auto max-w-6xl space-y-12 px-6 py-8 md:px-12">
+        {/* `space-y-20`: the two halves are divided by air alone — no rule —
+            so the gap has to be wide enough to read as a break rather than
+            as one more row of the stack. */}
+        <div className="relative z-10 mx-auto max-w-6xl space-y-20 px-6 py-8 md:px-12">
           {/* What is coming, first: the section's header, the next three
               nights as a short stack — each a step smaller than the one
               before it, so the list recedes and the soonest is the one that
@@ -102,8 +104,6 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
               All events <ArrowRightIcon />
             </LinkButton>
           </div>
-
-          <SectionRule />
 
           <HowItWorks cutout />
         </div>
@@ -152,22 +152,6 @@ function UpcomingStack({ meetings }: { meetings: MeetingInRange[] }) {
         </li>
       ))}
     </ol>
-  );
-}
-
-/**
- * The line between what is coming and how it works: a single black cut
- * across the whole plate, the same idea as the strip's cutout further down
- * at a hairline's width, so the two halves of the section are divided by
- * the page showing through rather than by a border drawn on the plate. As
- * wide as the section for the same reason and by the same arithmetic as the
- * cutout — see `Cutout` in HowItWorks.
- */
-function SectionRule() {
-  return (
-    <div className="relative h-0.5" aria-hidden>
-      <div className="absolute inset-y-0 left-1/2 w-[calc(100cqw-2rem)] -translate-x-1/2 bg-black md:w-[calc(100cqw-3rem)]" />
-    </div>
   );
 }
 
