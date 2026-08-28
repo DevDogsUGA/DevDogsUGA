@@ -35,7 +35,30 @@ import {
 export interface MeetingSummary {
   id: string;
   slug: string;
-  name: string;
+  /**
+   * A name for this night, when it has one worth reading — "Cold Start",
+   * "Midterm Study Session".
+   *
+   * Null is the ORDINARY case, not a missing value: a sprint Monday derives
+   * its heading from its workshops and its judging, and the schedule renders
+   * no heading at all for one. Surfaces that need a string regardless — the
+   * `<title>`, the JSON-LD, the dialog's accessible name, the stars table —
+   * go through `meetingTitle` rather than reading this directly.
+   */
+  nameOverride: string | null;
+  /**
+   * When this meeting was called off, or null.
+   *
+   * Distinct from `deletedAt`, which is not in this type at all because every
+   * loader filters it out: that one means "authored in error", this one means
+   * "real, and not happening". A cancelled meeting is still returned by the
+   * reads that answer *what is on the schedule* and filtered out of the ones
+   * that answer *where should I go now*.
+   */
+  cancelledAt: Date | null;
+  /** Why, in a few words. Null even when cancelled — the fact and the
+   *  explanation arrive in separate keystrokes. */
+  cancellationReason: string | null;
   /**
    * Which building, from the closed list the campus map can draw — or `Other`
    * for somewhere it cannot, or null when nobody has picked one.
@@ -117,7 +140,9 @@ function correlatedCount(subquery: { getSQL(): SQL }): SQL<number> {
 const summaryColumns = {
   id: meetings.id,
   slug: meetings.slug,
-  name: meetings.name,
+  nameOverride: meetings.nameOverride,
+  cancelledAt: meetings.cancelledAt,
+  cancellationReason: meetings.cancellationReason,
   building: meetings.building,
   location: meetings.location,
   startsAt: meetings.startsAt,
@@ -154,7 +179,22 @@ export const getUpcomingMeetings = cache(
     return db
       .select(summaryColumns)
       .from(meetings)
-      .where(and(isNull(meetings.deletedAt), gte(meetings.endsAt, new Date())))
+      .where(
+        and(
+          isNull(meetings.deletedAt),
+          // Cancelled meetings are filtered HERE and deliberately not in
+          // `getMeetingsInRange`, which looks like an oversight and is the
+          // whole point. This read answers "where should I go next" — it feeds
+          // the next-meeting strip and the homepage stack — and a cancelled
+          // meeting is not an answer to it; naming one as the next meeting is
+          // worse than the vanishing this column was added to stop. The range
+          // read answers "what is on the schedule", where a cancelled night is
+          // exactly what somebody holding it in their calendar needs to see,
+          // struck through and with its reason.
+          isNull(meetings.cancelledAt),
+          gte(meetings.endsAt, new Date()),
+        ),
+      )
       .orderBy(asc(meetings.startsAt))
       .limit(limit);
   },
@@ -243,7 +283,9 @@ export const getWorkshopDetail = cache(
       meeting: {
         id: row.id,
         slug: row.slug,
-        name: row.name,
+        nameOverride: row.nameOverride,
+        cancelledAt: row.cancelledAt,
+        cancellationReason: row.cancellationReason,
         building: row.building,
         location: row.location,
         startsAt: row.startsAt,
@@ -272,8 +314,17 @@ export const getWorkshopDetail = cache(
 
 export interface MeetingWorkshop {
   workshopId: string;
-  projectSlug: string;
-  projectName: string;
+  /**
+   * What the officers call this session — "Supabase", "Career Fair Readiness".
+   * Null falls back to {@link projectName}, so every workshop authored before
+   * the column existed renders exactly as it did.
+   */
+  title: string | null;
+  /** One or two sentences on what it teaches. Null renders nothing. */
+  description: string | null;
+  /** Both null for a workshop that teaches a skill rather than a codebase. */
+  projectSlug: string | null;
+  projectName: string | null;
   competitionSlug: string | null;
   teamCount: number;
 }
@@ -281,18 +332,33 @@ export interface MeetingWorkshop {
 /**
  * The workshops that ran at one meeting.
  *
- * The competition is a LEFT join, not an inner one: a supplementary workshop
- * has no competition and is complete on its own — worth exactly one star — so
- * an inner join would silently drop it from the meeting it ran at.
+ * BOTH joins are left joins, and for the same reason twice over.
+ *
+ * The competition, because a supplementary workshop has none and is complete
+ * on its own — worth exactly one star — so an inner join would silently drop
+ * it from the meeting it ran at.
+ *
+ * The project, because `workshops.projectId` is nullable as of the events
+ * rework: a career-readiness session teaches a skill and belongs to no
+ * codebase, and inventing a project for it would put that session on the
+ * Projects page as a body of work the club does not have. An inner join here
+ * would make the nullable column unreachable — the row would exist and no
+ * surface would ever show it, which is worse than not having the column,
+ * because it fails silently and fails on exactly the night the feature was
+ * added for.
  *
  * Ordered by the project sort order officers control, so the list on the page
  * matches the order the sessions are announced in rather than the alphabet.
+ * `nullsLast` puts the project-less sessions after the ones that carry an
+ * ordering officers chose, rather than wherever Postgres would default them.
  */
 export const getMeetingWorkshops = cache(
   async (meetingId: string): Promise<MeetingWorkshop[]> => {
     return db
       .select({
         workshopId: workshops.id,
+        title: workshops.title,
+        description: workshops.description,
         projectSlug: projects.slug,
         projectName: projects.displayName,
         competitionSlug: competitions.slug,
@@ -304,7 +370,7 @@ export const getMeetingWorkshops = cache(
         ),
       })
       .from(workshops)
-      .innerJoin(projects, eq(projects.id, workshops.projectId))
+      .leftJoin(projects, eq(projects.id, workshops.projectId))
       .leftJoin(
         competitions,
         and(
@@ -315,7 +381,11 @@ export const getMeetingWorkshops = cache(
       .where(
         and(eq(workshops.meetingId, meetingId), isNull(workshops.deletedAt)),
       )
-      .orderBy(asc(projects.sortOrder), asc(projects.displayName));
+      .orderBy(
+        sql`${projects.sortOrder} asc nulls last`,
+        sql`${projects.displayName} asc nulls last`,
+        asc(workshops.title),
+      );
   },
 );
 
@@ -395,7 +465,12 @@ async function judgingForMeetings(
     })
     .from(competitions)
     .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
-    .innerJoin(projects, eq(projects.id, workshops.projectId))
+    // Left, because `workshops.projectId` is nullable. A competition normally
+    // hangs off repo work and so has a project, but nothing in the schema
+    // enforces that, and an inner join would answer "this meeting judges
+    // nothing" for a competition it does judge — the calendar then quietly
+    // drops a judging chip off a night that has a deadline behind it.
+    .leftJoin(projects, eq(projects.id, workshops.projectId))
     .innerJoin(
       meetings,
       and(
@@ -520,12 +595,16 @@ export const getMeetingsInRange = cache(
         .select({
           meetingId: workshops.meetingId,
           workshopId: workshops.id,
+          title: workshops.title,
           projectSlug: projects.slug,
           projectName: projects.displayName,
           competitionSlug: competitions.slug,
         })
         .from(workshops)
-        .innerJoin(projects, eq(projects.id, workshops.projectId))
+        // Left: this feeds the calendar and the schedule chips, so an inner
+        // join would make a project-less workshop invisible on exactly the
+        // surfaces the nullable column was added to serve.
+        .leftJoin(projects, eq(projects.id, workshops.projectId))
         .leftJoin(
           competitions,
           and(
@@ -608,7 +687,16 @@ export const getCompetitionBySlug = cache(
       .select({
         id: competitions.id,
         slug: competitions.slug,
-        name: projects.displayName,
+        // A competition is called after its project — but `projectId` is
+        // nullable now, so the fallbacks matter. The workshop's own title is
+        // the next best name, and the competition's slug is the last resort:
+        // it is `not null`, unique, and already user-visible in git as the
+        // integration branch, so it is a real name rather than invented text.
+        name: sql<string>`coalesce(
+          ${projects.displayName},
+          ${workshops.title},
+          ${competitions.slug}
+        )`,
         openedOn: meetings.startsAt,
         judgingStartsAt: competitions.judgingStartsAt,
         maxTeamSize: sql<number>`coalesce(
@@ -618,7 +706,7 @@ export const getCompetitionBySlug = cache(
       })
       .from(competitions)
       .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
-      .innerJoin(projects, eq(projects.id, workshops.projectId))
+      .leftJoin(projects, eq(projects.id, workshops.projectId))
       .innerJoin(meetings, eq(meetings.id, workshops.meetingId))
       .where(
         and(

@@ -235,8 +235,16 @@ export const getPendingForUser = cache(
         teamName: teams.name,
         teamSlug: teams.slug,
         competitionSlug: competitions.slug,
-        // A competition is called after its project; it has no name of its own.
-        competitionName: projects.displayName,
+        // A competition is called after its project; it has no name of its
+        // own. `projectId` is nullable, so fall back to the workshop's title
+        // and then to the competition's slug — which is `not null` and already
+        // user-visible in git as the integration branch, so it names the thing
+        // rather than inventing text for it.
+        competitionName: sql<string>`coalesce(
+          ${projects.displayName},
+          ${workshops.title},
+          ${competitions.slug}
+        )`,
         userId: teamMembershipRequests.userId,
         preferredName: profiles.preferredName,
         direction: teamMembershipRequests.direction,
@@ -247,7 +255,7 @@ export const getPendingForUser = cache(
       .innerJoin(teams, eq(teams.id, teamMembershipRequests.teamId))
       .innerJoin(competitions, eq(competitions.id, teams.competitionId))
       .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
-      .innerJoin(projects, eq(projects.id, workshops.projectId))
+      .leftJoin(projects, eq(projects.id, workshops.projectId))
       .leftJoin(profiles, eq(profiles.userId, teamMembershipRequests.userId))
       .where(
         and(

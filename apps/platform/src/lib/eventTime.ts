@@ -15,6 +15,78 @@
  */
 export const EVENT_TZ = "America/New_York";
 
+const DAY_PARTS = new Intl.DateTimeFormat("en-US", {
+  timeZone: EVENT_TZ,
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+});
+
+/**
+ * The club-timezone calendar date of an instant, as its raw parts.
+ *
+ * `formatToParts` rather than parsing a formatted string: the separator and
+ * field order belong to ICU and are not ours to assume, and a `split("/")`
+ * would quietly start filing meetings under the wrong month if either changed.
+ *
+ * Month is **1-indexed here**, unlike `clubDay` below. The consumer that wants
+ * `Date#getMonth` semantics subtracts one at the edge, which keeps the one
+ * place needing a real calendar month — the ISO key — from having to add it
+ * back. That round trip is exactly how an off-by-one month ships looking
+ * completely normal.
+ */
+function clubDateParts(at: Date): {
+  year: number;
+  month: number;
+  day: number;
+} {
+  const parts = DAY_PARTS.formatToParts(at);
+  const read = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value ?? "0");
+  return { year: read("year"), month: read("month"), day: read("day") };
+}
+
+/**
+ * `{ year, month, day }` with a **0-indexed** month, matching `Date#getMonth`.
+ *
+ * `getDate()` would answer in the *server's* zone, and a UTC host is already on
+ * tomorrow while it is still this evening in Athens — so a "today" highlight
+ * would land on the wrong square for several hours every night, and a meeting
+ * would bucket into the wrong week.
+ *
+ * Lifted here from two private copies — `MonthCalendar` and the events layout —
+ * when a third caller appeared. Reads no clock and touches nothing but its
+ * argument, so it is safe in a client component.
+ */
+export function clubDay(at: Date): {
+  year: number;
+  month: number;
+  day: number;
+} {
+  const { year, month, day } = clubDateParts(at);
+  return { year, month: month - 1, day };
+}
+
+/**
+ * `YYYY-MM-DD` in the club's timezone — the meeting slug, and the key a week
+ * grouper buckets on.
+ *
+ * **Never `toISOString().slice(0, 10)`.** That reads the UTC date, which rolls
+ * at 20:00 Eastern under EDT and 19:00 under EST. The club's 18:00 slot clears
+ * that by two hours, so the naive version is right for every meeting on the
+ * books today and wrong for the first 20:00 social somebody schedules — a bug
+ * that ships green and fires on exactly the one night nobody wrote a fixture
+ * for. Nothing constrains the hour: the only temporal check on the table is
+ * `endsAt > startsAt`.
+ *
+ * Zero-padded by hand rather than by leaning on `en-CA` happening to emit ISO
+ * order, for the same reason `clubDateParts` reads by part type.
+ */
+export function clubDateKey(at: Date): string {
+  const { year, month, day } = clubDateParts(at);
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 /**
  * Formatted on the SERVER, deliberately.
  *

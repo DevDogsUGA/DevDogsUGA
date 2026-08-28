@@ -168,7 +168,19 @@ async function starPage(
       )`,
       meetingId: meetings.id,
       meetingSlug: meetings.slug,
-      meetingName: meetings.name,
+      // The CSV's columns are an append-only contract, so this one has to keep
+      // emitting a value even though `nameOverride` is null for most nights.
+      // Coalescing to the workshop's title and then its project keeps the
+      // cell meaningful; the empty string is the floor, because a reader
+      // already has `meetingSlug` and `meetingStartsAt` in the neighbouring
+      // columns and a literal like "Untitled" would be text the club never
+      // wrote appearing in an export it publishes.
+      meetingName: sql<string>`coalesce(
+        ${meetings.nameOverride},
+        ${workshops.title},
+        ${projects.displayName},
+        ''
+      )`,
       meetingStartsAt: meetings.startsAt,
       workshopId: memberStars.workshopId,
       projectId: projects.id,
@@ -193,7 +205,10 @@ async function starPage(
     .from(memberStars)
     .innerJoin(meetings, eq(meetings.id, memberStars.meetingId))
     .innerJoin(workshops, eq(workshops.id, memberStars.workshopId))
-    .innerJoin(projects, eq(projects.id, memberStars.projectId))
+    // Left, like every other read of a workshop's project: `projectId` is
+    // nullable, and a star earned at a skill session is still a star the
+    // export has to carry.
+    .leftJoin(projects, eq(projects.id, memberStars.projectId))
     .leftJoin(profiles, eq(profiles.userId, memberStars.userId))
     .leftJoin(usersInAuth, eq(usersInAuth.id, memberStars.userId))
     .leftJoin(competitions, eq(competitions.workshopId, memberStars.workshopId))

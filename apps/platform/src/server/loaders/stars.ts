@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "~/server/db";
 import { meetings, memberStars, projects, workshops } from "~/server/db/schema";
@@ -34,7 +34,22 @@ const cellColumns = {
   workshopId: memberStars.workshopId,
   meetingId: memberStars.meetingId,
   meetingSlug: meetings.slug,
-  meetingName: meetings.name,
+  /**
+   * What to call the night, or null when nothing was authored.
+   *
+   * `nameOverride` is null for an ordinary sprint Monday, so this coalesces
+   * through the labels that do exist — and the workshop's own title is the
+   * better one here anyway, since this is a per-workshop row and "Supabase"
+   * says more than a date the next column already shows.
+   *
+   * Deliberately still nullable rather than coalescing to a formatted date in
+   * SQL: that would put `EVENT_TZ` in a second place, as a string literal no
+   * typechecker relates to `lib/eventTime`. The consumer has
+   * `meetingStartsAt` and formats it there.
+   */
+  meetingName: sql<
+    string | null
+  >`coalesce(${meetings.nameOverride}, ${workshops.title}, ${projects.displayName})`,
   meetingStartsAt: meetings.startsAt,
   projectId: memberStars.projectId,
   projectSlug: projects.slug,
@@ -59,7 +74,10 @@ export const getStarsForUser = cache(
         .from(memberStars)
         .innerJoin(meetings, eq(meetings.id, memberStars.meetingId))
         .innerJoin(workshops, eq(workshops.id, memberStars.workshopId))
-        .innerJoin(projects, eq(projects.id, memberStars.projectId))
+        // Left: `workshops.projectId` is nullable, so a member who attended a
+        // skill session — career-fair readiness, say — has a real star whose
+        // row an inner join would delete from their own record.
+        .leftJoin(projects, eq(projects.id, memberStars.projectId))
         .where(
           and(
             eq(memberStars.userId, userId),
