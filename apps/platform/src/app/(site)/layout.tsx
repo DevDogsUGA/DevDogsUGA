@@ -77,9 +77,11 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
             rather than to the end of the page — it stays in view the whole way
             down, which is what keeps a club-wide notice unmissable without
             handing it a second sticky layer at the top to fight TopNav for.
-            Being last also means its pre-paint hide script has run before the
-            markup it hides is ever parsed. Outside the flex column because a
-            fixed element contributes nothing to that layout anyway. */}
+            The pre-paint hide script that keeps a dismissed notice from
+            flashing up is rendered by the root layout — see
+            ~/config/announcement for why it cannot live in this client
+            component. Outside the flex column because a fixed element
+            contributes nothing to that layout anyway. */}
         <AnnouncementBanner />
 
         <AppSwitcher />

@@ -9,6 +9,7 @@ import QueryProvider from "~/ui/query-provider";
 import Toaster from "~/components/Toaster";
 import { cn } from "~/lib/cn";
 import { env } from "~/env";
+import { ANNOUNCEMENT_HIDE_SCRIPT } from "~/config/announcement";
 
 export const metadata: Metadata = {
   title: "DevDogs",
@@ -144,6 +145,22 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="bg-black text-mauve-950">
+        {/* Stamps `<html data-announcement="dismissed">` before first paint
+            when this session already dismissed the current notice, so the card
+            in the static shell never flashes up. First in the <body> so it has
+            run long before the markup it hides is parsed.
+
+            It lives here, not in AnnouncementBanner, because a <script>
+            returned from a client component is only ever real in the server
+            HTML — on a client render React substitutes a <div> and warns. The
+            banner returns null on the console routes, so navigating back to a
+            public page re-created it client-side every time. See
+            ~/config/announcement. */}
+        {ANNOUNCEMENT_HIDE_SCRIPT && (
+          <script
+            dangerouslySetInnerHTML={{ __html: ANNOUNCEMENT_HIDE_SCRIPT }}
+          />
+        )}
         {/* React hoists a <style> carrying both `href` and `precedence` into
             <head> and dedupes it there, which is how a layout that owns no
             stylesheet of its own gets the @font-face above into the document.

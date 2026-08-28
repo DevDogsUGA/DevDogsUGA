@@ -98,3 +98,36 @@ export function showsAnnouncement(pathname: string | null): boolean {
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
+
+/**
+ * Runs while the browser is still parsing the document, ahead of the card
+ * markup, and stamps `<html data-announcement="dismissed">` when this session
+ * already waved the current notice away. `globals.css` hides the card on that
+ * attribute.
+ *
+ * The alternative — reading session storage from an effect — renders the card,
+ * paints it, then rips it out a frame later, so anyone who has dismissed the
+ * notice watches it flash up from the bottom of every page they load. The
+ * markup has to be in the server HTML (it is in the static shell, outside the
+ * page's Suspense boundary), so hiding it has to happen before first paint,
+ * and only a blocking script gets to run that early.
+ *
+ * It is rendered by the root layout rather than by AnnouncementBanner, which
+ * is where it used to live. A `<script>` returned from a client component only
+ * ever executes in the server HTML: React creates a `<div>` in its place on a
+ * client render and warns "Encountered a script tag while rendering React
+ * component". The banner returns `null` on the console routes and while
+ * dismissed, so every client navigation back onto a public page re-created the
+ * element and tripped that warning. The root layout is server-rendered and
+ * never remounts, so the script is emitted into the HTML stream exactly once,
+ * which is the only place it does anything at all.
+ *
+ * Empty when there is no notice, so `null` really does leave nothing behind.
+ */
+export const ANNOUNCEMENT_HIDE_SCRIPT = ANNOUNCEMENT
+  ? `try{if(sessionStorage.getItem(${JSON.stringify(
+      ANNOUNCEMENT_STORAGE_KEY,
+    )})===${JSON.stringify(
+      ANNOUNCEMENT.id,
+    )})document.documentElement.dataset.announcement="dismissed"}catch(e){}`
+  : "";

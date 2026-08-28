@@ -168,27 +168,6 @@ const TONE_BACKGROUND: Record<AnnouncementTone, string> = {
 };
 
 /**
- * Runs while the browser is still parsing the document, ahead of the card
- * markup below it, and stamps `<html data-announcement="dismissed">` when this
- * session already waved the current notice away. `globals.css` hides the card
- * on that attribute.
- *
- * The alternative — reading session storage from an effect — renders the card,
- * paints it, then rips it out a frame later, so anyone who has dismissed the
- * notice watches it flash up from the bottom of every page they load. The
- * markup has to be in the server HTML (it is in the static shell, outside the
- * page's Suspense boundary), so hiding it has to happen before first paint,
- * and only a blocking script gets to run that early.
- */
-const HIDE_SCRIPT = ANNOUNCEMENT
-  ? `try{if(sessionStorage.getItem(${JSON.stringify(
-      ANNOUNCEMENT_STORAGE_KEY,
-    )})===${JSON.stringify(
-      ANNOUNCEMENT.id,
-    )})document.documentElement.dataset.announcement="dismissed"}catch(e){}`
-  : "";
-
-/**
  * How far the notice has to be dragged down before letting go closes it.
  * 50px is Radix Toast's default swipe threshold, which is a well-worn number
  * for exactly this gesture.
@@ -322,10 +301,6 @@ export default function AnnouncementBanner() {
 
   return (
     <>
-      {/* A plain inline <script>, not next/script: it has to execute during
-          parse, before the markup below it exists. See HIDE_SCRIPT. */}
-      <script dangerouslySetInnerHTML={{ __html: HIDE_SCRIPT }} />
-
       {/* z-40 puts the notice over the page but under the z-50 dialog and
           sheet overlays, so opening a dialog dims it along with everything
           else, and under sonner's toasts (bottom-right, and on their own very
