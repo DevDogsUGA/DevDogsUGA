@@ -208,12 +208,12 @@ alter table "platform"."workshops"
 -- session is a WORKSHOP with a title, not a kind of evening, and now that
 -- `workshops.title` exists it has somewhere better to live.
 --
--- MERGED: `Info session` into `Interest meeting`. They were the same night
+-- MERGED: `Info session` into `Interest Meeting`. They were the same night
 -- under two names, and the club calls it the second one.
 --
--- IN: `Build session`, the Wednesday during a sprint -- roughly half the
+-- IN: `Build Session`, the Wednesday during a sprint -- roughly half the
 -- calendar, and until now indistinguishable from an empty evening. And
--- `Study session`, the Wednesday when no sprint is running.
+-- `Study Session`, the Wednesday when no sprint is running.
 --
 -- Still spelled as a list rather than an enum, for the reason the original
 -- gives: this list is expected to keep moving, and an enum makes each move a
@@ -249,8 +249,8 @@ alter table "platform"."meetings"
   add constraint "meetings_kind_choices"
   check (
     "kind" is null
-    or "kind" in ('Build session', 'Study session', 'Interest meeting', 'Social')
+    or "kind" in ('Build Session', 'Study Session', 'Interest Meeting', 'Social')
   );
 
 comment on column "platform"."meetings"."kind" is
-  'Override naming a meeting whose structure cannot describe it: Build session, Study session, Interest meeting, or Social. Null is the NORMAL case and means "read the derived segments", not "unknown" -- a sprint Monday is fully described by its workshops and its judging, so most rows leave this blank. Not a label for every night.';
+  'Override naming a meeting whose structure cannot describe it: Build Session, Study Session, Interest Meeting, or Social. Null is the NORMAL case and means "read the derived segments", not "unknown" -- a sprint Monday is fully described by its workshops and its judging, so most rows leave this blank. Not a label for every night.';

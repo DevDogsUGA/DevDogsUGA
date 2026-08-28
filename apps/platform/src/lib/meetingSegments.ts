@@ -164,7 +164,7 @@ export function resolveMeetingSegments(
   // `open` is what structural SILENCE looks like, and `kind` is the officer's
   // word for a night the structure cannot describe — the same condition said
   // the other way round. So they must never both speak: a build session would
-  // otherwise render "Unscheduled · Build session", the derived fallback
+  // otherwise render "Unscheduled · Build Session", the derived fallback
   // contradicting the person who told us what the night was.
   //
   // This is why `segments` can now come back empty, which it never could

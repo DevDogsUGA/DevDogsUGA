@@ -73,7 +73,7 @@ export function workshopLabel(workshop: TitleableWorkshop): string | null {
  * The meeting's name, in descending order of how much somebody meant it.
  *
  * 1. `nameOverride` — an officer wrote this night a name, so use it.
- * 2. `kind` — "Build session", "Study session". Authored, just not bespoke.
+ * 2. `kind` — "Build Session", "Study Session". Authored, just not bespoke.
  * 3. the workshops it teaches — "Workshop: Next.js & Flutter".
  * 4. the date — always available, since `startsAt` is `not null`.
  *

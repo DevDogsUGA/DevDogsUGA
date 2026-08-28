@@ -94,7 +94,7 @@ const BEATS: Beat[] = [
     // Named, because it is a night the club runs rather than a gap in the
     // week. "Open Build" was the old label for the structural fallback, which
     // is now called Unscheduled and means something else entirely.
-    title: "Build session",
+    title: "Build Session",
     body: (
       <>
         The room&rsquo;s open and officers are around. Build with your team,

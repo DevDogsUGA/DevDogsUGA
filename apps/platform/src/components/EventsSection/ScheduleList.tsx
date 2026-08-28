@@ -126,7 +126,7 @@ function weekLabel(key: string): string {
 /**
  * The filters offered, derived from what is actually in the list.
  *
- * A fixed set of chips would offer "Build session" in a summer with none and
+ * A fixed set of chips would offer "Build Session" in a summer with none and
  * hide a kind an officer added last week — `kind` is an open Airtable
  * single-select, so the closed list this side knows is never the whole truth.
  */

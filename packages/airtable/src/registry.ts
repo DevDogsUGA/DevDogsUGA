@@ -213,9 +213,9 @@ export function normalizeMeetingSummary(value: AirtableValue): string | null {
  * entry.
  */
 export const MEETING_KIND_CHOICES = [
-  "Build session",
-  "Study session",
-  "Interest meeting",
+  "Build Session",
+  "Study Session",
+  "Interest Meeting",
   "Social",
 ] as const;
 

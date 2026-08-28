@@ -20,7 +20,7 @@ phantom errors, on this branch and on `main` alike.
 - **Migration** `20260828000000_platform_events_rework.sql`, applied locally.
   `cancelledAt` / `cancellationReason`; `name` → nullable `nameOverride`;
   `workshops.title` / `description` and nullable `projectId`; the `kind` list
-  swapped to Build session / Study session / Interest meeting / Social.
+  swapped to Build Session / Study Session / Interest Meeting / Social.
 - **Derivation.** Segment order is `workshop → kickoff → judging → open`;
   `open` is suppressed when `kind` is set, so `segments` can be empty;
   `kindOverride` is gone from `MeetingBilling`.
@@ -45,7 +45,7 @@ phantom errors, on this branch and on `main` alike.
 
 ### One deviation from the plan
 
-Build session is **emerald**, not the cyan the plan specified. Cyan already
+Build Session is **emerald**, not the cyan the plan specified. Cyan already
 belongs to `kickoff` in this codebase — it took it when the timeline had to
 draw judge-then-kickoff as two ends of one loop. The plan's "kickoff and
 workshop share emerald" premise is stale here; every segment already has its
@@ -64,36 +64,31 @@ own hue.
    look like the `officer-seed` work. A pull from local therefore writes
    phantom schema, which is why the generated file was edited surgically.
 
-## One manual step left, in the Airtable UI
+## The Airtable base is done
 
-Scaffolding is done: the four new fields exist in the base and their real ids
-are committed. All suites pass.
+Scaffolded, ids committed, and the Kind select narrowed by hand:
+`Info session` was RENAMED to `Interest Meeting` rather than deleted, so the
+one live record holding it kept its value; `Career` and `Open lab` were
+removed; `Build Session` and `Study Session` added.
 
-`pnpm airtable:verify` still reports one fatal, and it is the one thing no
-amount of tooling can do. Airtable's Meta API cannot modify an existing
-select's choices **at all** — not add, not rename, not delete. A `PATCH`
-carrying a new choice list comes back
-`"Changing a field's type or number precision is not currently supported"`,
-with or without `type` echoed in the body. `scaffold.ts` says the same thing
-in its own words: choices are set at CREATION, the client has no `updateField`,
-and "adding a choice to a live base is a manual edit in the Airtable UI".
+`pnpm airtable:verify` reports **the base matches the registry**.
 
-So all four steps below are UI work. In the **Kind** field on the Meetings
-table:
+### Kind values are Title Case
 
-1. **Rename** `Info session` → `Interest meeting`. Rename, do NOT delete: one
-   live meeting record currently uses it, and deleting the choice clears that
-   cell.
-2. **Delete** `Career` and `Open lab`. Both are unused — zero records.
-3. **Add** `Build session` and `Study session`.
-4. Keep `Social` as it is.
+`Build Session`, `Study Session`, `Interest Meeting`, `Social` — not the
+sentence case the plan drafted. The base was authored that way and the code
+followed it, because the value is stored verbatim, printed verbatim on the
+public page, and keyed verbatim in `kindBadge`. Three places have to agree
+exactly and none of them normalises case:
 
-Then `pnpm airtable:verify` should come back clean and the sync will run.
+- `MEETING_KIND_CHOICES` in `packages/airtable/src/registry.ts`
+- the `meetings_kind_choices` check constraint
+- the `kindBadge` lookup key in `meetingView.ts`
 
-While in there, the `Name` field wants relabelling to "Custom name — irregular
-events only". That one is cosmetic but it has a code half: the label string in
-`registry.ts` must change in the same commit, because `verify` matches the live
-base by field name and would fail on the mismatch otherwise.
+The constraint was edited in the original migration rather than amended by a
+second one, since nothing is deployed and a migration whose only content is a
+capitalisation fix is noise a reader has to step over forever. If this branch
+ever ships before that stops being true, that decision has to be revisited.
 
 ## Remaining
 

@@ -145,9 +145,9 @@ describe("resolveMeetingSegments", () => {
   it("suppresses `open` when an officer named the night", () => {
     // `open` means structural silence and `kind` is the officer's word for a
     // night structure cannot describe — the same condition twice. Both
-    // speaking would render "Unscheduled · Build session", the fallback
+    // speaking would render "Unscheduled · Build Session", the fallback
     // contradicting the person who told us what the night was.
-    expect(resolveMeetingSegments(structure({ kind: "Build session" }))).toEqual(
+    expect(resolveMeetingSegments(structure({ kind: "Build Session" }))).toEqual(
       { segments: [] },
     );
   });
