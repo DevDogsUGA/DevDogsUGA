@@ -52,7 +52,6 @@ function Nav({
           return (
             <DocsMenu
               key={link.href}
-              href={link.href}
               label={link.label}
               active={active}
               activeSlug={activeDocsSlug(pathname)}

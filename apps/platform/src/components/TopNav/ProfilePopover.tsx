@@ -121,16 +121,14 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
     <NavigationMenu.Item asChild value={PROFILE_MENU}>
       <div className="flex items-center">
         <NavMenuTrigger
-          href="/account"
-          value={PROFILE_MENU}
           align="end"
           // Above the band below, or the band would cover the avatar itself
-          // and swallow the second click that follows the link.
+          // and swallow the click that opens the menu.
           className="z-10 flex shrink-0 items-center rounded-full text-3xl/0 transition-opacity hover:opacity-85"
         >
-          {/* The link's accessible name. Radix puts `aria-expanded` alongside
-              it, so a screen reader gets both what it goes to and that it also
-              opens something. */}
+          {/* The button's accessible name, since its only visible content is
+              a picture. Radix puts `aria-expanded` alongside it, so a screen
+              reader gets both whose menu it is and that it opens one. */}
           <span className="sr-only">{user.profile.preferredName}</span>
           <Avatar
             userId={user.profile.userId}

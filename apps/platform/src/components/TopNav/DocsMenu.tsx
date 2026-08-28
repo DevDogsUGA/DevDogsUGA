@@ -18,7 +18,6 @@ export interface DocsProjectLink {
 }
 
 interface Props {
-  href: string;
   label: string;
   active: boolean;
   /** Slug of the project being read right now, if any. */
@@ -39,7 +38,6 @@ interface Props {
  * travel between the two rather than one closing and another opening.
  */
 export default function DocsMenu({
-  href,
   label,
   active,
   activeSlug,
@@ -96,12 +94,7 @@ export default function DocsMenu({
 
   return (
     <NavigationMenu.Item value={DOCS_MENU} className="hidden md:block">
-      <NavMenuTrigger
-        href={href}
-        value={DOCS_MENU}
-        active={active}
-        className={`${className} gap-2`}
-      >
+      <NavMenuTrigger active={active} className={`${className} gap-2`}>
         {label}
         <CaretDownIcon aria-hidden className="size-3.5" />
       </NavMenuTrigger>

@@ -21,7 +21,6 @@ export const PROFILE_MENU = "profile";
 interface NavShellContext {
   /** The open item, or "" when the bar is closed. */
   value: string;
-  open: (value: string) => void;
   /**
    * A ref for a top-tier panel to hand its Content. Radix hoists that Content
    * into the shared viewport a couple of commits after the menu opens, and
@@ -35,8 +34,8 @@ interface NavShellContext {
 const Context = createContext<NavShellContext | null>(null);
 
 /**
- * Read the navbar's open item. Only for triggers, which need to know whether
- * they are already open to decide whether a click opens them or follows them.
+ * Read the navbar's open item. The profile menu needs it, to clear its own
+ * sub-menu when the menu it hangs off closes.
  */
 export function useNavShell() {
   const context = useContext(Context);
@@ -97,10 +96,7 @@ export default function NavShell({ children }: { children: ReactNode }) {
     place: true,
   });
 
-  const context = useMemo(
-    () => ({ value, open: setValue, panelRef }),
-    [value, panelRef],
-  );
+  const context = useMemo(() => ({ value, panelRef }), [value, panelRef]);
 
   return (
     <Context.Provider value={context}>

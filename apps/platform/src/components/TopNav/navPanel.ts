@@ -22,15 +22,22 @@
  * space, and leaves the two exactly the same box.
  */
 /*
- * The fill is the navbar's, carried down onto the panels that hang off it,
- * but held further from the page behind. The bar is sixty-four pixels of
- * chrome and can afford to be seen through; a panel is half the screen, and
- * over the home page's hero the same ninety percent left the headline legible
- * straight through a menu. Denser and blurred harder is the same material,
- * thick enough to read a list off.
+ * Opaque, which is a decision the arrow forces.
+ *
+ * The fill was the navbar's — translucent, blurred — on the reasoning that a
+ * panel hanging off the bar is made of the same material as the bar. But the
+ * arrow has to straddle this card's edge and be indistinguishable from it on
+ * the inside, and two translucent layers over one backdrop are never
+ * indistinguishable: they compound, and the overlap shows as a diamond. The
+ * only fills that match are the ones that hide what is behind them.
+ *
+ * A bar is sixty-four pixels of chrome and can afford to be seen through. A
+ * panel is half the screen with a list in it, and this was already at ninety-
+ * five percent to keep the home page's hero from reading straight through a
+ * menu. The last five percent buys an outline that is actually continuous.
  */
 export const NAV_SURFACE =
-  "rounded-lg bg-mauve-950/95 shadow-lg ring-1 ring-mauve-800 ring-inset backdrop-blur-lg";
+  "rounded-lg bg-mauve-950 shadow-lg ring-1 ring-mauve-800 ring-inset";
 
 /**
  * How a panel sits inside the viewport that hoisted it.
@@ -87,14 +94,23 @@ export const NAV_SUB_CONTENT = `${PANEL} ${CLIP} ${DOWN}`;
  * The arrow tying a panel to the trigger it belongs to.
  *
  * A small square turned forty-five degrees, showing the two borders that meet
- * at the corner it points with, filled to match the card. The card is painted
- * over it, so only the half sticking out past its edge is ever seen — and that
- * half is a chevron. Drawing it as a rotated square rather than a triangle is
- * what lets those two visible sides carry the card's own border rather than
- * approximating it.
+ * at the corner it points with, filled to match the card. It sits ON the card,
+ * straddling the edge, and is painted OVER it — which is the whole trick and
+ * was the thing this had backwards.
+ *
+ * Underneath, the card's own outline runs straight past. If the card is drawn
+ * last it wins, and what you get is an unbroken border with a separate little
+ * chevron perched on it: two shapes, and no amount of matching their timing
+ * makes them read as one. Drawn over the card instead, the arrow's fill hides
+ * the stretch of outline behind it and its own two borders carry that line up
+ * to the point and back down. One continuous edge, with a bump in it where the
+ * menu came from.
+ *
+ * The half of the square inside the card has to be indistinguishable from the
+ * card, which is why both are opaque — see the note on NAV_SURFACE, which this
+ * is the reason for.
  */
-const ARROW =
-  "size-2.5 rotate-45 border-mauve-800 bg-mauve-950/90 backdrop-blur";
+const ARROW = "size-2.5 rotate-45 border-mauve-800 bg-mauve-950";
 
 /** Points up, at a trigger in the bar above it. */
 export const NAV_ARROW = `${ARROW} -translate-y-1/2 border-t border-l`;
@@ -119,7 +135,7 @@ export const NAV_ARROW = `${ARROW} -translate-y-1/2 border-t border-l`;
  * arrow left, and then the panel it was pointing at left.
  */
 export const NAV_ARROW_TRACK =
-  "top-full mt-2 flex h-0 justify-center transition-[transform,width] duration-200 ease-out data-[state=visible]:animate-nav-arrow-in data-[state=hidden]:animate-nav-arrow-out";
+  "top-full z-10 mt-2 flex h-0 justify-center transition-[transform,width] duration-200 ease-out data-[state=visible]:animate-nav-arrow-in data-[state=hidden]:animate-nav-arrow-out";
 
 /**
  * The tier-2 arrow, which is placed by hand rather than by Radix.
@@ -132,7 +148,9 @@ export const NAV_ARROW_TRACK =
  *
  * Positioned from the right so it does not care how wide the sub-panel is, and
  * moved by `top` rather than a transform, because `rotate` and `translate` are
- * both already spoken for by the shape of it.
+ * both already spoken for by the shape of it. Above the sub-panel, for the
+ * same reason the tier-1 arrow is above its card: it has to hide the stretch
+ * of outline it is standing on, or it is a separate shape resting against one.
  */
 export const NAV_SUB_ARROW =
-  "absolute right-[calc(100%+0.5rem)] size-2.5 translate-x-1/2 -translate-y-1/2 rotate-45 border-t border-r border-mauve-800 bg-mauve-950/90 backdrop-blur [transition:top_200ms_ease-out,opacity_140ms_ease-in] data-[state=hidden]:opacity-0";
+  "absolute right-[calc(100%+0.5rem)] z-10 size-2.5 translate-x-1/2 -translate-y-1/2 rotate-45 border-t border-r border-mauve-800 bg-mauve-950 [transition:top_200ms_ease-out,opacity_140ms_ease-in] data-[state=hidden]:opacity-0";
