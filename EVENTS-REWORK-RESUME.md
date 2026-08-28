@@ -69,9 +69,17 @@ own hue.
 Scaffolding is done: the four new fields exist in the base and their real ids
 are committed. All suites pass.
 
-`pnpm airtable:verify` still reports one fatal, and it is the one thing the
-tooling cannot do — Airtable's Meta API can add a select choice but cannot
-delete one. In the **Kind** field on the Meetings table:
+`pnpm airtable:verify` still reports one fatal, and it is the one thing no
+amount of tooling can do. Airtable's Meta API cannot modify an existing
+select's choices **at all** — not add, not rename, not delete. A `PATCH`
+carrying a new choice list comes back
+`"Changing a field's type or number precision is not currently supported"`,
+with or without `type` echoed in the body. `scaffold.ts` says the same thing
+in its own words: choices are set at CREATION, the client has no `updateField`,
+and "adding a choice to a live base is a manual edit in the Airtable UI".
+
+So all four steps below are UI work. In the **Kind** field on the Meetings
+table:
 
 1. **Rename** `Info session` → `Interest meeting`. Rename, do NOT delete: one
    live meeting record currently uses it, and deleting the choice clears that
