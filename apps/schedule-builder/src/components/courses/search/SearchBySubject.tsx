@@ -5,7 +5,7 @@ import { useCoursesBySubject } from "~/hooks/queries/useCoursesBySubject";
 import { useSubjects } from "~/hooks/queries/useSubjects";
 import type { Course } from "~/types/course";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PiNetworkSlashDuotone } from "react-icons/pi";
+import { NetworkSlashIcon } from "@phosphor-icons/react/ssr";
 
 type InputState =
   | Record<string, never>
@@ -95,7 +95,7 @@ export default function SearchBySubject({
   useEffect(() => {
     if (subjectsQuery.error)
       dispatchError({
-        icon: PiNetworkSlashDuotone,
+        icon: NetworkSlashIcon,
         message: "Could not load subjects.",
       });
   }, [subjectsQuery.error, dispatchError]);
@@ -103,7 +103,7 @@ export default function SearchBySubject({
   useEffect(() => {
     if (coursesQuery.error)
       dispatchError({
-        icon: PiNetworkSlashDuotone,
+        icon: NetworkSlashIcon,
         message: "Could not load courses.",
       });
   }, [coursesQuery.error, dispatchError]);

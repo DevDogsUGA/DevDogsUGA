@@ -11,7 +11,11 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { PiCaretUpDown, PiCheckBold, PiMagnifyingGlass } from "react-icons/pi";
+import {
+  CaretUpDownIcon,
+  CheckIcon,
+  MagnifyingGlassIcon,
+} from "@phosphor-icons/react/ssr";
 
 function getTextContent(node: ReactNode): string {
   if (!node) {
@@ -421,14 +425,14 @@ export default function Combobox<T extends Record<string, ReactNode>>({
           <span className="flex-1 text-left text-neutral-600 peer-has-[option:checked]:hidden">
             {multiple ? displayText(values) : displayText(values[0])}
           </span>
-          <PiCaretUpDown />
+          <CaretUpDownIcon />
         </button>
       </Popover.Trigger>
 
       <Popover.Portal>
         <Popover.Content className="-mt-(--radix-popover-trigger-height) flex max-h-56 w-(--radix-popover-trigger-width) max-w-[calc(100dvw-1rem)] flex-col gap-1 rounded-md border-2 border-stone-400 bg-white px-1 py-1 shadow-lg">
           <label className="peer flex w-full items-center gap-2 rounded-sm bg-neutral-100 px-2 py-1">
-            <PiMagnifyingGlass className="text-neutral-700" />
+            <MagnifyingGlassIcon className="text-neutral-700" />
             <input
               className="flex-1 bg-transparent placeholder:text-neutral-700 focus:outline-none"
               onChange={handleFilterChange}
@@ -460,7 +464,10 @@ export default function Combobox<T extends Record<string, ReactNode>>({
                     value={String(value)}
                     type="checkbox"
                   />
-                  <PiCheckBold className="text-gray-800 opacity-0 peer-checked:opacity-100" />
+                  <CheckIcon
+                    weight="bold"
+                    className="text-gray-800 opacity-0 peer-checked:opacity-100"
+                  />
                   {content}
                 </label>
               ))}

@@ -5,12 +5,11 @@ import Link from "next/link";
 import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  PiArrowLeftBold,
-  PiArrowRightBold,
-  PiHeartBold,
-  PiHeartFill,
-  PiXBold,
-} from "react-icons/pi";
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  HeartIcon,
+  XIcon,
+} from "@phosphor-icons/react/ssr";
 import { useSavedPlan } from "~/hooks/data/useSavedPlans";
 import { getPlanOfferings } from "~/server/actions/get-plan-offerings";
 
@@ -73,9 +72,15 @@ export default function ScheduleDisplay({ id }: Props) {
             }
           >
             {currentPlan.pinned ? (
-              <PiHeartFill className="size-8 text-red-600 transition" />
+              <HeartIcon
+                weight="fill"
+                className="size-8 text-red-600 transition"
+              />
             ) : (
-              <PiHeartBold className="m-0.5 size-7 transition-[color,width,height,margin] hover:m-0 hover:size-8 hover:text-red-600" />
+              <HeartIcon
+                weight="bold"
+                className="m-0.5 size-7 transition-[color,width,height,margin] hover:m-0 hover:size-8 hover:text-red-600"
+              />
             )}
           </button>
 
@@ -86,7 +91,7 @@ export default function ScheduleDisplay({ id }: Props) {
                 href={`/plans/${prevPlan.id}`}
                 title={prevPlan.title}
               >
-                <PiArrowLeftBold />
+                <ArrowLeftIcon weight="bold" />
               </Link>
             )}
 
@@ -105,13 +110,13 @@ export default function ScheduleDisplay({ id }: Props) {
                 href={`/plans/${nextPlan.id}`}
                 title={nextPlan.title}
               >
-                <PiArrowRightBold />
+                <ArrowRightIcon weight="bold" />
               </Link>
             )}
           </div>
 
           <Link href="/plans" className="transition-colors hover:text-red-700">
-            <PiXBold className="size-7" />
+            <XIcon weight="bold" className="size-7" />
           </Link>
         </div>
 

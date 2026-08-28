@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
-import { PiHeartBold, PiHeartFill, PiTrashBold } from "react-icons/pi";
+import { HeartIcon, TrashIcon } from "@phosphor-icons/react/ssr";
 
 interface PlanDisplayProps {
   plan: { id: string; title: string; pinned: boolean };
@@ -57,9 +57,12 @@ export default function SavedPlan({ plan, onPin, onDelete }: PlanDisplayProps) {
       {/* Pin button (gives a saved plan priority over others*/}
       <button type="button" className="cursor-default" onClick={handlePin}>
         {plan.pinned ? (
-          <PiHeartFill className="size-8 text-red-600 transition" />
+          <HeartIcon weight="fill" className="size-8 text-red-600 transition" />
         ) : (
-          <PiHeartBold className="m-0.5 size-7 transition-[color,width,height,margin] hover:m-0 hover:size-8 hover:text-red-600" />
+          <HeartIcon
+            weight="bold"
+            className="m-0.5 size-7 transition-[color,width,height,margin] hover:m-0 hover:size-8 hover:text-red-600"
+          />
         )}
       </button>
 
@@ -67,7 +70,11 @@ export default function SavedPlan({ plan, onPin, onDelete }: PlanDisplayProps) {
         type="button"
         className="cursor-default rounded-md p-0.5 transition-colors hover:bg-red-600/15"
       >
-        <PiTrashBold className="size-7 text-red-600" onClick={handleDelete} />
+        <TrashIcon
+          weight="bold"
+          className="size-7 text-red-600"
+          onClick={handleDelete}
+        />
       </button>
     </div>
   );

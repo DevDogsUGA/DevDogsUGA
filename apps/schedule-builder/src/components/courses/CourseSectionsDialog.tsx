@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PiXBold } from "react-icons/pi";
+import { XIcon } from "@phosphor-icons/react/ssr";
 import { useOfferingsByCourse } from "~/hooks/queries/useOfferingsByCourse";
 import { useDraftCourses } from "~/hooks/data/useDraftCourses";
 import { useTerm } from "~/components/providers/TermProvider";
@@ -59,7 +59,7 @@ export function CourseSectionsDialog({
             onClick={onClose}
             className="text-neutral-400 hover:text-black"
           >
-            <PiXBold size={20} />
+            <XIcon weight="bold" size={20} />
           </button>
         </div>
 

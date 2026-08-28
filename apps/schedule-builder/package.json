@@ -27,6 +27,7 @@
     "@devdogsuga/drizzle": "workspace:*",
     "@devdogsuga/env": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
+    "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-accordion": "catalog:",
     "@radix-ui/react-avatar": "catalog:",
     "@radix-ui/react-dialog": "catalog:",
@@ -51,7 +52,6 @@
     "postgres": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-icons": "^5.7.0",
     "sharp": "^0.35.3",
     "zod": "catalog:"
   },

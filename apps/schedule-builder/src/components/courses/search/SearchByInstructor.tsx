@@ -5,7 +5,7 @@ import { useCoursesByInstructor } from "~/hooks/queries/useCoursesByInstructor";
 import { useInstructors } from "~/hooks/queries/useInstructors";
 import type { Course } from "~/types/course";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PiNetworkSlashDuotone } from "react-icons/pi";
+import { NetworkSlashIcon } from "@phosphor-icons/react/ssr";
 
 type InputState =
   | Record<string, never>
@@ -105,7 +105,7 @@ export default function SearchByInstructor({
   useEffect(() => {
     if (instructorsQuery.error)
       dispatchError({
-        icon: PiNetworkSlashDuotone,
+        icon: NetworkSlashIcon,
         message: "Could not load instructors.",
       });
   }, [instructorsQuery.error, dispatchError]);
@@ -113,7 +113,7 @@ export default function SearchByInstructor({
   useEffect(() => {
     if (coursesQuery.error)
       dispatchError({
-        icon: PiNetworkSlashDuotone,
+        icon: NetworkSlashIcon,
         message: "Could not load courses.",
       });
   }, [coursesQuery.error, dispatchError]);

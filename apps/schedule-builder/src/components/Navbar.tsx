@@ -3,13 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  PiCalendarDotsDuotone,
-  PiCaretDownBold,
-  PiChalkboardTeacherDuotone,
-  PiSignInBold,
-  PiSignOut,
-  PiXBold,
-} from "react-icons/pi";
+  CalendarDotsIcon,
+  CaretDownIcon,
+  ChalkboardTeacherIcon,
+  SignInIcon,
+  SignOutIcon,
+  XIcon,
+} from "@phosphor-icons/react/ssr";
 import devdog from "~/assets/devdog.png";
 import { TermSelector } from "~/components/TermSelector";
 import { UserAvatar } from "~/components/ui/UserAvatar";
@@ -32,7 +32,7 @@ export function Navbar() {
                 <Image alt="Dev Dog" src={devdog} />
               </figure>
             </Link>
-            <PiXBold className="text-base text-zinc-400" />
+            <XIcon weight="bold" className="text-base text-zinc-400" />
             <Link
               href="/"
               className="flex flex-col pl-0.5 text-xs leading-none font-bold text-red-950"
@@ -48,14 +48,14 @@ export function Navbar() {
 
         <ul className="grid auto-cols-fr grid-flow-col">
           <NavigationLink href="/courses">
-            <PiChalkboardTeacherDuotone className="text-2xl" />
+            <ChalkboardTeacherIcon weight="duotone" className="text-2xl" />
             <span className="text-xs leading-none font-medium tracking-[.0125em]">
               Courses
             </span>
           </NavigationLink>
 
           <NavigationLink href="/plans">
-            <PiCalendarDotsDuotone className="text-2xl" />
+            <CalendarDotsIcon weight="duotone" className="text-2xl" />
             <span className="text-xs leading-none font-medium tracking-[.0125em]">
               Plans
             </span>
@@ -71,7 +71,8 @@ export function Navbar() {
                 <Dropdown.Trigger className="flex flex-col items-center gap-0.75 border-0 border-red-950 px-3 py-2 text-2xl transition-colors hover:bg-red-200">
                   <UserAvatar user={user} />
                   <span className="flex items-center gap-[1ch] text-xs leading-none font-medium tracking-[.0125em]">
-                    Profile <PiCaretDownBold className="text-[0.5rem]" />
+                    Profile{" "}
+                    <CaretDownIcon weight="bold" className="text-[0.5rem]" />
                   </span>
                 </Dropdown.Trigger>
                 <Dropdown.Portal>
@@ -86,7 +87,7 @@ export function Navbar() {
                       type="button"
                       onClick={() => void supabase.auth.signOut()}
                     >
-                      <PiSignOut />
+                      <SignOutIcon />
                       Sign Out
                     </button>
                   </Dropdown.Content>
@@ -101,7 +102,7 @@ export function Navbar() {
                 type="button"
               >
                 <span className="contents">
-                  Get Started <PiSignInBold />
+                  Get Started <SignInIcon weight="bold" />
                 </span>
               </button>
             </li>
