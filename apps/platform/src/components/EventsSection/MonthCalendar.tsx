@@ -36,13 +36,14 @@ import {
 import type { MeetingInRange } from "~/server/loaders/meetings";
 import type { MeetingSegment } from "~/lib/meetingSegments";
 import { resolveMeetingSegments } from "~/lib/meetingSegments";
+import type { SegmentBadge } from "~/components/EventsSection/meetingView";
 import {
   CHIP_DARK_CLS,
-  NEUTRAL_CHIP_DARK_CLS,
-  SEGMENT_LEGEND,
-  segmentBadge,
+  meetingBadges,
+  primaryBadge,
 } from "~/components/EventsSection/meetingView";
 import { EVENT_TZ, formatEventSpan } from "~/lib/eventTime";
+import { meetingTitle } from "~/lib/meetingTitle";
 
 /**
  * Which calendar square a meeting belongs in, in the CLUB's zone.
@@ -106,57 +107,57 @@ function monthIndex(year: number, month: number): number {
 }
 
 /**
- * The colour a day's dot takes: the meeting's PRIMARY segment.
+ * The badge a day's dot takes.
  *
  * One dot per meeting, not one per segment — a night that judges one
  * competition and teaches another would otherwise sprout two dots and read as
- * two meetings. `resolveMeetingSegments` orders the set by
- * consequence-of-missing-it, so the first is the one worth colouring by.
+ * two meetings. The segment order ranks them, so the first is the one worth
+ * colouring by.
+ *
+ * This used to be `segments[0] ?? "open"`, which was safe when the resolver
+ * guaranteed a non-empty set. It no longer does: `open` is suppressed whenever
+ * an officer set a `kind`, so the segment list is empty for every authored
+ * night and that fallback would quietly paint a build session with the
+ * unscheduled colour — beside its own emerald chip, on the same row.
+ * `primaryBadge` consults the kind first for that reason.
  */
-function primarySegment(meeting: MeetingInRange): MeetingSegment {
-  // The resolver never returns an empty set — `open` is its structural
-  // fallback — but `noUncheckedIndexedAccess` cannot know that, and repeating
-  // the fallback here is cheaper than an assertion that could go stale.
-  return resolveMeetingSegments(meeting).segments[0] ?? "open";
+function meetingBadge(meeting: MeetingInRange): SegmentBadge | null {
+  const { segments } = resolveMeetingSegments(meeting);
+  return primaryBadge({ kind: meeting.kind, segments });
 }
 
 function MeetingDetail({ meeting }: { meeting: MeetingInRange }) {
-  const { segments, kindOverride } = resolveMeetingSegments(meeting);
+  const { segments } = resolveMeetingSegments(meeting);
+  // Derived chips and the officer's kind, composed in one place rather than
+  // here: a night an officer named has no segments at all, so a band that
+  // rendered only the derived set would show it nothing.
+  const badges = meetingBadges({ kind: meeting.kind, segments });
 
   return (
     <div className="flex w-56 flex-col gap-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        {segments.map((segment) => {
-          const badge = segmentBadge[segment];
-          return (
-            <span
-              key={segment}
-              className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
-            >
-              {badge.label}
-            </span>
-          );
-        })}
-        {/* Rendered alongside the derived segments rather than instead of
-            them: a social that also runs a workshop is a real night, and
-            showing only the override would quietly drop the workshop. Printed
-            verbatim in a neutral chip because `kind` is an Airtable
-            single-select an officer can extend without touching this repo. */}
-        {kindOverride !== null && (
-          <span className={`${NEUTRAL_CHIP_DARK_CLS} ${CHIP_DARK_CLS}`}>
-            {kindOverride}
+        {badges.map((badge) => (
+          <span
+            key={badge.label}
+            className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
+          >
+            {badge.label}
           </span>
-        )}
+        ))}
       </div>
+      {/* The date leads, because it is the one field guaranteed to be here and
+          because you arrived by hovering a specific square — it confirms which
+          one. A name appears BELOW it and only when an officer wrote one,
+          which is what makes Cold Start and Midterm Study Session stand out in
+          a month of nights that carry no title at all. */}
       <p className="font-display leading-tight font-extrabold text-white">
-        {meeting.name}
-      </p>
-      {/* A dated row, so it says when this one is. The old fabricated events
-          carried a recurrence rule and printed "Weekly on Mondays"; real
-          meetings are individual rows and there is no rule to state. */}
-      <p className="text-xs/snug font-semibold text-white">
         {formatEventSpan(meeting.startsAt, meeting.endsAt)}
       </p>
+      {meeting.nameOverride !== null && (
+        <p className="text-sm leading-tight font-semibold text-white">
+          {meeting.nameOverride}
+        </p>
+      )}
       {meeting.location !== null && (
         <p className="text-xs/snug text-mauve-400">{meeting.location}</p>
       )}
@@ -223,9 +224,13 @@ function MultiMeetingMenu({ meetings }: { meetings: MeetingInRange[] }) {
           >
             <span className="flex items-center gap-1.5">
               <span
-                className={`size-1.5 shrink-0 rounded-full ${segmentBadge[primarySegment(meeting)].dotDark}`}
+                className={`size-1.5 shrink-0 rounded-full ${meetingBadge(meeting)?.dotDark ?? "bg-mauve-400"}`}
               />
-              {meeting.name}
+              {/* This is a LIST of the day's meetings, so it needs a name for
+                  each — the popover's date-first treatment would print the
+                  same date twice over. `meetingTitle` falls back through the
+                  kind to the date, and never returns empty. */}
+              {meetingTitle(meeting)}
             </span>
             <CaretRightIcon className="shrink-0 text-mauve-400" />
           </button>
@@ -441,6 +446,22 @@ export default function MonthCalendar({
     meetingsByDay.set(at.day, [...(meetingsByDay.get(at.day) ?? []), meeting]);
   }
 
+  // The legend for the month on screen: one entry per DISTINCT dot colour
+  // actually drawn, in the order the dots first appear down the grid, so
+  // reading it top to bottom matches reading the month top to bottom.
+  // Deduplicated by label rather than by segment, because two different
+  // sources — a segment and an officer's `kind` — can produce one badge.
+  const visibleLegend: SegmentBadge[] = [];
+  const seenLegend = new Set<string>();
+  for (const day of [...meetingsByDay.keys()].sort((a, b) => a - b)) {
+    for (const meeting of meetingsByDay.get(day) ?? []) {
+      const badge = meetingBadge(meeting);
+      if (badge === null || seenLegend.has(badge.label)) continue;
+      seenLegend.add(badge.label);
+      visibleLegend.push(badge);
+    }
+  }
+
   const cells: (number | null)[] = [];
   for (let i = 0; i < firstDayOfWeek; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
@@ -515,7 +536,7 @@ export default function MonthCalendar({
                     {dayMeetings.map((meeting) => (
                       <span
                         key={meeting.id}
-                        className={`size-1 rounded-full ${segmentBadge[primarySegment(meeting)].dotDark}`}
+                        className={`size-1 rounded-full ${meetingBadge(meeting)?.dotDark ?? "bg-mauve-400"}`}
                       />
                     ))}
                   </div>
@@ -556,18 +577,27 @@ export default function MonthCalendar({
             );
           })}
         </div>
-        {/* Built from SEGMENT_LEGEND rather than hardcoded, so the legend and
-            the dots it explains cannot drift apart — and so a segment added to
-            the model shows up here without anybody remembering to add it. */}
+        {/* Derived from the meetings actually on THIS month's grid rather than
+            from a fixed list, so a hue appears in the legend exactly when it
+            appears as a dot. A fixed list has to guess, and it guesses wrong in
+            both directions: it explained "Judging" in rose on months whose
+            every judging night also taught something — workshop sorts first
+            now, so the dot is never rose — and it could never mention a build
+            session, whose colour comes from an officer's `kind` rather than
+            from the segment union. */}
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-white/10 pt-3 text-xs text-mauve-400">
-          {SEGMENT_LEGEND.map((segment) => (
-            <span key={segment} className="flex items-center gap-1.5">
-              <span
-                className={`inline-block size-2 rounded-full ${segmentBadge[segment].dotDark}`}
-              />
-              {segmentBadge[segment].label}
-            </span>
-          ))}
+          {visibleLegend.length === 0 ? (
+            <span className="text-mauve-500">No events this month</span>
+          ) : (
+            visibleLegend.map((badge) => (
+              <span key={badge.label} className="flex items-center gap-1.5">
+                <span
+                  className={`inline-block size-2 rounded-full ${badge.dotDark}`}
+                />
+                {badge.label}
+              </span>
+            ))
+          )}
         </div>
       </div>
 

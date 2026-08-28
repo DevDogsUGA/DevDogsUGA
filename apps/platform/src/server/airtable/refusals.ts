@@ -67,14 +67,15 @@ import {
  */
 export function describeIncompleteMeeting(
   values: {
-    name: string | null;
     startsAt: string | null;
     endsAt: string | null;
   },
   published: boolean,
 ): string {
   const missing: string[] = [];
-  if (values.name === null) missing.push("a name");
+  // A name is no longer among these. Most nights have none by design — the
+  // heading is derived from the workshops and the judging — so asking for one
+  // would report the ordinary case as a fault, and the slug no longer needs it.
   if (values.startsAt === null) missing.push("a start time");
   if (values.endsAt === null) missing.push("an end time");
 

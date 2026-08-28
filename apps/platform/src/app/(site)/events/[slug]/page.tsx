@@ -10,9 +10,11 @@ import {
 import {
   ACTION_DARK_CLS,
   CHIP_DARK_CLS,
+  meetingBadges,
   NEUTRAL_CHIP_DARK_CLS,
   segmentBadge,
 } from "~/components/EventsSection/meetingView";
+import { meetingTitle } from "~/lib/meetingTitle";
 import {
   isMappedBuilding,
   locationLine,
@@ -72,7 +74,12 @@ export async function generateMetadata({
   const where = locationLine(meeting.building, meeting.location);
 
   return {
-    title: `${meeting.name} | DevDogs`,
+    // Derived rather than read: `nameOverride` is null for most nights, and
+    // the naive version would put " | DevDogs" in the tab and in every link
+    // preview. `generateMetadata` deliberately does not load the agenda for
+    // this, so the title falls back through the kind to the date — one query
+    // is not worth a slightly richer tab.
+    title: `${meetingTitle(meeting)} | DevDogs`,
     description: where ? `${span} — ${where}` : span,
   };
 }
@@ -99,14 +106,16 @@ export default async function MeetingPage({
     getMeetingJudging(meeting.id),
   ]);
 
-  // `kindOverride` comes back separately from `segments` rather than replacing
-  // them, and both are rendered: a social that also runs a workshop is a real
-  // night, and showing only the override would quietly drop the workshop.
-  const { segments, kindOverride } = resolveMeetingSegments({
+  // Both derived and authored are rendered: a social that also runs a workshop
+  // is a real night, and showing only the kind would quietly drop the
+  // workshop. `segments` is empty for a night an officer named, so the
+  // composition has to happen somewhere — `meetingBadges` is that somewhere.
+  const { segments } = resolveMeetingSegments({
     kind: meeting.kind,
     workshops,
     judgedCompetitions: judged,
   });
+  const badges = meetingBadges({ kind: meeting.kind, segments });
 
   // Read once and threaded through everything below, so the three questions
   // that depend on it — happening now, ended, is the form live — cannot
@@ -130,33 +139,30 @@ export default async function MeetingPage({
       <JsonLd
         data={eventLd({
           slug,
-          name: meeting.name,
+          // Google's Event rich-result guidelines want a name, and most
+          // nights have no authored one — so this derives rather than reading
+          // the column, and it is the same string the tab and the dialog
+          // title use, computed once so the three cannot drift.
+          name: meetingTitle(meeting, workshops),
           startsAt: meeting.startsAt,
           endsAt: meeting.endsAt,
           summary: meeting.summary,
           where,
         })}
       />
+      {/* Derived chips then the officer's kind. An unrecognised kind prints
+          itself in the neutral pill rather than vanishing: `kind` is an
+          Airtable single-select an officer can extend without touching this
+          repository. */}
       <div className="flex flex-wrap items-center gap-2">
-        {segments.map((segment) => {
-          const badge = segmentBadge[segment];
-          return (
-            <span
-              key={segment}
-              className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
-            >
-              {badge.label}
-            </span>
-          );
-        })}
-        {/* Printed verbatim, in a neutral chip. `kind` is an Airtable
-            single-select an officer can extend without touching this repo, so
-            a value this side has never heard of has to render as itself. */}
-        {kindOverride !== null && (
-          <span className={`${NEUTRAL_CHIP_DARK_CLS} ${CHIP_DARK_CLS}`}>
-            {kindOverride}
+        {badges.map((badge) => (
+          <span
+            key={badge.label}
+            className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
+          >
+            {badge.label}
           </span>
-        )}
+        ))}
       </div>
 
       {/* The span itself is in the dialog header, where it stays put while

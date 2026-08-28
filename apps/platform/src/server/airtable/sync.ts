@@ -7,6 +7,7 @@ import {
   type AirtableRecord,
 } from "@devdogsuga/airtable";
 import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
+import { clubDateKey } from "~/lib/eventTime";
 import { db } from "~/server/db";
 import {
   attendance,
@@ -174,8 +175,12 @@ export async function pullMeetings(
     });
     out.refusals.push(...rules.refusals);
 
+    // `nameOverride` is deliberately NOT required, unlike every other field
+    // that used to gate a meeting. Most nights have no name: a sprint Monday
+    // derives its heading from its workshops and its judging, so demanding one
+    // would refuse the ordinary case. The slug no longer depends on it either
+    // — see below.
     const complete =
-      v.name !== null &&
       v.startsAt !== null &&
       v.endsAt !== null &&
       new Date(v.endsAt) > new Date(v.startsAt);
@@ -196,7 +201,6 @@ export async function pullMeetings(
         code: "meeting_incomplete",
         message: describeIncompleteMeeting(
           {
-            name: v.name,
             startsAt: v.startsAt,
             endsAt: v.endsAt,
           },
@@ -207,7 +211,7 @@ export async function pullMeetings(
     }
 
     const values: {
-      name: string;
+      nameOverride: string | null;
       building?: string | null;
       location: string | null;
       startsAt: Date;
@@ -217,7 +221,7 @@ export async function pullMeetings(
       kind?: string | null;
       rsvpUrl?: string | null;
     } = {
-      name: v.name!,
+      nameOverride: v.nameOverride,
       // Not part of `complete`, like the three below it: a meeting whose
       // officer has not picked a building yet is a meeting, and a pass landing
       // between two of their keystrokes must not refuse the whole row.
@@ -254,7 +258,19 @@ export async function pullMeetings(
     // New in Airtable. The slug is derived once, on insert, and never
     // recomputed: it is in URLs the moment the meeting is published, and
     // regenerating it on every rename would break every link anyone shared.
-    const slug = uniqueSlug(v.name!, usedSlugs);
+    //
+    // Derived from the meeting's DATE rather than its name, because the name
+    // is now nullable and most nights have none. The date is the one thing
+    // every meeting has — `startsAt` is `not null` and `complete` above
+    // guarantees it here — and it makes a better URL besides: `/events/
+    // 2026-09-21` is legible, sortable, and stable under a rename that a
+    // name-derived slug would strand.
+    //
+    // `clubDateKey`, never `toISOString()`. The UTC date rolls at 20:00
+    // Eastern under EDT and 19:00 under EST, so the naive version is right for
+    // the club's 18:00 slot and files a 20:00 social under the following day —
+    // permanently, since this runs once.
+    const slug = uniqueSlug(clubDateKey(new Date(v.startsAt!)), usedSlugs);
     usedSlugs.add(slug);
 
     const [inserted] = await db

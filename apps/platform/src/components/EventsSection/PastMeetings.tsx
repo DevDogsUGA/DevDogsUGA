@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import { ACTION_DARK_CLS } from "~/components/EventsSection/meetingView";
 import { formatEventDate } from "~/lib/eventTime";
+import { meetingTitle } from "~/lib/meetingTitle";
 import type { MeetingSummary } from "~/server/loaders/meetings";
 
 /**
@@ -100,7 +101,7 @@ export default function PastMeetings({
                         href={`/events/${meeting.slug}`}
                         className="font-semibold text-white underline decoration-2 underline-offset-2 hover:no-underline"
                       >
-                        {meeting.name}
+                        {meetingTitle(meeting)}
                       </Link>
                     </Td>
                     <Td numeric>{meeting.workshopCount}</Td>

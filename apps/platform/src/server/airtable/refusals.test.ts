@@ -454,7 +454,6 @@ describe("describeIncompleteMeeting", () => {
    * is how it reads.
    */
   const missingEnd = {
-    name: "Sprint 2",
     startsAt: "2026-09-01T22:00",
     endsAt: null,
   };
@@ -470,10 +469,21 @@ describe("describeIncompleteMeeting", () => {
 
   it("lists several missing fields the way a person would write them", () => {
     const message = describeIncompleteMeeting(
-      { name: null, startsAt: null, endsAt: null },
+      { startsAt: null, endsAt: null },
       false,
     );
-    expect(message).toContain("a name, a start time and an end time");
+    expect(message).toContain("a start time and an end time");
+  });
+
+  it("never asks for a name", () => {
+    // Most nights have none by design — the heading is derived from the
+    // workshops and the judging — so reporting its absence would flag the
+    // ordinary case as a fault, every week, in an officer's sync-status cell.
+    const message = describeIncompleteMeeting(
+      { startsAt: null, endsAt: null },
+      false,
+    );
+    expect(message).not.toContain("a name");
   });
 
   it("describes a bad ORDER rather than claiming something is absent", () => {
@@ -481,7 +491,6 @@ describe("describeIncompleteMeeting", () => {
     // an end time" here would send an officer to a field that is filled in.
     const message = describeIncompleteMeeting(
       {
-        name: "Sprint 2",
         startsAt: "2026-09-01T23:00",
         endsAt: "2026-09-01T22:00",
       },

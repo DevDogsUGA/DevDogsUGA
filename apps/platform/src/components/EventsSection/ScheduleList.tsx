@@ -3,12 +3,14 @@ import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
 import {
   ACTION_DARK_CLS,
   CHIP_DARK_CLS,
+  meetingBadges,
   NEUTRAL_CHIP_DARK_CLS,
   segmentBadge,
 } from "~/components/EventsSection/meetingView";
 import { locationLine } from "~/components/EventsSection/FindUs/buildings";
 import { INVOLVEMENT_NETWORK_EVENTS_URL } from "~/config/nav";
 import { EVENT_TZ, formatEventSpan, formatRelative } from "~/lib/eventTime";
+import { meetingTitle } from "~/lib/meetingTitle";
 import {
   resolveMeetingSegments,
   type MeetingInRange,
@@ -123,10 +125,12 @@ function EmptySchedule() {
 }
 
 function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
-  // `kindOverride` comes back beside `segments` rather than replacing them, so
-  // both are rendered. A social that also runs a workshop is a real night, and
-  // a row that showed only the override would quietly drop the workshop.
-  const { segments, kindOverride } = resolveMeetingSegments(meeting);
+  // Derived chips and the officer's kind, composed together. Both are shown:
+  // a social that also runs a workshop is a real night, and a row that printed
+  // only the kind would quietly drop the workshop. `segments` is empty for a
+  // night an officer named, so rendering it alone would show no chip at all.
+  const { segments } = resolveMeetingSegments(meeting);
+  const badges = meetingBadges({ kind: meeting.kind, segments });
 
   // `endsAt`, not `startsAt`: a meeting already underway is still the thing a
   // member walking over cares about, and "started 40 minutes ago" is a worse
@@ -172,11 +176,23 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
               element covers the row for the pointer while the accessible name
               stays the meeting's own, and the inner links sit above it.
             */}
+            {/*
+              `meetingTitle`, not `nameOverride` directly: this heading is the
+              row's whole click target and its accessible name, so it can never
+              be empty — and `nameOverride` is null for most nights now.
+
+              What it derives is deliberately not a restatement of the chips
+              below. They say a night taught something; this says *what* —
+              "Workshop: Next.js & Flutter". Only when there is neither a name
+              nor an agenda does it fall back to the date, which the span
+              beneath then repeats in full; that is the one redundant case and
+              it is the rarest.
+            */}
             <Link
               href={`/events/${meeting.slug}`}
               className="rounded-sm after:absolute after:inset-0 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             >
-              {meeting.name}
+              {meetingTitle(meeting, meeting.workshops)}
             </Link>
           </h3>
           <span className="text-xs font-semibold text-mauve-400">
@@ -205,29 +221,22 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
           )}
         </p>
 
+        {/*
+          Derived chips then the officer's kind, composed by `meetingBadges`.
+          An unrecognised kind still renders — verbatim, in the neutral pill —
+          because `kind` is an Airtable single-select an officer can extend
+          without touching this repository, and a value this side has never
+          heard of must never arrive as a blank badge.
+        */}
         <div className="flex flex-wrap items-center gap-1.5">
-          {segments.map((segment) => {
-            const badge = segmentBadge[segment];
-            return (
-              <span
-                key={segment}
-                className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
-              >
-                {badge.label}
-              </span>
-            );
-          })}
-          {/*
-            Verbatim, in a neutral chip. `kind` is an Airtable single-select an
-            officer can extend without touching this repository, so a value
-            this side has never heard of has to render as itself — never
-            switched on, which is how it would arrive here as a blank badge.
-          */}
-          {kindOverride !== null && (
-            <span className={`${NEUTRAL_CHIP_DARK_CLS} ${CHIP_DARK_CLS}`}>
-              {kindOverride}
+          {badges.map((badge) => (
+            <span
+              key={badge.label}
+              className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
+            >
+              {badge.label}
             </span>
-          )}
+          ))}
         </div>
 
         {(meeting.judgedCompetitions.length > 0 ||

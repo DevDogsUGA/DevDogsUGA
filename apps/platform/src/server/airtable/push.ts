@@ -174,7 +174,7 @@ export async function pushDerivedCounts(
     .select({
       id: meetings.id,
       slug: meetings.slug,
-      name: meetings.name,
+      nameOverride: meetings.nameOverride,
       location: meetings.location,
       startsAt: sql<string>`${meetings.startsAt}::text`,
       endsAt: sql<string>`${meetings.endsAt}::text`,

@@ -1,5 +1,6 @@
 import { CalendarDotsIcon } from "@phosphor-icons/react/ssr";
 import { formatEventSpan } from "~/lib/eventTime";
+import { meetingTitle } from "~/lib/meetingTitle";
 import {
   getMeetingBySlug,
   type MeetingSummary,
@@ -78,7 +79,12 @@ function MeetingHeader({ meeting }: { meeting: MeetingSummary | null }) {
           className="mt-0.5 shrink-0 text-mauve-400"
           weight="fill"
         />
-        {meeting?.name ?? "Meeting not found"}
+        {/* `meetingTitle`, not `nameOverride` — this is the dialog's
+            accessible name, the thing Radix announces on open. Reading the
+            column directly would make "Meeting not found" the announced name
+            of every meeting that WAS found, since most nights have no authored
+            name. The null branch still belongs to a genuinely missing slug. */}
+        {meeting ? meetingTitle(meeting) : "Meeting not found"}
       </DialogTitle>
       <DialogDescription className="text-sm text-mauve-400">
         {meeting

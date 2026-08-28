@@ -11,7 +11,8 @@ import {
   resolveMeetingSegments,
   type MeetingInRange,
 } from "~/server/loaders/meetings";
-import { CHIP_CLS, segmentBadge } from "./meetingView";
+import { meetingTitle } from "~/lib/meetingTitle";
+import { CHIP_CLS, meetingBadges } from "./meetingView";
 
 /**
  * The homepage's one line about the next meeting.
@@ -74,7 +75,8 @@ export default function NextMeetingStrip({
   // Months at a time, every summer — a state of the club, not of the query.
   if (meeting === null) return <NothingScheduled />;
 
-  const { segments, kindOverride } = resolveMeetingSegments(meeting);
+  const { segments } = resolveMeetingSegments(meeting);
+  const badges = meetingBadges({ kind: meeting.kind, segments });
 
   // Half-open on the end, matching the rest of the page: at the instant a
   // meeting ends it is over rather than still on.
@@ -108,8 +110,11 @@ export default function NextMeetingStrip({
 
         <div className="flex min-w-0 flex-col gap-1.5">
           <p className={EYEBROW_CLS}>{eyebrow}</p>
+          {/* Never `nameOverride` bare: this is the strip's headline and most
+              nights have no authored name, so `meetingTitle` derives one from
+              the agenda and falls back to the date. */}
           <p className="font-display truncate text-xl font-extrabold text-black">
-            {meeting.name}
+            {meetingTitle(meeting, meeting.workshops)}
           </p>
 
           <p className="text-xs text-mauve-700">
@@ -130,29 +135,22 @@ export default function NextMeetingStrip({
             </span>
           </p>
 
-          {(segments.length > 0 || kindOverride !== null) && (
+          {/* Derived chips then the officer's kind. An unrecognised kind still
+              renders, verbatim: it is an Airtable single-select an officer can
+              extend without touching this repository. This strip sits on the
+              marketing pages' light plates, so the chips are solid fills with
+              black borders rather than the console's translucent pills — the
+              HUE is the part that must not change between the two. */}
+          {badges.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
-              {segments.map((segment) => {
-                const badge = segmentBadge[segment];
-                return (
-                  <span
-                    key={segment}
-                    className={`${badge.bg} ${badge.text} ${CHIP_CLS}`}
-                  >
-                    {badge.label}
-                  </span>
-                );
-              })}
-              {/* Verbatim. `kind` is an Airtable single-select an officer can
-                  extend without touching this repo, so a value this side has
-                  never heard of renders as itself. */}
-              {kindOverride !== null && (
+              {badges.map((badge) => (
                 <span
-                  className={`border-2 border-black bg-white text-black ${CHIP_CLS}`}
+                  key={badge.label}
+                  className={`${badge.bg} ${badge.text} ${CHIP_CLS}`}
                 >
-                  {kindOverride}
+                  {badge.label}
                 </span>
-              )}
+              ))}
             </div>
           )}
         </div>

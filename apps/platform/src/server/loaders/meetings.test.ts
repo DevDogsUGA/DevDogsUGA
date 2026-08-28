@@ -82,15 +82,15 @@ describe("resolveMeetingSegments", () => {
     // A caller filtering on `workshop` to list teaching nights must not miss
     // the night that taught AND opened a competition.
     expect(segmentsOf({ workshops: [KICKOFF] })).toEqual([
-      "kickoff",
       "workshop",
+      "kickoff",
     ]);
   });
 
   it("marks a kickoff when only one of several workshops opens a competition", () => {
     expect(segmentsOf({ workshops: [SUPPLEMENTARY, KICKOFF] })).toEqual([
-      "kickoff",
       "workshop",
+      "kickoff",
     ]);
   });
 
@@ -103,7 +103,7 @@ describe("resolveMeetingSegments", () => {
         workshops: [KICKOFF],
         judgedCompetitions: [{ competitionId: "c1" }],
       }),
-    ).toEqual(["judging", "kickoff", "workshop"]);
+    ).toEqual(["workshop", "kickoff", "judging"]);
   });
 
   it("is a judging-only night when nothing is taught", () => {
@@ -114,37 +114,57 @@ describe("resolveMeetingSegments", () => {
     ).toEqual(["judging"]);
   });
 
-  it("puts the segment with a deadline behind it first", () => {
+  it("puts what the night TEACHES first, not what it closes", () => {
     // Callers take `segments[0]` as the primary for a dot colour or a narrow
     // badge, so the order is the contract, not an implementation detail.
+    //
+    // This used to assert "judging", ranked by consequence-of-missing-it. The
+    // model says a normal mid-semester night straddles two competitions, so
+    // that made the primary segment `judging` for nearly every Monday and the
+    // calendar a column of identical rose dots. A signal that fires every time
+    // carries no information, and this is a public schedule whose reader may
+    // not know what a sprint is yet.
     const [primary] = segmentsOf({
       workshops: [KICKOFF],
       judgedCompetitions: [{ competitionId: "c1" }],
     });
-    expect(primary).toBe("judging");
+    expect(primary).toBe("workshop");
   });
 
-  it("keeps the officer override beside the derived set, not on top of it", () => {
-    // A social that also runs a workshop is a real night. Merging the two
-    // fields would drop the workshop from the page.
+  it("keeps the derived set when an officer also named the night", () => {
+    // A social that also runs a workshop is a real night, and the workshop
+    // still has to reach the page. The kind is rendered beside these by the
+    // caller — it is no longer returned here, because it was a pass-through
+    // of a field every call site already held.
     const billing = resolveMeetingSegments(
       structure({ kind: "Social", workshops: [SUPPLEMENTARY] }),
     );
-    expect(billing.kindOverride).toBe("Social");
     expect(billing.segments).toEqual(["workshop"]);
   });
 
-  it("passes through a `kind` this codebase has never heard of", () => {
-    // It is an Airtable single-select an officer can extend without a
-    // migration, so an unknown value has to arrive intact rather than be
-    // normalised away.
-    expect(
-      resolveMeetingSegments(structure({ kind: "Pizza" })).kindOverride,
-    ).toBe("Pizza");
+  it("suppresses `open` when an officer named the night", () => {
+    // `open` means structural silence and `kind` is the officer's word for a
+    // night structure cannot describe — the same condition twice. Both
+    // speaking would render "Unscheduled · Build session", the fallback
+    // contradicting the person who told us what the night was.
+    expect(resolveMeetingSegments(structure({ kind: "Build session" }))).toEqual(
+      { segments: [] },
+    );
   });
 
-  it("reports no override when there is none", () => {
-    expect(resolveMeetingSegments(structure()).kindOverride).toBeNull();
+  it("still falls back to `open` when there is neither structure nor kind", () => {
+    expect(resolveMeetingSegments(structure()).segments).toEqual(["open"]);
+  });
+
+  it("never makes `kickoff` the primary segment", () => {
+    // `kickoff` is pushed only when some workshop opens a competition, which
+    // means `workshop` was already pushed ahead of it. The calendar legend is
+    // built from primary badges and relies on this.
+    const [primary] = segmentsOf({
+      workshops: [KICKOFF],
+      judgedCompetitions: [],
+    });
+    expect(primary).toBe("workshop");
   });
 });
 

@@ -77,16 +77,111 @@ export const segmentBadge: Record<MeetingSegment, SegmentBadge> = {
     dot: "bg-amber-400",
     chipDark: "border-amber-400/30 bg-amber-500/10 text-amber-300",
     dotDark: "bg-amber-400",
-    label: "Open build",
+    // Was "Open build", which became actively wrong the moment a real build
+    // session existed under its own name — two labels for what a reader would
+    // take to be the same night. This segment now says only what it always
+    // structurally meant: no workshops, no judging, and nothing an officer
+    // chose to call it. It is also now rare, since `resolveMeetingSegments`
+    // suppresses it whenever a `kind` is set.
+    label: "Unscheduled",
   },
 };
 
 /**
- * The legend under the calendar grid. `kickoff` is left out on purpose — it
- * shares emerald with `workshop`, so listing both would show two identical
- * swatches and imply the reader can tell them apart at a glance.
+ * The badge for a night an officer NAMED, keyed by `meetings.kind`.
+ *
+ * A lookup with a fallback rather than a total mapping, because `kind` is an
+ * open Airtable single-select: an officer can add a choice without anybody
+ * touching this repository. An unrecognised value gets the neutral pill
+ * printing itself — which is the whole reason `kind` stores Title Case display
+ * strings rather than identifiers, since a value this side has never heard of
+ * still has a readable label.
+ *
+ * Only `Build session` earns a hue, deliberately. It is MODAL — roughly half
+ * the calendar, recurring every week a sprint runs — so a reader learns its
+ * colour. A social happens twice a semester; a hue there is one nobody has
+ * time to learn, and every hue spent makes the ones that matter less distinct.
+ * Adding another is one entry here.
+ *
+ * Cyan, which is the one hue `segmentBadge` above does not spend: judging is
+ * rose, workshop and kickoff share emerald, and `open` is amber. It is also
+ * the colour `CompetitionTimeline` already draws the build week in, so the
+ * chip and the illustration agree without anybody having to keep them in step.
  */
-export const SEGMENT_LEGEND: MeetingSegment[] = ["judging", "workshop", "open"];
+export const kindBadge: Record<string, SegmentBadge> = {
+  "Build session": {
+    bg: "bg-cyan-400",
+    text: "text-black",
+    dot: "bg-cyan-500",
+    chipDark: "border-cyan-400/30 bg-cyan-500/10 text-cyan-300",
+    dotDark: "bg-cyan-400",
+    label: "Build session",
+  },
+};
+
+/** The neutral badge an unrecognised `kind` prints itself in. */
+function neutralKindBadge(kind: string): SegmentBadge {
+  return {
+    bg: "bg-white",
+    text: "text-black",
+    dot: "bg-mauve-400",
+    chipDark: NEUTRAL_CHIP_DARK_CLS,
+    dotDark: "bg-mauve-400",
+    label: kind,
+  };
+}
+
+/**
+ * The one badge that stands for a whole night — the calendar's single dot.
+ *
+ * `segments[0]` alone is no longer enough. `resolveMeetingSegments` suppresses
+ * `open` whenever a `kind` is set, so the segment list is *empty* for every
+ * authored night, and a lookup that consulted only segments would fall through
+ * to a default for a build session whose own chip is emerald: the same night
+ * in two colours, in the module whose entire premise is that colour here is
+ * information rather than decoration.
+ *
+ * Kind wins when present because it is the more specific claim. An officer
+ * said what the night was; structure only ever infers.
+ *
+ * Returns null only when a meeting has neither — which `resolveMeetingSegments`
+ * makes unreachable, since `open` is pushed exactly when both are absent. The
+ * nullable return is there so a caller cannot paper over that with a default
+ * colour if the invariant ever changes.
+ */
+export function primaryBadge(meeting: {
+  kind: string | null;
+  segments: readonly MeetingSegment[];
+}): SegmentBadge | null {
+  if (meeting.kind !== null) {
+    return kindBadge[meeting.kind] ?? neutralKindBadge(meeting.kind);
+  }
+  const first = meeting.segments[0];
+  return first === undefined ? null : segmentBadge[first];
+}
+
+/**
+ * Every badge a meeting shows, derived first and authored last.
+ *
+ * Composed here rather than at each band because all of them do the identical
+ * two steps — render the segment chips, then render the kind — and
+ * `resolveMeetingSegments` no longer returns the kind alongside the segments
+ * to remind them to. A band that forgot would show an authored night no chip
+ * at all, since its segment list is empty by design.
+ *
+ * Derived first, because the segment order is already ranked by what a reader
+ * needs; a kind is a modifier on the night rather than a deadline in it.
+ */
+export function meetingBadges(meeting: {
+  kind: string | null;
+  segments: readonly MeetingSegment[];
+}): SegmentBadge[] {
+  const badges = meeting.segments.map((segment) => segmentBadge[segment]);
+  if (meeting.kind !== null) {
+    badges.push(kindBadge[meeting.kind] ?? neutralKindBadge(meeting.kind));
+  }
+  return badges;
+}
 
 /** The chip shape every light band uses, so padding and weight cannot drift. */
 export const CHIP_CLS =

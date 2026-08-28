@@ -391,8 +391,15 @@ export const getMeetingWorkshops = cache(
 
 export interface MeetingRangeWorkshop {
   workshopId: string;
-  projectSlug: string;
-  projectName: string;
+  /** The officers' own word for the session. Null falls back to the project. */
+  title: string | null;
+  /**
+   * Both null for a workshop teaching a skill rather than a codebase —
+   * `workshops.projectId` is nullable, and the join below is a left one so
+   * such a session reaches the calendar instead of vanishing from it.
+   */
+  projectSlug: string | null;
+  projectName: string | null;
   /**
    * The competition this workshop opened, or null.
    *
@@ -625,6 +632,7 @@ export const getMeetingsInRange = cache(
       const bucket = workshopsByMeeting.get(row.meetingId);
       const entry: MeetingRangeWorkshop = {
         workshopId: row.workshopId,
+        title: row.title,
         projectSlug: row.projectSlug,
         projectName: row.projectName,
         competitionSlug: row.competitionSlug,

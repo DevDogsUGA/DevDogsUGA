@@ -87,7 +87,13 @@ export interface ProjectRow {
 export interface MeetingRow {
   id: string;
   slug: string;
-  name: string;
+  /**
+   * A name for this night, when it has one worth reading. Null is the ordinary
+   * case — a sprint Monday derives its heading from its workshops and its
+   * judging, and an officer retyping that in prose every week was the
+   * duplication the rename removed.
+   */
+  nameOverride: string | null;
   building: string | null;
   location: string | null;
   startsAt: string;
@@ -185,10 +191,10 @@ export function normalizeMeetingSummary(value: AirtableValue): string | null {
  * entry.
  */
 export const MEETING_KIND_CHOICES = [
+  "Build session",
+  "Study session",
+  "Interest meeting",
   "Social",
-  "Career",
-  "Info session",
-  "Open lab",
 ] as const;
 
 export type MeetingKind = (typeof MEETING_KIND_CHOICES)[number];
@@ -392,9 +398,16 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
     .text("fldIBjOSNweMYXAaj", "⚙️ Platform ID")
     .matchKey()
     .push((m: MeetingRow) => m.id),
-  name: field
+  // The label stays "Name" on purpose, even though the column and this key are
+  // now `nameOverride`. `verify` matches the live base by field NAME, so
+  // changing this string without renaming the field in the Airtable UI first
+  // would fail verification against every existing base. The two move
+  // together: relabel it to "Custom name — irregular events only" there, then
+  // here, in the same change. The scaffolder will not do it — it is
+  // create-only and does not rename.
+  nameOverride: field
     .text("fldc0NfTHVxHk8Za0", "Name")
-    .pull((v) => (typeof v === "string" ? v : null)),
+    .pull((v) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null)),
   // Which building, from a list the campus map can actually draw.
   //
   // Null is ordinary and means two different things that do not need telling
