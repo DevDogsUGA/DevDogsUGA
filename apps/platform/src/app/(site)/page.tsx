@@ -2,8 +2,11 @@ import type { ReactNode } from "react";
 import {
   CalendarDotsIcon,
   CompassIcon,
-  HandshakeIcon,
+  DiamondIcon,
+  HeartIcon,
+  LightningIcon,
   RocketIcon,
+  StarIcon,
 } from "@phosphor-icons/react/ssr";
 import HeroSection from "~/components/HeroSection";
 import SectionMarquee, { MarqueeItem } from "~/components/SectionMarquee";
@@ -131,15 +134,14 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         slope="fs"
         bg="bg-rose-600"
         className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-rose-100 shadow-rose-900`}
-        icon={CompassIcon}
+        icon={HeartIcon}
       >
-        <MarqueeItem>Real Software</MarqueeItem>
-        <MarqueeItem>Real Users</MarqueeItem>
-        <MarqueeItem>Shipped Every Semester</MarqueeItem>
-        <MarqueeItem>100% Open Source</MarqueeItem>
-        <MarqueeItem>Apply Real Skills</MarqueeItem>
         <MarqueeItem>Learn By Doing</MarqueeItem>
-        <MarqueeItem>Student-Built</MarqueeItem>
+        <MarqueeItem>Apply Real Skills</MarqueeItem>
+        <MarqueeItem>Software That Matters</MarqueeItem>
+        <MarqueeItem>Student-Run At UGA</MarqueeItem>
+        <MarqueeItem>First Line Or Thousandth</MarqueeItem>
+        <MarqueeItem>A Place For You</MarqueeItem>
         <MarqueeItem>Community Impact</MarqueeItem>
       </SectionMarquee>
 
@@ -149,15 +151,16 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         slope="bs"
         bg="bg-emerald-600"
         className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-emerald-100 shadow-emerald-900`}
-        icon={RocketIcon}
+        icon={LightningIcon}
       >
-        <MarqueeItem>Ship every week</MarqueeItem>
-        <MarqueeItem>Build your streak</MarqueeItem>
-        <MarqueeItem>Link your GitHub</MarqueeItem>
-        <MarqueeItem>Stay consistent</MarqueeItem>
-        <MarqueeItem>Track your contributions</MarqueeItem>
-        <MarqueeItem>Weekly contributors win</MarqueeItem>
-        <MarqueeItem>Open source every week</MarqueeItem>
+        <MarqueeItem>Real Products, Real Users</MarqueeItem>
+        <MarqueeItem>Not A Toy App</MarqueeItem>
+        <MarqueeItem>Shipped Every Semester</MarqueeItem>
+        <MarqueeItem>100% Open Source</MarqueeItem>
+        <MarqueeItem>Design, Engineering, Product</MarqueeItem>
+        <MarqueeItem>Ship Every Week</MarqueeItem>
+        <MarqueeItem>Build Your Streak</MarqueeItem>
+        <MarqueeItem>Link Your GitHub</MarqueeItem>
       </SectionMarquee>
 
       <EventsSection topEdge="bs" bottomEdge="bs" />
@@ -166,15 +169,16 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         slope="bs"
         bg="bg-cyan-600"
         className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-cyan-100 shadow-cyan-900`}
-        icon={CalendarDotsIcon}
+        icon={StarIcon}
       >
+        <MarqueeItem>One Feature, One Week</MarqueeItem>
+        <MarqueeItem>Every Team At Once</MarqueeItem>
         <MarqueeItem>Weekly Workshops</MarqueeItem>
-        <MarqueeItem>Competition Judging</MarqueeItem>
+        <MarqueeItem>Ship A Pull Request</MarqueeItem>
         <MarqueeItem>Build Sessions</MarqueeItem>
-        <MarqueeItem>Build Every Week</MarqueeItem>
-        <MarqueeItem>All Skill Levels Welcome</MarqueeItem>
-        <MarqueeItem>DLW 124</MarqueeItem>
-        <MarqueeItem>Fall & Spring Semesters</MarqueeItem>
+        <MarqueeItem>One Merges, The Rest Close</MarqueeItem>
+        <MarqueeItem>Showing Up Earns The Star</MarqueeItem>
+        <MarqueeItem>Some Weeks Just The Workshop</MarqueeItem>
       </SectionMarquee>
 
       <PartnersSection topEdge="bs" bottomEdge="fs" />
@@ -183,16 +187,16 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         slope="fs"
         bg="bg-purple-600"
         className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-purple-100 shadow-purple-900`}
-        icon={HandshakeIcon}
+        icon={DiamondIcon}
       >
+        <MarqueeItem>350+ Active Members</MarqueeItem>
         <MarqueeItem>Software Engineers</MarqueeItem>
         <MarqueeItem>UI Designers</MarqueeItem>
         <MarqueeItem>Data Scientists</MarqueeItem>
-        <MarqueeItem>Impact-Makers</MarqueeItem>
         <MarqueeItem>Project Leaders</MarqueeItem>
         <MarqueeItem>Community Builders</MarqueeItem>
-        <MarqueeItem>Open Source</MarqueeItem>
-        <MarqueeItem>350+ Active Members</MarqueeItem>
+        <MarqueeItem>Sponsorship & Recruiting</MarqueeItem>
+        <MarqueeItem>Mentorship</MarqueeItem>
         <MarqueeItem>UGA Athens</MarqueeItem>
       </SectionMarquee>
 
