@@ -342,6 +342,158 @@ export const GROUPS: readonly CommandGroup[] = [
           },
         ],
       },
+      {
+        name: "qr",
+        summary: "Write a QR code in the attendance-poster style.",
+        hint: "svg, png, jpg, webp, avif, tiff",
+        // The defaults ARE the reference (`apps/platform/public/attendance/
+        // qr.svg`); each summary names the reference value so a departure is
+        // a deliberate one, and every styling prompt is optional — Enter
+        // through them and the wizard makes the next poster to match.
+        options: [
+          {
+            flag: "--text",
+            value: "<text>",
+            summary: "What to encode. The first bare word does the same.",
+            prompt: {
+              kind: "text",
+              message: "What should the code open?",
+              placeholder: "https://devdogsuga.org/attendance",
+            },
+          },
+          {
+            flag: "--out",
+            value: "<path>",
+            summary:
+              "A file (its extension picks the format), a stem, or a directory. Defaults to ./qr.",
+            prompt: {
+              kind: "text",
+              message: "Where to write it? (blank: ./qr.svg and ./qr.png)",
+              optional: true,
+            },
+          },
+          {
+            flag: "--format",
+            value: "<a,b,…>",
+            summary: "svg, png, jpg, webp, avif, tiff — any of them. Defaults to svg,png.",
+            prompt: {
+              kind: "select",
+              message: "Which formats?",
+              choices: [
+                { value: "svg,png", hint: "the default" },
+                { value: "svg" },
+                { value: "png" },
+                { value: "jpg", hint: "flattened onto --background" },
+                { value: "webp" },
+                { value: "avif" },
+                { value: "tiff" },
+                { value: "svg,png,jpg,webp,avif,tiff", label: "all of them" },
+              ],
+            },
+          },
+          {
+            flag: "--size",
+            value: "<px>",
+            summary: "Side of the output. Reference: 999.",
+            prompt: {
+              kind: "text",
+              message: "Size in px? (blank: 999)",
+              placeholder: "999",
+              optional: true,
+            },
+          },
+          {
+            flag: "--color",
+            value: "<css>",
+            summary: "Module and eye colour. Reference: #ffffff.",
+            prompt: {
+              kind: "text",
+              message: "Module colour? (blank: #ffffff)",
+              placeholder: "#ffffff",
+              optional: true,
+            },
+          },
+          {
+            flag: "--background",
+            value: "<css>",
+            summary: "Fill behind everything. Reference: none (transparent).",
+            prompt: {
+              kind: "text",
+              message: "Background colour? (blank: transparent)",
+              placeholder: "#ba0c2f",
+              optional: true,
+            },
+          },
+          {
+            flag: "--logo",
+            value: "<file>",
+            summary:
+              "Artwork for the centre, or `none`. Defaults to the brand kit's devdog.svg.",
+            prompt: {
+              kind: "text",
+              message: "Logo file, or none? (blank: the brand kit's devdog.svg)",
+              placeholder: "none",
+              optional: true,
+            },
+          },
+          {
+            flag: "--logo-size",
+            value: "<0–1>",
+            summary: "Logo box as a fraction of the grid. Reference: 0.27 (9 of 33).",
+            prompt: {
+              kind: "text",
+              message: "Logo box, as a fraction of the grid? (blank: 0.27)",
+              placeholder: "0.27",
+              optional: true,
+            },
+          },
+          {
+            flag: "--logo-padding",
+            value: "<modules>",
+            summary: "Extra modules cleared around the logo box. Reference: 0.",
+            prompt: {
+              kind: "text",
+              message: "Extra modules cleared around the logo? (blank: 0)",
+              placeholder: "0",
+              optional: true,
+            },
+          },
+          {
+            flag: "--margin",
+            value: "<modules>",
+            summary: "Quiet zone. Reference: 2.",
+            prompt: {
+              kind: "text",
+              message: "Quiet zone, in modules? (blank: 2)",
+              placeholder: "2",
+              optional: true,
+            },
+          },
+          {
+            flag: "--ecl",
+            value: "<L|M|Q|H>",
+            summary: "Error correction. Reference: H — a logo needs it.",
+            prompt: {
+              kind: "text",
+              message: "Error correction level, L/M/Q/H? (blank: H)",
+              placeholder: "H",
+              optional: true,
+            },
+          },
+          {
+            flag: "--version",
+            value: "<1–40>",
+            summary:
+              "Fix the symbol version. Default: the smallest that fits, as the reference is.",
+            prompt: {
+              kind: "text",
+              message: "Symbol version, 1–40? (blank: the smallest that fits)",
+              placeholder: "4",
+              optional: true,
+            },
+          },
+        ],
+      },
     ],
   },
   {

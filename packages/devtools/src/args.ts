@@ -35,6 +35,20 @@
  */
 export const VALUE_FLAGS = new Set([
   "--access-token",
+  // `qr`: every value flag, so `qr --out poster.png https://…` still reads
+  // the URL as the text and not `poster.png`.
+  "--background",
+  "--color",
+  "--ecl",
+  "--format",
+  "--logo",
+  "--logo-padding",
+  "--logo-size",
+  "--margin",
+  "--out",
+  "--size",
+  "--text",
+  "--version",
   "--app",
   "--base-url",
   "--env",

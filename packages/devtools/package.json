@@ -23,13 +23,17 @@
     "@supabase/supabase-js": "catalog:",
     "dotenv": "^17.4.2",
     "postgres": "catalog:",
+    "qrcode": "1.5.4",
+    "sharp": "0.35.3",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/env": "workspace:*",
     "@types/node": "catalog:",
+    "@types/qrcode": "^1.5.6",
     "@vitest/coverage-v8": "catalog:",
+    "jsqr": "1.4.0",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

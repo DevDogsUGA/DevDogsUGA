@@ -183,6 +183,7 @@ describe("coverage of what the CLI dispatches", () => {
     "oauth",
     "airtable",
     "docs",
+    "qr",
     "env",
     "planner",
     "signing-key",

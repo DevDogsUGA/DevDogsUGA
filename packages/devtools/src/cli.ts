@@ -96,6 +96,7 @@ import { runMenu } from "./menu.js";
 import { runDocsIndex } from "./docs/index-pages.js";
 import { runTask } from "./run/pick.js";
 import { runBw } from "./bws/bw.js";
+import { runQr } from "./qr/commands.js";
 
 const DOCTOR_COMMANDS = [
   "doctor",
@@ -958,6 +959,11 @@ async function dispatch(argv: string[]): Promise<string | null> {
 
   if (first === "docs") {
     await runDocsCommand(rest);
+    return DONE;
+  }
+
+  if (first === "qr") {
+    await runQr(rest);
     return DONE;
   }
 
