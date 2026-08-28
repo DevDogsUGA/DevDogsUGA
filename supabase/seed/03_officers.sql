@@ -13,10 +13,9 @@
 -- leans on it. The board's plan is to reset before pushing to production,
 -- which is what makes this the delivery path rather than a local fixture.
 --
--- The consequence is worth stating once, because it arrives quietly: a reset
--- erases the database. That is fine now, before launch, and it stops being
--- fine the moment production carries attendance, ballots or teams that cannot
--- be dropped. After that point an edit here reaches contributors and nothing
+-- A reset erases the database. That is fine now, before launch, and it stops
+-- being fine the moment production carries attendance, ballots or teams that
+-- cannot be dropped. After that point an edit here reaches contributors and nothing
 -- else, and the officers' own content is maintained where they already
 -- maintain it -- `roleDescription` and links from /account, titles and role
 -- assignments from the console -- with a one-off migration for anything that
@@ -110,9 +109,8 @@
 -- is kept in "altEmails" so a match still lands if an account was made under
 -- one of them.
 --
--- That closes the orphaning hazard this file used to carry. It is worth
--- keeping in view anyway: if an officer signs in under an address on neither
--- list, GoTrue mints a NEW user and the profile seeded here is stranded --
+-- That closes the orphaning hazard this file used to carry, with one case
+-- left. If an officer signs in under an address on neither list, GoTrue mints a NEW user and the profile seeded here is stranded --
 -- the card keeps the seeded content while the real account has none. Adding an
 -- address here before a reset is cheap; merging two users afterwards is not.
 
@@ -368,7 +366,7 @@ on conflict ("userId") do update set
 -- certain and already offered.
 --
 -- Armani Peacox lists none. Her resume carries an email and a phone number and
--- nothing else, so she has none here; asking her is the fix.
+-- nothing else, so she has none here until somebody asks her.
 --
 -- Note what is NOT taken from those resumes: phone numbers, street addresses
 -- and personal email. Gabrielle's LinkedIn shares a header line with her mobile
