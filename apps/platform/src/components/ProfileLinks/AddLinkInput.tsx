@@ -42,8 +42,23 @@ export default function AddLinkInput({
     split ? "w-[26px]" : "w-0"
   }`;
 
+  /**
+   * `has-[input:disabled]:`, not the blanket `has-disabled:` this used to
+   * carry.
+   *
+   * The Add button lives in the bottom row, and it is disabled whenever the
+   * URL is not yet usable — which includes the empty box you are handed on
+   * arrival. `has-disabled:` matches any disabled descendant, so that button
+   * dimmed the field and, worse, took `pointer-events-none` with it: the URL
+   * input could not be clicked into, so no URL could be typed, so the button
+   * stayed disabled. The field read as disabled because every part of it that
+   * says "disabled" was on.
+   *
+   * Keying on a disabled *input* instead says what was always meant — the
+   * field is off when its inputs are off, which is the `disabled` prop.
+   */
   const rowBase =
-    "flex items-center bg-mauve-800 transition-shadow focus-within:inset-shadow-sm hover:inset-shadow-sm has-disabled:bg-mauve-900/50 has-disabled:pointer-events-none";
+    "flex items-center bg-mauve-800 transition-shadow focus-within:inset-shadow-sm hover:inset-shadow-sm has-[input:disabled]:bg-mauve-900/50 has-[input:disabled]:pointer-events-none";
 
   const inputBase =
     "form-input w-full border-0 bg-transparent px-3 py-2.25 text-sm text-white placeholder:text-mauve-500 focus:ring-0 disabled:pointer-events-none disabled:text-mauve-500";
@@ -52,7 +67,7 @@ export default function AddLinkInput({
     <div
       role="group"
       aria-label="Add link"
-      className="focus-within:shadow-block-sm max-w-sm overflow-hidden rounded-sm border border-mauve-600 bg-mauve-900 text-sm transition-shadow hover:border-mauve-500 has-disabled:cursor-not-allowed has-disabled:border-mauve-700 has-disabled:bg-mauve-900/50"
+      className="focus-within:shadow-block-sm max-w-sm overflow-hidden rounded-sm border border-mauve-600 bg-mauve-900 text-sm transition-shadow hover:border-mauve-500 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:border-mauve-700 has-[input:disabled]:bg-mauve-900/50"
     >
       <div
         className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
