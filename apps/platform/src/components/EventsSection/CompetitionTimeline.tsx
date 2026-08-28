@@ -144,15 +144,37 @@ const BAR_CLS =
 const DAY_CLS =
   "font-display text-center text-xs font-extrabold tracking-widest uppercase transition-[opacity,scale] duration-300 group-data-[hovering=true]/strip:opacity-40 group-data-[hovering=true]/strip:data-[active=true]:scale-110 group-data-[hovering=true]/strip:data-[active=true]:opacity-100";
 
+/**
+ * Where the two grey tails end. Normally at the strip's own edges; inside
+ * the homepage's cutout they run on to the SECTION's edges, so the fade
+ * finishes exactly where the plate does rather than a column's padding
+ * short of it. The section is the site layout's `@container` width less
+ * its `mx-4` / `md:mx-6`, and the strip is centred in it — the same
+ * arithmetic as `Cutout` in HowItWorks — so each tail's far edge is half
+ * the strip's width from centre minus half the section's.
+ */
+const TAIL_EDGE = {
+  contained: { left: "left-0", right: "right-0" },
+  bleed: {
+    left: "left-[calc(50%_-_50cqw_+_1rem)] md:left-[calc(50%_-_50cqw_+_1.5rem)]",
+    right:
+      "right-[calc(50%_-_50cqw_+_1rem)] md:right-[calc(50%_-_50cqw_+_1.5rem)]",
+  },
+} as const;
+
 export default function CompetitionTimeline({
   tone = "light",
   active = null,
+  bleed = false,
 }: {
   tone?: Tone;
   /** The card under the pointer, if any; the strip lights up to match. */
   active?: StripDay | null;
+  /** Run the tails out to the section's edges — see {@link TAIL_EDGE}. */
+  bleed?: boolean;
 }) {
   const t = TONES[tone];
+  const edge = bleed ? TAIL_EDGE.bleed : TAIL_EDGE.contained;
   const lit = active === null ? [] : DAY_COLUMNS[active];
 
   return (
@@ -181,7 +203,7 @@ export default function CompetitionTimeline({
             edge, ending at Monday's rose dot. */}
         <span
           aria-hidden
-          className={`${BAR_CLS} left-0 ${t.tail} [mask-image:linear-gradient(to_right,transparent,black_70%)]`}
+          className={`${BAR_CLS} ${edge.left} ${t.tail} [mask-image:linear-gradient(to_right,transparent,black_70%)]`}
           style={{ right: `calc(100% - ${HALF})` }}
         />
         {/* This week's: Monday's emerald dot to next Monday's rose one. When
@@ -196,8 +218,8 @@ export default function CompetitionTimeline({
         {/* Next week's, if there is one: grey, fading out to the right. */}
         <span
           aria-hidden
-          className={`${BAR_CLS} ${t.tail} [mask-image:linear-gradient(to_right,black_30%,transparent)]`}
-          style={{ left: `calc(100% - ${HALF})`, right: 0 }}
+          className={`${BAR_CLS} ${edge.right} ${t.tail} [mask-image:linear-gradient(to_right,black_30%,transparent)]`}
+          style={{ left: `calc(100% - ${HALF})` }}
         />
 
         <Cell col={MEETING_COL} active={active === "monday"} halo={t.halo}>
