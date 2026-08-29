@@ -147,6 +147,16 @@
           }
         },
         {
+          "id": "fldJLfFhWGD3elJjg",
+          "name": "Cancellation reason",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fld5JjWXM1om14UHs",
+          "name": "Cancelled",
+          "type": "dateTime"
+        },
+        {
           "id": "fldmhd0w0I2h88UTZ",
           "name": "Check-in closes",
           "type": "dateTime"
@@ -163,16 +173,16 @@
           "options": {
             "choices": [
               {
-                "name": "Career"
+                "name": "Build Session"
               },
               {
-                "name": "Info session"
-              },
-              {
-                "name": "Open lab"
+                "name": "Interest Meeting"
               },
               {
                 "name": "Social"
+              },
+              {
+                "name": "Study Session"
               }
             ]
           }
@@ -346,6 +356,11 @@
           "type": "multipleRecordLinks"
         },
         {
+          "id": "fldEBAaKW0mjaiS8Q",
+          "name": "Description",
+          "type": "multilineText"
+        },
+        {
           "id": "fldqxlHThMKBmhsiq",
           "name": "Meeting",
           "type": "multipleRecordLinks"
@@ -354,6 +369,11 @@
           "id": "fldhUjEo0dq5BRZez",
           "name": "Project",
           "type": "multipleRecordLinks"
+        },
+        {
+          "id": "fldaY1lWS1qBJsqrp",
+          "name": "Title",
+          "type": "singleLineText"
         }
       ]
     }
