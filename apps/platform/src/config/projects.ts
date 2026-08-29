@@ -157,7 +157,7 @@ export const PROJECTS: Project[] = [
     description:
       "Plan your semester against live UGA registrar data. Answer a short questionnaire, and DogDays generates conflict-free schedules — weighing professor ratings, walking distance between buildings, and the credits you already have.",
     switcher: {
-      icon: "CalendarDotsIcon",
+      icon: "DogDaysIcon",
       iconBg: "bg-red-400",
       blurb:
         "Conflict-free semester schedules, built from live registrar data.",
@@ -187,7 +187,7 @@ export const PROJECTS: Project[] = [
     description:
       "Our first mobile app: find the people already studying what you're studying. Match with classmates by course, form a group, and pick a time that works — built in Flutter for iOS and Android.",
     switcher: {
-      icon: "UsersIcon",
+      icon: "DogPackIcon",
       iconBg: "bg-purple-400",
       blurb:
         "Find classmates already studying what you're studying, on iOS and Android.",

@@ -5,54 +5,98 @@ import type { ProjectIconName } from "~/config/projects";
  * weight the cards set their titles in: strokes ~0.15em thick (the font's
  * 700-weight stems measure 0.163em, its bars 0.14em), round-capped terminals
  * like the font's arm endings, and square-shouldered outer corners like its
- * stem strips. Both render in currentColor so each card's titleColor tints
- * its own mark.
+ * stem strips. Both render in currentColor so whatever tints the text around
+ * them tints the mark.
+ *
+ * They take the same props the Phosphor icons in ~/config/icons do, and
+ * default to the same 1em box, so a tile or a menu row can hold either
+ * without knowing which it got. `weight` is accepted and ignored: the marks
+ * have one weight, the font's.
+ *
+ * Each viewBox is cropped to the ink, with the bottom edge of the mark on the
+ * bottom edge of the box. Set only a height in em and let the width follow,
+ * and the mark stands on the text baseline like a glyph would — the card
+ * title does exactly that.
  */
+export interface ProjectMarkProps {
+  className?: string;
+  weight?: string;
+}
 
-/** DogDays — a calendar carrying a sun: the dog days of the semester. */
-export function DogDaysIcon({ className }: { className?: string }) {
+/**
+ * DogDays — a wall calendar with a bone pinned to it: the dog days of the
+ * semester, planned.
+ *
+ * Drawn against the font's metrics, so it sits in a line of Alan Sans as a
+ * letter would. The calendar's body — from the top of the header band to the
+ * bottom edge of the frame — is cap height; the two binder tabs rise above the
+ * cap line the way an accent would. The header band is 1.75 strokes deep, the
+ * frame walls one stroke, and the band's bottom corners are flat so it reads
+ * as a strip laid over the frame rather than a rounded lid on it. The 43-unit
+ * box is 37 units of body, so at 0.68em of cap height the box is 0.79em.
+ */
+export function DogDaysIcon({ className }: ProjectMarkProps) {
   return (
     <svg
-      viewBox="0 0 48 48"
-      fill="none"
+      viewBox="2.5 3.5 43 43"
+      width="1em"
+      height="1em"
       aria-hidden
       className={className}
       xmlns="http://www.w3.org/2000/svg"
     >
-      <rect
-        x="6"
-        y="12.5"
-        width="36"
-        height="29"
-        rx="2.5"
-        stroke="currentColor"
-        strokeWidth="7"
+      {/* Header band, notched where the tabs pass through it. */}
+      <path
+        d="M 7.5 9.5 H 11.8 V 13.95 Q 11.8 15.45 13.3 15.45 H 17.7 Q 19.2 15.45 19.2 13.95 V 9.5 H 28.8 V 13.95 Q 28.8 15.45 30.3 15.45 H 34.7 Q 36.2 15.45 36.2 13.95 V 9.5 H 40.5 Q 45.5 9.5 45.5 14.5 V 18.25 H 2.5 V 14.5 Q 2.5 9.5 7.5 9.5 Z"
+        fill="currentColor"
       />
+      {/* Frame: walls and floor, one stroke wide, butt-ended under the band. */}
+      <path
+        d="M 5 17.75 V 41.5 Q 5 44 7.5 44 H 40.5 Q 43 44 43 41.5 V 17.75"
+        stroke="currentColor"
+        strokeWidth="5"
+        fill="none"
+        strokeLinecap="butt"
+      />
+      {/* Fillets easing the floor into the walls, inside the frame. */}
+      <path
+        d="M 40.5 39 Q 40.5 41.5 38 41.5 L 40.5 41.5 Z"
+        fill="currentColor"
+      />
+      <path d="M 7.5 39 Q 7.5 41.5 10 41.5 L 7.5 41.5 Z" fill="currentColor" />
       {/* Binder tabs: round-capped capsules, like Alan Sans arm terminals. */}
-      <g stroke="currentColor" strokeWidth="7" strokeLinecap="round">
-        <line x1="15.5" y1="6.5" x2="15.5" y2="12" />
-        <line x1="32.5" y1="6.5" x2="32.5" y2="12" />
+      <g stroke="currentColor" strokeWidth="5" strokeLinecap="round">
+        <line x1="15.5" y1="6" x2="15.5" y2="11.75" />
+        <line x1="32.5" y1="6" x2="32.5" y2="11.75" />
       </g>
-      <circle cx="24" cy="27" r="5" fill="currentColor" />
-      <g stroke="currentColor" strokeWidth="4" strokeLinecap="round">
-        <line x1="32" y1="27" x2="34.5" y2="27" />
-        <line x1="29.66" y1="32.66" x2="31.42" y2="34.42" />
-        <line x1="24" y1="35" x2="24" y2="37.5" />
-        <line x1="18.34" y1="32.66" x2="16.58" y2="34.42" />
-        <line x1="16" y1="27" x2="13.5" y2="27" />
-        <line x1="18.34" y1="21.34" x2="16.58" y2="19.58" />
-        <line x1="24" y1="19" x2="24" y2="16.5" />
-        <line x1="29.66" y1="21.34" x2="31.42" y2="19.58" />
+      {/* The bone, tilted a little so it reads as pinned rather than printed. */}
+      <g
+        transform="translate(24 29.88) rotate(-14) translate(-24 -27)"
+        fill="currentColor"
+      >
+        <rect x="16.5" y="24.8" width="15" height="4.4" rx="2.2" />
+        <circle cx="16.5" cy="24.9" r="3.1" />
+        <circle cx="16.5" cy="29.1" r="3.1" />
+        <circle cx="31.5" cy="24.9" r="3.1" />
+        <circle cx="31.5" cy="29.1" r="3.1" />
       </g>
     </svg>
   );
 }
 
-/** DogPack — one bold paw: four pads gathered around a center, a pack. */
-export function DogPackIcon({ className }: { className?: string }) {
+/**
+ * DogPack — one bold paw: four pads gathered around a center, a pack.
+ *
+ * The box is the paw's own bounds, 37.86 by 31.18, so with its bottom on the
+ * baseline and its height at cap height (0.68em) it stands as tall as the D
+ * beside it.
+ */
+export function DogPackIcon({ className }: ProjectMarkProps) {
   return (
     <svg
-      viewBox="0 0 48 48"
+      viewBox="5.07 9.42 37.86 31.18"
+      width="1em"
+      height="1em"
       fill="currentColor"
       aria-hidden
       className={className}
@@ -79,10 +123,15 @@ export function DogPackIcon({ className }: { className?: string }) {
   );
 }
 
+/**
+ * The marks by name, with the height each wants in a line of text: the box's
+ * height as a fraction of the em, when the mark's body is set to cap height.
+ * Tailwind arbitrary values, so the card can drop them straight into a class.
+ */
 export const PROJECT_ICONS: Record<
   ProjectIconName,
-  (props: { className?: string }) => React.JSX.Element
+  { Icon: (props: ProjectMarkProps) => React.JSX.Element; height: string }
 > = {
-  dogdays: DogDaysIcon,
-  dogpack: DogPackIcon,
+  dogdays: { Icon: DogDaysIcon, height: "h-[0.79em]" },
+  dogpack: { Icon: DogPackIcon, height: "h-[0.68em]" },
 };
