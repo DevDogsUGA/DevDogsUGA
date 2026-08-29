@@ -51,53 +51,154 @@ function platformHeaders(env: Env): HeadersInit {
   };
 }
 
+/** An absolute http(s) URL, which is the only thing `fetch` can be pointed at. */
+function isHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Turn one RPC row into a Resolution.
+ *
+ * Every field the `ok` branch promises is CHECKED here, not asserted. The
+ * previous shape was eight `!` assertions, which laundered a null column into a
+ * value the type system then swore was a string: a null `publishable_key` built
+ * a perfectly well-typed `ok` resolution and the proxy sent the literal string
+ * "undefined" upstream as an apikey, and a null `upstream_url` threw
+ * `TypeError: Invalid URL` somewhere with no try around it. Both are answers
+ * this function owes the caller, so it gives them a named outcome instead.
+ */
 function toResolution(row: ResolveRow | undefined): Resolution {
   if (!row) return { outcome: "unknown_host" };
+
   switch (row.outcome) {
-    case "ok":
-      return {
-        outcome: "ok",
-        credentialId: row.credential_id!,
-        environmentId: row.environment_id!,
-        userId: row.user_id!,
-        projectRef: row.project_ref!,
-        upstreamUrl: row.upstream_url!,
-        publishableKey: row.publishable_key!,
-        secretKey: row.secret_key,
-        scope: row.scope!,
+    case "ok": {
+      // Destructured so the guard below NARROWS each one to `string`. Written
+      // as `!row.credential_id` against `row` it would not, and every field
+      // would need the `!` this function exists to remove.
+      const {
+        credential_id,
+        environment_id,
+        user_id,
+        project_ref,
+        upstream_url,
+        publishable_key,
+      } = row;
+
+      if (
+        !credential_id ||
+        !environment_id ||
+        !user_id ||
+        !project_ref ||
+        !upstream_url ||
+        !publishable_key ||
+        !isHttpUrl(upstream_url)
+      ) {
+        console.error(
+          "[sandbox] resolve returned an `ok` row missing a required field",
+        );
+        return { outcome: "credential_unavailable" };
+      }
+
+      const base = {
+        outcome: "ok" as const,
+        credentialId: credential_id,
+        environmentId: environment_id,
+        userId: user_id,
+        projectRef: project_ref,
+        upstreamUrl: upstream_url,
+        publishableKey: publishable_key,
         environmentName: row.environment_name,
       };
+
+      if (row.scope === "secret") {
+        // A secret scope WITHOUT a secret key is the vault row being gone while
+        // the scope column still says `secret`. Refused rather than downgraded:
+        // running such a member as `anon` gives them RLS denials on a token
+        // meant to bypass RLS, and nothing in the log says why.
+        if (!row.secret_key) {
+          console.error(
+            "[sandbox] secret-scoped credential resolved with no secret key",
+          );
+          return { outcome: "credential_unavailable" };
+        }
+        return { ...base, scope: "secret", secretKey: row.secret_key };
+      }
+
+      if (row.scope === "publishable") {
+        // Any secret key on a publishable row is discarded here, so it cannot
+        // be reached downstream even by mistake.
+        return { ...base, scope: "publishable", secretKey: null };
+      }
+
+      console.error(`[sandbox] resolve returned unknown scope: ${row.scope}`);
+      return { outcome: "credential_unavailable" };
+    }
     case "retired_host":
       return { outcome: "retired_host", environmentName: row.environment_name };
     case "bad_credential":
       return { outcome: "bad_credential" };
     default:
-      return { outcome: "unknown_host" };
+      // An outcome this Worker does not recognize is OUR problem -- a database
+      // ahead of a deploy -- not the member's. It used to fall into
+      // `unknown_host`, telling them their environment was permanently gone.
+      console.error(
+        `[sandbox] resolve returned unknown outcome: ${row.outcome}`,
+      );
+      return { outcome: "lookup_failed" };
   }
 }
 
 function makeDeps(env: Env, ctx: ExecutionContext): ProxyDeps {
   return {
     async resolve(hostname, tokenHash) {
-      const res = await fetch(
-        `${env.PLATFORM_REST_URL}/rpc/resolve_sandbox_credential`,
-        {
-          method: "POST",
-          headers: platformHeaders(env),
-          body: JSON.stringify({ hostname, token_hash: tokenHash }),
-        },
-      );
+      let res: Response;
+      try {
+        res = await fetch(
+          `${env.PLATFORM_REST_URL}/rpc/resolve_sandbox_credential`,
+          {
+            method: "POST",
+            headers: platformHeaders(env),
+            body: JSON.stringify({ hostname, token_hash: tokenHash }),
+          },
+        );
+      } catch (error) {
+        console.error("[sandbox] resolve request failed:", error);
+        return { outcome: "lookup_failed" };
+      }
+
       if (!res.ok) {
         // A platform outage must not be indistinguishable from a bad token: a
         // 401 would send members hunting for a credential problem that does not
-        // exist. Treated as unknown_host so the caller gets a 410 explaining the
-        // environment could not be looked up, and the failure is loud.
+        // exist. It must not read as a MISSING ENVIRONMENT either, which is
+        // what folding it into `unknown_host` did -- an expired proxy token
+        // then told every member on every host that their sandbox was gone for
+        // good. `lookup_failed` is a 503 with a retry hint.
         console.error(
           `[sandbox] resolve failed: ${res.status} ${await res.text()}`,
         );
-        return { outcome: "unknown_host" };
+        return { outcome: "lookup_failed" };
       }
-      const rows = (await res.json()) as ResolveRow[];
+
+      let rows: ResolveRow[];
+      try {
+        rows = (await res.json()) as ResolveRow[];
+      } catch (error) {
+        // A gateway returning an HTML 502 with a 200 status, or any other
+        // non-JSON body. `res.ok` alone did not cover it and the throw escaped.
+        console.error("[sandbox] resolve returned unparseable JSON:", error);
+        return { outcome: "lookup_failed" };
+      }
+
+      if (!Array.isArray(rows)) {
+        console.error("[sandbox] resolve returned a non-array body");
+        return { outcome: "lookup_failed" };
+      }
+
       return toResolution(rows[0]);
     },
 
@@ -139,6 +240,17 @@ function makeDeps(env: Env, ctx: ExecutionContext): ProxyDeps {
   };
 }
 
+function jsonResponse(status: number, code: string, message: string): Response {
+  return new Response(JSON.stringify({ code, message }), {
+    status,
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*",
+    },
+  });
+}
+
 export default {
   async fetch(
     request: Request,
@@ -150,15 +262,26 @@ export default {
       console.error(
         "[sandbox] missing SANDBOX_PROXY_TOKEN or PLATFORM_REST_URL",
       );
-      return new Response(
-        JSON.stringify({
-          code: "proxy_misconfigured",
-          message: "This proxy is not configured.",
-        }),
-        { status: 503, headers: { "content-type": "application/json" } },
+      return jsonResponse(
+        503,
+        "proxy_misconfigured",
+        "This proxy is not configured.",
       );
     }
 
-    return handleProxyRequest(request, makeDeps(env, ctx));
+    try {
+      return await handleProxyRequest(request, makeDeps(env, ctx));
+    } catch (error) {
+      // The last line. Anything that throws past `handleProxyRequest` used to
+      // surface as a Cloudflare 1101 interstitial: no `code` for a client to
+      // branch on, no audit row, and nothing in it that tells a member whether
+      // to retry. A named 500 is worth more than a stack trace nobody sees.
+      console.error("[sandbox] unhandled error:", error);
+      return jsonResponse(
+        500,
+        "proxy_error",
+        "The sandbox proxy failed to handle this request. This is our fault; please report it.",
+      );
+    }
   },
 };

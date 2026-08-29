@@ -56,6 +56,15 @@
       // apex and first-level subdomains only, and anything deeper needs
       // Advanced Certificate Manager at around $10/month.
       //
+      // ⚠️ This pattern and `SANDBOX_SUFFIXES.staging` in
+      // apps/platform/src/server/sandbox/hostname.ts are two halves of one
+      // fact. Until 2026-08-29 they disagreed: the platform's suffix was a
+      // single environment-blind constant, so no hostname it generated could
+      // match this route. Staging sandboxes fell under PRODUCTION's wildcard
+      // instead, where the production Worker resolved the token against the
+      // production database and answered `410` — a routing fault that named the
+      // member's token. Change one, change the other.
+      //
       // Changing this shape later means rewriting every stored
       // `proxyHostname` in the staging database.
       "routes": [

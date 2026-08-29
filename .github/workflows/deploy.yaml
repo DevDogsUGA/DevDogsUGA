@@ -155,8 +155,46 @@ jobs:
         run: >-
           pnpm --filter @devdogsuga/devtools run cli:no-env deploy preflight
 
-  staging-deploy:
+  # Staging had no migrate job at all, which meant staging ran whatever schema
+  # it happened to be left with. The sandbox proxy made that visible: migration
+  # 20260805000002 creates `resolve_sandbox_credential`, `log_proxy_request` and
+  # the `sandbox_proxy` grants, and without it the staging proxy's every request
+  # fails against functions that are not there. Production has had this job
+  # since the beginning; staging deploying code against an unmigrated database
+  # is the asymmetry, not this.
+  #
+  # Before staging-deploy for the usual reason: a Worker that expects a column
+  # is easier to reason about than a column that expects a Worker.
+  #
+  # No `staging-config` counterpart. `production-config` pushes config.toml
+  # behind a reviewer, is gated on `production-plan`'s config-changed output,
+  # and staging has no plan job to gate on — inventing one is a larger change
+  # than this fix, and config.toml governs auth providers and site URLs rather
+  # than anything the sandbox proxy reads.
+  staging-migrate:
     needs: staging-preflight
+    if: needs.staging-preflight.outputs.paused != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply migrations
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+        run: |
+          set -euo pipefail
+          pnpm exec supabase db push --db-url "$DB_URL" --yes
+
+  staging-deploy:
+    needs: [staging-preflight, staging-migrate]
     if: needs.staging-preflight.outputs.paused != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
