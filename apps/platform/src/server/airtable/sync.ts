@@ -174,6 +174,9 @@ export async function pullMeetings(
       summary: v.summary,
       rawRsvpUrl: raw[meetingsSpec.fields.rsvpUrl.id],
       rsvpUrl: v.rsvpUrl,
+      cancelledAt: v.cancelledAt,
+      rawCancellationReason: raw[meetingsSpec.fields.cancellationReason.id],
+      cancellationReason: v.cancellationReason,
     });
     out.refusals.push(...rules.refusals);
 
@@ -248,7 +251,15 @@ export async function pullMeetings(
       // the column too, or the page keeps a night struck through after the
       // club decided it was on again.
       cancelledAt: v.cancelledAt === null ? null : new Date(v.cancelledAt),
-      cancellationReason: v.cancellationReason,
+      // The reason is PAIRED to that date rather than written through beside
+      // it. `meetings_cancellationReason_needs_cancellation` rejects a reason
+      // with no cancellation, and both orderings that produce one are ordinary
+      // officer work: typing the explanation before setting the date, and
+      // un-cancelling by clearing the date and leaving the words behind. Either
+      // would throw mid-loop and take down the pull for every table until
+      // somebody noticed the cell. So the date decides, and `checkMeeting`
+      // tells the officer when their words went unpublished.
+      cancellationReason: v.cancelledAt === null ? null : v.cancellationReason,
     };
 
     // A refused field is DROPPED from the write rather than written as null.
@@ -257,6 +268,11 @@ export async function pullMeetings(
     // punish the edit twice. The old text stays up until the new one fits.
     if (rules.rejectedFields.has("summary")) delete values.summary;
     if (rules.rejectedFields.has("rsvpUrl")) delete values.rsvpUrl;
+    // Only reachable while the night IS cancelled — the unpaired case clears
+    // the column instead, and says so above. Here the old reason stays up, for
+    // the same reason the old summary does.
+    if (rules.rejectedFields.has("cancellationReason"))
+      delete values.cancellationReason;
 
     if (current) {
       await db.update(meetings).set(values).where(eq(meetings.id, current.id));
@@ -391,16 +407,33 @@ export async function pullWorkshops(
       // from a session that turned out to teach a skill rather than a codebase
       // is a real edit, and the refusal rules still guard the case where
       // attendance already hangs off the old one.
-      if (!rules.rejectedFields.has("projectId")) {
+      //
+      // But only when the officer actually CLEARED the cell. A link that is
+      // present and merely failed to resolve this pass — its project row
+      // skipped earlier in the same run, or Airtable returning the workshop
+      // mid-edit — arrives here as the identical null, and `checkWorkshop`
+      // reads a null incoming value as "not a change" and issues no refusal
+      // for it *by design*, so `rejectedFields` cannot tell the two apart
+      // either. Writing that null would detach the workshop from its project
+      // silently, and `memberStars` would then strip the project off stars
+      // members had already earned. The empty cell is the only clearing.
+      // The same predicate `projectId` was computed from a few lines up, so
+      // "the officer cleared it" and "there was nothing to resolve" cannot
+      // drift into disagreeing about the same cell.
+      const projectCleared = !record.values.project;
+      if (
+        !rules.rejectedFields.has("projectId") &&
+        (projectCleared || projectId !== null)
+      ) {
         values.projectId = projectId;
       }
 
       out.idMap.set(record.airtableRecordId, current.id);
 
-      if (Object.keys(values).length === 0) {
-        out.skipped += 1;
-        continue;
-      }
+      // No empty-write skip here, deliberately: `title` and `description` are
+      // always set above, so `values` is never empty and a guard on its size
+      // would be a branch that reads as live and never runs. `skipped` counts
+      // the insert path below, where a workshop really can have nothing to do.
 
       await db
         .update(workshops)

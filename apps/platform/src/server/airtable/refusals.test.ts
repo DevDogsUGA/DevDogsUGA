@@ -9,6 +9,7 @@ import {
   type WorkshopFacts,
 } from "./refusals";
 import {
+  MEETING_CANCELLATION_REASON_MAX_LENGTH,
   MEETING_SUMMARY_MAX_LENGTH,
   meetings as meetingsSpec,
   parseRsvpUrl,
@@ -40,10 +41,13 @@ import {
  */
 const summaryParse = meetingsSpec.fields.summary.parse;
 const rsvpParse = meetingsSpec.fields.rsvpUrl.parse;
+const reasonParse = meetingsSpec.fields.cancellationReason.parse;
 
 function meetingFacts(raw: {
   summary?: string;
   rsvpUrl?: string;
+  cancelledAt?: string;
+  cancellationReason?: string;
 }): MeetingFacts {
   return {
     airtableRecordId: "recMeeting",
@@ -53,6 +57,9 @@ function meetingFacts(raw: {
     summary: summaryParse(raw.summary),
     rawRsvpUrl: raw.rsvpUrl,
     rsvpUrl: rsvpParse(raw.rsvpUrl),
+    cancelledAt: raw.cancelledAt ?? null,
+    rawCancellationReason: raw.cancellationReason,
+    cancellationReason: reasonParse(raw.cancellationReason),
   };
 }
 
@@ -220,6 +227,120 @@ describe("meeting RSVP", () => {
     );
 
     expect(result.rejectedFields).toEqual(new Set(["rsvpUrl"]));
+  });
+});
+
+const CANCELLED = "2026-09-21T18:00:00.000Z";
+
+/**
+ * The pair `meetings_cancellationReason_needs_cancellation` enforces.
+ *
+ * These are not cosmetic. The constraint rejects a reason with no date, and a
+ * violation raised inside `pullMeetings` is not a refused field — it is an
+ * exception mid-loop that takes the whole fifteen-minute pull down, for every
+ * table, until somebody edits the cell that caused it. So the rule that keeps
+ * the two in step is worth a test per ordering an officer can type them in.
+ */
+describe("meeting cancellation", () => {
+  it("stays silent on a night that is simply on", () => {
+    const result = checkMeeting(meetingFacts({}));
+
+    expect(result.refusals).toEqual([]);
+    expect(result.rejectedFields.size).toBe(0);
+  });
+
+  it("publishes a reason beside its date", () => {
+    const facts = meetingFacts({
+      cancelledAt: CANCELLED,
+      cancellationReason: "Campus closed.",
+    });
+
+    expect(checkMeeting(facts).refusals).toEqual([]);
+    expect(facts.cancellationReason).toBe("Campus closed.");
+  });
+
+  it("stays silent on a cancellation with no reason", () => {
+    // The ordinary case: the fact and the explanation arrive in separate
+    // keystrokes, and the page states the fact without one. A rule that
+    // complained here would fire on every cancellation the club ever makes.
+    const result = checkMeeting(meetingFacts({ cancelledAt: CANCELLED }));
+
+    expect(result.refusals).toEqual([]);
+  });
+
+  it("refuses a reason typed before the date", () => {
+    const result = checkMeeting(
+      meetingFacts({ cancellationReason: "Campus closed." }),
+    );
+
+    expect(result.refusals.map((r) => r.code)).toEqual([
+      "meeting_reason_without_cancellation",
+    ]);
+    // NOT rejected: the caller has to write null rather than drop the key,
+    // or an un-cancellation leaves the old reason behind and the next write
+    // is the constraint violation this exists to prevent.
+    expect(result.rejectedFields.has("cancellationReason")).toBe(false);
+  });
+
+  it("names both halves of the pair, so the fix is obvious", () => {
+    const result = checkMeeting(
+      meetingFacts({ cancellationReason: "Campus closed." }),
+    );
+
+    expect(result.refusals[0]!.message).toContain("Cancelled");
+    expect(result.refusals[0]!.message).toContain("Cancellation reason");
+  });
+
+  it("stays silent on whitespace with no date", () => {
+    // Same floor as every other field here: nobody meant a stray keystroke.
+    const result = checkMeeting(meetingFacts({ cancellationReason: "  \n " }));
+
+    expect(result.refusals).toEqual([]);
+  });
+
+  it("refuses a reason longer than the notice, and keeps the cancellation", () => {
+    const long = "x".repeat(MEETING_CANCELLATION_REASON_MAX_LENGTH + 40);
+    const facts = meetingFacts({
+      cancelledAt: CANCELLED,
+      cancellationReason: long,
+    });
+
+    const result = checkMeeting(facts);
+
+    expect(result.refusals.map((r) => r.code)).toEqual([
+      "meeting_cancellation_reason_too_long",
+    ]);
+    // Rejected here, unlike the unpaired case: the night IS cancelled, so the
+    // old reason stays up for the same reason an over-long summary leaves the
+    // published one alone.
+    expect(result.rejectedFields.has("cancellationReason")).toBe(true);
+    expect(result.refusals[0]!.message).toContain(String(long.length));
+    expect(facts.cancellationReason).toBeNull();
+  });
+
+  it("accepts a reason exactly at the limit", () => {
+    const facts = meetingFacts({
+      cancelledAt: CANCELLED,
+      cancellationReason: "x".repeat(MEETING_CANCELLATION_REASON_MAX_LENGTH),
+    });
+
+    expect(checkMeeting(facts).refusals).toEqual([]);
+    expect(facts.cancellationReason).toHaveLength(
+      MEETING_CANCELLATION_REASON_MAX_LENGTH,
+    );
+  });
+
+  it("reports the unpaired reason once, alongside an unrelated refusal", () => {
+    // Per field, not per record: an officer who typed a reason early and an
+    // RSVP wrong should hear about both.
+    const result = checkMeeting(
+      meetingFacts({ rsvpUrl: "nope", cancellationReason: "Campus closed." }),
+    );
+
+    expect(result.refusals.map((r) => r.code).sort()).toEqual([
+      "meeting_reason_without_cancellation",
+      "meeting_rsvp_host",
+    ]);
   });
 });
 

@@ -1,4 +1,5 @@
 import {
+  MEETING_CANCELLATION_REASON_MAX_LENGTH,
   MEETING_SUMMARY_MAX_LENGTH,
   normalizeMeetingSummary,
   RSVP_URL_ALLOWED_HOSTS,
@@ -114,6 +115,8 @@ export type RefusalCode =
   // Not a refusal — see the note on the third class above.
   | "meeting_incomplete"
   | "meeting_summary_too_long"
+  | "meeting_cancellation_reason_too_long"
+  | "meeting_reason_without_cancellation"
   | "meeting_rsvp_host"
   | "workshop_meeting_changed"
   | "workshop_project_changed"
@@ -159,6 +162,17 @@ export interface MeetingFacts {
   rawRsvpUrl: AirtableValue;
   /** What the registry parser made of it — null if it refused the value. */
   rsvpUrl: string | null;
+  /**
+   * The Cancelled date, parsed. Null means the night is on.
+   *
+   * Present here only so the reason can be judged against it: the two columns
+   * are paired by a check constraint, so neither can be ruled on alone.
+   */
+  cancelledAt: string | null;
+  /** Exactly what Airtable returned for `Cancellation reason`, unparsed. */
+  rawCancellationReason: AirtableValue;
+  /** What the registry parser made of it — null if it refused the value. */
+  cancellationReason: string | null;
 }
 
 /**
@@ -229,6 +243,42 @@ export function checkMeeting(facts: MeetingFacts): RuleResult {
         "so it has to be an https:// address on " +
         `${RSVP_ALLOWED_HOSTS_TEXT}. Paste the meeting's event page from the ` +
         "Involvement Network and it will appear within fifteen minutes.",
+    });
+  }
+
+  // The cancellation pair, which the two rules above have no equivalent of:
+  // `meetings_cancellationReason_needs_cancellation` allows a reason only
+  // beside the date it explains, so neither column can be judged alone.
+  const reasonText = normalizeMeetingSummary(facts.rawCancellationReason);
+
+  if (reasonText !== null && facts.cancelledAt === null) {
+    // Deliberately NOT added to `rejectedFields`, unlike every other refusal
+    // here. The caller must write null rather than drop the key: withholding
+    // it leaves whatever the column already held, and a reason left behind by
+    // an un-cancellation is precisely the row the constraint rejects — the
+    // next write would take down the pass this refusal exists to prevent.
+    result.refusals.push({
+      table: "meetings",
+      airtableRecordId: facts.airtableRecordId,
+      code: "meeting_reason_without_cancellation",
+      message:
+        "Cancellation reason is filled in but Cancelled is empty, so it has " +
+        "not been published — the reason is only ever shown beside the date " +
+        "it explains. Set Cancelled and both appear within fifteen minutes. " +
+        "If the meeting is back on, clear the reason as well.",
+    });
+  } else if (reasonText !== null && facts.cancellationReason === null) {
+    result.rejectedFields.add("cancellationReason");
+    result.refusals.push({
+      table: "meetings",
+      airtableRecordId: facts.airtableRecordId,
+      code: "meeting_cancellation_reason_too_long",
+      message:
+        `Cancellation reason is ${reasonText.length} characters; the notice ` +
+        `fits about ${MEETING_CANCELLATION_REASON_MAX_LENGTH}. It has not ` +
+        "been published — shorten it and it will appear within fifteen " +
+        "minutes. The night still shows as cancelled either way; only the " +
+        "explanation is missing.",
     });
   }
 
