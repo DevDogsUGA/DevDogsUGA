@@ -6,7 +6,7 @@ import EventsPage, {
 import EventsUnavailable from "~/components/EventsSection/EventsUnavailable";
 import CheckInIsland from "~/components/EventsSection/CheckInIsland";
 import UnderConstruction from "~/components/UnderConstruction";
-import { EVENT_TZ } from "~/lib/eventTime";
+import { clubDay } from "~/lib/eventTime";
 import { getMeetingsInRange, getPastMeetings } from "~/server/loaders/meetings";
 
 /**
@@ -131,30 +131,6 @@ async function getSchedule(): Promise<Omit<EventsPageProps, "checkIn">> {
 }
 
 const PAST_PAGE_SIZE = 8;
-
-/**
- * Today's date in the club's timezone.
- *
- * `getDate()` would answer in the *server's* zone, and a UTC host is already
- * on tomorrow while it is still this evening in Athens — so the "today"
- * highlight would land on the wrong square for several hours every night.
- * `formatToParts` with an explicit zone is the pure way to ask.
- */
-const DAY_PARTS = new Intl.DateTimeFormat("en-US", {
-  timeZone: EVENT_TZ,
-  year: "numeric",
-  month: "numeric",
-  day: "numeric",
-});
-
-function clubDay(at: Date): { year: number; month: number; day: number } {
-  const parts = DAY_PARTS.formatToParts(at);
-  const read = (type: string) =>
-    Number(parts.find((p) => p.type === type)?.value ?? "0");
-  // Read by part type rather than by splitting the formatted string: field
-  // order and separators belong to ICU and are not ours to assume.
-  return { year: read("year"), month: read("month") - 1, day: read("day") };
-}
 
 function addMonths(
   year: number,

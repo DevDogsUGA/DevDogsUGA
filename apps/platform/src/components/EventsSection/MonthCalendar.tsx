@@ -41,35 +41,8 @@ import {
   meetingBadges,
   primaryBadge,
 } from "~/components/EventsSection/meetingView";
-import { EVENT_TZ, formatEventSpan } from "~/lib/eventTime";
+import { clubDay, formatEventSpan } from "~/lib/eventTime";
 import { meetingTitle } from "~/lib/meetingTitle";
-
-/**
- * Which calendar square a meeting belongs in, in the CLUB's zone.
- *
- * Postgres hands back a `Date`, which is an instant with no zone of its own,
- * and `getDate()` answers in whatever zone the code is running in. A 6pm
- * Athens meeting is already tomorrow in UTC, so asking the `Date` directly
- * files it under the wrong square for every viewer east of here — and under a
- * *different* wrong square during SSR than during hydration, which is a
- * hydration mismatch on top of a wrong answer.
- *
- * `Intl.DateTimeFormat` with an explicit `timeZone` is pure — unlike
- * `@date-fns/tz`, whose `TZDate` constructor reads the clock and would drop
- * this whole page out of the prerendered shell (see docs/platform/caching.md,
- * "Clock reads in client components"). It gives byte-identical answers on the
- * server and in the browser regardless of where either one sits.
- *
- * Built once at module scope: constructing a formatter is the expensive part
- * and this one has no per-render inputs, so rebuilding it per cell would pay
- * that cost dozens of times a render for an identical object.
- */
-const dayPartsFormat = new Intl.DateTimeFormat("en-US", {
-  timeZone: EVENT_TZ,
-  year: "numeric",
-  month: "numeric",
-  day: "numeric",
-});
 
 /**
  * The month label. Formatted from a `Date.UTC` instant read back in UTC, so
@@ -79,22 +52,6 @@ const monthNameFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
   month: "long",
 });
-
-/** `{ year, month, day }` with a 0-indexed month, matching `Date#getMonth`. */
-function clubDay(at: Date): { year: number; month: number; day: number } {
-  let year = 0;
-  let month = 1;
-  let day = 1;
-  // `formatToParts` rather than parsing the formatted string: the separator
-  // and field order are ICU's to change, and a `split("/")` would quietly
-  // start bucketing meetings into the wrong month if it ever did.
-  for (const part of dayPartsFormat.formatToParts(at)) {
-    if (part.type === "year") year = Number(part.value);
-    else if (part.type === "month") month = Number(part.value);
-    else if (part.type === "day") day = Number(part.value);
-  }
-  return { year, month: month - 1, day };
-}
 
 /**
  * A month as a single comparable integer, so "is this before the window's

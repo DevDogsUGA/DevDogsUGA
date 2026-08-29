@@ -52,11 +52,20 @@ function clubDateParts(at: Date): {
  * `getDate()` would answer in the *server's* zone, and a UTC host is already on
  * tomorrow while it is still this evening in Athens — so a "today" highlight
  * would land on the wrong square for several hours every night, and a meeting
- * would bucket into the wrong week.
+ * would bucket into the wrong week. Worse in a client component: SSR and
+ * hydration would answer differently, making it a hydration mismatch on top of
+ * a wrong square.
  *
- * Lifted here from two private copies — `MonthCalendar` and the events layout —
- * when a third caller appeared. Reads no clock and touches nothing but its
- * argument, so it is safe in a client component.
+ * `Intl.DateTimeFormat` with an explicit `timeZone` is the pure way to ask —
+ * unlike `@date-fns/tz`, whose `TZDate` constructor reads the clock and would
+ * drop a calling page out of the prerendered shell (see
+ * docs/platform/caching.md, "Clock reads in client components"). This reads no
+ * clock and touches nothing but its argument, so it is safe in a client
+ * component and gives byte-identical answers on both sides of hydration.
+ *
+ * This is the only copy. It had two private ones — `MonthCalendar` and the
+ * events layout — and both are gone; add a caller here rather than a fourth
+ * formatter somewhere else.
  */
 export function clubDay(at: Date): {
   year: number;
