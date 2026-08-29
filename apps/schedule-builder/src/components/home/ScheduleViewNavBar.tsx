@@ -44,7 +44,7 @@ export function ScheduleViewNavBar() {
         scrollDirection === "down" ? "-translate-y-[130%]" : "translate-y-0"
       }`}
     >
-      <div className="border-opacity-40 bg-opacity-80 flex h-[4.5rem] w-full items-center justify-between rounded-none border border-[#F8E6EA] bg-[#F8E6EA] shadow-lg shadow-black/[0.03] backdrop-blur-[0.5rem] sm:mx-auto sm:h-[4rem] sm:w-[36rem] sm:rounded-full md:h-[4rem] md:w-[45rem] lg:w-[60rem] xl:w-[80rem]">
+      <div className="flex h-[4.5rem] w-full items-center justify-between rounded-none border border-[#F8E6EA]/40 bg-[#F8E6EA]/80 shadow-lg shadow-black/[0.03] backdrop-blur-[0.5rem] sm:mx-auto sm:h-[4rem] sm:w-[36rem] sm:rounded-full md:h-[4rem] md:w-[45rem] lg:w-[60rem] xl:w-[80rem]">
         {/* Logo and Title */}
         <div className="flex items-center space-x-2 pl-8">
           <Link href="/" className="flex items-center gap-3">

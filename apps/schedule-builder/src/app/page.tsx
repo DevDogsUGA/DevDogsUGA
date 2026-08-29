@@ -56,7 +56,7 @@ export default function Home() {
                 </p>
                 <Link
                   className="flex w-3/5 items-center rounded-full bg-red-700 px-6 py-4 pr-1.5 pl-8 text-nowrap text-white shadow-md sm:py-5"
-                  href="/create"
+                  href="/plans/create"
                 >
                   Start Now!{" "}
                   <span className="-my-2 mr-3 ml-auto flex size-12 items-center justify-center rounded-full border-2 border-red-900 bg-white pt-0.5 text-[1.5rem] leading-none">

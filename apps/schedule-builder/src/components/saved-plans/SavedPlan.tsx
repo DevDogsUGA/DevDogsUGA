@@ -55,7 +55,12 @@ export default function SavedPlan({ plan, onPin, onDelete }: PlanDisplayProps) {
       <h2 className="flex-1 text-2xl font-bold text-black">{plan.title}</h2>
 
       {/* Pin button (gives a saved plan priority over others*/}
-      <button type="button" className="cursor-default" onClick={handlePin}>
+      <button
+        type="button"
+        aria-label={plan.pinned ? `Unpin ${plan.title}` : `Pin ${plan.title}`}
+        className="cursor-default"
+        onClick={handlePin}
+      >
         {plan.pinned ? (
           <HeartIcon weight="fill" className="size-8 text-red-600 transition" />
         ) : (
@@ -68,13 +73,11 @@ export default function SavedPlan({ plan, onPin, onDelete }: PlanDisplayProps) {
 
       <button
         type="button"
+        aria-label={`Delete ${plan.title}`}
         className="cursor-default rounded-md p-0.5 transition-colors hover:bg-red-600/15"
+        onClick={handleDelete}
       >
-        <TrashIcon
-          weight="bold"
-          className="size-7 text-red-600"
-          onClick={handleDelete}
-        />
+        <TrashIcon weight="bold" className="size-7 text-red-600" />
       </button>
     </div>
   );

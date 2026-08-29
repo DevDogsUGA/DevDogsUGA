@@ -3,6 +3,7 @@ import { type ClassData } from "~/types/scheduleTypes";
 import { useState, useEffect } from "react";
 import { StarIcon } from "@phosphor-icons/react/ssr";
 import { useInstructorRating } from "~/hooks/queries/useInstructorRating";
+import { SCHEDULE_SPAN_MINUTES } from "~/lib/schedule-display";
 
 type DayClassProps = ClassData;
 
@@ -190,9 +191,7 @@ function CourseInfo({
   const defaultCorereq = coreq && coreq.trim() !== "" ? coreq : "None";
 
   return (
-    <div
-      className={`bg-opacity-50 fixed inset-0 z-40 flex items-center justify-center bg-white`}
-    >
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/50">
       <div
         className={`relative flex flex-col rounded-lg bg-white ${outerBorder}`}
         style={{
@@ -363,14 +362,12 @@ export default function DayClass({
   currentDay,
   otherTimes,
 }: DayClassProps) {
-  // Find course duartion
+  // Blocks and hour lines share one coordinate space — percent of the
+  // 8 AM–10 PM span — so they stay aligned at any container height. Pixel
+  // offsets could not, since the grid itself is sized in percentages.
   const duration = getDuration(timeStart, timeEnd);
-
-  // Position of class block based on start time
-  const startPosition = `${timeDifference ? `${timeDifference * 0.8}px` : "0px"}`;
-
-  // Height of class block based on duration
-  const classHeight = `${duration * 0.9}px`;
+  const startPosition = `${((timeDifference ?? 0) * 100) / SCHEDULE_SPAN_MINUTES}%`;
+  const classHeight = `${(Number.isFinite(duration) ? Math.max(duration, 0) : 0) * (100 / SCHEDULE_SPAN_MINUTES)}%`;
 
   // Open course block info popup
   const [courseBlockClicked, setcourseBlockClicked] = useState(false);
@@ -382,24 +379,18 @@ export default function DayClass({
   timeEnd = timeEnd.toUpperCase();
 
   return (
+    // The wrapper spans the whole day column so the block's percentage offset
+    // resolves against the hour grid. It ignores pointer events so stacked
+    // wrappers do not swallow clicks meant for the block beneath them.
     <div
-      className={`relative ${className} flex justify-end`}
+      className="pointer-events-none absolute inset-0 flex justify-end"
       onClick={courseBlockInfo}
     >
       <div
-        className="absolute inset-0 border-r-2 bg-gray-100"
-        style={{
-          height: "100%",
-          width: "100%",
-          backgroundSize: "100% 60px",
-        }}
-      ></div>
-
-      <div
-        className={`w-4/6 rounded-lg p-4 transition duration-150 ease-in-out hover:bg-black ${bgColor} flex items-center justify-between`}
+        className={`pointer-events-auto w-4/6 rounded-lg p-4 transition duration-150 ease-in-out hover:bg-black ${bgColor} flex items-center justify-between`}
         style={{
           position: "absolute",
-          top: startPosition, //timeDifference ? `${timeDifference * 0.9}px` : "0px",
+          top: startPosition,
           height: classHeight,
         }}
       >
@@ -416,29 +407,31 @@ export default function DayClass({
         </div>
       </div>
       {courseBlockClicked && (
-        <CourseInfo
-          classTitle={classTitle}
-          className={className}
-          description={description}
-          locationLong={locationLong}
-          locationShort={locationShort}
-          prereq={prereq}
-          coreq={coreq}
-          professor={professor}
-          semester={semester}
-          credits={credits}
-          crn={crn}
-          openSeats={openSeats}
-          maxSeats={maxSeats}
-          waitlist={waitlist}
-          bgColor={bgColor}
-          borderColor={borderColor}
-          timeStart={timeStart}
-          timeEnd={timeEnd}
-          timeDifference={timeDifference}
-          currentDay={currentDay}
-          otherTimes={otherTimes}
-        />
+        <div className="pointer-events-auto">
+          <CourseInfo
+            classTitle={classTitle}
+            className={className}
+            description={description}
+            locationLong={locationLong}
+            locationShort={locationShort}
+            prereq={prereq}
+            coreq={coreq}
+            professor={professor}
+            semester={semester}
+            credits={credits}
+            crn={crn}
+            openSeats={openSeats}
+            maxSeats={maxSeats}
+            waitlist={waitlist}
+            bgColor={bgColor}
+            borderColor={borderColor}
+            timeStart={timeStart}
+            timeEnd={timeEnd}
+            timeDifference={timeDifference}
+            currentDay={currentDay}
+            otherTimes={otherTimes}
+          />
+        </div>
       )}
     </div>
   );

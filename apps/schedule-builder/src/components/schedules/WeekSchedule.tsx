@@ -1,84 +1,19 @@
 "use client";
 
 import { type WeekSchedule as WeekScheduleType } from "~/types/scheduleTypes";
-import { differenceInMinutes } from "date-fns";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CaretDoubleRightIcon } from "@phosphor-icons/react/ssr";
 import DayClass from "./DayClass";
+import { SCHEDULE_END_HOUR, SCHEDULE_START_HOUR } from "~/lib/schedule-display";
 
 interface WeekScheduleProps {
   weekData: WeekScheduleType;
 }
 
-// Background colors for course blocks
-const bgColors = [
-  "bg-[#cc0128]",
-  "bg-[#bc8da7]",
-  "bg-[#0db1b1]",
-  "bg-[#53917e]",
-  "bg-[#202c59]",
-];
-
-const borderColors = [
-  "border-[#cc0128]",
-  "border-[#bc8da7]",
-  "border-[#0db1b1]",
-  "border-[#53917e]",
-  "border-[#202c59]",
-];
-
 export default function WeekSchedule({ weekData }: WeekScheduleProps) {
   const scrollportRef = useRef<HTMLElement>(null);
   const [next, setNext] = useState<string | undefined>(undefined);
   const [prev, setPrev] = useState<string | undefined>(undefined);
-  const colorMapping = useRef<
-    Record<string, { bgColor: string; borderColor: string }>
-  >({});
-  const usedColors = useRef<Set<string>>(new Set<string>());
-
-  const getBgColorForClass = useCallback((classTitle: string) => {
-    // Check if the course is a lab (has an L at the end)
-    // If so, drop the L when comparing so it has the same color as the corresponding class
-    classTitle.trimEnd();
-    if (classTitle.endsWith("L")) {
-      classTitle = classTitle.substring(0, classTitle.length - 1);
-    }
-
-    // Course block colors:
-    // Check if color has already been used
-    if (colorMapping.current[classTitle]) {
-      return colorMapping.current[classTitle]!;
-    }
-
-    // Find an unused color
-    let bgColorToAssign: string | undefined;
-    let borderColorToAssign: string | undefined;
-
-    // Assign unused color
-    if (usedColors.current.size < bgColors.length) {
-      for (const color of bgColors) {
-        if (!usedColors.current.has(color)) {
-          bgColorToAssign = color;
-          borderColorToAssign = borderColors[bgColors.indexOf(color)]; // Find the same color in the border colors list
-          usedColors.current.add(color); // Mark color as used
-          break;
-        }
-      }
-      // Reassign the color to the first class that needs a color
-      bgColorToAssign = bgColors[usedColors.current.size % bgColors.length];
-      borderColorToAssign =
-        borderColors[usedColors.current.size % borderColors.length];
-      usedColors.current.add(bgColorToAssign!); // ! asserts variable to not be read as undefined
-    }
-
-    // Store the assign color for classTitle
-    colorMapping.current[classTitle] = {
-      bgColor: bgColorToAssign ?? "bg-gray-500",
-      borderColor: borderColorToAssign ?? "border-gray-500",
-    };
-
-    return colorMapping.current[classTitle]!;
-  }, []);
 
   /**
    * Handler updating next/prev scroll buttons for scroll/resize events.
@@ -152,8 +87,8 @@ export default function WeekSchedule({ weekData }: WeekScheduleProps) {
    */
   const createHourlySections = useCallback(() => {
     const sections = [];
-    const startHour = 8; // 8AM
-    const endHour = 22; // 10PM
+    const startHour = SCHEDULE_START_HOUR;
+    const endHour = SCHEDULE_END_HOUR;
     const totalHours = endHour - startHour + 1;
     const sectionHeight = 50 / totalHours;
 
@@ -214,23 +149,14 @@ export default function WeekSchedule({ weekData }: WeekScheduleProps) {
               {/* Class list */}
               <div className="relative h-full">
                 {createHourlySections()}
-                {classes.map((classData, index) => {
-                  const colors = getBgColorForClass(classData.classTitle);
-                  const startDiff = differenceInMinutes(
-                    new Date(`1970/01/01 ${classData.timeStart}`),
-                    new Date("1970/01/01 3:06 pm"), // This time is not correct it should be 8:00 AM, but it positions the course blocks correctly
-                  );
-
-                  return (
-                    <DayClass
-                      key={`${day}-${classData.classTitle}-${index}`}
-                      {...classData}
-                      bgColor={colors.bgColor}
-                      borderColor={colors.borderColor}
-                      timeDifference={startDiff}
-                    />
-                  );
-                })}
+                {classes.map((classData, index) => (
+                  // Colours and grid offset are computed in toWeekSchedule, so
+                  // the display stays a pure function of its props.
+                  <DayClass
+                    key={`${day}-${classData.classTitle}-${index}`}
+                    {...classData}
+                  />
+                ))}
               </div>
             </article>
           </div>

@@ -14,7 +14,7 @@ export default function DeletePlan({
   planTitle,
 }: DeletePlanProps) {
   return (
-    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="rounded-lg border-2 border-black bg-pink-50 p-5">
         <div className="flex flex-col items-center">
           <h2 className="mb-4 text-xl text-black">
