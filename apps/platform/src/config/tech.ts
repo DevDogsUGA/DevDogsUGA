@@ -2,11 +2,10 @@
  * The technologies a project card can list, each with the site it links to and
  * its brand mark as a single SVG path on a 24x24 viewBox.
  *
- * The paths are Simple Icons' (CC0), copied verbatim from the `react-icons`
- * build that `schedule-builder` already depends on. They are inlined rather
- * than imported because this app's two icon sets — `@phosphor-icons` and
- * `lucide-react` — carry no brand marks, and a dozen paths are a poor reason
- * to add a third icon dependency to the bundle.
+ * The paths are Simple Icons' (CC0), copied verbatim from the Simple Icons
+ * SVG set. They are inlined rather than imported because this app's two icon
+ * sets — `@phosphor-icons` and `lucide-react` — carry no brand marks, and a
+ * dozen paths are a poor reason to add a third icon dependency to the bundle.
  *
  * `java` draws OpenJDK's mark: Simple Icons carries no Java icon, the name
  * being trademarked, and OpenJDK is the closest thing to an official one.

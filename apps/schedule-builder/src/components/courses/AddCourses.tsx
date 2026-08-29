@@ -4,7 +4,7 @@ import type { Course } from "~/types/course";
 import Link from "next/link";
 import { type ReadonlyURLSearchParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PiPlusBold } from "react-icons/pi";
+import { PlusIcon } from "@phosphor-icons/react/ssr";
 import * as z from "zod";
 import SearchByCRN from "./search/SearchByCRN";
 import SearchByInstructor from "./search/SearchByInstructor";
@@ -173,7 +173,7 @@ export function AddCourses({ onAddCourse, searchParams }: Props) {
           disabled={course === null}
           type="submit"
         >
-          <PiPlusBold />
+          <PlusIcon weight="bold" />
           Add Course
         </button>
       </form>

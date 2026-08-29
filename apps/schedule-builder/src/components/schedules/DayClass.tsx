@@ -1,7 +1,7 @@
 "use client";
 import { type ClassData } from "~/types/scheduleTypes";
 import { useState, useEffect } from "react";
-import { FaStar } from "react-icons/fa";
+import { StarIcon } from "@phosphor-icons/react/ssr";
 import { useInstructorRating } from "~/hooks/queries/useInstructorRating";
 
 type DayClassProps = ClassData;
@@ -131,7 +131,11 @@ interface ProfessorStarsProps {
 const ProfessorStars = ({ rating }: ProfessorStarsProps) => {
   const renderSVGs = () => {
     return Array.from({ length: rating }, () => (
-      <FaStar key={rating} className="inline -translate-y-0.5" />
+      <StarIcon
+        weight="fill"
+        key={rating}
+        className="inline -translate-y-0.5"
+      />
     ));
   };
   return <div className="inline">{renderSVGs()}</div>;

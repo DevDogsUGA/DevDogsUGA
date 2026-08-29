@@ -2,7 +2,7 @@
 
 import type { Course } from "~/types/course";
 import { type ReadonlyURLSearchParams } from "next/navigation";
-import { PiCaretDownBold } from "react-icons/pi";
+import { CaretDownIcon } from "@phosphor-icons/react/ssr";
 import { AddCourses } from "./AddCourses";
 import RegisteredClass from "./RegisteredClass";
 
@@ -62,7 +62,10 @@ export default function CourseDisplay({
           {/* Styling div to add spacing and hold down arrow notification in case there is more items */}
           <div className="absolute bottom-0 left-0 flex h-6 w-full justify-center border-4 border-t-0 border-pink-100 bg-white">
             {courses.length > 5 && (
-              <PiCaretDownBold className="size-30 h-auto w-auto animate-bounce" />
+              <CaretDownIcon
+                weight="bold"
+                className="size-30 h-auto w-auto animate-bounce"
+              />
             )}
           </div>
         </div>

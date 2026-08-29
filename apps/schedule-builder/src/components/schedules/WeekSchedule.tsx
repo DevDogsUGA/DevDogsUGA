@@ -3,7 +3,7 @@
 import { type WeekSchedule as WeekScheduleType } from "~/types/scheduleTypes";
 import { differenceInMinutes } from "date-fns";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PiCaretDoubleRightBold } from "react-icons/pi";
+import { CaretDoubleRightIcon } from "@phosphor-icons/react/ssr";
 import DayClass from "./DayClass";
 
 interface WeekScheduleProps {
@@ -191,9 +191,9 @@ export default function WeekSchedule({ weekData }: WeekScheduleProps) {
         onClick={scrollLeft}
         type="button"
       >
-        <PiCaretDoubleRightBold />
+        <CaretDoubleRightIcon weight="bold" />
         {prev}
-        <PiCaretDoubleRightBold />
+        <CaretDoubleRightIcon weight="bold" />
       </button>
 
       {/* Viewport of schedule display */}
@@ -243,9 +243,9 @@ export default function WeekSchedule({ weekData }: WeekScheduleProps) {
         onClick={scrollRight}
         type="button"
       >
-        <PiCaretDoubleRightBold />
+        <CaretDoubleRightIcon weight="bold" />
         {next}
-        <PiCaretDoubleRightBold />
+        <CaretDoubleRightIcon weight="bold" />
       </button>
     </div>
   );

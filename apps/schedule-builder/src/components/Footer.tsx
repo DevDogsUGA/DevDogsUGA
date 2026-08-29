@@ -1,4 +1,4 @@
-import { PiInstagramLogoBold, PiLinkedinLogoBold } from "react-icons/pi";
+import { InstagramLogoIcon, LinkedinLogoIcon } from "@phosphor-icons/react/ssr";
 import Image from "next/image";
 
 export function Footer() {
@@ -60,7 +60,7 @@ export function Footer() {
             href="https://www.instagram.com/devdogsuga/"
             target="_blank"
           >
-            <PiInstagramLogoBold />
+            <InstagramLogoIcon weight="bold" />
           </a>
           <a
             title="LinkedIn"
@@ -69,7 +69,7 @@ export function Footer() {
             href="https://www.linkedin.com/company/devdogsuga/"
             target="_blank"
           >
-            <PiLinkedinLogoBold />
+            <LinkedinLogoIcon weight="bold" />
           </a>
         </div>
       </nav>

@@ -12,7 +12,7 @@ import {
 } from "~/lib/localStorage/schemas";
 import { readLocal } from "~/lib/localStorage/storage";
 import * as Select from "@radix-ui/react-select";
-import { PiCaretUpDownBold } from "react-icons/pi";
+import { CaretUpDownIcon } from "@phosphor-icons/react/ssr";
 
 function useTermCounts() {
   const { user, isLoading: sessionLoading } = useSession();
@@ -138,7 +138,10 @@ export function TermSelector() {
             }
           </Select.Value>
         </span>
-        <PiCaretUpDownBold className="text-zinc-500 transition-colors group-hover:text-zinc-800" />
+        <CaretUpDownIcon
+          weight="bold"
+          className="text-zinc-500 transition-colors group-hover:text-zinc-800"
+        />
       </Select.Trigger>
 
       <Select.Portal>

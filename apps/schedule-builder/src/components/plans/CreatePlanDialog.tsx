@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
-  PiCaretDownBold,
-  PiCheckBold,
-  PiCircleNotchBold,
-  PiMinusBold,
-  PiSparkleBold,
-  PiXBold,
-} from "react-icons/pi";
+  CaretDownIcon,
+  CheckIcon,
+  CircleNotchIcon,
+  MinusIcon,
+  SparkleIcon,
+  XIcon,
+} from "@phosphor-icons/react/ssr";
 import Combobox from "~/components/ui/Combobox";
 import { SectionExclusionList } from "~/components/courses/SectionExclusionList";
 import { useOfferingsByCourse } from "~/hooks/queries/useOfferingsByCourse";
@@ -53,9 +53,11 @@ function TriStateCheckbox({
         className="peer sr-only"
       />
       <span className="flex size-5 shrink-0 items-center justify-center rounded border-2 border-stone-300 bg-white transition-colors peer-checked:border-red-700 peer-checked:bg-red-700 peer-focus-visible:ring-2 peer-focus-visible:ring-red-700 peer-focus-visible:ring-offset-1">
-        {state === "checked" && <PiCheckBold className="size-3.5 text-white" />}
+        {state === "checked" && (
+          <CheckIcon weight="bold" className="size-3.5 text-white" />
+        )}
         {state === "indeterminate" && (
-          <PiMinusBold className="size-3.5 text-white" />
+          <MinusIcon weight="bold" className="size-3.5 text-white" />
         )}
       </span>
     </span>
@@ -116,7 +118,8 @@ function CourseOfferingsSection({
             ) : null}
           </span>
           {offerings.length > 0 && (
-            <PiCaretDownBold
+            <CaretDownIcon
+              weight="bold"
               className={`size-4 shrink-0 text-neutral-400 transition-transform ${open ? "rotate-180" : ""}`}
             />
           )}
@@ -304,7 +307,7 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
             onClick={onClose}
             className="text-neutral-400 hover:text-black"
           >
-            <PiXBold size={20} />
+            <XIcon weight="bold" size={20} />
           </button>
         </div>
 
@@ -511,10 +514,13 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
             className="group relative rounded-md border-2 border-red-800 bg-red-700 px-6 py-2 font-medium text-white transition-[background-color,border-color,box-shadow] not-disabled:hover:border-red-950 not-disabled:hover:bg-red-800 not-disabled:hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span className="flex items-center gap-2 transition-opacity group-disabled:opacity-0">
-              <PiSparkleBold />
+              <SparkleIcon weight="bold" />
               Generate
             </span>
-            <PiCircleNotchBold className="absolute top-1/2 left-1/2 -translate-1/2 animate-spin opacity-0 transition-opacity [animation-duration:500ms] group-disabled:opacity-100" />
+            <CircleNotchIcon
+              weight="bold"
+              className="absolute top-1/2 left-1/2 -translate-1/2 animate-spin opacity-0 transition-opacity [animation-duration:500ms] group-disabled:opacity-100"
+            />
           </button>
         </div>
       </div>

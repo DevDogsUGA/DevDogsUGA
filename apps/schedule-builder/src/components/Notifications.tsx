@@ -11,7 +11,7 @@ import {
   useReducer,
   useState,
 } from "react";
-import { PiBellBold, PiBellFill, PiTrayDuotone, PiXBold } from "react-icons/pi";
+import { BellIcon, TrayIcon, XIcon } from "@phosphor-icons/react/ssr";
 
 const MobileDisplay = {
   Root: Dialog.Root,
@@ -117,8 +117,8 @@ export default function Notifications({ initialItems, closeAction }: Props) {
   return (
     <Root>
       <Trigger className="group relative cursor-default rounded-full border-2 border-red-700/30 p-1 text-lg text-black transition-colors hover:border-red-700/60 hover:bg-red-600/10 data-[state=open]:border-red-700/60 data-[state=open]:bg-red-600/10 sm:p-1.5 sm:text-xl">
-        <PiBellFill className="hidden sm:block" />
-        <PiBellBold className="sm:hidden" />
+        <BellIcon weight="fill" className="hidden sm:block" />
+        <BellIcon weight="bold" className="sm:hidden" />
         {items.length > 0 && (
           <span className="absolute -top-px -right-px size-2 rounded-full bg-red-700 transition-transform group-data-[state=open]:scale-0 sm:-top-0.5 sm:-right-0.5 sm:size-2.5" />
         )}
@@ -126,7 +126,7 @@ export default function Notifications({ initialItems, closeAction }: Props) {
       <Content>
         {items.length === 0 || items.every((item) => item.closed === true) ? (
           <p className="flex flex-1 flex-col items-center justify-center gap-3 text-stone-600">
-            <PiTrayDuotone className="text-3xl" />
+            <TrayIcon weight="duotone" className="text-3xl" />
             <span className="text-xs font-semibold">No new notifications</span>
           </p>
         ) : (
@@ -144,7 +144,7 @@ export default function Notifications({ initialItems, closeAction }: Props) {
                       className="rounded-full p-0.5 text-stone-600 transition-colors hover:bg-pink-100 hover:text-black"
                       onClick={() => close(id)}
                     >
-                      <PiXBold />
+                      <XIcon weight="bold" />
                     </button>
                   </div>
                 </Accordion.Content>

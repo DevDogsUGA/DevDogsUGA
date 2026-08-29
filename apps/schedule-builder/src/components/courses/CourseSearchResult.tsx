@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PiPlusCircleBold } from "react-icons/pi";
+import { PlusCircleIcon } from "@phosphor-icons/react/ssr";
 import type { OfferingSearchRow } from "~/types/course";
 import { CourseSectionsDialog } from "./CourseSectionsDialog";
 
@@ -48,7 +48,7 @@ export function CourseSearchResult({ course }: { course: CourseGroup }) {
             className="text-red-700 hover:text-red-800"
             title="Add course"
           >
-            <PiPlusCircleBold size={24} />
+            <PlusCircleIcon weight="bold" size={24} />
           </button>
         </div>
       </div>

@@ -5,7 +5,7 @@ import { useCourseDetailsByCrn } from "~/hooks/queries/useCourseDetailsByCrn";
 import { useCrns } from "~/hooks/queries/useCrns";
 import type { Course } from "~/types/course";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PiNetworkSlashDuotone } from "react-icons/pi";
+import { NetworkSlashIcon } from "@phosphor-icons/react/ssr";
 
 type InputState = Record<string, never> | { crn: string };
 
@@ -62,7 +62,7 @@ export default function SearchByCRN({
   useEffect(() => {
     if (crnsQuery.error)
       dispatchError({
-        icon: PiNetworkSlashDuotone,
+        icon: NetworkSlashIcon,
         message: "Could not load CRNs.",
       });
   }, [crnsQuery.error, dispatchError]);
@@ -70,7 +70,7 @@ export default function SearchByCRN({
   useEffect(() => {
     if (courseQuery.error)
       dispatchError({
-        icon: PiNetworkSlashDuotone,
+        icon: NetworkSlashIcon,
         message: "Could not load course details.",
       });
   }, [courseQuery.error, dispatchError]);
