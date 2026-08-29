@@ -81,7 +81,7 @@ async function seed() {
     [IDS.meetingB, "attendance-test-b"],
   ] as const) {
     await db.execute(sql`
-      insert into platform.meetings (id, slug, name, "startsAt", "endsAt")
+      insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt")
       values (${id}::uuid, ${slug}, 'Attendance Test',
               now(), now() + interval '1 hour')`);
   }

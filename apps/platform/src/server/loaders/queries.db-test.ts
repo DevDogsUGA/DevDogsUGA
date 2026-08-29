@@ -178,7 +178,7 @@ describe("correlated counts on a meeting", () => {
       values (${COUNTS.project}::uuid, 'counts-test-a', 'Counts Test A'),
              (${COUNTS.project2}::uuid, 'counts-test-b', 'Counts Test B')`);
     await db.execute(sql`
-      insert into platform.meetings (id, slug, name, "startsAt", "endsAt")
+      insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt")
       values (${COUNTS.meeting}::uuid, 'counts-test-meeting', 'Counts Test',
               now() + interval '1 day', now() + interval '1 day 2 hours')`);
     await db.execute(sql`

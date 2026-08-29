@@ -84,7 +84,7 @@ beforeAll(async () => {
            (${IDS.projectB}::uuid, 'respond-test-b', 'Respond Test B')
   `);
   await db.execute(sql`
-    insert into platform.meetings (id, slug, name, "startsAt", "endsAt")
+    insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt")
     values (${IDS.meeting}::uuid, 'respond-test-meeting', 'Respond Test',
             now() - interval '2 days', now() - interval '2 days' + interval '2 hours')
   `);
