@@ -71,6 +71,11 @@ enabled = false
 public = true
 file_size_limit = "256KiB"
 allowed_mime_types = ["image/webp"]
+# Seeded objects are named for the user id with no extension, because that is
+# the object key the app reads: `useAvatarSrc` and the officers loader both
+# build `/object/public/avatars/<userId>`. Without this path the bucket is
+# created empty and every officer card falls back to initials.
+objects_path = "./seed/avatars"
 
 [auth]
 enabled = true
