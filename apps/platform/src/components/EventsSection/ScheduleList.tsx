@@ -465,7 +465,9 @@ function JudgingChip({ judging }: { judging: MeetingRangeJudging }) {
       href={`/competitions/${judging.competitionSlug}/teams`}
       className={`${badge.chipDark} ${CHIP_DARK_CLS} ${CHIP_LINK_CLS}`}
     >
-      Judging: {judging.projectName}
+      {/* Same absence as the event page's row, and the same refusal to dress
+          it up: with no project to name, the chip is just the word. */}
+      {judging.projectName ? `Judging: ${judging.projectName}` : "Judging"}
     </Link>
   );
 }

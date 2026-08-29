@@ -415,9 +415,15 @@ export interface MeetingRangeWorkshop {
 export interface MeetingRangeJudging {
   competitionId: string;
   competitionSlug: string;
-  /** A competition has no name of its own — it is called after its project. */
-  projectName: string;
-  projectSlug: string;
+  /**
+   * A competition has no name of its own — it is called after its project.
+   * Null when it has none: `workshops.projectId` is nullable, and
+   * `judgingForMeetings` left-joins deliberately so that a project-less
+   * competition still reaches the calendar instead of being dropped off a
+   * night that has a deadline behind it.
+   */
+  projectName: string | null;
+  projectSlug: string | null;
   /**
    * The authored judging time. It falls inside this meeting's span, but it is
    * generally NOT the meeting's `startsAt`: two competitions judged the same

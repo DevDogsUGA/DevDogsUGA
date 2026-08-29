@@ -330,7 +330,10 @@ function JudgingRow({ judging }: { judging: MeetingRangeJudging }) {
         href={`/competitions/${judging.competitionSlug}/teams`}
         className="text-sm font-semibold text-white underline decoration-2 underline-offset-2 hover:no-underline"
       >
-        {judging.projectName}
+        {/* Without a project there is no name to print, and the night still
+            judges something — so the link keeps its target and wears the
+            plain noun rather than opening an empty anchor. */}
+        {judging.projectName ?? "Competition"}
       </Link>
       <span className={`${badge.chipDark} ${CHIP_DARK_CLS} ml-auto`}>
         {badge.label}

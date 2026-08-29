@@ -266,7 +266,10 @@ export interface WorkshopFacts {
   /** Attendance rows already pointing at this workshop. */
   attendanceCount: number;
   currentMeetingId: string;
-  currentProjectId: string;
+  /** Null when the workshop has no project yet: `workshops.projectId` is
+   *  nullable, and a session can be run and attended before anyone attaches
+   *  repo work to it. */
+  currentProjectId: string | null;
 }
 
 export interface WorkshopIncoming {
@@ -317,8 +320,14 @@ export function checkWorkshop(
     });
   }
 
+  // A null *current* project is not a change either, for the mirror of the
+  // reason a null incoming one isn't: nothing has been credited to a project
+  // yet, so filling the field in for the first time takes nothing away from
+  // one. The refusal below promises "a different project", and where there is
+  // no current project there is none to differ from.
   if (
     incoming.projectId !== null &&
+    facts.currentProjectId !== null &&
     incoming.projectId !== facts.currentProjectId
   ) {
     result.rejectedFields.add("projectId");
