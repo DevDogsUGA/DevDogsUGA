@@ -6,6 +6,7 @@ import { useOfferingsByCourse } from "~/hooks/queries/useOfferingsByCourse";
 import { useDraftCourses } from "~/hooks/data/useDraftCourses";
 import { useTerm } from "~/components/providers/TermProvider";
 import { SectionExclusionList } from "./SectionExclusionList";
+import { formatCourseCode } from "~/lib/courseCode";
 
 export function CourseSectionsDialog({
   course,
@@ -51,7 +52,7 @@ export function CourseSectionsDialog({
         <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-4">
           <div>
             <h2 className="text-lg font-bold">
-              {course.abbr} {course.courseNumber}
+              {formatCourseCode(course.abbr, course.courseNumber)}
             </h2>
             <p className="text-sm text-neutral-600">{course.title}</p>
           </div>

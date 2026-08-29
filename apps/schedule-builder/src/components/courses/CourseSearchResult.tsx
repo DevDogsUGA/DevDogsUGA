@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PlusCircleIcon } from "@phosphor-icons/react/ssr";
 import type { OfferingSearchRow } from "~/types/course";
 import { CourseSectionsDialog } from "./CourseSectionsDialog";
+import { formatCourseCode } from "~/lib/courseCode";
 
 type CourseGroup = {
   courseId: number;
@@ -32,7 +33,7 @@ export function CourseSearchResult({ course }: { course: CourseGroup }) {
       <div className="flex items-center justify-between rounded-sm border border-pink-100 bg-white px-4 py-3">
         <div className="flex flex-col">
           <span className="font-bold">
-            {course.abbr} {course.courseNumber}
+            {formatCourseCode(course.abbr, course.courseNumber)}
           </span>
           <span className="text-sm text-neutral-600">{course.title}</span>
           {instructorNames && (

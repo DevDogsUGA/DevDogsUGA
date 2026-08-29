@@ -9,6 +9,7 @@ import {
 } from "@phosphor-icons/react/ssr";
 import { CourseSectionsDialog } from "./CourseSectionsDialog";
 import { type DraftCourse } from "~/lib/localStorage/types";
+import { formatCourseCode } from "~/lib/courseCode";
 
 export type { DraftCourse };
 
@@ -20,7 +21,7 @@ export function SavedCourseItem({
   onRemove: () => void;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const info = course.courses[0];
+  const info = course.courses;
 
   return (
     <div className="group relative rounded-sm border border-transparent transition-[border-color,box-shadow,background-color] hover:border-stone-500 hover:bg-stone-500/15 hover:shadow-sm">
@@ -31,7 +32,7 @@ export function SavedCourseItem({
       >
         <span className="flex items-center gap-1.5 overflow-hidden font-bold text-ellipsis">
           <PlusCircleIcon weight="bold" className="text-lg text-green-700" />
-          {info?.abbr} {info?.courseNumber}
+          {formatCourseCode(info?.abbr, info?.courseNumber)}
         </span>
         <span className="block overflow-hidden pl-6 text-sm text-nowrap text-ellipsis">
           {info?.title}

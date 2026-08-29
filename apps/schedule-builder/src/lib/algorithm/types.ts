@@ -32,6 +32,11 @@ export interface AlgorithmSection {
   crn: number;
   professor: Professor;
   classes: AlgorithmClass[];
+  /**
+   * Credit-hour range for the section's course. Variable-credit courses have
+   * min < max, so a schedule's total is a range rather than a single number.
+   */
+  creditHours: { min: number; max: number };
 }
 
 export interface AlgorithmCourse {
@@ -40,11 +45,16 @@ export interface AlgorithmCourse {
 }
 
 export interface HConstraints {
-  excludedCourses: AlgorithmCourse[];
-  excludedSections: AlgorithmSection[];
+  /** Course codes to drop entirely before generating. */
+  excludedCourses: string[];
+  /** Section CRNs to drop before generating. */
+  excludedSections: number[];
   campus: string;
+  /** 0 means "no lower bound". */
   minCreditHours: number;
+  /** 0 means "no upper bound". */
   maxCreditHours: number;
+  /** Require consecutive classes to be walkable within the gap between them. */
   walking: boolean;
 }
 
@@ -53,7 +63,7 @@ export interface SConstraints {
   gapDay?: DayOfWeek;
   /** "HH:mm" — earliest acceptable start time */
   prefStartTime?: string;
-  /** "HH:mm" — latest acceptable start time for last class */
+  /** "HH:mm" — latest acceptable end time for the last class */
   prefEndTime?: string;
   showFilledClasses: boolean;
 }
