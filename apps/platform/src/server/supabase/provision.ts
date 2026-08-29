@@ -1,6 +1,9 @@
 import { and, eq, inArray, isNull, lt, notInArray, or, sql } from "drizzle-orm";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
+// Aliased: `env` is already the local name for a sandbox environment row
+// throughout this file, and the two are entirely different things.
+import { env as platformEnv } from "~/env";
 import { db } from "~/server/db";
 import {
   sandboxEnvironmentsInPlatform as sandboxEnvironments,
@@ -228,7 +231,12 @@ export async function provisionEnvironment(
       publishableKey: keys.publishable,
       secretKeySecretId,
       jwtSecretId,
-      proxyHostname: buildProxyHostname(name),
+      // The deployment decides the suffix, because each one's Worker claims a
+      // different wildcard. Passed explicitly rather than defaulted -- a
+      // default is exactly what let one constant serve three environments.
+      proxyHostname: buildProxyHostname(name, {
+        deployEnv: platformEnv.DEPLOY_ENV,
+      }),
       status: "active",
       provisionedAt: new Date(),
       lastSeenActiveAt: new Date(),

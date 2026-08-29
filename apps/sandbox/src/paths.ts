@@ -19,20 +19,13 @@ const PREFIXES: [string, PathClass][] = [
 ];
 
 /**
- * Classify an ALREADY-NORMALIZED pathname.
- *
- * Normalization is not this function's job and must not be attempted here with
- * string manipulation. `new URL()` resolves `..` and `.` segments and decodes
- * nothing that would change segment boundaries, so classifying `url.pathname`
- * is safe; classifying a raw request-target string is not. A hand-rolled
- * `startsWith` against `/storage/v1/../../rest/v1/users` would answer
- * "storage" for a request the origin will treat as REST.
+ * The prefix match, against one exact string.
  *
  * The trailing slash in each prefix matters. Without it `/restaurants` matches
  * `/rest`, which is the classic prefix-matching bug and here would mean
  * classifying an unknown path as a known one.
  */
-export function classifyPath(pathname: string): PathClass {
+function classifyExact(pathname: string): PathClass {
   for (const [prefix, kind] of PREFIXES) {
     if (pathname.startsWith(prefix)) return kind;
   }
@@ -45,11 +38,60 @@ export function classifyPath(pathname: string): PathClass {
 }
 
 /**
+ * Classify an ALREADY-NORMALIZED pathname.
+ *
+ * Normalization is not this function's job and must not be attempted here with
+ * string manipulation. `new URL()` resolves `..` and `.` segments, so
+ * classifying `url.pathname` is safe where classifying a raw request-target
+ * string is not: a hand-rolled `startsWith` against
+ * `/storage/v1/../../rest/v1/users` would answer "storage" for a request the
+ * origin will treat as REST.
+ *
+ * ## What `new URL()` does NOT do
+ *
+ * It resolves dot segments; it does not PERCENT-DECODE. So
+ * `/storage/v1/%2e%2e%2f%2e%2e%2fpg/query` arrives here byte-for-byte intact,
+ * `startsWith("/storage/v1/")` is true, and the allowlist waves through a path
+ * that names `/pg/query` the moment anything downstream decodes it. Whether the
+ * Supabase gateway decodes before routing is not a question this file gets to
+ * leave open: the allowlist cannot be the security boundary while the string it
+ * matches differs from the string the origin routes on.
+ *
+ * So the path is decoded, re-resolved, and classified a second time. It is
+ * refused only when decoding CHANGES the answer, which is what keeps a storage
+ * key legitimately containing `%2F` classified as storage while refusing a
+ * traversal that escapes the prefix it claimed.
+ */
+export function classifyPath(pathname: string): PathClass {
+  const direct = classifyExact(pathname);
+
+  let decoded: string;
+  try {
+    // Back through `new URL()`, because decoding can expose dot segments that
+    // were hidden from the first normalization pass.
+    decoded = new URL(decodeURIComponent(pathname), "https://sandbox.invalid")
+      .pathname;
+  } catch {
+    // Malformed percent-encoding. Refused rather than guessed at -- we cannot
+    // say what the origin would make of it.
+    return "unknown";
+  }
+
+  if (decoded !== pathname && classifyExact(decoded) !== direct) {
+    return "unknown";
+  }
+  return direct;
+}
+
+/**
  * Realtime carries its key in the query string rather than a header, because a
  * browser WebSocket constructor cannot set headers. That makes it the one class
  * where the token appears somewhere other than `apikey`/`Authorization`, and
  * the one place a rewrite can be forgotten.
+ *
+ * It is also the one class where `Sec-WebSocket-Protocol` may carry the token,
+ * for the same reason -- see `extractCredential`.
  */
-export function usesQueryParamKey(kind: PathClass): boolean {
+export function usesRealtimeCarriers(kind: PathClass): boolean {
   return kind === "realtime";
 }

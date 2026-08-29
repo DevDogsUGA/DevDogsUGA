@@ -22,11 +22,16 @@ export function isMemberToken(value: string): boolean {
  * these. Upstream does, with the signing key, and duplicating that at the edge
  * would mean holding the environment's JWT secret for no gain -- a second copy
  * of a key, to re-answer a question the origin answers anyway. All this decides
- * is "pass through" versus "treat as a key to swap".
+ * is "pass through" versus "refuse".
+ *
+ * The segments must be non-empty base64url. A three-dot check alone accepted
+ * `a.b.c`, and anything it accepted was forwarded to Supabase as a session.
  */
+const BASE64URL = /^[A-Za-z0-9_-]+$/;
+
 export function looksLikeJwt(value: string): boolean {
   const parts = value.split(".");
-  return parts.length === 3 && parts.every((p) => p.length > 0);
+  return parts.length === 3 && parts.every((p) => BASE64URL.test(p));
 }
 
 export interface PresentedCredential {
@@ -37,6 +42,45 @@ export interface PresentedCredential {
    * Null when `Authorization` carried a member token instead, or nothing.
    */
   userJwt: string | null;
+  /**
+   * `Authorization: Bearer <x>` where x is neither a member token nor
+   * JWT-shaped.
+   *
+   * Reported rather than ignored because the alternative is worse than doing
+   * nothing: with no flag, such a bearer fell through to `userJwt = null` and
+   * the request went upstream carrying the project key, so an expired or
+   * corrupted session was answered `200` as `anon` where real Supabase answers
+   * `401`. A sandbox that succeeds where production fails is the one outcome
+   * this proxy exists to prevent.
+   */
+  malformedBearer: boolean;
+}
+
+/**
+ * Which credential carriers this path class permits beyond the two headers.
+ *
+ * Both are realtime-only and for the same reason -- a browser `WebSocket`
+ * constructor can set neither headers nor much else -- so they travel together.
+ */
+export interface RealtimeCarriers {
+  queryParam: boolean;
+  protocol: boolean;
+}
+
+/**
+ * Every query parameter named `apikey`, in whatever case it was written.
+ *
+ * `URLSearchParams` matches byte-for-byte while every header lookup around it
+ * is case-insensitive, and that asymmetry was a hole: the realtime rewrite
+ * tested `has("apikey")`, so `?APIKEY=` skipped it and the member's token went
+ * to Supabase in the URL. Both the read and the rewrite go through this.
+ */
+export function apikeyParamNames(params: URLSearchParams): string[] {
+  const names = new Set<string>();
+  for (const name of params.keys()) {
+    if (name.toLowerCase() === "apikey") names.add(name);
+  }
+  return [...names];
 }
 
 /**
@@ -54,7 +98,7 @@ export interface PresentedCredential {
 export function extractCredential(
   request: Request,
   url: URL,
-  allowQueryParam: boolean,
+  carriers: RealtimeCarriers,
 ): PresentedCredential {
   const headerKey = request.headers.get("apikey");
   const auth = request.headers.get("authorization");
@@ -64,18 +108,46 @@ export function extractCredential(
   // Only for realtime, and only because a browser WebSocket cannot set headers.
   // Accepting a query-param key on every path would mean any request could
   // carry credentials in a URL, where they land in logs and Referer headers.
-  const queryKey = allowQueryParam ? url.searchParams.get("apikey") : null;
+  const queryKey = carriers.queryParam
+    ? (apikeyParamNames(url.searchParams)
+        .map((name) => url.searchParams.get(name))
+        .find((value): value is string => value !== null) ?? null)
+    : null;
+
+  // The other half of the same carve-out. `buildUpstreamRequest` has always
+  // REWRITTEN a `dd_`-prefixed subprotocol, so the header was treated as a
+  // credential location on the way out while being invisible on the way in --
+  // which meant the header-less browser handshake the carve-out exists for was
+  // answered 401 for want of a credential it was carrying all along.
+  const protocolKey = carriers.protocol
+    ? (protocolEntries(request).find(isMemberToken) ?? null)
+    : null;
 
   const token =
-    [headerKey, bearer, queryKey].find(
+    [headerKey, bearer, queryKey, protocolKey].find(
       (candidate): candidate is string =>
         typeof candidate === "string" && isMemberToken(candidate),
     ) ?? null;
 
+  const bearerIsMember = bearer !== null && isMemberToken(bearer);
   const userJwt =
-    bearer && !isMemberToken(bearer) && looksLikeJwt(bearer) ? bearer : null;
+    bearer && !bearerIsMember && looksLikeJwt(bearer) ? bearer : null;
 
-  return { token, userJwt };
+  return {
+    token,
+    userJwt,
+    malformedBearer: bearer !== null && !bearerIsMember && userJwt === null,
+  };
+}
+
+/** `Sec-WebSocket-Protocol` as a trimmed list, empty when absent. */
+export function protocolEntries(request: Request): string[] {
+  const raw = request.headers.get("sec-websocket-protocol");
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
 }
 
 /**

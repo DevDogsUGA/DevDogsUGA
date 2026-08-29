@@ -114,30 +114,40 @@ from the database rather than inferring it from the request host.
 
 ## What the proxy does per request
 
-Credentials first, then routing.
+Credentials first, then routing — with one step ahead of both.
 
+0. **Answer a CORS preflight.** An `OPTIONS` carrying `Origin` and
+   `Access-Control-Request-Method` is answered `204` here and goes no further.
+   It has to be: a browser strips `apikey` and `Authorization` from a preflight by design, so the credential check below refused every one — and `apikey` makes every supabase-js call preflighted, so that was every cross-origin browser request. Real Supabase answers its own, so this is fidelity, not a favour. The answer is identical for every path and hostname, so it discloses nothing. Proxy errors carry `Access-Control-Allow-Origin` too, without which the browser reports an opaque CORS failure and the named `code` never surfaces.
 1. **Classify the path.** `url.pathname` is already normalized by the URL parser,
    so `/storage/v1/../../rest/v1/…` cannot be judged as storage while the origin
-   treats it as REST.
+   treats it as REST. Normalization is not decoding, though, so the path is decoded and classified again, and refused when that **changes** the answer — which stops `/storage/v1/%2e%2e%2f%2e%2e%2fpg/query` while leaving a storage key legitimately containing `%2F` alone.
 2. **Find the member token** in `apikey`, in `Authorization: Bearer`, or — for
-   realtime only — in the `apikey` query parameter. No token at all is `401`
-   before anything else happens, so nobody maps which services exist without
-   presenting one.
+   realtime only — in the `apikey` query parameter (in any case) or in
+   `Sec-WebSocket-Protocol`. No token at all is `401` before anything else
+   happens, so nobody maps which services exist without presenting one. An
+   `Authorization: Bearer` that is neither a member token nor a JWT is `401`
+   `invalid_session` rather than being quietly replaced with the project key,
+   which used to answer `200` as `anon` where real Supabase answers `401`.
 3. **Resolve it** against the platform, hostname and token hash together. A
    retired hostname is `410 Gone` naming the environment it was; an unknown one
    is the same `410`, unnamed; anything wrong with the credential is one
-   undifferentiated `401`. See
+   undifferentiated `401`. A platform that cannot be **asked** is `503 platform_unavailable` with a retry hint: folding an outage into the unknown-hostname answer told every member their environment was permanently gone, which is what an expired proxy token would produce. An `ok` row missing a field, or a secret scope whose vault secret is gone, is `503 credential_unavailable` — refused, never downgraded. See
    [Access](/docs/sandbox/guides/access) for the function behind this.
 4. **Refuse a secret token from a browser** `User-Agent` with `401`, logged, and
    without contacting upstream.
 5. **Reject anything else that does not belong** — a path outside the allowlist
-   is `404`, a body over 1 MiB is `413`.
+   is `404`, a body over 1 MiB is `413`. The cap is enforced **as the body
+   arrives** rather than after `arrayBuffer()`, so it bounds what the isolate
+   allocates and not merely what gets forwarded.
 
 | Path prefix                                                | Handling                                       |
 | ---------------------------------------------------------- | ---------------------------------------------- |
 | `/rest/v1/`, `/auth/v1/`, `/storage/v1/`, `/functions/v1/` | Swap `apikey`, forward                         |
 | `/realtime/v1/`                                            | Swap the `apikey` **query parameter** too      |
 | everything else                                            | `404` — the allowlist is the security boundary |
+
+Every `apikey` **query parameter** is rewritten on every path class, in any case. The query string is copied upstream verbatim, so a rewrite narrower than the copy is a leak: a REST request carrying `?apikey=dd_secret_…` handed the member's own token to Supabase inside a URL.
 
 The upstream request starts from an **empty `Headers`** rather than a copy of the
 incoming one, and the request's headers are then copied in against a skip list:
@@ -148,12 +158,20 @@ Starting empty is what makes the skip list the only thing to read — and what
 makes forgetting one a visible omission rather than a silent forward. `apikey`
 is then set to the real upstream key, and `Authorization` carries the user's JWT
 when there is one and the key otherwise. An upstream fetch that throws answers `503` with a
-four-minute retry hint; the Worker never concludes "paused" on its own.
+four-minute retry hint; the Worker never concludes "paused" on its own. Anything
+that throws past all of this is a named `500 proxy_error`, not a Cloudflare 1101
+interstitial with no `code` in it.
+
+The **response** path was not a mirror of that, and the asymmetry was a hole: it deleted two header names and relayed the rest, the copy-then-edit posture the request path rejects. `Location` is now rewritten wherever the project origin appears — percent-encoded included, since the OAuth `redirect_uri` is where it hides — and a `Set-Cookie` scoped by `Domain` to the project host loses that attribute. Without both, a member signing in with a provider followed the redirect to the real project and every later request bypassed the proxy: no audit row, and revoking their token stopped nothing.
 
 ## WebSockets pass through
 
 Realtime is proxied by forwarding the `Upgrade` request and returning the
-response. The Worker never calls `accept()`, so it runs for the **handshake
+response **exactly as it came** — not rebuilt. `new Response` rejects any status
+outside 200–599, so reconstructing a `101` throws `RangeError`, and the
+`webSocket` handle would not survive the copy in any case. The two response
+headers this proxy strips are therefore not stripped from a handshake, which has
+no body to describe. The Worker never calls `accept()`, so it runs for the **handshake
 only**; after that the client and Supabase talk through a tunnel it is not in. No
 duration billing, no memory pinning — a WebSocket costs exactly one Worker
 request.

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildProxyHostname,
   isValidProxyHostname,
-  SANDBOX_SUFFIX,
+  sandboxSuffix,
 } from "~/server/sandbox/hostname";
 import { generateToken, hashToken, scopeOf } from "~/server/sandbox/tokens";
 import { KeySelectionError, selectKeys } from "~/server/supabase/keys";
@@ -119,49 +119,125 @@ describe("mapProjectStatus", () => {
 });
 
 describe("buildProxyHostname", () => {
+  // The suffix is per deployment now, so every case names the one it means.
+  const PROD = { deployEnv: "production" } as const;
+  const PROD_SUFFIX = sandboxSuffix("production");
+
   it("produces exactly one label above the apex", () => {
-    const host = buildProxyHostname("Lantern", "abc123");
+    const host = buildProxyHostname("Lantern", { ...PROD, suffix: "abc123" });
     expect(host).toBe("lantern-abc123-sandbox.devdogsuga.org");
     // The constraint that keeps it inside the free wildcard certificate.
-    expect(host.slice(0, -SANDBOX_SUFFIX.length)).not.toContain(".");
+    expect(host.slice(0, -PROD_SUFFIX.length)).not.toContain(".");
   });
 
   it("strips anything that would add a level to the hostname", () => {
-    const host = buildProxyHostname("team.evil.co", "abc123");
-    expect(host.slice(0, -SANDBOX_SUFFIX.length)).not.toContain(".");
-    expect(isValidProxyHostname(host)).toBe(true);
+    const host = buildProxyHostname("team.evil.co", {
+      ...PROD,
+      suffix: "abc123",
+    });
+    expect(host.slice(0, -PROD_SUFFIX.length)).not.toContain(".");
+    expect(isValidProxyHostname(host, "production")).toBe(true);
   });
 
   it.each([
     "Lantern",
     "  spaces  everywhere  ",
     "UPPER CASE",
-    "emoji 🎉 name",
+    "emoji \u{1F389} name",
     "a".repeat(100),
     "-leading-and-trailing-",
-    "café",
+    "caf\u00e9",
   ])("builds a legal label from %j", (name) => {
-    expect(isValidProxyHostname(buildProxyHostname(name, "abc123"))).toBe(true);
+    expect(
+      isValidProxyHostname(
+        buildProxyHostname(name, { ...PROD, suffix: "abc123" }),
+        "production",
+      ),
+    ).toBe(true);
   });
 
   it("falls back rather than emitting a label starting with a separator", () => {
-    const host = buildProxyHostname("!!!", "abc123");
+    const host = buildProxyHostname("!!!", { ...PROD, suffix: "abc123" });
     expect(host).toBe("env-abc123-sandbox.devdogsuga.org");
-    expect(isValidProxyHostname(host)).toBe(true);
+    expect(isValidProxyHostname(host, "production")).toBe(true);
   });
 
   it("is unguessable from the team name alone", () => {
     // Not collision avoidance -- the unique constraint handles that -- but so
     // that knowing a team exists does not tell you where its instance lives.
-    const a = buildProxyHostname("Lantern");
-    const b = buildProxyHostname("Lantern");
+    const a = buildProxyHostname("Lantern", PROD);
+    const b = buildProxyHostname("Lantern", PROD);
     expect(a).not.toBe(b);
   });
 
   it("rejects a hostname that would fall outside the wildcard", () => {
-    expect(isValidProxyHostname("a.b-sandbox.devdogsuga.org")).toBe(false);
-    expect(isValidProxyHostname("x-sandbox.example.com")).toBe(false);
-    expect(isValidProxyHostname("-bad-sandbox.devdogsuga.org")).toBe(false);
+    expect(
+      isValidProxyHostname("a.b-sandbox.devdogsuga.org", "production"),
+    ).toBe(false);
+    expect(isValidProxyHostname("x-sandbox.example.com", "production")).toBe(
+      false,
+    );
+    expect(
+      isValidProxyHostname("-bad-sandbox.devdogsuga.org", "production"),
+    ).toBe(false);
+  });
+
+  describe("the per-environment suffix", () => {
+    // The bug this replaced: one constant, `-sandbox.devdogsuga.org`, served
+    // all three deployments while apps/sandbox/wrangler.jsonc routed staging at
+    // `*-sandbox-staging.devdogsuga.org/*`. Nothing generated a hostname
+    // matching that route, so staging traffic hit the PRODUCTION Worker, which
+    // resolved the token against the production database and answered 410.
+    it("builds a staging hostname the staging Worker route matches", () => {
+      const host = buildProxyHostname("Lantern", {
+        deployEnv: "staging",
+        suffix: "abc123",
+      });
+      expect(host).toBe("lantern-abc123-sandbox-staging.devdogsuga.org");
+      // The wildcard is `*-sandbox-staging.devdogsuga.org`, one label deep.
+      expect(host.endsWith("-sandbox-staging.devdogsuga.org")).toBe(true);
+      expect(host.slice(0, -sandboxSuffix("staging").length)).not.toContain(
+        ".",
+      );
+    });
+
+    it("does not let a staging hostname match the production route", () => {
+      const staging = buildProxyHostname("Lantern", {
+        deployEnv: "staging",
+        suffix: "abc123",
+      });
+      // `*-sandbox.devdogsuga.org` is one label deep, so a name carrying an
+      // extra `-staging` label does not fall under it.
+      expect(isValidProxyHostname(staging, "production")).toBe(false);
+      expect(isValidProxyHostname(staging, "staging")).toBe(true);
+    });
+
+    it("does not let a production hostname match the staging route", () => {
+      const production = buildProxyHostname("Lantern", {
+        ...PROD,
+        suffix: "abc123",
+      });
+      expect(isValidProxyHostname(production, "staging")).toBe(false);
+      expect(isValidProxyHostname(production, "production")).toBe(true);
+    });
+
+    it("keeps every environment one label deep", () => {
+      // Universal SSL covers the apex and first-level subdomains only; a second
+      // label needs Advanced Certificate Manager and fails as a TLS error on
+      // somebody's phone rather than as anything this code reports.
+      for (const deployEnv of [
+        "development",
+        "staging",
+        "production",
+      ] as const) {
+        const host = buildProxyHostname("Lantern", {
+          deployEnv,
+          suffix: "abc",
+        });
+        expect(host.split(".").length).toBe(3);
+        expect(isValidProxyHostname(host, deployEnv)).toBe(true);
+      }
+    });
   });
 });
 
