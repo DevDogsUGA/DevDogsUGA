@@ -110,6 +110,13 @@ export interface EventLdInput {
   summary: string | null;
   /** `locationLine(building, location)` — null when neither is known. */
   where: string | null;
+  /**
+   * When the club called the night off, or null.
+   *
+   * A cancelled meeting keeps its URL and its row, so this cannot be inferred
+   * from the page existing — see `eventStatus` below.
+   */
+  cancelledAt: Date | null;
 }
 
 /**
@@ -136,9 +143,16 @@ export function eventLd(meeting: EventLdInput) {
     url: `${BASE}/events/${encodeURIComponent(meeting.slug)}`,
     startDate: meeting.startsAt.toISOString(),
     endDate: meeting.endsAt.toISOString(),
-    // True of anything still on the schedule: a cancelled meeting is soft
-    // deleted in Airtable, and this page 404s before it can be rendered.
-    eventStatus: "https://schema.org/EventScheduled",
+    // Read from the column rather than assumed. This used to be hardcoded to
+    // `EventScheduled` on the premise that a cancelled meeting was soft
+    // deleted in Airtable and 404ed before rendering — which stopped being
+    // true when cancellation became a column and the night kept its page. A
+    // crawler was then told a cancelled meeting was going ahead, which is the
+    // one thing `eventStatus` exists to prevent.
+    eventStatus:
+      meeting.cancelledAt === null
+        ? "https://schema.org/EventScheduled"
+        : "https://schema.org/EventCancelled",
     ...(meeting.summary ? { description: meeting.summary } : {}),
     ...(meeting.where
       ? {

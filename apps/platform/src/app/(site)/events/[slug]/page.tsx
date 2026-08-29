@@ -133,6 +133,9 @@ export default async function MeetingPage({
   const now = new Date();
   const happeningNow = now >= meeting.startsAt && now < meeting.endsAt;
   const ended = now >= meeting.endsAt;
+  // A cancelled night is still a night with a page, a room and an agenda —
+  // only the clock-shaped claims and the two actions come off it below.
+  const cancelled = meeting.cancelledAt !== null;
   const where = locationLine(meeting.building, meeting.location);
 
   return (
@@ -156,12 +159,11 @@ export default async function MeetingPage({
           endsAt: meeting.endsAt,
           summary: meeting.summary,
           where,
+          cancelledAt: meeting.cancelledAt,
         })}
       />
-      {/* Derived chips then the officer's kind. An unrecognised kind prints
-          itself in the neutral pill rather than vanishing: `kind` is an
-          Airtable single-select an officer can extend without touching this
-          repository. */}
+      {/* Derived chips then the officer's kind, which prints itself in the
+          neutral pill when it has no hue of its own — see `kindBadge`. */}
       <div className="flex flex-wrap items-center gap-2">
         {badges.map((badge) => (
           <span
@@ -173,27 +175,51 @@ export default async function MeetingPage({
         ))}
       </div>
 
+      {/* A cancelled night keeps this URL rather than 404ing, for the same
+          reason the schedule keeps its row: the link is already in Discord and
+          in people's calendars, and a page that has vanished tells a member
+          nothing — they walk over anyway. So the notice comes first, and the
+          agenda below stays rendered: what was going to happen is still what
+          somebody clicked to find out.
+
+          `cancellationReason` is null even on a cancelled night — the fact and
+          the explanation arrive in separate keystrokes — so the word carries
+          the meaning on its own and the reason extends it when there is one. */}
+      {cancelled && (
+        <p className="rounded-lg border border-rose-400/30 bg-rose-400/10 p-3 text-sm/relaxed text-rose-200">
+          <span className="font-semibold">Cancelled</span>
+          {meeting.cancellationReason !== null && (
+            <> — {meeting.cancellationReason}</>
+          )}
+        </p>
+      )}
+
       {/* The span itself is in the dialog header, where it stays put while
-          this scrolls; what belongs here is the bit that needs the clock. */}
-      <p className="text-sm font-semibold text-white">
-        {happeningNow ? (
-          <>Happening now — until {formatEventTime(meeting.endsAt)}</>
-        ) : ended ? (
-          <>
-            Ended{" "}
-            <time dateTime={meeting.endsAt.toISOString()}>
-              {formatRelative(meeting.endsAt, now)}
-            </time>
-          </>
-        ) : (
-          <>
-            Starts{" "}
-            <time dateTime={meeting.startsAt.toISOString()}>
-              {formatRelative(meeting.startsAt, now)}
-            </time>
-          </>
-        )}
-      </p>
+          this scrolls; what belongs here is the bit that needs the clock.
+          Suppressed entirely for a cancelled night: "starts in two days" is
+          the actively wrong half of that sentence, and the notice above has
+          already said the useful one. */}
+      {!cancelled && (
+        <p className="text-sm font-semibold text-white">
+          {happeningNow ? (
+            <>Happening now — until {formatEventTime(meeting.endsAt)}</>
+          ) : ended ? (
+            <>
+              Ended{" "}
+              <time dateTime={meeting.endsAt.toISOString()}>
+                {formatRelative(meeting.endsAt, now)}
+              </time>
+            </>
+          ) : (
+            <>
+              Starts{" "}
+              <time dateTime={meeting.startsAt.toISOString()}>
+                {formatRelative(meeting.startsAt, now)}
+              </time>
+            </>
+          )}
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <p className="flex items-center gap-2 text-sm text-mauve-300">
@@ -258,48 +284,53 @@ export default async function MeetingPage({
         )}
       </section>
 
-      {(meeting.rsvpUrl !== null ||
-        (meeting.attendanceFormUrl !== null &&
-          attendanceFormIsLive(meeting, now))) && (
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-2">
-            {meeting.rsvpUrl !== null && (
-              <a
-                href={meeting.rsvpUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={ACTION_DARK_CLS}
-              >
-                RSVP <ArrowUpRightIcon />
-              </a>
-            )}
-            {/* `attendanceFormIsLive` answers "is there a link, and is the
+      {/* Neither action survives a cancellation. An RSVP button on a night
+          that is not happening collects replies to nothing, and a check-in
+          link would write attendance against it — the row a member would then
+          have to argue their way out of. */}
+      {!cancelled &&
+        (meeting.rsvpUrl !== null ||
+          (meeting.attendanceFormUrl !== null &&
+            attendanceFormIsLive(meeting, now))) && (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              {meeting.rsvpUrl !== null && (
+                <a
+                  href={meeting.rsvpUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={ACTION_DARK_CLS}
+                >
+                  RSVP <ArrowUpRightIcon />
+                </a>
+              )}
+              {/* `attendanceFormIsLive` answers "is there a link, and is the
                 meeting on" — NOT "is attendance open", which this process
                 cannot know since the Airtable form's own open and close is the
                 only gate. So the button is a pointer and the line below it
                 refuses to promise anything. The null check is separate because
                 the predicate does not narrow the type. */}
+              {meeting.attendanceFormUrl !== null &&
+                attendanceFormIsLive(meeting, now) && (
+                  <a
+                    href={meeting.attendanceFormUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={ACTION_DARK_CLS}
+                  >
+                    <ClipboardTextIcon /> Check in <ArrowUpRightIcon />
+                  </a>
+                )}
+            </div>
             {meeting.attendanceFormUrl !== null &&
               attendanceFormIsLive(meeting, now) && (
-                <a
-                  href={meeting.attendanceFormUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={ACTION_DARK_CLS}
-                >
-                  <ClipboardTextIcon /> Check in <ArrowUpRightIcon />
-                </a>
+                <p className="text-xs text-mauve-400">
+                  Officers open and close the check-in form themselves, so it
+                  may not be taking responses yet.
+                </p>
               )}
           </div>
-          {meeting.attendanceFormUrl !== null &&
-            attendanceFormIsLive(meeting, now) && (
-              <p className="text-xs text-mauve-400">
-                Officers open and close the check-in form themselves, so it may
-                not be taking responses yet.
-              </p>
-            )}
-        </div>
-      )}
+        )}
 
       {ended && (
         <p className="border-t border-mauve-800 pt-3 text-sm text-mauve-400">
