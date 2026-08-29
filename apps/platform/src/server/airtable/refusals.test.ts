@@ -2,17 +2,24 @@ import { describe, expect, it } from "vitest";
 import {
   describeIncompleteMeeting,
   checkCompetition,
+  checkCompetitionValues,
   checkMeeting,
   checkWorkshop,
+  checkWorkshopValues,
   type CompetitionFacts,
   type MeetingFacts,
   type WorkshopFacts,
 } from "./refusals";
 import {
   MEETING_CANCELLATION_REASON_MAX_LENGTH,
+  MEETING_NAME_OVERRIDE_MAX_LENGTH,
   MEETING_SUMMARY_MAX_LENGTH,
+  WORKSHOP_DESCRIPTION_MAX_LENGTH,
+  WORKSHOP_TITLE_MAX_LENGTH,
+  competitions as competitionsSpec,
   meetings as meetingsSpec,
   parseRsvpUrl,
+  workshops as workshopsSpec,
 } from "@devdogsuga/airtable";
 
 /**
@@ -42,12 +49,16 @@ import {
 const summaryParse = meetingsSpec.fields.summary.parse;
 const rsvpParse = meetingsSpec.fields.rsvpUrl.parse;
 const reasonParse = meetingsSpec.fields.cancellationReason.parse;
+const nameParse = meetingsSpec.fields.nameOverride.parse;
+const formParse = meetingsSpec.fields.attendanceForm.parse;
 
 function meetingFacts(raw: {
   summary?: string;
   rsvpUrl?: string;
   cancelledAt?: string;
   cancellationReason?: string;
+  nameOverride?: string;
+  attendanceForm?: string;
 }): MeetingFacts {
   return {
     airtableRecordId: "recMeeting",
@@ -60,6 +71,10 @@ function meetingFacts(raw: {
     cancelledAt: raw.cancelledAt ?? null,
     rawCancellationReason: raw.cancellationReason,
     cancellationReason: reasonParse(raw.cancellationReason),
+    rawNameOverride: raw.nameOverride,
+    nameOverride: nameParse(raw.nameOverride),
+    rawAttendanceForm: raw.attendanceForm,
+    attendanceForm: formParse(raw.attendanceForm),
   };
 }
 
@@ -356,6 +371,7 @@ describe("workshops with attendance", () => {
     const result = checkWorkshop(WORKSHOP, {
       meetingId: "meeting-b",
       projectId: "project-a",
+      projectCleared: false,
     });
 
     expect(result.refusals.map((r) => r.code)).toEqual([
@@ -371,6 +387,7 @@ describe("workshops with attendance", () => {
     const result = checkWorkshop(WORKSHOP, {
       meetingId: "meeting-a",
       projectId: "project-b",
+      projectCleared: false,
     });
 
     expect(result.refusals.map((r) => r.code)).toEqual([
@@ -383,6 +400,7 @@ describe("workshops with attendance", () => {
     const result = checkWorkshop(WORKSHOP, {
       meetingId: "meeting-b",
       projectId: "project-b",
+      projectCleared: false,
     });
 
     // Two refusals, not one "this row is frozen" — an officer who changed two
@@ -394,7 +412,7 @@ describe("workshops with attendance", () => {
   it("allows any edit to a workshop nobody attended", () => {
     const result = checkWorkshop(
       { ...WORKSHOP, attendanceCount: 0 },
-      { meetingId: "meeting-b", projectId: "project-b" },
+      { meetingId: "meeting-b", projectId: "project-b", projectCleared: false },
     );
 
     expect(result.refusals).toEqual([]);
@@ -407,6 +425,7 @@ describe("workshops with attendance", () => {
     const result = checkWorkshop(WORKSHOP, {
       meetingId: null,
       projectId: null,
+      projectCleared: false,
     });
 
     expect(result.refusals).toEqual([]);
@@ -636,5 +655,320 @@ describe("describeIncompleteMeeting", () => {
     const message = describeIncompleteMeeting(missingEnd, false);
     expect(message).toContain("Nothing is wrong with what you have entered");
     expect(message).not.toMatch(/refus|reject|invalid|error/i);
+  });
+});
+
+/**
+ * The rules below guard CHECK CONSTRAINTS rather than layouts, which makes
+ * them a different kind of test from the ones above.
+ *
+ * A missing summary rule costs a bad card. A missing rule here cost the whole
+ * pass: the value reached Postgres, the constraint rejected the write, and the
+ * exception unwound past every table left in the run — while `writeSyncStatus`
+ * sat inside the same `try`, so nothing was reported anywhere. One officer
+ * typing one character too many stopped the entire sync and left a clean grid
+ * behind it.
+ *
+ * So each of these asserts the refusal AND that the parser really returns null
+ * for the value, because a rule that fires while the parser still accepts the
+ * text would let the write through regardless.
+ */
+describe("meeting name", () => {
+  it("stays silent when no name is written", () => {
+    // The ordinary case, and by a wide margin: most nights have no name at
+    // all — the heading is built from the workshops and the judging.
+    expect(checkMeeting(meetingFacts({})).refusals).toEqual([]);
+  });
+
+  it("refuses a name longer than a schedule row", () => {
+    const long = "x".repeat(MEETING_NAME_OVERRIDE_MAX_LENGTH + 1);
+    const facts = meetingFacts({ nameOverride: long });
+
+    const result = checkMeeting(facts);
+
+    expect(result.refusals.map((r) => r.code)).toEqual([
+      "meeting_name_too_long",
+    ]);
+    expect(result.rejectedFields.has("nameOverride")).toBe(true);
+    expect(result.refusals[0]!.message).toContain(String(long.length));
+    // The half that matters: the parser refused it too, so the caller has a
+    // null to drop rather than an 81-character string to write.
+    expect(facts.nameOverride).toBeNull();
+  });
+
+  it("accepts a name exactly at the limit", () => {
+    const facts = meetingFacts({
+      nameOverride: "x".repeat(MEETING_NAME_OVERRIDE_MAX_LENGTH),
+    });
+
+    expect(checkMeeting(facts).refusals).toEqual([]);
+    expect(facts.nameOverride).toHaveLength(MEETING_NAME_OVERRIDE_MAX_LENGTH);
+  });
+});
+
+describe("meeting attendance form", () => {
+  it("stays silent when no form is written", () => {
+    // A meeting with no workshop has no form, and one whose officer has not
+    // made this week's yet is still a meeting.
+    expect(checkMeeting(meetingFacts({})).refusals).toEqual([]);
+  });
+
+  it("accepts an Airtable share link", () => {
+    const facts = meetingFacts({
+      attendanceForm: "https://airtable.com/shrABCDEF123456",
+    });
+
+    expect(checkMeeting(facts).refusals).toEqual([]);
+    expect(facts.attendanceForm).toBe("https://airtable.com/shrABCDEF123456");
+  });
+
+  it("refuses a form on any other host", () => {
+    // The realistic mispaste: an officer who made this week's form in Google
+    // Forms out of habit.
+    const facts = meetingFacts({
+      attendanceForm: "https://docs.google.com/forms/d/e/1FAIpQ/viewform",
+    });
+
+    const result = checkMeeting(facts);
+
+    expect(result.refusals.map((r) => r.code)).toEqual([
+      "meeting_attendance_form_host",
+    ]);
+    expect(result.rejectedFields.has("attendanceFormUrl")).toBe(true);
+    expect(facts.attendanceForm).toBeNull();
+  });
+
+  it("refuses a credential-carrying url on the allowed host", () => {
+    // `new URL` accepts this and the hostname passes, so only the shape check
+    // stops it — and `meetings_attendanceFormUrl_airtable` would reject it.
+    const facts = meetingFacts({
+      attendanceForm: "https://someone@airtable.com/shrABC",
+    });
+
+    expect(checkMeeting(facts).refusals.map((r) => r.code)).toEqual([
+      "meeting_attendance_form_host",
+    ]);
+    expect(facts.attendanceForm).toBeNull();
+  });
+});
+
+describe("the cancellation pair reports both faults at once", () => {
+  it("fires the length rule even when the date is missing", () => {
+    // ⚠️ The regression this exists to hold down. These two used to be an
+    // `if`/`else if`, so an officer who typed 220 characters BEFORE setting
+    // Cancelled was told only "set Cancelled and both appear within fifteen
+    // minutes" — untrue, and it cost them a second fifteen-minute round trip
+    // to learn about a fault that was knowable on the first pass.
+    const long = "x".repeat(MEETING_CANCELLATION_REASON_MAX_LENGTH + 40);
+
+    const result = checkMeeting(meetingFacts({ cancellationReason: long }));
+
+    expect(result.refusals.map((r) => r.code).sort()).toEqual([
+      "meeting_cancellation_reason_too_long",
+      "meeting_reason_without_cancellation",
+    ]);
+  });
+
+  it("does not promise the explanation is the only thing missing", () => {
+    // A refused reason is DROPPED from the write, so a previously published
+    // explanation stays on the page. The old wording said "only the
+    // explanation is missing", which sent an officer to look at a site that
+    // was still showing one.
+    const result = checkMeeting(
+      meetingFacts({
+        cancelledAt: CANCELLED,
+        cancellationReason: "x".repeat(
+          MEETING_CANCELLATION_REASON_MAX_LENGTH + 1,
+        ),
+      }),
+    );
+
+    expect(result.refusals[0]!.message).not.toContain("only the explanation");
+  });
+});
+
+describe("clearing a workshop's project", () => {
+  it("refuses the clear once anybody has been credited", () => {
+    // ⚠️ The data loss this file exists to prevent, and the one case that got
+    // through: `workshop_project_changed` only fires for a project that
+    // DIFFERS, and an emptied cell arrives as null, which every other rule
+    // here reads as "not a change". `memberStars` groups on `w."projectId"`,
+    // so the write took the project off stars twelve people had earned.
+    const result = checkWorkshop(WORKSHOP, {
+      meetingId: "meeting-a",
+      projectId: null,
+      projectCleared: true,
+    });
+
+    expect(result.refusals.map((r) => r.code)).toEqual([
+      "workshop_project_cleared",
+    ]);
+    expect(result.rejectedFields.has("projectId")).toBe(true);
+    expect(result.refusals[0]!.message).toContain("12");
+  });
+
+  it("allows the clear on a workshop nobody attended", () => {
+    // Unlinking a session that turned out to teach a skill rather than a
+    // codebase is the reason the column is nullable. It stays legal right up
+    // until somebody has been credited for it.
+    const result = checkWorkshop(
+      { ...WORKSHOP, attendanceCount: 0 },
+      { meetingId: "meeting-a", projectId: null, projectCleared: true },
+    );
+
+    expect(result.refusals).toEqual([]);
+  });
+
+  it("allows the clear when there was no project to begin with", () => {
+    const result = checkWorkshop(
+      { ...WORKSHOP, currentProjectId: null },
+      { meetingId: "meeting-a", projectId: null, projectCleared: true },
+    );
+
+    expect(result.refusals).toEqual([]);
+  });
+
+  it("still treats an unresolved link as no change", () => {
+    // The distinction the whole rule turns on. Both arrive as `projectId:
+    // null`; only one of them is an edit.
+    const result = checkWorkshop(WORKSHOP, {
+      meetingId: "meeting-a",
+      projectId: null,
+      projectCleared: false,
+    });
+
+    expect(result.refusals).toEqual([]);
+  });
+});
+
+const titleParse = workshopsSpec.fields.title.parse;
+const descriptionParse = workshopsSpec.fields.description.parse;
+
+function workshopValueFacts(raw: { title?: string; description?: string }) {
+  return {
+    airtableRecordId: "recWorkshop",
+    rawTitle: raw.title,
+    title: titleParse(raw.title),
+    rawDescription: raw.description,
+    description: descriptionParse(raw.description),
+  };
+}
+
+describe("workshop values", () => {
+  it("stays silent on a workshop with neither written", () => {
+    // Both are optional: a workshop authored before these columns existed
+    // renders off its project's name and is not a fault.
+    expect(checkWorkshopValues(workshopValueFacts({})).refusals).toEqual([]);
+  });
+
+  it("refuses a title longer than a schedule row", () => {
+    const long = "x".repeat(WORKSHOP_TITLE_MAX_LENGTH + 1);
+    const facts = workshopValueFacts({ title: long });
+
+    const result = checkWorkshopValues(facts);
+
+    expect(result.refusals.map((r) => r.code)).toEqual([
+      "workshop_title_too_long",
+    ]);
+    // Load-bearing: the caller drops the key on this, and dropping is what
+    // stops a one-character edit erasing the title that was published.
+    expect(result.rejectedFields.has("title")).toBe(true);
+    expect(facts.title).toBeNull();
+  });
+
+  it("refuses a description longer than the dialog", () => {
+    const facts = workshopValueFacts({
+      description: "x".repeat(WORKSHOP_DESCRIPTION_MAX_LENGTH + 1),
+    });
+
+    const result = checkWorkshopValues(facts);
+
+    expect(result.refusals.map((r) => r.code)).toEqual([
+      "workshop_description_too_long",
+    ]);
+    expect(result.rejectedFields.has("description")).toBe(true);
+  });
+
+  it("refuses each field independently", () => {
+    const result = checkWorkshopValues(
+      workshopValueFacts({
+        title: "x".repeat(WORKSHOP_TITLE_MAX_LENGTH + 1),
+        description: "y".repeat(WORKSHOP_DESCRIPTION_MAX_LENGTH + 1),
+      }),
+    );
+
+    expect(result.refusals).toHaveLength(2);
+    expect(result.rejectedFields).toEqual(new Set(["title", "description"]));
+  });
+
+  it("accepts both exactly at their limits", () => {
+    const facts = workshopValueFacts({
+      title: "x".repeat(WORKSHOP_TITLE_MAX_LENGTH),
+      description: "y".repeat(WORKSHOP_DESCRIPTION_MAX_LENGTH),
+    });
+
+    expect(checkWorkshopValues(facts).refusals).toEqual([]);
+    expect(facts.title).toHaveLength(WORKSHOP_TITLE_MAX_LENGTH);
+  });
+});
+
+const maxTeamSizeParse = competitionsSpec.fields.maxTeamSize.parse;
+const requirementCountParse = competitionsSpec.fields.requirementCount.parse;
+
+function competitionValueFacts(raw: {
+  maxTeamSize?: number;
+  requirementCount?: number;
+}) {
+  return {
+    airtableRecordId: "recCompetition",
+    rawMaxTeamSize: raw.maxTeamSize,
+    maxTeamSize: maxTeamSizeParse(raw.maxTeamSize),
+    rawRequirementCount: raw.requirementCount,
+    requirementCount: requirementCountParse(raw.requirementCount),
+  };
+}
+
+describe("competition numbers", () => {
+  it("stays silent when neither is set", () => {
+    expect(checkCompetitionValues(competitionValueFacts({})).refusals).toEqual(
+      [],
+    );
+  });
+
+  it("refuses a max team size of zero", () => {
+    // `competitions_maxTeamSize_positive`. Typing 0 is an ordinary slip and
+    // used to be an exception raised in the middle of the pull.
+    const facts = competitionValueFacts({ maxTeamSize: 0 });
+
+    expect(checkCompetitionValues(facts).refusals.map((r) => r.code)).toEqual([
+      "competition_max_team_size_invalid",
+    ]);
+    expect(facts.maxTeamSize).toBeNull();
+  });
+
+  it("refuses a negative requirement count", () => {
+    const facts = competitionValueFacts({ requirementCount: -1 });
+
+    expect(checkCompetitionValues(facts).refusals.map((r) => r.code)).toEqual([
+      "competition_requirement_count_invalid",
+    ]);
+    expect(facts.requirementCount).toBeNull();
+  });
+
+  it("accepts a zero requirement count", () => {
+    // Zero requirements is a real competition, unlike a zero-person team.
+    // `competitions_requirementCount_nonneg` allows it, so this must too.
+    const facts = competitionValueFacts({ requirementCount: 0 });
+
+    expect(checkCompetitionValues(facts).refusals).toEqual([]);
+    expect(facts.requirementCount).toBe(0);
+  });
+
+  it("refuses a fractional team size", () => {
+    const facts = competitionValueFacts({ maxTeamSize: 2.5 });
+
+    expect(checkCompetitionValues(facts).refusals.map((r) => r.code)).toEqual([
+      "competition_max_team_size_invalid",
+    ]);
   });
 });

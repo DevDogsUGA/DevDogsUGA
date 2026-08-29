@@ -186,6 +186,90 @@ export function meetingBadges(meeting: {
   return badges;
 }
 
+// ── Cancellation ─────────────────────────────────────────────────────────────
+//
+// This lives here, beside the badges, because it is the same kind of fact and
+// has the same problem: every band renders it, and a band that forgets does
+// not fail — it renders a night that is not happening as a night that is.
+//
+// ⚠️ The loaders deliberately do NOT filter cancelled rows. `getMeetingsInRange`
+// and `getPastMeetings` keep them (see the note in `loaders/meetings.ts`), and
+// only `getUpcomingMeetings` drops them, because the schedule's whole reason
+// for keeping a cancelled night is that somebody was already told to turn up.
+// The consequence is that EVERY consumer of those two loaders is responsible
+// for the gate, and four of them silently were not: the calendar dot and its
+// popover, the past-meetings archive, the dialog header — whose title and time
+// are also the Radix accessible name and description, so a screen-reader user
+// was told only when and where — and `generateMetadata`, so the Discord unfurl
+// of the link people were sent still advertised the room and the hour.
+//
+// The predicate was also being re-derived as `meeting.cancelledAt !== null` at
+// each site that did remember, which is how the count got to four: there was
+// nothing to import, so there was nothing to notice the absence of.
+
+/** The least a row has to carry for the helpers below to judge it. */
+export interface CancellableMeeting {
+  cancelledAt: Date | null;
+  cancellationReason: string | null;
+}
+
+/**
+ * Whether the club has called this night off.
+ *
+ * Trivial on purpose. The value of it is not the expression, it is that there
+ * is ONE of them and it is importable — a band reaching for it is a band that
+ * has thought about the case.
+ */
+export function isCancelled(meeting: { cancelledAt: Date | null }): boolean {
+  return meeting.cancelledAt !== null;
+}
+
+/**
+ * The notice a cancelled night shows, or null when the night is on.
+ *
+ * The reason is optional even on a cancelled night — the fact and the
+ * explanation arrive in separate officer keystrokes, and `checkMeeting`
+ * refuses a reason that has outgrown the notice while keeping the
+ * cancellation. So the fact is stated alone whenever the words are missing,
+ * rather than the whole notice waiting on them.
+ *
+ * One string rather than a component because the callers need it in three
+ * shapes: rendered as text, as an OG description, and as a Radix accessible
+ * description where markup is not allowed at all.
+ */
+export function cancellationNotice(meeting: CancellableMeeting): string | null {
+  if (!isCancelled(meeting)) return null;
+  return meeting.cancellationReason === null
+    ? CANCELLED_LABEL
+    : `${CANCELLED_LABEL} — ${meeting.cancellationReason}`;
+}
+
+/**
+ * The word itself, so the schedule chip, the dialog notice and the unfurl
+ * cannot drift into three spellings of one status.
+ */
+export const CANCELLED_LABEL = "Cancelled";
+
+/**
+ * A cancelled night's dot, keeping the shape and losing the claim.
+ *
+ * Grey rather than absent: the square still has a meeting on it, and removing
+ * the dot would say the club had nothing planned that day, which is a
+ * different and equally wrong thing. Neutral rather than rose because the
+ * calendar's hues are a legend of what KIND of night it is, and "cancelled"
+ * is not a kind — a rose dot would read as judging at 4px.
+ */
+export function cancelledBadge(label: string): SegmentBadge {
+  return {
+    bg: "bg-mauve-300",
+    text: "text-black",
+    dot: "bg-mauve-400",
+    chipDark: "border-white/20 bg-white/5 text-mauve-300 line-through",
+    dotDark: "bg-mauve-600",
+    label,
+  };
+}
+
 /** The chip shape every light band uses, so padding and weight cannot drift. */
 export const CHIP_CLS =
   "rounded-sm px-2 py-0.5 text-xs font-bold tracking-wide uppercase";
@@ -196,8 +280,10 @@ export const CHIP_CLS =
 export const CHIP_DARK_CLS =
   "rounded-full border px-2.5 py-0.5 text-xs font-medium";
 
-/** A `kindOverride`'s chip on the console plate: neutral, because the value is
- *  an Airtable single-select this side has never heard of and has no hue. */
+/** The chip for a recognised kind with no hue of its own — `Study Session`,
+ *  `Interest Meeting`, `Social`. Neutral because those three deliberately have
+ *  no colour, NOT because the value is unknown: the list is closed at four, by
+ *  `parseMeetingKind` upstream and `meetings_kind_choices` in the database. */
 export const NEUTRAL_CHIP_DARK_CLS = "border-white/20 bg-white/5 text-white";
 
 /** A bordered action — the Directions trigger, RSVP, check-in. Light plates. */

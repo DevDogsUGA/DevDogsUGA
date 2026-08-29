@@ -33,7 +33,7 @@ const PROJECT_LINKS = PROJECTS.map((project) => ({
  * shell itself — every route on the site would prerender to nothing but the
  * <html> wrapper. Inside one, the year resolves at prerender time and is baked
  * into the static output, which also means it refreshes on each deploy rather
- * than per request. See docs/platform/caching.md.
+ * than per request. See docs/monorepo/stack/nextjs.md.
  *
  * `cacheLife("max")` is required for the same reason. A route's revalidate
  * window is the *minimum* across its cache entries, so leaving this on the

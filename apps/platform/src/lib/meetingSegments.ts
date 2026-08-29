@@ -185,8 +185,20 @@ export function resolveMeetingSegments(
  * next to a form that is closed.
  *
  * So this answers the narrower question it can actually answer — is there a
- * link, and is the meeting happening — and the copy around it is worded as a
- * pointer rather than a promise.
+ * link, is the meeting happening, and is it still ON — and the copy around it
+ * is worded as a pointer rather than a promise.
+ *
+ * ⚠️ `cancelledAt` is part of "is the meeting happening", and used to be
+ * missing from it. The guard existed exactly once, as a `!cancelled &&` at
+ * one of the three call sites; the other two were safe only by accident,
+ * because they happened to be fed by `getUpcomingMeetings`, which filters
+ * cancelled rows at the loader. `getMeetingsInRange` and `getMeetingBySlug`
+ * both KEEP them by design, so any caller reaching for this predicate with one
+ * of their rows got a live check-in button on a night that was called off —
+ * and an attendance row a member then has to argue their way out of.
+ *
+ * A predicate whose docstring says it answers "is the meeting on" has to
+ * actually answer it, rather than leave the last third to whoever calls it.
  */
 export function attendanceFormIsLive(
   // Structural, not a `Pick` of the loader's row type: importing that here
@@ -196,11 +208,13 @@ export function attendanceFormIsLive(
     startsAt: Date;
     endsAt: Date;
     attendanceFormUrl: string | null;
+    cancelledAt: Date | null;
   },
   now = new Date(),
 ): boolean {
   return (
     meeting.attendanceFormUrl !== null &&
+    meeting.cancelledAt === null &&
     now >= meeting.startsAt &&
     now < meeting.endsAt
   );

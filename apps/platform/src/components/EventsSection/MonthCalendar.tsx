@@ -37,7 +37,11 @@ import type { MeetingInRange } from "~/server/loaders/meetings";
 import { resolveMeetingSegments } from "~/lib/meetingSegments";
 import type { SegmentBadge } from "~/components/EventsSection/meetingView";
 import {
+  CANCELLED_LABEL,
+  cancellationNotice,
+  cancelledBadge,
   CHIP_DARK_CLS,
+  isCancelled,
   meetingBadges,
   primaryBadge,
 } from "~/components/EventsSection/meetingView";
@@ -78,6 +82,12 @@ function monthIndex(year: number, month: number): number {
  * `primaryBadge` consults the kind first for that reason.
  */
 function meetingBadge(meeting: MeetingInRange): SegmentBadge | null {
+  // Before the kind and before the segments, because it overrides both. A
+  // cancelled build session is not a build session that is happening, and the
+  // grid's hues are a legend of what is ON — `getMeetingsInRange` keeps
+  // cancelled rows by design, so without this the square kept its cyan dot
+  // and the month read as a night going ahead.
+  if (isCancelled(meeting)) return cancelledBadge(CANCELLED_LABEL);
   const { segments } = resolveMeetingSegments(meeting);
   return primaryBadge({ kind: meeting.kind, segments });
 }
@@ -88,33 +98,62 @@ function MeetingDetail({ meeting }: { meeting: MeetingInRange }) {
   // here: a night an officer named has no segments at all, so a band that
   // rendered only the derived set would show it nothing.
   const badges = meetingBadges({ kind: meeting.kind, segments });
+  const notice = cancellationNotice(meeting);
 
   return (
     <div className="flex w-56 flex-col gap-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        {badges.map((badge) => (
+        {/* The cancellation chip REPLACES the night's own chips rather than
+            joining them. Beside an emerald "Workshop" it would read as one
+            more attribute of an evening going ahead, which is the reading
+            this popover most needs not to produce: somebody is hovering the
+            square because they are deciding whether to walk over. */}
+        {notice !== null ? (
           <span
-            key={badge.label}
-            className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
+            className={`${cancelledBadge(CANCELLED_LABEL).chipDark} ${CHIP_DARK_CLS}`}
           >
-            {badge.label}
+            {CANCELLED_LABEL}
           </span>
-        ))}
+        ) : (
+          badges.map((badge) => (
+            <span
+              key={badge.label}
+              className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
+            >
+              {badge.label}
+            </span>
+          ))
+        )}
       </div>
       {/* The date leads, because it is the one field guaranteed to be here and
           because you arrived by hovering a specific square — it confirms which
           one. A name appears BELOW it and only when an officer wrote one,
           which is what makes Cold Start and Midterm Study Session stand out in
           a month of nights that carry no title at all. */}
-      <p className="font-display leading-tight font-extrabold text-white">
+      {/* Struck through rather than removed: the hour is why somebody opened
+          this, and deleting it leaves them wondering whether they hovered the
+          wrong square. Struck, it answers the question and withdraws it. */}
+      <p
+        className={`font-display leading-tight font-extrabold ${
+          notice !== null
+            ? "text-mauve-400 line-through decoration-2"
+            : "text-white"
+        }`}
+      >
         {formatEventSpan(meeting.startsAt, meeting.endsAt)}
       </p>
+      {notice !== null && (
+        <p className="text-xs/relaxed font-semibold text-rose-300">{notice}</p>
+      )}
       {meeting.nameOverride !== null && (
         <p className="text-sm leading-tight font-semibold text-white">
           {meeting.nameOverride}
         </p>
       )}
-      {meeting.location !== null && (
+      {/* Suppressed on a cancelled night. The room is the one claim here that
+          is purely an instruction — it exists to send somebody to a door —
+          and there is nothing behind it that evening. */}
+      {notice === null && meeting.location !== null && (
         <p className="text-xs/snug text-mauve-400">{meeting.location}</p>
       )}
       {meeting.summary !== null && (

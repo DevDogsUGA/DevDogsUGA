@@ -711,12 +711,14 @@ export type Database = {
           airtableRecordId: string | null
           attendanceFormUrl: string | null
           building: string | null
+          cancellationReason: string | null
+          cancelledAt: string | null
           deletedAt: string | null
           endsAt: string
           id: string
           kind: string | null
           location: string | null
-          name: string
+          nameOverride: string | null
           rsvpUrl: string | null
           slug: string
           startsAt: string
@@ -726,12 +728,14 @@ export type Database = {
           airtableRecordId?: string | null
           attendanceFormUrl?: string | null
           building?: string | null
+          cancellationReason?: string | null
+          cancelledAt?: string | null
           deletedAt?: string | null
           endsAt: string
           id?: string
           kind?: string | null
           location?: string | null
-          name: string
+          nameOverride?: string | null
           rsvpUrl?: string | null
           slug: string
           startsAt: string
@@ -741,12 +745,14 @@ export type Database = {
           airtableRecordId?: string | null
           attendanceFormUrl?: string | null
           building?: string | null
+          cancellationReason?: string | null
+          cancelledAt?: string | null
           deletedAt?: string | null
           endsAt?: string
           id?: string
           kind?: string | null
           location?: string | null
-          name?: string
+          nameOverride?: string | null
           rsvpUrl?: string | null
           slug?: string
           startsAt?: string
@@ -1785,23 +1791,29 @@ export type Database = {
         Row: {
           airtableRecordId: string | null
           deletedAt: string | null
+          description: string | null
           id: string
           meetingId: string
-          projectId: string
+          projectId: string | null
+          title: string | null
         }
         Insert: {
           airtableRecordId?: string | null
           deletedAt?: string | null
+          description?: string | null
           id?: string
           meetingId: string
-          projectId: string
+          projectId?: string | null
+          title?: string | null
         }
         Update: {
           airtableRecordId?: string | null
           deletedAt?: string | null
+          description?: string | null
           id?: string
           meetingId?: string
-          projectId?: string
+          projectId?: string | null
+          title?: string | null
         }
         Relationships: [
           {

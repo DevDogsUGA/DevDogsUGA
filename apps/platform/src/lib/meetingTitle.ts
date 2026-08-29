@@ -64,10 +64,43 @@ function dateTitle(at: Date): string {
   return WEEKDAY_DATE.format(at);
 }
 
-/** What a workshop is called: the officer's title, else its project. */
-export function workshopLabel(workshop: TitleableWorkshop): string | null {
+/**
+ * The word a row prints for a workshop. Total — there is always something.
+ *
+ * The fallback used to live at the call sites as `workshopLabel(x) ??
+ * "Workshop"`, copy-pasted at four of them, while `ScheduleList`'s own comment
+ * asserted that "the schedule and the permalink cannot print two different
+ * words for one row". That invariant was held by four string literals and no
+ * code, which is the same as not being held: a fifth surface renders a
+ * workshop and either picks its own fallback or prints nothing.
+ *
+ * Making it total moved the invariant into the type. It also surfaced the
+ * surface that had never been given one at all — see `judgingForMeetings`,
+ * which was still labelling judging nights off the project name.
+ */
+export function workshopLabel(workshop: TitleableWorkshop): string {
+  return workshopName(workshop) ?? WORKSHOP_FALLBACK_LABEL;
+}
+
+/**
+ * What a workshop is CALLED, or null when nobody has named it.
+ *
+ * The partial half of the pair, and it stays partial because `meetingTitle`
+ * below aggregates over it. A total function here would make a workshop with
+ * neither a title nor a project contribute the literal word, and the heading
+ * for a night would come out "Workshop: Workshop".
+ */
+export function workshopName(workshop: TitleableWorkshop): string | null {
   return workshop.title ?? workshop.projectName;
 }
+
+/**
+ * What an unnamed workshop is called.
+ *
+ * Reachable: `workshops.projectId` is nullable and `title` is optional, so a
+ * session created for a skill and not yet named has neither.
+ */
+export const WORKSHOP_FALLBACK_LABEL = "Workshop";
 
 /**
  * The meeting's name, in descending order of how much somebody meant it.
@@ -90,8 +123,11 @@ export function meetingTitle(
   if (meeting.nameOverride !== null) return meeting.nameOverride;
   if (meeting.kind !== null) return meeting.kind;
 
+  // `workshopName`, not `workshopLabel`: the label is total now, so mapping
+  // it here would turn an unnamed workshop into the heading "Workshop:
+  // Workshop" rather than letting the night fall through to its date.
   const taught = workshops
-    .map(workshopLabel)
+    .map(workshopName)
     .filter((label): label is string => label !== null);
 
   // Two is where a heading stops being a heading. "Workshop: Next.js, Flutter

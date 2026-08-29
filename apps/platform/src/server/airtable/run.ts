@@ -202,12 +202,25 @@ export async function runAirtableSync(
   let attendanceRemoved = 0;
   let failure: unknown = null;
 
+  // Declared out here rather than inside the `try`, so the status write below
+  // can still reach it when the pass fails partway. It is the only thing that
+  // escapes the block, and it escapes for exactly that reason.
+  let listed: {
+    members: AirtableRecord[];
+    projects: AirtableRecord[];
+    meetings: AirtableRecord[];
+    workshops: AirtableRecord[];
+    competitions: AirtableRecord[];
+    teams: AirtableRecord[];
+    attendance: AirtableRecord[];
+  } | null = null;
+
   try {
     // One list per table, reused by both directions. Change detection compares
     // against what Airtable currently holds rather than a stored hash, so the
     // push needs these reads anyway — sharing them is what keeps a pass at
     // roughly six requests rather than twelve.
-    const listed = {
+    listed = {
       members: await client.listRecords(membersSpec.id),
       projects: await client.listRecords(projectsSpec.id),
       meetings: await client.listRecords(meetingsSpec.id),
@@ -275,10 +288,40 @@ export async function runAirtableSync(
     add(pushed, await pushMembers(client, listed.members));
     add(pushed, await pushTeams(client, listed.teams));
     add(pushed, await pushDerivedCounts(client, listed));
-
-    statusWrites = await writeSyncStatus(client, refusals, listed);
   } catch (error) {
     failure = error;
+  }
+
+  // ⚠️ OUTSIDE the try, and that placement is the whole point of it.
+  //
+  // This used to be the last statement inside the block, which meant any
+  // throw anywhere above skipped it. The refusals were still collected — the
+  // array is right here — and then silently discarded, so an officer whose
+  // edit was refused saw a clean `⚙️ Sync status` and no explanation
+  // anywhere, on top of a pass that had already stopped. The one signal the
+  // system has for "your edit did not take" was disabled by exactly the
+  // event most likely to need it.
+  //
+  // Reporting what was learned before the failure is strictly better than
+  // reporting nothing: those refusals are real, they are about rows the
+  // officer edited, and they do not become false because a later table threw.
+  //
+  // `listed === null` means the very first read failed, so there is nothing
+  // to write onto and nothing was learned yet.
+  if (listed !== null) {
+    try {
+      statusWrites = await writeSyncStatus(client, refusals, listed);
+    } catch (statusError) {
+      // Deliberately not assigned to `failure`. If the pass itself failed,
+      // that error is the one worth reporting, and overwriting it with "and
+      // then we also could not write the status" would bury the cause. If the
+      // pass succeeded, the data is in and only the annotation is missing —
+      // which is a worse pass, not a failed one.
+      console.error(
+        "[airtable] sync status could not be written:",
+        describe(statusError),
+      );
+    }
   }
 
   const ok = failure === null;

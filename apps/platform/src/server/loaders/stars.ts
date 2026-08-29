@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "~/server/db";
 import { meetings, memberStars, projects, workshops } from "~/server/db/schema";
@@ -21,11 +21,24 @@ export interface StarCell {
   meetingId: string;
   meetingSlug: string;
   /**
-   * What to call the night, or null when nothing was authored. See the column
-   * below: the fallback is the caller's, because the date lives in one
-   * timezone module and this file is not it.
+   * The night's own name, and the officer's kind for it. Both null on an
+   * ordinary sprint Monday.
+   *
+   * ⚠️ These replaced a `meetingName` column that coalesced through the
+   * WORKSHOP's title — a per-workshop value being used as a per-meeting
+   * heading. `groupByMeeting` kept whichever row arrived first and
+   * `getStarsForUser` orders only by `desc(meetings.startsAt)` with no
+   * tiebreaker, so a member who attended "Supabase" and "Next.js" on one
+   * unnamed Monday got a heading that was one of the two, chosen arbitrarily,
+   * and able to change between requests. It then stuttered against the row
+   * immediately beneath it: "Supabase / Supabase ★ / Next.js ★".
+   *
+   * Passed to `meetingTitle` with the night's cells, which composes the
+   * heading these were always meant to produce — "Workshop: Supabase &
+   * Next.js" — from all of them rather than from whichever one sorted first.
    */
-  meetingName: string | null;
+  meetingNameOverride: string | null;
+  meetingKind: string | null;
   meetingStartsAt: Date;
   /**
    * The officer's word for the session. With `projectName`, this is exactly
@@ -51,22 +64,14 @@ const cellColumns = {
   workshopId: memberStars.workshopId,
   meetingId: memberStars.meetingId,
   meetingSlug: meetings.slug,
-  /**
-   * What to call the night, or null when nothing was authored.
-   *
-   * `nameOverride` is null for an ordinary sprint Monday, so this coalesces
-   * through the labels that do exist — and the workshop's own title is the
-   * better one here anyway, since this is a per-workshop row and "Supabase"
-   * says more than a date the next column already shows.
-   *
-   * Deliberately still nullable rather than coalescing to a formatted date in
-   * SQL: that would put `EVENT_TZ` in a second place, as a string literal no
-   * typechecker relates to `lib/eventTime`. The consumer has
-   * `meetingStartsAt` and formats it there.
-   */
-  meetingName: sql<
-    string | null
-  >`coalesce(${meetings.nameOverride}, ${workshops.title}, ${projects.displayName})`,
+  // The two per-MEETING naming columns, carried as themselves rather than
+  // pre-coalesced with a per-workshop one. `meetingTitle` composes the
+  // heading; doing it in SQL is what made the old column pick an arbitrary
+  // workshop and call it the night. Still nullable rather than falling back to
+  // a formatted date here, because that would put `EVENT_TZ` in a second
+  // place as a string literal no typechecker relates to `lib/eventTime`.
+  meetingNameOverride: meetings.nameOverride,
+  meetingKind: meetings.kind,
   meetingStartsAt: meetings.startsAt,
   title: workshops.title,
   projectId: memberStars.projectId,
@@ -86,30 +91,47 @@ const cellColumns = {
  */
 export const getStarsForUser = cache(
   async (userId: string): Promise<StarCell[]> => {
-    return (
-      db
-        .select(cellColumns)
-        .from(memberStars)
-        .innerJoin(meetings, eq(meetings.id, memberStars.meetingId))
-        .innerJoin(workshops, eq(workshops.id, memberStars.workshopId))
-        // Left: `workshops.projectId` is nullable, so a member who attended a
-        // skill session — career-fair readiness, say — has a real star whose
-        // row an inner join would delete from their own record.
-        .leftJoin(projects, eq(projects.id, memberStars.projectId))
-        .where(
-          and(
-            eq(memberStars.userId, userId),
-            isNull(meetings.deletedAt),
-            isNull(workshops.deletedAt),
-          ),
-        )
-        // The cast covers only the columns the VIEW cannot prove NOT NULL —
-        // Postgres never can — and which the inner joins above do prove:
-        // `workshopId`, `meetingId` and the three flags. The nullable fields
-        // in `StarCell` are nullable for real, and are declared that way, so
-        // this assertion no longer quietly launders them into strings.
-        .orderBy(desc(meetings.startsAt)) as Promise<StarCell[]>
-    );
+    const rows = await db
+      .select(cellColumns)
+      .from(memberStars)
+      .innerJoin(meetings, eq(meetings.id, memberStars.meetingId))
+      .innerJoin(workshops, eq(workshops.id, memberStars.workshopId))
+      // Left: `workshops.projectId` is nullable, so a member who attended a
+      // skill session — career-fair readiness, say — has a real star whose
+      // row an inner join would delete from their own record.
+      .leftJoin(projects, eq(projects.id, memberStars.projectId))
+      .where(
+        and(
+          eq(memberStars.userId, userId),
+          isNull(meetings.deletedAt),
+          isNull(workshops.deletedAt),
+        ),
+      )
+      .orderBy(desc(meetings.startsAt));
+
+    // Named one at a time rather than `as Promise<StarCell[]>` over the whole
+    // chain.
+    //
+    // The old comment claimed the cast "covers only the columns the VIEW
+    // cannot prove NOT NULL" — but a cast on the chain covers EVERY column,
+    // including the genuinely nullable ones, so the claim described an
+    // intention the code had no way to enforce. Widening `StarCell` later
+    // would have been silently absorbed by it.
+    //
+    // These five are the ones Postgres cannot prove and the joins above can:
+    // `memberStars` is a view, so every column comes back optional, while the
+    // two inner joins mean a row only exists when its workshop and meeting do,
+    // and `bool_or` over a non-empty group is never null. `projectId`,
+    // `projectSlug`, `projectName`, `title` and the two naming columns are
+    // nullable for real and pass through untouched.
+    return rows.map((row) => ({
+      ...row,
+      workshopId: row.workshopId!,
+      meetingId: row.meetingId!,
+      workshopStar: row.workshopStar!,
+      competitionStar: row.competitionStar!,
+      won: row.won!,
+    }));
   },
 );
 

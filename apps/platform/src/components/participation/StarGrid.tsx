@@ -1,5 +1,5 @@
 import { formatEventDate } from "~/lib/eventTime";
-import { workshopLabel } from "~/lib/meetingTitle";
+import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
 import type { StarCell } from "~/server/loaders/stars";
 import EmptyState from "./EmptyState";
 import { StarBadges } from "./StarBadges";
@@ -44,25 +44,28 @@ export default function StarGrid({ cells }: { cells: StarCell[] }) {
           key={meeting.meetingId}
           className="rounded-lg border border-white/10 bg-white/5 p-4"
         >
-          {/* Null for a night nobody named and no workshop titled — an
-              ordinary sprint Monday. The date is the fallback, formatted here
-              rather than coalesced in SQL so `EVENT_TZ` stays in one module,
-              and it becomes the heading itself rather than repeating under a
-              blank one. */}
+          {/* `meetingTitle` over the whole night, not a column. It falls
+              through name → kind → the workshops it taught → the date, so an
+              unnamed Monday that taught two sessions reads "Workshop: Supabase
+              & Next.js" instead of borrowing one of their names and then
+              repeating it verbatim as the first row underneath. The date
+              fallback is inside `meetingTitle`, which keeps `EVENT_TZ` in one
+              module. */}
           <h3 className="font-semibold text-white">
-            {meeting.meetingName ?? (
-              <time dateTime={meeting.meetingStartsAt.toISOString()}>
-                {formatEventDate(meeting.meetingStartsAt)}
-              </time>
+            {meetingTitle(
+              {
+                nameOverride: meeting.meetingNameOverride,
+                kind: meeting.meetingKind,
+                startsAt: meeting.meetingStartsAt,
+              },
+              meeting.workshops,
             )}
           </h3>
-          {meeting.meetingName !== null && (
-            <p className="text-xs text-mauve-400">
-              <time dateTime={meeting.meetingStartsAt.toISOString()}>
-                {formatEventDate(meeting.meetingStartsAt)}
-              </time>
-            </p>
-          )}
+          <p className="text-xs text-mauve-400">
+            <time dateTime={meeting.meetingStartsAt.toISOString()}>
+              {formatEventDate(meeting.meetingStartsAt)}
+            </time>
+          </p>
 
           <ul className="mt-3 flex flex-col gap-2">
             {meeting.workshops.map((cell) => (
@@ -72,7 +75,7 @@ export default function StarGrid({ cells }: { cells: StarCell[] }) {
               >
                 {/* Not `projectName`: it is null for a skill session, which
                     left the row labelled with nothing at all. */}
-                <span>{workshopLabel(cell) ?? "Workshop"}</span>
+                <span>{workshopLabel(cell)}</span>
                 <StarBadges
                   workshopStar={cell.workshopStar}
                   competitionStar={cell.competitionStar}
@@ -122,7 +125,8 @@ function Legend() {
 
 interface MeetingGroup {
   meetingId: string;
-  meetingName: string | null;
+  meetingNameOverride: string | null;
+  meetingKind: string | null;
   meetingStartsAt: Date;
   workshops: StarCell[];
 }
@@ -137,7 +141,12 @@ function groupByMeeting(cells: StarCell[]): MeetingGroup[] {
     if (group === undefined) {
       group = {
         meetingId: cell.meetingId,
-        meetingName: cell.meetingName,
+        // Both are per-MEETING columns, so taking them off the first cell is
+        // correct rather than arbitrary — every cell in this group carries the
+        // identical pair. That was not true of the `meetingName` this
+        // replaced, which coalesced through the workshop's own title.
+        meetingNameOverride: cell.meetingNameOverride,
+        meetingKind: cell.meetingKind,
         meetingStartsAt: cell.meetingStartsAt,
         workshops: [],
       };

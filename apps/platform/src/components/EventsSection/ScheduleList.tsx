@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
 import {
   ACTION_DARK_CLS,
+  CANCELLED_LABEL,
   CHIP_DARK_CLS,
   meetingBadges,
   NEUTRAL_CHIP_DARK_CLS,
@@ -58,7 +59,8 @@ interface Props {
    * The instant the page is rendering at, passed in rather than read here.
    *
    * A `new Date()` in this tree would drop the whole route out of the static
-   * shell with no build warning at all — see `docs/platform/caching.md`. It is
+   * shell with no build warning at all — see `docs/monorepo/stack/nextjs.md`.
+   * It is
    * also the only way the countdown on every row can agree with the calendar's
    * "today": one read, threaded down, instead of a dozen a few ms apart.
    */
@@ -126,9 +128,14 @@ function weekLabel(key: string): string {
 /**
  * The filters offered, derived from what is actually in the list.
  *
- * A fixed set of chips would offer "Build Session" in a summer with none and
- * hide a kind an officer added last week — `kind` is an open Airtable
- * single-select, so the closed list this side knows is never the whole truth.
+ * A fixed set of chips would offer "Build Session" in a summer with none, and
+ * a filter for a kind nothing on screen has is a control that returns an empty
+ * list. Derived from the rows in hand, it offers exactly what is there.
+ *
+ * NOT because `kind` is open-ended — it is closed at four values, by
+ * `parseMeetingKind` upstream and `meetings_kind_choices` in the database.
+ * This comment used to say otherwise; the reason is availability, not
+ * open-endedness.
  */
 function availableFilters(meetings: MeetingInRange[]): string[] {
   const labels = new Set<string>();
@@ -320,14 +327,7 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
   const elsewhere = meeting.building !== null && meeting.building !== "DLW";
 
   return (
-    <li
-      className={`relative flex gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-4 md:gap-5 ${
-        // Dimmed rather than struck through as a whole: a line through an
-        // entire tile is unreadable, and the strike belongs on the title,
-        // where it reads as "this one, not happening" rather than as damage.
-        cancelled ? "opacity-60" : ""
-      }`}
-    >
+    <li className="relative flex gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-4 md:gap-5">
       {/*
         Hidden from assistive tech: the span below prints the same date in full,
         so announcing "Wed 10" first only makes every row take twice as long to
@@ -383,7 +383,15 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
               wrong half; the strike-through and the word are the useful half. */}
           <span className="text-xs font-semibold text-mauve-400">
             {cancelled ? (
-              <span className="text-rose-300">Cancelled</span>
+              // Not dimmed, deliberately. `opacity-60` used to sit on the
+              // whole tile, which knocked 40% off THIS — already the page's
+              // smallest and dimmest token — and off the reason below it,
+              // landing both near 4.2:1 against the plate and under the AA
+              // floor. The one sentence explaining why the row is greyed out
+              // was the least readable thing in it. The strike-through on the
+              // title carries "not happening"; these carry the explanation and
+              // stay at full contrast.
+              <span className="text-rose-300">{CANCELLED_LABEL}</span>
             ) : happeningNow ? (
               "Happening now"
             ) : (
@@ -466,7 +474,7 @@ function JudgingChip({ judging }: { judging: MeetingRangeJudging }) {
     >
       {/* Same absence as the event page's row, and the same refusal to dress
           it up: with no project to name, the chip is just the word. */}
-      {judging.projectName ? `Judging: ${judging.projectName}` : "Judging"}
+      {`Judging: ${workshopLabel(judging)}`}
     </Link>
   );
 }
@@ -490,7 +498,7 @@ function WorkshopChip({ workshop }: { workshop: MeetingRangeWorkshop }) {
   // a skill rather than a codebase — which rendered the career-fair-readiness
   // night as an empty chip. The fallback matches `/events/<slug>`, so the
   // schedule and the permalink cannot print two different words for one row.
-  const label = workshopLabel(workshop) ?? "Workshop";
+  const label = workshopLabel(workshop);
 
   if (workshop.competitionSlug === null) {
     return <span className={chipCls}>{label}</span>;
