@@ -135,9 +135,9 @@ export default function NextMeetingStrip({
             </span>
           </p>
 
-          {/* Derived chips then the officer's kind. An unrecognised kind still
-              renders, verbatim: it is an Airtable single-select an officer can
-              extend without touching this repository. This strip sits on the
+          {/* Derived chips then the officer's kind, which renders verbatim in
+              the neutral pill when it has no hue of its own — see `kindBadge`.
+              This strip sits on the
               marketing pages' light plates, so the chips are solid fills with
               black borders rather than the console's translucent pills — the
               HUE is the part that must not change between the two. */}

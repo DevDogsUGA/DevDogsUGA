@@ -77,13 +77,18 @@ export interface MeetingSummary {
   attendanceFormUrl: string | null;
   /**
    * An officer's override for what the night is, for the nights structure
-   * cannot describe — `Social`, `Career`, `Info session`, `Open lab`.
+   * cannot describe. One of the four `MEETING_KIND_CHOICES` — `Build Session`,
+   * `Study Session`, `Interest Meeting`, `Social`.
    *
    * Null is the ordinary case and means "read the derived segments", NOT
-   * "unknown". Typed as free text rather than a union because it is an
-   * Airtable single-select an officer can extend without anybody touching this
-   * repository, and a value this side has never heard of has to render as
-   * itself rather than fall through a `switch` into a crash or a blank badge.
+   * "unknown".
+   *
+   * Typed as free text rather than as `MeetingKind` because that is what the
+   * column is: the list is enforced by `parseMeetingKind` on the way in and by
+   * `meetings_kind_choices` in the database, neither of which a row already
+   * stored can be re-checked against here. Widening it costs nothing, since
+   * the values are Title Case display strings and every render path prints the
+   * string rather than switching on it.
    */
   kind: string | null;
   /** An authored sentence or two for the calendar popover. Null means the page

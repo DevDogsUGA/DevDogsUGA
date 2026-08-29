@@ -90,12 +90,15 @@ export const segmentBadge: Record<MeetingSegment, SegmentBadge> = {
 /**
  * The badge for a night an officer NAMED, keyed by `meetings.kind`.
  *
- * A lookup with a fallback rather than a total mapping, because `kind` is an
- * open Airtable single-select: an officer can add a choice without anybody
- * touching this repository. An unrecognised value gets the neutral pill
- * printing itself — which is the whole reason `kind` stores Title Case display
- * strings rather than identifiers, since a value this side has never heard of
- * still has a readable label.
+ * A lookup with a fallback rather than a total mapping, and NOT because the
+ * list is open — it is closed at four values, by `parseMeetingKind` upstream
+ * and by `meetings_kind_choices` in the database, so a kind this side has
+ * never heard of cannot reach here. The fallback is for the three choices that
+ * are recognised and deliberately have no hue: `Study Session`, `Interest
+ * Meeting` and `Social` all print themselves in the neutral pill. That is what
+ * makes storing Title Case display strings rather than identifiers pay — the
+ * label is the value, so a kind can be added to the list above without also
+ * being given a colour.
  *
  * Only `Build Session` earns a hue, deliberately. It is MODAL — roughly half
  * the calendar, recurring every week a sprint runs — so a reader learns its
@@ -119,7 +122,7 @@ export const kindBadge: Record<string, SegmentBadge> = {
   },
 };
 
-/** The neutral badge an unrecognised `kind` prints itself in. */
+/** The neutral badge the three un-hued kinds print themselves in. */
 function neutralKindBadge(kind: string): SegmentBadge {
   return {
     bg: "bg-white",
