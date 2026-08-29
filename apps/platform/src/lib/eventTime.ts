@@ -59,7 +59,8 @@ function clubDateParts(at: Date): {
  * `Intl.DateTimeFormat` with an explicit `timeZone` is the pure way to ask —
  * unlike `@date-fns/tz`, whose `TZDate` constructor reads the clock and would
  * drop a calling page out of the prerendered shell (see
- * docs/platform/caching.md, "Clock reads in client components"). This reads no
+ * docs/monorepo/stack/nextjs.md, "Why does a client component that formats
+ * a date drop the page out of the static shell?"). This reads no
  * clock and touches nothing but its argument, so it is safe in a client
  * component and gives byte-identical answers on both sides of hydration.
  *
@@ -75,6 +76,92 @@ export function clubDay(at: Date): {
   const { year, month, day } = clubDateParts(at);
   return { year, month: month - 1, day };
 }
+
+/**
+ * The instant midnight-on-the-1st happens in the club's timezone.
+ *
+ * ⚠️ The bound `getMeetingsInRange` filters on, and it must not be
+ * `Date.UTC(year, month, 1)`.
+ *
+ * That was the bug. `clubDay` resolves the current year and month in
+ * America/New_York and those parts were then fed straight to `Date.UTC`,
+ * which reads them as a UTC wall-clock time. Under EDT that instant is 20:00
+ * on the LAST DAY OF THE PREVIOUS MONTH — the window was shifted four hours
+ * (five under EST) in both directions.
+ *
+ * A 20:00 Eastern social on the final day of the range has `startsAt` =
+ * 00:00 UTC the next day, so it fell outside the exclusive upper bound and
+ * vanished from /events entirely. Symmetrically, a 20:00 meeting on the last
+ * evening BEFORE the window was included by the query and then filed by
+ * `clubDay` under a month the calendar's own paging bounds cannot reach — a
+ * row fetched, counted, and unreachable.
+ *
+ * This is the precise failure `clubDateKey` warns about below, arrived at from
+ * the other direction: that one is about reading a UTC date out of an instant,
+ * this one about building an instant out of club-zone parts. Both are wrong by
+ * the same four hours, and both fire only on a meeting past 20:00 — the night
+ * nobody wrote a fixture for.
+ *
+ * Two passes, which is what makes it correct across a DST boundary. The first
+ * offset is measured at the naive guess; applying it can land on the other
+ * side of a transition, so the offset is measured again at the corrected
+ * instant and reapplied. March's 01:00-does-not-exist hour cannot arise here —
+ * the 1st of a month at midnight is never a US transition, which happens on a
+ * Sunday at 02:00 — but the second pass costs nothing and removes the need for
+ * anyone to have checked that.
+ *
+ * Pure `Intl` rather than `@date-fns/tz`, for the reason `clubDay` gives: this
+ * reads no clock, so it is safe anywhere and identical on both sides of
+ * hydration.
+ */
+export function clubMonthStart({
+  year,
+  month,
+}: {
+  year: number;
+  /** 0-indexed, matching `clubDay` and `Date#getMonth`. */
+  month: number;
+}): Date {
+  const naive = Date.UTC(year, month, 1);
+  const firstPass = naive - zoneOffsetMs(naive);
+  return new Date(naive - zoneOffsetMs(firstPass));
+}
+
+/**
+ * How far ahead of UTC the club's zone is at a given instant, in milliseconds.
+ *
+ * Negative for America/New_York: -4h under EDT, -5h under EST. Derived by
+ * formatting the instant INTO the zone and reading the wall clock back out,
+ * which is the only way to ask without a timezone database of our own.
+ */
+function zoneOffsetMs(instant: number): number {
+  const parts = OFFSET_PARTS.formatToParts(new Date(instant));
+  const at = (type: Intl.DateTimeFormatPartTypes): number => {
+    const part = parts.find((p) => p.type === type);
+    return part === undefined ? 0 : Number(part.value);
+  };
+  // `hourCycle: "h23"` below is why midnight reads as 0 rather than 24.
+  const wall = Date.UTC(
+    at("year"),
+    at("month") - 1,
+    at("day"),
+    at("hour"),
+    at("minute"),
+    at("second"),
+  );
+  return wall - instant;
+}
+
+const OFFSET_PARTS = new Intl.DateTimeFormat("en-US", {
+  timeZone: EVENT_TZ,
+  hourCycle: "h23",
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+  second: "numeric",
+});
 
 /**
  * `YYYY-MM-DD` in the club's timezone — the meeting slug, and the key a week

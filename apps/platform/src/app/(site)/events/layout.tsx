@@ -6,7 +6,7 @@ import EventsPage, {
 import EventsUnavailable from "~/components/EventsSection/EventsUnavailable";
 import CheckInIsland from "~/components/EventsSection/CheckInIsland";
 import UnderConstruction from "~/components/UnderConstruction";
-import { clubDay } from "~/lib/eventTime";
+import { clubDay, clubMonthStart } from "~/lib/eventTime";
 import { getMeetingsInRange, getPastMeetings } from "~/server/loaders/meetings";
 
 /**
@@ -108,7 +108,7 @@ async function getSchedule(): Promise<Omit<EventsPageProps, "checkIn">> {
   const to = addMonths(today.year, today.month, 2);
 
   const [meetings, past] = await Promise.all([
-    getMeetingsInRange(monthStart(from), monthStart(to)),
+    getMeetingsInRange(clubMonthStart(from), clubMonthStart(to)),
     // One more than shown, which is how the archive knows whether to offer
     // "older meetings" without a second COUNT query.
     getPastMeetings(PAST_PAGE_SIZE + 1),
@@ -139,9 +139,4 @@ function addMonths(
 ): { year: number; month: number } {
   const total = year * 12 + month + delta;
   return { year: Math.floor(total / 12), month: total % 12 };
-}
-
-/** Midnight on the first of a month, in UTC — the range bound for the query. */
-function monthStart({ year, month }: { year: number; month: number }): Date {
-  return new Date(Date.UTC(year, month, 1));
 }

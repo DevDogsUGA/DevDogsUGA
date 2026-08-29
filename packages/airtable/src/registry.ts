@@ -172,6 +172,17 @@ export interface TeamRow {
 export const MEETING_SUMMARY_MAX_LENGTH = 240;
 
 /**
+ * Matches `meetings_nameOverride_length`. A schedule row and a dialog title
+ * are both one line, so a name that outgrows this is discovered by a member
+ * looking at a broken page rather than by the officer who wrote it.
+ *
+ * Same load-bearing reason as the summary cap below it: a parser looser than
+ * its constraint is a violation inside the pull, which takes down the whole
+ * pass rather than refusing one field.
+ */
+export const MEETING_NAME_OVERRIDE_MAX_LENGTH = 80;
+
+/**
  * Shorter than a summary because it renders inline beside a struck-through
  * row rather than in a paragraph of its own. Must stay at or below the
  * `meetings_cancellationReason_length` constraint — a parser looser than its
@@ -353,6 +364,79 @@ export function parseRsvpUrl(value: AirtableValue): string | null {
   return canonical;
 }
 
+/**
+ * The shape an accepted attendance form link must have, character for
+ * character — the JavaScript twin of `meetings_attendanceFormUrl_airtable`.
+ *
+ * Deliberately narrower than the RSVP shape: that constraint allows `%`, `#`
+ * and `:` in the path and this one does not, so reusing the other regex would
+ * accept links the database then rejects. The two are written out separately
+ * rather than shared for exactly that reason.
+ */
+const ATTENDANCE_FORM_URL_SHAPE =
+  /^https:\/\/airtable\.com\/[A-Za-z0-9/_?=&.-]+$/;
+
+/** The one host an attendance form may live on. */
+const ATTENDANCE_FORM_URL_HOST = "airtable.com";
+
+/**
+ * An attendance form link in canonical form, or null if it is not one this
+ * may store.
+ *
+ * This used to be `typeof v === "string" ? v : null`, which accepted anything
+ * an officer could type. `meetings_attendanceFormUrl_airtable` accepts only an
+ * https link on airtable.com, so a pasted Google Form was a constraint
+ * violation raised in the middle of the pull — and that unwinds past every
+ * remaining table, so one wrong paste stopped meetings, workshops,
+ * competitions, attendance and both pushes, and the officer saw a clean grid.
+ *
+ * Canonicalized before testing for the same reason `parseRsvpUrl` is: a host
+ * comparison is case-insensitive and a regex is not, so `https://AirTable.com/
+ * shrX` would otherwise pass the check here and fail the one in Postgres. The
+ * string tested is the string stored.
+ */
+export function parseAttendanceFormUrl(value: AirtableValue): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return null;
+  }
+
+  if (url.protocol !== "https:") return null;
+  if (url.username !== "" || url.password !== "") return null;
+  if (url.hostname.toLowerCase() !== ATTENDANCE_FORM_URL_HOST) return null;
+
+  const canonical = url.toString();
+  if (!ATTENDANCE_FORM_URL_SHAPE.test(canonical)) return null;
+
+  return canonical;
+}
+
+/**
+ * An Airtable datetime string, or null when it is not a date at all.
+ *
+ * Airtable returns ISO-8601 for a date cell, so the guard looks redundant --
+ * and for `startsAt` and `endsAt` it very nearly was, because `new Date(x) >
+ * new Date(y)` is false when either side is Invalid Date and the completeness
+ * gate happened to catch it. `cancelledAt` has no such comparison, so an
+ * unparseable value reached drizzle's timestamp mapper, which calls
+ * `.toISOString()` on it and throws `RangeError` mid-pull.
+ *
+ * Relying on a neighbouring comparison to reject bad input is the kind of
+ * accident that holds until someone adds a third date. This states it.
+ */
+export function parseAirtableDateTime(value: AirtableValue): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  return Number.isNaN(new Date(trimmed).getTime()) ? null : trimmed;
+}
+
 // ── Tables ───────────────────────────────────────────────────────────────────
 //
 // The `⚙️` prefix marks a field the platform writes. It is a naming convention
@@ -429,7 +513,18 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
   // create-only and does not rename.
   nameOverride: field
     .text("fldc0NfTHVxHk8Za0", "Name")
-    .pull((v) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null)),
+    // Capped, not just trimmed. `meetings_nameOverride_length` is a check
+    // constraint, so an 81st character used to be a rejected INSERT in the
+    // middle of the pull rather than a refused field — one keystroke taking
+    // down every table in the pass. Refused rather than truncated, for the
+    // same reason the summary is: half a name under an officer's heading is
+    // worse than the fallback the schedule already knows how to render.
+    .pull((v) => {
+      if (typeof v !== "string") return null;
+      const trimmed = v.trim();
+      if (trimmed === "") return null;
+      return trimmed.length > MEETING_NAME_OVERRIDE_MAX_LENGTH ? null : trimmed;
+    }),
   // Which building, from a list the campus map can actually draw.
   //
   // Null is ordinary and means two different things that do not need telling
@@ -453,10 +548,10 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
     .pull((v) => (typeof v === "string" ? v : null)),
   startsAt: field
     .dateTime("fld0iXyGZpgW7zJWF", "Starts at")
-    .pull((v) => (typeof v === "string" ? v : null)),
+    .pull((v) => parseAirtableDateTime(v)),
   endsAt: field
     .dateTime("fldEjZPZGVJG3qZEl", "Ends at")
-    .pull((v) => (typeof v === "string" ? v : null)),
+    .pull((v) => parseAirtableDateTime(v)),
   // The week's attendance form, pasted by an officer.
   //
   // Not discoverable: the Meta API returns views as {id, name, type} and a
@@ -465,7 +560,7 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
   // it. Measured 2026-08-06.
   attendanceForm: field
     .url("fldZT0taFyXVb7Bls", "Attendance form")
-    .pull((v) => (typeof v === "string" ? v : null)),
+    .pull((v) => parseAttendanceFormUrl(v)),
   // What the night is about, in an officer's own words.
   //
   // Null is the ordinary state, not an error: the events page derives an
@@ -504,7 +599,7 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
   // struck through.
   cancelledAt: field
     .dateTime("fld5JjWXM1om14UHs", "Cancelled")
-    .pull((v) => (typeof v === "string" ? v : null)),
+    .pull((v) => parseAirtableDateTime(v)),
 
   // Why. Null even when `cancelledAt` is set: the fact and the explanation
   // arrive in separate keystrokes, and the page states the fact without it.
@@ -585,13 +680,25 @@ export const competitions = table("Competitions", "tbltrW1Xum127cNwy", {
     .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
   judgingStartsAt: field
     .dateTime("fld9p3FVXCuFWJF7b", "Judging starts")
-    .pull((v) => (typeof v === "string" ? v : null)),
+    .pull((v) => parseAirtableDateTime(v)),
+  // Both numbers are bounded here because both are check constraints:
+  // `competitions_requirementCount_nonneg` and
+  // `competitions_maxTeamSize_positive`. Typing 0 into Max team size is an
+  // ordinary slip and used to be a rejected insert mid-pull, which ends the
+  // pass for every table rather than refusing one cell.
+  //
+  // Non-integers are rejected too. Airtable's number field has a precision
+  // setting an officer can change, and 2.5 people is not a team size.
   requirementCount: field
     .number("fldu17YKeE2FYBkOc", "Requirements")
-    .pull((v) => (typeof v === "number" ? v : null)),
+    .pull((v) =>
+      typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null,
+    ),
   maxTeamSize: field
     .number("fldGij8ChmqGklbwh", "Max team size")
-    .pull((v) => (typeof v === "number" ? v : null)),
+    .pull((v) =>
+      typeof v === "number" && Number.isInteger(v) && v > 0 ? v : null,
+    ),
   teamCount: field
     .number("fldss0bnDwAM2YXii", "⚙️ Teams")
     .push((c: CompetitionRow) => c.teamCount),

@@ -9,10 +9,13 @@ import {
 } from "@phosphor-icons/react/ssr";
 import {
   ACTION_DARK_CLS,
+  CANCELLED_LABEL,
+  cancellationNotice,
   CHIP_DARK_CLS,
   meetingBadges,
   segmentBadge,
 } from "~/components/EventsSection/meetingView";
+import Callout from "~/ui/callout";
 import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
 import {
   isMappedBuilding,
@@ -81,6 +84,21 @@ export async function generateMetadata({
 
   const where = locationLine(meeting.building, meeting.location);
 
+  // ⚠️ The unfurl is the single most-read surface this page has, and it was
+  // the last one still saying the meeting was on.
+  //
+  // The stated reason a cancelled night keeps its URL rather than 404ing is
+  // that the link is already in Discord and people walk over anyway. That
+  // link renders as a card carrying exactly these two fields — so the card
+  // sitting in the channel went on advertising "6:00 – 8:00 PM — DLW 124"
+  // for a night the club had called off. The one place the correction most
+  // needed to reach was the one place it did not.
+  //
+  // The room is dropped along with the hour: both are instructions to go
+  // somewhere, and neither survives the cancellation.
+  const notice = cancellationNotice(meeting);
+  const description = notice ?? (where ? `${span} — ${where}` : span);
+
   return {
     // Derived rather than read: `nameOverride` is null for most nights, and
     // the naive version would put " | DevDogs" in the tab and in every link
@@ -88,7 +106,7 @@ export async function generateMetadata({
     // this, so the title falls back through the kind to the date — one query
     // is not worth a slightly richer tab.
     title: `${meetingTitle(meeting)} | DevDogs`,
-    description: where ? `${span} — ${where}` : span,
+    description,
   };
 }
 
@@ -186,12 +204,16 @@ export default async function MeetingPage({
           the explanation arrive in separate keystrokes — so the word carries
           the meaning on its own and the reason extends it when there is one. */}
       {cancelled && (
-        <p className="rounded-lg border border-rose-400/30 bg-rose-400/10 p-3 text-sm/relaxed text-rose-200">
-          <span className="font-semibold">Cancelled</span>
-          {meeting.cancellationReason !== null && (
-            <> — {meeting.cancellationReason}</>
-          )}
-        </p>
+        // `Callout tone="critical"`, not a hand-rolled block. The classes here
+        // were `border-rose-400/30 bg-rose-400/10 text-rose-200` — character
+        // for character `TONE_CLASSES.critical` — with a bolded first line,
+        // which is what `title` is. Callout's own docblock says it exists
+        // because these had been nine separate inline blocks each picking its
+        // own radius and padding; this was quietly the tenth, and already
+        // disagreed with it on both.
+        <Callout tone="critical" title={CANCELLED_LABEL}>
+          {meeting.cancellationReason}
+        </Callout>
       )}
 
       {/* The span itself is in the dialog header, where it stays put while
@@ -332,7 +354,16 @@ export default async function MeetingPage({
           </div>
         )}
 
-      {ended && (
+      {/* ⚠️ `!cancelled`, and it is not a tidiness gate.
+          `attendanceCount === 0` is GUARANTEED for a cancelled night — nobody
+          checks in to a meeting that did not happen — so this rendered "No
+          check-ins were recorded for this meeting." under the red Cancelled
+          notice, permanently, for every cancelled night in the archive. Not an
+          edge case: a sentence that is always false and reads as an accusation
+          that nobody turned up. The comment above says only the clock-shaped
+          claims and the two actions come off a cancelled night; this is a
+          clock-shaped claim and it had escaped. */}
+      {ended && !cancelled && (
         <p className="border-t border-mauve-800 pt-3 text-sm text-mauve-400">
           {meeting.attendanceCount === 0
             ? "No check-ins were recorded for this meeting."
@@ -364,7 +395,7 @@ function JudgingRow({ judging }: { judging: MeetingRangeJudging }) {
         {/* Without a project there is no name to print, and the night still
             judges something — so the link keeps its target and wears the
             plain noun rather than opening an empty anchor. */}
-        {judging.projectName ?? "Competition"}
+        {workshopLabel(judging)}
       </Link>
       <span className={`${badge.chipDark} ${CHIP_DARK_CLS} ml-auto`}>
         {badge.label}
@@ -395,14 +426,14 @@ function WorkshopRow({ workshop }: { workshop: MeetingWorkshop }) {
             project, so the fallback runs both ways. */}
         {workshop.competitionSlug === null ? (
           <span className="text-sm font-semibold text-white">
-            {workshopLabel(workshop) ?? "Workshop"}
+            {workshopLabel(workshop)}
           </span>
         ) : (
           <Link
             href={`/competitions/${workshop.competitionSlug}/teams`}
             className="text-sm font-semibold text-white underline decoration-2 underline-offset-2 hover:no-underline"
           >
-            {workshopLabel(workshop) ?? "Workshop"}
+            {workshopLabel(workshop)}
           </Link>
         )}
         <span className="text-xs text-mauve-400">

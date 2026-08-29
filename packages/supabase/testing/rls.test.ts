@@ -328,7 +328,7 @@ describe("platform meetings, teams and attendance", () => {
     await a.from("meetings").insert({
       id: meetingId,
       slug: "rls-meeting",
-      name: "RLS Meeting",
+      nameOverride: "RLS Meeting",
       startsAt: new Date(now).toISOString(),
       endsAt: new Date(now + 7_200_000).toISOString(),
     });
@@ -383,25 +383,38 @@ describe("platform meetings, teams and attendance", () => {
     for (const client of [anon(), member.client, moderator.client]) {
       await client
         .from("meetings")
-        .update({ name: "hacked" })
+        .update({ nameOverride: "hacked" })
         .eq("id", meetingId);
     }
 
     const { data } = await admin()
       .from("meetings")
-      .select("name")
+      .select("nameOverride")
       .eq("id", meetingId)
       .single();
-    expect(data?.name).toBe("RLS Meeting");
+    expect(data?.nameOverride).toBe("RLS Meeting");
 
     // INSERT does surface an error, so the deny side is directly observable.
     const { error: insert } = await member.client.from("meetings").insert({
       slug: "rogue-meeting",
-      name: "Rogue",
+      nameOverride: "Rogue",
       startsAt: new Date().toISOString(),
       endsAt: new Date(Date.now() + 3_600_000).toISOString(),
     });
-    expect(insert).not.toBeNull();
+
+    // ⚠️ The code, not just "an error happened".
+    //
+    // `expect(insert).not.toBeNull()` was the whole assertion, and it stopped
+    // meaning anything the moment this fixture went stale: PostgREST rejected
+    // the insert for naming a column that no longer existed, which is an
+    // error, so the test passed — and it would have passed identically with
+    // RLS switched off entirely. A security assertion that a schema typo can
+    // satisfy is not one.
+    //
+    // 42501 is insufficient_privilege, which is what a policy denial actually
+    // raises. PGRST204 (unknown column) and 23502 (not-null violation) now
+    // fail here instead of masquerading as a pass.
+    expect(insert?.code).toBe("42501");
   });
 
   // The join code is the entire secret a join code consists of. A row policy

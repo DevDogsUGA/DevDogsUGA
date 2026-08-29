@@ -75,12 +75,25 @@ A refusal is per **field**, not per record: fixing a project link and a max team
 | Refused                                                                 | Because                                                                            |
 | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | A workshop's Meeting or Project, once it has attendance                 | It re-attributes credit people already earned                                      |
+| **Emptying** a workshop's Project, once it has attendance               | It takes the project off stars members have already earned                         |
 | `Requirements` on a finalized competition                               | It is the denominator of a score already published                                 |
 | `Judging starts` at or before the opening workshop's meeting            | Every roster would lock the moment the competition was created                     |
 | `Judging starts` moving once participation is frozen                    | Later reopens settled rosters; earlier locks people out of days they spent joining |
 | A Summary over 240 characters, or an RSVP link off the allowlisted host | It cannot go on a public page as written                                           |
+| A meeting Name over 80 characters                                       | It cannot go on a public page as written                                           |
+| A workshop Title over 80, or a Description over 280                     | It cannot go on a public page as written                                           |
+| An Attendance form link that is not `https://airtable.com/…`            | Check-in sends members straight to it                                              |
+| `Max team size` below 1, or `Requirements` below 0                      | The database rejects the value, and a rejected write used to stop the whole pass   |
+| A Cancellation reason over 160 characters                               | It cannot go on a public page as written                                           |
+| A Cancellation reason with `Cancelled` empty                            | The reason is only ever shown beside the date it explains                          |
 
-The first four protect **history**. The last is a different kind — nothing is at risk, the value simply cannot be published — so the refused field is dropped from the write rather than blanked, and whatever was already up stays up until the replacement fits.
+The first five protect **history**. The rest are a different kind — nothing is at risk, the value simply cannot be published — so the refused field is dropped from the write rather than blanked, and whatever was already up stays up until the replacement fits.
+
+**One exception to "dropped rather than blanked":** a Cancellation reason with no `Cancelled` date is written as **null**, not withheld. `meetings_cancellationReason_needs_cancellation` allows a reason only beside the date it explains, so leaving the old value in place would be the constraint violation the refusal exists to prevent. Every other refused field keeps what was published.
+
+Both halves of the cancellation pair are judged independently: a reason that is both too long **and** unpaired produces two messages on the first pass, not one and then the other fifteen minutes later.
+
+If a write is rejected for a reason no rule here anticipates, that **one row** is skipped and says so in its own `⚙️ Sync status`; the rest of the pass runs normally. Refusals gathered before any failure are still written back — the status write happens outside the pass's error boundary, so a pass that dies partway still reports what it learned.
 
 A workshop with **no** attendance is still fully editable, and a null incoming value is never a change: officers fill fields one at a time, and a pass landing between two keystrokes must not complain about a row that will be complete shortly.
 

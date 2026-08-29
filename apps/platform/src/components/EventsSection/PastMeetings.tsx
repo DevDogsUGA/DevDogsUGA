@@ -3,7 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
-import { ACTION_DARK_CLS } from "~/components/EventsSection/meetingView";
+import {
+  ACTION_DARK_CLS,
+  CANCELLED_LABEL,
+  isCancelled,
+} from "~/components/EventsSection/meetingView";
 import { formatEventDate } from "~/lib/eventTime";
 import { meetingTitle } from "~/lib/meetingTitle";
 import type { MeetingSummary } from "~/server/loaders/meetings";
@@ -119,33 +123,64 @@ export default function PastMeetings({
                 </tr>
               </thead>
               <tbody>
-                {shown.map((meeting) => (
-                  <tr
-                    key={meeting.id}
-                    className="border-b border-mauve-800/50 last:border-b-mauve-800"
-                  >
-                    <Td className="whitespace-nowrap text-mauve-400 tabular-nums">
-                      <time dateTime={meeting.startsAt.toISOString()}>
-                        {formatEventDate(meeting.startsAt)}
-                      </time>
-                    </Td>
-                    <Td>
-                      <Link
-                        href={`/events/${meeting.slug}`}
-                        className="font-semibold text-white underline decoration-2 underline-offset-2 hover:no-underline"
-                      >
-                        {meetingTitle(meeting)}
-                      </Link>
-                    </Td>
-                    <Td numeric>{meeting.workshopCount}</Td>
-                    {/* `tabular-nums` on both number columns, so 7 and 112 sit
-                        under each other instead of drifting with the width of
-                        the glyphs — the whole reason a table beats cards here. */}
-                    <Td numeric className="font-semibold text-white">
-                      {meeting.attendanceCount}
-                    </Td>
-                  </tr>
-                ))}
+                {shown.map((meeting) => {
+                  // `getPastMeetings` keeps cancelled nights on purpose, so
+                  // the archive is the one place a member can find out that a
+                  // night they were told about did not happen.
+                  const cancelled = isCancelled(meeting);
+                  return (
+                    <tr
+                      key={meeting.id}
+                      className="border-b border-mauve-800/50 last:border-b-mauve-800"
+                    >
+                      <Td className="whitespace-nowrap text-mauve-400 tabular-nums">
+                        <time dateTime={meeting.startsAt.toISOString()}>
+                          {formatEventDate(meeting.startsAt)}
+                        </time>
+                      </Td>
+                      <Td>
+                        <Link
+                          href={`/events/${meeting.slug}`}
+                          className={`font-semibold underline decoration-2 underline-offset-2 hover:no-underline ${
+                            cancelled ? "text-mauve-400" : "text-white"
+                          }`}
+                        >
+                          {meetingTitle(meeting)}
+                        </Link>
+                        {cancelled && (
+                          <span className="ml-2 align-middle text-xs font-medium text-rose-300">
+                            {CANCELLED_LABEL}
+                          </span>
+                        )}
+                      </Td>
+                      <Td numeric>{meeting.workshopCount}</Td>
+                      {/* `tabular-nums` on both number columns, so 7 and 112 sit
+                          under each other instead of drifting with the width of
+                          the glyphs — the whole reason a table beats cards here. */}
+                      <Td numeric className="font-semibold text-white">
+                        {/* ⚠️ A dash, not the 0.
+                            `attendanceCount` is 0 for every cancelled night,
+                            necessarily — nobody checks in to a meeting that
+                            did not happen. Printed as a number in a column
+                            headed "Attendance", beside nights that drew 40,
+                            that 0 does not read as "no meeting", it reads as
+                            "a meeting nobody came to". The club's worst night
+                            on record, in the archive, permanently, for a night
+                            it cancelled itself. */}
+                        {cancelled ? (
+                          <span
+                            className="text-mauve-500"
+                            aria-label="No attendance: this meeting was cancelled"
+                          >
+                            &mdash;
+                          </span>
+                        ) : (
+                          meeting.attendanceCount
+                        )}
+                      </Td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -421,14 +421,33 @@ export interface MeetingRangeJudging {
   competitionId: string;
   competitionSlug: string;
   /**
-   * A competition has no name of its own — it is called after its project.
-   * Null when it has none: `workshops.projectId` is nullable, and
+   * A competition has no name of its own — it is called after the workshop
+   * that opened it, and after that workshop's project.
+   *
+   * Null when it has neither: `workshops.projectId` is nullable, and
    * `judgingForMeetings` left-joins deliberately so that a project-less
    * competition still reaches the calendar instead of being dropped off a
    * night that has a deadline behind it.
+   *
+   * Read through `workshopLabel`, never directly — see `title` below.
    */
   projectName: string | null;
   projectSlug: string | null;
+  /**
+   * The officer's word for the workshop this competition came out of.
+   *
+   * ⚠️ Selected here because this row did not have it, and the omission
+   * printed one workshop under two different names on two nights of the same
+   * schedule: a workshop titled "Supabase" on project "Platform" was the chip
+   * **Supabase** on its kickoff night and **Judging: Platform** on its judging
+   * night. Worse, a titled workshop with no project — the case the whole
+   * nullable-`projectId` rework exists for — rendered as the bare word
+   * "Judging" with a perfectly good title sitting unread in the row.
+   *
+   * This is the same drift `workshopLabel` was introduced to remove. It was
+   * applied to the chip, the row and the star grid, and never here.
+   */
+  title: string | null;
   /**
    * The authored judging time. It falls inside this meeting's span, but it is
    * generally NOT the meeting's `startsAt`: two competitions judged the same
@@ -479,6 +498,10 @@ async function judgingForMeetings(
       competitionSlug: competitions.slug,
       projectSlug: projects.slug,
       projectName: projects.displayName,
+      // The officer's title for the opening workshop, so both nights of a
+      // competition print the same word. Already joined below for the
+      // `deletedAt` filter, so this costs no extra work.
+      title: workshops.title,
       judgingStartsAt: competitions.judgingStartsAt,
     })
     .from(competitions)
@@ -517,6 +540,7 @@ async function judgingForMeetings(
       competitionSlug: row.competitionSlug,
       projectSlug: row.projectSlug,
       projectName: row.projectName,
+      title: row.title,
       // Non-null by construction: the join only matches rows whose
       // `judgingStartsAt` compared successfully against two timestamps, and
       // null compares to neither. Drizzle types it from the column, which
@@ -741,28 +765,19 @@ export const getCompetitionBySlug = cache(
 );
 
 /**
- * Whether there is a form to point somebody at, right now.
+ * Re-exported from `~/lib/meetingSegments`, which owns it.
  *
- * Deliberately NOT "whether attendance is open". The platform stopped being
- * able to answer that when the check-in codes went: the Airtable form's own
- * open and close is the only gate, and this process has no way to read it.
- * Claiming otherwise would put a confident "Attendance open" badge on a page
- * next to a form that is closed.
+ * This was a byte-identical second copy — same body, same docstring — in a
+ * branch whose own story is deduplicating `clubDay` for exactly this reason.
+ * Two copies of a predicate is two places to fix a bug and one of them gets
+ * missed, which is precisely what happened: neither consulted `cancelledAt`,
+ * and a fix applied to one would have left the other handing out check-in
+ * buttons for a cancelled night.
  *
- * So this answers the narrower question it can actually answer — is there a
- * link, and is the meeting happening — and the copy around it is worded as a
- * pointer rather than a promise.
+ * Kept as a re-export rather than deleted so the existing import sites — which
+ * reach for it beside the loaders they already use — keep working.
  */
-export function attendanceFormIsLive(
-  meeting: Pick<MeetingSummary, "startsAt" | "endsAt" | "attendanceFormUrl">,
-  now = new Date(),
-): boolean {
-  return (
-    meeting.attendanceFormUrl !== null &&
-    now >= meeting.startsAt &&
-    now < meeting.endsAt
-  );
-}
+export { attendanceFormIsLive } from "~/lib/meetingSegments";
 
 /**
  * Every meeting slug that resolves to a page, newest first — for `sitemap.ts`.

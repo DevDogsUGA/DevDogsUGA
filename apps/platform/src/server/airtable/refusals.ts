@@ -1,8 +1,11 @@
 import {
   MEETING_CANCELLATION_REASON_MAX_LENGTH,
+  MEETING_NAME_OVERRIDE_MAX_LENGTH,
   MEETING_SUMMARY_MAX_LENGTH,
   normalizeMeetingSummary,
   RSVP_URL_ALLOWED_HOSTS,
+  WORKSHOP_DESCRIPTION_MAX_LENGTH,
+  WORKSHOP_TITLE_MAX_LENGTH,
   type AirtableValue,
 } from "@devdogsuga/airtable";
 
@@ -114,12 +117,23 @@ export interface Refusal {
 export type RefusalCode =
   // Not a refusal — see the note on the third class above.
   | "meeting_incomplete"
+  // Also not a refusal: no rule rejected anything, the write itself failed.
+  // The backstop for a bad value no rule here has learned to name yet — see
+  // `tryWrite` in `sync.ts`.
+  | "row_write_failed"
   | "meeting_summary_too_long"
   | "meeting_cancellation_reason_too_long"
   | "meeting_reason_without_cancellation"
   | "meeting_rsvp_host"
+  | "meeting_name_too_long"
+  | "meeting_attendance_form_host"
   | "workshop_meeting_changed"
   | "workshop_project_changed"
+  | "workshop_project_cleared"
+  | "workshop_title_too_long"
+  | "workshop_description_too_long"
+  | "competition_max_team_size_invalid"
+  | "competition_requirement_count_invalid"
   | "requirement_count_after_finalize"
   | "judging_before_workshop"
   | "judging_moved_after_freeze"
@@ -173,6 +187,14 @@ export interface MeetingFacts {
   rawCancellationReason: AirtableValue;
   /** What the registry parser made of it — null if it refused the value. */
   cancellationReason: string | null;
+  /** Exactly what Airtable returned for `Name`, before any parsing. */
+  rawNameOverride: AirtableValue;
+  /** What the registry parser made of it — null if it refused the value. */
+  nameOverride: string | null;
+  /** Exactly what Airtable returned for `Attendance form`, unparsed. */
+  rawAttendanceForm: AirtableValue;
+  /** What the registry parser made of it — null if it refused the value. */
+  attendanceForm: string | null;
 }
 
 /**
@@ -246,7 +268,44 @@ export function checkMeeting(facts: MeetingFacts): RuleResult {
     });
   }
 
-  // The cancellation pair, which the two rules above have no equivalent of:
+  // Both of the rules below guard a CHECK CONSTRAINT rather than a layout.
+  // That is a stronger reason than the two above: an unpublishable summary is
+  // a bad card, but a value the constraint rejects is an exception raised in
+  // the middle of the pull, and that unwinds past every table left in the
+  // pass. The parser now returns null for both, so all that is left here is
+  // telling the officer which keystroke did it.
+  const nameText = presentText(facts.rawNameOverride);
+  if (nameText !== null && facts.nameOverride === null) {
+    result.rejectedFields.add("nameOverride");
+    result.refusals.push({
+      table: "meetings",
+      airtableRecordId: facts.airtableRecordId,
+      code: "meeting_name_too_long",
+      message:
+        `Name is ${nameText.length} characters; a schedule row fits about ` +
+        `${MEETING_NAME_OVERRIDE_MAX_LENGTH}. It has not been published — ` +
+        "shorten it and it will appear within fifteen minutes. Most nights " +
+        "need no name at all: the heading is built from the workshops and " +
+        "the judging, so clearing this cell is also a fix.",
+    });
+  }
+
+  const formText = presentText(facts.rawAttendanceForm);
+  if (formText !== null && facts.attendanceForm === null) {
+    result.rejectedFields.add("attendanceFormUrl");
+    result.refusals.push({
+      table: "meetings",
+      airtableRecordId: facts.airtableRecordId,
+      code: "meeting_attendance_form_host",
+      message:
+        `Attendance form is "${formText}", which is not a link this can ` +
+        "store. It has not been published — check-in sends members straight " +
+        "to it, so it has to be an https:// address on airtable.com. Open " +
+        "the form in Airtable, use Share form, and paste that link.",
+    });
+  }
+
+  // The cancellation pair, which the rules above have no equivalent of:
   // `meetings_cancellationReason_needs_cancellation` allows a reason only
   // beside the date it explains, so neither column can be judged alone.
   const reasonText = normalizeMeetingSummary(facts.rawCancellationReason);
@@ -267,7 +326,17 @@ export function checkMeeting(facts: MeetingFacts): RuleResult {
         "it explains. Set Cancelled and both appear within fifteen minutes. " +
         "If the meeting is back on, clear the reason as well.",
     });
-  } else if (reasonText !== null && facts.cancellationReason === null) {
+  }
+
+  // A SEPARATE `if`, not the `else` this used to be. The two conditions are
+  // independent — one is about `cancelledAt`, the other about the length of
+  // `cancellationReason` — and chaining them hid the length problem behind
+  // the pairing one. An officer who typed 220 characters before setting the
+  // date was told only "set Cancelled and both appear within fifteen
+  // minutes", which was untrue; they set the date, waited a pull, and then
+  // learned about a fault that was knowable on the first pass. Summary and
+  // rsvpUrl have always both fired, and this now matches them.
+  if (reasonText !== null && facts.cancellationReason === null) {
     result.rejectedFields.add("cancellationReason");
     result.refusals.push({
       table: "meetings",
@@ -277,8 +346,12 @@ export function checkMeeting(facts: MeetingFacts): RuleResult {
         `Cancellation reason is ${reasonText.length} characters; the notice ` +
         `fits about ${MEETING_CANCELLATION_REASON_MAX_LENGTH}. It has not ` +
         "been published — shorten it and it will appear within fifteen " +
-        "minutes. The night still shows as cancelled either way; only the " +
-        "explanation is missing.",
+        "minutes. The night still shows as cancelled either way.",
+      // That last sentence used to end "; only the explanation is missing",
+      // which is false on the update path: a refused reason is DROPPED from
+      // the write, so a previously published explanation stays on the page.
+      // The officer would read "missing", look at the site, and see words.
+      // Claiming only what is certainly true is what the summary refusal does.
     });
   }
 
@@ -325,6 +398,84 @@ export interface WorkshopFacts {
 export interface WorkshopIncoming {
   meetingId: string | null;
   projectId: string | null;
+  /**
+   * True when the officer EMPTIED the Project cell, as opposed to a link that
+   * is present and merely failed to resolve this pass.
+   *
+   * Both arrive as `projectId: null`, and the difference is the whole of the
+   * rule below: emptying the cell is an edit with intent, and a link whose
+   * project row was skipped earlier in the same run is not an edit at all.
+   * The caller knows which because it holds the raw cell; this file cannot
+   * derive it, so it is passed rather than guessed.
+   */
+  projectCleared: boolean;
+}
+
+// ── Workshop values ──────────────────────────────────────────────────────────
+
+export interface WorkshopValueFacts {
+  airtableRecordId: string;
+  /** Exactly what Airtable returned for `Title`, before any parsing. */
+  rawTitle: AirtableValue;
+  /** What the registry parser made of it — null if it refused the value. */
+  title: string | null;
+  /** Exactly what Airtable returned for `Description`, unparsed. */
+  rawDescription: AirtableValue;
+  /** What the registry parser made of it — null if it refused the value. */
+  description: string | null;
+}
+
+/**
+ * The values a workshop cannot publish.
+ *
+ * The second class of rule, on the workshops table — see this file's header.
+ * `checkWorkshop` below asks what a workshop already HAS; this asks only what
+ * arrived, which is why it runs on the insert path too and does not care
+ * about attendance.
+ *
+ * It exists because `title` and `description` were written through
+ * unconditionally while `workshops_title_length` and
+ * `workshops_description_length` cap both at 80 and 280. The parser returns
+ * null past those caps, and null CLEARS — so an officer lengthening a title
+ * by one character silently erased the one that was there, with nothing in
+ * `⚙️ Sync status` to say so and the schedule quietly falling back to the
+ * project name. Summary and rsvpUrl have always been handled this way; these
+ * two were the pair that never got it.
+ */
+export function checkWorkshopValues(facts: WorkshopValueFacts): RuleResult {
+  const result = empty();
+
+  const titleText = normalizeMeetingSummary(facts.rawTitle);
+  if (titleText !== null && facts.title === null) {
+    result.rejectedFields.add("title");
+    result.refusals.push({
+      table: "workshops",
+      airtableRecordId: facts.airtableRecordId,
+      code: "workshop_title_too_long",
+      message:
+        `Title is ${titleText.length} characters; a schedule row fits about ` +
+        `${WORKSHOP_TITLE_MAX_LENGTH}. It has not been published — shorten ` +
+        "it and it will appear within fifteen minutes. The previous title " +
+        "is still on the site until then.",
+    });
+  }
+
+  const descriptionText = normalizeMeetingSummary(facts.rawDescription);
+  if (descriptionText !== null && facts.description === null) {
+    result.rejectedFields.add("description");
+    result.refusals.push({
+      table: "workshops",
+      airtableRecordId: facts.airtableRecordId,
+      code: "workshop_description_too_long",
+      message:
+        `Description is ${descriptionText.length} characters; the dialog ` +
+        `fits about ${WORKSHOP_DESCRIPTION_MAX_LENGTH}. It has not been ` +
+        "published — shorten it and it will appear within fifteen minutes. " +
+        "The previous description is still on the site until then.",
+    });
+  }
+
+  return result;
 }
 
 /**
@@ -393,6 +544,39 @@ export function checkWorkshop(
     });
   }
 
+  // Clearing the cell is the third edit, and it was the one that got through.
+  //
+  // The rule above only fires for a project that DIFFERS, and emptying the
+  // cell arrives as `projectId: null`, which it reads as "not a change" by
+  // design. So a cleared Project on a workshop with twenty check-ins was
+  // written straight through: `memberStars` groups on `w."projectId"`, and
+  // every one of those members lost the project off a star they had already
+  // earned, silently, with a clean `⚙️ Sync status`.
+  //
+  // Unlinking a session that turned out to teach a skill rather than a
+  // codebase is still a real edit — it is the reason `projectId` became
+  // nullable. It is real up until somebody has been credited for it, which is
+  // exactly where the other two rules draw the line too.
+  if (
+    incoming.projectCleared &&
+    incoming.projectId === null &&
+    facts.currentProjectId !== null
+  ) {
+    result.rejectedFields.add("projectId");
+    result.refusals.push({
+      table: "workshops",
+      airtableRecordId: facts.airtableRecordId,
+      code: "workshop_project_cleared",
+      message:
+        `Refused: this workshop has ${facts.attendanceCount} attendance ` +
+        "record(s), so its Project cannot be emptied — those check-ins are " +
+        "credited to that project, and clearing it would take the project " +
+        "off stars members have already earned. The Project is unchanged on " +
+        "the site. If this session really teaches a skill rather than a " +
+        "codebase, create a new workshop row for it.",
+    });
+  }
+
   return result;
 }
 
@@ -413,6 +597,69 @@ export interface CompetitionFacts {
 export interface CompetitionIncoming {
   requirementCount: number | null;
   judgingStartsAt: Date | null;
+}
+
+export interface CompetitionValueFacts {
+  airtableRecordId: string;
+  /** Exactly what Airtable returned for `Max team size`, unparsed. */
+  rawMaxTeamSize: AirtableValue;
+  /** What the registry parser made of it — null if it refused the value. */
+  maxTeamSize: number | null;
+  /** Exactly what Airtable returned for `Requirements`, unparsed. */
+  rawRequirementCount: AirtableValue;
+  /** What the registry parser made of it — null if it refused the value. */
+  requirementCount: number | null;
+}
+
+/**
+ * The numbers a competition cannot store.
+ *
+ * `competitions_maxTeamSize_positive` and
+ * `competitions_requirementCount_nonneg` are check constraints, so a 0 typed
+ * into Max team size used to be an exception raised inside the pull rather
+ * than a refused cell. The parser now rejects both, and the only thing left
+ * is saying so — otherwise the number simply never applies and the officer
+ * has no way to find out which of their edits did not take.
+ *
+ * Unlike the meeting rules, a rejected value here is never written as null:
+ * the caller already omits a null number from the update rather than
+ * clearing the column, so nothing needs adding to `rejectedFields`.
+ */
+export function checkCompetitionValues(
+  facts: CompetitionValueFacts,
+): RuleResult {
+  const result = empty();
+
+  if (facts.rawMaxTeamSize !== undefined && facts.maxTeamSize === null) {
+    result.refusals.push({
+      table: "competitions",
+      airtableRecordId: facts.airtableRecordId,
+      code: "competition_max_team_size_invalid",
+      message:
+        `Max team size is "${String(facts.rawMaxTeamSize)}", which is not a ` +
+        "team size. It has to be a whole number of at least 1, and it has " +
+        "not been applied — the previous value is still in force. Leave the " +
+        "cell empty for no limit.",
+    });
+  }
+
+  if (
+    facts.rawRequirementCount !== undefined &&
+    facts.requirementCount === null
+  ) {
+    result.refusals.push({
+      table: "competitions",
+      airtableRecordId: facts.airtableRecordId,
+      code: "competition_requirement_count_invalid",
+      message:
+        `Requirements is "${String(facts.rawRequirementCount)}", which is ` +
+        "not a count. It has to be a whole number, zero or more, and it has " +
+        "not been applied — the previous value is still in force. It is the " +
+        "denominator every team's requirement score is computed against.",
+    });
+  }
+
+  return result;
 }
 
 /**

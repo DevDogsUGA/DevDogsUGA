@@ -20,9 +20,11 @@ import {
 } from "~/server/db/schema";
 import {
   checkCompetition,
+  checkCompetitionValues,
   checkMeeting,
   describeIncompleteMeeting,
   checkWorkshop,
+  checkWorkshopValues,
   type Refusal,
 } from "./refusals";
 
@@ -68,6 +70,72 @@ function emptyOutcome(): PullOutcome {
     refusals: [],
     idMap: new Map(),
   };
+}
+
+/**
+ * One row's write, contained.
+ *
+ * Every rule in `refusals.ts` exists to stop a bad cell reaching Postgres, and
+ * each one is a rule somebody had to think of first. This is the answer for
+ * the ones nobody has thought of yet.
+ *
+ * The pull had no `try` anywhere in it, so a constraint violation on a single
+ * row unwound out of the loop, past the tables that had not run yet, and into
+ * the one whole-pass catch in `run.ts` -- where it also skipped
+ * `writeSyncStatus`. One officer typing one wrong character therefore stopped
+ * meetings, workshops, competitions, attendance and both pushes, and reported
+ * NOTHING: no refusal for any table reached Airtable, `syncedAt` stayed null,
+ * and the grid looked clean. The failure was invisible from the only place
+ * anyone would look.
+ *
+ * Containing it here makes the blast radius one row. The other rows in the
+ * pass apply, the tables downstream still run, and the row that failed says so
+ * in its own status cell -- which is where the officer who edited it is
+ * already looking.
+ *
+ * Deliberately NOT a substitute for a rule. A refusal explains what to change;
+ * this can only say that the write was rejected. When this fires for a case
+ * that turns out to be ordinary officer work, the fix is a rule in
+ * `refusals.ts` that names it, not a better message here.
+ */
+async function tryWrite<T>(
+  out: PullOutcome,
+  table: Refusal["table"],
+  airtableRecordId: string,
+  write: () => Promise<T>,
+): Promise<{ ok: true; value: T } | { ok: false }> {
+  try {
+    return { ok: true, value: await write() };
+  } catch (error) {
+    out.skipped += 1;
+    out.refusals.push({
+      table,
+      airtableRecordId,
+      code: "row_write_failed",
+      message:
+        "This row could not be saved, so nothing on it has changed on the " +
+        "site. The rest of the sync ran normally. Check the values in this " +
+        "row - a date, a number or a length is the usual cause - and if it " +
+        "still fails after an edit, an officer needs to look at the logs. " +
+        `The database said: ${describeWriteError(error)}`,
+    });
+    return { ok: false };
+  }
+}
+
+/** The database's own words, trimmed to something an officer can read. */
+function describeWriteError(error: unknown): string {
+  // Narrowed rather than `String(error)`: a thrown object stringifies to
+  // "[object Object]", which would put that in an officer's status cell as
+  // though it were the database's explanation.
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "unknown error";
+  const oneLine = message.replace(/\s+/g, " ").trim();
+  return oneLine.length > 200 ? `${oneLine.slice(0, 199)}…` : oneLine;
 }
 
 // ── Meetings ─────────────────────────────────────────────────────────────────
@@ -177,6 +245,10 @@ export async function pullMeetings(
       cancelledAt: v.cancelledAt,
       rawCancellationReason: raw[meetingsSpec.fields.cancellationReason.id],
       cancellationReason: v.cancellationReason,
+      rawNameOverride: raw[meetingsSpec.fields.nameOverride.id],
+      nameOverride: v.nameOverride,
+      rawAttendanceForm: raw[meetingsSpec.fields.attendanceForm.id],
+      attendanceForm: v.attendanceForm,
     });
     out.refusals.push(...rules.refusals);
 
@@ -216,12 +288,12 @@ export async function pullMeetings(
     }
 
     const values: {
-      nameOverride: string | null;
+      nameOverride?: string | null;
       building?: string | null;
       location: string | null;
       startsAt: Date;
       endsAt: Date;
-      attendanceFormUrl: string | null;
+      attendanceFormUrl?: string | null;
       summary?: string | null;
       kind?: string | null;
       rsvpUrl?: string | null;
@@ -268,6 +340,14 @@ export async function pullMeetings(
     // punish the edit twice. The old text stays up until the new one fits.
     if (rules.rejectedFields.has("summary")) delete values.summary;
     if (rules.rejectedFields.has("rsvpUrl")) delete values.rsvpUrl;
+    // Both of these guard a check constraint rather than a layout, so the
+    // consequence of writing them anyway was not a bad card but a rejected
+    // INSERT mid-pull, which ends the pass for every table after this one.
+    // The parser refuses the value and this drops it, so the row keeps the
+    // name and the form it already had while the officer fixes the cell.
+    if (rules.rejectedFields.has("nameOverride")) delete values.nameOverride;
+    if (rules.rejectedFields.has("attendanceFormUrl"))
+      delete values.attendanceFormUrl;
     // Only reachable while the night IS cancelled — the unpaired case clears
     // the column instead, and says so above. Here the old reason stays up, for
     // the same reason the old summary does.
@@ -275,9 +355,18 @@ export async function pullMeetings(
       delete values.cancellationReason;
 
     if (current) {
-      await db.update(meetings).set(values).where(eq(meetings.id, current.id));
+      const written = await tryWrite(
+        out,
+        "meetings",
+        record.airtableRecordId,
+        () =>
+          db.update(meetings).set(values).where(eq(meetings.id, current.id)),
+      );
+      // Mapped even when the write failed: the row exists, and the tables
+      // downstream still need to resolve links to it. A failed edit is not a
+      // missing meeting.
       out.idMap.set(record.airtableRecordId, current.id);
-      out.upserted += 1;
+      if (written.ok) out.upserted += 1;
       continue;
     }
 
@@ -299,15 +388,22 @@ export async function pullMeetings(
     const slug = uniqueSlug(clubDateKey(new Date(v.startsAt!)), usedSlugs);
     usedSlugs.add(slug);
 
-    const [inserted] = await db
-      .insert(meetings)
-      .values({
-        ...values,
-        slug,
-        airtableRecordId: record.airtableRecordId,
-      })
-      .returning({ id: meetings.id });
+    const written = await tryWrite(
+      out,
+      "meetings",
+      record.airtableRecordId,
+      () =>
+        db
+          .insert(meetings)
+          .values({
+            ...values,
+            slug,
+            airtableRecordId: record.airtableRecordId,
+          })
+          .returning({ id: meetings.id }),
+    );
 
+    const inserted = written.ok ? written.value[0] : undefined;
     if (inserted) {
       out.idMap.set(record.airtableRecordId, inserted.id);
       out.upserted += 1;
@@ -366,6 +462,11 @@ export async function pullWorkshops(
       .map((w) => [w.airtableRecordId!, w]),
   );
 
+  // Same reason the meetings pass keeps these: `title` and `description` both
+  // parse to null for "the officer wrote nothing" and for "the officer wrote
+  // something too long", and only the second is a refusal.
+  const rawByRecordId = new Map(records.map((r) => [r.id, r.fields]));
+
   for (const record of parsed) {
     const meetingId = record.values.meeting
       ? (meetingIds.get(record.values.meeting) ?? null)
@@ -373,8 +474,27 @@ export async function pullWorkshops(
     const projectId = record.values.project
       ? (projectIds.get(record.values.project) ?? null)
       : null;
+    // "The officer emptied the cell", as opposed to "a link is there and did
+    // not resolve this pass". Computed once, here, from the same value both
+    // the resolution above and the refusal below are derived from, so the two
+    // cannot drift into disagreeing about one cell.
+    const projectCleared = !record.values.project;
 
     const current = byRecordId.get(record.airtableRecordId);
+
+    // Before the branch, and before the completeness gate, exactly like the
+    // meeting value rules: a title too long to publish is too long whether
+    // the row is new or not, and the officer who just typed it is the person
+    // best placed to fix it now.
+    const raw = rawByRecordId.get(record.airtableRecordId) ?? {};
+    const valueRules = checkWorkshopValues({
+      airtableRecordId: record.airtableRecordId,
+      rawTitle: raw[workshopsSpec.fields.title.id],
+      title: record.values.title,
+      rawDescription: raw[workshopsSpec.fields.description.id],
+      description: record.values.description,
+    });
+    out.refusals.push(...valueRules.refusals);
 
     if (current) {
       const rules = checkWorkshop(
@@ -384,7 +504,7 @@ export async function pullWorkshops(
           currentMeetingId: current.meetingId,
           currentProjectId: current.projectId,
         },
-        { meetingId, projectId },
+        { meetingId, projectId, projectCleared },
       );
       out.refusals.push(...rules.refusals);
 
@@ -394,33 +514,44 @@ export async function pullWorkshops(
         title?: string | null;
         description?: string | null;
       } = {
-        // Written through unconditionally, unlike the two links: clearing the
-        // Airtable cell has to clear the column, or the page keeps printing a
-        // title an officer deleted.
+        // Written through, unlike the two links: clearing the Airtable cell
+        // has to clear the column, or the page keeps printing a title an
+        // officer deleted.
+        //
+        // But only when the null MEANS cleared. Both parsers also return null
+        // past their length caps, and writing that erased a published title
+        // because somebody added one character to it — no message anywhere,
+        // and the schedule silently falling back to the project name. The two
+        // deletes below are what tell those apart.
         title: record.values.title,
         description: record.values.description,
       };
+      if (valueRules.rejectedFields.has("title")) delete values.title;
+      if (valueRules.rejectedFields.has("description"))
+        delete values.description;
       if (meetingId !== null && !rules.rejectedFields.has("meetingId")) {
         values.meetingId = meetingId;
       }
-      // `projectId` may now legitimately go to null: unlinking the project
-      // from a session that turned out to teach a skill rather than a codebase
-      // is a real edit, and the refusal rules still guard the case where
-      // attendance already hangs off the old one.
+      // `projectId` may legitimately go to null: unlinking the project from a
+      // session that turned out to teach a skill rather than a codebase is a
+      // real edit, and it is the reason the column became nullable.
       //
-      // But only when the officer actually CLEARED the cell. A link that is
+      // Two things have to be true before that null is written, and only the
+      // first used to be checked.
+      //
+      // The officer must have actually CLEARED the cell. A link that is
       // present and merely failed to resolve this pass — its project row
       // skipped earlier in the same run, or Airtable returning the workshop
-      // mid-edit — arrives here as the identical null, and `checkWorkshop`
-      // reads a null incoming value as "not a change" and issues no refusal
-      // for it *by design*, so `rejectedFields` cannot tell the two apart
-      // either. Writing that null would detach the workshop from its project
-      // silently, and `memberStars` would then strip the project off stars
-      // members had already earned. The empty cell is the only clearing.
-      // The same predicate `projectId` was computed from a few lines up, so
-      // "the officer cleared it" and "there was nothing to resolve" cannot
-      // drift into disagreeing about the same cell.
-      const projectCleared = !record.values.project;
+      // mid-edit — arrives here as the identical null. Writing that would
+      // detach a workshop from its project because of an ordering accident.
+      //
+      // And nobody may have been credited for it yet. `checkWorkshop` reads a
+      // null incoming value as "not a change", so the clear sailed past both
+      // of its rules and `rejectedFields` came back empty — while
+      // `memberStars` groups on `w."projectId"` and every member who attended
+      // lost the project off a star they had already earned. That case now
+      // has a rule of its own (`workshop_project_cleared`), which is why this
+      // condition can stay this simple: `rejectedFields` finally knows.
       if (
         !rules.rejectedFields.has("projectId") &&
         (projectCleared || projectId !== null)
@@ -435,17 +566,20 @@ export async function pullWorkshops(
       // would be a branch that reads as live and never runs. `skipped` counts
       // the insert path below, where a workshop really can have nothing to do.
 
-      await db
-        .update(workshops)
-        .set(values)
-        .where(eq(workshops.id, current.id));
-      out.upserted += 1;
+      const written = await tryWrite(
+        out,
+        "workshops",
+        record.airtableRecordId,
+        () =>
+          db.update(workshops).set(values).where(eq(workshops.id, current.id)),
+      );
+      if (written.ok) out.upserted += 1;
       continue;
     }
 
-    // Only the MEETING link is still required. `projectId` became nullable
-    // with the events rework, so a career-readiness session -- which belongs to
-    // no codebase and never will -- can be created with its project cell empty
+    // Only the MEETING link is required. `projectId` became nullable with the
+    // events rework, so a career-readiness session -- which belongs to no
+    // codebase and never will -- can be created with its project cell empty
     // rather than sitting in Airtable being skipped every pass with no
     // explanation.
     if (meetingId === null) {
@@ -453,17 +587,48 @@ export async function pullWorkshops(
       continue;
     }
 
-    const [inserted] = await db
-      .insert(workshops)
-      .values({
-        meetingId,
-        projectId,
-        title: record.values.title,
-        description: record.values.description,
-        airtableRecordId: record.airtableRecordId,
-      })
-      .returning({ id: workshops.id });
+    // The insert path needs the same distinction the update path makes, and
+    // did not have it: `projectId` went straight in, so a workshop whose
+    // Project link was filled in but whose project row happened to be skipped
+    // earlier in this same pass was created project-less. That is the exact
+    // conflation the heavily-commented block above refuses to make — an empty
+    // cell and an unresolved link are not the same edit — and here it was
+    // permanent, because the next pass finds the row already inserted and
+    // treats its missing project as the officer's choice.
+    //
+    // Skipped rather than inserted: the project resolves on the following
+    // pass and the row is created whole, fifteen minutes later.
+    if (!projectCleared && projectId === null) {
+      out.skipped += 1;
+      continue;
+    }
 
+    const written = await tryWrite(
+      out,
+      "workshops",
+      record.airtableRecordId,
+      () =>
+        db
+          .insert(workshops)
+          .values({
+            meetingId,
+            projectId,
+            // Refused values are omitted here too. On insert there is nothing
+            // to preserve, but writing a value the check constraint rejects
+            // would throw, and the refusal above has already told the officer
+            // why the row has no title yet.
+            title: valueRules.rejectedFields.has("title")
+              ? null
+              : record.values.title,
+            description: valueRules.rejectedFields.has("description")
+              ? null
+              : record.values.description,
+            airtableRecordId: record.airtableRecordId,
+          })
+          .returning({ id: workshops.id }),
+    );
+
+    const inserted = written.ok ? written.value[0] : undefined;
     if (inserted) {
       out.idMap.set(record.airtableRecordId, inserted.id);
       out.upserted += 1;
@@ -525,6 +690,12 @@ export async function pullCompetitions(
       .map((c) => [c.airtableRecordId!, c]),
   );
 
+  // Both numbers below are check-constrained, so the raw cell is needed for
+  // the same reason the meetings pass needs it: the parser returns null for
+  // "empty" and for "not a number I can store", and only the second is worth
+  // a message.
+  const rawByRecordId = new Map(records.map((r) => [r.id, r.fields]));
+
   for (const record of parsed) {
     const v = record.values;
     const workshopId = v.workshop
@@ -534,6 +705,17 @@ export async function pullCompetitions(
       ? new Date(v.judgingStartsAt)
       : null;
     const current = byRecordId.get(record.airtableRecordId);
+
+    const raw = rawByRecordId.get(record.airtableRecordId) ?? {};
+    out.refusals.push(
+      ...checkCompetitionValues({
+        airtableRecordId: record.airtableRecordId,
+        rawMaxTeamSize: raw[competitionsSpec.fields.maxTeamSize.id],
+        maxTeamSize: v.maxTeamSize,
+        rawRequirementCount: raw[competitionsSpec.fields.requirementCount.id],
+        requirementCount: v.requirementCount,
+      }).refusals,
+    );
 
     if (current) {
       const rules = checkCompetition(
@@ -572,15 +754,26 @@ export async function pullCompetitions(
         continue;
       }
 
-      await db
-        .update(competitions)
-        .set(values)
-        .where(eq(competitions.id, current.id));
-      out.upserted += 1;
+      const written = await tryWrite(
+        out,
+        "competitions",
+        record.airtableRecordId,
+        () =>
+          db
+            .update(competitions)
+            .set(values)
+            .where(eq(competitions.id, current.id)),
+      );
+      if (written.ok) out.upserted += 1;
       continue;
     }
 
-    if (workshopId === null || v.slug === null) {
+    // Hoisted to a const before the guard, rather than narrowed in place.
+    // The insert below runs inside a callback now, and TypeScript discards a
+    // narrowing on a mutable property across a function boundary -- `v.slug`
+    // would be `string | null` again by the time it is read.
+    const slug = v.slug;
+    if (workshopId === null || slug === null) {
       out.skipped += 1;
       continue;
     }
@@ -590,18 +783,25 @@ export async function pullCompetitions(
     // creation the officer may not have linked the workshop and set the time
     // in the same edit. The next pass sees it as a change and applies the rule
     // then, when both halves are present.
-    const [inserted] = await db
-      .insert(competitions)
-      .values({
-        slug: v.slug,
-        workshopId,
-        judgingStartsAt,
-        requirementCount: v.requirementCount,
-        maxTeamSize: v.maxTeamSize,
-        airtableRecordId: record.airtableRecordId,
-      })
-      .returning({ id: competitions.id });
+    const written = await tryWrite(
+      out,
+      "competitions",
+      record.airtableRecordId,
+      () =>
+        db
+          .insert(competitions)
+          .values({
+            slug,
+            workshopId,
+            judgingStartsAt,
+            requirementCount: v.requirementCount,
+            maxTeamSize: v.maxTeamSize,
+            airtableRecordId: record.airtableRecordId,
+          })
+          .returning({ id: competitions.id }),
+    );
 
+    const inserted = written.ok ? written.value[0] : undefined;
     if (inserted) {
       out.idMap.set(record.airtableRecordId, inserted.id);
       out.upserted += 1;
