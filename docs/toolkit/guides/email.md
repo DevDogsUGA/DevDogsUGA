@@ -46,7 +46,7 @@ The build renders every template **twice per output**, with two different
 sentinel alphabets, and compares the results. The Proxy hands back a string for
 every prop access, so `{p.isLead ? … : …}` always takes the truthy branch and
 would silently bake one variant into the shipped artifact. Two sentinel sets
-must produce identical structure; anything that reads a prop's *value* rather
+must produce identical structure; anything that reads a prop's _value_ rather
 than substituting it makes them disagree, and the build fails with the chunk
 that differed.
 

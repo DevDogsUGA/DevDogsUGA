@@ -65,7 +65,10 @@ export function clearedModules(
   const { gridSize, padding } = options;
   const box = logoBox(gridSize, options.modules);
   const first = Math.max(0, Math.floor(box.x - padding));
-  const last = Math.min(gridSize - 1, Math.ceil(box.x + box.side + padding) - 1);
+  const last = Math.min(
+    gridSize - 1,
+    Math.ceil(box.x + box.side + padding) - 1,
+  );
 
   const cleared = new Set<number>();
   for (let y = first; y <= last; y += 1) {

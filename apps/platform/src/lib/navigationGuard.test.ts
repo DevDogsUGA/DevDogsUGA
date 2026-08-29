@@ -90,9 +90,9 @@ describe("shouldInterceptNavigation", () => {
   });
 
   it("resolves relative hrefs against the current page", () => {
-    expect(shouldInterceptNavigation(intent({ href: "/community" }), HERE)).toBe(
-      true,
-    );
+    expect(
+      shouldInterceptNavigation(intent({ href: "/community" }), HERE),
+    ).toBe(true);
     expect(shouldInterceptNavigation(intent({ href: "#top" }), HERE)).toBe(
       false,
     );
@@ -100,7 +100,9 @@ describe("shouldInterceptNavigation", () => {
 
   it("treats odd-looking but valid relative paths as navigation", () => {
     // "::::" resolves to /:::: — a real same-origin path, not a parse failure.
-    expect(shouldInterceptNavigation(intent({ href: "::::" }), HERE)).toBe(true);
+    expect(shouldInterceptNavigation(intent({ href: "::::" }), HERE)).toBe(
+      true,
+    );
   });
 
   it("does not throw on an href that fails to parse", () => {

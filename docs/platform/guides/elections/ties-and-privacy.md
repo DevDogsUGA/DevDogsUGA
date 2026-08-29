@@ -36,15 +36,15 @@ This is the step somebody will forget, precisely because it usually is not neede
 
 Ballots are **officer-visible, not public**. Full secrecy was considered and rejected: with a handful of ballots, a disputed count that cannot be re-examined is a dispute that cannot be resolved.
 
-| Table                  | Client read                                                    |
-| ---------------------- | -------------------------------------------------------------- |
-| `elections`            | Anyone — which elections exist and when they open is public     |
-| `ballots`              | Your own team's, or any with `canAuditBallots`                  |
-| `ballotRankings`       | The same, through the ballot                                    |
-| `electionResults`      | Anyone, once the election's `status = 'tallied'`                |
-| `pairwiseTallies`      | `canAuditBallots` only                                          |
-| `tiebreakDisclosures`  | Anyone — this is the disclosure surface                         |
-| `competitionStandings` | Anyone, once one of the competition's points elections tallied  |
+| Table                  | Client read                                                       |
+| ---------------------- | ----------------------------------------------------------------- |
+| `elections`            | Anyone — which elections exist and when they open is public       |
+| `ballots`              | Your own team's, or any with `canAuditBallots`                    |
+| `ballotRankings`       | The same, through the ballot                                      |
+| `electionResults`      | Anyone, once the election's `status = 'tallied'`                  |
+| `pairwiseTallies`      | `canAuditBallots` only                                            |
+| `tiebreakDisclosures`  | Anyone — this is the disclosure surface                           |
+| `competitionStandings` | Anyone, once one of the competition's points elections tallied    |
 | `memberPoints`         | A view with `security_invoker = on`, so it inherits the row above |
 
 Every table in that list is insert/update/delete-closed to clients by restrictive policies; the tally writes them server-side. Gating results on `'tallied'` is what stops a partial count leaking mid-pass.

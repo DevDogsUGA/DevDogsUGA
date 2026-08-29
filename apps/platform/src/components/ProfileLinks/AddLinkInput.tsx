@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, type RefObject } from "react";
-import { CheckIcon, LinkIcon, PlusIcon, TagIcon } from "@phosphor-icons/react/ssr";
+import {
+  CheckIcon,
+  LinkIcon,
+  PlusIcon,
+  TagIcon,
+} from "@phosphor-icons/react/ssr";
 import { isValidLinkUrl, PROFILE_LIMITS } from "~/lib/validation/profile";
 
 interface AddLinkInputProps {

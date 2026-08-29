@@ -16,10 +16,10 @@ Each election carries its own `opensAt` and `closesAt`. The only ordering the da
 
 ## Two electorates
 
-| Electorate   | Ballots                | Cast by                                    |
-| ------------ | ---------------------- | ------------------------------------------ |
+| Electorate   | Ballots                | Cast by                                     |
+| ------------ | ---------------------- | ------------------------------------------- |
 | **Teams**    | One per competing team | The team lead — `teamMembers.role = 'lead'` |
-| **Officers** | Exactly one, total     | Any officer holding `canVoteAsOfficer`     |
+| **Officers** | Exactly one, total     | Any officer holding `canVoteAsOfficer`      |
 
 Officers vote collectively: they agree on an ordering however they like and one of them submits it, so a category decided by officers is decided once rather than once per officer who happens to be in the room. Officers do not compete, so the two electorates are disjoint by construction and there is no recusal problem.
 

@@ -10,12 +10,12 @@ Every DevDogs project lives in one pnpm + Turborepo monorepo: four apps, eight s
 
 ## The four apps
 
-| Directory | What it is | Postgres schema |
-| --- | --- | --- |
-| `apps/platform` | Next.js — the DevDogs site, console, docs, and OAuth server | `platform` |
-| `apps/schedule-builder` | Next.js — course schedule planning | `schedule_builder` |
-| `apps/study-group-finder` | Flutter — study groups, still a scaffold | `study_group_finder` |
-| `apps/sandbox` | Cloudflare Worker — the proxy in front of each team's Supabase project | none |
+| Directory                 | What it is                                                             | Postgres schema      |
+| ------------------------- | ---------------------------------------------------------------------- | -------------------- |
+| `apps/platform`           | Next.js — the DevDogs site, console, docs, and OAuth server            | `platform`           |
+| `apps/schedule-builder`   | Next.js — course schedule planning                                     | `schedule_builder`   |
+| `apps/study-group-finder` | Flutter — study groups, still a scaffold                               | `study_group_finder` |
+| `apps/sandbox`            | Cloudflare Worker — the proxy in front of each team's Supabase project | none                 |
 
 Schema-per-app is an organizational boundary, not a security one. Every schema is reachable through the same PostgREST endpoint and the same publishable key, so Row-Level Security is what actually isolates one app's data from another's.
 

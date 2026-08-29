@@ -11,14 +11,8 @@ type ProfileData = Awaited<ReturnType<typeof getProfilePageData>>;
 
 export default function PreferredNameField({ id, profile }: ProfileData) {
   const inputId = useId();
-  const {
-    name,
-    setName,
-    nameDirty,
-    nameError,
-    saveName,
-    resetName,
-  } = useProfileIdentity(id, profile.preferredName);
+  const { name, setName, nameDirty, nameError, saveName, resetName } =
+    useProfileIdentity(id, profile.preferredName);
 
   return (
     <SettingsField

@@ -142,7 +142,6 @@ export default function EventsPage({
           </div>
         </ConsoleCard.Content>
       </ConsoleCard.Root>
-
     </div>
   );
 }

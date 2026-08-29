@@ -351,7 +351,9 @@ export default function ProfileLinks({ initialLinks }: Props) {
   // page-wide save would quietly drop it. Blocking the save is the honest
   // alternative: the message says what to do and the bar names the field.
   const pendingUrlError =
-    urlInput.trim().length > 0 && !urlIsValid ? validateLinkUrl(urlInput) : null;
+    urlInput.trim().length > 0 && !urlIsValid
+      ? validateLinkUrl(urlInput)
+      : null;
   const listError = validateLinks(stagedLinks);
   const error = listError ?? pendingUrlError;
 

@@ -330,7 +330,9 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
 export function useSettingsForm() {
   const context = useContext(SettingsFormContext);
   if (!context) {
-    throw new Error("useSettingsForm must be used inside <SettingsFormProvider>");
+    throw new Error(
+      "useSettingsForm must be used inside <SettingsFormProvider>",
+    );
   }
   return context;
 }

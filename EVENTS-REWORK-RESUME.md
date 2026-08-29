@@ -29,7 +29,7 @@ phantom errors, on this branch and on `main` alike.
   `lib/eventTime` beside `EVENT_TZ`; `clubDateKey` is the slug source.
 - **Loaders.** `summaryColumns` carries `nameOverride` and both cancellation
   columns; seven `projects` joins became left joins; where a project name was
-  doubling as the *competition's* name it coalesces through the workshop title
+  doubling as the _competition's_ name it coalesces through the workshop title
   to the competition slug; `getUpcomingMeetings` filters cancelled and
   `getMeetingsInRange` deliberately does not.
 - **`meetingView`.** `kindBadge`, `primaryBadge`, `meetingBadges`; `open`
@@ -54,7 +54,7 @@ own hue.
 ## Two environment traps
 
 1. **`.env`'s `DB_URL` points at the remote Supabase pooler, not localhost.** A
-   plain `pnpm db:pull` introspects *staging* and writes its shape over the
+   plain `pnpm db:pull` introspects _staging_ and writes its shape over the
    committed schema. Use
    `DB_URL='postgresql://postgres:postgres@127.0.0.1:54322/postgres' npx drizzle-kit pull --config drizzle.config.ts`
    then `npx tsx scripts/post-pull.ts`.

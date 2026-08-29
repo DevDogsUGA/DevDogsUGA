@@ -45,7 +45,10 @@ describe("parseQrArgs", () => {
   });
 
   it("treats --out as a stem when --format lists several", () => {
-    const opts = parseQrArgs(["hi", "--out", "poster.png", "--format", "svg,webp,jpg,webp"], CWD);
+    const opts = parseQrArgs(
+      ["hi", "--out", "poster.png", "--format", "svg,webp,jpg,webp"],
+      CWD,
+    );
     if (opts instanceof Error) throw opts;
     expect(opts.formats).toEqual(["svg", "webp", "jpeg"]);
     expect(opts.exactPath).toBeUndefined();
@@ -53,7 +56,9 @@ describe("parseQrArgs", () => {
   });
 
   it("refuses formats and extensions it cannot write", () => {
-    expect(parseQrArgs(["hi", "--format", "png,bmp"], CWD)).toBeInstanceOf(Error);
+    expect(parseQrArgs(["hi", "--format", "png,bmp"], CWD)).toBeInstanceOf(
+      Error,
+    );
     expect(parseQrArgs(["hi", "--out", "code.gif"], CWD)).toBeInstanceOf(Error);
     expect(parseQrArgs(["hi", "--ecl", "X"], CWD)).toBeInstanceOf(Error);
     expect(parseQrArgs(["hi", "--size", "big"], CWD)).toBeInstanceOf(Error);
@@ -133,7 +138,15 @@ describe("generateQr", () => {
   it("writes every format and each one scans back to the text", async () => {
     const text = "https://devdogsuga.org/attendance";
     const opts = parseQrArgs(
-      [text, "--out", join(dir, "code"), "--format", "svg,png,jpg,webp,avif,tiff", "--logo", join(dir, "logo.png")],
+      [
+        text,
+        "--out",
+        join(dir, "code"),
+        "--format",
+        "svg,png,jpg,webp,avif,tiff",
+        "--logo",
+        join(dir, "logo.png"),
+      ],
       dir,
     );
     if (opts instanceof Error) throw opts;
@@ -161,7 +174,18 @@ describe("generateQr", () => {
   }, 60_000);
 
   it("writes to the exact path --out names", async () => {
-    const opts = parseQrArgs(["hello", "--out", join(dir, "one.webp"), "--logo", "none", "--size", "300"], dir);
+    const opts = parseQrArgs(
+      [
+        "hello",
+        "--out",
+        join(dir, "one.webp"),
+        "--logo",
+        "none",
+        "--size",
+        "300",
+      ],
+      dir,
+    );
     if (opts instanceof Error) throw opts;
     const written = await generateQr(opts);
     expect(written).toHaveLength(1);

@@ -144,15 +144,16 @@ describe("link limits match the database", () => {
 
   it("refuses more than five links", () => {
     const link = { url: "https://example.com", title: "Example" };
-    const atLimit = Array.from({ length: PROFILE_LIMITS.linkCount }, () => link);
+    const atLimit = Array.from(
+      { length: PROFILE_LIMITS.linkCount },
+      () => link,
+    );
     expect(validateLinks(atLimit)).toBeNull();
     expect(validateLinks([...atLimit, link])).not.toBeNull();
   });
 
   it("reports a bad URL inside the list", () => {
-    expect(
-      validateLinks([{ url: "not a url", title: null }]),
-    ).not.toBeNull();
+    expect(validateLinks([{ url: "not a url", title: null }])).not.toBeNull();
   });
 
   it("treats a missing title as empty rather than invalid", () => {
@@ -183,6 +184,8 @@ describe("server schemas agree with the validators", () => {
   });
 
   it("shares the URL message between validator and field", () => {
-    expect(validateLinkUrl("nope")).toBe("Enter a full http:// or https:// URL.");
+    expect(validateLinkUrl("nope")).toBe(
+      "Enter a full http:// or https:// URL.",
+    );
   });
 });

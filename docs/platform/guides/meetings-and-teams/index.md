@@ -22,8 +22,8 @@ Meeting 1 (Sep 3)        Meeting 2 (Sep 10)       Meeting 3 (Sep 17)
 
 ## Five rows, each answering one question
 
-| Row            | Answers                                                 |
-| -------------- | ------------------------------------------------------- |
+| Row            | Answers                                                  |
+| -------------- | -------------------------------------------------------- |
 | `meetings`     | when and where the club gathered, and who showed up      |
 | `projects`     | which long-lived line of work — persists all semester    |
 | `workshops`    | the teaching slot for one project at one meeting         |

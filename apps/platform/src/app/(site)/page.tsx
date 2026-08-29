@@ -11,9 +11,7 @@ import {
 import HeroSection from "~/components/HeroSection";
 import SectionMarquee, { MarqueeItem } from "~/components/SectionMarquee";
 import MissionSection, { MISSION_BLOBS } from "~/components/MissionSection";
-import ProjectsSection, {
-  PROJECTS_BLOBS,
-} from "~/components/ProjectsSection";
+import ProjectsSection, { PROJECTS_BLOBS } from "~/components/ProjectsSection";
 import EventsSection, { EVENTS_BLOBS } from "~/components/EventsSection";
 import PartnersSection from "~/components/PartnersSection";
 import LeadershipSection from "~/components/LeadershipSection";

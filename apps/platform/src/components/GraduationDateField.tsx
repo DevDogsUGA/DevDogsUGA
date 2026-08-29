@@ -55,10 +55,7 @@ export default function GraduationDateField({ profile }: ProfileData) {
   });
 
   const dirty = semester !== savedSemester || year !== savedYear;
-  const error = validateGraduation(
-    semester,
-    year ? parseInt(year, 10) : null,
-  );
+  const error = validateGraduation(semester, year ? parseInt(year, 10) : null);
 
   function handleYearChange(v: string) {
     setYear(v);

@@ -102,7 +102,9 @@ const ours = modulesOf(rendered);
 
 describe("renderSvg against attendance/qr.svg", () => {
   it("draws the same modules", () => {
-    expect([...ours.keys()].sort()).toEqual([...referenceModules.keys()].sort());
+    expect([...ours.keys()].sort()).toEqual(
+      [...referenceModules.keys()].sort(),
+    );
   });
 
   it("rounds the same corners on every module", () => {
@@ -120,7 +122,11 @@ describe("renderSvg against attendance/qr.svg", () => {
 
   it("places the eyes where the reference does, at the same scale", () => {
     const eyes = (svg: string) =>
-      [...svg.matchAll(/translate\((\d+),(\d+)\)" fill="#ffffff"><g transform="scale\(([\d.]+)\)"/g)]
+      [
+        ...svg.matchAll(
+          /translate\((\d+),(\d+)\)" fill="#ffffff"><g transform="scale\(([\d.]+)\)"/g,
+        ),
+      ]
         .map((m) => `${m[1]},${m[2]}@${m[3]}`)
         .sort();
     expect(eyes(rendered)).toEqual(eyes(reference));
@@ -129,33 +135,48 @@ describe("renderSvg against attendance/qr.svg", () => {
 
   it("places the logo in the same 243px box at (378,378)", () => {
     const box = (svg: string) =>
-      /<image [^>]*?width="(\d+)" height="(\d+)" x="(\d+)" y="(\d+)"/.exec(svg)?.slice(1);
+      /<image [^>]*?width="(\d+)" height="(\d+)" x="(\d+)" y="(\d+)"/
+        .exec(svg)
+        ?.slice(1);
     expect(box(rendered)).toEqual(box(reference));
     expect(box(rendered)).toEqual(["243", "243", "378", "378"]);
   });
 
   it("is 999px with no background, like the reference", () => {
-    expect(rendered).toContain('width="999" height="999" viewBox="0 0 999 999"');
-    expect(rendered).not.toContain("<rect width=\"999\"");
+    expect(rendered).toContain(
+      'width="999" height="999" viewBox="0 0 999 999"',
+    );
+    expect(rendered).not.toContain('<rect width="999"');
   });
 });
 
 describe("tile", () => {
   it("is a circle when alone and a square when surrounded", () => {
-    expect(tile({ tl: true, tr: true, br: true, bl: true })).toContain("<circle");
-    expect(tile({ tl: false, tr: false, br: false, bl: false })).toContain("<rect");
+    expect(tile({ tl: true, tr: true, br: true, bl: true })).toContain(
+      "<circle",
+    );
+    expect(tile({ tl: false, tr: false, br: false, bl: false })).toContain(
+      "<rect",
+    );
   });
 
   it("uses a half-module arc for each rounded corner", () => {
     const d = tile({ tl: true, tr: false, br: true, bl: false });
     expect(d.match(/A3,3/g)).toHaveLength(2);
-    expect(d).toMatch(/^<path d="M0,3A3,3 0 0 1 3,0H6V3A3,3 0 0 1 3,6H0Z"><\/path>$/);
+    expect(d).toMatch(
+      /^<path d="M0,3A3,3 0 0 1 3,0H6V3A3,3 0 0 1 3,6H0Z"><\/path>$/,
+    );
   });
 });
 
 describe("renderSvg options", () => {
   it("adds a background rect only when asked", () => {
-    const svg = renderSvg(grid, { size: 370, margin: 2, color: "#ba0c2f", background: "#000" });
+    const svg = renderSvg(grid, {
+      size: 370,
+      margin: 2,
+      color: "#ba0c2f",
+      background: "#000",
+    });
     expect(svg).toContain('<rect width="370" height="370" fill="#000"></rect>');
     expect(svg).toContain('<g fill="#ba0c2f">');
     expect(svg).not.toContain("<image");
@@ -164,6 +185,8 @@ describe("renderSvg options", () => {
   it("divides the size evenly across grid plus margins", () => {
     // 33 + 2×3 = 39 modules into 390px is 10px each: first data module at 30.
     const svg = renderSvg(grid, { size: 390, margin: 3, color: "#fff" });
-    expect(svg).toContain('translate(30,30)" fill="#fff"><g transform="scale(5)">');
+    expect(svg).toContain(
+      'translate(30,30)" fill="#fff"><g transform="scale(5)">',
+    );
   });
 });

@@ -65,7 +65,8 @@ export function logoBox(gridSize: number, logoModules: number) {
 }
 
 function isFinder(size: number, x: number, y: number): boolean {
-  const inRange = (v: number, start: number) => v >= start && v < start + FINDER;
+  const inRange = (v: number, start: number) =>
+    v >= start && v < start + FINDER;
   return (
     (inRange(x, 0) && inRange(y, 0)) ||
     (inRange(x, size - FINDER) && inRange(y, 0)) ||

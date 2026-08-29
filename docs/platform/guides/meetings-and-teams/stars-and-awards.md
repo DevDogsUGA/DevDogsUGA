@@ -12,10 +12,10 @@ Stars are the club's participation display, following Advent of Code: a workshop
 
 `platform."memberStars"` (migration `20260803000004_platform_team_awards.sql`) folds participation facts down per `(user, workshop)`:
 
-| Star            | Earned when                                                                             |
-| --------------- | --------------------------------------------------------------------------------------- |
-| **Workshop**    | an attendance row for that workshop, **or** the competition star below                   |
-| **Competition** | on a team whose `competedAt` is set — it had a live entry when judging began              |
+| Star            | Earned when                                                                  |
+| --------------- | ---------------------------------------------------------------------------- |
+| **Workshop**    | an attendance row for that workshop, **or** the competition star below       |
+| **Competition** | on a team whose `competedAt` is set — it had a live entry when judging began |
 
 Three things fall out, and all three are requirements rather than accidents:
 

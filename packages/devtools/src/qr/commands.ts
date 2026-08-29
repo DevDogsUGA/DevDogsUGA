@@ -108,11 +108,15 @@ export function parseQrArgs(
     formats = [];
     for (const item of formatList.split(",")) {
       const format = parseFormat(item.trim());
-      if (!format) return new Error(`--format: "${item.trim()}" is not one of svg, png, jpg, webp, avif, tiff.`);
+      if (!format)
+        return new Error(
+          `--format: "${item.trim()}" is not one of svg, png, jpg, webp, avif, tiff.`,
+        );
       if (!formats.includes(format)) formats.push(format);
     }
   } else if (outExt) {
-    if (!outFormat) return new Error(`--out: "${outExt}" is not an extension this writes.`);
+    if (!outFormat)
+      return new Error(`--out: "${outExt}" is not an extension this writes.`);
     formats = [outFormat];
   } else {
     formats = [...REFERENCE.formats];
@@ -129,19 +133,42 @@ export function parseQrArgs(
     stem = resolve(cwd, out ?? REFERENCE.stem);
   }
 
-  const size = numberFlag(rest, "--size", REFERENCE.size, (n) => n >= 21 && Number.isInteger(n));
+  const size = numberFlag(
+    rest,
+    "--size",
+    REFERENCE.size,
+    (n) => n >= 21 && Number.isInteger(n),
+  );
   if (size instanceof Error) return size;
   const margin = numberFlag(rest, "--margin", REFERENCE.margin, (n) => n >= 0);
   if (margin instanceof Error) return margin;
-  const logoFraction = numberFlag(rest, "--logo-size", REFERENCE.logoFraction, (n) => n > 0 && n < 1);
+  const logoFraction = numberFlag(
+    rest,
+    "--logo-size",
+    REFERENCE.logoFraction,
+    (n) => n > 0 && n < 1,
+  );
   if (logoFraction instanceof Error) return logoFraction;
-  const logoPadding = numberFlag(rest, "--logo-padding", REFERENCE.logoPadding, (n) => n >= 0);
+  const logoPadding = numberFlag(
+    rest,
+    "--logo-padding",
+    REFERENCE.logoPadding,
+    (n) => n >= 0,
+  );
   if (logoPadding instanceof Error) return logoPadding;
-  const version = numberFlag(rest, "--version", 0, (n) => Number.isInteger(n) && n >= 1 && n <= 40);
+  const version = numberFlag(
+    rest,
+    "--version",
+    0,
+    (n) => Number.isInteger(n) && n >= 1 && n <= 40,
+  );
   if (version instanceof Error) return version;
 
-  const errorLevel = (flagValue(rest, "--ecl") ?? REFERENCE.errorLevel).toUpperCase();
-  if (!isErrorLevel(errorLevel)) return new Error(`--ecl ${errorLevel} is not L, M, Q or H.`);
+  const errorLevel = (
+    flagValue(rest, "--ecl") ?? REFERENCE.errorLevel
+  ).toUpperCase();
+  if (!isErrorLevel(errorLevel))
+    return new Error(`--ecl ${errorLevel} is not L, M, Q or H.`);
 
   const logoFlag = flagValue(rest, "--logo");
   const logo =
@@ -205,8 +232,7 @@ export async function generateQr(options: QrOptions): Promise<Written[]> {
 
   const written: Written[] = [];
   for (const format of options.formats) {
-    const path =
-      options.exactPath ?? `${options.stem}.${extensionOf(format)}`;
+    const path = options.exactPath ?? `${options.stem}.${extensionOf(format)}`;
     await mkdir(dirname(path), { recursive: true });
     if (format === "svg") {
       await writeFile(path, svg);
@@ -215,8 +241,13 @@ export async function generateQr(options: QrOptions): Promise<Written[]> {
     }
     const background =
       options.background ??
-      (needsBackground(format) ? contrastingBackground(options.color) : undefined);
-    const bytes = await rasterize(svg, format, { size: options.size, background });
+      (needsBackground(format)
+        ? contrastingBackground(options.color)
+        : undefined);
+    const bytes = await rasterize(svg, format, {
+      size: options.size,
+      background,
+    });
     await writeFile(path, bytes);
     written.push({ path, bytes: bytes.length });
   }
@@ -230,7 +261,8 @@ export async function runQr(rest: string[]): Promise<void> {
       await askText({
         message: "What should the code open?",
         placeholder: "https://devdogsuga.org/attendance",
-        validate: (value) => (value?.trim() ? undefined : "Something to encode."),
+        validate: (value) =>
+          value?.trim() ? undefined : "Something to encode.",
       }),
     ).trim();
     args = ["--text", answer, ...rest];
@@ -274,11 +306,15 @@ export async function runQr(rest: string[]): Promise<void> {
       );
     }
   } catch (err) {
-    explain("The code could not be written.", err instanceof Error ? err.message : String(err), [
-      options.logo
-        ? `The logo is read from ${options.logo}; pass --logo <file> or --logo none.`
-        : "Try a shorter text, or a lower --ecl.",
-    ]);
+    explain(
+      "The code could not be written.",
+      err instanceof Error ? err.message : String(err),
+      [
+        options.logo
+          ? `The logo is read from ${options.logo}; pass --logo <file> or --logo none.`
+          : "Try a shorter text, or a lower --ecl.",
+      ],
+    );
     process.exitCode = 1;
   }
 }

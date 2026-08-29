@@ -47,11 +47,11 @@ The cap is `DEFAULT_MAX_TEAM_SIZE = 4` in `server/teams/limits.ts`, overridden p
 
 Membership can be proposed from either side, and both are the same row with the arrow reversed: a `(team, member)` pair awaiting the other party. `platform."teamMembershipRequests"` carries a `direction`, and that is the only thing the two halves disagree about:
 
-|                     | `invite`                                   | `request`                            |
-| ------------------- | ------------------------------------------ | ------------------------------------ |
-| Created by          | the team's lead                            | the member                           |
-| Answered by         | the named member                           | the team's lead                      |
-| Carries a `message` | no                                         | optional                             |
+|                     | `invite`         | `request`       |
+| ------------------- | ---------------- | --------------- |
+| Created by          | the team's lead  | the member      |
+| Answered by         | the named member | the team's lead |
+| Carries a `message` | no               | optional        |
 
 A partial unique index allows one _pending_ row per `(team, member)` in either direction, so an invitation and a request between the same pair cannot both be open: whichever arrives second is refused as `request_not_actionable`, and accepting the one already there is the right move. Two people reaching for each other at once is agreement, not a conflict.
 

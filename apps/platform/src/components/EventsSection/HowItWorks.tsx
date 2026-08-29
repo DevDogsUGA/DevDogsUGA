@@ -97,8 +97,8 @@ const BEATS: Beat[] = [
     title: "Build Session",
     body: (
       <>
-        The room&rsquo;s open and officers are around. Build with your team,
-        get your laptop set up, or just come work.
+        The room&rsquo;s open and officers are around. Build with your team, get
+        your laptop set up, or just come work.
       </>
     ),
     // No segment: a build session is AUTHORED on the meeting rather than

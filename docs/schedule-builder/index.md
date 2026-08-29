@@ -18,12 +18,12 @@ different about this app.
 
 ## Where things are
 
-| Area                  | Path                              |
-| --------------------- | --------------------------------- |
-| Scrape entry points   | `src/app/(api)/cron/`             |
-| Parsing               | `src/lib/parsers/`                |
-| Upserts into Postgres | `src/lib/sync/`                   |
-| Schedule generation   | `src/lib/algorithm/`              |
+| Area                  | Path                  |
+| --------------------- | --------------------- |
+| Scrape entry points   | `src/app/(api)/cron/` |
+| Parsing               | `src/lib/parsers/`    |
+| Upserts into Postgres | `src/lib/sync/`       |
+| Schedule generation   | `src/lib/algorithm/`  |
 
 Course and instructor data arrive on two cron routes — `scrape-registrar` and
 `scrape-rmp` — which parse and then upsert. The generator reads what those
@@ -33,7 +33,7 @@ leave behind; it never scrapes anything itself.
 
 This is the one place the app departs from
 [Database](/docs/platform/guides/database), and the departure is narrow enough
-to state in a sentence: the Drizzle schema is where a change is *drafted*, and
+to state in a sentence: the Drizzle schema is where a change is _drafted_, and
 `supabase/migrations/` is still the only thing that defines the database.
 
 The schema at `src/server/db/schema/` is **hand-authored** — it is the input to
@@ -57,7 +57,7 @@ pnpm --filter schedule-builder db:pull       # other schemas → src/supabase/dr
 
 Its config filters this app's own schema out (`"!schedule_builder"`) and writes
 to `src/supabase/drizzle/`. It exists to give you typed access to the schemas
-this app *reads but does not own*. Running it will never regenerate
+this app _reads but does not own_. Running it will never regenerate
 `src/server/db/schema/`, and expecting it to is how someone concludes their
 hand-written schema was silently dropped.
 

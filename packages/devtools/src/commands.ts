@@ -380,7 +380,8 @@ export const GROUPS: readonly CommandGroup[] = [
           {
             flag: "--format",
             value: "<a,b,…>",
-            summary: "svg, png, jpg, webp, avif, tiff — any of them. Defaults to svg,png.",
+            summary:
+              "svg, png, jpg, webp, avif, tiff — any of them. Defaults to svg,png.",
             prompt: {
               kind: "select",
               message: "Which formats?",
@@ -436,7 +437,8 @@ export const GROUPS: readonly CommandGroup[] = [
               "Artwork for the centre, or `none`. Defaults to the brand kit's devdog.svg.",
             prompt: {
               kind: "text",
-              message: "Logo file, or none? (blank: the brand kit's devdog.svg)",
+              message:
+                "Logo file, or none? (blank: the brand kit's devdog.svg)",
               placeholder: "none",
               optional: true,
             },
@@ -444,7 +446,8 @@ export const GROUPS: readonly CommandGroup[] = [
           {
             flag: "--logo-size",
             value: "<0–1>",
-            summary: "Logo box as a fraction of the grid. Reference: 0.27 (9 of 33).",
+            summary:
+              "Logo box as a fraction of the grid. Reference: 0.27 (9 of 33).",
             prompt: {
               kind: "text",
               message: "Logo box, as a fraction of the grid? (blank: 0.27)",

@@ -10,16 +10,16 @@ order: 10
 
 ## Guides
 
-| Guide                                                              | What it covers                                                                    |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| [Meetings & Teams](/docs/platform/guides/meetings-and-teams)       | Meetings, workshops, competitions, teams, attendance, stars, and awards           |
-| [Elections](/docs/platform/guides/elections)                       | Ranked ballots over competing implementations, and how a competition is scored    |
-| [Airtable](/docs/platform/guides/airtable)                         | The officer base, the field registry, and what syncs in which direction           |
-| [Reporting](/docs/platform/guides/reporting)                       | The `platform` RPC contract every app calls to report content                     |
-| [Moderation](/docs/platform/guides/moderation)                     | How a table becomes reportable and quarantinable, and the traps that hides        |
-| [Identity](/docs/platform/guides/identity)                         | Sign in with DevDogs, and the GitHub App the platform authenticates as            |
-| [Database](/docs/platform/guides/database)                         | SQL migrations own the schema — the change loop, and how one reaches each project |
-| [Navigation](/docs/platform/guides/navigation)                     | The top nav, the docs sidebar, and permission-gated console items                 |
+| Guide                                                        | What it covers                                                                    |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| [Meetings & Teams](/docs/platform/guides/meetings-and-teams) | Meetings, workshops, competitions, teams, attendance, stars, and awards           |
+| [Elections](/docs/platform/guides/elections)                 | Ranked ballots over competing implementations, and how a competition is scored    |
+| [Airtable](/docs/platform/guides/airtable)                   | The officer base, the field registry, and what syncs in which direction           |
+| [Reporting](/docs/platform/guides/reporting)                 | The `platform` RPC contract every app calls to report content                     |
+| [Moderation](/docs/platform/guides/moderation)               | How a table becomes reportable and quarantinable, and the traps that hides        |
+| [Identity](/docs/platform/guides/identity)                   | Sign in with DevDogs, and the GitHub App the platform authenticates as            |
+| [Database](/docs/platform/guides/database)                   | SQL migrations own the schema — the change loop, and how one reaches each project |
+| [Navigation](/docs/platform/guides/navigation)               | The top nav, the docs sidebar, and permission-gated console items                 |
 
 ## Reference
 

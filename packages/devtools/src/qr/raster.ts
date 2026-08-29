@@ -19,7 +19,9 @@ export type Format = (typeof FORMATS)[number];
 export function parseFormat(value: string): Format | null {
   const name = value.toLowerCase().replace(/^\./, "");
   if (name === "jpg") return "jpeg";
-  return (FORMATS as readonly string[]).includes(name) ? (name as Format) : null;
+  return (FORMATS as readonly string[]).includes(name)
+    ? (name as Format)
+    : null;
 }
 
 /** The file extension a format is written with. */
