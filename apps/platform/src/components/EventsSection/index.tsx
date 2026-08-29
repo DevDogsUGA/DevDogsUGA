@@ -72,9 +72,10 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
           base="#f0fdff"
           blobs={EVENTS_BLOBS}
         />
-        {/* `space-y-20`: the two halves are divided by air alone — no rule —
-            so the gap has to be wide enough to read as a break rather than
-            as one more row of the stack. */}
+        {/* `space-y-20`: the two halves are far enough apart to read as a
+            break rather than as one more row of the stack, and the rule
+            between them names the break rather than leaving it to the air
+            alone. */}
         <div className="relative z-10 mx-auto max-w-6xl space-y-20 px-6 py-8 md:px-12">
           {/* What is coming, first: the section's header, the next three
               nights as a short stack — each a step smaller than the one
@@ -104,6 +105,24 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
               All events <ArrowRightIcon />
             </LinkButton>
           </div>
+
+          {/* A real `<hr>`, because that is exactly what this is: a thematic
+              break between what is coming up and how a week of it works. The
+              two halves are different questions, and a screen reader gets to
+              hear the boundary the sighted reader sees.
+
+              Violet because the section already owns it — two of the four
+              blobs behind this plate are `violet-300` and `violet-400` — so
+              the rule reads as the background stepping forward rather than as
+              a new colour arriving. Against the plate's near-white cyan
+              (`#f0fdff`) violet-400 is unmistakable without the hardness a
+              black hairline would bring to a plate made of soft blobs.
+
+              Faded at both ends for the same reason: a full-width line at
+              constant weight would read as the edge of a box on a section
+              that has none. The centre carries the weight, which is where the
+              eye crossing from one half to the other actually is. */}
+          <hr className="h-0.5 rounded-full border-0 bg-gradient-to-r from-transparent via-violet-400 to-transparent" />
 
           <HowItWorks cutout />
         </div>

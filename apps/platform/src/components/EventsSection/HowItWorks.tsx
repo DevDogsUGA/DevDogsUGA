@@ -271,39 +271,61 @@ export default function HowItWorks({
       // pages' idiom — so the attribute only exists on the light plate.
       data-animate={tone === "light" ? "fade-up" : undefined}
     >
-      {/* Heading and television in one row, both hung from the top edge. */}
-      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-8">
-        <div className="flex max-w-prose flex-col gap-4 text-left lg:col-span-5">
-          <h2
-            id={`${id}-heading`}
-            className={`font-display text-2xl font-extrabold md:text-3xl ${t.heading}`}
-          >
-            A Week in DevDogs
-          </h2>
-          <p className={`text-base/relaxed text-balance ${t.intro}`}>
-            One feature, one week, every team at once. Monday&rsquo;s workshop
-            teaches the tools and hands out the build; teams ship a pull request
-            by the next Monday; we demo, one merges, and that night&rsquo;s
-            workshop kicks off the next one.
-          </p>
-          <p className={`text-base/relaxed text-balance ${t.intro}`}>
-            That&rsquo;s a sprint — and it&rsquo;s how every project on the
-            platform grows, one merged feature at a time. Some weeks are just
-            the workshop. Those count too.
-          </p>
-        </div>
-        {/* The set's cell stretches to the row, and the set is absolutely
-            positioned inside it from `lg`, so its own height contributes
-            nothing: the row is as tall as the words and the set fits that,
-            never taller. In flow, its natural height would set the row. */}
-        <div className="mx-auto w-full max-w-sm lg:relative lg:col-span-3 lg:max-w-none lg:self-stretch">
-          <div className="lg:absolute lg:inset-0 lg:flex lg:justify-center">
-            <CrtTv
-              className={`lg:h-full lg:w-auto lg:max-w-full ${t.tvShadow}`}
-              showing={
-                active?.gif ? { key: active.title, image: active.gif } : null
-              }
-            />
+      {/* The heading spans the whole section rather than sitting in the text
+          column, so it titles the television as much as the words — the set is
+          part of what this section is, not an illustration hung beside a
+          heading that belongs to something else. Left-justified, so it still
+          starts on the same line the paragraphs under it do. */}
+      <div className="flex flex-col gap-4">
+        <h2
+          id={`${id}-heading`}
+          className={`font-display text-2xl font-extrabold md:text-3xl ${t.heading}`}
+        >
+          A Week in DevDogs
+        </h2>
+
+        {/* Flex rather than the eight-column grid this used to be, and that is
+            what puts the set where it belongs. On a grid the set was centred in
+            ITS OWN cell, so the empty run between the prose's right edge — the
+            paragraphs stop at `max-w-prose`, well short of the column — and the
+            start of the set's column was dead space the centring never saw.
+            `flex-1` gives the set exactly the width left over after the prose,
+            and centring inside that is centring in the gap a reader sees. */}
+        {/* `lg:gap-0` so the leftover space really does start at the prose's
+            right edge. A gap here would push the set's box inward and centre
+            it in something narrower than the gap a reader sees, which is the
+            error this layout was changed to fix — just smaller. The set is
+            centred in that space, so it keeps clear of the text on its own. */}
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-stretch lg:gap-0">
+          <div className="flex max-w-prose flex-col gap-4 text-left">
+            <p className={`text-base/relaxed text-balance ${t.intro}`}>
+              One feature, one week, every team at once. Monday&rsquo;s workshop
+              teaches the tools and hands out the build; teams ship a pull
+              request by the next Monday; we demo, one merges, and that
+              night&rsquo;s workshop kicks off the next one.
+            </p>
+            <p className={`text-base/relaxed text-balance ${t.intro}`}>
+              That&rsquo;s a sprint — and it&rsquo;s how every project on the
+              platform grows, one merged feature at a time. Some weeks are just
+              the workshop. Those count too.
+            </p>
+          </div>
+          {/* The set's cell stretches to the row, and the set is absolutely
+              positioned inside it from `lg`, so its own height contributes
+              nothing: the row is as tall as the WORDS and the set fits that,
+              never taller. In flow its natural height would set the row, and
+              the television would decide how tall the prose beside it looked.
+              Now that the heading has moved out of the row, "as tall as the
+              words" means the body text alone, which is the height wanted. */}
+          <div className="mx-auto w-full max-w-sm lg:relative lg:mx-0 lg:max-w-none lg:flex-1">
+            <div className="lg:absolute lg:inset-0 lg:flex lg:justify-center">
+              <CrtTv
+                className={`lg:h-full lg:w-auto lg:max-w-full ${t.tvShadow}`}
+                showing={
+                  active?.gif ? { key: active.title, image: active.gif } : null
+                }
+              />
+            </div>
           </div>
         </div>
       </div>
