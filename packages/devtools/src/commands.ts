@@ -342,6 +342,11 @@ export const GROUPS: readonly CommandGroup[] = [
           },
         ],
       },
+    ],
+  },
+  {
+    title: "Brand",
+    commands: [
       {
         name: "qr",
         summary: "Write a QR code in the attendance-poster style.",
