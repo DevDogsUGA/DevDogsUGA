@@ -18,6 +18,7 @@ export function useCurrentAcademicPeriod() {
         const { data, error } = await supabase
           .from("userPreferences")
           .select("currentAcademicPeriod")
+          .eq("userId", user.id)
           .maybeSingle();
         if (error) throw error;
         return { currentAcademicPeriod: data?.currentAcademicPeriod ?? null };

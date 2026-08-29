@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "~/supabase/client";
 import { useSession } from "~/components/providers/SessionProvider";
-import { useCurrentAcademicPeriod } from "./usePreferences";
+import { useTerm } from "~/components/providers/TermProvider";
 import { LOCAL_KEYS } from "~/lib/localStorage/keys";
 import { LocalSavedPlans } from "~/lib/localStorage/schemas";
 import { readLocal, writeLocal } from "~/lib/localStorage/storage";
@@ -11,7 +11,10 @@ import { type SavedPlan } from "~/lib/localStorage/types";
 
 export function useSavedPlans() {
   const { user, isLoading: sessionLoading } = useSession();
-  const { academicPeriod } = useCurrentAcademicPeriod();
+  // Read the effective term from TermProvider, not the raw preference:
+  // a first-time visitor has no saved preference, and the provider's
+  // fallback to the latest term is what the UI actually displays.
+  const { academicPeriod } = useTerm();
   const queryClient = useQueryClient();
 
   const { data: savedPlans = [], isLoading } = useQuery<SavedPlan[]>({
@@ -22,6 +25,7 @@ export function useSavedPlans() {
         const { data, error } = await supabase
           .from("userSavedPlans")
           .select("*")
+          .eq("userId", user.id)
           .eq("academicPeriod", academicPeriod!)
           .order("pinned", { ascending: false });
         if (error) throw error;
@@ -87,7 +91,8 @@ export function useSavedPlans() {
             ...(patch.title !== undefined && { title: patch.title }),
             updatedAt: new Date().toISOString(),
           })
-          .eq("id", patch.id);
+          .eq("id", patch.id)
+          .eq("userId", user.id);
         if (error) throw error;
       } else {
         const all = readLocal(LOCAL_KEYS.savedPlans, LocalSavedPlans);
@@ -130,7 +135,8 @@ export function useSavedPlans() {
         const { error } = await supabase
           .from("userSavedPlans")
           .delete()
-          .eq("id", id);
+          .eq("id", id)
+          .eq("userId", user.id);
         if (error) throw error;
       } else {
         const all = readLocal(LOCAL_KEYS.savedPlans, LocalSavedPlans);

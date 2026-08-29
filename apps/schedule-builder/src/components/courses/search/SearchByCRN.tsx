@@ -44,15 +44,15 @@ export default function SearchByCRN({
     [onInput],
   );
 
+  // Clear the restored selection only when the CRN turns out NOT to exist in
+  // this term — matching SearchBySubject/SearchByInstructor. Clearing on a
+  // *valid* CRN wiped a good `?crn=` param the moment the list resolved.
   useEffect(() => {
-    if (!(
-      defaultValue &&
-      "crn" in defaultValue &&
-      crnsQuery.data?.includes(Number(defaultValue.crn))
-    ))
-      return;
-    onInput?.({});
-    onChange?.(null);
+    if (!(defaultValue && "crn" in defaultValue && crnsQuery.data)) return;
+    if (!crnsQuery.data.includes(Number(defaultValue.crn))) {
+      onInput?.({});
+      onChange?.(null);
+    }
   }, [defaultValue, crnsQuery.data, onChange, onInput]);
 
   useEffect(() => {
