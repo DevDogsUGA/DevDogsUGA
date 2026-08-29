@@ -16,6 +16,15 @@ type CourseGroup = {
   offerings: OfferingSearchRow[];
 };
 
+/**
+ * True when the query is safe to splice into a PostgREST `or()` filter as a
+ * CRN: digits only, and inside `int4`. Digits alone cannot contain the commas,
+ * dots or spaces that the filter grammar treats as syntax.
+ */
+function isCrnCandidate(query: string): boolean {
+  return /^\d{1,9}$/.test(query) && Number(query) <= 2147483647;
+}
+
 export default function CourseSearchPage() {
   const { academicPeriod } = useTerm();
   const [inputValue, setInputValue] = useState("");
@@ -34,7 +43,6 @@ export default function CourseSearchPage() {
     queryKey: ["offering-search", academicPeriod, query],
     enabled: !!academicPeriod && query.length > 0,
     queryFn: async () => {
-      const numericCrn = parseInt(query);
       let req = supabase
         .from("offeringSearch")
         .select(
@@ -42,8 +50,12 @@ export default function CourseSearchPage() {
         )
         .eq("academicPeriod", academicPeriod!);
 
-      if (!isNaN(numericCrn)) {
-        req = req.or(`crn.eq.${numericCrn},search_vector.fts.${query}`);
+      // Only an all-digit query can be a CRN. `parseInt` would accept
+      // "1301 data structures" too, and interpolating that into the
+      // comma-separated `or()` grammar breaks the filter: `fts` maps to plain
+      // `to_tsquery`, which rejects unquoted multi-word input outright.
+      if (isCrnCandidate(query)) {
+        req = req.or(`crn.eq.${query},search_vector.fts.${query}`);
       } else {
         req = req.textSearch("search_vector", query, { type: "websearch" });
       }

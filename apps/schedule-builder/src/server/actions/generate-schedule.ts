@@ -3,7 +3,11 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "~/server/db";
 import * as schema from "~/server/db/schema";
-import { algorithmDriver } from "~/lib/algorithm/brute-force";
+import {
+  algorithmDriver,
+  MAX_INPUT_COURSES,
+  type AlgorithmOutcome,
+} from "~/lib/algorithm/brute-force";
 import type {
   AlgorithmCourse,
   DayOfWeek,
@@ -42,18 +46,60 @@ function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
 
+const FAILURE_MESSAGES: Record<
+  Extract<AlgorithmOutcome, { ok: false }>["reason"],
+  string
+> = {
+  "no-courses":
+    "None of the selected courses have sections in this term matching your filters.",
+  "too-many-courses": `Generating a schedule is limited to ${MAX_INPUT_COURSES} courses at a time.`,
+  "no-schedules":
+    "No schedules found matching your criteria — try adjusting your filters or included courses/sections.",
+};
+
 export async function getRecommendedSchedules(
   params: GenerateScheduleParams,
-): Promise<{ data: number[][] }> {
-  // Resolve campus ID
+): Promise<{ data: number[][]; error?: string }> {
+  if (params.inputCourseNumbers.length === 0) {
+    return {
+      data: [],
+      error: "Select at least one course to generate a schedule.",
+    };
+  }
+  if (params.inputCourseNumbers.length > MAX_INPUT_COURSES) {
+    return {
+      data: [],
+      error: `Generating a schedule is limited to ${MAX_INPUT_COURSES} courses at a time — you selected ${params.inputCourseNumbers.length}.`,
+    };
+  }
+
+  // `campusOptions` is keyed by the human-readable campus name, which the
+  // registrar feed stores as `description`; `abbr` holds the Banner code.
   const campusRows = await db
     .select({ id: schema.campuses.id })
     .from(schema.campuses)
-    .where(eq(schema.campuses.abbr, params.inputCampus))
+    .where(eq(schema.campuses.description, params.inputCampus))
     .limit(1);
   const campusId = campusRows[0]?.id;
 
-  if (params.inputCourseNumbers.length === 0) return { data: [] };
+  // Falling through with an unresolved campus would silently ignore the filter
+  // and hand back sections from every campus.
+  if (params.inputCampus && campusId === undefined) {
+    return {
+      data: [],
+      error: `No sections found for the ${params.inputCampus} campus.`,
+    };
+  }
+
+  const excludedCourseAbbrs =
+    params.excludedCourseIDs.length > 0
+      ? (
+          await db
+            .select({ abbr: schema.courses.abbr })
+            .from(schema.courses)
+            .where(inArray(schema.courses.id, params.excludedCourseIDs))
+        ).map((r) => r.abbr)
+      : [];
 
   // Build algorithm course structures
   type OfferingAcc = {
@@ -64,6 +110,7 @@ export async function getRecommendedSchedules(
     instructorLast: string | null;
     avgRating: number;
     campusAbbr: string;
+    creditHours: { min: number; max: number };
     meetings: {
       monday: boolean | null;
       tuesday: boolean | null;
@@ -72,8 +119,8 @@ export async function getRecommendedSchedules(
       friday: boolean | null;
       saturday: boolean | null;
       sunday: boolean | null;
-      startTime: string | null;
-      endTime: string | null;
+      startTime: string;
+      endTime: string;
       buildingLat: number | null;
       buildingLon: number | null;
       buildingDesc: string | null;
@@ -85,6 +132,8 @@ export async function getRecommendedSchedules(
   const matchingRows = await db
     .select({
       courseAbbr: schema.courses.abbr,
+      courseMinCreditHours: schema.courses.minCreditHours,
+      courseMaxCreditHours: schema.courses.maxCreditHours,
       offeringCrn: schema.offerings.crn,
       offeringCampusId: schema.offerings.campusId,
       seatsAvailable: schema.offerings.seatsAvailable,
@@ -130,13 +179,15 @@ export async function getRecommendedSchedules(
       and(
         inArray(schema.courses.abbr, params.inputCourseNumbers),
         eq(schema.offerings.academicPeriod, params.academicPeriod),
+        // Sections cancelled since the last sync must not be recommended as
+        // CRNs the student then tries to register for.
+        eq(schema.offerings.active, true),
       ),
     );
 
   for (const row of matchingRows) {
-    if (campusId && row.offeringCampusId !== campusId) continue;
+    if (campusId !== undefined && row.offeringCampusId !== campusId) continue;
     if (!params.showFilledClasses && row.seatsAvailable <= 0) continue;
-    if (params.excludedSectionCrns.includes(row.offeringCrn)) continue;
 
     if (!courseMap.has(row.courseAbbr))
       courseMap.set(row.courseAbbr, new Map());
@@ -151,11 +202,22 @@ export async function getRecommendedSchedules(
         instructorLast: row.instructorLast,
         avgRating: row.averageRating ?? 0,
         campusAbbr: row.campusAbbr,
+        creditHours: {
+          min: row.courseMinCreditHours,
+          max: row.courseMaxCreditHours,
+        },
         meetings: [],
       });
     }
-    if (row.monday != null) {
-      offeringsMap.get(row.offeringCrn)!.meetings.push(row);
+    // A meeting with no time is TBA (async/online). It occupies no slot, so it
+    // is dropped rather than given the student's own preferred hours, which
+    // would make it collide with everything else that day.
+    if (row.monday != null && row.startTime && row.endTime) {
+      offeringsMap.get(row.offeringCrn)!.meetings.push({
+        ...row,
+        startTime: row.startTime,
+        endTime: row.endTime,
+      });
     }
   }
 
@@ -171,6 +233,7 @@ export async function getRecommendedSchedules(
             : "TBA",
           quality: o.avgRating,
         },
+        creditHours: o.creditHours,
         classes: o.meetings.map((m) => {
           const days: DayOfWeek[] = (
             [
@@ -187,8 +250,8 @@ export async function getRecommendedSchedules(
           return {
             crn: o.crn,
             days,
-            startTime: m.startTime ?? `${pad(params.prefStartTime)}:00`,
-            endTime: m.endTime ?? `${pad(params.prefEndTime)}:00`,
+            startTime: m.startTime,
+            endTime: m.endTime,
             buildingName: m.buildingDesc ?? "",
             campus: o.campusAbbr,
             buildingNumber: String(m.buildingLat ?? ""),
@@ -212,14 +275,16 @@ export async function getRecommendedSchedules(
   };
 
   const hard: HConstraints = {
-    excludedCourses: [],
-    excludedSections: [],
+    excludedCourses: excludedCourseAbbrs,
+    excludedSections: params.excludedSectionCrns,
     campus: params.inputCampus,
     minCreditHours: params.minCreditHours,
     maxCreditHours: params.maxCreditHours,
     walking: params.walking,
   };
 
-  const result = algorithmDriver(algorithmCourses, soft, hard);
-  return { data: result ?? [] };
+  const outcome = algorithmDriver(algorithmCourses, soft, hard);
+  if (outcome.ok) return { data: outcome.schedules };
+
+  return { data: [], error: FAILURE_MESSAGES[outcome.reason] };
 }

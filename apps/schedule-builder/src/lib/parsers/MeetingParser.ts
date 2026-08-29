@@ -21,6 +21,17 @@ interface PendingMeeting {
   buildingId: number | null;
 }
 
+/**
+ * Banner writes day indicators as "Y"/"N" in some exports and as the day letter
+ * or an empty cell in others. A bare `!!` read "N" as true, which would put
+ * every class on every day; only an affirmative value counts.
+ */
+function meetsOn(indicator: string | undefined): boolean {
+  if (!indicator) return false;
+  const value = indicator.trim().toUpperCase();
+  return value !== "" && value !== "N" && value !== "0" && value !== "FALSE";
+}
+
 export class MeetingCollector {
   private readonly pending: PendingMeeting[] = [];
 
@@ -38,13 +49,13 @@ export class MeetingCollector {
 
     this.pending.push({
       crn,
-      monday: !!row["MEETING_TIME.MONDAY_IND"],
-      tuesday: !!row["MEETING_TIME.TUESDAY_IND"],
-      wednesday: !!row["MEETING_TIME.WEDNESDAY_IND"],
-      thursday: !!row["MEETING_TIME.THURSDAY_IND"],
-      friday: !!row["MEETING_TIME.FRIDAY_IND"],
-      saturday: !!row["MEETING_TIME.SATURDAY_IND"],
-      sunday: !!row["MEETING_TIME.SUNDAY_IND"],
+      monday: meetsOn(row["MEETING_TIME.MONDAY_IND"]),
+      tuesday: meetsOn(row["MEETING_TIME.TUESDAY_IND"]),
+      wednesday: meetsOn(row["MEETING_TIME.WEDNESDAY_IND"]),
+      thursday: meetsOn(row["MEETING_TIME.THURSDAY_IND"]),
+      friday: meetsOn(row["MEETING_TIME.FRIDAY_IND"]),
+      saturday: meetsOn(row["MEETING_TIME.SATURDAY_IND"]),
+      sunday: meetsOn(row["MEETING_TIME.SUNDAY_IND"]),
       startDate: parseDate(row["MEETING_TIME.START_DATE"]),
       endDate: parseDate(row["MEETING_TIME.END_DATE"]),
       startTime: parseTime(startRaw?.trim()),
@@ -68,6 +79,17 @@ export class MeetingCollector {
     const rows = this.pending
       .filter((m) => validCrns.has(m.crn))
       .map(({ crn, ...rest }) => ({ ...rest, offeringCrn: crn }));
+
+    // `bulkUpsert` returns early on an empty array, so deleting first would
+    // leave the table truncated — which is what a renamed CSV column used to
+    // do, silently and with an ok response. Refuse the replacement instead;
+    // the surrounding transaction rolls the whole scrape back.
+    if (rows.length === 0 && this.pending.length > 0) {
+      throw new Error(
+        `MeetingParser: ${this.pending.length} meetings collected but none ` +
+          `matched a valid offering — refusing to empty the meetings table.`,
+      );
+    }
 
     await tx.delete(meetings);
     await bulkUpsert(tx, meetings, rows);

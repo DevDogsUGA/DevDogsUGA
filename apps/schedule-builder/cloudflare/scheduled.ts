@@ -9,20 +9,43 @@
  * scheduled invocation may exceed CPU/wall-time limits. Consider splitting into
  * Queues/Workflows or chunked runs before production.
  */
-export interface CronEnv {
-  CRON_SECRET: string;
-  BASE_URL: string;
-}
+import type { env } from "~/env";
 
-const SCRAPE_ROUTES = ["/api/cron/scrape-registrar", "/api/cron/scrape-rmp"];
+/**
+ * The bindings this handler reads, derived from the env schema rather than
+ * restated. A hand-written interface cannot fail the build when the schema
+ * never declared the key — which is how `BASE_URL` was read here for a while
+ * without any manifest supplying it, making every run throw `Invalid URL`.
+ *
+ * Type-only import, so nothing is pulled into the Worker bundle.
+ */
+export type CronEnv = Pick<typeof env, "CRON_SECRET" | "BASE_URL">;
+
+/**
+ * Route-group segments in parentheses contribute no URL segment, so the
+ * handlers under `src/app/(api)/cron/...` are served at `/cron/...`.
+ */
+const SCRAPE_ROUTES = ["/cron/scrape-registrar", "/cron/scrape-rmp"];
 
 export async function scheduled(
   _event: { cron: string },
   env: CronEnv,
 ): Promise<void> {
   for (const path of SCRAPE_ROUTES) {
-    await fetch(`${env.BASE_URL}${path}`, {
-      headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
-    });
+    const url = `${env.BASE_URL}${path}`;
+    try {
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
+      });
+      // Without this the course and RMP data can silently stop refreshing:
+      // a 404 or a 500 is as quiet as a success to a bare `await fetch`.
+      if (!response.ok) {
+        console.error(
+          `[cron] ${path} responded ${response.status} ${response.statusText}`,
+        );
+      }
+    } catch (error) {
+      console.error(`[cron] ${path} failed:`, error);
+    }
   }
 }

@@ -1,4 +1,5 @@
 import type {
+  AlgorithmClass,
   AlgorithmSection,
   DayOfWeek,
   HConstraints,
@@ -35,13 +36,57 @@ export function validate(schedule: Schedule): boolean {
   return true;
 }
 
+/** Lowest total credit hours the schedule can be worth. */
+export function creditHourFloor(schedule: Schedule): number {
+  return schedule.sections.reduce((sum, s) => sum + s.creditHours.min, 0);
+}
+
+/** Highest total credit hours the schedule can be worth. */
+export function creditHourCeiling(schedule: Schedule): number {
+  return schedule.sections.reduce((sum, s) => sum + s.creditHours.max, 0);
+}
+
+/**
+ * True when consecutive classes on a day are far enough apart in time to walk
+ * between. Uses the real gap rather than a fixed threshold, so a long break
+ * across campus passes and a back-to-back across campus does not.
+ */
+function isWalkable(schedule: Schedule): boolean {
+  for (const classes of schedule.days.values()) {
+    for (let i = 0; i < classes.length - 1; i++) {
+      const a = classes[i]!;
+      const b = classes[i + 1]!;
+      const gap = timeToMinutes(b.startTime) - timeToMinutes(a.endTime);
+      if (walkingMinutes(a, b) > gap) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Returns true when the schedule satisfies every hard constraint. Credit hours
+ * are compared as a range, so a variable-credit course counts as satisfying a
+ * bound it *can* reach.
+ */
 export function validateHard(
   schedule: Schedule,
   constraints: HConstraints,
-): void {
-  if (!schedule || !constraints) {
-    throw new Error("Schedule and/or constraints cannot be null");
+): boolean {
+  if (
+    constraints.maxCreditHours > 0 &&
+    creditHourFloor(schedule) > constraints.maxCreditHours
+  ) {
+    return false;
   }
+  if (
+    constraints.minCreditHours > 0 &&
+    creditHourCeiling(schedule) < constraints.minCreditHours
+  ) {
+    return false;
+  }
+  if (constraints.walking && !isWalkable(schedule)) return false;
+
+  return true;
 }
 
 // ─── Objective components ─────────────────────────────────────────────────────
@@ -59,41 +104,46 @@ export function computeAverageProfessorQuality(schedule: Schedule): number {
   return count === 0 ? 0 : sum / count;
 }
 
+const EARTH_RADIUS_MILES = 3960;
+const WALKING_SPEED_MPH = 3;
+
+/**
+ * Haversine walking time in minutes between two classes' buildings. Returns 0
+ * when either building has no coordinates, so unknown locations never make a
+ * schedule look worse than one we can actually measure.
+ */
+function walkingMinutes(a: AlgorithmClass, b: AlgorithmClass): number {
+  if (
+    a.latitude == null ||
+    a.longitude == null ||
+    b.latitude == null ||
+    b.longitude == null
+  ) {
+    return 0;
+  }
+
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLon = toRad(b.longitude - a.longitude);
+  const lat1 = toRad(a.latitude);
+  const lat2 = toRad(b.latitude);
+
+  const haversine =
+    Math.pow(Math.sin(dLat / 2), 2) +
+    Math.pow(Math.sin(dLon / 2), 2) * Math.cos(lat1) * Math.cos(lat2);
+
+  const distanceMiles =
+    EARTH_RADIUS_MILES * 2 * Math.asin(Math.sqrt(haversine));
+  return distanceMiles * (60 / WALKING_SPEED_MPH);
+}
+
 /** Haversine distance in walking minutes between consecutive classes in a day. */
 export function computeMaxDistance(schedule: Schedule): number {
-  const EARTH_RADIUS_MILES = 3960;
-  const WALKING_SPEED_MPH = 3;
-
   let maxDistance = 0;
 
   for (const classes of schedule.days.values()) {
     for (let i = 0; i < classes.length - 1; i++) {
-      const a = classes[i]!;
-      const b = classes[i + 1]!;
-
-      if (
-        a.latitude == null ||
-        a.longitude == null ||
-        b.latitude == null ||
-        b.longitude == null
-      ) {
-        continue;
-      }
-
-      const dLat = toRad(b.latitude - a.latitude);
-      const dLon = toRad(b.longitude - a.longitude);
-      const lat1 = toRad(a.latitude);
-      const lat2 = toRad(b.latitude);
-
-      const haversine =
-        Math.pow(Math.sin(dLat / 2), 2) +
-        Math.pow(Math.sin(dLon / 2), 2) * Math.cos(lat1) * Math.cos(lat2);
-
-      const distanceMiles =
-        EARTH_RADIUS_MILES * 2 * Math.asin(Math.sqrt(haversine));
-      const walkingMinutes = distanceMiles * (60 / WALKING_SPEED_MPH);
-
-      if (walkingMinutes > maxDistance) maxDistance = walkingMinutes;
+      const minutes = walkingMinutes(classes[i]!, classes[i + 1]!);
+      if (minutes > maxDistance) maxDistance = minutes;
     }
   }
 
@@ -135,11 +185,11 @@ export function computeStartTime(schedule: Schedule): number {
   return earliest / 60;
 }
 
-function computeEndTime(schedule: Schedule): number {
+export function computeEndTime(schedule: Schedule): number {
   let latest = 0;
   for (const section of schedule.sections) {
     for (const cls of section.classes) {
-      const t = timeToMinutes(cls.startTime);
+      const t = timeToMinutes(cls.endTime);
       if (t > latest) latest = t;
     }
   }

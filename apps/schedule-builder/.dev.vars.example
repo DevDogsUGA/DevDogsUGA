@@ -11,7 +11,7 @@ DEPLOY_ENV=development
 
 # The worker's own public origin. The cron scheduled() handler fetches the
 # scraper routes here, so it must be an absolute URL.
-BASE_URL=http://localhost:3000
+BASE_URL=http://localhost:3001
 
-# Shared secret guarding the /api/cron/scrape-* routes the daily cron hits.
+# Shared secret guarding the /cron/scrape-* routes the daily cron hits.
 CRON_SECRET=

@@ -37,6 +37,12 @@
       "service": "development-schedule-builder",
     },
   ],
+  // Next's default image optimiser needs `sharp`, a native Node binary that
+  // cannot run in workerd, so `next/image` requests fail on the deployed worker
+  // without this binding. Non-inheritable, hence repeated per environment.
+  "images": {
+    "binding": "IMAGES",
+  },
   "r2_buckets": [
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
@@ -56,6 +62,9 @@
           "service": "staging-schedule-builder",
         },
       ],
+      "images": {
+        "binding": "IMAGES",
+      },
       "r2_buckets": [
         {
           "binding": "NEXT_INC_CACHE_R2_BUCKET",
@@ -95,6 +104,9 @@
           "service": "production-schedule-builder",
         },
       ],
+      "images": {
+        "binding": "IMAGES",
+      },
       // Backing store for the incremental cache. The binding name is fixed by
       // the OpenNext adapter. Without it the adapter falls back to its "dummy"
       // cache, which uploads nothing on deploy and throws on every read --

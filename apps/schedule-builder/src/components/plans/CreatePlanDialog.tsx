@@ -24,6 +24,7 @@ import {
   timeOptions,
 } from "~/lib/scheduleFilterOptions";
 import { type DraftCourse } from "~/lib/localStorage/types";
+import { formatCourseCode } from "~/lib/courseCode";
 
 type CourseSelection = {
   included: boolean;
@@ -79,7 +80,7 @@ function CourseOfferingsSection({
   onToggleCourse: (allCrns: number[]) => void;
   onToggleSection: (crn: number) => void;
 }) {
-  const info = course.courses[0];
+  const info = course.courses;
   const { data: offerings = [] } = useOfferingsByCourse(
     course.courseId,
     academicPeriod,
@@ -112,7 +113,7 @@ function CourseOfferingsSection({
           className="flex flex-1 cursor-pointer items-center gap-2"
         >
           <span className="flex-1 text-left font-bold">
-            {info?.abbr} {info?.courseNumber}
+            {formatCourseCode(info?.abbr, info?.courseNumber)}
             {info?.title ? (
               <span className="font-normal"> — {info.title}</span>
             ) : null}
@@ -247,9 +248,16 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
         return;
       }
 
-      const inputCourseNumbers = includedCourses.map(
-        (c) => (c.courses[0]?.abbr ?? "") + (c.courses[0]?.courseNumber ?? ""),
-      );
+      // `abbr` is already the fully-qualified code the server action matches on
+      // (`courses.abbr`); appending `courseNumber` would send "CSCI13021302".
+      const inputCourseNumbers = includedCourses
+        .map((c) => c.courses?.abbr)
+        .filter((abbr): abbr is string => !!abbr);
+
+      if (inputCourseNumbers.length === 0) {
+        setError("Could not read the course codes for your selection.");
+        return;
+      }
       const excludedSectionCrns = includedCourses.flatMap((c) => [
         ...(selections[c.id]?.tempExcludedCrns ?? []),
       ]);
@@ -269,9 +277,14 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
         walking,
       });
 
-      if (result.data.length === 0) {
+      // An empty CRN list is not a plan — saving one produces a plan whose
+      // detail view can never load.
+      const schedules = result.data.filter((crns) => crns.length > 0);
+
+      if (result.error !== undefined || schedules.length === 0) {
         setError(
-          "No schedules found matching your criteria — try adjusting your filters or included courses/sections.",
+          result.error ??
+            "No schedules found matching your criteria — try adjusting your filters or included courses/sections.",
         );
         return;
       }
@@ -280,7 +293,7 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
 
       try {
         await insertPlans.mutateAsync(
-          result.data.map((crns, i) => ({
+          schedules.map((crns, i) => ({
             title: `Plan ${baseCount + i + 1}`,
             crns,
           })),

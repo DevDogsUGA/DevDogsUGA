@@ -75,15 +75,38 @@ export async function fetchPartsOfTerm(
     const cells = $cal(tr).children("td");
     const code = cells.eq(0).text().trim();
     if (!code) return;
+
+    const classesBegin = extractDate(cells.eq(2).text());
+    const dropAddEnds = extractDate(cells.eq(3).text());
+    const censusDate = extractDate(cells.eq(4).text());
+    const withdrawalDeadline = extractDate(cells.eq(5).text());
+    const classesEnd = extractDate(cells.eq(6).text());
+
+    // These five are `notNull` columns. Asserting them non-null turned one
+    // unparseable registrar cell into a constraint violation that rolled back
+    // the entire term scrape; skipping the row keeps the rest of the term.
+    if (
+      !classesBegin ||
+      !dropAddEnds ||
+      !censusDate ||
+      !withdrawalDeadline ||
+      !classesEnd
+    ) {
+      console.warn(
+        `[parts-of-term] skipping ${academicPeriod} "${code}": unparseable date`,
+      );
+      return;
+    }
+
     partOfTermRows.push({
       academicPeriod,
       code,
       description: cells.eq(1).text().trim(),
-      classesBegin: extractDate(cells.eq(2).text())!,
-      dropAddEnds: extractDate(cells.eq(3).text())!,
-      censusDate: extractDate(cells.eq(4).text())!,
-      withdrawalDeadline: extractDate(cells.eq(5).text())!,
-      classesEnd: extractDate(cells.eq(6).text())!,
+      classesBegin,
+      dropAddEnds,
+      censusDate,
+      withdrawalDeadline,
+      classesEnd,
       finalsEnd: extractDate(cells.eq(7).text()),
     });
   });

@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "~/supabase/client";
 import { useSession } from "~/components/providers/SessionProvider";
-import { useCurrentAcademicPeriod } from "./usePreferences";
+import { useTerm } from "~/components/providers/TermProvider";
 import { LOCAL_KEYS } from "~/lib/localStorage/keys";
 import { LocalDraftCoursesMap } from "~/lib/localStorage/schemas";
 import { readLocal, writeLocal } from "~/lib/localStorage/storage";
@@ -11,7 +11,10 @@ import { type DraftCourse } from "~/lib/localStorage/types";
 
 export function useDraftCourses() {
   const { user, isLoading: sessionLoading } = useSession();
-  const { academicPeriod } = useCurrentAcademicPeriod();
+  // Read the effective term from TermProvider, not the raw preference:
+  // a first-time visitor has no saved preference, and the provider's
+  // fallback to the latest term is what the UI actually displays.
+  const { academicPeriod } = useTerm();
   const queryClient = useQueryClient();
 
   const { data: draftCourses = [], isLoading } = useQuery<DraftCourse[]>({
@@ -26,17 +29,17 @@ export function useDraftCourses() {
           )
           .eq("academicPeriod", academicPeriod!);
         if (error) throw error;
-        return (data ?? []) as unknown as DraftCourse[];
+        return data ?? [];
       }
       const map = readLocal(LOCAL_KEYS.draftCourses, LocalDraftCoursesMap);
       const flat = map[String(academicPeriod)] ?? [];
-      // Normalize flat local shape → DraftCourse shape (embedded courses array)
+      // Normalize flat local shape → DraftCourse shape (embedded course object)
       return flat.map(
         ({ id, courseId, excludedCrns, abbr, courseNumber, title }) => ({
           id,
           courseId,
           excludedCrns,
-          courses: [{ abbr, courseNumber, title }],
+          courses: { abbr, courseNumber, title },
         }),
       );
     },
@@ -97,7 +100,8 @@ export function useDraftCourses() {
         const { error } = await supabase
           .from("userPlanDraftCourses")
           .delete()
-          .eq("id", id);
+          .eq("id", id)
+          .eq("userId", user.id);
         if (error) throw error;
       } else {
         const map = readLocal(LOCAL_KEYS.draftCourses, LocalDraftCoursesMap);

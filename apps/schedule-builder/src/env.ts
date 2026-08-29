@@ -56,6 +56,23 @@ const server = {
     secrecy: "public",
     commented: true,
   }),
+  // User-specified (.env). Read by the cron dispatcher in
+  // cloudflare/scheduled.ts, which fetches this app's own scraper routes.
+  BASE_URL: define(
+    switchEnvironment({
+      local: z.url().default(`http://localhost:${process.env.PORT ?? 3001}`),
+      deployed: z.url(),
+    }),
+    {
+      doc:
+        "The schedule builder's public URL, fetched by the daily cron " +
+        "dispatcher to reach its own scraper routes. Defaults to " +
+        "http://localhost:3001 in development.",
+      scope: "environment",
+      secrecy: "public",
+      example: "http://localhost:3001",
+    },
+  ),
   CRON_SECRET: define(
     switchEnvironment({
       local: z.string().default(""),
