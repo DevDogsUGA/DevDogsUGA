@@ -83,9 +83,18 @@ export interface StarRow {
   meetingName: string;
   meetingStartsAt: Date;
   workshopId: string;
-  projectId: string;
-  projectSlug: string;
-  projectName: string;
+  /**
+   * All three are null for a star earned at a skill session — the join below
+   * is a left one and `workshops.projectId` is nullable.
+   *
+   * Declared rather than coalesced, unlike `meetingName`. `csvField` already
+   * renders null as an empty cell, so the FILE was always right and only this
+   * type was wrong; coalescing in SQL would change nothing a reader sees while
+   * adding a third place the export's shape is decided.
+   */
+  projectId: string | null;
+  projectSlug: string | null;
+  projectName: string | null;
   competitionId: string | null;
   workshopStar: boolean;
   competitionStar: boolean;
@@ -155,43 +164,44 @@ async function starPage(
     conditions.push(eq(projects.slug, filters.projectSlug));
   }
 
-  return db
-    .select({
-      userId: memberStars.userId,
-      preferredName: profiles.preferredName,
-      email: usersInAuth.email,
-      githubLogin: sql<string | null>`(
+  return (
+    db
+      .select({
+        userId: memberStars.userId,
+        preferredName: profiles.preferredName,
+        email: usersInAuth.email,
+        githubLogin: sql<string | null>`(
         select i.identity_data ->> 'user_name'
         from auth.identities i
         where i.user_id = ${memberStars.userId} and i.provider = 'github'
         limit 1
       )`,
-      meetingId: meetings.id,
-      meetingSlug: meetings.slug,
-      // The CSV's columns are an append-only contract, so this one has to keep
-      // emitting a value even though `nameOverride` is null for most nights.
-      // Coalescing to the workshop's title and then its project keeps the
-      // cell meaningful; the empty string is the floor, because a reader
-      // already has `meetingSlug` and `meetingStartsAt` in the neighbouring
-      // columns and a literal like "Untitled" would be text the club never
-      // wrote appearing in an export it publishes.
-      meetingName: sql<string>`coalesce(
+        meetingId: meetings.id,
+        meetingSlug: meetings.slug,
+        // The CSV's columns are an append-only contract, so this one has to keep
+        // emitting a value even though `nameOverride` is null for most nights.
+        // Coalescing to the workshop's title and then its project keeps the
+        // cell meaningful; the empty string is the floor, because a reader
+        // already has `meetingSlug` and `meetingStartsAt` in the neighbouring
+        // columns and a literal like "Untitled" would be text the club never
+        // wrote appearing in an export it publishes.
+        meetingName: sql<string>`coalesce(
         ${meetings.nameOverride},
         ${workshops.title},
         ${projects.displayName},
         ''
       )`,
-      meetingStartsAt: meetings.startsAt,
-      workshopId: memberStars.workshopId,
-      projectId: projects.id,
-      projectSlug: projects.slug,
-      projectName: projects.displayName,
-      competitionId: competitions.id,
-      workshopStar: memberStars.workshopStar,
-      competitionStar: memberStars.competitionStar,
-      // `submitted` is not `competitionStar`: a team can have a live PR and
-      // still not have competed, because competing is frozen at judging.
-      submitted: sql<boolean>`exists (
+        meetingStartsAt: meetings.startsAt,
+        workshopId: memberStars.workshopId,
+        projectId: projects.id,
+        projectSlug: projects.slug,
+        projectName: projects.displayName,
+        competitionId: competitions.id,
+        workshopStar: memberStars.workshopStar,
+        competitionStar: memberStars.competitionStar,
+        // `submitted` is not `competitionStar`: a team can have a live PR and
+        // still not have competed, because competing is frozen at judging.
+        submitted: sql<boolean>`exists (
         select 1
         from ${teams} t
         join ${teamMembers} tm
@@ -199,38 +209,42 @@ async function starPage(
         where t."competitionId" = ${competitions.id}
           and t."submissionState" is not null
       )`,
-      won: memberStars.won,
-      awardCategory: teamAwards.category,
-    })
-    .from(memberStars)
-    .innerJoin(meetings, eq(meetings.id, memberStars.meetingId))
-    .innerJoin(workshops, eq(workshops.id, memberStars.workshopId))
-    // Left, like every other read of a workshop's project: `projectId` is
-    // nullable, and a star earned at a skill session is still a star the
-    // export has to carry.
-    .leftJoin(projects, eq(projects.id, memberStars.projectId))
-    .leftJoin(profiles, eq(profiles.userId, memberStars.userId))
-    .leftJoin(usersInAuth, eq(usersInAuth.id, memberStars.userId))
-    .leftJoin(competitions, eq(competitions.workshopId, memberStars.workshopId))
-    .leftJoin(
-      teamAwards,
-      and(
-        eq(teamAwards.competitionId, competitions.id),
-        sql`exists (
+        won: memberStars.won,
+        awardCategory: teamAwards.category,
+      })
+      .from(memberStars)
+      .innerJoin(meetings, eq(meetings.id, memberStars.meetingId))
+      .innerJoin(workshops, eq(workshops.id, memberStars.workshopId))
+      // Left, like every other read of a workshop's project: `projectId` is
+      // nullable, and a star earned at a skill session is still a star the
+      // export has to carry.
+      .leftJoin(projects, eq(projects.id, memberStars.projectId))
+      .leftJoin(profiles, eq(profiles.userId, memberStars.userId))
+      .leftJoin(usersInAuth, eq(usersInAuth.id, memberStars.userId))
+      .leftJoin(
+        competitions,
+        eq(competitions.workshopId, memberStars.workshopId),
+      )
+      .leftJoin(
+        teamAwards,
+        and(
+          eq(teamAwards.competitionId, competitions.id),
+          sql`exists (
           select 1 from ${teamMembers} tm
           where tm."teamId" = ${teamAwards.teamId}
             and tm."userId" = ${memberStars.userId}
         )`,
-      ),
-    )
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(
-      asc(meetings.startsAt),
-      asc(memberStars.userId),
-      asc(memberStars.workshopId),
-    )
-    .limit(limit)
-    .offset(offset) as Promise<StarRow[]>;
+        ),
+      )
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(
+        asc(meetings.startsAt),
+        asc(memberStars.userId),
+        asc(memberStars.workshopId),
+      )
+      .limit(limit)
+      .offset(offset) as Promise<StarRow[]>
+  );
 }
 
 /** Parses the query string into filters, ignoring anything unparseable. */

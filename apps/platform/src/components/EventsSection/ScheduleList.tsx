@@ -19,7 +19,7 @@ import {
   formatEventSpan,
   formatRelative,
 } from "~/lib/eventTime";
-import { meetingTitle } from "~/lib/meetingTitle";
+import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
 // `resolveMeetingSegments` as a VALUE comes from `~/lib/meetingSegments`, not
 // from the loader that re-exports it. The loader's first import is
 // `~/server/db`, whose entry point runs `createDb(env.DB_URL, …)` at module
@@ -417,10 +417,9 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
 
         {/*
           Derived chips then the officer's kind, composed by `meetingBadges`.
-          An unrecognised kind still renders — verbatim, in the neutral pill —
-          because `kind` is an Airtable single-select an officer can extend
-          without touching this repository, and a value this side has never
-          heard of must never arrive as a blank badge.
+          A kind with no hue of its own renders verbatim in the neutral pill —
+          three of the four do, by design. See `kindBadge`: the list is closed,
+          so this is the un-coloured case rather than the unknown one.
         */}
         <div className="flex flex-wrap items-center gap-1.5">
           {badges.map((badge) => (
@@ -486,8 +485,15 @@ function WorkshopChip({ workshop }: { workshop: MeetingRangeWorkshop }) {
       : segmentBadge.kickoff;
   const chipCls = `${badge.chipDark} ${CHIP_DARK_CLS}`;
 
+  // `workshopLabel`, not `projectName`: the title is what officers actually
+  // name a session by, and `projectName` is null outright for one that teaches
+  // a skill rather than a codebase — which rendered the career-fair-readiness
+  // night as an empty chip. The fallback matches `/events/<slug>`, so the
+  // schedule and the permalink cannot print two different words for one row.
+  const label = workshopLabel(workshop) ?? "Workshop";
+
   if (workshop.competitionSlug === null) {
-    return <span className={chipCls}>{workshop.projectName}</span>;
+    return <span className={chipCls}>{label}</span>;
   }
 
   return (
@@ -495,7 +501,7 @@ function WorkshopChip({ workshop }: { workshop: MeetingRangeWorkshop }) {
       href={`/competitions/${workshop.competitionSlug}/teams`}
       className={`${chipCls} ${CHIP_LINK_CLS}`}
     >
-      {workshop.projectName}
+      {label}
     </Link>
   );
 }

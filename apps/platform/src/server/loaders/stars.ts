@@ -20,11 +20,28 @@ export interface StarCell {
   workshopId: string;
   meetingId: string;
   meetingSlug: string;
-  meetingName: string;
+  /**
+   * What to call the night, or null when nothing was authored. See the column
+   * below: the fallback is the caller's, because the date lives in one
+   * timezone module and this file is not it.
+   */
+  meetingName: string | null;
   meetingStartsAt: Date;
-  projectId: string;
-  projectSlug: string;
-  projectName: string;
+  /**
+   * The officer's word for the session. With `projectName`, this is exactly
+   * `TitleableWorkshop`, so a cell can be passed to `workshopLabel` rather
+   * than having the same fallback written out a second time here.
+   */
+  title: string | null;
+  /**
+   * All three are null for a workshop that teaches a skill rather than a
+   * codebase — `workshops.projectId` is nullable and the join below is a left
+   * one, so such a star reaches the member's record instead of vanishing from
+   * it.
+   */
+  projectId: string | null;
+  projectSlug: string | null;
+  projectName: string | null;
   workshopStar: boolean;
   competitionStar: boolean;
   won: boolean;
@@ -51,6 +68,7 @@ const cellColumns = {
     string | null
   >`coalesce(${meetings.nameOverride}, ${workshops.title}, ${projects.displayName})`,
   meetingStartsAt: meetings.startsAt,
+  title: workshops.title,
   projectId: memberStars.projectId,
   projectSlug: projects.slug,
   projectName: projects.displayName,
@@ -85,10 +103,11 @@ export const getStarsForUser = cache(
             isNull(workshops.deletedAt),
           ),
         )
-        // The view's columns are nullable because Postgres cannot prove a view
-        // column NOT NULL. Every row here comes from a join on the underlying
-        // rows, so the nulls are unreachable — asserted once here rather than
-        // pushed onto every caller.
+        // The cast covers only the columns the VIEW cannot prove NOT NULL —
+        // Postgres never can — and which the inner joins above do prove:
+        // `workshopId`, `meetingId` and the three flags. The nullable fields
+        // in `StarCell` are nullable for real, and are declared that way, so
+        // this assertion no longer quietly launders them into strings.
         .orderBy(desc(meetings.startsAt)) as Promise<StarCell[]>
     );
   },

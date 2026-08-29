@@ -1,4 +1,5 @@
 import { formatEventDate } from "~/lib/eventTime";
+import { workshopLabel } from "~/lib/meetingTitle";
 import type { StarCell } from "~/server/loaders/stars";
 import EmptyState from "./EmptyState";
 import { StarBadges } from "./StarBadges";
@@ -43,12 +44,25 @@ export default function StarGrid({ cells }: { cells: StarCell[] }) {
           key={meeting.meetingId}
           className="rounded-lg border border-white/10 bg-white/5 p-4"
         >
-          <h3 className="font-semibold text-white">{meeting.meetingName}</h3>
-          <p className="text-xs text-mauve-400">
-            <time dateTime={meeting.meetingStartsAt.toISOString()}>
-              {formatEventDate(meeting.meetingStartsAt)}
-            </time>
-          </p>
+          {/* Null for a night nobody named and no workshop titled — an
+              ordinary sprint Monday. The date is the fallback, formatted here
+              rather than coalesced in SQL so `EVENT_TZ` stays in one module,
+              and it becomes the heading itself rather than repeating under a
+              blank one. */}
+          <h3 className="font-semibold text-white">
+            {meeting.meetingName ?? (
+              <time dateTime={meeting.meetingStartsAt.toISOString()}>
+                {formatEventDate(meeting.meetingStartsAt)}
+              </time>
+            )}
+          </h3>
+          {meeting.meetingName !== null && (
+            <p className="text-xs text-mauve-400">
+              <time dateTime={meeting.meetingStartsAt.toISOString()}>
+                {formatEventDate(meeting.meetingStartsAt)}
+              </time>
+            </p>
+          )}
 
           <ul className="mt-3 flex flex-col gap-2">
             {meeting.workshops.map((cell) => (
@@ -56,7 +70,9 @@ export default function StarGrid({ cells }: { cells: StarCell[] }) {
                 key={cell.workshopId}
                 className="flex flex-wrap items-center justify-between gap-3 text-sm"
               >
-                <span>{cell.projectName}</span>
+                {/* Not `projectName`: it is null for a skill session, which
+                    left the row labelled with nothing at all. */}
+                <span>{workshopLabel(cell) ?? "Workshop"}</span>
                 <StarBadges
                   workshopStar={cell.workshopStar}
                   competitionStar={cell.competitionStar}
@@ -106,7 +122,7 @@ function Legend() {
 
 interface MeetingGroup {
   meetingId: string;
-  meetingName: string;
+  meetingName: string | null;
   meetingStartsAt: Date;
   workshops: StarCell[];
 }
