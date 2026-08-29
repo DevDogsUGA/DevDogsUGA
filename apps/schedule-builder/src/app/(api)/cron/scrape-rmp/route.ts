@@ -1,11 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import { instructors } from "~/server/db/schema";
 import { verifyCronSecret } from "~/lib/cron/auth";
 
 const RMP_GRAPHQL_URL = "https://www.ratemyprofessors.com/graphql";
 const TARGET_SCHOOL = "University of Georgia";
+
+/**
+ * One RMP request per instructor, spaced out to stay polite, does not fit in a
+ * single Workers invocation: the full instructor table takes the better part of
+ * an hour. The table is instead swept in daily slices — every instructor is
+ * refreshed once per rotation — with a wall-clock budget as a backstop.
+ */
+const ROTATION_DAYS = 30;
+const REQUEST_SPACING_MS = 250;
+const TIME_BUDGET_MS = 3 * 60 * 1000;
 
 interface RmpEdge {
   node: {
@@ -19,7 +29,53 @@ interface RmpEdge {
   };
 }
 
-async function fetchRmpRating(lastName: string): Promise<{
+const sameName = (a: string, b: string) =>
+  a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/**
+ * Picks the RMP record for this instructor, or nothing.
+ *
+ * A surname is not an identity: UGA has many instructors per common surname,
+ * and taking the first hit gave them all one professor's rating. A first-name
+ * match is required, and a first-initial match is accepted only when it is
+ * unambiguous. No confident match means no rating rather than a wrong one.
+ */
+function pickMatch(
+  edges: RmpEdge[],
+  firstName: string | null,
+  lastName: string,
+): RmpEdge["node"] | null {
+  const candidates = edges
+    .map((e) => e.node)
+    .filter(
+      (n) =>
+        sameName(n.school.name, TARGET_SCHOOL) &&
+        sameName(n.lastName, lastName),
+    );
+  if (candidates.length === 0) return null;
+
+  // With no first name on our side there is nothing to disambiguate with, so
+  // only a lone candidate is safe.
+  if (!firstName?.trim()) {
+    return candidates.length === 1 ? candidates[0]! : null;
+  }
+
+  const exact = candidates.filter((n) => sameName(n.firstName, firstName));
+  if (exact.length === 1) return exact[0]!;
+  if (exact.length > 1) return null;
+
+  // "Rob" vs "Robert", or a bare initial — accepted only when one candidate fits.
+  const initial = firstName.trim()[0]!.toLowerCase();
+  const byInitial = candidates.filter(
+    (n) => n.firstName.trim()[0]?.toLowerCase() === initial,
+  );
+  return byInitial.length === 1 ? byInitial[0]! : null;
+}
+
+async function fetchRmpRating(
+  firstName: string | null,
+  lastName: string,
+): Promise<{
   averageRating: number;
   difficultyRating: number;
   wouldTakeAgainRating: number;
@@ -50,38 +106,55 @@ async function fetchRmpRating(lastName: string): Promise<{
     };
     const edges = json.data?.searchTeachers?.edges ?? [];
 
-    const match = edges.find(
-      (e) => e.node.school.name.toLowerCase() === TARGET_SCHOOL.toLowerCase(),
-    );
+    const match = pickMatch(edges, firstName, lastName);
     if (!match) return null;
 
     return {
-      averageRating: match.node.avgRating,
-      difficultyRating: match.node.avgDifficulty,
-      wouldTakeAgainRating: Math.round(match.node.wouldTakeAgainPercent),
-      totalReviews: match.node.numRatings,
+      averageRating: match.avgRating,
+      difficultyRating: match.avgDifficulty,
+      wouldTakeAgainRating: Math.round(match.wouldTakeAgainPercent),
+      totalReviews: match.numRatings,
     };
   } catch {
     return null;
   }
 }
 
+/** Which slice of the rotation today's run owns. */
+function todaysSlice(now: Date): number {
+  const startOfYear = Date.UTC(now.getUTCFullYear(), 0, 1);
+  const dayOfYear = Math.floor((now.getTime() - startOfYear) / 86_400_000);
+  return dayOfYear % ROTATION_DAYS;
+}
+
 export async function GET(req: NextRequest) {
   const denied = verifyCronSecret(req);
   if (denied) return denied;
 
-  const allInstructors = await db
+  const slice = todaysSlice(new Date());
+
+  const batch = await db
     .select({
       id: instructors.id,
       firstName: instructors.firstName,
       lastName: instructors.lastName,
     })
-    .from(instructors);
+    .from(instructors)
+    .where(sql`${instructors.id} % ${ROTATION_DAYS} = ${slice}`);
 
+  const startedAt = Date.now();
   let updated = 0;
-  // Rate-limit: process sequentially with a small delay to avoid hammering RMP
-  for (const instructor of allInstructors) {
-    const rating = await fetchRmpRating(instructor.lastName);
+  let processed = 0;
+
+  for (const instructor of batch) {
+    if (Date.now() - startedAt > TIME_BUDGET_MS) break;
+
+    const rating = await fetchRmpRating(
+      instructor.firstName,
+      instructor.lastName,
+    );
+    processed++;
+
     if (rating) {
       await db
         .update(instructors)
@@ -89,9 +162,17 @@ export async function GET(req: NextRequest) {
         .where(eq(instructors.id, instructor.id));
       updated++;
     }
-    // 250 ms between requests
-    await new Promise((r) => setTimeout(r, 250));
+
+    await new Promise((r) => setTimeout(r, REQUEST_SPACING_MS));
   }
 
-  return NextResponse.json({ ok: true, total: allInstructors.length, updated });
+  return NextResponse.json({
+    ok: true,
+    slice,
+    rotationDays: ROTATION_DAYS,
+    batchSize: batch.length,
+    processed,
+    updated,
+    truncated: processed < batch.length,
+  });
 }
