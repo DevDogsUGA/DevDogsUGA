@@ -10,8 +10,8 @@
  *
  * Nothing here throws. Most contributors to this monorepo will never install
  * Flutter, and a web-only clone still has to build its docs, so a missing SDK,
- * a script that will not run and JSON that will not parse are all the same
- * outcome — an empty result and one warning saying the pass was skipped.
+ * a script that will not run and JSON that will not parse all end the same way:
+ * an empty result and one warning saying the pass was skipped.
  */
 import * as fs from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -73,9 +73,9 @@ interface DartDeclaration {
 
 /**
  * Reference pages for the Flutter app. `appDir` is `apps/study-group-finder`,
- * either repo-relative or absolute — every path this builds is repo-relative,
- * because that is what the emitter's source links resolve against, so the one
- * it is handed is reduced to that first.
+ * repo-relative or absolute. Every path this builds is repo-relative, because
+ * that is what the emitter's source links resolve against, so the one it is
+ * handed is reduced to that first.
  */
 export function extractDart(repoRoot: string, appDir: string): ExtractResult {
   const root = trimTrailingSlash(toPosix(repoRoot));
@@ -247,9 +247,9 @@ function toSymbol(
         : declaration.kind === "widget"
           ? "Prop"
           : "Parameter",
-    // A Dart return type is the head of the signature, never a separate line,
-    // and none of the TypeScript tags — `client`, `default export`, `public` —
-    // has a Dart meaning. Both stay empty rather than being invented.
+    // A Dart return type is the head of the signature, never a separate line.
+    // No TypeScript tag has a Dart meaning: not `client`, not `default export`,
+    // not `public`. Both stay empty rather than being invented.
     returns: null,
     shape: null,
     tags: [],
@@ -258,10 +258,9 @@ function toSymbol(
       line: declaration.line,
     },
     // Every declaration this file builds came out of the Dart analyzer, so the
-    // emitter is told so once, here. It is what picks the `dart` fence and the
-    // `import 'package:…';` line; without it the page would claim a widget is
-    // TypeScript and hand the reader an import that does not compile in either
-    // language.
+    // emitter is told once, here. It picks the `dart` fence and the
+    // `import 'package:…';` line. Without it the page would claim a widget is
+    // TypeScript and print an import that compiles in neither language.
     language: "dart",
   };
 }
@@ -319,10 +318,10 @@ function asParams(value: unknown): ParamDoc[] {
 }
 
 /**
- * The script names what it had to skip — a mixin, a mutable top-level — on
- * stderr, because the schema has no kind for those. Repeating those lines is
- * what keeps a documented declaration from disappearing between the two halves;
- * the cap is so one pathological file cannot bury the rest of the run.
+ * The script names on stderr what it had to skip, a mixin or a mutable
+ * top-level, because the schema has no kind for those. Repeating those lines
+ * keeps a documented declaration from disappearing between the two halves. The
+ * cap is so one pathological file cannot bury the rest of the run.
  */
 function diagnostics(stderr: string): string[] {
   const lines = stderr

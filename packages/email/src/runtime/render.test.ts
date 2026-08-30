@@ -2,13 +2,12 @@ import { describe, expect, it } from "vitest";
 import { render, templateNames } from "./index.js";
 
 /**
- * Tests against the COMPILED artifact, not the React sources.
+ * Tests the COMPILED artifact, not the React sources.
  *
- * That is deliberate: the artifact is what ships, and every interesting
- * failure in this design — a sentinel left unsubstituted, a slot compiled in
- * the wrong order, a URL slot that lost its marker — exists only after the
- * compile step. Testing the components would test the half that never reaches
- * a Worker.
+ * The artifact is what ships, and every interesting failure in this design
+ * exists only after the compile step: a sentinel left unsubstituted, a slot
+ * compiled in the wrong order, a URL slot that lost its marker. Testing the
+ * components would test the half that never reaches a Worker.
  */
 
 const invite = {
@@ -42,9 +41,9 @@ describe("render", () => {
   });
 
   it("leaves no sentinel behind in any output", () => {
-    // The failure this design is most exposed to: a `⟦teamName⟧` in somebody's
-    // inbox. It can only come from a slot the tokenizer failed to find, so it
-    // is worth asserting on every template rather than on one.
+    // A `⟦teamName⟧` in somebody's inbox is what this design is most exposed
+    // to. It can only come from a slot the tokenizer failed to find, so assert
+    // on every template rather than on one.
     for (const name of templateNames) {
       const email = render(name, {
         ...invite,
@@ -67,7 +66,7 @@ describe("render", () => {
 
     expect(email.html).not.toContain("<script>");
     expect(email.html).toContain("&lt;script&gt;");
-    // The subject is a header, not markup — escaping it would put literal
+    // The subject is a header, not markup. Escaping it would put a literal
     // `&amp;` in an inbox.
     expect(email.subject).toContain('<script>alert("x")</script>');
   });

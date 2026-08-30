@@ -3,8 +3,8 @@
  *
  * An SVG logo is embedded as SVG so it stays vector in an SVG export; a
  * raster one is embedded as it is, and anything else is converted to PNG.
- * The reference clears exactly the square the artwork is fitted into — its
- * cleared area is the 9×9 box, not the mascot's outline — so the clearing is
+ * The reference clears exactly the square the artwork is fitted into. That
+ * cleared area is the 9×9 box, not the mascot's outline, so the clearing is
  * arithmetic on the box and needs no pixels.
  */
 import { readFile } from "node:fs/promises";

@@ -6,12 +6,11 @@
  * `ts.Program`, shared by all three TypeScript extractors, because building it
  * is by far the slowest thing the docs build does. And every generated page
  * lives inside a `reference/` tree that this module deletes before it writes,
- * so a renamed or deleted source file cannot leave a stale page behind for a
- * reader to trust.
+ * so a renamed or deleted source file cannot leave a stale page behind.
  *
  * Nothing here is exported from `src/index.ts`. `@devdogsuga/docs` re-exports
  * that module's types, so anything on it widens the graph `apps/platform`
- * typechecks against; the generator is reachable as `docs-build gen` and
+ * typechecks against. The generator is reachable as `docs-build gen` and
  * through the `./gen` subpath, and that is all.
  */
 import * as fs from "node:fs";
@@ -54,7 +53,7 @@ const ROUTES_ORDER = 2;
 const API_ROUTES_ORDER = 3;
 
 export interface GenOptions {
-  /** Absolute path to the monorepo root — the directory holding `docs/`. */
+  /** Absolute path to the monorepo root, the directory holding `docs/`. */
   repoRoot: string;
   /** Absolute path to the content root, normally `<repoRoot>/docs`. */
   docsRoot: string;
@@ -65,9 +64,9 @@ export interface GenOptions {
 }
 
 /**
- * What a run produced. Coverage is on here because it is *reported* — it is
- * printed on every run and never gates anything, so a caller that wants to act
- * on it has to decide to.
+ * What a run produced. Coverage is on here because it is reported, never
+ * enforced. It prints on every run and gates nothing, so a caller that wants to
+ * act on it has to decide to.
  */
 export interface GenSummary {
   /** Pages written, or that would be written under `dryRun`. */
@@ -219,9 +218,9 @@ function describe(error: unknown): string {
 /* Routes ----------------------------------------------------------------- */
 
 /**
- * Two pages per project, split on `isApi`. A page URL and a route handler are
- * different things to a reader — one is somewhere to navigate, the other is an
- * HTTP entry point — and the columns that describe them differ too.
+ * Two pages per project, split on `isApi`. A page URL is somewhere to navigate
+ * and a route handler is an HTTP entry point. The columns that describe them
+ * differ too.
  *
  * Routes are bucketed by `docs/` project rather than by target because several
  * packages share the `toolkit` project, and two targets writing the same page
@@ -298,11 +297,11 @@ function routePages(
 /**
  * The pages that are safe to write, in a stable order.
  *
- * Two rules, both of which exist because this module deletes directories. A
- * page must resolve inside `docsRoot`, and it must sit under a project's
- * `reference/` — the only tree that gets cleaned, and the only one where a
- * generated page cannot land on top of a hand-written one. Anything else warns
- * and is dropped rather than written somewhere it would outlive its source.
+ * Two rules, both because this module deletes directories. A page must resolve
+ * inside `docsRoot`, and it must sit under a project's `reference/`. That is
+ * the only tree that gets cleaned, and the only one where a generated page
+ * cannot land on top of a hand-written one. Anything else warns and is dropped
+ * rather than written somewhere it would outlive its source.
  */
 function acceptPages(
   pages: PendingPage[],
@@ -352,7 +351,7 @@ function isInsideDocsRoot(docsRoot: string, docsPath: string): boolean {
  * wrong.
  *
  * Deliberately narrow: only a directory named exactly `reference`, only one
- * level below a docs project, and only a real directory — a symlink is left
+ * level below a docs project, and only a real directory. A symlink is left
  * alone rather than followed out of the tree. Hand-written pages live beside
  * these trees, never inside one.
  */
@@ -377,14 +376,12 @@ function removeReferenceTrees(docsRoot: string): void {
  * Two reasons this cannot just group by the string it was handed. Every package
  * contributes its own rows to the shared `toolkit` project, so an unaggregated
  * list would print the same area eight times and mean nothing. And the
- * extractors label a row differently — the components pass names the source
- * directories it read, the functions pass names the page it wrote — so the
- * table sorted into two interleaved conventions, and the same code could appear
- * twice under two names.
+ * extractors label a row differently. The components pass names the source
+ * directories it read, the functions pass names the page it wrote, so the table
+ * sorted into two interleaved conventions and the same code could appear twice
+ * under two names.
  *
- * The docs page path wins because it is the one a reader can navigate to, which
- * makes the table a contents listing with coverage attached rather than a map
- * of the tree it was derived from.
+ * The docs page path wins because it is the one a reader can navigate to.
  */
 function aggregateCoverage(
   rows: CoverageRow[],
@@ -412,7 +409,7 @@ function aggregateCoverage(
  *
  * A `DocGroup` is the only thing that knows both halves of the translation: its
  * `path` is the page, and its symbols carry the source files that fed it. That
- * is why the fix lives here rather than in an extractor — neither extractor can
+ * is why the fix lives here rather than in an extractor. Neither extractor can
  * see the other's convention, and this module has already merged both.
  */
 interface AreaIndex {
@@ -473,15 +470,14 @@ function percent(documented: number, symbols: number): string {
 /**
  * The house `[docs-build]` line, then the coverage table, then every warning.
  *
- * Printing coverage on every run is the point of collecting it: it turns a
- * quality gap into a visible one and names the thin spots by area. It is
- * reported and never enforced — nothing here influences the exit code.
+ * Printing coverage on every run is the point of collecting it: it names the
+ * thin spots by area. It is reported and never enforced, and nothing here
+ * influences the exit code.
  *
- * That order is deliberate, and so is the completeness. A run warns about a
- * hundred or so things, all of them individually minor; leading with them
- * scrolls the counts and the table — the two things the command was run for —
- * off the top of the terminal, and capping them would hide the one warning that
- * mattered. Last and whole is the only arrangement that does neither.
+ * The order is deliberate, and so is the completeness. A run warns about a
+ * hundred or so things, all of them individually minor. Leading with them
+ * scrolls the counts and the table off the top of the terminal, and capping
+ * them would hide the one warning that mattered.
  */
 function printSummary(summary: GenSummary, docsRoot: string): void {
   const verb = summary.dryRun ? "would generate" : "generated";
@@ -513,8 +509,7 @@ function printSummary(summary: GenSummary, docsRoot: string): void {
 
   if (summary.warnings.length > 0) {
     // The count goes with the summary, where a reader is still looking, so the
-    // block below is something they scroll into on purpose rather than a wall
-    // of text they have to scroll back out of.
+    // block below is something they scroll into on purpose.
     console.log(
       `[docs-build] ${summary.warnings.length} warning(s), all of them below:`,
     );

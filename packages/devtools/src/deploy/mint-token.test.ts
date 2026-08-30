@@ -1,5 +1,5 @@
 /**
- * `deploy mint-token` — the one command in this repository whose stdout is a
+ * `deploy mint-token`, the one command in this repository whose stdout is a
  * production credential.
  *
  * Ported from `env/mint-sandbox-token.test.ts`, which drove the standalone
@@ -9,7 +9,7 @@
  *
  *   1. **In-process, injected sink.** `runMintToken(env, out)` takes the
  *      credential stream as a parameter, so a collector captures EVERY byte
- *      written to it — more precise than reading a pipe, and it makes
+ *      written to it. That is more precise than reading a pipe and makes
  *      exhaustive refusal coverage cheap. Refusals throw a `DeployError`
  *      before the first write; `cli.ts` renders it to stderr.
  *   2. **Subprocess.** The contract a deploy depends on is a PROCESS contract,
@@ -18,17 +18,16 @@
  *      layer-1 test green and still corrupt the token. So a harness runs the
  *      real module in a real process and the real fds get read.
  *   3. **The wiring in `cli.ts`.** The actual trap in this migration is not in
- *      `mint-token.ts` at all — it is `intro("DevDogs devtools")`, which
- *      writes to STDOUT, running before the dispatch. No test of this module
- *      can catch that, so the last block asserts it against the text of
- *      `cli.ts`.
+ *      `mint-token.ts` at all. It is `intro("DevDogs devtools")`, which writes
+ *      to STDOUT, running before the dispatch. No test of this module can catch
+ *      that, so the last block asserts it against the text of `cli.ts`.
  *
  * ⚠️ The subprocess NEVER inherits `process.env`. Two reasons, and the second
- * is the important one: a hermetic environment makes DEPLOY_ENV and the
- * signing key explicit per test, and — since a developer's shell may well hold
- * the real platform signing key — an inherited environment could have a test
- * signing a genuine credential and printing it into CI logs. Every case builds
- * its environment from `PATH` upward.
+ * is the important one: a hermetic environment makes DEPLOY_ENV and the signing
+ * key explicit per test, and a developer's shell may hold the real platform
+ * signing key, so an inherited environment could have a test signing a genuine
+ * credential and printing it into CI logs. Every case builds its environment
+ * from `PATH` upward.
  */
 import { execFile } from "node:child_process";
 import { createHmac } from "node:crypto";
@@ -98,8 +97,8 @@ function mint(env: Record<string, string | undefined> = {}): Captured {
     SUPABASE_JWT_SIGNING_KEY: KEY,
     ...env,
   };
-  // `undefined` means genuinely ABSENT, which is a different input from "" —
-  // it is the one that reaches `signingKey.length` as undefined.
+  // `undefined` means genuinely ABSENT, a different input from "". It is the
+  // one that reaches `signingKey.length` as undefined.
   for (const [key, value] of Object.entries(child)) {
     if (value === undefined) delete child[key];
   }
@@ -125,9 +124,9 @@ describe("the signature", () => {
   it("is a real HMAC-SHA256 over the header and payload", () => {
     // THE POSITIVE CONTROL. Every claim assertion below would pass just as
     // happily against a token whose third segment was a constant, a hash of
-    // the wrong thing, or the empty string — the payload is readable without
-    // any key at all. This is the only test that fails if the signing step
-    // stops signing.
+    // the wrong thing, or the empty string, because the payload is readable
+    // without any key at all. This is the only test that fails if the signing
+    // step stops signing.
     const [header, payload, signature] = token().split(".");
     expect(signature).toBe(sign(`${header}.${payload}`, KEY));
   });
@@ -214,7 +213,7 @@ describe("the claims", () => {
     // The failure this guards is a token authorizing as the database owner.
     // The same signing key would produce one happily; the only thing stopping
     // it is that the role is a constant in the module, so the constant is what
-    // gets asserted — against every name somebody might plausibly try.
+    // gets asserted, against every name somebody might try.
     //
     // ⚠️ This covers only the env OBJECT the command was handed. A mutation
     // introducing `process.env.ROLE ?? SANDBOX_PROXY_ROLE` SURVIVES this test,
@@ -238,8 +237,8 @@ describe("the claims", () => {
 
   it("issues at roughly now, in seconds rather than milliseconds", () => {
     // A `Date.now()` that forgot to divide produces an `iat` 1000x too large
-    // and an `exp` in the year 57000 — a token that never expires, which is
-    // the failure the 90-day window exists to prevent, arriving silently.
+    // and an `exp` in the year 57000: a token that never expires, which is the
+    // failure the 90-day window exists to prevent, arriving silently.
     const claims = decode(token().split(".")[1]!) as { iat: number };
     const now = Math.floor(Date.now() / 1000);
     expect(Math.abs(claims.iat - now)).toBeLessThan(60);
@@ -301,8 +300,8 @@ describe("refusing to mint", () => {
     const result = mint(env);
     // A CLEAN refusal, not a crash. `mint()` rethrows anything that is not a
     // DeployError, so reaching here at all means this was a decision rather
-    // than a fall-over — which exit-code-only assertions could never tell
-    // apart, and the second is a bug the first would hide forever.
+    // than a fall-over. Exit-code-only assertions cannot tell the two apart,
+    // and a crash is a bug a passing exit code would hide forever.
     expect(result.error).toBeInstanceOf(DeployError);
     // The one that matters: a caller piping stdout into `wrangler secret put`
     // must receive NOTHING on a failing run. A token signed with an empty or
@@ -538,7 +537,7 @@ describe("the process contract", () => {
       expect(result.code, label).not.toBe(0);
       expect(result.stdout, label).toBe("");
       expect(result.stderr.trim().length, label).toBeGreaterThan(0);
-      // Not a crash — see the in-process expectRefusal for why this matters.
+      // Not a crash. See the in-process expectRefusal for why this matters.
       expect(result.stderr, label).not.toMatch(/^\s+at /m);
       expect(result.stderr, label).not.toMatch(/TypeError|ReferenceError/);
     }
@@ -554,7 +553,7 @@ describe("the dispatch in cli.ts", () => {
     // writes to STDOUT (165 bytes of box drawing), never stderr. Dispatched
     // after it, `deploy mint-token` emits
     //   ┌  DevDogs devtools\n│\n<jwt>
-    // which does not error — it deploys a malformed credential that fails
+    // which does not error. It deploys a malformed credential that fails
     // later, at the edge.
     const cli = readFileSync(join(HERE, "..", "cli.ts"), "utf8");
 

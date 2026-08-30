@@ -1,10 +1,8 @@
 /**
- * The style is checked against the file it was read from.
- *
- * `apps/platform/public/attendance/qr.svg` is parsed into a grid and rendered
- * back; every module must land at the same place with the same corners
- * rounded, the eyes and the logo at the same coordinates and scales. That
- * is the whole claim of `style.ts`, so it is the whole test.
+ * `style.ts` is checked against `apps/platform/public/attendance/qr.svg`. The
+ * file is parsed into a grid and rendered back; every module must land at the
+ * same place with the same corners rounded, and the eyes and logo at the same
+ * coordinates and scales.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -19,7 +17,7 @@ const MODULE = 27;
 const ORIGIN = 54;
 const SIZE = 33;
 
-/** The reference's nine tile paths, by which corners they round. */
+/** The reference's tile paths, keyed by which corners they round. */
 const REFERENCE_TILES: Record<string, string> = {
   '<rect width="6" height="6"></rect>': "",
   '<circle cx="3" cy="3" r="3"></circle>': "tl,tr,br,bl",

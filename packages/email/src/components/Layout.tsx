@@ -16,8 +16,8 @@ import { theme } from "../theme.js";
  *
  * Styles are inline attributes rather than a stylesheet because `<style>` is
  * stripped by Gmail's web client on forwarded mail and by several others
- * outright. react-email's components emit the table scaffolding underneath;
- * this file only decides what it looks like.
+ * outright. react-email's components emit the table markup underneath; this
+ * file only decides what it looks like.
  */
 export function Layout({
   preview,
@@ -26,21 +26,20 @@ export function Layout({
   /**
    * The line clients show next to the subject in the inbox list.
    *
-   * Not optional. Left out, clients fall back to the first text in the body —
+   * Not optional. Left out, clients fall back to the first text in the body,
    * which for these templates is the greeting, so every message in the list
-   * reads "Hi Sam". It is the second thing anyone sees and the cheapest to get
-   * right.
+   * reads "Hi Sam".
    *
    * **It must be a literal, never a prop.** `<Preview>` pads its content with
    * zero-width characters up to a fixed total length, so its output depends on
-   * the LENGTH of what it is given — and the compile step renders once, which
+   * the LENGTH of what it is given, and the compile step renders once, which
    * would bake the padding for a sentinel rather than for the real value. The
    * branching check in `scripts/compile.tsx` catches this, and this is the one
    * place it fires for a reason that is not the template author's fault.
    *
-   * The cost is that the preview line is generic while the subject is
-   * personalised. That is the right way round: the subject is what the reader
-   * scans, and it is a plain header with no padding behaviour.
+   * So the preview line is generic while the subject is personalised. The
+   * subject is what the reader scans and is a plain header with no padding
+   * behaviour, so it is the right half to personalise.
    */
   preview: string;
   children: ReactNode;

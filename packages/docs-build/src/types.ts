@@ -32,7 +32,7 @@ export interface DocsPage extends ParsedDocFile {
   path: string;
 }
 
-/** A project — one immediate subfolder of `docs/` — as shown on the docs landing page. */
+/** A project, one immediate subfolder of `docs/`, as shown on the docs landing page. */
 export interface DocsProject {
   slug: string;
   name: string;

@@ -2,11 +2,11 @@
  * Finding the Secrets Manager access token, in four places, in order.
  *
  *   1. `--access-token`   explicit, and explicit beats ambient
- *   2. `BWS_ACCESS_TOKEN` the environment — which includes your `.env`,
+ *   2. `BWS_ACCESS_TOKEN` the environment, which includes your `.env`,
  *                         since `with-env` loads it for every command
  *   3. the Bitwarden Password Manager vault, via the bundled `bw`
- *   4. ask, and offer to save it — to `.env` (the default) or the vault —
- *      so this is the last time
+ *   4. ask, and offer to save it to `.env` (the default) or the vault, so
+ *      this is the last time
  *
  * The ordering logic is separated from the four implementations because it is
  * the part that can be wrong invisibly. A chain that silently prefers a stale

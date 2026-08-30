@@ -9,10 +9,10 @@
  *   * the docs build reads it for the CLI reference page (see the rewrite
  *     plan's §11.3: the registry generators stay in devtools).
  *
- * It is deliberately inert — names, summaries and option shapes, no imports of
+ * It is deliberately inert: names, summaries and option shapes, no imports of
  * anything that runs. `cli.ts` owns dispatch; the wizard turns a walk of this
- * tree into an argv and hands it to that same dispatcher, which is what keeps
- * "the menu covers the CLI" true by construction rather than by review.
+ * tree into an argv and hands it to that same dispatcher, which keeps "the menu
+ * covers the CLI" true by construction rather than by review.
  *
  * ## What a summary is for
  *
@@ -26,10 +26,10 @@
  * One choice in a select prompt.
  *
  * A `value` that starts with `--` IS the flag (the database target is three
- * mutually exclusive booleans wearing one option); anything else is a value
- * for the option's own flag. `argValue` covers the one choice that takes a
- * further word — `--team <slug>` — so the wizard asks for it in place rather
- * than emitting a flag with nothing after it.
+ * mutually exclusive booleans wearing one option); anything else is a value for
+ * the option's own flag. `argValue` covers the one choice that takes a further
+ * word, `--team <slug>`, so the wizard asks for it in place rather than
+ * emitting a flag with nothing after it.
  */
 export interface OptionChoice {
   value: string;
@@ -42,10 +42,9 @@ export interface OptionChoice {
  * A prompt the wizard raises to fill an option the command line would carry.
  *
  * `confirm` has no polarity switch on purpose: **yes adds the flag**, always.
- * Every message here is therefore phrased so that yes is the flag's own
- * meaning ("Skip the duplicate scan?" rather than "Scan for duplicates?"),
- * which keeps the wizard from having a second place to get an inversion
- * wrong.
+ * So every message here is phrased so yes is the flag's own meaning ("Skip the
+ * duplicate scan?" rather than "Scan for duplicates?"). That leaves the wizard
+ * without a second place to get an inversion wrong.
  */
 export type OptionPrompt =
   | { kind: "confirm"; message: string; initial: boolean }
@@ -62,24 +61,24 @@ export interface CommandOption {
   /**
    * How the wizard asks for it.
    *
-   * Absent means the wizard does not ask HERE, and that is a decision rather
-   * than an omission. Three kinds of option are deliberately promptless:
+   * Absent means the wizard does not ask HERE, a decision rather than an
+   * omission. Three kinds of option are deliberately promptless:
    *
-   *   * ones the command asks for ITSELF, from something live — `--app` picks
+   *   * ones the command asks for ITSELF, from something live. `--app` picks
    *     from the apps in the database, `--user` from the accounts on it,
-   *     `--target` from `pick.ts`'s danger-ordered list, `--apps` from the
-   *     env registry. A wizard text box would be a worse version of a menu
-   *     that already exists, and `--target`'s in particular would put
-   *     production one keystroke closer than `pick.ts` deliberately puts it;
-   *   * ones that exist to SUPPRESS a prompt (`--yes`) — meaningless in a
+   *     `--target` from `pick.ts`'s danger-ordered list, `--apps` from the env
+   *     registry. A wizard text box would be a worse version of a menu that
+   *     already exists, and `--target`'s would put production one keystroke
+   *     closer than `pick.ts` deliberately puts it;
+   *   * ones that exist to SUPPRESS a prompt (`--yes`), meaningless in a
    *     wizard, which is the prompt;
-   *   * ones that carry a credential (`--access-token`) — the interactive
-   *     path already resolves it better, and typing it makes it visible to
-   *     `ps` and shell history.
+   *   * ones that carry a credential (`--access-token`). The interactive path
+   *     resolves it better, and typing it makes it visible to `ps` and shell
+   *     history.
    *
    * So every option is reachable from the menu; what varies is which screen
-   * asks. `commands.test.ts` pins the promptless set so a fourth case has to
-   * be argued for rather than accumulate.
+   * asks. `commands.test.ts` pins the promptless set so a fourth case has to be
+   * argued for rather than accumulate.
    */
   prompt?: OptionPrompt;
 }
@@ -97,18 +96,18 @@ export type Condition = "docker" | "stack-running" | "stack-stopped";
 /**
  * Which layer of the Supabase group a command acts on.
  *
- * "Supabase" is one word covering two things a contributor has to tell apart:
- * the *stack* — the Docker containers, the auth server, PostgREST, Studio, the
- * CLI that runs them — and the *Postgres database* those containers wrap.
- * Starting and stopping act on the first; migrations and seeds act on the
+ * "Supabase" is one word covering two things a contributor has to tell apart.
+ * The *stack* is the Docker containers, the auth server, PostgREST, Studio and
+ * the CLI that runs them. The *Postgres database* is what those containers
+ * wrap. Starting and stopping act on the first; migrations and seeds act on the
  * second, and stay put across a restart.
  *
  * Getting that backwards is the mistake this labels away from: `reset` looks
- * like the way to pick up a `config.toml` change and is not (the config is
- * read at `supabase start`, so a reset replays migrations into containers
- * still holding the old settings). `restart` is. The moderation guide had to
- * spell that trap out in a warning box; naming the layer on the line is the
- * cheaper version of the same lesson.
+ * like the way to pick up a `config.toml` change and is not (the config is read
+ * at `supabase start`, so a reset replays migrations into containers still
+ * holding the old settings). `restart` is. The moderation guide spells that
+ * trap out in a warning box; naming the layer on the line is the cheaper
+ * version of the same lesson.
  */
 export type Scope = "supabase" | "postgres";
 
@@ -116,8 +115,8 @@ export type Scope = "supabase" | "postgres";
  * How each scope reads, in the two places that draw it.
  *
  * `menu` sits inline in a hint, so it is one word. `help` heads a block of
- * commands, so it can be a phrase. Both live here rather than in the
- * renderers, because they are labels — the same kind of data as a group title.
+ * commands, so it can be a phrase. Both live here rather than in the renderers
+ * because they are labels, the same kind of data as a group title.
  */
 export const SCOPES: Record<Scope, { menu: string; help: string }> = {
   supabase: { menu: "Supabase", help: "the stack" },
@@ -136,10 +135,10 @@ export interface CommandNode {
    * Offer this in the wizard only while the condition holds.
    *
    * For commands that are *meaningless* otherwise, not merely inconvenient:
-   * stopping a stack that is already stopped is the whole of the category.
-   * A command that would run and fail with a good message gets `needs`
-   * instead — see the two-line rule on `isOffered` in `environment.ts` for
-   * why hiding is the rarer of the two.
+   * stopping a stack that is already stopped is the whole of the category. A
+   * command that would run and fail with a good message gets `needs` instead.
+   * See the two-line rule on `isOffered` in `environment.ts` for why hiding is
+   * the rarer of the two.
    *
    * Wizard-only. `--help`, the dispatcher and the generated reference all
    * ignore this, so nothing here removes a command from the CLI.
@@ -170,7 +169,7 @@ export interface CommandNode {
    * stdout that something downstream parses, so a wizard that ran them would
    * either fail confusingly on a laptop or overwrite a local env file with a
    * deploy environment's values. They are still fully reachable and fully
-   * described here — that is the coverage — and choosing one hands back the
+   * described here, which is the coverage, and choosing one hands back the
    * exact line to run.
    */
   wizard?: "run" | "show";
@@ -227,8 +226,8 @@ const VAULT_TARGET: CommandOption = {
  * three times and let two of the answers contradict the third. `--help` still
  * documents both, which is where someone scripting this will look.
  *
- * Same reasoning as `VAULT_TARGET` above: the command already owns the
- * question, so the tree declares the flag and stays quiet.
+ * Same reasoning as `VAULT_TARGET` above: the command owns the question, so the
+ * tree declares the flag and stays quiet.
  */
 const TURBO_OPTIONS: readonly CommandOption[] = [
   {
@@ -352,9 +351,9 @@ export const GROUPS: readonly CommandGroup[] = [
         summary: "Write a QR code in the attendance-poster style.",
         hint: "svg, png, jpg, webp, avif, tiff",
         // The defaults ARE the reference (`apps/platform/public/attendance/
-        // qr.svg`); each summary names the reference value so a departure is
-        // a deliberate one, and every styling prompt is optional — Enter
-        // through them and the wizard makes the next poster to match.
+        // qr.svg`); each summary names the reference value so a departure is a
+        // deliberate one, and every styling prompt is optional. Enter through
+        // them and the wizard makes the next poster to match.
         options: [
           {
             flag: "--text",
@@ -506,7 +505,7 @@ export const GROUPS: readonly CommandGroup[] = [
   },
   {
     title: "Supabase",
-    // Declared in scope order — the four that act on the stack, then the two
+    // Declared in scope order: the four that act on the stack, then the two
     // that act on the database inside it. `--help` heads each run with its
     // scope, so declaration order is what puts those headings in the right
     // place; interleaving them would produce four one-line blocks.
@@ -837,9 +836,9 @@ export const GROUPS: readonly CommandGroup[] = [
         // is handed to it untouched. It is here because it is the login that
         // `env pull` depends on, it ships as a devtools dependency, and the
         // root `bw` alias it replaces was the last thing at the workspace root
-        // reaching into this package. Declaring no subcommands is deliberate —
-        // Bitwarden's surface is its own to document, and mirroring a slice of
-        // it here would go stale on their release schedule, not ours.
+        // reaching into this package. Declaring no subcommands is deliberate:
+        // Bitwarden's commands are its own to document, and mirroring a slice
+        // of them here would go stale on their release schedule, not ours.
         name: "bw",
         summary: "Run the Bitwarden CLI. `bw login` is the one you want.",
         hint: "passes everything through",
@@ -975,7 +974,7 @@ export function subcommandNames(path: readonly string[]): string[] {
   return (findCommand(path)?.subcommands ?? []).map((node) => node.name);
 }
 
-/** `pull, push, audit, init, example or reset` — for a refusal message. */
+/** `pull, push, audit, init, example or reset`, for a refusal message. */
 export function subcommandList(path: readonly string[]): string {
   const names = subcommandNames(path);
   if (names.length <= 1) return names.join("");

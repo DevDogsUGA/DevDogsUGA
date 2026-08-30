@@ -4,11 +4,12 @@
  *   with-env <command> [args...]
  *   with-env -c '<shell command>'
  *
- * Loads the environment `DEPLOY_ENV` selects — unset means development means
- * the root `.env` — plus, in development only, the `.env.generated` overlay
- * when the local Supabase stack is actually listening (see `load.ts` for the
- * probe table). Installed as a bin, so it inherits the calling package's
- * directory and its node_modules/.bin — no chdir or PATH fixup needed.
+ * Loads the environment `DEPLOY_ENV` selects, where unset means development
+ * means the root `.env`. In development only, it also loads the
+ * `.env.generated` overlay when the local Supabase stack is actually listening
+ * (see `load.ts` for the probe table). Installed as a bin, so it inherits the
+ * calling package's directory and its node_modules/.bin, with no chdir or PATH
+ * fixup.
  *
  * The files it loaded are printed to stderr on every run. That is a design
  * requirement, not chattiness: the probe silently decides between the hosted
@@ -19,8 +20,8 @@
  * script is expanded by pnpm's shell before this helper loads anything, so it
  * would resolve against the ambient environment; quoting it and passing it to
  * -c defers expansion until after the env is loaded. -c runs the string
- * through @yarnpkg/shell — the same JS shell pnpm's shellEmulator uses — so
- * it stays cross-platform.
+ * through @yarnpkg/shell, the same JS shell pnpm's shellEmulator uses, so it
+ * stays cross-platform.
  *
  * Neither mode spawns a platform shell, so this works on Windows and POSIX.
  */
@@ -40,19 +41,19 @@ import {
 // ALMOST NOTHING ELSE IS IMPORTED AT THE TOP LEVEL, deliberately.
 //
 // This wrapper runs in front of roughly fifty package scripts, so every import
-// here is paid by every one of them -- including the ones that never reach the
+// here is paid by every one of them, including the ones that never reach the
 // code needing it. Measured on 2026-08-14, `with-env node -e ""` took 560ms
 // against 17ms for bare node, and the breakdown was mostly imports the common
 // path never used:
 //
-//   @yarnpkg/shell + @yarnpkg/fslib   +50ms   -- only `-c` runs a shell
-//   @dotenvx/dotenvx (Node API)      +127ms   -- only some paths load in-process
+//   @yarnpkg/shell + @yarnpkg/fslib   +50ms   only `-c` runs a shell
+//   @dotenvx/dotenvx (Node API)      +127ms   only some paths load in-process
 //   tsx register                      +24ms
 //
 // So all three stay dynamically imported where they are used. commander is the
 // one exception, measured before admitting it: its import costs ~6ms, and on
 // 2026-08-15 this rewrite timed at ~210-230ms per `with-env node -e ""`
-// against ~200ms for the old hand-rolled parser -- commander, the selection
+// against ~200ms for the old hand-rolled parser. commander, the selection
 // modules, and the port probe together cost ~10-30ms, cheap enough to keep
 // the parsing declarative. Anything heavier gets lazy-imported: a top-level
 // import added here for tidiness costs every script in the repository on
@@ -122,8 +123,7 @@ const cwd = process.cwd();
 
 // Decide which files to load. Selection is separated from loading (load.ts)
 // and always happens in-process, even on Windows where the *loading* is
-// delegated below — the warnings and the loaded-files line are ours either
-// way.
+// delegated below. The warnings and the loaded-files line are ours either way.
 let envFiles: string[];
 try {
   const selection = await selectEnvFiles({
@@ -144,15 +144,15 @@ try {
   // A missing file is reported and survived, NOT refused.
   //
   // It used to exit(1), which is why `@devdogsuga/devtools` carried a second
-  // entry point: `pnpm devtools` runs under this wrapper, and the commands
-  // that run before there IS an environment — `setup`, which creates `.env`,
-  // and the two checks CI runs on a clean checkout — could only reach the CLI
-  // by going around it. That made the wrapper, rather than the command,
-  // the thing that decided whether an environment was needed.
+  // entry point. `pnpm devtools` runs under this wrapper, and the commands that
+  // run before there IS an environment could only reach the CLI by going around
+  // it: `setup`, which creates `.env`, and the two checks CI runs on a clean
+  // checkout. That made the wrapper, rather than the command, the thing that
+  // decided whether an environment was needed.
   //
   // Now there is one door. A command that genuinely needs a variable still
-  // fails, and fails naming the variable — @t3-oss validates the environment
-  // at import time and says which key is missing, which is a better error than
+  // fails, and fails naming the variable: @t3-oss validates the environment at
+  // import time and says which key is missing, which is a better error than
   // this one could give. What is gone is the case where a command needing
   // nothing was refused for the absence of a file it would never have read.
   //
@@ -183,8 +183,8 @@ for (const [key, value] of Object.entries(process.env)) {
 /**
  * Applies the env files to `env`, in process.
  *
- * dotenvx's Node API follows the same rules as its CLI — first file wins, and
- * values already in the environment are left alone — so this and delegating to
+ * dotenvx's Node API follows the same rules as its CLI, first file wins and
+ * values already in the environment are left alone, so this and delegating to
  * the CLI produce the same environment.
  */
 async function loadEnv(): Promise<void> {
@@ -250,12 +250,12 @@ if (shellMode && opts.c !== undefined) {
 //
 // This used to spawn dotenvx's CLI and have IT spawn the command, which meant a
 // second Node startup plus dotenvx's own boot (commander, conf, systeminfo) on
-// every invocation -- 238ms of the 560ms measured above. Loading in-process and
+// every invocation, 238ms of the 560ms measured above. Loading in-process and
 // spawning the command directly removes that.
 //
 // ⚠️ WINDOWS STILL DELEGATES, and the reason is not stylistic. Since
 // CVE-2024-27980 Node refuses to spawn `.cmd`/`.bat` without a shell, and on
-// Windows every `node_modules/.bin` entry is a `.cmd` shim -- so a direct spawn
+// Windows every `node_modules/.bin` entry is a `.cmd` shim, so a direct spawn
 // of `next` or `tsx` there fails outright. dotenvx uses execa, which handles it.
 // `shell: true` is not the fix: it would break on any path containing a space,
 // which on Windows is the ordinary case (`C:\Users\Firstname Lastname\...`).
@@ -272,8 +272,8 @@ const child = spawn(
         // With no file selected, dotenvx would fall back to looking for its
         // own default `.env` and print a MISSING_ENV_FILE banner for the
         // absence this wrapper has already reported in its own words. The
-        // delegation is still needed here — it is what spawns a `.cmd` shim —
-        // so silence the duplicate rather than skipping the hop.
+        // delegation is still needed here because it is what spawns a `.cmd`
+        // shim, so silence the duplicate rather than skipping the hop.
         ...(envFiles.length === 0 ? ["--ignore=MISSING_ENV_FILE"] : []),
         ...envFiles.flatMap((f) => ["-f", join(root, f)]),
         "--",

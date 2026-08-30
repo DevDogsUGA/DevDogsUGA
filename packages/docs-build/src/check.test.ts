@@ -1,23 +1,23 @@
 /**
  * The lint warns and never fails, which is exactly why it has to be right.
  * Nothing downstream breaks when it reports a defect that is not there, so the
- * only thing keeping it worth reading is that it does not cry wolf — and most
- * of what is below is about the false positive: markup inside a code fence or
+ * only thing keeping it worth reading is that it does not cry wolf. Most of
+ * what is below is about the false positive: markup inside a code fence or
  * under four spaces of indentation, a `#` that is a shell comment, a page whose
  * length is all inside folds.
  *
  * The other half is the false positive's quieter twin. An opening tag the
- * scanner invents is not just a warning about nothing: it leaves every line
- * below it looking hidden, so the page's visible word count stops climbing and
- * `page-length` — the rule this whole lint exists for — goes silent on the one
- * page long enough to need it. Several of the tests below check that a warning
- * is still there rather than that a phantom is gone.
+ * scanner invents leaves every line below it looking hidden, so the page's
+ * visible word count stops climbing and `page-length`, the rule this whole lint
+ * exists for, goes silent on the one page long enough to need it. Several of
+ * the tests below check that a warning is still there rather than that a
+ * phantom is gone.
  *
  * Two of these assert behaviour checked against `parseDocFile` rather than
  * assumed. A heading inside a `<details>` really is visited like any other and
  * becomes an entry in the page TOC, pointing at content behind a fold. And a
  * `</summary>` with no blank line after it really does leave everything down to
- * the closing tag as one raw HTML block — put to `parseDocFile`, both the body
+ * the closing tag as one raw HTML block. Put to `parseDocFile`, both the body
  * on the next line and the body on the `</summary>` line itself come back with
  * their markdown still spelled out in `plainText`, where the same page with a
  * blank line comes back parsed.
@@ -255,8 +255,8 @@ describe("collapsibles", () => {
   it("flags a closer that cancels an opener it never belonged to", () => {
     // One of each, and nothing pairs up: the closer at the top closes nothing,
     // and the fold below it never closes. Counted as totals this page balances
-    // and goes out silent — while the open fold has already taken every word
-    // under it out of the visible count, so the length rule is silent too.
+    // and goes out silent, and the open fold has already taken every word under
+    // it out of the visible count, so the length rule is silent too.
     const page = [
       "</details>",
       "",
@@ -360,7 +360,7 @@ describe("the blank line after </summary>", () => {
     // The newline is not what the rule is about, and a check that only looked
     // at the line below would miss the identical page written on one line
     // fewer. Put to `parseDocFile`, this comes back exactly as the two-line
-    // form does — `**bold** and a [link](/docs)`, asterisks and brackets and
+    // form does: `**bold** and a [link](/docs)`, asterisks and brackets and
     // all, sitting in `plainText` unparsed.
     const page = [
       "<details>",
@@ -409,7 +409,7 @@ describe("the blank line after </summary>", () => {
 
   it("accepts a fold with no body at all", () => {
     // Nothing follows the summary, so there is nothing for the HTML block to
-    // swallow — a blank line here would change nothing on the page.
+    // swallow. A blank line here would change nothing on the page.
     expect(
       rules(
         check(
@@ -445,7 +445,7 @@ describe("the description in front matter", () => {
 
   it("does not take a --- inside a block scalar for the end of it", () => {
     // `name: |` opens a YAML block scalar, and gray-matter reads the indented
-    // --- as one of its lines rather than the closing delimiter — checked
+    // --- as one of its lines rather than the closing delimiter. Checked
     // against gray-matter here, which returns the whole scalar and a body that
     // starts after the real delimiter. A scanner that stopped three lines early
     // would hand the remaining YAML to the body: 340 words on a 290-word page,

@@ -6,10 +6,10 @@ import { EnvDocument, parseValue, quote } from "./document.js";
  *
  * Two classes of bug matter here and neither throws:
  *
- *   * **Silent corruption** — a value that round-trips into something that
+ *   * **Silent corruption**: a value that round-trips into something that
  *     still looks like a credential and does not authenticate. A truncated
  *     password, a private key that lost its newlines.
- *   * **Silent loss** — a comment, an ordering, or a whole key that the writer
+ *   * **Silent loss**: a comment, an ordering, or a whole key that the writer
  *     dropped because it only understood assignments.
  *
  * Every case below is one of those.
@@ -92,7 +92,7 @@ describe("commenting out instead of deleting", () => {
 
     expect(doc.has("DB_URL")).toBe(false);
     expect(doc.isCommented("DB_URL")).toBe(true);
-    // The value is still in the file, which is the point -- a removal has to be
+    // The value is still in the file, which is the point: a removal has to be
     // recoverable from the file rather than from somebody's memory.
     expect(doc.toString()).toContain('# DB_URL="postgresql://x"');
   });
@@ -269,9 +269,9 @@ describe("stamping where a value came from", () => {
   });
 
   it("keeps a trailing comment when no stamp is given", () => {
-    // Spacing is normalised to one space, not preserved. The line is being
-    // rewritten anyway — the value changed length — so the original column
-    // alignment is already gone, and a canonical form beats a half-kept one.
+    // Spacing is normalised to one space, not preserved. The value changed
+    // length, so the line is being rewritten and the original column alignment
+    // is already gone. A canonical form beats a half-kept one.
     const doc = EnvDocument.parse(FILE);
     doc.set("DB_URL", "postgresql://y");
     expect(doc.toString()).toContain('DB_URL="postgresql://y" # trailing note');

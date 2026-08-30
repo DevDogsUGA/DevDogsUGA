@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *
  * This is the layer a person actually meets: `runEnvCommand` asks here first,
  * so `--target development` is refused HERE and never reaches the commands'
- * own `assertVaultTarget` guard. Both exist on purpose — this one explains,
- * that one is structural — and only this one is reachable from a keyboard.
+ * own `assertVaultTarget` guard. Both exist on purpose. This one explains,
+ * that one is structural, and only this one is reachable from a keyboard.
  *
  * The prompt path is not exercised: it is only taken when no target is named
  * AND stdin is a TTY, which a test runner is not. Every case below names one.
@@ -24,7 +24,7 @@ vi.mock("@clack/prompts", () => ({
 import { log, note } from "@clack/prompts";
 import { resolveVaultTarget } from "./pick.js";
 
-/** Everything `explain()` printed, joined — summary, detail and hints. */
+/** Everything `explain()` printed, joined: summary, detail and hints. */
 function reported(): string {
   return [
     ...vi.mocked(log.error).mock.calls.flat(),
@@ -50,7 +50,7 @@ describe("resolveVaultTarget", () => {
   });
 
   it("refuses development by naming the missing project, not by calling it unknown", async () => {
-    // `development` IS a target — it has a row and a file — so "not a target"
+    // `development` IS a target. It has a row and a file, so "not a target"
     // would be a false statement about the fact that actually rules it out.
     expect(await resolveVaultTarget("development", "?")).toBeNull();
     expect(reported()).toMatch(/no Bitwarden project/);

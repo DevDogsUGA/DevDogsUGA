@@ -5,9 +5,8 @@ import { fill } from "./fill.js";
  * The runtime. A few kilobytes of strings and one loop.
  *
  * React, the renderer and Tailwind are build-time dependencies; none of them
- * is reachable from this file. That is what makes Worker bundle size stop
- * being a consideration rather than something to watch against the 3 MB
- * compressed limit.
+ * is reachable from this file. Worker bundle size stops being something to
+ * watch against the 3 MB compressed limit.
  */
 
 export type { Templates };
@@ -18,8 +17,8 @@ export interface RenderedEmail {
   html: string;
   /**
    * Never omit this when sending. Some clients show only the text part, and
-   * its absence measurably worsens spam scoring — a message with no plain-text
-   * alternative is one of the cheapest signals a filter has.
+   * its absence worsens spam scoring: a message with no plain-text alternative
+   * is one of the cheapest signals a filter has.
    */
   text: string;
 }
@@ -29,9 +28,9 @@ export interface RenderedEmail {
  *
  * `Templates` is generated from each template's exported `Props`, so this call
  * is checked against the real component: a renamed prop, a missing one or a
- * typo is a build error rather than a `⟦teamName⟧` appearing in somebody's
- * inbox. Generating the types rather than hand-maintaining a registry is what
- * makes the compiled artifact and the source unable to drift.
+ * typo is a build error rather than a `⟦teamName⟧` in somebody's inbox.
+ * Generated types, not a hand-maintained registry, are why the compiled
+ * artifact and the source cannot drift.
  */
 export function render<K extends keyof Templates>(
   name: K,
@@ -41,7 +40,7 @@ export function render<K extends keyof Templates>(
   const values = props as Record<string, unknown>;
 
   return {
-    // The subject is a header, not markup — escaping it would put `&amp;` in
+    // The subject is a header, not markup. Escaping it would put `&amp;` in
     // somebody's inbox.
     subject: fill(compiled.subject, values, false),
     html: fill(compiled.html, values, true),

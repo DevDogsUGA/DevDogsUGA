@@ -3,30 +3,29 @@
  *
  * One local env file per target, three remote stores, and a source of truth:
  *
- *   pull   Bitwarden → your env file
- *   push   your env file → Bitwarden → GitHub secrets AND variables (all, always)
- *   audit  compare the file · Bitwarden · GitHub · Cloudflare
+ *   pull   Bitwarden into your env file
+ *   push   your env file to Bitwarden, then to GitHub secrets AND variables
+ *   audit  compare the file, Bitwarden, GitHub and Cloudflare
  *
- * ⚠️ THE FILE IS DERIVED FROM THE TARGET, and that one line is the bug this
- * module was carrying. `pathFor()` used to default to the root `.env`
- * regardless of target and honour only an explicit `--file`, while `init`
- * mapped target → file the way the table always said. So `push --env staging`
- * uploaded the DEVELOPMENT file to the staging project and reported success,
- * and nothing in either subcommand was internally wrong — they were reading
- * two different enums behind one flag name. `--file` remains, as an override
- * somebody types on purpose.
+ * ⚠️ THE FILE IS DERIVED FROM THE TARGET, and that one line was this
+ * module's bug. `pathFor()` used to default to the root `.env` regardless of
+ * target and honour only an explicit `--file`, while `init` mapped target to
+ * file the way the table always said. So `push --env staging` uploaded the
+ * DEVELOPMENT file to the staging project and reported success. Neither
+ * subcommand was internally wrong; they read two different enums behind one
+ * flag name. `--file` remains, as an override somebody types on purpose.
  *
- * Three rules shape all of it:
+ * Four rules shape all of it:
  *
  *   * **Nothing is overwritten or removed without being asked.** Every
  *     destructive change is listed in fingerprints and confirmed. `push` sends
  *     to Bitwarden AND GitHub because a value in one and not the other is the
  *     failure this design has.
- *   * **Bitwarden holds an entire target, not its secret half.** The
- *     public per-environment values (`PROJECT_REF`, `BASE_URL`,
- *     `PUBLISHABLE_KEY`, …) are stored there too and pushed on to GitHub as
- *     *variables* rather than secrets. Storing them as secrets would mask them
- *     in every log line they appear in, by substring, and make their values
+ *   * **Bitwarden holds an entire target, not its secret half.** The public
+ *     per-environment values (`PROJECT_REF`, `BASE_URL`, `PUBLISHABLE_KEY`,
+ *     and so on) are stored there too and pushed on to GitHub as *variables*
+ *     rather than secrets. Storing them as secrets would mask them by
+ *     substring in every log line they appear in and make their values
  *     unreadable to `audit`; leaving them out of Bitwarden would mean `pull`
  *     reconstructs a file that cannot boot an app.
  *   * **Nothing is deleted from the file.** A key that should go away is
@@ -88,10 +87,10 @@ import { bail, errorMessage, explain, unwrap } from "../ui.js";
 
 export interface EnvOptions {
   /**
-   * Typed as any `EnvTarget` rather than as a `VaultTarget`, on purpose.
-   * `development` has to be able to REACH these commands so each can refuse it
-   * by name; narrowing here would move the refusal back into the argument
-   * parser, which is where it was missing.
+   * Typed as any `EnvTarget` rather than a `VaultTarget`, on purpose.
+   * `development` has to REACH these commands so each can refuse it by name.
+   * Narrowing here would move the refusal back into the argument parser, which
+   * is where it was missing.
    */
   target: EnvTarget;
   /** Overrides the file the target implies. */
@@ -112,9 +111,9 @@ async function readDocument(path: string): Promise<EnvDocument> {
  *
  * The default is the whole fix. `--target staging` now reads and writes
  * `.env.staging` for pull, push AND audit, where it used to reach the root
- * `.env` — which meant pushing "staging" uploaded the development values, and
+ * `.env`. That meant pushing "staging" uploaded the development values, and
  * pulling "staging" overwrote the development file. Every caller passes the
- * target explicitly so that no future one can inherit `.env` by omission.
+ * target explicitly so no future one can inherit `.env` by omission.
  */
 function pathFor(target: EnvTarget, file?: string): string {
   return resolve(PROJECT_ROOT, file ?? fileFor(target));
@@ -145,11 +144,11 @@ async function save(path: string, doc: EnvDocument): Promise<boolean> {
 /**
  * Names every key the file holds that no manifest declares.
  *
- * Loud on purpose, and per key: an undeclared key used to be pushed as a
- * secret BY OMISSION, so a typo'd name uploaded garbage under the wrong key
- * and a stray local variable uploaded something private. Now it is skipped,
- * and the person who typed the line has to hear that — silence would read as
- * "stored" right up until a deploy goes looking for it.
+ * Loud on purpose, and per key: an undeclared key used to be pushed as a secret
+ * BY OMISSION, so a typo'd name uploaded garbage under the wrong key and a
+ * stray local variable uploaded something private. Now it is skipped, and the
+ * person who typed the line has to hear that. Silence would read as "stored"
+ * right up until a deploy goes looking for it.
  */
 function warnUnknown(unknown: string[]): void {
   for (const key of unknown) {
@@ -168,8 +167,7 @@ function warnUnknown(unknown: string[]): void {
  * A warning rather than a hard stop, because `AIRTABLE_PAT` is legitimately in
  * `.env` while somebody is scaffolding the base, and blocking the whole push
  * then would be wrong. But never silence: somebody who put a token in the file
- * expecting it to sync has to learn that it did not, or they will believe it is
- * stored when it is not.
+ * expecting it to sync has to learn that it did not.
  */
 function warnRefused(refused: string[]): void {
   for (const key of refused) {
@@ -193,8 +191,8 @@ function warnRefused(refused: string[]): void {
  * Says that some lines were left to the registry rather than stored.
  *
  * `info`, not `warn`: this is the correct outcome, and the eight lines it
- * covers are ones `env init --target` WROTE. Silence would be the problem —
- * somebody who filled in a file and pushed it has to be able to tell "your
+ * covers are ones `env init --target` WROTE. Silence would be the problem.
+ * Somebody who filled in a file and pushed it has to be able to tell "your
  * derivations were left alone, on purpose" from "your derivations were
  * dropped", and before this the tool said neither.
  */
@@ -309,18 +307,18 @@ export async function runEnvPull(options: EnvOptions): Promise<void> {
  * credential is revoked.
  *
  * ⚠️ The file comes from the TARGET. `--target staging` reads `.env.staging`,
- * not the root `.env` — that defaulting mistake meant this command uploaded a
+ * not the root `.env`. That defaulting mistake meant this command uploaded a
  * developer's own values to a shared project and said "3 created, 12 updated"
  * about it.
  *
  * ⚠️ Two GitHub stores on the far side, and only one Bitwarden project. The
  * public per-environment values become GitHub *variables* rather than secrets
  * (see `gh/client.ts` for why the store matters), but they are stored in
- * Bitwarden alongside the secrets — because the claim "Bitwarden is the source
- * of truth" has to be true of a WHOLE target for `pull` to rebuild a working
- * env file. Splitting them would make GitHub the only home for 27 keys and the
- * second source of truth for their values, which is the arrangement this tool
- * exists to remove.
+ * Bitwarden alongside the secrets, because "Bitwarden is the source of truth"
+ * has to be true of a WHOLE target for `pull` to rebuild a working env file.
+ * Splitting them would make GitHub the only home for 27 keys and the second
+ * source of truth for their values, which is the arrangement this tool exists
+ * to remove.
  */
 export async function runEnvPush(options: EnvOptions): Promise<void> {
   assertVaultTarget(options.target);
@@ -368,9 +366,9 @@ export async function runEnvPush(options: EnvOptions): Promise<void> {
     if (!current) created.push(key);
     else if (current.value !== value) updated.push(key);
   }
-  // Present in the project and absent from the file. NEVER removed — reported,
-  // because a key missing from a file is far more often an incomplete edit than
-  // an intentional deletion.
+  // Present in the project and absent from the file. NEVER removed, only
+  // reported: a key missing from a file is far more often an incomplete edit
+  // than an intentional deletion.
   const orphaned = existing
     .map((s) => s.key)
     .filter((k) => !stored.has(k) && !skip.has(k));
@@ -385,10 +383,9 @@ export async function runEnvPush(options: EnvOptions): Promise<void> {
     }
   } else {
     // Fingerprints for the public values too, not their plaintext. They are
-    // safe to print, but "values are never printed" is a rule worth being able
-    // to state without an exception — and a fingerprint answers the question
-    // anybody is actually asking here, which is whether this is a rotation or
-    // a paste error.
+    // safe to print, but "values are never printed" is a rule worth stating
+    // without an exception, and a fingerprint answers the question anybody is
+    // asking here: rotation, or paste error?
     note(
       [
         ...created.map((k) => `+ ${k}  (${fingerprint(stored.get(k)!)})`),
@@ -432,8 +429,8 @@ export async function runEnvPush(options: EnvOptions): Promise<void> {
     }
 
     // Writes are paced ~1.1s apart, under Bitwarden's published 60-POSTs-a-
-    // minute limit (see bws/pace.ts) — said out loud for a big push, because
-    // a minute of silence reads as a hang and gets Ctrl-C'd.
+    // minute limit (see bws/pace.ts). Said out loud for a big push, because a
+    // minute of silence reads as a hang and gets Ctrl-C'd.
     const writes = created.length + updated.length;
     if (writes > 5) {
       log.info(
@@ -454,9 +451,9 @@ export async function runEnvPush(options: EnvOptions): Promise<void> {
 
   await pushToGithub(target, secrets, publicValues, options.yes);
 
-  // Record what went where, in the file itself. Values are untouched -- this
-  // rewrites the trailing comment only -- so it needs no confirmation, and it
-  // is what makes a stale file say so rather than looking freshly synced.
+  // Record what went where, in the file itself. Values are untouched, since
+  // this rewrites the trailing comment only, so it needs no confirmation. It is
+  // what makes a stale file say so rather than look freshly synced.
   const stamp = stampFor(target, "pushed");
   for (const [key, value] of stored) doc.set(key, value, stamp);
   await save(path, doc);
@@ -470,7 +467,7 @@ const MANAGED = "Managed by `pnpm devtools env push`.";
  * One Bitwarden project can feed more than one GitHub environment: `production`
  * feeds both `production` and `production-apply`, and which key goes where IS
  * the reviewer gate. So this loops over the routed targets rather than assuming
- * one, and confirms each separately — agreeing to update production's ordinary
+ * one, and confirms each separately. Agreeing to update production's ordinary
  * secrets is not agreeing to touch the two write-capable credentials sitting
  * behind the reviewers.
  *
@@ -480,9 +477,9 @@ const MANAGED = "Managed by `pnpm devtools env push`.";
  * publishes a credential's plaintext to everyone who can read the repository's
  * Actions config.
  *
- * Exported ONLY so that dispatch can be tested against a mocked `gh` client.
- * The two `setSecret`/`setVariable` lines below are the one place in this change
- * where a swap is silent, irreversible, and invisible to `selection.ts`'s tests.
+ * Exported ONLY so dispatch can be tested against a mocked `gh` client. The two
+ * `setSecret`/`setVariable` lines below are the one place where a swap is
+ * silent, irreversible, and invisible to `selection.ts`'s tests.
  */
 export async function pushToGithub(
   target: VaultTarget,
@@ -495,10 +492,10 @@ export async function pushToGithub(
   // `ghEnvironment`, not `target`: a GitHub environment is a THIRD vocabulary
   // (there are four of them, and `production-apply` is not an env target at
   // all), so it keeps a name of its own. Reusing `target` here is how the two
-  // vocabularies this change collapsed got confused in the first place.
+  // vocabularies got confused in the first place.
   for (const ghEnvironment of githubTargets(project)) {
     // Routing applies to both stores, and the two loops below are the same
-    // filter twice rather than one filter and a branch — see the header.
+    // filter twice rather than one filter and a branch. See the header.
     //
     // `production-apply` accepts everything `production` does plus the
     // apply-tier pair, so a production push writes MOST keys twice: once to the
@@ -549,9 +546,9 @@ export async function pushToGithub(
     }
 
     // Sequential. `gh` is one process per secret, and a burst of them against
-    // the same environment is a good way to meet a secondary rate limit --
-    // which would leave the set half-applied, the one outcome worse than not
-    // having started.
+    // the same environment is a good way to meet a secondary rate limit. That
+    // leaves the set half-applied, the one outcome worse than not having
+    // started.
     for (const [key, value] of chosenSecrets)
       await setSecret(ghEnvironment, key, value);
     for (const [key, value] of chosenVariables) {
@@ -612,7 +609,7 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
       }
     } catch {
       // Usually an environment nobody has created yet. Reported, then routed
-      // around -- inventing "missing from GitHub" for every key in an
+      // around: inventing "missing from GitHub" for every key in an
       // environment that could not be read would bury everything else.
       unreachable.push(ghEnvironment);
     }
@@ -632,9 +629,9 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
   } catch (err) {
     repositoryVariables = {
       readable: false,
-      // The FIRST line only. `describe()` in the gh client returns a
-      // paragraph of guidance, and a finding is one line — the rest of it is
-      // reproducible by running the command the finding tells you to run.
+      // The FIRST line only. `describe()` in the gh client returns a paragraph
+      // of guidance, and a finding is one line. The rest is reproducible by
+      // running the command the finding names.
       reason: errorMessage(err).split("\n")[0]?.trim() || "`gh` failed",
     };
   }
@@ -657,7 +654,7 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
     github,
     githubVariables,
     // Which store each key belongs in. Read from the registry rather than
-    // inferred from where a copy turned up — otherwise a misplaced key would
+    // inferred from where a copy turned up: otherwise a misplaced key would
     // define its own correctness and never be reported.
     variables: pushableVariables(),
     route: (key) => {
@@ -667,16 +664,16 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
     // Whether a SECOND copy is legitimate, which stopped being "the one place
     // `route` names" when `production-apply` became a superset of `production`.
     // A push now writes most production keys to both, and comparing against
-    // `route` alone would report every one of them as a stray to delete —
-    // burying the one stray that matters, an apply-tier key in the unreviewed
-    // environment. `acceptsKey()` still says no to that one, and is a name
-    // rather than a lambda so that it has tests of its own.
+    // `route` alone would report every one as a stray to delete, burying the one
+    // stray that matters: an apply-tier key in the unreviewed environment.
+    // `acceptsKey()` still says no to that one, and is a name rather than a
+    // lambda so it has tests of its own.
     accepted: acceptsKey,
     cloudflare,
     ignore: ignoredFor(target),
     neverStore: neverStore(),
     // Keeps the Worker's minted credential from being reported as a Cloudflare
-    // orphan — and so from being pruned — while still flagging a stored copy.
+    // orphan, and so from being pruned, while still flagging a stored copy.
     minted: minted(),
     // Lets the audit tell "undeclared" apart from drift: the fix for one is a
     // define() in a manifest, for the other a push or a pull.
@@ -701,9 +698,9 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
     );
   }
 
-  // Said explicitly, because "no drift" reads as a stronger claim than it is —
-  // and it is now a stronger claim for some keys than for others, which is
-  // exactly the sort of difference a summary line quietly loses.
+  // Said explicitly, because "no drift" reads as a stronger claim than it is,
+  // and is now a stronger claim for some keys than for others. That is the sort
+  // of difference a summary line loses.
   log.info(
     "GitHub *secrets* and Cloudflare secrets are write-only: those were " +
       "checked for presence, for routing, and for whether GitHub's copy " +
@@ -728,20 +725,19 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
 /**
  * Empties every value in a local env file, losing none of them.
  *
- * The use is handing a filled-in file back to its blank state — after pulling
+ * The use is handing a filled-in file back to its blank state: after pulling
  * production onto a laptop, before passing a machine on, or when a set of keys
  * has to be re-entered from scratch. Deleting the values would do that too, and
- * would also delete the only copy of anything that was never pushed.
- *
- * So each becomes a commented line holding what it was, plus an empty active
- * line beneath. The file still declares every key it needs, which is what makes
- * it a checklist rather than a blank page.
+ * would also delete the only copy of anything that was never pushed. So each
+ * becomes a commented line holding what it was, plus an empty active line
+ * beneath. The file still declares every key it needs, which makes it a
+ * checklist rather than a blank page.
  *
  * Purely local. It touches no remote store, so it takes no `--target`: asking
  * which target to clear a file against would imply it reaches one. It works on
  * `.env` unless `--file` says otherwise, and that default is written out here
- * rather than inherited, so that the shared `pathFor` has no "no target" case
- * for a remote command to fall into.
+ * rather than inherited, so the shared `pathFor` has no "no target" case for a
+ * remote command to fall into.
  */
 export async function runEnvReset(
   options: Pick<EnvOptions, "file" | "yes">,

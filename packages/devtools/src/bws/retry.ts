@@ -1,18 +1,17 @@
 /**
  * Retrying exactly one failure class: HTTP 429, rate limiting.
  *
- * A 429 is the server saying "correct request, wrong minute" — the only
- * error where trying the same thing again IS the fix. Everything else
- * (bad token, missing project, malformed input) re-throws untouched on the
- * first attempt, because retrying those just triples the time to the real
- * message.
+ * A 429 is the server saying "correct request, wrong minute", the only error
+ * where trying the same thing again IS the fix. Everything else (bad token,
+ * missing project, malformed input) re-throws untouched on the first attempt,
+ * because retrying those just triples the time to the real message.
  *
  * Written for the Secrets Manager calls, where the minute matters: a push is
- * ~45 sequential writes plus a login, several targets get pushed
- * back-to-back, and Bitwarden's identity endpoint rate-limits repeated
- * access-token logins aggressively. (The login half is also FIXED at the
- * source — the client now caches its login in a state file, so the retry is
- * the belt on that suspender.)
+ * ~45 sequential writes plus a login, several targets get pushed back-to-back,
+ * and Bitwarden's identity endpoint rate-limits repeated access-token logins
+ * aggressively. The login half is also fixed at the source, since the client
+ * now caches its login in a state file, so the retry is the belt on that
+ * suspender.
  */
 import { log } from "@clack/prompts";
 
@@ -44,9 +43,9 @@ export async function withRateLimitRetry<T>(
     } catch (err) {
       if (!isRateLimited(err) || attempt >= retries) throw err;
       const ms = baseMs * 2 ** attempt;
-      // Said out loud: a silent 20-second stall reads as a hang, and the
-      // command that appears hung gets Ctrl-C'd — which turns a wait the
-      // server asked for into a half-finished push.
+      // A silent 20-second stall reads as a hang, and a command that appears
+      // hung gets Ctrl-C'd, turning a wait the server asked for into a
+      // half-finished push.
       log.warn(
         `Bitwarden rate-limited ${doing} (HTTP 429). Waiting ${ms / 1000}s ` +
           `and retrying (${attempt + 1}/${retries})…`,

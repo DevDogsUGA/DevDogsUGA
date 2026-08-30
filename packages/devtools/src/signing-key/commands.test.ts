@@ -2,14 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * The signing-key lifecycle, with the filesystem, prompts, and the Management
- * API all faked. What each block pins:
+ * API faked. What each block pins:
  *
  *   * generate writes a value long enough for every consumer's floor, and
- *     treats overwriting as rotation — confirmed, never silent;
+ *     confirms an overwrite rather than rotating silently;
  *   * import sends the JWK whose `k` is base64url over the UTF-8 BYTES of
- *     the env string — the one encoding that matches what mint-token keys
- *     HMAC with. This is the test that keeps the two sides of the secret
- *     agreeing;
+ *     the env string, the one encoding that matches what mint-token keys
+ *     HMAC with. This test keeps the two sides of the secret agreeing;
  *   * both remote commands refuse loudly when the file lacks what they need,
  *     naming the command that fills it.
  */
@@ -131,7 +130,7 @@ describe("signing-key generate", () => {
 
   it("refuses a target that is not staging or production", async () => {
     // development has no Supabase project of its own, and preflight holds no
-    // deployed secrets at all — a typo must not mint into either.
+    // deployed secrets at all. A typo must not mint into either.
     await expect(
       runSigningKeyGenerate({ target: "preflight" }),
     ).rejects.toThrow(/staging, production/);
@@ -163,8 +162,8 @@ describe("signing-key import", () => {
         k: Buffer.from(SECRET, "utf8").toString("base64url"),
       },
     });
-    // No status field: new keys start in standby, and promotion to in_use —
-    // which changes what signs user sessions — is not this tool's business.
+    // No status field: new keys start in standby. Promotion to in_use changes
+    // what signs user sessions, and is not this tool's business.
     expect(call.body).not.toHaveProperty("status");
     // The access token came from .env.production, in a header, never argv.
     expect(call.headers.Authorization).toBe("Bearer sbp_token");

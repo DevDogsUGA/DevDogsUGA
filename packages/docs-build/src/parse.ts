@@ -35,30 +35,19 @@ const BLOCK_TYPES = new Set([
 ]);
 
 /**
- * Flattens a node to text, separating blocks with a blank line.
- *
- * `toString` on its own concatenates every descendant with no delimiter, so a
- * heading's last word fuses with the next paragraph's first word ("Caching
- * StrategyThis project…"). Postgres then tokenises the pair as one word, which
- * makes the text on either side of every block boundary unsearchable and
- * garbles ts_headline snippets. Recursing until the children are inline keeps
- * `toString`'s handling of emphasis, links, and inline code intact.
- */
-/**
- * The GitHub alert markers, which are prose to this parser and a callout to
- * the renderer.
+ * The GitHub alert markers, prose to this parser and a callout to the renderer.
  *
  * `remark-github-blockquote-alert` runs in the PLATFORM's pipeline, not this
- * one — rendering is not this package's job — so a `> [!NOTE]` blockquote
- * reaches `blockText` as a paragraph whose first line is the literal text
- * `[!NOTE]`. Left in, it lands in `plainText`, which is what the search index
- * is built from and what `ts_headline` cuts snippets out of, so a result for
- * any generated reference page would open with `[!NOTE]` where its first
- * sentence should be. Every one of those pages starts with an alert.
+ * one; rendering is not this package's job. So a `> [!NOTE]` blockquote reaches
+ * `blockText` as a paragraph whose first line is the literal text `[!NOTE]`.
+ * Left in, it lands in `plainText`, which the search index is built from and
+ * which `ts_headline` cuts snippets out of, so a result for any generated
+ * reference page would open with `[!NOTE]` where its first sentence should be.
+ * Every one of those pages starts with an alert.
  *
  * Dropped rather than translated to "Note": the word is chrome the renderer
- * draws, it is not something anybody searches for, and putting it in the index
- * would only move the noise from the marker to the label.
+ * draws, nobody searches for it, and indexing it would move the noise from the
+ * marker to the label.
  */
 const ALERT_MARKER = /^\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\n?/gim;
 
@@ -66,6 +55,16 @@ function stripAlertMarkers(text: string): string {
   return text.replace(ALERT_MARKER, "");
 }
 
+/**
+ * Flattens a node to text, separating blocks with a blank line.
+ *
+ * `toString` alone concatenates every descendant with no delimiter, so a
+ * heading's last word fuses with the next paragraph's first word ("Caching
+ * StrategyThis project..."). Postgres then tokenises the pair as one word,
+ * which makes the text on either side of every block boundary unsearchable and
+ * garbles ts_headline snippets. Recursing until the children are inline keeps
+ * `toString`'s handling of emphasis, links, and inline code intact.
+ */
 function blockText(node: Node): string {
   const children = (node as Parent).children as Node[] | undefined;
   if (children?.some((child) => BLOCK_TYPES.has(child.type))) {
@@ -114,12 +113,12 @@ export function parseDocFile(source: string, fileName: string): ParsedDocFile {
         ? frontmatter.description
         : null,
     // Finite, or nothing. YAML has literals for NaN and infinity (`.nan`,
-    // `.inf`), and either one poisons every comparison in the sidebar sort —
-    // NaN makes the comparator answer 0 to everything, which leaves the
-    // surrounding pages in whatever order the engine happened to have them in.
-    // Anything that is not a number at all — `order: first`, `order: "3"` — is
-    // a typo rather than an instruction, and a page with a typo sorting where
-    // an undeclared page sorts is the outcome an author will notice.
+    // `.inf`), and either one poisons every comparison in the sidebar sort:
+    // NaN makes the comparator answer 0 to everything, leaving the surrounding
+    // pages in whatever order the engine happened to have them in. Anything
+    // that is not a number at all, `order: first` or `order: "3"`, is a typo
+    // rather than an instruction, and a page with a typo sorting where an
+    // undeclared page sorts is the outcome an author will notice.
     order:
       typeof frontmatter.order === "number" &&
       Number.isFinite(frontmatter.order)

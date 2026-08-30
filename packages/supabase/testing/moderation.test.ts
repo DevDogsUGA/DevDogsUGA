@@ -3,24 +3,24 @@
  * public RPCs.
  *
  * Every case asserts both an allow and a deny. A policy test that only checks
- * the allow side passes just as happily when the policy is missing entirely --
- * and two of the denials here (execute on `resolve_content` and
- * `apply_content_action`) were in fact wide open on first write, because
- * revoking from `anon, authenticated` leaves the default PUBLIC grant intact.
+ * the allow side passes just as happily when the policy is missing entirely.
+ * Two of the denials here (execute on `resolve_content` and
+ * `apply_content_action`) were wide open on first write, because revoking from
+ * `anon, authenticated` leaves the default PUBLIC grant intact.
  *
  * ⚠️ THE SUBJECT IS REAL CONTENT. This suite used to run against a `sandbox`
- * schema of fake posts, comments and profiles that existed only to be reported
- * -- an entire fixture app registered in platform."apps" on every tier. It is
- * gone, and these cases now point at platform."profile", the same table the
- * account settings page writes.
+ * schema of fake posts, comments and profiles that existed only to be
+ * reported, an entire fixture app registered in platform."apps" on every tier.
+ * It is gone, and these cases now point at platform."profile", the same table
+ * the account settings page writes.
  *
- * That changes what quarantine MEANS here, and it is the main thing to hold on
- * to when reading below. For a post, quarantine hides. For a profile it
- * FREEZES: the display name is reset to the member's name of record and they
- * lose the ability to change it back. A profile cannot be hidden -- rosters,
- * teams and standings all render the name, and the row is own-row-only over
- * PostgREST anyway. `contentTypes."quarantineEffect"` is where that is
- * declared, and `conformance_report` checks the right policy accordingly.
+ * That changes what quarantine MEANS here, which is the thing to hold on to
+ * below. For a post, quarantine hides. For a profile it FREEZES: the display
+ * name is reset to the member's name of record and they lose the ability to
+ * change it back. A profile cannot be hidden: rosters, teams and standings all
+ * render the name, and the row is own-row-only over PostgREST anyway.
+ * `contentTypes."quarantineEffect"` is where that is declared, and
+ * `conformance_report` checks the right policy accordingly.
  *
  * Requires the local stack with migrations and seeds applied
  * (`pnpm devtools reset`). Run via `pnpm --filter @devdogsuga/supabase test:rls`.
@@ -58,7 +58,7 @@ let platformAppId: string;
  *
  * `schedule_builder` is the host rather than `platform`: it is a real
  * registered app with a real schema, so the DDL cases exercise the same
- * derivation path a new app would hit -- without adding a table to the schema
+ * derivation path a new app would hit, without adding a table to the schema
  * every other test in this file reads.
  */
 const HOST_SCHEMA = "schedule_builder";
@@ -68,9 +68,9 @@ const HOST_APP = "schedule_builder";
  * A one-pixel WebP.
  *
  * `[storage.buckets.avatars] allowed_mime_types = ["image/webp"]`, and storage
- * enforces it on the declared content type before any policy is consulted — so
- * an upload with the wrong type is rejected for a reason that has nothing to do
- * with what these tests are asserting.
+ * enforces it on the declared content type before any policy is consulted. An
+ * upload with the wrong type is rejected for a reason unrelated to what these
+ * tests assert.
  */
 const WEBP_BYTES = Uint8Array.from(
   atob("UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=="),
@@ -169,8 +169,8 @@ afterAll(async () => {
 describe("privileged functions", () => {
   // These three read or write any registered app's content as the definer.
   // resolve_content in particular would be a disclosure oracle: ask about a row
-  // you cannot see and read its snapshot back -- and profile is exactly such a
-  // row, since its SELECT policy is own-row-only.
+  // you cannot see and read its snapshot back. profile is exactly such a row,
+  // since its SELECT policy is own-row-only.
   it("are not executable by a client, at any persona", async () => {
     const subject = await createSubject("private", {
       preferredName: "Private Person",
@@ -262,9 +262,9 @@ describe("content type derivation", () => {
     });
 
     // The one override that is load-bearing rather than cosmetic. Left to the
-    // default, a snapshot captures EVERY text column on the table -- which
-    // since 20260803000000 includes "legalFirstName", "legalLastName" and
-    // "ugaEmail", copied into a report row that is kept forever.
+    // default, a snapshot captures EVERY text column on the table, which since
+    // 20260803000000 includes "legalFirstName", "legalLastName" and "ugaEmail",
+    // copied into a report row that is kept forever.
     expect(byType.profile).toMatchObject({
       snapshotColumns: ["preferredName", "bio"],
     });
@@ -383,8 +383,7 @@ describe("platform.file_report", () => {
 
   // The predecessor of this test asserted that a reason belonging to another
   // app was rejected. There is no such thing now: one global vocabulary, no
-  // per-app and no per-content-type lists. What replaces it is the guarantee
-  // that took over the job -- the enum.
+  // per-app and no per-content-type lists. The enum took over that job.
   //
   // This asserts the DATABASE's half of that guarantee, not TypeScript's. The
   // persona clients here are built without the `Database` generic (see
@@ -446,11 +445,11 @@ describe("platform.file_report", () => {
   it("keeps the enum and its presentation table in step", async () => {
     // Only one direction can break: the table's primary key IS the enum type,
     // so a row cannot exist without a label. A label with no row can, and it
-    // fails silently -- file_report accepts it, list_report_reasons omits it,
-    // and the generated TypeScript union still contains it. Adding a reason
-    // takes two migrations precisely because `alter type ... add value` cannot
-    // be used in the transaction that adds it, so this is what catches someone
-    // writing the first file and not the second.
+    // fails silently: file_report accepts it, list_report_reasons omits it, and
+    // the generated TypeScript union still contains it. Adding a reason takes
+    // two migrations because `alter type ... add value` cannot be used in the
+    // transaction that adds it, so this catches someone writing the first
+    // migration and not the second.
     const orphans = await sql()`
       select unnest(enum_range(null::"platform"."reportReason")) as label
       except
@@ -659,9 +658,9 @@ describe("quarantine", () => {
       expect(after!.preferredName).toBe("Avery Author");
       expect(after!.quarantinedBy).toBeTruthy();
 
-      // And it stays reverted. A denied UPDATE under RLS is not an error -- it
-      // matches no rows -- so asserting on `error` would pass just as happily
-      // if the write had landed. Read the value back instead.
+      // And it stays reverted. A denied UPDATE under RLS is not an error, it
+      // matches no rows, so asserting on `error` would pass just as happily if
+      // the write had landed. Read the value back instead.
       await author.client
         .from("profile")
         .update({ preferredName: "BUY CHEAP FOLLOWERS NOW" })
@@ -691,8 +690,8 @@ describe("quarantine", () => {
     } finally {
       if (reportId) await deleteReports(reportId);
       // Deleting the report cascades the resolution, which `on delete set null`
-      // clears from the profile -- so the author is editable again for the
-      // tests that follow.
+      // clears from the profile, so the author is editable again for the tests
+      // that follow.
       await giveProfile(author, {
         preferredName: "Avery Author",
         bio: "Writes things.",
@@ -703,10 +702,10 @@ describe("quarantine", () => {
   });
 
   it("reaches the whole public profile, not just the table it is set on", async () => {
-    // The public profile is three surfaces: platform."profile",
+    // The public profile is three places: platform."profile",
     // platform."profileLinks", and an object in the `avatars` storage bucket.
     // Freezing only the first would let a member move an abusive name into a
-    // link title or an avatar — stopped, as far as the moderation record shows,
+    // link title or an avatar: stopped as far as the moderation record shows,
     // while still editing the page a moderator was looking at.
     const subject = await createPersona("wholeprofile");
     let reportId: string | undefined;
@@ -807,7 +806,7 @@ describe("quarantine", () => {
   it("leaves the name alone when there is no name of record", async () => {
     // The tier-3 path. A member who has never appeared on an Involvement roster
     // has no legal name, and blanking "preferredName" would render as a gap in
-    // every roster, team and standings table -- worse than the name a moderator
+    // every roster, team and standings table, worse than the name a moderator
     // is already looking at. They still have `suspend` and `ban` for that.
     const subject = await createSubject("nameless", {
       preferredName: "STILL ABUSIVE",
@@ -862,7 +861,7 @@ describe("quarantine", () => {
 
       // The column grant, not a policy. 20260803000000 revoked the table-wide
       // UPDATE on profile and granted it back one column at a time, so a column
-      // added afterwards is unreachable by construction -- `revoke update
+      // added afterwards is unreachable by construction. `revoke update
       // ("quarantinedBy")` alone would not have held, because a table-wide
       // grant outranks it.
       //
@@ -893,7 +892,7 @@ describe("quarantine", () => {
   });
 
   it("rolls the whole decision back when it cannot be applied", async () => {
-    // A type that is reportable but has no column to quarantine into -- declared
+    // A type that is reportable but has no column to quarantine into, declared
     // by a row in "contentTypes" rather than derived from a foreign key. The RPC
     // raises rather than no-oping, which is what makes the decision atomic.
     await createHostTable("notes", { quarantinable: false });
@@ -1006,8 +1005,8 @@ describe("snapshot visibility", () => {
       const rows = mine as Record<string, unknown>[];
 
       // profile defaults to restricted because nothing configured it, which is
-      // the point of defaulting closed -- and here it is doing real work, since
-      // a bio can hold more than whatever the reporter actually saw.
+      // the point of defaulting closed. Here it does real work: a bio can hold
+      // more than whatever the reporter actually saw.
       expect(
         rows.find((r) => r.reportId === reportIds[0])!.snapshot,
       ).toBeNull();
@@ -1105,8 +1104,8 @@ describe("platform.resolve_report", () => {
 
   it("reports a ban back to the caller rather than applying it", async () => {
     // Supabase's native ban needs admin credentials, which a browser does not
-    // have. The suspension -- which is what every app's write policies actually
-    // consult -- is applied either way.
+    // have. The suspension, which is what every app's write policies consult,
+    // is applied either way.
     const subject = await createSubject("bannable");
     let reportId: string | undefined;
     try {
@@ -1192,9 +1191,9 @@ describe("platform.conformance_check", () => {
 
   it("checks the write policy for a freeze type, not the read policy", async () => {
     // profile declares quarantineEffect = 'freeze', so the check that applies is
-    // whether an UPDATE policy consults the column. Asserting the *shape* of the
-    // report, not just that it passes: a version of this check that silently
-    // skipped freeze types would also show zero failures above.
+    // whether an UPDATE policy consults the column. This asserts the *shape* of
+    // the report rather than only that it passes: a version of this check that
+    // silently skipped freeze types would also show zero failures above.
     const { data } = await moderator.client.rpc("conformance_check", {
       app_slug: "platform",
     });

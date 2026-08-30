@@ -2,23 +2,22 @@
  * The component extractor: every React component under a target's `components`
  * and `ui` directories, grouped one page per directory.
  *
- * Whether something *is* a component is decided syntactically — a PascalCase
- * name, a `.tsx` file, a type the checker says is callable — rather than by
- * hunting for a JSX return. `memo(forwardRef(...))` buries that return two
- * calls deep, and the two tests disagree about nothing in this repository, so
- * the cheap one is also the one that cannot get it subtly wrong.
+ * Whether something is a component is decided syntactically: a PascalCase name,
+ * a `.tsx` file, a type the checker says is callable, rather than hunting for a
+ * JSX return. `memo(forwardRef(...))` buries that return two calls deep, and
+ * the two tests disagree about nothing in this repository, so the cheap one is
+ * also the one that cannot get it wrong.
  *
- * Props are the opposite: they are resolved through the checker and never read
- * off the source. `ComponentProps<"button"> & VariantProps<typeof variants>` is
- * the ordinary declaration here, and reprinting that verbatim would document
- * nothing a reader could not already see in the file.
+ * Props are the opposite: resolved through the checker, never read off the
+ * source. `ComponentProps<"button"> & VariantProps<typeof variants>` is the
+ * ordinary declaration here, and reprinting it verbatim would document nothing
+ * a reader could not already see in the file.
  *
  * That resolution is also why the table is not everything the checker returns.
  * A shadcn wrapper spreading `ComponentProps<"div">` resolves to some three
- * hundred props, of which two are its own, so props are partitioned by where
- * each one is declared: in this repository it is listed, under `node_modules`
- * it is counted. That is a fact about the source, like every other line this
- * generator draws, rather than a judgment about which props matter.
+ * hundred props, of which two are its own, so props are split by where each one
+ * is declared: in this repository it is listed, under `node_modules` it is
+ * counted.
  */
 import * as ts from "typescript";
 import type {
@@ -52,10 +51,9 @@ const COMPONENT_DIRECTORIES = ["components", "ui"];
 
 /**
  * A backstop rather than the mechanism. Inherited props no longer reach the
- * table, so a component has to declare forty of its own to hit this — which
- * would be a genuine anomaly, and is announced as a warning rather than
- * applied quietly, because a truncated table a reader trusts completely is
- * worse than no table at all.
+ * table, so a component has to declare forty of its own to hit this. That would
+ * be a real anomaly, so it warns instead of truncating in silence: a truncated
+ * table a reader trusts is worse than no table at all.
  */
 const MAX_OWN_PROPS = 40;
 
@@ -243,13 +241,13 @@ interface ResolvedProps {
 /**
  * The props, split. Every property comes from the checker's view of the first
  * parameter, so an intersection of `ComponentProps<typeof Slot>` and a local
- * object type arrives here already flattened — the component's own props and
- * the two hundred DOM attributes that came in with the spread, side by side
- * and indistinguishable by name.
+ * object type arrives here already flattened. The component's own props and the
+ * two hundred DOM attributes that came in with the spread sit side by side, and
+ * no name tells them apart.
  *
- * Where each one is *declared* tells them apart, and it is the only thing that
- * does: a property whose declaration sits under `node_modules` came in with a
- * spread, and anything else was written in this repository.
+ * Where each one is declared is the only thing that does. A property whose
+ * declaration sits under `node_modules` came in with a spread, and anything
+ * else was written in this repository.
  */
 function propsOf(
   ctx: TargetContext,
@@ -321,8 +319,8 @@ function propsOf(
             .slice(0, MAX_INHERITED_SOURCES),
         };
 
-  // Only own props can overflow, and only own props are worth saying anything
-  // about: three hundred inherited props is what a `div` wrapper *is*, not an
+  // Only own props can overflow, and only own props are worth warning about.
+  // Three hundred inherited props is what a `div` wrapper is rather than an
   // anomaly, and warning about it teaches a reader to ignore the warnings.
   if (own.length <= MAX_OWN_PROPS) return { own, inherited };
 
@@ -334,9 +332,8 @@ function propsOf(
 
 /**
  * The dependency a prop was declared in, or null when it was declared here.
- * The first declaration's file is the whole test — no name patterns, no list
- * of known DOM attributes, nothing that has to be maintained as React's
- * typings change.
+ * The first declaration's file is the whole test. No name patterns, no list of
+ * known DOM attributes, nothing to maintain as React's typings change.
  */
 function declaringPackage(property: ts.Symbol): string | null {
   const [declaration] = property.getDeclarations() ?? [];
@@ -393,10 +390,10 @@ function describeProp(
 
 /**
  * The signature as one line: `function Button(props: ButtonProps): Element`.
- * The parameter's annotation is preferred over the resolved type — the props
- * table below is where resolution belongs, and on this line
- * `ComponentProps<"button">` expanded into its two hundred DOM attributes is
- * exactly what a reader hoped the page would spare them.
+ * The parameter's annotation wins over the resolved type. Resolution belongs in
+ * the props table below, not on this line, where `ComponentProps<"button">`
+ * would expand into the two hundred DOM attributes a reader came here to
+ * avoid.
  */
 function signatureText(
   ctx: TargetContext,
@@ -445,10 +442,10 @@ function signatureText(
 /**
  * `import("react").JSX.Element` is how the checker spells a type whose symbol
  * is not in scope where the component is declared. That is a fact about the
- * checker rather than about the component, and the import line printed
- * directly above this one already says where the component comes from. Only
- * the `import("…").` prefix goes; the type name after it is left exactly as
- * the checker wrote it, so `JSX.Element` still says what it said.
+ * checker, not about the component, and the import line printed directly above
+ * this one already says where the component comes from. Only the `import("…").`
+ * prefix goes. The type name after it is left exactly as the checker wrote it,
+ * so `JSX.Element` still says what it said.
  */
 function withoutImportQualifiers(signature: string): string {
   return signature.replace(/import\((?:"[^"]*"|'[^']*')\)\./g, "");
@@ -459,8 +456,8 @@ function withoutImportQualifiers(signature: string): string {
 /**
  * The node whose type answers "is this callable". A component is written as a
  * function, as a `const` holding an arrow, or as a `const` holding the result
- * of `forwardRef`/`memo` — and only the checker can tell the third from a
- * `const` holding an object of components, which this repository also has.
+ * of `forwardRef`/`memo`. Only the checker can tell the third from a `const`
+ * holding an object of components, which this repository also has.
  */
 function valueNodeOf(declaration: ts.Declaration): ts.Node | null {
   if (ts.isFunctionDeclaration(declaration)) {
@@ -615,8 +612,8 @@ function titleFor(segment: string): string {
 /**
  * Two components of the same name in one directory become two `### Button`
  * sections on one page, with the second reachable only by a `#button-1`
- * anchor. That is worth saying out loud: the page is not wrong, but it reads
- * like a bug in the generator rather than a collision in the source.
+ * anchor. The page is not wrong, but it reads like a bug in the generator
+ * rather than a collision in the source, so it is worth saying out loud.
  */
 function warnDuplicateNames(draft: GroupDraft, warnings: string[]): void {
   const seen = new Set<string>();
@@ -643,8 +640,8 @@ function sortedDirectories(draft: GroupDraft): string[] {
 /* Text ------------------------------------------------------------------- */
 
 /**
- * PascalCase is enforced by React at the call site — a lowercase name is a DOM
- * tag — so it is a rule of the language here rather than a naming convention.
+ * React enforces PascalCase at the call site, where a lowercase name is a DOM
+ * tag. Here it is a rule of the language rather than a naming convention.
  */
 function isPascalCase(name: string): boolean {
   return /^[A-Z][A-Za-z0-9]*$/.test(name);

@@ -28,7 +28,7 @@ interface ClientOptions<S extends DatabaseSchema> {
   url: string;
   /** Publishable/anon key for browser & server clients; secret key for admin. */
   key: string;
-  /** The app's Postgres schema — becomes the client's default for `.from()`. */
+  /** The app's Postgres schema. Becomes the client's default for `.from()`. */
   schema: S;
 }
 
@@ -41,10 +41,10 @@ interface ClientOptions<S extends DatabaseSchema> {
  * silently hands back the first client, still pointed at the first schema.
  *
  * That is survivable here only because each app runs in its own page and calls
- * this with one schema — the constant from its own `./schema`. Calling it with
+ * this with one schema, the constant from its own `./schema`. Calling it with
  * two different schemas in one app would not fail; it would quietly query the
  * wrong one. Use a separate client from `@supabase/supabase-js` if a second
- * schema is ever genuinely needed on the client.
+ * schema is ever needed on the client.
  */
 export function createBrowserClient<S extends DatabaseSchema>(
   opts: ClientOptions<S>,
@@ -68,8 +68,8 @@ export function createServerClient<S extends DatabaseSchema>(
 }
 
 /**
- * Service-role admin client. Bypasses RLS — server-only, never ship to the
- * browser. Session auto-refresh/persistence are disabled.
+ * Service-role admin client. Bypasses RLS, so it is server-only: never ship it
+ * to the browser. Session auto-refresh/persistence are disabled.
  */
 export function createAdminClient<S extends DatabaseSchema>(
   opts: ClientOptions<S>,

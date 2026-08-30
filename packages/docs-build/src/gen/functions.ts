@@ -1,19 +1,19 @@
 /**
  * Everything under `src/` that is not a component, a piece of `ui`, or a route.
  *
- * That is the largest surface in the reference by a wide margin — server
- * actions, hooks, `lib` helpers, the server modules, and the whole of every
- * package — and it is also the best documented: roughly two thirds of these
- * exports already carry a doc comment. Most of the value here is therefore not
- * analysis, it is transport: quote what the author already wrote, next to a
- * signature that cannot go stale, on a page named after the folder the reader
- * was going to open anyway.
+ * That is the largest part of the reference by a wide margin: server actions,
+ * hooks, `lib` helpers, the server modules, and the whole of every package. It
+ * is also the best documented, with roughly two thirds of these exports already
+ * carrying a doc comment. Most of the value here is therefore not analysis, it
+ * is transport: quote what the author already wrote, next to a signature that
+ * cannot go stale, on a page named after the folder the reader was going to
+ * open anyway.
  *
  * The one page that is more than transport is `reference/server-actions`. Every
  * export of a `"use server"` file is an RPC endpoint any browser can call with
  * no route in front of it, and that set is otherwise scattered across a dozen
- * folders. Collecting it answers a question the folder pages cannot — "what can
- * a client reach" — so the symbols are deliberately listed twice.
+ * folders. Collecting it answers a question the folder pages cannot, "what can
+ * a client reach", so the symbols are deliberately listed twice.
  */
 import * as ts from "typescript";
 import type {
@@ -53,9 +53,9 @@ const HOOK_NAME = /^use[A-Z]/;
 const FOREIGN_DIRECTORIES = ["components", "ui", "app"];
 
 /**
- * How many members of an interface the shape prints before it says how many
- * are left. A shape is an orientation aid — the reader follows the source link
- * for the rest — and a hundred-row block is neither.
+ * How many members of an interface the shape prints before it says how many are
+ * left. A shape is an orientation aid, with the source link there for the rest,
+ * and a hundred-row block is neither.
  */
 const SHAPE_MEMBER_LIMIT = 40;
 
@@ -253,9 +253,9 @@ function tagsFor(
   if (exported.isDefault) tags.push("default export");
   if (isDeprecated(exported.declaration)) tags.push("deprecated");
 
-  // Apps have no public surface to speak of — everything in them is internal to
-  // the app — so tagging them would put a badge on every symbol that says
-  // nothing. Only a package has drawn the line.
+  // An app publishes nothing: everything in it is internal to the app, so
+  // tagging would put a badge on every symbol that says nothing. Only a package
+  // has drawn the line.
   if (target.kind === "package") {
     tags.push(target.publicEntries.has(file) ? "public" : "internal");
   }
@@ -343,7 +343,7 @@ function constantResolution(
  * A class documents as a function, because the emitter's `class` kind is the
  * Dart one and would fence this in `dart`. `class Name extends Error` plus the
  * constructor's arguments is what a reader needs to write `new`, and the
- * heritage clause is the whole story for most of these — they are error types.
+ * heritage clause is the whole story for most of these: they are error types.
  */
 function classResolution(
   ctx: TargetContext,
@@ -405,8 +405,8 @@ function paramsFor(
 /**
  * A lone destructured parameter is an options bag, and `{ signingKey, now }` as
  * a single table row tells a reader nothing the call site would not have. The
- * properties are the real arguments, so they are what the table lists — and
- * this is the prevailing idiom in the repo, so it is most of the tables here.
+ * properties are the real arguments, so they are what the table lists. This is
+ * the prevailing idiom in the repo, so it is most of the tables here.
  *
  * The type's properties are the source of truth rather than the binding
  * elements: an option the function does not destructure is still an option the
@@ -537,7 +537,7 @@ function shapeOf(
 /**
  * An interface prints member by member rather than through `typeToString`,
  * which answers with the interface's own name. Each member's type comes from
- * the checker, so `InferSelectModel<typeof users>` resolves — one level, and no
+ * the checker, so `InferSelectModel<typeof users>` resolves. One level and no
  * further: `Promise<Team>` stays `Promise<Team>`, because a reader looking up
  * one type does not want three inlined.
  */
@@ -587,7 +587,7 @@ function memberType(ctx: TargetContext, member: ts.TypeElement): string {
 
 /**
  * An alias prints its right-hand side as the checker resolves it, which is the
- * point of generating this at all — `InferSelectModel<typeof subjects>` becomes
+ * point of generating this at all: `InferSelectModel<typeof subjects>` becomes
  * the row. When the checker answers with the alias's own name it has resolved
  * nothing, and the written form is what the reader wanted anyway.
  */

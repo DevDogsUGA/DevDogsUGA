@@ -6,8 +6,8 @@
  *
  *   * Nothing requires knowing a command. Running `pnpm devtools` with no
  *     arguments opens a menu, and every prompt has a sensible default.
- *   * A failure says what to do next, not just what went wrong. `explain()`
- *     exists so that no error path ends at a stack trace.
+ *   * A failure says what to do next. `explain()` exists so no error path
+ *     ends at a stack trace.
  */
 import { cancel, isCancel, log, note } from "@clack/prompts";
 

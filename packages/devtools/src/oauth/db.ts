@@ -66,8 +66,10 @@ export function detectLocalSupabase(cwd: string): LocalSupabaseConfig {
 }
 
 /**
- * Creates or updates the `custom:devdogs` provider on a local Supabase
- * instance using the Admin SDK. Returns the resulting identifier and issuer.
+ * Looks up a custom auth provider on a local Supabase instance through the
+ * Admin SDK, and reports whether it exists along with its name and issuer.
+ *
+ * A 404 means it does not exist yet. Any other error is real and rethrown.
  */
 export async function checkProvider(
   { apiUrl, serviceRoleKey }: LocalSupabaseConfig,
@@ -109,7 +111,7 @@ export async function upsertDevDogsProvider(
   const { data: existing, error: getError } =
     await supabase.auth.admin.customProviders.getProvider(identifier);
 
-  // 404 just means the provider doesn't exist yet — any other error is real.
+  // 404 just means the provider doesn't exist yet. Any other error is real.
   if (getError && (getError as { status?: number }).status !== 404) {
     throw getError;
   }

@@ -1,24 +1,24 @@
 /**
- * Which env files `with-env` loads — the decision, separated from the doing.
+ * Which env files `with-env` loads. The decision, separated from the doing.
  *
- * `selectEnvFiles()` is pure: environment × file-existence × probe-result in,
- * ordered file list + warnings out. The CLI wires in the real `existsSync` and
- * the real TCP probe; the tests inject stubs and never open a socket. Keep it
- * that way — the four-row probe table below is exactly the kind of logic that
- * rots when it can only be exercised by spawning processes.
+ * `selectEnvFiles()` is pure: environment, file existence and probe result in,
+ * ordered file list and warnings out. The CLI wires in the real `existsSync`
+ * and the real TCP probe; the tests inject stubs and never open a socket. Keep
+ * it that way. The four-row probe table below is the kind of logic that rots
+ * when it can only be exercised by spawning processes.
  *
- * ⚠️ This module is exported as `@devdogsuga/env/load`, a subpath, on purpose.
+ * ⚠️ This module is exported as the `@devdogsuga/env/load` subpath on purpose.
  * The root `"."` export is imported by `apps/platform`, which deploys to
- * Cloudflare Workers; nothing here may ever be re-exported from `index.ts`,
- * or an innocent `import { selectEnvFiles } from "@devdogsuga/env"` in server
- * code fails at the edge instead of at build.
+ * Cloudflare Workers; nothing here may ever be re-exported from `index.ts`, or
+ * an `import { selectEnvFiles } from "@devdogsuga/env"` in server code fails at
+ * the edge instead of at build.
  */
 import { fileFor, resolveEnvironment } from "./targets.js";
 import type { DeployEnvironment } from "./targets.js";
 
 /**
  * The local Supabase API port. Hardcoded to match `supabase/config.toml`,
- * which itself hardcodes 54321 deliberately — `supabase seed` rejects `env()`
+ * which itself hardcodes 54321 deliberately: `supabase seed` rejects `env()`
  * interpolation in numeric fields, so the port cannot come from the
  * environment on either side. The file is committed; the number is stable.
  */
@@ -28,14 +28,14 @@ export const LOCAL_STACK_PORT = 54321;
 export const GENERATED_FILE = ".env.generated";
 
 /**
- * A selected environment's file is missing. The message names the file and
- * the command that materialises it, because "ENOENT: .env.staging" tells a
- * new contributor nothing about `env pull`.
+ * A selected environment's file is missing. The message names the file and the
+ * command that materialises it, because "ENOENT: .env.staging" tells a new
+ * contributor nothing about `env pull`.
  *
  * ⚠️ The named command has to actually produce the named file. It did not
  * before: this said `secrets pull --env staging`, whose `--env` was the VAULT
- * vocabulary, so it wrote staging's values into the development `.env` — the
- * file that may hold the only copy of somebody's production credentials — and
+ * vocabulary. So it wrote staging's values into the development `.env`, the
+ * file that may hold the only copy of somebody's production credentials, and
  * left `.env.staging` still missing, so the error repeated. `--target` now
  * defaults the file from the same table this message reads.
  */
@@ -49,14 +49,13 @@ export class MissingEnvFileError extends Error {
         ? // `pnpm devtools setup` now, and the change is not cosmetic. This
           // message used to name the root `setup` alias BECAUSE it is only
           // ever seen when there is no `.env`, and `pnpm devtools` ran under
-          // the `with-env` wrapper — which, back when a missing file was
-          // fatal, would have failed here exactly as its caller just did. So
-          // the advice had to point at an unwrapped entry point.
+          // the `with-env` wrapper, which back when a missing file was fatal
+          // would have failed here exactly as its caller just did. So the
+          // advice had to point at an unwrapped entry point.
           //
           // The wrapper reports the absence and continues (see `cli.ts`), so
           // the wrapped entry reaches `setup` fine and there is one door to
-          // name. Naming it matters most in precisely this message: it is one
-          // of the first things a clean clone prints.
+          // name. This is one of the first things a clean clone prints.
           `${file} does not exist. Run \`pnpm devtools setup\` to create it.`
         : `${file} does not exist. Run ` +
             `\`pnpm devtools env pull --target ${environment}\` to fetch it.`,
@@ -76,7 +75,7 @@ export interface Selection {
 export interface SelectionContext {
   /** Raw `DEPLOY_ENV`; unset/empty means development. */
   deployEnv: string | undefined;
-  /** File existence relative to the repo root — `existsSync` or a stub. */
+  /** File existence relative to the repo root: `existsSync` or a stub. */
   exists: (file: string) => boolean;
   /**
    * Is anything listening on the local stack port? Only invoked when the
@@ -90,26 +89,25 @@ export interface SelectionContext {
  * Resolves `DEPLOY_ENV` and decides which files to load.
  *
  * Throws `UnknownEnvironmentError` for anything outside the allowlist (never
- * fall through to `.env.${DEPLOY_ENV}` — `DEPLOY_ENV=example` would load the
- * committed placeholder file, largely pass validation, and boot an app
- * pointed at nothing) and `MissingEnvFileError` when the selected file is
- * absent.
+ * fall through to `.env.${DEPLOY_ENV}`: `DEPLOY_ENV=example` would load the
+ * committed placeholder file, largely pass validation, and boot an app pointed
+ * at nothing) and `MissingEnvFileError` when the selected file is absent.
  *
  * ⚠️ `.env.generated` IS DEVELOPMENT-ONLY, and the design doc's probe table
- * does not say so because it never imagines otherwise: the overlay holds a
- * local Docker container's connection block, and under `DEPLOY_ENV=staging`
- * or `production` a running container must never shadow the deployed
- * connection values — first-file-wins would silently point a staging build
- * at localhost. So the whole table below is gated on `development`.
+ * does not say so because it never imagines otherwise. The overlay holds a
+ * local Docker container's connection block, and under `DEPLOY_ENV=staging` or
+ * `production` a running container must never shadow the deployed connection
+ * values: first-file-wins would silently point a staging build at localhost.
+ * So the whole table below is gated on `development`.
  *
  * The probe table (file is a hint; the port is the truth):
  *
- *   | `.env.generated` | port 54321 | behaviour                              |
- *   |------------------|------------|----------------------------------------|
- *   | exists           | listening  | prepend it — first-file-wins overlay   |
- *   | exists           | refused    | ignore it, warn: stale                 |
- *   | missing          | listening  | warn: regenerate it                    |
- *   | missing          | refused    | hosted project, silently — also normal |
+ *   | `.env.generated` | port 54321 | behaviour                             |
+ *   |------------------|------------|---------------------------------------|
+ *   | exists           | listening  | prepend it, a first-file-wins overlay |
+ *   | exists           | refused    | ignore it, warn: stale                |
+ *   | missing          | listening  | warn: regenerate it                   |
+ *   | missing          | refused    | hosted project, silent, also normal   |
  *
  * No file-existence rule can distinguish the middle two rows; that is the
  * entire reason the probe exists.
@@ -122,7 +120,7 @@ export async function selectEnvFiles(
 
   // Fail on the missing base file before probing: the overlay is meaningless
   // without the `.env` it overlays, and every environment needs its own file
-  // (they are standalone by design — no shared base to fall back to).
+  // (they are standalone by design, with no shared base to fall back to).
   if (!ctx.exists(envFile)) throw new MissingEnvFileError(environment, envFile);
 
   const files = [envFile];
@@ -157,10 +155,10 @@ export async function selectEnvFiles(
  * The real probe: one TCP connect to 127.0.0.1:54321.
  *
  * On loopback a refused connection returns ECONNREFUSED immediately, so the
- * hosted-project path costs well under a millisecond. The timeout exists for
- * the pathological case — a firewall that drops instead of refusing — and is
- * kept tight so a weird network stack cannot stall every script in the repo
- * by a quarter second, let alone longer.
+ * hosted-project path costs well under a millisecond. The timeout is for the
+ * pathological case, a firewall that drops instead of refusing, and is kept
+ * tight so a weird network stack cannot stall every script in the repo by more
+ * than a quarter second.
  *
  * Accepted hole (recorded in the design doc): something *else* listening on
  * 54321 fools this. Proving identity would mean an HTTP round-trip on every

@@ -43,20 +43,20 @@ describe("environment selection", () => {
   });
 
   it("rejects DEPLOY_ENV=preflight, which HAS a file and is not an environment", async () => {
-    // `preflight` is a real row in the target table — `.env.preflight` exists
-    // as a staging area for pushing credentials — and is deliberately NOT a
-    // deploy environment. Unifying the vocabularies must not have quietly
-    // made it one: the preflight credentials are read-only by construction, so
-    // an app booted on them fails feature-by-feature rather than at startup.
+    // `preflight` is a real row in the target table, with `.env.preflight` as a
+    // staging area for pushing credentials, and is deliberately NOT a deploy
+    // environment. Unifying the vocabularies must not have quietly made it one:
+    // preflight credentials are read-only by construction, so an app booted on
+    // them fails feature-by-feature rather than at startup.
     await expect(
       selectEnvFiles(ctx({ deployEnv: "preflight" })),
     ).rejects.toThrow(UnknownEnvironmentError);
   });
 
   it("rejects an unknown DEPLOY_ENV naming the allowlist, never a suffix", async () => {
-    // The hazard is DEPLOY_ENV=example resolving to .env.example — a real,
-    // committed file whose placeholders largely pass validation. It must be
-    // an allowlist error, not a file lookup.
+    // The hazard is DEPLOY_ENV=example resolving to .env.example, a committed
+    // file whose placeholders largely pass validation. It must be an allowlist
+    // error, not a file lookup.
     await expect(selectEnvFiles(ctx({ deployEnv: "example" }))).rejects.toThrow(
       UnknownEnvironmentError,
     );
@@ -98,9 +98,9 @@ describe("missing env files", () => {
     expect((thrown as Error).message).not.toContain("--env ");
   });
 
-  // Selection still throws. It is `with-env` that now reports the absence and
-  // carries on, so this stays the one place that decides a file is missing —
-  // and the advice it carries is the first thing a clean clone reads.
+  // Selection still throws. `with-env` is what now reports the absence and
+  // carries on, so this stays the one place that decides a file is missing, and
+  // the advice it carries is the first thing a clean clone reads.
   it("fails for development pointing at pnpm devtools setup", async () => {
     const attempt = selectEnvFiles(ctx({ exists: () => false }));
     await expect(attempt).rejects.toThrow(MissingEnvFileError);

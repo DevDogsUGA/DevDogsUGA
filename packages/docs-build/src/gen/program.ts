@@ -5,8 +5,8 @@
  * The scope rule lives here and nowhere else, stated mechanically so it cannot
  * drift: every `.ts`/`.tsx` under `apps/*​/src` and `packages/*​/src`, minus
  * tests, minus the generated output nested inside those trees, minus
- * `node_modules`. There is deliberately no "is this important enough" filter —
- * that judgment belongs to the written guides, and a mechanical rule cannot
+ * `node_modules`. There is deliberately no "is this important enough" filter.
+ * That judgment belongs to the written guides, and a mechanical rule cannot
  * rot.
  */
 import * as fs from "node:fs";
@@ -44,8 +44,8 @@ export interface Target {
    */
   publicEntries: Set<string>;
   /**
-   * The same entries keyed to the `exports` subpath that reaches them — `.` or
-   * `./schema` — because `@devdogsuga/supabase/schemas` is what a reader types
+   * The same entries keyed to the `exports` subpath that reaches them, `.` or
+   * `./schema`, because `@devdogsuga/supabase/schemas` is what a reader types
    * and the file name alone cannot recover it.
    */
   publicSubpaths: Map<string, string>;
@@ -77,10 +77,10 @@ const EXCLUDED_ANYWHERE = new Set(["node_modules"]);
 
 /**
  * Directory names that end scope only *below* a target's `src/`. Nested there
- * they hold machine-generated schema output — the `supabase/drizzle/` and
- * `server/db/schema/generated/` trees under `apps/platform/src` — which the
- * database reference already covers from `devtools`, and documenting a
- * generated file twice is how two references start disagreeing.
+ * they hold machine-generated schema output: the `supabase/drizzle/` and
+ * `server/db/schema/generated/` trees under `apps/platform/src`, which the
+ * database reference already covers from `devtools`. Documenting a generated
+ * file twice is how two references start disagreeing.
  *
  * The depth restriction is the point. `packages/drizzle` is a hand-written
  * client factory named after the tool it wraps, and testing these names against
@@ -91,7 +91,7 @@ const GENERATED_SEGMENTS = new Set(["generated", "drizzle"]);
 
 /**
  * A hard cap on a printed type. This is a guard against a pathological generic
- * blowing up a page, not a display choice — the emitter has its own, narrower
+ * blowing up a page, not a display choice: the emitter has its own, narrower
  * limit for what fits in a table cell.
  */
 const TYPE_STRING_LIMIT = 400;
@@ -123,7 +123,7 @@ export function repoRelative(repoRoot: string, absFile: string): string {
  *
  * Excluded: `*.test.ts(x)`, `*.db-test.ts`, `*.d.ts`, anything under a
  * `node_modules/` at any depth, and anything under a `generated/` or
- * `drizzle/` directory that lies *below* the target's `src/` — that is, in the
+ * `drizzle/` directory that lies *below* the target's `src/`, meaning in the
  * segments following the last `src` in the path.
  *
  * Where those two exclusions differ is the part that rots silently, so stated
@@ -513,7 +513,7 @@ function readJsonObject(file: string): Record<string, unknown> | null {
 /**
  * Aliases come from the target's own `tsconfig.json` and no further. TypeScript
  * resolves `paths` against the file that declares them, so a hoisted `~/*`
- * would point at the shared preset's directory — which is why only the two Next
+ * would point at the shared preset's directory. That is why only the two Next
  * apps declare one, and why chasing `extends` here would be wrong.
  */
 function readAliases(absDir: string, tsconfigPath: string): AliasRule[] {
@@ -541,9 +541,9 @@ function readAliases(absDir: string, tsconfigPath: string): AliasRule[] {
 }
 
 /**
- * The public surface, read off `exports`. This is the only filter in the
- * generator that is not a judgment call: the package already drew the line, so
- * the generator does not have to.
+ * What the package makes public, read off `exports`. This is the only filter in
+ * the generator that is not a judgment call: the package already drew the line,
+ * so the generator does not have to.
  */
 function readPublicEntries(
   absDir: string,

@@ -4,24 +4,24 @@
  * The file this renders exists to be FILLED IN AND PUSHED, which makes both of
  * its failure modes silent ones:
  *
- *   * a prefilled value that is wrong for a deployed target — `BASE_URL` as
- *     `http://localhost:3000`, `GH_APP_PRIVATE_KEY` as a placeholder PEM —
- *     is non-empty, so `selectForPush()` sends it, and `env audit` then reports
+ *   * a prefilled value that is wrong for a deployed target (`BASE_URL` as
+ *     `http://localhost:3000`, `GH_APP_PRIVATE_KEY` as a placeholder PEM) is
+ *     non-empty, so `selectForPush()` sends it, and `env audit` then reports
  *     NO DRIFT because the stored value matches the file it came from. A clean
  *     audit over a broken production is the worst outcome this system has.
- *   * a must-fill key shipped COMMENTED — 17 of staging's 45 did, including
- *     `SUPABASE_DB_PASSWORD` and all four OAuth client secrets — swallows the
- *     value typed on it, because a commented line is not an assignment.
+ *   * a must-fill key shipped COMMENTED, which 17 of staging's 45 were,
+ *     including `SUPABASE_DB_PASSWORD` and all four OAuth client secrets,
+ *     swallows the value typed on it: a commented line is not an assignment.
  *
  * ⚠️ EVERYTHING HERE PARSES THE RENDERED TEXT with its own regexes and
  * recomputes the expected key set from raw `variables()` metadata. Reusing
  * `keysRoutedTo()` or `ASSIGNMENT` from the module under test would make most
- * of these tests tautologies — they would agree with the renderer about a
- * shared mistake, which is the exact shape of the bug they exist to catch.
+ * of these tests tautologies: they would agree with the renderer about a shared
+ * mistake, which is the exact shape of the bug they exist to catch.
  *
- * The development rendering is pinned here too, and deliberately so: it is the
- * one this change must NOT touch, and `setup.ts` seeds every contributor's
- * `.env` from it.
+ * The development rendering is pinned here too, deliberately: it is the one
+ * this change must NOT touch, and `setup.ts` seeds every contributor's `.env`
+ * from it.
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -49,9 +49,9 @@ beforeAll(async () => {
 
 // ── an independent reading of the rendered file ──────────────────────────────
 
-/** `KEY="value"`, active. Its own regex — see the header. */
+/** `KEY="value"`, active. Its own regex; see the header. */
 const ACTIVE = /^([A-Z][A-Z0-9_]*)="(.*)"$/;
-/** `# KEY="value"` — the same line, commented out. */
+/** `# KEY="value"`, the same line commented out. */
 const COMMENTED = /^#\s?([A-Z][A-Z0-9_]*)="(.*)"$/;
 /** `$NAME` / `${NAME}`, dotenvx's expansion syntax. */
 const REFERENCE = /\$\{([A-Z][A-Z0-9_]*)\}|\$([A-Z][A-Z0-9_]*)/g;
@@ -105,7 +105,7 @@ function parse(text: string): Parsed {
   return { active, commented, sections, assignmentsPerSection };
 }
 
-/** Everything from the first section rule on — the header dropped. */
+/** Everything from the first section rule on, with the header dropped. */
 function bodyOf(text: string): string {
   return text.slice(text.indexOf("\n# ---------"));
 }
@@ -117,7 +117,7 @@ function references(value: string): string[] {
 const target = (name: VaultTarget): Parsed => parse(renderInit(name, DATE));
 const development = (): Parsed => parse(renderInit("development", DATE));
 
-/** Every key with a line of any kind — active or commented. */
+/** Every key with a line of any kind, active or commented. */
 function mentioned(file: Parsed): Set<string> {
   return new Set([...file.active.keys(), ...file.commented]);
 }
@@ -127,14 +127,14 @@ function mentioned(file: Parsed): Set<string> {
 /**
  * The keys a push for `target` routes, recomputed from the metadata.
  *
- * Deliberately NOT `keysRoutedTo()`: this is the claim that function is
- * supposed to satisfy, written out from the four rules that decide it —
- * "`scope: environment`, storable somewhere, not minted", "apply-tier is
- * production's alone", "plan-tier belongs to the targets whose plan jobs run
- * (preflight and production)", and "a target no app boots from carries only
- * what opted in". The last is spelled out from `deployEnv` and `meta.narrowed`
- * here, not read from `holdsOnlyNarrowedKeys()` / `narrowedKeys()`, so that a
- * renderer and a selector agreeing on a shared mistake still fails.
+ * Deliberately NOT `keysRoutedTo()`: this is the claim that function has to
+ * satisfy, written out from the four rules that decide it. "`scope:
+ * environment`, storable somewhere, not minted", "apply-tier is production's
+ * alone", "plan-tier belongs to the targets whose plan jobs run (preflight and
+ * production)", and "a target no app boots from carries only what opted in".
+ * The last is spelled out from `deployEnv` and `meta.narrowed` here, not read
+ * from `holdsOnlyNarrowedKeys()` / `narrowedKeys()`, so a renderer and a
+ * selector agreeing on a shared mistake still fails.
  */
 function routedByHand(name: VaultTarget): Set<string> {
   const narrowTarget = !TARGETS[name].deployEnv;
@@ -164,7 +164,7 @@ function routedByHand(name: VaultTarget): Set<string> {
 }
 
 /**
- * The vault targets an app actually boots from — staging and production.
+ * The vault targets an app actually boots from: staging and production.
  *
  * The block below them asserts things about a file with 45 keys in it: that it
  * kept its derivations, that it blanked the localhost defaults, that its
@@ -242,7 +242,7 @@ describe.each(VAULT_TARGETS)("%s", (name) => {
 
   it("ships every key it carries uncommented", () => {
     // The whole file is a form to fill in. A commented line is not an
-    // assignment — `selectForPush` never sees one — so a value typed on it is
+    // assignment, and `selectForPush` never sees one, so a value typed on it is
     // silently dropped by the push this file exists to feed.
     const file = target(name);
     expect([...file.commented]).toEqual([]);
@@ -340,10 +340,10 @@ describe.each(DEPLOYED_VAULT_TARGETS)("%s", (name) => {
 
   it("uncomments the keys the registry asks to comment out", () => {
     // The `commented: true` decision, asserted rather than described. It
-    // encodes "unset and empty are different states" — true of the Supabase
-    // CLI reading `.env`, and irrelevant to push, which skips an empty value
-    // and never reads a commented line at all. In a file that exists to be
-    // pushed, the flag would only hide the must-fill keys.
+    // encodes "unset and empty are different states", true of the Supabase CLI
+    // reading `.env` and irrelevant to push, which skips an empty value and
+    // never reads a commented line at all. In a file that exists to be pushed,
+    // the flag would only hide the must-fill keys.
     const { active } = target(name);
     const routed = commentedByDeclaration().filter((key) =>
       routedByHand(name).has(key),
@@ -366,8 +366,8 @@ describe.each(DEPLOYED_VAULT_TARGETS)("%s", (name) => {
  *
  * The finding this closes: `env init --target preflight` wrote 45 keys, and a
  * person who filled that file in and pushed it put the token-minting key, the
- * service-role key and the GitHub App private key into `preflight` —
- * whose GitHub environment is reachable from `main`. §3.5 of the security plan
+ * service-role key and the GitHub App private key into `preflight`, whose
+ * GitHub environment is reachable from `main`. §3.5 of the security plan
  * refuses even a general read-only Postgres role at that tier.
  */
 describe("preflight", () => {
@@ -407,32 +407,33 @@ describe("preflight", () => {
   });
 
   it("shrinks preflight WITHOUT shrinking staging or production", () => {
-    // The regression that would make this whole change a bug rather than a
-    // fix. The exclusion is one branch in `ignoredFor()`, and a branch that
-    // ran for every target would empty all three files identically — which
-    // reads exactly like a working narrow.
+    // The regression that would make this a bug, not a fix: the exclusion is
+    // one branch in `ignoredFor()`, and a branch that ran for every target
+    // would empty all three files identically, which reads like a working
+    // narrow.
+    //
     // 1/45/47 before `AIRTABLE_PLAN_PAT` was declared. It is narrowed, so it
     // joins preflight; back then it also routed wherever an ordinary deployed
     // secret does. One key, three counts, each up by exactly one.
     //
-    // `AIRTABLE_BASE_ID`'s `narrowed` (2026-08-17) moved preflight ALONE, 2 →
+    // `AIRTABLE_BASE_ID`'s `narrowed` (2026-08-17) moved preflight ALONE, 2 to
     // 3: it was already routed to the deployed targets, being an ordinary
     // public environment variable, so the marker added a target and not a key.
     //
-    // `AIRTABLE_PLAN_PAT`'s `tier: "plan"` then moved staging ALONE, 46 → 45:
-    // only the two §3.5 plan jobs read it, and neither runs in staging, so
-    // the rendered staging file stops asking anyone to fill it in.
+    // `AIRTABLE_PLAN_PAT`'s `tier: "plan"` then moved staging ALONE, 46 to 45:
+    // only the two §3.5 plan jobs read it, and neither runs in staging, so the
+    // rendered staging file stops asking anyone to fill it in.
     //
     // The Dog Pack rebrand (dogpack.dev) moved staging and production by two
-    // (STUDY_GROUP_FINDER_URL + _CALLBACK), and AIRTABLE_SYNC_PAT — moved from
-    // Supabase Vault into the platform manifest — by one more (2026-08-19).
+    // (STUDY_GROUP_FINDER_URL + _CALLBACK), and AIRTABLE_SYNC_PAT, moved from
+    // Supabase Vault into the platform manifest, by one more (2026-08-19).
     //
     // Then ALL THREE dropped by one: `AIRTABLE_BASE_ID` became a committed
     // constant with `scope: "default"`, which is pushed nowhere. Unlike every
-    // move above it, this one is a key leaving the routing entirely rather
-    // than changing which targets it reaches — so the three counts move
-    // together, and a change that moved only preflight would mean the marker
-    // came off without the scope change.
+    // move above it, this one is a key leaving the routing entirely rather than
+    // changing which targets it reaches, so the three counts move together, and
+    // a change that moved only preflight would mean the marker came off without
+    // the scope change.
     expect(target("preflight").active.size).toBe(2);
     expect(target("staging").active.size).toBe(47);
     expect(target("production").active.size).toBe(50);
@@ -447,14 +448,14 @@ describe("preflight", () => {
     expect(text).toMatch(/Airtable PAT/);
     // ⚠️ THE INSTRUCTION THAT HAD TO GO. Until 2026-08-17 this header said
     // AIRTABLE_BASE_ID was "NOT here" and told the reader to set a REPOSITORY
-    // variable by hand — visible to every environment, and wider than the
-    // routing it stood in for.
+    // variable by hand, which is visible to every environment and wider than
+    // the routing it stood in for.
     //
-    // The key is genuinely absent again now, and the distinction matters
-    // enough to keep both assertions: it is absent because the value is a
-    // committed constant, NOT because a human is expected to go and set it
-    // somewhere. The old instruction must never come back on the strength of
-    // "the key is missing from this file again".
+    // The key is genuinely absent again now, and the distinction matters enough
+    // to keep both assertions: it is absent because the value is a committed
+    // constant, NOT because a human is expected to go and set it somewhere. The
+    // old instruction must never come back on the strength of "the key is
+    // missing from this file again".
     expect(text).not.toContain("AIRTABLE_BASE_ID is NOT here");
     expect(text).not.toMatch(/REPOSITORY variable/);
     expect(text).not.toMatch(/^AIRTABLE_BASE_ID=/m);
@@ -540,10 +541,10 @@ describe("development", () => {
   it("keeps every declared key, including the ones no target carries", () => {
     const file = mentioned(development());
     // The never-store and minted keys are excluded because they get
-    // documentation and NO assignable line anywhere — asserted separately
-    // below. The overlap this guarded against was `AIRTABLE_PAT`, both
+    // documentation and NO assignable line anywhere, asserted separately below.
+    // The overlap this guarded against was `AIRTABLE_PAT`, both
     // `scope: developer` and never-store, which would otherwise have been
-    // expected in two contradictory places; it has since been removed, and the
+    // expected in two contradictory places. It has since been removed, and the
     // filter stays because the next key in that position should not have to
     // rediscover the clash.
     const withoutLines = new Set([...mintedKeys(), ...neverStoreKeys()]);
@@ -562,10 +563,10 @@ describe("development", () => {
       expect(file.has(key), `${key} must have no assignable line`).toBe(false);
       expect(renderInit("development", DATE)).toContain(`# ${key}:`);
     }
-    // Never-store keys ship COMMENTED (since 2026-08-19): never in any
-    // remote store — push refuses them by name — but the operator's own
-    // .env may hold one, and the commented line is the documented home the
-    // BWS prompts' save offer revives.
+    // Never-store keys ship COMMENTED (since 2026-08-19). Never in any remote
+    // store, since push refuses them by name, but the operator's own .env may
+    // hold one, and the commented line is the documented home the BWS prompts'
+    // save offer revives.
     const parsed = development();
     for (const key of neverStoreKeys()) {
       expect(parsed.active.has(key), `${key} must not ship active`).toBe(false);
@@ -575,8 +576,8 @@ describe("development", () => {
 });
 
 describe("the project picker's rendering", () => {
-  // The picker itself is a TTY prompt; what is testable — and what carries
-  // the security property — is the selection arithmetic and the render.
+  // The picker itself is a TTY prompt. What is testable, and what carries the
+  // security property, is the selection arithmetic and the render.
   const SB = new Set(["schedule-builder", "supabase"]);
 
   it("keeps the shared infrastructure a chosen app boots on", () => {
@@ -610,8 +611,8 @@ describe("the project picker's rendering", () => {
   });
 
   it("renders the full file, with no narrowed banner, when nothing narrows", () => {
-    // Every pre-picker caller — and every pipe with no terminal — lands here,
-    // so "no sections" has to mean exactly what init always meant.
+    // Every pre-picker caller, and every pipe with no terminal, lands here, so
+    // "no sections" has to mean exactly what init always meant.
     const text = renderInit("development", DATE);
     expect(text).not.toContain("Narrowed to:");
     expect(text).toContain("DISCORD_TOKEN");
@@ -625,8 +626,8 @@ describe("the project picker's rendering", () => {
   });
 
   it("resolveSections refuses a section that is not an app or the role", async () => {
-    // `supabase` is refused as an OPTION precisely because it is implied —
-    // accepting it would teach people it is optional.
+    // `supabase` is refused as an OPTION because it is implied. Accepting it
+    // would teach people it is optional.
     await expect(resolveSections("supabase")).rejects.toThrow(/not a section/);
     await expect(resolveSections("platfrom")).rejects.toThrow(/not a section/);
   });

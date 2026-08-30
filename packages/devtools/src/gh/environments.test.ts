@@ -14,9 +14,8 @@ import {
  *
  * `production` deploys on a push with nothing in front of it; `production-apply`
  * has required reviewers. A write-capable credential reaching the first makes
- * the second decorative — so the failure to guard against is not "the push
- * errored", it is "the push succeeded and put the token somewhere that deploys
- * unreviewed".
+ * the second decorative. The failure to guard against is "the push succeeded
+ * and put the token somewhere that deploys unreviewed", not "the push errored".
  */
 
 // The apply set is derived from the manifests now; routing refuses to answer
@@ -60,17 +59,17 @@ describe("routeTo", () => {
   });
 
   it("sends every ordinary secret to production", () => {
-    // The PRIMARY environment. `production-apply` also accepts it — see
-    // `acceptedBy` below — and `production` comes first because that is where
-    // the deploy reads it.
+    // The PRIMARY environment. `production-apply` also accepts it, as
+    // `acceptedBy` below shows, and `production` comes first because that is
+    // where the deploy reads it.
     expect(routeTo("production", "DISCORD_TOKEN")).toBe("production");
   });
 
   it("routes every apply-only key, not just the first", () => {
     // A set, not a convention. A third `tier: "apply"` declaration must not
-    // silently leave its key routed to the unreviewed environment — so this
-    // loops over the DERIVED set, catching a new member the literals above
-    // have not heard of yet.
+    // leave its key routed to the unreviewed environment, so this loops over
+    // the DERIVED set, catching a new member the literals above have not heard
+    // of yet.
     for (const key of applyOnlyKeys()) {
       expect(routeTo("production", key)).toBe("production-apply");
     }
@@ -92,7 +91,7 @@ describe("accepts", () => {
   it("⚠️ refuses EVERY apply-only key in the unreviewed environments", () => {
     // THE INVARIANT, and since `production-apply` became a superset it is the
     // only thing enforcing the reviewer gate: `production.excludeKeys`. By
-    // name and per key, not `applyOnlyKeys().every(...)` — a derived set that
+    // name and per key, not `applyOnlyKeys().every(...)`: a derived set that
     // emptied would make the loop vacuous and the test green.
     for (const key of APPLY_KEYS) {
       expect(accepts("production", key), `${key} in production`).toBe(false);
@@ -106,8 +105,8 @@ describe("accepts", () => {
   });
 
   it("refuses the plan-tier key in staging, where no job reads it", () => {
-    // Not a security gate like the apply exclusion — a stray copy could not
-    // write anything — but the same failure mode as §3.6's orphans: a
+    // Not a security gate like the apply exclusion, since a stray copy could
+    // not write anything. It is the same failure mode as §3.6's orphans: a
     // credential nothing manages and nothing would ever mention. `staging`
     // excludes it so a push routes it nowhere and `audit` names a stray.
     expect(accepts("staging", "AIRTABLE_PLAN_PAT")).toBe(false);
@@ -119,9 +118,9 @@ describe("accepts", () => {
   it("gives production-apply a SUPERSET of production", () => {
     // It used to take the apply pair and nothing else, which withheld
     // plan-tier secrets and every public variable from the three jobs that run
-    // there. Restricting the REVIEWED half buys nothing — same Bitwarden
-    // project, required reviewers in front of it — and the gate is the row
-    // above, about the unreviewed half.
+    // there. Restricting the REVIEWED half buys nothing: same Bitwarden
+    // project, required reviewers in front of it. The gate is the row above,
+    // about the unreviewed half.
     expect(accepts("production-apply", APPLY_KEY)).toBe(true);
     expect(accepts("production-apply", "DISCORD_TOKEN")).toBe(true);
     expect(accepts("production-apply", "CLOUDFLARE_API_TOKEN")).toBe(true);
@@ -174,8 +173,8 @@ describe("acceptsKey", () => {
 
   it("refuses an environment it does not recognise", () => {
     // Fails CLOSED. The name comes from whatever `gh` listed, and this decides
-    // whether a found copy is reported as a stray — so an unknown environment
-    // holding a credential is the case most worth reporting, not least worth.
+    // whether a found copy is reported as a stray. An unknown environment
+    // holding a credential is the case most worth reporting, not least.
     expect(acceptsKey("DISCORD_TOKEN", "production-legacy")).toBe(false);
     expect(acceptsKey("DISCORD_TOKEN", "")).toBe(false);
   });

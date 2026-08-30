@@ -4,9 +4,9 @@ import { field, table, type AirtableValue } from "./field.js";
  * The field registry: one declaration read by the push builder, the pull
  * parser and the verifier.
  *
- * Adding a field to the sync is one line here and nothing else. The batching,
- * change detection and `⚙️` prefix conventions are properties of the engine,
- * so a new field inherits them.
+ * Adding a field to the sync is one line here and nothing else. Batching,
+ * change detection and the `⚙️` prefix convention belong to the engine, so a
+ * new field inherits them.
  *
  * ## The IDs below are real, and are the wire format
  *
@@ -24,10 +24,10 @@ import { field, table, type AirtableValue } from "./field.js";
 /**
  * Marks an ID as not-yet-discovered. See `isPlaceholder`.
  *
- * Exported, and stays exported after the base is scaffolded, because adding a
- * field later uses the same two-step: declare it with a `todo()` id, run
- * `pnpm devtools airtable scaffold` to create it, then `pnpm devtools airtable pull-ids` to
- * replace this call with the real one.
+ * Stays exported after the base is scaffolded, because adding a field later
+ * uses the same two steps: declare it with a `todo()` id, run
+ * `pnpm devtools airtable scaffold` to create it, then
+ * `pnpm devtools airtable pull-ids` to replace this call with the real one.
  */
 export function todo(slug: string): string {
   return `fldTODO_${slug}`;
@@ -46,21 +46,21 @@ export function isPlaceholder(id: string): boolean {
  *
  * It was an `environment`-scoped variable routed through Bitwarden to a GitHub
  * environment VARIABLE in all four environments, plus a `narrowed` opt-in to
- * reach `preflight`. That was machinery for a value that has exactly one
- * possible setting: there is one base, and staging deliberately shares it.
+ * reach `preflight`. That was machinery for a value with exactly one possible
+ * setting: there is one base, and staging deliberately shares it.
  *
  * The argument that settles it is one file down. Every field id in this
  * registry belongs to THIS base, so a second base would need a second
- * registry — parameterising the base id alone never bought the portability it
- * looked like it was buying. Committing it puts the base's identity in one
+ * registry, and parameterising the base id alone never bought the portability
+ * it looked like it was buying. Committing it puts the base's identity in one
  * place instead of three, and retires the failure mode that bit us on
  * 2026-08-17: a hand-set repository variable silently shadowed by an
  * environment one, invisible until somebody deletes the environment copy.
  *
- * Public rather than secret — it is in every Airtable dashboard URL, and it
- * identifies without authorising. Every capability belongs to the token.
+ * Public rather than secret. It is in every Airtable dashboard URL, and it
+ * identifies without authorising; every capability belongs to the token.
  * `AIRTABLE_BASE_ID` survives as an override for anyone pointing the tooling
- * at a scratch base; unset, which is now the ordinary case, this is the value.
+ * at a scratch base. Unset, which is now the ordinary case, this is the value.
  */
 export const BASE_ID = "appt422RNi98uAqwX";
 
@@ -89,9 +89,9 @@ export interface MeetingRow {
   slug: string;
   /**
    * A name for this night, when it has one worth reading. Null is the ordinary
-   * case — a sprint Monday derives its heading from its workshops and its
-   * judging, and an officer retyping that in prose every week was the
-   * duplication the rename removed.
+   * case: a sprint Monday derives its heading from its workshops and its
+   * judging, and an officer retyping that every week was the duplication the
+   * rename removed.
    */
   nameOverride: string | null;
   /** When this night was called off. Null is the ordinary case. */
@@ -128,9 +128,9 @@ export interface CompetitionRow {
 /**
  * An imported attendance row, as the platform reports it back.
  *
- * Only the id: everything else about the row came FROM Airtable, and pushing
+ * Only the id. Everything else about the row came FROM Airtable, and pushing
  * any of it back would make the platform a second writer of a field the form
- * owns — the exact thing `.push()`/`.pull()` exclusivity exists to prevent.
+ * owns, the exact thing `.push()`/`.pull()` exclusivity exists to prevent.
  */
 export interface AttendanceRow {
   id: string;
@@ -151,9 +151,9 @@ export interface TeamRow {
 // The three fields below are what let an officer say what a night is ABOUT,
 // rather than leaving the events page to infer it from the night's structure.
 // Their parsers live here, next to the declarations, because the pull, the
-// verifier and the app's refusal rules all need to agree on exactly one
-// definition of "acceptable" — and a second copy of that definition is how a
-// value gets published that the database then rejects.
+// verifier and the app's refusal rules all need one definition of
+// "acceptable". A second copy of that definition is how a value gets published
+// that the database then rejects.
 //
 // ## Every parser here returns null instead of throwing
 //
@@ -173,19 +173,18 @@ export const MEETING_SUMMARY_MAX_LENGTH = 240;
 
 /**
  * Matches `meetings_nameOverride_length`. A schedule row and a dialog title
- * are both one line, so a name that outgrows this is discovered by a member
- * looking at a broken page rather than by the officer who wrote it.
+ * are both one line, so a name that outgrows this is found by a member looking
+ * at a broken page rather than by the officer who wrote it.
  *
- * Same load-bearing reason as the summary cap below it: a parser looser than
- * its constraint is a violation inside the pull, which takes down the whole
- * pass rather than refusing one field.
+ * A parser looser than its constraint is a violation inside the pull, which
+ * takes down the whole pass rather than refusing one field.
  */
 export const MEETING_NAME_OVERRIDE_MAX_LENGTH = 80;
 
 /**
- * Shorter than a summary because it renders inline beside a struck-through
- * row rather than in a paragraph of its own. Must stay at or below the
- * `meetings_cancellationReason_length` constraint — a parser looser than its
+ * Shorter than a summary because it renders inline beside a struck-through row
+ * rather than in a paragraph of its own. Must stay at or below the
+ * `meetings_cancellationReason_length` constraint. A parser looser than its
  * constraint is a violation inside the pull, which takes down the whole pass.
  */
 export const MEETING_CANCELLATION_REASON_MAX_LENGTH = 160;
@@ -200,7 +199,7 @@ export const WORKSHOP_DESCRIPTION_MAX_LENGTH = 280;
  * Trims and collapses a summary, or null when the officer has written nothing.
  *
  * Exported because the refusal rule needs the same normalized text this
- * produces — it reports the length that was measured, and a message quoting a
+ * produces. It reports the length that was measured, and a message quoting a
  * different number than the rule applied is worse than no message.
  */
 export function normalizeMeetingSummary(value: AirtableValue): string | null {
@@ -215,13 +214,12 @@ export function normalizeMeetingSummary(value: AirtableValue): string | null {
 /**
  * The closed list of meeting kinds.
  *
- * Deliberately short, because `Kind` is an OVERRIDE and not a label for every
+ * Short on purpose, because `Kind` is an OVERRIDE and not a label for every
  * night. A meeting that runs workshops already derives as a workshop night
- * from its own structure, and a meeting that judges a competition derives as
- * judging — naming those here would create two sources for one fact. What is
- * left is the set of nights whose structure cannot describe them: there is
- * nothing in the schema that distinguishes a social from an empty calendar
- * entry.
+ * from its own structure, and one that judges a competition derives as
+ * judging; naming those here would create two sources for one fact. What is
+ * left is the nights whose structure cannot describe them. Nothing in the
+ * schema distinguishes a social from an empty calendar entry.
  */
 export const MEETING_KIND_CHOICES = [
   "Build Session",
@@ -248,16 +246,16 @@ export function parseMeetingKind(value: AirtableValue): MeetingKind | null {
  * A closed list, unlike the free text it sits beside, because this value has a
  * job beyond being printed: the directions dialog highlights the building on a
  * campus map, and a highlight needs a footprint. Every key here has one, drawn
- * from OpenStreetMap by `scripts/generate-campus-map.ts` in the app — which is
+ * from OpenStreetMap by `scripts/generate-campus-map.ts` in the app, which is
  * where the real list lives. This is a copy, because this package is upstream
  * of the app and importing downward would invert the dependency.
  *
- * The two are held together by `buildings.test.ts` in the app rather than by
- * anyone remembering, since the failure mode is quiet: a building the map
- * cannot draw produces a dialog with a pin over nothing, and nobody finds out
- * until a meeting is actually scheduled there.
+ * `buildings.test.ts` in the app holds the two together, rather than anyone
+ * remembering, since the failure mode is quiet: a building the map cannot draw
+ * produces a dialog with a pin over nothing, and nobody finds out until a
+ * meeting is scheduled there.
  *
- * `Other` is not a building, it is the absence of one — the escape hatch for a
+ * `Other` is not a building, it is the absence of one, the escape hatch for a
  * room the map does not cover. It stores fine and draws nothing; the free-text
  * Location beside it carries the detail.
  */
@@ -294,16 +292,15 @@ export function parseMeetingBuilding(
 /**
  * Hosts an RSVP link may point at.
  *
- * Seeded with the UGA Involvement Network, which is where the club's events
- * already live — the same origin as `INVOLVEMENT_NETWORK_URL` in
- * `apps/platform/src/config/nav.ts`. It is retyped rather than imported
- * because this package is upstream of the app and importing downward would
- * invert the dependency; keep the two in step by hand if the Involvement
- * Network ever moves.
+ * Seeded with the UGA Involvement Network, where the club's events already
+ * live. Same origin as `INVOLVEMENT_NETWORK_URL` in
+ * `apps/platform/src/config/nav.ts`, retyped rather than imported because this
+ * package is upstream of the app and importing downward would invert the
+ * dependency. Keep the two in step by hand if the Involvement Network moves.
  *
  * An allowlist rather than a scheme check, because the value is rendered as an
  * href on a public page under the club's name. "https and well-formed" still
- * lets one mispaste point every member at somewhere else entirely.
+ * lets one mispaste point every member somewhere else entirely.
  */
 export const RSVP_URL_ALLOWED_HOSTS: readonly string[] = ["uga.campuslabs.com"];
 
@@ -313,7 +310,7 @@ export const RSVP_URL_ALLOWED_HOSTS: readonly string[] = ["uga.campuslabs.com"];
  * The host allowlist alone is not enough, because `new URL()` accepts a great
  * deal this must not store: `https://someone@uga.campuslabs.com/x` has the
  * allowed hostname and is still a credential-carrying URL. This is also the
- * JavaScript twin of the `meetings_rsvpUrl_host` check constraint — the parser
+ * JavaScript twin of the `meetings_rsvpUrl_host` check constraint. The parser
  * has to be at least as strict as the database, or a value it accepts becomes
  * an insert the constraint rejects, which takes down the whole sync pass.
  *
@@ -325,16 +322,16 @@ const RSVP_URL_SHAPE = /^https:\/\/[A-Za-z0-9.-]+(\/[A-Za-z0-9/_?=&.%#:~-]*)?$/;
 /**
  * An RSVP link in canonical form, or null if it is not one this may publish.
  *
- * `https:` only and an allowlisted host. Anything else — `http:`, a
- * `javascript:` URI, a link to somebody's Google Form, a half-typed address —
- * is null, and the app's refusal rule turns that null into a message in the
- * officer's grid so the rejection is visible where the paste happened.
+ * `https:` only and an allowlisted host. Anything else is null: `http:`, a
+ * `javascript:` URI, a link to somebody's Google Form, a half-typed address.
+ * The app's refusal rule turns that null into a message in the officer's grid,
+ * so the rejection is visible where the paste happened.
  *
  * ## It returns `url.toString()`, not the officer's text, and that matters
  *
  * A host comparison is case-insensitive and a regex is not, so
  * `https://UGA.CampusLabs.com/engage` passes the allowlist and fails the
- * `meetings_rsvpUrl_host` constraint — the parser would accept a value the
+ * `meetings_rsvpUrl_host` constraint. The parser would accept a value the
  * insert then rejects, and a constraint violation inside the pull takes down
  * the whole sync pass rather than refusing one field. Storing what `URL`
  * canonicalized (lowercased host, default port dropped) closes that gap by
@@ -366,12 +363,12 @@ export function parseRsvpUrl(value: AirtableValue): string | null {
 
 /**
  * The shape an accepted attendance form link must have, character for
- * character — the JavaScript twin of `meetings_attendanceFormUrl_airtable`.
+ * character. The JavaScript twin of `meetings_attendanceFormUrl_airtable`.
  *
- * Deliberately narrower than the RSVP shape: that constraint allows `%`, `#`
- * and `:` in the path and this one does not, so reusing the other regex would
- * accept links the database then rejects. The two are written out separately
- * rather than shared for exactly that reason.
+ * Narrower than the RSVP shape on purpose: that constraint allows `%`, `#` and
+ * `:` in the path and this one does not, so reusing the other regex would
+ * accept links the database then rejects. That is why the two are written out
+ * separately rather than shared.
  */
 const ATTENDANCE_FORM_URL_SHAPE =
   /^https:\/\/airtable\.com\/[A-Za-z0-9/_?=&.-]+$/;
@@ -380,13 +377,13 @@ const ATTENDANCE_FORM_URL_SHAPE =
 const ATTENDANCE_FORM_URL_HOST = "airtable.com";
 
 /**
- * An attendance form link in canonical form, or null if it is not one this
- * may store.
+ * An attendance form link in canonical form, or null if it is not one this may
+ * store.
  *
  * This used to be `typeof v === "string" ? v : null`, which accepted anything
  * an officer could type. `meetings_attendanceFormUrl_airtable` accepts only an
  * https link on airtable.com, so a pasted Google Form was a constraint
- * violation raised in the middle of the pull — and that unwinds past every
+ * violation raised in the middle of the pull. That unwinds past every
  * remaining table, so one wrong paste stopped meetings, workshops,
  * competitions, attendance and both pushes, and the officer saw a clean grid.
  *
@@ -420,12 +417,12 @@ export function parseAttendanceFormUrl(value: AirtableValue): string | null {
 /**
  * An Airtable datetime string, or null when it is not a date at all.
  *
- * Airtable returns ISO-8601 for a date cell, so the guard looks redundant --
- * and for `startsAt` and `endsAt` it very nearly was, because `new Date(x) >
- * new Date(y)` is false when either side is Invalid Date and the completeness
- * gate happened to catch it. `cancelledAt` has no such comparison, so an
- * unparseable value reached drizzle's timestamp mapper, which calls
- * `.toISOString()` on it and throws `RangeError` mid-pull.
+ * Airtable returns ISO-8601 for a date cell, so the guard looks redundant, and
+ * for `startsAt` and `endsAt` it very nearly was: `new Date(x) > new Date(y)`
+ * is false when either side is Invalid Date, so the completeness gate happened
+ * to catch it. `cancelledAt` has no such comparison, so an unparseable value
+ * reached drizzle's timestamp mapper, which calls `.toISOString()` on it and
+ * throws `RangeError` mid-pull.
  *
  * Relying on a neighbouring comparison to reject bad input is the kind of
  * accident that holds until someone adds a third date. This states it.
@@ -442,15 +439,15 @@ export function parseAirtableDateTime(value: AirtableValue): string | null {
 // The `⚙️` prefix marks a field the platform writes. It is a naming convention
 // for officers rather than anything the API understands: it says "editing this
 // will be overwritten on the next pass". Field editing permissions are what
-// actually prevent that, and they are configured by hand — see the runbook.
+// prevent that, and they are configured by hand. See the runbook.
 
 /**
  * Members.
  *
  * Push-only apart from dues. The match key is `⚙️ Platform ID` and NOT the UGA
- * email, for two reasons that happen to agree: a MyID can change with a legal
- * name change, and `email`-typed fields are not eligible in `fieldsToMergeOn`
- * at all. The second makes it a requirement rather than a preference.
+ * email, for two reasons that agree: a MyID can change with a legal name
+ * change, and `email`-typed fields are not eligible in `fieldsToMergeOn` at
+ * all. The second makes it a requirement rather than a preference.
  */
 export const members = table("Members", "tblLTJtir40NrL87x", {
   platformId: field
@@ -494,7 +491,7 @@ export const projects = table("Projects", "tblqcG8xDrOMuBTvF", {
 });
 
 /**
- * Meetings — officer-authored, so most fields are PULLED.
+ * Meetings, officer-authored, so most fields are PULLED.
  *
  * The platform pushes only its own id and the derived attendance count. The
  * schedule itself belongs to whoever is running the semester.
@@ -508,16 +505,16 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
   // now `nameOverride`. `verify` matches the live base by field NAME, so
   // changing this string without renaming the field in the Airtable UI first
   // would fail verification against every existing base. The two move
-  // together: relabel it to "Custom name — irregular events only" there, then
-  // here, in the same change. The scaffolder will not do it — it is
-  // create-only and does not rename.
+  // together: relabel it to "Custom name, irregular events only" there, then
+  // here, in the same change. The scaffolder is create-only and will not
+  // rename.
   nameOverride: field
     .text("fldc0NfTHVxHk8Za0", "Name")
     // Capped, not just trimmed. `meetings_nameOverride_length` is a check
     // constraint, so an 81st character used to be a rejected INSERT in the
-    // middle of the pull rather than a refused field — one keystroke taking
+    // middle of the pull rather than a refused field: one keystroke taking
     // down every table in the pass. Refused rather than truncated, for the
-    // same reason the summary is: half a name under an officer's heading is
+    // same reason the summary is. Half a name under an officer's heading is
     // worse than the fallback the schedule already knows how to render.
     .pull((v) => {
       if (typeof v !== "string") return null;
@@ -525,7 +522,7 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
       if (trimmed === "") return null;
       return trimmed.length > MEETING_NAME_OVERRIDE_MAX_LENGTH ? null : trimmed;
     }),
-  // Which building, from a list the campus map can actually draw.
+  // Which building, from a list the campus map can draw.
   //
   // Null is ordinary and means two different things that do not need telling
   // apart here: nobody has picked one yet, or the officer picked a value this
@@ -535,13 +532,13 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
     .singleSelect("fldZoHoKMT4JE2R1C", "Building", MEETING_BUILDING_CHOICES)
     .pull((v) => parseMeetingBuilding(v)),
 
-  // Where inside the building — "124", "Room 148", "the second-floor lounge".
+  // Where inside the building: "124", "Room 148", "the second-floor lounge".
   //
-  // Deliberately still free text and deliberately still called Location: rooms
-  // are not a list anyone wants to maintain, and the pair reads as one address
-  // in the officer's grid. It is no longer the whole answer, though. Anything
-  // that needs to KNOW where a meeting is — the map highlight, the floor plan,
-  // the "not the usual room" flag — reads `building`, because sniffing a
+  // Still free text and still called Location, on purpose. Rooms are not a
+  // list anyone wants to maintain, and the pair reads as one address in the
+  // officer's grid. It is no longer the whole answer, though. Anything that
+  // needs to KNOW where a meeting is reads `building` instead: the map
+  // highlight, the floor plan, the "not the usual room" flag. Sniffing a
   // building's name out of typed text is a guess and this is not.
   location: field
     .text("fld3MRTF42aS6c3PX", "Location")
@@ -566,7 +563,7 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
   // Null is the ordinary state, not an error: the events page derives an
   // agenda from the meeting's workshops when there is no summary, so most
   // weeks need nothing written here at all. `parse` returns null for a summary
-  // that is too long as well — see `MEETING_SUMMARY_MAX_LENGTH`. It never
+  // that is too long as well, see `MEETING_SUMMARY_MAX_LENGTH`. It never
   // TRUNCATES, because publishing the first 240 characters puts half a
   // sentence under an officer's name on a public page with no way for them to
   // know it happened. `checkMeeting` in the app turns that null into a message
@@ -630,18 +627,18 @@ export const workshops = table("Workshops", "tblSYPbmIagwyTFq1", {
   meeting: field
     .link("fldqxlHThMKBmhsiq", "Meeting", "meetings")
     .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
-  // Optional now. A workshop that teaches a SKILL rather than a codebase --
-  // career-fair readiness, say -- belongs to no project, and inventing one
-  // would put that session on the public Projects page as a body of work the
-  // club does not have.
+  // Optional now. A workshop that teaches a SKILL rather than a codebase,
+  // career-fair readiness say, belongs to no project, and inventing one would
+  // put that session on the public Projects page as a body of work the club
+  // does not have.
   project: field
     .link("fldhUjEo0dq5BRZez", "Project", "projects")
     .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
 
-  // What the officers call this session -- "Supabase", "Career Fair
-  // Readiness". The published schedule has always named workshops by topic
-  // while the schema named them by project, so the page printed "Platform"
-  // where the officers wrote "Next.js". This is the officers' word winning.
+  // What the officers call this session: "Supabase", "Career Fair Readiness".
+  // The published schedule has always named workshops by topic while the
+  // schema named them by project, so the page printed "Platform" where the
+  // officers wrote "Next.js". This is the officers' word winning.
   //
   // Null falls back to the project's name, so every workshop authored before
   // this field existed keeps rendering exactly as it did.
@@ -729,7 +726,7 @@ export const teamsTable = table("Teams", "tblfXjgqCZiJnnD4x", {
 });
 
 /**
- * Attendance — the one table Airtable CREATES rows in.
+ * Attendance, the one table Airtable CREATES rows in.
  *
  * Every other table here is either platform-owned and pushed, or
  * officer-authored and pulled field by field. This one is different in kind: a
@@ -739,25 +736,25 @@ export const teamsTable = table("Teams", "tblfXjgqCZiJnnD4x", {
  *
  * ## Why a MyID and not an email field
  *
- * `MyID` is the local part alone — `jdoe`, not `jdoe@uga.edu`. Two reasons,
- * and the second is the load-bearing one:
+ * `MyID` is the local part alone: `jdoe`, not `jdoe@uga.edu`. Two reasons, and
+ * the second is the load-bearing one:
  *
  *   * It is what somebody standing in a workshop can type without thinking,
  *     which matters when the alternative is a wrong address.
- *   * An `email`-typed field cannot be a `.matchKey()` — `fieldsToMergeOn`
- *     rejects the type outright — and more importantly, accepting a free-text
- *     address would let a response name `someone@gmail.com`. Sign-in is Google
- *     restricted to `hd=uga.edu`, so an address outside that domain can never
- *     be claimed by anybody and would create an account nobody can reach.
- *     Taking the local part and appending the domain ourselves makes that
- *     unrepresentable rather than merely unlikely.
+ *   * An `email`-typed field cannot be a `.matchKey()`, since
+ *     `fieldsToMergeOn` rejects the type outright. More importantly, accepting
+ *     a free-text address would let a response name `someone@gmail.com`.
+ *     Sign-in is Google restricted to `hd=uga.edu`, so an address outside that
+ *     domain can never be claimed by anybody and would create an account
+ *     nobody can reach. Taking the local part and appending the domain
+ *     ourselves makes that unrepresentable rather than merely unlikely.
  *
  * ## What the platform writes back
  *
  * Only `⚙️ Platform ID` and `⚙️ Sync status`. The first is the imported row's
- * uuid, which makes a re-import idempotent and shows an officer that a response
- * landed. The second carries the refusal when it did not — an unknown MyID, or
- * a workshop link the platform cannot resolve.
+ * uuid, which makes a re-import idempotent and shows an officer that a
+ * response landed. The second carries the refusal when it did not: an unknown
+ * MyID, or a workshop link the platform cannot resolve.
  */
 export const attendanceTable = table("Attendance", "tblVgyeo1q9vk0ddD", {
   platformId: field
@@ -765,8 +762,8 @@ export const attendanceTable = table("Attendance", "tblVgyeo1q9vk0ddD", {
     .matchKey()
     .push((a: AttendanceRow) => a.id),
 
-  // The form's own field. Pulled, lowercased and trimmed by the importer --
-  // MyIDs are handed out in one case and typed in another.
+  // The form's own field. Pulled, lowercased and trimmed by the importer,
+  // because MyIDs are handed out in one case and typed in another.
   myId: field
     .text("fldmscaBQzdP4qhMP", "MyID")
     .pull((v) => (typeof v === "string" ? v.trim().toLowerCase() : null)),

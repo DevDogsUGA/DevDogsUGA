@@ -2,9 +2,9 @@
  * The one seam between the planner commands and a real Postgres.
  *
  * Deliberately tiny: a runner of constant SQL strings and an `end()`. Every
- * query in this feature is a string literal — nothing user-shaped is ever
+ * query in this feature is a string literal. Nothing user-shaped is ever
  * interpolated except the generated password, whose alphabet `role.ts`
- * constrains — so the interface can stay `run(text)` and the tests can hand in
+ * constrains. That lets the interface stay `run(text)`, and lets tests hand in
  * a map from query to rows instead of mocking a client library.
  */
 import postgres from "postgres";
@@ -18,6 +18,8 @@ export interface PlannerDb {
 export type Connect = (url: string) => PlannerDb;
 
 /**
+ * Opens the single connection the planner commands run through.
+ *
  * `max: 1` because every use here is a handful of sequential statements, and
  * `prepare: false` because the session pooler tolerates prepared statements
  * but gains nothing from them for one-shot queries. The timeout keeps a

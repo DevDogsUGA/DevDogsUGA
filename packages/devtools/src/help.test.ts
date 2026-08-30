@@ -1,12 +1,12 @@
 /**
- * What `--help` prints, and — mostly — what it does NOT.
+ * What `--help` prints, and mostly what it does NOT.
  *
  * The help this replaced was 190 lines and printed the whole tree at every
  * level: a contributor asking how to start a database read the Bitwarden
  * target table, the access-token lookup order, `migration_planner`'s grants
  * and the deploy group's wrapper rules on the way past. The assertions below
  * are upper bounds and absence checks, because "concise" and "says no more
- * than it needs to" are the properties at issue and both fail silently.
+ * than it needs to" both fail silently.
  */
 import { describe, expect, it } from "vitest";
 import { helpPath, renderHelp } from "./help.js";
@@ -59,7 +59,7 @@ describe("the top level", () => {
 
     expect(body.length).toBeGreaterThan(0);
     for (const line of body) {
-      // Two spaces, a name, the gutter, then prose — an entry, not a heading
+      // Two spaces, a name, the gutter, then prose. An entry, not a heading
       // and not a deeper indent.
       expect(line, line).toMatch(/^ {2}\S+ {2,}\S/);
     }
@@ -68,13 +68,13 @@ describe("the top level", () => {
   it("lists no subcommand as an entry of its own", () => {
     // The reason the old help was unreadable: it printed all 31 of them.
     //
-    // Structural rather than a substring search — a summary is prose and may
-    // legitimately contain a subcommand's word ("Report the target's health"
-    // holds `status`). What must not appear is a subcommand as a LISTED
-    // entry, which is what the reader scans.
+    // Structural rather than a substring search: a summary is prose and may
+    // contain a subcommand's word ("Report the target's health" holds
+    // `status`). What must not appear is a subcommand as a LISTED entry,
+    // which is what the reader scans.
     // Two indents or four: a group that splits into scope blocks (Supabase)
-    // lists its commands one level deeper, and they are still entries the
-    // reader scans. Matching only ` {2}` would quietly stop guarding them.
+    // lists its commands one level deeper, and those are entries too.
+    // Matching only ` {2}` would quietly stop guarding them.
     const entries = root
       .split("\n")
       .map((line) => /^ {2,4}(\S+)/.exec(line)?.[1])
@@ -97,7 +97,7 @@ describe("the top level", () => {
 
   it("keeps operator internals out", () => {
     // Each of these was in the old top-level help, and none of them is how
-    // anyone chooses a command — they are what `docs/` is for. Naming a
+    // anyone chooses a command. They are what `docs/` is for. Naming a
     // SYSTEM a command talks to is fine and is how it gets recognised
     // ("synced to Bitwarden and GitHub"); reciting how it authenticates to
     // it, or what a deploy job's environment holds, is not.

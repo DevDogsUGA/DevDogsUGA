@@ -14,7 +14,7 @@ export interface Compiled {
    *
    * These get `encodeURI` before escaping. A slot value that lands in an
    * `href` and is only HTML-escaped can still carry a `javascript:` scheme or
-   * a raw space that breaks the attribute — different problem, different
+   * a raw space that breaks the attribute. Different problem, different
    * filler.
    */
   urlSlots: string[];
@@ -30,9 +30,8 @@ export interface CompiledTemplate {
  * Escaped on substitution, never at compile time.
  *
  * Team names and display names are user-authored: a team called `<script>`
- * must not become one. Escaping at fill time is what makes that safe —
- * escaping at compile time would only cover the literal text in the template,
- * which is the half that was never dangerous.
+ * must not become one. Escaping at compile time would only cover the literal
+ * text in the template, which is the half that was never dangerous.
  */
 export function escapeHtml(value: string): string {
   return value
@@ -47,9 +46,9 @@ export function escapeHtml(value: string): string {
  * A URL safe to put in an `href`.
  *
  * Scheme-checked rather than merely encoded: `encodeURI` leaves
- * `javascript:alert(1)` completely intact, and these URLs are built from
- * database values. Anything that is not plainly http(s) becomes `#`, which
- * fails visibly instead of executing.
+ * `javascript:alert(1)` intact, and these URLs are built from database values.
+ * Anything that is not plainly http(s) becomes `#`, which fails visibly
+ * instead of executing.
  */
 export function safeUrl(value: string): string {
   const trimmed = value.trim();

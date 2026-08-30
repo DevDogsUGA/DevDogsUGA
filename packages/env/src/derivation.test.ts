@@ -1,11 +1,10 @@
 /**
  * The one question two very different callers ask: is this `example` a VALUE?
  *
- * `devtools deploy write-env` asks it to decide what a deploy job writes
- * into a runner's env file, and `env init --target` asks it to decide what a
- * person is handed to fill in. A disagreement between them is not a cosmetic
- * one — it means the file CI composes and the file a human curates stop being
- * the same file.
+ * `devtools deploy write-env` asks it to decide what a deploy job writes into a
+ * runner's env file, and `env init --target` asks it to decide what a person is
+ * handed to fill in. When they disagree, the file CI composes and the file a
+ * human curates stop being the same file.
  *
  * Every case below asserts a deny as well as an allow. The mechanism here IS
  * the refusal: a predicate stuck at `true` would ship `http://localhost:3000`
@@ -32,8 +31,8 @@ describe("envReferences", () => {
       "PROJECT_REF",
     ]);
     // Greedy to the end of the name, so `$BASE_URL_CALLBACK` is one reference
-    // and not `BASE_URL` with a suffix — the difference between expanding the
-    // right variable and expanding a shorter one that happens to share a
+    // and not `BASE_URL` with a suffix. That is the difference between
+    // expanding the right variable and expanding a shorter one that shares a
     // prefix.
     expect(envReferences("$BASE_URL_CALLBACK")).toEqual(["BASE_URL_CALLBACK"]);
   });
@@ -48,8 +47,8 @@ describe("envReferences", () => {
 
   it("carries no state between calls", () => {
     // The shared `/g` literal is a real hazard: a `lastIndex` surviving one
-    // call would make the next one skip its first match, non-deterministically
-    // and only in the presence of a specific call order.
+    // call would make the next one skip its first match, intermittently and
+    // only under a specific call order.
     expect(envReferences("$A/$B")).toEqual(["A", "B"]);
     expect(envReferences("$A/$B")).toEqual(["A", "B"]);
   });
@@ -102,10 +101,10 @@ describe("derivationOf", () => {
 
   it("says nothing about a committed constant", () => {
     // `scope: "default"` values are real and usable, but they are constants
-    // rather than derivations — the deploy script routes them by scope, and a
+    // rather than derivations. The deploy script routes them by scope, and a
     // target's env file leaves them out entirely.
     expect(derivationOf(meta("DevDogsUGA", { scope: "default" }))).toBeNull();
-    // …unless it genuinely is a formula, which the scope does not affect.
+    // Unless it genuinely is a formula, which the scope does not affect.
     expect(derivationOf(meta("$GITHUB_ORG", { scope: "default" }))).toBe(
       "$GITHUB_ORG",
     );

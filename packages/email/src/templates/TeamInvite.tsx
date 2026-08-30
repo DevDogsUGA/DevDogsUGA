@@ -7,13 +7,13 @@ import { Layout } from "../components/Layout.js";
  *
  * Team formation happens between meetings, when nobody is looking at the site,
  * and a competition week is short enough that missing an invitation by three
- * days means missing the competition entirely. This is why invitations are
- * email and not only a badge in the UI.
+ * days means missing the competition. So invitations are email, not only a
+ * badge in the UI.
  *
- * Note there is no branching on props anywhere below — see `scripts/compile`.
- * The compiler renders with a Proxy that returns a sentinel for every access,
- * so a conditional would always take the truthy path and silently bake one
- * branch into the shipped artifact. A variant is a separate template.
+ * Nothing below branches on props. See `scripts/compile`: the compiler renders
+ * with a Proxy that returns a sentinel for every access, so a conditional
+ * always takes the truthy path and bakes that one branch into the shipped
+ * artifact. A variant is a separate template.
  */
 export type Props = {
   inviteeName: string;

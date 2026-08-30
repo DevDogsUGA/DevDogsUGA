@@ -11,10 +11,10 @@ import type { Compiled } from "../src/runtime/fill.js";
  *
  * Each template is rendered ONCE with a `Proxy` standing in for its props, so
  * every prop access emits a `⟦key⟧` sentinel instead of a value. The rendered
- * HTML is then split on those sentinels, and the pieces are what ships.
+ * HTML is split on those sentinels, and the pieces are what ships.
  *
- * The result is that filling a template at runtime is interleaving two arrays
- * — no React, no renderer, no template engine in the Worker.
+ * Filling a template at runtime is then interleaving two arrays. No React, no
+ * renderer, no template engine in the Worker.
  */
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -31,10 +31,10 @@ interface TemplateModule {
 /**
  * A slot is a URL slot when its name says so.
  *
- * A convention rather than a marker API, because the alternative — wrapping
- * the access in the template — does not survive the Proxy: whatever the
- * wrapper returned would be a plain string by the time React saw it, and the
- * compiler would have no way to tell it apart from any other slot.
+ * A convention rather than a marker API. The alternative, wrapping the access
+ * in the template, does not survive the Proxy: whatever the wrapper returned
+ * would be a plain string by the time React saw it, and the compiler could not
+ * tell it apart from any other slot.
  */
 function isUrlSlot(name: string): boolean {
   return /(?:^|[a-z])(?:Url|Href)$/.test(name) || name === "url";
@@ -102,8 +102,7 @@ async function main(): Promise<void> {
  * A props object whose every access returns a marked string.
  *
  * The marker is parameterised so the same template can be rendered twice with
- * two different sentinel sets — see `compileOutput`, which uses that to catch
- * branching.
+ * two different sentinel sets. `compileOutput` uses that to catch branching.
  */
 function sentinelProps(
   slots: string[],
@@ -128,7 +127,7 @@ async function compileOutput(
   // The branching check. The Proxy returns a string for every access, so
   // `{p.isLead ? … : …}` always takes the truthy path and silently bakes one
   // branch into the artifact. Two renders with different sentinel values must
-  // produce identical structure — anything that reads a prop's VALUE rather
+  // produce identical structure. Anything that reads a prop's VALUE rather
   // than substituting it will disagree here.
   if (
     a.chunks.length !== b.chunks.length ||
@@ -159,8 +158,8 @@ async function renderWith(
   const element = createElement(module.default, sentinelProps(slots, wrap));
   if (mode === "html") return renderReactEmail(element, { plainText: false });
 
-  // Both options below are required, not cosmetic — each is a default that
-  // transforms prop values rather than substituting them.
+  // Both options below are required, not cosmetic. Each turns off a default
+  // that transforms prop values rather than substituting them.
   //
   //   * `wordwrap` wraps at a column count, which makes the output depend on
   //     the LENGTH of every value in it. Compiling once would bake the line
@@ -171,7 +170,7 @@ async function renderWith(
   //
   //   * Headings are UPPERCASED by default, and a heading here contains a
   //     person's name. That would send "SAM ASKED TO JOIN..." in the text part
-  //     while the HTML part reads normally — the same message shouting at
+  //     while the HTML part reads normally, the same message shouting at
   //     whoever's client prefers plain text.
   return renderReactEmail(element, {
     plainText: true,
@@ -253,11 +252,10 @@ interface PropType {
 /**
  * Reads each template's exported `Props` with the TypeScript checker.
  *
- * The generated module then declares the shape standalone, with no import back
- * into `src/templates` — which matters because those files import React, and
- * anything the build graph can reach from `dist` risks pulling the renderer
- * into the Worker bundle. Deriving the declaration on every build is what
- * keeps it from drifting anyway.
+ * The generated module declares the shape standalone, with no import back into
+ * `src/templates`. Those files import React, and anything the build graph can
+ * reach from `dist` risks pulling the renderer into the Worker bundle.
+ * Deriving the declaration on every build keeps it from drifting.
  */
 function extractPropTypes(files: string[]): Map<string, PropType> {
   const program = ts.createProgram(files, {

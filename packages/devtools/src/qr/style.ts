@@ -5,8 +5,8 @@
  * was read off that file rather than invented:
  *
  *   * A module is a 6×6 unit tile, scaled to the module size and then a
- *     further 3% (the reference's `scale(4.635)` against a 27px module — the
- *     overlap is what stops rasterisers leaving hairlines between neighbours).
+ *     further 3%: the reference's `scale(4.635)` against a 27px module. The
+ *     overlap stops rasterisers leaving hairlines between neighbours.
  *   * A tile's corner is rounded to a half-module radius exactly when BOTH
  *     modules that touch that corner orthogonally are empty. A lone module is
  *     therefore a circle, a module in a run is a rectangle, and the end of a
@@ -15,7 +15,7 @@
  *     rounded-square frame (14 units, scaled to half a module) with a rounded
  *     3×3 ball two modules in. Alignment patterns ARE ordinary modules.
  *   * The logo sits in a centred box (9 of the reference's 33 modules) and
- *     every module in that box is cleared — the box, not the artwork's
+ *     every module in that box is cleared, the box rather than the artwork's
  *     outline. Colour is one fill for everything; there is no background
  *     unless asked for.
  *

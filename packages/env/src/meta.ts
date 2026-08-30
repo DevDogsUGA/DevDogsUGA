@@ -1,20 +1,18 @@
 /**
  * What every environment variable has to declare about itself.
  *
- * The problem this exists to solve: adding a variable used to mean editing four
- * files — the app's `env.ts`, `.env`, `.env.example`, and
- * `devtools/src/bws/environments.ts` — and only the first of those failed
- * loudly when you forgot. Miss the last one and the variable is simply absent
- * from every deployed environment, discovered at the next deploy.
+ * Adding a variable used to mean editing four files: the app's `env.ts`,
+ * `.env`, `.env.example`, and `devtools/src/bws/environments.ts`. Only the
+ * first failed loudly when you forgot. Miss the last one and the variable is
+ * absent from every deployed environment, discovered at the next deploy.
  *
- * The fix is not "remember to edit four files". It is that three of the four
- * are DERIVED from the one you cannot skip, because the app will not boot
- * without it.
+ * So three of the four are DERIVED from the one you cannot skip, the one the
+ * app will not boot without.
  *
  * ⚠️ The enforcement lives in `define()`'s signature, not here and not in zod's
- * `GlobalMeta`. Calling `.meta()` is optional in zod — a schema without it is
- * perfectly valid — so a registry that merely *reads* metadata cannot make
- * anyone write it. A wrapper whose second argument is required can.
+ * `GlobalMeta`. A schema without `.meta()` is perfectly valid in zod, so a
+ * registry that merely *reads* metadata cannot make anyone write it. A wrapper
+ * whose second argument is required can.
  */
 
 /**
@@ -42,7 +40,7 @@ export type EnvScope =
    * meaningless to anyone else. `DEV_VPN_HOST` is one machine's IP.
    *
    * Never pushed, never in `.env.example` as anything but a comment, and never
-   * required — an app that cannot boot without one of these cannot boot in CI.
+   * required. An app that cannot boot without one of these cannot boot in CI.
    */
   | "developer";
 
@@ -56,7 +54,7 @@ export type EnvSecrecy =
   /** A secret. Bitwarden and GitHub Actions secrets only. */
   | "secret"
   /**
-   * A secret that must never reach any REMOTE store — not Bitwarden, not
+   * A secret that must never reach any REMOTE store: not Bitwarden, not
    * GitHub, not a vault target's file. `push` refuses it by name, `pull`
    * will not write it back, and `audit` errors on any remote copy.
    *
@@ -65,35 +63,34 @@ export type EnvSecrecy =
    * inside the box it opens, and syncing it to GitHub would hand CI every
    * secret we hold.
    *
-   * The operator's OWN machine may hold one — their password vault, or
-   * (since 2026-08-19, by decision) their gitignored `.env`, which the BWS
-   * prompts offer to save into. What the classification forbids is any
-   * store a push could reach or CI could read; the local file is neither,
-   * and the refusals above are what keep it that way.
+   * The operator's OWN machine may hold one: their password vault, or their
+   * gitignored `.env` (since 2026-08-19, by decision), which the BWS prompts
+   * offer to save into. What the classification forbids is any store a push
+   * could reach or CI could read. The local file is neither, and the refusals
+   * above are what keep it that way.
    */
   | "never-store";
 
 /**
  * Which environments a deployed secret may reach, named after the JOBS that
- * read it — the same vocabulary `deploy.yaml` uses for its own sections.
+ * read it, the same vocabulary `deploy.yaml` uses for its own sections.
  *
  * `deploy` (the default when absent) is an ordinary deployed secret: the
  * environments an app boots from read it, so it routes to `staging` and
  * `production`.
  *
- * `plan` is for credentials only the §3.5 dry-run jobs read — `main-plan`
+ * `plan` is for credentials only the §3.5 dry-run jobs read: `main-plan`
  * (which runs in the `preflight` environment) and `production-plan` (which
  * runs in `production`). Such a key has no reader in `staging`, and a copy
- * there is a second credential to rotate for no benefit — which is exactly
- * what `AIRTABLE_PLAN_PAT` was until this tier existed. ⚠️ Reaching
- * `preflight` is still `narrowed`'s decision, not this one: the two fields
- * answer different questions (`narrowed` promises the preflight VALUE is
- * narrow enough for a dry run; the tier says which jobs READ the key), and a
- * plan-tier key that skipped the `narrowed` opt-in would silently starve
- * `main-plan`.
+ * there is a second credential to rotate for no benefit, which is what
+ * `AIRTABLE_PLAN_PAT` was until this tier existed. ⚠️ Reaching `preflight` is
+ * still `narrowed`'s decision, not this one. The two fields answer different
+ * questions: `narrowed` promises the preflight VALUE is narrow enough for a
+ * dry run, the tier says which jobs READ the key. A plan-tier key that skipped
+ * the `narrowed` opt-in would silently starve `main-plan`.
  *
- * `apply` is for credentials that can reshape production and have no dry run —
- * a Supabase access token carries full account privileges, and
+ * `apply` is for credentials that can reshape production and have no dry run.
+ * A Supabase access token carries full account privileges, and
  * `AIRTABLE_APPLY_PAT` can restructure the officers' base. They belong behind
  * required reviewers, not in the environment an ordinary deploy reads.
  *
@@ -108,15 +105,15 @@ export type EnvTier = "deploy" | "plan" | "apply";
  * A type alias rather than an `interface`, and it has to be.
  *
  * zod's `GlobalMeta` carries `[x: string]: unknown`, and TypeScript gives
- * *implicit* index signatures to type aliases but not to interfaces — so an
+ * *implicit* index signatures to type aliases but not to interfaces. So an
  * `interface EnvMeta` is not assignable to it, and `.meta()` rejects it with
  * "Index signature for type 'string' is missing".
  */
 export type EnvMeta = {
   /**
-   * What the variable is for, and — more useful — what breaks when it is
-   * missing or wrong. This is what lands in `.env.example`, so it is the only
-   * documentation most readers will ever see.
+   * What the variable is for, and what breaks when it is missing or wrong.
+   * This lands in `.env.example`, so it is the only documentation most readers
+   * will ever see.
    */
   doc: string;
   scope: EnvScope;
@@ -124,48 +121,48 @@ export type EnvMeta = {
   /** Deployed-secret routing. Defaults to `deploy` when absent. */
   tier?: EnvTier;
   /**
-   * Whatever the targets no app boots from — today, `preflight` alone — hold
-   * under this key name is narrow enough for a dry run and no wider.
+   * What the targets no app boots from hold under this key name is narrow
+   * enough for a dry run and no wider. Today that is `preflight` alone.
    *
-   * The opt-in that decides which keys a CI-only target carries, and it has to
-   * live on the KEY rather than in the target table: nothing in a row about
+   * The opt-in that decides which keys a CI-only target carries. It has to live
+   * on the KEY rather than in the target table: nothing in a row about
    * `.env.preflight` can say *which* keys belong in it, and a hand-written list
-   * in that row would be precisely the array this registry exists to delete.
-   * The target half of the rule is derived instead — see
-   * `holdsOnlyNarrowedKeys()` in `targets.ts`.
+   * in that row would be the array this registry exists to delete. The target
+   * half of the rule is derived instead, see `holdsOnlyNarrowedKeys()` in
+   * `targets.ts`.
    *
    * ⚠️ THREE SHAPES SATISFY IT, and the difference decides how you check a
-   * fourth before marking it. The field says nothing about which shape a key is
-   * — it says only that the claim below holds — so reading it as one shape and
-   * marking a key of another is how the wrong credential gets in.
+   * fourth before marking it. The field says nothing about which shape a key
+   * is, only that the claim below holds, so reading it as one shape and marking
+   * a key of another is how the wrong credential gets in.
    *
    *   * **The same key name, carrying a weaker credential here.** `DB_URL` is
    *     a full connection string in `.env`, `.env.staging` and
    *     `.env.production`; its preflight value is a Postgres role that can see
    *     `supabase_migrations.schema_migrations` and nothing else. Same key,
-   *     same schema, a value deliberately weaker than the deployed one — which
-   *     is exactly what one vault project per target already makes possible.
-   *     Marking one of these is a claim about a value that has to be minted
-   *     and pushed separately, and nothing at rest can check it — which is
-   *     why DB_URL's claim is enforced live instead: `devtools planner
-   *     create` verifies the freshly minted role, and CI's
-   *     `deploy require-planner` re-runs the same checks before every §3.5
-   *     stage-1 dry run. A fourth key of this shape should ship with the
-   *     same kind of runtime check, because nothing else will catch it.
+   *     same schema, a value deliberately weaker than the deployed one, which
+   *     is what one vault project per target already makes possible. Marking
+   *     one of these is a claim about a value that has to be minted and pushed
+   *     separately, and nothing at rest can check it, so DB_URL's claim is
+   *     enforced live instead: `devtools planner create` verifies the freshly
+   *     minted role, and CI's `deploy require-planner` re-runs the same checks
+   *     before every §3.5 stage-1 dry run. A fourth key of this shape should
+   *     ship with the same kind of runtime check, because nothing else will
+   *     catch it.
    *   * **A key that is only ever the narrow one.** `AIRTABLE_PLAN_PAT` holds
    *     a PAT with `schema.bases:read` on the officers' base and nothing else;
    *     there is no wider credential under that name in any target, because
    *     the wider Airtable tokens are separate declarations
-   *     (`AIRTABLE_PAT`, `AIRTABLE_APPLY_PAT`). Here the narrowness is a
-   *     property of the key rather than of one target's copy of it, so the
-   *     claim is checked when the token is minted and cannot drift per target.
+   *     (`AIRTABLE_PAT`, `AIRTABLE_APPLY_PAT`). The narrowness is a property
+   *     of the key rather than of one target's copy of it, so the claim is
+   *     checked when the token is minted and cannot drift per target.
    *   * **A key that is not a credential at all.** `AIRTABLE_BASE_ID` is a
    *     public identifier (`secrecy: "public"`, so it is a GitHub *variable*
    *     that anyone who can read the repository's Actions config can read
    *     anyway). It names WHICH base the dry run talks to and confers no access
    *     to it; every capability in `deploy airtable-plan` comes from
-   *     `AIRTABLE_PLAN_PAT` beside it. Here the promise holds trivially rather
-   *     than by scoping — there is nothing under this name that could do more.
+   *     `AIRTABLE_PLAN_PAT` beside it. The promise holds trivially rather than
+   *     by scoping: there is nothing under this name that could do more.
    *
    *     ⚠️ Added 2026-08-17, and it is the shape most easily over-applied.
    *     "Public" is not the test; "confers nothing" is. A public value that
@@ -174,32 +171,31 @@ export type EnvMeta = {
    *     about that. If reading the value teaches an attacker where to point a
    *     credential they already hold, it is a shape-one question, not this one.
    *
-   * All three make the same promise and it is the promise, not the shape,
+   * All three make the same promise, and it is the promise, not the shape,
    * that this field asserts: what `preflight` holds under this name cannot do
    * more than the dry runs need.
    *
    * ⚠️ ABSENT MEANS "NOT IN PREFLIGHT", and that default is the whole security
    * property. Without this field `keysRoutedTo("preflight")` answered with all
    * 45 routable keys, so `env push --target preflight` on a filled-in file
-   * uploaded `SUPABASE_JWT_SIGNING_KEY` — which mints a token for ANY role,
-   * `service_role` included — along with `SECRET_KEY` and
-   * `GH_APP_PRIVATE_KEY` into `preflight`, whose GitHub environment
-   * is reachable from `main`. §3.5 of the security plan refuses even a general
-   * read-only Postgres role at that tier, on the grounds that it "would read all
-   * production data from the `main` trust tier"; a signing key is considerably
-   * worse.
+   * uploaded `SUPABASE_JWT_SIGNING_KEY`, which mints a token for ANY role,
+   * `service_role` included, along with `SECRET_KEY` and `GH_APP_PRIVATE_KEY`
+   * into `preflight`, whose GitHub environment is reachable from `main`. §3.5
+   * of the security plan refuses even a general read-only Postgres role at that
+   * tier, on the grounds that it "would read all production data from the
+   * `main` trust tier"; a signing key is considerably worse.
    *
    * ⚠️ NOT a claim that the value is harmless, in any shape. Each has its
    * own way of being marked wrongly:
    *
-   *   * shared-name — marking a key whose ONLY credential is the deployed one
+   *   * shared-name: marking a key whose ONLY credential is the deployed one
    *     hands that credential to `main`, which is the bug this field was added
    *     to close, reintroduced one field later;
-   *   * narrow-key — marking a key that is narrow by habit rather than by
+   *   * narrow-key: marking a key that is narrow by habit rather than by
    *     scope. `AIRTABLE_PLAN_PAT` qualifies because a token minted with
    *     `schema.bases:read` alone cannot be talked into a write; a key that
    *     merely *happens* to hold a limited token today does not;
-   *   * non-credential — reading `secrecy: "public"` as the test and marking
+   *   * non-credential: reading `secrecy: "public"` as the test and marking
    *     every public key. Most of them are not needed by a dry run at all, and
    *     `narrowed` is an opt-in to a TIER, not a secrecy restatement: the
    *     question is whether a preflight job would fail without it.
@@ -219,14 +215,14 @@ export type EnvMeta = {
    * exists to push, pull, or compare.
    *
    * The distinction `secrecy` cannot express. `secrecy` answers "where may this
-   * be stored", and every answer it has — including `never-store` — presumes
-   * there is a value somebody holds. A minted credential has no such value:
+   * be stored", and every answer it has, `never-store` included, presumes there
+   * is a value somebody holds. A minted credential has no such value:
    * `SANDBOX_PROXY_TOKEN` is a JWT the deploy signs from
    * `SUPABASE_JWT_SIGNING_KEY` seconds before writing it to the Worker, and the
    * previous one is replaced on every deploy. It is a genuine secret
    * (`secrecy: "secret"`), it genuinely differs per deployment
    * (`scope: "environment"`), and it is genuinely absent from `.env`, Bitwarden
-   * and GitHub — none of which is a mistake.
+   * and GitHub. None of that is a mistake.
    *
    * ⚠️ Marking it is not bookkeeping; two tools fail in opposite directions
    * without it, and both failures are silent:
@@ -234,8 +230,8 @@ export type EnvMeta = {
    *   * `env audit` reports every Worker secret absent from Bitwarden as an
    *     ORPHAN, and the §3.6 prune path deletes orphans. Unmarked, the audit
    *     would recommend deleting the live proxy credential.
-   *   * classifying it `never-store` instead — the intuitive reach, since it is
-   *     never stored — inverts that into an ERROR saying it must be deleted
+   *   * classifying it `never-store` instead, the intuitive reach since it is
+   *     never stored, inverts that into an ERROR saying it must be deleted
    *     from the Worker, which is the one place it has to be.
    *
    * Implies "not storable": `storableKeys()` excludes these, so `env push`
@@ -243,8 +239,8 @@ export type EnvMeta = {
    */
   minted?: true;
   /**
-   * The literal text `env example` and `env init` write after the `=`
-   * — `"$API_URL"`, `"https://$PROJECT_REF.supabase.co"`,
+   * The literal text `env example` and `env init` write after the `=`:
+   * `"$API_URL"`, `"https://$PROJECT_REF.supabase.co"`,
    * `"http://localhost:3000"`, the committed Discord guild id. Absent means
    * the line ships empty: `KEY=""`.
    *
@@ -258,8 +254,8 @@ export type EnvMeta = {
    * The key ships commented out: `# KEY=""` rather than `KEY=""`.
    *
    * Encodes a real semantic, not tidiness: an EMPTY value for an enabled
-   * OAuth provider makes the Supabase CLI fail with `ProjectConfigParseError`
-   * — for those keys "unset" and "empty" are different states, and only the
+   * OAuth provider makes the Supabase CLI fail with `ProjectConfigParseError`.
+   * For those keys "unset" and "empty" are different states, and only the
    * commented form is safe to ship. Also used for keys most contributors
    * never set (operator credentials, opt-in overrides), where an uncommented
    * empty line would read as a blank to fill in.
@@ -273,9 +269,9 @@ export type EnvMeta = {
  *
  * Deliberately declared with EVERY FIELD OPTIONAL. Making them required here
  * would apply to every `.meta()` call in the monorepo, including ones that have
- * nothing to do with environment variables — zod's `GlobalMeta` is global in
- * the literal sense. Requiring them is `define()`'s job, where the scope is
- * exactly right.
+ * nothing to do with environment variables: zod's `GlobalMeta` is global in the
+ * literal sense. Requiring them is `define()`'s job, where the scope is exactly
+ * right.
  */
 declare module "zod" {
   interface GlobalMeta extends Partial<EnvMeta> {}

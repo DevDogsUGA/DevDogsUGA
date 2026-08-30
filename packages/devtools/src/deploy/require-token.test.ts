@@ -1,13 +1,13 @@
 /**
- * `deploy require-token` — the guard that stands between a contributor and
- * wrangler's browser OAuth prompt.
+ * `deploy require-token` is the guard between a contributor and wrangler's
+ * browser OAuth prompt.
  *
- * Two things are asserted here and they pull in opposite directions: the guard
- * must refuse when the token is absent (or a contributor gets a login flow
- * that "works", against policy §9), and it must NOT refuse when the token is
- * present (or every devops deploy is blocked by its own guard). A suite that
- * only checked the first would stay green if the function threw
- * unconditionally, which is why the pass case is here first.
+ * Two assertions here pull in opposite directions. The guard must refuse when
+ * the token is absent, or a contributor gets a login flow that "works",
+ * against policy §9. It must NOT refuse when the token is present, or every
+ * devops deploy is blocked by its own guard. A suite that only checked the
+ * first would stay green if the function threw unconditionally, which is why
+ * the pass case comes first.
  */
 import { describe, expect, it, vi } from "vitest";
 import { runRequireToken } from "./require-token.js";

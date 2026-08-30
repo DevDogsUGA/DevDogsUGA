@@ -6,10 +6,9 @@
  * produces an unstyled email rather than a fallback.
  *
  * **One palette, not two.** Client support for `prefers-color-scheme` is
- * partial and Outlook inverts colors on its own regardless — so a dark variant
- * would only be honoured by some clients while others invert the light one
- * into something nobody designed. These are chosen to read correctly under
- * both, which is the only outcome available.
+ * partial and Outlook inverts colors on its own regardless, so a dark variant
+ * would be honoured by only some clients while the rest invert the light one
+ * into something nobody designed. These colors read correctly under both.
  */
 export const theme = {
   color: {
@@ -18,7 +17,7 @@ export const theme = {
     line: "#e4e4e4",
     surface: "#ffffff",
     canvas: "#f4f4f5",
-    /** UGA arch black on red — the club's, not the university's marks. */
+    /** UGA arch black on red. The club's marks, not the university's. */
     accent: "#ba0c2f",
     accentInk: "#ffffff",
   },

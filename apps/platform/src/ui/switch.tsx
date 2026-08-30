@@ -5,19 +5,19 @@ import { SpinnerGapIcon } from "@phosphor-icons/react/ssr";
 
 interface Props {
   /**
-   * The current state of the toggle. When the form is submitted, the hidden
-   * checkbox will carry the opposite value (i.e. the state-to-be).
+   * The current state of the toggle. The button submits the opposite value,
+   * the state-to-be: `on` when unchecked, nothing at all when checked.
    */
   checked: boolean;
   /**
-   * The `name` of the hidden checkbox input submitted with the form. When
-   * omitted, no checkbox is rendered (useful when the form manages its own
-   * intent input, as in OAuthCredentialsField).
+   * The `name` submitted with the form, carried on the button itself. Without
+   * it the button submits no value, which is what forms that manage their own
+   * intent input want, as in OAuthCredentialsField.
    */
   name?: string;
   /**
-   * Overrides the `useFormStatus` pending state. Pass this when pending state
-   * is managed externally (e.g. via `useActionState` across multiple forms).
+   * Overrides the `useFormStatus` pending state. Pass it when pending is
+   * managed externally, e.g. `useActionState` across multiple forms.
    */
   pending?: boolean;
   disabled?: boolean;

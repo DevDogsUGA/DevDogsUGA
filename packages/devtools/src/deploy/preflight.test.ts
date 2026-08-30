@@ -1,5 +1,5 @@
 /**
- * `deploy preflight` — the 540-vs-everything-else exit contract.
+ * `deploy preflight`: the 540-vs-everything-else exit contract.
  *
  * That contract gates a deploy job: **returning** means exit 0 (healthy OR
  * paused), **throwing** means exit 1, and `paused` in `$GITHUB_OUTPUT` is what
@@ -96,7 +96,7 @@ async function preflight(
       attempt += 1;
       if (next instanceof Error) throw next;
       // Only `status` and `statusText` are read, so a real Response is
-      // unnecessary — and building one would drag in undici's own semantics.
+      // unnecessary, and building one would drag in undici's own semantics.
       return { status: next, statusText: `status ${next}` } as Response;
     }) as unknown as typeof globalThis.fetch,
     report: (lines: readonly string[]) => {
@@ -121,7 +121,7 @@ async function preflight(
     return finish(await runPreflight(shared), null);
   } catch (err) {
     // A non-DeployError is a crash, and a crash is exactly what the refusal
-    // paths must not become — so it is surfaced rather than swallowed.
+    // paths must not become, so it is surfaced rather than swallowed.
     if (!(err instanceof DeployError)) throw err;
     return finish(null, err);
   }
@@ -213,7 +213,7 @@ describe("the request", () => {
   it("asks the project's auth health endpoint, with the publishable key", async () => {
     const { requests, headers } = await preflight([200]);
     // NOT `/rest/v1/`: the REST root is the OpenAPI schema document, which
-    // Supabase answers with 401 for any non-secret key — a healthy project
+    // Supabase answers with 401 for any non-secret key, so a healthy project
     // would land in the "broken" bucket (it did, on the first real run).
     expect(requests).toEqual([`https://${REF}.supabase.co/auth/v1/health`]);
     // The positive control for the header: without an apikey, the gateway
@@ -265,7 +265,7 @@ describe("refusing before it classifies anything", () => {
   });
 
   it("refuses an unset PUBLISHABLE_KEY without making a request", async () => {
-    // Guarded because a keyless 401 is indistinguishable from broken — this
+    // Guarded because a keyless 401 is indistinguishable from broken. This
     // refusal is what stops a healthy project from failing its deploy.
     const { error, requests } = await preflight([200], {
       PUBLISHABLE_KEY: undefined,

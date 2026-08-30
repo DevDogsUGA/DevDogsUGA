@@ -11,10 +11,9 @@ import {
 import { parseTeamBranch, stateFor } from "./prEvent";
 
 /**
- * The naming rules and the PR state mapping, both of which are silent when
- * wrong: a mismatched branch name means the PR never registers as an entry,
- * and a mis-mapped close costs a team its star. Neither produces an error
- * anywhere.
+ * The naming rules and the PR state mapping. Both fail silently: a mismatched
+ * branch name means the PR never registers as an entry, and a mis-mapped close
+ * costs a team its star.
  */
 
 const COMP = "2026-fall/w02/study-group-finder";

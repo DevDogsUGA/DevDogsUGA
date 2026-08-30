@@ -19,11 +19,11 @@
  *   | variable   | plaintext  | value and all | verbatim       |
  *
  * The masking is not a nicety either way. `PROJECT_REF` as a *secret* rewrites
- * `https://supabase.com/dashboard/project/<ref>` to `.../***` — the paused-
- * project gate's whole output — and, because the ref is a substring of every
- * Supabase hostname, corrupts unrelated log lines across the repo. The
- * readability is what lets `env audit` compare a variable by VALUE, which
- * it cannot do for anything on the top row.
+ * `https://supabase.com/dashboard/project/<ref>` to `.../***`, which is the
+ * paused-project gate's whole output. And because the ref is a substring of
+ * every Supabase hostname, it corrupts unrelated log lines across the repo. The
+ * readability is what lets `env audit` compare a variable by VALUE, which it
+ * cannot do for anything on the top row.
  *
  * ⚠️ The corollary, and the reason each setter is its own function rather than
  * one with a flag: putting a secret in the variable store publishes its value
@@ -47,7 +47,7 @@ let warnedAboutTokenOverride = false;
  * Says, once, when `gh` is about to ignore its own login.
  *
  * `gh` prefers `GH_TOKEN` / `GITHUB_TOKEN` from the environment over the
- * account somebody logged in with — and `with-env` loads `.env` for every
+ * account somebody logged in with, and `with-env` loads `.env` for every
  * devtools command, so a token line in that file takes over EVERY `gh` call
  * silently. That is how a leftover classic PAT kept authenticating after the
  * operator's real login was a perfectly valid OAuth token, right up until
@@ -86,9 +86,9 @@ export interface GhVariable {
  * Turns a spawn failure into something with a next step in it.
  *
  * The three that happen are a missing binary, an unauthenticated CLI, and an
- * environment that does not exist yet — the last of which reports as a bare
- * 404, because an environment you cannot see and one that was never created
- * look identical from here.
+ * environment that does not exist yet. The last reports as a bare 404, because
+ * an environment you cannot see and one that was never created look identical
+ * from here.
  */
 function describe(err: unknown): string {
   const e = err as { code?: string; stderr?: string; message?: string };
@@ -162,7 +162,7 @@ export async function listSecrets(environment: string): Promise<GhSecret[]> {
  * it. Not `--env-file` either, despite it being one call for the whole set:
  * that hands the file to `gh`'s own dotenv parser, and this tool has already
  * parsed it with different rules. Two parsers over one file agree right up
- * until a multi-line value — a PEM private key is the case — and then disagree
+ * until a multi-line value, a PEM private key being the case, and then disagree
  * silently, storing something that looks like a key and is not.
  *
  * One process per secret is the cost. It is paid once per rotation.
@@ -216,10 +216,10 @@ export async function deleteSecret(
 /**
  * Environment variable names, VALUES, and when each last changed.
  *
- * The value is the point. It is what turns the GitHub half of `env audit`
- * from a presence check into a real comparison for these keys — a variable
- * whose value drifted from Bitwarden is detectable, where the same drift in a
- * secret is not detectable by anything.
+ * The value is the point. It is what turns the GitHub half of `env audit` from
+ * a presence check into a real comparison for these keys: a variable whose
+ * value drifted from Bitwarden is detectable, where the same drift in a secret
+ * is not detectable by anything.
  */
 export async function listVariables(
   environment: string,
@@ -250,7 +250,7 @@ export async function listVariables(
  * Stdin rather than `--body` even though a variable is public by definition:
  * argv is shared machinery, and a rule with an exception ("stdin for secrets,
  * argv for variables") is a rule somebody applies to the wrong call. The
- * `--env-file` form is refused for the reason `setSecret` refuses it — it would
+ * `--env-file` form is refused for the reason `setSecret` refuses it: it would
  * hand the file to `gh`'s own dotenv parser, which agrees with this tool's
  * parser right up until a multi-line value and then disagrees silently.
  */
@@ -305,7 +305,7 @@ export async function deleteVariable(
  * A repository-level variable. NAME ONLY, and that is deliberate.
  *
  * `gh variable list` will return the value here as readily as it does for an
- * environment variable, and fetching it would invite the obvious next step —
+ * environment variable, and fetching it would invite the obvious next step,
  * comparing it against Bitwarden. That comparison has no correct answer. This
  * copy is unmanaged whatever it holds, so a value that matches today proves
  * nothing except that somebody set them the same way once; reporting only the
@@ -318,13 +318,13 @@ export interface GhRepositoryVariable {
 }
 
 /**
- * The repository's OWN variables — the ones with no environment.
+ * The repository's OWN variables, the ones with no environment.
  *
  * ⚠️ The reason this exists at all: an environment variable of the same name
  * **shadows** a repository one, and nothing in GitHub's UI says so. Every job
  * that runs in the environment reads the environment copy, so a repository
  * variable a person set by hand before `env push` routed that key keeps its
- * stale value indefinitely, invisibly — right up until somebody deletes the
+ * stale value indefinitely and invisibly, right up until somebody deletes the
  * environment copy, at which point the stale value silently becomes live.
  *
  * No `--env`, and that missing flag IS the call. Everything else in this file
