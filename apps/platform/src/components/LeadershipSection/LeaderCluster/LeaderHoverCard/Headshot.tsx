@@ -18,9 +18,9 @@ function initials(name: string) {
  *
  * Built by filtering rather than interpolating, because for this board most of
  * it is missing. Nobody stated pronouns and one officer of seven gave a
- * graduation year, so the template this replaced —
- * `{pronouns} · Class of {year}` — would have rendered a bare " · Class of "
- * under six names. Empty string means the caller omits the element.
+ * graduation year, so the template this replaced, `{pronouns} · Class of
+ * {year}`, would have rendered a bare " · Class of " under six names. Empty
+ * string means the caller omits the element.
  */
 export function formatLeaderMeta(
   pronouns: string | null,
@@ -46,9 +46,9 @@ interface Props {
  * An officer's headshot, or their initials when there is not one.
  *
  * The `avatars` bucket is keyed by bare user id, so a URL can always be
- * composed for an officer whether or not they have ever uploaded anything --
+ * composed for an officer whether or not they have ever uploaded anything:
  * "no avatar" is a 404, not a null. That is why the error branch matters as
- * much as the missing-src one, and why it is the same branch: it mirrors what
+ * much as the missing-src one, and why it is the same branch. It mirrors what
  * `ui/avatar.tsx` gets from Radix's `Avatar.Fallback` for every other avatar
  * in the app. Officers join the board before they send a photo, and a card
  * showing a broken image is worse than one showing a monogram.

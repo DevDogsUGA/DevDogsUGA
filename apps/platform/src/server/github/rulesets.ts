@@ -2,18 +2,16 @@
  * The branch rulesets that make competition team isolation real.
  *
  * Pure payload builders, separate from the API calls in `teamSync.ts`, because
- * every property that matters here is a property of the *shape* — which rules,
- * which refs, who bypasses — and none of it is observable from a successful
- * HTTP response. A ruleset with the wrong `include` pattern, or with a bypass
- * actor that is not the team it is named for, returns 201 exactly like a
- * correct one and protects nothing.
+ * every property that matters here is a property of the *shape*: which rules,
+ * which refs, who bypasses. None of it is observable from a successful HTTP
+ * response. A ruleset with the wrong `include` pattern, or with a bypass actor
+ * that is not the team it is named for, returns 201 exactly like a correct one
+ * and protects nothing.
  *
- * ============================================================================
- * Why rulesets and not team permissions
- * ============================================================================
+ * ## Why rulesets and not team permissions
  *
  * `provisionTeam` grants the GitHub team `push` on the repository, and GitHub
- * team permissions have NO BRANCH DIMENSION — the grant is repository-wide or
+ * team permissions have NO BRANCH DIMENSION: the grant is repository-wide or
  * it does not exist. So joining any competition team means push access to every
  * other team's branch and to the integration branch judging reads from.
  *
@@ -21,9 +19,7 @@
  * offers is a ruleset that restricts a ref pattern and names the team as the
  * one actor allowed past it.
  *
- * ============================================================================
- * Three constraints that shape everything below
- * ============================================================================
+ * ## Three constraints that shape everything below
  *
  * 1. **Bypass actors are ruleset-scoped, not rule-scoped.** A team listed as a
  *    bypass actor bypasses every rule in that ruleset. There is no way to say
@@ -34,14 +30,14 @@
  * 2. **Rules AGGREGATE across rulesets, and bypass does not.** Two rulesets
  *    matching the same ref both apply, and bypassing one does not bypass the
  *    other. A broad `team/**` ruleset alongside the per-team ones would leave
- *    every team blocked by the broad one while bypassing its own — the branches
- *    would be readable, unpushable, and the cause would not appear in either
+ *    every team blocked by the broad one while bypassing its own. The branches
+ *    would be readable but unpushable, and the cause would not appear in either
  *    ruleset read on its own. **Never run both at once.**
  *
- * 3. **75 rulesets per repository.** Fixed cost is `main`, `production`,
- *    `~ALL`, `comp/**` and the tag ruleset — 5, leaving 70 for teams. At ~4
- *    teams a week over a 14-week semester (~56), one semester nearly exhausts
- *    it. `archiveRulesetPayload` is what makes the count come back down.
+ * 3. **75 rulesets per repository.** Fixed cost is 5: `main`, `production`,
+ *    `~ALL`, `comp/**` and the tag ruleset, leaving 70 for teams. At ~4 teams
+ *    a week over a 14-week semester (~56), one semester nearly exhausts it.
+ *    `archiveRulesetPayload` is what makes the count come back down.
  */
 
 /**
@@ -75,8 +71,8 @@ export interface RulesetPayload {
  * Rulesets are addressed by numeric id, which nothing here stores, so every
  * lookup is "list them and match by name". A name that cannot be recomputed
  * from the team would make the ruleset unfindable the moment provisioning
- * re-ran, and `createRepoRuleset` does not reject duplicate names — the second
- * call would quietly leave two.
+ * re-ran, and `createRepoRuleset` does not reject duplicate names, so the
+ * second call would quietly leave two.
  */
 export function teamRulesetName(
   competitionSlug: string,
@@ -99,25 +95,25 @@ export function archiveRulesetName(competitionSlug: string): string {
  * here and nowhere else.
  *
  * `deletion` stops another team removing this branch. It does NOT stop the team
- * removing its own — bypass is ruleset-scoped (constraint 1) — which is the
- * right trade: the alternative is a second ruleset per team, at twice the cost
- * against a 75-ruleset ceiling, to prevent a team from deleting work that is
- * only theirs and whose pull request survives regardless.
+ * removing its own, because bypass is ruleset-scoped (constraint 1). That is
+ * the right trade: the alternative is a second ruleset per team, at twice the
+ * cost against a 75-ruleset ceiling, to stop a team deleting work that is only
+ * theirs and whose pull request survives regardless.
  *
  * Deliberately NOT included:
  *
- *   * `creation` — the branch is cut by `cutTeamBranch` using the org token
+ *   * `creation`: the branch is cut by `cutTeamBranch` using the org token
  *     BEFORE this ruleset exists. A `creation` rule would be inert on an
  *     existing ref and would block re-provisioning after a branch was deleted.
- *   * `non_fast_forward` — rebasing your own feature branch is ordinary work,
+ *   * `non_fast_forward`: rebasing your own feature branch is ordinary work,
  *     and the team would bypass it anyway.
- *   * `pull_request` — rules aggregate, so requiring reviews here would also
+ *   * `pull_request`: rules aggregate, so requiring reviews here would also
  *     require them on any other ruleset's count. The review gate belongs on the
  *     integration branch, which is what a team PRs *into*.
  *
  * An EXACT ref, not a pattern: `team/<comp>/<team>` is a prefix of
  * `team/<comp>/<team>-2`, so a `fnmatch` pattern would let one team's ruleset
- * govern another team's branch — and, because that team is its bypass actor,
+ * govern another team's branch and, because that team is its bypass actor,
  * hand them push access to it.
  */
 export function teamRulesetPayload(
@@ -146,8 +142,8 @@ export function teamRulesetPayload(
  * One frozen ruleset covering every team branch of a finished competition.
  *
  * Replaces that competition's N per-team rulesets, taking the count from N to
- * 1 — which is what keeps the 75-ruleset ceiling reachable across years rather
- * than across one semester.
+ * 1, which keeps the 75-ruleset ceiling reachable across years rather than
+ * across one semester.
  *
  * **Empty bypass list, and that is the entire point.** Deleting a per-team
  * ruleset does not freeze the branch, it OPENS it: every competition team holds
@@ -156,8 +152,8 @@ export function teamRulesetPayload(
  *
  * This is also why `downgradeTeam` is not sufficient on its own. It sets the
  * team's repository permission to `pull`, which the plan's org base permission
- * of `write` overrides — a floor cannot be lowered per-repository. After that
- * change the ruleset is the only thing still freezing the branch.
+ * of `write` overrides, because a floor cannot be lowered per-repository. After
+ * that change the ruleset is the only thing still freezing the branch.
  */
 export function archiveRulesetPayload(competitionSlug: string): RulesetPayload {
   return {

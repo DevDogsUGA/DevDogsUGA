@@ -51,8 +51,8 @@ interface Options {
   place?: boolean;
   /**
    * Centre the panel against its container's height rather than hanging it
-   * from the top — clamped, because a panel taller than what it is centred
-   * on would otherwise rise out of the top of it and into the navbar.
+   * from the top. Clamped, because a panel taller than what it is centred on
+   * would otherwise rise out of the top of it and into the navbar.
    */
   centre?: boolean;
   /** How close a placed panel may come to the container's edges. */
@@ -66,18 +66,18 @@ interface Options {
  * Radix publishes the same numbers as `--radix-navigation-menu-viewport-*`,
  * and they are the wrong numbers to build on. It measures in a state update a
  * commit after the panel mounts, so on the opening frame the variables are
- * simply absent: anything derived from them is derived from a fallback and
- * visibly corrects itself once the real values land. That is one bug with two
- * faces — a panel anchored by its right edge jumped sideways by its own width,
- * and a panel whose box grew from zero dragged the origin of its fold along
- * with it, so the fold looked like a sideways lurch.
+ * absent: anything derived from them starts at a fallback and corrects itself
+ * once the real values land. That one bug had two faces. A panel anchored by
+ * its right edge jumped sideways by its own width, and a panel whose box grew
+ * from zero dragged the origin of its fold with it, so the fold looked like a
+ * sideways lurch.
  *
  * Measuring here instead is a commit earlier. The panel is already in the DOM
  * when this runs, at its natural width, because its width is written in its
  * own classes rather than inferred; `offsetWidth` is therefore final on the
  * first frame and every frame after. The open trigger names its panel through
- * `aria-controls`, which is exactly the panel Radix is about to show — during
- * a hand-over, when both are mounted, it is unambiguous in a way that querying
+ * `aria-controls`, which is exactly the panel Radix is about to show. During a
+ * hand-over, when both are mounted, that is unambiguous in a way that querying
  * for a panel is not.
  *
  * `travelling` is the same gate as before, and the reason both tiers need it:
@@ -206,9 +206,9 @@ export function useMenuBox({
   // a viewport that already exists, so opening takes three commits: the value
   // changes, the viewport mounts and publishes itself, and only then does the
   // panel render inside it. Worse, the last two are state updates inside
-  // Radix's own provider, which is a DESCENDANT — so nothing re-renders the
+  // Radix's own provider, which is a DESCENDANT, so nothing re-renders the
   // component holding this hook, and an effect of its own, however it is
-  // keyed, simply never runs again to see the panel appear.
+  // keyed, never runs again to see the panel appear.
   //
   // Hence `revision`: every panel hands its Content a ref, and a ref callback
   // fires during the commit that mounts it. That is a signal travelling the

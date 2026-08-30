@@ -6,22 +6,22 @@ import { expectSession } from "~/server/auth";
 import { runAirtableSync, type SyncReport } from "~/server/airtable/run";
 
 /**
- * GET /airtable/sync — the manual trigger.
+ * GET /airtable/sync: the manual sync trigger.
  *
  * Exists because an Airtable **button field** can do nothing but open a URL,
- * and that is the trigger that matters in practice: it puts the control in the
- * surface where the edit was just made, which is the same reasoning that puts
- * refusals in `Sync status` rather than in a log nobody reads.
+ * and that is the trigger that matters in practice: it puts the control where
+ * the edit was just made, the same reasoning that puts refusals in
+ * `Sync status` rather than in a log nobody reads.
  *
  * Shares one implementation with `requestAirtableSync()`. The manual path is
- * what an officer reaches for precisely when something has already gone wrong,
- * so a second code path here would be a debugging trap.
+ * what an officer reaches for when something has already gone wrong, so a
+ * second code path here would be a debugging trap.
  *
  * Two callers, two credentials:
  *
  *   * The 15-minute cron, with `CRON_SECRET`.
- *   * An officer, by session cookie — including one arriving from an Airtable
- *     button, which opens the URL in their signed-in browser.
+ *   * An officer, by session cookie. An Airtable button counts: it opens the
+ *     URL in their signed-in browser.
  */
 export async function GET(request: Request) {
   await connection();
@@ -49,8 +49,8 @@ export async function GET(request: Request) {
   });
 
   // A browser navigating here came from the Airtable button, and a raw JSON
-  // body is a bad answer to "did my edit land?". Everything else — the cron,
-  // curl, the console — gets JSON.
+  // body is a bad answer to "did my edit land?". The cron, curl and the
+  // console get JSON.
   if (!cron && wantsHtml(request)) {
     return new NextResponse(renderReport(report), {
       status: 200,
@@ -77,8 +77,8 @@ function wantsHtml(request: Request): boolean {
  * A summary page, not a redirect.
  *
  * A manual sync is almost always somebody checking whether one specific edit
- * landed, and "done" does not answer that — so the refusals are on the page,
- * in full, rather than a count linking somewhere else.
+ * landed, and "done" does not answer that. So the refusals are on the page in
+ * full, rather than a count linking somewhere else.
  */
 function renderReport(report: SyncReport): string {
   const heading = report.skipped

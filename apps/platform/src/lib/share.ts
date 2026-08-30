@@ -2,13 +2,12 @@
  * Hand a link to the device's share sheet, falling back to the clipboard.
  *
  * Kept free of React and of any toast so it can be unit-tested against a
- * stubbed `navigator` — the caller decides what, if anything, to say about
- * the outcome.
+ * stubbed `navigator`. The caller decides what to say about the outcome.
  */
 
 export interface ShareTarget {
   title: string;
-  /** Absolute, or relative to this origin — `"/"` is resolved before sharing. */
+  /** Absolute, or relative to this origin. `"/"` is resolved before sharing. */
   url: string;
 }
 
@@ -50,14 +49,14 @@ export async function shareOrCopy({
       await navigator.share(data);
       return "shared";
     } catch (error) {
-      // Closing the sheet is a decision, not a failure — report neither an
+      // Closing the sheet is a decision, not a failure. Report neither an
       // error nor a copy the person did not ask for.
       if (error instanceof DOMException && error.name === "AbortError") {
         return "dismissed";
       }
-      // Anything else — a share sheet that refuses the payload, or transient
-      // activation that expired on the way here — falls through to the
-      // clipboard rather than leaving the press with nothing to show.
+      // Anything else falls through to the clipboard rather than leaving the
+      // press with nothing to show: a share sheet that refuses the payload, or
+      // transient activation that expired on the way here.
     }
   }
 
@@ -71,7 +70,7 @@ export async function shareOrCopy({
 
 /**
  * `navigator.clipboard` (like the share sheet) only exists in secure
- * contexts, which a dev server reached over plain http on a LAN is not — the
+ * contexts, which a dev server reached over plain http on a LAN is not. The
  * deprecated selection-based copy is the only thing that still works there.
  */
 function legacyCopy(text: string): boolean {
@@ -85,7 +84,7 @@ function legacyCopy(text: string): boolean {
   textarea.focus();
   textarea.select();
   // iOS Safari ignores `select()` and copies the empty selection it left
-  // behind — the range has to be spelled out.
+  // behind, so the range has to be spelled out.
   textarea.setSelectionRange(0, text.length);
   let copied = false;
   try {

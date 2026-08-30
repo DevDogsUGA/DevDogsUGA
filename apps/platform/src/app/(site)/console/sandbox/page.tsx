@@ -200,8 +200,8 @@ function ConnectionCard({
  *
  * `paused` gets an explanation rather than a bare word, because a paused
  * project is the state most likely to read as "broken" when it is in fact
- * normal and reversible — and the wait is about four minutes, which is worth
- * saying before somebody starts debugging their connection string.
+ * normal and reversible. The wait is about four minutes, worth saying before
+ * somebody starts debugging their connection string.
  */
 function StatusChip({ status }: { status: string }) {
   const COPY: Record<string, string> = {

@@ -13,28 +13,23 @@ import { meetingTitle } from "~/lib/meetingTitle";
 import type { MeetingSummary } from "~/server/loaders/meetings";
 
 /**
- * The archive — every night that already happened.
+ * The archive: every night that already happened.
  *
- * A **table**, deliberately. The rows above this one carry chips and a
- * countdown because a member is deciding whether to come; nobody decides
- * anything here. This is the club's record, read by whoever wants to check
- * that DevDogs actually meets every week, and the question they are asking is
- * answered by four columns lining up down the page rather than by forty cards
- * they have to scroll. It is ruled like the rows above it rather than boxed,
- * so the two halves of the ledger read as one list that changes shape where
- * the nights stop being decisions and start being records.
+ * A table, deliberately. The rows above carry chips and a countdown because a
+ * member is deciding whether to come; nobody decides anything here. This is
+ * the club's record, and "does DevDogs meet every week" is answered by four
+ * columns lining up down the page rather than by forty cards to scroll. Ruled
+ * like the rows above rather than boxed, so both halves read as one list.
  *
- * The attendance column is the reason the band exists. Everything else on the
- * events page is authored — an officer typed the name, the summary, the room —
- * but attendance is counted from check-ins the platform holds itself. It is
- * the one number here nobody could have simply written down, which makes it
- * the only public evidence of the thing the whole site claims, so it is shown
- * plainly and without decoration rather than buried in a detail page.
+ * The attendance column is the reason the band exists. An officer typed
+ * everything else on the events page; attendance is counted from check-ins the
+ * platform holds itself, so it is the one number here nobody could have
+ * written down.
  *
- * Fetches nothing, and does not count anything: `attendanceCount` and
- * `workshopCount` arrive on `MeetingSummary` from subqueries in the loader.
- * Recomputing either here would mean loading every attendance row to get a
- * number Postgres already returned.
+ * Fetches nothing and counts nothing: `attendanceCount` and `workshopCount`
+ * arrive on `MeetingSummary` from subqueries in the loader. Recomputing either
+ * would mean loading every attendance row to get a number Postgres already
+ * returned.
  */
 
 interface Props {
@@ -80,9 +75,9 @@ export default function PastMeetings({
       </h3>
 
       {/* Only once the archive is long enough to be worth searching. Below
-          that a search box is a control that costs more room than the rows it
-          would filter — and it searches only the page in hand, which is the
-          honest limit of a client-side filter over a paged table. */}
+          that a search box costs more room than the rows it would filter. It
+          searches only the page in hand, the limit of a client-side filter
+          over a paged table. */}
       {meetings.length > 5 && (
         <label className="flex flex-col gap-1 text-xs text-mauve-400">
           <span className="sr-only">Search past meetings</span>
@@ -156,17 +151,15 @@ export default function PastMeetings({
                       <Td numeric>{meeting.workshopCount}</Td>
                       {/* `tabular-nums` on both number columns, so 7 and 112 sit
                           under each other instead of drifting with the width of
-                          the glyphs — the whole reason a table beats cards here. */}
+                          the glyphs. That is why a table beats cards here. */}
                       <Td numeric className="font-semibold text-white">
-                        {/* ⚠️ A dash, not the 0.
-                            `attendanceCount` is 0 for every cancelled night,
-                            necessarily — nobody checks in to a meeting that
-                            did not happen. Printed as a number in a column
-                            headed "Attendance", beside nights that drew 40,
-                            that 0 does not read as "no meeting", it reads as
-                            "a meeting nobody came to". The club's worst night
-                            on record, in the archive, permanently, for a night
-                            it cancelled itself. */}
+                        {/* ⚠️ A dash, not the 0. `attendanceCount` is
+                            necessarily 0 for every cancelled night, since
+                            nobody checks in to a meeting that did not happen.
+                            In a column headed "Attendance", beside nights that
+                            drew 40, that 0 reads as "a meeting nobody came to"
+                            rather than "no meeting", and it stays on the
+                            record for a night the club called off itself. */}
                         {cancelled ? (
                           <span
                             className="text-mauve-500"
@@ -186,9 +179,9 @@ export default function PastMeetings({
           </div>
 
           {/* Distinct from the empty-archive copy above: that one is a fact
-              about the semester, this one is a fact about what the reader
-              typed — and it says which page was searched, because the filter
-              only sees the rows in hand. */}
+              about the semester, this one is about what the reader typed. It
+              says which page was searched, because the filter only sees the
+              rows in hand. */}
           {shown.length === 0 && (
             <p className="text-sm text-mauve-400">
               Nothing on this page matches &ldquo;{query.trim()}&rdquo;.
@@ -196,14 +189,13 @@ export default function PastMeetings({
           )}
 
           {/*
-            A link to a search param, never client state — and that still holds
-            now that this band IS a client component for the search box above,
-            because the reason was never the cost of the boundary. The archive
-            is the part of this page somebody links to — "we met eleven times
-            last spring, see" — and a page number in `useState` cannot be
-            pasted or crawled. The search query deliberately goes the other
-            way: it filters the page in hand, is nobody's permalink, and would
-            be noise in a URL.
+            A link to a search param, never client state, and still so now that
+            this band IS a client component for the search box above. The
+            reason was never the cost of the boundary: the archive is the part
+            of this page somebody links to, and a page number in `useState`
+            cannot be pasted or crawled. The search query goes the other way on
+            purpose. It filters the page in hand, is nobody's permalink, and
+            would be noise in a URL.
 
             The caller owns reading the param back; this only names the next
             page. Relative href, so it keeps whatever path and other params the

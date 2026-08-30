@@ -27,15 +27,15 @@ interface Props {
 }
 
 /**
- * The Docs navbar entry: still a plain link to /docs, with a menu of the
- * individual projects that opens on hover.
+ * The Docs navbar entry: a plain link to /docs, with a menu of the individual
+ * projects that opens on hover.
  *
  * The hover intent, the focus handling and the Escape key all used to live
  * here, hand-written, because Radix's DropdownMenu trigger swallowed Enter and
- * would have taken /docs away from keyboard users. NavigationMenu is the
- * primitive that was actually wanted: its trigger is allowed to be a link, and
- * it shares one viewport with the profile menu, which is what lets the panel
- * travel between the two rather than one closing and another opening.
+ * would have taken /docs away from keyboard users. NavigationMenu is what was
+ * wanted: its trigger is allowed to be a link, and it shares one viewport with
+ * the profile menu, which lets the panel travel between the two rather than one
+ * closing and another opening.
  */
 export default function DocsMenu({
   label,
@@ -58,7 +58,7 @@ export default function DocsMenu({
   // element tree React would diff anyway, where a component declared here
   // would be a new type on every render and remount the whole column.
   //
-  // A plain group + label rather than a role="menu" tree — these are links the
+  // A plain group + label rather than a role="menu" tree. These are links the
   // tab order already walks in order, and calling them menuitems would promise
   // arrow-key navigation the trigger deliberately does not implement.
   function renderGroup(group: (typeof groups)[number]) {
@@ -105,7 +105,7 @@ export default function DocsMenu({
         className={NAV_CONTENT}
       >
         {/* The one element here with a size of its own, which is why the shell
-            measures this rather than the panel around it — the panel is
+            measures this rather than the panel around it. The panel is
             stretched to whatever the viewport currently is.
 
             Two columns from `lg`, not from `md`. The panel is anchored to its

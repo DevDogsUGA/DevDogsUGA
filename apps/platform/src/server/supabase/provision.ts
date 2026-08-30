@@ -31,10 +31,10 @@ import { isGone, mapProjectStatus } from "./status";
 /**
  * Provisioning, attaching, and tearing down sandbox environments.
  *
- * The orchestration layer: everything here composes the Management API client
- * with the platform's own tables, and every function is written so a failure
- * partway through leaves a state somebody can recover from rather than a
- * half-built environment nothing owns.
+ * Everything here composes the Management API client with the platform's own
+ * tables. Every function is written so a failure partway through leaves a state
+ * somebody can recover from, rather than a half-built environment nothing
+ * owns.
  */
 
 /** The free plan grants two projects, counted across EVERY org where you are owner or admin. */
@@ -64,9 +64,9 @@ export interface CapacityReport {
 /**
  * How many projects this member owns, and what they are.
  *
- * The list includes projects with nothing to do with DevDogs, which is what
- * makes presentation the careful part: the console must label which are ours by
- * matching `sandboxEnvironments.projectRef`, and never pre-select anything.
+ * The list includes projects with nothing to do with DevDogs, so presentation
+ * is the careful part: the console labels which are ours by matching
+ * `sandboxEnvironments.projectRef`, and never pre-selects anything.
  */
 export async function capacityFor(userId: string): Promise<CapacityReport> {
   const token = await accessTokenFor(userId);
@@ -82,8 +82,8 @@ export async function capacityFor(userId: string): Promise<CapacityReport> {
 /**
  * Free a slot by pausing one of the owner's own projects.
  *
- * Two refusals are enforced rather than warned about, because both would let
- * one lead break somebody else's week:
+ * Two cases are refused rather than warned about, because either would let one
+ * lead break somebody else's week:
  *
  *   - a DevDogs environment still attached to a team with an open competition;
  *   - the environment currently being provisioned into.
@@ -127,8 +127,9 @@ export async function pauseOwnedProject(
  *
  * One payload rather than one call per file, because `database/query` is
  * atomic (measured): a multi-statement payload with an error in the middle
- * rolls back completely. So a failed migration leaves the schema untouched and
- * there is no repair path to write — which is only true if they go together.
+ * rolls back completely. A failed migration leaves the schema untouched and
+ * there is no repair path to write, which holds only if the files go
+ * together.
  */
 async function migrationBundle(): Promise<string> {
   const dir = join(process.cwd(), "../../supabase/migrations");
@@ -158,7 +159,7 @@ export async function applyMigrations(environmentId: string): Promise<void> {
  *
  * Ordering is the whole design here. The Vault writes and the row insert happen
  * only AFTER the project is confirmed healthy, so a failure during creation
- * leaves nothing behind in the platform — no orphan row pointing at a project
+ * leaves nothing behind in the platform: no orphan row pointing at a project
  * that never came up, no secrets nothing references.
  */
 export async function provisionEnvironment(
@@ -172,7 +173,7 @@ export async function provisionEnvironment(
     .where(eq(teams.id, teamId));
   if (!team) throw new ProvisionError("environment_gone");
 
-  // The owner must already be the team's lead -- the composite FKs on
+  // The owner must already be the team's lead. The composite FKs on
   // teamEnvironments enforce it at attach time, and finding out there rather
   // than here would mean a created project with nowhere to attach.
   const [lead] = await db
@@ -206,7 +207,7 @@ export async function provisionEnvironment(
   });
 
   // ~10s measured, but a poll rather than a sleep. ACTIVE_HEALTHY proved a real
-  // readiness signal -- all 24 migrations applied immediately after the flip.
+  // readiness signal: all 24 migrations applied immediately after the flip.
   await waitForReady(token, created.ref, { timeoutMs: 180_000 });
 
   const keys = await retrieveKeys(token, created.ref);
@@ -232,8 +233,8 @@ export async function provisionEnvironment(
       secretKeySecretId,
       jwtSecretId,
       // The deployment decides the suffix, because each one's Worker claims a
-      // different wildcard. Passed explicitly rather than defaulted -- a
-      // default is exactly what let one constant serve three environments.
+      // different wildcard. Passed explicitly rather than defaulted, because a
+      // default is what let one constant serve three environments.
       proxyHostname: buildProxyHostname(name, {
         deployEnv: platformEnv.DEPLOY_ENV,
       }),
@@ -252,7 +253,7 @@ export async function provisionEnvironment(
 /**
  * Point a team at an environment.
  *
- * The composite foreign keys do the real work: they refuse unless the
+ * The composite foreign keys do the real work. They refuse unless the
  * environment's owner is this team's lead, so the invariant is a constraint
  * rather than a check somebody has to remember to write.
  */
@@ -453,8 +454,8 @@ export async function autoPausePass(): Promise<{ paused: number }> {
  *
  * **This pass is the sole authority on orphaning.** The proxy must never make
  * that call, because a transient upstream error would otherwise tear down a
- * healthy environment. Only a definite 404 — or absence from the owner's
- * project list — counts.
+ * healthy environment. Only a definite 404 counts, or absence from the owner's
+ * project list.
  */
 export async function reconcilePass(): Promise<{
   orphaned: number;

@@ -1,31 +1,30 @@
 /**
  * Branch and team names, derived in one place.
  *
- * Pure and separate because three things have to agree on them and they run in
+ * Pure and separate because three things have to agree on them and run in
  * different places: provisioning creates the branch, the webhook matches an
  * incoming PR's base ref against it, and the nightly reconcile looks the team
- * up by slug. A mismatch between any two is silent — the PR simply never
- * registers as an entry, which looks to the team like the platform ignoring
- * their work.
+ * up by slug. A mismatch is silent. The PR never registers as an entry, which
+ * looks to the team like the platform ignoring their work.
  */
 
 /**
- * The layout:
+ * The judging target for a competition, cut from main and pointed at by team
+ * branches.
  *
  *   main
  *    └── comp/2026-fall/w02/study-group-finder   judging target, cut from main
  *         ├── team/2026-fall/w02/study-group-finder/lantern
  *         └── team/2026-fall/w02/study-group-finder/marble
  *
- * The week segment is not decoration. Competitions recur per project across a
- * semester, so a name without it would collide with itself every week —
+ * The week segment matters. Competitions recur per project across a semester,
+ * so a name without it would collide with itself every week.
  * `competitions.slug` carries the week and is unique by construction, which is
- * exactly why the branch is named from the slug rather than from the project.
+ * why the branch is named from the slug rather than from the project.
  *
- * Note this differs from the design sketch, which abbreviated the project to
- * `sgf` in the team branch. Abbreviating means a second naming rule that
- * nothing derives and everything has to agree on; the full slug costs a longer
- * branch name and nothing else.
+ * The design sketch abbreviated the project to `sgf` in the team branch.
+ * Abbreviating means a second naming rule that nothing derives and everything
+ * has to agree on; the full slug costs a longer branch name and nothing else.
  */
 export function integrationBranch(competitionSlug: string): string {
   return `comp/${competitionSlug}`;
@@ -43,10 +42,9 @@ export function teamBranchPattern(competitionSlug: string): string {
 /**
  * The GitHub team name.
  *
- * GitHub derives a slug from the name by lowercasing and replacing runs of
- * non-alphanumerics with a single dash, so the name is chosen to survive that
- * transformation predictably — otherwise the API would have to be asked what
- * slug it picked before anything could reference the team.
+ * GitHub slugifies the name by lowercasing and replacing runs of
+ * non-alphanumerics with a single dash. The name is already in that form, so
+ * nothing has to ask the API which slug it picked before referencing the team.
  */
 export function githubTeamName(
   competitionSlug: string,
@@ -73,12 +71,12 @@ function slugSegment(value: string): string {
 /**
  * Whether a PR's base ref is this competition's integration branch.
  *
- * Two details the handler has to get right, and both are silent when wrong:
+ * Two details, both silent when wrong:
  *
  *   * **Match on the BASE ref, not the head branch prefix.** A team PR opened
  *     against `main` by mistake, or against last week's integration branch,
- *     has a perfectly valid `team/...` head and must not register as an entry.
- *     Checking the head alone accepts both.
+ *     has a valid `team/...` head and must not register as an entry. Checking
+ *     the head alone accepts both.
  *
  *   * **Exact, not prefix.** `comp/2026-fall/w02/study-group` is a prefix of
  *     `comp/2026-fall/w02/study-group-finder`, and a `startsWith` check would

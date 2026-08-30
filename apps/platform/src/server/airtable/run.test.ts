@@ -9,15 +9,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * The pass refuses to run against a base that does not match the registry.
  *
- * This is the guard the verifier was written for and never wired to. It
- * matters more than it looks: a registry ID that is not in the base is NOT an
- * error at write time. Airtable accepts the request, the value lands nowhere,
- * and the pass reports success — so the failure mode is a healthy-looking cron
- * quietly discarding data, which nothing downstream can detect.
+ * This is the guard the verifier was written for and never wired to. A
+ * registry ID that is not in the base is NOT an error at write time: Airtable
+ * accepts the request, the value lands nowhere, and the pass reports success.
+ * The failure mode is a healthy-looking cron discarding data, with no signal
+ * anywhere downstream.
  *
- * Everything that touches Postgres is mocked; the subject here is the ORDER of
- * operations, specifically that nothing is claimed or written before the schema
- * has been agreed.
+ * Everything that touches Postgres is mocked. The subject here is the ORDER of
+ * operations: nothing is claimed or written before the schema has been agreed.
  */
 
 const lease = vi.hoisted(() => ({
@@ -55,8 +54,8 @@ const writes = vi.hoisted(() => ({
 
 // `credentials.ts` reads `~/env`, which is not populated in the unit-test
 // environment, and reaches Vault through `~/server/db`. Every test here passes
-// its own client, so the whole module is off the path anyway -- mocking it is
-// what keeps this a unit test rather than a database one.
+// its own client, so the module is off the path anyway. Mocking it is what
+// keeps this a unit test rather than a database one.
 const credentials = vi.hoisted(() => {
   class AirtableNotConfiguredError extends Error {}
   return {
@@ -120,8 +119,8 @@ const { runAirtableSync } = await import("./run");
  *
  * Widened to `TableSpec` on the way in. `registry` is a const object whose
  * tables each carry their own field shape, so `Object.values` over it yields
- * `any` — and an `any` here would quietly defeat the point, since these
- * fixtures exist to be broken in one specific way each.
+ * `any`, and an `any` here would defeat the point: these fixtures exist to be
+ * broken in one specific way each.
  */
 function matchingSchema() {
   const specs = Object.values(registry as unknown as Record<string, TableSpec>);
@@ -132,14 +131,11 @@ function matchingSchema() {
         id: spec.id,
         name: spec.name,
         primaryFieldId: fields[0]!.id,
-        // A field that declares choices only "matches" the registry when the
-        // base carries the same ones — `verifyBase` compares choice names for
-        // exactly those fields. So the fixture has to mirror what the Meta API
-        // returns for a select, or every test built on "a base that matches"
-        // fails with `schema_invalid` the moment any field declares a list.
-        // Colour and choice id are deliberately absent: the check compares
-        // names only, and a fixture carrying more than the check reads would
-        // imply a stricter comparison than there is.
+        // `verifyBase` compares choice names for every field that declares
+        // them, so the fixture has to mirror what the Meta API returns for a
+        // select. Without that, each test built on "a base that matches" fails
+        // with `schema_invalid` the moment a field declares a list. Colour and
+        // choice id are left out because the check compares names only.
         fields: fields.map((f) => ({
           id: f.id,
           name: f.name,
@@ -328,13 +324,13 @@ describe("runAirtableSync with no token", () => {
   /**
    * A pass that cannot find `AIRTABLE_SYNC_PAT` is a REFUSAL, not a no-op.
    *
-   * This branch used to return in silence, and the silence is what let the
-   * cron run every fifteen minutes for days with nothing recorded anywhere.
-   * The argument for the silence was that an unconfigured install should not
-   * touch the state row — but that conflated "nobody has set this up" with
-   * "this was set up and the credential is gone", two states it could not then
-   * distinguish because an unset base id looked like a fresh clone. The base id
-   * is committed now, so the token is the only thing that can be missing.
+   * This branch used to return in silence, which let the cron run every
+   * fifteen minutes for days with nothing recorded anywhere. The argument for
+   * the silence was that an unconfigured install should not touch the state
+   * row, but that conflated "nobody has set this up" with "this was set up and
+   * the credential is gone". It could not tell them apart, because an unset
+   * base id looked like a fresh clone. The base id is committed now, so the
+   * token is the only thing that can be missing.
    */
   const unconfigured = () => {
     credentials.getAirtableClient.mockImplementation(() =>
@@ -363,8 +359,8 @@ describe("runAirtableSync with no token", () => {
       expect.stringMatching(/no sync token/),
       expect.arrayContaining([expect.stringMatching(/AIRTABLE_SYNC_PAT/)]),
       // The fix belongs in the alert: the token moved out of Vault, so
-      // "rotate it from the console" is no longer the answer and the path
-      // that replaced it is not guessable.
+      // "rotate it from the console" is no longer the answer and the path that
+      // replaced it is not guessable.
       expect.stringMatching(/env push/),
     );
   });
@@ -399,8 +395,8 @@ describe("runAirtableSync with no token", () => {
   it("records and alerts NOTHING for a manual run", async () => {
     // ⚠️ The exemption that keeps this from firing on a button press.
     // `requestAirtableSync` hands this report straight to the console, which
-    // says "not configured" on screen — an officer clicking twice must not
-    // post twice to the officers' channel.
+    // says "not configured" on screen. An officer clicking twice must not post
+    // twice to the officers' channel.
     unconfigured();
 
     const report = await runAirtableSync({ trigger: "manual" });

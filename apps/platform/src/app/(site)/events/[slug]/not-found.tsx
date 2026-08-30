@@ -6,10 +6,10 @@ import { ACTION_DARK_CLS } from "~/components/EventsSection/meetingView";
  * An unknown slug, rendered as the dialog's body.
  *
  * It lives in this segment rather than being left to the app-level 404 so the
- * miss stays *inside* the dialog: the calendar behind it never unmounts, and
- * the way out is one click back to it. The wording says what is actually known
- * — the link resolved to no live meeting — which covers both a typo and the
- * ordinary case of an officer archiving a night after the link was shared.
+ * miss stays inside the dialog: the calendar behind it never unmounts, and the
+ * way out is one click back to it. The wording claims only what is known, that
+ * the link resolved to no live meeting, which covers both a typo and an officer
+ * archiving a night after the link was shared.
  *
  * `scroll={false}` for the same reason every route-dialog link carries it:
  * dismissing a dialog should not jump the page underneath to the top.

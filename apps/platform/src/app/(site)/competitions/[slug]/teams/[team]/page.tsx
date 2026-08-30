@@ -16,10 +16,11 @@ import Callout from "~/ui/callout";
 import { ConsoleCard } from "~/ui/card";
 
 /**
- * "Public" in the comment below means public to members — the page exists so
- * somebody can find a team they are not on — and `expectSession()` is still the
- * door. What a crawler would get is the `/auth` redirect, and what it must
- * never get is the join code the loader reveals to a member.
+ * Noindex, because "public" below means public to members.
+ *
+ * The page exists so somebody can find a team they are not on, and
+ * `requireSession()` is still the door. A crawler gets the `/auth` redirect, and
+ * what it must never get is the join code the loader reveals to a member.
  */
 export const metadata: Metadata = {
   title: "Team | DevDogs",
@@ -27,11 +28,11 @@ export const metadata: Metadata = {
 };
 
 /**
- * /competitions/[slug]/teams/[team] — one team.
+ * /competitions/[slug]/teams/[team], one team.
  *
- * Public, on purpose: finding a team you are not on is the point of the list
- * this hangs off. What changes for a member is one thing — the join code —
- * and it is the loader that decides that, not this page. See below.
+ * Public on purpose: finding a team you are not on is the point of the list this
+ * hangs off. One thing changes for a member, the join code, and the loader
+ * decides that, not this page. See below.
  */
 
 export default async function TeamPage({
@@ -55,14 +56,13 @@ export default async function TeamPage({
   // no name of its own, and `TeamDetail` carries the slug rather than either.
   const competition = await getCompetitionBySlug(slug);
 
-  // `canUnlockByClosingPr` wants the raw columns; `TeamDetail` carries the
-  // reason the loader already derived from them. Passing nulls for the two it
-  // does not expose is sound only because `lockReason` ordered them first: a
-  // team whose reason came back "entry" is by construction neither manually
-  // locked nor past judging, so the reconstruction cannot disagree with the
-  // real row. It matters that this is computed rather than assumed — a merged
-  // entry also reads "entry", and closing a pull request does not bring that
-  // one back, so the notice must not offer it.
+  // `canUnlockByClosingPr` wants the raw columns; `TeamDetail` carries only the
+  // reason the loader derived from them. Passing null for the two it does not
+  // expose is sound because `lockReason` ordered them first: a reason of "entry"
+  // means the team is by construction neither manually locked nor past judging,
+  // so the reconstruction cannot disagree with the real row. Still computed
+  // rather than assumed: a merged entry also reads "entry", and closing a pull
+  // request does not bring that one back, so the notice must not offer it.
   const closingPrWouldUnlock =
     team.lock === "entry" &&
     canUnlockByClosingPr({
@@ -106,9 +106,9 @@ export default async function TeamPage({
                 className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm"
               >
                 <span className="font-semibold text-white">
-                  {/* A profile with no preferred name set is a real state — the
-                      field is optional — and showing a raw user id instead would
-                      be both uglier and more identifying than saying nothing. */}
+                  {/* The preferred name is optional, so no name set is a real
+                      state. A raw user id in its place would be uglier and more
+                      identifying than saying nothing. */}
                   {member.preferredName ?? "Member"}
                   {member.userId === userId && (
                     <span className="ml-2 text-xs font-normal text-mauve-400">
@@ -135,11 +135,11 @@ export default async function TeamPage({
 
       <Entry team={team} />
 
-      {/* The loader returns `joinCode: null` to everybody who is not on this
-          team, and that null IS the access control — there is no second way to
-          ask for it. Rendering the block only when it is non-null keeps that
-          the single decision rather than re-deciding "is this person a member"
-          here, where it could get the answer wrong. */}
+      {/* The loader returns `joinCode: null` to everybody not on this team, and
+          that null IS the access control; there is no second way to ask for it.
+          Rendering the block only when it is non-null keeps that one decision,
+          rather than re-deciding "is this person a member" here, where it could
+          get the answer wrong. */}
       {team.joinCode !== null && (
         <ConsoleCard.Root id="join-code">
           <ConsoleCard.Header title="Join Code" />
@@ -197,10 +197,9 @@ type TeamDetail = NonNullable<Awaited<ReturnType<typeof getTeamDetail>>>;
 /**
  * The entry, which is a pull request.
  *
- * Kept next to the roster rather than hidden behind the lock notice, because
- * the two are the same fact seen from opposite ends: the entry being open is
- * *why* the roster is closed, and a team deciding whether to close it needs
- * both in one glance.
+ * Next to the roster rather than behind the lock notice, because the two are the
+ * same fact from opposite ends: an open entry is *why* the roster is closed, and
+ * a team deciding whether to close it needs both in one glance.
  */
 function Entry({ team }: { team: TeamDetail }) {
   return (
@@ -250,8 +249,8 @@ function Entry({ team }: { team: TeamDetail }) {
 
         <p className="text-sm text-mauve-400">
           {/* Null is "not graded yet", not zero. Officers fill this in after the
-              fact, so an unscored team must not read as one that met nothing —
-              which is also why only the counted branch gets a badge. */}
+              fact, so an unscored team must not read as one that met nothing.
+              That is also why only the counted branch gets a badge. */}
           {team.requirementsMet === null ? (
             "Requirements have not been graded yet."
           ) : (
@@ -311,9 +310,9 @@ function JoinPanel({
     );
   }
 
-  // A locked roster already has the notice at the top of the page saying which
-  // of the three reasons it is and what, if anything, undoes it. Repeating it
-  // down here would say it worse.
+  // The notice at the top of the page already names which of the three lock
+  // reasons applies and what, if anything, undoes it. Repeating it here would
+  // say it worse.
   if (team.lock !== null) return null;
 
   return (
@@ -355,7 +354,7 @@ function Figure({
   );
 }
 
-/** 1st, 2nd, 3rd — including the 11th/12th/13th exceptions. */
+/** 1st, 2nd, 3rd, including the 11th/12th/13th exceptions. */
 function ordinal(n: number): string {
   const tens = n % 100;
   if (tens >= 11 && tens <= 13) return `${n}th`;

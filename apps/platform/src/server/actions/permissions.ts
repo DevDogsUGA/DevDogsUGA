@@ -29,8 +29,8 @@ type RoleRow = typeof roles.$inferSelect;
 
 /**
  * Every nullable-boolean column on `roles` is a rank-inherited permission
- * flag. `isLeadership`/`showOnProfile` are `notNull` and are excluded
- * automatically — see the comment above the `roles` table definition.
+ * flag. `isLeadership`/`showOnProfile` are `notNull`, so this excludes them
+ * automatically. See the comment above the `roles` table definition.
  */
 type PermissionKey = {
   [K in keyof RoleRow]: null extends RoleRow[K]
@@ -116,10 +116,10 @@ export async function getRootHolderId(): Promise<string | null> {
 }
 
 /**
- * Resolves all 7 permission flags for a user from the
+ * Resolves every permission flag for a user from the
  * `resolvedUserPermissions` materialized view. The view already handles the
- * Root role (all-true override) and rank-inherited permission resolution.
- * Users with no role assignments won't appear in the view and get all-false.
+ * Root role (all-true override) and rank inheritance. Users with no role
+ * assignments don't appear in the view and get all-false.
  */
 export async function resolveUserPermissions(
   userId: string,
@@ -261,10 +261,10 @@ export async function requirePermissionGuard(
 
 // ── Role CRUD ─────────────────────────────────────────────────────────────────
 //
-// None of the mutations below refresh `resolvedUserPermissions` by hand. The
-// view is maintained by triggers on `roles` and `userRoles` (migration
-// 20260728000000), so every writer gets it — including the ones that never go
-// through this file, like a dashboard edit or a restored dump.
+// None of the mutations below refresh `resolvedUserPermissions` by hand.
+// Triggers on `roles` and `userRoles` (migration 20260728000000) maintain the
+// view, so every writer gets it, including writers that never go through this
+// file such as a dashboard edit or a restored dump.
 
 export type CreateRoleInput = {
   title: string;
@@ -545,7 +545,6 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
 
-  // Search profiles by preferred name; get auth email via supabaseAdmin
   const profileRows = await db
     .select({
       userId: profiles.userId,
@@ -559,7 +558,7 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
 
   const userIds = profileRows.map((r) => r.userId);
 
-  // Fetch emails from auth.users via supabaseAdmin
+  // Emails live in auth.users, not `profiles`, so they need supabaseAdmin.
   const emailMap = new Map<string, string>();
   await Promise.all(
     userIds.map(async (id) => {
@@ -568,8 +567,8 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
     }),
   );
 
-  // Fetch assigned roles for these users (custom roles only — Member has no
-  // assignments and Root is shown separately via RootAccessCard)
+  // Custom roles only: Member has no assignments, and RootAccessCard shows
+  // Root separately.
   const roleRows = await db
     .select({
       userId: userRoles.userId,
@@ -604,7 +603,6 @@ export async function searchUsers(query: string): Promise<UserSearchResult[]> {
     rolesByUser.set(row.userId, list);
   }
 
-  // Batch-check which of these users have a linked Discord account
   const discordLinkedRows = await db
     .select({ userId: identitiesInAuth.userId })
     .from(identitiesInAuth)
@@ -693,7 +691,7 @@ export async function getHighestRankingRole(
 
 /**
  * Transfers the singleton Root role to another user. Only the current Root
- * holder may call this — there is no other path to assigning Root.
+ * holder may call this, and there is no other path to assigning Root.
  */
 export async function transferRootRole(targetUserId: string): Promise<void> {
   const callerId = await expectSession();

@@ -16,15 +16,14 @@ export const metadata: Metadata = {
   description:
     "DevDogs is a club at UGA devoted to bettering our community through open-source software.",
   applicationName: "DevDogs",
-  // Every relative URL anywhere in a `metadata` export resolves against this
-  // -- Open Graph and Twitter card images above all. Without it Next resolves
-  // them against a localhost guess, so a link shared anywhere off the machine
-  // that built it previews with no image at all, silently and only ever where
-  // nobody is looking. BASE_URL is the same value the OAuth callbacks are
-  // built from (server/auth/providers/*), which is what keeps the preview
-  // origin and the redirect origin from drifting apart; its schema defaults to
-  // http://localhost:3000 in development and is required in every deployed
-  // environment, so there is no second fallback to write here.
+  // Every relative URL in a `metadata` export resolves against this, Open
+  // Graph and Twitter card images above all. Without it Next resolves them
+  // against a localhost guess, so a link shared off the machine that built it
+  // previews with no image, silently. BASE_URL is the same value the OAuth
+  // callbacks are built from (server/auth/providers/*), which keeps the
+  // preview origin and the redirect origin from drifting apart. Its schema
+  // defaults to http://localhost:3000 in development and is required in every
+  // deployed environment, so there is no second fallback to write here.
   metadataBase: new URL(env.BASE_URL),
 };
 
@@ -40,15 +39,15 @@ const sans = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-sans" });
  *     Failed to find font override values for font `Alan Sans`
  *     Skipping generating a fallback font.
  *
- * That was not a cosmetic warning. With no fallback face, next/font emitted a
- * bare `--font-display: "Alan Sans"` -- and that declaration beats the @theme
- * one in globals.css (equal specificity, later stylesheet), so the generic
+ * That was not cosmetic. With no fallback face, next/font emitted a bare
+ * `--font-display: "Alan Sans"`, and that declaration beats the @theme one in
+ * globals.css (equal specificity, later stylesheet), so the generic
  * `sans-serif` written there never applied to anything. Until Alan Sans
  * finished loading, every display heading rendered in the browser's default
- * face -- Times New Roman in Chrome, a serif, at serif metrics -- and the page
- * reflowed when the real font swapped in: one layout shift at ~110ms, CLS
- * 0.404, deterministic at every throttling tier. Hanken Grotesk IS in the
- * table, which is why only these two fonts say anything below.
+ * face, Times New Roman in Chrome, a serif at serif metrics. The page reflowed
+ * when the real font swapped in: one layout shift at ~110ms, CLS 0.404,
+ * deterministic at every throttling tier. Hanken Grotesk IS in the table,
+ * which is why only these two fonts say anything below.
  *
  * Two settings do the silencing, one per bundler: an explicit `fallback` list
  * short-circuits Turbopack's metrics lookup before it can fail, while the
@@ -57,19 +56,19 @@ const sans = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-sans" });
  */
 
 /**
- * The metric-matched stand-in `next/font/google` would have written itself --
- * the same shape as the `Hanken Grotesk Fallback` face it does emit -- worked
- * out here the way `next/font/local` does it, with fontkit over the emitted
- * Alan Sans woff2: ascent 990, descent -310, lineGap 0, unitsPerEm 1000,
- * average advance width measured against Arial's.
+ * The metric-matched stand-in `next/font/google` would have written itself, in
+ * the same shape as the `Hanken Grotesk Fallback` face it does emit. Worked out
+ * here the way `next/font/local` does it, with fontkit over the emitted Alan
+ * Sans woff2: ascent 990, descent -310, lineGap 0, unitsPerEm 1000, average
+ * advance width measured against Arial's.
  *
  * `size-adjust` and the three overrides are a matched pair on purpose: each
  * override is a fraction of the *adjusted* em, so the two cancel and the line
  * box lands on Alan Sans' real 1.30em however the glyph widths fall out. That
  * height is the half that was moving the page. The widths are measured at the
  * variable font's default instance (300) while most headings are 700-800 and
- * run a few percent wider -- the same approximation Next's own table makes,
- * and it costs line wrapping, not line height.
+ * run a few percent wider, the same approximation Next's own table makes. It
+ * costs line wrapping, not line height.
  *
  * `src` lists Arial's metric clones as well as Arial: the overrides define the
  * line box whichever one resolves, so every extra name is another machine that
@@ -100,9 +99,9 @@ const display = Alan_Sans({
 // Cascadia Code hit the same missing-metrics warning and had the same bare
 // `--font-mono: "Cascadia Code"`. It gets the fallback list but deliberately
 // no override face: at 1900/2048 ascent and 480/2048 descent it already sits
-// within about a percent of Menlo, Consolas and Liberation Mono, and the face
-// Next would have reached for is a size-adjusted local(Arial) -- its table
-// only tells serif from everything-else -- which swaps a proportional font in
+// within about a percent of Menlo, Consolas and Liberation Mono. The face Next
+// would have reached for is a size-adjusted local(Arial), because its table
+// only tells serif from everything else, which swaps a proportional font in
 // for a monospace one and shifts more than the adjustment saves.
 const mono = Cascadia_Code({
   subsets: ["latin"],
@@ -137,8 +136,8 @@ export default function RootLayout({
       )}
       // How Next is told the page opted into smooth scrolling. A same-page hash
       // change keeps it; a route transition temporarily forces
-      // `scroll-behavior: auto`, so arriving on a new page — the footer's
-      // "/#projects", say — snaps rather than animating the whole way down.
+      // `scroll-behavior: auto`, so arriving on a new page, say through the
+      // footer's "/#projects", snaps rather than animating the whole way down.
       // Without the attribute Next skips that override and dev-warns.
       // https://nextjs.org/docs/messages/missing-data-scroll-behavior
       data-scroll-behavior="smooth"
@@ -152,7 +151,7 @@ export default function RootLayout({
 
             It lives here, not in AnnouncementBanner, because a <script>
             returned from a client component is only ever real in the server
-            HTML — on a client render React substitutes a <div> and warns. The
+            HTML. On a client render React substitutes a <div> and warns. The
             banner returns null on the console routes, so navigating back to a
             public page re-created it client-side every time. See
             ~/config/announcement. */}
@@ -179,7 +178,7 @@ export default function RootLayout({
 
             AnimationInit deliberately does NOT live here. It mutates the
             `class` attribute of [data-animate] elements, which React owns, so
-            it has to run after the page body has hydrated — see
+            it has to run after the page body has hydrated. See
             (site)/layout.tsx. */}
         <Suspense>
           <NavigationProgress />

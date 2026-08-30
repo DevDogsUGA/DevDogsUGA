@@ -100,14 +100,14 @@ export default function ConnectedAccountField({
            whenever the member backs out of leaving.
 
            `linkAction` redirects to the OAuth provider, so submitting it is
-           meant to be the last thing this document ever does — FormButton goes
-           pending and stays pending, which is right up until the member has
-           unsaved changes, gets the browser's "Leave site?" prompt, and
-           chooses to stay. The action has nowhere left to go and nothing
-           resolves it, so the button sat there spinning and disabled, and the
-           only way to link an account was a reload. Remounting throws the
-           stuck transition away; there is no in-progress user input here to
-           lose, just a hidden field and a button. */
+           meant to be the last thing this document ever does: FormButton goes
+           pending and stays pending. That is right until the member has unsaved
+           changes, gets the browser's "Leave site?" prompt, and chooses to
+           stay. The action then has nowhere to go and nothing resolves it, so
+           the button sat there spinning and disabled, and the only way to link
+           an account was a reload. Remounting throws the stuck transition away,
+           and there is no in-progress input here to lose, just a hidden field
+           and a button. */
         <form key={cancelledUnloads} className="contents" action={linkAction}>
           <input type="hidden" name="callbackPath" value="/account" />
           <p className="text-sm text-mauve-400">{notLinkedLabel}</p>

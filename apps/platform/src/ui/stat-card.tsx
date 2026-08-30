@@ -4,11 +4,11 @@ import Link from "next/link";
 import { blobsBackgroundImage, type BlobDef } from "./blob-gradient";
 
 // Both vertical edges of a card are the SAME zigzag, in phase, exactly
-// CHEVRON_DEPTH apart — which is what the -CHEVRON_DEPTH margin on the wrapper
-// below pays for: a card's right-hand teeth drop precisely into the next
-// card's left-hand valleys. The tiling is exact rather than overlapping, so
-// what shows at a seam is the two cards' borders meeting, not one card's teeth
-// painted over the other's fill.
+// CHEVRON_DEPTH apart. That is what the -CHEVRON_DEPTH margin on the wrapper
+// below pays for: a card's right-hand teeth drop into the next card's
+// left-hand valleys. The tiling is exact rather than overlapping, so a seam
+// shows the two cards' borders meeting, not one card's teeth painted over the
+// other's fill.
 const CHEVRON_DEPTH = 10;
 const CHEVRON_COUNT = 6;
 /** Vertices down one edge: every tooth contributes a peak and a valley. */
@@ -18,7 +18,7 @@ const BORDER_W = 5;
 
 /**
  * The card silhouette, pulled in by `inset` px on every side: `inset: 0` is
- * the outer shape, `inset: BORDER_W` is the fill, and the band between the two
+ * the outer shape, `inset: BORDER_W` is the fill, and the band between them
  * reads as the border.
  *
  * The zigzag edges inset horizontally, so the border measures exactly BORDER_W
@@ -60,10 +60,9 @@ const STAT_CLIP_INNER = chevronClip(BORDER_W);
 
 /**
  * Everything above the CTA steps back while the card is hovered, leaving the
- * one line that says what the click does as the only thing at full strength.
- * It waits out the lift on the arrow's delay and drops the moment the pointer
- * goes, the same way round, so the arrow and the copy read as a single move
- * rather than two effects that happen to overlap.
+ * line that says what the click does at full strength. It waits out the lift
+ * on the arrow's delay and drops the moment the pointer goes, so the arrow and
+ * the copy read as one move.
  */
 const RECEDE_ON_HOVER =
   "transition-opacity delay-0 group-hover:opacity-70 group-hover:delay-[450ms] motion-reduce:transition-none";
@@ -71,9 +70,9 @@ const RECEDE_ON_HOVER =
 /**
  * How strongly the section's wash reads on the card.
  *
- * The blobs are drawn for a near-white section base and land here on a 400-level
- * fill, so at full strength they wash it out rather than tint it. This is the
- * texture's share of the card, the way `opacity-15` was the dot grid's.
+ * The blobs are drawn for a near-white section base and land on a 400-level
+ * fill here, so at full strength they wash it out rather than tint it. This is
+ * the texture's share of the card, as `opacity-15` was the dot grid's.
  */
 const BLOB_OPACITY = 0.45;
 
@@ -82,11 +81,11 @@ interface Props {
   description: string;
   /** The section's unique "go read it" line, paired with an arrow icon. */
   cta: string;
-  /** Drawn above the copy, filled, in {@link textColor}. What makes the card. */
+  /** Drawn above the copy, filled, in {@link textColor}. */
   icon: ComponentType<{ className?: string; weight?: "fill" }>;
   /**
    * One literal Tailwind color class (e.g. `"text-rose-950"`), applied to the
-   * whole text block so the icon — which draws in `currentColor` — and every
+   * whole text block so the icon, which draws in `currentColor`, and every
    * line of copy pick up the same accent. Kept literal, not built from a hue
    * prop: Tailwind's scanner only generates classes it can see spelled out in
    * source, and `bg`/`darkBg` below follow the same rule.
@@ -95,20 +94,20 @@ interface Props {
   bg: string;
   darkBg: string;
   /**
-   * The blobs of the section {@link href} points at — the same array that
+   * The blobs of the section {@link href} points at. The same array that
    * section hands `SectionBackground`, so the card cannot drift from the place
-   * it is a door to.
+   * it opens.
    */
   blobs: BlobDef[];
   href: string;
   /**
    * One literal Tailwind `z-*` class (e.g. `"z-30"`), descending left to
-   * right. The edges tile exactly, so this decides nothing at rest — it is
-   * for the hover lift, which travels further than CHEVRON_DEPTH and so has
-   * to cover the card on its left. Kept as a class rather than an inline
-   * `zIndex` number so `hover:z-50` below, which has to outrank that
-   * left-hand card's *higher* resting z, wins on cascade order instead of
-   * losing to inline-style specificity.
+   * right. The edges tile exactly, so this decides nothing at rest. It is for
+   * the hover lift, which travels further than CHEVRON_DEPTH and so has to
+   * cover the card on its left. Kept as a class rather than an inline `zIndex`
+   * number so `hover:z-50` below, which has to outrank that left-hand card's
+   * *higher* resting z, wins on cascade order instead of losing to
+   * inline-style specificity.
    */
   zIndexClass: string;
 }
@@ -131,9 +130,9 @@ export default function StatCard({
       style={{ marginRight: `-${CHEVRON_DEPTH}px` }}
     >
       {/* Sits at the card's resting slot so lifting it on hover reveals a
-          block instead of a gap — a stand-in for `shadow-block-*`, which
-          `clip-path` would clip away before it ever pokes out past the
-          chevron's own edge. */}
+          block instead of a gap. A stand-in for `shadow-block-*`, which
+          `clip-path` would clip away before it pokes out past the chevron's
+          own edge. */}
       <div
         aria-hidden
         className="absolute inset-0 bg-mauve-800"
@@ -193,34 +192,31 @@ export default function StatCard({
 /**
  * The CTA arrow: the shaft *is* the element, and the head hangs off its end.
  *
- * The shaft's width is what animates, so the flex row above genuinely gets
- * wider and, being centred, pushes the label out to the left as the arrow
- * reaches right. A transform would paint longer without occupying more space
- * and the line would never move — and it cannot grow one axis of an arrowhead
- * without shearing it either, which is why the head stays a fixed glyph.
+ * The shaft's width animates, so the flex row above genuinely gets wider and,
+ * being centred, pushes the label left as the arrow reaches right. A transform
+ * would paint longer without occupying more space, so the line would never
+ * move; it also cannot grow one axis of an arrowhead without shearing it. The
+ * head stays a fixed glyph.
  *
- * The head is positioned rather than laid out beside the shaft. Set side by
- * side, the shaft stops at the head's *box*, and a head that narrows to a
- * point leaves the distance from that box edge to the tip reading as a gap in
- * the arrow. Overlaying the two instead — the box's right edge on the shaft's
- * end, the tip drawn on that edge — makes them one shape at any head size,
+ * The head is positioned, not laid out beside the shaft. Side by side, the
+ * shaft stops at the head's *box*, and the run from that box edge to a pointed
+ * tip reads as a gap in the arrow. Overlaid, with the tip on the box's right
+ * edge and that edge on the shaft's end, they are one shape at any head size,
  * with no offset to keep in sync.
  *
  * The head is Phosphor's own `ArrowRight` with its shaft cut out of the path,
- * so it belongs to the same set as the icons above it — and at `fill` weight,
- * matching the card's other icons, which is also what makes it sizeable. The
- * bold head is drawn as two arms of a fixed thickness, so matching those arms
- * to the shaft pins the head's height to seven times it: 17.5px against a
+ * at `fill` weight like the icons above it, which is also what makes it
+ * sizeable. A bold head is two arms of a fixed thickness, so matching those
+ * arms to the shaft pins the head's height to seven times it: 17.5px against a
  * 2.5px line, taller than the text beside it. A solid head has no arm to
- * match, so its size is free and set by what looks right next to the label.
+ * match, so its size is set by what looks right next to the label.
  *
  * Phosphor's glyph is one filled path whose bar runs out to the round cap at
- * the far end and back; removing that run and closing the outline straight up
+ * the far end and back. Removing that run and closing the outline straight up
  * the back at x=136 leaves the head alone, on its original coordinates. The
- * window onto it is the viewBox, ending at x=224 — the tip of the rounded
- * point — which puts the tip on the box's right edge and therefore exactly on
- * the shaft's end, with the head's back edge sitting over the shaft in the
- * same colour so the meeting point is invisible.
+ * viewBox ends at x=224, the tip of the rounded point, which puts the tip on
+ * the box's right edge and so on the shaft's end, with the head's back edge
+ * over the shaft in the same colour so the meeting point is invisible.
  */
 function CtaArrow() {
   return (

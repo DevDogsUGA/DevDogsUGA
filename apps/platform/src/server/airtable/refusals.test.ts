@@ -23,17 +23,16 @@ import {
 } from "@devdogsuga/airtable";
 
 /**
- * One test per refusal rule, because these are the rules that protect credit
- * people have already earned and arithmetic that has already been published.
+ * One test per refusal rule, because these rules protect credit people have
+ * already earned and arithmetic that has already been published.
  *
- * Each rule gets three cases and the third is the one that matters: the edit
- * is refused when it would destroy something, allowed when it would not, and
- * — the case that is easy to get wrong — allowed when the officer is simply
- * mid-edit and the field has not arrived yet.
+ * Each rule gets three cases and the third is the one that matters: refused
+ * when the edit would destroy something, allowed when it would not, and
+ * allowed when the officer is mid-edit and the field has not arrived yet.
  */
 
 /**
- * `checkMeeting` is the other class of rule — see the note at the top of
+ * `checkMeeting` is the other class of rule, see the note at the top of
  * `refusals.ts`. Nothing here protects credit already earned; these say only
  * that a value cannot go on a public page as written.
  *
@@ -43,7 +42,7 @@ import {
  * destroy `⚙️ Sync status` as a signal.
  *
  * The facts are built through the real parser rather than by hand, because
- * "present but the parser refused it" is the entire distinction under test and
+ * "present but the parser refused it" is the whole distinction under test and
  * asserting it against a hand-written null would assert nothing.
  */
 const summaryParse = meetingsSpec.fields.summary.parse;
@@ -179,9 +178,9 @@ describe("meeting RSVP", () => {
   it("canonicalizes a mixed-case host rather than refusing it", () => {
     // The host allowlist compares case-insensitively; the
     // `meetings_rsvpUrl_host` check constraint does not. Returning the
-    // officer's text verbatim would therefore let a value through the parser
-    // that the insert rejects — and a constraint violation inside the pull
-    // fails the whole sync pass, for every table, rather than one field.
+    // officer's text verbatim would let a value through the parser that the
+    // insert rejects, and a constraint violation inside the pull fails the
+    // whole sync pass, for every table, rather than one field.
     const facts = meetingFacts({
       rsvpUrl: "https://UGA.CampusLabs.com/engage/event/12345678",
     });
@@ -192,7 +191,7 @@ describe("meeting RSVP", () => {
 
   it("refuses a credentialled URL on an allowlisted host", () => {
     // `new URL()` parses this happily and reports the allowlisted hostname, so
-    // a host check alone would let it through — and it would then fail the
+    // a host check alone would let it through. It would then fail the
     // `meetings_rsvpUrl_host` constraint at insert and take the pass down.
     const result = checkMeeting(
       meetingFacts({ rsvpUrl: "https://someone@uga.campuslabs.com/engage" }),
@@ -203,7 +202,7 @@ describe("meeting RSVP", () => {
 
   it("refuses malformed garbage without throwing", () => {
     // `new URL()` throws on every one of these. `applyPull` runs the parser
-    // inside a bare `.map()`, so an exception here would not skip one row — it
+    // inside a bare `.map()`, so an exception here would not skip one row. It
     // would fail the entire sync pass, for every table.
     for (const garbage of [
       "not a url",
@@ -251,7 +250,7 @@ const CANCELLED = "2026-09-21T18:00:00.000Z";
  * The pair `meetings_cancellationReason_needs_cancellation` enforces.
  *
  * These are not cosmetic. The constraint rejects a reason with no date, and a
- * violation raised inside `pullMeetings` is not a refused field — it is an
+ * violation raised inside `pullMeetings` is not a refused field. It is an
  * exception mid-loop that takes the whole fifteen-minute pull down, for every
  * table, until somebody edits the cell that caused it. So the rule that keeps
  * the two in step is worth a test per ordering an officer can type them in.
@@ -403,7 +402,7 @@ describe("workshops with attendance", () => {
       projectCleared: false,
     });
 
-    // Two refusals, not one "this row is frozen" — an officer who changed two
+    // Two refusals, not one "this row is frozen". An officer who changed two
     // things needs to be told about both.
     expect(result.refusals).toHaveLength(2);
     expect(result.rejectedFields).toEqual(new Set(["meetingId", "projectId"]));
@@ -421,7 +420,7 @@ describe("workshops with attendance", () => {
 
   it("treats an unfilled link as no change, not as a clear", () => {
     // The mid-edit case. A pass landing between two keystrokes must not write
-    // a complaint into a row that will be complete thirty seconds later.
+    // a complaint into a row that is complete thirty seconds later.
     const result = checkWorkshop(WORKSHOP, {
       meetingId: null,
       projectId: null,
@@ -534,7 +533,7 @@ describe("judgingStartsAt", () => {
   });
 
   it("allows a first schedule on a competition that had none", () => {
-    // A null judgingStartsAt means "not scheduled yet", never "never" — so
+    // A null judgingStartsAt means "not scheduled yet", never "never", so
     // filling it in is not a move.
     const result = checkCompetition(
       { ...COMPETITION, currentJudgingStartsAt: null },
@@ -587,11 +586,10 @@ describe("describeIncompleteMeeting", () => {
    * a half-filled meeting and one the sync had never reached looked identical
    * in the grid: clean status, nothing on the site, no way to tell which.
    *
-   * These assertions are mostly about WORDING, which is unusual for a test and
-   * deliberate here. The reason the row was silent is a good one — officers
-   * fill fields one at a time and a pass landing between two keystrokes must
-   * not complain — and the only thing separating "a state" from "a complaint"
-   * is how it reads.
+   * These assertions are about WORDING, which is unusual for a test and
+   * deliberate. Officers fill fields one at a time, and a pass landing between
+   * two keystrokes must not complain, so the only thing separating "a state"
+   * from "a complaint" is how it reads.
    */
   const missingEnd = {
     startsAt: "2026-09-01T22:00",
@@ -616,8 +614,8 @@ describe("describeIncompleteMeeting", () => {
   });
 
   it("never asks for a name", () => {
-    // Most nights have none by design — the heading is derived from the
-    // workshops and the judging — so reporting its absence would flag the
+    // Most nights have none by design, since the heading is derived from the
+    // workshops and the judging, so reporting its absence would flag the
     // ordinary case as a fault, every week, in an officer's sync-status cell.
     const message = describeIncompleteMeeting(
       { startsAt: null, endsAt: null },
@@ -664,7 +662,7 @@ describe("describeIncompleteMeeting", () => {
  *
  * A missing summary rule costs a bad card. A missing rule here cost the whole
  * pass: the value reached Postgres, the constraint rejected the write, and the
- * exception unwound past every table left in the run — while `writeSyncStatus`
+ * exception unwound past every table left in the run, while `writeSyncStatus`
  * sat inside the same `try`, so nothing was reported anywhere. One officer
  * typing one character too many stopped the entire sync and left a clean grid
  * behind it.
@@ -676,7 +674,7 @@ describe("describeIncompleteMeeting", () => {
 describe("meeting name", () => {
   it("stays silent when no name is written", () => {
     // The ordinary case, and by a wide margin: most nights have no name at
-    // all — the heading is built from the workshops and the judging.
+    // all, since the heading is built from the workshops and the judging.
     expect(checkMeeting(meetingFacts({})).refusals).toEqual([]);
   });
 
@@ -740,7 +738,7 @@ describe("meeting attendance form", () => {
 
   it("refuses a credential-carrying url on the allowed host", () => {
     // `new URL` accepts this and the hostname passes, so only the shape check
-    // stops it — and `meetings_attendanceFormUrl_airtable` would reject it.
+    // stops it, and `meetings_attendanceFormUrl_airtable` would reject it.
     const facts = meetingFacts({
       attendanceForm: "https://someone@airtable.com/shrABC",
     });
@@ -757,8 +755,8 @@ describe("the cancellation pair reports both faults at once", () => {
     // ⚠️ The regression this exists to hold down. These two used to be an
     // `if`/`else if`, so an officer who typed 220 characters BEFORE setting
     // Cancelled was told only "set Cancelled and both appear within fifteen
-    // minutes" — untrue, and it cost them a second fifteen-minute round trip
-    // to learn about a fault that was knowable on the first pass.
+    // minutes". Untrue, and it cost them a second fifteen-minute round trip to
+    // learn about a fault that was knowable on the first pass.
     const long = "x".repeat(MEETING_CANCELLATION_REASON_MAX_LENGTH + 40);
 
     const result = checkMeeting(meetingFacts({ cancellationReason: long }));

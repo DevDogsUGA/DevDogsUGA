@@ -5,11 +5,10 @@ import { SettingsFormProvider } from "./settings-form";
 
 /**
  * The bar is written inside the account page's tree but has to paint over the
- * whole document, and the tree it is written in cannot give it that.
- * `<main className="@container">` and PageShell's `isolate` each create a
- * stacking context, which caps the bar's z-40 at "topmost inside PageShell" —
- * so <footer>, positioned and later in document order, painted over it and
- * swallowed the bar at the bottom of the page.
+ * whole document. `<main className="@container">` and PageShell's `isolate`
+ * each create a stacking context, which caps the bar's z-40 at "topmost inside
+ * PageShell", so <footer>, positioned and later in document order, painted over
+ * it and swallowed the bar at the bottom of the page.
  *
  * The portal is the fix, and it is invisible in the rendered markup: the bar
  * looks identical whether or not it escaped. This asserts the escape itself,

@@ -13,10 +13,10 @@ import { getBallotOptions, getEligibility } from "~/server/loaders/elections";
  * Casting a ballot.
  *
  * Every check the loader makes for display is made again here. That is not
- * duplication to be factored away — the loader decides what to SHOW and this
- * decides what to ACCEPT, and a caller who skips the page entirely has to hit
- * the same wall. `getEligibility` being shared is what keeps the two answers
- * identical rather than merely similar.
+ * duplication to factor away: the loader decides what to SHOW and this decides
+ * what to ACCEPT, and a caller who skips the page has to hit the same wall.
+ * Sharing `getEligibility` keeps the two answers identical, not merely
+ * similar.
  */
 
 export type CastBallotResult =
@@ -34,7 +34,7 @@ export type CastBallotError =
   | "untouched";
 
 /**
- * @param ranking Team ids, best first. Must be complete — see `validateBallot`.
+ * @param ranking Team ids, best first. Must be complete, see `validateBallot`.
  * @param touched Whether the voter reordered or explicitly confirmed the
  *   presented order. A ballot cast by pressing submit on an untouched form is
  *   rejected here as well as in the form, because the form is the half that
@@ -69,8 +69,8 @@ export async function castBallot(
         .values({
           electionId,
           // Denormalized so the composite foreign key can enforce that a team
-          // ballot names a team and an officer ballot does not — an invariant
-          // no application check can be trusted with, because it has to hold
+          // ballot names a team and an officer ballot does not. No application
+          // check can be trusted with that invariant, because it has to hold
           // for rows written by anything.
           electorate,
           teamId: eligibility.teamId,
@@ -91,7 +91,7 @@ export async function castBallot(
       );
     });
   } catch (error) {
-    // The uniqueness race. Two tabs, or a double submit — the second insert
+    // The uniqueness race. Two tabs, or a double submit: the second insert
     // loses to the partial unique index rather than to a check that read
     // before the first one committed.
     if (isDuplicateBallot(error)) return { ok: false, error: "already_voted" };
@@ -121,9 +121,9 @@ async function electorateOf(electionId: string): Promise<"teams" | "officers"> {
 }
 
 /**
- * Either unique index can fire here — one ballot per team per election, or one
- * officer ballot per election — so this matches on the SQLSTATE rather than on
- * a constraint name. Both mean the same sentence to the voter.
+ * Either unique index can fire here, one ballot per team per election or one
+ * officer ballot per election, so this matches on the SQLSTATE rather than on a
+ * constraint name. Both mean the same sentence to the voter.
  *
  * `sqlState` unwraps Drizzle's `DrizzleQueryError`; reading `.code` off the
  * thrown error directly is always `undefined`. See `teams/errors.ts`.

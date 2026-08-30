@@ -9,8 +9,8 @@ import type { TeamActionOutcome, TeamProblemCode } from "~/server/teams/errors";
  * Answer one invitation or one join request.
  *
  * `blocked` is the interesting prop. Acceptance is validated when it is
- * answered, never when it was created — between the two, the team can fill up,
- * the roster can lock, or the person can join somebody else — so a row that
+ * answered, never when it was created. Between the two, the team can fill up,
+ * the roster can lock, or the person can join somebody else, so a row that
  * looks answerable may not be. The page works out whether accepting can still
  * succeed and says why above this component; here that only removes the
  * button, so nobody presses something that was always going to fail.
@@ -46,9 +46,9 @@ export default function RequestActions({
     setProblem(null);
     startTransition(async () => {
       const result = await respond(requestId, accept);
-      // Settled in place rather than refreshed away. The row would vanish on a
-      // refresh — which is technically correct and reads as the click having
-      // done nothing, so the answer is stated where the buttons were.
+      // Settled in place rather than refreshed away. The row would vanish on
+      // a refresh, which is correct and reads as the click having done
+      // nothing, so the answer is stated where the buttons were.
       if (result.ok) setSettled(accept ? "accepted" : "declined");
       else setProblem(result.code);
     });

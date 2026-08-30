@@ -9,7 +9,7 @@ import { issueCredentials } from "~/server/sandbox/credentials";
  * the proxy URL to point a checkout at.
  *
  * This is the only endpoint that ever returns token plaintext, and it returns
- * it exactly once — nothing stores it, and a second call issues new tokens
+ * it exactly once. Nothing stores it, and a second call issues new tokens
  * rather than recovering the old ones. That is a deliberate cost: a lost token
  * is re-issued in one command, whereas a recoverable one is a secret sitting in
  * a database waiting to be read.

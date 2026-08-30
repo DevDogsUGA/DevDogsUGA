@@ -8,9 +8,8 @@ import { profileWithVerification, type profiles } from "~/server/db/schema";
 /**
  * The verification console's gate.
  *
- * Named for what it does. It was `getVerificationPageData`, which returned
- * nothing at all — a loader in name that loaded no data, so the page called it
- * for its side effect and read as though it were awaiting something.
+ * Was `getVerificationPageData`, which returned no data at all: the page
+ * called it for its side effect while reading as though it awaited something.
  */
 export const requireVerificationAccess = cache(async () => {
   await requirePermission(canUserManageVerification);
@@ -48,7 +47,7 @@ export const getVerificationStatus = cache(async (userId: string) => {
     .where(eq(profileWithVerification.userId, userId))
     .limit(1);
 
-  // Drizzle infers SQL expression columns as `{}` — cast explicitly to boolean.
+  // Drizzle infers SQL expression columns as `{}`, so cast to boolean.
   const verificationStatus: VerificationStatus = {
     hasPronouns: Boolean(row?.hasPronouns),
     hasGraduationDate: Boolean(row?.hasGraduationDate),
@@ -60,7 +59,7 @@ export const getVerificationStatus = cache(async (userId: string) => {
   return { verificationStatus, isVerified: Boolean(row?.verified) };
 });
 
-/** Same logic as the inline computation previously in `getProfilePageData`. */
+/** The member's Involvement Network full name, or null when they have none. */
 export function getInvolvementFullName(
   profile: Pick<
     typeof profiles.$inferSelect,

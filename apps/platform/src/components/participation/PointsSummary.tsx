@@ -1,13 +1,12 @@
 /**
  * Lifetime points on a profile, with the number that makes them readable.
  *
- * Both figures, never just the total. A points total is meaningless without the
- * count of competitions behind it — 1,700 is an excellent two-competition
- * record and a poor five-competition one — and, more importantly, the count is
- * the only thing that separates the two ways to hold zero: a member who has
- * never competed, and a member whose competitions have not been finalized yet.
- * `getMemberPoints` returns zero for both on purpose, so the distinction has to
- * be made here or not at all.
+ * Both figures, never just the total. A points total means little without the
+ * count of competitions behind it: 1,700 is an excellent two-competition record
+ * and a poor five-competition one. The count is also the only thing separating
+ * the two ways to hold zero, a member who has never competed and a member whose
+ * competitions have not been finalized yet. `getMemberPoints` returns zero for
+ * both on purpose, so the distinction has to be made here or not at all.
  *
  * Takes the loader's shape as props rather than a user id, matching
  * `StarTotalsRow`: a profile page already knows whose profile it is and reads

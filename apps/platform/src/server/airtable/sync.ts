@@ -38,7 +38,7 @@ import {
  *   * **Identity is the Airtable record id, never the name or slug.** Record
  *     ids survive renames, field edits, view re-sorts and moves between views.
  *     Matching on a name would break the first time somebody fixed a typo, and
- *     break in the worst way — a second row that looks right, while the credit
+ *     break in the worst way: a second row that looks right, while the credit
  *     already earned stays attached to the first.
  *
  *   * **An incomplete row is skipped, not refused.** Officers fill Airtable
@@ -81,17 +81,17 @@ function emptyOutcome(): PullOutcome {
  *
  * The pull had no `try` anywhere in it, so a constraint violation on a single
  * row unwound out of the loop, past the tables that had not run yet, and into
- * the one whole-pass catch in `run.ts` -- where it also skipped
- * `writeSyncStatus`. One officer typing one wrong character therefore stopped
- * meetings, workshops, competitions, attendance and both pushes, and reported
- * NOTHING: no refusal for any table reached Airtable, `syncedAt` stayed null,
- * and the grid looked clean. The failure was invisible from the only place
- * anyone would look.
+ * the one whole-pass catch in `run.ts`, which also skipped `writeSyncStatus`.
+ * One officer typing one wrong character therefore stopped meetings,
+ * workshops, competitions, attendance and both pushes, and reported NOTHING:
+ * no refusal for any table reached Airtable, `syncedAt` stayed null, and the
+ * grid looked clean. The failure was invisible from the only place anyone
+ * would look.
  *
  * Containing it here makes the blast radius one row. The other rows in the
  * pass apply, the tables downstream still run, and the row that failed says so
- * in its own status cell -- which is where the officer who edited it is
- * already looking.
+ * in its own status cell, which is where the officer who edited it is already
+ * looking.
  *
  * Deliberately NOT a substitute for a rule. A refusal explains what to change;
  * this can only say that the write was rejected. When this fires for a case
@@ -159,7 +159,7 @@ interface MeetingValues {
  *
  * `/events/directions` is a page, and meeting pages live at `/events/<slug>`.
  * A meeting named "Directions" would slug to `directions` and be shadowed by
- * that route forever — the URL would render the directions page, and the
+ * that route forever: the URL would render the directions page, and the
  * meeting would be unreachable at the only address anybody had for it. The
  * slug is derived once on insert and never recomputed, so this is not a
  * problem that fixes itself on the next pass.
@@ -170,27 +170,27 @@ interface MeetingValues {
 const RESERVED_MEETING_SLUGS = ["directions"] as const;
 
 /**
- * Meetings have no refusal rules of the destructive kind — nothing downstream
+ * Meetings have no refusal rules of the destructive kind: nothing downstream
  * of a meeting can be invalidated by renaming it or moving it an hour later,
  * because attendance hangs off the row rather than off its schedule.
  *
  * `checkMeeting` is a different class of rule and does not contradict that.
- * It refuses VALUES that cannot be published — a summary too long for the card
- * it is laid out in, an RSVP link pointing off the allowlisted host — rather
+ * It refuses VALUES that cannot be published, a summary too long for the card
+ * it is laid out in or an RSVP link pointing off the allowlisted host, rather
  * than edits that would destroy something already earned. See the note at the
  * top of `refusals.ts`.
  *
- * What it does have is a required shape: `name`, `startsAt`, `endsAt` and
- * `endsAt` are both NOT NULL, and `endsAt > startsAt` is a check
- * constraint. A half-filled row is skipped until it is whole — and SAYS SO in
- * `⚙️ Sync status`, which it did not used to do. Silence there meant a
- * half-filled row and a row the sync had never reached looked identical in the
- * grid: clean status, nothing on the site, no way to tell which.
+ * What it does have is a required shape: `startsAt` and `endsAt` are both NOT
+ * NULL, and `endsAt > startsAt` is a check constraint. A half-filled row is
+ * skipped until it is whole, and SAYS SO in `⚙️ Sync status`, which it did not
+ * used to do. Silence there meant a half-filled row and a row the sync had
+ * never reached looked identical in the grid: clean status, nothing on the
+ * site, no way to tell which.
  *
  * That is a state, not a refusal, and the wording carries the difference. The
- * reason for the old silence still holds — officers fill Airtable fields one
- * at a time, and a pass landing between two keystrokes must not COMPLAIN about
- * a field nobody has reached yet — but saying where the row stands is not
+ * reason for the old silence still holds, since officers fill Airtable fields
+ * one at a time and a pass landing between two keystrokes must not COMPLAIN
+ * about a field nobody has reached yet. But saying where the row stands is not
  * complaining, and `.status()` clears itself on the pass after the row becomes
  * whole.
  *
@@ -223,7 +223,7 @@ export async function pullMeetings(
 
   // `checkMeeting` needs the RAW cell alongside the parsed value, because the
   // parser returns null both for "the officer wrote nothing" and for "the
-  // officer wrote something unpublishable" — and only the second is a refusal.
+  // officer wrote something unpublishable", and only the second is a refusal.
   // Keyed by record id rather than zipped by index, so the correspondence is
   // stated rather than inherited from `applyPull` happening to use `.map()`.
   const rawByRecordId = new Map(records.map((r) => [r.id, r.fields]));
@@ -255,8 +255,8 @@ export async function pullMeetings(
     // `nameOverride` is deliberately NOT required, unlike every other field
     // that used to gate a meeting. Most nights have no name: a sprint Monday
     // derives its heading from its workshops and its judging, so demanding one
-    // would refuse the ordinary case. The slug no longer depends on it either
-    // — see below.
+    // would refuse the ordinary case. The slug no longer depends on it either;
+    // see below.
     const complete =
       v.startsAt !== null &&
       v.endsAt !== null &&
@@ -348,7 +348,7 @@ export async function pullMeetings(
     if (rules.rejectedFields.has("nameOverride")) delete values.nameOverride;
     if (rules.rejectedFields.has("attendanceFormUrl"))
       delete values.attendanceFormUrl;
-    // Only reachable while the night IS cancelled — the unpaired case clears
+    // Only reachable while the night IS cancelled; the unpaired case clears
     // the column instead, and says so above. Here the old reason stays up, for
     // the same reason the old summary does.
     if (rules.rejectedFields.has("cancellationReason"))
@@ -376,14 +376,14 @@ export async function pullMeetings(
     //
     // Derived from the meeting's DATE rather than its name, because the name
     // is now nullable and most nights have none. The date is the one thing
-    // every meeting has — `startsAt` is `not null` and `complete` above
-    // guarantees it here — and it makes a better URL besides: `/events/
-    // 2026-09-21` is legible, sortable, and stable under a rename that a
-    // name-derived slug would strand.
+    // every meeting has: `startsAt` is `not null` and `complete` above
+    // guarantees it here. It makes a better URL besides. `/events/2026-09-21`
+    // is legible, sortable, and stable under a rename that a name-derived slug
+    // would strand.
     //
     // `clubDateKey`, never `toISOString()`. The UTC date rolls at 20:00
     // Eastern under EDT and 19:00 under EST, so the naive version is right for
-    // the club's 18:00 slot and files a 20:00 social under the following day —
+    // the club's 18:00 slot and files a 20:00 social under the following day,
     // permanently, since this runs once.
     const slug = uniqueSlug(clubDateKey(new Date(v.startsAt!)), usedSlugs);
     usedSlugs.add(slug);
@@ -432,8 +432,8 @@ interface WorkshopValues {
  *
  * The link fields arrive as arrays of Airtable record ids, so both have to be
  * resolved through the maps the earlier passes built. An unresolvable link is
- * a skip rather than a refusal — it usually means the linked meeting was
- * itself incomplete this pass.
+ * a skip rather than a refusal: it usually means the linked meeting was itself
+ * incomplete this pass.
  */
 export async function pullWorkshops(
   records: AirtableRecord[],
@@ -520,8 +520,8 @@ export async function pullWorkshops(
         //
         // But only when the null MEANS cleared. Both parsers also return null
         // past their length caps, and writing that erased a published title
-        // because somebody added one character to it — no message anywhere,
-        // and the schedule silently falling back to the project name. The two
+        // because somebody added one character to it: no message anywhere, and
+        // the schedule silently falling back to the project name. The two
         // deletes below are what tell those apart.
         title: record.values.title,
         description: record.values.description,
@@ -540,16 +540,16 @@ export async function pullWorkshops(
       // first used to be checked.
       //
       // The officer must have actually CLEARED the cell. A link that is
-      // present and merely failed to resolve this pass — its project row
-      // skipped earlier in the same run, or Airtable returning the workshop
-      // mid-edit — arrives here as the identical null. Writing that would
+      // present and merely failed to resolve this pass, its project row
+      // skipped earlier in the same run or Airtable returning the workshop
+      // mid-edit, arrives here as the identical null. Writing that would
       // detach a workshop from its project because of an ordering accident.
       //
       // And nobody may have been credited for it yet. `checkWorkshop` reads a
       // null incoming value as "not a change", so the clear sailed past both
-      // of its rules and `rejectedFields` came back empty — while
-      // `memberStars` groups on `w."projectId"` and every member who attended
-      // lost the project off a star they had already earned. That case now
+      // of its rules and `rejectedFields` came back empty, while `memberStars`
+      // groups on `w."projectId"` and every member who attended lost the
+      // project off a star they had already earned. That case now
       // has a rule of its own (`workshop_project_cleared`), which is why this
       // condition can stay this simple: `rejectedFields` finally knows.
       if (
@@ -578,8 +578,8 @@ export async function pullWorkshops(
     }
 
     // Only the MEETING link is required. `projectId` became nullable with the
-    // events rework, so a career-readiness session -- which belongs to no
-    // codebase and never will -- can be created with its project cell empty
+    // events rework, so a career-readiness session, which belongs to no
+    // codebase and never will, can be created with its project cell empty
     // rather than sitting in Airtable being skipped every pass with no
     // explanation.
     if (meetingId === null) {
@@ -591,10 +591,10 @@ export async function pullWorkshops(
     // did not have it: `projectId` went straight in, so a workshop whose
     // Project link was filled in but whose project row happened to be skipped
     // earlier in this same pass was created project-less. That is the exact
-    // conflation the heavily-commented block above refuses to make — an empty
-    // cell and an unresolved link are not the same edit — and here it was
-    // permanent, because the next pass finds the row already inserted and
-    // treats its missing project as the officer's choice.
+    // conflation the block above refuses to make: an empty cell and an
+    // unresolved link are not the same edit. Here it was permanent, because
+    // the next pass finds the row already inserted and treats its missing
+    // project as the officer's choice.
     //
     // Skipped rather than inserted: the project resolves on the following
     // pass and the row is created whole, fifteen minutes later.
@@ -770,7 +770,7 @@ export async function pullCompetitions(
 
     // Hoisted to a const before the guard, rather than narrowed in place.
     // The insert below runs inside a callback now, and TypeScript discards a
-    // narrowing on a mutable property across a function boundary -- `v.slug`
+    // narrowing on a mutable property across a function boundary: `v.slug`
     // would be `string | null` again by the time it is read.
     const slug = v.slug;
     if (workshopId === null || slug === null) {

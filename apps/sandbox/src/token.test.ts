@@ -11,14 +11,14 @@ import {
  *
  * `hashToken` and the platform's `hashToken` must produce the SAME string or no
  * deployed token resolves. The platform pins external vectors for its copy
- * (apps/platform/src/server/sandbox/sandbox.test.ts) and says explicitly that
- * it does so to keep the two from drifting -- but this copy was unpinned, and
- * the security suite keys its resolve table by calling `hashToken` itself. Table
- * and lookup therefore moved together: switching to uppercase hex, base64url or
- * a salted digest kept every test green and would have failed every member with
- * "This member token is not valid for this environment."
+ * (apps/platform/src/server/sandbox/sandbox.test.ts) to keep the two from
+ * drifting. This copy was unpinned, and the security suite keys its resolve
+ * table by calling `hashToken` itself, so table and lookup moved together:
+ * switching to uppercase hex, base64url or a salted digest kept every test
+ * green and would have failed every member with "This member token is not valid
+ * for this environment."
  *
- * These vectors come from `node:crypto` rather than from this function.
+ * These vectors come from `node:crypto`, not from this function.
  */
 describe("hashToken", () => {
   it("matches published SHA-256 vectors", async () => {

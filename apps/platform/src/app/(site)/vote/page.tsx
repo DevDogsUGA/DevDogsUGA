@@ -10,8 +10,8 @@ import { getEligibility, getOpenElections } from "~/server/loaders/elections";
 
 /**
  * Behind `expectSession()`, and the list is filtered by what the viewer is
- * eligible to vote in — so there is no such thing as the anonymous version of
- * this page for a crawler to hold.
+ * eligible to vote in, so there is no anonymous version of this page for a
+ * crawler to hold.
  */
 export const metadata: Metadata = {
   title: "Vote | DevDogs",
@@ -19,15 +19,14 @@ export const metadata: Metadata = {
 };
 
 /**
- * /vote — everything open right now.
+ * /vote: everything open right now.
  *
  * Eligibility is resolved here rather than on the ballot page so the list can
  * say why a ballot is not the viewer's to cast. "Your team lead casts this
- * one" on the list is a different experience from clicking through and finding
- * a disabled form.
+ * one" on the list beats clicking through to find a disabled form.
  */
 export default async function VotePage() {
-  // Voting windows are wall-clock, so nothing here can be prerendered — an
+  // Voting windows are wall-clock, so nothing here can be prerendered. An
   // election that closed a minute ago must not still be listed as open.
   await connection();
 
@@ -83,9 +82,8 @@ export default async function VotePage() {
                   Cast ballot
                 </Link>
               ) : (
-                // The reason a ballot is not castable is a standing status, not
-                // prose — a chip reads as one at the same glance as the button
-                // it stands in for.
+                // Not castable is a standing status, not prose. A chip reads
+                // as one at the same glance as the button it stands in for.
                 <Badge variant="default">
                   {BLOCK_LABELS[eligibility.reason ?? "not_eligible"]}
                 </Badge>

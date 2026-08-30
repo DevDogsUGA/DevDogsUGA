@@ -61,9 +61,9 @@ export interface HConstraints {
 export interface SConstraints {
   /** undefined means no gap-day preference */
   gapDay?: DayOfWeek;
-  /** "HH:mm" — earliest acceptable start time */
+  /** "HH:mm", the earliest acceptable start time. */
   prefStartTime?: string;
-  /** "HH:mm" — latest acceptable end time for the last class */
+  /** "HH:mm", the latest acceptable end time for the last class. */
   prefEndTime?: string;
   showFilledClasses: boolean;
 }

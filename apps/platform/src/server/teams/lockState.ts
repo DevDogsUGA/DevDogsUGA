@@ -5,15 +5,15 @@ import { competitions, teams } from "~/server/db/schema";
 /**
  * Whether a team's roster is closed, in one place.
  *
- * The predicate is read by the join checks, the team page, the officer
- * console, and the UI that decides whether to show a "close your PR to add
- * someone" hint. Four copies of a three-term boolean is exactly the drift that
- * produces a screen saying a roster is open while the action rejects the join,
- * so it lives here as one definition with a SQL spelling beside it.
+ * The join checks, the team page, the officer console, and the UI behind the
+ * "close your PR to add someone" hint all read this predicate. Four copies of a
+ * three-term boolean drift apart, and the drift shows up as a screen saying a
+ * roster is open while the action rejects the join. So it lives here as one
+ * definition with a SQL spelling beside it.
  */
 
-/** The inputs the predicate needs. Deliberately not a full row — callers
- *  assemble this from a join, and narrowing it keeps the dependency honest. */
+/** The inputs the predicate needs. Not a full row: callers assemble this from
+ *  a join, and narrowing it keeps the dependency honest. */
 export interface LockInputs {
   submissionState: "open" | "closed" | "merged" | null;
   lockedManuallyAt: Date | string | null;
@@ -60,8 +60,8 @@ export function isLocked(team: LockInputs, now: Date = new Date()): boolean {
  * Whether closing the PR would reopen the roster.
  *
  * This is the "we need one more person" affordance: close the PR, add them,
- * reopen. It is deliberately bounded — once judging begins, closing no longer
- * unlocks, so there is no path to adding a ringer at the table.
+ * reopen. It is bounded: once judging begins, closing no longer unlocks, so
+ * there is no path to adding a ringer at the table.
  */
 export function canUnlockByClosingPr(
   team: LockInputs,
@@ -73,17 +73,17 @@ export function canUnlockByClosingPr(
 /**
  * The same predicate as SQL, for queries that must filter in the database.
  *
- * Requires `teams` joined to `competitions`. Kept adjacent to the TypeScript
+ * Requires `teams` joined to `competitions`. Kept next to the TypeScript
  * version above so a change to one is visibly a change to the other.
  *
  * CURRENTLY UNCALLED, and worth knowing why before reaching for it or deleting
- * it. The one query that should use it — `freezeParticipation` in
- * `judgingPass.ts` — instead spells its own filter out, and that filter is NOT
- * this predicate: it omits `lockedManuallyAt`, so the freeze runs against a
- * manually locked roster. Whether that is a bug or the intended narrowing has
- * not been decided. Until it is, this is the honest state: two spellings of
- * "locked" that nothing forces to agree, and the adjacency above is doing no
- * work because only one of them has a caller.
+ * it. `freezeParticipation` in `judgingPass.ts` is the one query that should
+ * use it, and instead spells out its own filter. That filter is NOT this
+ * predicate: it omits `lockedManuallyAt`, so the freeze runs against a manually
+ * locked roster. Whether that is a bug or the intended narrowing has not been
+ * decided. Until it is, there are two spellings of "locked" that nothing forces
+ * to agree, and the adjacency above does no work because only one has a
+ * caller.
  */
 export function lockedSql(): SQL {
   return or(

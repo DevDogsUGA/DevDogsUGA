@@ -6,19 +6,19 @@ type MarkSize = "sm" | "lg";
 
 interface MarkProps {
   icon: ComponentType<{ className?: string; weight?: "bold" }>;
-  /** The fill behind the glyph — a solid, saturated Tailwind background. */
+  /** The fill behind the glyph: a solid, saturated Tailwind background. */
   iconBg: string;
   /**
    * `sm` for a row in a menu or a select; `lg` for a tile, where the mark is
-   * the thing you look at and carries the block shadow the app switcher's
-   * icons do.
+   * the thing you look at and carries the same block shadow as the app
+   * switcher's icons.
    */
   size?: MarkSize;
 }
 
 /**
  * An app-icon-shaped mark. The rim and shadow stay black, as everywhere else
- * on the site — it is the surface beneath that lifts, to give them something
+ * on the site. The color goes on the surface beneath, so they have something
  * to read against.
  */
 export function Mark({ icon: Icon, iconBg, size = "sm" }: MarkProps) {
@@ -38,7 +38,7 @@ export function Mark({ icon: Icon, iconBg, size = "sm" }: MarkProps) {
 }
 
 /**
- * A documented project's mark — the same app icon that project wears in the
+ * A documented project's mark, the same app icon that project wears in the
  * fullscreen switcher, so it is recognisable wherever the docs list it.
  */
 export default function DocsProjectMark({

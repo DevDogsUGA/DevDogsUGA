@@ -5,8 +5,8 @@
  * makes a rule the client does not know about expensive: the save fans out,
  * some writes land, one comes back rejected, and the member is left staring at
  * a form that is half saved. So the client has to refuse exactly what the
- * server would refuse — no more, no less — and it can only do that if both
- * sides read their rules from the same file.
+ * server would refuse, no more and no less, which it can only do if both sides
+ * read their rules from the same file.
  *
  * The validators below return a human-readable message or `null`, which is
  * what the fields render on blur. The zod schemas at the bottom are built out
@@ -14,7 +14,7 @@
  * change a rule you change it here, once.
  *
  * Limits that mirror a database column are marked as such. Those are the ones
- * that used to bite — `profileLinks.title` is `varchar(64)` while the add-link
+ * that used to bite: `profileLinks.title` is `varchar(64)` while the add-link
  * action accepted 100 characters and the input let you type them, so a long
  * title passed validation and then failed at the insert.
  */
@@ -23,7 +23,7 @@ import * as z from "zod";
 import { normalizeShortText } from "~/lib/shortText";
 
 export const PROFILE_LIMITS = {
-  /** Stricter than the `varchar(255)` column on purpose — it is a display name. */
+  /** Stricter than the `varchar(255)` column on purpose. It is a display name. */
   preferredName: 32,
   /** `platform.profile.bio` is `varchar(127)`. */
   shortText: 127,
@@ -31,8 +31,8 @@ export const PROFILE_LIMITS = {
    * `platform.profile.roleDescription` is `varchar(512)`. It shared
    * `shortText` until 20260827000000 widened the column: it is the officer bio
    * the homepage Leadership section prints, and 127 characters could not hold
-   * one. Still deliberately far short of an essay -- it renders in a hover
-   * card, which stops being a card if it grows.
+   * one. Still far short of an essay, because it renders in a hover card, which
+   * stops being a card if it grows.
    */
   roleDescription: 512,
   /** Length of a single pronoun, e.g. "theirs". */
@@ -71,7 +71,7 @@ export function validatePreferredName(value: string): string | null {
 // Bio and role description
 //
 // Both are free text capped at the same column width. They are validated
-// against the NORMALIZED value — the one that actually gets written — so a
+// against the NORMALIZED value, the one that actually gets written, so a
 // trailing space or a blank line can never be the thing that trips the limit.
 // ---------------------------------------------------------------------------
 
@@ -160,9 +160,9 @@ export function validateGraduation(
 // ---------------------------------------------------------------------------
 
 /**
- * `new URL()` accepts every scheme there is — `javascript:`, `data:`, `mailto:`
- * — so parsing alone is not the check. The add-link action refuses anything
- * that is not http(s), and this has to refuse the same set.
+ * `new URL()` accepts every scheme there is, `javascript:` and `data:` and
+ * `mailto:` included, so parsing alone is not the check. The add-link action
+ * refuses anything that is not http(s), and this has to refuse the same set.
  */
 export function isValidLinkUrl(url: string): boolean {
   let parsed: URL;
@@ -208,8 +208,7 @@ export function validateLinks(
 //
 // Thin wrappers over the validators above: a `superRefine` carrying the
 // validator's own message, so there is exactly one statement of each rule. A
-// server action gets zod's parsing and error shape; the client gets a plain
-// string. Neither can drift from the other, because neither owns the rule.
+// server action gets zod's parsing and error shape; the client gets a string.
 // ---------------------------------------------------------------------------
 
 /** Turns a `(value) => string | null` validator into a zod refinement. */

@@ -23,9 +23,9 @@ function assertOk(
 /**
  * Copies a signed-out visitor's local data into their account on sign-in.
  *
- * Each key is cleared only once its own merge has actually succeeded — an RLS
- * denial or a dropped connection must never leave the data deleted locally and
- * absent server-side.
+ * Each key is cleared only once its own merge has succeeded. An RLS denial or a
+ * dropped connection must never leave the data deleted locally and absent
+ * server-side.
  */
 export async function runLocalDataMerge(userId: string): Promise<void> {
   const localPrefs = readLocal(LOCAL_KEYS.preferences, LocalPreferences);
@@ -170,7 +170,7 @@ async function mergeDraftCourses(
     const academicPeriod = Number(periodStr);
 
     // The table is unique on (userId, academicPeriod, courseId), so an upsert
-    // that ignores duplicates is safe to run twice — two tabs both handling
+    // that ignores duplicates is safe to run twice. Two tabs both handling
     // SIGNED_IN converge instead of racing.
     assertOk(
       await supabase.from("userPlanDraftCourses").upsert(

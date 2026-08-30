@@ -16,10 +16,10 @@ import { isUniqueViolation } from "~/server/teams/errors";
  * Provisioning and teardown, against a mock Management API.
  *
  * The Supabase-facing half has never run against the live API and cannot until
- * an OAuth grant exists, so the claims it makes are otherwise unchecked. Those
- * claims are all about ORDERING and REFUSAL — what must not be written yet, and
- * what must not be concluded from a transient error — which is exactly the kind
- * of thing typechecking cannot see and a happy-path test would not exercise.
+ * an OAuth grant exists, so its claims are otherwise unchecked. Those claims
+ * are all about ORDERING and REFUSAL: what must not be written yet, and what
+ * must not be concluded from a transient error. Typechecking cannot see either,
+ * and a happy-path test would not exercise them.
  *
  * The mock records every call, so "the Vault was written after the project came
  * up" is asserted against the real sequence rather than inferred.
@@ -124,8 +124,8 @@ vi.mock("~/server/supabase/oauth", () => ({
   accessTokenFor: vi.fn(() => Promise.resolve("fake-oauth-token")),
 }));
 
-// Vault calls are recorded so teardown ORDER can be asserted -- the whole point
-// of the teardown test is that credentials are revoked before secrets vanish.
+// Vault calls are recorded so teardown ORDER can be asserted: the teardown test
+// exists to prove credentials are revoked before secrets vanish.
 vi.mock("~/server/vault", () => ({
   storeVaultSecret: vi.fn((_s: string, name: string) => {
     calls.push({ fn: "storeVaultSecret", arg: name });
@@ -342,7 +342,7 @@ describe("tearDownEnvironment", () => {
     // Asserted through `isUniqueViolation` rather than on the message, because
     // Drizzle wraps driver errors: the thrown object says "Failed query: …" and
     // the PostgresError carrying `constraint_name` is on `.cause`. Matching the
-    // message would pass for ANY failed insert -- including a fixture mistake
+    // message would pass for ANY failed insert, including a fixture mistake
     // that never reached the constraint at all.
     const recycled = await db
       .execute(
@@ -441,7 +441,7 @@ describe("autoPausePass", () => {
     const result = await autoPausePass();
 
     // Pausing takes ~80s (measured), so a project mid-pause must not be paused
-    // again -- and the check that prevents it is a real getProject call.
+    // again. The check that prevents it is a real getProject call.
     expect(names()).toContain("getProject");
     expect(result.paused).toBe(0);
     expect(names()).not.toContain("pauseProject");
@@ -461,7 +461,7 @@ describe("autoPausePass", () => {
 
   it("leaves an environment alone while its competition is open", async () => {
     // judgingStartsAt is seven days out, so this competition is open and the
-    // team is attached -- pausing here would take a live event offline.
+    // team is attached. Pausing here would take a live event offline.
     await provisionEnvironment(IDS.team, IDS.lead, { organizationId: "org" });
     calls = [];
 

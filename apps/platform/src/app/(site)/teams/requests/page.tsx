@@ -20,9 +20,10 @@ import type { LockReason } from "~/server/teams/lockState";
 import Callout from "~/ui/callout";
 
 /**
- * A queue addressed to one person: `expectSession()` below redirects anonymous
- * visitors to `/auth`, and what a signed-in member sees is theirs alone. The
- * title is the label `config/nav.ts` gives it in the profile popover.
+ * A queue addressed to one person: `requireSession()` below redirects
+ * anonymous visitors to `/auth`, and what a signed-in member sees is theirs
+ * alone. The title is the label `config/nav.ts` gives it in the profile
+ * popover.
  */
 export const metadata: Metadata = {
   title: "Team requests | DevDogs",
@@ -30,19 +31,18 @@ export const metadata: Metadata = {
 };
 
 /**
- * /teams/requests — everything waiting on the viewer to decide.
+ * /teams/requests: everything waiting on the viewer to decide.
  *
  * Invitations addressed to them and join requests on the teams they lead are
  * two halves of one table and one screen, because they are one question: what
  * do I have to answer. Splitting them by direction would mean checking two
  * places to find out whether anything is outstanding.
  *
- * The work this page does beyond listing is deciding whether each row can
- * still be accepted. Acceptance is validated when it is answered, never when
- * it was created — the team can fill up, the roster can lock, or the person
- * can join somebody else in between — so a row can be dead on arrival, and
- * finding that out by pressing Accept and getting an error is the experience
- * this page exists to avoid.
+ * Beyond listing, it decides whether each row can still be accepted.
+ * Acceptance is validated when answered, never when created: the team can fill
+ * up, the roster can lock, or the person can join somebody else in between. A
+ * row can be dead on arrival, and this page exists so nobody finds that out by
+ * pressing Accept and getting an error.
  */
 
 interface Row {
@@ -56,7 +56,7 @@ interface Row {
 }
 
 export default async function TeamRequestsPage() {
-  // Whether a roster is locked is a comparison against now — the same reason
+  // Whether a roster is locked is a comparison against now, the same reason
   // the team pages opt out of prerendering.
   await connection();
 
@@ -68,14 +68,14 @@ export default async function TeamRequestsPage() {
       // The pending row carries a team id and a name but no team SLUG, so the
       // competition's list is also what makes each of these linkable. All
       // three loaders are `cache`d per argument, so several rows in one
-      // competition cost one query between them — and none of the three reads
+      // competition cost one query between them. None of the three reads
       // another's answer, so they go out together rather than in sequence.
       const [cards, competition, joinerTeam] = await Promise.all([
         getTeamsForCompetition(request.competitionSlug),
         getCompetitionBySlug(request.competitionSlug),
         // Asked about the person the row would ADD, not about the viewer. For
         // an invitation those are the same person; for a join request the
-        // difference is the whole check — the asker may have joined somebody
+        // difference is the whole check: the asker may have joined somebody
         // else while the lead was deciding.
         getMyTeam(request.competitionSlug, request.userId),
       ]);
@@ -111,8 +111,8 @@ export default async function TeamRequestsPage() {
               </h2>
               {/* Deliberately does not promise that accepting withdraws the
                   rest. The design says it should; `respondToMembership` marks
-                  only the row it answered, so the others stay pending and turn
-                  into the blocked rows below. Describing the intent rather
+                  only the row it answered, so the others stay pending and
+                  become the blocked rows below. Describing the intent rather
                   than the behaviour would leave a member waiting for teams to
                   hear something the platform never sent. */}
               <p className="max-w-prose px-1 text-sm text-mauve-400">
@@ -180,7 +180,7 @@ function RequestCard({ row }: { row: Row }) {
         </span>
         <span className="text-xs text-mauve-400">
           {/* Named, because "you were invited to a team" is not enough to
-              decide with — which competition it is for is half the question,
+              decide with. Which competition it is for is half the question,
               and a member may be looking at two weeks' worth at once. */}
           {competitionName} ·{" "}
           <time dateTime={request.createdAt.toISOString()}>
@@ -225,7 +225,7 @@ function RequestCard({ row }: { row: Row }) {
  * Why accepting would fail, in the words of whoever is reading it.
  *
  * Returns null when it would work. Everything checked here is checked again
- * inside the transaction — this is not the enforcement, it is the difference
+ * inside the transaction. This is not the enforcement, it is the difference
  * between being told and being surprised.
  *
  * One thing it cannot answer: whether the team is FULL. The cap is
@@ -261,8 +261,8 @@ function blockerFor({
   }
 
   if (card.lock !== null) {
-    // The lead gets the standard copy, which is written in the second person
-    // possessive — "your entry is open". An invitee is not on the team, so
+    // The lead gets the standard copy, written in the second person
+    // possessive ("your entry is open"). An invitee is not on the team, so
     // that reading is wrong for them, and the temporary case matters more to
     // them anyway: an entry lock is the one that can come back.
     return isInvite

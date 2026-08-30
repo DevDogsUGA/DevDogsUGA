@@ -16,8 +16,8 @@ export interface ResolveArgs {
 interface Props {
   reportId: string;
   /**
-   * Whether this report's content type supports quarantine — i.e. whether its
-   * table carries the foreign key to `platform."reportResolutions"`.
+   * Whether this report's content type supports quarantine, meaning its table
+   * carries the foreign key to `platform."reportResolutions"`.
    *
    * `apply_content_action` raises when it does not, aborting the whole
    * resolution, so hiding the option here keeps a moderator from losing their
@@ -30,10 +30,9 @@ interface Props {
    *
    * The console resolves reports on this instance through a server action; the
    * contributor tooling resolves them on a *different* instance through
-   * `platform.resolve_report()` from the browser. Same decision, same rules —
-   * both end up in the same SQL function — so this is a transport seam and not
-   * a second implementation. The previous attempt at this was a whole duplicate
-   * component, and it drifted.
+   * `platform.resolve_report()` from the browser. Both end up in the same SQL
+   * function, so this is a transport seam, not a second implementation. The
+   * previous attempt at this was a whole duplicate component, and it drifted.
    */
   onResolve?: (args: ResolveArgs) => void;
   onDismiss?: (note?: string) => void;
@@ -201,8 +200,8 @@ export default function ReportActionForm({
               )?.value;
               // An empty textarea is no note. Written as a comparison rather
               // than `note || undefined` because `??` is NOT the right fix
-              // there -- `""` is not nullish, so nullish coalescing would keep
-              // the empty string and send it as a real note.
+              // here: `""` is not nullish, so nullish coalescing would keep the
+              // empty string and send it as a real note.
               handleDismiss(note === "" ? undefined : note);
             }}
           >

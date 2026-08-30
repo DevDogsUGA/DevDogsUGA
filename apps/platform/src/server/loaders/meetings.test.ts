@@ -2,12 +2,11 @@ import { describe, expect, it } from "vitest";
 
 /**
  * Imported from `~/lib/meetingSegments`, NOT from the loader that re-exports
- * them. The rules are pure and live there precisely so nothing needs a
- * database to exercise them — the loader's first import is `~/server/db`,
- * which resolves `~/env` at module load, so reaching them through it used to
- * require stubbing the database module out of the graph just to run arithmetic
- * on dates. Importing the pure module directly removes the stub and the reason
- * for it. Anything that genuinely touches `db` belongs in `queries.db-test.ts`.
+ * them. The rules are pure and live there so nothing needs a database to
+ * exercise them. The loader's first import is `~/server/db`, which resolves
+ * `~/env` at module load, so reaching them through it used to require stubbing
+ * the database module out of the graph just to run arithmetic on dates.
+ * Anything that genuinely touches `db` belongs in `queries.db-test.ts`.
  */
 import {
   attendanceFormIsLive,
@@ -22,10 +21,10 @@ import {
  *
  * These decide the calendar's dot colour, the badge on every meeting card, and
  * the copy on the schedule list. They are derived from structure rather than
- * read from a column, which means the failure they are exposed to is not a bad
- * row — it is a rule quietly disagreeing with the roster lock or with the
- * design note about what a night *is*. That drift does not need Postgres to
- * happen, so it should not need Postgres to catch.
+ * read from a column, so the failure mode is not a bad row. It is a rule
+ * disagreeing with the roster lock or with the design note about what a night
+ * is. That drift does not need Postgres to happen, so it should not need
+ * Postgres to catch.
  *
  * The scenarios below are the timeline from the design note: a meeting judges
  * the competition that opened last week and opens the next one, and a
@@ -61,7 +60,7 @@ function segmentsOf(
 
 describe("resolveMeetingSegments", () => {
   it("falls back to `open` when nothing is scheduled", () => {
-    // Not an error state and not an empty one — a night with no workshops and
+    // Not an error state and not an empty one. A night with no workshops and
     // nothing to judge is a real meeting the club still holds.
     expect(segmentsOf()).toEqual(["open"]);
   });
@@ -133,9 +132,9 @@ describe("resolveMeetingSegments", () => {
 
   it("keeps the derived set when an officer also named the night", () => {
     // A social that also runs a workshop is a real night, and the workshop
-    // still has to reach the page. The kind is rendered beside these by the
-    // caller — it is no longer returned here, because it was a pass-through
-    // of a field every call site already held.
+    // still has to reach the page. The caller renders the kind beside these.
+    // It is no longer returned here, because it was a pass-through of a field
+    // every call site already held.
     const billing = resolveMeetingSegments(
       structure({ kind: "Social", workshops: [SUPPLEMENTARY] }),
     );
@@ -144,7 +143,7 @@ describe("resolveMeetingSegments", () => {
 
   it("suppresses `open` when an officer named the night", () => {
     // `open` means structural silence and `kind` is the officer's word for a
-    // night structure cannot describe — the same condition twice. Both
+    // night structure cannot describe, the same condition twice. Both
     // speaking would render "Unscheduled · Build Session", the fallback
     // contradicting the person who told us what the night was.
     expect(
@@ -188,7 +187,7 @@ describe("isJudgedDuring", () => {
   it("treats a null judging time as not scheduled, not as judged here", () => {
     // Null means "not yet on the calendar", never "never". Counting it as
     // judged at the labelled meeting would put a deadline on the page that
-    // nobody authored — and the roster lock, which reads the same datetime,
+    // nobody authored, and the roster lock, which reads the same datetime,
     // would disagree.
     expect(isJudgedDuring(MEETING, null)).toBe(false);
   });
@@ -242,7 +241,7 @@ describe("attendanceFormIsLive", () => {
     // other two were safe only because `getUpcomingMeetings` happens to filter
     // cancelled rows before they arrive. `getMeetingsInRange` and
     // `getMeetingBySlug` both keep them, so anything reading through those got
-    // a live check-in button for a night that was called off — and an
+    // a live check-in button for a night that was called off, and an
     // attendance row a member then has to argue their way back out of.
     expect(
       attendanceFormIsLive(

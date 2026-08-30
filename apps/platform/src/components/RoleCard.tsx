@@ -126,9 +126,7 @@ export default function RoleCard({
       style={{ ...style, borderLeftColor: accentColor }}
       className="rounded-sm border-2 border-l-4 border-mauve-600 bg-mauve-800 transition-opacity"
     >
-      {/* Header row */}
       <div className="flex items-center gap-3 px-4 py-3">
-        {/* Drag handle */}
         {editable && !isDragOverlay && (
           <button
             {...attributes}
@@ -144,14 +142,12 @@ export default function RoleCard({
           </button>
         )}
 
-        {/* Color dot */}
         <span
           className="h-3 w-3 shrink-0 rounded-full"
           style={{ backgroundColor: accentColor }}
           aria-hidden
         />
 
-        {/* Title + description */}
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm font-semibold text-white">
             {role.title}
@@ -163,7 +159,6 @@ export default function RoleCard({
           )}
         </div>
 
-        {/* Discord sync badge */}
         {role.discordRoleId !== null && (
           <span
             className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-xs text-indigo-300"
@@ -174,12 +169,10 @@ export default function RoleCard({
           </span>
         )}
 
-        {/* Rank badge */}
         <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/50">
           #{Math.round(role.rank)}
         </span>
 
-        {/* Edit button */}
         {editable && !isDragOverlay && (
           <button
             onClick={() => setExpanded((v) => !v)}
@@ -195,10 +188,8 @@ export default function RoleCard({
         )}
       </div>
 
-      {/* Edit panel */}
       {expanded && editable && (
         <div className="flex flex-col gap-4 border-t border-mauve-600 px-4 py-4">
-          {/* Title */}
           <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
             Title
             <input
@@ -209,7 +200,6 @@ export default function RoleCard({
             />
           </label>
 
-          {/* Description */}
           <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
             Description
             <textarea
@@ -221,7 +211,6 @@ export default function RoleCard({
             />
           </label>
 
-          {/* Color */}
           <label className="flex items-center gap-3 text-xs font-medium text-white/70">
             Color
             <input
@@ -233,7 +222,6 @@ export default function RoleCard({
             <span className="font-mono text-white/50">{color}</span>
           </label>
 
-          {/* Display */}
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-1 text-xs font-medium text-white/70">
               Display
@@ -258,7 +246,6 @@ export default function RoleCard({
             </label>
           </fieldset>
 
-          {/* Permissions */}
           <fieldset>
             <legend className="mb-2 text-xs font-medium text-white/70">
               Permissions
@@ -295,10 +282,8 @@ export default function RoleCard({
             </div>
           </fieldset>
 
-          {/* Discord sync */}
           <DiscordSyncSection role={role} callerCapability={callerCapability} />
 
-          {/* Actions */}
           <div className="flex items-center justify-between gap-3">
             <ConfirmDestructiveAction
               title="Delete role"

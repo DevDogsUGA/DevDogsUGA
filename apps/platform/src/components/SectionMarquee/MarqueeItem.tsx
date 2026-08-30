@@ -14,7 +14,7 @@ export type MarqueeIcon = ComponentType<{
  * One phrase in a scrolling text strip, followed by the strip's divider.
  *
  * The divider used to cycle through seven icons by item index, which made the
- * separator itself something to read — a rocket, then a flame, then a git
+ * separator itself something to read: a rocket, then a flame, then a git
  * branch, all at the same weight as the words around them. One glyph per strip
  * says "and then" and gets out of the way, and it is the strip's own mark, so
  * it can carry the section's subject the way the colour does.

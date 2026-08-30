@@ -2,7 +2,7 @@
  * Picking the right two keys out of `GET /v1/projects/{ref}/api-keys`.
  *
  * Pure, and separated from the HTTP client, because the rule it encodes is the
- * single most measured-and-counterintuitive fact in the whole integration.
+ * counterintuitive part of the integration.
  */
 
 export interface ApiKeyRow {
@@ -29,10 +29,10 @@ export class KeySelectionError extends Error {
 /**
  * Select on `type`, never on `name`.
  *
- * > **Measured:** a fresh project returns FOUR keys — `anon`, `service_role`,
- * > and _two_ both literally named `default`. The new publishable/secret pair is
- * > distinguishable only by its `type` field, so matching on the name either
- * > picks a deprecated key or is ambiguous depending on array order.
+ * > **Measured:** a fresh project returns FOUR keys: `anon`, `service_role`,
+ * > and _two_ both literally named `default`. The new publishable/secret pair
+ * > is distinguishable only by its `type` field, so matching on the name picks
+ * > a deprecated key or is ambiguous depending on array order.
  *
  * The legacy `anon`/`service_role` entries are deliberately not accepted as
  * fallbacks. They are documented as slated for removal in late 2026, and

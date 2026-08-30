@@ -10,11 +10,11 @@
  *
  * The *call* is not structural. Argument names here are a by-name contract with
  * a Postgres function signature, and a typo surfaces at runtime as PostgREST
- * failing to find an overload rather than as a type error — which is why this
- * package used to carry a suite of tests doing nothing but pinning those names.
- * Generated types make that a compile error instead, so the tests are gone and
- * the guarantee is stronger: `Database["platform"]["Functions"]` comes from the
- * catalog, so it cannot drift from the SQL the way a hand-written wrapper could.
+ * failing to find an overload rather than as a type error. This package used to
+ * carry a suite of tests doing nothing but pinning those names. Generated types
+ * make a typo a compile error instead, so the tests are gone and the guarantee
+ * is stronger: `Database["platform"]["Functions"]` comes from the catalog, so it
+ * cannot drift from the SQL the way a hand-written wrapper could.
  */
 import type { Database } from "@devdogsuga/supabase";
 
@@ -48,10 +48,10 @@ const PLATFORM = "platform";
  * thrown `Error` in TypeScript, which is what callers already handle.
  *
  * The schema hop is here rather than at each call site because a consumer app's
- * client defaults to *its own* schema — the whole point of the arrangement is
- * that an app talks to `platform` without adopting it.
+ * client defaults to *its own* schema. The point of the arrangement is that an
+ * app talks to `platform` without adopting it.
  *
- * Note the results are **arrays**: these functions are set-returning, so even a
+ * Results are **arrays**: these functions are set-returning, so even a
  * logically-single result arrives as a one-element list.
  */
 export async function callRpc<K extends keyof PlatformFunctions>(

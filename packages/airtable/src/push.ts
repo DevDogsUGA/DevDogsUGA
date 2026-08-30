@@ -27,7 +27,7 @@ export interface PushPlan {
  *
  * Airtable omits empty fields from responses entirely rather than returning
  * null, so `undefined` from a read and `null` from a projection describe the
- * same state and must compare equal — otherwise every record with one empty
+ * same state and must compare equal. Otherwise every record with one empty
  * field looks changed on every pass, forever.
  */
 function sameValue(a: AirtableValue, b: AirtableValue): boolean {
@@ -63,8 +63,8 @@ function isBlank(value: AirtableValue): boolean {
  * ## Never blanking
  *
  * A null projection omits the field from the payload rather than writing an
- * empty value. Null in Postgres means "we have not learned this yet" — never
- * "it is empty" — and the two are indistinguishable once written. This is what
+ * empty value. Null in Postgres means "we have not learned this yet", never
+ * "it is empty", and the two are indistinguishable once written. This is what
  * stops a member who is missing from one Involvement CSV from having their
  * dues record's name silently cleared.
  */
@@ -95,7 +95,7 @@ export function buildPush<TRow>(
     }
 
     const keyValue = projected.get(key.id);
-    // A row with no match key cannot be upserted — Airtable would create a
+    // A row with no match key cannot be upserted: Airtable would create a
     // duplicate on every pass. The caller filters these out (members without a
     // ugaEmail, for instance); this is the backstop.
     if (typeof keyValue !== "string" || keyValue === "") continue;
@@ -128,8 +128,7 @@ export function buildPush<TRow>(
 /**
  * The same projection, addressed by Airtable record id instead of match key.
  *
- * Which one to use is not a style choice — it follows from who authors the
- * table:
+ * Which one to use follows from who authors the table:
  *
  *   * The platform authors Members, Projects and Teams, so a row with no
  *     matching Airtable record SHOULD create one. That is `buildPush` +
@@ -138,9 +137,9 @@ export function buildPush<TRow>(
  *   * Airtable authors Meetings, Workshops and Competitions. The platform only
  *     writes derived values back onto rows an officer already created. Sending
  *     those through an upsert keyed on `⚙️ Platform ID` would CREATE a second
- *     Airtable record for every row whose Platform ID is still blank — which is
- *     every row an officer just added, i.e. exactly the rows a sync touches
- *     first. That is this function.
+ *     Airtable record for every row whose Platform ID is still blank, i.e.
+ *     every row an officer just added, exactly the rows a sync touches first.
+ *     That is this function.
  *
  * Same change detection and same never-blank rule, because they are properties
  * of the engine rather than of either call site.

@@ -13,9 +13,9 @@ export const CAN_MODERATE_BITS =
 
 /**
  * Maps a Discord role's permission bitfield onto the website's shared
- * permission flags. This is a one-time suggestion used when importing a
- * Discord role or previewing a new role's permissions — it has no bearing
- * on ongoing sync, which never touches permissions.
+ * permission flags. This is a one-time suggestion, used when importing a
+ * Discord role or previewing a new role's permissions. It has no bearing on
+ * ongoing sync, which never touches permissions.
  */
 export function decodeSharedPermissions(discordPerms: bigint): {
   canManageRoles: boolean;
@@ -36,7 +36,7 @@ export function decodeSharedPermissions(discordPerms: bigint): {
 /**
  * Encodes a DevDogs role's shared permission flags as a Discord permission
  * bitfield. Used only once, to seed a brand-new Discord role's initial
- * permissions when creating it from a DevDogs role — never revisited.
+ * permissions when creating it from a DevDogs role. Never revisited.
  */
 export function encodeSharedPermissions(role: {
   canManageRoles: boolean | null;

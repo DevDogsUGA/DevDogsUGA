@@ -10,8 +10,8 @@ const TARGET_SCHOOL = "University of Georgia";
 /**
  * One RMP request per instructor, spaced out to stay polite, does not fit in a
  * single Workers invocation: the full instructor table takes the better part of
- * an hour. The table is instead swept in daily slices — every instructor is
- * refreshed once per rotation — with a wall-clock budget as a backstop.
+ * an hour. The table is swept in daily slices instead, so every instructor is
+ * refreshed once per rotation, with a wall-clock budget as a backstop.
  */
 const ROTATION_DAYS = 30;
 const REQUEST_SPACING_MS = 250;
@@ -64,7 +64,7 @@ function pickMatch(
   if (exact.length === 1) return exact[0]!;
   if (exact.length > 1) return null;
 
-  // "Rob" vs "Robert", or a bare initial — accepted only when one candidate fits.
+  // "Rob" vs "Robert", or a bare initial. Accepted only when one candidate fits.
   const initial = firstName.trim()[0]!.toLowerCase();
   const byInitial = candidates.filter(
     (n) => n.firstName.trim()[0]?.toLowerCase() === initial,

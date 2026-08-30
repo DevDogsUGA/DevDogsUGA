@@ -12,10 +12,10 @@ import { supabaseAdmin } from "~/supabase/admin";
  * Authenticating `pnpm devtools --team` calls.
  *
  * The CLI has no cookies, so these routes take a bearer token rather than a
- * session. It is the member's own Supabase access token — verified against
- * GoTrue on every call rather than decoded locally, so that a member who has
- * been signed out or suspended stops being able to reach their team's
- * environment immediately rather than until their JWT happens to expire.
+ * session. It is the member's own Supabase access token, verified against
+ * GoTrue on every call rather than decoded locally, so a member who has been
+ * signed out or suspended loses their team's environment immediately rather
+ * than when their JWT happens to expire.
  */
 
 export type CliProblem =
@@ -59,8 +59,8 @@ export interface ResolvedTarget {
  * Resolve a team slug to the environment behind it, for this caller.
  *
  * Membership is checked here rather than in each route, because every `--team`
- * command needs the identical answer and a route that forgot would be a route
- * that let any signed-in member reset somebody else's database.
+ * command needs the identical answer and a route that forgot would let any
+ * signed-in member reset somebody else's database.
  */
 export async function resolveTeamTarget(
   request: Request,

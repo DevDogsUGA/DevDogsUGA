@@ -45,7 +45,7 @@ const HERO_BLOBS: BlobDef[] = [
 ];
 
 // Outline plus offset block. Both are drop-shadows, so both paint outside the
-// clipped shape's box — 2px each side, and --gem-offset down-and-right.
+// clipped shape's box: 2px each side, and --gem-offset down-and-right.
 // HeroPhotoFrame reserves exactly that much as padding.
 const GEM_BORDER_SHADOW = {
   filter: [
@@ -60,12 +60,12 @@ const GEM_BORDER_SHADOW = {
 /* The shadows above overhang the gem's box, and the frame reserves that
    overhang as padding rather than clipping it (`overflow-hidden`, as it used to
    below md) or letting it escape (`md:overflow-visible`, as above md). Clipping
-   cut the outline flat where the gem meets its box — which it does on all four
-   sides — and left the offset block showing only in the concave notches;
-   letting it escape put 22px of block through the container's 24px px-6 gutter.
+   cut the outline flat where the gem meets its box, which it does on all four
+   sides, and left the offset block showing only in the concave notches. Letting
+   it escape put 22px of block through the container's 24px px-6 gutter.
 
    `md:shrink` is the other half. The copy column is `flex-1`, so `min-width:
-   auto` floors it at the headline's min-content width — "SOFTWARE." set solid.
+   auto` floors it at the headline's min-content width, "SOFTWARE." set solid.
    Against a frame pinned to half the row that refused to shrink, that floor
    overran the container from md up to ~870px, and again right at lg where the
    headline steps up a size. The row spilled and the section's `overflow-hidden`
@@ -80,21 +80,21 @@ function HeroPhotoFrame() {
             fill
             alt="DevDogs team planning session"
             src={backendDiscussion}
-            // Worked back from the chain above rather than guessed: the row is
-            // `min(100vw - 96px, 1104px)` wide — the viewport less this
+            // Worked back from the chain above, not guessed. The row is
+            // `min(100vw - 96px, 1104px)` wide: the viewport less this
             // wrapper's `md:mx-6` and the container's `px-6`, capped by
-            // `max-w-6xl` — and the frame is `md:w-1/2` of it, so it pins at
-            // 552px from 1200px up (`md:max-w-xl` never binds; half of 1104 is
-            // already under 576). Off that comes the padding this frame
-            // reserves for the gem's shadow overhang: 24px above md, 16px
-            // below. Without this, `fill` defaults to `100vw` and a 4000px
-            // source ships at w=1920 for a box never wider than 528.
+            // `max-w-6xl`. The frame is `md:w-1/2` of that, so it pins at 552px
+            // from 1200px up (`md:max-w-xl` never binds; half of 1104 is under
+            // 576). Off that comes the padding this frame reserves for the
+            // gem's shadow overhang: 24px above md, 16px below. Without this,
+            // `fill` defaults to `100vw` and a 4000px source ships at w=1920
+            // for a box never wider than 528.
             sizes="(min-width: 1200px) 528px, (min-width: 768px) calc(50vw - 72px), calc(100vw - 96px)"
-            // The one image on the site that gets this. It is the largest
-            // above-the-fold element on desktop, so it is the LCP candidate,
-            // and the preload <link> beats the body parse to it. `preload`
-            // rather than `priority`: the latter is deprecated as of Next 16 —
-            // same effect, clearer name.
+            // The one image on the site that gets this: the largest
+            // above-the-fold element on desktop, so the LCP candidate, and the
+            // preload <link> beats the body parse to it. `preload` rather than
+            // `priority` because Next 16 deprecated the latter; same effect,
+            // clearer name.
             preload
             className="object-cover object-center"
           />
@@ -151,7 +151,7 @@ export default function HeroSection() {
               <div className="flex flex-wrap gap-3">
                 <LinkButton
                   href="/join"
-                  // Redirects off-site, not a page — never prefetch.
+                  // Redirects off-site, not a page, so never prefetch.
                   prefetch={false}
                   className="transition-lift hover:shadow-block-md flex items-center gap-2 rounded-sm border border-black bg-cyan-400 px-6 py-2.5 font-bold text-black shadow-none hover:-translate-x-1 hover:-translate-y-1 hover:shadow-amber-400"
                 >

@@ -16,12 +16,12 @@ export const PREFIXES: Record<ProxyScope, string> = {
 };
 
 /**
- * Mirroring upstream's `sb_publishable_` / `sb_secret_` is not cosmetic.
+ * The prefix every token of a given scope carries.
  *
- * It is what lets the planned CI secret scan on `team/**` branches pattern-match
- * at all, and what makes an accidental elevation visible in a diff: `dd_secret_`
- * appearing in a commit is legible to a human reviewer in a way an opaque
- * random string is not.
+ * Mirroring upstream's `sb_publishable_` / `sb_secret_` is not cosmetic. It is
+ * what lets the planned CI secret scan on `team/**` branches pattern-match at
+ * all, and what makes an accidental elevation visible in a diff: `dd_secret_`
+ * in a commit is legible to a reviewer in a way a random string is not.
  */
 export function tokenPrefix(scope: ProxyScope): string {
   return PREFIXES[scope];

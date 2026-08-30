@@ -8,49 +8,44 @@ import { useSettingsForm } from "~/ui/settings-form";
 /**
  * The page's one save affordance, fixed to the bottom of the viewport.
  *
- * It has to be fixed rather than sit at the end of the form: the account page
- * is taller than a viewport, and a member who edits their preferred name at
- * the top should not have to hunt for a button at the bottom to commit it.
+ * Fixed rather than at the end of the form because the account page is taller
+ * than a viewport, and someone who edits their preferred name at the top should
+ * not have to hunt for a button at the bottom to commit it.
  *
- * z-40 matches AnnouncementBanner — under the z-50 dialog and sheet overlays,
- * and under sonner's toasts. The two never share a page (`showsAnnouncement`
- * keeps the notice off `/account` and every other signed-in surface), and
+ * z-40 matches AnnouncementBanner, under the z-50 dialog and sheet overlays and
+ * under sonner's toasts. The two never share a page (`showsAnnouncement` keeps
+ * the notice off `/account` and every other signed-in page), and
  * `announcement.test.ts` pins that down so they cannot start to.
  *
  * Rendered through a portal to <body>, because z-40 alone was not enough to
- * clear the footer. The bar is written in the account page's tree, which puts
- * it under two elements that trap it:
+ * clear the footer. The bar is written in the account page's tree, under two
+ * elements that trap it:
  *
  *   <main className="@container relative">   <- container-type: inline-size
  *     <div className="relative isolate">     <- PageShell
  *
- * `isolation: isolate` creates a stacking context outright, and
- * `container-type` applies layout containment, which creates one too — so the
- * bar's z-40 was only ever ordering it against its siblings inside PageShell,
- * never against the page. <footer> is positioned and comes after <main> in
- * document order, so with both at the default z-index the footer painted last
- * and won. Layout containment also makes <main> the containing block for
- * fixed-position descendants, so "fixed to the viewport" was not strictly true
- * either.
+ * `isolation: isolate` creates a stacking context, and `container-type` applies
+ * layout containment, which creates one too, so the bar's z-40 only ordered it
+ * against its siblings inside PageShell. <footer> is positioned and comes after
+ * <main> in document order, so with both at the default z-index the footer
+ * painted last and won. Layout containment also makes <main> the containing
+ * block for fixed-position descendants, so "fixed to the viewport" was not true
+ * either. Portalling to <body> steps outside both, where AnnouncementBanner and
+ * AppSwitcher already sit for the same reason.
  *
- * Portalling to <body> steps outside both, which is exactly where
- * AnnouncementBanner and AppSwitcher already sit for the same reason: the site
- * layout mounts them last in the document, outside the flex column.
- *
- * Note the breakpoints below are `sm:`, not `@sm:`. Leaving <main> leaves its
+ * The breakpoints below are `sm:`, not `@sm:`. Leaving <main> leaves its
  * `@container` behind, and a container query with no container above it never
- * matches — the bar would have been pinned to its narrowest styles at every
- * width. Viewport breakpoints are the honest unit for something fixed to the
+ * matches, so the bar would have been pinned to its narrowest styles at every
+ * width. Viewport breakpoints are the right unit for something fixed to the
  * viewport anyway, which is why AnnouncementBanner uses them too. They also
- * land later: `@sm` was resolving against <main>, so it flipped at 384px where
- * `sm:` flips at 640px. All that rides on it is padding, the gap between the
- * two controls, and whether the validation warning shows its icon.
+ * land later: `@sm` resolved against <main>, so it flipped at 384px where `sm:`
+ * flips at 640px. All that rides on it is padding, the gap between the two
+ * controls, and whether the validation warning shows its icon.
  */
 
 /**
- * Static "⌘ S" / "Ctrl S" hint. It used to slide open, which meant a hint about
- * a keyboard shortcut animating every time the button re-rendered — motion
- * spent on the least urgent thing in the bar.
+ * Static "⌘ S" / "Ctrl S" hint. It used to slide open, so a keyboard shortcut
+ * hint animated every time the button re-rendered.
  */
 function ShortcutHint() {
   const [isMac] = useState(
@@ -96,11 +91,10 @@ export default function SettingsSaveBar() {
    * server render, so the portal cannot be created until it does, and the two
    * renders have to agree or hydration mismatches.
    *
-   * useSyncExternalStore is how React answers that without a `useState` +
-   * `useEffect` pair — a store that never changes, reading `false` on the
-   * server and `true` on the client. The pair would set state synchronously
-   * inside an effect, which lint rejects as a cascading render, and it is:
-   * every mount would render twice.
+   * useSyncExternalStore answers that without a `useState` + `useEffect` pair:
+   * a store that never changes, reading `false` on the server and `true` on the
+   * client. The pair would set state synchronously inside an effect, which lint
+   * rejects as a cascading render. Every mount would render twice.
    *
    * Rendering nothing before mount costs nothing here. The bar is only on
    * screen once a field is dirty, and a field only becomes dirty from a client
@@ -115,11 +109,10 @@ export default function SettingsSaveBar() {
   /**
    * Answer a swallowed link click.
    *
-   * Driven from JS rather than a CSS class because it has to be able to fire
-   * twice in a row — a member who clicks the same dead link again should get
-   * the same shake, and re-adding a class that is already there animates
-   * nothing. The Web Animations API restarts cleanly every call and needs no
-   * keyframes in the global stylesheet.
+   * Driven from JS rather than a CSS class because it has to fire twice in a
+   * row. Clicking the same dead link again should give the same shake, and
+   * re-adding a class that is already there animates nothing. The Web
+   * Animations API restarts on every call and needs no global keyframes.
    *
    * Skipped on the first render: `blockedAt` starts at 0 and nothing has been
    * blocked yet.
@@ -130,9 +123,9 @@ export default function SettingsSaveBar() {
     if (blockedAt === previousBlockedAt.current) return;
     previousBlockedAt.current = blockedAt;
 
-    // The shake says nothing to a screen reader, and a link that simply does
-    // not fire is the most confusing possible outcome there. Re-set on every
-    // block so a repeat click re-announces.
+    // The shake says nothing to a screen reader, and a link that does not fire
+    // is the worst outcome there. Re-set on every block so a repeat click
+    // re-announces.
     setBlockedMessage(
       `Navigation cancelled. Save or discard your ${dirtyCount === 1 ? "change" : "changes"} first.`,
     );
@@ -145,11 +138,11 @@ export default function SettingsSaveBar() {
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
-    // `transform` rather than the `translate` property: universally animatable,
+    // `transform` rather than the `translate` property: animatable everywhere,
     // and the outer wrapper owns the bar's own translate-y so there is nothing
     // here to fight over.
     //
-    // Reduced motion gets the same message without the movement — the edge
+    // Reduced motion gets the same message without the movement, the edge
     // flares instead. Deliberately NOT boxShadow, which would blow away the
     // card's drop shadow for the length of the animation and read as a flicker.
     card.animate(
@@ -197,32 +190,30 @@ export default function SettingsSaveBar() {
 
       {/* The surface deliberately does NOT match either thing behind it. The
           page is mauve-900 and the cards are mauve-950 inside a mauve-800
-          border, so a dark bar with a dim edge read as one more card that
-          happened to be stuck to the bottom of the window. Going lighter than
-          both — mauve-800 on a mauve-600 edge — is what makes it chrome
-          floating over the page rather than part of it, and the inset highlight
-          plus the deeper drop shadow sell the "floating" half of that. */}
+          border, so a dark bar with a dim edge read as one more card stuck to
+          the bottom of the window. Lighter than both, mauve-800 on a mauve-600
+          edge, reads as chrome over the page instead, and the inset highlight
+          plus the deeper drop shadow sell the floating. */}
       <div
         ref={cardRef}
         /* Narrower than PageShell's max-w-5xl on purpose. At the same width it
            lined up edge-to-edge with the cards above it and read as the last
            one in the stack; pulled in, it stops sharing their gridlines and
            sits over the page as its own object. The border thinned to 1px for
-           the same reason — at 2px the edge competed with the card borders
-           instead of just containing the bar. */
+           the same reason: at 2px the edge competed with the card borders
+           instead of containing the bar. */
         className="pointer-events-auto relative mx-auto flex w-full max-w-3xl items-center justify-between gap-x-3 rounded-lg border border-mauve-600 bg-mauve-800 px-3 py-3 shadow-2xl inset-ring-1 shadow-black/60 inset-ring-white/10 sm:gap-x-4 sm:px-4"
       >
-        {/* The shake is the whole feedback for a cancelled click, and it is
-            invisible to a screen reader. This is the same news, spoken. */}
+        {/* The shake is the whole feedback for a cancelled click. Same news,
+            spoken. */}
         <span aria-live="assertive" className="sr-only">
           {blockedMessage}
         </span>
 
-        {/* Leads the bar now. It is the reason the bar is on screen at all, so
-            it reads first and carries the weight — the two controls that follow
-            are what you do about it. `text-left` rather than centred: with the
-            actions gathered on the right there is no second edge to balance
-            against, and a centred count next to a left edge just looks adrift. */}
+        {/* Leads the bar, because it is the reason the bar is on screen at all.
+            The two controls that follow are what you do about it. `text-left`
+            rather than centred: with the actions gathered on the right there is
+            no second edge to balance against. */}
         <p
           role="status"
           className={`min-w-0 text-left text-sm leading-tight font-semibold ${
@@ -248,7 +239,7 @@ export default function SettingsSaveBar() {
         </p>
 
         {/* Both actions live on the right, discard nearest the text so Save
-            keeps the outer corner — the far edge is the easiest target in the
+            keeps the outer corner. The far edge is the easiest target in the
             bar and it should belong to the safe action, not the destructive
             one. */}
         <div className="flex shrink-0 items-center gap-4 sm:gap-6">
@@ -256,13 +247,12 @@ export default function SettingsSaveBar() {
             type="button"
             onClick={resetAll}
             disabled={isSaving}
-            /* A link, not a button: two buttons side by side asked to be read
-               as a pair of equal options, and discarding is not the equal of
-               saving. Demoting it to text puts Save alone at button weight.
-               Rose is what carries the warning now that the box is gone — this
-               throws away everything typed since the last save with no undo
-               behind it. Underline only on hover/focus, so it announces itself
-               as clickable at the moment it is about to be clicked. */
+            /* A link, not a button: two buttons side by side read as a pair of
+               equal options, and discarding is not the equal of saving.
+               Demoting it to text puts Save alone at button weight. Rose
+               carries the warning now that the box is gone, since this throws
+               away everything typed since the last save with no undo. Underline
+               only on hover/focus. */
             className="shrink-0 rounded-xs text-sm font-medium text-rose-400 underline-offset-4 transition outline-none hover:text-rose-300 hover:underline focus-visible:underline focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-800 disabled:pointer-events-none disabled:opacity-50"
           >
             Reset

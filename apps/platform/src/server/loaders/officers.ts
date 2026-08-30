@@ -10,10 +10,9 @@ import type { LeaderProfile } from "~/components/LeadershipSection/LeaderCluster
  *
  * Officers are members, so there is no officer table: this is
  * `platform.profile` joined to the roles its holder has been given, filtered
- * to the roles marked `isLeadership`. Being on the homepage is therefore the
- * same fact as holding a leadership role, rather than a second list that can
- * disagree with the first -- assigning the role puts someone here, and
- * removing it takes them off.
+ * to the roles marked `isLeadership`. Being on the homepage is the same fact
+ * as holding a leadership role, not a second list that can disagree with the
+ * first. Assigning the role puts someone here, removing it takes them off.
  *
  * `roles.rank` is the order. It is the same rank the console's role list is
  * dragged into, so the board is arranged where roles are already arranged, and
@@ -23,7 +22,7 @@ import type { LeaderProfile } from "~/components/LeadershipSection/LeaderCluster
  * `userRoles` denies client reads entirely. This is not a hole in either:
  * drizzle connects with `DB_URL` as the owner and is not subject to them, and
  * this function runs on the server inside the homepage's prerendered shell.
- * What reaches the browser is the projection below and nothing else -- notably
+ * What reaches the browser is the projection below and nothing else, notably
  * not `bio`, `legalFirstName`, `ugaEmail` or anything else on the row.
  *
  * `cacheLife` rather than a tag, for the reason `(site)/events/layout.tsx`
@@ -91,13 +90,13 @@ export async function getCurrentOfficers(): Promise<LeaderProfile[]> {
     slug: row.userId,
     name: row.name,
     titles: row.titles,
-    // The `avatars` bucket is keyed by the bare user id -- the same URL
-    // `useAvatarSrc` builds -- so an officer who changes their avatar from
-    // /account changes their card. Missing objects 404 and the card falls
-    // back to initials.
+    // The `avatars` bucket is keyed by the bare user id, the same URL
+    // `useAvatarSrc` builds, so an officer who changes their avatar from
+    // /account changes their card. Missing objects 404 and the card falls back
+    // to initials.
     imageSrc: `${env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${env.NEXT_PUBLIC_AVATARS_BUCKET}/${row.userId}`,
-    // Stored as an array of the words -- ["he","him"] -- and printed the way
-    // it is written. Null when unset, which is every officer today.
+    // Stored as an array of the words, ["he","him"], and printed the way it is
+    // written. Null when unset, which is every officer today.
     pronouns:
       row.pronouns && row.pronouns.length > 0 ? row.pronouns.join("/") : null,
     year: row.graduationYear === null ? null : String(row.graduationYear),

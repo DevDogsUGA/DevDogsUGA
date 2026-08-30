@@ -5,21 +5,19 @@ import Callout from "~/ui/callout";
 /**
  * The team actions' failures, said out loud.
  *
- * The conversion from a thrown `TeamActionError` into `{ ok: false, code }`
- * happens in `src/server/actions/teams.ts`, at the boundary where every action
- * is exported — see the note there for why it cannot be left to each page.
- * What is left here is the half that belongs to the UI: which sentence each
- * code becomes.
+ * `src/server/actions/teams.ts` converts a thrown `TeamActionError` into
+ * `{ ok: false, code }` at the boundary where every action is exported. See the
+ * note there for why it cannot be left to each page. What is left here is the
+ * half that belongs to the UI: which sentence each code becomes.
  */
 
 /**
  * One sentence per code.
  *
- * Typed as a total record over the union on purpose: adding a code to
+ * Typed as a total record over the union on purpose. Adding a code to
  * `TeamActionCode` breaks the build HERE rather than silently rendering an
  * empty paragraph to whoever hits the new failure first. That is not
- * hypothetical — `name_taken` was added to the union and this table is what
- * caught it.
+ * hypothetical. `name_taken` was added to the union and this table caught it.
  */
 export const TEAM_PROBLEM_MESSAGES: Record<TeamProblemCode, string> = {
   competition_closed:
@@ -50,12 +48,12 @@ export const TEAM_PROBLEM_MESSAGES: Record<TeamProblemCode, string> = {
  * The failure, said out loud.
  *
  * `github_not_linked` is the only one with somewhere to go, and it gets the
- * link: it is the single most likely first-join failure — nothing before this
- * point in the platform requires GitHub — and "link your account" without a
+ * link. It is the most likely first-join failure, since nothing before this
+ * point in the platform requires GitHub, and "link your account" without a
  * route to do it in is an instruction to go hunting.
  *
- * `alert` because every one of these is the answer to a button the reader just
- * pressed, which is exactly the case the flag is for.
+ * `alert` because every one of these answers a button the reader just pressed,
+ * which is exactly the case the flag is for.
  */
 export function TeamProblem({ code }: { code: TeamProblemCode }) {
   return (

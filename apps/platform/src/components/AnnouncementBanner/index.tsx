@@ -51,7 +51,7 @@ interface ToneClasses {
    * in a section, and outlined in the tone's accent rather than their black.
    * Those cards sit on light section backgrounds where a black block reads on
    * its own; over a near-black page black is no shadow at all, so the block
-   * has to be coloured — and a coloured block with no edge is a smear, which
+   * has to be coloured, and a coloured block with no edge is a smear, which
    * is what the black outline is for. It picks up where the card's own
    * `border-2 border-black` leaves off.
    */
@@ -83,7 +83,7 @@ const TONES: Record<AnnouncementTone, ToneClasses> = {
 };
 
 /**
- * The card's wash, in the tone's own colours — two steps up from the fill for
+ * The card's wash, in the tone's own colours: two steps up from the fill for
  * the light end, and the accent it already wears on the badge and the block
  * for the far end. Nothing new enters the palette.
  *
@@ -93,12 +93,12 @@ const TONES: Record<AnnouncementTone, ToneClasses> = {
  * not a blob anywhere. At a quarter of the width they leave base showing
  * between them, which is what makes them read as shapes.
  *
- * `ry` is well over 100 for the same reason it is on the homepage's blobs and
- * not for a different one: a percentage is of its own axis, and this card is
- * an order of magnitude wider than it is tall. 150% of ~60px is about 90px
- * against an `rx` of ~230px — an ellipse a little wider than it is tall, which
- * is the shape the sections use. Set `ry` near the `rx` number and the pool
- * flattens into the band this was trying to stop being.
+ * `ry` is well over 100 for the same reason it is on the homepage's blobs: a
+ * percentage is of its own axis, and this card is an order of magnitude wider
+ * than it is tall. 150% of ~60px is about 90px against an `rx` of ~230px, an
+ * ellipse a little wider than it is tall, which is the shape the sections use.
+ * Set `ry` near the `rx` number and the pool flattens into the band this was
+ * trying to stop being.
  */
 const TONE_BLOBS: Record<AnnouncementTone, BlobDef[]> = {
   urgent: [
@@ -157,8 +157,8 @@ const TONE_BLOBS: Record<AnnouncementTone, BlobDef[]> = {
 
 /**
  * Built at module load, not per render. The gradient is a fixed function of a
- * constant, and this component re-renders on every pointermove of a swipe —
- * rebuilding sixteen `color-mix` stops per frame, mid-gesture, beside the
+ * constant, and this component re-renders on every pointermove of a swipe.
+ * Rebuilding sixteen `color-mix` stops per frame, mid-gesture, beside the
  * scrim's `backdrop-filter`, is the one place on this card that cost has
  * already been measured and refused once.
  */
@@ -190,8 +190,8 @@ const DRAG_SLOP = 4;
  * you can see. 32 is the next rung on Phosphor's own ratio and lands on that
  * stem.
  *
- * The arms run 64 to 192 so the round caps put the extent at 48–208 — exactly
- * where Phosphor's X sits, so this drops in at the same optical size.
+ * The arms run 64 to 192 so the round caps put the extent at 48 to 208,
+ * exactly where Phosphor's X sits, so this drops in at the same optical size.
  */
 function DismissCross({ className }: { className?: string }) {
   return (
@@ -247,7 +247,7 @@ export default function AnnouncementBanner() {
   };
 
   /**
-   * Both ways out — pressing the tab and swiping down — run the exit first and
+   * Both ways out, pressing the tab and swiping down, run the exit first and
    * commit on a timer rather than on transitionend, which never fires if the
    * transition is interrupted or optimised away and would strand the notice
    * on screen for good.
@@ -276,7 +276,7 @@ export default function AnnouncementBanner() {
 
     // Capture only once the finger has actually travelled, never on the way
     // down. Capturing on pointerdown re-targets the click that follows, which
-    // would break tapping the tab and the action button — the two things most
+    // would break tapping the tab and the action button, the two things most
     // people touch this notice for.
     if (!start.captured) {
       if (Math.abs(distance) < DRAG_SLOP) return;
@@ -312,7 +312,7 @@ export default function AnnouncementBanner() {
           The side padding does not step down on a narrow screen the way the
           vertical padding does. The card's border is black and the page it
           floats over is near-black, so a thin gutter reads as no gutter at
-          all — the border runs into the background and the card loses its
+          all: the border runs into the background and the card loses its
           edge. The sides hold 1.5rem everywhere; only the top and bottom
           tighten on mobile, where vertical space is the scarce one.
 
@@ -321,7 +321,7 @@ export default function AnnouncementBanner() {
           box and leave the thing you actually see sitting half the offset
           left of centre, and on a narrow screen, where the card fills the
           gutter, the shadow would eat half the right-hand gap. Widening the
-          gutter on that side by exactly the offset squares both — the card
+          gutter on that side by exactly the offset squares both: the card
           shifts left by half of it when centred, and the shadow lands in the
           space that was added for it when it does not. Reading the token
           rather than a literal keeps it true if the offset changes. */}
@@ -333,7 +333,7 @@ export default function AnnouncementBanner() {
             and gives the card's black border something other than page text
             to sit on.
 
-            The blur has to fade out, and `backdrop-filter` takes no gradient —
+            The blur has to fade out, and `backdrop-filter` takes no gradient,
             so the gradient goes on a `mask-image` instead, which is applied to
             this element's composited result and therefore fades the blur and
             the darkening together, in one pass. Tailwind emits the -webkit-
@@ -341,12 +341,12 @@ export default function AnnouncementBanner() {
             covered without a second class.
 
             Height: it hangs 4/6 above the gutter's box, which is the same step
-            as the gutter's own padding — so the distance it reaches past the
+            as the gutter's own padding, so the distance it reaches past the
             top of the notice is the gap below it, mirrored. The extra also
             covers the tab, which hangs above the gutter's box and would
             otherwise sit on the scrim's hard edge.
 
-            No z-index: like the tab, it just takes its place in DOM order —
+            No z-index: like the tab, it just takes its place in DOM order,
             first child, so both the card and the tab paint over it. */}
         <div
           aria-hidden
@@ -386,7 +386,7 @@ export default function AnnouncementBanner() {
                 : "none",
           }}
           /* touch-none hands us the vertical drag instead of scrolling the
-             page with it — the same trade Radix Toast makes. It costs the
+             page with it, the same trade Radix Toast makes. It costs the
              ability to scroll by starting the drag on the notice itself. */
           className="animate-in slide-in-from-bottom-6 fade-in pointer-events-auto relative mx-auto max-w-4xl touch-none duration-500 motion-reduce:animate-none"
         >
@@ -396,9 +396,9 @@ export default function AnnouncementBanner() {
               with nothing to colour. Every other block-shadow call site on the
               site (EventCard, PartnersSection, LeaderCard) concatenates for
               the same reason. There is nothing here for a merge to resolve
-              anyway — no caller passes a className in. */}
+              anyway: no caller passes a className in. */}
           {/* The wash goes on the card's own background, over the fill the
-              tone's `card` class sets — no extra element and nothing to clip,
+              tone's `card` class sets: no extra element and nothing to clip,
               since a background is already cut to the border radius. */}
           <div
             style={{ backgroundImage: TONE_BACKGROUND[tone] }}
@@ -417,7 +417,7 @@ export default function AnnouncementBanner() {
                   `backdrop-filter`, and repainting it every frame forces that
                   1440x144 surface to re-filter behind it. The banner measured
                   19.5 FPS with the ping running and 21.7 with the blur taken
-                  away instead — the glass is the half worth keeping. */}
+                  away instead. The glass is the half worth keeping. */}
                 <span
                   aria-hidden
                   className={cn(
@@ -429,8 +429,8 @@ export default function AnnouncementBanner() {
 
               {/* max-w-prose caps the measure. The card runs to max-w-4xl so it
                 has room for the action button on the same row, but a line of
-                copy that wide is a chore to read — the text stops at a
-                comfortable measure and wraps, and the leftover width stays
+                copy that wide is a chore to read, so the text stops at a
+                comfortable measure and wraps and the leftover width stays
                 with the button. */}
               <p className="max-w-prose min-w-0 text-sm leading-snug font-semibold text-balance sm:text-base">
                 {message}
@@ -444,9 +444,9 @@ export default function AnnouncementBanner() {
                 : {})}
               /* The house lift, as every other button on the page wears it:
                  `shadow-block-md` against a `translate` of 0.5. This used to
-                 be 3px against 0.75, which is the geometrically exact version
-                 — the block grows by the same distance the button travels, so
-                 its far corner stays put — but it was the only one on the
+                 be 3px against 0.75, the geometrically exact version, where
+                 the block grows by the same distance the button travels so
+                 its far corner stays put. But it was the only one on the
                  site, and a notice that floats over the page is the last
                  place to run a second lift. */
               className={cn(
@@ -463,7 +463,7 @@ export default function AnnouncementBanner() {
             </Link>
           </div>
 
-          {/* The tab, which is also the dismiss control — the X lives here
+          {/* The tab, which is also the dismiss control. The X lives here
               rather than in the action row, so the notice has exactly one
               close affordance and the row is left to the one thing it wants
               you to do.
@@ -471,14 +471,14 @@ export default function AnnouncementBanner() {
               It comes AFTER the card in the DOM so its opaque fill
               paints over the card's top border, erasing exactly the span it
               covers, and `translate-y` drops it 2px into the card so that
-              erased band is precisely the border's width — no seam, no
+              erased band is precisely the border's width: no seam, no
               doubled line. `border-b-0` leaves its own outline open at the
               bottom, so the two borders read as one silhouette.
 
               Hovering lifts it back out: `translate-y-0` is the whole of the
-              gesture, and 2px is not a chosen distance but the only one
-              available. The tab is `bottom-full`, so at 0 its lower edge is
-              already flush with the card's — lift it any further and the 2px
+              gesture, and 2px is the only distance available rather than a
+              chosen one. The tab is `bottom-full`, so at 0 its lower edge is
+              already flush with the card's. Lift it any further and the 2px
               it was overlapping becomes a transparent gap with the scrim
               showing through, and the tab reads as detached rather than
               raised. Landing exactly on 0 hands the erased span back to the
@@ -487,8 +487,8 @@ export default function AnnouncementBanner() {
 
               Straight up, with no sideways component and no shadow growing
               under it, unlike the buttons inside the card. Those two go
-              together — the diagonal exists to uncover a block — and this is
-              a tab hinged on an edge, which only has one direction to go.
+              together because the diagonal exists to uncover a block, and this
+              is a tab hinged on an edge with one direction to go.
 
               No block shadow here on purpose: the card's falls down and to the
               right, away from the tab, while a shadow on the tab itself would
@@ -497,7 +497,7 @@ export default function AnnouncementBanner() {
             type="button"
             onClick={startDismiss}
             /* The eyebrow is inside the control, so the label has to carry
-               both — "Now open, button" would say nothing about what pressing
+               both. "Now open, button" would say nothing about what pressing
                it does, and a bare "Dismiss announcement" would drop the
                eyebrow from the accessible name entirely. */
             aria-label={`${eyebrow} — dismiss announcement`}
@@ -508,7 +508,7 @@ export default function AnnouncementBanner() {
             )}
           >
             {/* No hover of its own. The whole tab is the close control, so the
-                feedback belongs to the whole tab — `chipHover` darkens the
+                feedback belongs to the whole tab: `chipHover` darkens the
                 fill under both the cross and the label together, and singling
                 the cross out for an animation implied it was the only part
                 worth aiming at. */}

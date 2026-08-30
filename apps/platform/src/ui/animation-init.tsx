@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 
 /**
  * Wires up IntersectionObserver for all [data-animate] elements.
- * Elements with [data-animate-stagger] have their [data-animate] children animated
- * in sequentially with an 80ms stagger between each.
+ * Elements with [data-animate-stagger] animate their [data-animate] children in
+ * sequence, 80ms apart.
  *
  * Registration is driven by a MutationObserver rather than a single pass at
  * mount. That is not belt-and-braces: `[data-animate]` starts at `opacity: 0`
@@ -17,10 +17,10 @@ import { usePathname } from "next/navigation";
  * A one-shot `querySelectorAll` made that outcome a race. This component sits
  * in the root layout inside its own <Suspense> (it reads `usePathname`, which
  * Cache Components treats as dynamic), so it hydrates independently of the page
- * body — and under PPR the body arrives as streamed dynamic holes. Anything
- * that landed after this effect ran, or that React re-created afterwards on a
- * route refresh, was never observed and stayed blank. Watching for nodes
- * instead of sampling them once removes the ordering dependency entirely.
+ * body. Under PPR the body arrives as streamed dynamic holes. Anything that
+ * landed after this effect ran, or that React re-created afterwards on a route
+ * refresh, was never observed and stayed blank. Watching for nodes instead of
+ * sampling them once removes the ordering dependency.
  */
 export default function AnimationInit() {
   const pathname = usePathname();
@@ -100,14 +100,14 @@ export default function AnimationInit() {
     });
 
     // Scoped to the page-content landmark rather than `document.body`. Watching
-    // the body meant every DOM mutation anywhere in the document paid this
-    // callback -- toasts, Radix portals, the nav's dropdowns, the announcement
-    // banner, every dialog that opens and closes -- when `[data-animate]` only
-    // ever lives inside the page content. `#main-content` is the wrapper
+    // the body meant every DOM mutation in the document paid this callback:
+    // toasts, Radix portals, the nav's dropdowns, the announcement banner,
+    // every dialog that opens and closes, when `[data-animate]` only ever lives
+    // inside the page content. `#main-content` is the wrapper that
     // `(site)/layout.tsx` puts around `children`, and it is the same node the
     // page streams into, so the race this observer exists to close is still
     // covered. Falling back to the body keeps behaviour correct on any route
-    // that does not render that landmark.
+    // without that landmark.
     const watchRoot = document.getElementById("main-content") ?? document.body;
     mutations.observe(watchRoot, { childList: true, subtree: true });
 

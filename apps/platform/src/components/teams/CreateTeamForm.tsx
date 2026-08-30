@@ -9,10 +9,9 @@ import type { TeamActionOutcome, TeamProblemCode } from "~/server/teams/errors";
 /**
  * Make a team, and lead it.
  *
- * The only field is a name. Everything else about a new team — its join code,
- * its GitHub team, its branch, the creator's membership as lead — is decided
- * by `createTeam`, and asking about any of it here would be asking a question
- * whose answer the member cannot change.
+ * The only field is a name. `createTeam` decides the rest: the join code, the
+ * GitHub team, the branch, the creator's membership as lead. Asking about any
+ * of it here would be asking a question whose answer the member cannot change.
  */
 export default function CreateTeamForm({
   competitionId,

@@ -51,16 +51,13 @@ export default function AddLinkInput({
    * `has-[input:disabled]:`, not the blanket `has-disabled:` this used to
    * carry.
    *
-   * The Add button lives in the bottom row, and it is disabled whenever the
-   * URL is not yet usable — which includes the empty box you are handed on
-   * arrival. `has-disabled:` matches any disabled descendant, so that button
-   * dimmed the field and, worse, took `pointer-events-none` with it: the URL
-   * input could not be clicked into, so no URL could be typed, so the button
-   * stayed disabled. The field read as disabled because every part of it that
-   * says "disabled" was on.
-   *
-   * Keying on a disabled *input* instead says what was always meant — the
-   * field is off when its inputs are off, which is the `disabled` prop.
+   * The Add button in the bottom row is disabled whenever the URL is not yet
+   * usable, including the empty box you are handed on arrival.
+   * `has-disabled:` matches any disabled descendant, so that button dimmed the
+   * field and took `pointer-events-none` with it: the URL input could not be
+   * clicked into, so no URL could be typed, so the button stayed disabled.
+   * Keying on a disabled *input* means the field is off when its inputs are
+   * off, which is the `disabled` prop.
    */
   const rowBase =
     "flex items-center bg-mauve-800 transition-shadow focus-within:inset-shadow-sm hover:inset-shadow-sm has-[input:disabled]:bg-mauve-900/50 has-[input:disabled]:pointer-events-none";
@@ -146,9 +143,9 @@ export default function AddLinkInput({
           className={`${inputBase} font-mono`}
         />
 
-        {/* Stages the link into the list. It is not a save — the page's save
-            bar is still the only thing that writes — so it reads "Add", and it
-            collapses to nothing until the URL is one we can actually use. */}
+        {/* Stages the link into the list. The page's save bar is still the only
+            thing that writes, so this reads "Add". It collapses to nothing
+            until the URL is one we can use. */}
         <span
           className={`grid shrink-0 overflow-hidden transition-[grid-template-columns] duration-200 ease-in-out ${
             canSubmit ? "grid-cols-[1fr]" : "grid-cols-[0fr]"

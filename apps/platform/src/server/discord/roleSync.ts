@@ -19,7 +19,7 @@ import { roles, userRoles } from "~/server/db/schema";
 import { identitiesInAuth } from "~/supabase/drizzle/schema";
 import type { CreateRoleInput } from "~/server/actions/permissions";
 
-/** Fields needed by `importRoleFromDiscord` — `title` and `color` come from the live Discord role. */
+/** Fields needed by `importRoleFromDiscord`. `title` and `color` come from the live Discord role. */
 export type ImportRoleInput = Omit<CreateRoleInput, "title" | "color">;
 
 export type ImportableDiscordRole = {
@@ -89,7 +89,7 @@ export async function pullRoleFromDiscord(
 /**
  * Lists Discord roles that aren't yet linked to a DevDogs role (and aren't
  * `@everyone`), with suggested permission flags decoded for the import UI.
- * Client-safe — no bigints cross the boundary.
+ * Client-safe: no bigints cross the boundary.
  */
 export async function listImportableDiscordRoles(): Promise<
   ImportableDiscordRole[]
@@ -116,11 +116,11 @@ export async function listImportableDiscordRoles(): Promise<
 }
 
 /**
- * Imports a Discord role as a new DevDogs role. `title`/`color` are taken
- * from the live Discord role; `fields` supplies everything else (including
- * all 7 permission flags, freely edited from the suggested values). The
- * import retains the link (name/color sync going forward) but does not
- * retain any connection between the permission flags and Discord's bits.
+ * Imports a Discord role as a new DevDogs role. `title` and `color` are taken
+ * from the live Discord role; `fields` supplies everything else, including
+ * all 7 permission flags, freely edited from the suggested values. The link
+ * keeps name and color in sync going forward, but the permission flags keep
+ * no connection to Discord's bits.
  */
 export async function importRoleFromDiscord(
   discordRoleId: string,
@@ -160,9 +160,9 @@ export async function importRoleFromDiscord(
 }
 
 /**
- * Counts how many users currently hold `roleId` without a linked Discord
- * account — i.e. how many would lose the role if it were synced with
- * Discord. Used by the confirmation UI before linking.
+ * Counts how many users hold `roleId` without a linked Discord account, i.e.
+ * how many would lose the role if it were synced with Discord. Used by the
+ * confirmation UI before linking.
  */
 export async function countUsersWithoutLinkedDiscord(
   roleId: string,
@@ -241,9 +241,9 @@ export async function applyDiscordLinkSideEffects(
 }
 
 /**
- * Links an existing DevDogs role to an existing Discord role. DB wins for
- * the initial sync — the Discord role is immediately renamed/recolored to
- * match the DevDogs role.
+ * Links an existing DevDogs role to an existing Discord role. The DB wins the
+ * initial sync: the Discord role is immediately renamed and recolored to match
+ * the DevDogs role.
  */
 export async function linkRoleToDiscord(
   roleId: string,
@@ -261,9 +261,9 @@ export async function linkRoleToDiscord(
 }
 
 /**
- * Creates a new Discord role from an existing DevDogs role, seeding its
- * name/color/permissions from the DevDogs role (one-time — permissions are
- * never revisited after this).
+ * Creates a new Discord role from an existing DevDogs role, seeding its name,
+ * color, and permissions from it. Permissions are seeded once and never
+ * revisited after this.
  */
 export async function createDiscordRoleFromRole(roleId: string): Promise<void> {
   const [role] = await db
@@ -296,7 +296,7 @@ export async function createDiscordRoleFromRole(roleId: string): Promise<void> {
 }
 
 /**
- * Unsyncs a role from Discord. Clears the link and sync snapshot only — no
+ * Unsyncs a role from Discord. Clears the link and sync snapshot only, with no
  * membership or Discord-side side effects.
  */
 export async function unsyncRole(roleId: string): Promise<void> {

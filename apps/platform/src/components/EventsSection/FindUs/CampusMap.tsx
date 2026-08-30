@@ -18,22 +18,18 @@ import { BUILDING_LABEL } from "./buildings";
 /**
  * The two plates the map is drawn on.
  *
- * The dark plate is drawn the way Apple Maps draws its dark mode: one
- * charcoal ramp with a faint blue cast (zinc), and the layers told apart by
- * a few deliberate steps of lightness rather than by hue. The ground is the
- * darkest thing; buildings are one step up with a hairline a step above
- * that, so they read as blocks without shouting; drives are a mid-grey
- * hairline and streets a lighter ribbon over a casing the colour of the
- * ground, so a road has an edge where it crosses a building. Building
- * names are near-white, street names a quiet grey, both haloed in the
- * ground. Restraint is the point — the map is context, and the only
- * saturated things on it are the rose footprint and the cyan pin, which is
- * how the eye finds them first.
+ * The dark plate is drawn the way Apple Maps draws its dark mode: one charcoal
+ * ramp with a faint blue cast (zinc), layers told apart by steps of lightness
+ * rather than by hue. The ground is the darkest thing. Buildings are one step
+ * up with a hairline a step above that. Drives are a mid-grey hairline and
+ * streets a lighter ribbon over a casing the colour of the ground, so a road
+ * has an edge where it crosses a building. Building names are near-white,
+ * street names a quiet grey, both haloed in the ground. The map is context, so
+ * the only saturated things on it are the rose footprint and the cyan pin.
  *
- * The rose footprint and the cyan pin are the answer and keep their hue on
- * both plates; only their outlines change, black on the light ground and
- * white on the dark one, because an outline is there to separate the shape
- * from what it sits on.
+ * Those two are the answer and keep their hue on both plates. Only their
+ * outlines change, black on the light ground and white on the dark one,
+ * because an outline is there to separate the shape from what it sits on.
  */
 const MAP_TONES = {
   light: {
@@ -74,19 +70,19 @@ export type MapTone = keyof typeof MAP_TONES;
 
 /**
  * Label anchors placed against the generated footprint coordinates (each
- * building's centroid is printed when the generator runs) — nudged off roads
+ * building's centroid is printed when the generator runs), nudged off roads
  * and off each other, so re-check after regenerating campusMapData.
  *
  * "Off each other" is what makes these hand-placed rather than derived, and
- * it is also how they go wrong: nudge a name clear of its neighbour and it
- * can end up nearer some third building than the one it belongs to. Five of
- * them were, and Journalism had drifted 54px onto Payne Hall. The check that
- * catches it is to ask, for each name, which named footprint on campus its
- * anchor is actually closest to — not whether the map looks tidy.
+ * how they go wrong: nudge a name clear of its neighbour and it can end up
+ * nearer some third building. Five of them were, and Journalism had drifted
+ * 54px onto Payne Hall. The check that catches it is to ask, for each name,
+ * which named footprint its anchor is closest to. Not whether the map looks
+ * tidy.
  *
  * The ten a meeting can name are labelled here like any other landmark. The
- * highlighted one is drawn again, bigger and in black, by {@link Callout} —
- * and skipped here, so it never prints twice at two sizes.
+ * highlighted one is drawn again, bigger and in black, by {@link Callout}, and
+ * skipped here, so it never prints twice at two sizes.
  */
 const LABELS: { text: string; x: number; y: number; key?: BuildingKey }[] = [
   // ── North ──
@@ -144,11 +140,10 @@ interface Box {
  *
  * Estimated from the character count rather than measured, because measuring
  * means getBBox, and getBBox means this drawing can only be laid out in a
- * browser after it has already been painted wrong once. The widest character
- * on the map runs about 0.74em and the narrowest about 0.41em; 0.62 is set
- * high on purpose, since the cost of over-estimating is dropping a landmark
- * name that would have just fitted, and the cost of under-estimating is the
- * collision this exists to prevent.
+ * browser after it has already been painted wrong once. The widest character on
+ * the map runs about 0.74em and the narrowest about 0.41em. 0.62 is set high on
+ * purpose: over-estimating drops a landmark name that would have just fitted,
+ * and under-estimating gives the collision this exists to prevent.
  */
 function labelBox(text: string, x: number, y: number, size: number): Box {
   const w = text.length * size * 0.62;
@@ -184,7 +179,7 @@ const overlaps = (a: Box, b: Box) =>
 /**
  * Real geometry, not a sketch: road centerlines and building footprints come
  * from OpenStreetMap via scripts/generate-campus-map.ts, projected into the
- * viewBox. Labels are placed by eye against those generated coordinates —
+ * viewBox. Labels are placed by eye against those generated coordinates, so
  * after regenerating campusMapData, re-check them against the rendered map.
  *
  * The frame runs from the Main Library down to Driftmier, which is why it is
@@ -198,11 +193,11 @@ export default function CampusMap({ building, tone = "light" }: Props) {
   /**
    * What the callout occupies, and so what has to get out of its way.
    *
-   * Ten destinations means ten arrangements of this map, and the dense corner
-   * of it — Boyd, the Science Library, Poultry Science and Food Science within
-   * 40px of each other — cannot be hand-placed to survive all ten. Whichever
-   * building is being pointed at wins; a context label the callout lands on is
-   * dropped for that one rendering rather than printed underneath it.
+   * Ten destinations means ten arrangements of this map, and its dense corner
+   * (Boyd, the Science Library, Poultry Science and Food Science within 40px of
+   * each other) cannot be hand-placed to survive all ten. Whichever building is
+   * being pointed at wins; a context label the callout lands on is dropped for
+   * that one rendering rather than printed underneath it.
    */
   const placed = pin === undefined ? undefined : placeCallout(pin);
   const claimed: Box[] =
@@ -228,12 +223,11 @@ export default function CampusMap({ building, tone = "light" }: Props) {
     >
       <rect width={VIEW.w} height={VIEW.h} className={m.land} />
 
-      {/* Roads: minor drives first and thin, then the cased streets — each
+      {/* Roads: minor drives first and thin, then the cased streets, each
           tier's casing before its white surface, so surfaces run together at
-          junctions instead of butting into casings. The base map is drawn in
-          muted mauve throughout; black is reserved for the highlighted
-          building, its pin, and the callout, so the one building that matters
-          is the one that reads first. */}
+          junctions instead of butting into casings. The base map stays muted;
+          the saturated colours are reserved for the highlighted building, its
+          pin and the callout, so the one building that matters reads first. */}
       <g fill="none" strokeLinecap="round" strokeLinejoin="round">
         <path d={MINOR_ROADS} className={m.minorRoad} strokeWidth="1.5" />
         <path d={MAJOR_ROADS} className={m.majorCasing} strokeWidth="9" />
@@ -249,13 +243,13 @@ export default function CampusMap({ building, tone = "light" }: Props) {
         <path d={footprint} className={m.highlight} strokeWidth="2.5" />
       )}
 
-      {/* Building names, and the loudest thing on the map after the
-          destination itself — somebody reading this is looking for a
-          building, so the streets are what they scan past.
+      {/* Building names, the loudest thing on the map after the destination
+          itself. Somebody reading this is looking for a building, so the
+          streets are what they scan past.
 
-          paint-order:stroke turns each label's white stroke into a halo
-          behind the glyphs — the standard cartographic trick that keeps text
-          readable over footprints and parking aisles. */}
+          paint-order:stroke turns each label's white stroke into a halo behind
+          the glyphs, the standard cartographic trick that keeps text readable
+          over footprints and parking aisles. */}
       <g
         textAnchor="middle"
         fontSize="9"
@@ -282,15 +276,13 @@ export default function CampusMap({ building, tone = "light" }: Props) {
         />
       )}
 
-      {/* Street names, sitting on their own centrelines at their own angle:
-          position and rotation are generated from the road geometry, not
-          typed here, because the six that were typed here were placed against
-          a landscape frame and every one of them was left behind when the map
-          went portrait.
+      {/* Street names, sitting on their own centrelines at their own angle.
+          Position and rotation are generated from the road geometry, not typed
+          here: the six that were typed here were placed against a landscape
+          frame and every one was left behind when the map went portrait.
 
-          Smaller and paler than the building names on purpose. A street name
-          is orientation — it should be there when looked for and quiet when
-          not, and it is competing with the labels that actually answer the
+          Smaller and paler than the building names on purpose. A street name is
+          orientation, and it competes with the labels that answer the
           question. */}
       <g
         fontSize="7"
@@ -351,17 +343,15 @@ const PIN_R = 7;
  *
  * Placed relative to the footprint rather than hand-positioned per building.
  * The old map could afford a hand-tuned callout with a leader line because
- * there was exactly one destination and it never moved; ten destinations means
- * ten sets of coordinates to keep true through every reframing, which is ten
- * chances for one of them to be quietly wrong. A rule that reads the generated
- * footprint cannot drift from it.
+ * there was one destination and it never moved. Ten destinations means ten sets
+ * of coordinates to keep true through every reframing. A rule that reads the
+ * generated footprint cannot drift from it.
  *
  * The pin stands OFF the building, tip on its edge, rather than on its
  * centroid. A campus building at this scale is 15-20px tall and the marker is
- * 22px, so a centred pin hid most of what it was pointing at — worst on the
- * DLW, which is both the smallest of the ten and the one people actually need
- * to find. It hangs above the building where there is room above, below it
- * where there is not.
+ * 22px, so a centred pin hid most of what it was pointing at, worst on the DLW,
+ * which is both the smallest of the ten and the one people need to find. It
+ * hangs above the building where there is room, below it where there is not.
  *
  * The name then goes on the far side of the building from the pin, so the two
  * frame the destination instead of stacking on one edge of it.
@@ -380,7 +370,7 @@ function placeCallout({ top, bottom, tipTop, tipBottom }: Pin) {
   // Clamped rather than flipped back over the pin: a building at the very top
   // of the frame has nowhere above it to put a name, and pushing the name to
   // the pin's side instead stacks the two and shoves the name into whatever
-  // landmark is there — which is what Main Library did to Journalism.
+  // landmark is there, which is what Main Library did to Journalism.
   const labelY = Math.min(
     Math.max(above ? bottom + 15 : top - 11, 14),
     VIEW.h - 8,
@@ -399,7 +389,7 @@ function Callout({
   pin: Pin;
   /** The name's fill and halo, from the plate's tone. */
   className: string;
-  /** The teardrop's fill and outline, and the dot in it — same source. */
+  /** The teardrop's fill and outline, and the dot in it. Same source. */
   pinClassName: string;
   pinDotClassName: string;
 }) {
@@ -426,11 +416,10 @@ function Callout({
           footprint's own edge so it lands on the building the generator
           measured rather than near it.
 
-          Cyan against the rose footprint, which is the pairing the rest of
-          the site uses. It was rose-600 on rose-400 — one step apart on one
-          ramp, so the marker and the building it marks were the same colour
-          at a glance, which is the one distinction this drawing exists to
-          make. */}
+          Cyan against the rose footprint, the pairing the rest of the site
+          uses. It was rose-600 on rose-400, one step apart on one ramp, so the
+          marker and the building it marks read as the same colour at a glance,
+          which is the one distinction this drawing exists to make. */}
       <path
         d={teardrop}
         className={pinClassName}

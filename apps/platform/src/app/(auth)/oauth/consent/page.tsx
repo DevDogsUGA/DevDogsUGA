@@ -9,10 +9,10 @@ import ConsentForm from "~/components/ConsentForm";
 
 /**
  * A step inside an authorization flow, reachable only with a live
- * `authorization_id` — without one it 404s, and with a stale one it 404s too.
- * There is nothing here that is the same twice, let alone worth indexing, and
- * the query string it needs is a credential-adjacent identifier that should not
- * end up in a search result.
+ * `authorization_id`. Without one it 404s, and with a stale one it 404s too.
+ * Nothing here is the same twice, let alone worth indexing, and the query
+ * string it needs is a credential-adjacent identifier that should not end up in
+ * a search result.
  */
 export const metadata: Metadata = {
   title: "Authorize | DevDogs",
@@ -37,8 +37,8 @@ export default async function ConsentPage({ searchParams }: Props) {
   if (!oauthRegistration) {
     notFound();
   }
-  // Production clients (or clients not in our DB) are auto-approved with the
-  // real user's identity — no interaction needed.
+  // Production clients are auto-approved with the real user's identity, with no
+  // interaction.
   if (oauthRegistration.type === "production") {
     await expectSession().catch(() => {
       const callbackPath = `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`;
@@ -93,8 +93,8 @@ export default async function ConsentPage({ searchParams }: Props) {
       }) satisfies TestAccount,
   );
 
-  // The centring and the full-viewport ground belong to `(auth)/layout.tsx`;
-  // all that is left here is the card the decision sits on.
+  // The centring and the full-viewport ground come from `(auth)/layout.tsx`.
+  // All that is left here is the card the decision sits on.
   return (
     <div className="w-full max-w-sm rounded-xl border-2 border-mauve-800 bg-mauve-900 p-8 shadow-lg shadow-black/30">
       <ConsentForm

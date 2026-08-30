@@ -14,8 +14,8 @@ import {
  * Points reads: one competition's standings, and a member's running total.
  *
  * Everything here is downstream of the tally. `competitionStandings` rows
- * exist only once a competition has been finalized, which is the same fact the
- * sync's `requirementCount` refusal keys on — so an empty result means "not
+ * exist only once a competition has been finalized, the same fact the sync's
+ * `requirementCount` refusal keys on. An empty result therefore means "not
  * scored yet" rather than "scored zero", and the UI has to say so.
  */
 
@@ -38,9 +38,8 @@ export interface StandingRow {
  * One competition's final standings, best first.
  *
  * Ordered by placement rather than by points: a tiebreak can put two teams on
- * identical totals in a deliberate order, and sorting by points would silently
- * re-tie them on screen after the whole tiebreak apparatus was run to separate
- * them.
+ * identical totals in a deliberate order, and sorting by points would re-tie
+ * them on screen after the tiebreak was run to separate them.
  */
 export const getStandings = cache(
   async (competitionSlug: string): Promise<StandingRow[]> => {
@@ -83,10 +82,9 @@ export interface MemberPointsRow {
  * The points leaderboard.
  *
  * `memberPoints` is a `security_invoker` view over the standings, so it shows
- * only competitions the caller may see — which for a member is every finalized
- * one and nothing in progress. That is the correct answer rather than a
- * limitation: a partial standing shown before the tally is a number people
- * will screenshot.
+ * only competitions the caller may see: for a member, every finalized one and
+ * nothing in progress. That is the right answer, not a limitation. A partial
+ * standing shown before the tally is a number people will screenshot.
  */
 export const getMemberPointsLeaderboard = cache(
   async (limit = 50): Promise<MemberPointsRow[]> => {
@@ -112,10 +110,10 @@ export interface MemberPointsTotals {
 /**
  * One member's total, for their profile.
  *
- * Zero and "never scored" are the same number and deliberately not
- * distinguished here — a member with no finalized competition has earned
- * nothing yet, and the profile says "0 points" rather than hiding the row.
- * `competitionsScored` is what tells them apart when a caller needs to.
+ * Zero and "never scored" are the same number here, deliberately. A member
+ * with no finalized competition has earned nothing yet, and the profile says
+ * "0 points" rather than hiding the row. `competitionsScored` tells the two
+ * apart when a caller needs it.
  */
 export const getMemberPoints = cache(
   async (userId: string): Promise<MemberPointsTotals> => {

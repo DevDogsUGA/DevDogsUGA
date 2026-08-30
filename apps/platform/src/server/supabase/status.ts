@@ -15,8 +15,8 @@ export type EnvStatus =
   | "orphaned";
 
 /**
- * Supabase publishes roughly fifteen project statuses; the platform has seven,
- * and three of those (`detached`, `revoked`, `orphaned`) are ours alone — they
+ * Supabase publishes roughly fifteen project statuses; the platform has seven.
+ * Three of those (`detached`, `revoked`, `orphaned`) are ours alone: they
  * describe the platform's relationship to a project, not the project's health,
  * so nothing upstream ever maps onto them.
  */
@@ -41,10 +41,10 @@ const MAPPING: Record<string, EnvStatus> = {
 /**
  * Unrecognized statuses map to `provisioning`, which reads as "not ready yet".
  *
- * The alternative — mapping the unknown to `active` — would have the pre-warm
- * cron declare victory on a project that is not serving, and members would meet
- * a broken instance rather than a wait. Erring toward not-ready costs a retry;
- * erring toward ready costs an event.
+ * Mapping the unknown to `active` instead would have the pre-warm cron declare
+ * victory on a project that is not serving, and members would meet a broken
+ * instance rather than a wait. Erring toward not-ready costs a retry; erring
+ * toward ready costs an event.
  */
 export function mapProjectStatus(
   upstream: string | null | undefined,
@@ -62,9 +62,9 @@ export function isReady(upstream: string | null | undefined): boolean {
  * Has the project genuinely disappeared?
  *
  * Separate from the mapping on purpose. Orphaning tears down credentials and
- * deletes Vault secrets, so it must follow from a definite answer — a 404 from
- * `GET /v1/projects/{ref}`, or absence from `GET /v1/projects` — and never from
- * a transient error. The proxy must not make this determination at all.
+ * deletes Vault secrets, so it must follow from a definite answer: a 404 from
+ * `GET /v1/projects/{ref}`, or absence from `GET /v1/projects`. Never from a
+ * transient error. The proxy must not make this determination at all.
  */
 export function isGone(upstream: string | null | undefined): boolean {
   return upstream === "REMOVED";

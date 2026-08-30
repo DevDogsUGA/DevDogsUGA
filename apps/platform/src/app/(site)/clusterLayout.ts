@@ -10,15 +10,15 @@ export interface CardLayout {
 // Profiles are assigned outer→inner so earlier list entries appear closer to the top.
 const SEMI_CENTER_Y = +280;
 const RINGS = [
-  { r: 140, thetaMin: 22 }, // inner  — bottom, fewest slots (~22% of n, capacity ≤ 3)
+  { r: 140, thetaMin: 22 }, // inner, bottom. Fewest slots (~22% of n, cap ≤ 3)
   { r: 330, thetaMin: 15 }, // middle
-  { r: 520, thetaMin: 40 }, // outer  — top, most slots; 40° keeps cx ≤ 400
+  { r: 520, thetaMin: 40 }, // outer, top. Most slots; 40° keeps cx ≤ 400
 ] as const;
 // Half of the chord clearance between adjacent cards on the same ring.
 // 156px = 120px card width + 20px margin + ~16px rotation-induced expansion at max tilt.
 const HALF_CLEARANCE = 78;
-// Cards tilt proportional to the arc tangent at their position (0° at apex, growing
-// toward the sides). Scale keeps the maximum tilt readable — ~15° at the widest spread.
+// Cards tilt with the arc tangent at their position: 0° at apex, growing toward
+// the sides. This scale caps tilt at ~15° at the widest spread, which stays readable.
 const TILT_SCALE = 0.2;
 const SEED_JITTER = 0xa5e3f1b2;
 const SEED_SCT = 0x3c7d92e4;
@@ -40,8 +40,9 @@ export function computeClusterLayout(
 ): CardLayout[] {
   const DEG = Math.PI / 180;
 
-  // n0 is the smallest group — it goes to the inner ring which has the least capacity.
-  // n2 goes to the outer ring (most capacity). Sizes are proportional to circumference.
+  // n0 is the smallest group and goes to the inner ring, which has the least
+  // capacity. n2 goes to the outer ring, which has the most. Group sizes are
+  // proportional to circumference.
   const n0 = Math.max(1, Math.round(n * 0.22));
   const n1 = Math.max(1, Math.round(n * 0.42));
   const n2 = n - n0 - n1;
@@ -79,8 +80,7 @@ export function computeClusterLayout(
       // ±3° positional jitter for organic feel.
       const theta = baseTheta + (jitterRand() * 6 - 3) * DEG;
 
-      // Tilt follows the arc tangent: 0° at apex (θ=90°), growing toward the sides.
-      // Cards lean outward — right-side profiles tilt right (CW), left-side tilt left (CCW).
+      // Cards lean outward: right-side profiles tilt CW, left-side CCW.
       const deg = (Math.PI / 2 - theta) * (180 / Math.PI) * TILT_SCALE;
 
       ringLayouts[k]!.push({

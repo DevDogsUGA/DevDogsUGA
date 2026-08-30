@@ -10,10 +10,10 @@ import {
 } from "./tally";
 
 /**
- * Degenerate cases first. The interesting failures here are all at the edges —
- * every team self-ranking, exact point ties, Condorcet cycles, a two-team
- * competition — and those are trivial to write against a pure function and
- * nearly impossible to provoke through the UI.
+ * Degenerate cases first. The interesting failures are all at the edges: every
+ * team self-ranking, exact point ties, Condorcet cycles, a two-team
+ * competition. Those are trivial to write against a pure function and nearly
+ * impossible to provoke through the UI.
  */
 
 const ballot = (...ranking: string[]): Ballot => ({ ranking });
@@ -83,8 +83,8 @@ describe("copeland", () => {
   });
 
   it("ties every team on a Condorcet cycle", () => {
-    // A beats B, B beats C, C beats A. Every pair decisive, every score 0 —
-    // which is exactly why step 3 has to exist.
+    // A beats B, B beats C, C beats A. Every pair decisive, every score 0,
+    // which is why step 3 has to exist.
     const result = copeland(
       [ballot("a", "b", "c"), ballot("b", "c", "a"), ballot("c", "a", "b")],
       ["a", "b", "c"],
@@ -196,8 +196,8 @@ describe("standings", () => {
   it("scores everyone zero when both blocks are absent", () => {
     // The two rules interact, and the interaction is correct rather than
     // incidental: every team scoring 0 is an exact tie across the whole field,
-    // so placements still have to come from the chain. A tiebreak is therefore
-    // required to finalize — see the case below.
+    // so placements still have to come from the chain. Finalizing therefore
+    // requires a tiebreak. See the case below.
     const outcome = standings(
       input({
         requirementCount: 0,
@@ -311,9 +311,9 @@ describe("standings", () => {
 
   it("discloses one comparison per decided pair, never the ordering", () => {
     // The officer ranking is cast for every competition and used in almost
-    // none. When it decides a tie the only thing revealed is the relation it
-    // was actually used for — not the full order, and nothing about teams
-    // whose placement was never in question.
+    // none. When it decides a tie, the only thing revealed is the relation it
+    // was used for, never the full order and nothing about teams whose
+    // placement was never in question.
     const outcome = standings(
       input({
         teams: ["a", "b", "c"],

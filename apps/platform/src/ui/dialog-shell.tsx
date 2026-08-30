@@ -46,17 +46,17 @@ interface Props {
 }
 
 /**
- * The shared frame for this site's big dialogs: overlay, panel, sizing, and a
- * fixed header over a scrolling body. Nothing in here knows what it is framing
- * — the directions dialog and the meeting dialog both hand it a header and a
- * body — so the overlay and panel exist once, in one place.
+ * The shared frame for this site's big dialogs. Overlay, panel, sizing, and a
+ * fixed header over a scrolling body. Nothing in here knows what it is framing.
+ * The directions dialog and the meeting dialog both hand it a header and a
+ * body, so the overlay and panel exist once, in one place.
  *
  * The panel caps at 85dvh and hides its own overflow; the body is the scroll
- * container instead of the panel, which is what keeps the header (and the
- * close button, which is absolutely positioned against the panel) in view no
- * matter how tall the content is. `dvh` rather than `vh` because mobile
- * browsers shrink the visual viewport as their chrome slides in, and `vh`
- * would leave the bottom of the dialog under the address bar.
+ * container instead of the panel, which keeps the header (and the close button,
+ * absolutely positioned against the panel) in view however tall the content is.
+ * `dvh` rather than `vh` because mobile browsers shrink the visual viewport as
+ * their chrome slides in, and `vh` would leave the bottom of the dialog under
+ * the address bar.
  *
  * The two classes worth not deleting:
  *  - `min-h-0` on the body: a flex child's default `min-height: auto` refuses
@@ -75,27 +75,27 @@ interface Props {
  * `aside` sit side by side; the panels shrink to half the viewport less a
  * margin when 36rem each will not fit. The primary hears the aside open
  * through {@link PairContext} and transitions `left` by half a panel plus half
- * the gap, with a small tilt; the aside is placed the same distance to the
- * right and is dealt out from behind it — a full panel-and-gap of travel,
- * which is exactly the primary's resting spot, with a rotation that swings
- * through and settles, like a card pulled from a deck. The primary sits one
- * z-index above it at that width, so the aside is genuinely *behind* it as
- * it emerges. Closing runs the deal in reverse.
+ * the gap, with a small tilt. The aside is placed the same distance to the
+ * right and dealt out from behind it, travelling a full panel-and-gap, exactly
+ * the primary's resting spot, with a rotation that swings through and settles
+ * like a card pulled from a deck. The primary sits one z-index above it at that
+ * width, so the aside is genuinely *behind* it as it emerges. Closing runs the
+ * deal in reverse.
  *
  * Side by side, the aside is NON-modal. That is what lets the primary stay
- * live — a modal aside would make Radix put `pointer-events: none` on the
- * primary — and it is why the dismiss rules are written by hand below:
+ * live, since a modal aside would make Radix put `pointer-events: none` on the
+ * primary, and it is why the dismiss rules are written by hand below:
  *  - a click inside either panel keeps both open (each panel's outside-click
  *    handler ignores targets inside any dialog content);
- *  - a click on the overlay closes both, because it is outside both, and
- *    each closes itself — nothing closes the other, so a route dialog's
+ *  - a click on the overlay closes both, because it is outside both, and each
+ *    closes itself. Nothing closes the other, so a route dialog's
  *    `router.back()` runs exactly once;
- *  - the primary's own close button closes both, since the aside lives in
- *    the primary's body and unmounts with it.
+ *  - the primary's own close button closes both, since the aside lives in the
+ *    primary's body and unmounts with it.
  *
  * Stacked (below `lg`), the aside is an ordinary modal nested dialog: the
- * primary is inert beneath it, the overlay closes only the aside, and the X
- * is replaced by a back button that says where closing goes.
+ * primary is inert beneath it, the overlay closes only the aside, and the X is
+ * replaced by a back button that says where closing goes.
  */
 export default function DialogShell({
   open,
@@ -161,7 +161,7 @@ export default function DialogShell({
     </Dialog>
   );
 
-  // Only a primary provides — an aside inside an aside would otherwise report
+  // Only a primary provides. An aside inside an aside would otherwise report
   // to the wrong dialog.
   return isPrimary ? (
     <PairContext.Provider value={setAsideOpen}>{content}</PairContext.Provider>
@@ -176,8 +176,8 @@ const PairContext = createContext<((open: boolean) => void) | null>(null);
 /**
  * Side by side from `lg`. Tailwind's `lg` is 64rem; the query says the same
  * thing in the same unit so the CSS classes below and this hook flip on the
- * same pixel. Server-rendered as false — a dialog only opens on the client,
- * and the first client snapshot corrects it before anyone can click.
+ * same pixel. Server-rendered as false: a dialog only opens on the client, and
+ * the first client snapshot corrects it before anyone can click.
  */
 const PAIR_QUERY = "(min-width: 64rem)";
 
@@ -197,8 +197,8 @@ function useSideBySide(): boolean {
 
 /**
  * Outside-interaction handler for both panels of an open pair: anything that
- * lands inside a dialog's content — the other panel — is not "outside" in
- * any sense the user means, so it is swallowed. Anything else (the overlay)
+ * lands inside a dialog's content, meaning the other panel, is not "outside"
+ * in any sense the user means, so it is swallowed. Anything else (the overlay)
  * falls through to Radix's default and dismisses this panel; the other panel
  * gets the same event and dismisses itself.
  */
@@ -218,12 +218,12 @@ function keepPairOpen(event: {
 /**
  * The pair geometry lives in three custom properties set on both panels:
  * the panel width (36rem, or half the viewport less a margin when that will
- * not fit — at `lg` itself two 36rem panels would need 73rem of a 64rem
- * screen), how far each panel sits off centre, and how far the aside travels
- * as it is dealt. The keyframes in globals.css read `--pair-travel`.
+ * not fit; at `lg` itself two 36rem panels would need 73rem of a 64rem screen),
+ * how far each panel sits off centre, and how far the aside travels as it is
+ * dealt. The keyframes in globals.css read `--pair-travel`.
  *
- * Spelled out literally in every class — Tailwind finds utilities by
- * scanning source text, so nothing here may be interpolated.
+ * Spelled out literally in every class: Tailwind finds utilities by scanning
+ * source text, so nothing here may be interpolated.
  */
 const PAIR_VARS =
   "lg:[--pair-panel:min(36rem,50vw_-_1.5rem)] lg:[--pair-offset:calc(var(--pair-panel)_/_2_+_0.5rem)] lg:[--pair-travel:calc(var(--pair-panel)_+_1rem)]";

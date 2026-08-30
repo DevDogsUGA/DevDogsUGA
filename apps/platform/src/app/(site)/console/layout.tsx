@@ -4,16 +4,14 @@ import { requireSession } from "~/server/auth/require";
 /**
  * One `robots` for the whole console, declared here rather than on each of the
  * eight pages below it. Metadata merges shallowly down the segment tree, so a
- * page that exports only a `title` keeps this — which is the property that
- * makes a layout the right place for it: a console page added tomorrow is
- * noindex by default instead of by remembering.
+ * page that exports only a `title` keeps this, which is why a layout is the
+ * right place for it: a console page added tomorrow is noindex by default
+ * instead of by someone remembering.
  *
  * This is defence in depth, not the gate. `/console` is disallowed in
- * `robots.txt` and every page checks a permission flag server-side; what a
- * `noindex` adds is the case those two do not cover, which is a URL that
- * reached an index some other way — pasted into a public channel, or found by a
- * crawler that ignores robots.txt. `robots.txt` asks a crawler not to look;
- * this tells one that did look not to publish.
+ * `robots.txt` and every page checks a permission flag server-side. `noindex`
+ * covers the case those two miss: a URL that reached an index some other way,
+ * pasted into a public channel or found by a crawler that ignores robots.txt.
  *
  * The default title is deliberately generic and every page overrides it. It is
  * only ever seen on a route with no `metadata` of its own.
@@ -24,10 +22,10 @@ export const metadata: Metadata = {
 };
 
 /**
- * The console's ground, and its one universal gate.
+ * Wraps every `/console` page and holds their one shared gate, a session check.
  *
  * Being signed in is the only thing every page under `/console` needs, so it is
- * checked once here rather than at the top of each of them — a page added under
+ * checked once here rather than at the top of each of them: a page added under
  * this route later cannot forget it. What each page needs *beyond* a session
  * differs (moderation, audit-log and permissions want three different flags),
  * so the specific check stays with the page that knows which one it is. See

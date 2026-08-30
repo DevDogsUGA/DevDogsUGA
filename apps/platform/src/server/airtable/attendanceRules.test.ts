@@ -4,10 +4,9 @@ import { checkAttendance, myIdToEmail } from "./refusals";
 /**
  * MyID parsing and the two refusal rules, with no database anywhere near them.
  *
- * These are the rules most worth a test each and least in need of a fixture:
- * what a person types into a form in a noisy room is the least predictable
- * input this system has, and every one of these cases is somebody having a
- * slightly bad day rather than a hypothetical.
+ * These want a test each and no fixture. What a person types into a form in a
+ * noisy room is the least predictable input this system has, and every case
+ * here is somebody having a bad day rather than a hypothetical.
  */
 
 describe("myIdToEmail", () => {
@@ -32,9 +31,9 @@ describe("myIdToEmail", () => {
   });
 
   it("refuses another domain", () => {
-    // The one that matters. Sign-in is Google restricted to hd=uga.edu, so an
-    // account created for a gmail address could never be signed into by
-    // anybody -- it would hold somebody's attendance permanently out of reach.
+    // The one that matters. Sign-in is Google restricted to hd=uga.edu, so
+    // nobody could ever sign into an account created for a gmail address. It
+    // would hold somebody's attendance permanently out of reach.
     expect(myIdToEmail("jdoe@gmail.com")).toBeNull();
     expect(myIdToEmail("jdoe@uga.edu.evil.com")).toBeNull();
     expect(myIdToEmail("jdoe@gatech.edu")).toBeNull();
@@ -91,17 +90,16 @@ describe("checkAttendance", () => {
   });
 
   it("refuses a workshop that resolved but has no meeting", () => {
-    // Distinct from the above in cause and identical in consequence: without a
-    // meeting there is no key to write, since attendance is keyed on the
-    // meeting rather than the workshop.
+    // Different cause from the above, same consequence: attendance is keyed on
+    // the meeting rather than the workshop, so without a meeting there is no
+    // key to write.
     const result = checkAttendance({ ...ok, meetingId: null });
     expect(result.refusals[0]!.code).toBe("attendance_unknown_workshop");
   });
 
   it("reports the MyID first when both are wrong", () => {
-    // Not arbitrary: a person can fix their own MyID, and the workshop link is
-    // an officer's job. Leading with the one the reader can act on is what
-    // makes the message worth writing.
+    // Not arbitrary: a person can fix their own MyID, but the workshop link is
+    // an officer's job. Lead with the one the reader can act on.
     const result = checkAttendance({
       ...ok,
       rawMyId: "nope@gmail.com",

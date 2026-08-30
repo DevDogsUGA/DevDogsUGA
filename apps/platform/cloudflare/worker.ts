@@ -1,7 +1,7 @@
 /**
  * Custom Cloudflare Worker entry (wrangler `main` points here). Re-exports the
- * OpenNext-generated `fetch` handler — plus any Durable Object classes the
- * generated worker exports — and adds the cron `scheduled` handler from
+ * OpenNext-generated `fetch` handler, plus any Durable Object classes the
+ * generated worker exports, and adds the cron `scheduled` handler from
  * ./scheduled.
  *
  * `../.open-next/worker.js` is produced by `opennextjs-cloudflare build` and is

@@ -7,11 +7,11 @@ import { StarBadges } from "./StarBadges";
 /**
  * A member's participation record: one row per workshop, newest first.
  *
- * The important property is what this does NOT draw. `getStarsForUser` returns
- * a row only where something was earned — a meeting somebody skipped produces
- * no row at all, rather than a row of falses — so a grid with a line for every
- * meeting the club ever held would be inventing the failures it displayed.
- * Every row here is something the member did.
+ * What it does NOT draw matters. `getStarsForUser` returns a row only where
+ * something was earned. A meeting somebody skipped produces no row at all,
+ * rather than a row of falses, so a grid with a line for every meeting the club
+ * ever held would be inventing the failures it displayed. Every row here is
+ * something the member did.
  *
  * Rows are grouped under their meeting because a meeting can run several
  * workshops, and three consecutive rows carrying the same date otherwise read
@@ -19,7 +19,7 @@ import { StarBadges } from "./StarBadges";
  *
  * The order comes from the query (`meetings.startsAt` descending) and is not
  * re-sorted here: grouping preserves first-appearance order, so the newest
- * meeting stays first without a second sort that could disagree with the first.
+ * meeting stays first without a second sort that could disagree.
  */
 export default function StarGrid({ cells }: { cells: StarCell[] }) {
   if (cells.length === 0) {
@@ -47,10 +47,9 @@ export default function StarGrid({ cells }: { cells: StarCell[] }) {
           {/* `meetingTitle` over the whole night, not a column. It falls
               through name → kind → the workshops it taught → the date, so an
               unnamed Monday that taught two sessions reads "Workshop: Supabase
-              & Next.js" instead of borrowing one of their names and then
-              repeating it verbatim as the first row underneath. The date
-              fallback is inside `meetingTitle`, which keeps `EVENT_TZ` in one
-              module. */}
+              & Next.js" instead of borrowing one workshop's name and repeating
+              it verbatim as the first row underneath. The date fallback lives
+              inside `meetingTitle`, which keeps `EVENT_TZ` in one module. */}
           <h3 className="font-semibold text-white">
             {meetingTitle(
               {
@@ -94,9 +93,9 @@ export default function StarGrid({ cells }: { cells: StarCell[] }) {
 /**
  * What the three marks mean, in words.
  *
- * The badges carry `title` attributes, which are a hover affordance and
- * therefore not one on a phone. Three amber stars with no key is a decoration;
- * the distinctions between them are the whole point of the model.
+ * The badges carry `title` attributes, which need hover and so do nothing on a
+ * phone. Without a key, three amber stars read as decoration when the
+ * distinction between them is the point of the model.
  */
 function Legend() {
   return (
@@ -142,9 +141,9 @@ function groupByMeeting(cells: StarCell[]): MeetingGroup[] {
       group = {
         meetingId: cell.meetingId,
         // Both are per-MEETING columns, so taking them off the first cell is
-        // correct rather than arbitrary — every cell in this group carries the
-        // identical pair. That was not true of the `meetingName` this
-        // replaced, which coalesced through the workshop's own title.
+        // correct rather than arbitrary: every cell in this group carries the
+        // identical pair. That was not true of the `meetingName` this replaced,
+        // which coalesced through the workshop's own title.
         meetingNameOverride: cell.meetingNameOverride,
         meetingKind: cell.meetingKind,
         meetingStartsAt: cell.meetingStartsAt,

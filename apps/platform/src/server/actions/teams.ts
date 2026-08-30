@@ -42,14 +42,14 @@ import {
 /**
  * Runs a GitHub side effect after the transaction has committed.
  *
- * Never inside. The membership row is the source of truth and repository
- * access is a consequence of it — so a failed API call must leave somebody on
- * the roster without push, which the nightly reconcile repairs, rather than
- * rolling back a join that already succeeded. Rolling back would mean GitHub
- * being down stops people from forming teams at all.
+ * Never inside. The membership row is the source of truth and repository access
+ * is a consequence of it, so a failed API call must leave somebody on the
+ * roster without push, which the nightly reconcile repairs, rather than rolling
+ * back a join that already succeeded. Rolling back would mean GitHub being down
+ * stops people from forming teams at all.
  *
- * Swallowing the error is therefore deliberate and not laziness: there is no
- * caller-visible action to take, and the repair path already exists.
+ * Swallowing the error is deliberate: there is no caller-visible action to
+ * take, and the repair path already exists.
  */
 async function afterCommit(
   what: string,
@@ -140,9 +140,8 @@ async function requireLead(tx: Tx, teamId: string, userId: string) {
  * The created team, identified the way the routes are.
  *
  * Both the id and the slug: the id is what the GitHub provisioning needs, and
- * the slug is what `/competitions/[slug]/teams/[team]` is keyed on — so
- * returning only the id leaves a form with nowhere to navigate after a
- * successful create.
+ * the slug is what `/competitions/[slug]/teams/[team]` is keyed on. Returning
+ * only the id leaves a form with nowhere to navigate after a successful create.
  */
 export interface CreatedTeam {
   id: string;
@@ -173,8 +172,8 @@ async function createTeamImpl(
     } catch (error) {
       // Two teams named the same thing in one competition. Translated here
       // because the untranslated 23505 reaches the member as "something went
-      // wrong on our side" — which sends them to ask an officer about a
-      // problem they could have solved by picking another name.
+      // wrong on our side", which sends them to ask an officer about a problem
+      // they could have solved by picking another name.
       if (isUniqueViolation(error, "teams_competitionId_slug_key")) {
         throw new TeamActionError("name_taken");
       }
@@ -350,9 +349,9 @@ async function respondToMembershipImpl(
   // Returned from the transaction rather than assigned to a captured `let`.
   // TypeScript does not track an assignment made inside the callback, so the
   // old shape still read as `null` after the await: `joined !== null` narrowed
-  // to `never`, and the two fields destructured out of it were `never` too —
+  // to `never`, and the two fields destructured out of it were `never` too,
   // which is what the template literal below was reporting. Returning the value
-  // keeps the type and removes the mutable at the same time.
+  // keeps the type and removes the mutable.
   const joined = await db.transaction(async (tx) => {
     const [request] = await tx
       .select({
@@ -407,11 +406,11 @@ async function respondToMembershipImpl(
     // Accepting one withdraws the rest for that competition.
     //
     // Applying to a few teams and joining whichever answers first is the
-    // intended use, so the leftovers are not a mistake — but the
+    // intended use, so the leftovers are not a mistake. But the
     // one-team-per-competition constraint would reject every one of them
-    // anyway, and leaving them pending strands leads waiting on somebody who
-    // is no longer available. Withdrawn rather than declined: the member did
-    // not turn these down, their situation changed.
+    // anyway, and leaving them pending strands leads waiting on somebody who is
+    // no longer available. Withdrawn rather than declined: the member did not
+    // turn these down, their situation changed.
     //
     // Both directions, not just invitations. A join request this member sent
     // to another team is exactly as stale as an invitation they received.
@@ -470,7 +469,7 @@ async function leaveTeamImpl(teamId: string): Promise<void> {
 
       // A team with no lead has nobody who can invite, respond or transfer,
       // and the partial unique index means one cannot simply be promoted by a
-      // second writer. Leaving last is fine — the row goes with the member.
+      // second writer. Leaving last is fine, the row goes with the member.
       if (other) throw new TeamActionError("lead_must_transfer_first");
     }
 
@@ -506,7 +505,7 @@ async function transferLeadImpl(
     if (!target) throw new TeamActionError("not_a_member");
 
     // Demote first. The partial unique index permits exactly one lead per
-    // team, so promoting before demoting violates it — within one transaction
+    // team, so promoting before demoting violates it. Within one transaction
     // the order is the whole difference between working and 23505.
     await tx
       .update(teamMembers)
@@ -534,10 +533,10 @@ export interface ReformReport {
  * Re-forms a team for a later competition.
  *
  * Returns a structured report rather than an id because the caller needs the
- * skipped list — somebody who already joined another team this week cannot be
+ * skipped list. Somebody who already joined another team this week cannot be
  * carried over, and the lead has to be told which of their teammates that was.
- * This is where dropping RPCs pays immediately: the shape was `jsonb` before,
- * typed by hand on both sides.
+ * This is where dropping RPCs pays: the shape was `jsonb` before, typed by hand
+ * on both sides.
  *
  * The previous roster is INVITED rather than inserted. Membership is a choice
  * every week, and silently re-adding people would make "I am not doing this
@@ -635,12 +634,12 @@ async function reformTeamImpl(
  * Every action returns an outcome; none of them throws across the wire.
  *
  * The implementations above throw `TeamActionError`, which is the right shape
- * for them — the six join checks read as a chain of guards rather than as a
- * result being threaded through by hand. But a thrown error does not survive
- * the trip to a client component: Next redacts an uncaught server-action error
- * in production and hands the browser an opaque digest, so `error.code` — the
- * thing every one of these screens branches on — reads correctly in
- * development and is GONE in the deployed build.
+ * for them. The six join checks read as a chain of guards rather than as a
+ * result threaded through by hand. But a thrown error does not survive the trip
+ * to a client component: Next redacts an uncaught server-action error in
+ * production and hands the browser an opaque digest, so `error.code`, the thing
+ * every one of these screens branches on, reads correctly in development and is
+ * GONE in the deployed build.
  *
  * Converting here rather than in a per-page wrapper is what makes that
  * impossible to forget. A page that forgets is not broken in a way anybody
@@ -655,7 +654,7 @@ async function attempt<T>(
     if (error instanceof TeamActionError) {
       return { ok: false, code: error.code };
     }
-    // Anything else is a fault rather than a refusal — a dropped connection, a
+    // Anything else is a fault rather than a refusal: a dropped connection, a
     // constraint nothing translated. Logged so the server keeps it, and
     // reported as "unknown" so a member is not told they did something wrong.
     console.error("[teams] unexpected action failure:", error);

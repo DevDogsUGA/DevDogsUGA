@@ -39,9 +39,9 @@ import type { Refusal } from "./refusals";
  * One pass, shared verbatim by the cron and the manual trigger.
  *
  * The route handler exists only because an Airtable button field can do
- * nothing but open a URL; it must not be a second implementation, because the
- * manual path is the one an officer reaches for precisely when something has
- * already gone wrong, and a divergent code path there is a debugging trap.
+ * nothing but open a URL. It must not be a second implementation: the manual
+ * path is the one an officer reaches for when something has already gone
+ * wrong, and a divergent code path there is a debugging trap.
  */
 
 export interface SyncReport {
@@ -80,23 +80,18 @@ export async function runAirtableSync(
     client = options.client ?? (await getAirtableClient());
   } catch (error) {
     if (error instanceof AirtableNotConfiguredError) {
-      // Still not a reason to fail a boot: the platform has to run without
-      // Airtable, and a checkout nobody has configured must not have a cron
-      // that goes red every fifteen minutes.
+      // The platform has to run without Airtable, and a checkout nobody has
+      // configured must not have a cron that goes red every fifteen minutes.
+      // That is no reason to say NOTHING, which is what this branch used to do:
+      // it returned in silence so `lastStatus` would not read "ok" for a base
+      // that had never been contacted. That could not tell an unconfigured
+      // install from a fresh clone, because an unset base id looked exactly
+      // like one.
       //
-      // But it stopped being a reason to say NOTHING. This branch used to
-      // return in silence, on the argument that an unconfigured install should
-      // not touch the state row at all -- otherwise `lastStatus` would read
-      // "ok" for a base that had never been contacted. That argument conflated
-      // two states it could not then tell apart, because an unset base id
-      // looked exactly like a fresh clone.
-      //
-      // It can tell them apart now. The base id is a committed constant, so
-      // the only thing left that can be missing is the token, and a SCHEDULED
-      // pass finding none is a misconfiguration rather than a fresh clone. The
-      // silence is what let this run 96 times a day for days with no record
-      // anywhere -- the exact shape of failure the schema refusal below was
-      // built to stop.
+      // The base id is a committed constant now, so only the token can be
+      // missing, and a SCHEDULED pass finding none is a misconfiguration. The
+      // silence let this run 96 times a day for days with no record anywhere,
+      // the same failure the schema refusal below was built to stop.
       //
       // Manual runs are exempt: `requestAirtableSync` hands this report
       // straight back to the console, which says so on screen. Alerting there
@@ -128,14 +123,12 @@ export async function runAirtableSync(
     throw error;
   }
 
-  // The base has to agree with the registry BEFORE anything is written.
-  //
-  // This is the check the whole verifier exists for, and it was missing: a
-  // registry ID that does not exist in the base is not an error at write time.
+  // The base has to agree with the registry BEFORE anything is written. A
+  // registry ID that does not exist in the base is not an error at write time:
   // Airtable accepts the request, the value lands nowhere, and the pass reports
-  // success -- so a sync against a drifted base is silent data loss that looks
-  // like a healthy cron. `verify.ts` being written but never called meant the
-  // one failure mode it was built for was the one still unguarded.
+  // success. A sync against a drifted base is silent data loss that looks like
+  // a healthy cron. `verify.ts` was written but never called, so the one
+  // failure mode it was built for was the one still unguarded.
   //
   // Costs one schema read out of roughly seven requests a pass.
   // `checkDuplicates` is off: it re-reads every record the pass is about to
@@ -150,7 +143,7 @@ export async function runAirtableSync(
     for (const f of fatal) console.error(`  ${f}`);
 
     // Record it before alerting. The refusal still claims no lease and writes
-    // nothing to Airtable -- this touches only the state row the console reads,
+    // nothing to Airtable. This touches only the state row the console reads,
     // which until now showed the last *successful* pass with no sign that every
     // pass since had refused.
     const { previous, persisted } = await recordRefusal(
@@ -159,8 +152,8 @@ export async function runAirtableSync(
     );
 
     // Only the transition is news. The cron refuses 96 times a day, and an
-    // alert on every pass is one people mute -- which is worse than no alert,
-    // because a muted channel still looks like coverage.
+    // alert on every pass is one people mute, which is worse than no alert:
+    // a muted channel still looks like coverage.
     if (persisted && previous !== "schema_invalid") {
       await postAlert(
         "Airtable sync stopped: the base no longer matches the registry",
@@ -177,12 +170,11 @@ export async function runAirtableSync(
     return report;
   }
 
-  // The lease is still claimed AFTER the client resolves, so a pass that never
-  // reached the base cannot leave `lastStatus` reading "ok". What changed is
-  // what an unconfigured install writes INSTEAD: a cron pass now records
-  // `not_configured` above rather than nothing at all. Both refusals sit on
-  // the same side of this line for the same reason — they are decisions taken
-  // before any work, so neither may look like the outcome of work.
+  // The lease is claimed AFTER the client resolves, so a pass that never
+  // reached the base cannot leave `lastStatus` reading "ok". A cron pass with
+  // no token records `not_configured` above rather than nothing at all. Both
+  // refusals sit on this side of the line for the same reason: they are
+  // decisions taken before any work, so neither may look like its outcome.
   const claim: ClaimResult = await claimSyncLease(
     trigger,
     options.triggeredBy ?? null,
@@ -203,8 +195,8 @@ export async function runAirtableSync(
   let failure: unknown = null;
 
   // Declared out here rather than inside the `try`, so the status write below
-  // can still reach it when the pass fails partway. It is the only thing that
-  // escapes the block, and it escapes for exactly that reason.
+  // can still reach it when the pass fails partway. That is the only reason
+  // anything escapes the block.
   let listed: {
     members: AirtableRecord[];
     projects: AirtableRecord[];
@@ -218,8 +210,8 @@ export async function runAirtableSync(
   try {
     // One list per table, reused by both directions. Change detection compares
     // against what Airtable currently holds rather than a stored hash, so the
-    // push needs these reads anyway — sharing them is what keeps a pass at
-    // roughly six requests rather than twelve.
+    // push needs these reads anyway. Sharing them keeps a pass at roughly six
+    // requests rather than twelve.
     listed = {
       members: await client.listRecords(membersSpec.id),
       projects: await client.listRecords(projectsSpec.id),
@@ -266,7 +258,7 @@ export async function runAirtableSync(
     // Attendance after workshops, because a response names its workshop by
     // Airtable record id and only that pass knows what those map to. Before
     // the pushes, so the ⚙️ Attendance counts a member reads in the base
-    // include what this same pass just imported rather than lagging one
+    // include what this pass just imported rather than lagging a
     // fifteen-minute cycle behind the form they watched somebody submit.
     const attendanceOutcome = await pullAttendance(
       listed.attendance,
@@ -294,20 +286,16 @@ export async function runAirtableSync(
 
   // ⚠️ OUTSIDE the try, and that placement is the whole point of it.
   //
-  // This used to be the last statement inside the block, which meant any
-  // throw anywhere above skipped it. The refusals were still collected — the
-  // array is right here — and then silently discarded, so an officer whose
-  // edit was refused saw a clean `⚙️ Sync status` and no explanation
-  // anywhere, on top of a pass that had already stopped. The one signal the
-  // system has for "your edit did not take" was disabled by exactly the
-  // event most likely to need it.
+  // This used to be the last statement inside the block, so any throw above
+  // skipped it. The refusals were collected into the array right here, then
+  // discarded: an officer whose edit was refused saw a clean `⚙️ Sync status`
+  // and no explanation anywhere, on top of a pass that had already stopped. The
+  // one signal for "your edit did not take" was disabled by the event most
+  // likely to need it. Refusals collected before the failure are about rows the
+  // officer really edited, and a later table throwing does not make them false.
   //
-  // Reporting what was learned before the failure is strictly better than
-  // reporting nothing: those refusals are real, they are about rows the
-  // officer edited, and they do not become false because a later table threw.
-  //
-  // `listed === null` means the very first read failed, so there is nothing
-  // to write onto and nothing was learned yet.
+  // `listed === null` means the very first read failed, so there is nothing to
+  // write onto and nothing was learned yet.
   if (listed !== null) {
     try {
       statusWrites = await writeSyncStatus(client, refusals, listed);
@@ -315,8 +303,8 @@ export async function runAirtableSync(
       // Deliberately not assigned to `failure`. If the pass itself failed,
       // that error is the one worth reporting, and overwriting it with "and
       // then we also could not write the status" would bury the cause. If the
-      // pass succeeded, the data is in and only the annotation is missing —
-      // which is a worse pass, not a failed one.
+      // pass succeeded, the data is in and only the annotation is missing:
+      // a worse pass, not a failed one.
       console.error(
         "[airtable] sync status could not be written:",
         describe(statusError),
@@ -388,8 +376,8 @@ function addPull(
 }
 
 /**
- * Airtable error bodies quote the request, which can include member emails, so
- * this is deliberately lossy — `lastError` is read by the officer console.
+ * Airtable error bodies quote the request, which can include member emails.
+ * This is deliberately lossy, because the officer console reads `lastError`.
  */
 function describe(error: unknown): string {
   if (error instanceof Error) return `${error.name}: ${error.message}`;

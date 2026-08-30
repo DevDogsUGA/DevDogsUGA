@@ -1,17 +1,17 @@
 /**
- * The one row shape every line of the profile popover wears.
+ * The row class every line of the profile popover uses.
  *
- * Lives apart from both components that use it because ProfilePopover renders
- * the plain rows and NavSubMenu renders the sub-menu triggers, and the whole
- * point is that the two are indistinguishable but for the glyph they lead with.
+ * Shared rather than kept in either component: ProfilePopover renders the plain
+ * rows, NavSubMenu renders the sub-menu triggers, and the two have to look
+ * identical apart from the glyph they lead with.
  */
 export const POPOVER_ROW =
   "flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors outline-none hover:bg-mauve-800 focus:outline-none";
 
 /**
- * The caret a sub-menu row leads with, in place of the icon a plain row leads
- * with. It carries no size of its own so it renders at 1em, exactly the box a
- * bare Phosphor icon takes, which is what lines the two kinds of row up.
+ * The caret a sub-menu row leads with, in place of a plain row's icon. It sets
+ * no size of its own, so it renders at 1em, the same box a bare Phosphor icon
+ * takes. That is what lines the two kinds of row up.
  */
 export const POPOVER_ROW_CARET = "shrink-0 text-mauve-400";
 

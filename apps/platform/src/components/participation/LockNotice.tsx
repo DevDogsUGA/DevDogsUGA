@@ -5,19 +5,18 @@ import type { LockReason } from "~/server/teams/lockState";
 /**
  * Why a roster is closed, said in the terms that decide what to do next.
  *
- * The three reasons are not interchangeable and the UI has to distinguish
- * them, because only one of them is actionable:
+ * The three reasons are not interchangeable, because only one is actionable:
  *
- *   * `entry` — the team's PR is open. Closing it reopens the roster, so this
+ *   * `entry`: the team's PR is open. Closing it reopens the roster, so this
  *     one gets an instruction rather than an apology.
- *   * `judging` — judging has started. Nothing reopens it; the offer to close
+ *   * `judging`: judging has started. Nothing reopens it, so the offer to close
  *     the PR would be an affordance that no longer works.
- *   * `officer` — an officer locked it deliberately. The member cannot undo
- *     that and should be told who to ask rather than what to press.
+ *   * `officer`: an officer locked it deliberately. The member cannot undo that
+ *     and should be told who to ask rather than what to press.
  *
- * Showing one generic "this roster is locked" for all three is the failure
- * this component exists to prevent: it sends a team that could fix its own
- * problem to go find an officer.
+ * One generic "this roster is locked" for all three is the failure this
+ * component exists to prevent. It sends a team that could fix its own problem
+ * to go find an officer.
  */
 
 export const LOCK_COPY: Record<LockReason, { title: string; body: string }> = {
@@ -50,8 +49,8 @@ export default function LockNotice({
   reason: LockReason;
   /**
    * Whether closing the PR would actually reopen it. Distinct from
-   * `reason === "entry"` on purpose — once judging starts, the entry is still
-   * the nearest reason but closing no longer helps, and offering the
+   * `reason === "entry"` on purpose. Once judging starts the entry is still
+   * the nearest reason, but closing no longer helps, and offering the
    * instruction anyway is worse than saying nothing.
    */
   canUnlockByClosingPr?: boolean;

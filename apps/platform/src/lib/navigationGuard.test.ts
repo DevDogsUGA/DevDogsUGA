@@ -99,17 +99,17 @@ describe("shouldInterceptNavigation", () => {
   });
 
   it("treats odd-looking but valid relative paths as navigation", () => {
-    // "::::" resolves to /:::: — a real same-origin path, not a parse failure.
+    // "::::" resolves to /::::, a real same-origin path, not a parse failure.
     expect(shouldInterceptNavigation(intent({ href: "::::" }), HERE)).toBe(
       true,
     );
   });
 
   it("does not throw on an href that fails to parse", () => {
-    // A bare scheme with no host throws inside new URL(). In practice an
-    // anchor's .href IDL attribute is always absolute and resolved, so this is
-    // defensive — but the listener runs on every click in the document and
-    // must not be the thing that throws.
+    // A bare scheme with no host throws inside new URL(). An anchor's .href
+    // IDL attribute is always absolute and resolved, so this is defensive.
+    // Still, the listener runs on every click in the document and must not be
+    // the thing that throws.
     expect(shouldInterceptNavigation(intent({ href: "http://" }), HERE)).toBe(
       false,
     );

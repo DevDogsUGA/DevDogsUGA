@@ -11,10 +11,9 @@ import { generateToken, hashToken, type ProxyScope } from "./tokens";
 /**
  * Issuing, disabling and reinstating member credentials.
  *
- * The organising idea: **access is a reachability question, not a lookup.**
- * One environment can serve several teams, so "may this member use it?" is not
- * a row to read — it is "are they an active member of ANY team currently
- * attached to it?".
+ * **Access is a reachability question, not a lookup.** One environment can
+ * serve several teams, so "may this member use it?" is not a row to read. It is
+ * "are they an active member of ANY team currently attached to it?".
  */
 
 export interface IssuedToken {
@@ -27,7 +26,7 @@ export interface IssuedToken {
  * May this member hold a credential for this environment?
  *
  * The whole rule in one query. Deliberately not "is this member on the team
- * that owns it" — an environment has no team, it has an owner, and teams attach
+ * that owns it": an environment has no team, it has an owner, and teams attach
  * to it.
  */
 export async function isReachable(
@@ -51,9 +50,9 @@ export async function isReachable(
  * Give a member both tokens for an environment, or reinstate the ones they had.
  *
  * Both scopes, always, and in one call. Issuing them separately would invite a
- * state where somebody holds a secret token and no publishable one — which
- * reads as "elevated by default", the exact posture the scoped-token design
- * exists to avoid.
+ * state where somebody holds a secret token and no publishable one, which reads
+ * as "elevated by default", the exact posture the scoped-token design exists to
+ * avoid.
  *
  * Returns plaintext ONCE. The caller shows it and forgets it; only hashes are
  * stored, following `reportApiKeyHash` in `oauthRegistrations`.
@@ -104,8 +103,8 @@ export async function issueCredentials(
 /**
  * Withdraw access, reversibly.
  *
- * **Disabled, not revoked.** Access is usually not permanent — people leave a
- * team and rejoin, or return for the next event on the same environment — and
+ * **Disabled, not revoked.** Access is usually not permanent. People leave a
+ * team and rejoin, or return for the next event on the same environment, and
  * revoking is terminal. Revocation is reserved for the environment itself
  * ending.
  */
@@ -128,12 +127,11 @@ export async function disableCredentials(
 /**
  * Re-check every credential on an environment against the reachability rule.
  *
- * Called when a roster changes and nightly. Doing it as a sweep rather than as
- * a targeted update at the moment of removal is what makes the shared-environment
- * case correct: removing somebody from ONE of two teams that share an
- * environment must leave their credential active, and only removal from BOTH
- * takes it away. A per-removal handler would have to know about the other team;
- * a sweep asks the question the rule actually poses.
+ * Called when a roster changes and nightly. A sweep rather than a targeted
+ * update at the moment of removal, because that is what makes the shared
+ * environment case correct: removing somebody from ONE of two teams that share
+ * an environment must leave their credential active, and only removal from BOTH
+ * takes it away. A per-removal handler would have to know about the other team.
  */
 export async function reconcileEnvironmentAccess(
   environmentId: string,
@@ -154,7 +152,7 @@ export async function reconcileEnvironmentAccess(
         eq(sandboxCredentials.environmentId, environmentId),
         eq(sandboxCredentials.status, "active"),
         // Parameterized rather than string-built. See the note in
-        // supabase/provision.ts -- uuids cannot inject, but the predicate that
+        // supabase/provision.ts. Uuids cannot inject, but the predicate that
         // stays correct under a future change is the one to write now.
         reachableIds.length > 0
           ? notInArray(sandboxCredentials.userId, reachableIds)
@@ -164,7 +162,7 @@ export async function reconcileEnvironmentAccess(
     .returning({ id: sandboxCredentials.id });
 
   // Somebody who rejoined gets the row they already had back, still carrying
-  // their history -- but NOT a new token, because the old one is unrecoverable.
+  // their history, but NOT a new token, because the old one is unrecoverable.
   // The console re-issues on request; silently minting one here would mean a
   // credential exists that nobody was ever shown.
   const reinstated =

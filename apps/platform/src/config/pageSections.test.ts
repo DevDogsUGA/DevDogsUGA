@@ -11,7 +11,7 @@ import { CONSOLE_ITEMS, PROFILE_ITEMS, PUBLIC_LINKS } from "./nav";
 /**
  * PAGE_SECTIONS restates anchors and copy that live in page JSX. Rather than
  * drive the pages from the table (which would make them a lot less readable),
- * this reads the sources back and fails on any drift — a renamed anchor, an
+ * this reads the sources back and fails on any drift: a renamed anchor, an
  * edited description, a card added without a search entry.
  */
 
@@ -81,7 +81,7 @@ describe("PAGE_SECTIONS", () => {
     const parsed = parseSections(source);
 
     // A page listed here with nothing parsed means the regex stopped matching,
-    // not that the page is empty — treat it as a failure either way.
+    // not that the page is empty. Either way it is a failure.
     expect(parsed.length).toBeGreaterThan(0);
     expect(normalize(PAGE_SECTIONS[href] ?? [])).toEqual(normalize(parsed));
   });

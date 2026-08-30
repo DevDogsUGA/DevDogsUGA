@@ -13,18 +13,18 @@ import {
  *
  * Every five minutes, for each competition whose `judgingStartsAt` has passed:
  *
- *   1. Freeze participation — turn each team's live entry into a permanent
+ *   1. Freeze participation, turning each team's live entry into a permanent
  *      fact.
  *   2. Create solo teams for members of that workshop who never joined one, so
  *      attribution has a row to hang on.
  *
- * Nothing else. The roster hard-lock needs no write at all — it falls out of
+ * Nothing else. The roster hard-lock needs no write; it falls out of
  * `judgingStartsAt` in the lock predicate.
  *
- * Deliberately NOT folded into the election tally cron, even though both run
- * every five minutes: the tally blocks on ungraded competitions and on a
- * missing tiebreak ballot, and freezing participation has to happen whether or
- * not grading is done, or a slow officer costs every team its star.
+ * Deliberately NOT folded into the election tally cron, though both run every
+ * five minutes: the tally blocks on ungraded competitions and on a missing
+ * tiebreak ballot, and freezing has to happen whether or not grading is done,
+ * or a slow officer costs every team its star.
  */
 export interface JudgingPassReport {
   frozen: number;
@@ -42,11 +42,11 @@ export async function runJudgingPass(): Promise<JudgingPassReport> {
 /**
  * Turns "has a live entry" into "competed", once.
  *
- * Idempotent by the `competedAt is null` guard, which is what makes a
- * five-minute cadence safe. The window matters: a PR closed between judging
- * starting and this pass running costs that team its star. Five minutes is
- * tight enough that losing one would take deliberate effort, and the officer
- * override exists for the case where somebody manages it.
+ * Idempotent by the `competedAt is null` guard, which makes a five-minute
+ * cadence safe. The window matters: a PR closed between judging starting and
+ * this pass running costs that team its star. Five minutes is tight enough
+ * that losing one takes deliberate effort, and the officer override covers
+ * whoever manages it.
  */
 async function freezeParticipation(): Promise<number> {
   // False positive. The `.where()` is right there with five conditions; the
@@ -76,14 +76,13 @@ async function freezeParticipation(): Promise<number> {
 /**
  * Gives every attendee of a judged workshop a team, so attribution has a row.
  *
- * A member who attended the workshop but never joined a team still earned a
- * workshop star, and the star view reaches attendance directly — so this is
- * not what makes that work. It exists so the standings and award surfaces,
- * which are keyed by team, have somewhere to put a solo participant rather
- * than dropping them.
+ * A member who attended but never joined a team still earned a workshop star,
+ * and the star view reaches attendance directly, so this is not what makes
+ * that work. It exists so the standings and award pages, which are keyed by
+ * team, have somewhere to put a solo participant rather than dropping them.
  *
- * Skips anybody who already holds a team for the competition, which is what
- * makes re-running it a no-op.
+ * Skips anybody who already holds a team for the competition, which makes
+ * re-running it a no-op.
  */
 async function createSoloTeams(): Promise<number> {
   const candidates = await db
@@ -98,11 +97,10 @@ async function createSoloTeams(): Promise<number> {
         isNotNull(attendance.workshopId),
         isNotNull(competitions.judgingStartsAt),
         lte(competitions.judgingStartsAt, sql`now()`),
-        // Correlated NOT EXISTS rather than a tuple NOT IN. The obvious
-        // spelling — `(userId, competitionId) not in (select ...)` — is what
-        // Postgres rejects with "subquery has too few columns", because
-        // Drizzle renders the projection as a single expression rather than
-        // as a row constructor.
+        // Correlated NOT EXISTS rather than a tuple NOT IN. Postgres rejects
+        // the obvious spelling, `(userId, competitionId) not in (select ...)`,
+        // with "subquery has too few columns", because Drizzle renders the
+        // projection as a single expression rather than as a row constructor.
         notExists(
           db
             .select({ one: sql`1` })
@@ -120,9 +118,9 @@ async function createSoloTeams(): Promise<number> {
   let created = 0;
 
   for (const candidate of candidates) {
-    // One transaction per solo team rather than one for all of them: a single
-    // member who cannot be placed — because they joined a team in the seconds
-    // since the query above — should not roll back everybody else's.
+    // One transaction per solo team rather than one for all of them: a member
+    // who cannot be placed, because they joined a team in the seconds since
+    // the query above, should not roll back everybody else's.
     await db
       .transaction(async (tx) => {
         const [team] = await tx
@@ -149,9 +147,8 @@ async function createSoloTeams(): Promise<number> {
       })
       .catch((error: unknown) => {
         // The unique constraint on ("userId", "competitionId") is the real
-        // enforcement here; losing that race means somebody joined a team
-        // between the select and the insert, which is exactly the outcome
-        // this pass wanted anyway.
+        // enforcement. Losing that race means somebody joined a team between
+        // the select and the insert, which is the outcome this pass wanted.
         const code = (error as { code?: string } | null)?.code;
         if (code !== "23505") throw error;
       });

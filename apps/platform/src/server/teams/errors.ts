@@ -1,7 +1,7 @@
 /**
  * Typed failures for the team actions.
  *
- * The join screens branch on these — "the competition is over", "close your PR
+ * The join screens branch on these. "The competition is over", "close your PR
  * first", "link GitHub to join" and "that team is full" are four different
  * screens, and a string message cannot be switched on without matching prose
  * that translation or a copy edit will break.
@@ -34,10 +34,10 @@ export type TeamActionCode =
 
 /**
  * Everything a caller can be told, including the one thing the domain does not
- * choose. `"unknown"` is a fault rather than a refusal — a dropped connection,
- * a constraint nothing translated — and it is in the same union so the message
- * table below can be a TOTAL record, which is what makes adding a code a build
- * error rather than a blank paragraph in front of whoever hits it first.
+ * choose. `"unknown"` is a fault rather than a refusal: a dropped connection, a
+ * constraint nothing translated. It is in the same union so the message table
+ * below can be a TOTAL record, which makes adding a code a build error rather
+ * than a blank paragraph in front of whoever hits it first.
  */
 export type TeamProblemCode = TeamActionCode | "unknown";
 
@@ -71,15 +71,13 @@ interface PostgresErrorShape {
  * Finds the driver error inside whatever Drizzle threw.
  *
  * **Drizzle wraps.** Every failed statement arrives as a `DrizzleQueryError`
- * whose own `code` is `undefined`, with the `PostgresError` — the one carrying
- * `23505` and `constraint_name` — on `.cause`. Reading the fields off the
- * outer error therefore never matches, silently: the catch block falls
- * through, the caller re-throws, and a member who is already on a team gets a
- * 500 instead of "you are already on a team".
- *
- * Nothing about that is visible in a type, and it only shows up against a real
- * database, which is why it survived until the ballot write path was exercised
- * against one.
+ * whose own `code` is `undefined`, with the `PostgresError` carrying `23505`
+ * and `constraint_name` on `.cause`. Reading the fields off the outer error
+ * never matches, and fails silently: the catch block falls through, the caller
+ * re-throws, and a member who is already on a team gets a 500 instead of "you
+ * are already on a team". None of it is visible in a type, and it only shows up
+ * against a real database, which is why it survived until the ballot write path
+ * ran against one.
  *
  * The chain is walked rather than unwrapped once, because a nested transaction
  * can add another layer and a fixed `.cause` would break again.
@@ -107,9 +105,9 @@ export function sqlState(error: unknown): string | null {
  * Whether a driver error is a unique violation of a specific constraint.
  *
  * Matching on the constraint name rather than on `23505` alone is the point:
- * one insert can violate more than one unique index, and the caller has to
- * know which — "you are already on a team" and "that slug is taken" are
- * different sentences.
+ * one insert can violate more than one unique index, and the caller has to know
+ * which. "You are already on a team" and "that slug is taken" are different
+ * sentences.
  */
 export function isUniqueViolation(error: unknown, constraint: string): boolean {
   const driver = driverError(error);

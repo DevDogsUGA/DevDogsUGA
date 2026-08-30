@@ -1,24 +1,23 @@
 /**
- * The sidebar's ordering rules, and in particular the one that cost the most
- * thought: where a FOLDER goes, which no folder declares for itself.
+ * The sidebar's ordering rules, in particular where a FOLDER goes, which no
+ * folder declares for itself.
  *
  * Read the first describe block before the rest. A top-level folder's number
- * decides much less than it looks like it does, because `Nodes` in
+ * decides far less than it looks like, because `Nodes` in
  * `components/DocsSidebar/Tree.tsx` renders depth-0 nodes as
- * `[...pages, ...folders]` — every top-level folder is drawn as a section
+ * `[...pages, ...folders]`. Every top-level folder is drawn as a section
  * heading below every loose page whatever `order` says, and `reference/` was
  * already last in the platform sidebar before this module read `order` at all.
- * What the number does decide is the order of the sections relative to each
- * other, everything below the top level, and `firstPagePath`, which walks the
- * array rather than the rendering. `asSidebar` here is that partition
- * transcribed, so the depth-0 tests assert what a reader sees rather than what
- * the array happens to hold.
+ * The number decides the order of the sections relative to each other,
+ * everything below the top level, and `firstPagePath`, which walks the array
+ * rather than the rendering. `asSidebar` here is that partition transcribed, so
+ * the depth-0 tests assert what a reader sees rather than what the array holds.
  *
- * Where a fixture uses real numbers it says so, and those are the ones worth
- * trusting: `docs/platform/reference/server-actions.md` really does carry
- * `order: 1`, and the seven pages in `docs/toolkit/reference/api/` really do
- * all carry `order: 200`. They are here because they are the cases the rules
- * exist for, and the cases that falsify the tempting simpler versions of them.
+ * Where a fixture uses real numbers it says so.
+ * `docs/platform/reference/server-actions.md` does carry `order: 1`, and the
+ * seven pages in `docs/toolkit/reference/api/` do all carry `order: 200`. They
+ * are the cases the rules exist for, and the ones that falsify the tempting
+ * simpler versions of them.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -42,9 +41,9 @@ function labels(nodes: DocsTreeNode[]): string[] {
 /**
  * The depth-0 half of `Nodes` in `components/DocsSidebar/Tree.tsx`,
  * transcribed rather than imported: that module is a client component pulling
- * in `next/link` and the icon set, and none of that belongs in a unit test of
- * this file. Deeper levels are rendered in array order, so there is nothing to
- * transcribe for them.
+ * in `next/link` and the icon set, none of which belongs in a unit test of this
+ * file. Deeper levels render in array order, so there is nothing to transcribe
+ * for them.
  */
 function asSidebar(nodes: DocsTreeNode[]): DocsTreeNode[] {
   return [
@@ -56,10 +55,10 @@ function asSidebar(nodes: DocsTreeNode[]): DocsTreeNode[] {
 describe("the top level", () => {
   it("draws sections below the pages whatever order says, without help from order", () => {
     // The whole platform shape in miniature. `reference/` holds a page that
-    // claims order 1 — "of everything in reference/, read this first" — and
-    // the guides beside it claim nothing, so a naive derivation would hoist
-    // the generated reference above Getting Started. It does not, and neither
-    // would anything else: the partition puts every folder last on its own.
+    // claims order 1 ("of everything in reference/, read this first") and the
+    // guides beside it claim nothing, so a naive derivation would hoist the
+    // generated reference above Getting Started. It does not, and neither would
+    // anything else: the partition puts every folder last on its own.
     const tree = buildDocsTree([
       page("index", "Platform"),
       page("getting-started", "Getting Started"),
@@ -87,9 +86,8 @@ describe("the top level", () => {
   it("sorts sections that declare nothing by title", () => {
     // Documentation System holds three unnumbered guides; Reference holds
     // pages numbered 2 and 224. Neither derives anything at this level, so the
-    // two sections sort against each other by name — which is also what they
-    // did before `order` existed, and the point is that adding `order` did not
-    // quietly reshuffle them.
+    // two sections sort against each other by name. That is also what they did
+    // before `order` existed: adding `order` did not quietly reshuffle them.
     const tree = buildDocsTree([
       page("contributing", "Contributing"),
       page("elections", "Elections"),
@@ -114,9 +112,8 @@ describe("the top level", () => {
       page("reference/server-actions", "Server Actions", 1),
     ]);
 
-    // Still below the loose page, because that is the partition's doing and
-    // no number overrides it — but ahead of the section that asked for
-    // nothing.
+    // Still below the loose page, because that is the partition's doing and no
+    // number overrides it. But ahead of the section that asked for nothing.
     expect(labels(asSidebar(tree))).toEqual([
       "Platform",
       "Guides/",
@@ -143,8 +140,8 @@ describe("pages within a folder", () => {
   });
 
   it("sorts an unordered page as if it declared the default", () => {
-    // 99 and 101 straddle the default, which is the only way to see that an
-    // unordered page is placed rather than appended.
+    // 99 and 101 straddle the default, the only way to see that an unordered
+    // page is placed rather than appended.
     const tree = buildDocsTree([
       page("zulu", "Zulu", 101),
       page("alpha", "Alpha", 99),
@@ -155,10 +152,10 @@ describe("pages within a folder", () => {
   });
 
   it("gives the generated reference a reading order instead of an alphabet", () => {
-    // This is what the key buys, and it is a level down from where the change
-    // was first justified. Alphabetically these are API Routes, Routes, Server
-    // Actions; the generator numbers them 1, 2, 3 because a reviewer should
-    // meet the server actions first.
+    // This is what the key buys, a level down from where the change was first
+    // justified. Alphabetically these are API Routes, Routes, Server Actions;
+    // the generator numbers them 1, 2, 3 because a reviewer should meet the
+    // server actions first.
     const tree = buildDocsTree([
       page("reference/server-actions", "Server Actions", 1),
       page("reference/routes", "Routes", 2),
@@ -226,8 +223,8 @@ describe("where a folder below the top level goes", () => {
 
   it("takes the smallest declared order otherwise, landing beside the page that names it", () => {
     // The generator numbers a folder's pages as a run following the page that
-    // names it — in `docs/platform/reference/` the page `server.md` is 203 and
-    // `server/*` runs 204 to 222 — so the smallest puts `Server/` immediately
+    // names it. In `docs/platform/reference/` the page `server.md` is 203 and
+    // `server/*` runs 204 to 222, so the smallest puts `Server/` immediately
     // after `server`, which is the row a reader is looking under.
     const tree = buildDocsTree([
       page("reference/lib", "Lib", 202),
@@ -248,15 +245,15 @@ describe("where a folder below the top level goes", () => {
   });
 
   it("counts an unnumbered child at the default rather than skipping it", () => {
-    // The fixture that actually separates the two readings of an unnumbered
-    // child, and the reason the module picks the one it does. `guides/` holds
-    // an unnumbered index page and one page at 300. Counting only the numbers
-    // somebody wrote would answer 300 and file the section after Supabase,
-    // when the row a reader meets on opening it is the unnumbered index,
-    // sorted at 100. And that 300 is Advanced's place INSIDE guides/, so
-    // reading it as the folder's own would mean numbering a single page last
-    // sends the whole section last. Invented numbers: no folder in `docs/`
-    // reaches this fallback holding an unnumbered child today.
+    // The fixture that separates the two readings of an unnumbered child, and
+    // the reason the module picks the one it does. `guides/` holds an
+    // unnumbered index page and one page at 300. Counting only the numbers
+    // somebody wrote would answer 300 and file the section after Supabase, when
+    // the row a reader meets on opening it is the unnumbered index, sorted at
+    // 100. And that 300 is Advanced's place INSIDE guides/, so reading it as
+    // the folder's own would mean numbering one page last sends the whole
+    // section last. Invented numbers: no folder in `docs/` hits this fallback
+    // holding an unnumbered child today.
     const tree = buildDocsTree([
       page("reference/api-routes", "API Routes", 3),
       page("reference/guides/index", "Guides"),
@@ -276,9 +273,9 @@ describe("where a folder below the top level goes", () => {
     // The mirror of the fixture above, and the worry it settles: filling 100
     // in for the unnumbered index page does not pin the folder at 100, because
     // `Math.min` keeps the smaller of the two and something inside claims 1.
-    // Worth being straight about what this one is — it passes under either
-    // reading of an unnumbered child, so it pins the direction of the rule
-    // rather than choosing the rule. The test above is the one that chooses.
+    // This one passes under either reading of an unnumbered child, so it pins
+    // the direction of the rule rather than choosing the rule. The test above
+    // is the one that chooses.
     const tree = buildDocsTree([
       page("reference/api-routes", "API Routes", 3),
       page("reference/guides/index", "Guides"),
@@ -302,12 +299,12 @@ describe("where a folder below the top level goes", () => {
       page("reference/supabase", "Supabase", 224),
     ]);
 
-    // Null, not a number — so it sorts at the default like any other node,
+    // Null, not a number, so it sorts at the default like any other node,
     // between the 3 and the 224. This is the one folder shape that stays null
     // even though an unnumbered child otherwise counts as 100: a folder of
     // pages with no opinion has none of its own to report. Substituting the
-    // default here as well would answer 100, which draws in the same place but
-    // says something the folder was never told.
+    // default would answer 100, which draws in the same place but says
+    // something the folder was never told.
     expect(findFolder(tree, "reference/notes")!.order).toBeNull();
     expect(labels(findFolder(tree, "reference")!.children)).toEqual([
       "API Routes",
@@ -320,12 +317,12 @@ describe("where a folder below the top level goes", () => {
     // Every page below is `docs/toolkit/reference/api/` exactly as the
     // generator writes it. Each package is its own target restarting the
     // sequence, so all seven package pages carry `order: 200` and every
-    // subfolder under them starts again at 201 — there is no one run here for
-    // a folder to sit inside. Taking the LARGEST declared number sorted these
+    // subfolder under them starts again at 201. There is no one run here for a
+    // folder to sit inside. Taking the LARGEST declared number sorted these
     // three by how many pages they happen to hold: Devtools last on 209
     // because it has nine, Docs Build first on 201 because it has one. The
-    // smallest ties all three at 201, and the title tiebreak settles it the
-    // way it did before folders were placed by their contents at all.
+    // smallest ties all three at 201, and the title tiebreak settles it the way
+    // it did before folders were placed by their contents at all.
     const tree = buildDocsTree([
       page("reference/api/airtable", "@devdogsuga/airtable", 200),
       page("reference/api/devtools", "@devdogsuga/devtools", 200),
@@ -368,8 +365,8 @@ describe("firstPagePath", () => {
     // This is `docs/toolkit`, which has no loose pages at all: `components/`
     // takes 100 from its own index page and `api/` takes 200 from the package
     // pages it holds, so `/docs/toolkit` redirects to the components index
-    // rather than to the alphabetically first API page. The sidebar's
-    // partition never enters into it — `firstPagePath` reads the array.
+    // rather than the alphabetically first API page. The sidebar's partition
+    // never enters into it. `firstPagePath` reads the array.
     const tree = buildDocsTree([
       page("reference/api/airtable", "@devdogsuga/airtable", 200),
       page("reference/api/supabase", "@devdogsuga/supabase", 200),

@@ -10,8 +10,8 @@ import { applyPullRequestEvent } from "~/server/github/pullRequest";
  * opened, closed, merged or reopened; the team's `submissionState` follows.
  *
  * Nothing here decides consequences. Whether the roster is locked and whether
- * a star was earned are derived from `submissionState` plus time, elsewhere —
- * which is what makes this handler safe to replay and safe to receive out of
+ * a star was earned are derived from `submissionState` plus time, elsewhere.
+ * That is what makes this handler safe to replay and safe to receive out of
  * order.
  */
 export async function POST(request: Request) {
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   if (!secret) {
     // Refusing is the right default. An unsigned webhook endpoint that writes
     // `submissionState` lets anyone on the internet mark a team as having
-    // merged — which awards a star. Accepting unsigned payloads "until the
+    // merged, which awards a star. Accepting unsigned payloads "until the
     // secret is configured" is exactly the window that never gets closed.
     return NextResponse.json(
       { error: "GH_WEBHOOK_SECRET is not set" },
@@ -54,8 +54,8 @@ export async function POST(request: Request) {
 /**
  * HMAC-SHA256 over the raw body, compared in constant time.
  *
- * WebCrypto rather than `node:crypto` because this runs on Workers, and
- * `crypto.subtle.verify` is constant-time by construction — a hand-rolled
+ * WebCrypto rather than `node:crypto` because this runs on Workers.
+ * `crypto.subtle.verify` is constant-time by construction; a hand-rolled
  * comparison of two hex strings leaks the position of the first differing
  * byte, which is enough to forge a signature given enough attempts.
  */

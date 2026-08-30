@@ -25,9 +25,9 @@ function toEntry(item: NavItem, breadcrumbs: string[] = []): SearchEntry {
  * A page, plus one entry per section and field it contains, so "graduation"
  * lands on `/account#graduation` rather than on `/account`.
  *
- * Sub-entries inherit the page's icon and, more importantly, its permission
- * gate: they only ever come from a page the caller can already see, so search
- * still can't leak the shape of a console page it wouldn't open.
+ * Sub-entries inherit the page's icon and its permission gate: they only come
+ * from a page the caller can already see, so search can't leak the shape of a
+ * console page it wouldn't open.
  */
 function toEntries(item: NavItem, breadcrumbs: string[] = []): SearchEntry[] {
   const entries = [toEntry(item, breadcrumbs)];
@@ -63,8 +63,8 @@ function toEntries(item: NavItem, breadcrumbs: string[] = []): SearchEntry[] {
 
 /**
  * The searchable app pages for one caller: public pages always, signed-in
- * pages for sessions, console pages only where permitted — so search can
- * never leak the existence of a page its caller couldn't open.
+ * pages for sessions, console pages only where permitted. Search can never
+ * leak the existence of a page its caller couldn't open.
  */
 export function buildAppSearchEntries(
   permissions: ResolvedPermissions | null,

@@ -24,16 +24,16 @@ export default function TopNav() {
     <header className="sticky top-0 z-50 border-b-2 border-mauve-800 bg-mauve-950/90 backdrop-blur">
       {/* One list across the whole bar, not one on each side. Docs and the
           avatar have to sit in the same Radix collection for their panels to
-          share a viewport, and a collection is a list. The items that are not
-          menus — the brand, search, the app switcher, the mobile trigger —
-          are plain <li>s, which Radix's collection ignores. */}
+          share a viewport, and a collection is a list. The brand, search, the
+          app switcher and the mobile trigger are plain <li>s, which Radix's
+          collection ignores. */}
       <NavShell>
-        {/* The list is spaced like the row of links it mostly is, and the two
-            ends restore the wider gaps they had before there was a list: the
-            brand pushes a full 1rem off the first link, and the right-hand
-            cluster keeps its own tighter rhythm inside one item. Spacing every
-            child off the list itself would set one number for three groups
-            that never shared one. */}
+        {/* Spaced like the row of links it mostly is, with the two ends
+            keeping the wider gaps they had before there was a list: the brand
+            sits a full 1rem off the first link, and the right-hand cluster
+            keeps its tighter rhythm inside one item. Spacing every child off
+            the list would set one number for three groups that never shared
+            one. */}
         <li className="mr-3 shrink-0">
           <Link href="/" className="flex items-center gap-2 lg:gap-2.5">
             <figure className="size-7 shrink-0">
@@ -51,8 +51,8 @@ export default function TopNav() {
 
         {/* One item, four controls. The avatar is a menu and so has to be a
             NavigationMenu.Item, but an <li> inside an <li> is not markup, so
-            that item renders as a div here — Radix's collection is context,
-            not DOM shape, and does not mind. */}
+            that item renders as a div here. Radix's collection is context, not
+            DOM shape, and does not mind. */}
         <li className="ml-auto flex items-center gap-1.5">
           <SearchButton />
           <AppSwitcherButton />

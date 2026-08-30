@@ -10,11 +10,9 @@ import { isUniqueViolation, sqlState } from "~/server/teams/errors";
  * Exercised as SQL rather than through `castBallot` because the action calls
  * `expectSession`, and the parts worth proving are the ones Postgres enforces:
  * the composite foreign key that ties a ballot's electorate to its election,
- * and the unique index that decides the double-submit race.
- *
- * Those are exactly the checks an application-level test cannot substitute
- * for — a race is won or lost in the index, not in the code that reads before
- * writing.
+ * and the unique index that decides the double-submit race. An
+ * application-level test cannot substitute for either. A race is won or lost in
+ * the index, not in the code that reads before writing.
  */
 
 const IDS = {
@@ -89,9 +87,9 @@ async function seed() {
  * Meetings first, then projects.
  *
  * `workshops.projectId` is `on delete restrict` while `workshops.meetingId`
- * cascades — deleting the meeting takes the workshop (and the competition, the
- * teams, the election and the ballots) with it, which then frees the project.
- * The other order fails on the restrict.
+ * cascades. Deleting the meeting takes the workshop with it, along with the
+ * competition, the teams, the election and the ballots, which then frees the
+ * project. The other order fails on the restrict.
  */
 async function cleanup() {
   await db.execute(
@@ -142,13 +140,13 @@ describe("casting a ballot", () => {
     `);
 
     expect(ranks.map((r) => r.rank)).toEqual([1, 2]);
-    // Rank 1 is first place — what the tally's `n − r` scoring assumes and
-    // what a voter would say out loud.
+    // Rank 1 is first place, which is what the tally's `n − r` scoring assumes
+    // and what a voter would say out loud.
     expect(ranks[0]!.candidateTeamId).toBe(IDS.teamB);
   });
 
   it("rejects a second ballot for the same team", async () => {
-    // The double-submit race. Two tabs, or an impatient click — the second
+    // The double-submit race: two tabs, or an impatient click. The second
     // insert loses to the index rather than to a check that read before the
     // first one committed.
     const error = await castTeamBallot(IDS.teamA).catch((e: unknown) => e);

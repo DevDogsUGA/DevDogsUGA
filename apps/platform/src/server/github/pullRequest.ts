@@ -14,8 +14,8 @@ import {
  *
  * The team's PR against the competition's integration branch **is** the entry,
  * and it drives both the roster lock and the competition star. The webhook
- * only mirrors GitHub's view of the PR; every time-dependent consequence —
- * whether the roster is locked, whether a star was earned — is derived from
+ * only mirrors GitHub's view of the PR. Every time-dependent consequence,
+ * whether the roster is locked and whether a star was earned, is derived from
  * `submissionState` elsewhere rather than decided here.
  *
  * That separation is what makes this handler safe to replay: it is a
@@ -58,8 +58,7 @@ export async function applyPullRequestEvent(
 
   if (!isEntryBase(event.baseRef, row.competitionSlug)) {
     // A PR against `main` by mistake, or against another week's branch. Not an
-    // entry, and deliberately not an error either — opening one is a normal
-    // thing to do wrong.
+    // entry, and deliberately not an error: opening one is a normal mistake.
     return { applied: false, reason: "wrong_base" };
   }
 
@@ -68,10 +67,10 @@ export async function applyPullRequestEvent(
   }
 
   // Participation is frozen. `competedAt` turned a live entry into a permanent
-  // fact, and nothing GitHub does afterwards may undo it — closing the PR the
-  // evening after judging must not cost the team its star. The submission
-  // state still advances so the record stays accurate; what it no longer does
-  // is decide anything.
+  // fact, and nothing GitHub does afterwards may undo it: closing the PR the
+  // evening after judging must not cost the team its star. The submission state
+  // still advances so the record stays accurate, but it no longer decides
+  // anything.
   const frozen = row.competedAt !== null;
 
   // The entry triple moves together or not at all.
@@ -81,14 +80,14 @@ export async function applyPullRequestEvent(
   // `submissionUrl`, `submissionState` and `submittedAt` to be null or all
   // three set. Stamping `submittedAt` only on `opened` looks right and is not:
   // the first event this handler sees need not be `opened` at all. A webhook
-  // that was down when the PR was created, a hook added to an existing repo,
-  // or a redelivery replayed out of order all deliver `closed` or `merged`
-  // first — and that write would set two of the three and be rejected by the
-  // constraint, so the entry would never register.
+  // that was down when the PR was created, a hook added to an existing repo, or
+  // a redelivery replayed out of order all deliver `closed` or `merged` first.
+  // That write would set two of the three, the constraint would reject it, and
+  // the entry would never register.
   //
-  // `coalesce` rather than a conditional: it fills the gap on a
-  // first-seen close and preserves the original time on a reopen, which is
-  // what "when this team first entered" should mean.
+  // `coalesce` rather than a conditional: it fills the gap on a first-seen
+  // close and preserves the original time on a reopen, which is what "when this
+  // team first entered" should mean.
   await db
     .update(teams)
     .set({

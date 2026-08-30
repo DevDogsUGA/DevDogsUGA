@@ -12,7 +12,7 @@ interface searchFilterProps {
   clearState?: boolean;
 }
 
-//Dropdown Tag Input component that contains a search input and dropdown feature
+// Search input with a dropdown of matches; each pick becomes a removable tag.
 export const DropdownTagInput = ({
   name = "",
   items = [],
@@ -27,7 +27,6 @@ export const DropdownTagInput = ({
   const [filteredData, setFilteredData] = useState<string[]>(items);
   const [tags, setTags] = useState<string[]>([]);
 
-  //Handles filtering the search input
   const handleQuery = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.currentTarget.value);
     const regex = new RegExp("^" + e.currentTarget.value, "i");
@@ -35,7 +34,6 @@ export const DropdownTagInput = ({
     setFilteredData(filter);
   };
 
-  //Handles clicking on a dropdown item
   const addTag = (e: React.MouseEvent) => {
     const text = e.currentTarget.textContent ?? "";
     setTags((prev) => [...prev, text]);

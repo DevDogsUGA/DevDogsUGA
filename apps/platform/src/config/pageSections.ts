@@ -2,11 +2,11 @@
  * The sections and fields inside the account, console, and tools pages, so
  * search can land on `/account#graduation` instead of just `/account`.
  *
- * Every `id` here is the anchor the page already renders — `ConsoleCard.Root`'s
- * `id` for a section, `Field`'s `id` for a field — and every label/description
- * is the copy that page shows. That duplication is deliberate: the pages stay
- * plain readable JSX rather than being driven by this table. `pageSections.test.ts`
- * parses the page sources and fails if the two ever drift.
+ * Every `id` here is the anchor the page already renders, `ConsoleCard.Root`'s
+ * `id` for a section and `Field`'s `id` for a field, and every label and
+ * description is the copy that page shows. That duplication is deliberate: the
+ * pages stay plain readable JSX rather than being driven by this table.
+ * `pageSections.test.ts` parses the page sources and fails if the two drift.
  *
  * Only pages built from `ConsoleCard` + `Field` appear here. The console's
  * table-driven pages (moderation, feedback, audit log, credentials) have no
@@ -15,7 +15,7 @@
 
 /** One `<Field>` on a page. */
 export interface PageField {
-  /** Anchor id — matches the `id` prop on the page's `<Field>`. */
+  /** Anchor id. Matches the `id` prop on the page's `<Field>`. */
   id: string;
   label: string;
   description?: string;
@@ -23,7 +23,7 @@ export interface PageField {
 
 /** One `<ConsoleCard.Root>` on a page, with the fields it contains. */
 export interface PageSection {
-  /** Anchor id — matches the `id` prop on the page's `<ConsoleCard.Root>`. */
+  /** Anchor id. Matches the `id` prop on the page's `<ConsoleCard.Root>`. */
   id: string;
   /** The card's `<ConsoleCard.Header title>`. */
   label: string;

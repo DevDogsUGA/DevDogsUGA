@@ -17,24 +17,22 @@ import { toast } from "~/lib/toast";
 /**
  * One save button for a whole settings page.
  *
- * This replaces the per-field `InlineSave` row. Each field used to own a save
- * button, a reset button, a toast, an unsaved-changes warning and its own
- * Ctrl/Cmd+S handler, which meant a member changing four things on the account
- * page pressed Save four times and collected four toasts. Now every field
- * registers what it has (`isDirty`, an `error`, and the two callbacks) and the
- * page grows a single bar that commits all of them at once.
+ * Replaces the per-field `InlineSave` row, where each field owned a save
+ * button, a reset, a toast, an unsaved-changes warning and its own Ctrl/Cmd+S
+ * handler: changing four things on the account page meant four Saves and four
+ * toasts. Now each field registers `isDirty`, an `error` and the two callbacks,
+ * and the page grows one bar that commits all of them at once.
  *
- * Fields still own their own state and their own write. `saveAll` fans out to
- * each dirty field's `save` in parallel rather than posting one combined
- * payload, because the writes genuinely differ — some go straight to PostgREST,
- * some through a server action. The cost of fanning out is that a failure can
- * be partial, so two things guard against it:
+ * Fields still own their state and their write. `saveAll` fans out to each
+ * dirty field's `save` in parallel rather than posting one combined payload,
+ * because the writes differ: some go straight to PostgREST, some through a
+ * server action. That makes failure partial, so two things guard it:
  *
- *   1. Nothing saves while any dirty field reports an `error`. Those errors
- *      come from ~/lib/validation/profile, the same module the server actions
- *      validate with, so the client refuses exactly what the server would.
+ *   1. Nothing saves while any dirty field reports an `error`. Those come from
+ *      ~/lib/validation/profile, the same module the server actions validate
+ *      with, so the client refuses exactly what the server would.
  *   2. If a write fails anyway, the toast names the fields that did not land
- *      and the rest stay dirty, so the bar is still there to retry them.
+ *      and the rest stay dirty, so the bar is there to retry them.
  */
 
 export interface SettingsFieldRegistration {
@@ -45,7 +43,7 @@ export interface SettingsFieldRegistration {
   isDirty: boolean;
   /**
    * Non-null blocks the save. Fields derive it from ~/lib/validation/profile
-   * and render it under themselves once blurred — see `useBlurredError`.
+   * and render it under themselves once blurred. See `useBlurredError`.
    */
   error: string | null;
   /** Must reject on failure; `saveAll` reads the rejection to name the field. */
@@ -82,8 +80,8 @@ interface SettingsFormContextValue {
   resetAll: () => void;
   /**
    * Bumped each time a link click was swallowed to protect unsaved changes.
-   * The bar watches it and draws attention to itself — the click has to be
-   * answered with something, or it reads as the page having ignored it.
+   * The bar watches it and draws attention to itself. An unanswered click
+   * reads as the page having ignored it.
    */
   blockedAt: number;
 }
@@ -151,13 +149,12 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
   // Client-side navigation away from unsaved work.
   //
   // `useUnsavedChangesWarning` above only fires when the document itself is
-  // going away. A `<Link>` click never unloads anything — the router swaps the
-  // tree, this page unmounts, and the edits vanish with no prompt at all. This
-  // catches the click on the way down, before Link's own handler sees it, and
-  // answers it by making the bar ask for attention instead.
-  //
-  // Only while dirty: a clean form must never make a link feel broken. See
-  // ~/lib/navigationGuard for which clicks are eligible.
+  // going away. A `<Link>` click never unloads anything: the router swaps the
+  // tree, this page unmounts, and the edits vanish with no prompt. This catches
+  // the click on the way down, before Link's own handler sees it, and makes the
+  // bar ask for attention instead. Only while dirty, so a clean form never
+  // makes a link feel broken. See ~/lib/navigationGuard for which clicks are
+  // eligible.
   const [blockedAt, setBlockedAt] = useState(0);
   useEffect(() => {
     if (!isDirty) return;
@@ -182,13 +179,13 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
       );
       if (!intercept) return;
 
-      // preventDefault alone is enough, and deliberately not stopPropagation:
+      // preventDefault alone is enough, and deliberately not stopPropagation.
       // Link's own click handler ends with `if (e.defaultPrevented) return`
       // before it navigates (see next/dist/client/app-dir/link.js), and this
       // listener is on the document in the capture phase, so it has already run
-      // by the time React builds the synthetic event. Killing propagation as
-      // well would also silence every unrelated handler on the way down — the
-      // menu that wanted to close itself when its link was clicked, say.
+      // by the time React builds the synthetic event. Killing propagation would
+      // also silence every unrelated handler on the way down, such as a menu
+      // closing itself when its own link was clicked.
       event.preventDefault();
       setBlockedAt((n) => n + 1);
     }
@@ -211,11 +208,11 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
       targets.map(({ id }) => {
         const handler = handlers.current.get(id);
         // Wrapped because `save()` is a field's own closure and is only
-        // promised to return one — a synchronous throw from any single field
-        // would escape this `map` before `allSettled` was ever constructed,
-        // leaving `isSaving` stuck true. Every input on the page reads that
-        // flag to disable itself, so one bad field would freeze the whole
-        // form with no error and no way back except a reload.
+        // promised to return a promise. A synchronous throw from one field
+        // would escape this `map` before `allSettled` was constructed, leaving
+        // `isSaving` stuck true. Every input on the page reads that flag to
+        // disable itself, so one bad field would freeze the whole form with no
+        // error and no way back except a reload.
         try {
           return handler ? handler.save() : Promise.resolve();
         } catch (cause) {
@@ -306,15 +303,14 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
       {/* Floor for the save bar to hover over.
 
           The bar is fixed to the bottom of the viewport and its card takes
-          pointer events, so while it is up it covers — and swallows clicks on
-          — whatever the last stretch of the page happens to be. That is worst
-          on the control the member is actually using, because the bar appears
-          in response to them using it: type into the last field on screen and
-          the answer is a bar landing on top of it.
+          pointer events, so while it is up it covers the last stretch of the
+          page and swallows clicks there. Worst on the control the member is
+          using, since the bar appears in response to them using it: type into
+          the last field on screen and the answer is a bar landing on top of it.
 
-          Reserving the height at the end of the document means there is always
+          Reserved height at the end of the document means there is always
           somewhere to scroll the covered thing to. It costs nothing while the
-          bar is down, and it grows rather than snapping so the page does not
+          bar is down, and it grows rather than snapping, so the page does not
           lurch under the pointer the moment a field goes dirty. */}
       <div
         aria-hidden
@@ -340,8 +336,8 @@ export function useSettingsForm() {
 /**
  * Registers a field with the page's save bar.
  *
- * Safe to call with fresh closures every render: the callbacks go into a ref,
- * and only the summary — which is compared by value — can re-render the bar.
+ * Safe to call with fresh closures every render. The callbacks go into a ref,
+ * and only the summary, which is compared by value, can re-render the bar.
  */
 export function useSettingsField({
   id,
@@ -377,13 +373,13 @@ export function useSettingsField({
 }
 
 /**
- * Holds a field's error back until the member has actually left the field, so
- * "Enter a preferred name." does not appear on the first keystroke of clearing
- * it. Once a field has been blurred once it reports live, which is what people
- * expect while they are fixing the thing they were just told about.
+ * Holds a field's error back until the member has left the field, so "Enter a
+ * preferred name." does not appear on the first keystroke of clearing it. After
+ * one blur the field reports live, which is what people expect while fixing the
+ * thing they were just told about.
  *
- * `errorsRevealed` overrides all of that: a save attempt that was refused has
- * to explain itself even for fields nobody touched.
+ * `errorsRevealed` overrides that: a refused save has to explain itself even
+ * for fields nobody touched.
  */
 export function useBlurredError(error: string | null) {
   const { errorsRevealed } = useSettingsForm();
@@ -405,7 +401,7 @@ export function useBlurredError(error: string | null) {
   return { error: blurred ? error : null, onBlur };
 }
 
-/** The message itself. `role="alert"` — it arrives after the interaction. */
+/** The message itself. `role="alert"` because it arrives after the interaction. */
 export function FieldError({ error }: { error: string | null }) {
   return (
     <div

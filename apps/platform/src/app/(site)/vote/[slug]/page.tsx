@@ -18,9 +18,9 @@ import {
 } from "~/server/loaders/elections";
 
 /**
- * A ballot, and one that is shuffled per voter — see below. Indexing it would
- * publish a presented order that is only true for whoever the crawler was, on
- * a page nobody can open without a session anyway.
+ * A ballot, and one that is shuffled per voter. Indexing it would publish a
+ * presented order that is only true for whoever the crawler was, on a page
+ * nobody can open without a session anyway.
  *
  * Static rather than a `generateMetadata` reading the election's name: naming
  * the election in a tab title would cost a query on a page that already makes
@@ -32,13 +32,13 @@ export const metadata: Metadata = {
 };
 
 /**
- * /vote/[slug] — one ballot.
+ * /vote/[slug], one ballot.
  *
- * The presented order is computed HERE, on the server, from a seed derived
- * from the election and the voter. Shuffling in the browser would reshuffle on
- * every render and on every reload, moving options under somebody halfway
- * through ordering them — and it would make "I put us second" unverifiable
- * against what they actually submitted.
+ * The presented order is computed HERE, on the server, from a seed derived from
+ * the election and the voter. Shuffling in the browser would reshuffle on every
+ * render and on every reload, moving options under somebody halfway through
+ * ordering them, and it would make "I put us second" unverifiable against what
+ * they actually submitted.
  */
 export default async function BallotPage({
   params,
@@ -84,7 +84,7 @@ export default async function BallotPage({
       <ConsoleCard.Root id="how-voting-works">
         <ConsoleCard.Header title="How voting works" />
         <ConsoleCard.Content>
-          {/* Both sentences are one thought, so they are one child — a second
+          {/* Both sentences are one thought, so they are one child. A second
               direct child would put a divider through the middle of it. */}
           <div className="flex flex-col gap-2">
             <p className="text-sm text-mauve-300">

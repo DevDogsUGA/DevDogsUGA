@@ -81,9 +81,9 @@ export class MeetingCollector {
       .map(({ crn, ...rest }) => ({ ...rest, offeringCrn: crn }));
 
     // `bulkUpsert` returns early on an empty array, so deleting first would
-    // leave the table truncated — which is what a renamed CSV column used to
-    // do, silently and with an ok response. Refuse the replacement instead;
-    // the surrounding transaction rolls the whole scrape back.
+    // leave the table truncated. A renamed CSV column used to do exactly that,
+    // silently and with an ok response. Refuse the replacement instead; the
+    // surrounding transaction rolls the whole scrape back.
     if (rows.length === 0 && this.pending.length > 0) {
       throw new Error(
         `MeetingParser: ${this.pending.length} meetings collected but none ` +

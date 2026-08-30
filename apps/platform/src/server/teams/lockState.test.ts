@@ -13,8 +13,7 @@ import {
  * readers is the failure it exists to prevent, and drift does not need a
  * database to happen.
  *
- * The table below is the lifecycle from the design note, and the last two rows
- * are the ones worth checking against.
+ * The cases below follow the lifecycle in the design note.
  */
 
 const JUDGING = "2026-03-02T18:00:00Z";

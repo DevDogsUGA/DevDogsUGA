@@ -25,12 +25,12 @@ interface SettingsFieldProps {
 }
 
 /**
- * Wraps a field that has nothing unusual about it: local state, one error, one
- * write. Replaces the old `SaveableField`, which wrapped a field in its own
- * save and reset buttons — those now live once, at the bottom of the page.
+ * Wraps a field with nothing unusual about it: local state, one error, one
+ * write. Replaces `SaveableField`, which carried its own save and reset
+ * buttons. Those now live once, at the bottom of the page.
  *
  * Fields with their own interaction model (the pronoun combobox, the two
- * graduation selects, the links list) call `useSettingsField` directly instead.
+ * graduation selects, the links list) call `useSettingsField` directly.
  */
 export default function SettingsField({
   id,

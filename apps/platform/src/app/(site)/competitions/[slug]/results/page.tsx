@@ -16,15 +16,15 @@ import { getCompetitionBySlug } from "~/server/loaders/meetings";
 import { getStandings, type StandingRow } from "~/server/loaders/points";
 
 /**
- * /competitions/[slug]/results — what the tally decided, and how.
+ * /competitions/[slug]/results, what the tally decided and how.
  *
- * The page is built around one refusal: it never shows a team a single number.
- * A competition total collapses two blocks that measure different things — 600
- * for requirements a team met on its own, 400 for how other people ranked it —
- * and the collapsed version cannot distinguish "did half the work" from "did
- * all of it and lost the vote". Both are on screen for every team, always.
+ * The page never shows a team a single number. A competition total collapses
+ * two blocks that measure different things, 600 for requirements a team met on
+ * its own and 400 for how other people ranked it, and the collapsed version
+ * cannot tell "did half the work" from "did all of it and lost the vote". Both
+ * are on screen for every team, always.
  *
- * Nothing here reads the clock: standings, election results and disclosures are
+ * Nothing here reads the clock. Standings, election results and disclosures are
  * all written by the tally and do not change with time, so there is no
  * `connection()` and the page is a plain uncached read inside the site layout's
  * content boundary.
@@ -32,7 +32,7 @@ import { getStandings, type StandingRow } from "~/server/loaders/points";
 
 /**
  * The only competition route that is not behind `expectSession()`, so the only
- * one worth describing to anything but a browser tab — the two under `teams/`
+ * one worth describing to anything but a browser tab. The two under `teams/`
  * redirect an anonymous visitor to `/auth` and carry `robots: { index: false }`
  * instead of this.
  *
@@ -40,9 +40,9 @@ import { getStandings, type StandingRow } from "~/server/loaders/points";
  * `cache()` wrapper on the loader is what stops that being a second query
  * within the same request.
  *
- * A competition has no name of its own — it is called after its project — which
- * is why the title is built rather than stored, and why the miss branch cannot
- * name anything: an unknown slug has no project behind it to name.
+ * A competition has no name of its own, it is called after its project, so the
+ * title is built rather than stored. The miss branch cannot name anything: an
+ * unknown slug has no project behind it to name.
  */
 export async function generateMetadata({
   params,
@@ -61,9 +61,9 @@ export async function generateMetadata({
 
   return {
     title: `${competition.name} results | DevDogs`,
-    // The scoring split is the description rather than a placing, because the
-    // page refuses to reduce a team to one number and an unfurl that led with
-    // a winner would undo that in the one place nobody proofreads.
+    // The scoring split is the description rather than a placing. The page
+    // refuses to reduce a team to one number, and an unfurl leading with a
+    // winner would undo that in the one place nobody proofreads.
     description: `Final standings for the DevDogs ${competition.name} competition, scored out of 1000 — 600 for requirements met and 400 from the member elections.`,
   };
 }
@@ -75,14 +75,14 @@ export default async function ResultsPage({
 }) {
   const { slug } = await params;
 
-  // The competition is the one read that has to land alone: it decides whether
-  // there is a page at all, and it supplies the id the other three are keyed on.
+  // This read has to land alone. It decides whether there is a page at all, and
+  // it supplies the id the other three are keyed on.
   const competition = await getCompetitionBySlug(slug);
   if (!competition) notFound();
 
   // The other three depend on the competition and on nothing each other
   // returns, so they go out together rather than three round trips deep. The
-  // election results below are a genuine second wave: their ids come from
+  // election results below are a real second wave: their ids come from
   // `pointsElections` and cannot be asked for before it answers.
   const [standings, disclosures, pointsElections] = await Promise.all([
     getStandings(slug),
@@ -97,7 +97,7 @@ export default async function ResultsPage({
     })),
   );
 
-  // Team names come from the standings rather than from a second query: the
+  // Team names come from the standings rather than a second query. The
   // disclosure table stores ids only, and every team in a disclosure is by
   // definition a team that placed, so the join has nothing to miss.
   const teamNames = new Map(standings.map((row) => [row.teamId, row.teamName]));
@@ -164,11 +164,9 @@ export default async function ResultsPage({
 }
 
 /**
- * What the two colours on every bar mean, said once.
- *
- * Once, and above the list, because the alternative is a swatch on both halves
- * of every row — two facts repeated as many times as there are teams, in the
- * one place on the page where the numbers should be doing the talking.
+ * What the two colours on every bar mean, said once above the list. The
+ * alternative is a swatch on both halves of every row, two facts repeated once
+ * per team where the numbers should be doing the talking.
  */
 function SplitLegend() {
   return (
@@ -189,9 +187,9 @@ function SplitLegend() {
  * One team's row.
  *
  * Rendered in the order `getStandings` returned, which is by `placement` and
- * never by points — a tiebreak can leave two teams on identical totals in a
- * deliberate order, and re-sorting here by `totalPoints` would silently re-tie
- * on screen the exact pair the whole tiebreak chain ran to separate.
+ * never by points. A tiebreak can leave two teams on identical totals in a
+ * deliberate order, so re-sorting here by `totalPoints` would re-tie on screen
+ * the exact pair the tiebreak chain ran to separate.
  */
 function StandingCard({
   row,
@@ -226,13 +224,13 @@ function StandingCard({
 
       {/* Both blocks on one track, drawn against 1000 rather than each against
           its own ceiling. Two bars each filled to their own maximum put a team
-          that met every requirement level with one that swept the vote, which
-          is precisely the equivalence the 600/400 split exists to deny. On a
-          shared track the halves keep their real sizes, and nothing needs
-          clamping: a renormalized block — a competition with no elections, so
-          requirements are worth the full 1000 — is already measured against
-          the same denominator, and the two widths cannot sum past the track.
-          It is `aria-hidden` because it draws the numbers printed beneath it. */}
+          that met every requirement level with one that swept the vote, the
+          equivalence the 600/400 split exists to deny. On a shared track the
+          halves keep their real sizes and nothing needs clamping. A
+          renormalized block, where a competition has no elections so
+          requirements are worth the full 1000, is already measured against the
+          same denominator, and the two widths cannot sum past the track.
+          `aria-hidden` because it draws the numbers printed beneath it. */}
       <div
         aria-hidden
         className="mt-4 flex h-2 w-full overflow-hidden rounded-full bg-white/10"
@@ -247,11 +245,11 @@ function StandingCard({
         />
       </div>
 
-      {/* The split, always both halves. The captions carry the inputs rather
-          than only the outputs, because "550 / 600" alone is not checkable and
-          "11 of 12 requirements" is — and the standings row stores those counts
-          precisely so the arithmetic can be reproduced from what was published
-          rather than from a team's current, possibly-corrected grade. */}
+      {/* The split, always both halves. The captions carry the inputs and not
+          only the outputs, because "550 / 600" alone is not checkable and "11
+          of 12 requirements" is. The standings row stores those counts so the
+          arithmetic can be reproduced from what was published rather than from
+          a team's current, possibly-corrected grade. */}
       <dl className="mt-4 grid gap-3 @sm:grid-cols-2">
         <Block
           label="Requirements"
@@ -295,10 +293,10 @@ function widthOf(points: number): string {
 
 /**
  * `resolvedBy` names the step that decided the placement, and only one of the
- * three values means "nothing was needed". A team that was separated from
- * another by a mechanism rather than by its score is owed that fact in the
- * terms of the mechanism — "we lost head-to-head" and "the officers put them
- * above us" are different things to be told.
+ * three values means "nothing was needed". A team separated from another by a
+ * mechanism rather than by its score is owed that fact in the mechanism's own
+ * terms. "We lost head-to-head" and "the officers put them above us" are
+ * different things to be told.
  */
 const RESOLVED_BY_COPY: Record<string, string> = {
   copeland:
@@ -371,11 +369,10 @@ function ScoringExplainer() {
  * The comparisons the officers' ranking was actually used for.
  *
  * This is a read of the disclosure table the tally wrote, never a filtered read
- * of the ballot: the officers' ranking covers every team and is never published
+ * of the ballot. The officers' ranking covers every team and is never published
  * as an ordering, so the only defensible source is the set of pairs the tally
- * deliberately recorded. Each pair is one relation and nothing else — not where
- * either team sits in the officers' order, and nothing about teams that were
- * never tied.
+ * recorded. Each pair is one relation and nothing else: not where either team
+ * sits in the officers' order, and nothing about teams that were never tied.
  */
 function TiebreakDisclosures({
   pairs,
@@ -387,9 +384,9 @@ function TiebreakDisclosures({
   hasCopeland: boolean;
 }) {
   return (
-    // The section keeps the accessible name it had. `ConsoleCard.Header` owns
-    // the `h2` and gives it no id, so there is nothing for `aria-labelledby` to
-    // point at; `aria-label` names the region with the same word instead.
+    // `ConsoleCard.Header` owns the `h2` and gives it no id, so there is
+    // nothing for `aria-labelledby` to point at. `aria-label` names the region
+    // with the same word instead.
     <ConsoleCard.Root id="tiebreaks" aria-label="Tiebreaks">
       <ConsoleCard.Header
         title="Tiebreaks"
@@ -430,9 +427,9 @@ function TiebreakDisclosures({
  * One election's result.
  *
  * `scaled` is the Borda score over the largest score the election could have
- * produced — not over the field — so it is shown as a share of the ceiling. Two
- * teams a point apart read as a point apart here, which is the honest rendering
- * of a close vote and the reason min-max scaling was rejected upstream.
+ * produced, not over the field, so it is shown as a share of the ceiling. Two
+ * teams a point apart read as a point apart here, which is why min-max scaling
+ * was rejected upstream.
  */
 function ElectionCard({
   title,
@@ -485,8 +482,8 @@ function ElectionCard({
 }
 
 /**
- * `scaled` arrives as a numeric string (Postgres `numeric(10,9)`), which is
- * deliberate on the driver's side: parsing it to a float in the query layer
+ * `scaled` arrives as a numeric string, Postgres `numeric(10,9)`, and the
+ * driver keeps it that way on purpose: parsing it to a float in the query layer
  * would round a value the tally stores to nine places. One decimal place is
  * what a reader can use.
  */

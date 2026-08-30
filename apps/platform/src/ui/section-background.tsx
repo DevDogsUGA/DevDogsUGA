@@ -37,8 +37,8 @@ interface Props {
   className?: string;
 }
 
-// useLayoutEffect synchronises the clip path before the first paint in the browser,
-// but falls back to useEffect on the server (where useLayoutEffect is a no-op anyway).
+// useLayoutEffect syncs the clip path before first paint in the browser; on the
+// server it falls back to useEffect, where useLayoutEffect is a no-op anyway.
 const useSafeLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
@@ -51,16 +51,16 @@ const PARALLAX_FACTORS = [0.18, -0.13, 0.1, -0.16, 0.12] as const;
  *
  * `progress` is 0 with the section centred and ±0.5 with its centre one
  * half-viewport away, so it reaches ±(0.5 + H/2V) over the range where the
- * section is visible at all — its top at the viewport bottom, through its
- * bottom at the viewport top. Multiplying by V leaves a bound in pixels with V
- * and H the only terms, and a layer's own bound is that times its factor:
+ * section is visible at all: its top at the viewport bottom, through its bottom
+ * at the viewport top. Multiplying by V leaves a bound in pixels with V and H
+ * the only terms, and a layer's own bound is that times its factor:
  *
  *     |dy| ≤ |factor| · (V + H) / 2
  *
- * Tight rather than generous, which is the point: headroom is paint area, and
- * the slowest blob asks for barely half of what the fastest one does. Past this
- * the section is entirely off screen, which is why `applyParallax` can clamp to
- * it without anyone seeing a blob stop.
+ * Tight rather than generous: headroom is paint area, and the slowest blob asks
+ * barely half of what the fastest one does. Past this the section is entirely
+ * off screen, so `applyParallax` can clamp to it without anyone seeing a blob
+ * stop.
  */
 const parallaxSpan = (sectionH: number, viewH: number) =>
   Math.ceil((viewH + sectionH) / 2);
@@ -74,13 +74,13 @@ const REVEAL_MS = 450;
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 
 /**
- * Measures `ref` and drives `paint(width, height, slope)` — on mount, on every
+ * Measures `ref` and drives `paint(width, height, slope)` on mount, on every
  * resize, and once per frame during the intro reveal.
  *
- * The slope is a function of the measured width, so it can't be resolved during
+ * The slope is a function of the measured width, so it cannot be resolved during
  * SSR. Rather than leaving the section invisible until hydration, callers render
  * a full-bleed fallback and this hook eases the slope up from 0 (which draws
- * that same flat rect) to its real value, then tracks resizes instantly.
+ * that same flat rect) to its real value, then tracks resizes.
  */
 export function useSectionSlope(
   ref: RefObject<HTMLElement | null>,
@@ -138,11 +138,10 @@ export function useSectionSlope(
  * ## Why the blobs are CSS gradients and not blurred SVG ellipses
  *
  * This used to be an SVG: a `<g>` of hard-edged `<ellipse>`s pushed through one
- * `feGaussianBlur` at stdDeviation 45 (55 on the hero). It looked right and it
- * was the single most expensive thing on the site. Six of these mount on the
- * homepage, so every scroll frame that moved a section across the viewport had
- * to re-run six full-section Gaussian blurs on the CPU. Measured on a scroll
- * harness:
+ * `feGaussianBlur` at stdDeviation 45 (55 on the hero). It looked right and was
+ * the most expensive thing on the site. Six of these mount on the homepage, so
+ * every scroll frame that moved a section across the viewport re-ran six
+ * full-section Gaussian blurs on the CPU. Measured on a scroll harness:
  *
  * - as it was ......................................... 10.9 FPS
  * - filter removed, ellipses kept ..................... 31.2 FPS
@@ -150,7 +149,7 @@ export function useSectionSlope(
  * - stdDeviation dropped 45 → 4, filter kept .......... 17.9 FPS
  * - parallax frozen, filter kept ...................... 11.5 FPS
  *
- * So the blur was the whole cost — shrinking it was not a fix, and the parallax
+ * So the blur was the whole cost. Shrinking it was not a fix, and the parallax
  * was never the problem (with gradients, parallax running 46.4 / frozen 46.8 /
  * listeners removed 45.4 are all one number). A radial-gradient whose stops
  * trace the same Gaussian falloff reads as the same shape, and the browser
@@ -159,8 +158,8 @@ export function useSectionSlope(
  * The one thing gradients cannot reproduce exactly: the old filter blurred the
  * blobs *after* compositing them together, and the blur was isotropic in pixels
  * while each gradient's falloff is a fraction of its own radius. Overlaps and
- * very flat blobs are therefore a shade softer or harder than they were. At
- * these radii — every blob is half the section wide — that is not visible.
+ * very flat blobs are a shade softer or harder than they were. At these radii,
+ * every blob being half the section wide, that is not visible.
  */
 export default function SectionBackground({
   topEdge,
@@ -182,8 +181,8 @@ export default function SectionBackground({
   useSectionSlope(containerRef, (W, H, S) => {
     const container = containerRef.current;
     const painted = paintedRef.current;
-    // Painted only once a shape exists — a degenerate clip path makes the
-    // browser drop the whole layer, which is what left the section blank.
+    // Painted only once a shape exists. A degenerate clip path makes the browser
+    // drop the whole layer, which is what left the section blank.
     if (!container || !painted || !W || !H) return;
 
     const cs = getComputedStyle(container);
@@ -194,8 +193,8 @@ export default function SectionBackground({
       parseFloat(cs.borderBottomLeftRadius),
     ];
     // The painted layer is inset-0 inside the measured container, so the path's
-    // user units are that container's own pixels — the same space buildPath
-    // works in, and the same space HeroSection clips its <section> with.
+    // user units are that container's own pixels: the same space buildPath works
+    // in, and the same space HeroSection clips its <section> with.
     painted.style.clipPath = `path('${buildPath(W, H, S, topEdge, bottomEdge, radii)}')`;
     // Each blob layer is taller than the section (see blobLayerStyle), so it
     // can no longer let its gradient default to the size of its own box. This
@@ -237,9 +236,8 @@ export default function SectionBackground({
         const factor = PARALLAX_FACTORS[i % PARALLAX_FACTORS.length]!;
         // Exactly the headroom this layer was given, since both are this
         // factor's share of the same span. Reachable only with the section off
-        // screen, so the clamp is what keeps travel and headroom in step —
-        // including for a frame after a resize, before the span is rewritten —
-        // rather than a limit anyone can see.
+        // screen, so the clamp keeps travel and headroom in step, including for a
+        // frame after a resize before the span is rewritten.
         const reach = Math.abs(factor) * span;
         const dy = clamp(progress * factor * viewH, -reach, reach);
         el.style.transform = `translateY(${dy.toFixed(1)}px)`;
@@ -251,10 +249,10 @@ export default function SectionBackground({
       rafId = requestAnimationFrame(applyParallax);
     }
 
-    // Six sections mount on the homepage and five of them are off-screen at any
-    // moment; none of those should be answering the scroll event. The margin
-    // starts a section a quarter-screen early so it is already in position by
-    // the time it is visible — the catch-up never happens on screen.
+    // Six sections mount on the homepage and five are off-screen at any moment;
+    // none of those should answer the scroll event. The margin starts a section
+    // a quarter-screen early so it is in position by the time it is visible, and
+    // the catch-up never happens on screen.
     const io = new IntersectionObserver(
       (entries) => {
         const visible = entries[entries.length - 1]?.isIntersecting ?? false;
@@ -298,7 +296,7 @@ export default function SectionBackground({
           // over earlier ones exactly as the <ellipse> list did. No will-change:
           // the measurements above show the parallax costs nothing once the
           // filter is gone, and promoting five full-section layers per section
-          // would spend a lot of GPU memory to buy nothing.
+          // would spend GPU memory to buy nothing.
           //
           // Only the horizontal inset is a class. The vertical one is the
           // parallax headroom and comes from `style`, which needs a custom
@@ -346,9 +344,9 @@ function blobLayerStyle(
 ): CSSProperties {
   const { grow, edge, sd } = blurGeometry(blurSd);
 
-  // This layer's own share of the parallax span — see `parallaxSpan`. Kept as
-  // a fraction of one shared custom property rather than five of them, so a
-  // resize rewrites one value per section instead of one per blob.
+  // This layer's own share of the parallax span; see `parallaxSpan`. Kept as a
+  // fraction of one shared custom property rather than five of them, so a resize
+  // rewrites one value per section instead of one per blob.
   const reach = Math.abs(PARALLAX_FACTORS[index % PARALLAX_FACTORS.length]!);
   const m = `calc(var(--bg-span, 0px) * ${reach})`;
 
@@ -357,46 +355,39 @@ function blobLayerStyle(
   return {
     // ## Why the layer is taller than the section it fills
     //
-    // An SVG ellipse is a shape in the section's own coordinate space, so
-    // moving it moved a shape, and the only thing that ever cut it was the
-    // section boundary. A gradient is the *background of a box*, and both the
-    // box and the image inside it have edges. Sized to the section and then
-    // translated by dy, the image's own edge came to rest dy pixels inside the
-    // section — and these blobs are taller than the section they sit in (ry
-    // ~45%, grown again by the tail), so the gradient still had alpha to draw
-    // where that edge fell. It rendered as a hard horizontal line ruled across
-    // the band: measured at up to 193px in from the edge on the homepage, a
-    // 2px step from rgb(127,228,189) to rgb(240,253,244), and the more obvious
-    // for being horizontal on a section whose own edges are slanted.
+    // An SVG ellipse is a shape in the section's own coordinate space, so only
+    // the section boundary ever cut it. A gradient is the *background of a box*,
+    // and both the box and the image inside it have edges. Sized to the section
+    // and then translated by dy, the image's own edge came to rest dy pixels
+    // inside the section, where these blobs still have alpha to draw (ry ~45%,
+    // grown again by the tail). It rendered as a hard horizontal line across the
+    // band: up to 193px in from the edge on the homepage, a 2px step from
+    // rgb(127,228,189) to rgb(240,253,244), the more obvious for being
+    // horizontal on a section whose own edges are slanted.
     //
     // Growing the box alone does not fix it, because the image travels with the
-    // box. The image has to grow too, so that it still covers the section once
-    // moved: both gain `m` at each end, this layer's share of the span that
-    // `applyParallax` publishes and clamps the travel to. The image then
-    // overhangs by exactly the distance it can move, and only the section
-    // boundary ever cuts it — which is where `overflow-hidden` and the clip
-    // path cut anyway.
+    // box. Both gain `m` at each end, this layer's share of the span that
+    // `applyParallax` publishes and clamps travel to, so the image overhangs by
+    // exactly the distance it can move and only the section boundary cuts it.
     //
-    // The cost is that `BlobDef`'s vertical percentages no longer mean what
-    // they say: they were written against the section, and the image is now
-    // taller than that. `vertical()` re-expresses them against `--bg-h`, and
-    // the centre is pushed down by the same overhang the image gained, which
-    // together put the blob back exactly where it was.
+    // The cost is that `BlobDef`'s vertical percentages were written against the
+    // section and the image is now taller. `vertical()` re-expresses them against
+    // `--bg-h`, and the centre is pushed down by the same overhang the image
+    // gained, which puts the blob back where it was.
     //
-    // With both custom properties unset — server-rendered, or reduced motion,
-    // where nothing translates and the headroom would be dead weight — every
-    // one of these collapses to what it was. `--bg-h` falls back to `100%`,
-    // which inside a gradient already means the image height, and the image is
-    // the box again.
+    // With both custom properties unset, all of this collapses to what it was:
+    // `--bg-h` falls back to `100%`, which inside a gradient means the image
+    // height, so the image is the box again. That covers the server render and
+    // reduced motion, where nothing translates and the headroom is dead weight.
     top: `calc(-1 * ${m})`,
     bottom: `calc(-1 * ${m})`,
     backgroundImage:
       `radial-gradient(${scaleLength(b.rx, grow)} ${vertical(b.ry, grow)}` +
       ` at ${b.cx} calc(${m} + ${vertical(b.cy, 1)}), ${stops})`,
     backgroundSize: `100% calc(var(--bg-h, 100%) + 2 * ${m})`,
-    // The image is sized to the box rather than left to tile into it — but a
-    // stale `--bg-h` would make those disagree, and a tiled blob is a much
-    // louder failure than a slightly mismeasured one.
+    // The image is sized to the box rather than left to tile into it. A stale
+    // `--bg-h` would make those disagree, and a tiled blob is a much louder
+    // failure than a slightly mismeasured one.
     backgroundRepeat: "no-repeat",
     // Matches the <ellipse opacity> default this replaced.
     opacity: b.opacity ?? 0.65,
@@ -404,15 +395,15 @@ function blobLayerStyle(
 }
 
 /**
- * The same, for a length down the page — where the gradient image is taller
- * than the section by `--bg-span` at each end, so a percentage of the image is no
+ * The same, for a length down the page, where the gradient image is taller than
+ * the section by `--bg-span` at each end, so a percentage of the image is no
  * longer a percentage of the section.
  *
  * Percentages are rewritten as that fraction of `--bg-h`, the section's own
- * measured height. Everything else is already absolute and only needs scaling.
- * The `100%` fallback is what makes this a no-op before the section has been
- * measured: inside a gradient it resolves against the image, and until
- * `--bg-span` exists the image is exactly the section.
+ * measured height. Everything else is absolute and only needs scaling. The
+ * `100%` fallback makes this a no-op before the section has been measured:
+ * inside a gradient it resolves against the image, and until `--bg-span` exists
+ * the image is exactly the section.
  */
 function vertical(value: string, k: number): string {
   const m = LENGTH.exec(value);

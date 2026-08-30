@@ -9,8 +9,8 @@ import { runJudgingPass } from "~/server/teams/judgingPass";
  * Freezes competition participation and creates solo teams for competitions
  * whose judging has begun. Every five minutes.
  *
- * This is the pass without which no competition star is ever awarded: the
- * star reads `teams."competedAt"`, and nothing else writes that column.
+ * No competition star is ever awarded without this pass: the star reads
+ * `teams."competedAt"`, and nothing else writes that column.
  *
  * Auth: `Authorization: Bearer <CRON_SECRET>`, same as the other cron routes,
  * skipped when running locally.

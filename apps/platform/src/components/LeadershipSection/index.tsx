@@ -32,7 +32,7 @@ export default async function LeadershipSection({
 }: Props) {
   // Cached in the loader, and this whole section renders inside the
   // homepage's `"use cache"` scope, so the await does not make the page
-  // dynamic — it resolves once when the prerendered shell is built.
+  // dynamic. It resolves once when the prerendered shell is built.
   const officers = await getCurrentOfficers();
 
   return (
@@ -60,8 +60,8 @@ export default async function LeadershipSection({
           </div>
 
           {/* An empty board is a seeding failure, not a state worth designing
-              for -- but rendering the cluster with nothing in it produces a
-              660px void under the heading, so the section closes up instead. */}
+              for. But rendering the cluster with nothing in it produces a 660px
+              void under the heading, so the section closes up instead. */}
           {officers.length > 0 && <LeaderCluster profiles={officers} />}
 
           {/* Says the same thing as the announcement notice, in the same
@@ -76,8 +76,8 @@ export default async function LeadershipSection({
             </p>
             <LinkButton
               href="/leadership"
-              // A next.config redirect onto the application form, not a page —
-              // never prefetch. It leaves the site, so it leaves this tab
+              // A next.config redirect onto the application form, not a page,
+              // so never prefetch. It leaves the site, so it leaves this tab
               // alone: the notice's button does the same.
               prefetch={false}
               target="_blank"

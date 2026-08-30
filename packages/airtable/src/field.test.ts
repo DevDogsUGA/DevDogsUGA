@@ -12,13 +12,10 @@ import {
 
 describe("direction", () => {
   /**
-   * The highest-value property in the registry, and the one that must never
-   * run: a field both sides write produces no runtime error. It produces
-   * last-writer-wins, silently, weeks later — and the losing write is
-   * somebody's dues record.
-   *
-   * Asserted at the type level. `.push()` returns a `PushField`, which carries
-   * no `.pull()` method, so the mistake cannot be spelled.
+   * A field both sides write produces no runtime error. It produces
+   * last-writer-wins, silently, weeks later, and the losing write is somebody's
+   * dues record. `.push()` returns a `PushField`, which has no `.pull()`, so
+   * the mistake cannot be spelled.
    */
   it("makes push and pull mutually exclusive in the type", () => {
     const pushed = field.text("fld1", "Name").push((r: { a: string }) => r.a);
@@ -60,9 +57,8 @@ describe("direction", () => {
 describe("matchKey", () => {
   /**
    * `fieldsToMergeOn` accepts only number, text, long text, single/multiple
-   * select and date. `email` is not on that list — which is why the Members
-   * match key is a Platform ID and not the UGA email it would otherwise
-   * obviously be.
+   * select and date. `email` is not on that list, which is why the Members
+   * match key is a Platform ID and not the UGA email.
    */
   it("rejects an ineligible type at compile time", () => {
     const eligible = field.text("fldA", "Platform ID").matchKey();
@@ -103,12 +99,12 @@ describe("matchKey", () => {
 });
 
 /**
- * A closed choice list is the only thing in a spec that Airtable itself can
- * enforce, and it can only do so if the list survives all the way from the
- * declaration to the scaffolder. Every direction method rebuilds the spec by
- * hand rather than spreading it, so a new property is carried through four
- * places or silently dropped in whichever one was missed -- and a dropped list
- * scaffolds a select with NO choices, which accepts anything and looks fine.
+ * A closed choice list is the only part of a spec Airtable can enforce, and
+ * only if the list survives from the declaration to the scaffolder. Every
+ * direction method rebuilds the spec by hand rather than spreading it, so a new
+ * property has to be carried through four places. A list dropped in whichever
+ * one was missed scaffolds a select with NO choices, which accepts anything and
+ * looks fine.
  */
 describe("choices", () => {
   const KIND = ["Workshop", "Social", "Meeting"] as const;
@@ -145,7 +141,7 @@ describe("choices", () => {
 
   it("treats multipleSelects the same way", () => {
     // The two types take identical options at creation and differ only in
-    // cardinality, so a list declarable on one and not the other would be a
+    // cardinality, so a list allowed on one and not the other would be a
     // distinction with no cause.
     const spec = field.multipleSelects("fldT", "Tracks", KIND).ignore();
     expect(spec.type).toBe("multipleSelects");
@@ -153,9 +149,8 @@ describe("choices", () => {
   });
 
   it("accepts a readonly array declared as const at the call site", () => {
-    // The signature other code is written against. `as const` gives a
-    // `readonly string[]`, which a `string[]` parameter would reject -- so
-    // this is a compile-time assertion wearing a runtime test's clothes.
+    // `as const` gives a `readonly string[]`, which a `string[]` parameter
+    // would reject, so this is a compile-time assertion in a runtime test.
     const choices = ["Workshop", "Social"] as const;
     expect(
       field.singleSelect("fldK", "Kind", choices).ignore().choices,

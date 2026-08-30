@@ -28,9 +28,9 @@ export interface UseProfileLinksReturn {
    * It takes the list rather than reading the draft because the list on screen
    * is not always the draft: a URL typed into the add-link box shows as a
    * preview card and is committed by the page-wide save, without the member
-   * having to press Add first. The component folds that pending input into the
-   * draft and hands the result to this, to `validateLinks`, and to `save` — so
-   * the preview card, the dirty count and the write all describe one list.
+   * pressing Add first. The component folds that pending input into the draft
+   * and passes the result here, to `validateLinks`, and to `save`, so the
+   * preview card, the dirty count and the write all describe one list.
    */
   isDirtyFor: (links: DraftLink[]) => boolean;
   /** Returns the new link's local id, so the caller can skip its entrance animation. */
@@ -59,12 +59,12 @@ const bySortOrder = (a: { sortOrder: number }, b: { sortOrder: number }) =>
 /**
  * Links, staged.
  *
- * Adding, editing, deleting and reordering used to each fire their own write
+ * Adding, editing, deleting and reordering each used to fire their own write
  * the moment they happened, which made the links list the one part of the
- * account page that did not have a save button — it just kept saving. Now
- * every operation edits a local draft and nothing reaches the server until the
- * page's save bar commits, so links behave like the rest of the form and a
- * mis-drag is undone with Reset rather than with a second mis-drag.
+ * account page with no save button. It just kept saving. Now every operation
+ * edits a local draft and nothing reaches the server until the page's save bar
+ * commits, so links behave like the rest of the form and a mis-drag is undone
+ * with Reset rather than with a second mis-drag.
  */
 export function useProfileLinks(
   initialLinks: ProfileLink[],

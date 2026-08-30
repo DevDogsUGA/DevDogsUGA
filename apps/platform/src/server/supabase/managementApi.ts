@@ -4,9 +4,9 @@ import { selectKeys, type ApiKeyRow, type SelectedKeys } from "./keys";
  * The Supabase Management API, confined to the endpoints this design uses.
  *
  * Confined deliberately. A general client would invite reaching for whatever
- * endpoint is convenient, and every additional endpoint is a scope the OAuth
- * app has to request — the scope set is the security boundary, and it is only
- * as tight as the code that stays inside it.
+ * endpoint is convenient, and every extra endpoint is a scope the OAuth app has
+ * to request. The scope set is the security boundary, and it is only as tight
+ * as the code that stays inside it.
  */
 
 const BASE = "https://api.supabase.com";
@@ -81,8 +81,8 @@ export function listProjects(token: string): Promise<ProjectSummary[]> {
  * A single project, or null when it is gone.
  *
  * Null rather than a throw for 404 specifically, because "the owner deleted
- * their project" is a routine state this system has to handle rather than an
- * exception — it is the input to orphaning, and the nightly reconcile asks this
+ * their project" is a routine state this system handles rather than an
+ * exception. It is the input to orphaning, and the nightly reconcile asks this
  * question about every environment on every run.
  */
 export async function getProject(
@@ -121,7 +121,7 @@ export function createProject(
   });
 }
 
-/** Selection is by `type`, never by `name` — see `keys.ts` for why. */
+/** Selection is by `type`, never by `name`. See `keys.ts` for why. */
 export async function retrieveKeys(
   token: string,
   ref: string,
@@ -139,7 +139,7 @@ export async function retrieveKeys(
  * > `begin`/`commit`. A failed migration therefore leaves the schema untouched
  * > rather than half-applied, so the migration driver needs no repair path.
  *
- * **This endpoint is marked Beta**, and the entire control plane rests on it.
+ * **This endpoint is marked Beta**, and the whole control plane rests on it.
  * Its stability is a risk to re-check before each event; the fallback is that
  * the owner can always run migrations from their own machine with the CLI.
  */
@@ -166,7 +166,7 @@ export function restoreProject(token: string, ref: string): Promise<void> {
  * Poll until the project reports ready, or give up.
  *
  * A poll rather than a sleep. Create measured ~10s and restore ~196s, but those
- * are observations of one afternoon on one account, not a contract — and
+ * are observations of one afternoon on one account, not a contract.
  * `ACTIVE_HEALTHY` proved trustworthy enough that all 24 migrations applied
  * immediately after the flip, so there is no separate connectivity probe to add.
  */

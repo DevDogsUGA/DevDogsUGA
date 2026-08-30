@@ -3,33 +3,32 @@ import type { DeployEnvironment } from "@devdogsuga/env";
 /**
  * Proxy hostnames: one label deep, never recycled, and PER ENVIRONMENT.
  *
- * Pure. The uniqueness guarantee lives in the database — `proxyHostname` is
- * unique and dead environments keep their rows — so this only has to produce a
+ * Pure. The uniqueness guarantee lives in the database: `proxyHostname` is
+ * unique and dead environments keep their rows. This only has to produce a
  * candidate that is a legal single DNS label under the right suffix.
  */
 
 /**
  * The suffix each deployment's Worker route actually claims.
  *
- * This was one constant, `-sandbox.devdogsuga.org`, with no environment
- * awareness — while `apps/sandbox/wrangler.jsonc` routes staging at
- * `*-sandbox-staging.devdogsuga.org/*`. Nothing generated a hostname matching
- * that pattern, so no request ever reached the staging Worker: a staging
- * environment provisioned as `lantern-abc-sandbox.devdogsuga.org` matched
- * PRODUCTION's wildcard instead, where the production Worker resolved the token
- * against the production database and answered `410`. Staging sandboxes could
- * not work, and the failure named the member's token rather than the routing.
+ * One environment-blind constant, `-sandbox.devdogsuga.org`, used to break
+ * staging. `apps/sandbox/wrangler.jsonc` routes staging at
+ * `*-sandbox-staging.devdogsuga.org/*`, nothing generated a hostname matching
+ * it, and a staging environment provisioned as
+ * `lantern-abc-sandbox.devdogsuga.org` matched PRODUCTION's wildcard instead.
+ * The production Worker resolved the token against the production database and
+ * answered `410`, so the failure named the member's token, not the routing.
  *
  * Each entry must stay in step with the `routes` block of that wrangler config;
  * they are two halves of one fact, and this is the half that writes rows.
  * Changing a suffix later means rewriting every stored `proxyHostname` in that
  * environment's database.
  *
- * Development shares staging's suffix. `wrangler dev` has no route at all — it
- * serves locally and reads `proxyHostname` from the database — so the value is
- * unreachable in practice; pointing it at staging rather than production means
- * a row that somehow escaped a dev machine lands on the environment that can
- * absorb it.
+ * Development shares staging's suffix. `wrangler dev` has no route at all: it
+ * serves locally and reads `proxyHostname` from the database, so the value is
+ * unreachable in practice. Pointing it at staging rather than production means
+ * a row that escaped a dev machine lands on the environment that can absorb
+ * it.
  */
 export const SANDBOX_SUFFIXES = {
   development: "-sandbox-staging.devdogsuga.org",
@@ -47,9 +46,9 @@ export function sandboxSuffix(deployEnv: DeployEnvironment): string {
  * `<env>-sandbox.devdogsuga.org`, never `<env>.sandbox.devdogsuga.org`.
  * Cloudflare's Universal SSL covers the apex and first-level subdomains only;
  * anything deeper needs Advanced Certificate Manager at around $10/month. A dot
- * that slips into the label silently moves the hostname a level down, where the
- * wildcard certificate does not reach — and the failure appears as a TLS error
- * on somebody's phone, not as anything this code would report.
+ * that slips into the label moves the hostname a level down, past the wildcard
+ * certificate, and the failure shows up as a TLS error on somebody's phone
+ * rather than as anything this code reports.
  *
  * Every suffix above is itself one label deep, so this holds for all of them.
  */
@@ -69,10 +68,10 @@ function slugify(name: string): string {
 /**
  * A short random suffix, always.
  *
- * Not a collision-avoidance measure — the unique constraint handles that — but
- * an unguessability one. Without it a hostname is derivable from a team name,
- * so anybody who knows a team exists knows where its instance lives, and the
- * only thing between them and it is a token they would then go looking for.
+ * Not for collision avoidance; the unique constraint handles that. It is for
+ * unguessability. Without it a hostname is derivable from a team name, so
+ * anybody who knows a team exists knows where its instance lives, leaving only
+ * the token between them and it.
  */
 function randomSuffix(): string {
   const alphabet = "abcdefghijkmnpqrstuvwxyz23456789"; // no look-alikes

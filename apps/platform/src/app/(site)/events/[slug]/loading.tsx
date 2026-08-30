@@ -1,13 +1,13 @@
 /**
  * What appears between the click and the meeting arriving.
  *
- * Not a nicety: the `(site)` layout reads auth cookies, so every route under
- * it is dynamic, and a dynamic route is not prefetched at all unless it has a
- * loading boundary. Without this file, hovering a meeting link fetches
- * nothing, and the dialog opens on an empty frame while the query runs.
+ * The `(site)` layout reads auth cookies, so every route under it is dynamic,
+ * and a dynamic route is not prefetched at all unless it has a loading
+ * boundary. Without this file, hovering a meeting link fetches nothing, and the
+ * dialog opens on an empty frame while the query runs.
  *
- * Shaped like the body it stands in for — badge row, a line of prose, the
- * location, two agenda rows — so the dialog does not resize under the reader
+ * It is shaped like the body it stands in for: badge row, a line of prose, the
+ * location, two agenda rows. The dialog then does not resize under the reader
  * the moment the real content lands.
  */
 export default function Loading() {

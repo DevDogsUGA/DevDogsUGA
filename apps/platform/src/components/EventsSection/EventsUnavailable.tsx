@@ -7,26 +7,26 @@ import { INVOLVEMENT_NETWORK_EVENTS_URL } from "~/config/nav";
 /**
  * What the events page says when it cannot read the schedule.
  *
- * Shared by two callers that catch different failures, which is the whole
- * reason it is its own module.
+ * Two callers that catch different failures share it, which is the whole reason
+ * it is its own module.
  *
- * `error.tsx` catches throws from `page.tsx` and the segments below it — a
- * meeting's own dialog, mainly. It does NOT catch the schedule, because the
- * schedule is rendered by `layout.tsx`, and the Next docs are explicit that
- * `error.js` "does not wrap the layout.js or template.js above it in the same
- * segment". A throw there would sail past this boundary to the `(site)` parent
- * and take out the nav and footer with it.
+ * `error.tsx` catches throws from `page.tsx` and the segments below it, mainly
+ * a meeting's own dialog. It does NOT catch the schedule, because `layout.tsx`
+ * renders the schedule, and the Next docs are explicit that `error.js` "does
+ * not wrap the layout.js or template.js above it in the same segment". A throw
+ * there would sail past this boundary to the `(site)` parent and take out the
+ * nav and footer with it.
  *
- * The schedule cannot move to `page.tsx` to fix that: it lives in the layout
- * so it stays mounted behind `/events/directions` and `/events/[slug]`, which
- * is what makes those dialogs open over a calendar that never re-renders. So
- * the layout catches its own read instead and renders this directly, and the
- * two paths share one fallback rather than drifting into two.
+ * The schedule cannot move to `page.tsx` to fix that. It lives in the layout so
+ * it stays mounted behind `/events/directions` and `/events/[slug]`, which is
+ * what makes those dialogs open over a calendar that never re-renders. So the
+ * layout catches its own read instead and renders this directly, and the two
+ * paths share one fallback rather than drifting into two.
  *
  * It degrades rather than apologises. The club's meetings are also listed on
- * the UGA Involvement Network — a different host on a different database, so
- * it is still up when ours is not. That link is the point: somebody who came
- * for the date should leave with the date. Retrying is the second-best outcome.
+ * the UGA Involvement Network, a different host on a different database, so it
+ * is still up when ours is not. That link is the point: somebody who came for
+ * the date should leave with the date. Retrying is the second-best outcome.
  */
 export default function EventsUnavailable({
   digest,
@@ -63,8 +63,8 @@ export default function EventsUnavailable({
             {retry ? (
               // `retry()` re-fetches and re-renders the boundary's children.
               // The Next 16 docs single it out over `reset()`, which only
-              // clears the error state without re-running the read — so the
-              // same failure renders again with nothing having been retried.
+              // clears the error state without re-running the read, so the
+              // same failure renders again with nothing retried.
               <button
                 type="button"
                 onClick={() => retry()}

@@ -7,67 +7,59 @@ import { useTvStatic } from "./useTvStatic";
 /**
  * A CRT television, drawn rather than photographed, with a live screen.
  *
- * ## Why it is a drawing and not an image
- *
- * A photo or a stock render would be the only piece of the site not built out
- * of the same parts as everything else. Vector also means the screen aperture
- * is a *known shape* at every size, which is the thing that actually makes this
- * work — see below.
+ * A photo or a stock render would be the only piece of the site not built out of
+ * the same parts as everything else, and vector makes the screen aperture a
+ * known shape at every size.
  *
  * ## Why the picture is an SVG `<image>` and not `next/image`
  *
  * The screen is not a rectangle. A real tube bulges, so the aperture here is
- * four quadratic curves, and the picture has to be clipped to exactly that
- * shape at every viewport width. Two ways to do that with an HTML element on
- * top — `foreignObject` inside the SVG, or a CSS `clip-path: path()` on a
- * positioned div — and both fail in a way that matters: `clip-path: path()`
- * takes fixed user units and cannot scale with a fluid container, and
- * `foreignObject` under a `clipPath` has a long history of rendering
- * incorrectly in WebKit. An SVG `<image>` inside a `<clipPath>` group is the
- * boring option that is correct at every size in every engine.
+ * four quadratic curves, and the picture has to be clipped to exactly that shape
+ * at every viewport width. Both ways of doing that with an HTML element on top
+ * fail: `clip-path: path()` takes fixed user units and cannot scale with a fluid
+ * container, and `foreignObject` under a `clipPath` has a long history of
+ * rendering incorrectly in WebKit. An SVG `<image>` inside a `<clipPath>` group
+ * is correct at every size in every engine.
  *
- * Nothing is lost by giving up `next/image` here. The clips are animated GIFs,
- * and the optimiser passes animated files through untouched — so the bytes on
- * the wire are identical either way. The static import is kept for its `.src`,
- * which is still the hashed, immutably-cacheable URL the build emits.
+ * Nothing is lost by giving up `next/image`. The clips are animated GIFs and the
+ * optimiser passes animated files through untouched, so the bytes on the wire
+ * are identical either way. The static import is kept for its `.src`, the
+ * hashed, immutably-cacheable URL the build emits.
  *
  * ## The snow underneath is drawn, not fetched
  *
- * The no-signal layer used to be a 1.8 MB GIF — sixty per cent of the
- * homepage's image payload, spent on the picture that is up when the set is
- * showing nothing. It is now generated a frame at a time into the same
- * `<image>`; see `useTvStatic`, which also owns the two gates that keep it from
- * costing anything off screen or under reduced motion.
+ * The no-signal layer used to be a 1.8 MB GIF, sixty per cent of the homepage's
+ * image payload, spent on the picture that is up when the set shows nothing. It
+ * is now generated a frame at a time into the same `<image>`; see `useTvStatic`,
+ * which owns the two gates that keep it from costing anything off screen or
+ * under reduced motion.
  *
  * ## How the volume is built
  *
- * Two pieces, not three faces. The whole silhouette is drawn once as a rounded
- * shell and the front face is laid over it, so the top and the right side are
- * simply the parts of the shell the front does not cover. Each paint only has
- * to be correct where it is still visible, which is what keeps three surfaces
- * meeting along two creases from needing six edges to agree — and it is what
- * makes the rounding tractable, since there is one path to round rather than
- * three that have to line up at every seam.
- *
- * Value is what carries the form, so the three surfaces are separated by
- * lightness first and hue second: top light, front middle, side dark.
+ * Two pieces, not three faces. The silhouette is drawn once as a rounded shell
+ * with the front face laid over it, so the top and the right side are the parts
+ * of the shell the front does not cover. Each paint only has to be correct where
+ * it is still visible, which keeps three surfaces meeting along two creases from
+ * needing six edges to agree, and leaves one path to round rather than three
+ * that line up at every seam. Value carries the form, so the surfaces are
+ * separated by lightness first and hue second: top light, front middle, side
+ * dark.
  *
  * ## The outline is drawn last
  *
- * The silhouette is stroked in a final pass over everything else rather than
- * as part of the shell's own paint, because it has to be one unbroken weight
- * and the outer edge is shared between three elements — the shell's back, the
- * front face's left and bottom, the top face's corners. Stroking each of them
- * individually puts three strokes end to end along one edge, and they show
- * every place they meet.
+ * The silhouette is stroked in a final pass rather than as part of the shell's
+ * own paint, because it has to be one unbroken weight and the outer edge is
+ * shared between three elements: the shell's back, the front face's left and
+ * bottom, the top face's corners. Stroking each individually puts three strokes
+ * end to end along one edge, and they show every place they meet.
  *
- * The outline and every black edge inside it are one weight, 3.5; the trim
- * and knobs step down to 3 and the lamp to 2.5; the grille is 4 but at half
- * opacity, so it reads as shading rather than as an edge. Thin enough that
- * the set reads as a drawing on the page rather than a sticker, which
- * matters now that it casts the site's block shadow: the caller adds
- * `drop-shadow-block-*`, which follows the drawn silhouette rather than the
- * SVG's box, and a heavy outline plus an offset block read as two outlines.
+ * The outline and every black edge inside it are one weight, 3.5; the trim and
+ * knobs step down to 3 and the lamp to 2.5; the grille is 4 but at half opacity,
+ * so it reads as shading rather than an edge. Thin enough that the set reads as
+ * a drawing rather than a sticker, which matters now that it casts the site's
+ * block shadow: the caller adds `drop-shadow-block-*`, which follows the drawn
+ * silhouette rather than the SVG's box, and a heavy outline plus an offset block
+ * read as two outlines.
  */
 
 interface Props {
@@ -76,7 +68,7 @@ interface Props {
    *
    * `key` remounts the `<image>` rather than re-pointing one, because a GIF
    * whose href changes keeps playing from wherever the previous one left off
-   * instead of restarting — the same reason the panel this replaces keyed its
+   * instead of restarting. Same reason the panel this replaces keyed its
    * `<Image>` on the beat title.
    */
   showing: { key: string; image: StaticImageData } | null;
@@ -90,11 +82,11 @@ interface Props {
  * Depth:       +56 x, −34 y  (back and up, so the set is seen from below-left)
  *
  * The silhouette is the convex hull of the front face and that same rectangle
- * pushed along the depth vector. Its corners are rounded by walking 16 units
- * back down each incoming edge, curving through the vertex, and landing 16
- * units along the outgoing one — the radius is uniform even though the angles
- * are not, which is what stops the two oblique corners at the back from
- * looking sharper than the four square ones.
+ * pushed back along the depth offset. Its corners are rounded by walking 16
+ * units back down each incoming edge, curving through the vertex, and landing 16
+ * units along the outgoing one. The radius is uniform even though the angles are
+ * not, which stops the two oblique corners at the back from looking sharper than
+ * the four square ones.
  */
 const CORNER = 16;
 const SHELL = [
@@ -117,12 +109,12 @@ const SHELL = [
  * The top face, laid over the shell so that what is left of the shell is the
  * right side and nothing else.
  *
- * Its own right edge IS the crease between top and side, which is why there is
- * no separate crease element: an edge drawn twice is an edge that can disagree
- * with itself. It closes below the front face's top edge rather than along it,
- * because the front is drawn afterwards and covers the overshoot — and at the
- * two top corners, where the front face rounds away, the overshoot is exactly
- * what should be visible. That is the top of the cabinet curving over.
+ * Its own right edge IS the crease between top and side, so there is no separate
+ * crease element: an edge drawn twice can disagree with itself. It closes below
+ * the front face's top edge rather than along it, because the front is drawn
+ * afterwards and covers the overshoot. At the two top corners, where the front
+ * face rounds away, that overshoot is what should be visible: the top of the
+ * cabinet curving over.
  */
 const TOP = [
   "M 18,100",
@@ -138,10 +130,10 @@ const TOP = [
 /**
  * The aperture: four quadratic curves, one per edge, each bowing outward.
  *
- * The corners are deliberately left as corners. A tube is not a rounded
- * rectangle — it is a rectangle pushed out from behind — and rounding the
- * joins here turns it into a bar of soap. This is the one part of the drawing
- * that does *not* get rounded off with the rest.
+ * The corners are deliberately left as corners. A tube is a rectangle pushed out
+ * from behind, not a rounded rectangle, and rounding the joins turns it into a
+ * bar of soap. This is the one part of the drawing that does *not* get rounded
+ * off with the rest.
  */
 const SCREEN =
   "M 52,110 Q 130,96 208,110 Q 234,177 208,245 Q 130,259 52,245 Q 26,177 52,110 Z";
@@ -160,19 +152,18 @@ const PICTURE = { x: 36, y: 98, width: 188, height: 158 } as const;
 /*
  * The club's colours, used as light rather than as decoration.
  *
- * Cyan is the body and mauve is the fittings — the bezel, the trim, the knobs.
- * The fittings used to be rose, chosen back when the plates under the set were
- * already rose or already mauve, and a rose bezel on a rose plate was a
- * television with no edge. The homepage plate is cyan now, which puts the body
- * on its own colour instead; what holds the set off its background either way
- * is the black stroke around every face, not a contrast of hue. Grey fittings
- * are also just what the real thing had. Amber is here exactly once, on the
- * power lamp, where a colour nothing else on the set is wearing is the whole
- * point.
+ * Cyan is the body and mauve is the fittings: the bezel, the trim, the knobs.
+ * The fittings used to be rose, chosen when the plates under the set were rose
+ * or mauve, and a rose bezel on a rose plate was a television with no edge. The
+ * homepage plate is cyan now, which puts the body on its own colour instead;
+ * what holds the set off its background either way is the black stroke around
+ * every face, not a contrast of hue. Grey fittings are also what the real thing
+ * had. Amber appears exactly once, on the power lamp, where a colour nothing
+ * else on the set wears is the point.
  *
- * Each ramp is a single hue darkening, never a hue shift, because lightness is
- * what the eye reads as form. A gradient that changed hue across a face would
- * look like two materials meeting rather than one surface turning away.
+ * Each ramp is a single hue darkening, never a hue shift, because the eye reads
+ * lightness as form. A gradient that changed hue across a face would look like
+ * two materials meeting rather than one surface turning away.
  */
 const CYAN = {
   50: "#ecfeff",
@@ -200,14 +191,14 @@ export default function CrtTv({ showing, className }: Props) {
   return (
     <svg
       // Cropped to the cabinet and a stroke's worth of margin. It used to carry
-      // an antenna above and feet below; with those gone the old box was a
-      // third empty, and an SVG's empty space is not free — `meet` scales to
-      // fit the whole viewBox, so the padding would have shrunk the set inside
-      // its column rather than sitting around it.
+      // an antenna above and feet below; with those gone the old box was a third
+      // empty, and empty space is not free: `meet` scales to fit the whole
+      // viewBox, so the padding shrank the set inside its column rather than
+      // sitting around it.
       viewBox="8 40 356 274"
-      // meet, not slice: the column this sits in is as tall as the list of
-      // beats beside it, which is much taller than a television. Fitting would
-      // stretch the chassis; this keeps it in proportion and lets the caller
+      // meet, not slice: the column this sits in is as tall as the list of beats
+      // beside it, much taller than a television. Filling that height would
+      // distort the chassis; this keeps it in proportion and lets the caller
       // decide where the spare height goes.
       preserveAspectRatio="xMidYMid meet"
       aria-hidden
@@ -218,19 +209,19 @@ export default function CrtTv({ showing, className }: Props) {
           <path d={SCREEN} />
         </clipPath>
 
-        {/* Every gradient here is userSpaceOnUse and aimed along the light,
-            not along its own element's box. objectBoundingBox would restart
-            each ramp inside whatever it fills, so two neighbouring parts of
-            one cabinet would each run light-to-dark independently and the set
-            would read as a collage of separately lit pieces. */}
+        {/* Every gradient here is userSpaceOnUse and aimed along the light, not
+            along its own element's box. objectBoundingBox would restart each
+            ramp inside whatever it fills, so neighbouring parts of one cabinet
+            would each run light-to-dark independently and the set would read as
+            a collage of separately lit pieces. */}
 
-        {/* The shell is only ever seen as the right side, since the top face
-            and then the front are laid over the rest of it — so this is the
-            side's ramp, and it is the darkest thing on the cabinet. The three
-            surfaces are pulled apart by VALUE first: a viewer reads a form
-            from light and dark long before they read it from an outline, and
-            three faces at one lightness would be a flat shape with some lines
-            on it however carefully the lines were drawn. */}
+        {/* The shell is only ever seen as the right side, since the top face and
+            then the front are laid over the rest of it. So this is the side's
+            ramp, and the darkest thing on the cabinet. The three surfaces are
+            pulled apart by VALUE first: a viewer reads form from light and dark
+            long before they read it from an outline, and three faces at one
+            lightness are a flat shape with lines on it however carefully the
+            lines are drawn. */}
         <linearGradient
           id={id("shell")}
           gradientUnits="userSpaceOnUse"
@@ -310,7 +301,7 @@ export default function CrtTv({ showing, className }: Props) {
           <stop offset="1" stopColor="#0c090c" />
         </linearGradient>
 
-        {/* Every 4 units, which lands near 3px at the size this renders — fine
+        {/* Every 4 units, which lands near 3px at the size this renders. Fine
             enough to read as a raster and coarse enough to survive the scale
             down to a phone. */}
         <pattern
@@ -325,9 +316,9 @@ export default function CrtTv({ showing, className }: Props) {
 
       <g stroke="black" strokeLinejoin="round" strokeLinecap="round">
         {/* ── Cabinet ──────────────────────────────────────────────────────
-            Back to front: the whole silhouette, then the top face over it,
-            then the front over that. The silhouette carries no stroke here —
-            the outline is a separate pass at the end, in a different colour. */}
+            Back to front: the whole silhouette, then the top face over it, then
+            the front over that. The silhouette carries no stroke here; the
+            outline is a separate pass at the end, in a different colour. */}
         <path d={SHELL} fill={`url(#${id("shell")})`} stroke="none" />
         <path d={TOP} fill={`url(#${id("top")})`} strokeWidth="3.5" />
         <rect
@@ -347,10 +338,10 @@ export default function CrtTv({ showing, className }: Props) {
         <path d={SCREEN} fill="black" strokeWidth="0" />
 
         <g clipPath={`url(#${id("screen")})`} stroke="none">
-          {/* The snow, underneath everything and running whenever the set is
-              in view. It ships with no `href` at all: the frames are painted on
-              the client, so the server renders an empty element over the black
-              above and the tube reads correctly until the first one lands. */}
+          {/* The snow, underneath everything and running whenever the set is in
+              view. It ships with no `href`: the frames are painted on the
+              client, so the server renders an empty element over the black above
+              and the tube reads correctly until the first one lands. */}
           <image
             ref={noSignal}
             x={PICTURE.x}
@@ -380,9 +371,9 @@ export default function CrtTv({ showing, className }: Props) {
           />
 
           {/* Two hard-edged bands rather than a soft one. The gradients on the
-              cabinet describe a surface turning away from a light; glass does
-              not do that, it throws the light straight back, and a blurred
-              smear here would read as dirt on the tube instead. */}
+              cabinet describe a surface turning away from a light; glass throws
+              the light straight back, and a blurred smear here reads as dirt on
+              the tube. */}
           <polygon
             points="35,90 95,90 170,265 110,265"
             fill="white"
@@ -396,8 +387,7 @@ export default function CrtTv({ showing, className }: Props) {
         </g>
 
         {/* Re-struck over the picture, because the clip above cuts the image
-            flush to the path and leaves the aperture with no edge of its
-            own. */}
+            flush to the path and leaves the aperture with no edge. */}
         <path d={SCREEN} fill="none" strokeWidth="3.5" />
 
         {/* ── Controls ─────────────────────────────────────────────────────*/}
@@ -419,7 +409,7 @@ export default function CrtTv({ showing, className }: Props) {
               fill={`url(#${id("knob")})`}
               strokeWidth="3"
             />
-            {/* Pointing somewhere specific — a knob with no indicator is a
+            {/* Pointing somewhere specific, since a knob with no indicator is a
                 button. The two disagree so the set does not look printed. */}
             <line
               x1="266"
@@ -434,13 +424,12 @@ export default function CrtTv({ showing, className }: Props) {
 
         {/* ── Speaker ──────────────────────────────────────────────────────
             Across the chin. A blank strip under a tube reads as a mistake; a
-            grille is what is actually behind it.
+            grille is what is behind it.
 
             The chin is only ~38 units deep and three of its edges are strokes
-            rather than lines — the bezel's bottom reaches y≈262, and the
-            outline is 3.5 wide centred on y=300, so it eats up to 298. The
-            lines are placed against those inner edges, not against the
-            nominal ones. */}
+            rather than lines: the bezel's bottom reaches y≈262, and the outline
+            is 3.5 wide centred on y=300, so it eats up to 298. The lines are
+            placed against those inner edges, not the nominal ones. */}
         <g stroke={CYAN[900]} strokeWidth="4" opacity="0.5">
           {[269, 280, 291].map((y) => (
             <line key={y} x1="48" y1={y} x2="212" y2={y} />
@@ -449,13 +438,12 @@ export default function CrtTv({ showing, className }: Props) {
 
         {/* ── Outline ──────────────────────────────────────────────────────
             Last, over everything, so the outer edge is one unbroken weight
-            rather than three elements' strokes meeting along it. The SAME
-            weight as the strokes it covers — the front face's left and
-            bottom, and the top face's back corners, all sit on this same
-            path, and drawing it heavier made the set look inked twice over
-            at the edge and once inside. Since it is painted last it still
-            owns the shared edges; being no wider, it just no longer bulges
-            past them. */}
+            rather than three elements' strokes meeting along it. The SAME weight
+            as the strokes it covers: the front face's left and bottom, and the
+            top face's back corners, all sit on this path, and drawing it heavier
+            made the set look inked twice at the edge and once inside. Painted
+            last it still owns the shared edges; being no wider, it no longer
+            bulges past them. */}
         <path d={SHELL} fill="none" strokeWidth="3.5" />
       </g>
     </svg>

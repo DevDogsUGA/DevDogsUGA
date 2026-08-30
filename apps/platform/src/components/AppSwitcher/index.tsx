@@ -56,8 +56,8 @@ export default function AppSwitcher() {
         </Link>
         {/* Mirrors the navbar's trailing cluster so the close button lands
             exactly where the grid trigger was: same gap, same size-9 box, same
-            size-4.5 bold icon, and the same neighbour to its right — the Sign
-            In button, or a spacer the width of the avatar. */}
+            size-4.5 bold icon. Its right-hand neighbour matches too, either the
+            Sign In button or a spacer the width of the avatar. */}
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -68,10 +68,10 @@ export default function AppSwitcher() {
             <XIcon weight="bold" className="size-4.5" />
           </button>
           {/* The overlay only mounts on a click, well after the streamed user
-              cluster has hydrated the context — so a signed-in visitor never
+              cluster has hydrated the context, so a signed-in visitor never
               sees this flash before `navUser` arrives. Hidden below md, where
-              the navbar has already folded into the drawer: the overlay's Join
-              CTA is the pitch there, not signing in. */}
+              the navbar has already folded into the drawer and the overlay's
+              Join CTA is the pitch instead of signing in. */}
           {navUser ? (
             <span aria-hidden className="hidden w-7.5 md:block" />
           ) : (
@@ -96,7 +96,7 @@ export default function AppSwitcher() {
 
           <LinkButton
             href={SWITCHER_PRIMARY.href}
-            // /join redirects off-site, not a page — never prefetch.
+            // /join redirects off-site, not a page, so never prefetch.
             prefetch={false}
             // The amber lift the Sign In button in the header uses, a size up:
             // this one moves twice as far, so the shadow grows with it to stay

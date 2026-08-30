@@ -37,12 +37,12 @@ export const REQUIRED_SCOPES = [
 export type OAuthProblem =
   | "not_configured"
   | "exchange_failed"
-  // Distinct from `exchange_failed` on purpose. Connecting is two steps —
-  // trade the code with Supabase, then store the result — and they fail for
-  // completely unrelated reasons: a bad client secret versus a Vault write or
-  // a missing table. Reporting both as "exchange_failed" sent me hunting
-  // through the token endpoint for a fault that could equally have been in our
-  // own database, and cost two wrong diagnoses before the distinction existed.
+  // Distinct from `exchange_failed` on purpose. Connecting is two steps, trade
+  // the code with Supabase then store the result, and they fail for unrelated
+  // reasons: a bad client secret versus a Vault write or a missing table.
+  // Reporting both as "exchange_failed" sent me hunting through the token
+  // endpoint for a fault that could equally have been in our own database, and
+  // cost two wrong diagnoses before the distinction existed.
   | "persist_failed"
   | "not_connected"
   | "refresh_failed";
@@ -59,8 +59,8 @@ export class OAuthError extends Error {
 
 function credentials(): { id: string; secret: string } {
   // Empty rather than absent, so the platform boots without the integration
-  // configured and fails loudly at the point of use instead of at startup --
-  // the same shape AIRTABLE_BASE_ID uses.
+  // configured and fails loudly at the point of use instead of at startup.
+  // Same shape AIRTABLE_BASE_ID uses.
   if (!env.SUPABASE_OAUTH_CLIENT_ID || !env.SUPABASE_OAUTH_CLIENT_SECRET) {
     throw new OAuthError("not_configured");
   }
@@ -95,7 +95,7 @@ interface TokenResponse {
   expires_in: number;
   token_type: string;
   // NOTE: there is deliberately no `scope` field here. Measured: the response
-  // does not include one, so what was actually granted cannot be read back --
+  // does not include one, so what was actually granted cannot be read back,
   // only discovered by calling an endpoint and seeing whether it works.
 }
 
@@ -103,9 +103,9 @@ interface TokenResponse {
  * Exchange a code or a refresh token for a grant.
  *
  * Credentials go in the body AND in HTTP Basic. The body is the documented
- * contract — the OpenAPI spec declares `security: None` for this operation and
- * lists `client_id`/`client_secret` among its form fields — and Basic is kept
- * because it demonstrably works too.
+ * contract: the OpenAPI spec declares `security: None` for this operation and
+ * lists `client_id`/`client_secret` among its form fields. Basic is kept
+ * because it works too.
  *
  * > **Measured: both mechanisms are honoured, and equivalently.** Against the
  * > live endpoint with a deliberately invalid code: Basic-only returns `404
@@ -131,7 +131,7 @@ async function exchange(body: Record<string, string>): Promise<TokenResponse> {
   if (!res.ok) {
     // The body, not just the status. Supabase distinguishes "invalid
     // client_secret" from "unrecognized client_id" from "invalid or expired
-    // authorization" in the message alone -- three completely different faults
+    // authorization" in the message alone, three completely different faults
     // behind one thrown code. Logging the status by itself turned a named
     // diagnosis into a guess.
     const detail = await res.text().catch(() => "<unreadable>");
@@ -188,7 +188,7 @@ async function persist(
       },
     });
 
-  // After the row points at the new secrets, never before -- a failure between
+  // After the row points at the new secrets, never before. A failure between
   // the two must leave a working connection, not a row referencing deleted rows.
   for (const row of existing) {
     await deleteVaultSecret(row.access);

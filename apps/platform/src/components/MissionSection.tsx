@@ -10,10 +10,9 @@ const STAR_POINTS =
   "50,8 62.9,32.2 90,37 70.9,56.8 74.7,84 50,72 25.3,84 29.1,56.8 10,37 37.1,32.2";
 
 /* The wash is two hues at two strengths each. Named rather than inlined
-   because the star's shadow reaches for BLOB_AMBER by name — see
-   SHADOW_STEPS — and that is the whole point of naming it: retint the blob
-   and the star's leading edge follows, instead of the two drifting a shade
-   apart the way they had. */
+   because the star's shadow reaches for BLOB_AMBER by name (see SHADOW_STEPS).
+   Retint the blob and the star's leading edge follows, instead of the two
+   drifting a shade apart the way they had. */
 const BLOB_ROSE_PALE = "#fecdd3";
 const BLOB_ROSE = "#fb7185";
 const BLOB_AMBER_PALE = "#fed7aa";
@@ -47,35 +46,32 @@ export const MISSION_BLOBS: BlobDef[] = [
 const STAR_BOX =
   "pointer-events-none absolute inset-1/2 aspect-square size-[min(100cqh,100cqw)] -mt-4 -translate-1/2 md:-mt-6";
 
-/* ── The shadow, and everything aimed along it ────────────────────────────
+/* The shadow, and everything aimed along it.
+
    These three offsets are the only place the star's shadow direction is
    written down. CSS filter functions pipe each result into the next, so the
-   drop-shadow copies compound rather than overlap: the outermost one lands at
-   the running sum, (12px, 30px) -- measured, by rendering the chain and
-   scanning the raster, not just derived. Both the filter string and the angle
-   the sparks fall at come from this array, so retuning the shadow re-aims the
-   shower and the two can never disagree. */
-/* Amber first and rose under it, rather than the section's dominant rose first:
-   the slab has to separate from the plate it is cast on, and that plate is now
-   pale rose. A rose band on it reads as a smudge; the amber one reads as an
-   edge, and the dark rose behind it is what makes the stack look like depth
-   instead of an outline.
+   copies compound rather than overlap, and the outermost lands at the running
+   sum, (12px, 30px), measured by rendering the chain and scanning the raster.
+   Both the filter string and the angle the sparks fall at come from this array,
+   so retuning the shadow re-aims the shower and the two cannot disagree.
 
-   Every band is the wash's own, and now literally so. The bright one is
-   BLOB_AMBER itself rather than amber-400, which was a near-miss: amber-400 is
-   #fcbb00 here, a gold, against the #fdba74 the two warm blobs are actually
-   painted in, so the star's leading edge was the one warm thing on the section
-   that no blob could account for. The dark bands are the far end of the same
-   rose ramp the wash starts on — rose-900 into rose-950, where the outermost
-   used to be mauve-800, a near-black with a violet cast left over from the
-   cyan/violet palette this section used to wear. Nothing in the stack is off
-   the two hues any more.
+   Amber first and rose under it, not the section's dominant rose first. The
+   slab has to separate from the pale rose plate it is cast on: a rose band
+   there reads as a smudge, the amber one reads as an edge, and the dark rose
+   behind it makes the stack look like depth instead of an outline.
 
-   None of that moves the stack's read, because the swaps are lightness-neutral:
-   the bright-to-dark step goes 5.6:1 -> 5.7:1 and the dark-to-darkest 1.62:1 ->
-   1.63:1, so the three bands separate exactly as far as they did.
+   Every band is the wash's own colour. The bright one is BLOB_AMBER rather than
+   amber-400, which is #fcbb00 here, a gold against the #fdba74 the two warm
+   blobs are painted in, so the star's leading edge was the one warm thing on
+   the section no blob could account for. The dark bands are the far end of the
+   same rose ramp the wash starts on, rose-900 into rose-950, where the
+   outermost used to be mauve-800, a near-black with a violet cast left over
+   from the cyan/violet palette this section used to wear.
 
-   The lightness spread is also what the sparks need — see SPARK_TINTS. */
+   The swaps are lightness-neutral, so none of that moves the stack's read. The
+   bright-to-dark step goes 5.6:1 -> 5.7:1 and the dark-to-darkest 1.62:1 ->
+   1.63:1, so the three bands separate exactly as far as they did. That
+   lightness spread is also what the sparks need. See SPARK_TINTS. */
 const SHADOW_STEPS = [
   { x: 3, y: 8, color: BLOB_AMBER },
   { x: 4, y: 10, color: "var(--color-rose-900)" },
@@ -100,16 +96,15 @@ const SPARK_ANGLE_DEG =
 
 /* Pale bodies with white heads, and a dark rim from the CSS below. The first
    version painted its sparks in the same three colours as the shadow slab they
-   fall through, so a spark crossing its own band measured 1.00:1 -- invisible
-   by construction, however big it got.
+   fall through, so a spark crossing its own band measured 1.00:1, invisible by
+   construction however big it got.
 
    A spark is never one colour against a backdrop, it is a white head and a dark
-   rim, so what has to hold is that *one of those two* separates from whatever it
-   crosses. That is a fact about lightness, not hue, which is why the section
-   could trade its cyan/violet wash for rose/amber and keep it -- but only once
-   the bands were re-picked to sit at opposite ends of the range. Straight
-   hue-for-hue substitution put both of them mid-range and dropped the worst pair
-   to 5.2:1.
+   rim, so what has to hold is that *one of those two* separates from whatever
+   it crosses. That is about lightness, not hue, which is why the section could
+   trade its cyan/violet wash for rose/amber and keep it, but only once the
+   bands were re-picked to sit at opposite ends of the range. Hue-for-hue
+   substitution put both mid-range and dropped the worst pair to 5.2:1.
 
    Measured on the built page, worst backdrop, better of head and rim:
 
@@ -119,17 +114,17 @@ const SPARK_ANGLE_DEG =
    - the section base ..... 18.03:1   (rim)
 
    So 9.61:1 at worst, against 8.38:1 for the cyan/violet original. Pulling the
-   outer bands onto the wash's exact hues did not cost the shower anything —
-   amber-400 -> BLOB_AMBER went 11.55 -> 11.75 and mauve-800 -> rose-950 went
-   15.53 -> 15.70 — because both swaps hold their lightness and it is lightness
-   this table is about. The worst pair is the rose-900 band either way. */
+   outer bands onto the wash's exact hues cost the shower nothing: amber-400 ->
+   BLOB_AMBER went 11.55 -> 11.75 and mauve-800 -> rose-950 went 15.53 -> 15.70,
+   because both swaps hold their lightness. The worst pair is the rose-900 band
+   either way. */
 const SPARK_TINTS = [
   "var(--color-rose-200)",
   "var(--color-orange-200)",
   "var(--color-white)",
 ] as const;
 
-/* Fixed-seed PRNG rather than Math.random: server and browser have to emit
+/* Fixed-seed PRNG rather than Math.random. Server and browser have to emit
    byte-identical markup or React throws the tree away as a hydration mismatch.
    Deterministic also means the shower looks the same on every deploy, so
    tuning it stays a code change rather than a coin flip. */
@@ -144,10 +139,10 @@ function mulberry32(seed: number) {
 
 const spark = mulberry32(0x5eed);
 
-/* Every dimension is in cqmin -- percent of the star's own box -- because the
-   star is sized in container units and the first version's sparks were sized in
-   rem. They stayed 4px wide while the star grew from 256px to 336px, so the
-   shower quietly shrank to a third of a percent of the viewport on desktop. */
+/* Every dimension is in cqmin, percent of the star's own box, because the star
+   is sized in container units and the first version's sparks were sized in rem.
+   They stayed 4px wide while the star grew from 256px to 336px, so the shower
+   shrank to a third of a percent of the viewport on desktop. */
 const STAR_SPARKS = Array.from({ length: 16 }, (_, i) => ({
   left: `${(16 + spark() * 68).toFixed(1)}%`,
   top: `${(38 + spark() * 46).toFixed(1)}%`,
@@ -167,16 +162,16 @@ function SpinStarImage() {
       className="@container-[size] relative h-64 min-w-64 grow md:-my-6 md:h-auto"
       aria-hidden="true"
     >
-      {/* Deliberately a sibling of the star rather than a child: a filter
+      {/* Deliberately a sibling of the star rather than a child. A filter
           applies to the whole subtree, so sparks nested under the drop-shadow
           would each trail three offset copies of themselves.
 
           It sits before the star in the DOM on purpose. Both layers are
-          positioned at z-index auto, so document order is what decides which
-          one paints on top -- putting the sparks first drops them behind the
-          star and its shadow with no z-index anywhere. The star is clipped to
-          its polygon, so sparks show through the gaps between the arms and
-          duck behind the arms themselves as it turns. */}
+          positioned at z-index auto, so document order decides which one paints
+          on top. Putting the sparks first drops them behind the star and its
+          shadow with no z-index anywhere. The star is clipped to its polygon,
+          so sparks show through the gaps between the arms and duck behind the
+          arms themselves as it turns. */}
       <div
         className={STAR_BOX}
         style={
@@ -196,7 +191,7 @@ function SpinStarImage() {
                 top: s.top,
                 width: s.width,
                 height: s.height,
-                // Never starts at zero alpha: the rim below is drawn around the
+                // Never starts at zero alpha. The rim below is drawn around the
                 // whole capsule, so a fully transparent tail would leave a
                 // hollow outline chasing the head.
                 backgroundImage: `linear-gradient(to bottom, color-mix(in oklab, ${s.tint} 40%, transparent), ${s.tint} 55%, var(--color-white))`,
@@ -213,7 +208,7 @@ function SpinStarImage() {
           />
         ))}
       </div>
-      {/* Weighted downward rather than evenly diagonal: the chained offsets
+      {/* Weighted downward rather than evenly diagonal. The chained offsets
           stack to 12px sideways against 30px down, so the star reads as
           hanging over the section instead of leaning out of it. */}
       <div className={STAR_BOX} style={{ filter: STAR_SHADOW_FILTER }}>
@@ -230,14 +225,14 @@ function SpinStarImage() {
               />
             </clipPath>
           </defs>
-          {/* No `sizes` here, deliberately — it would make this worse, not
-              better. An SVG <image> takes a single href, so only `.props.src`
-              survives and the srcset is thrown away; Next builds that one URL
-              from the LARGEST candidate it generated. With no `sizes` the
-              candidates are the 1x/2x pair around `height`, so `src` comes out
-              at w=828 — a sane 2x for the ~400px the star renders at. Add a
-              `sizes` and the candidate list becomes every configured width,
-              and this single href jumps to w=3840. */}
+          {/* No `sizes` here, deliberately. It would make this worse. An SVG
+              <image> takes a single href, so only `.props.src` survives and the
+              srcset is thrown away; Next builds that one URL from the LARGEST
+              candidate it generated. With no `sizes` the candidates are the
+              1x/2x pair around `height`, so `src` comes out at w=828, a sane 2x
+              for the ~400px the star renders at. Add a `sizes` and the candidate
+              list becomes every configured width, and this single href jumps to
+              w=3840. */}
           <image
             href={
               getImageProps({ alt: "", src: lecture, height: 400 }).props.src
@@ -261,10 +256,10 @@ export default function MissionSection({ topEdge, bottomEdge }: Props) {
     <div className="mx-4 overflow-hidden rounded-xl md:mx-6">
       <section
         id="mission"
-        // scroll-mt clears the h-16 sticky TopNav when a marquee card jumps
-        // to #id — the same idea as `ui/card`. It is measured from the border
-        // box, whose top is where pt-(--section-skew-slope) begins, so the
-        // slanted top edge clears the nav too and not just the copy below it.
+        // scroll-mt clears the h-16 sticky TopNav when a marquee card jumps to
+        // #id, the same idea as `ui/card`. It is measured from the border box,
+        // whose top is where pt-(--section-skew-slope) begins, so the slanted
+        // top edge clears the nav too and not just the copy below it.
         className="relative w-full scroll-mt-20 overflow-hidden pt-(--section-skew-slope) pb-(--section-skew-slope)"
         data-animate="fade-up"
       >

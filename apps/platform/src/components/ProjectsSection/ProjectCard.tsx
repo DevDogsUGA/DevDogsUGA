@@ -8,15 +8,15 @@ interface Props extends Project {
   /**
    * De-emphasizes the card, for projects that are not open to contributions.
    *
-   * Not a transform: every size steps down a notch so the card is genuinely
-   * smaller and its text genuinely shorter, rather than a full-size card drawn
-   * at 90%.
+   * Not a transform: every size steps down a notch, so the card is really
+   * smaller and its text really shorter rather than a full-size card drawn at
+   * 90%.
    *
-   * The border and shadow are the same black the full card uses, just carrying
-   * alpha, so the ink thins rather than switching to a gray that would read as
-   * a different, muddier color beside it. The fills stay real mauve — a
-   * translucent black fill tinted toward whatever the section sat on, which
-   * made the card look washed rather than quiet.
+   * Border and shadow keep the full card's black and only carry alpha, so the
+   * ink thins instead of switching to a gray that reads as a different,
+   * muddier color beside it. Fills stay real mauve. A translucent black fill
+   * tinted toward whatever the section sat on, which made the card look washed
+   * rather than quiet.
    */
   recessed?: boolean;
 }
@@ -39,12 +39,12 @@ export default function ProjectCard({
   // One step down in size, spacing, and contrast, kept in one object so the
   // two variants cannot drift apart. Every padding has an entry: shrinking the
   // type without shrinking what surrounds it is what makes a small card read
-  // as a big card squeezed. `chip` also stays a step darker than `card` in
-  // both variants — that rule is relative, so it has to move with the fill.
+  // as a big card squeezed. `chip` stays a step darker than `card` in both
+  // variants, and that rule is relative, so it has to move with the fill.
   //
-  // `fill` is its own entry because two things share it: the card, and the
-  // outlined GitHub button, which is meant to read as a cutout of the card
-  // rather than as a white chip sitting on it.
+  // `fill` is its own entry because the card and the outlined GitHub button
+  // share it. The button is meant to read as a cutout of the card, not a white
+  // chip sitting on it.
   const t = recessed
     ? {
         card: "gap-3 border-black/50 p-4",
@@ -126,9 +126,9 @@ export default function ProjectCard({
                 key={key}
                 href={tech.href}
                 target="_blank"
-                // Sides and top at 1px, bottom at 2px — the chips pick up the
-                // same weighted underline the block shadows give the cards,
-                // and sit a step darker than the card they lie on.
+                // Sides and top at 1px, bottom at 2px, so the chips pick up
+                // the same weighted underline the block shadows give the
+                // cards. They sit a step darker than the card they lie on.
                 className={`flex items-center gap-1.5 rounded-sm border-x border-t border-b-2 border-mauve-300 ${t.chip} ${t.chipPad} font-mono ${t.label} text-mauve-500 transition-colors hover:border-mauve-400 hover:text-mauve-700`}
               >
                 <svg

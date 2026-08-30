@@ -12,17 +12,17 @@ interface Props {
    */
   courses: Course[];
   /**
-   * Fires the provided event handler when a course is selected and the "Add Course" button is clicked.
+   * Called when a course is selected and the "Add Course" button is clicked.
    * @param course The selected course.
    */
   onAddCourse?: (course: Course) => void;
   /**
-   * Fires the provided event handler when a course is removed from the plan
-   * @param course The course to remove
+   * Called when a course is removed from the plan.
+   * @param course The course to remove.
    */
   onRemoveCourse?: (course: Course) => void;
   /**
-   *  The current URL search params.
+   * The current URL search params.
    */
   searchParams: ReadonlyURLSearchParams;
 }
@@ -46,9 +46,7 @@ export default function CourseDisplay({
           Courses
         </h1>
         <div className="relative">
-          {/* Container for course list */}
           <div className="no-scrollbar relative flex flex-1 flex-col overflow-x-hidden overflow-y-scroll scroll-smooth border-4 border-pink-100 bg-white py-4">
-            {/*Course item */}
             {courses.map((course) => (
               <RegisteredClass
                 key={course.courseId}
@@ -59,7 +57,7 @@ export default function CourseDisplay({
               />
             ))}
           </div>
-          {/* Styling div to add spacing and hold down arrow notification in case there is more items */}
+          {/* Bottom bar: reserves spacing and holds the scroll-for-more caret. */}
           <div className="absolute bottom-0 left-0 flex h-6 w-full justify-center border-4 border-t-0 border-pink-100 bg-white">
             {courses.length > 5 && (
               <CaretDownIcon

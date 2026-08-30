@@ -17,7 +17,7 @@ enum SessionStatus { scheduled, active, ended }
 
 /// Renders [status] for a chip or a list subtitle.
 ///
-/// Pass `short: true` where the column is narrow — the abbreviation is not
+/// Pass `short: true` where the column is narrow. The abbreviation is not
 /// localized, so it is only safe in space-constrained chrome.
 String formatSessionLabel(SessionStatus status, {bool short = false}) {
   return switch (status) {

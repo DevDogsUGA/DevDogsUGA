@@ -7,7 +7,7 @@ import type * as icons from "./icons";
 export type NavIcon = keyof typeof icons;
 
 /**
- * DevDogs on the UGA Involvement Network — the roster that decides official
+ * DevDogs on the UGA Involvement Network, the roster that decides official
  * membership (see `docs/platform/airtable-setup.md`). `/join` redirects here,
  * so keep the two in sync by importing this rather than retyping the URL.
  */
@@ -92,8 +92,8 @@ export const SEARCH_ONLY_PAGES: NavItem[] = [
 ];
 
 /**
- * Items in the Console dropdown. Each is gated by the permission that the
- * page itself enforces server-side — keep these in sync with the page loaders.
+ * Items in the Console dropdown. Each is gated by the permission that the page
+ * itself enforces server-side. Keep these in sync with the page loaders.
  */
 export const CONSOLE_ITEMS: ConsoleItem[] = [
   {
@@ -147,10 +147,10 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
 ];
 
 /**
- * The competition program's personal pages. Voting and team requests are two
- * halves of one question — what is a competition waiting on me for — so the
- * profile popover nests them in one sub-menu rather than listing them beside
- * Account, which is about the viewer rather than about a competition.
+ * The competition program's personal pages. Voting and team requests both
+ * answer "what is a competition waiting on me for", so the profile popover
+ * nests them in one sub-menu rather than listing them beside Account, which is
+ * about the viewer.
  */
 export const COMPETITION_ITEMS: NavItem[] = [
   {
@@ -189,9 +189,8 @@ export const ACCOUNT_ITEMS: NavItem[] = [
 
 /**
  * Every signed-in-only page, in menu order. The profile popover splits these
- * back apart; the surfaces that want one flat list — search and the mobile
- * sheet — read this, so a page added to either half above is picked up by both
- * without a second edit.
+ * back apart. Search and the mobile sheet want one flat list and read this, so
+ * a page added to either half above is picked up by both without a second edit.
  */
 export const PROFILE_ITEMS: NavItem[] = [
   ...COMPETITION_ITEMS,
@@ -202,9 +201,8 @@ export const PROFILE_ITEMS: NavItem[] = [
  * A named sub-menu inside the profile popover.
  *
  * `iconBg` is the fill behind every row's mark, so a sub-menu's rows read as
- * one set the way a docs project's mark reads as one project — the fill is per
- * group rather than per item, since these pages have no identity of their own
- * to carry a colour for.
+ * one set. Per group rather than per item, since these pages have no identity
+ * of their own to carry a colour for.
  */
 export interface NavGroup {
   label: string;
@@ -212,7 +210,7 @@ export interface NavGroup {
   items: NavItem[];
   /**
    * Split the panel into two columns where the viewport is wide enough to
-   * take it. For a group long enough to want it — the Console's six — one
+   * take it. For a group long enough to want it, like the Console's six, one
    * 20rem column of described rows is a scroll masquerading as a menu.
    */
   twoColumn?: boolean;
@@ -226,8 +224,8 @@ export const COMPETITION_GROUP: NavGroup = {
 };
 
 /**
- * The Console sub-menu's label and fill. Its items are missing because they
- * are permission-filtered per request — `visibleConsoleItems` resolves them
+ * The Console sub-menu's label and fill. Its items are missing because they are
+ * permission-filtered per request: `visibleConsoleItems` resolves them
  * server-side and they reach the popover as props.
  */
 export const CONSOLE_GROUP: Omit<NavGroup, "items"> = {
@@ -243,8 +241,8 @@ export const SWITCHER_PRIMARY: SwitcherEntry = {
 };
 
 /**
- * External listings, shown in the app switcher. Projects are not listed here —
- * the switcher renders them as cards from `~/config/projects`.
+ * External listings, shown in the app switcher. Projects are not listed here.
+ * The switcher renders them as cards from `~/config/projects`.
  */
 export const SWITCHER_LINKS: SwitcherEntry[] = [
   {

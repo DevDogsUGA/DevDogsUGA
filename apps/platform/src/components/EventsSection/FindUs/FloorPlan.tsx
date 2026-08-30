@@ -1,4 +1,4 @@
-/** The route the floor plan's numbered chips draw — see {@link FloorPlan}. */
+/** The route the floor plan's numbered chips draw. See {@link FloorPlan}. */
 export const ROOM_STEPS = [
   "Come in through the main entrance on E. Cloverhurst Ave.",
   "Skip the stairs — dining is on floors 2 and 3, and we stay on 1.",
@@ -6,11 +6,11 @@ export const ROOM_STEPS = [
 ];
 
 /**
- * Schematic, not measured: the first floor really does split into a classroom
+ * Schematic, not measured. The first floor really does split into a classroom
  * wing and a health & well-being wing with dining upstairs (that comes from the
  * architects' program), but the corridor shape and where 124 falls along it are
  * sketched. If the room ever moves or the wing flips, redraw here and reword
- * ROOM_STEPS together — the numbered chips on the route are steps 1–3 of that
+ * ROOM_STEPS together: the numbered chips on the route are steps 1–3 of that
  * list.
  */
 export default function FloorPlan() {

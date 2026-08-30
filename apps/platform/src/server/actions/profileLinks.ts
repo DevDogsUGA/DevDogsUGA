@@ -61,15 +61,15 @@ export default async function addProfileLink(
 
     const sortOrder = suppliedSortOrder ?? (countRow?.maxOrder ?? 0) + 1;
 
-    // OG title fetching must remain server-side. Browsers block cross-origin
+    // OG title fetching must stay server-side. Browsers block cross-origin
     // HTML fetches (CORS) unless the target sets Access-Control-Allow-Origin,
     // which almost no site does on its HTML pages.
     //
-    // The fetch is OURS, with ogs only parsing the `html`: given a bare
-    // `url`, ogs fetches through undici, whose first request compiles the
-    // llhttp parser's Wasm — and the Workers runtime forbids runtime Wasm
-    // codegen (the same class of failure DocsMarkdown hit with Shiki's
-    // Oniguruma engine). The platform-native fetch needs no parser.
+    // The fetch is OURS, with ogs only parsing the `html`. Given a bare `url`,
+    // ogs fetches through undici, whose first request compiles the llhttp
+    // parser's Wasm, and the Workers runtime forbids runtime Wasm codegen (the
+    // same failure DocsMarkdown hit with Shiki's Oniguruma engine). The
+    // platform-native fetch needs no parser.
     let title: string | null = suppliedTitle ?? null;
     if (!title) {
       try {
@@ -87,10 +87,10 @@ export default async function addProfileLink(
       }
     }
 
-    // An OG title is whatever the page felt like putting in its <head> and is
-    // routinely longer than the varchar(64) column. Nobody validated it,
-    // because nobody typed it — so a perfectly good link could fail to save on
-    // account of someone else's markup. Truncate instead of refusing.
+    // An OG title is whatever the page put in its <head> and is routinely
+    // longer than the varchar(64) column. Nobody validated it, because nobody
+    // typed it, so a good link could fail to save on account of someone else's
+    // markup. Truncate instead of refusing.
     const resolved =
       title ?? hostname.charAt(0).toUpperCase() + hostname.slice(1);
 

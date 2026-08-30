@@ -11,9 +11,9 @@ import {
 } from "~/server/db/schema";
 import { expectSession } from "~/server/auth";
 import { blankToNull } from "~/lib/blank";
-// Moved to a non-"use server" module: every export from this file is a server
-// action with an HTTP endpoint, and `readVaultSecret` as one would hand any
-// browser any secret by id.
+// The vault helpers live in a non-"use server" module. Every export from this
+// file is a server action with an HTTP endpoint, so exporting `readVaultSecret`
+// from here would hand any browser any secret by id.
 import {
   deleteVaultSecret,
   readVaultSecret,

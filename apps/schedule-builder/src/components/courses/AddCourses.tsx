@@ -40,9 +40,8 @@ const searchParamsState = z
   });
 
 /**
- *
- * @param view
- * @param state
+ * Per-tab state: the selected course, the last values typed into that tab's
+ * fields, and the href that restores them.
  */
 function useTab<T extends z.infer<typeof searchParamsState>["view"]>(
   view: T,
@@ -63,11 +62,7 @@ function useTab<T extends z.infer<typeof searchParamsState>["view"]>(
     [view, defaultValue],
   );
 
-  /**
-   * When a new tab is selected, or the content in one of the
-   * search fields changes, we update the search params of the
-   * page to reflect said changes.
-   */
+  // Mirror the active tab and its field values into the page's search params.
   useEffect(() => {
     if (state.view === view) {
       router.replace(href);
@@ -89,7 +84,7 @@ interface Props {
    */
   searchParams: ReadonlyURLSearchParams;
   /**
-   * Fires the provided event handler when a course is selected and the "Add Course" button is clicked.
+   * Called when a course is selected and the "Add Course" button is clicked.
    * @param course The selected course.
    */
   onAddCourse?: (course: Course) => void;

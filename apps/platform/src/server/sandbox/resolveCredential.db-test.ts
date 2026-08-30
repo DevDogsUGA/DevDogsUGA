@@ -6,25 +6,24 @@ import { db } from "~/server/db";
 /**
  * `resolve_sandbox_credential`, and the privileges around it.
  *
- * Two halves, and the second is the one that earned this file.
+ * The first half exercises the function's contract: which outcome each
+ * situation produces, and that a publishable credential cannot obtain the
+ * secret key. That check is what the proxy's security rests on, and it lives in
+ * SQL rather than the Worker so a routing bug in the Worker cannot reach past
+ * it.
  *
- * The first exercises the function's contract: which outcome each situation
- * produces, and — the part the proxy's security rests on — that a publishable
- * credential cannot obtain the secret key. That check lives in SQL rather than
- * in the Worker precisely so a routing bug in the Worker cannot reach past it.
- *
- * The second asserts the SHAPE OF THE GRANTS, because the narrow role's whole
- * value is what it cannot do, and that is invisible to typechecking and to
- * every other test. Measured while building this: Postgres grants EXECUTE to
- * PUBLIC on every new function, so `sandbox_proxy` — created with no privileges
- * whatsoever — could initially execute 18 of this schema's functions, all of
- * them SECURITY DEFINER, `claim_root` among them. SECURITY DEFINER is what made
- * it matter: those run as the owner, so an empty set of table grants stops
+ * The second half asserts the SHAPE OF THE GRANTS, because the narrow role's
+ * whole value is what it cannot do, and that is invisible to typechecking and
+ * to every other test. Measured while building this: Postgres grants EXECUTE to
+ * PUBLIC on every new function, so `sandbox_proxy`, created with no privileges
+ * at all, could initially execute 18 of this schema's functions, all of them
+ * SECURITY DEFINER, `claim_root` among them. SECURITY DEFINER is what made it
+ * matter: those run as the owner, so an empty set of table grants stops
  * nothing.
  *
  * The migration closes that with a schema-wide revoke plus an `alter default
- * privileges`. This test is what stops it coming back, and it will fail the
- * moment somebody adds a function without thinking about who may call it.
+ * privileges`. This test stops it coming back, and it fails the moment somebody
+ * adds a function without deciding who may call it.
  */
 
 const IDS = {
@@ -33,7 +32,7 @@ const IDS = {
   // A third account exists only so the disabled credential can sit on envA
   // alongside the active one. The unique constraint is (environment, user,
   // scope) and is deliberately unconditional, so one member cannot hold two
-  // secret credentials for one environment -- which is the point of it.
+  // secret credentials for one environment, which is the point of it.
   formerUser: "d1111111-1111-1111-1111-111111111103",
   envA: "e1111111-1111-1111-1111-11111111110a",
   envB: "e1111111-1111-1111-1111-11111111110b",
@@ -120,7 +119,7 @@ beforeAll(async () => {
     [IDS.envA, IDS.memberUser, "sbxtest-sec-a", "secret", "active"],
     [IDS.envB, IDS.memberUser, "sbxtest-pub-b", "publishable", "active"],
     // On envA, so resolving it at envA's hostname fails because it is
-    // disabled -- not because it belongs somewhere else.
+    // disabled, not because it belongs somewhere else.
     [IDS.envA, IDS.formerUser, "sbxtest-sec-disabled", "secret", "disabled"],
   ] as const) {
     await db.execute(sql`
@@ -245,13 +244,12 @@ describe("the sandbox_proxy role's privilege surface", () => {
     // the cluster.
     //
     // `coalesce(proacl, acldefault(...))` and not a bare `proacl`, because a
-    // NULL proacl means "the built-in default" -- which for a function is owner
+    // NULL proacl means "the built-in default", which for a function is owner
     // plus EXECUTE to PUBLIC. `aclexplode(NULL)` returns no rows, so a function
     // that was never granted OR revoked is wide open and, read the naive way,
     // INVISIBLE TO THIS ASSERTION. That is not hypothetical: it is exactly the
     // state a schema-scoped `alter default privileges ... revoke ... from
     // public` produces, which is the no-op that 20260807000000 exists to fix.
-    // The guard has to see the case it was written for.
     const rows = await db.execute<{ proname: string }>(sql`
       select p.proname
         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -271,7 +269,7 @@ describe("the sandbox_proxy role's privilege surface", () => {
     // then-current surface passed, while the statement meant to hold the line
     // did nothing and the next migration to add a function reopened everything.
     //
-    // Create one and look, rather than inspecting pg_default_acl -- the stored
+    // Create one and look, rather than inspecting pg_default_acl. The stored
     // row is a delta merged over acldefault() at creation time, so the row
     // reads clean in both the working and the broken configuration. Only the
     // created object tells the truth.

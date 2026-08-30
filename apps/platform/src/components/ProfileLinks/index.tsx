@@ -49,16 +49,16 @@ import {
 import LinkCard from "./LinkCard";
 import AddLinkInput from "./AddLinkInput";
 
-/** Identity of the card that mirrors whatever is currently in the add-link box. */
+/** Identity of the card that mirrors what is in the add-link box. */
 const PREVIEW_ID = "__preview__";
 
 interface Props {
   initialLinks: (typeof profileLinks.$inferSelect)[];
 }
 
-// Merges dnd-kit's sortable ref + transform with Framer Motion's height/opacity animation.
-// setNodeRef must be on the motion.div (not a child) so the entire clipped box moves as a
-// unit during sorting — applying the transform inside an overflow:hidden parent would clip it.
+// Merges dnd-kit's sortable ref and transform with Motion's height/opacity animation.
+// setNodeRef goes on the motion.div, not a child, so the whole clipped box moves as one
+// unit while sorting. A transform applied inside the overflow:hidden parent gets clipped.
 interface SortableMotionItemProps {
   id: string;
   isJustAdded: boolean;
@@ -197,9 +197,9 @@ function SortablePreviewItem({
  *
  * Nothing here writes. Every add, edit, delete and drag edits a local draft
  * (see ~/hooks/useProfileLinks) and the page's save bar commits the lot. The
- * card that appears while a URL is being typed is not decoration any more —
- * it is a real entry in the list this component hands to `save`, which is why
- * a member can type a URL and press Save without pressing Add first.
+ * card that appears while a URL is being typed is a real entry in the list this
+ * component hands to `save`, which is why a member can type a URL and press
+ * Save without pressing Add first.
  */
 export default function ProfileLinks({ initialLinks }: Props) {
   const urlInputId = useId();
@@ -222,8 +222,8 @@ export default function ProfileLinks({ initialLinks }: Props) {
   const [droppingId, setDroppingId] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
-  // sideEffects cleanup fires when the drop animation finishes — that's when we
-  // reveal the real card again (until then, the slot stays as DropTarget).
+  // The sideEffects cleanup fires when the drop animation finishes. That is when
+  // the real card comes back; until then the slot stays a DropTarget.
   const dropAnimation = useMemo<DropAnimation>(
     () => ({
       duration: 250,
@@ -243,21 +243,21 @@ export default function ProfileLinks({ initialLinks }: Props) {
     left: number;
     right: number;
   } | null>(null);
-  // True while the overlay is mounted (including during its exit animation).
-  // Keeps card elevation and z-index in sync with the overlay fade instead of snapping instantly.
+  // True while the overlay is mounted, including during its exit animation, so card
+  // elevation and z-index fade with the overlay instead of snapping.
   const mobileEditSelectPresent = mobileEditSelectOpen || titlePos !== null;
 
   useEffect(() => {
     if (mobileEditSelectOpen && listRef.current) {
       const rect = listRef.current.getBoundingClientRect();
-      // bottom: position title just above the first card (accounting for pt-2.5 inside each item)
+      // bottom: puts the title just above the first card, allowing for the pt-2.5 in each item
       setTitlePos({
         bottom: window.innerHeight - rect.top - 2,
         left: rect.left,
         right: window.innerWidth - rect.right,
       });
     }
-    // titlePos is cleared by AnimatePresence.onExitComplete so it stays visible during the fade-out
+    // AnimatePresence.onExitComplete clears titlePos, so it stays visible through the fade-out
   }, [mobileEditSelectOpen]);
 
   const handleMobileAddLink = useCallback(() => {
@@ -273,10 +273,10 @@ export default function ProfileLinks({ initialLinks }: Props) {
 
     const rect = listRef.current.getBoundingClientRect();
 
-    // Use CSS `top` + offsetHeight (both unaffected by translateY transforms) so that a
-    // nav currently hidden by scroll detection is still counted — scrolling up reveals it
-    // before the selection UI appears. Skip elements with `top: auto` (bottom drawers)
-    // and anything taller than 1/3 of the viewport (full-screen overlays).
+    // CSS `top` plus offsetHeight, both unaffected by translateY transforms, so a nav
+    // hidden by scroll detection still counts: scrolling up reveals it before the
+    // selection UI appears. Skips `top: auto` (bottom drawers) and anything taller
+    // than a third of the viewport (full-screen overlays).
     const navBottom = Array.from(
       document.querySelectorAll<HTMLElement>(".sticky, .fixed"),
     ).reduce((max, el) => {
@@ -307,9 +307,9 @@ export default function ProfileLinks({ initialLinks }: Props) {
   const trimmedTitle = titleInput.trim();
 
   /**
-   * The draft with the add-link box folded in — what is on screen, and what
-   * `save` commits. While editing, the typed values replace that link in
-   * place; otherwise a valid URL becomes a new card at `previewIndex`.
+   * The draft with the add-link box folded in: what is on screen, and what
+   * `save` commits. While editing, the typed values replace that link in place;
+   * otherwise a valid URL becomes a new card at `previewIndex`.
    */
   const stagedLinks = useMemo<DraftLink[]>(() => {
     if (!urlIsValid) return links;
@@ -347,9 +347,9 @@ export default function ProfileLinks({ initialLinks }: Props) {
 
   const atMax = links.length >= PROFILE_LIMITS.linkCount;
 
-  // A URL half-typed into the box is not in `stagedLinks`, so without this the
-  // page-wide save would quietly drop it. Blocking the save is the honest
-  // alternative: the message says what to do and the bar names the field.
+  // A half-typed URL is not in `stagedLinks`, so without this the page-wide save
+  // would drop it without saying so. Block the save instead: the message says
+  // what to do and the bar names the field.
   const pendingUrlError =
     urlInput.trim().length > 0 && !urlIsValid
       ? validateLinkUrl(urlInput)
@@ -359,8 +359,8 @@ export default function ProfileLinks({ initialLinks }: Props) {
 
   // The list-level message ("You can only add up to five links.") is about the
   // list, not about what is being typed, so it shows straight away. The URL
-  // message waits for blur — nobody needs to be told a URL is invalid while
-  // they are still on the third character of it.
+  // message waits for blur. Nobody needs to be told a URL is invalid while they
+  // are still on its third character.
   const blurred = useBlurredError(pendingUrlError);
   const visibleError = listError ?? blurred.error;
 
@@ -374,16 +374,16 @@ export default function ProfileLinks({ initialLinks }: Props) {
 
   /**
    * Moves whatever is in the add-link box into the draft and empties the box.
-   * Local and instant — nothing is written. Returns the list to commit, which
-   * differs from `stagedLinks` in one way that matters: the preview card's
-   * placeholder id is swapped for the real draft id it was just given.
+   * Local; nothing is written. Returns the list to commit, which differs from
+   * `stagedLinks` in one way that matters: the preview card's placeholder id is
+   * swapped for the real draft id it was just given.
    *
-   * Both callers need this. Pressing Add is the obvious one. The page-wide
-   * save is the important one: a member who types a URL and reaches straight
-   * for Save should not lose it, and folding the box in first means that if
-   * the write fails the link is sitting in the list rather than in an input
-   * that has since been cleared. It also keeps `PREVIEW_ID` out of the draft,
-   * where it would collide with the next thing typed.
+   * Both callers need it. Pressing Add is the obvious one. The page-wide save is
+   * the one that matters: a member who types a URL and reaches straight for Save
+   * should not lose it, and folding the box in first means a failed write leaves
+   * the link sitting in the list rather than in an input that has since been
+   * cleared. It also keeps `PREVIEW_ID` out of the draft, where it would collide
+   * with the next thing typed.
    */
   const materializePending = useCallback((): DraftLink[] => {
     if (editingLinkId) {
@@ -563,9 +563,8 @@ export default function ProfileLinks({ initialLinks }: Props) {
                     );
                   }
 
-                  // Consume-once animation flag: this newly added link animates
-                  // in on its first render only, so we read and clear the ref
-                  // here during render (a deliberate imperative one-shot).
+                  // Consume-once flag: a newly added link animates in on its first
+                  // render only, so the ref is read and cleared here during render.
                   const isJustAdded = justAddedIdRef.current === link.id;
                   if (isJustAdded) justAddedIdRef.current = null;
 
@@ -615,8 +614,8 @@ export default function ProfileLinks({ initialLinks }: Props) {
           </DragOverlay>
         </DndContext>
 
-        {/* Mobile-only buttons + helper text — wrapper stays elevated above overlay in
-            selection mode so neither element causes a layout shift when mode opens. */}
+        {/* Mobile-only buttons and helper text. The wrapper stays above the overlay in
+            selection mode so neither element shifts layout when the mode opens. */}
         <div className="flex flex-col gap-2.5">
           <AnimatePresence>
             {!mobileInputOpen && !editingLinkId && (
@@ -701,7 +700,7 @@ export default function ProfileLinks({ initialLinks }: Props) {
         <FieldError error={visibleError} />
       </div>
 
-      {/* Full-screen overlay + title — portalled to body to escape any parent stacking context */}
+      {/* Full-screen overlay and title, portalled to body to escape any parent stacking context */}
       {createPortal(
         <AnimatePresence onExitComplete={() => setTitlePos(null)}>
           {mobileEditSelectOpen && (

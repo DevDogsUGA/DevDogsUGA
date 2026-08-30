@@ -11,8 +11,8 @@ export default {
   //
   // ⚠️ ANY OTHER APP'S SCHEMA THAT ADDS A QUARANTINE COLUMN MUST BE EXCLUDED
   // HERE. A foreign key to platform."reportResolutions" makes Drizzle emit a
-  // reference it has no import for, so the generated file does not compile —
-  // and importing across would make these two generated modules circular. The
+  // reference it has no import for, so the generated file does not compile.
+  // Importing across would make these two generated modules circular. The
   // `sandbox` fixture schema used to be on this list for exactly that reason.
   // Nothing is lost by excluding one: the console has no reason to read another
   // app's tables server-side, and apps reach their own content over PostgREST.

@@ -7,14 +7,14 @@ import { db } from "~/server/db";
  * Accepting one invitation withdraws the rest, for that competition.
  *
  * Applying to a few teams and joining whichever answers first is the intended
- * use, so the leftovers are not a mistake — but the one-team-per-competition
+ * use, so the leftovers are not a mistake. But the one-team-per-competition
  * constraint would reject every one of them anyway, and leaving them pending
  * strands leads waiting on somebody who is no longer available.
  *
- * Worth a database test rather than a unit test because the interesting part
- * is the scope of the UPDATE: it must catch the sibling in the same
- * competition, must NOT catch one in a different competition, and must not
- * touch anybody else's rows.
+ * A database test rather than a unit test because the interesting part is the
+ * scope of the UPDATE: it must catch the sibling in the same competition, must
+ * NOT catch one in a different competition, and must not touch anybody else's
+ * rows.
  */
 
 const IDS = {
@@ -64,9 +64,9 @@ beforeAll(async () => {
   }
 
   // Joining provisions repository access, so `requireCanJoin` refuses a member
-  // with no linked GitHub identity — `github_not_linked`, the sixth check.
-  // Seeding the identity is not incidental setup: without it this test would
-  // pass for the wrong reason, never reaching the withdrawal at all.
+  // with no linked GitHub identity: `github_not_linked`, the sixth check.
+  // Without the seeded identity this test would pass for the wrong reason,
+  // never reaching the withdrawal at all.
   await db.execute(sql`
     insert into auth.identities (id, user_id, provider, provider_id, identity_data)
     values (gen_random_uuid(), ${IDS.applicant}::uuid, 'github', 'respond-applicant-gh',
@@ -75,9 +75,9 @@ beforeAll(async () => {
   `);
 
   // Two projects, not two workshops on one: `workshops_meetingId_projectId_key`
-  // allows a meeting to run a given project exactly once, which is correct —
-  // two sessions on the same project at the same meeting would make an
-  // attendance row ambiguous about which one it credits.
+  // allows a meeting to run a given project exactly once, because two sessions
+  // on the same project at the same meeting would make an attendance row
+  // ambiguous about which one it credits.
   await db.execute(sql`
     insert into platform.projects (id, slug, "displayName")
     values (${IDS.projectA}::uuid, 'respond-test-a', 'Respond Test A'),
@@ -89,7 +89,7 @@ beforeAll(async () => {
             now() - interval '2 days', now() - interval '2 days' + interval '2 hours')
   `);
 
-  // Two competitions at the same meeting — the whole point is that they are
+  // Two competitions at the same meeting. The whole point is that they are
   // scoped independently.
   for (const [workshop, comp, slug, project] of [
     [IDS.workshopA, IDS.compA, "respond-comp-a", IDS.projectA],

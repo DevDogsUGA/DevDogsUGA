@@ -1,11 +1,10 @@
 /**
  * The blob wash, as CSS gradient strings.
  *
- * Split out of `section-background` because that module is `"use client"` —
- * every one of its exports becomes a client reference, so a server component
- * cannot call one. This is the half with no hooks and no DOM in it, which is
- * what lets a server-rendered card draw the same wash as the section it links
- * to. See {@link blobsBackgroundImage}.
+ * Split out of `section-background` because that module is `"use client"`, so
+ * every export there is a client reference a server component cannot call. This
+ * is the half with no hooks and no DOM, which lets a server-rendered card draw
+ * the same wash as the section it links to. See {@link blobsBackgroundImage}.
  */
 
 export interface BlobDef {
@@ -45,7 +44,7 @@ const TAIL_REACH = BLUR_TAIL[BLUR_TAIL.length - 1]![0];
  * The old filter blurred in pixels, so its softness relative to a blob depended
  * on which axis you looked along: 45px is ~6% of a 700px rx but ~16% of a 275px
  * ry. A gradient's stops are in normalised ellipse space and cannot be
- * anisotropic, so this is the geometric middle of that range — the value that
+ * anisotropic, so this is the geometric middle of that range, the value that
  * looks like the old blur from both directions at once.
  */
 const SOFTNESS_AT_45 = 0.11;
@@ -57,12 +56,12 @@ export const f = (n: number) => Math.round(n * 10) / 10;
 export const LENGTH = /^\s*(-?\d*\.?\d+)\s*([a-z%]+)?\s*$/i;
 
 /**
- * Scales a CSS length, keeping its unit. Percentages resolve against the same
- * axis in a radial-gradient as they did on an SVG ellipse — width for rx/cx,
- * height for ry/cy — so a percentage blob needs no conversion, only this.
+ * Scales a CSS length, keeping its unit. A percentage blob needs no conversion
+ * beyond this: percentages resolve against the same axis in a radial-gradient
+ * as they did on an SVG ellipse, width for rx/cx and height for ry/cy.
  *
- * Anything the regex can't read (calc(), var()) is passed through untouched: the
- * blob then keeps its stated extent and the soft rim falls just inside the
+ * Anything the regex can't read, calc() or var(), is passed through untouched.
+ * The blob then keeps its stated extent and the soft rim falls just inside the
  * radius rather than straddling it.
  */
 export function scaleLength(value: string, k: number): string {
@@ -84,11 +83,11 @@ export const withAlpha = (color: string, a: number) =>
  * How far past its stated radius a blob's gradient has to be drawn, and where
  * the stops land once it is.
  *
- * The gradient is grown so the whole falloff fits inside it — a gradient paints
+ * The gradient is grown so the whole falloff fits inside it. A gradient paints
  * nothing beyond its extent, so a tail that ran off the end would be chopped
  * into a visible ring. The stops are then placed so α = 0.5 lands back on the
  * original radius, which is where a blurred edge sits: the blob keeps the size
- * it has today, it just gains a soft rim.
+ * it has today and gains a soft rim.
  */
 export function blurGeometry(blurSd: number) {
   const sigma = SOFTNESS_AT_45 * (blurSd / 45);
@@ -104,10 +103,10 @@ export function blurGeometry(blurSd: number) {
  * The stop list for one blob, at `scale` times its alpha throughout.
  *
  * `scale` is 1 wherever the layer carries the blob's own opacity itself.
- * Folding that opacity in here instead is exact rather than an approximation,
- * because a blob is a single colour: compositing a layer of per-pixel alpha `a`
- * at opacity `α` lands on the same pixels as alpha `a·α` does, and `withAlpha`
- * premultiplies, so no stop shifts toward grey on the way.
+ * Folding it in here instead is exact, not an approximation, because a blob is
+ * a single colour: compositing per-pixel alpha `a` at opacity `α` lands on the
+ * same pixels as alpha `a·α`, and `withAlpha` premultiplies, so no stop shifts
+ * toward grey on the way.
  */
 export function blobStops(
   fill: string,
@@ -125,7 +124,7 @@ export function blobStops(
 
 /**
  * The same blobs as one element's `background-image`, for a box that never
- * moves — a card echoing the section it links to.
+ * moves, such as a card echoing the section it links to.
  *
  * `SectionBackground` gives every blob a layer of its own because each has to
  * travel at its own parallax rate. Nothing here travels, so the whole set fits
@@ -134,10 +133,10 @@ export function blobStops(
  * composite, since {@link blobStops} folds each one into its own stops.
  *
  * Vertical percentages are read straight, with none of the `--bg-h` rewriting
- * `blobLayerStyle` needs: that exists because parallax makes the image taller
+ * `blobLayerStyle` needs. That exists because parallax makes the image taller
  * than the section it fills, and here the image is exactly its box again.
  *
- * The list is reversed because the two stacking orders are opposites — a later
+ * The list is reversed because the two stacking orders are opposites: a later
  * element paints over an earlier one, a later background layer paints under.
  */
 export function blobsBackgroundImage(blobs: BlobDef[], blurSd = 45): string {

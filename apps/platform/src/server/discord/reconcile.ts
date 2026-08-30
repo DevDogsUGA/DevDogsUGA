@@ -22,7 +22,7 @@ type FieldSync<T> =
 
 /**
  * Diffs one field (name or color) across DB / live Discord / last-synced
- * snapshot. Per-field, DB wins on conflict — see `reconcileRoleDefinitions`.
+ * snapshot. Per-field, DB wins on conflict. See `reconcileRoleDefinitions`.
  */
 function reconcileField<T>(
   dbValue: T,
@@ -38,20 +38,19 @@ function reconcileField<T>(
     return { action: "push", snapshot: dbValue, discordValue: dbValue };
   if (!dbChanged && liveChanged)
     return { action: "pull", snapshot: liveValue, dbValue: liveValue };
-  // conflict: both sides changed since the last sync — DB wins
+  // conflict: both sides changed since the last sync, so DB wins
   return { action: "push", snapshot: dbValue, discordValue: dbValue };
 }
 
 /**
  * Cheap reconciliation of synced roles' name/color, run on every Permissions
  * page load and on Discord account link. For each synced role, diffs `name`
- * and `color` independently against the live Discord role and the
- * last-synced snapshot; pushes, pulls, or (on a same-field conflict) pushes
- * DB's value to Discord. If a synced role's Discord role no longer exists,
- * records an error and skips it (never auto-unsyncs).
+ * and `color` independently against the live Discord role and the last-synced
+ * snapshot, then pushes, pulls, or on a same-field conflict pushes DB's value
+ * to Discord. If a synced role's Discord role no longer exists, records an
+ * error and skips it; it never auto-unsyncs.
  *
- * Failed Discord pushes leave the snapshot stale, so the next run retries
- * automatically.
+ * Failed Discord pushes leave the snapshot stale, so the next run retries.
  */
 export async function reconcileRoleDefinitions(
   guildRoles?: APIRole[],

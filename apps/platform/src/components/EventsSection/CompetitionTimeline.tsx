@@ -4,32 +4,31 @@ import { segmentBadge } from "./meetingView";
 /**
  * One week of the club, drawn as the loop it is.
  *
- * The model this has to keep straight (see `docs/platform/guides/meetings-and-
- * teams`): a competition is a week-long window between two Mondays. The first
- * Monday's workshop kicks it off, the next Monday judges it — and the moment
- * judging is done, that same night's workshop kicks off the next one. So the
- * strip is not one bar with two ends; it is the middle of a chain. Last
- * week's bar arrives from the left in grey and ends in rose at the first
- * Monday, this week's runs cyan from there to the next Monday, where an
- * emerald kickoff dot starts the one after, whose bar leaves to the right in
- * grey. Grey is "not the week in view"; the dots on the Monday in view are
- * always coloured, because that Monday's meeting always happens.
+ * The model (see `docs/platform/guides/meetings-and-teams`): a competition is a
+ * week-long window between two Mondays. The first Monday's workshop kicks it
+ * off, the next Monday judges it, and the moment judging is done that same
+ * night's workshop kicks off the next one. So the strip is the middle of a
+ * chain, not one bar with two ends: last week's bar arrives from the left in
+ * grey and ends in rose at the first Monday, this week's runs cyan from there
+ * to the next Monday, where an emerald kickoff dot starts the one after, whose
+ * bar leaves to the right in grey. Grey is "not the week in view"; the dots on
+ * the Monday in view are always coloured, because that Monday's meeting always
+ * happens.
  *
- * The bars are striped and the stripes crawl: a diagram of something in
- * progress, drawn as a progress bar. `motion-safe` gates the crawl.
+ * The bars are striped and the stripes crawl, so a week in progress reads as a
+ * progress bar. `motion-safe` gates the crawl.
  *
- * No labels. The day cards in {@link HowItWorks} sit on this strip's own
- * eight columns, above and below it, each pointing at its dot — they ARE the
- * labels, so a second set on the strip only said everything twice. What the
- * strip does instead is answer the cards: `active` names the card under the
- * pointer, and the matching dots swell with a ring pulsing out behind them,
- * the bar brightens and hurries when the build week is the one, and the
- * other day names step back.
+ * No labels of its own. The day cards in {@link HowItWorks} sit on this strip's
+ * eight columns, above and below it, each pointing at its dot, so a second set
+ * here would say everything twice. The strip answers the cards instead:
+ * `active` names the card under the pointer, and the matching dots swell with a
+ * ring pulsing out behind them, the bar brightens and hurries when the build
+ * week is the one, and the other day names step back.
  *
- * Colour is the same information it is everywhere else on the events pages:
- * `segmentBadge` decides it. `tone` swaps the *neutrals* only.
+ * `segmentBadge` decides colour, the same as everywhere else on the events
+ * pages. `tone` swaps the *neutrals* only.
  *
- * Reads no clock and no database — a fixed diagram of the format, safe inside
+ * Reads no clock and no database: a fixed diagram of the format, safe inside
  * any cache scope and on any page.
  */
 
@@ -108,9 +107,9 @@ function Dot({
 }
 
 /**
- * A cell on the strip holding one or two dots, centred on its column. When
- * it is the active one its dots swell and a ring pulses out from behind
- * them — the strip's answer to a card being hovered.
+ * A cell on the strip holding one or two dots, centred on its column. When it
+ * is the active one its dots swell and a ring pulses out from behind them, the
+ * strip's answer to a card being hovered.
  */
 function Cell({
   col,
@@ -145,13 +144,13 @@ const DAY_CLS =
   "font-display text-center text-xs font-extrabold tracking-widest uppercase transition-[opacity,scale] duration-300 group-data-[hovering=true]/strip:opacity-40 group-data-[hovering=true]/strip:data-[active=true]:scale-110 group-data-[hovering=true]/strip:data-[active=true]:opacity-100";
 
 /**
- * Where the two grey tails end. Normally at the strip's own edges; inside
- * the homepage's cutout they run on to the SECTION's edges, so the fade
- * finishes exactly where the plate does rather than a column's padding
- * short of it. The section is the site layout's `@container` width less
- * its `mx-4` / `md:mx-6`, and the strip is centred in it — the same
- * arithmetic as `Cutout` in HowItWorks — so each tail's far edge is half
- * the strip's width from centre minus half the section's.
+ * Where the two grey tails end. Normally at the strip's own edges; inside the
+ * homepage's cutout they run on to the SECTION's edges, so the fade finishes
+ * exactly where the plate does rather than a column's padding short of it. The
+ * section is the site layout's `@container` width less its `mx-4` / `md:mx-6`,
+ * and the strip is centred in it, the same arithmetic as `Cutout` in
+ * HowItWorks, so each tail's far edge is half the strip's width from centre
+ * minus half the section's.
  */
 const TAIL_EDGE = {
   contained: { left: "left-0", right: "right-0" },
@@ -170,7 +169,7 @@ export default function CompetitionTimeline({
   tone?: Tone;
   /** The card under the pointer, if any; the strip lights up to match. */
   active?: StripDay | null;
-  /** Run the tails out to the section's edges — see {@link TAIL_EDGE}. */
+  /** Run the tails out to the section's edges. See {@link TAIL_EDGE}. */
   bleed?: boolean;
 }) {
   const t = TONES[tone];
@@ -207,8 +206,8 @@ export default function CompetitionTimeline({
           style={{ right: `calc(100% - ${HALF})` }}
         />
         {/* This week's: Monday's emerald dot to next Monday's rose one. When
-            the build-week card is hovered it brightens and the stripes hurry
-            — `--slants-duration` is what `animate-slants` reads. */}
+            the build-week card is hovered it brightens and the stripes hurry.
+            `--slants-duration` is what `animate-slants` reads. */}
         <span
           aria-hidden
           data-active={active === "week"}

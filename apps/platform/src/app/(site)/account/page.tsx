@@ -23,8 +23,8 @@ import VerificationStatusField from "~/components/VerificationStatusField";
 import { getProfilePageData } from "~/server/loaders/console";
 
 /**
- * One person's own profile — nothing here is the same page for two visitors,
- * which is the whole reason for the `noindex`. There is no description, on
+ * One person's own profile. Nothing here is the same page for two visitors,
+ * which is the whole reason for the `noindex`. There is no description on
  * purpose: a description exists to be shown in a result, and there should not
  * be a result.
  */
@@ -149,12 +149,12 @@ async function AccountContent() {
                 <span
                   key={role.roleId}
                   className="rounded-sm px-2 py-1 text-sm font-medium text-white"
-                  // mauve-800 rather than a gray when a role has no colour of
-                  // its own; `text-white` above keeps the label legible either
-                  // way, including against a dark custom colour. Tested for
+                  // mauve-800 when a role has no colour of its own;
+                  // `text-white` above keeps the label legible either way,
+                  // including against a dark custom colour. Tested for
                   // emptiness rather than `??`-ed: the column is nullable AND
-                  // free text, so "" is a reachable value that would otherwise
-                  // reach `backgroundColor` and paint the chip transparent.
+                  // free text, so "" is reachable and would otherwise reach
+                  // `backgroundColor` and paint the chip transparent.
                   style={{
                     backgroundColor: role.roleColor?.trim()
                       ? role.roleColor
@@ -167,9 +167,9 @@ async function AccountContent() {
             </div>
           </Field>
           {data.isLeader && (
-            // Also a column on platform."profile", so also frozen — and it is
-            // rendered on the homepage, which makes it exactly the kind of
-            // thing a frozen member should not be able to rewrite.
+            // Also a column on platform."profile", so also frozen. It renders
+            // on the homepage, exactly the kind of thing a frozen member
+            // should not be able to rewrite.
             <Fields>
               <Field
                 id="roleDescription"
@@ -203,14 +203,15 @@ export default function ProfilePage() {
       >
         {/* Every editable field on this page registers with the provider, and
             the bar at the bottom saves and resets all of them at once. It
-            renders itself away when nothing is dirty, so a quarantined profile
-            never sees it: FrozenFields marks the whole subtree `inert`, which
-            means no field can be edited, which means nothing is ever dirty.
+            hides itself when nothing is dirty, so a quarantined profile never
+            sees it: FrozenFields marks the whole subtree `inert`, so no field
+            can be edited and nothing is ever dirty.
 
-            The bar is fixed to the bottom of the viewport, which is also where
-            AnnouncementBanner sits. They cannot collide — `showsAnnouncement`
-            keeps the notice off /account along with the rest of the signed-in
-            surfaces, and announcement.test.ts pins that down. */}
+            The bar is fixed to the bottom of the viewport, where
+            AnnouncementBanner also sits. They cannot collide:
+            `showsAnnouncement` keeps the notice off /account along with the
+            rest of the signed-in pages, and announcement.test.ts pins that
+            down. */}
         <SettingsFormProvider>
           <Suspense
             fallback={

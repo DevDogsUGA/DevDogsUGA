@@ -10,28 +10,28 @@ import Headshot, { formatLeaderMeta } from "./Headshot";
 /**
  * One officer, as the cards render them.
  *
- * Shaped by `~/server/loaders/officers.ts` out of `platform.profile` and the
- * leadership roles its holder has been given; it was a hand-maintained array
- * of object literals until 20260827000000. Three consequences of that move
+ * `~/server/loaders/officers.ts` shapes this out of `platform.profile` and the
+ * leadership roles its holder has been given. It was a hand-maintained array of
+ * object literals until 20260827000000, and three consequences of that move
  * show up in these types.
  *
- * `imageSrc` is a URL string rather than a `StaticImageData`, because the
- * image is no longer a build-time import from `~/assets` — it is the
- * officer's avatar, keyed by user id in the `avatars` bucket, and can 404.
- * The blur placeholder a static import used to carry is simply gone: an
- * avatar uploaded from /account has none to carry.
+ * `imageSrc` is a URL string rather than a `StaticImageData`, because the image
+ * is no longer a build-time import from `~/assets`. It is the officer's avatar,
+ * keyed by user id in the `avatars` bucket, and can 404. The blur placeholder a
+ * static import used to carry is gone, because an avatar uploaded from /account
+ * has none to carry.
  *
  * `links` replaced the fixed portfolio/github/linkedin/email fields. Members
- * curate `platform."profileLinks"` from /account, so what a card shows is
- * whatever the officer put there, rather than four slots the data has to be
- * bent into. GitHub, Discord and LinkedIn are separately modelled as linked
- * identities gated on `showGithub`/`showDiscord`/`showLinkedin`, which this
- * section does not read yet.
+ * curate `platform."profileLinks"` from /account, so a card shows whatever the
+ * officer put there rather than four slots the data has to be bent into.
+ * GitHub, Discord and LinkedIn are separately modelled as linked identities
+ * gated on `showGithub`/`showDiscord`/`showLinkedin`, which this section does
+ * not read yet.
  *
  * Everything optional is explicitly `| null` rather than `?`, because the
- * database distinguishes "no answer" from "not asked" and the difference is
- * load-bearing here — no officer has stated pronouns, and a card must render
- * that as silence rather than as a gap in a sentence.
+ * database distinguishes "no answer" from "not asked". No officer has stated
+ * pronouns, and a card must render that as silence rather than as a gap in a
+ * sentence.
  */
 export interface LeaderProfile {
   /** The officer's user id, which is also their avatar's key. */
@@ -62,7 +62,7 @@ function MobileContent({ profile }: { profile: LeaderProfile }) {
           <Headshot
             name={profile.name}
             src={profile.imageSrc}
-            // `size-20`, fixed — this sheet only ever opens below md.
+            // `size-20`, fixed. This sheet only ever opens below md.
             sizes="80px"
           />
         </div>

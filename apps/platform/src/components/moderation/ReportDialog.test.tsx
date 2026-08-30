@@ -9,15 +9,15 @@ import ReportDialog from "./ReportDialog";
 import type { ModerationClient } from "./rpc";
 
 /**
- * These pin the **wire shape** — which RPC is called, with which argument
- * names — not the SQL behaviour, which lives in the persona suite under
+ * These pin the **wire shape**, which RPC is called with which argument names.
+ * Not the SQL behaviour, which lives in the persona suite under
  * `packages/supabase/testing`.
  *
- * That is worth a test even though `callRpc` is typed against the generated
- * `Database["platform"]["Functions"]`, because the types only catch a *wrong*
- * name. They cannot catch a right name carrying the wrong value: passing
- * `contentRef` where `content_ref` was meant is a type error, but passing the
- * content ref as `reason` is not. These assert the mapping itself.
+ * `callRpc` is typed against the generated `Database["platform"]["Functions"]`,
+ * but the types only catch a *wrong* name, not a right name carrying the wrong
+ * value: passing `contentRef` where `content_ref` was meant is a type error,
+ * but passing the content ref as `reason` is not. These assert the mapping
+ * itself.
  *
  * They also cover the one behaviour the shape does not imply: a corroborated
  * report and a fresh one are the same successful response, and the dialog has
@@ -28,8 +28,8 @@ import type { ModerationClient } from "./rpc";
  * A client whose every RPC is answered from a map.
  *
  * An entry may be a value (resolves) or an `Error` (resolves with PostgREST's
- * `{ data, error }` envelope, which is how a raised exception arrives — not as
- * a rejected promise).
+ * `{ data, error }` envelope, which is how a raised exception arrives, not as a
+ * rejected promise).
  */
 function stubClient(responses: Record<string, unknown>) {
   const rpc = vi.fn((fn: string) => {
@@ -79,10 +79,9 @@ describe("ReportDialog", () => {
     renderDialog(client);
 
     await waitFor(() =>
-      // No arguments: the vocabulary is global, so there is nothing to
-      // scope by. `undefined` rather than `{}` because a zero-argument
-      // function is generated as `Args: never`, and callRpc drops the
-      // parameter entirely rather than passing an empty object.
+      // No arguments: the vocabulary is global, so there is nothing to scope
+      // by. `undefined` rather than `{}` because a zero-argument function is
+      // generated as `Args: never`, and callRpc drops the parameter entirely.
       expect(rpc).toHaveBeenCalledWith("list_report_reasons", undefined),
     );
     expect(await reasonOption("Spam")).toBeInTheDocument();

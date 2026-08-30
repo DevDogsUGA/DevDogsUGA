@@ -42,7 +42,7 @@ interface Props {
   user: NavUserClientData;
   /** The viewer's own pages, listed flat under the sub-menus. */
   items: NavItem[];
-  /** Console pages this viewer may see — already filtered server-side. */
+  /** Console pages this viewer may see. Already filtered server-side. */
   consoleItems: ConsoleItem[];
 }
 
@@ -53,24 +53,23 @@ const CLOSE_DELAY = 150;
  * The avatar menu, as an item of the navbar's own list.
  *
  * It was a DropdownMenu, which opens on click and owns its own popper. Sharing
- * the navbar's viewport means giving that up: the panel is now a Content that
+ * the navbar's viewport means giving that up. The panel is now a Content that
  * Radix hoists into the same box Docs renders into, so hovering from one to
  * the other slides one surface across rather than swapping two.
  *
- * The cost is that this is navigation now, not a menu — no role="menu", no
+ * The cost is that this is navigation now, not a menu: no role="menu", no
  * arrow-key roving between rows. That is the honest description of what it
  * holds. Sign Out is the one exception, an action among links, and it stays a
  * real form submit rather than being dressed as a link.
  *
  * The sub-menu's open state is held here rather than left to Radix. A
- * NavigationMenu.Sub deliberately has no close-on-leave: it provides its
- * provider with `onTriggerEnter` and nothing else, because the tier it was
- * written for is a permanent row of tabs, where there is nowhere to leave TO.
- * Inside a card there very much is, and a sub-panel that stays open after the
- * pointer has wandered down to Sign Out is a sub-panel nobody is reading. So
- * the value is controlled, and leaving the region that owns it — its triggers,
- * its panel, and the gap between the two — starts a short timer, long enough
- * to cross that gap and no longer.
+ * NavigationMenu.Sub deliberately has no close-on-leave: it gives its provider
+ * `onTriggerEnter` and nothing else, because the tier it was written for is a
+ * permanent row of tabs, where there is nowhere to leave TO. Inside a card
+ * there is, and a sub-panel still open after the pointer has wandered down to
+ * Sign Out is one nobody is reading. So the value is controlled: the region
+ * that owns it is its triggers, its panel and the gap between them, and leaving
+ * that region starts a timer long enough to cross the gap and no longer.
  */
 export default function ProfilePopover({ user, items, consoleItems }: Props) {
   const verification = useVerification();
@@ -79,8 +78,8 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
   const subRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef(0);
   const [subValue, setSubValue] = useState("");
-  // The sub-menu is its own tier with its own viewport, so it needs the same
-  // word that a panel has arrived that the shell needs. See NavShell.
+  // The sub-menu is its own tier with its own viewport, so the shell needs the
+  // same signal that a panel has arrived. See NavShell.
   const [subRevision, subPanelChanged] = useReducer((n: number) => n + 1, 0);
   const subPanelRef = useCallback(() => subPanelChanged(), [subPanelChanged]);
 
@@ -114,7 +113,7 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
   }
 
   return (
-    // A div, not the <li> a NavigationMenu.Item is by default: this sits
+    // A div, not the <li> a NavigationMenu.Item is by default. This sits
     // inside the navbar's right-hand cluster, which is already one <li>, and
     // an <li> in an <li> is not markup. Radix's collection is context rather
     // than DOM shape, so the item is none the wiser.
@@ -148,29 +147,28 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
         >
           {/* The bar's right-hand end, held open.
 
-              An avatar is a thirty-pixel target in a sixty-four-pixel bar, and
-              the panel it opens hangs a long way below and to the left of it.
-              Every path from one to the other crosses somewhere that is
-              neither, and the close timer does not care why the pointer is
-              where it is. So while the menu is open, the whole right end of
-              the bar counts as part of it.
+              The avatar is a thirty-pixel target in a sixty-four-pixel bar and
+              its panel hangs a long way below and to the left, so every path
+              between them crosses somewhere that is neither, and the close
+              timer does not care why the pointer is there. While the menu is
+              open, the whole right end of the bar counts as part of it.
 
               This works by being inside the Content, and therefore inside the
-              viewport: pointerenter fires on an element when the pointer
-              enters any of its descendants, and Radix cancels its close timer
-              on the viewport's. A plain div rather than a pseudo-element on
-              the trigger, which would have been fewer lines but would have
-              made the whole band a link to /account.
+              viewport: pointerenter fires on an element when the pointer enters
+              any of its descendants, and Radix cancels its close timer on the
+              viewport's. A plain div rather than a pseudo-element on the
+              trigger, which would have been fewer lines but would have made the
+              whole band a link to /account. The controls that live in that band
+              opt back out by painting above it, so hovering one of them is
+              hovering it and not this, and the menu closes as it should.
 
-              The controls that live in that band opt back out by painting
-              above it, so hovering one of them is hovering it and not this,
-              and the menu closes as it should. It spans the cluster the avatar
-              belongs to, out to the window's edge; both bounds are measured
-              and published by the shell, because both depend on the
-              breakpoint. Guessing the right one either leaves a live strip
-              uncovered or pushes the page wider than the window, and guessing
-              the left one puts a transparent sheet over the navigation links
-              at exactly the width where the card is wider than the cluster. */}
+              It spans the cluster the avatar belongs to, out to the window's
+              edge. The shell measures and publishes both bounds, because both
+              depend on the breakpoint: guess the right one and either a live
+              strip is left uncovered or the page grows wider than the window,
+              guess the left one and a transparent sheet covers the navigation
+              links at exactly the width where the card is wider than the
+              cluster. */}
           <div
             aria-hidden
             style={{
@@ -259,8 +257,8 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
 
             {/* Aimed at the row it belongs to rather than tracked by Radix's
                 Indicator, which portals itself into the wrapper around its
-                tier's list — and that list is inside the card, which clips.
-                An arrow whose whole job is to stick out past the card's edge
+                tier's list, and that list is inside the card, which clips. An
+                arrow whose whole job is to stick out past the card's edge
                 cannot live inside the thing doing the clipping. */}
             <span
               aria-hidden
@@ -273,29 +271,28 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
             {/* Out of flow, off the card's left edge, and centred against it.
                 In flow it was measured as part of this panel, so opening a
                 sub-menu grew the panel and the viewport above resized and slid
-                to match — the card visibly moved when nothing about the card
-                had changed.
+                to match: the card moved when nothing about it had changed.
 
-                Centred rather than aligned to the card's top: the two
+                Centred rather than aligned to the card's top. The two
                 sub-panels are different heights, and hung from the top they
-                grow downward off a fixed corner, which reads as the panel
-                being extended rather than exchanged. The offset is measured
-                rather than done with auto margins or a translate — a margin
-                would happily centre a panel taller than the card by giving it
-                a negative one, which puts its top edge inside the navbar, and
-                a translate is what the hand-over animations move.
+                grow downward off a fixed corner, which reads as the panel being
+                extended rather than exchanged. The offset is measured rather
+                than done with auto margins or a translate. A margin would
+                happily centre a panel taller than the card by giving it a
+                negative one, putting its top edge inside the navbar, and a
+                translate is what the hand-over animations move.
 
                 After the card in the DOM, so the sub-panel paints over the
                 arrow and hides the half of it that is not a chevron.
 
-                It carries the surface, for the same reason the tier above
-                does: it is the thing that moves and resizes, so it had better
-                be the thing you can see. The gap it keeps from the card is a
+                It carries the surface, for the same reason the tier above does:
+                it is the thing that moves and resizes, so it had better be the
+                thing you can see. The gap it keeps from the card is a
                 pseudo-element rather than padding, so the border and the fill
-                stop at the panel's edge while the pointer's path across the
-                gap stays inside the viewport's own box — Radix cancels its
-                close timer on the viewport's pointerenter, and that is what
-                makes the gap crossable rather than a trapdoor. */}
+                stop at the panel's edge while the pointer's path across the gap
+                stays inside the viewport's own box. Radix cancels its close
+                timer on the viewport's pointerenter, which is what makes the
+                gap crossable rather than a trapdoor. */}
             <NavigationMenu.Viewport
               data-slot="nav-sub-viewport"
               data-travelling={travelling || undefined}

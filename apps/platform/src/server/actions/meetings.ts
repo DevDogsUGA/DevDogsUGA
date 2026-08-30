@@ -19,7 +19,7 @@ async function requireOfficer(): Promise<string> {
  * Officer override for a team that presented without a PR.
  *
  * The webhook path writes `submissionState` directly from GitHub events and
- * contains no time logic at all — that is what keeps it simple enough to be
+ * contains no time logic at all, which is what keeps it simple enough to be
  * obviously right. This is the manual counterpart, and it writes the same
  * three columns together because they are constrained to be all-or-nothing.
  */

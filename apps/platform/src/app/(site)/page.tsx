@@ -24,31 +24,29 @@ const MARQUEE_TEXT_CLS =
   "py-4 font-display text-base font-bold tracking-widest uppercase";
 
 /**
- * The page itself stays uncached so it can construct `<StreakCTA />`, the one
- * genuinely per-visitor thing on the homepage. Everything else lives in the
- * cached {@link HomeSections} below.
+ * The homepage. It stays uncached so it can construct `<StreakCTA />`, the one
+ * per-visitor thing here. Everything else lives in the cached
+ * {@link HomeSections} below.
  *
- * Passing the element down rather than rendering it inside the cached body is
- * the whole trick: an element created out here renders outside the cache
- * boundary, so its `cookies()` read is legal and it streams into the Suspense
- * that ProjectsSection puts around it. Rendering it inside would fail the build
- * with "used `cookies()` inside \"use cache\"".
+ * Pass the element down rather than rendering it inside the cached body. An
+ * element created out here renders outside the cache boundary, so its
+ * `cookies()` read is legal and it streams into the Suspense that
+ * ProjectsSection puts around it. Rendering it inside fails the build with
+ * "used `cookies()` inside \"use cache\"".
  */
 export default function HomePage() {
   return (
     <>
       {/* The Organization and WebSite nodes, on the homepage and nowhere else.
           Both describe the site rather than this page, so repeating them on
-          every route would be the same two claims made 28 times over — and a
+          every route would be the same two claims made 28 times over, and a
           crawler that finds several copies of a node has to pick one. The apex
           is where a search engine looks for them.
 
           It sits out here rather than inside {@link HomeSections} because that
           function returns `<UnderConstruction />` and nothing else in a
-          production build. Which of the two branches ships is not a question
-          about who the club is, and putting the graph inside would have made
-          production — the only deployment anybody crawls — the one place it
-          went missing. */}
+          production build. Putting the graph inside would have made production,
+          the only deployment anybody crawls, the one place it went missing. */}
       <JsonLd data={siteGraph()} />
       <HomeSections streakCta={<StreakCTA />} />
     </>
@@ -58,8 +56,8 @@ export default function HomePage() {
 /**
  * `"use cache"` is what puts the homepage in the prerendered shell. Under Cache
  * Components everything is dynamic by default, so without it the static output
- * was the nav chrome and nothing else — 7.9 KB of shell — and every visit
- * re-rendered the entire marketing page on the server. Every section here is
+ * was the nav chrome and nothing else, 7.9 KB of shell, and every visit
+ * re-rendered the whole marketing page on the server. Every section here is
  * static copy or reads the cached calendar frame, so caching is accurate.
  */
 async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
@@ -84,8 +82,8 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         aria-label="Homepage sections"
       >
         {/* In the order the sections themselves run, and each card in its own
-            section's hue — the fill is the 400 its blobs are drawn from, so a
-            card is a small piece of the place it opens rather than a differently
+            section's hue. The fill is the 400 its blobs are drawn from, so a
+            card is a piece of the place it opens rather than a differently
             coloured door onto it. `zIndexClass` stays with the *slot*, not the
             card: it descends left to right for the hover lift alone. */}
         <StatCard

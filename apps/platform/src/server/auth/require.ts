@@ -13,8 +13,8 @@ import { expectSession } from "~/server/auth";
  * The split below is the only distinction that matters to the person hitting
  * the route:
  *
- *   * **Not signed in** — a fixable state, so send them to sign in.
- *   * **Signed in, not allowed** — not fixable by them, so the route simply
+ *   * **Not signed in.** A fixable state, so send them to sign in.
+ *   * **Signed in, not allowed.** Not fixable by them, so the route simply
  *     does not exist for this caller. `notFound()` renders the app's own
  *     not-found page; a redirect to `/` drops an officer on the homepage with
  *     no account of why the link they followed evaporated.
@@ -28,8 +28,8 @@ export async function requireSession(): Promise<string> {
 /**
  * The caller's id, provided `check` passes for them.
  *
- * Pass the `canUser*` predicate itself — `requirePermission(canUserModerate)`
- * — so the page reads as the permission it needs.
+ * Pass the `canUser*` predicate itself: `requirePermission(canUserModerate)`,
+ * so the page reads as the permission it needs.
  */
 export async function requirePermission(
   check: (userId: string) => Promise<boolean>,

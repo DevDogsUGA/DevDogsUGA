@@ -8,22 +8,22 @@ import type { TeamActionOutcome, TeamProblemCode } from "~/server/teams/errors";
 export interface JoinTarget {
   id: string;
   name: string;
-  /** `teams.acceptingRequests` — a team may close itself to strangers. */
+  /** `teams.acceptingRequests`: a team may close itself to strangers. */
   acceptingRequests: boolean;
 }
 
 /**
  * The two ways onto a team you are not on.
  *
- * Both live in one component because they are one decision — "get me onto this
- * team" — and because they are the same fallback for each other: the code is
+ * Both live in one component because they are one decision, "get me onto this
+ * team", and because they are the same fallback for each other: the code is
  * instant and needs somebody to have given it to you, the request is not
  * instant and needs nobody. Splitting them puts the answer to "I don't have a
  * code" on a different part of the page from the question.
  *
  * The team PICKER is here for a duller reason. `joinTeam` takes a team id and
- * a code, and nothing resolves a code on its own to the team it belongs to —
- * so on the competition-wide list the member has to say which team they are
+ * a code, and nothing resolves a code on its own to the team it belongs to, so
+ * on the competition-wide list the member has to say which team they are
  * joining as well as prove it. Where the page already knows the team (a team's
  * own page) it passes one target and the picker collapses to a label.
  */
@@ -39,7 +39,7 @@ export default function JoinByCodeForm({
     joinCode: string,
   ) => Promise<TeamActionOutcome<void>>;
   /**
-   * Returns the request id on success. The message is optional at the action —
+   * Returns the request id on success. The message is optional at the action:
    * an all-whitespace note is normalized to absent there rather than here, so
    * this passes whatever was typed.
    */

@@ -38,17 +38,17 @@ import type { Refusal } from "./refusals";
 /**
  * The push half: derived values the platform owns exclusively.
  *
- * One rule governs everything here — **push only fields the platform owns
+ * One rule governs everything here: **push only fields the platform owns
  * exclusively, and never create a field both sides write.** A field with two
- * writers has no conflict-resolution story, and last-writer-wins destroys
+ * writers has no way to resolve a conflict, and last-writer-wins destroys
  * somebody's work silently, weeks later.
  *
  * Which write verb each table gets follows from who authors it, not from
  * convenience:
  *
- *   * Members, Projects, Teams — the platform authors these, so a row with no
+ *   * Members, Projects, Teams: the platform authors these, so a row with no
  *     Airtable record should create one. Upsert on `⚙️ Platform ID`.
- *   * Meetings, Workshops, Competitions — Airtable authors these. The platform
+ *   * Meetings, Workshops, Competitions: Airtable authors these. The platform
  *     only writes derived values onto rows that already exist, addressed by
  *     record id. Upserting them would create a duplicate record for every row
  *     whose Platform ID is still blank.
@@ -105,10 +105,10 @@ export async function pushProjects(
  * Teams, with their computed points.
  *
  * `totalPoints` comes from `competitionStandings`, which only exists once the
- * tally has run — so it is null for a live competition and that is correct.
- * The never-blank rule means a null is omitted rather than written as zero,
- * which matters here more than anywhere: a zero in that column reads as "this
- * team scored nothing", and a blank reads as "not scored yet".
+ * tally has run, so it is null for a live competition and that is correct. The
+ * never-blank rule means a null is omitted rather than written as zero, which
+ * matters here more than anywhere: a zero in that column reads as "this team
+ * scored nothing", and a blank reads as "not scored yet".
  */
 export async function pushTeams(
   client: AirtableClient,
@@ -158,9 +158,9 @@ async function upsert<TRow>(
 /**
  * Derived counts written back onto officer-authored rows.
  *
- * Each of these is a number an officer plans against — how many people came,
- * how full a competition is — and each is a projection of attendance or
- * membership that Airtable has no way to compute for itself.
+ * Each of these is a number an officer plans against: how many people came,
+ * how full a competition is. Each is a projection of attendance or membership
+ * that Airtable has no way to compute for itself.
  */
 export async function pushDerivedCounts(
   client: AirtableClient,
@@ -253,9 +253,9 @@ type _CompetitionRowCheck = CompetitionRow;
  *
  * The Teams table is the one place both directions meet, and it is legal
  * because direction is per field: the grade is an input the platform reads,
- * the points are an output the platform writes. Resisting the obvious Airtable
- * formula between them is the whole discipline — a formula computing points
- * from the grade would put the scoring rule in two places that will drift.
+ * the points are an output the platform writes. Do not add the obvious
+ * Airtable formula between them. A formula computing points from the grade
+ * would put the scoring rule in two places that will drift.
  *
  * Refused outright for teams whose competition is finalized, for the same
  * reason `requirementCount` is: the score is published.
@@ -300,7 +300,7 @@ export async function pullTeamGrades(
  * resolved.
  *
  * Without this, a refused edit looks to the officer exactly like a sync that
- * has not run yet — and the next move is to make the same edit again.
+ * has not run yet, and the next move is to make the same edit again.
  *
  * Clearing is the half that makes it trustworthy. A stale refusal sitting in
  * the grid after the officer fixed the row reads as a live problem forever,
@@ -328,9 +328,9 @@ export async function writeSyncStatus(
     [meetingsSpec, listed.meetings],
     [workshopsSpec, listed.workshops],
     [competitionsSpec, listed.competitions],
-    // Attendance carries the refusals a MEMBER caused rather than an officer --
+    // Attendance carries the refusals a MEMBER caused rather than an officer:
     // a mistyped MyID, a workshop that is not in the base. Omitting it here
-    // would compute those refusals and then drop them: the response stays
+    // would compute those refusals and then drop them, so the response stays
     // unimported and nothing in the grid says why, which is worse than having
     // no rule at all.
     [attendanceSpec, listed.attendance],
@@ -349,8 +349,8 @@ export async function writeSyncStatus(
       const current = record.fields[status.id];
       const currentText = typeof current === "string" ? current : "";
       // Change detection here too, so an untouched grid does not show every
-      // row as freshly modified — which would destroy "sort by last modified"
-      // as a way to find what an officer actually changed.
+      // row as freshly modified. That would destroy "sort by last modified" as
+      // a way to find what an officer changed.
       if (currentText === desired) continue;
       updates.push({ id: record.id, fields: { [status.id]: desired } });
     }

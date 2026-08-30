@@ -7,13 +7,12 @@ import { useEffect, useRef } from "react";
  *
  * ## Why this is not a GIF any more
  *
- * It used to be `static.gif`: 1.8 MB, and sixty per cent of the homepage's
- * entire image payload — spent on the picture that is on screen when the
- * television is showing *nothing*. A GIF is also the most expensive possible
- * container for it. Every frame is decoded on the CPU, none of it can be
- * hardware accelerated, and Chrome pauses animated images that are off screen,
- * so the whole bill arrives in the moment the band scrolls into view. It was a
- * megabyte and a half of scroll jank buying a texture.
+ * It used to be `static.gif`: 1.8 MB, sixty per cent of the homepage's entire
+ * image payload, spent on the picture that is on screen when the television is
+ * showing *nothing*. A GIF is also the most expensive container for it. Every
+ * frame is decoded on the CPU, none of it can be hardware accelerated, and
+ * Chrome pauses animated images that are off screen, so the whole bill arrives
+ * in the moment the band scrolls into view.
  *
  * Noise is the one picture that is cheaper to generate than to fetch, because
  * it has no content to be faithful to. Nothing here has to match the original
@@ -21,12 +20,12 @@ import { useEffect, useRef } from "react";
  *
  * ## What the formula is
  *
- * Not white noise. Per-pixel randomness reads as digital dither — an even
- * sand, wrong in a way that is hard to name until you see the two side by
- * side. Analogue snow is drawn by a beam sweeping left to right, so the grain
- * smears *along the scan* into short horizontal streaks, sits nearly bimodal
- * between black and white, and falls off toward the corners of the tube. Three
- * cheap terms, applied in that order, and the reference GIF stops being
+ * Not white noise. Per-pixel randomness reads as digital dither, an even sand,
+ * wrong in a way that is hard to name until you see the two side by side.
+ * Analogue snow is drawn by a beam sweeping left to right, so the grain smears
+ * *along the scan* into short horizontal streaks, sits nearly bimodal between
+ * black and white, and falls off toward the corners of the tube. Three cheap
+ * terms, applied in that order, and the reference GIF stops being
  * distinguishable from the generated one at the size this renders.
  */
 
@@ -42,8 +41,8 @@ const HEIGHT = 94;
 
 /**
  * How many frames get baked. They are picked at random rather than cycled, so
- * six is enough never to read as a loop — six cycled in order is a repeat
- * every half second, and the eye finds a repeat in noise almost immediately.
+ * six is enough never to read as a loop. Six cycled in order is a repeat every
+ * half second, and the eye finds a repeat in noise almost immediately.
  */
 const FRAME_COUNT = 6;
 
@@ -61,8 +60,8 @@ const CONTRAST = 2.6;
 
 /**
  * How far the corners fall off. A tube is brightest in the middle. Applied on
- * both axes, so a corner lands at (1 - VIGNETTE)² of centre brightness —
- * enough to see, not enough to look like a spotlight.
+ * both axes, so a corner lands at (1 - VIGNETTE)² of centre brightness: enough
+ * to see, not enough to look like a spotlight.
  */
 const VIGNETTE = 0.24;
 
@@ -75,8 +74,8 @@ function createNoiseSource(): (() => string) | null {
   const canvas = document.createElement("canvas");
   canvas.width = WIDTH;
   canvas.height = HEIGHT;
-  // alpha: false — the picture is opaque, and saying so lets the encoder drop
-  // a channel it would otherwise write for every pixel.
+  // The picture is opaque, and `alpha: false` lets the encoder drop a channel
+  // it would otherwise write for every pixel.
   const ctx = canvas.getContext("2d", { alpha: false });
   if (!ctx) return null;
 
@@ -86,7 +85,7 @@ function createNoiseSource(): (() => string) | null {
   return () => {
     let i = 0;
     for (let y = 0; y < HEIGHT; y++) {
-      // Separable vignette — a product of two parabolas rather than a true
+      // Separable vignette: a product of two parabolas rather than a true
       // radial falloff. The difference is slightly squarer corners, which
       // nothing clipped to a bulging tube can show.
       const ty = (y / (HEIGHT - 1)) * 2 - 1;
@@ -118,18 +117,17 @@ function createNoiseSource(): (() => string) | null {
  * it.
  *
  * The `href` is set imperatively rather than through state. A state update per
- * frame would re-render the entire television — forty-odd nodes of gradients
- * and paths — twelve times a second in order to change one attribute on one of
- * them.
+ * frame would re-render the entire television, forty-odd nodes of gradients
+ * and paths, twelve times a second to change one attribute on one of them.
  *
- * Two gates, and both are the point rather than politeness:
+ * Two gates, and both are necessary:
  *
  * - **On screen.** An IntersectionObserver starts and stops the loop. The GIF
  *   this replaces was a jank source *precisely because* the browser only began
  *   decoding it when it scrolled into view; swapping that for a rAF loop that
  *   runs from page load would be a worse bargain, not a better one.
  * - **Reduced motion.** A visitor who has asked for less movement gets a
- *   single frozen frame of snow. Not a black screen — the tube should still
+ *   single frozen frame of snow, not a black screen. The tube should still
  *   read as a tube, it just is not flickering.
  *
  * A hidden tab is covered for free: `requestAnimationFrame` stops being
@@ -171,8 +169,8 @@ export function useTvStatic() {
 
       // One encode per tick until the set is full, rather than six of them in
       // the single frame the band scrolls into view. Each costs a millisecond
-      // or two; the first is on screen immediately and the picture simply
-      // stops repeating over the following half second.
+      // or two; the first is on screen immediately and the picture stops
+      // repeating over the following half second.
       if (frames.length < FRAME_COUNT) {
         bake();
         return;

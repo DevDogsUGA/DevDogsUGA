@@ -16,15 +16,14 @@ import {
  * and the label tables here. Three of them are code and can be compared; the
  * fourth is a migration, which these cannot read.
  *
- * The failure they are guarding against is quiet. A building in the dropdown
- * with no footprint is a dialog with a pin over empty ground, and a building
- * on the map that Airtable cannot offer is simply unreachable — neither throws,
- * neither shows up in a build, and both are found by a member standing in the
- * wrong place.
+ * The failure they guard against is quiet. A building in the dropdown with no
+ * footprint is a dialog with a pin over empty ground, and a building on the
+ * map that Airtable cannot offer is unreachable. Neither throws, neither shows
+ * up in a build, and both are found by a member standing in the wrong place.
  */
 describe("the building list", () => {
   it("matches the copy in packages/airtable", () => {
-    // Order too, not just membership: this is the order officers see in the
+    // Order as well as membership: this is the order officers see in the
     // dropdown, and `BUILDING_KEYS` is what fixes it.
     expect([...MEETING_BUILDING_CHOICES]).toEqual([...FROM_AIRTABLE]);
   });
@@ -38,10 +37,9 @@ describe("the building list", () => {
       expect(HIGHLIGHT_PATHS[key], `${key} footprint`).toMatch(/^M/);
       expect(BUILDING_CENTERS[key], `${key} centroid`).toBeDefined();
 
-      // Inside the frame, not merely present. A pin whose coordinates fall
-      // outside the viewBox is the exact shape of a reframing that moved the
-      // map and left one building behind, and it renders as a map with no pin
-      // on it rather than as an error.
+      // Inside the frame, not merely present. A pin outside the viewBox is
+      // the shape of a reframing that moved the map and left one building
+      // behind, and it renders as a map with no pin rather than as an error.
       const pin = HIGHLIGHT_PINS[key]!;
       expect(pin.x, `${key} pin x`).toBeGreaterThan(0);
       expect(pin.x, `${key} pin x`).toBeLessThan(VIEW.w);

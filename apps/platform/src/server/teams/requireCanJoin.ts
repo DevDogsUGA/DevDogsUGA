@@ -17,20 +17,20 @@ export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * somebody ends up on two teams, so there is one copy and the two callers
  * share it.
  *
- * `reformTeam` is the exception, and deliberately: it re-creates a team for
- * the next competition with its lead already inside, so it calls `requireLead`
- * and `requireOpenCompetition` and then `insertMembership` directly. The lead
- * it inserts is therefore not checked here — the unique constraint is what
- * stops that row being a second team, rather than check 4. Everyone else on
- * the previous roster is INVITED rather than inserted, and their answers come
- * back through `respondToMembership`, which does run these checks.
+ * `reformTeam` is the deliberate exception: it re-creates a team for the next
+ * competition with its lead already inside, so it calls `requireLead` and
+ * `requireOpenCompetition` and then `insertMembership` directly. The lead it
+ * inserts is therefore not checked here. The unique constraint, not check 4,
+ * is what stops that row being a second team. Everyone else on the previous
+ * roster is INVITED rather than inserted, and their answers come back through
+ * `respondToMembership`, which does run these checks.
  *
- * It takes the TRANSACTION HANDLE, not the db. A relationship check answered
- * outside the transaction that acts on the answer is a TOCTOU window: the
- * roster can lock, or fill, between the check and the insert.
+ * It takes the TRANSACTION HANDLE, not the db. A check answered outside the
+ * transaction that then acts on the answer is a TOCTOU window: the roster can
+ * lock, or fill, between the check and the insert.
  *
  * The design note spells this `requireCanJoin(tx, competitionId, userId)`, but
- * two of the checks — the lock and the cap — are questions about a TEAM, not a
+ * two of the checks, the lock and the cap, are questions about a TEAM, not a
  * competition. Taking the team and deriving the competition from it also makes
  * a mismatched (team, competition) pair unrepresentable at the call site.
  */
@@ -61,9 +61,9 @@ export async function requireCanJoin(
 
   // 1. The competition is still open.
   //
-  // Judging beginning is what closes it, which is the same clock the lock
-  // predicate reads — but the two are worth keeping separate, because a
-  // closed competition and a locked roster need different sentences.
+  // Judging beginning is what closes it, the same clock the lock predicate
+  // reads. The two stay separate because a closed competition and a locked
+  // roster need different sentences.
   const judgingAt = row.judgingStartsAt;
   if (judgingAt !== null && new Date(judgingAt).getTime() <= Date.now()) {
     throw new TeamActionError("competition_closed");
@@ -89,12 +89,12 @@ export async function requireCanJoin(
 
   // 4. Room on the team.
   //
-  // This check does not ENFORCE the cap — it produces a good error message.
+  // This check does not ENFORCE the cap; it produces a good error message.
   // "At most four rows" is a count, not a uniqueness property, so no index
   // expresses it and two concurrent joins would interleave between the select
-  // and the insert. The `for update` above is what actually enforces it: the
-  // second transaction blocks until the first commits, then reads the true
-  // count and fails here cleanly.
+  // and the insert. The `for update` above is what enforces it: the second
+  // transaction blocks until the first commits, then reads the true count and
+  // fails here cleanly.
   const cap = row.maxTeamSize ?? DEFAULT_MAX_TEAM_SIZE;
   const [tally] = await tx
     .select({ n: count() })
@@ -108,7 +108,7 @@ export async function requireCanJoin(
   // Also advisory. The row lock above does not help here at all: two
   // transactions accepting invitations from DIFFERENT teams lock different
   // rows and never contend. What saves it is the unique constraint, caught by
-  // the insert helper below — this check exists so the common case gets the
+  // the insert helper below. This check exists so the common case gets the
   // right message without waiting for a constraint to fire.
   const [existing] = await tx
     .select({ teamId: teamMembers.teamId })
@@ -132,8 +132,7 @@ export async function requireCanJoin(
  *
  * Two races, two mechanisms: a counting race is caught by nothing and needs a
  * lock; a uniqueness race is caught by a constraint and needs translating.
- * Telling them apart is the whole skill here, and getting it wrong stays
- * invisible until a real event with real simultaneity.
+ * Confusing the two stays invisible until a real event with real simultaneity.
  */
 export async function insertMembership(
   tx: Tx,

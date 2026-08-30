@@ -33,15 +33,13 @@ function contains(folder: DocsTreeFolder, activePath: string) {
 
 /**
  * The disclosure control, drawn AFTER the label so it lands on the right edge
- * of the row — the label is `flex-1`, so the caret is pushed to the rail every
- * row shares. Left of the label it sat at a different x on every nesting
- * level, which read as ragged rather than as depth; the indent already says
- * how deep a row is, and the caret only has to say whether it opens.
+ * of the row. The label is `flex-1`, which pushes the caret to a rail every row
+ * shares. Left of the label it sat at a different x on every nesting level, and
+ * the indent already says how deep a row is.
  *
- * It stays a separate control from the link beside it, which is the reason
- * this is not simply a `<summary>`: the label navigates and the caret expands,
- * and a reader who wants the section's own page should not have to avoid a
- * toggle to reach it.
+ * It stays a separate control from the link beside it, which is why this is not
+ * a `<summary>`: the label navigates and the caret expands, so a reader who
+ * wants the section's own page does not have to avoid a toggle to reach it.
  */
 function Caret({ label, className }: { label: string; className: string }) {
   return (
@@ -60,18 +58,17 @@ function Caret({ label, className }: { label: string; className: string }) {
 }
 
 /**
- * A first-level folder: a section heading over the pages it holds, rather
- * than another row in the list. The caret is its own control so the label can
- * stay a link — selecting the section itself shows what is inside it, which
- * for a folder with no index page of its own is a grid of its contents.
+ * A first-level folder: a section heading over the pages it holds, not another
+ * row in the list. The caret is its own control so the label can stay a link.
+ * Selecting the section shows what is inside it, which for a folder with no
+ * index page of its own is a grid of its contents.
  *
- * Open by default, always, rather than only when it holds the current page.
- * A tree that opens exactly one section shows a reader the part they already
- * found and hides the rest behind carets they have to think to press; the
- * sections are the table of contents, and a table of contents that is closed
- * is not doing its job. Deeper folders still open on the active path only —
- * see `Folder` — because those are where the page counts get large enough for
- * open-everything to become its own kind of unreadable.
+ * Open by default, always, not only when it holds the current page. A tree that
+ * opens exactly one section shows a reader the part they already found and
+ * hides the rest behind carets they have to think to press, and the sections
+ * are the table of contents. Deeper folders still open on the active path only,
+ * see `Folder`, because those are where the page counts get large enough for
+ * open-everything to become unreadable.
  */
 function Section({
   folder,
@@ -175,7 +172,7 @@ function Nodes({
 }) {
   // At the top level the folders are section headings, so they gather at the
   // bottom under their own headings rather than sorting in among the loose
-  // pages — a heading stranded mid-list reads as a page that lost its icon.
+  // pages. A heading stranded mid-list reads as a page that lost its icon.
   // Deeper in, a folder is just another row and keeps its place.
   const ordered =
     depth === 0

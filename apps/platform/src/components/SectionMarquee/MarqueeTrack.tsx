@@ -47,16 +47,16 @@ interface Props {
    * Only the `--copy-z` custom property is set here; `[data-marquee-copy]` in
    * globals.css turns it into the actual `position`/`z-index`. That indirection
    * is what lets the hover rule beside it lift whichever copy holds the hovered
-   * card above the rest — an inline `z-index` would outrank that rule on
-   * specificity, and a card hovered at a seam could never rise above the copy
-   * to its left.
+   * card above the rest. An inline `z-index` would outrank that rule on
+   * specificity, so a card hovered at a seam could never rise above the copy to
+   * its left.
    */
   copyZBase?: number;
   /**
    * Scroll the strip when the pointer lands on a link the viewport is cutting
-   * off, so hovering a half-visible card pulls it fully into view. For
-   * marquees whose items are individually meaningful — the plain text strips
-   * have nothing worth bringing over.
+   * off, so hovering a half-visible card pulls it fully into view. For marquees
+   * whose items are individually meaningful; the plain text strips have nothing
+   * worth bringing over.
    */
   keepHoveredInView?: boolean;
 }
@@ -103,8 +103,8 @@ export default function MarqueeTrack({
           const slice = reduced.matches ? shift : shift * EASE;
           shift -= slice;
           if (Math.abs(shift) < 0.5) shift = 0;
-          // The strip loops every `duration`, so whole periods are invisible —
-          // adding them back keeps currentTime positive when a scroll would
+          // The strip loops every `duration`, so whole periods are invisible.
+          // Adding them back keeps currentTime positive when a scroll would
           // otherwise push it below zero on a freshly started animation.
           const period = duration * 1000;
           let next = Number(anim.currentTime ?? 0) + slice;
@@ -134,8 +134,8 @@ export default function MarqueeTrack({
       const anim = track.getAnimations()[0];
       if (!anim) return;
 
-      // One period covers half the track — that is what the -50% keyframe
-      // means — so this is how far the strip travels per millisecond.
+      // One period covers half the track, which is what the -50% keyframe
+      // means, so this is how far the strip travels per millisecond.
       const travel = track.scrollWidth / 2;
       if (travel <= 0) return;
 
@@ -159,7 +159,7 @@ export default function MarqueeTrack({
 
     // A card too far off screen to be hovered cannot start a scroll, and
     // bringing one to EDGE_MARGIN leaves only a sliver of its neighbour
-    // behind it — so the scroll has nothing to hand off to. `shift === 0` is
+    // behind it, so the scroll has nothing to hand off to. `shift === 0` is
     // ordinary hygiene on top: no stacking a correction onto a running one.
     let hovered: Element | null = null;
     const onMouseOver = (event: MouseEvent) => {
@@ -188,22 +188,20 @@ export default function MarqueeTrack({
     }
 
     /**
-     * A strip only costs anything while it is on screen, and at 5,950–13,180px
-     * wide these are the largest animated surfaces on the site — the homepage
-     * runs five of them and never shows more than two at once. Pausing the
-     * off-screen ones is invisible and, unlike lowering COPIES, actually
-     * removes work: cutting the copy count measured 13.9 -> 13.9 FPS, because
-     * the cost tracks animated area rather than how many copies fill it.
+     * A strip only costs anything while it is on screen, and at 5,950-13,180px
+     * wide these are the largest animated surfaces on the site. The homepage
+     * runs five and never shows more than two at once. Pausing the off-screen
+     * ones is invisible and, unlike lowering COPIES, actually removes work:
+     * cutting the copy count measured 13.9 -> 13.9 FPS, because the cost tracks
+     * animated area rather than how many copies fill it.
      *
      * Paused through the Animation object rather than `animation-play-state`,
-     * because the strip's own animation is an inline style that a stylesheet
-     * cannot reach, and because `step` above already owns this object via
+     * because the strip's own animation is an inline style a stylesheet cannot
+     * reach, and because `step` above already owns this object via
      * `playbackRate`/`currentTime`. Pausing composes with both: the hover ramp
-     * survives a scroll past, and resuming picks the clock back up where it
-     * stopped, so the loop never jumps.
-     *
-     * Reduced motion holds it paused for good. The stylesheet stops the other
-     * expensive animations, but it cannot stop this one for the same reason.
+     * survives a scroll past, and resuming picks the clock up where it stopped,
+     * so the loop never jumps. Reduced motion holds it paused for good, since
+     * the stylesheet cannot reach it either.
      */
     const applyMotionState = () => {
       const anim = track.getAnimations()[0];
@@ -222,13 +220,13 @@ export default function MarqueeTrack({
       // pixel is visible, rather than starting as the user arrives at it.
       { rootMargin: "200px 0px" },
     );
-    // The track, not the root. `skew-section` gives the strip a negative
-    // top margin and a skew, so the track paints well outside its parent --
-    // measured at 1440x900, track #1 spans y[803,1665] while its root sits at
+    // The track, not the root. `skew-section` gives the strip a negative top
+    // margin and a skew, so the track paints well outside its parent: measured
+    // at 1440x900, track #1 spans y[803,1665] while its root sits at
     // y[1523,1680]. The root is `overflow-y-visible`, so those 700-odd pixels
     // above it are on screen. Observing the root would leave a visible sliver
     // of a frozen strip at the bottom of the first viewport; observing the
-    // track matches what a reader can actually see.
+    // track matches what a reader can see.
     visibility.observe(track);
     reduced.addEventListener("change", applyMotionState);
     // The animation does not exist until after first paint on some routes.
@@ -257,7 +255,7 @@ export default function MarqueeTrack({
 
   return (
     // `clip`, not `hidden`. Per CSS Overflow 3, `visible` on one axis computes
-    // to `auto` when the other axis is `hidden` — so `overflow-x-hidden
+    // to `auto` when the other axis is `hidden`, so `overflow-x-hidden
     // overflow-y-visible` quietly became `overflow-y: auto` and went on
     // clipping a hovered card's lift at the strip's top edge. `clip` is the
     // documented exception: paired with it, `visible` stays visible. x still

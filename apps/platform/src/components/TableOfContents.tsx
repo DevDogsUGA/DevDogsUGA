@@ -15,11 +15,10 @@ interface Props {
 }
 
 /**
- * The headings of one docs page, in the two shapes the layout needs: a sticky
- * column from `lg` up, and a fold-out above the article below it. Both live
- * here because they are one component wearing two pieces of chrome — the list
- * itself, its colors, and its depth indents are shared, and a change to how an
- * entry looks has to reach both.
+ * The headings of one docs page, shared by both shapes the layout needs: the
+ * sticky column from `lg` up, and the fold-out above the article below it. The
+ * list, its colors, and its depth indents live here so a change to how an entry
+ * looks reaches both.
  */
 function Entries({
   items,
@@ -64,8 +63,8 @@ const LABEL_CLASS =
   "px-2 pb-1 text-xs font-semibold tracking-wide text-mauve-500 uppercase";
 
 /**
- * The sticky column, shown from `lg` up — where {@link InlineTableOfContents}
- * hides, so exactly one of the two is on screen at any width.
+ * The sticky column, shown from `lg` up. {@link InlineTableOfContents} hides
+ * there, so exactly one of the two is on screen at any width.
  */
 export default function TableOfContents({ items }: Props) {
   const [activeId, setActiveId] = useState<string>("");

@@ -5,19 +5,19 @@ import type { PropsWithChildren } from "react";
  *
  * A moderator resolving a report with `quarantine` sets
  * `platform."profile"."quarantinedBy"`, which resets the display name to the
- * member's name of record and — via the policies in
- * 20260808000000_platform_profile_moderation.sql — stops them changing it back.
+ * member's name of record and, via the policies in
+ * 20260808000000_platform_profile_moderation.sql, stops them changing it back.
  *
- * ⚠️ THIS IS PRESENTATION, NOT ENFORCEMENT. Every write below is refused by
- * RLS whether or not this renders, and a denied UPDATE under RLS is not an
- * error: it matches no rows. So a page that let the fields stay live would show
- * a member typing a new name, saving it, and seeing the old one come back with
- * no explanation. That is the failure this exists to prevent — not a security
- * boundary, a way of saying what already happened.
+ * ⚠️ THIS IS PRESENTATION, NOT ENFORCEMENT. RLS refuses every write below
+ * whether or not this renders, and a denied UPDATE under RLS is not an error.
+ * It matches no rows. So a page that left the fields live would show a member
+ * typing a new name, saving it, and seeing the old one come back with no
+ * explanation. That is the failure this exists to prevent. It is not a security
+ * boundary, it is a way of saying what already happened.
  *
  * `inert` rather than a `disabled` prop threaded through six field components:
  * it removes the whole subtree from interaction AND from the accessibility
- * tree, in one attribute, and it cannot be forgotten by a field added later.
+ * tree in one attribute, and a field added later cannot forget it.
  */
 export function FrozenFields({ children }: PropsWithChildren) {
   return (
@@ -30,11 +30,11 @@ export function FrozenFields({ children }: PropsWithChildren) {
 /**
  * The notice itself.
  *
- * Deliberately GENERIC. The subject cannot read their own resolution —
- * `reporter_or_moderator_select` covers the reporter and moderators, and
- * "moderatorNote" is internal by design — so anything more specific would need
- * new RLS, and the specific version most people would write ("your name was
- * reported as...") risks identifying the reporter. Reports should be rare
+ * Deliberately GENERIC. The subject cannot read their own resolution, since
+ * `reporter_or_moderator_select` covers the reporter and moderators and
+ * "moderatorNote" is internal by design, so anything more specific would need
+ * new RLS. The specific version most people would write ("your name was
+ * reported as...") also risks identifying the reporter. Reports should be rare
  * enough that a member contacts an officer either way.
  */
 export function FrozenProfileNotice() {

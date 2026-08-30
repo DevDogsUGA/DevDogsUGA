@@ -18,7 +18,7 @@ interface PageShellProps extends PropsWithChildren {
  * The opening of every page inside the site layout: centred column, the accent
  * wash behind it, and the title.
  *
- * Was `ConsolePageShell`, which was never accurate — the console is six of its
+ * Was `ConsolePageShell`, which was never accurate. The console is six of its
  * callers and one of the rest is the public results page. It is the app's page
  * shell, and the name no longer implies a permission.
  */

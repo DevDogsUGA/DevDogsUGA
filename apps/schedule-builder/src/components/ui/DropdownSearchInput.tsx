@@ -14,7 +14,6 @@ interface searchFilterProps {
   onSelect?: (selectedItem: string) => void;
 }
 
-//Dropdown Search Input component that contains a search input and dropdown feature
 export const DropdownSearchInput = ({
   name = "",
   items = [],
@@ -39,7 +38,6 @@ export const DropdownSearchInput = ({
     }
   }, [selectedItem]);
 
-  //Handles filtering the search input
   const handleQuery = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.currentTarget.value);
     const regex = new RegExp("^" + e.currentTarget.value, "i");
@@ -47,8 +45,6 @@ export const DropdownSearchInput = ({
     setFilteredData(filter);
   };
 
-  //Handles clicking on a dropdown item
-  //"index: number" parameter never used
   const handleClick = (e: React.MouseEvent) => {
     const selectedValue = e.currentTarget.textContent ?? "";
     setQuery(selectedValue);
@@ -58,7 +54,6 @@ export const DropdownSearchInput = ({
     }
   };
 
-  //Handles Enter Keypress
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -74,7 +69,7 @@ export const DropdownSearchInput = ({
     }
   };
 
-  //Handles closing dropdown menu when clicked off
+  // Close the dropdown when a click lands outside it.
   useEffect(() => {
     const handleClose = (e: MouseEvent) => {
       if (!dropdownRef.current?.contains(e.target as Node)) {
@@ -87,7 +82,6 @@ export const DropdownSearchInput = ({
     };
   }, [isOpen]);
 
-  //This useEffect is to handle clearing the input when the form is submitted or cleared
   useEffect(() => {
     if (clearState && query !== "") {
       // Intentional: clear the input when the parent form raises `clearState`.
@@ -113,13 +107,11 @@ export const DropdownSearchInput = ({
           onKeyDown={handleKeyPress}
         />
       </label>
-      {/* DROPDOWN MENU */}
       {isOpen && filteredData.length !== 0 && (
         <ul
           ref={dropdownRef}
           className={`absolute max-h-52 w-full overflow-y-scroll scroll-smooth rounded-md border-2 bg-white ${className} z-10 px-[0]`}
         >
-          {/* DROPDOWN ITEMS */}
           {filteredData.map((item, index) => (
             <li
               key={index}

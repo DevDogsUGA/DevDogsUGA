@@ -11,7 +11,7 @@ import { authorizeUrl, isConfigured } from "~/server/supabase/oauth";
  *
  * PKCE, even though this is a confidential client holding a secret. The
  * authorization code travels through the member's browser, and a verifier binds
- * the code to the session that started the flow — so a code intercepted in
+ * the code to the session that started the flow, so a code intercepted in
  * transit or replayed from a stale redirect is useless without the cookie.
  */
 export const STATE_COOKIE = "sb_oauth_state";
@@ -53,8 +53,8 @@ export async function GET(request: Request) {
 
   const jar = await cookies();
   // httpOnly so no script can read the verifier; sameSite lax because the
-  // callback arrives as a top-level navigation from Supabase, which `strict`
-  // would strip the cookie from -- breaking every flow.
+  // callback arrives as a top-level navigation from Supabase and `strict` would
+  // strip the cookie from it, breaking every flow.
   const options = {
     httpOnly: true,
     secure: process.env.DEPLOY_ENV !== undefined,

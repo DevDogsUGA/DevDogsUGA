@@ -7,14 +7,14 @@ import { applyMigrations } from "~/server/supabase/provision";
  *
  * Applies the repo's migrations to a team's environment.
  *
- * **Every member gets full DDL, not just the lead.** The environment is a
- * sandbox; the thing being protected is the platform's data, not the team's
- * test rows. Requiring the lead for migrations would make them a bottleneck on
- * the single most common action of an event weekend.
+ * **Every member gets full DDL, not only the lead.** The environment is a
+ * sandbox; what needs protecting is the platform's data, not the team's test
+ * rows. Requiring the lead for migrations would make them a bottleneck on the
+ * most common action of an event weekend.
  *
  * Runs under the OWNER's OAuth token regardless of who called, which is what
- * makes that safe: the caller never holds a credential, and the platform is the
- * only thing that can reach the Management API.
+ * makes it safe: the caller never holds a credential, and only the platform can
+ * reach the Management API.
  */
 export async function POST(request: Request) {
   await connection();

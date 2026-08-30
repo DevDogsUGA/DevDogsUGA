@@ -9,10 +9,9 @@ import DocsMenu, { type DocsProjectLink } from "./DocsMenu";
 /**
  * `inline-flex` is what makes Docs line up with the rest. A plain inline
  * anchor's padding does not grow its line box, so these sat 30px tall inside
- * 24px items, while Docs — a flex row, because it carries a caret — sat 32px
- * tall inside 32px. Two pixels of height and one of offset, on the hover fill,
- * on the one link in the row that opens something. Giving every link the same
- * box makes them the same box.
+ * 24px items, while Docs sat 32px tall inside 32px because its caret makes it
+ * a flex row. That is two pixels of height and one of offset on the hover fill,
+ * on the one link in the row that opens something.
  */
 const LINK_CLASS =
   "inline-flex items-center rounded-sm px-2.5 py-1.5 text-sm font-medium text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white data-active:bg-mauve-800/60 data-active:text-white";
@@ -32,9 +31,9 @@ function activeDocsSlug(pathname: string | null) {
  * The left-hand links, as items of the navbar's single list.
  *
  * They are items rather than their own <nav> so that Docs sits in the same
- * Radix collection as the profile menu on the far right: one collection is one
- * viewport, and one viewport is what lets a panel travel from one to the other
- * instead of blinking out and back.
+ * Radix collection as the profile menu on the far right. One collection means
+ * one viewport, which lets a panel travel from one trigger to the other instead
+ * of blinking out and back.
  */
 function Nav({
   pathname,
@@ -85,7 +84,7 @@ function Nav({
 
 /**
  * Static fallback for the prerendered shell. usePathname() is dynamic under
- * Cache Components, so NavLinks must render inside a <Suspense> boundary; this
+ * Cache Components, so NavLinks must render inside a <Suspense> boundary. This
  * renders the same links without active-state highlighting until the client
  * resolves the pathname.
  */

@@ -9,20 +9,20 @@ import { canUserEditAttendance } from "~/server/actions/permissions";
 /**
  * Attendance, as an officer edits it.
  *
- * The member-facing half of this file was `checkIn(code)` and it is gone: the
- * Airtable form supersedes the rotating codes, and a member picking a workshop
- * from a linked-record field is the same disambiguation the codes existed to
+ * The member-facing half of this file was `checkIn(code)` and it is gone. The
+ * Airtable form supersedes the rotating codes: a member picking a workshop from
+ * a linked-record field is the same disambiguation the codes existed to
  * provide, without anybody reading a screen and typing.
  *
  * What remains is the correction path, which no capture method removes the need
- * for -- somebody's phone died, somebody arrived late, somebody's MyID was
+ * for. Somebody's phone died, somebody arrived late, somebody's MyID was
  * refused. See `server/airtable/attendance.ts` for the import.
  */
 
 /**
  * Officer roster edit: add or remove one member's attendance for a meeting.
  *
- * Allowed at any time, including after check-in has closed — correcting a
+ * Allowed at any time, including after check-in has closed. Correcting a
  * roster the following week is the whole point. Stars derive from these rows,
  * so an edit here is visible on the star grid immediately, which is the main
  * reason stars are a view rather than a table.

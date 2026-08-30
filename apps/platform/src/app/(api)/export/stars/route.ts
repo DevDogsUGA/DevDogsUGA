@@ -19,15 +19,15 @@ import {
  * One row per `(member, workshop)`, across every semester. Query parameters:
  * `from`, `to` (ISO dates, on the meeting start) and `project` (a slug).
  *
- * Gated on `canExportStars`, which is deliberately separate from
- * `canEditAttendance`: correcting one member's check-in and downloading every
+ * Gated on `canExportStars`, kept deliberately separate from
+ * `canEditAttendance`. Correcting one member's check-in and downloading every
  * member's email are different powers, and the officer who needs the first
  * rarely needs the second.
  *
  * Every download is audited. That is the protection the design noted was LOST
- * by exporting attendance from Airtable instead — anybody with base access can
- * export a view silently — so keeping the one export that survived detectable
- * is what stops the loss from spreading to the file with the most PII in it.
+ * by exporting attendance from Airtable instead, where anybody with base access
+ * can export a view silently. Keeping the one export that survived detectable
+ * stops the loss from spreading to the file with the most PII in it.
  */
 export async function GET(request: Request) {
   await connection();
@@ -39,8 +39,8 @@ export async function GET(request: Request) {
   const filters = parseStarsFilters(new URL(request.url));
 
   // Written BEFORE the stream, not after. A download that fails halfway still
-  // put rows in front of somebody, and an audit row that only lands on clean
-  // completion is one an aborted request can be used to avoid entirely.
+  // put rows in front of somebody, and an audit row written only on clean
+  // completion is one an aborted request avoids entirely.
   await recordDownload(callerId, filters);
 
   const stream = csvStream(
@@ -53,8 +53,8 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${filename(filters)}"`,
-      // The response is a snapshot of live data and carries member emails —
-      // neither a browser nor an intermediary should keep a copy.
+      // The response is a snapshot of live data and carries member emails.
+      // Neither a browser nor an intermediary should keep a copy.
       "Cache-Control": "no-store, private",
     },
   });
@@ -74,9 +74,9 @@ async function recordDownload(
  * The filters as recorded.
  *
  * Two officers exporting different slices is a different fact from two
- * exporting the whole roster, and only the parameters distinguish them — so an
- * unfiltered download is recorded as an explicit empty object rather than as
- * an absent field.
+ * exporting the whole roster, and only the parameters distinguish them. So an
+ * unfiltered download is recorded as an explicit empty object rather than as an
+ * absent field.
  */
 function serialize(filters: StarsFilters): Record<string, string> {
   const out: Record<string, string> = {};

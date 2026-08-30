@@ -2,11 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ANNOUNCEMENT, showsAnnouncement } from "./announcement";
 
 /**
- * The banner lives in the `(site)` layout, which wraps the public pages AND
- * the signed-in console/account surfaces. `showsAnnouncement` is the only
- * thing keeping a club-wide notice out of the latter, so it is worth pinning
- * down — including the sibling-prefix case (`/accounts` is not `/account`)
- * that a bare `startsWith` gets wrong.
+ * The banner lives in the `(site)` layout, which wraps the public pages and the
+ * signed-in console/account pages. `showsAnnouncement` is the only thing keeping
+ * a club-wide notice off the signed-in ones. That includes the sibling-prefix
+ * case (`/accounts` is not `/account`) that a bare `startsWith` gets wrong.
  */
 describe("showsAnnouncement", () => {
   const publicPaths = [
@@ -50,14 +49,12 @@ describe("showsAnnouncement", () => {
 
 /**
  * The settings save bar (~/ui/settings-save-bar) is fixed to the bottom of the
- * viewport, which is exactly where the announcement card sits. Two things
- * stacked in the same corner, one of them the only way to save the form, is a
- * confusing page at best and an unreachable button at worst.
+ * viewport, where the announcement card also sits. Stacking them hides the one
+ * button that saves the form.
  *
- * They are kept apart by route rather than by z-index: every page that mounts
- * a save bar is a signed-in surface, and `showsAnnouncement` already refuses
- * those. This pins that down so adding a save bar to a page the notice DOES
- * reach fails here rather than in someone's browser.
+ * Route, not z-index, keeps them apart: every page with a save bar is signed in,
+ * and `showsAnnouncement` already refuses those. Adding a save bar to a page the
+ * notice reaches fails here instead of in someone's browser.
  *
  * Add the route below when you add a `<SettingsSaveBar />` to a page.
  */

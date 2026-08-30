@@ -17,24 +17,19 @@ import { CHIP_CLS, meetingBadges } from "./meetingView";
 /**
  * The homepage's one line about the next meeting.
  *
- * Deliberately NOT `NextMeeting`, which is the same fact at ten times the
- * size. The two pages have different jobs and should not look like each other
- * doing them: `/events` exists to answer "when", so its top band is the next
- * meeting at the scale of the only thing anybody came for, with directions,
- * RSVP, check-in and a summary. The homepage is not answering that question —
- * it is making the case that the club meets at all — so the date belongs here
- * as *evidence* rather than as the subject, one row deep, with a single way
- * through.
+ * Deliberately NOT `NextMeeting`, which is the same fact at ten times the size.
+ * `/events` exists to answer "when", so its top band gives the next meeting
+ * directions, RSVP, check-in and a summary. The homepage is instead making the
+ * case that the club meets at all, so the date belongs here as *evidence*
+ * rather than as the subject: one row deep, with a single way through.
  *
- * A card — the site's white plate with a block shadow — and the only box in
- * the section. It was briefly a ruled row, but a row on a plate full of
- * headings read as another heading; the one fact the section has to prove
- * deserves the one frame the section has.
+ * A card, the site's white plate with a block shadow, and the only box in the
+ * section. It was briefly a ruled row, but a row on a plate full of headings
+ * read as another heading.
  *
- * Like every band under `/events`, it never reads the clock — `now` arrives
- * from the caller, resolved once — and every zone-aware string goes through
- * `Intl` with an explicit `timeZone`. See {@link NextMeeting} for why that
- * matters more than it looks like it should.
+ * Like every band under `/events`, it never reads the clock. `now` arrives from
+ * the caller, resolved once, and every zone-aware string goes through `Intl`
+ * with an explicit `timeZone`. See {@link NextMeeting} for why that matters.
  */
 
 interface Props {
@@ -63,7 +58,7 @@ const ROW_CLS =
 const EYEBROW_CLS =
   "font-display text-xs font-extrabold tracking-widest text-mauve-600 uppercase";
 
-/** A text link with an arrow — the one way through, and not a button. */
+/** A text link with an arrow. The one way through, and not a button. */
 const ROW_LINK_CLS =
   "flex w-fit shrink-0 items-center gap-1.5 text-sm font-semibold text-black underline decoration-2 underline-offset-4 hover:no-underline";
 
@@ -72,7 +67,7 @@ export default function NextMeetingStrip({
   now,
   eyebrow = "Next meeting",
 }: Props) {
-  // Months at a time, every summer — a state of the club, not of the query.
+  // Months at a time, every summer: a state of the club, not of the query.
   if (meeting === null) return <NothingScheduled />;
 
   const { segments } = resolveMeetingSegments(meeting);
@@ -93,9 +88,9 @@ export default function NextMeetingStrip({
           horizontal scrollbar. */}
       <div className="flex min-w-0 items-center gap-5">
         {/* Through `Intl` with an explicit zone rather than `getDate()`, which
-            answers in the *server's* zone — and a 20:00 Eastern meeting is
-            already tomorrow in UTC, so the number would be wrong for every
-            evening meeting on a UTC host. */}
+            answers in the *server's* zone. A 20:00 Eastern meeting is already
+            tomorrow in UTC, so the number would be wrong for every evening
+            meeting on a UTC host. */}
         <time
           dateTime={meeting.startsAt.toISOString()}
           className="flex w-14 shrink-0 flex-col items-center leading-none"
@@ -136,11 +131,11 @@ export default function NextMeetingStrip({
           </p>
 
           {/* Derived chips then the officer's kind, which renders verbatim in
-              the neutral pill when it has no hue of its own — see `kindBadge`.
-              This strip sits on the
-              marketing pages' light plates, so the chips are solid fills with
-              black borders rather than the console's translucent pills — the
-              HUE is the part that must not change between the two. */}
+              the neutral pill when it has no hue of its own. See `kindBadge`.
+              This strip sits on the marketing pages' light plates, so the chips
+              are solid fills with black borders rather than the console's
+              translucent pills. The HUE is the part that must not change
+              between the two. */}
           {badges.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
               {badges.map((badge) => (
@@ -160,8 +155,7 @@ export default function NextMeetingStrip({
           leaf under the events layout so the dialog opens over a calendar that
           stays mounted. There is no calendar behind this one, so following it
           from here is an ordinary navigation to /events with the meeting's
-          dialog already open — which is exactly what somebody clicking a date
-          on the homepage wants. */}
+          dialog already open. */}
       <Link href={`/events/${meeting.slug}`} className={ROW_LINK_CLS}>
         Details <ArrowRightIcon />
       </Link>
@@ -172,11 +166,11 @@ export default function NextMeetingStrip({
 /**
  * Between semesters, in one row.
  *
- * Says when the schedule comes back rather than that there is nothing — "no
- * events" reads as something broken, and this is the ordinary state of the
- * club for months at a time. The full version of this argument, with the
- * paragraph explaining what a week looks like, belongs on `/events`; here it
- * is a line and a way to hear about it first.
+ * Says when the schedule comes back rather than that there is nothing. "No
+ * events" reads as something broken, and this is the ordinary state of the club
+ * for months at a time. The full version of this argument, with the paragraph
+ * explaining what a week looks like, belongs on `/events`; here it is a line
+ * and a way to hear about it first.
  */
 function NothingScheduled() {
   return (

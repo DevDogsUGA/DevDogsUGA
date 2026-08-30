@@ -13,7 +13,7 @@ import {
  * The rules that make this a sync rather than a mirror.
  *
  * Airtable is the CMS, so the default answer to "the officer changed this" is
- * "then change it here too". These are the exceptions — the edits the platform
+ * "then change it here too". These are the exceptions: the edits the platform
  * refuses because applying them would rewrite something already earned or
  * already published.
  *
@@ -22,7 +22,7 @@ import {
  * the rules that most need a test each and the least need a fixture base to
  * test against.
  *
- * ## Two classes of rule live here, and they are not the same thing
+ * ## Two classes of rule
  *
  * The workshop and competition rules mean **"this edit would destroy
  * something already earned"**: attendance credit attached to a workshop,
@@ -30,13 +30,13 @@ import {
  * HISTORY, and what they protect is a row that is already correct.
  *
  * `checkMeeting` is the other kind. It means **"this value cannot be
- * published"** — a summary that will not fit the card it is laid out in, an
+ * published"**: a summary that will not fit the card it is laid out in, an
  * RSVP link pointing somewhere the club is not. Nothing has been earned and
  * nothing is at risk; the value simply cannot go on a public page as written.
  *
  * Both write to `⚙️ Sync status`, and they should, because the officer's
  * question is the same in both cases: I edited this and the site did not
- * change — why. But the reasoning does not transfer. A rule of the first kind
+ * change, why. But the reasoning does not transfer. A rule of the first kind
  * asks what already exists; a rule of the second kind asks only what arrived.
  *
  * ## And one entry that is not a rule at all
@@ -48,7 +48,7 @@ import {
  * than `⚙️ Sync errors`.
  *
  * ⚠️ It must stay worded as a state. The reason this row was silent for so
- * long is a good one — officers fill fields one at a time, and a pass landing
+ * long is a good one: officers fill fields one at a time, and a pass landing
  * between two keystrokes must not COMPLAIN about a row that will be finished
  * in a minute. Saying where the row stands is not complaining; saying it did
  * something wrong would be. `.status()` clears on the next pass once the row
@@ -60,7 +60,7 @@ import {
  *
  * Names what is actually missing rather than restating the rule, because the
  * officer reading it is looking at the row and wants to know the next
- * keystroke, not the schema. Phrased as a state rather than a complaint — see
+ * keystroke, not the schema. Phrased as a state rather than a complaint; see
  * the third class of entry in this file's header for why that is
  * load-bearing.
  *
@@ -77,9 +77,9 @@ export function describeIncompleteMeeting(
   published: boolean,
 ): string {
   const missing: string[] = [];
-  // A name is no longer among these. Most nights have none by design — the
-  // heading is derived from the workshops and the judging — so asking for one
-  // would report the ordinary case as a fault, and the slug no longer needs it.
+  // A name is no longer among these. Most nights have none by design, since
+  // the heading is derived from the workshops and the judging, so asking for
+  // one would report the ordinary case as a fault. The slug no longer needs it.
   if (values.startsAt === null) missing.push("a start time");
   if (values.endsAt === null) missing.push("an end time");
 
@@ -115,10 +115,10 @@ export interface Refusal {
 }
 
 export type RefusalCode =
-  // Not a refusal — see the note on the third class above.
+  // Not a refusal. See the note on the third class above.
   | "meeting_incomplete"
   // Also not a refusal: no rule rejected anything, the write itself failed.
-  // The backstop for a bad value no rule here has learned to name yet — see
+  // The backstop for a bad value no rule here has learned to name yet. See
   // `tryWrite` in `sync.ts`.
   | "row_write_failed"
   | "meeting_summary_too_long"
@@ -145,7 +145,7 @@ export type RefusalCode =
  * A refusal is per FIELD, not per record.
  *
  * An officer who fixes a project link and a max team size in the same edit
- * should get the team size change applied and a complaint about the project —
+ * should get the team size change applied and a complaint about the project,
  * not silence on both. So each rule names the field it rejects, and the caller
  * drops exactly those keys from the update.
  */
@@ -170,11 +170,11 @@ export interface MeetingFacts {
    * the parsed value.
    */
   rawSummary: AirtableValue;
-  /** What the registry parser made of it — null if it refused the value. */
+  /** What the registry parser made of it. Null if it refused the value. */
   summary: string | null;
   /** Exactly what Airtable returned for `RSVP`, before any parsing. */
   rawRsvpUrl: AirtableValue;
-  /** What the registry parser made of it — null if it refused the value. */
+  /** What the registry parser made of it. Null if it refused the value. */
   rsvpUrl: string | null;
   /**
    * The Cancelled date, parsed. Null means the night is on.
@@ -185,15 +185,15 @@ export interface MeetingFacts {
   cancelledAt: string | null;
   /** Exactly what Airtable returned for `Cancellation reason`, unparsed. */
   rawCancellationReason: AirtableValue;
-  /** What the registry parser made of it — null if it refused the value. */
+  /** What the registry parser made of it. Null if it refused the value. */
   cancellationReason: string | null;
   /** Exactly what Airtable returned for `Name`, before any parsing. */
   rawNameOverride: AirtableValue;
-  /** What the registry parser made of it — null if it refused the value. */
+  /** What the registry parser made of it. Null if it refused the value. */
   nameOverride: string | null;
   /** Exactly what Airtable returned for `Attendance form`, unparsed. */
   rawAttendanceForm: AirtableValue;
-  /** What the registry parser made of it — null if it refused the value. */
+  /** What the registry parser made of it. Null if it refused the value. */
   attendanceForm: string | null;
 }
 
@@ -206,7 +206,7 @@ export interface MeetingFacts {
  * are the ORDINARY state of a meeting: most weeks have neither, the events
  * page derives an agenda instead, and an officer who never fills them in has
  * done nothing wrong. A blank field must therefore stay silent forever, not
- * just until somebody notices the noise — otherwise every meeting in the base
+ * only until somebody notices the noise. Otherwise every meeting in the base
  * carries a permanent complaint and `⚙️ Sync status` stops being a signal.
  *
  * Only a value that is PRESENT and WRONG produces a refusal.
@@ -221,13 +221,13 @@ export interface MeetingFacts {
  *
  * So the caller hands over both halves: the raw Airtable cell, which answers
  * "did the officer write anything", and the parsed value, which answers "was
- * it publishable". A refusal is exactly the pair (present, null) — and the
- * verdict stays with the parser rather than being re-derived here, so there is
- * no second definition of "acceptable" to drift out of step with the first.
+ * it publishable". A refusal is exactly the pair (present, null). The verdict
+ * stays with the parser rather than being re-derived here, so there is no
+ * second definition of "acceptable" to drift out of step with the first.
  *
  * Note what is absent: there is no rule for `Kind`. It is a single select in
  * Airtable, so an out-of-list value is close to unrepresentable at the source,
- * and there is no wrong-but-plausible value for an officer to be told about —
+ * and there is no wrong-but-plausible value for an officer to be told about:
  * they picked from a dropdown or they did not.
  */
 export function checkMeeting(facts: MeetingFacts): RuleResult {
@@ -314,7 +314,7 @@ export function checkMeeting(facts: MeetingFacts): RuleResult {
     // Deliberately NOT added to `rejectedFields`, unlike every other refusal
     // here. The caller must write null rather than drop the key: withholding
     // it leaves whatever the column already held, and a reason left behind by
-    // an un-cancellation is precisely the row the constraint rejects — the
+    // an un-cancellation is precisely the row the constraint rejects, so the
     // next write would take down the pass this refusal exists to prevent.
     result.refusals.push({
       table: "meetings",
@@ -329,8 +329,8 @@ export function checkMeeting(facts: MeetingFacts): RuleResult {
   }
 
   // A SEPARATE `if`, not the `else` this used to be. The two conditions are
-  // independent — one is about `cancelledAt`, the other about the length of
-  // `cancellationReason` — and chaining them hid the length problem behind
+  // independent, one about `cancelledAt` and the other about the length of
+  // `cancellationReason`, and chaining them hid the length problem behind
   // the pairing one. An officer who typed 220 characters before setting the
   // date was told only "set Cancelled and both appear within fifteen
   // minutes", which was untrue; they set the date, waited a pull, and then
@@ -367,7 +367,7 @@ const RSVP_ALLOWED_HOSTS_TEXT = RSVP_URL_ALLOWED_HOSTS.join(" or ");
  * "Wrote something" and not "wrote a string": Airtable omits an empty field
  * from a record's `fields` object entirely rather than returning null, so
  * `undefined` is the shape absence usually arrives in. A cell holding only
- * whitespace is absence too — nobody meant it, and refusing it would be a
+ * whitespace is absence too: nobody meant it, and refusing it would be a
  * complaint about a stray keystroke.
  *
  * Anything present and not a string is stringified rather than treated as
@@ -417,18 +417,18 @@ export interface WorkshopValueFacts {
   airtableRecordId: string;
   /** Exactly what Airtable returned for `Title`, before any parsing. */
   rawTitle: AirtableValue;
-  /** What the registry parser made of it — null if it refused the value. */
+  /** What the registry parser made of it. Null if it refused the value. */
   title: string | null;
   /** Exactly what Airtable returned for `Description`, unparsed. */
   rawDescription: AirtableValue;
-  /** What the registry parser made of it — null if it refused the value. */
+  /** What the registry parser made of it. Null if it refused the value. */
   description: string | null;
 }
 
 /**
  * The values a workshop cannot publish.
  *
- * The second class of rule, on the workshops table — see this file's header.
+ * The second class of rule, on the workshops table; see this file's header.
  * `checkWorkshop` below asks what a workshop already HAS; this asks only what
  * arrived, which is why it runs on the insert path too and does not care
  * about attendance.
@@ -436,7 +436,7 @@ export interface WorkshopValueFacts {
  * It exists because `title` and `description` were written through
  * unconditionally while `workshops_title_length` and
  * `workshops_description_length` cap both at 80 and 280. The parser returns
- * null past those caps, and null CLEARS — so an officer lengthening a title
+ * null past those caps, and null CLEARS, so an officer lengthening a title
  * by one character silently erased the one that was there, with nothing in
  * `⚙️ Sync status` to say so and the schedule quietly falling back to the
  * project name. Summary and rsvpUrl have always been handled this way; these
@@ -486,13 +486,13 @@ export function checkWorkshopValues(facts: WorkshopValueFacts): RuleResult {
  * start counting toward a different session, or toward a different project's
  * star, without anybody being told.
  *
- * Note that this is not "the workshop is frozen" — a workshop with no
- * attendance yet is still fully editable, which covers the ordinary case of an
- * officer fixing a link they got wrong when they created the row.
+ * This is not "the workshop is frozen": a workshop with no attendance yet is
+ * still fully editable, which covers the ordinary case of an officer fixing a
+ * link they got wrong when they created the row.
  *
  * A null incoming value is NOT a change. An officer fills Airtable fields one
  * at a time and a sync landing between two keystrokes must not refuse a row
- * that will be complete thirty seconds later — the same reasoning that keeps
+ * that will be complete thirty seconds later. Same reasoning as leaving
  * `judgingStartsAt` and `judgingMeetingId` unconstrained against each other.
  */
 export function checkWorkshop(
@@ -554,7 +554,7 @@ export function checkWorkshop(
   // earned, silently, with a clean `⚙️ Sync status`.
   //
   // Unlinking a session that turned out to teach a skill rather than a
-  // codebase is still a real edit — it is the reason `projectId` became
+  // codebase is still a real edit; it is the reason `projectId` became
   // nullable. It is real up until somebody has been credited for it, which is
   // exactly where the other two rules draw the line too.
   if (
@@ -584,7 +584,7 @@ export function checkWorkshop(
 
 export interface CompetitionFacts {
   airtableRecordId: string;
-  /** True once standings have been written — the arithmetic is published. */
+  /** True once standings have been written: the arithmetic is published. */
   isFinalized: boolean;
   /** True once `competedAt` has been stamped on any team. */
   participationFrozen: boolean;
@@ -603,11 +603,11 @@ export interface CompetitionValueFacts {
   airtableRecordId: string;
   /** Exactly what Airtable returned for `Max team size`, unparsed. */
   rawMaxTeamSize: AirtableValue;
-  /** What the registry parser made of it — null if it refused the value. */
+  /** What the registry parser made of it. Null if it refused the value. */
   maxTeamSize: number | null;
   /** Exactly what Airtable returned for `Requirements`, unparsed. */
   rawRequirementCount: AirtableValue;
-  /** What the registry parser made of it — null if it refused the value. */
+  /** What the registry parser made of it. Null if it refused the value. */
   requirementCount: number | null;
 }
 
@@ -617,9 +617,9 @@ export interface CompetitionValueFacts {
  * `competitions_maxTeamSize_positive` and
  * `competitions_requirementCount_nonneg` are check constraints, so a 0 typed
  * into Max team size used to be an exception raised inside the pull rather
- * than a refused cell. The parser now rejects both, and the only thing left
- * is saying so — otherwise the number simply never applies and the officer
- * has no way to find out which of their edits did not take.
+ * than a refused cell. The parser now rejects both, and the only thing left is
+ * saying so. Otherwise the number never applies and the officer has no way to
+ * find out which of their edits did not take.
  *
  * Unlike the meeting rules, a rejected value here is never written as null:
  * the caller already omits a null number from the update rather than
@@ -675,7 +675,7 @@ export function checkCompetition(
   // A finalized competition rejects edits to `requirementCount`.
   //
   // It is the denominator of the requirement score. Changing it after a winner
-  // is announced rewrites arithmetic that has already been published — every
+  // is announced rewrites arithmetic that has already been published: every
   // team's requirement points move, and the placement order can move with
   // them, silently, days after everyone read the result.
   if (
@@ -712,7 +712,7 @@ export function checkCompetition(
  * move once participation has frozen.
  *
  * The first half stops a typo scheduling judging before the feature was even
- * announced — which would lock every roster the moment the competition was
+ * announced, which would lock every roster the moment the competition was
  * created, with no visible cause.
  *
  * The second half matters more. This datetime IS the roster lock: moving it
@@ -776,7 +776,7 @@ const UGA_DOMAIN = "@uga.edu";
  *
  * The rejection matters more than the parsing. Sign-in is Google restricted to
  * `hd=uga.edu`, so an account created for `someone@gmail.com` could never be
- * signed into by anybody — it would be an unreachable row holding somebody's
+ * signed into by anybody: it would be an unreachable row holding somebody's
  * attendance forever. Refusing is the only outcome that leaves a person able to
  * fix it.
  */
@@ -815,7 +815,7 @@ export interface AttendanceFacts {
  * because the rest of the pull leans the other way. An officer half-filling a
  * meeting row will finish it in thirty seconds, so complaining is noise. A
  * response naming `jdoe@gmail.com`, or naming a workshop that is not in the
- * base, will still be wrong on the next pass and every pass after — nobody
+ * base, will still be wrong on the next pass and every pass after, and nobody
  * finds out unless somebody is told.
  */
 export function checkAttendance(facts: AttendanceFacts): RuleResult {

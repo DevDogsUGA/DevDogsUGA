@@ -15,16 +15,16 @@ import { usersInAuth } from "~/supabase/drizzle/schema";
 import { csvTimestamp } from "./csv";
 
 /**
- * `stars.csv` — one row per `(member, workshop)`, every meeting, one file.
+ * `stars.csv`: one row per `(member, workshop)`, every meeting, one file.
  *
- * The one export that survived pushing attendance into Airtable, and it
- * survived for two reasons the others did not:
+ * The one export that survived pushing attendance into Airtable, for two
+ * reasons the others did not:
  *
  *   * **Stars are derived, not stored.** Getting them into Airtable would mean
- *     pushing a computed row per `(member, workshop)` — the whole
- *     participation matrix, recomputed and re-pushed whenever an officer fixes
- *     one attendance row, against a per-workspace allowance shared with dues
- *     and project management. One streamed endpoint is dramatically cheaper.
+ *     pushing a computed row per `(member, workshop)`, the whole participation
+ *     matrix, recomputed and re-pushed whenever an officer fixes one
+ *     attendance row, against a per-workspace allowance shared with dues and
+ *     project management. One streamed endpoint is far cheaper.
  *
  *   * **Their value is cross-meeting**, which is the shape Airtable is worst
  *     at. The point is a member's record across a semester, not one meeting's
@@ -34,7 +34,7 @@ import { csvTimestamp } from "./csv";
  * competing earns the workshop star, so a member who skipped the workshop and
  * submitted anyway has a workshop star with no attendance row to hang it on.
  * The Airtable attendance mirror has no row for them; this gives them both
- * stars. Neither is lying — they answer different questions.
+ * stars. Neither is lying; they answer different questions.
  */
 
 /**
@@ -42,8 +42,8 @@ import { csvTimestamp } from "./csv";
  *
  * **Append-only.** New fields go at the end; existing columns are never
  * reordered or renamed. That is what lets a downstream import keep working
- * when the schema grows — and the failure mode of getting it wrong is not an
- * error but a spreadsheet where every value is in the wrong column.
+ * when the schema grows. The failure mode of getting it wrong is not an error
+ * but a spreadsheet where every value is in the wrong column.
  */
 export const STARS_COLUMNS = [
   "user_id",
@@ -84,8 +84,8 @@ export interface StarRow {
   meetingStartsAt: Date;
   workshopId: string;
   /**
-   * All three are null for a star earned at a skill session — the join below
-   * is a left one and `workshops.projectId` is nullable.
+   * All three are null for a star earned at a skill session: the join below is
+   * a left one and `workshops.projectId` is nullable.
    *
    * Declared rather than coalesced, unlike `meetingName`. `csvField` already
    * renders null as an empty cell, so the FILE was always right and only this
@@ -134,13 +134,13 @@ export function projectStarRow(row: StarRow): unknown[] {
  * grows with the club across every semester, and a single `select` would hold
  * the whole result set in the Worker before the first byte reached the client.
  *
- * Ordered by `(meetingStartsAt, userId, workshopId, awardCategory)` —
- * deterministic and total, which matters because pagination over a non-total
- * order silently skips or repeats rows at page boundaries.
+ * Ordered by `(meetingStartsAt, userId, workshopId, awardCategory)`, which is
+ * deterministic and total. Pagination over a non-total order silently skips or
+ * repeats rows at page boundaries.
  *
  * The fourth column is not decoration. `teamAwards_one_winner_per_competition`
- * is a PARTIAL unique index — it constrains `category = 'winner'` and nothing
- * else — so one team may hold several non-winner categories for a single
+ * is a PARTIAL unique index, constraining `category = 'winner'` and nothing
+ * else, so one team may hold several non-winner categories for one
  * competition, and the left join below fans one star into a row per category.
  * Those rows agree on the first three columns exactly, so Postgres was free to
  * order them differently between the query for offset 500 and the query for
@@ -169,7 +169,7 @@ async function starPage(
   // ⚠️ The soft-delete filters come first because they are not optional and
   // the three below them are.
   //
-  // This query had none, alone among every read of these tables — compare
+  // This query had none, alone among every read of these tables. Compare
   // `loaders/stars.ts`, `getMeetingWorkshops`, `getMeetingsInRange`, and the
   // `meetings_live_idx` / `workshops_live_idx` partial indexes, which are
   // built on precisely this predicate. Deleting a duplicate meeting in
@@ -178,7 +178,7 @@ async function starPage(
   // meeting_ids, for one night they attended once.
   //
   // Inner joins, so a deleted meeting or workshop removes the row outright.
-  // That is the intent — the star was earned at a session the club has since
+  // That is the intent: the star was earned at a session the club has since
   // said did not happen.
   const conditions = [isNull(meetings.deletedAt), isNull(workshops.deletedAt)];
   if (filters.from) conditions.push(gte(meetings.startsAt, filters.from));
@@ -245,11 +245,11 @@ async function starPage(
     .leftJoin(usersInAuth, eq(usersInAuth.id, memberStars.userId))
     // Deleted competitions are excluded in the JOIN rather than the WHERE,
     // and the difference is a row. In the WHERE this would still read as
-    // correct — an unmatched left join gives `deletedAt = null`, which
-    // passes `isNull` — but a MATCHED row on a deleted competition would
-    // fail it and take the whole star out of the export. The workshop star
-    // does not stop existing because the competition attached to it was
-    // deleted; only the competition columns should go null.
+    // correct, since an unmatched left join gives `deletedAt = null` and
+    // passes `isNull`, but a MATCHED row on a deleted competition would fail
+    // it and take the whole star out of the export. The workshop star does not
+    // stop existing because the competition attached to it was deleted; only
+    // the competition columns should go null.
     .leftJoin(
       competitions,
       and(

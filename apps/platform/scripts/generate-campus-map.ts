@@ -1,53 +1,53 @@
 /**
  * Regenerates `src/components/EventsSection/FindUs/campusMapData.ts` (and the
- * few bytes in `campusMapMeta.ts` beside it) from live OpenStreetMap data —
- * run with `pnpm exec tsx scripts/generate-campus-map.ts`.
+ * few bytes in `campusMapMeta.ts` beside it) from live OpenStreetMap data. Run
+ * with `pnpm exec tsx scripts/generate-campus-map.ts`.
  *
  * The Directions dialog's campus map is real geometry, not a sketch: every
  * building footprint and road in the frame, pulled via Overpass and projected
  * equirectangular into an SVG viewBox. The DLW's own footprint is exported
  * separately so the component can highlight it, along with its centroid in
- * lat/lon — the pin the Google/Apple Maps links drop, since the building is
- * too new for a name search to resolve reliably. Rerun this when OSM improves
- * the area (the DLW is brand new) or to reframe.
+ * lat/lon, the pin the Google/Apple Maps links drop, since the building is too
+ * new for a name search to resolve reliably. Rerun this when OSM improves the
+ * area (the DLW is brand new) or to reframe.
  *
- * Street names come out of here already placed, on the centreline they name
- * and turned to match it. Building labels do not: they still live in
- * CampusMap.tsx, positioned by eye, because a building's name belongs beside
- * its footprint and which side is free depends on its neighbours. So re-check
- * those against the rendered map after regenerating — the script prints every
- * labelled building's centroid, and every street's placement, to help.
+ * Street names come out of here already placed, on the centreline they name and
+ * turned to match it. Building labels do not: they live in CampusMap.tsx,
+ * positioned by eye, because a building's name belongs beside its footprint and
+ * which side is free depends on its neighbours. So re-check those against the
+ * rendered map after regenerating. The script prints every labelled building's
+ * centroid and every street's placement to help.
  *
- * Two output files because the map is loaded on demand: the path strings are
- * the weight, so they live in campusMapData.ts behind a dynamic import, while
- * the viewBox and the DLW's coordinates — needed by the eagerly loaded dialog
- * for the placeholder and the Google/Apple Maps links — go in campusMapMeta.ts.
+ * Two output files because the map is loaded on demand. The path strings are the
+ * weight, so they live in campusMapData.ts behind a dynamic import; the viewBox
+ * and the DLW's coordinates, needed by the eagerly loaded dialog for the
+ * placeholder and the map links, go in campusMapMeta.ts.
  *
- * OSM data is ODbL — the map must keep its visible "© OpenStreetMap"
+ * OSM data is ODbL, so the map must keep its visible "© OpenStreetMap"
  * attribution (FindUs.tsx renders it in the SVG corner).
  */
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** Query bbox (S, W, N, E) — generous so roads at the frame's edge arrive
- * whole instead of clipped mid-way. */
+/** Query bbox (S, W, N, E), generous so roads at the frame's edge arrive whole
+ * instead of clipped mid-way. */
 const QUERY_BBOX = [33.9355, -83.39, 33.957, -83.363] as const;
 
 /**
  * Rendered frame: the Main Library north, Driftmier south, Brumby west, past
  * Sanford Stadium east.
  *
- * The south edge is what set this. A meeting can now name the building it is
- * in, and the list runs from the Main Library at 33.9540 down to Driftmier at
- * 33.9388 — 1.7 km of campus, against the 930 m the old frame covered. Every
+ * The south edge is what set this. A meeting can now name the building it is in,
+ * and the list runs from the Main Library at 33.9540 down to Driftmier at
+ * 33.9388: 1.7 km of campus, against the 930 m the old frame covered. Every
  * building an officer can pick has to be ON the map, or the highlight has
- * nothing to point at, so the frame is a consequence of that list rather than
- * a composition choice.
+ * nothing to point at, so the frame follows that list rather than a composition
+ * choice.
  *
- * That makes the map portrait where it used to be landscape. The longitude
- * span is widened past what the buildings strictly need — there is real campus
- * out to the east, and none of it is wasted — to keep the aspect near 1.13
- * rather than the 1.55 the buildings alone would force.
+ * That makes the map portrait where it used to be landscape. The longitude span
+ * is widened past what the buildings need, since there is real campus out to the
+ * east, to keep the aspect near 1.13 rather than the 1.55 the buildings alone
+ * would force.
  */
 const S = 33.9372,
   N = 33.9552,
@@ -69,19 +69,19 @@ const MINOR_HIGHWAYS = new Set(["service", "pedestrian"]);
  * Every building a meeting can name, and what OSM calls it.
  *
  * `key` is the value stored in `platform.meetings.building` and offered in the
- * Airtable dropdown — students' shorthand, because an officer picking from a
- * list should see what they would say out loud. `osm` is the name tag, which
- * is frequently neither ("Miller Plant Science", "Shirley Mathis McBay Science
- * Library"), and the two are mapped here rather than anywhere else so the
- * dropdown never has to spell a building the way a mapper did.
+ * Airtable dropdown: students' shorthand, because an officer picking from a list
+ * should see what they would say out loud. `osm` is the name tag, which is
+ * frequently neither ("Miller Plant Science", "Shirley Mathis McBay Science
+ * Library"), and the two are mapped here so the dropdown never has to spell a
+ * building the way a mapper did.
  *
  * `via` is load-bearing. OSM models a building either as a closed way or as a
  * multipolygon relation over several ways, and this script only ever asked for
- * ways — so Driftmier, Brooks Hall, the Ramsey Center, Lamar Dodd, Ecology and
- * the vet school have been silently absent from the map, not merely
- * un-highlighted. A relation's geometry does not come back from `out geom`
- * either (Overpass returns its tags and an empty member list), so those are
- * fetched a second time through their member ways. See `fetchRelationWays`.
+ * ways, so Driftmier, Brooks Hall, the Ramsey Center, Lamar Dodd, Ecology and
+ * the vet school were silently absent from the map, not merely un-highlighted. A
+ * relation's geometry does not come back from `out geom` either (Overpass
+ * returns its tags and an empty member list), so those are fetched a second time
+ * through their member ways. See `fetchRelationWays`.
  */
 const HIGHLIGHTS = [
   { key: "DLW", osm: "Dining, Learning and Well-being Center", via: "way" },
@@ -109,12 +109,12 @@ const HIGHLIGHTS = [
 }[];
 
 /**
- * Buildings CampusMap.tsx labels that are not already highlightable — the
+ * Buildings CampusMap.tsx labels that are not already highlightable: the
  * landmarks somebody orients by rather than meets in.
  *
- * Every highlightable building is labelled too; they are not repeated here.
- * The script prints a centroid for each name in both lists, which is what
- * those labels are placed against.
+ * Every highlightable building is labelled too; they are not repeated here. The
+ * script prints a centroid for each name in both lists, which is what those
+ * labels are placed against.
  */
 const LANDMARKS = [
   "Brumby Hall",
@@ -138,18 +138,17 @@ const LANDMARKS = [
 /**
  * The streets worth naming, and what a student would call them.
  *
- * `at` is the only knob here: how far along the street's longest run inside
- * the frame its name sits, 0 at one end and 1 at the other. Where the text
- * lands and what angle it turns are measured off the centreline the map
- * actually draws. The alternative is what used to be in CampusMap.tsx — six
- * hand-typed x/y/rotate triples, true for the landscape frame and quietly
- * wrong the moment the map went portrait, because nothing connected them to
- * the roads they named. A label that reads its own centreline cannot come
- * loose from it.
+ * `at` is the only knob here: how far along the street's longest run inside the
+ * frame its name sits, 0 at one end and 1 at the other. Where the text lands and
+ * what angle it turns are measured off the centreline the map draws.
+ * CampusMap.tsx used to hold six hand-typed x/y/rotate triples instead, true for
+ * the landscape frame and wrong the moment the map went portrait, because
+ * nothing connected them to the roads they named. A label that reads its own
+ * centreline cannot come loose from it.
  *
- * University Court is deliberately absent. Its visible run is 78px, a name
- * for it is 47px, and all 78 of those pixels are directly under the DLW's
- * callout — the one label on the map that must never be crowded.
+ * University Court is deliberately absent. Its visible run is 78px, a name for
+ * it is 47px, and all 78 of those pixels are directly under the DLW's callout,
+ * the one label on the map that must never be crowded.
  */
 const STREETS = [
   { osm: "Baxter Street", text: "Baxter St", at: 0.35 },
@@ -182,8 +181,8 @@ const px = (lon: number, lat: number): [number, number] => [
 ];
 const fmt = (n: number) => Math.round(n * 10) / 10;
 
-/** Drop points within 2.5px of the last kept one — subpixel wiggle isn't
- * worth the payload bytes at this scale. */
+/** Drop points within 2.5px of the last kept one. Subpixel wiggle is not worth
+ * the payload bytes at this scale. */
 function simplify(pts: [number, number][]): [number, number][] {
   const kept = [pts[0]!];
   for (const p of pts.slice(1)) {
@@ -213,7 +212,7 @@ function inFrame(geom: OsmGeomPoint[]): boolean {
   });
 }
 
-/** Shoelace area in px² — used to drop sheds too small to read as buildings. */
+/** Shoelace area in px², used to drop sheds too small to read as buildings. */
 function area(geom: OsmGeomPoint[]): number {
   const pts = proj(geom);
   let a = 0;
@@ -349,9 +348,9 @@ function placeAlong(run: Pt[], frac: number, span: number) {
     return run[run.length - 1]!;
   };
 
-  // The angle comes from the chord the text will actually span, not from
-  // whichever segment the midpoint lands on — a name reading across a bend
-  // should follow the bend, not the one metre of asphalt under its centre.
+  // The angle comes from the chord the text spans, not from whichever segment
+  // the midpoint lands on: a name reading across a bend should follow the bend,
+  // not the one metre of asphalt under its centre.
   const mid = total * frac;
   const half = Math.min(span, total) / 2;
   const [x, y] = at(mid);
@@ -371,8 +370,8 @@ function placeAlong(run: Pt[], frac: number, span: number) {
  *
  * The public instance answers 504 or hands back an XML error page under load
  * often enough that a single attempt is not a reliable build step, and the
- * failure is not always an HTTP status — a 200 whose body starts with `<?xml`
- * is an error too, so the body is checked rather than only `res.ok`.
+ * failure is not always an HTTP status: a 200 whose body starts with `<?xml` is
+ * an error too, so the body is checked rather than only `res.ok`.
  */
 async function overpass(query: string): Promise<OsmWay[]> {
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -410,9 +409,9 @@ async function fetchOsm(): Promise<OsmWay[]> {
 out geom tags;`);
 
   // A multipolygon's members carry no name and usually no `building` tag, so
-  // they arrive here tagged by hand — enough to be drawn as ordinary
-  // footprints. Which relation each one belonged to is not recoverable from
-  // this query and is not needed: the named ones are fetched again below.
+  // they arrive here tagged by hand, enough to be drawn as ordinary footprints.
+  // Which relation each one belonged to is not recoverable from this query and
+  // is not needed: the named ones are fetched again below.
   const relWays = await overpass(`[out:json][timeout:90];
 relation["building"](${bbox});
 way(r);
@@ -431,9 +430,8 @@ out geom;`);
  * The member ways of one named building relation.
  *
  * Needed because `out geom` on a relation returns its tags and an EMPTY member
- * list — verified against the public instance — so there is no single query
- * that yields a named multipolygon's geometry. Asking for the relation and
- * then its ways is the way through.
+ * list, verified against the public instance, so no single query yields a named
+ * multipolygon's geometry. Asking for the relation and then its ways works.
  */
 async function fetchRelationWays(name: string): Promise<OsmWay[]> {
   return overpass(`[out:json][timeout:90];
@@ -446,7 +444,7 @@ console.log("fetching OSM…");
 const elements = await fetchOsm();
 
 const roadPaths = { major: [] as string[], minor: [] as string[] };
-/** Centrelines by street name, kept unsimplified — these carry the labels. */
+/** Centrelines by street name, kept unsimplified: these carry the labels. */
 const namedRoads = new Map<string, Pt[][]>();
 for (const e of elements) {
   const hw = e.tags?.highway;
@@ -466,11 +464,11 @@ for (const e of elements) {
 /**
  * A street name on the street, at the street's angle.
  *
- * Every one of these is derived, so reframing the map moves the names with
- * the roads instead of leaving them stranded where the last frame put them.
- * The width estimate is deliberately rough — it only decides how much of the
- * road the angle is averaged over, and being a few pixels out there changes
- * a bearing by a fraction of a degree.
+ * Every one of these is derived, so reframing the map moves the names with the
+ * roads instead of leaving them stranded where the last frame put them. The
+ * width estimate is rough on purpose: it only decides how much of the road the
+ * angle is averaged over, and a few pixels there change a bearing by a fraction
+ * of a degree.
  */
 const roadLabels = STREETS.map((street) => {
   const parts = namedRoads.get(street.osm);
@@ -498,7 +496,7 @@ const roadLabels = STREETS.map((street) => {
   };
 });
 
-/** Area-weighted polygon centroid in lat/lon — a vertex average would drift
+/** Area-weighted polygon centroid in lat/lon. A vertex average would drift
  * toward whichever wall OSM mapped with the most nodes. */
 function centroid(geom: OsmGeomPoint[]): { lat: number; lon: number } {
   let a = 0,
@@ -547,9 +545,9 @@ interface Highlight {
 
 const highlights: Record<string, Highlight> = {};
 for (const b of HIGHLIGHTS) {
-  // A relation's ways are several pieces of one building, so the path is all
-  // of them and the centre comes from the biggest — averaging across an
-  // L-shaped building's wings puts the pin in the courtyard between them.
+  // A relation's ways are several pieces of one building, so the path is all of
+  // them and the centre comes from the biggest. Averaging across an L-shaped
+  // building's wings puts the pin in the courtyard between them.
   const geoms: OsmGeomPoint[][] =
     b.via === "relation"
       ? (await fetchRelationWays(b.osm)).map((w) => w.geometry)
@@ -572,10 +570,10 @@ for (const b of HIGHLIGHTS) {
   // The name has to clear the whole building, so it goes off the outermost
   // point: `top` and `bottom`. The pin's tip has to touch the wall directly
   // under it, which on anything that is not an axis-aligned box is somewhere
-  // else entirely — the DLW is a parallelogram whose highest corner is 6px
-  // above its roofline at the centre, so a tip placed off the bounding box
-  // floated over open ground. `tipTop` and `tipBottom` are where a vertical
-  // line through the pin crosses the outline it is pointing at.
+  // else. The DLW is a parallelogram whose highest corner is 6px above its
+  // roofline at the centre, so a tip placed off the bounding box floated over
+  // open ground. `tipTop` and `tipBottom` are where a vertical line through the
+  // pin crosses the outline it is pointing at.
   const rings = geoms.map((g) => simplify(proj(g)));
   const ys = rings.flat().map((pt) => pt[1]);
   const crossings = rings.flatMap((ring) => {
@@ -589,9 +587,9 @@ for (const b of HIGHLIGHTS) {
     }
     return hits;
   });
-  // A footprint the vertical line misses entirely is possible in principle —
-  // an L whose centroid falls in the notch — and the outer edge is the honest
-  // answer when it happens.
+  // A footprint the vertical line misses entirely is possible in principle, an
+  // L whose centroid falls in the notch, and the outer edge is the honest answer
+  // when it happens.
   const spans = crossings.length > 0 ? crossings : ys;
 
   highlights[b.key] = {

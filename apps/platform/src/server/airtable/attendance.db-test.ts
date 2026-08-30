@@ -15,10 +15,10 @@ import { pullAttendance } from "./attendance";
  * workshop to its meeting, and the unique index on `airtableRecordId` that
  * makes a re-import an update. None of those exist in a mock.
  *
- * The account-creation path is the other half, and it is the one carrying real
- * consequence: these rows go into `auth.users`, so what this import writes —
- * and more importantly what it refuses to write — is asserted here rather than
- * trusted to a comment.
+ * The account-creation path is the other half and carries the real
+ * consequence: these rows go into `auth.users`, so what this import writes,
+ * and what it refuses to write, is asserted here rather than trusted to a
+ * comment.
  */
 
 const F = attendanceSpec.fields;
@@ -26,8 +26,8 @@ const F = attendanceSpec.fields;
 const IDS = {
   project: "d0000000-0000-0000-0000-0000000000a1",
   // A second project, because `workshops_meetingId_projectId_key` allows one
-  // workshop per project per meeting -- so "two workshops in one meeting", the
-  // case this file most needs, is only representable with two projects.
+  // workshop per project per meeting. "Two workshops in one meeting", the case
+  // this file most needs, is only representable with two projects.
   project2: "d0000000-0000-0000-0000-0000000000a2",
   meetingA: "d0000000-0000-0000-0000-0000000000b1",
   meetingB: "d0000000-0000-0000-0000-0000000000b2",
@@ -154,10 +154,10 @@ describe("importing a response", () => {
   });
 
   it("creates the account UNCONFIRMED", async () => {
-    // The single most load-bearing line in this import. An unconfirmed identity
-    // is what Supabase's linking safeguard removes when a real Google sign-in
-    // arrives for the same address -- confirming it here would make a typo'd
-    // MyID a permanent lockout for whoever actually owns it.
+    // The most load-bearing line in this import. An unconfirmed identity is
+    // what Supabase's linking safeguard removes when a real Google sign-in
+    // arrives for the same address. Confirming it here would make a typo'd
+    // MyID a permanent lockout for whoever owns it.
     await pullAttendance(
       [record("recR1", { myId: "attendee1", workshop: "recWorkshopA" })],
       WORKSHOP_IDS,
@@ -180,8 +180,8 @@ describe("importing a response", () => {
   it("does NOT write ugaEmail or the legal name", async () => {
     // A self-declared MyID must never reach `profile."ugaEmail"`. That column
     // is unique and the Involvement roster import writes it for every member
-    // inside one transaction -- a mistyped MyID sitting there would raise a
-    // unique violation when the roster reached the real owner and abort the
+    // inside one transaction. A mistyped MyID sitting there would raise a
+    // unique violation when the roster reached the real owner, aborting the
     // import for the entire club.
     await pullAttendance(
       [record("recR1", { myId: "attendee1", workshop: "recWorkshopA" })],
@@ -232,7 +232,7 @@ describe("re-importing", () => {
   it("removes a row whose Airtable record has gone", async () => {
     // Deleting the record IS how an officer removes somebody. The rest of the
     // pull archives rather than deletes, on the grounds that a spreadsheet
-    // deletion must not destroy platform truth -- but that was written when the
+    // deletion must not destroy platform truth, but that was written when the
     // platform CREATED attendance. Once Airtable is the source, a deleted
     // record is the source saying it did not happen.
     await pullAttendance(
@@ -246,10 +246,10 @@ describe("re-importing", () => {
   });
 
   it("re-imports a restored record as an equivalent row", async () => {
-    // The property that makes deletion safe rather than reckless: Airtable's
-    // own trash is the recovery path, and a restored record reconstructs the
-    // row exactly, because nothing outside this table references an attendance
-    // id -- stars read by member and meeting, judging by member and workshop.
+    // What makes deletion safe: Airtable's own trash is the recovery path,
+    // and a restored record reconstructs the row exactly, because nothing
+    // outside this table references an attendance id. Stars read by member and
+    // meeting, judging by member and workshop.
     const records = [
       record("recR1", { myId: "attendee1", workshop: "recWorkshopA" }),
     ];
@@ -314,7 +314,7 @@ describe("re-importing", () => {
 
 describe("one attendance per member per meeting", () => {
   it("refuses a second response for two workshops of one meeting", async () => {
-    // Both responses are legitimate -- the member really did sit in both -- but
+    // Both responses are legitimate, the member really did sit in both, but
     // the schema collapses them on purpose. A refusal is what tells the officer
     // that, rather than a silently discarded row.
     const out = await pullAttendance(
@@ -402,8 +402,8 @@ describe("what it refuses and what it skips", () => {
 describe("alongside a row an officer already made", () => {
   it("keeps the original method and fills in the workshop", async () => {
     // An officer added the member by hand, then the member filled in the form
-    // too. Airtable owns the workshop dimension now, so it supplies that -- but
-    // rewriting `method` would make the row lie about how it was captured, and
+    // too. Airtable owns the workshop dimension now, so it supplies that.
+    // Rewriting `method` would make the row lie about how it was captured, and
     // 'officer' is the one method that also carries a `recordedBy`.
     await db.execute(sql`
       insert into platform.attendance ("meetingId", "userId", method, "recordedBy")

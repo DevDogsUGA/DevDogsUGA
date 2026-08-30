@@ -19,18 +19,19 @@ import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
  * One highlighter for the process, on Shiki's JAVASCRIPT regex engine.
  *
  * Not the stock `@shikijs/rehype` plugin, whose bundled highlighter compiles
- * the Oniguruma engine's Wasm at request time — and the Workers runtime
- * forbids `WebAssembly.compile()` outright ("Wasm code generation disallowed
- * by embedder"). On the first staging deploy that CompileError surfaced as an
+ * the Oniguruma engine's Wasm at request time. The Workers runtime forbids
+ * `WebAssembly.compile()` outright ("Wasm code generation disallowed by
+ * embedder"). On the first staging deploy that CompileError became an
  * unhandled rejection inside MarkdownAsync, the response promise never
  * settled, and every page render hung until the runtime killed the request.
  * Prerendered pages hid it locally; any `◐` partial-prerender revalidating in
  * the Worker hit it.
  *
- * The deep `shiki/dist/...` paths are that package's published `./*` export —
- * each is a one-line re-export of `@shikijs/langs/*` / `@shikijs/themes/*`,
- * reached through the direct `shiki` dependency so no transitive package is
- * imported. The langs here must cover what DocsMarkdown's option list names.
+ * The deep `shiki/dist/...` paths are that package's published `./*` export.
+ * Each is a one-line re-export of `@shikijs/langs/*` or `@shikijs/themes/*`,
+ * reached through the direct `shiki` dependency so nothing imports a
+ * transitive package. The langs here must cover what DocsMarkdown's option
+ * list names.
  */
 const highlighterPromise = createHighlighterCore({
   themes: [import("shiki/dist/themes/rose-pine-moon.mjs")],
@@ -58,7 +59,7 @@ const highlighterPromise = createHighlighterCore({
     import("shiki/dist/langs/yaml.mjs"),
   ],
   // `forgiving` skips the rare grammar rule the JS engine cannot translate
-  // instead of throwing — a partially-highlighted block beats a hung render.
+  // instead of throwing. A partially-highlighted block beats a hung render.
   engine: createJavaScriptRegexEngine({ forgiving: true }),
 });
 
@@ -67,11 +68,11 @@ const highlighterPromise = createHighlighterCore({
  *
  * `"use cache"` is required, not an optimisation: something in this plugin
  * chain reads `Date.now()`, which Cache Components forbids during a prerender
- * unless it happens inside a cached function. It is also exactly right
- * semantically — the rendered output is a pure function of `source`, so
- * `cacheLife("max")` is accurate, and because every docs page is prerendered
- * the entry is baked into the static output rather than needing a runtime
- * cache store (which the Cloudflare adapter does not have configured).
+ * unless it happens inside a cached function. The semantics fit anyway: the
+ * rendered output is a pure function of `source`, so `cacheLife("max")` is
+ * accurate, and because every docs page is prerendered the entry is baked into
+ * the static output rather than needing a runtime cache store (which the
+ * Cloudflare adapter does not have configured).
  */
 export default async function DocsMarkdown({ source }: { source: string }) {
   "use cache";
@@ -83,7 +84,7 @@ export default async function DocsMarkdown({ source }: { source: string }) {
     <MarkdownAsync
       components={{
         // Tables render at their natural width, which on a phone can exceed
-        // the article column — scroll the table inside its own container
+        // the article column. Scroll the table inside its own container
         // rather than letting it stretch the page sideways.
         table: ({ node: _node, ...props }) => (
           <div className="overflow-x-auto">
@@ -115,14 +116,14 @@ export default async function DocsMarkdown({ source }: { source: string }) {
             // Registered as a *named* theme with `defaultColor: false` even
             // though there is only one. That combination stops Shiki writing
             // literal `color:`/`background-color:` into the markup and makes
-            // it emit `--shiki-dark` custom properties instead — which is what
-            // lets globals.css decide the chrome (the `<pre>` background comes
-            // from `--card` via the prose variables) while the theme keeps
-            // ownership of the token colors. With an inline background, no
-            // amount of CSS could retheme the block short of `!important`.
+            // it emit `--shiki-dark` custom properties instead. So globals.css
+            // decides the chrome (the `<pre>` background comes from `--card`
+            // via the prose variables) while the theme keeps ownership of the
+            // token colors. With an inline background, no amount of CSS could
+            // retheme the block short of `!important`.
             themes: { dark: "rose-pine-moon" },
             defaultColor: false,
-            // The language LIST lives on the highlighter above — the core
+            // The language LIST lives on the highlighter above. The core
             // plugin renders with whatever that instance loaded.
             fallbackLanguage: "text",
           },

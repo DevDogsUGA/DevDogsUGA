@@ -1,14 +1,14 @@
 /**
  * The order a ballot opens in.
  *
- * Requiring a complete ranking means whatever order the form opens in **is
- * already a valid ballot**. Left alone that turns voter apathy into systematic
- * bias: a prefilled alphabetical list quietly rewards teams whose names sort
- * early, every election, forever.
+ * Requiring a complete ranking means whatever order the form opens in is
+ * already a valid ballot. Left alone that turns voter apathy into systematic
+ * bias: a prefilled alphabetical list rewards teams whose names sort early,
+ * every election, forever.
  *
- * Two mitigations, and this module is the first. The second — requiring an
- * interaction before submit — lives in the form, because it is about what the
- * voter did rather than about what they were shown.
+ * Two mitigations, and this module is the first. The second, requiring an
+ * interaction before submit, lives in the form, because it is about what the
+ * voter did rather than what they were shown.
  */
 
 /**
@@ -16,13 +16,13 @@
  *
  * The shuffle has to be stable for one voter across reloads. A fresh shuffle
  * on every render would move options under somebody halfway through ordering
- * them, which is worse than the bias it was meant to fix — and it would make
+ * them, which is worse than the bias it was meant to fix. It would also make
  * "I put us second" unverifiable against what they actually submitted.
  *
- * FNV-1a: not cryptographic, and does not need to be. The property required is
- * that two voters get different orders and one voter gets the same order
- * twice; an adversary predicting their own shuffle gains nothing, because the
- * order they see does not affect how their ballot is counted.
+ * FNV-1a: not cryptographic, and does not need to be. What it must give is two
+ * voters different orders and one voter the same order twice. An adversary
+ * predicting their own shuffle gains nothing, because the order they see does
+ * not affect how their ballot is counted.
  */
 export function seedFrom(...parts: string[]): number {
   let hash = 0x811c9dc5;
@@ -35,7 +35,7 @@ export function seedFrom(...parts: string[]): number {
   return hash >>> 0;
 }
 
-/** mulberry32 — small, fast, and adequate for shuffling a handful of teams. */
+/** mulberry32: small, fast, and enough for shuffling a handful of teams. */
 function generator(seed: number): () => number {
   let state = seed;
   return () => {
@@ -46,7 +46,7 @@ function generator(seed: number): () => number {
   };
 }
 
-/** Fisher–Yates, so every permutation is equally likely. */
+/** Fisher-Yates, so every permutation is equally likely. */
 function shuffle<T>(items: T[], seed: number): T[] {
   const random = generator(seed);
   const out = [...items];
@@ -64,11 +64,11 @@ export interface Orderable {
 /**
  * The presented order for one voter's ballot.
  *
- * The voter's own team is pinned first rather than shuffled in. That is not a
- * convenience — teams may rank themselves, and self-ranking cancels out
+ * The voter's own team is pinned first rather than shuffled in. This is not
+ * for convenience. Teams may rank themselves, and self-ranking cancels out
  * because every team does it, so the position that matters is where they put
  * everybody ELSE. Pinning their own entry keeps it out of the way and makes
- * the deliberate act of demoting themselves visible rather than accidental.
+ * demoting themselves a deliberate act rather than an accident.
  *
  * `ownTeamId` is null for an officer ballot, which then shuffles completely.
  * Officer ballots get the same treatment despite there being only one of them,
@@ -91,10 +91,10 @@ export type BallotProblem =
 /**
  * Whether a submitted ranking is a ballot at all.
  *
- * Complete rankings are required — with a handful of candidates it is no
+ * Complete rankings are required. With a handful of candidates that is no
  * burden, and it removes truncation strategy, ballot exhaustion, and any rule
- * about how to score unranked teams. So "they left one out" is a rejection
- * rather than something the tally has to interpret.
+ * about how to score unranked teams. "They left one out" is a rejection rather
+ * than something the tally has to interpret.
  *
  * `touched` is the second mitigation: a ballot cast by pressing submit on an
  * untouched form should be impossible. The form enforces it too, but the form

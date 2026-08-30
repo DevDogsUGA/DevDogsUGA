@@ -7,7 +7,7 @@ import { expectSession } from "~/server/auth";
 import { supabaseAdmin } from "~/supabase/admin";
 import { canUserManageSuspensions } from "~/server/actions/permissions";
 
-// 10 years in hours — effectively permanent ban via Supabase's native mechanism
+// 10 years in hours, so a permanent ban through Supabase's own ban field.
 const BAN_DURATION = "87600h";
 
 /** Adds a global suspension record for `userId`. */
@@ -42,7 +42,7 @@ async function unsuspendUser(userId: string) {
  *
  * The decision itself is `platform.resolve_report()`, not code here. That
  * function updates the report, records the resolution, carries the content
- * action into the app's own data and writes any suspension — all in one
+ * action into the app's own data and writes any suspension, all in one
  * transaction, so a content action that cannot be applied aborts the whole
  * thing rather than leaving a decision whose effect never landed.
  *
@@ -51,13 +51,13 @@ async function unsuspendUser(userId: string) {
  * this one cannot reach. Two implementations of one workflow is what the
  * retired `OAuthReports` component was, and it had already drifted.
  *
- * What stays here is the one thing SQL cannot do — Supabase's native ban. The
- * RPC hands back `bannedUserId` when a decision calls for one, and this caller,
- * which holds admin credentials, finishes the job.
+ * What stays here is the one thing SQL cannot do: Supabase's native ban. The
+ * RPC hands back `bannedUserId` when a decision calls for one, and this caller
+ * holds the admin credentials to finish the job.
  *
  * Runs as `postgres` through Drizzle, so `has_permission()` inside the function
- * has no `auth.uid()` to read; authorization is therefore established here and
- * the caller is passed explicitly.
+ * has no `auth.uid()` to read. This action authorizes the caller itself and
+ * passes the caller id in.
  */
 export async function resolveReport(
   reportId: string,

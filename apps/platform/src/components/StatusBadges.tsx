@@ -5,10 +5,10 @@ import Badge from "~/ui/badge";
  *
  * These were declared three times over: `red/orange/mauve` on the two
  * moderation pages, `amber/emerald/white` in the audit log, and
- * `yellow/green/mauve` in the report history — so the same resolved report was
- * green in one list and emerald in another. Anything not in a map falls
- * through to the neutral variant rather than throwing, because these strings
- * come from the database and a new one should look plain, not crash the page.
+ * `yellow/green/mauve` in the report history, so the same resolved report was
+ * green in one list and emerald in another. Anything not in a map falls through
+ * to the neutral variant rather than throwing, because these strings come from
+ * the database and a new one should look plain, not crash the page.
  */
 
 const REPORT_STATUS = {

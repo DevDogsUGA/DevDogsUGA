@@ -8,7 +8,6 @@ interface TimeselectorProps {
   className?: string;
 }
 
-//Component to input time
 const Timeselector = ({
   name = "",
   clearState,
@@ -20,11 +19,11 @@ const Timeselector = ({
     const isColon = input.trim().endsWith(":");
     const inputValue = input.replace(/[^0-9]/g, "").slice(0, 4);
 
-    //This formats the time input to have the colon after minutes
     let formattedValue =
       inputValue.length > 2
         ? `${inputValue.slice(0, 2)}:${inputValue.slice(2)}`
         : inputValue;
+    // A colon typed after two digits survives the digit-only strip above.
     if (isColon && formattedValue.length === 2) {
       formattedValue = formattedValue + ":";
     }
@@ -32,12 +31,10 @@ const Timeselector = ({
     return formattedValue;
   };
 
-  //Handles the input change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue(formatInput(e.target.value));
   };
 
-  //handles the meridian toggle button
   const changeMeridian = (e: React.MouseEvent<HTMLButtonElement>) => {
     const text = e.currentTarget.textContent === "AM" ? "PM" : "AM";
     if (text) {
@@ -45,7 +42,8 @@ const Timeselector = ({
     }
   };
 
-  //handles quick input using "enter" key to skip to seconds
+  // Space pads the hour to two digits and adds the colon, so the next
+  // keystroke lands in the minutes.
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === " ") {
       if (value.length >= 1 && value.length < 3) {
@@ -54,7 +52,6 @@ const Timeselector = ({
     }
   };
 
-  //Use state to handle reseting the input and meridian button
   useEffect(() => {
     if (clearState) {
       // Intentional: reset the input + meridian when the parent survey raises
@@ -67,7 +64,6 @@ const Timeselector = ({
 
   return (
     <div className="relative">
-      {/* USER INPUT */}
       <input
         value={value}
         placeholder={"00:00"}
@@ -76,7 +72,7 @@ const Timeselector = ({
         maxLength={5}
         className={`w-full rounded-md border-2 px-12 py-2 outline-0 hover:border-stone-400 ${className}`}
       />
-      {/* READONLY INPUT TO CAPTURE CURRENT FORMATTED VALUE W/MERIDIAN TO SEND TO FORMDATA  */}
+      {/* FormData reads the combined value and meridian from this hidden input. */}
       <input
         title="time input"
         type="text"
@@ -85,7 +81,6 @@ const Timeselector = ({
         className="hidden"
         readOnly
       />
-      {/* TIME ICON */}
       <Image
         src="./images/timeIcon.svg"
         alt="time icon"
@@ -94,7 +89,6 @@ const Timeselector = ({
         className="absolute top-3 left-4"
         draggable="false"
       />
-      {/* MERIDIAN TOGGLE BUTTON */}
       <ToggleButton
         text="AM"
         toggledText="PM"

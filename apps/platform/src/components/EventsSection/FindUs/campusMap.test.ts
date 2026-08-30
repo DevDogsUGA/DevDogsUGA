@@ -3,11 +3,10 @@ import { ROAD_LABELS } from "./campusMapData";
 import { VIEW } from "./campusMapMeta";
 
 /**
- * Street names are generated onto their own centrelines by
- * scripts/generate-campus-map.ts, which is what stops them drifting when the
- * frame moves. These check the properties that make a generated placement
- * usable at all — a name off the map, or one printed upside down, is a bug
- * the generator can produce from perfectly good geometry.
+ * scripts/generate-campus-map.ts places street names on their own centrelines,
+ * which is what stops them drifting when the frame moves. These check the
+ * properties that make a placement usable at all. Perfectly good geometry can
+ * still leave a name off the map or printed upside down.
  */
 describe("the street labels", () => {
   it("names some streets", () => {

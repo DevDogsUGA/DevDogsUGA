@@ -8,11 +8,11 @@ import { BUILDING_CENTERS, VIEW, type BuildingKey } from "./campusMapMeta";
 import { BUILDING_NAME } from "./buildings";
 
 /**
- * The map is the heavy part of the dialog — 46 KB of OSM paths — so it is a
+ * The map is the heavy part of the dialog, 46 KB of OSM paths, so it is a
  * chunk of its own, fetched when the dialog first renders. `preloadCampusMap`
- * shares the same `import()`, which the bundler resolves to the same chunk,
- * so a trigger can start that fetch the moment someone shows intent and the
- * map is usually already here by the time the dialog opens.
+ * shares the same `import()`, which the bundler resolves to the same chunk, so
+ * a trigger can start that fetch the moment someone shows intent and the map
+ * is usually already here by the time the dialog opens.
  */
 const CampusMap = dynamic(() => import("./CampusMap"), {
   loading: () => <MapPlaceholder />,
@@ -24,10 +24,10 @@ export function preloadCampusMap() {
 /**
  * The destination is a coordinate pin, not a place query: the DLW only opened
  * in August 2026, and searching either app for it by name still lands on the
- * wrong building or nothing at all. A coordinate behaves the same for all ten
- * buildings, so the rule that was written for the newest one is simply the
- * rule. The pin is the centroid of the same OSM footprint the map highlights,
- * so regenerating the map data moves both together.
+ * wrong building or nothing at all. A coordinate works the same for all ten
+ * buildings, so what the newest one needs, they all get. The pin is the
+ * centroid of the same OSM footprint the map highlights, so regenerating the
+ * map data moves both together.
  */
 function mapUrls(building: BuildingKey) {
   const { lat, lon } = BUILDING_CENTERS[building];
@@ -61,14 +61,14 @@ const TONES = {
 /**
  * Everything inside the dialog below its title: the campus map with the
  * building highlighted, a line about where it is, and the hand-off to a
- * navigation app for the door-to-door part — at the bottom, on the right,
- * where a dialog's actions go.
+ * navigation app for the door-to-door part. That hand-off sits at the bottom
+ * right, where a dialog's actions go.
  *
  * There used to be a second tab here, a floor plan of the walk to DLW 124
- * (`FloorPlan.tsx`, still on disk with its `ROOM_STEPS`). It is parked
- * rather than deleted: the drawing was hand-traced, and it comes back once
- * there is a real plan of the building to draw from. Until then the room is
- * in the dialog's title and the map answers the building.
+ * (`FloorPlan.tsx`, still on disk with its `ROOM_STEPS`). It is parked rather
+ * than deleted: the drawing was hand-traced, and it comes back once there is a
+ * real plan of the building to draw from. Until then the room is in the
+ * dialog's title and the map answers the building.
  */
 export default function FindUsContent({
   building = "DLW",
@@ -138,8 +138,8 @@ export function MapPlaceholder() {
 /**
  * What the intercepted /events/directions route shows between the click and
  * its content arriving: the map's silhouette, since that is what the content
- * resolves to. Prefetching fetches the route down to this boundary, so this —
- * not a blank dialog — is what appears the instant the link is hit.
+ * resolves to. Prefetching fetches the route down to this boundary, so this,
+ * not a blank dialog, is what appears the instant the link is hit.
  */
 export function FindUsSkeleton() {
   return (

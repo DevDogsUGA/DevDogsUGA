@@ -17,9 +17,9 @@ import { lockReason, type LockReason } from "~/server/teams/lockState";
  * Reads for the team pages.
  *
  * The lock state is computed here rather than selected, through the same
- * `lockReason` the join checks use. One definition: a screen saying a roster
- * is open while the action rejects the join is exactly the drift that having
- * four copies of a three-term boolean produces.
+ * `lockReason` the join checks use. One definition: a screen saying a roster is
+ * open while the action rejects the join is the drift four copies of a
+ * three-term boolean produce.
  */
 
 export interface TeamMemberRow {
@@ -60,9 +60,9 @@ export interface TeamDetail {
  * A team, with its roster.
  *
  * `joinCode` is returned ONLY to a member. It is the credential that lets
- * somebody join, so a team page rendered for a stranger must not carry it —
- * the column grants exclude it from the client-readable set for the same
- * reason, and this is the server-side half of that.
+ * somebody join, so a team page rendered for a stranger must not carry it. The
+ * column grants exclude it from the client-readable set for the same reason;
+ * this is the server-side half.
  */
 export const getTeamDetail = cache(
   async (
@@ -106,8 +106,8 @@ export const getTeamDetail = cache(
       .from(teamMembers)
       .leftJoin(profiles, eq(profiles.userId, teamMembers.userId))
       .where(eq(teamMembers.teamId, row.id))
-      // Lead first, then join order — the roster reads as "who runs this, and
-      // who arrived when", which is the order somebody scanning it expects.
+      // Lead first, then join order, so the roster reads as "who runs this,
+      // and who arrived when".
       .orderBy(desc(teamMembers.role), asc(teamMembers.joinedAt));
 
     const [standing] = await db
@@ -222,9 +222,8 @@ export interface PendingRequest {
  * Everything awaiting the viewer's answer.
  *
  * Both halves of the shared table in one list: invitations addressed to them,
- * and join requests on teams they lead. They are the same screen — "things
- * you have to decide about" — and splitting them would mean somebody has to
- * check two places.
+ * and join requests on teams they lead. They are one screen, "things you have
+ * to decide about", and splitting them would make somebody check two places.
  */
 export const getPendingForUser = cache(
   async (userId: string): Promise<PendingRequest[]> => {
@@ -237,9 +236,8 @@ export const getPendingForUser = cache(
         competitionSlug: competitions.slug,
         // A competition is called after its project; it has no name of its
         // own. `projectId` is nullable, so fall back to the workshop's title
-        // and then to the competition's slug — which is `not null` and already
-        // user-visible in git as the integration branch, so it names the thing
-        // rather than inventing text for it.
+        // and then to the competition's slug, which is `not null` and already
+        // user-visible in git as the integration branch.
         competitionName: sql<string>`coalesce(
           ${projects.displayName},
           ${workshops.title},

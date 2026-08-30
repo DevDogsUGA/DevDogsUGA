@@ -106,7 +106,7 @@ function generateRecursive(
   if (!validate(schedule)) return;
 
   // Credit hours only accumulate, so a partial schedule already over the cap
-  // can never come back under it — prune the whole branch here.
+  // can never come back under it. Prune the whole branch here.
   if (
     hard.maxCreditHours > 0 &&
     creditHourFloor(schedule) > hard.maxCreditHours

@@ -17,10 +17,10 @@ import { getCompetitionBySlug } from "~/server/loaders/meetings";
 import { getMyTeam, getTeamsForCompetition } from "~/server/loaders/teams";
 
 /**
- * `expectSession()` below sends an anonymous visitor to `/auth`, so this route
- * has no public rendering — unlike its sibling `results/`, which is public and
- * carries a real description. The `noindex` says the same thing to a crawler
- * that reached the URL without following a link.
+ * `requireSession()` below sends an anonymous visitor to `/auth`, so this route
+ * has no public rendering. Its sibling `results/` is public and carries a real
+ * description. The `noindex` says the same thing to a crawler that reached the
+ * URL without following a link.
  */
 export const metadata: Metadata = {
   title: "Teams | DevDogs",
@@ -28,13 +28,12 @@ export const metadata: Metadata = {
 };
 
 /**
- * /competitions/[slug]/teams — every team, and the two ways onto one.
+ * /competitions/[slug]/teams: every team, and the two ways onto one.
  *
- * The page is built around one fact: a member has exactly one team per
- * competition, or none. So it renders one of two things above the list — the
- * team they are on, or the affordances for getting on one — and never both.
- * `already_on_team` is a normal state of the world here, not an error to be
- * reported after somebody presses a button.
+ * A member has exactly one team per competition, or none. So the page renders
+ * one of two things above the list, the team they are on or the affordances for
+ * getting on one, and never both. `already_on_team` is a normal state of the
+ * world here, not an error to report after somebody presses a button.
  */
 
 export default async function CompetitionTeamsPage({
@@ -42,7 +41,7 @@ export default async function CompetitionTeamsPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  // Every lock on this page is a comparison against now — judging starting is
+  // Every lock on this page is a comparison against now: judging starting is
   // what closes a competition, and the loader computes each team's lock from
   // the current time. A prerender would freeze that at build time and show
   // open rosters for a competition that has already been judged.
@@ -53,7 +52,7 @@ export default async function CompetitionTeamsPage({
 
   // Identity first, and separately: `getTeamsForCompetition` answers "no such
   // competition" and "no teams yet" with the same empty array, and those need
-  // opposite answers — a 404 and an invitation to start the first team.
+  // opposite answers: a 404, and an invitation to start the first team.
   const competition = await getCompetitionBySlug(slug);
   if (!competition) notFound();
 
@@ -75,8 +74,8 @@ export default async function CompetitionTeamsPage({
   const now = Date.now();
   const closed = judgingStartsAt !== null && judgingStartsAt.getTime() <= now;
 
-  // Neither read consults the other's answer — the roster list is about the
-  // competition and `getMyTeam` is about the viewer — so they go out together
+  // Neither read consults the other's answer. The roster list is about the
+  // competition, `getMyTeam` is about the viewer, so they go out together
   // rather than one waiting on the other.
   const [teams, mine] = await Promise.all([
     getTeamsForCompetition(slug),
@@ -84,7 +83,7 @@ export default async function CompetitionTeamsPage({
   ]);
 
   // A locked roster is not somewhere anybody can be added, so it is not a
-  // target for either affordance — offering it and failing on submit would be
+  // target for either affordance. Offering it and failing on submit would be
   // the exact drift the single lock predicate exists to prevent.
   const openTargets: JoinTarget[] = teams
     .filter((team) => team.lock === null)

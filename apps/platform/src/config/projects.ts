@@ -20,7 +20,7 @@ export interface Badge {
  * How a project appears in the fullscreen switcher.
  *
  * The switcher answers "where can I go", while the homepage cards answer "what
- * can I join" — so it carries its own badge and its own destination rather than
+ * can I join", so it carries its own badge and its own destination rather than
  * reusing the card's. A project can be wide open to contributions and still
  * have nothing to visit yet.
  */
@@ -28,13 +28,13 @@ export interface ProjectSwitcher {
   /** The app icon, drawn on {@link ProjectSwitcher.iconBg}. */
   icon: keyof typeof icons;
   /**
-   * Fill behind the icon — a solid, saturated background, since the tiles sit
+   * Fill behind the icon: a solid, saturated background, since the tiles sit
    * on black and the mark is drawn in black on top.
    */
   iconBg: string;
   /**
    * One sentence. The switcher is for picking a project, not reading about
-   * one — the full pitch lives in `description`.
+   * one. The full pitch lives in `description`.
    */
   blurb: string;
   /**
@@ -47,19 +47,7 @@ export interface ProjectSwitcher {
   badge?: Badge;
 }
 
-/**
- * The DevDogs projects, shared by the homepage Projects section and the
- * fullscreen app switcher so both render from one source.
- *
- * The two surfaces show different amounts of it: the homepage cards carry the
- * full `description`, `techStack`, and repo links, while the switcher shows
- * only what {@link ProjectSwitcher} holds.
- *
- * Array order is the switcher's order — the platform you are standing in
- * first, then the apps by how far along they are. The homepage regroups these
- * by `contributions` instead, so reordering here leaves it untouched.
- */
-/** Keys into PROJECT_ICONS — marks drawn for the apps that have one. */
+/** Keys into PROJECT_ICONS: the marks drawn for the apps that have one. */
 export type ProjectIconName = "dogdays" | "dogpack";
 
 export interface Project {
@@ -74,14 +62,14 @@ export interface Project {
   description: string;
   /**
    * Present for the projects the switcher lists as apps. Absent keeps a
-   * project on the homepage but out of the switcher — the switcher is a short
-   * list of what DevDogs is building now, not the whole back catalogue.
+   * project on the homepage but out of the switcher, which is a short list of
+   * what DevDogs is building now rather than the whole back catalogue.
    */
   switcher?: ProjectSwitcher;
   /**
    * Whether anyone can pick up an issue, or only a closed group can. Drives
-   * how prominently the card renders — `"closed"` projects are real work worth
-   * listing, but they are not what a prospective member should click first.
+   * how prominently the card renders: `"closed"` projects are real work worth
+   * listing, but not what a prospective member should click first.
    */
   contributions: "open" | "closed";
   /** Why contributions are closed, or any other one-line caveat. */
@@ -118,6 +106,18 @@ const PAUSED: Badge = {
   text: "text-mauve-800",
 };
 
+/**
+ * The DevDogs projects, shared by the homepage Projects section and the
+ * fullscreen app switcher so both render from one source.
+ *
+ * The two show different amounts of it: the homepage cards carry the full
+ * `description`, `techStack`, and repo links, while the switcher shows only
+ * what {@link ProjectSwitcher} holds.
+ *
+ * Array order is the switcher's order: the platform you are standing in first,
+ * then the apps by how far along they are. The homepage regroups these by
+ * `contributions`, so reordering here leaves it untouched.
+ */
 export const PROJECTS: Project[] = [
   {
     badge: MAINTENANCE,
@@ -133,8 +133,8 @@ export const PROJECTS: Project[] = [
       blurb:
         "The site you're on — member portal, OAuth server, and club tooling.",
       url: "/",
-      // Where you are standing, rather than how far along it is — the one
-      // tile in the switcher whose badge answers a different question.
+      // Where you are standing, rather than how far along it is. The one tile
+      // in the switcher whose badge answers a different question.
       badge: { label: "You are Here", bg: "bg-amber-400", text: "text-black" },
     },
     contributions: "closed",
@@ -234,7 +234,7 @@ export const PROJECTS: Project[] = [
   },
 ];
 
-/** A project the switcher lists — one that carries a `switcher` block. */
+/** A project the switcher lists, meaning one with a `switcher` block. */
 export type SwitcherProject = Project & { switcher: ProjectSwitcher };
 
 /** The projects the fullscreen switcher shows as apps, in array order. */

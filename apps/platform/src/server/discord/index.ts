@@ -19,9 +19,7 @@ export function Command<T extends z.core.SomeType>(command: Command<T>) {
 
 // const commands = [leaderboard] satisfies ReturnType<typeof Command>[];
 
-/**
- * Registers all commands defined above in `commands`.
- */
+/** Registers every command in `commands` with Discord. */
 // export async function registerCommands() {
 //   const response = await fetch(
 //     `https://discord.com/api/v10/applications/${env.DISCORD_CLIENT_ID}/commands`,
@@ -48,8 +46,7 @@ export function Command<T extends z.core.SomeType>(command: Command<T>) {
 
 /**
  * A Next.js `POST` route handler.
- * @param request The incoming request object.
- * @returns The appropriate interaction response, considering all registered commands.
+ * @returns The interaction response from whichever registered command matches.
  */
 // export async function handleInteractionRequest(request: NextRequest) {
 //   const signature = request.headers.get("x-signature-ed25519");

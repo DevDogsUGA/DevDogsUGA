@@ -2,8 +2,8 @@
 // TypeScript, which it reads in-process with the TS compiler API; there is no
 // equivalent for Dart from Node, so this script runs under the Flutter SDK's
 // own analyzer and hands the result across as JSON. The shape it writes is a
-// contract with `packages/docs-build/src/gen/dart.ts` — change one and the
-// other stops parsing, so `version` is bumped whenever a field's meaning moves.
+// contract with `packages/docs-build/src/gen/dart.ts`. Change one and the other
+// stops parsing, so `version` is bumped whenever a field's meaning moves.
 //
 //   dart run tool/docs_extract.dart [--lib <dir>] [--out <file>]
 //
@@ -504,7 +504,7 @@ List<Map<String, Object?>> _params(List<FormalParameterElement> parameters) {
 }
 
 /// A field formal (`this.title`) and a super formal (`super.key`) never carry a
-/// doc comment themselves — the prose lives on the field, or on the matching
+/// doc comment themselves. The prose lives on the field, or on the matching
 /// parameter one constructor up. Following that is what gives a widget's
 /// parameter table any descriptions at all.
 String? _parameterDoc(FormalParameterElement parameter, [int depth = 0]) {

@@ -25,11 +25,11 @@ export const PROJECTS_BLOBS: BlobDef[] = [
 
 /* Parked, not deleted: the header is centered copy for now, with no room for
    the rotated diamond beside it. Uncommenting this and the call in the header
-   brings it back — but it needs a picture and a `next/image` import first. The
-   638 KB `ibm.gif` it used to point at was deleted rather than shipped to
-   every visitor of a page that has not rendered it in months; whatever
-   replaces it should not be an animated GIF, which `next/image` cannot
-   optimise and passes through whole.
+   brings it back, but it needs a picture and a `next/image` import first. The
+   638 KB `ibm.gif` it used to point at was deleted rather than shipped to every
+   visitor of a page that has not rendered it in months. Whatever replaces it
+   should not be an animated GIF, which `next/image` cannot optimise and passes
+   through whole.
 
 function RotatedImage() {
   return (
@@ -71,9 +71,9 @@ export default function ProjectsSection({
       <section
         id="projects"
         // scroll-mt clears the h-16 sticky TopNav when a marquee card jumps
-        // to #id — the same idea as `ui/card`. It is measured from the border
+        // to #id, the same idea as `ui/card`. It is measured from the border
         // box, whose top is where pt-(--section-skew-slope) begins, so the
-        // slanted top edge clears the nav too and not just the copy below it.
+        // slanted top edge clears the nav too, not just the copy below it.
         className="relative w-full scroll-mt-20 overflow-hidden pt-(--section-skew-slope) pb-(--section-skew-slope)"
         data-animate="fade-up"
       >

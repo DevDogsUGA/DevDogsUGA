@@ -14,8 +14,8 @@ const EXPLORE_LINKS = PUBLIC_LINKS.filter((link) => link.href !== "/docs");
  * best destination it has: its live site, else wherever the fullscreen
  * switcher sends you, else its repository. The paused ones have none of the
  * three, so they fall back to the homepage section that describes them rather
- * than dropping out of the list — the footer says what DevDogs has built, not
- * only what is currently reachable.
+ * than dropping out of the list. The footer says what DevDogs has built, not
+ * only what is reachable today.
  */
 const PROJECT_LINKS = PROJECTS.map((project) => ({
   title: project.title,
@@ -30,14 +30,14 @@ const PROJECT_LINKS = PROJECTS.map((project) => ({
  * `"use cache"` is required, not an optimisation. This renders in the site
  * layout, above the page's own <Suspense> boundary, and the copyright line
  * reads the clock. Outside a cache scope that read would postpone the layout
- * shell itself — every route on the site would prerender to nothing but the
+ * shell itself, and every route on the site would prerender to nothing but the
  * <html> wrapper. Inside one, the year resolves at prerender time and is baked
  * into the static output, which also means it refreshes on each deploy rather
  * than per request. See docs/monorepo/stack/nextjs.md.
  *
  * `cacheLife("max")` is required for the same reason. A route's revalidate
  * window is the *minimum* across its cache entries, so leaving this on the
- * default 15m profile pulled every route on the site down to 15m — including
+ * default 15m profile pulled every route on the site down to 15m, including
  * the docs pages, whose own `cacheLife("max")` had earned them 30d. Nothing
  * here can go stale between deploys, so "max" is accurate as well as harmless.
  */
@@ -50,7 +50,7 @@ export default async function Footer() {
       className="relative overflow-hidden border-t-2 border-t-mauve-700 bg-mauve-950 px-8 py-10 text-sm text-mauve-400"
       id="footer"
     >
-      {/* Dense dot pattern — top-left */}
+      {/* Dense dot pattern, top-left */}
       <div
         aria-hidden
         className="bg-dot-grid-dense pointer-events-none absolute top-0 left-0 h-full w-1/2 text-mauve-700/35"
@@ -59,7 +59,7 @@ export default async function Footer() {
           WebkitMaskImage: "linear-gradient(135deg, black 0%, transparent 60%)",
         }}
       />
-      {/* Dense dot pattern — bottom-right */}
+      {/* Dense dot pattern, bottom-right */}
       <div
         aria-hidden
         className="bg-dot-grid-dense pointer-events-none absolute right-0 bottom-0 h-full w-1/2 text-mauve-700/35"
@@ -76,9 +76,9 @@ export default async function Footer() {
               className="flex items-center gap-2 text-lg md:text-xl lg:gap-2.5"
             >
               <figure className="size-[1.5em]">
-                {/* `1.5em` against the link's `text-lg md:text-xl` — 27px, then
-                    30px. Both land on the same 32px candidate, so one value
-                    covers the pair. */}
+                {/* `1.5em` against the link's `text-lg md:text-xl` is 27px,
+                    then 30px. Both land on the same 32px candidate, so one
+                    value covers the pair. */}
                 <Image alt="Home" src={devdog} sizes="30px" />
               </figure>
               {/* Not a heading: this renders on every page now, and the site's
@@ -116,7 +116,7 @@ export default async function Footer() {
                 ))}
 
                 <li>
-                  {/* Redirects off-site, not a page — never prefetch. */}
+                  {/* Redirects off-site, not a page, so never prefetch. */}
                   <Link
                     href="/join"
                     prefetch={false}
@@ -188,7 +188,7 @@ export default async function Footer() {
                 our various social channels.
               </p>
 
-              {/* Every channel the fullscreen switcher shows, in its order —
+              {/* Every channel the fullscreen switcher shows, in its order,
                   email included, so the two never disagree about how to reach
                   DevDogs. The bottom bar spells the same address out in full. */}
               <ul className="flex items-center gap-2">

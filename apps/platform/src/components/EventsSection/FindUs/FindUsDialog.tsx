@@ -24,7 +24,7 @@ interface Props {
   room?: string | null;
   /** The element that opens it; none when a route decides that instead. */
   trigger?: ReactNode;
-  /** The body below the title — normally {@link FindUsContent}. */
+  /** The body below the title, normally {@link FindUsContent}. */
   children: ReactNode;
   /** Passed to the shell; the header follows it. */
   tone?: DialogTone;
@@ -50,10 +50,10 @@ const HEADER_TONES = {
  * `/events/directions` hands this to the shared {@link RouteDialog}, which
  * owns the close behaviour a route dialog needs.
  *
- * The title is the place as a member says it — "DLW 124" — and the two lines
- * under it are the same place as a stranger needs it: the building's full
- * name, then its street address. Nothing about what happens there; that is
- * the meeting dialog's job, and this one is only ever about *where*.
+ * The title is the place as a member says it, "DLW 124". The two lines under
+ * it are the same place as a stranger needs it: the building's full name, then
+ * its street address. Nothing about what happens there; that is the meeting
+ * dialog's job, and this one is only ever about *where*.
  */
 export function FindUsHeader({
   building = "DLW",

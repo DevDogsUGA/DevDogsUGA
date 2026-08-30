@@ -51,7 +51,7 @@ export default function BallotForm({
   castBallot,
 }: {
   electionId: string;
-  /** Already in presented order — shuffled per voter, own team pinned. */
+  /** Already in presented order: shuffled per voter, own team pinned. */
   options: BallotOptionView[];
   castBallot: (
     electionId: string,
@@ -75,10 +75,10 @@ export default function BallotForm({
     setTouched(true);
   }
 
-  // Either reordering OR explicitly confirming counts. A voter who genuinely
-  // agrees with the shuffle they were given must have a way through that is
-  // not "drag one item and put it back" — the point is that submitting is a
-  // decision, not that it is laborious.
+  // Either reordering OR confirming counts. A voter who agrees with the
+  // shuffle they were given must have a way through that is not "drag one item
+  // and put it back". The point is that submitting is a decision, not that it
+  // is laborious.
   const canSubmit = (touched || confirmed) && !isPending && !done;
 
   if (done) {

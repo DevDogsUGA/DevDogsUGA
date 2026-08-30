@@ -6,14 +6,13 @@ import { meetings, memberStars, projects, workshops } from "~/server/db/schema";
 /**
  * Star reads, for the profile badge row and the participation grid.
  *
- * Stars are derived — `memberStars` is a view, not a table — which is what
- * makes the whole design work: an officer correcting an attendance row changes
- * the stars immediately and everywhere, with nothing to recompute and nothing
- * that can fall out of step.
+ * Stars are derived: `memberStars` is a view, not a table. An officer
+ * correcting an attendance row changes the stars everywhere at once, with
+ * nothing to recompute and nothing that can fall out of step.
  *
  * The view is `security_invoker`, so these reads see exactly what the caller
- * is allowed to see. That matters because a member's participation record is
- * public but the attendance rows underneath it are not.
+ * is allowed to see. A member's participation record is public but the
+ * attendance rows underneath it are not.
  */
 
 export interface StarCell {
@@ -25,30 +24,29 @@ export interface StarCell {
    * ordinary sprint Monday.
    *
    * ⚠️ These replaced a `meetingName` column that coalesced through the
-   * WORKSHOP's title — a per-workshop value being used as a per-meeting
-   * heading. `groupByMeeting` kept whichever row arrived first and
-   * `getStarsForUser` orders only by `desc(meetings.startsAt)` with no
-   * tiebreaker, so a member who attended "Supabase" and "Next.js" on one
-   * unnamed Monday got a heading that was one of the two, chosen arbitrarily,
-   * and able to change between requests. It then stuttered against the row
-   * immediately beneath it: "Supabase / Supabase ★ / Next.js ★".
+   * WORKSHOP's title, a per-workshop value used as a per-meeting heading.
+   * `groupByMeeting` keeps whichever row arrives first and `getStarsForUser`
+   * orders only by `desc(meetings.startsAt)` with no tiebreaker, so a member
+   * who attended "Supabase" and "Next.js" on one unnamed Monday got one of the
+   * two as the heading, chosen arbitrarily and able to change between
+   * requests. It stuttered against the row beneath it: "Supabase / Supabase ★
+   * / Next.js ★".
    *
-   * Passed to `meetingTitle` with the night's cells, which composes the
-   * heading these were always meant to produce — "Workshop: Supabase &
-   * Next.js" — from all of them rather than from whichever one sorted first.
+   * `meetingTitle` composes the heading from all of a night's cells instead:
+   * "Workshop: Supabase & Next.js".
    */
   meetingNameOverride: string | null;
   meetingKind: string | null;
   meetingStartsAt: Date;
   /**
    * The officer's word for the session. With `projectName`, this is exactly
-   * `TitleableWorkshop`, so a cell can be passed to `workshopLabel` rather
-   * than having the same fallback written out a second time here.
+   * `TitleableWorkshop`, so a cell can go straight to `workshopLabel` instead
+   * of repeating its fallback here.
    */
   title: string | null;
   /**
    * All three are null for a workshop that teaches a skill rather than a
-   * codebase — `workshops.projectId` is nullable and the join below is a left
+   * codebase. `workshops.projectId` is nullable and the join below is a left
    * one, so such a star reaches the member's record instead of vanishing from
    * it.
    */
@@ -85,7 +83,7 @@ const cellColumns = {
 /**
  * One member's record, newest first.
  *
- * Only rows where something was earned exist at all — the view is built from
+ * Only rows where something was earned exist at all. The view is built from
  * participation, so a meeting somebody skipped produces no row rather than a
  * row of falses. The grid fills the gaps; the query does not carry them.
  */
@@ -97,8 +95,8 @@ export const getStarsForUser = cache(
       .innerJoin(meetings, eq(meetings.id, memberStars.meetingId))
       .innerJoin(workshops, eq(workshops.id, memberStars.workshopId))
       // Left: `workshops.projectId` is nullable, so a member who attended a
-      // skill session — career-fair readiness, say — has a real star whose
-      // row an inner join would delete from their own record.
+      // skill session like career-fair readiness has a real star whose row an
+      // inner join would delete from their own record.
       .leftJoin(projects, eq(projects.id, memberStars.projectId))
       .where(
         and(
@@ -110,13 +108,9 @@ export const getStarsForUser = cache(
       .orderBy(desc(meetings.startsAt));
 
     // Named one at a time rather than `as Promise<StarCell[]>` over the whole
-    // chain.
-    //
-    // The old comment claimed the cast "covers only the columns the VIEW
-    // cannot prove NOT NULL" — but a cast on the chain covers EVERY column,
-    // including the genuinely nullable ones, so the claim described an
-    // intention the code had no way to enforce. Widening `StarCell` later
-    // would have been silently absorbed by it.
+    // chain. A cast on the chain covers EVERY column, including the genuinely
+    // nullable ones, so a later widening of `StarCell` would be absorbed by it
+    // in silence.
     //
     // These five are the ones Postgres cannot prove and the joins above can:
     // `memberStars` is a view, so every column comes back optional, while the
@@ -153,11 +147,10 @@ export function totalStars(cells: StarCell[]): StarTotals {
 /**
  * Every star earned at one workshop, for the workshop page's roster.
  *
- * Note this is the participation matrix column, not the attendance list. A
- * member who skipped the workshop and competed anyway appears here — competing
- * earns the workshop star — with no attendance row behind them. That is the
- * ambiguity the design deliberately keeps out of Airtable, and it is correct
- * in both places precisely because neither is trying to be the other.
+ * This is the participation matrix column, not the attendance list. A member
+ * who skipped the workshop and competed anyway appears here, because competing
+ * earns the workshop star, with no attendance row behind them. The design
+ * keeps that ambiguity out of Airtable.
  */
 export const getStarsForWorkshop = cache(
   async (

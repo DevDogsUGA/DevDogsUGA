@@ -3,16 +3,15 @@ import type { StarTotals } from "~/server/loaders/stars";
 /**
  * The three stars a member can earn at one workshop.
  *
- * Three separate marks rather than one count, because they mean genuinely
- * different things and collapsing them loses the distinction the whole model
- * is built on:
+ * Three separate marks rather than one count, because they mean different
+ * things and collapsing them loses the distinction the model is built on:
  *
- *   * **Workshop** — you were there, or you competed. Competing earns it even
+ *   * **Workshop**: you were there, or you competed. Competing earns it even
  *     without attendance, which is why a member can hold this with no
  *     attendance row behind it.
- *   * **Competition** — your team's entry was frozen at judging. This is the
+ *   * **Competition**: your team's entry was frozen at judging. This is the
  *     one that cannot be taken away afterwards.
- *   * **Win** — your team won.
+ *   * **Win**: your team won.
  *
  * A win implies the other two, so they nest visually rather than reading as
  * three unrelated achievements.

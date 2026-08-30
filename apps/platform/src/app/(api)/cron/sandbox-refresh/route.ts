@@ -8,10 +8,10 @@ import { refreshExpiringConnections } from "~/server/supabase/oauth";
  *
  * Refreshes Supabase OAuth grants before they lapse.
  *
- * Access tokens last 86,400s (measured), so a daily pass has ample margin — and
- * the margin matters, because a lapsed grant does not fail visibly. It makes
- * provisioning, pre-warm and the reconcile all quietly skip that owner's
- * environments until somebody notices their instance never woke up.
+ * Access tokens last 86,400s (measured), so a daily pass has ample margin. The
+ * margin matters because a lapsed grant does not fail visibly: provisioning,
+ * pre-warm and the reconcile skip that owner's environments with no error
+ * until somebody notices their instance never woke up.
  *
  * Auth: `Authorization: Bearer <CRON_SECRET>`, skipped when running locally.
  */

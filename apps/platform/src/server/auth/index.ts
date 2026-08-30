@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 
 /**
  * Starts the OAuth flow with a specified provider.
- * @param provider One of `"google"`, `"discord"`, or `"github"`
+ * @param provider One of `"google"`, `"discord"`, `"github"`, or `"linkedin_oidc"`
  * @param callbackPath Where to navigate the user after the OAuth flow is complete
  */
 export async function authenticate(

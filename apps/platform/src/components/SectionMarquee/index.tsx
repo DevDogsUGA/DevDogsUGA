@@ -18,19 +18,18 @@ interface SectionMarqueeProps {
   duration?: number;
   copyZBase?: number;
   /**
-   * Opts this marquee into the hover-invert interaction defined in
-   * globals.css: hovering one item dims every other item, in every looped
-   * copy. Meant for marquees whose items are individually meaningful links
-   * (e.g. the homepage's section-highlight cards), not the plain scrolling
-   * text strips.
+   * Opts into the hover-invert interaction defined in globals.css: hovering one
+   * item dims every other item, in every looped copy. For marquees whose items
+   * are links, such as the homepage's section-highlight cards, not the plain
+   * scrolling text strips.
    */
   hoverInvert?: boolean;
   /** See {@link MarqueeTrack}'s prop of the same name. */
   keepHoveredInView?: boolean;
   /**
-   * The one glyph this strip puts between its items, injected into every
-   * {@link MarqueeItem} below. A strip of items wants one; a strip of cards has
-   * no dividers to draw, which is why this is optional rather than required.
+   * The divider glyph this strip puts between its items, injected into every
+   * {@link MarqueeItem} below. Optional because a strip of cards has no
+   * dividers to draw.
    */
   icon?: MarqueeIcon;
   children: ReactNode[];

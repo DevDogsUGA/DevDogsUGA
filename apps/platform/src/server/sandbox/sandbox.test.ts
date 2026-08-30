@@ -110,8 +110,8 @@ describe("mapProjectStatus", () => {
 
   it("keeps 'gone' out of the status mapping entirely", () => {
     // Orphaning deletes Vault secrets and revokes credentials, so it must
-    // follow from a definite 404 in the nightly reconcile -- never from a
-    // status string that happened to arrive during a blip.
+    // follow from a definite 404 in the nightly reconcile, never from a status
+    // string that happened to arrive during a blip.
     expect(isGone("REMOVED")).toBe(true);
     expect(mapProjectStatus("REMOVED")).toBe("provisioning");
     expect(isGone("INACTIVE")).toBe(false);
@@ -163,8 +163,8 @@ describe("buildProxyHostname", () => {
   });
 
   it("is unguessable from the team name alone", () => {
-    // Not collision avoidance -- the unique constraint handles that -- but so
-    // that knowing a team exists does not tell you where its instance lives.
+    // The unique constraint handles collisions. This is so that knowing a
+    // team exists does not tell you where its instance lives.
     const a = buildProxyHostname("Lantern", PROD);
     const b = buildProxyHostname("Lantern", PROD);
     expect(a).not.toBe(b);
@@ -275,7 +275,7 @@ describe("member tokens", () => {
     //
     // Pinned to externally computed vectors rather than compared against the
     // Worker's implementation, so that changing BOTH in the same way still
-    // fails here. These are plain `sha256(token)`, hex — reproducible with
+    // fails here. These are plain `sha256(token)`, hex. Reproduce one with
     // `printf 'dd_secret_abc' | sha256sum`.
     expect(await hashToken("dd_publishable_test")).toBe(
       "030541452058b0bffaaf9bc47f056cb7ccef4daf00073a0fd5f953ec5f5d4f19",

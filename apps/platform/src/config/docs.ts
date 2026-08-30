@@ -3,28 +3,26 @@ import type { NavIcon } from "./nav";
 /**
  * Where the docs live on GitHub, for the "edit this page" links.
  *
- * The repo name and branch are constants rather than env vars: docs are now
+ * The repo name and branch are constants rather than env vars: docs are
  * compiled into the bundle from this repository's own `docs/` folder at build
- * time, so the source of a rendered page is always this repo on its default
- * branch — there is nothing per-environment to configure.
+ * time, so a rendered page's source is always this repo on its default branch.
  */
 export const DOCS_REPO = "DevDogs-Website";
 export const DOCS_BRANCH = "main";
 
 /**
- * The mark shown for each documented project — in the sidebar's project
+ * The mark shown for each documented project, in the sidebar's project
  * switcher, the navbar's Docs menu, and on the docs landing page.
  *
  * Keyed by docs slug, which is the name of the project's workspace directory
  * (`docs/schedule-builder/` documents `apps/schedule-builder`). The icon and
- * fill are the ones that project already wears in the fullscreen app
- * switcher, so DogDays is the same red calendar-and-bone wherever you meet it —
- * ~/config/projects.ts holds those originals, and a project whose mark
- * changes there wants the matching change here.
+ * fill are the ones that project already wears in the fullscreen app switcher.
+ * ~/config/projects.ts holds those originals, and a project whose mark changes
+ * there wants the matching change here.
  *
- * A project absent from this map is not an error: it falls back to the
- * generic book below, which is what a newly documented project gets before
- * anyone has chosen a mark for it.
+ * A project absent from this map is not an error: it falls back to the generic
+ * book below, which is what a newly documented project gets before anyone
+ * picks a mark for it.
  */
 export const DOCS_PROJECT_MARKS: Record<
   string,
@@ -47,11 +45,11 @@ export function docsProjectMark(slug: string) {
 /**
  * The sidebar label for a folder's own index page.
  *
- * An index page is titled for the thing it introduces — `docs/monorepo/index.md`
- * is "Monorepo" — which is right for its heading, its breadcrumb and its search
- * result, and wrong for the sidebar, where the folder's name is already on the
- * row above it and the project's name is in the switcher above that. Three
- * copies of one word is what makes a tree look like it is repeating itself.
+ * An index page is titled for the thing it introduces, so
+ * `docs/monorepo/index.md` is "Monorepo". That is right for its heading, its
+ * breadcrumb and its search result, and wrong for the sidebar, where the
+ * folder's name is already on the row above it and the project's name is in
+ * the switcher above that, making three copies of one word.
  *
  * So the sidebar alone relabels that row. It is one word for every project
  * rather than a per-page frontmatter field, because the row's job is identical
@@ -66,14 +64,13 @@ export const DOCS_INDEX_LABEL = "Overview";
  *
  * Six projects listed flat is an accurate list and a poor menu: it puts the
  * repository itself, four deployables and a set of shared packages on one
- * level, so a newcomer reads six equal choices and has no way to tell which
- * one they are supposed to open first. The groups say what kind of thing each
- * project is, which is the question the flat list left unanswered.
+ * level, so a newcomer reads six equal choices with no way to tell which to
+ * open first. The groups say what kind of thing each project is.
  *
  * Membership only. Projects keep the order their `order:` frontmatter gives
- * them WITHIN a group — the group decides which heading a project sits under
- * and the sequence of the headings, and nothing else, so there is still one
- * source of truth for where a project sits among its peers.
+ * them WITHIN a group. The group decides which heading a project sits under and
+ * the sequence of the headings, and nothing else, so there is still one source
+ * of truth for where a project sits among its peers.
  *
  * A project missing from every group is not an error and must never vanish: it
  * collects under `UNGROUPED_LABEL` at the end, so documenting a new project is
@@ -85,8 +82,8 @@ export const DOCS_GROUPS: readonly {
   label: string;
   /**
    * Which side of the navbar menu's two-column layout this group takes.
-   * Omitted means left. Only the wide menu reads it — the sidebar switcher
-   * and the landing page stack their groups in one column and ignore it.
+   * Omitted means left. Only the wide menu reads it. The sidebar switcher and
+   * the landing page stack their groups in one column and ignore it.
    */
   column?: "left" | "right";
   slugs: readonly string[];
@@ -115,8 +112,8 @@ export interface DocsProjectGroup<T> {
  * Partitions projects into `DOCS_GROUPS`, dropping groups that came out empty.
  *
  * Generic over the project shape because the three callers pass three
- * different ones — the navbar's link, the sidebar's switcher row and the
- * landing page's tile — and all this needs from any of them is `slug`.
+ * different ones: the navbar's link, the sidebar's switcher row and the landing
+ * page's tile. All this needs from any of them is `slug`.
  */
 export function groupDocsProjects<T extends { slug: string }>(
   projects: T[],

@@ -2,10 +2,10 @@
  * The election tally: Borda, Copeland, scoring, and the standings chain.
  *
  * Pure functions over plain arrays, with no database access anywhere in this
- * file. Purity is what makes it safe to move out of Postgres — the tally reads
- * its inputs, computes, and writes, none of which needs to happen in the
- * database to be correct, and all of which is easier to test as functions over
- * arrays than as PL/pgSQL.
+ * file. That is what made it safe to move out of Postgres. The tally reads its
+ * inputs, computes, and writes, none of which needs to happen in the database
+ * to be correct, and all of which is easier to test as functions over arrays
+ * than as PL/pgSQL.
  *
  * What stays in the database is every constraint the tally writes against: the
  * tiebreak's partial unique index, the `scaled` range check, and the
@@ -26,7 +26,7 @@ export interface BordaResult {
   score: number;
   /** score / (V x (n - 1)), in [0, 1]. */
   scaled: number;
-  /** Ties share a placement, and legitimately so — see `standings`. */
+  /** Ties share a placement, and legitimately so. See `standings`. */
   placement: number;
 }
 
@@ -41,10 +41,10 @@ export const ELECTION_CEILING = 400;
  * Borda count over complete ballots.
  *
  * `scaled` normalizes against the CEILING (what a team ranked first on every
- * ballot would score), not against the field. Min-max scaling — leader takes
- * the full share, trailer takes zero — was rejected: it is undefined when every
- * team ties, and it manufactures a decisive result from noise, spreading five
- * teams within one Borda point of each other across the entire block.
+ * ballot would score), not against the field. Min-max scaling, where the leader
+ * takes the full share and the trailer zero, was rejected: it is undefined when
+ * every team ties, and it manufactures a decisive result from noise, spreading
+ * five teams within one Borda point of each other across the entire block.
  *
  * Normalizing against the ceiling means margins survive. Teams that finish
  * close together score close together.
@@ -96,9 +96,9 @@ export interface CopelandResult {
 /**
  * Copeland over pooled ballots.
  *
- * Step 2 pools every ballot from every POINTS election — team-voted and
- * officer-voted alike — rather than running on a dedicated ballot. Teams have
- * already stated their preferences several times over; asking again adds
+ * Step 2 pools every ballot from every POINTS election, team-voted and
+ * officer-voted alike, rather than running on a dedicated ballot. Teams have
+ * already stated their preferences several times over, and asking again adds
  * fatigue without adding information.
  *
  * The tiebreak ballot is excluded by the caller. It is step 3, and pooling it
@@ -108,7 +108,7 @@ export interface CopelandResult {
  * the opposite conclusion. A tournament where every pair is decisive can still
  * tie every team on score: A beats B, B beats C, C beats A gives every team one
  * win and one loss. Any regular tournament does this, and they exist for every
- * odd team count from three up — which is why step 3 exists and is guaranteed
+ * odd team count from three up. That is why step 3 exists and is guaranteed
  * rather than probable.
  */
 export function copeland(
@@ -178,7 +178,7 @@ export function requirementPoints(
  * The comparative block.
  *
  * Every points election is weighted equally, so with `k` of them each is worth
- * `ceiling / k`. The rounding happens ONCE, on the block total — rounding each
+ * `ceiling / k`. The rounding happens ONCE, on the block total. Rounding each
  * of three elections separately would cap a perfect team at 399.
  */
 export function electionPoints(
@@ -232,7 +232,7 @@ export type StandingsOutcome =
   | {
       status: "ok";
       standings: Standing[];
-      /** One entry per pair the tiebreak actually decided — see below. */
+      /** One entry per pair the tiebreak actually decided. See below. */
       disclosures: { higherTeamId: TeamId; lowerTeamId: TeamId }[];
     };
 
@@ -326,8 +326,8 @@ export function standings(input: StandingsInput): StandingsOutcome {
   const disclosures: { higherTeamId: TeamId; lowerTeamId: TeamId }[] = [];
 
   // Group by total points, then resolve each tied group in turn. Only pairs
-  // the tiebreak ACTUALLY decides are disclosed — the officer ranking is never
-  // published as an ordering, so a tie among three teams discloses the chain
+  // the tiebreak ACTUALLY decides are disclosed, because the officer ranking is
+  // never published as an ordering: a tie among three teams discloses the chain
   // among those three and nothing else.
   const byTotal = new Map<number, typeof rows>();
   for (const row of rows) {
@@ -371,9 +371,9 @@ export function standings(input: StandingsInput): StandingsOutcome {
       }
 
       // Step 3: the officer tiebreak. It is the only step guaranteed to
-      // resolve, and it is the one somebody will forget to cast because it
-      // usually is not needed — so a tie reaching here without it blocks
-      // rather than being decided on a coin flip.
+      // resolve, and the one somebody will forget to cast because it usually
+      // is not needed. A tie reaching here without it blocks rather than being
+      // decided on a coin flip.
       if (tiebreak === null) {
         blocked = true;
         continue;

@@ -13,21 +13,21 @@ const TRIGGER_CLS =
   "hover:shadow-block-md transition-lift flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5";
 
 /**
- * While the dialog it opens is open, the trigger steps out of sight: the
+ * While the dialog it opens is open, the trigger steps out of sight. The
  * meeting dialog beside (or beneath) the map has no second thing to offer.
  * `invisible` rather than `hidden`, so the button keeps its place in the row
- * and is back — and focusable — the instant the dialog reports closed, which
- * is before Radix returns focus to it.
+ * and is back and focusable the instant the dialog reports closed, which is
+ * before Radix returns focus to it.
  */
 const HIDE_WHILE_OPEN = "data-[state=open]:invisible";
 
 /**
- * Every way of showing intent short of clicking: a pointer arriving, a
- * keyboard focus, a finger landing. Each starts the map chunk downloading so
- * it is normally already here when the dialog opens. Calling it twice is free.
+ * Every way of showing intent short of clicking. A pointer arriving, a keyboard
+ * focus, a finger landing. Each starts the map chunk downloading so it is
+ * normally already here when the dialog opens. Calling it twice is free.
  *
- * This stays here rather than moving into the shared route-dialog trigger:
- * warming a chunk only pays off because this dialog's map is 46 KB of generated
+ * This stays here rather than moving into the shared route-dialog trigger.
+ * Warming a chunk only pays off because this dialog's map is 46 KB of generated
  * path data, and a dialog without such a chunk would be preloading nothing.
  */
 const INTENT_HANDLERS = {
@@ -39,10 +39,10 @@ const INTENT_HANDLERS = {
 /**
  * A button that opens the dialog in place.
  *
- * The meeting dialog renders it `tone="dark"` and as the `aside` of a pair,
- * so that on a wide screen the map opens beside the meeting rather than on
- * top of it; that is why `open` is held here rather than left to Radix — an
- * aside has to be able to say when it is open.
+ * The meeting dialog renders it `tone="dark"` and as the `aside` of a pair, so
+ * on a wide screen the map opens beside the meeting rather than on top of it.
+ * That is why `open` is held here rather than left to Radix. An aside has to be
+ * able to say when it is open.
  */
 export default function FindUs({
   building = "DLW",
@@ -80,13 +80,13 @@ export default function FindUs({
 }
 
 /**
- * The same dialog, reached through a URL. `/events/directions` is a route
- * under the events layout, which keeps the calendar mounted behind it, so
- * following this swaps only the leaf — no remount of the page underneath, and
- * the URL is shareable.
+ * The same dialog, reached through a URL. `/events/directions` is a route under
+ * the events layout, which keeps the calendar mounted behind it, so following
+ * this swaps only the leaf. The page underneath does not remount, and the URL
+ * is shareable.
  *
  * {@link RouteDialogLink} carries the props that make that URL behave like a
- * dialog rather than a page — no scroll to the top, and the mark that lets
+ * dialog rather than a page: no scroll to the top, and the mark that lets
  * closing go back instead of pushing.
  */
 export function FindUsLink({

@@ -1,23 +1,23 @@
 import { EVENT_TZ } from "./eventTime";
 
 /**
- * What to call a meeting, for the surfaces that need a string rather than a
- * row of chips.
+ * What to call a meeting, for the places that need a string rather than a row
+ * of chips.
  *
  * `meetings.nameOverride` is nullable and usually null: a sprint Monday is
  * described by its workshops and its judging, and an officer retyping that in
- * prose every week was the duplication the rename removed. The schedule
- * renders no heading for such a night at all — the chips and the workshop list
- * *are* the row.
+ * prose every week was the duplication the rename removed. The schedule renders
+ * no heading for such a night at all. The chips and the workshop list *are* the
+ * row.
  *
- * But four surfaces cannot render nothing:
+ * But four callers cannot render nothing:
  *
  * - the page `<title>`, which would otherwise read " | DevDogs";
  * - `eventLd`'s `Event.name`, which Google's rich-result guidelines require
- *   for these URLs to surface as events rather than as pages;
- * - the route dialog's `DialogTitle`, which is the accessible name Radix
- *   announces — and which today falls back to "Meeting not found", a sentence
- *   that would start appearing over meetings that were found;
+ *   for these URLs to appear as events rather than as pages;
+ * - the route dialog's `DialogTitle`, the accessible name Radix announces,
+ *   which today falls back to "Meeting not found", a sentence that would start
+ *   appearing over meetings that were found;
  * - the stars grid and the CSV export, which identify a night in a table.
  *
  * So the heading still EXISTS; it is simply not painted on the schedule. This
@@ -26,7 +26,7 @@ import { EVENT_TZ } from "./eventTime";
  *
  * ## Deliberately not the slug
  *
- * A slug is a permanent URL and this string moves — add a workshop and it
+ * A slug is a permanent URL and this string moves: add a workshop and it
  * changes. `clubDateKey` is the slug source for exactly that reason.
  *
  * ## Client-safe
@@ -59,24 +59,24 @@ const WEEKDAY_DATE = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
-/** "Monday, September 21" — the identifier every meeting always has. */
+/** "Monday, September 21", the identifier every meeting always has. */
 function dateTitle(at: Date): string {
   return WEEKDAY_DATE.format(at);
 }
 
 /**
- * The word a row prints for a workshop. Total — there is always something.
+ * The word a row prints for a workshop. Total: there is always something.
  *
  * The fallback used to live at the call sites as `workshopLabel(x) ??
  * "Workshop"`, copy-pasted at four of them, while `ScheduleList`'s own comment
  * asserted that "the schedule and the permalink cannot print two different
  * words for one row". That invariant was held by four string literals and no
- * code, which is the same as not being held: a fifth surface renders a
- * workshop and either picks its own fallback or prints nothing.
+ * code, which is the same as not being held: a fifth caller renders a workshop
+ * and either picks its own fallback or prints nothing.
  *
- * Making it total moved the invariant into the type. It also surfaced the
- * surface that had never been given one at all — see `judgingForMeetings`,
- * which was still labelling judging nights off the project name.
+ * Making it total moved the invariant into the type. It also found the caller
+ * that had never been given a fallback at all, `judgingForMeetings`, which was
+ * still labelling judging nights off the project name.
  */
 export function workshopLabel(workshop: TitleableWorkshop): string {
   return workshopName(workshop) ?? WORKSHOP_FALLBACK_LABEL;
@@ -105,10 +105,10 @@ export const WORKSHOP_FALLBACK_LABEL = "Workshop";
 /**
  * The meeting's name, in descending order of how much somebody meant it.
  *
- * 1. `nameOverride` — an officer wrote this night a name, so use it.
- * 2. `kind` — "Build Session", "Study Session". Authored, just not bespoke.
- * 3. the workshops it teaches — "Workshop: Next.js & Flutter".
- * 4. the date — always available, since `startsAt` is `not null`.
+ * 1. `nameOverride`: an officer wrote this night a name, so use it.
+ * 2. `kind`: "Build Session", "Study Session". Authored, just not bespoke.
+ * 3. the workshops it teaches: "Workshop: Next.js & Flutter".
+ * 4. the date, always available, since `startsAt` is `not null`.
  *
  * `workshops` is optional because two callers genuinely do not have it: the
  * stars grid and the CSV export select a meeting row without its agenda, and

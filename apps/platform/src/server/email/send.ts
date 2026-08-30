@@ -4,15 +4,14 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 /**
  * Sending, through the Cloudflare Workers `send_email` binding.
  *
- * **Not Supabase.** Its email is auth-transactional only — it fires on signup
- * confirmation, magic link and password recovery, and there is no
- * general-purpose send API to call. Reaching for `inviteUserByEmail` to get
- * around that is worse than it looks: it provisions an `auth.users` row, so a
- * team invitation would create an account for somebody who already has one, or
- * for a teammate who never accepts.
+ * **Not Supabase.** Its email is auth-transactional only: signup confirmation,
+ * magic link, password recovery. There is no general-purpose send API.
+ * `inviteUserByEmail` is not a way around that, because it provisions an
+ * `auth.users` row, so a team invitation would create an account for somebody
+ * who already has one, or for a teammate who never accepts.
  *
  * The platform already runs on Workers via OpenNext, so the binding costs one
- * line of config and no new vendor, no API key, and no secret to rotate.
+ * line of config: no new vendor, no API key, no secret to rotate.
  */
 
 export const SENDER = {
@@ -23,11 +22,10 @@ export const SENDER = {
 /**
  * Why a send failed, in the terms the caller has to branch on.
  *
- * `suppressed` is the one that matters. It means the address previously
- * bounced or reported spam, so the message will never arrive no matter how
- * many times the cron retries — and the lead should be told their invitee
- * cannot be reached rather than left waiting. Swallowing it produces an
- * invitation that looks sent forever.
+ * `suppressed` is the one that matters. The address previously bounced or
+ * reported spam, so no number of cron retries will deliver it. Swallow it and
+ * the lead is never told their invitee cannot be reached, leaving an invitation
+ * that looks sent forever.
  */
 export type SendFailure =
   "not_configured" | "suppressed" | "sender_not_verified" | "unknown";
@@ -46,10 +44,10 @@ interface EmailBinding {
 }
 
 /**
- * Why the binding is absent, because the two cases deserve opposite
- * reactions: outside a Worker its absence is the normal state of `next dev`
- * and every test, while *inside* a Worker it means the deployment itself is
- * misconfigured and mail is silently not going out.
+ * Why the binding is absent. The two cases deserve opposite reactions: outside
+ * a Worker its absence is the normal state of `next dev` and every test, while
+ * *inside* a Worker it means the deployment is misconfigured and mail is
+ * silently not going out.
  */
 type MissingBinding = "outside-worker" | "worker-unbound";
 
@@ -60,8 +58,8 @@ function binding():
     const email = (env as unknown as { EMAIL?: EmailBinding }).EMAIL;
     return email ? { email } : { email: null, missing: "worker-unbound" };
   } catch {
-    // Outside a Worker — `next dev` without `--experimental-https`, a test, a
-    // script. Not an error: the caller decides whether a missing binding is
+    // Outside a Worker: `next dev` without `--experimental-https`, a test, a
+    // script. Not an error. The caller decides whether a missing binding is
     // fatal, and for an invitation it is not.
     return { email: null, missing: "outside-worker" };
   }
@@ -74,7 +72,7 @@ export function isEmailConfigured(): boolean {
 
 // Once per process, not once per send: the binding cannot appear mid-process,
 // and a line repeated across a seeding run's fan-out is noise that trains
-// people to ignore it. Logs the template name and the reason — never the
+// people to ignore it. Logs the template name and the reason, never the
 // recipient address.
 let announcedMissing = false;
 
@@ -103,10 +101,9 @@ function announceMissing(missing: MissingBinding, template: string): void {
 /**
  * Renders a template and sends it to one address.
  *
- * Deliberately returns a result rather than throwing. Every caller of this is
- * a side effect after a committed write — the invite row is the source of
- * truth and the email is the notification — so a failure has to be recorded
- * and retried, not unwound.
+ * Returns a result rather than throwing. Every caller is a side effect after a
+ * committed write: the invite row is the source of truth, the email is the
+ * notification. A failure has to be recorded and retried, not unwound.
  */
 export async function sendTemplate<K extends keyof Templates>(
   to: string,
@@ -148,12 +145,11 @@ export async function sendTemplate<K extends keyof Templates>(
  * Sends to several addresses, one call each.
  *
  * Not one call with several recipients: `to` is a single address on this
- * binding, and more importantly a shared recipient list would put every
- * invitee's address in front of every other invitee. Re-forming a team fans
- * out one invite per member, which at a cap of four is never close to the
- * 50-recipient limit — but fan-out is the shape that eventually reaches it,
- * so this is sequential rather than a `Promise.all` that would burst straight
- * through the rate limit.
+ * binding, and a shared recipient list would put every invitee's address in
+ * front of every other invitee. Re-forming a team fans out one invite per
+ * member, which at a cap of four never approaches the 50-recipient limit, but
+ * fan-out is the shape that eventually reaches it. Hence sequential, rather
+ * than a `Promise.all` that would burst through the rate limit.
  */
 export async function sendEach<K extends keyof Templates>(
   recipients: { to: string; props: Templates[K] }[],

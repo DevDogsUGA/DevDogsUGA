@@ -22,13 +22,12 @@ import {
 } from "~/lib/eventTime";
 import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
 // `resolveMeetingSegments` as a VALUE comes from `~/lib/meetingSegments`, not
-// from the loader that re-exports it. The loader's first import is
-// `~/server/db`, whose entry point runs `createDb(env.DB_URL, …)` at module
-// scope — an observable side effect a bundler cannot drop — so importing the
+// from the loader that re-exports it: the loader imports `~/server/db`, whose
+// entry point runs `createDb(env.DB_URL, …)` at module scope, so importing the
 // value through it from a client component pulls the database module into the
-// browser graph, where t3-env throws on `env.DB_URL`. During HYDRATION, not
-// SSR: the server render looks perfect and it breaks only in a visitor's
-// console. The types below are erased and were never the problem.
+// browser graph, where t3-env throws on `env.DB_URL` during HYDRATION, not SSR.
+// The server render looks perfect and it breaks only in a visitor's console. The
+// types below are erased and were never the problem.
 import { resolveMeetingSegments } from "~/lib/meetingSegments";
 import type {
   MeetingInRange,
@@ -39,16 +38,15 @@ import type {
 /**
  * The upcoming nights, as a list.
  *
- * A **list**, not a grid: real semesters do not have four nights, they have
- * eleven, or three, or none in July, and a list has no opinion about how many
- * there are. Each night is a console tile — the same bordered translucent row
- * the audit log uses — with the date down the left edge, so twelve of them
- * read as one schedule. This is the "coming up" half of the page's ledger;
+ * A **list**, not a grid: real semesters have eleven nights, or three, or none
+ * in July, and a list has no opinion about how many there are. Each night is a
+ * console tile, the same bordered translucent row the audit log uses, with the
+ * date down the left edge. This is the "coming up" half of the page's ledger;
  * {@link PastMeetings} is the other half, as a table.
  *
- * Fetches nothing. Every meeting here was already loaded by whoever renders
- * the page — the calendar beside it draws the same rows, and a second query
- * would be the same data read twice at a different instant.
+ * Fetches nothing. Every meeting here was already loaded by whoever renders the
+ * page: the calendar beside it draws the same rows, and a second query would be
+ * the same data read twice at a different instant.
  */
 
 interface Props {
@@ -59,10 +57,9 @@ interface Props {
    * The instant the page is rendering at, passed in rather than read here.
    *
    * A `new Date()` in this tree would drop the whole route out of the static
-   * shell with no build warning at all — see `docs/monorepo/stack/nextjs.md`.
-   * It is
-   * also the only way the countdown on every row can agree with the calendar's
-   * "today": one read, threaded down, instead of a dozen a few ms apart.
+   * shell with no build warning; see `docs/monorepo/stack/nextjs.md`. It is also
+   * the only way the countdown on every row agrees with the calendar's "today":
+   * one read, threaded down, instead of a dozen a few ms apart.
    */
   now: Date;
 }
@@ -70,9 +67,8 @@ interface Props {
 /**
  * Intl with an explicit `timeZone`, not `@date-fns/tz`: `TZDate`'s constructor
  * runs `new Date()` unconditionally, so building one is a clock read even when
- * the value it produces has nothing to do with now. `eventTime` has no
- * weekday helper to reach for — its formatters all print a full date, which is
- * exactly what this block exists to avoid repeating — so the zone comes from
+ * the value it produces has nothing to do with now. `eventTime` has no weekday
+ * helper, since its formatters all print a full date, so the zone comes from
  * there and the shape is spelled here.
  */
 const WEEKDAY_FORMAT = new Intl.DateTimeFormat("en-US", {
@@ -88,14 +84,14 @@ const DAY_FORMAT = new Intl.DateTimeFormat("en-US", {
 /**
  * One week of the schedule, as the reader experiences it.
  *
- * The week is the club's real unit: the Wednesday build session exists
- * *because* of the Monday's sprint, and `CompetitionTimeline` has always drawn
- * the format that way. Grouping by it also pays for itself once there are two
- * nights most weeks — twice the rows, half as many headings.
+ * The week is the club's real unit: the Wednesday build session exists *because*
+ * of the Monday's sprint, and `CompetitionTimeline` has always drawn the format
+ * that way. It also pays for itself once there are two nights most weeks: twice
+ * the rows, half as many headings.
  *
  * Keyed on the ISO date of the week's Monday in the club's zone. Never
  * `getDay()`: a Monday 18:00 Athens meeting is Tuesday in UTC, so the ambient
- * zone files it in the *next* week — and files it differently during SSR than
+ * zone files it in the *next* week, and files it differently during SSR than
  * during hydration, which is a wrong answer and a hydration mismatch at once.
  */
 function weekKey(at: Date): string {
@@ -128,14 +124,13 @@ function weekLabel(key: string): string {
 /**
  * The filters offered, derived from what is actually in the list.
  *
- * A fixed set of chips would offer "Build Session" in a summer with none, and
- * a filter for a kind nothing on screen has is a control that returns an empty
- * list. Derived from the rows in hand, it offers exactly what is there.
+ * A fixed set of chips would offer "Build Session" in a summer with none, and a
+ * filter for a kind nothing on screen has returns an empty list. Derived from
+ * the rows in hand, it offers exactly what is there.
  *
- * NOT because `kind` is open-ended — it is closed at four values, by
- * `parseMeetingKind` upstream and `meetings_kind_choices` in the database.
- * This comment used to say otherwise; the reason is availability, not
- * open-endedness.
+ * NOT because `kind` is open-ended. It is closed at four values, by
+ * `parseMeetingKind` upstream and `meetings_kind_choices` in the database. This
+ * comment used to say otherwise; the reason is availability, not open-endedness.
  */
 function availableFilters(meetings: MeetingInRange[]): string[] {
   const labels = new Set<string>();
@@ -184,10 +179,10 @@ export default function ScheduleList({ meetings, now }: Props) {
         Coming up
       </h3>
 
-      {/* Sits with the list it acts on rather than in the card header, where
-          the console puts a card's one ACTION and where check-in already
-          lives. Hidden when there is nothing to tell apart — a single chip
-          filters a list into itself. */}
+      {/* Sits with the list it acts on rather than in the card header, where the
+          console puts a card's one ACTION and where check-in already lives.
+          Hidden when there is nothing to tell apart: a single chip filters a
+          list into itself. */}
       {filters.length > 1 && (
         <div
           className="flex flex-wrap gap-1.5"
@@ -215,11 +210,11 @@ export default function ScheduleList({ meetings, now }: Props) {
       {meetings.length === 0 ? (
         <EmptySchedule />
       ) : shown.length === 0 ? (
-        // A second empty state, distinct from the one above on purpose. That
-        // one is a fact about the club — there are no meetings — and this one
-        // is a fact about the filter, which the reader can undo. Saying "no
-        // meetings coming up" here would be a lie, and the chips stay visible
-        // above so there is a way back.
+        // A second empty state, distinct from the one above on purpose. That one
+        // is a fact about the club, that there are no meetings; this one is a
+        // fact about the filter, which the reader can undo. Saying "no meetings
+        // coming up" here would be a lie, and the chips stay visible above so
+        // there is a way back.
         <NoMatches onClear={() => setActive(null)} />
       ) : (
         <div className="flex flex-col gap-6">
@@ -230,8 +225,8 @@ export default function ScheduleList({ meetings, now }: Props) {
               </h4>
               {/* The console's list idiom: a stack of bordered tiles, like the
                   audit log's rows, rather than the ruled ledger the light
-                  dialect draws. Its own `ul` per week — an `h4` cannot be a
-                  child of `ul`, whose only legal children are `li`. */}
+                  dialect draws. Its own `ul` per week, because an `h4` cannot
+                  be a child of `ul`, whose only legal children are `li`. */}
               <ul className="flex flex-col gap-2">
                 {week.meetings.map((meeting) => (
                   <ScheduleRow key={meeting.id} meeting={meeting} now={now} />
@@ -246,22 +241,12 @@ export default function ScheduleList({ meetings, now }: Props) {
 }
 
 /**
- * Months of the year, not an error.
- *
- * This is the live state through every summer and both breaks, so it is
- * written as a status rather than an apology: nothing is scheduled, here is
- * when that changes, and here is the one place that has anything in the
- * meantime. An "unable to load events" framing would send members to Discord
- * to report a bug that is really just August.
- */
-/**
- * The filter matched nothing — which is not the same state as an empty
- * schedule, and must not borrow its copy.
+ * The filter matched nothing, which is not the same state as an empty schedule
+ * and must not borrow its copy.
  *
  * `EmptySchedule` says something true about the club; this says something true
- * about a control the reader is holding, and its whole job is to hand back the
- * way out. The same dashed well, deliberately quieter: this is a dead end the
- * reader made and can undo in one click, not news.
+ * about a control the reader is holding, and hands back the way out. The same
+ * dashed well, quieter: a dead end the reader made and can undo in one click.
  */
 function NoMatches({ onClear }: { onClear: () => void }) {
   return (
@@ -276,6 +261,15 @@ function NoMatches({ onClear }: { onClear: () => void }) {
   );
 }
 
+/**
+ * Months of the year, not an error.
+ *
+ * This is the live state through every summer and both breaks, so it reads as a
+ * status rather than an apology: nothing is scheduled, here is when that
+ * changes, here is the one place that has anything meanwhile. An "unable to load
+ * events" framing would send members to Discord to report a bug that is really
+ * just August.
+ */
 function EmptySchedule() {
   return (
     // The console's empty state: a dashed well, like an empty credentials
@@ -301,10 +295,10 @@ function EmptySchedule() {
 }
 
 function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
-  // Derived chips and the officer's kind, composed together. Both are shown:
-  // a social that also runs a workshop is a real night, and a row that printed
-  // only the kind would quietly drop the workshop. `segments` is empty for a
-  // night an officer named, so rendering it alone would show no chip at all.
+  // Derived chips and the officer's kind, composed together. Both are shown: a
+  // social that also runs a workshop is a real night, and a row printing only
+  // the kind would drop the workshop. `segments` is empty for a night an officer
+  // named, so rendering it alone would show no chip at all.
   const { segments } = resolveMeetingSegments(meeting);
   const badges = meetingBadges({ kind: meeting.kind, segments });
 
@@ -318,12 +312,11 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
   // with the date in their calendar sees nothing at all and walks over anyway.
   const cancelled = meeting.cancelledAt !== null;
 
-  // Every row prints its room, but only one *not* in the usual room earns a
-  // chip saying so, which is how a room change stands out. This used to be a
-  // regex over the typed location, which failed closed — an unrecognised
-  // string flagged a room change that might not have happened — and needed a
-  // second guard to stay quiet. A picked building answers it outright, and a
-  // null one still says nothing rather than guessing.
+  // Every row prints its room, but only one *not* in the usual room earns a chip
+  // saying so. This used to be a regex over the typed location, which failed
+  // closed: an unrecognised string flagged a room change that might not have
+  // happened, and it needed a second guard to stay quiet. A picked building
+  // answers it outright, and a null one says nothing rather than guessing.
   const elsewhere = meeting.building !== null && meeting.building !== "DLW";
 
   return (
@@ -346,7 +339,7 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
       </div>
 
       {/* `min-w-0` so a long meeting name wraps instead of forcing the row
-          wider than the viewport — the phone case this band is built for. */}
+          wider than the viewport, the phone case this band is built for. */}
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           <h3 className="font-display text-base leading-tight font-extrabold text-white md:text-lg">
@@ -356,18 +349,15 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
               browser silently un-nests, which breaks hydration. The pseudo
               element covers the row for the pointer while the accessible name
               stays the meeting's own, and the inner links sit above it.
-            */}
-            {/*
+
               `meetingTitle`, not `nameOverride` directly: this heading is the
               row's whole click target and its accessible name, so it can never
-              be empty — and `nameOverride` is null for most nights now.
-
-              What it derives is deliberately not a restatement of the chips
-              below. They say a night taught something; this says *what* —
-              "Workshop: Next.js & Flutter". Only when there is neither a name
-              nor an agenda does it fall back to the date, which the span
-              beneath then repeats in full; that is the one redundant case and
-              it is the rarest.
+              be empty, and `nameOverride` is null for most nights now. What it
+              derives does not restate the chips below. They say a night taught
+              something; this says *what*: "Workshop: Next.js & Flutter". Only
+              with neither a name nor an agenda does it fall back to the date,
+              which the span beneath repeats in full; that rare case is the one
+              redundant one.
             */}
             <Link
               href={`/events/${meeting.slug}`}
@@ -379,18 +369,16 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
             </Link>
           </h3>
           {/* A cancelled night keeps its row and loses its countdown. "In two
-              days" beside a meeting that is not happening is the actively
-              wrong half; the strike-through and the word are the useful half. */}
+              days" beside a meeting that is not happening is the wrong half; the
+              strike-through and the word are the useful half. */}
           <span className="text-xs font-semibold text-mauve-400">
             {cancelled ? (
-              // Not dimmed, deliberately. `opacity-60` used to sit on the
-              // whole tile, which knocked 40% off THIS — already the page's
-              // smallest and dimmest token — and off the reason below it,
-              // landing both near 4.2:1 against the plate and under the AA
-              // floor. The one sentence explaining why the row is greyed out
-              // was the least readable thing in it. The strike-through on the
-              // title carries "not happening"; these carry the explanation and
-              // stay at full contrast.
+              // Not dimmed, deliberately. `opacity-60` used to sit on the whole
+              // tile, which knocked 40% off THIS, already the page's smallest
+              // and dimmest token, and off the reason below it, landing both
+              // near 4.2:1 against the plate and under the AA floor. The
+              // strike-through on the title carries "not happening"; these carry
+              // the explanation and stay at full contrast.
               <span className="text-rose-300">{CANCELLED_LABEL}</span>
             ) : happeningNow ? (
               "Happening now"
@@ -424,8 +412,8 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
         </p>
 
         {/*
-          Derived chips then the officer's kind, composed by `meetingBadges`.
-          A kind with no hue of its own renders verbatim in the neutral pill —
+          Derived chips then the officer's kind, composed by `meetingBadges`. A
+          kind with no hue of its own renders verbatim in the neutral pill, and
           three of the four do, by design. See `kindBadge`: the list is closed,
           so this is the un-coloured case rather than the unknown one.
         */}
@@ -481,23 +469,23 @@ function JudgingChip({ judging }: { judging: MeetingRangeJudging }) {
 
 function WorkshopChip({ workshop }: { workshop: MeetingRangeWorkshop }) {
   // A null `competitionSlug` is a *supplementary* workshop: a session complete
-  // on its own, worth exactly one star, and an ordinary thing for a Wednesday.
-  // So it gets a chip of the same size, weight and colour family as any other
-  // workshop — no faded state, no "no competition" caveat, no empty slot where
-  // a link would have been. The only difference is that it is a span rather
-  // than an anchor, because there is genuinely nowhere to go. Dressing the
-  // absence up as a gap would tell members a complete session was broken.
+  // on its own and an ordinary thing for a Wednesday. So it gets a chip of the
+  // same size, weight and colour family as any other workshop. No faded state,
+  // no "no competition" caveat, no empty slot where a link would have been. The
+  // only difference is a span rather than an anchor, because there is nowhere to
+  // go. Dressing the absence up as a gap would tell members a complete session
+  // was broken.
   const badge =
     workshop.competitionSlug === null
       ? segmentBadge.workshop
       : segmentBadge.kickoff;
   const chipCls = `${badge.chipDark} ${CHIP_DARK_CLS}`;
 
-  // `workshopLabel`, not `projectName`: the title is what officers actually
-  // name a session by, and `projectName` is null outright for one that teaches
-  // a skill rather than a codebase — which rendered the career-fair-readiness
-  // night as an empty chip. The fallback matches `/events/<slug>`, so the
-  // schedule and the permalink cannot print two different words for one row.
+  // `workshopLabel`, not `projectName`: the title is what officers name a
+  // session by, and `projectName` is null for one that teaches a skill rather
+  // than a codebase, which rendered the career-fair-readiness night as an empty
+  // chip. The fallback matches `/events/<slug>`, so the schedule and the
+  // permalink cannot print two different words for one row.
   const label = workshopLabel(workshop);
 
   if (workshop.competitionSlug === null) {

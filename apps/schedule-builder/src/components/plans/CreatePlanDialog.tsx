@@ -173,7 +173,6 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
     ),
   ) as Partial<typeof timeOptions>;
 
-  // Seed per-course selection state from saved draft courses
   useEffect(() => {
     // Intentional: seed selection entries for any newly added draft courses,
     // preserving existing selections (returns `prev` unchanged when none added).
@@ -277,7 +276,7 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
         walking,
       });
 
-      // An empty CRN list is not a plan — saving one produces a plan whose
+      // An empty CRN list is not a plan. Saving one produces a plan whose
       // detail view can never load.
       const schedules = result.data.filter((crns) => crns.length > 0);
 
@@ -329,7 +328,6 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
           disabled={isPending}
           className="flex flex-col gap-8 overflow-y-auto px-6 py-4"
         >
-          {/* Your Courses */}
           <section className="flex flex-col gap-3">
             <h3 className="text-base font-bold">Your Courses</h3>
             {bodyLoading ? (
@@ -370,7 +368,6 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
             )}
           </section>
 
-          {/* Filters */}
           <section className="flex flex-col gap-4">
             <h3 className="text-base font-bold">Filters</h3>
             {bodyLoading ? (

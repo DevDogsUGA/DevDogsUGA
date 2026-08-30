@@ -62,12 +62,12 @@ const SetterContext = createContext<Setter>(() => undefined);
  *
  * `NavUserHydrator` sits at the root of the tree, so every `setNavUser` call
  * re-renders the whole app. Its props arrive from a streamed server component
- * and are fresh object identities on every RSC payload — including the ones
- * the router refetches on its own, without anything having changed. Comparing
- * by value lets React bail out of those renders instead of replaying the page.
+ * and are fresh object identities on every RSC payload, including the ones the
+ * router refetches on its own without anything having changed. Comparing by
+ * value lets React bail out of those renders instead of replaying the page.
  *
  * `JSON.stringify` is enough here: both sides are plain data produced by the
- * same server code, so key order is stable, and `Date` columns serialise
+ * same server code, so key order is stable and `Date` columns serialise
  * deterministically.
  */
 function sameData(a: unknown, b: unknown): boolean {

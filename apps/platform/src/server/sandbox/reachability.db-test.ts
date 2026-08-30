@@ -103,8 +103,8 @@ beforeAll(async () => {
   `);
 
   // Two competitions, because one member cannot be on two teams in the same
-  // one -- which is exactly why sharing an environment across competitions is
-  // the case that needs testing.
+  // one. That is why sharing an environment across competitions is the case
+  // that needs testing.
   for (const [workshop, comp, slug, project] of [
     [IDS.workshopA, IDS.compA, "reach-comp-a", IDS.projectA],
     [IDS.workshopB, IDS.compB, "reach-comp-b", IDS.projectB],
@@ -221,7 +221,7 @@ describe("issueCredentials", () => {
     ]);
 
     await issueCredentials(IDS.env, IDS.member);
-    // Still exactly two rows -- history, lastUsedAt and the audit trail survive.
+    // Still exactly two rows: history, lastUsedAt and the audit trail survive.
     expect(await statuses(IDS.member)).toEqual([
       "publishable:active",
       "secret:active",

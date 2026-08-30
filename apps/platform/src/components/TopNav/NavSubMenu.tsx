@@ -19,7 +19,7 @@ import { POPOVER_ROW, POPOVER_ROW_CARET } from "./popoverRow";
  * Competitions and Console are one box that resizes between them rather than
  * two that swap.
  *
- * The caret points and sits LEFT, which is where the panel lands — the
+ * The caret points and sits LEFT, which is where the panel lands. The
  * sub-viewport is pinned off the card's left edge, so it can only go that way.
  * That used to be a claim about collision detection; now it is the layout,
  * which is a better guarantee than a measurement.
@@ -89,7 +89,7 @@ export default function NavSubMenu({
         className={NAV_SUB_CONTENT}
       >
         {/* Two columns only from `lg`, and only where a group asked for them.
-            The whole row — sub-panel plus card — has to clear the left of the
+            The whole row, sub-panel plus card, has to clear the left of the
             bar, so 36rem of sub-panel wants roughly 60rem of viewport; below
             that it stays the single 20rem column it was. */}
         <div

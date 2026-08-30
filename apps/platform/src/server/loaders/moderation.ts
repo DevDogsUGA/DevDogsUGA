@@ -33,11 +33,11 @@ export type ReportListEntry = {
  * Scoped by `canModerate` alone. Moderation is centralised, so there is no
  * per-app grant to intersect with and a moderator sees every app's reports.
  *
- * The gate is enforced here rather than reported back as a flag. Returning an
- * empty queue plus `canModerate: false` and leaving the page to redirect meant
- * the one loader in the tree whose answer the caller had to check before
- * trusting it — and a second caller that forgot would have rendered an empty
- * dashboard to somebody with no business seeing one.
+ * The gate is enforced here rather than returned as a flag. Handing back an
+ * empty queue plus `canModerate: false` and leaving the page to redirect would
+ * make this the one loader whose answer a caller must check before trusting it,
+ * and a second caller that forgot would render an empty dashboard to somebody
+ * with no business seeing one.
  */
 export const getModerationPageData = cache(async () => {
   const userId = await requirePermission(canUserModerate);
@@ -115,15 +115,14 @@ export const getReportDetailData = cache(async (reportId: string) => {
 
   if (!report) notFound();
 
-  // Not every reportable type can be quarantined -- a profile is reportable, but
+  // Not every reportable type can be quarantined. A profile is reportable, but
   // the remedy is suspending its owner rather than hiding a row. Resolving with
   // "quarantine" against such a type raises inside the transaction, so the
-  // console asks first and stops offering the option rather than relying on that
-  // backstop.
+  // console asks first and hides the option instead of leaning on that backstop.
   //
-  // False is also the honest answer when the type has been dropped since the
-  // report was filed: content_types() returns no row, and the frozen snapshot on
-  // the report is all that is left to act on.
+  // False is also right when the type has been dropped since the report was
+  // filed: content_types() returns no row, and the frozen snapshot on the report
+  // is all that is left to act on.
   const quarantinable = await isQuarantinable(report.appId, report.contentType);
 
   const [corroborationRow] = await db

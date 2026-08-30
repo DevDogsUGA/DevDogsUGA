@@ -17,10 +17,10 @@ import { requirePermission } from "~/server/auth/require";
  * officer who fixed a requirement count ten minutes before judging should not
  * have to wait, and neither should anyone working out why a refusal fired.
  *
- * The same trigger is also reachable from an Airtable **button field** on the
- * Meetings table, which is the one that matters in practice — it puts the
- * control in the surface where the edit was just made. Both go through
- * `requestAirtableSync`; this page is the one with room to explain itself.
+ * The same trigger is also reachable from an Airtable button field on the
+ * Meetings table, which puts the control where the edit was just made. Both go
+ * through `requestAirtableSync`; this page is the one with room to explain
+ * itself.
  */
 export default async function AirtableConsolePage() {
   // Nothing here may be prerendered: "last run 3 minutes ago" is the whole

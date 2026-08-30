@@ -15,8 +15,8 @@ import type { ProjectIconName } from "~/config/projects";
  *
  * Each viewBox is cropped to the ink, with the bottom edge of the mark on the
  * bottom edge of the box. Set only a height in em and let the width follow,
- * and the mark stands on the text baseline like a glyph would — the card
- * title does exactly that.
+ * and the mark stands on the text baseline like a glyph would. The card title
+ * does exactly that.
  */
 export interface ProjectMarkProps {
   className?: string;
@@ -24,16 +24,15 @@ export interface ProjectMarkProps {
 }
 
 /**
- * DogDays — a wall calendar with a bone pinned to it: the dog days of the
- * semester, planned.
+ * DogDays: a wall calendar with a bone pinned to it.
  *
  * Drawn against the font's metrics, so it sits in a line of Alan Sans as a
- * letter would. The calendar's body — from the top of the header band to the
- * bottom edge of the frame — is cap height; the two binder tabs rise above the
- * cap line the way an accent would. The header band is 1.75 strokes deep, the
- * frame walls one stroke, and the band's bottom corners are flat so it reads
- * as a strip laid over the frame rather than a rounded lid on it. The 43-unit
- * box is 37 units of body, so at 0.68em of cap height the box is 0.79em.
+ * letter would. The calendar's body, from the top of the header band to the
+ * bottom edge of the frame, is cap height; the two binder tabs rise above the
+ * cap line the way an accent would. The header band is 1.75 strokes deep and
+ * the frame walls one stroke. The band's bottom corners are flat so it reads
+ * as a strip laid over the frame, not a rounded lid on it. The 43-unit box is
+ * 37 units of body, so at 0.68em of cap height the box is 0.79em.
  */
 export function DogDaysIcon({ className }: ProjectMarkProps) {
   return (
@@ -85,7 +84,7 @@ export function DogDaysIcon({ className }: ProjectMarkProps) {
 }
 
 /**
- * DogPack — one bold paw: four pads gathered around a center, a pack.
+ * DogPack: one bold paw, four pads gathered around a center.
  *
  * The box is the paw's own bounds, 37.86 by 31.18, so with its bottom on the
  * baseline and its height at cap height (0.68em) it stands as tall as the D

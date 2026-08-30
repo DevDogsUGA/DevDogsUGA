@@ -46,9 +46,9 @@ function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
   return (
     <div className="flex flex-col gap-4">
       {projects.length > 1 && (
-        // The site's own select — the same control the account page's
-        // graduation fields use — rather than the shadcn one in ~/ui, which
-        // is styled for a light surface and left the chosen project's name
+        // The site's own select, the same control the account page's
+        // graduation fields use, rather than the shadcn one in ~/ui, which is
+        // styled for a light surface and left the chosen project's name
         // painted in <body>'s text-mauve-950 against the dark sidebar.
         <Select
           value={project}
@@ -56,12 +56,11 @@ function SidebarContent({ projects, project, tree }: DocsSidebarProps) {
           aria-label="Project"
           className="w-full"
         >
-          {/* Descriptions are one short line each — see the `description`
-              frontmatter on every `docs/<project>/index.md`. They were the
-              long form once, and at this width a sentence with an em-dash
-              elaboration wrapped to three lines and turned six choices into a
-              wall. The elaboration belongs in the page's opening paragraph,
-              which is where it now lives. */}
+          {/* Descriptions are one short line each; see the `description`
+              frontmatter on every `docs/<project>/index.md`. They were longer
+              once, and at this width a sentence with an em-dash elaboration
+              wrapped to three lines and turned six choices into a wall. The
+              elaboration now lives in the page's opening paragraph. */}
           {groups.map((group) => (
             <Select.Group key={group.id} label={group.label}>
               {group.projects.map((p) => (

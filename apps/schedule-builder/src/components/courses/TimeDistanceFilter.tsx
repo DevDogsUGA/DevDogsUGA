@@ -15,52 +15,43 @@ const createTimeSlots = () => {
 };
 
 export function TimeDistanceFilter() {
-  // Tracks selected start time
   const [startTime, setStartTime] = useState<string>("");
-  // Tracks selected end time
   const [endTime, setEndTime] = useState<string>("");
-  // Stores the valid end times based on selected start time
   const [availableEndTimes, setAvailableEndTimes] = useState<string[]>([]);
 
   const allTimeSlots = createTimeSlots();
 
-  /* Handler function for when a start time is selected.
-  / If start time sleceted, update available end times.
-  / Always clears end time when start time changed. */
+  // Picking a start time limits the end times to later slots, and always
+  // clears whatever end time was already chosen.
   const handleStartTimeSelect = (value: string) => {
-    setStartTime(value); // Update start time state
+    setStartTime(value);
 
     if (!value) {
-      // If no start time selected
       setAvailableEndTimes([]);
       setEndTime("");
     } else {
-      // If start time is selected
       const startIndex = allTimeSlots.indexOf(value);
-      // Get all times after the selected start time
       const validEndTimes = allTimeSlots.slice(startIndex + 1);
-      setAvailableEndTimes(validEndTimes); // Update available end times
+      setAvailableEndTimes(validEndTimes);
       setEndTime("");
     }
   };
 
   return (
     <div className="contents">
-      {/* Start Time Dropdown */}
       <DropdownSearchInput
         labelText="Start Time"
-        items={allTimeSlots} // All possible time slots
+        items={allTimeSlots}
         placeholder="Start Time"
         className="border-stone-400"
         onSelect={handleStartTimeSelect}
         selectedItem={startTime}
       />
 
-      {/* End Time Dropdown */}
       <DropdownSearchInput
         labelText="End Time"
-        key={startTime} // Forces component refresh when start time changes
-        items={availableEndTimes} // Only shows valid end times
+        key={startTime} // remounts the input so its filtered list resets
+        items={availableEndTimes}
         placeholder={startTime ? "End Time" : "Select Start Time"}
         className="border-stone-400"
         onSelect={(value) => setEndTime(value)}

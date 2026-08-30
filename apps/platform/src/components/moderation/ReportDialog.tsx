@@ -43,7 +43,7 @@ export interface ReportDialogProps {
   /**
    * Called after a successful filing. `corroborated` is true when the content
    * already had an open report and this reporter was recorded as agreeing with
-   * it — worth telling the user, since "someone already reported this" reads
+   * it. Worth telling the user, since "someone already reported this" reads
    * very differently from "thanks, we'll take a look".
    */
   onFiled?: (result: { reportId: string; corroborated: boolean }) => void;
@@ -83,14 +83,13 @@ export default function ReportDialog({
    * One state for the fetch, and `loading` derived rather than stored.
    *
    * This was three pieces of state, which forced `setReasonsLoading(true)` and
-   * `setReasonsLoadError(null)` to run SYNCHRONOUSLY inside the effect — a
-   * second render scheduled before the request had even started, which is what
+   * `setReasonsLoadError(null)` to run SYNCHRONOUSLY inside the effect. That
+   * schedules a second render before the request has started, which is what
    * `react-hooks/set-state-in-effect` is pointing at.
    *
    * Loading is not independent information: it is exactly "we need the reasons
    * and do not have them yet". Deriving it makes that unrepresentable-wrong and
-   * leaves the effect setting state only from its async callbacks, which is the
-   * part effects are for.
+   * leaves the effect setting state only from its async callbacks.
    */
   const [fetched, setFetched] = useState<
     { reasons: ReportReason[] } | { error: string } | null
@@ -141,11 +140,10 @@ export default function ReportDialog({
     setDescriptionError(false);
     setSubmitError(null);
     setCorroborated(null);
-    // Discards a failed fetch so reopening retries from a clean slate rather
-    // than showing the previous error while the new request is in flight. The
-    // old effect got this for free by listing `open` and clearing the error on
-    // every run; setting it from a handler is the same behaviour without the
-    // synchronous-set-in-effect.
+    // Discards a failed fetch so reopening retries clean rather than showing
+    // the previous error while the new request is in flight. The old effect got
+    // this by listing `open` and clearing the error on every run; a handler
+    // does the same without setting state synchronously in an effect.
     setFetched(null);
     formRef.current?.reset();
   }, []);
@@ -171,16 +169,16 @@ export default function ReportDialog({
       const formData = new FormData(e.currentTarget);
       // `FormData.get` returns `string | File | null`, so the old
       // `String(... ?? "")` would render a File as "[object File]" and submit
-      // that as the description. Narrowing instead of coercing means a
-      // non-string is treated as no description at all, which the `other`
-      // check below then catches.
+      // that as the description. Narrowing instead of coercing treats a
+      // non-string as no description at all, which the `other` check below
+      // then catches.
       const raw = formData.get("description");
       const description = typeof raw === "string" ? raw.trim() : "";
 
-      // Mirrors the same rule inside file_report, which is where it is
-      // actually enforced -- 'other' is the catch-all, and a catch-all with no
-      // sentence attached is something a moderator can only dismiss. Checking
-      // here too just turns a round-trip error into inline feedback.
+      // Mirrors the rule inside file_report, which is where it is enforced.
+      // 'other' is the catch-all, and a catch-all with no sentence attached is
+      // something a moderator can only dismiss. Checking here turns a
+      // round-trip error into inline feedback.
       if (reason === "other" && !description) {
         setDescriptionError(true);
         return;

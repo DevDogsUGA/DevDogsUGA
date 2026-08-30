@@ -13,9 +13,9 @@ import {
  * Nightly: project existence, status drift, 90-day pause expiry, auto-pause.
  *
  * **This route is the sole authority on orphaning.** The proxy must never
- * conclude a project is gone — a transient upstream error would otherwise tear
- * down a healthy environment's credentials and Vault secrets. Only a definite
- * 404 from `GET /v1/projects/{ref}` counts, and only here.
+ * conclude a project is gone: a transient upstream error would tear down a
+ * healthy environment's credentials and Vault secrets. Only a definite 404 from
+ * `GET /v1/projects/{ref}` counts, and only here.
  *
  * The three passes run in order rather than in parallel, because each one's
  * input is the previous one's output: reconciling first means expiry sees

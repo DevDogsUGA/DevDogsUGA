@@ -1,11 +1,10 @@
 /**
  * Post-processing for `drizzle-kit pull` (run at the end of `db:pull`).
- * Replaces the old inline `sed` hack from package.json.
  *
- * 1. Deletes the `relations.ts` drizzle emits (we maintain relations by hand
- *    in `src/server/db/relations.ts`).
- * 2. Re-injects the cross-schema FK-target import that drizzle can't resolve
- *    on its own — `auth.users` / `auth.oauth_clients`, which live in the
+ * 1. Deletes the `relations.ts` drizzle emits. We maintain relations by hand
+ *    in `src/server/db/relations.ts`.
+ * 2. Re-injects the cross-schema FK-target import drizzle cannot resolve on
+ *    its own: `auth.users` / `auth.oauth_clients`, which live in the
  *    introspected `~/supabase/drizzle/schema` module.
  * 3. Aliases the schema-suffixed exports drizzle emits for a non-public schema
  *    (`profileInPlatform` → `profile`) so the app's imports stay stable.

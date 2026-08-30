@@ -27,8 +27,8 @@ import { borda, copeland, standings, type Ballot, type TeamId } from "./tally";
  *     second winner row. `status = 'open'` is the guard for elections, and the
  *     existing standings rows are the guard for competitions.
  *   - Blocks rather than guesses. A missing tiebreak ballot or an ungraded
- *     competition surfaces as an explicit state; neither is defaulted, which
- *     would publish a wrong winner rather than a visible gap.
+ *     competition becomes an explicit blocked state. Defaulting either one
+ *     would publish a wrong winner instead of a visible gap.
  *
  * Deliberately separate from the judging-start pass even though both run every
  * five minutes: this one blocks on grading, and freezing participation must
@@ -103,11 +103,10 @@ async function tallyClosedElections(): Promise<number> {
     const cast = await loadBallots(election.id);
 
     await db.transaction(async (tx) => {
-      // The tiebreak election writes NO electionResults rows at all. It awards
-      // no points and exists only to be a complete ordering, so there is
-      // nothing here for a policy to have to exclude — which is why the rule
-      // is enforced here and asserted in a test, rather than left to nobody
-      // adding the obvious insert later.
+      // The tiebreak election writes NO electionResults rows. It awards no
+      // points and exists only to be a complete ordering, so no downstream
+      // policy has to exclude it. A test asserts that rule, rather than
+      // trusting nobody to add the obvious insert later.
       if (election.purpose === "points" && candidates.length > 0) {
         const results = borda(cast, candidates);
         await tx.insert(electionResults).values(
@@ -299,8 +298,8 @@ async function finalizeCompetitions(): Promise<{
 /**
  * Competitions that need officer attention, for the console.
  *
- * These are the two states the tally refuses to finalize through, surfaced
- * where somebody can act on them rather than left in a cron log.
+ * These are the two states the tally refuses to finalize through, put where
+ * somebody can act on them rather than left in a cron log.
  */
 export async function blockedCompetitions(): Promise<{
   ungraded: string[];

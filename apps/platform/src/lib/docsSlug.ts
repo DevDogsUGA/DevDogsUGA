@@ -6,12 +6,12 @@
  *
  * The first URL segment after /docs is the project; everything after it is the
  * project-relative page path (/docs/platform/guides/setup). There is no branch
- * dimension — docs are built from the checked-out working tree, so a per-branch
+ * dimension. Docs are built from the checked-out working tree, so a per-branch
  * preview is just a preview deployment of the whole site from that branch.
  */
 
 /**
- * Builds a docs URL. `path` is project-relative — the segments below the
+ * Builds a docs URL. `path` is project-relative: the segments below the
  * project folder, without the project itself.
  */
 export function docsHref(project: string, path: string[]): string {

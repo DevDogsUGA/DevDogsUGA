@@ -13,8 +13,8 @@ import { checkAttendance, myIdToEmail, type Refusal } from "./refusals";
 /**
  * Attendance, imported from Airtable.
  *
- * Workshops are run with a form — attendance collected alongside the poll
- * questions asked in the room anyway — and co-branded events arrive as a paste
+ * Workshops are run with a form, so attendance is collected alongside the poll
+ * questions asked in the room anyway, and co-branded events arrive as a paste
  * from whichever club ran their own scheme. This is the only table in the sync
  * where Airtable CREATES rows; everything else is either platform-owned and
  * pushed, or officer-authored and pulled field by field.
@@ -49,15 +49,15 @@ export interface AttendanceOutcome {
  *
  * ## `email_confirm: false` is load-bearing
  *
- * A MyID off a form is unverified — nobody has checked that the person filling
- * it in owns that mailbox. Creating the user unconfirmed is what makes a wrong
- * one harmless:
+ * A MyID off a form is unverified. Nobody has checked that the person filling
+ * it in owns that mailbox, and creating the user unconfirmed is what makes a
+ * wrong one harmless:
  *
  * > **Measured** against the local stack: `admin.createUser` with
  * > `email_confirm: false` produces a user carrying an `email` identity with
  * > `email_verified: false`. Supabase's documented linking safeguard is that
  * > "when a new identity can be linked to an existing user, Supabase Auth will
- * > remove any other unconfirmed identities linked to an existing user" — so a
+ * > remove any other unconfirmed identities linked to an existing user", so a
  * > later Google sign-in as that address links to this row and displaces the
  * > unconfirmed identity.
  *
@@ -69,10 +69,10 @@ export interface AttendanceOutcome {
  * ## What is deliberately NOT written
  *
  * No `ugaEmail`, no `legalFirstName`/`legalLastName`. Those are durable
- * identity from the roster and `profile_ugaEmail_key` is unique — a mistyped
- * MyID sitting in that column would raise a unique violation the next time the
- * roster import reached the real owner of the address, inside a transaction,
- * aborting the import for the entire club. One typo, everybody's import.
+ * identity from the roster and `profile_ugaEmail_key` is unique, so a mistyped
+ * MyID in that column would raise a unique violation the next time the roster
+ * import reached the real owner of the address, inside a transaction, aborting
+ * the import for the entire club. One typo, everybody's import.
  */
 async function resolveUser(
   email: string,
@@ -140,8 +140,8 @@ export async function pullAttendance(
   if (parsed.length === 0) return out;
 
   // Every workshop's meeting, in one read. `attendance` is keyed on the
-  // MEETING -- the workshop is a dimension on that row -- so the meeting has to
-  // be derived rather than asked for. A form collecting both could disagree
+  // MEETING, with the workshop as a dimension on that row, so the meeting has
+  // to be derived rather than asked for. A form collecting both could disagree
   // with itself, and the composite foreign key would then reject the row.
   const workshopRows = await db
     .select({ id: workshops.id, meetingId: workshops.meetingId })
@@ -160,8 +160,8 @@ export async function pullAttendance(
     const meetingId = workshopId ? (meetingOf.get(workshopId) ?? null) : null;
 
     // Incomplete rather than wrong. A form response mid-submission, or a
-    // workshop whose own record was incomplete this pass, will be complete
-    // next time -- writing a complaint into it would be noise.
+    // workshop whose own record was incomplete this pass, will be complete next
+    // time. Writing a complaint into it would be noise.
     if (record.values.myId === null || record.values.workshop === null) {
       out.skipped += 1;
       continue;
@@ -189,9 +189,9 @@ export async function pullAttendance(
     const key = `${meetingId!}:${resolved.userId}`;
     if (claimed.has(key)) {
       // A member who sat in two workshops of one meeting. The schema collapses
-      // that to one row on purpose -- "attended twice" is unrepresentable --
-      // so this is a legitimate submission the platform cannot store, which
-      // makes it exactly a refusal rather than a skip or an error.
+      // that to one row on purpose, so "attended twice" is unrepresentable.
+      // This is a legitimate submission the platform cannot store, which makes
+      // it a refusal rather than a skip or an error.
       out.refusals.push({
         table: "attendance",
         airtableRecordId: record.airtableRecordId,
@@ -206,9 +206,9 @@ export async function pullAttendance(
 
     // `onConflictDoUpdate` on the meeting/member key rather than an insert:
     // the member may already have a row from a check-in code or an officer.
-    // Airtable owns the workshop dimension now, so it wins on `workshopId` --
-    // but `method` and `recordedBy` are left alone, because overwriting them
-    // would rewrite how an earlier row says it was captured.
+    // Airtable owns the workshop dimension now, so it wins on `workshopId`.
+    // `method` and `recordedBy` are left alone, because overwriting them would
+    // rewrite how an earlier row says it was captured.
     const [row] = await db
       .insert(attendance)
       .values({
@@ -248,19 +248,19 @@ export async function pullAttendance(
  * on the grounds that attendance is a record of who was in a room on a Tuesday
  * and no amount of "I deleted the wrong row" in a spreadsheet erases that. That
  * reasoning was written when the PLATFORM created attendance and Airtable
- * mirrored it — there, a deletion in the mirror was an accident that must not
+ * mirrored it. There, a deletion in the mirror was an accident that must not
  * destroy the original.
  *
  * It inverts once Airtable is the source. The row exists only because somebody
  * created it there, so removing it there is the source saying it did not
- * happen, and a mirror that keeps asserting otherwise is simply stale.
+ * happen, and a mirror that keeps asserting otherwise is stale.
  *
  * The safety argument inverts with it. A row deleted here is fully
  * reconstructible: restore the record from Airtable's trash and the next pass
  * re-imports it, matching on the same `airtableRecordId`. Nothing outside this
- * table references an attendance id — stars read by member and meeting, judging
- * by member and workshop — so a restored row is equivalent, not merely similar.
- * Airtable's own undo is the recovery path, which is why this needs no
+ * table references an attendance id, since stars read by member and meeting and
+ * judging by member and workshop, so a restored row is equivalent rather than
+ * similar. Airtable's own undo is the recovery path, which is why this needs no
  * `deletedAt` of its own.
  *
  * ## Scope
@@ -269,9 +269,9 @@ export async function pullAttendance(
  * officer's correction has neither and is never touched by a pass.
  *
  * An empty `presentRecordIds` really does mean an empty table, so it really
- * does remove everything — and that is correct, because `listRecords` throws on
- * any non-2xx rather than returning a short list. A failed fetch aborts the
- * pass; it cannot masquerade as "the table is empty".
+ * does remove everything. That is correct, because `listRecords` throws on any
+ * non-2xx rather than returning a short list. A failed fetch aborts the pass;
+ * it cannot masquerade as "the table is empty".
  */
 async function removeDeleted(presentRecordIds: string[]): Promise<number> {
   const mine = and(

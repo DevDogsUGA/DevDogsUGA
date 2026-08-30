@@ -7,17 +7,17 @@ import AddLinkInput from "./AddLinkInput";
  * it was made of CSS and jsdom does not apply any.
  *
  * The Add button sits in the same row as the URL input and is disabled until
- * the URL is usable — so on arrival, with an empty box, it is disabled. The row
+ * the URL is usable, so on arrival, with an empty box, it is disabled. The row
  * carried `has-disabled:pointer-events-none`, which matches ANY disabled
- * descendant. So the button switched off pointer events for the row containing
- * the input you were supposed to type the URL into: the field looked disabled
- * and could not be clicked, and nothing could ever enable it, because enabling
- * it required typing a URL.
+ * descendant. The button therefore switched off pointer events for the row
+ * holding the input you were supposed to type the URL into. The field looked
+ * disabled and could not be clicked, and nothing could ever enable it, because
+ * enabling it required typing a URL.
  *
  * `fireEvent.change` sets a value directly and never consults pointer-events,
- * which is exactly why driving the component in jsdom reported everything
- * working. So this asserts the class contract instead: the disabled styling has
- * to key on a disabled *input*, never on any disabled descendant.
+ * which is why driving the component in jsdom reported everything working. So
+ * this asserts the class contract instead. The disabled styling has to key on a
+ * disabled *input*, never on any disabled descendant.
  */
 
 function renderIdle() {

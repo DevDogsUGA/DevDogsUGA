@@ -16,11 +16,11 @@ import {
 /**
  * Election reads: what is open, who may vote in it, and what it decided.
  *
- * The eligibility question is the interesting one and it is why this is a
- * loader rather than a query in a page. Whether somebody may vote depends on
- * the election's electorate, on their team membership, on a permission, and on
- * whether they have already voted — four facts from four places, and getting
- * any of them wrong shows a ballot to somebody whose vote will be rejected.
+ * Eligibility is why this is a loader rather than a query in a page. Whether
+ * somebody may vote depends on the election's electorate, their team
+ * membership, a permission, and whether they have already voted. Four facts
+ * from four places, and getting any wrong shows a ballot to somebody whose
+ * vote will be rejected.
  */
 
 export interface ElectionSummary {
@@ -78,12 +78,12 @@ export const getElectionBySlug = cache(
 /**
  * A competition's tallied points elections.
  *
- * Both filters are load-bearing rather than incidental:
+ * Both filters are load-bearing:
  *
  *   * `purpose = 'points'` keeps the TIEBREAK election out. Publishing its
- *     results would publish the officers' complete ordering — which is exactly
- *     what `tiebreakDisclosures` exists to avoid, by naming only the pairs a
- *     placement actually turned on.
+ *     results would publish the officers' complete ordering, which
+ *     `tiebreakDisclosures` avoids by naming only the pairs a placement turned
+ *     on.
  *   * `status = 'tallied'` keeps out an election whose numbers are not final.
  *     A partial standing shown before the tally is a number people screenshot.
  */
@@ -124,11 +124,10 @@ export interface Eligibility {
 /**
  * Whether this person may cast this ballot, and why not.
  *
- * Returns a reason rather than a boolean because every one of these is a
- * different sentence on screen. "Voting closed", "you already voted" and
- * "your team lead casts this one" are three completely different things to
- * tell somebody looking at a ballot they cannot submit, and a bare false makes
- * all three read as a bug.
+ * Returns a reason rather than a boolean because each is a different sentence
+ * on screen. "Voting closed", "you already voted" and "your team lead casts
+ * this one" are three different things to tell somebody looking at a ballot
+ * they cannot submit, and a bare false makes all three read as a bug.
  */
 export const getEligibility = cache(
   async (electionId: string, userId: string): Promise<Eligibility> => {
@@ -163,7 +162,7 @@ export const getEligibility = cache(
     }
 
     // A team electorate casts one ballot per team, by the lead. Anyone else on
-    // the roster sees the ballot and cannot submit it — which is deliberate:
+    // the roster sees the ballot and cannot submit it. That is deliberate:
     // they should know a vote is being cast on their behalf.
     const [membership] = await db
       .select({ teamId: teamMembers.teamId, role: teamMembers.role })
@@ -224,12 +223,11 @@ export interface BallotOption {
 /**
  * The teams on a ballot.
  *
- * A voter's own team is included rather than filtered out. Borda is a ranking
- * of the whole field, and removing one entry from one voter's ballot changes
- * how many points every other position is worth on it — which would quietly
- * make a self-ranking voter's ballot count differently from everybody else's.
- * Whether ranking your own team first is allowed is a rule for the tally, not
- * a reason to hand out ballots of different lengths.
+ * A voter's own team is included rather than filtered out. Borda ranks the
+ * whole field, so removing one entry from one voter's ballot changes what
+ * every other position is worth on it and that ballot counts differently from
+ * everybody else's. Whether ranking your own team first is allowed is a rule
+ * for the tally, not a reason to hand out ballots of different lengths.
  */
 export const getBallotOptions = cache(
   async (competitionId: string): Promise<BallotOption[]> => {
@@ -303,10 +301,10 @@ export const getElectionResults = cache(
 /**
  * Every tiebreak that decided a placement, for the competition's results page.
  *
- * Disclosed rather than merely recorded. A placement settled by a tiebreak
- * looks identical to one settled outright, and a team that lost on a
- * tiebreaker is owed the fact that it was one — that is the whole reason the
- * table exists rather than the tally just writing an order.
+ * Disclosed, not just recorded. A placement settled by a tiebreak looks
+ * identical to one settled outright, and a team that lost on a tiebreaker is
+ * owed the fact that it was one. That is why the table exists rather than the
+ * tally just writing an order.
  */
 export const getTiebreakDisclosures = cache(async (competitionId: string) => {
   return db

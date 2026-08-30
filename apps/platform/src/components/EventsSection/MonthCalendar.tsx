@@ -69,24 +69,24 @@ function monthIndex(year: number, month: number): number {
 /**
  * The badge a day's dot takes.
  *
- * One dot per meeting, not one per segment — a night that judges one
+ * One dot per meeting, not one per segment. A night that judges one
  * competition and teaches another would otherwise sprout two dots and read as
- * two meetings. The segment order ranks them, so the first is the one worth
- * colouring by.
+ * two meetings. The segment order ranks them, so the first is the one to colour
+ * by.
  *
  * This used to be `segments[0] ?? "open"`, which was safe when the resolver
  * guaranteed a non-empty set. It no longer does: `open` is suppressed whenever
  * an officer set a `kind`, so the segment list is empty for every authored
- * night and that fallback would quietly paint a build session with the
- * unscheduled colour — beside its own emerald chip, on the same row.
- * `primaryBadge` consults the kind first for that reason.
+ * night and that fallback would paint a build session with the unscheduled
+ * colour, beside its own emerald chip on the same row. `primaryBadge` consults
+ * the kind first for that reason.
  */
 function meetingBadge(meeting: MeetingInRange): SegmentBadge | null {
   // Before the kind and before the segments, because it overrides both. A
   // cancelled build session is not a build session that is happening, and the
-  // grid's hues are a legend of what is ON — `getMeetingsInRange` keeps
-  // cancelled rows by design, so without this the square kept its cyan dot
-  // and the month read as a night going ahead.
+  // grid's hues are a legend of what is ON. `getMeetingsInRange` keeps
+  // cancelled rows by design, so without this the square kept its cyan dot and
+  // the month read as a night going ahead.
   if (isCancelled(meeting)) return cancelledBadge(CANCELLED_LABEL);
   const { segments } = resolveMeetingSegments(meeting);
   return primaryBadge({ kind: meeting.kind, segments });
@@ -104,9 +104,8 @@ function MeetingDetail({ meeting }: { meeting: MeetingInRange }) {
     <div className="flex w-56 flex-col gap-2">
       <div className="flex flex-wrap items-center gap-1.5">
         {/* The cancellation chip REPLACES the night's own chips rather than
-            joining them. Beside an emerald "Workshop" it would read as one
-            more attribute of an evening going ahead, which is the reading
-            this popover most needs not to produce: somebody is hovering the
+            joining them. Beside an emerald "Workshop" it would read as one more
+            attribute of an evening going ahead, and somebody is hovering the
             square because they are deciding whether to walk over. */}
         {notice !== null ? (
           <span
@@ -126,10 +125,10 @@ function MeetingDetail({ meeting }: { meeting: MeetingInRange }) {
         )}
       </div>
       {/* The date leads, because it is the one field guaranteed to be here and
-          because you arrived by hovering a specific square — it confirms which
-          one. A name appears BELOW it and only when an officer wrote one,
-          which is what makes Cold Start and Midterm Study Session stand out in
-          a month of nights that carry no title at all. */}
+          because it confirms which square you hovered. A name appears BELOW it
+          and only when an officer wrote one, which is what makes Cold Start and
+          Midterm Study Session stand out in a month of nights that carry no
+          title at all. */}
       {/* Struck through rather than removed: the hour is why somebody opened
           this, and deleting it leaves them wondering whether they hovered the
           wrong square. Struck, it answers the question and withdraws it. */}
@@ -151,8 +150,8 @@ function MeetingDetail({ meeting }: { meeting: MeetingInRange }) {
         </p>
       )}
       {/* Suppressed on a cancelled night. The room is the one claim here that
-          is purely an instruction — it exists to send somebody to a door —
-          and there is nothing behind it that evening. */}
+          is purely an instruction, sending somebody to a door, and there is
+          nothing behind it that evening. */}
       {notice === null && meeting.location !== null && (
         <p className="text-xs/snug text-mauve-400">{meeting.location}</p>
       )}
@@ -161,10 +160,10 @@ function MeetingDetail({ meeting }: { meeting: MeetingInRange }) {
           {meeting.summary}
         </p>
       )}
-      {/* `Link`, not `a` — `/events/[slug]` is a route dialog whose frame is a
+      {/* `Link`, not `a`. `/events/[slug]` is a route dialog whose frame is a
           nested layout over the calendar (see its `layout.tsx`). A client
-          navigation opens it over what is already on screen and gets the
-          hover prefetch of that frame; a plain anchor throws the page away and
+          navigation opens it over what is already on screen and gets the hover
+          prefetch of that frame; a plain anchor throws the page away and
           reloads the whole route. */}
       <Link
         href={`/events/${meeting.slug}`}
@@ -222,9 +221,9 @@ function MultiMeetingMenu({ meetings }: { meetings: MeetingInRange[] }) {
                 className={`size-1.5 shrink-0 rounded-full ${meetingBadge(meeting)?.dotDark ?? "bg-mauve-400"}`}
               />
               {/* This is a LIST of the day's meetings, so it needs a name for
-                  each — the popover's date-first treatment would print the
-                  same date twice over. `meetingTitle` falls back through the
-                  kind to the date, and never returns empty. */}
+                  each. The popover's date-first treatment would print the same
+                  date twice over. `meetingTitle` falls back through the kind to
+                  the date, and never returns empty. */}
               {meetingTitle(meeting)}
             </span>
             <CaretRightIcon className="shrink-0 text-mauve-400" />
@@ -287,11 +286,11 @@ export default function MonthCalendar({
   today,
   bounds,
 }: Props) {
-  // Which month the grid draws. Seeded from props — resolved server-side, not
-  // read from the clock here. A client component's SSR pass cannot sit inside
-  // a `"use cache"` scope, so any clock read here would silently drop the page
-  // out of the prerendered shell, and would let SSR and hydration disagree
-  // about what month it is.
+  // Which month the grid draws. Seeded from props, resolved server-side rather
+  // than read from the clock here. A client component's SSR pass cannot sit
+  // inside a `"use cache"` scope, so any clock read here would drop the page out
+  // of the prerendered shell, and would let SSR and hydration disagree about
+  // what month it is.
   const [view, setView] = useState({ year: initialYear, month: initialMonth });
   const { year, month } = view;
 
@@ -415,10 +414,10 @@ export default function MonthCalendar({
   /**
    * Page by `delta` months, clamped to the loaded window.
    *
-   * No fetch: the whole window — usually three months — arrives in `meetings`,
+   * No fetch: the whole window, usually three months, arrives in `meetings`,
    * so paging is a re-slice of data already in hand. The clamp is belt and
-   * braces over the `disabled` attributes, which a keyboard cannot get past
-   * but a stale render could.
+   * braces over the `disabled` attributes, which a keyboard cannot get past but
+   * a stale render could.
    */
   function stepMonth(delta: number) {
     const next = Math.min(Math.max(viewIdx + delta, fromIdx), toIdx);
@@ -432,7 +431,7 @@ export default function MonthCalendar({
 
   const meetingsByDay = new Map<number, MeetingInRange[]>();
   for (const meeting of meetings) {
-    // Bucketed by the club's zone, not the ambient one — see `clubDay`. The
+    // Bucketed by the club's zone, not the ambient one. See `clubDay`. The
     // year is compared too: the window spans months, and December 2026 and
     // December 2027 are not the same squares.
     const at = clubDay(meeting.startsAt);
@@ -444,8 +443,8 @@ export default function MonthCalendar({
   // The legend for the month on screen: one entry per DISTINCT dot colour
   // actually drawn, in the order the dots first appear down the grid, so
   // reading it top to bottom matches reading the month top to bottom.
-  // Deduplicated by label rather than by segment, because two different
-  // sources — a segment and an officer's `kind` — can produce one badge.
+  // Deduplicated by label rather than by segment, because two sources, a
+  // segment and an officer's `kind`, can produce one badge.
   const visibleLegend: SegmentBadge[] = [];
   const seenLegend = new Set<string>();
   for (const day of [...meetingsByDay.keys()].sort((a, b) => a - b)) {
@@ -483,7 +482,7 @@ export default function MonthCalendar({
       >
         <div className="flex items-center justify-between gap-2">
           {/* Live so a keyboard user who just pressed Previous hears which
-              month they landed on — the grid below re-renders silently. */}
+              month they landed on. The grid below re-renders silently. */}
           <h3 aria-live="polite" className="font-display font-bold text-white">
             {monthName} {year}
           </h3>
@@ -574,12 +573,12 @@ export default function MonthCalendar({
         </div>
         {/* Derived from the meetings actually on THIS month's grid rather than
             from a fixed list, so a hue appears in the legend exactly when it
-            appears as a dot. A fixed list has to guess, and it guesses wrong in
-            both directions: it explained "Judging" in rose on months whose
-            every judging night also taught something — workshop sorts first
-            now, so the dot is never rose — and it could never mention a build
-            session, whose colour comes from an officer's `kind` rather than
-            from the segment union. */}
+            appears as a dot. A fixed list guesses wrong in both directions. It
+            explained "Judging" in rose on months whose every judging night also
+            taught something, since workshop sorts first now and the dot is
+            never rose. And it could never mention a build session, whose colour
+            comes from an officer's `kind` rather than from the segment
+            union. */}
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-white/10 pt-3 text-xs text-mauve-400">
           {visibleLegend.length === 0 ? (
             <span className="text-mauve-500">No events this month</span>

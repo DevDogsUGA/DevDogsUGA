@@ -9,10 +9,8 @@ import { applyMigrations } from "~/server/supabase/provision";
  *
  * Drops the team's public schema and rebuilds it from migrations.
  *
- * The blast radius is genuinely small and worth stating to teams: migrations
- * live in git, so a reset restores the entire schema. Only test data is lost,
- * because test data is the only kind of data these instances are ever supposed
- * to hold.
+ * Migrations live in git, so a reset restores the whole schema. Only test data
+ * is lost, and test data is the only kind these instances are supposed to hold.
  */
 export async function POST(request: Request) {
   await connection();
@@ -27,7 +25,7 @@ export async function POST(request: Request) {
     const token = await accessTokenFor(target.ownerUserId);
 
     // `public` only. Dropping `auth` would take the members' own sign-ins with
-    // it, and those are federated against real DevDogs accounts -- a reset must
+    // it, and those are federated against real DevDogs accounts. A reset must
     // cost test rows, not the ability to log in.
     await runQuery(
       token,

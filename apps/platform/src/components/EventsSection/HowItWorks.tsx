@@ -20,25 +20,24 @@ import muybridgeHorse from "~/assets/muybridge-horse.gif";
  *
  * The copy has to keep the model straight (see `docs/platform/guides/meetings-
  * and-teams`): a competition is a week bracketed by two Mondays, and every
- * Monday does both jobs — judges last week's, kicks off this week's. The
- * timeline strip draws that loop; the day cards around it carry the
- * sentences, and they sit on the strip's own eight columns, above and below
- * it, so each card is beside the day it is about with a pointer at its dot.
+ * Monday does both jobs, judging last week's and kicking off this week's. The
+ * timeline strip draws that loop. The day cards around it carry the sentences,
+ * and they sit on the strip's own eight columns, above and below it, so each
+ * card is beside the day it is about with a pointer at its dot.
  *
- * The television is the other drawing. It sits beside the heading, and
- * hovering a card changes the channel — the GIF on screen is that card's.
- * Static plays whenever no card is live. The set is a hand-drawn SVG (see
- * {@link CrtTv}) and the static is drawn too, a frame at a time on the client
- * (see {@link useTvStatic}) rather than the 1.8 MB GIF it used to be. The
- * clips are still GIFs, running from 200 KB to 2.4 MB, and next/image passes
- * animated files through unoptimized, so each mounts only while its card is
- * hovered rather than putting megabytes on a page most visitors never hover
- * at all. The build-week clip is Muybridge's 1878 race horse, public domain
- * via Wikimedia Commons — the original "something running".
+ * The television is the other drawing. It sits beside the heading, hovering a
+ * card changes the channel to that card's GIF, and static plays whenever no
+ * card is live. The set is a hand-drawn SVG (see {@link CrtTv}) and the static
+ * is drawn too, a frame at a time on the client (see {@link useTvStatic})
+ * rather than the 1.8 MB GIF it used to be. The clips are still GIFs, 200 KB to
+ * 2.4 MB, and next/image passes animated files through unoptimized, so each
+ * mounts only while its card is hovered rather than putting megabytes on a page
+ * most visitors never hover. The build-week clip is Muybridge's 1878 race
+ * horse, public domain via Wikimedia Commons.
  *
  * Renders on both pages, in both dialects. The homepage uses it on its light
  * marketing plate; /events renders it `tone="dark"` inside a console card.
- * `tone` swaps neutrals only — the segment hues are information and never
+ * `tone` swaps neutrals only. The segment hues are information and never
  * change.
  *
  * `id` is a prop rather than a constant so the two pages can pick their own
@@ -56,15 +55,15 @@ interface Beat {
   segments: MeetingSegment[];
   /**
    * What the television shows while this card is hovered, or null to let the
-   * static show through. Mounted only while hovered — see the note above.
+   * static show through. Mounted only while hovered, see the note above.
    */
   gif: StaticImageData | null;
-  /** Which part of the strip this card is about — what lights up. */
+  /** Which part of the strip this card is about, meaning what lights up. */
   strip: StripDay;
   /**
-   * Where the card sits on the strip's eight columns from `lg`: above or
-   * below the track, starting on which column, and which of its two columns
-   * its caret points from — or none, for the async window, which has no dot.
+   * Where the card sits on the strip's eight columns from `lg`: above or below
+   * the track, starting on which column, and which of its two columns its caret
+   * points from, or none, for the async window, which has no dot.
    */
   place: {
     side: "above" | "below";
@@ -103,9 +102,9 @@ const BEATS: Beat[] = [
     ),
     // No segment: a build session is AUTHORED on the meeting rather than
     // derived from its structure, so there is no entry in `segmentBadge` to
-    // point at — its chip comes from `kindBadge` instead. The card carries the
-    // name on its own. It used to claim `open`, which is now the label for a
-    // night nobody scheduled at all.
+    // point at and its chip comes from `kindBadge`. The card carries the name
+    // on its own. It used to claim `open`, which is now the label for a night
+    // nobody scheduled at all.
     segments: [],
     gif: bruceAlmighty,
     strip: "wednesday",
@@ -143,32 +142,32 @@ const BEATS: Beat[] = [
 ];
 
 /**
- * The two dialects' neutrals. Class strings are CONSTANT per tone — which
- * card is live is a data attribute, never a class change: `[data-animate]`
+ * The two dialects' neutrals. Class strings are CONSTANT per tone, and which
+ * card is live is a data attribute, never a class change. `[data-animate]`
  * starts at `opacity: 0` in globals.css and only becomes visible when
  * AnimationInit adds `.is-visible`, a class added outside React to an element
  * React believes it owns. Deriving className from hover state makes React
  * rewrite the class attribute and delete `is-visible`, and the observer has
- * already unobserved the node, so nothing ever puts it back — hovering a card
- * deletes the card.
+ * already unobserved the node, so nothing puts it back. Hovering a card deletes
+ * the card.
  *
- * The caret is part of the card: a rotated square in the card's own fill,
- * with two of its borders drawn and the corner between them rounded off,
- * laid over the card's edge so the border appears to run out around the
- * point and back. That only works with an OPAQUE fill — a translucent one
- * would show the edge through the square — which is why the dark card is
- * solid `mauve-900` rather than the console's usual `white/5`. It sits at
- * 25% or 75% of the card's width, the centres of its two strip columns, and
- * only from `lg`, where the cards are on the columns at all. Cards above the
- * track point down; cards below point up.
+ * The caret is part of the card: a rotated square in the card's own fill, two
+ * of its borders drawn and the corner between them rounded off, laid over the
+ * card's edge so the border appears to run out around the point and back. That
+ * only works with an OPAQUE fill, since a translucent one would show the edge
+ * through the square, which is why the dark card is solid `mauve-900` rather
+ * than the console's usual `white/5`. It sits at 25% or 75% of the card's
+ * width, the centres of its two strip columns, and only from `lg`, where the
+ * cards are on the columns at all. Cards above the track point down, cards
+ * below point up.
  *
- * The light card's shadow is a `drop-shadow`, not a `box-shadow`, on
- * purpose: a filter follows the painted shape, caret included, where a box
- * shadow would stop at the rectangle and leave the point casting nothing.
+ * The light card's shadow is a `drop-shadow`, not a `box-shadow`, on purpose: a
+ * filter follows the painted shape, caret included, where a box shadow would
+ * stop at the rectangle and leave the point casting nothing.
  *
  * While any card is hovered the live one leans in toward the strip and the
- * others step back from it — a little smaller, a little dimmer — so it reads
- * as the channel that is on. See `SIDE` for the direction.
+ * others step back, smaller and dimmer, so it reads as the channel that is on.
+ * See `SIDE` for the direction.
  */
 const CARET_BASE =
   "lg:before:absolute lg:before:size-3.5 lg:before:-translate-x-1/2 lg:before:rotate-45 lg:before:transition-colors";
@@ -227,9 +226,9 @@ const COL_START = {
  * Placement, plus the direction of the hover: the live card moves TOWARD the
  * strip and the others shrink AWAY from it, which is a matter of where each
  * card's transform origin sits. A card above the strip scales about its top
- * edge, so getting smaller pulls its bottom — the strip-facing edge — away;
- * a card below scales about its bottom. Below `lg` every card is under the
- * strip, so "toward" is up for all of them.
+ * edge, so getting smaller pulls its bottom, the strip-facing edge, away. A
+ * card below scales about its bottom. Below `lg` every card is under the strip,
+ * so "toward" is up for all of them.
  */
 const SIDE = {
   above:
@@ -248,16 +247,16 @@ export default function HowItWorks({
   /**
    * Cut the strip's band out of the plate behind it, edge to edge, so the
    * timeline runs on the page's own black through a slot in the section.
-   * Homepage only — it assumes it is inside a `SectionBackground` plate
-   * that the `@container` site layout sizes, and draws the plate's rounded
-   * corners at the slot's four corners itself.
+   * Homepage only: it assumes it is inside a `SectionBackground` plate that the
+   * `@container` site layout sizes, and draws the plate's rounded corners at
+   * the slot's four corners itself.
    */
   cutout?: boolean;
 }) {
   // `null` is the resting state, not "beat 0": static plays underneath until a
   // pointer lands on a card.
   const [hovered, setHovered] = useState<number | null>(null);
-  // noUncheckedIndexedAccess is on, so this is Beat | undefined either way —
+  // noUncheckedIndexedAccess is on, so this is Beat | undefined either way,
   // which is what the television wants anyway, since undefined IS static.
   const active = hovered === null ? undefined : BEATS[hovered];
   const t = TONES[tone];
@@ -267,15 +266,14 @@ export default function HowItWorks({
       id={id}
       aria-labelledby={`${id}-heading`}
       className="flex scroll-mt-28 flex-col gap-8"
-      // The console page reveals nothing on scroll — that is the marketing
-      // pages' idiom — so the attribute only exists on the light plate.
+      // The console page reveals nothing on scroll, that being the marketing
+      // pages' idiom, so the attribute only exists on the light plate.
       data-animate={tone === "light" ? "fade-up" : undefined}
     >
       {/* The heading spans the whole section rather than sitting in the text
-          column, so it titles the television as much as the words — the set is
-          part of what this section is, not an illustration hung beside a
-          heading that belongs to something else. Left-justified, so it still
-          starts on the same line the paragraphs under it do. */}
+          column, so it titles the television as much as the words. The set is
+          part of this section, not an illustration hung beside it.
+          Left-justified, so it starts on the same line the paragraphs do. */}
       <div className="flex flex-col gap-4">
         <h2
           id={`${id}-heading`}
@@ -284,18 +282,17 @@ export default function HowItWorks({
           A Week in DevDogs
         </h2>
 
-        {/* Flex rather than the eight-column grid this used to be, and that is
-            what puts the set where it belongs. On a grid the set was centred in
-            ITS OWN cell, so the empty run between the prose's right edge — the
-            paragraphs stop at `max-w-prose`, well short of the column — and the
-            start of the set's column was dead space the centring never saw.
-            `flex-1` gives the set exactly the width left over after the prose,
-            and centring inside that is centring in the gap a reader sees. */}
-        {/* `lg:gap-0` so the leftover space really does start at the prose's
-            right edge. A gap here would push the set's box inward and centre
-            it in something narrower than the gap a reader sees, which is the
-            error this layout was changed to fix — just smaller. The set is
-            centred in that space, so it keeps clear of the text on its own. */}
+        {/* Flex rather than the eight-column grid this used to be. On a grid
+            the set was centred in ITS OWN cell, so the run between the prose's
+            right edge (the paragraphs stop at `max-w-prose`, well short of the
+            column) and the start of the set's column was dead space the
+            centring never saw. `flex-1` gives the set the width left over after
+            the prose, and centring inside that is centring in the gap a reader
+            sees. */}
+        {/* `lg:gap-0` so that leftover space really does start at the prose's
+            right edge. A gap would push the set's box inward and centre it in
+            something narrower than the gap a reader sees, the same error this
+            layout was changed to fix, just smaller. */}
         <div className="flex flex-col gap-8 lg:flex-row lg:items-stretch lg:gap-0">
           <div className="flex max-w-prose flex-col gap-4 text-left">
             <p className={`text-base/relaxed text-balance ${t.intro}`}>
@@ -315,8 +312,8 @@ export default function HowItWorks({
               nothing: the row is as tall as the WORDS and the set fits that,
               never taller. In flow its natural height would set the row, and
               the television would decide how tall the prose beside it looked.
-              Now that the heading has moved out of the row, "as tall as the
-              words" means the body text alone, which is the height wanted. */}
+              With the heading out of the row, "as tall as the words" is the
+              body text alone. */}
           <div className="mx-auto w-full max-w-sm lg:relative lg:mx-0 lg:max-w-none lg:flex-1">
             <div className="lg:absolute lg:inset-0 lg:flex lg:justify-center">
               <CrtTv
@@ -330,18 +327,18 @@ export default function HowItWorks({
         </div>
       </div>
 
-      {/* One grid, three rows from `lg`: cards above, the strip, cards
-          below — on the strip's own eight columns, so each card starts under
-          (or over) the day it is about. The `<ol>` keeps its chronological
-          DOM order and dissolves into the grid with `contents`; below `lg`
-          it is a plain stack after the strip. */}
+      {/* One grid, three rows from `lg`: cards above, the strip, cards below,
+          on the strip's own eight columns, so each card starts under (or over)
+          the day it is about. The `<ol>` keeps its chronological DOM order and
+          dissolves into the grid with `contents`; below `lg` it is a plain
+          stack after the strip. */}
       {/* `gap-y-5`: the light cards cast a block drop-shadow, and anything
           tighter let it bleed into the strip's black cutout. */}
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-8 lg:gap-x-4 lg:gap-y-5">
         <div className="relative py-5 lg:col-span-8 lg:row-start-2">
           {cutout && <Cutout />}
           {/* Inside a cutout the strip sits on the page's black, whatever
-              plate the rest of the section is on — so it takes the dark
+              plate the rest of the section is on, so it takes the dark
               neutrals there, or the day names would be black on black. */}
           <CompetitionTimeline
             tone={cutout ? "dark" : tone}
@@ -395,17 +392,17 @@ export default function HowItWorks({
 /**
  * The slot in the plate that the strip runs through.
  *
- * A black band as wide as the section — the site layout is the `@container`,
- * and a section is that width less its `mx-4` / `md:mx-6`, the same sum
- * `--section-skew-slope` in globals.css is built from — centred on this
- * wrapper, which is centred in the section because the content column is.
- * It paints at `-z-10`, under the strip but inside the content's stacking
- * context, which is above the plate.
+ * A black band as wide as the section, centred on this wrapper, which is
+ * centred in the section because the content column is. The site layout is the
+ * `@container`, and a section is that width less its `mx-4` / `md:mx-6`, the
+ * same sum `--section-skew-slope` in globals.css is built from. It paints at
+ * `-z-10`, under the strip but inside the content's stacking context, which is
+ * above the plate.
  *
- * The four ears are what make it a cutout rather than a stripe: a square at
- * each outer corner, black except for a quarter-circle of transparency
- * where the plate above or below rounds off into the slot. Their radius is
- * the section's own `rounded-xl`, so the slot's corners match the plate's.
+ * The four ears make it a cutout rather than a stripe: a square at each outer
+ * corner, black except for a quarter-circle of transparency where the plate
+ * above or below rounds off into the slot. Their radius is the section's own
+ * `rounded-xl`, so the slot's corners match the plate's.
  */
 function Cutout() {
   return (

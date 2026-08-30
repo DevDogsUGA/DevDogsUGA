@@ -7,11 +7,11 @@ import {
 } from "./rulesets";
 
 /**
- * The ruleset shapes, which are untestable anywhere else.
+ * The ruleset shapes, untestable anywhere else.
  *
  * Every property asserted here is invisible at runtime: GitHub returns 201 for
  * a ruleset that protects the wrong ref, carries the wrong bypass actor, or
- * enforces nothing at all. The failure surfaces as a team pushing to another
+ * enforces nothing at all. The failure shows up as a team pushing to another
  * team's branch, which nothing reports and nobody looks for.
  */
 
@@ -62,9 +62,9 @@ describe("per-team ruleset", () => {
   it("uses an exact ref, so one team's ruleset cannot govern another's branch", () => {
     // The regression this exists for: `team/<comp>/lantern` is a prefix of
     // `team/<comp>/lantern-2`. Under a glob, lantern's ruleset would match
-    // lantern-2's branch AND name lantern as its bypass actor -- handing one
-    // team push access to another's work, with both rulesets reading correctly
-    // in isolation.
+    // lantern-2's branch AND name lantern as its bypass actor, handing one team
+    // push access to another's work, with both rulesets reading correctly in
+    // isolation.
     const include = teamRulesetPayload(COMP, "lantern", TEAM_ID).conditions
       .ref_name.include;
 
@@ -97,8 +97,8 @@ describe("archive ruleset", () => {
 
   it("has an empty bypass list", () => {
     // The whole point. Deleting a per-team ruleset does not freeze its branch,
-    // it opens it -- every team holds repository-wide push. A frozen branch is
-    // one covered by a ruleset nobody bypasses.
+    // it opens it: every team holds repository-wide push. A frozen branch is one
+    // covered by a ruleset nobody bypasses.
     expect(archiveRulesetPayload(COMP).bypass_actors).toEqual([]);
     expect(archiveRulesetPayload(COMP).enforcement).toBe("active");
   });

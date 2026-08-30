@@ -4,7 +4,7 @@
  *
  * The paths are Simple Icons' (CC0), copied verbatim from the Simple Icons
  * SVG set. They are inlined rather than imported because this app's two icon
- * sets — `@phosphor-icons` and `lucide-react` — carry no brand marks, and a
+ * sets, `@phosphor-icons` and `lucide-react`, carry no brand marks, and a
  * dozen paths are a poor reason to add a third icon dependency to the bundle.
  *
  * `java` draws OpenJDK's mark: Simple Icons carries no Java icon, the name
@@ -91,5 +91,5 @@ export const TECH = {
   },
 } as const satisfies Record<string, Tech>;
 
-/** Keys of {@link TECH} — what a project's `techStack` is built from. */
+/** Keys of {@link TECH}. A project's `techStack` is built from these. */
 export type TechKey = keyof typeof TECH;

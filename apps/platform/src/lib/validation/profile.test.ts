@@ -14,10 +14,10 @@ import {
 } from "./profile";
 
 /**
- * These rules are the reason a page-wide save can fan out to five different
- * writes without regularly ending up half applied, so they are worth pinning
- * down — particularly the two that mirror a database column, where the cost of
- * drifting is a write that passes validation and then fails at the insert.
+ * These rules are why a page-wide save can fan out to five different writes
+ * without regularly ending up half applied. The two that mirror a database
+ * column matter most: drifting there means a write that passes validation and
+ * then fails at the insert.
  */
 
 describe("validatePreferredName", () => {
@@ -39,10 +39,10 @@ describe("validatePreferredName", () => {
 
 describe("validateBio", () => {
   // The limit is on the NORMALIZED value, and normalizing wraps to 63-column
-  // lines — so the newlines it inserts count against the varchar(127) too. A
+  // lines, so the newlines it inserts count against the varchar(127) too. A
   // 127-character run with nowhere to break becomes three lines and 129
-  // characters, and is refused. That is long-standing behaviour; this pins it
-  // down because it is surprising enough to be "fixed" by accident.
+  // characters, and is refused. Long-standing behaviour, pinned down here
+  // because it is surprising enough to be "fixed" by accident.
   it("accepts text that normalizes to exactly the column width", () => {
     const twoFullLines = `${"a".repeat(63)} ${"b".repeat(63)}`;
     expect(twoFullLines).toHaveLength(PROFILE_LIMITS.shortText);

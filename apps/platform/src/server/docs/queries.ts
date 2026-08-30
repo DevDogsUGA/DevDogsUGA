@@ -15,9 +15,9 @@ import type { DocHeading } from "~/lib/toc";
 
 // Docs are parsed from the repo's `docs/` folder at build time by
 // @devdogsuga/docs, so every read here is an in-memory lookup over a bundled
-// constant — no database, no cache, and nothing to revalidate. `docs/` is
-// grouped by project: each immediate subfolder is one project, and the first
-// segment of a stored page path is its project.
+// constant. No database, no cache, nothing to revalidate. `docs/` is grouped by
+// project: each immediate subfolder is one project, and the first segment of a
+// stored page path is its project.
 
 export type { DocsProject };
 
@@ -57,7 +57,7 @@ export function getDocsFolder(
 /** One entry in a folder's contents grid. */
 export interface DocsFolderEntry {
   kind: "page" | "folder";
-  /** Project-relative path — the page's own, or the subfolder's. */
+  /** Project-relative path: the page's own, or the subfolder's. */
   path: string;
   title: string;
   description: string | null;
@@ -65,8 +65,8 @@ export interface DocsFolderEntry {
 
 /**
  * What a folder holds, in sidebar order. Descriptions come from the pages
- * themselves, which the tree does not carry — it stores only what the sidebar
- * needs, and a one-line summary is not that.
+ * themselves, because the tree stores only what the sidebar needs and a
+ * one-line summary is not that.
  */
 export function getDocsFolderEntries(
   project: string,

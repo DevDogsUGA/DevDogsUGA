@@ -4,10 +4,10 @@ import { isPlaceholder } from "./registry.js";
  * Writing discovered IDs back into `registry.ts`.
  *
  * This is a source transform on this package's own file, which is why it lives
- * here rather than in the CLI that calls it: the shape it rewrites — `todo()`
- * calls, `fldTODO_` placeholders, the header paragraph — is defined three
- * modules over, and a rewriter that drifts from it fails by silently replacing
- * nothing.
+ * here rather than in the CLI that calls it. It rewrites `todo()` calls,
+ * `fldTODO_` placeholders, and the header paragraph. That shape is defined
+ * three modules over, and a rewriter that drifts from it fails by silently
+ * replacing nothing.
  *
  * Kept pure so it can be tested without a base. The caller reads the file,
  * passes the text through, and writes the result.
@@ -36,7 +36,7 @@ export interface ApplyIdsResult {
  * replaces it once it is no longer true.
  *
  * Rewritten rather than left alone because the old text opens with "Every `id`
- * below is a PLACEHOLDER" — a comment that survives its own subject is worse
+ * below is a PLACEHOLDER". A comment that survives its own subject is worse
  * than no comment, since the next reader has no reason to doubt it.
  */
 export const HEADER_PLACEHOLDER_SECTION = ` * ## Field IDs are placeholders until the base exists
@@ -78,14 +78,14 @@ function escape(s: string): string {
 }
 
 /**
- * Whether any `todo("...")` call remains — in CODE, not in prose.
+ * Whether any `todo("...")` call remains in CODE, not in prose.
  *
- * Comments have to be stripped first, and by both halves of the file: the
+ * Comments have to be stripped first, from both halves of the file: the
  * registry declares `function todo(slug: string)` a few lines up, and the
  * header this module writes explains the workflow using the literal text
- * `todo("slug")`. A naive search for either `todo(` or `todo("` matches one of
- * those on every run, which is why the stale-header warning below could never
- * fire before.
+ * `todo("slug")`. A naive search for `todo(` or `todo("` matches one of those
+ * on every run, which is why the stale-header warning below could never fire
+ * before.
  */
 function hasPlaceholderCalls(source: string): boolean {
   const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
@@ -124,9 +124,8 @@ export function applyDiscoveredIds(
     }
   }
 
-  // The helpers stay -- adding a field later uses them again. The header does
-  // not: it opens by telling the reader that every ID below is fake, and a
-  // comment that outlives its own subject is worse than no comment at all.
+  // The helpers stay, since adding a field later uses them again. The header
+  // does not: it opens by telling the reader that every ID below is fake.
   if (next.includes(HEADER_PLACEHOLDER_SECTION)) {
     next = next.replace(HEADER_PLACEHOLDER_SECTION, HEADER_REAL_SECTION);
   } else if (replaced > 0 && !hasPlaceholderCalls(next)) {

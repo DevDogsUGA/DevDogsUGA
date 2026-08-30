@@ -57,10 +57,10 @@ const profileSchema = z.object({
 
 /**
  * Fetches the Discord profile and adds the user to the DevDogs guild.
- * The identity link itself is managed by Supabase (`auth.identities`).
+ * Supabase owns the identity link itself (`auth.identities`).
  * @param accessToken The Discord access token from the Supabase OAuth session.
- * @param profile The public profile of the user (their `name` is used to
- *   set their Discord nickname in the guild).
+ * @param preferredName Becomes the member's nickname in the guild.
+ * @param userId The DevDogs user, whose roles are synced after the link.
  * @see `requestAuthorization`
  */
 export async function linkProfile(
@@ -93,7 +93,7 @@ export async function linkProfile(
   );
 
   // Pull in any synced DevDogs roles the user already holds on Discord, and
-  // refresh synced role names/colors. Soft-fail — neither should block linking.
+  // refresh synced role names/colors. Both soft-fail so neither blocks linking.
   await syncRolesOnLink(userId, discordProfile.id).catch((err: unknown) => {
     console.error("Failed to sync roles on Discord link:", err);
   });

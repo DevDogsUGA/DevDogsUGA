@@ -2,8 +2,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import { env } from "~/env";
 // Extensionless like every other import in this app: tsc under bundler
 // resolution tolerates a `.js` suffix on a `.ts` source, but Turbopack's
-// production build does not resolve it -- this line was the only one in the
-// app written NodeNext-style, and it broke `next build` invisibly for weeks
+// production build does not resolve it. This line was the only one in the app
+// written NodeNext-style, and it broke `next build` invisibly for weeks,
 // because nothing runs a production build between pushes.
 import { octokit } from "./client";
 import { db } from "~/server/db";
@@ -24,7 +24,7 @@ import {
  * schedule.** A member who joins on Tuesday can push on Tuesday; routing that
  * through the nightly pass would make it a nightly promise. `reconcileTeams`
  * exists because GitHub's API can fail and a membership change that silently
- * did not apply is invisible until somebody cannot push — it closes that gap
+ * did not apply is invisible until somebody cannot push. It closes that gap
  * rather than being the mechanism.
  *
  * Teams get a branch in the org rather than a fork, for one decisive reason:
@@ -110,9 +110,9 @@ async function contextFor(teamId: string): Promise<TeamContext | null> {
  * whose members can push once somebody cuts one, while a branch that exists
  * with nobody able to push to it is a dead end.
  *
- * Idempotent. Every step treats "already there" as success — re-running after
- * a partial failure is the recovery path, and it is also what the reconcile
- * pass does.
+ * Idempotent. Every step treats "already there" as success, because
+ * re-running after a partial failure is the recovery path, and it is what the
+ * reconcile pass does.
  */
 export async function provisionTeam(teamId: string): Promise<GithubResult> {
   const ctx = await contextFor(teamId);
@@ -121,11 +121,11 @@ export async function provisionTeam(teamId: string): Promise<GithubResult> {
   const slug = githubTeamSlug(ctx.competitionSlug, ctx.teamSlug);
   const api = octokit();
 
-  // The numeric id, not the slug. It is needed for the ruleset's bypass actor,
-  // where `actor_type: "Team"` takes an id and nothing else — and the create
-  // response is the cheapest place to get it. The `already_exists` path costs
-  // one extra request precisely because re-provisioning is the recovery path
-  // and has to reach the same end state.
+  // The numeric id, not the slug. The ruleset's bypass actor needs it, since
+  // `actor_type: "Team"` takes an id and nothing else, and the create response
+  // is the cheapest place to get it. The `already_exists` path costs one extra
+  // request because re-provisioning is the recovery path and has to reach the
+  // same end state.
   let githubTeamId: number;
   try {
     const { data } = await api.rest.teams.create({
@@ -183,7 +183,7 @@ export async function provisionTeam(teamId: string): Promise<GithubResult> {
  * branch judging reads. This is the only thing that narrows it.
  *
  * Idempotent by name, because rulesets are addressed by a numeric id nothing
- * here stores and `createRepoRuleset` does NOT reject a duplicate name — a
+ * here stores and `createRepoRuleset` does NOT reject a duplicate name. A
  * blind create on the recovery path would leave two rulesets over one branch,
  * both enforcing, and removing either would look like it fixed the problem.
  */
@@ -257,8 +257,8 @@ async function cutTeamBranch(ctx: TeamContext): Promise<GithubResult> {
     sha = data.object.sha;
   } catch (error) {
     // The integration branch is created when the competition is set up, so its
-    // absence is a competition-level problem rather than a team-level one —
-    // worth naming precisely, because the fix is somewhere else entirely.
+    // absence is a competition-level problem, not a team-level one. Worth
+    // naming exactly, because the fix is somewhere else entirely.
     return failed(
       "not_found",
       `Integration branch ${base} does not exist: ${describe(error)}`,
@@ -283,7 +283,7 @@ async function cutTeamBranch(ctx: TeamContext): Promise<GithubResult> {
  * Cuts the integration branch for a competition, from `main`.
  *
  * Separate from team provisioning and called when the competition is created,
- * because every team's branch is cut from this one — a competition whose
+ * because every team's branch is cut from this one. A competition whose
  * integration branch does not exist cannot provision any team at all.
  */
 export async function provisionCompetitionBranch(
@@ -317,11 +317,11 @@ export async function provisionCompetitionBranch(
 /**
  * Adds a member to the GitHub team.
  *
- * A member without a linked GitHub identity cannot be added, and the join path
+ * A member without a linked GitHub identity cannot be added, so the join path
  * refuses rather than succeeding into a half-provisioned state where somebody
- * is on the roster and cannot push — see `github_not_linked` in the team
- * errors. This returns `not_linked` for the case where the link disappeared
- * between joining and the reconcile.
+ * is on the roster and cannot push. See `github_not_linked` in the team errors.
+ * This returns `not_linked` for the case where the link disappeared between
+ * joining and the reconcile.
  */
 export async function addMember(
   teamId: string,
@@ -374,28 +374,20 @@ export async function removeMember(
 }
 
 /**
- * Drops the team to read-only once its competition is over.
- *
- * Not a deletion. The branch, the PR and the history are the record of what
- * the team did, and a member should still be able to point at it a semester
- * later — what they lose is the ability to keep pushing to a competition that
- * has been judged.
- */
-/**
  * Freezes a finished competition's team branches, and reclaims its rulesets.
  *
- * Replace, then delete — never delete. Deleting a per-team ruleset does not
+ * Replace, then delete. Never delete. Deleting a per-team ruleset does not
  * freeze that branch, it OPENS it: every competition team holds repository-wide
  * `push`, so a team branch governed by no ruleset is one any member of any team
  * can rewrite. The archive ruleset goes up FIRST, with an empty bypass list, and
  * the per-team ones come down only once it is in place.
  *
- * Takes the ruleset count for the competition from N to 1, which is what keeps
- * the 75-per-repository ceiling reachable across years rather than across a
- * single semester.
+ * Takes the ruleset count for the competition from N to 1, which keeps the
+ * 75-per-repository ceiling reachable across years rather than across a single
+ * semester.
  *
  * ⚠️ NOT WIRED TO ANYTHING YET, like `downgradeTeam` below. Both are the
- * archive path, and nothing calls it — competitions are never marked finished
+ * archive path and nothing calls either; competitions are never marked finished
  * in a way that reaches GitHub. Written now because it is the safe counterpart
  * to `ensureTeamRuleset`: the moment somebody DOES build that flow, the obvious
  * implementation is "delete the rulesets", which is the one thing that must not
@@ -460,6 +452,14 @@ export async function archiveCompetitionRulesets(
   return { ok: true };
 }
 
+/**
+ * Drops the team to read-only once its competition is over.
+ *
+ * Not a deletion. The branch, the PR and the history are the record of what the
+ * team did, and a member should still be able to point at it a semester later.
+ * What they lose is the ability to keep pushing to a competition that has been
+ * judged.
+ */
 export async function downgradeTeam(teamId: string): Promise<GithubResult> {
   const ctx = await contextFor(teamId);
   if (!ctx) return failed("not_found", `No team ${teamId}`);
@@ -499,9 +499,9 @@ export interface ReconcileReport {
  * nobody found out, which is invisible until a member tries to push and
  * cannot.
  *
- * Scoped to teams whose competition has not been archived. A finished
- * competition's teams are history — reconciling them would re-add members to
- * a team that was deliberately downgraded, every night, forever.
+ * Scoped to teams whose competition has not been archived. Reconciling a
+ * finished competition would re-add members to a team that was deliberately
+ * downgraded, every night, forever.
  */
 export async function reconcileTeams(): Promise<ReconcileReport> {
   const report: ReconcileReport = {
@@ -540,7 +540,7 @@ export async function reconcileTeams(): Promise<ReconcileReport> {
     } catch (error) {
       if (isNotFound(error)) {
         // The team itself never got created. Provisioning is idempotent, so
-        // this is the same call the join path makes — re-running it is the
+        // this is the same call the join path makes, and re-running it is the
         // whole recovery path.
         const result = await provisionTeam(row.teamId);
         if (result.ok) report.provisioned += 1;
@@ -602,10 +602,10 @@ function status(error: unknown): number | null {
 }
 
 /**
- * GitHub answers "this already exists" with 422 on ref creation and with 422
- * on team creation, so both provisioning steps treat it as success. Anything
- * else at 422 is a genuinely malformed request and must not be swallowed —
- * hence the message check rather than the status alone.
+ * GitHub answers "this already exists" with 422 on ref creation and on team
+ * creation, so both provisioning steps treat it as success. Anything else at
+ * 422 is a malformed request and must not be swallowed, hence the message check
+ * rather than the status alone.
  */
 function isAlreadyExists(error: unknown): boolean {
   if (status(error) !== 422) return false;

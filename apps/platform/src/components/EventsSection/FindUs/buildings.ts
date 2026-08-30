@@ -3,16 +3,14 @@ import { BUILDING_KEYS, type BuildingKey } from "./campusMapMeta";
 /**
  * What a meeting can say about where it is, on the app's side of the line.
  *
- * The keys themselves come from `campusMapMeta`, which the map generator
- * writes — so the set of buildings an officer can pick is, by construction,
- * the set the map can draw. That is the whole reason the list lives there
- * rather than here: a building in the dropdown with no footprint behind it is
- * a highlight pointing at nothing, and the failure would not show up until
- * somebody scheduled a meeting in it.
+ * The keys come from `campusMapMeta`, which the map generator writes, so the
+ * set of buildings an officer can pick is the set the map can draw. A building
+ * in the dropdown with no footprint behind it is a highlight pointing at
+ * nothing, and nobody would notice until a meeting was scheduled in it.
  *
  * `packages/airtable` keeps its own copy, because it sits upstream of this app
- * and importing downward would invert the dependency. The two are held
- * together by a test rather than by discipline — see `buildings.test.ts`.
+ * and importing downward would invert the dependency. `buildings.test.ts`
+ * holds the two together.
  */
 
 /** Somewhere the map does not draw. The room text carries the detail. */
@@ -21,10 +19,10 @@ export const OTHER_BUILDING = "Other";
 /**
  * Where the club meets when nothing says otherwise.
  *
- * Named here rather than typed into the places that want it — the homepage's
- * Directions button and the bare `/events/directions` URL — because those have
- * to agree with the floor plan's own gate or the link on the front door opens
- * a dialog with no floor plan in it.
+ * Named here rather than typed into the homepage's Directions button and the
+ * bare `/events/directions` URL, because those have to agree with the floor
+ * plan's own gate or the link on the front door opens a dialog with no floor
+ * plan in it.
  */
 export const USUAL_ROOM = "124";
 
@@ -38,7 +36,7 @@ export const MEETING_BUILDING_CHOICES: readonly MeetingBuilding[] = [
 
 const DRAWN: ReadonlySet<string> = new Set(BUILDING_KEYS);
 
-/** Whether the map has a footprint for this value — false for `Other`/null. */
+/** Whether the map has a footprint for this value: false for `Other`/null. */
 export function isMappedBuilding(
   building: string | null,
 ): building is BuildingKey {
@@ -50,8 +48,8 @@ export function isMappedBuilding(
  *
  * Shorter than the name in prose, because this is set at display scale over a
  * building the reader is already looking at: "SLC" is what fits and what a
- * student says. The stored key is not always what should be drawn — hence a
- * table rather than printing the key.
+ * student says. A table rather than the key itself, because the stored key is
+ * not always what should be drawn.
  */
 export const BUILDING_LABEL: Record<BuildingKey, string> = {
   DLW: "DLW",
@@ -69,8 +67,8 @@ export const BUILDING_LABEL: Record<BuildingKey, string> = {
 /**
  * The building's name in a sentence, article included.
  *
- * Written to be dropped into running text — "Meet in the Driftmier Engineering
- * Center" — so the article belongs to the name rather than to every call site
+ * Written to drop into running text, "Meet in the Driftmier Engineering
+ * Center", so the article belongs to the name rather than to every call site
  * remembering to add one.
  */
 export const BUILDING_NAME: Record<BuildingKey, string> = {
@@ -88,9 +86,9 @@ export const BUILDING_NAME: Record<BuildingKey, string> = {
 
 /**
  * The building's name on its own, for a heading: no article, no sentence.
- * Kept beside {@link BUILDING_NAME} rather than derived from it, because
- * "the" is not the only thing that differs — a heading gets the Oxford comma
- * the running text drops.
+ * Kept beside {@link BUILDING_NAME} rather than derived from it, because "the"
+ * is not the only difference: a heading gets the Oxford comma the running text
+ * drops.
  */
 export const BUILDING_FULL_NAME: Record<BuildingKey, string> = {
   DLW: "Dining, Learning, and Well-Being Center",
@@ -113,9 +111,9 @@ export const BUILDING_FULL_NAME: Record<BuildingKey, string> = {
  *
  * Sourced from the buildings' own UGA pages and cross-checked against the
  * OpenStreetMap footprints the map is drawn from. The DLW's is the least
- * settled — the building opened in August 2026 on the old Hillside site,
- * whose address this is — so it is the one to re-check first if a member
- * reports a maps app sending them somewhere odd.
+ * settled: the building opened in August 2026 on the old Hillside site, whose
+ * address this is. Re-check that one first if a member reports a maps app
+ * sending them somewhere odd.
  */
 export const BUILDING_ADDRESS: Record<BuildingKey, string> = {
   DLW: "301 E Cloverhurst Ave, Athens, GA 30605",
@@ -133,15 +131,14 @@ export const BUILDING_ADDRESS: Record<BuildingKey, string> = {
 /**
  * Where a meeting is, in one line: the building's short name and the room.
  *
- * Either half can be missing and the answer is still useful — a building with
- * no room is "DLW", a room with no building is whatever the officer typed —
- * so this returns null only when there is nothing at all to say, which is what
- * lets a caller print "Room to be announced" rather than an empty string.
+ * Either half can be missing and the answer is still useful: a building with
+ * no room is "DLW", a room with no building is whatever the officer typed. It
+ * returns null only when there is nothing at all to say, which lets a caller
+ * print "Room to be announced" rather than an empty string.
  *
  * `Other` contributes nothing: it means "not one of the buildings on the map",
- * which is a statement about this app rather than about where to go, and
- * printing it would put the word "Other" on a public page as if it were an
- * address.
+ * a statement about this app rather than about where to go, and printing it
+ * would put the word "Other" on a public page as if it were an address.
  */
 export function locationLine(
   building: string | null,

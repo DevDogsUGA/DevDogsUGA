@@ -4,18 +4,18 @@ import Link from "next/link";
 import { useEffect } from "react";
 
 /**
- * The boundary for every page in the site layout that does not bring its own —
+ * The boundary for every page in the site layout that does not bring its own:
  * the console, the account and tools pages, voting, teams and competitions.
  * The events segment has its own; see `events/error.tsx`.
  *
- * Until this existed, a loader that threw — a database that went away
- * mid-request, a Supabase token that failed to refresh — put Next's unstyled
- * default error screen in front of an officer, which reads as the site being
- * gone rather than one read having failed.
+ * Until this existed, a loader that threw put Next's unstyled default error
+ * screen in front of an officer, which reads as the site being gone rather
+ * than one read having failed. Loaders throw when a database goes away
+ * mid-request or a Supabase token fails to refresh.
  *
- * The digest is the only handle on what actually happened: a Server
- * Component's error reaches the client stripped of its message, and the digest
- * is what ties the screenshot somebody sends us to the line in the server log.
+ * The digest is the only handle on what happened: a Server Component's error
+ * reaches the client stripped of its message, and the digest ties the
+ * screenshot somebody sends us to the line in the server log.
  */
 export default function SiteError({
   error,

@@ -49,9 +49,9 @@ export async function GET(request: Request) {
 
   const [expectedState, orgSlug] = stored.split(":");
 
-  // Constant-time-ish: these are equal-length base64url strings from our own
-  // CSPRNG, so a length check plus a comparison is not leaking anything an
-  // attacker can use, but the comparison must happen before the exchange.
+  // These are equal-length base64url strings from our own CSPRNG, so a plain
+  // comparison leaks nothing an attacker can use. It must still run before the
+  // exchange.
   if (state !== expectedState) {
     return NextResponse.json(
       { code: "state_mismatch", message: "This flow did not start here." },
@@ -62,10 +62,10 @@ export async function GET(request: Request) {
   try {
     await connectSupabase(userId, code, verifier, orgSlug ?? "");
   } catch (e) {
-    // The stage matters. Trading the code with Supabase and storing the result
-    // fail for entirely unrelated reasons, and collapsing both into one code
-    // makes the console report a Supabase problem for what may be our own
-    // database. `redirect` throws NEXT_REDIRECT, so it stays out of the try.
+    // Trading the code with Supabase and storing the result fail for unrelated
+    // reasons. One shared code would make the console blame Supabase for what
+    // may be our own database. `redirect` throws NEXT_REDIRECT, so it stays out
+    // of the try.
     const code_ =
       e instanceof OAuthError && e.code === "persist_failed"
         ? "persist_failed"
@@ -74,10 +74,9 @@ export async function GET(request: Request) {
     redirect(`/console/sandbox?error=${code_}`);
   }
 
-  // The token response carries no `scope` field, so what was actually granted
-  // can only be discovered by calling something. Probing here means a missing
-  // scope surfaces on the connect screen rather than mid-provision, in front of
-  // a team.
+  // The token response carries no `scope` field, so the only way to learn what
+  // was granted is to call something. Probing here shows a missing scope on the
+  // connect screen instead of mid-provision, in front of a team.
   const granted = await probeScopes(await accessTokenFor(userId));
 
   redirect(

@@ -12,10 +12,9 @@ import {
 /**
  * Reads for the sandbox console.
  *
- * Every one of these is scoped to what the caller can already reach — an
- * environment is visible to somebody on a team attached to it, which is the
- * same reachability rule that governs credentials. Nothing here returns a key,
- * a token, or a Vault id.
+ * Every one is scoped to what the caller can already reach: an environment is
+ * visible to somebody on a team attached to it, the same reachability rule that
+ * governs credentials. Nothing here returns a key, a token, or a Vault id.
  */
 
 export interface SandboxConnection {
@@ -56,9 +55,9 @@ export interface EnvironmentCard {
 /**
  * Environments the caller can reach, with the teams attached to each.
  *
- * Reached through `teamMembers` rather than through ownership, because a member
- * who is not the owner still needs to see the environment they are building
- * against — and one environment may serve several teams.
+ * Reached through `teamMembers` rather than ownership, because a member who is
+ * not the owner still needs to see the environment they build against. One
+ * environment may serve several teams.
  */
 export async function getEnvironmentsForMember(
   userId: string,

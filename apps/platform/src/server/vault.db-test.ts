@@ -14,14 +14,14 @@ import {
  *
  * This test exists because these four functions were broken for their entire
  * life and nothing noticed. They went through `supabaseAdmin.schema("vault")`,
- * and `vault` is not in `config.toml`'s `[api].schemas` — so PostgREST answered
+ * and `vault` is not in `config.toml`'s `[api].schemas`, so PostgREST answered
  * every call with `Invalid schema: vault`. It surfaced only when the Supabase
  * OAuth callback tried to store a grant in front of a person.
  *
- * The unit tests could not have caught it: every caller mocks this module, and
- * a mock of a function that never worked passes exactly as well as a mock of
- * one that does. Only a test that talks to a real Vault distinguishes them,
- * which is the whole argument for it living in the `.db-test` suite.
+ * The unit tests could not have caught it. Every caller mocks this module, and
+ * a mock of a function that never worked passes as well as a mock of one that
+ * does. Only a test that talks to a real Vault tells them apart, which is why
+ * it lives in the `.db-test` suite.
  */
 
 const NAME = `vault_db_test_${Date.now()}`;
@@ -52,8 +52,8 @@ describe("the Vault round trip", () => {
   });
 
   it("stores ciphertext, not the plaintext", async () => {
-    // The point of the Vault. If this ever passes trivially -- because the
-    // column holds the plaintext -- the encryption is not doing anything.
+    // The point of the Vault. If this ever passes trivially, because the column
+    // holds the plaintext, the encryption is not doing anything.
     const [row] = await db.execute<{ secret: string }>(
       sql`select secret from vault.secrets where id = ${storedId!}::uuid`,
     );
@@ -89,9 +89,9 @@ describe("the Vault round trip", () => {
 describe("the schema the API actually serves", () => {
   it("does not expose vault over PostgREST", async () => {
     // A guard on the repair, not on the bug. Adding `vault` to `[api].schemas`
-    // would make the original code work again, and would also put
-    // `decrypted_secrets` on the REST surface -- one missing grant away from
-    // handing out every credential the platform holds.
+    // would make the original code work again, and would also expose
+    // `decrypted_secrets` over REST, one missing grant away from handing out
+    // every credential the platform holds.
     const [row] = await db.execute<{ setting: string | null }>(
       sql`select current_setting('pgrst.db_schemas', true) as setting`,
     );

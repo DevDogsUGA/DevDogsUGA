@@ -2,45 +2,40 @@
  * RFC 4180 serialization.
  *
  * Pure and separate because the format is a contract with importers nobody
- * here controls, and every rule below is one that fails silently: a missing
- * quote shifts every subsequent column, a bare local timestamp is read in the
- * importer's zone, and a `null` rendered as the word "null" becomes a member
- * named null.
+ * here controls, and every rule below fails silently: a missing quote shifts
+ * every later column, a bare local timestamp is read in the importer's zone,
+ * and a `null` rendered as the word "null" becomes a member named null.
  */
 
-/** The format contract's stability rules, encoded. */
+/** CRLF, the line ending RFC 4180 specifies. */
 export const LINE_ENDING = "\r\n";
 
 /**
  * Quotes a field only when it has to be quoted.
  *
  * The four triggers are the whole of RFC 4180: a comma, a quote, a carriage
- * return or a line feed. Quoting everything would also be valid and is what
- * most hand-rolled serializers do; not quoting everything keeps the file
- * readable in a terminal, which is where somebody debugging an import will
- * open it.
+ * return or a line feed. Quoting everything would also be valid, but quoting
+ * only what needs it keeps the file readable in a terminal, where somebody
+ * debugging an import will open it.
  *
- * A leading `=`, `+`, `-` or `@` is additionally prefixed with a tab. Those
- * are the four characters spreadsheets treat as the start of a formula, and a
- * member is entirely capable of naming their team `=cmd|'/c calc'!A1`. The tab
- * is invisible in a cell and neutralises the injection — this is the one place
- * the serializer is not a pure encoding, and it is worth it.
+ * A leading `=`, `+`, `-` or `@` also gets a tab prefix. Those are the four
+ * characters spreadsheets treat as the start of a formula, and a member can
+ * name their team `=cmd|'/c calc'!A1`. The tab is invisible in a cell and
+ * neutralises the injection. It is the one place this is not a pure encoding.
  */
 export function csvField(value: unknown): string {
   if (value === null || value === undefined) return "";
 
-  // Narrowed per type rather than a bare `String()`, which is what this used to
-  // be (behind a ternary whose branches were identical). Two things reach a
-  // spreadsheet silently wrong otherwise, and both are the failure mode the
-  // whole file is shaped against:
+  // Narrowed per type rather than a bare `String()`, which is what this used
+  // to be. Two things reach a spreadsheet silently wrong otherwise:
   //
-  //   * An object stringifies to "[object Object]" — a perfectly valid CSV cell
-  //     that has dropped the data, in a file nobody re-reads until an import has
+  //   * An object stringifies to "[object Object]", a valid CSV cell that has
+  //     dropped the data, in a file nobody re-reads until an import has
   //     already gone wrong.
-  //   * A Date stringifies to a bare local time. `csvTimestamp` exists
-  //     precisely so that does not reach an importer in another zone, and
-  //     `project` in `csvStream` returns `unknown[]`, so nothing stops a caller
-  //     handing one straight over.
+  //   * A Date stringifies to a bare local time. `csvTimestamp` exists so that
+  //     does not reach an importer in another zone, and `project` in
+  //     `csvStream` returns `unknown[]`, so nothing stops a caller handing one
+  //     straight over.
   let text: string;
   if (typeof value === "string") {
     text = value;
@@ -72,9 +67,9 @@ export function csvRow(values: unknown[]): string {
 /**
  * ISO 8601 with an explicit offset, never a bare local time.
  *
- * A timestamp without an offset is read in whatever zone the importer happens
- * to run in, which for a club whose meetings all start at 18:00 Eastern means
- * a spreadsheet in another zone showing the wrong evening.
+ * A timestamp without an offset is read in whatever zone the importer runs in,
+ * which for a club whose meetings all start at 18:00 Eastern means a
+ * spreadsheet in another zone showing the wrong evening.
  */
 export function csvTimestamp(value: Date | string | null): string {
   if (value === null) return "";
@@ -86,9 +81,8 @@ export function csvTimestamp(value: Date | string | null): string {
  * Streams rows without buffering the whole file.
  *
  * The stars export is one row per `(member, workshop)` across every semester,
- * so it grows with the club rather than staying small. Buffering it would work
- * for years and then not, on a Worker with a fixed memory ceiling — and the
- * streaming version is barely longer.
+ * so it grows with the club. Buffering it would work for years and then not,
+ * on a Worker with a fixed memory ceiling.
  */
 export function csvStream<T>(
   header: string[],
@@ -100,8 +94,8 @@ export function csvStream<T>(
   return new ReadableStream({
     async start(controller) {
       // UTF-8 BOM. Excel on Windows reads a BOM-less UTF-8 CSV as the system
-      // codepage, which turns every non-ASCII name into mojibake — and a
-      // member surname is exactly where that shows up.
+      // codepage, turning every non-ASCII name into mojibake, and a member
+      // surname is exactly where that shows up.
       controller.enqueue(encoder.encode("\uFEFF"));
       controller.enqueue(encoder.encode(csvRow(header)));
 

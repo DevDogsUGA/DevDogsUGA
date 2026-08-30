@@ -34,8 +34,8 @@ describe("csvField", () => {
   });
 
   it("neutralises a spreadsheet formula in a team name", () => {
-    // A member is entirely capable of naming their team this. The tab is
-    // invisible in a cell and stops the formula executing on open.
+    // A member can name their team this. The tab is invisible in a cell and
+    // stops the formula executing on open.
     // Not quoted: a tab is an ordinary character in a comma-delimited file,
     // and none of the four RFC 4180 triggers is present.
     expect(csvField("=cmd|'/c calc'!A1")).toBe("\t=cmd|'/c calc'!A1");
@@ -60,10 +60,10 @@ describe("csvField", () => {
   });
 
   it("never writes [object Object]", () => {
-    // The silent failure: "[object Object]" is a perfectly valid CSV cell that
-    // has dropped the data entirely, in a file nobody re-reads until an import
-    // has already gone wrong. JSON is lossy for some shapes but always legible,
-    // so a reviewer opening the file can see the projection is at fault.
+    // The silent failure: "[object Object]" is a valid CSV cell that has
+    // dropped the data, in a file nobody re-reads until an import has already
+    // gone wrong. JSON is lossy for some shapes but always legible, so a
+    // reviewer opening the file can see the projection is at fault.
     expect(csvField({ name: "Sam" })).toBe('"{""name"":""Sam""}"');
     expect(csvField([1, 2])).toBe('"[1,2]"');
   });

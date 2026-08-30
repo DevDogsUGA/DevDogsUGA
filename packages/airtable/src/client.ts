@@ -3,9 +3,10 @@ import type { AirtableValue } from "./field.js";
 /**
  * A minimal typed wrapper over the Airtable Web API.
  *
- * Deliberately not the official SDK: this integration touches four endpoints,
- * and the parts that need care — the per-base rate limit, `returnFieldsByFieldId`,
- * and batching at exactly 10 records — are the parts a general client hides.
+ * Deliberately not the official SDK. This integration touches four endpoints,
+ * and the parts that need care are the parts a general client hides: the
+ * per-base rate limit, `returnFieldsByFieldId`, and batching at exactly 10
+ * records.
  */
 
 export interface AirtableRecord {
@@ -17,7 +18,7 @@ export interface AirtableRecord {
 
 export interface AirtableClientOptions {
   baseId: string;
-  /** Personal access token. Read from Vault — never from .env. */
+  /** Personal access token. Read from Vault, never from .env. */
   token: string;
   fetch?: typeof globalThis.fetch;
   /** Overridable so tests do not sleep. */
@@ -38,7 +39,7 @@ export class AirtableError extends Error {
 }
 
 /**
- * Airtable's write endpoints cap at 10 records per request. Not a tunable —
+ * Airtable's write endpoints cap at 10 records per request. Not a tunable:
  * exceeding it is a 422, so it is a property of the API rather than a choice.
  */
 export const BATCH_SIZE = 10;
@@ -67,11 +68,11 @@ export class AirtableClient {
   /**
    * One request, with backoff on 429.
    *
-   * The 5 requests/second per-base limit is universal — it does not lift with
-   * the plan — so backoff is required at every tier rather than being a
-   * politeness for free accounts. Airtable asks for a 30-second wait after a
-   * 429; this backs off exponentially from 1s instead, because the limiter is
-   * per second and a full 30s stall would make a sync pass take minutes.
+   * The 5 requests/second per-base limit is universal and does not lift with
+   * the plan, so backoff is required at every tier. Airtable asks for a
+   * 30-second wait after a 429; this backs off exponentially from 1s instead,
+   * because the limiter is per second and a full 30s stall would make a sync
+   * pass take minutes.
    */
   private async request<T>(
     method: string,
@@ -107,7 +108,7 @@ export class AirtableClient {
   /**
    * Every record in a table, following pagination.
    *
-   * `returnFieldsByFieldId` is response-only — it does NOT make a request body
+   * `returnFieldsByFieldId` is response-only. It does NOT make a request body
    * ID-keyed, that is simply allowed. A client that sets the flag and then
    * writes by name reads one way and writes the other, and only notices on the
    * first rename. This client keys both by ID.
@@ -136,7 +137,7 @@ export class AirtableClient {
    * Upsert by a merge key, in batches of 10.
    *
    * `performUpsert.fieldsToMergeOn` is what makes this an upsert rather than a
-   * create — and it accepts only a narrow set of field types, which is why the
+   * create. It accepts only a narrow set of field types, which is why the
    * registry constrains `.matchKey()` at the type level.
    */
   async upsertRecords(
@@ -215,9 +216,9 @@ export class AirtableClient {
   /**
    * Add one field to an existing table.
    *
-   * Separate from `createTable` because link fields cannot be created until the
-   * table they point at exists — see `scaffoldBase`, which creates every table
-   * without its links and then fills them in.
+   * Separate from `createTable` because link fields cannot be created until
+   * the table they point at exists. See `scaffoldBase`, which creates every
+   * table without its links and then fills them in.
    */
   async createField(tableId: string, field: NewField): Promise<LiveField> {
     return this.request(

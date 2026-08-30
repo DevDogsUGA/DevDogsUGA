@@ -17,7 +17,7 @@ import {
 } from "~/ui/dialog";
 
 interface Props {
-  /** Names the link — the dialog's title and the label the share sheet gets. */
+  /** Names the link: the dialog's title, and the label the share sheet gets. */
   title: string;
   url: string;
   external: boolean;
@@ -30,10 +30,10 @@ interface Props {
 /**
  * The question every switcher link asks when pressed: follow it, or share it?
  *
- * Asking outright replaced a long press that only touch could reach and a
- * hover-revealed button that only a mouse could see — one affordance, the
- * same on every device, and the share runs from a plain button click, squarely
- * inside the user activation the share sheet demands.
+ * Asking outright replaced a long press only touch could reach and a
+ * hover-revealed button only a mouse could see. One affordance, the same on
+ * every device, and the share runs from a plain button click, inside the user
+ * activation the share sheet demands.
  */
 export default function OpenOrShareDialog({
   title,
@@ -62,7 +62,7 @@ export default function OpenOrShareDialog({
       <DialogPortal>
         <DialogPrimitive.Overlay className="data-open:animate-modal-overlay-in data-closed:animate-modal-overlay-out fixed inset-0 z-110 bg-black/50" />
         {/* Centered with the `translate` property, which the keyframes'
-            `transform` leaves alone — the card rises the last 12px into place
+            `transform` leaves alone. The card rises the last 12px into place
             without losing its centering on the way. */}
         <DialogPrimitive.Content className="data-open:animate-modal-content-in data-closed:animate-modal-content-out fixed top-1/2 left-1/2 z-110 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-md border border-mauve-600 bg-mauve-900 p-5 text-sm text-white outline-none sm:max-w-xs">
           <DialogHeader>
@@ -80,8 +80,8 @@ export default function OpenOrShareDialog({
             <button
               type="button"
               onClick={() => {
-                // The share first, while the click's user activation is fresh —
-                // closing is just cleanup and can happen behind it.
+                // The share first, while the click's user activation is fresh.
+                // Closing is cleanup and can happen behind it.
                 share();
                 onOpenChange(false);
               }}

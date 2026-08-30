@@ -5,7 +5,7 @@
  * that entry and `triggers.crons` fires these schedules.
  *
  * Each cron hits the existing CRON_SECRET-guarded route on the worker's own
- * public origin (`env.BASE_URL`), so no route logic changes — the schedules
+ * public origin (`env.BASE_URL`), so no route logic changes. The schedules
  * mirror the former vercel.json entries.
  */
 import type { env } from "~/env";
@@ -18,8 +18,8 @@ import type { env } from "~/env";
  * and the deploy pipeline decides which secrets exist by reading the schema in
  * `~/env`. A second, independent list here would drift silently in the
  * dangerous direction: a secret declared only in this file is one the audit
- * would see on the Worker, fail to find in the schema, and report as orphaned —
- * that is, as safe to delete from production.
+ * would see on the Worker, fail to find in the schema, and report as orphaned,
+ * meaning safe to delete from production.
  *
  * Type-only import, so nothing is pulled into the Worker bundle and @t3-oss
  * validation does not run in this entry point. Picking a key that leaves the
@@ -33,7 +33,7 @@ export type CronEnv = Pick<typeof env, "CRON_SECRET" | "BASE_URL">;
  * A list per expression, not a single route: Cloudflare fires each schedule
  * once, and more than one pass can want the same cadence. With a bare
  * `Record<string, string>` the second five-minute pass added would have
- * silently replaced the first — a whole subsystem quietly not running, with
+ * silently replaced the first: a whole subsystem quietly not running, with
  * nothing to notice it by.
  */
 export const CRON_ROUTES: Record<string, string[]> = {
@@ -46,8 +46,8 @@ export const CRON_ROUTES: Record<string, string[]> = {
     "/cron/github-reconcile",
     // Supabase OAuth access tokens last 24h, so daily has ample margin. Runs
     // BEFORE the reconcile below, which needs those tokens to ask whether each
-    // project still exists -- reversing them would have the reconcile skip
-    // every environment whose grant lapsed overnight.
+    // project still exists. Reversing them would have the reconcile skip every
+    // environment whose grant lapsed overnight.
     "/cron/sandbox-refresh",
     // Project existence, status drift, 90-day pause expiry, auto-pause. The
     // sole authority on orphaning: the proxy must never conclude a project is
@@ -57,7 +57,7 @@ export const CRON_ROUTES: Record<string, string[]> = {
   ],
   // Airtable polls rather than subscribes. Webhooks exist but expire on a
   // 7-day refresh cycle and deliver cursor-based payloads that have to be
-  // replayed in order -- real complexity for a club calendar that changes a
+  // replayed in order, real complexity for a club calendar that changes a
   // few times a week. At ~5 requests a pass this is ~13% of the monthly
   // allowance, and the manual trigger covers the case where 15 minutes is too
   // long to wait.

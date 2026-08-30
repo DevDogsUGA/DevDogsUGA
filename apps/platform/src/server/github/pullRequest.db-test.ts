@@ -7,13 +7,13 @@ import { applyPullRequestEvent } from "./pullRequest";
 /**
  * The PR webhook against a real database.
  *
- * The case worth a test is the one that has no `opened` event: the entry
- * triple (`submissionUrl`, `submissionState`, `submittedAt`) is constrained to
- * be all null or all set, so a handler that stamps `submittedAt` only on
- * `opened` writes two of three and is rejected outright. That is not a
- * hypothetical ordering — a webhook added to an existing repo, a hook that was
- * down at creation, or a redelivery replayed out of order all deliver `closed`
- * or `merged` first.
+ * The case worth a test is the one with no `opened` event: the entry triple
+ * (`submissionUrl`, `submissionState`, `submittedAt`) is constrained to be all
+ * null or all set, so a handler that stamps `submittedAt` only on `opened`
+ * writes two of three and is rejected outright. That ordering is not
+ * hypothetical. A webhook added to an existing repo, a hook that was down at
+ * creation, or a redelivery replayed out of order all deliver `closed` or
+ * `merged` first.
  */
 
 const IDS = {
@@ -137,7 +137,7 @@ describe("applyPullRequestEvent", () => {
     const outcome = await applyPullRequestEvent(event("opened", false, "main"));
 
     expect(outcome).toEqual({ applied: false, reason: "wrong_base" });
-    // Nothing written — a mistaken base must not register as an entry.
+    // Nothing written: a mistaken base must not register as an entry.
     expect(await entryState()).toEqual(before);
   });
 
@@ -157,8 +157,8 @@ describe("applyPullRequestEvent", () => {
 
     const outcome = await applyPullRequestEvent(event("closed", false));
 
-    // The record stays accurate; what it no longer does is decide anything.
-    // Closing the PR the evening after judging must not cost the star.
+    // The record stays accurate, it just stops deciding anything. Closing the
+    // PR the evening after judging must not cost the star.
     expect(outcome).toEqual({ applied: false, reason: "competed" });
     expect((await entryState()).submissionState).toBe("closed");
   });

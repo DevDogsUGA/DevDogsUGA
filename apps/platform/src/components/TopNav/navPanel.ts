@@ -1,70 +1,56 @@
 /**
- * The card itself — the thing a viewer would point at and call the menu.
+ * The card itself, the thing a viewer would point at and call the menu.
  *
- * It belongs to the VIEWPORT, not to the panels inside it, and that is the
- * whole arrangement in one line. The viewport is what moves between triggers
- * and resizes between panels; if the border and the fill live on the panels
- * instead, the viewport is an invisible box and all that movement happens to
- * nothing. What you would see is one card disappearing and a differently
- * sized one appearing somewhere else, with a very carefully animated nothing
- * in between them.
- *
- * One surface for every panel also means one surface being cross-faded rather
- * than two translucent ones stacking mid-hand-over, which would darken and
- * double-blur exactly halfway through.
+ * It belongs to the VIEWPORT, not to the panels inside it. The viewport moves
+ * between triggers and resizes between panels. Put the border and fill on the
+ * panels and the viewport animates nothing while one card disappears and a
+ * differently sized one appears somewhere else. One surface per panel also
+ * keeps the cross-fade from stacking two translucent layers, which would darken
+ * and double-blur halfway through.
  */
 /*
- * An inset ring rather than a border, because a border is layout and this
- * needs not to be. The viewport is sized to the panel inside it, and the panel
- * is stretched back to the viewport; a border between them takes a pixel off
- * each edge of that round trip, so the panel ends up two pixels narrower than
- * the contents it is supposed to be holding. A ring is a shadow, occupies no
- * space, and leaves the two exactly the same box.
+ * An inset ring rather than a border, because a border is layout and this must
+ * not be. The viewport is sized to the panel inside it and the panel is
+ * stretched back to the viewport, so a border between them takes a pixel off
+ * each edge of that round trip and the panel ends up two pixels narrower than
+ * its contents. A ring is a shadow: no space, same box.
  */
 /*
- * Opaque, which is a decision the arrow forces.
+ * Opaque, which the arrow forces.
  *
- * The fill was the navbar's — translucent, blurred — on the reasoning that a
- * panel hanging off the bar is made of the same material as the bar. But the
- * arrow has to straddle this card's edge and be indistinguishable from it on
- * the inside, and two translucent layers over one backdrop are never
- * indistinguishable: they compound, and the overlap shows as a diamond. The
- * only fills that match are the ones that hide what is behind them.
+ * The fill used to be the navbar's, translucent and blurred, on the reasoning
+ * that a panel hanging off the bar is the same material. But the arrow
+ * straddles this card's edge and has to be indistinguishable from it on the
+ * inside, and two translucent layers over one backdrop compound: the overlap
+ * shows as a diamond. Only a fill that hides what is behind it matches.
  *
- * A bar is sixty-four pixels of chrome and can afford to be seen through. A
- * panel is half the screen with a list in it, and this was already at ninety-
- * five percent to keep the home page's hero from reading straight through a
- * menu. The last five percent buys an outline that is actually continuous.
+ * A 64px bar can afford to be seen through; a panel is half the screen. This
+ * was already at 95% to keep the home page's hero from reading through a menu.
+ * The last 5% buys a continuous outline.
  */
 export const NAV_SURFACE =
   "rounded-lg bg-mauve-950 shadow-lg ring-1 ring-mauve-800 ring-inset";
 
 /**
- * How a panel sits inside the viewport that hoisted it.
+ * A panel fills the viewport that hoisted it, and clips.
  *
- * It fills it, and it clips. Filling is what makes a hand-over a cross-fade of
- * two things the same size and shape rather than of two cards; clipping is
- * what the surface's own rounded border cannot do for it, because the panels
- * are Radix's own children and there is nowhere to put a clipping wrapper
- * between them.
+ * Filling makes a hand-over a cross-fade of two identical boxes rather than of
+ * two cards. Clipping has to happen here because the panels are Radix's own
+ * children and there is nowhere to put a wrapper between them and the surface.
  *
- * The clip is load-bearing, not tidiness. A panel keeps its natural size while
- * the viewport travels between two different ones, so for the length of every
- * hand-over the outgoing panel is bigger than the box it is leaving. Unclipped
- * it hangs out past the border, and a menu with its contents spilling over the
- * edge of its own card is a worse thing to look at than the jump this replaced.
+ * The clip is load-bearing. A panel keeps its natural size while the viewport
+ * travels between two different ones, so during every hand-over the outgoing
+ * panel is bigger than the box it is leaving and would spill past the border.
  *
- * The animation is keyed on `data-motion`, which Radix sets only when one
- * panel replaces another in an already-open viewport, and leaves off entirely
- * when the viewport opens from closed. That is the distinction we want: a
- * hand-over slides, an opening does not, because the viewport is folding in
- * around it and a second animation underneath reads as a stutter.
+ * The animation is keyed on `data-motion`, which Radix sets only when one panel
+ * replaces another in an already-open viewport, never when the viewport opens
+ * from closed. A hand-over slides, an opening does not: the viewport is folding
+ * in around it and a second animation underneath reads as a stutter.
  *
- * The slide follows the pointer's own travel along the triggers. Radix names
- * the four cases relative to the list's order — `from-end` is the panel of an
- * item further down the list arriving, `to-start` its predecessor leaving —
- * so a menu read left to right hands over horizontally and one read top to
- * bottom hands over vertically, each in the direction the reader is moving.
+ * Radix names the four cases relative to the list's order. `from-end` is the
+ * panel of an item further down the list arriving, `to-start` its predecessor
+ * leaving, so the slide follows the pointer's travel: left to right for a menu
+ * read that way, top to bottom for one read down.
  */
 const PANEL = "absolute inset-0";
 const CLIP = "overflow-hidden rounded-lg";
@@ -78,10 +64,10 @@ const DOWN =
 export const NAV_CONTENT = `${PANEL} ${CLIP} ${ACROSS}`;
 
 /**
- * A top-tier panel that cannot clip itself, because things it owns are
- * supposed to hang outside it: the profile menu's sub-panel, the arrow
- * pointing at it, and the band that holds the whole menu open. Those get to
- * escape, and the card's contents are clipped one level in instead.
+ * A top-tier panel that cannot clip itself, because things it owns hang outside
+ * it: the profile menu's sub-panel, the arrow pointing at it, and the band that
+ * holds the whole menu open. Those escape, and NAV_CLIP clips the card's
+ * contents one level in instead.
  */
 export const NAV_OPEN_CONTENT = `${PANEL} ${ACROSS}`;
 
@@ -90,25 +76,20 @@ export const NAV_CLIP = `${PANEL} ${CLIP}`;
 
 export const NAV_SUB_CONTENT = `${PANEL} ${CLIP} ${DOWN}`;
 
-/**
- * The arrow tying a panel to the trigger it belongs to.
+/*
+ * The arrow tying a panel to the trigger it belongs to: a small square turned
+ * 45deg, showing the two borders that meet at the corner it points with, filled
+ * to match the card.
  *
- * A small square turned forty-five degrees, showing the two borders that meet
- * at the corner it points with, filled to match the card. It sits ON the card,
- * straddling the edge, and is painted OVER it — which is the whole trick and
- * was the thing this had backwards.
- *
- * Underneath, the card's own outline runs straight past. If the card is drawn
- * last it wins, and what you get is an unbroken border with a separate little
- * chevron perched on it: two shapes, and no amount of matching their timing
- * makes them read as one. Drawn over the card instead, the arrow's fill hides
- * the stretch of outline behind it and its own two borders carry that line up
- * to the point and back down. One continuous edge, with a bump in it where the
- * menu came from.
+ * It sits ON the card, straddling the edge, and is painted OVER it. That order
+ * is the trick, and it is what this had backwards. The card's own outline runs
+ * straight past underneath, so draw the card last and you get an unbroken
+ * border with a separate chevron perched on it. Drawn over, the arrow's fill
+ * hides the outline behind it and its own two borders carry that line up to the
+ * point and back down.
  *
  * The half of the square inside the card has to be indistinguishable from the
- * card, which is why both are opaque — see the note on NAV_SURFACE, which this
- * is the reason for.
+ * card, which is why both are opaque. See NAV_SURFACE.
  */
 const ARROW = "size-2.5 rotate-45 border-mauve-800 bg-mauve-950";
 
@@ -118,39 +99,36 @@ export const NAV_ARROW = `${ARROW} -translate-y-1/2 border-t border-l`;
 /**
  * The tier-1 arrow's track.
  *
- * Radix portals the Indicator into a wrapper spanning the list and positions
- * it over whichever trigger is open, so all that is added here is the drop to
- * the panel's edge, the centring within the trigger, and the movement between
- * one trigger and the next — on the duration and easing the panel travels on,
- * so arrow and panel read as one thing moving rather than two things agreeing.
+ * Radix portals the Indicator into a wrapper spanning the list and positions it
+ * over whichever trigger is open. This adds the drop to the panel's edge, the
+ * centring within the trigger, and movement on the panel's own duration and
+ * easing, so arrow and panel read as one thing moving.
  *
- * No height, so it takes part in none of the bar's layout: it is a line to
- * hang the arrow off, and the arrow is pulled back onto it by half itself.
+ * No height, so it takes part in none of the bar's layout. It is a line to hang
+ * the arrow off, and the arrow is pulled back onto it by half itself.
  *
- * It arrives and leaves on an animation rather than a transition, and that is
- * the whole point of it. Radix keeps the indicator mounted only while an
- * animation is running on it; a transition to zero opacity is not one, so it
- * was being torn out of the DOM the instant the menu closed, while the panel
- * was still a hundred and forty milliseconds from finishing its fold. The
- * arrow left, and then the panel it was pointing at left.
+ * It arrives and leaves on an animation rather than a transition. Radix keeps
+ * the indicator mounted only while an animation is running on it, and a
+ * transition to zero opacity is not one, so the arrow was torn out of the DOM
+ * the instant the menu closed, 140ms before the panel finished folding.
  */
 export const NAV_ARROW_TRACK =
   "top-full z-10 mt-2 flex h-0 justify-center transition-[transform,width] duration-200 ease-out data-[state=visible]:animate-nav-arrow-in data-[state=hidden]:animate-nav-arrow-out";
 
 /**
- * The tier-2 arrow, which is placed by hand rather than by Radix.
+ * The tier-2 arrow, placed by hand rather than by Radix.
  *
- * Radix's Indicator portals itself into the wrapper around its tier's list,
- * and that list lives inside the card, which now clips. An arrow whose whole
- * job is to stick out past the card's edge cannot be rendered inside the thing
- * clipping at that edge. So it is a sibling of the sub-panel instead, sitting
- * on the panel's near edge, and the shell tells it which row to point at.
+ * Radix's Indicator portals itself into the wrapper around its tier's list, and
+ * that list lives inside the card, which now clips. An arrow whose job is to
+ * stick out past the card's edge cannot be rendered inside the thing clipping
+ * at that edge. So it is a sibling of the sub-panel, sitting on the panel's
+ * near edge, and the shell tells it which row to point at.
  *
  * Positioned from the right so it does not care how wide the sub-panel is, and
  * moved by `top` rather than a transform, because `rotate` and `translate` are
- * both already spoken for by the shape of it. Above the sub-panel, for the
- * same reason the tier-1 arrow is above its card: it has to hide the stretch
- * of outline it is standing on, or it is a separate shape resting against one.
+ * both spoken for by the shape of it. Above the sub-panel, for the same reason
+ * the tier-1 arrow is above its card: it has to hide the stretch of outline it
+ * stands on.
  */
 export const NAV_SUB_ARROW =
   "absolute right-[calc(100%+0.5rem)] z-10 size-2.5 translate-x-1/2 -translate-y-1/2 rotate-45 border-t border-r border-mauve-800 bg-mauve-950 [transition:top_200ms_ease-out,opacity_140ms_ease-in] data-[state=hidden]:opacity-0";

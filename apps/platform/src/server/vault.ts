@@ -8,8 +8,8 @@ import { db } from "~/server/db";
  * `server/actions/credentials.ts` and had to move so the sandbox work could
  * reach them, but exporting them from a `"use server"` module is not the way:
  * every export there becomes a server action with an HTTP endpoint, so
- * `readVaultSecret` would become "hand any browser any secret by id" — the
- * single worst endpoint this codebase could publish.
+ * `readVaultSecret` would become an endpoint that hands any browser any secret
+ * by id.
  *
  * They live here instead, importable by server code and unreachable from a
  * client. The rule that makes that safe is that nothing in this file is
@@ -19,19 +19,19 @@ import { db } from "~/server/db";
  * ## Why direct SQL and not the Supabase client
  *
  * These went through `supabaseAdmin.schema("vault")` until the Supabase OAuth
- * connect flow failed with `Invalid schema: vault` — PostgREST's PGRST106,
- * raised because a schema it does not serve was requested. `vault` is not in
+ * connect flow failed with `Invalid schema: vault`, PostgREST's PGRST106,
+ * raised when a request names a schema it does not serve. `vault` is not in
  * `config.toml`'s `[api].schemas` and has never been, so **every one of these
  * calls had always failed**; nothing had exercised them end to end.
  *
  * Adding `vault` to that list would have been the wrong repair. It publishes
- * `vault.decrypted_secrets` on the REST surface, one missing grant away from
- * handing out every credential the platform holds, and Supabase deliberately
- * does not expose Vault over the API for exactly that reason. The Vault is
- * meant to be reached from inside Postgres.
+ * `vault.decrypted_secrets` over the REST API, one missing grant away from
+ * handing out every credential the platform holds. Supabase does not expose
+ * Vault over the API for that reason; the Vault is meant to be reached from
+ * inside Postgres.
  *
  * `DB_URL` connects as `postgres`, which owns the vault schema, so direct SQL
- * needs no new privilege and no new API surface.
+ * needs no new privilege and exposes nothing new over the API.
  *
  * > **Measured** against the linked project: `supabase_vault` 0.3.1 is
  * > installed, `vault.create_secret` and the `vault.decrypted_secrets` view

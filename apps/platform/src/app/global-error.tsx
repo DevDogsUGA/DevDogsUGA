@@ -7,12 +7,12 @@ import { useEffect } from "react";
  * never mounted.
  *
  * Every style here is inline and every colour is a literal. `global-error`
- * replaces the root layout when it renders, which means it renders its own
- * document and receives **none** of the app's global stylesheet — no Tailwind
- * utilities, no mauve palette, no fonts. A className here would silently do
- * nothing, so the DevDogs dark ground is spelled out by hand rather than
- * referenced. The values are `--color-mauve-950`, `-900`, `-800` and `-400`
- * from `globals.css`, copied literally.
+ * replaces the root layout when it renders, so it renders its own document and
+ * receives **none** of the app's global stylesheet: no Tailwind utilities, no
+ * mauve palette, no fonts. A className here would silently do nothing, so the
+ * DevDogs dark ground is spelled out by hand. The values are
+ * `--color-mauve-950`, `-900`, `-800` and `-400` from `globals.css`, copied
+ * literally.
  */
 export default function GlobalError({
   error,

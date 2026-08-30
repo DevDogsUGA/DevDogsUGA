@@ -14,14 +14,14 @@ import { getMeetingsInRange, getPastMeetings } from "~/server/loaders/meetings";
  * mounted underneath every route in this segment: `/events` renders it with an
  * empty `children`, `/events/directions` and `/events/[slug]` render it with a
  * dialog as `children`. Moving between them is a soft navigation that swaps
- * only the leaf, so a dialog opens over a calendar that never re-renders — and
- * the dialog's URL survives being shared or refreshed, which is what an
+ * only the leaf, so a dialog opens over a calendar that never re-renders. The
+ * dialog's URL also survives being shared or refreshed, which is what an
  * intercepting route would have given up on a cold load.
  *
- * That placement has one consequence worth stating, because it is not obvious
- * and it cost a boundary: `error.js` does not wrap the `layout.js` above it in
- * the same segment, so `events/error.tsx` cannot catch anything thrown here.
- * The read is therefore caught below, by hand.
+ * That placement has one non-obvious consequence, and it cost a boundary:
+ * `error.js` does not wrap the `layout.js` above it in the same segment, so
+ * `events/error.tsx` cannot catch anything thrown here. The read is therefore
+ * caught below, by hand.
  */
 export default function EventsLayout({ children }: LayoutProps<"/events">) {
   // Build-time, not request-time, like the homepage: whatever DEPLOY_ENV holds
@@ -32,7 +32,7 @@ export default function EventsLayout({ children }: LayoutProps<"/events">) {
     <>
       {/* Created OUTSIDE the cache scope and passed in as an element, so its
           clock read stays legal and uncached while everything around it is
-          served from the entry — the pattern the homepage uses for StreakCTA.
+          served from the entry. Same pattern the homepage uses for StreakCTA.
           Whether a check-in form is live is true for about two hours a week and
           must never be answered from a five-minute-old cache entry. */}
       <EventsBody
@@ -80,18 +80,18 @@ async function EventsBody({ checkIn }: { checkIn: React.ReactNode }) {
 /**
  * Everything time- and database-dependent about the page, resolved once.
  *
- * `cacheLife` rather than a tag, because `revalidateTag` is inert here — the
- * Cloudflare adapter's `tagCache` is `"dummy"` — so there is no push
- * invalidation to reach for and freshness has to come from a TTL. The Airtable
- * sync runs every 15 minutes, so a five-minute revalidate means the page is
- * never more than one sync window behind, and `stale` lets a visitor have the
- * previous answer instantly while that happens.
+ * `cacheLife` rather than a tag, because `revalidateTag` is inert here: the
+ * Cloudflare adapter's `tagCache` is `"dummy"`. There is no push invalidation
+ * to reach for, so freshness has to come from a TTL. The Airtable sync runs
+ * every 15 minutes, so a five-minute revalidate means the page is never more
+ * than one sync window behind, and `stale` lets a visitor have the previous
+ * answer instantly while that happens.
  *
- * Reading the clock is legal here precisely because this IS a cache scope; the
- * value is resolved when the entry is built and handed down as data, so no
- * component below reads a clock and none of them can disagree about the date.
- * The cost is that `now` can be up to the revalidate window old, which is why
- * the marquee carries an `ended` branch rather than trusting "next" blindly.
+ * Reading the clock is legal here because this IS a cache scope; the value is
+ * resolved when the entry is built and handed down as data, so no component
+ * below reads a clock and none of them can disagree about the date. The cost is
+ * that `now` can be up to the revalidate window old, which is why the marquee
+ * carries an `ended` branch rather than trusting "next" blindly.
  */
 async function getSchedule(): Promise<Omit<EventsPageProps, "checkIn">> {
   "use cache";
@@ -103,7 +103,7 @@ async function getSchedule(): Promise<Omit<EventsPageProps, "checkIn">> {
   // A month back and two forward. Back, because the calendar should let
   // somebody page to the meeting they just missed; forward, because a semester
   // is announced in chunks and two months is as far ahead as the base is ever
-  // filled in. Three months is also one query — see `getMeetingsInRange`.
+  // filled in. Three months is also one query. See `getMeetingsInRange`.
   const from = addMonths(today.year, today.month, -1);
   const to = addMonths(today.year, today.month, 2);
 
