@@ -7,7 +7,7 @@ import { toast } from "./toast";
 /**
  * Shares a link, and speaks up only when the device had no sheet to show.
  *
- * The single place the wording lives, since a tile can reach this two ways —
+ * The single place the wording lives, since a tile can reach this two ways:
  * the button a pointer reveals, and the long press a finger uses.
  */
 export function useShare({ title, url }: ShareTarget) {

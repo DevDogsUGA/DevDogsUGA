@@ -44,7 +44,7 @@ describe("withRateLimitRetry", () => {
 
   it("⚠️ never retries anything but a rate limit", async () => {
     // Retrying a bad token or a missing project just triples the time to the
-    // real message — and retrying a WRITE that failed for an unknown reason
+    // real message, and retrying a WRITE that failed for an unknown reason
     // is how one secret becomes three.
     const op = vi.fn(async () => {
       throw new Error("401 Unauthorized");

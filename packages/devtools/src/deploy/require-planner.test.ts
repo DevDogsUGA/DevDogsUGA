@@ -9,7 +9,7 @@ import { DeployError } from "./report.js";
 import { runRequirePlanner } from "./require-planner.js";
 
 /**
- * The guard's own concerns — the checks themselves are covered in
+ * The guard's own concerns. The checks themselves are covered in
  * `planner/checks.test.ts`. What is left here: the missing-variable refusal,
  * the verdict-to-DeployError translation (so `cli.ts` renders it like every
  * other deploy failure), and that the connection is closed on BOTH paths.

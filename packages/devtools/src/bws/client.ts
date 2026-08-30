@@ -87,7 +87,7 @@ export function setExplicitAccessToken(token: string | undefined): void {
  * still let two concurrent calls open two prompts over each other.
  *
  * Whatever the source, the token reaches the SDK as a function argument in
- * this process — never argv, never a child's environment.
+ * this process, never argv, never a child's environment.
  */
 export async function accessToken(): Promise<string> {
   resolved ??= resolveToken({

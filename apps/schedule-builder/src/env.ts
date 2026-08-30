@@ -178,11 +178,11 @@ const server = {
     localStack: true,
     example: "https://$PROJECT_REF.storage.supabase.co/storage/v1/s3",
   }),
-  // Custom OAuth2 provider ("Sign in with DevDogs" — used in dev only, so
-  // optional; production authenticates via the shared Google provider).
+  // Custom OAuth2 provider ("Sign in with DevDogs"), used in dev only, so
+  // optional; production authenticates via the shared Google provider.
   //
   // The client id is public, like every OAuth client id: it travels in the
-  // clear on each authorization redirect. The URLs are public too — they are
+  // clear on each authorization redirect. The URLs are public too. They are
   // endpoints, not credentials. Only the client secret is one.
   OAUTH_CLIENT_ID: define(z.string().optional(), {
     doc:
@@ -275,7 +275,7 @@ const client = {
 };
 
 /**
- * Registers this app's manifest with `@devdogsuga/env` — alongside
+ * Registers this app's manifest with `@devdogsuga/env`, alongside
  * `createEnv`, not instead of it: @t3-oss keeps the runtime behaviour,
  * `declare()` makes the variables visible to the tooling that derives
  * `.env.example` and the secrets routing, and it throws on any schema that
@@ -290,7 +290,7 @@ export const env = createEnv({
    * Only client keys need listing: Next.js stopped static analysis of
    * server-side `process.env`, so @t3-oss reads those from `process.env`
    * directly (NODE_ENV included). The `NEXT_PUBLIC_*` values are inlined into
-   * the browser bundle by STATIC analysis — each entry must be the literal
+   * the browser bundle by STATIC analysis. Each entry must be the literal
    * text `process.env.NEXT_PUBLIC_FOO`, because a computed lookup is silently
    * `undefined` in the browser.
    */
@@ -301,7 +301,7 @@ export const env = createEnv({
     NEXT_PUBLIC_AUTH_MODE: process.env.NEXT_PUBLIC_AUTH_MODE,
   },
   /**
-   * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation —
+   * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation,
    * used by CI and Cloudflare/Docker builds that run without secrets.
    */
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

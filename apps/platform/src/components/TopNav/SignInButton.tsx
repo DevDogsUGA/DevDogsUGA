@@ -6,7 +6,7 @@ export default function SignInButton() {
     // The sign-in flow is unfinished, so this opens an explainer rather than
     // linking to /auth, which would start an OAuth handshake that can't be
     // completed. Restore the <Link href="/auth" prefetch={false}> once the flow
-    // lands — the prefetch guard matters. See ~/server/auth/oauthLinkRoute.
+    // lands. The prefetch guard matters. See ~/server/auth/oauthLinkRoute.
     <SignInUnavailableDialog>
       <button
         type="button"

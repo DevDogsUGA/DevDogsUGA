@@ -6,7 +6,7 @@ import { escapeHtml } from "./match";
 import type { SearchEntry } from "./types";
 
 // Control-character sentinels can't appear in stored plain text, so they
-// survive HTML-escaping and are swapped for <mark> tags afterwards — the
+// survive HTML-escaping and are swapped for <mark> tags afterwards. The
 // snippet can never smuggle markup from document content.
 const START = "\u0002";
 const STOP = "\u0003";
@@ -29,8 +29,8 @@ function toSnippetHtml(raw: string): string {
 /**
  * Full-text search over the docs index using Postgres websearch syntax (quoted
  * phrases, OR, -exclusions). The table is populated at deploy time by
- * `pnpm docs:index` from the same build-time artifact the pages render from —
- * see `devtools docs index`. ts_headline runs on the top N rows only; it's by
+ * `pnpm docs:index` from the same build-time artifact the pages render from.
+ * See `devtools docs index`. ts_headline runs on the top N rows only; it's by
  * far the most expensive part.
  */
 export async function searchDocs(

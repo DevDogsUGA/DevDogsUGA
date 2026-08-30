@@ -98,7 +98,7 @@ describe("url slots", () => {
       slots: ["acceptUrl"],
       urlSlots: [],
     };
-    // Same slot name, not declared as a url slot — escaped, not scheme-checked.
+    // Same slot name, not declared as a url slot: escaped, not scheme-checked.
     expect(fill(asText, { acceptUrl: "javascript:x" }, true)).toBe(
       "javascript:x",
     );

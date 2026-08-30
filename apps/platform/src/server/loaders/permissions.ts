@@ -56,7 +56,7 @@ export type PermissionsPageData = {
 
 export const getPermissionsPageData = cache(
   async (): Promise<PermissionsPageData> => {
-    // Not `requirePermission` — the caller context is needed in full further
+    // Not `requirePermission`: the caller context is needed in full further
     // down, so re-deriving it behind a `canUser*` predicate would resolve the
     // same roles twice. The denial is the shared one either way.
     const userId = await requireSession();

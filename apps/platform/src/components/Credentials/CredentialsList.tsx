@@ -27,7 +27,7 @@ function CopyPasswordButton({ credentialId }: { credentialId: string }) {
         const password = await revealPassword(credentialId);
         await navigator.clipboard.writeText(password);
       } catch {
-        // silently ignore — clipboard API errors are non-critical
+        // silently ignore: clipboard API errors are non-critical
       }
     });
   }, [credentialId]);

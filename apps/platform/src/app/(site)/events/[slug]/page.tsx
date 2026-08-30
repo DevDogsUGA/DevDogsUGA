@@ -91,8 +91,8 @@ export async function generateMetadata({
   // A cancelled night keeps its URL rather than 404ing because the link is
   // already in Discord and people walk over anyway. That link renders as a card
   // carrying exactly these two fields, so the card sitting in the channel went
-  // on advertising "6:00 – 8:00 PM — DLW 124" for a night the club had called
-  // off.
+  // on advertising a 6:00 to 8:00 PM meeting in DLW 124 for a night the club
+  // had called off.
   //
   // The room is dropped along with the hour: both are instructions to go
   // somewhere, and neither survives the cancellation.

@@ -30,8 +30,8 @@ export default function SearchButton() {
         type="button"
         aria-label="Search"
         onClick={() => setOpen(true)}
-        // `lg`, not `md`. At `md` the navbar turns everything on at once —
-        // logo, the four nav links, and this cluster — and the row then needs
+        // `lg`, not `md`. At `md` the navbar turns everything on at once:
+        // logo, the four nav links, and this cluster. The row then needs
         // ~845px against a 768px viewport, so every page on the site scrolled
         // sideways from 768 up to ~845. This pill is the widest discretionary
         // thing in the row at 192px; holding it back to `lg` buys the range

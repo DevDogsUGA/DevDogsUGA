@@ -16,7 +16,7 @@ export default async function StreakCTA() {
 
   // Nothing to say to a visitor who has not linked GitHub: the sign-in flow is
   // unfinished, so the prompt that used to live here could only open an
-  // explainer. Returning null rather than an empty wrapper matters — the
+  // explainer. Returning null rather than an empty wrapper matters: the
   // section spaces its children, so a childless div would still leave a gap.
   if (!linkedGithubProfile) return null;
 

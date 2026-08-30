@@ -16,8 +16,9 @@ import {
 } from "~/server/docs/queries";
 
 // Every docs page AND every folder is enumerated below and prerendered at
-// build time. Anything else renders on demand and 404s via notFound() — safe
-// on Workers because the lookup reads a bundled constant, not the filesystem.
+// build time. Anything else renders on demand and 404s via notFound(), which
+// is safe on Workers because the lookup reads a bundled constant, not the
+// filesystem.
 // (`dynamicParams` can't express that here: Cache Components rejects the route
 // segment config.)
 export function generateStaticParams() {
@@ -36,7 +37,7 @@ export function generateStaticParams() {
   for (const project of getDocsProjects()) {
     const tree = getDocsTree(project.slug);
     collect(project.slug, tree);
-    // A folder is a destination of its own — the sidebar's section headings
+    // A folder is a destination of its own: the sidebar's section headings
     // link to one, and it answers with its index page or with its contents.
     for (const folder of allFolders(tree)) {
       params.push({ project: project.slug, slug: folder.path.split("/") });
@@ -81,7 +82,7 @@ export default async function DocsPage({
   ];
 
   if (!page) {
-    // Not a page — but the sidebar links folders too, so it may be one.
+    // Not a page, but the sidebar links folders too, so it may be one.
     const folder = getDocsFolder(projectSlug, path.join("/"));
     if (!folder) notFound();
 

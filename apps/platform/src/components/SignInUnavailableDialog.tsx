@@ -22,7 +22,7 @@ interface Props {
  * Stands in for the sign-in flow while it is still being built. Wraps whatever
  * trigger it is given, so a "Sign In" button opens this instead of starting an
  * OAuth handshake the Platform cannot yet finish, and points the visitor at the
- * Involvement Network listing — the way to join DevDogs today.
+ * Involvement Network listing, the way to join DevDogs today.
  */
 export default function SignInUnavailableDialog({ children }: Props) {
   return (

@@ -19,8 +19,8 @@ interface Props extends PropsWithChildren {
 /**
  * The page's title, and the only `h1` on it.
  *
- * Nothing above this in the tree supplies one — TopNav is chrome and the site
- * layout contributes a landmark rather than a heading — so opening at `h2`
+ * Nothing above this in the tree supplies one: TopNav is chrome and the site
+ * layout contributes a landmark rather than a heading. So opening at `h2`
  * left every gated screen with an outline that started one level down. The
  * card headers beneath it are the `h2`s; see `ConsoleCard.Header`.
  */

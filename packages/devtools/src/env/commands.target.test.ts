@@ -38,7 +38,7 @@ import { resolve } from "node:path";
  *
  * `pull` returns early when nothing would change and `push` when nothing is
  * pushable, so equal values would make every command below a no-op that never
- * opened a file — and "it read no file" passes a `not.toContain` check just as
+ * opened a file, and "it read no file" passes a `not.toContain` check just as
  * well as "it read the right one".
  *
  * ⚠️ `DB_URL` is here for `preflight` specifically, and dropping it would make
@@ -200,7 +200,7 @@ describe.each(RUNNERS)("$name", ({ name, run, writes }) => {
     expect(pathsRead()).not.toContain(at(".env.staging"));
     // The override is about the FILE only. It must not also redirect which
     // project is written, or `--file` would become a second way to choose a
-    // target — the ambiguity this whole change removes.
+    // target: the ambiguity this whole change removes.
     expect(vi.mocked(projectIdFor).mock.calls).toEqual([["staging"]]);
   });
 
@@ -215,8 +215,8 @@ describe.each(RUNNERS)("$name", ({ name, run, writes }) => {
     expect((thrown as Error).message).toMatch(/\.env is your own file/);
 
     // Refused BEFORE anything is touched. A refusal that still read the file,
-    // or still resolved a project id, would leave the interesting question —
-    // which project did it pick? — answered by accident.
+    // or still resolved a project id, would leave the interesting question of
+    // which project it picked answered by accident.
     expect(readFile).not.toHaveBeenCalled();
     expect(projectIdFor).not.toHaveBeenCalled();
   });

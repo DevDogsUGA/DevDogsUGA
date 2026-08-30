@@ -8,7 +8,7 @@ import { validatePreferredName } from "~/lib/validation/profile";
 /**
  * `saveName` deliberately does not catch, and does not toast. The account
  * page's save bar awaits every dirty field at once and needs the rejection to
- * know which ones failed — see ~/ui/settings-form.
+ * know which ones failed. See ~/ui/settings-form.
  */
 export function useProfileIdentity(userId: string, initialName: string) {
   const [name, setName] = useState(initialName);

@@ -11,7 +11,7 @@ function avatarQueryKey(userId: string) {
 }
 
 /**
- * Returns the best available avatar src for the given user — a local blob URL
+ * Returns the best available avatar src for the given user: a local blob URL
  * immediately after upload, or the Supabase storage URL otherwise. Reactive:
  * every Avatar sharing the same userId updates together when one uploads.
  */

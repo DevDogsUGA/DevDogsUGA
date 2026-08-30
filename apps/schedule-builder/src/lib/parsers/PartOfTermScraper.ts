@@ -35,7 +35,7 @@ function extractDate(cellText: string): string | null {
   return isValid(d) ? format(d, "yyyy-MM-dd") : null;
 }
 
-// ─── Fetch (pure HTTP, no DB — safe to run outside a transaction) ──────────────
+// ─── Fetch (pure HTTP, no DB, safe to run outside a transaction) ───────────────
 
 export async function fetchPartsOfTerm(
   academicPeriod: number,

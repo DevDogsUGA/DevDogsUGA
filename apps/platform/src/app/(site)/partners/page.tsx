@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: "Organizations and sponsors that partner with DevDogs.",
 };
 
-/** `"use cache"` moved onto the component — see `/community` for why. */
+/** `"use cache"` moved onto the component. See `/community` for why. */
 export default async function Partners() {
   "use cache";
 

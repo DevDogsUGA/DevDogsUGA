@@ -17,7 +17,7 @@ type ProfileData = Awaited<ReturnType<typeof getProfilePageData>>;
 /**
  * Greys out a semester that has already finished this year, so the common case
  * never reaches validation at all. The message from `validateGraduation` is
- * the backstop for the rest — picking a year first, then a stale semester.
+ * the backstop for the rest: picking a year first, then a stale semester.
  */
 function isSemesterDisabled(sem: Semester, selectedYear: string): boolean {
   const currentYear = new Date().getFullYear();

@@ -4,7 +4,7 @@
  * migrations in `supabase/migrations` and exposed via `[api] schemas` in
  * `supabase/config.toml`.
  *
- * Schema isolation is organizational, not a security boundary — every schema
+ * Schema isolation is organizational, not a security boundary. Every schema
  * is reachable through the one PostgREST endpoint. Row-Level Security is what
  * actually protects data. See the monorepo plan's "Security model" section.
  */

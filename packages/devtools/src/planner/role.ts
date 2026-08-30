@@ -54,8 +54,8 @@ export function generatePassword(): string {
 /**
  * The preflight `DB_URL`, derived from the admin one.
  *
- * Everything but the identity is kept — host, port, database — because the
- * planner connects to the same place as everyone else. Only the userinfo
+ * Everything but the identity is kept, including host, port, and database,
+ * because the planner connects to the same place as everyone else. Only the userinfo
  * changes, and the username's shape depends on the route in a way worth
  * spelling out: through Supabase's session pooler the username is
  * `<role>.<project-ref>`, so the ref (everything after the first dot of the

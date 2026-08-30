@@ -26,7 +26,7 @@ export async function createSupabaseServerClient() {
             cookieStore.set(name, value, options),
           );
         } catch {
-          // Called from a Server Component — cookie writes are not allowed there.
+          // Called from a Server Component. Cookie writes are not allowed there.
         }
       },
     },

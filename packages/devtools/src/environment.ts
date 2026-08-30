@@ -133,7 +133,7 @@ export function probeEnvironment(): Environment {
   const docker: Known = run("docker", ["info"]) === null ? "no" : "yes";
 
   // A stack cannot be up without a daemon to hold it, so this needs no second
-  // subprocess to say "no" — and asking anyway on a machine with no Docker
+  // subprocess to say "no", and asking anyway on a machine with no Docker
   // installed would pay the whole timeout for an answer already in hand.
   if (docker === "no") return { docker, stack: "no", envFile };
 
@@ -181,7 +181,7 @@ const UNMET: Record<Condition, string> = {
 /**
  * Whether the wizard should offer this command at all.
  *
- * False only for a command whose `when` is definitively unmet — `stop`
+ * False only for a command whose `when` is definitively unmet: `stop`
  * against a stack that is already stopped. This is reserved for commands that
  * would be *meaningless*, never merely inconvenient: one that would fail with
  * a good error message stays in the menu and carries `needs` instead, because
@@ -189,7 +189,7 @@ const UNMET: Record<Condition, string> = {
  * one who runs it and is told why it did not work.
  *
  * Hiding is a wizard-only decision. `--help` still lists these, the dispatcher
- * still accepts them, and the generated reference still documents them — the
+ * still accepts them, and the generated reference still documents them. The
  * menu is a guide to right now, and those three are the reference.
  */
 export function isOffered(
@@ -203,7 +203,7 @@ export function isOffered(
  * Why this command will not work right now, or `null` if nothing is in the way.
  *
  * Appended to the entry's hint, so the menu says "needs Docker, which is not
- * running" on the line itself — rather than after the reader has chosen it and
+ * running" on the line itself, rather than after the reader has chosen it and
  * waited for a connection attempt to fail.
  */
 export function blockedBecause(

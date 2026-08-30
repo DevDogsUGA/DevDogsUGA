@@ -30,8 +30,8 @@ export default function NavigationProgress() {
     function handleClick(e: MouseEvent) {
       // Someone ahead of us already cancelled this navigation, so there is no
       // page load to report. This listener is on the bubble phase, so anything
-      // that ran in capture — the account page's unsaved-changes guard, say
-      // (see ~/ui/settings-form) — has already had its say by now.
+      // that ran in capture, such as the account page's unsaved-changes guard
+      // (see ~/ui/settings-form), has already had its say by now.
       //
       // Without this the bar starts a load that will never finish: it only
       // clears when `pathname` changes, and a cancelled click never changes it,

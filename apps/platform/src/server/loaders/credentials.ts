@@ -19,7 +19,7 @@ export type CredentialsPageData = {
 export const getCredentialsPageData = cache(
   async (): Promise<CredentialsPageData> => {
     // The navbar hides this page behind `canSeeCredentialsPage`, but until now
-    // the page itself asked only for a session — so a member with no
+    // the page itself asked only for a session, so a member with no
     // credential-granting role who typed the URL got the full Credentials page
     // with an empty list. Nothing leaked (`getAccessibleCredentials` filters by
     // role), but a page that renders its own emptiness is a worse answer than

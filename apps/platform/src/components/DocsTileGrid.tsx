@@ -15,7 +15,7 @@ export interface DocsTile {
  * folder with no index page of its own lists its contents the same way, so
  * arriving at either reads as the same kind of place.
  *
- * Each tile is one control — the link stretches over the whole card with its
+ * Each tile is one control: the link stretches over the whole card with its
  * own ::after rather than nesting the card's block content inside an anchor.
  */
 export default function DocsTileGrid({ tiles }: { tiles: DocsTile[] }) {

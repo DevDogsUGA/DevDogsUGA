@@ -4,7 +4,7 @@ import { getModerationPageData } from "~/server/loaders/moderation";
 import { ConsoleCard } from "~/ui/card";
 
 export default async function ModerationDashboard() {
-  // The loader is the gate — it refuses anybody without `canModerate` rather
+  // The loader is the gate. It refuses anybody without `canModerate` rather
   // than handing back an empty queue for the page to check.
   const {
     openReports: open,

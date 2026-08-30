@@ -4,7 +4,7 @@ import { useCancelledUnload } from "./useCancelledUnload";
 
 /**
  * The link-account buttons submit a form whose action redirects to an OAuth
- * provider, so their pending state is never meant to resolve — the document is
+ * provider, so their pending state is never meant to resolve. The document is
  * supposed to be gone. When unsaved changes put a "Leave site?" prompt in the
  * way and the member chooses to stay, nothing resolves it and the button spins
  * forever. This is the signal that lets the form be remounted out of that.

@@ -247,7 +247,7 @@ async function requestToJoinImpl(
   // because it is a fact about the value rather than about one screen.
   //
   // `||` is load-bearing and must NOT become `??`. Trimming produces `""` for
-  // an all-whitespace note, and `""` is not nullish — `??` would keep it and
+  // an all-whitespace note, and `""` is not nullish. `??` would keep it and
   // store an empty string as if it were a real message, which is the exact
   // thing this line exists to prevent.
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing

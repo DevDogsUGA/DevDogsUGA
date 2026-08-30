@@ -10,10 +10,10 @@ import { createSupabaseServerClient } from "~/supabase/server";
 
 /**
  * Handles all Supabase OAuth callbacks:
- * - `sign-in:google`  — exchanges code, ensures a DevDogs profile exists
- * - `link:discord`       — exchanges code, then links the Discord profile
- * - `link:github`        — exchanges code, then links the GitHub profile
- * - `link:linkedin_oidc` — exchanges code, then links the LinkedIn profile
+ * - `sign-in:google`:     exchanges code, ensures a DevDogs profile exists
+ * - `link:discord`:       exchanges code, then links the Discord profile
+ * - `link:github`:        exchanges code, then links the GitHub profile
+ * - `link:linkedin_oidc`: exchanges code, then links the LinkedIn profile
  *
  * The intent is read from the short-lived `auth_intent` cookie set by each
  * provider's Route Handler before initiating the Supabase OAuth flow.

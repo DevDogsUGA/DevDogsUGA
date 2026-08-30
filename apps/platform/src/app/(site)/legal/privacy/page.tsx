@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 /**
  * The description is the one `config/nav.ts` gives this page under
- * `SEARCH_ONLY_PAGES` — the list of routes that are public and indexed but not
+ * `SEARCH_ONLY_PAGES`: the list of routes that are public and indexed but not
  * in the navbar, which is exactly what this is.
  *
  * The title says "Privacy Policy" rather than the heading's "DevDogs x GDG On
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   description: "How DevDogs collects, uses, and protects your data.",
 };
 
-/** `"use cache"` moved onto the component — see `/community` for why. */
+/** `"use cache"` moved onto the component. See `/community` for why. */
 export default async function Privacy() {
   "use cache";
 

@@ -17,7 +17,7 @@ const CONNECTION_OPTIONS = { prepare: false } as const;
  * reuse one pool instead of opening a new one per edit. Keyed by URL rather
  * than stored under a bare `conn`: this factory is called by more than one
  * package now, and an unkeyed slot would let the second caller silently
- * inherit the first caller's connection — including its database.
+ * inherit the first caller's connection, including its database.
  */
 const CACHE_KEY = Symbol.for("@devdogsuga/drizzle.connections");
 
@@ -46,8 +46,8 @@ export interface CreateDbOptions {
  *
  * Each app passes its own generated `relations`, because the two introspect
  * different Postgres schemas and their generated modules are not
- * interchangeable. Everything else — driver, pooling behaviour, hot-reload
- * caching — lives here so it can only be configured one way.
+ * interchangeable. Everything else lives here so it can only be configured
+ * one way: driver, pooling behaviour, hot-reload caching.
  */
 export function createDb<TRelations extends AnyRelations>(
   url: string,

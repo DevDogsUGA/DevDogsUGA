@@ -1,7 +1,7 @@
 /**
- * The Supabase CLI's environment manifest. These variables belong to no app —
- * they are read by `config.toml`'s `env(...)` substitutions and by the CLI
- * commands themselves (`supabase link`, `db push`) — so they are declared
+ * The Supabase CLI's environment manifest. These variables belong to no app.
+ * They are read by `config.toml`'s `env(...)` substitutions and by the CLI
+ * commands themselves (`supabase link`, `db push`), so they are declared
  * here, next to the config that reads them, rather than in any `src/env.ts`
  * or in `packages/` (contributors must never have to edit `packages/` to add
  * a variable).
@@ -12,7 +12,7 @@
  * honest.
  *
  * ⚠️ `env(FOO)` in config.toml is substituted only when it is the ENTIRE
- * value — the CLI matches it anchored — which is why the callbacks are their
+ * value: the CLI matches it anchored. That is why the callbacks are their
  * own variables rather than `"env(BASE_URL)/auth/callback"`.
  */
 import { declare, define, type EnvMeta } from "@devdogsuga/env";
@@ -25,7 +25,7 @@ import { z } from "zod";
  *
  * ⚠️ Leave a provider UNSET (commented out) to disable it locally. An EMPTY
  * value for an enabled provider makes the CLI fail with
- * `ProjectConfigParseError` — hence `.optional()` rather than a default.
+ * `ProjectConfigParseError`, hence `.optional()` rather than a default.
  */
 const provider = (name: string, idExample?: string) => {
   const id: EnvMeta = {
@@ -48,8 +48,8 @@ const provider = (name: string, idExample?: string) => {
 
 const discord = provider("Discord");
 const github = provider("GitHub");
-// The example preserves the id's shape — the one OAuth client id whose format
-// people second-guess when pasting from the Google console.
+// The example preserves the id's shape. This is the one OAuth client id
+// whose format people second-guess when pasting from the Google console.
 const google = provider(
   "Google",
   "000000000000-xxxx.apps.googleusercontent.com",

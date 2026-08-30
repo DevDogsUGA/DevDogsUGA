@@ -1,5 +1,5 @@
 // Dashed "marching ants" placeholder shown in place of a list item while it's
-// being dragged elsewhere — shared by drag-and-drop lists (profile links, roles)
+// being dragged elsewhere. Shared by drag-and-drop lists (profile links, roles)
 // so the dragging affordance stays visually consistent across the console.
 export default function DropTarget({
   className = "h-17 max-w-lg",

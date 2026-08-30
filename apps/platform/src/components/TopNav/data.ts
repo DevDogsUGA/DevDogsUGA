@@ -24,7 +24,7 @@ export interface NavUser {
 
 /**
  * The single per-request read backing every navbar surface. Wrapped in React's
- * `cache()` (not `"use cache"` — it reads auth cookies) so the streamed
+ * `cache()` (not `"use cache"`: it reads auth cookies) so the streamed
  * console, profile, and mobile clusters share one lookup.
  */
 export const getNavUser = cache(async (): Promise<NavUser | null> => {
