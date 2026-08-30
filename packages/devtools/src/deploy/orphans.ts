@@ -1,57 +1,57 @@
 /**
  * `devtools deploy orphans [--prune]`
  *
- * Reports — and, only when asked, deletes — Worker secrets nothing declares.
+ * Reports, and only when asked deletes, Worker secrets nothing declares.
  *
  * ## Why there is anything to audit
  *
  * `wrangler deploy --secrets-file` applies additively: it preserves every
  * secret it does not mention. So renaming a variable, or dropping one, leaves
- * the old secret on the Worker indefinitely, and nothing else in the system
- * can see it — Bitwarden does not know about it, GitHub does not, and the
- * app's schema stopped mentioning it. Cloudflare will happily hold a
- * credential nobody has thought about for a year.
+ * the old secret on the Worker indefinitely, and nothing else in the system can
+ * see it. Bitwarden does not know about it, GitHub does not, and the app's
+ * schema stopped mentioning it. Cloudflare will hold a credential nobody has
+ * thought about for a year.
  *
  * The expected set is derived from the app's own manifest: every key it
  * declares with `secrecy: "secret"`. That deliberately includes the MINTED
- * ones — `SANDBOX_PROXY_TOKEN` has no copy in Bitwarden or GitHub by design,
- * and an audit that reasoned from stored copies alone would report the live
- * proxy credential as safe to delete. (`env audit` had exactly that bug;
- * see `EnvMeta.minted`.)
+ * ones. `SANDBOX_PROXY_TOKEN` has no copy in Bitwarden or GitHub by design, and
+ * an audit that reasoned from stored copies alone would report the live proxy
+ * credential as safe to delete. (`env audit` had exactly that bug; see
+ * `EnvMeta.minted`.)
  *
  * ## Report always, prune almost never (security plan §3.6)
  *
  *   report   every production deploy      environment: production
  *   prune    `workflow_dispatch` only     environment: production-apply
  *
- * **Orphans never fail the deploy.** A stale secret name is not a defect in
- * the change being deployed, and failing on it would make an unrelated commit
+ * **Orphans never fail the deploy.** A stale secret name is not a defect in the
+ * change being deployed, and failing on it would make an unrelated commit
  * responsible for a cleanup somebody else deferred. So the reporting path
- * returns normally even when it found something; the only non-zero exit here
- * is a deletion that was asked for and did not happen.
+ * returns normally even when it found something; the only non-zero exit here is
+ * a deletion that was asked for and did not happen.
  *
  * **Pruning must not chain to a deploy.** Deleting a secret publishes a new
- * version of the currently deployed code with the secret gone — there is no
- * way to change a secret without publishing. Auto-pruning would therefore turn
- * every deploy carrying an orphan into TWO version publishes, and the second
- * one bypasses both the promotion PR and the `production-apply` approval that
- * the first went through. That is why this is a separate, deliberate,
- * human-triggered run, and why `--prune` is the only thing that can reach
- * `deleteSecret` — a default that deleted would be a default that deployed.
+ * version of the currently deployed code with the secret gone. There is no way
+ * to change a secret without publishing. Auto-pruning would turn every deploy
+ * carrying an orphan into TWO version publishes, and the second one bypasses
+ * both the promotion PR and the `production-apply` approval that the first went
+ * through. That is why this is a separate, human-triggered run, and why
+ * `--prune` is the only thing that can reach `deleteSecret`: a default that
+ * deleted would be a default that deployed.
  *
  * > **Names only.** Cloudflare never returns a secret's value, so a secret
  * > whose VALUE is wrong is undetectable here. A clean audit means "no name is
  * > unaccounted for", not "the configuration is correct".
  *
  * Recovery from a wrong prune is real but not instant: Bitwarden is the source
- * of truth and every deploy sends the complete set, so a wrongly deleted
- * secret comes back on the next deploy — with an outage in between.
+ * of truth and every deploy sends the complete set, so a wrongly deleted secret
+ * comes back on the next deploy, with an outage in between.
  *
  * ## Interface
  *
  * Reads secret NAMES from Cloudflare and needs no env file, so it runs through
- * the `cli:no-env` seam like `write-env` does — there is no `.env.production`
- * in the job that audits, and demanding one would be demanding the whole
+ * the `cli:no-env` seam like `write-env` does. There is no `.env.production` in
+ * the job that audits, and demanding one would be demanding the whole
  * credential set to list some names:
  *
  *   DEPLOY_ENV=production \
@@ -100,7 +100,7 @@ function deleteViaWrangler(
 ): void {
   execFileSync(
     "pnpm",
-    // WRANGLER's `--env` — a wrangler.jsonc environment block. Unrelated to
+    // WRANGLER's `--env` is a wrangler.jsonc environment block. Unrelated to
     // devtools' `--target`, and not renamed with it.
     ["exec", "wrangler", "secret", "delete", key, "--env", environment],
     { cwd: join(root, "apps", app), stdio: "inherit", shell: false },
@@ -108,9 +108,9 @@ function deleteViaWrangler(
 }
 
 /**
- * Names the app's manifest declares for its Worker: secrets (stored or
- * minted) AND public server keys — `secrets-file` ships both since
- * 2026-08-20, so a public key on the Worker is expected, not an orphan.
+ * Names the app's manifest declares for its Worker: secrets (stored or minted)
+ * AND public server keys. `secrets-file` ships both since 2026-08-20, so a
+ * public key on the Worker is expected, not an orphan.
  */
 function expectedFor(app: string): Set<string> {
   const keys = new Set<string>();

@@ -9,16 +9,17 @@
  * "It only reads" is a claim, and a claim in a comment is worth nothing on the
  * job that runs from `main`. So the claim is structural instead: this module
  * imports `planScaffold` and calls `getBaseSchema()`, and there is no path from
- * here to `scaffoldBase` — the function that creates tables and fields is not
- * in this module's import list at all. Splitting the two commands across two
- * files is what makes that inspectable rather than argued.
+ * here to `scaffoldBase`. The function that creates tables and fields is not in
+ * this module's import list at all. Splitting the two commands across two files
+ * is what makes that inspectable rather than argued.
  *
- * The credential is the second half of the same argument. `resolveAirtableCredentials`
- * is asked for `need: "read"`, which consults `AIRTABLE_PLAN_PAT` first and
- * never consults `AIRTABLE_APPLY_PAT` at all — see `../airtable/client.ts` for
- * why preferring the narrower token is the point rather than a nicety. The
- * plan token carries `schema.bases:read` on one base and was probed against
- * the live base: a records read and a schema write both answered 403.
+ * The credential is the second half of the same argument.
+ * `resolveAirtableCredentials` is asked for `need: "read"`, which consults
+ * `AIRTABLE_PLAN_PAT` first and never consults `AIRTABLE_APPLY_PAT` at all. See
+ * `../airtable/client.ts` for why preferring the narrower token is the point
+ * rather than a nicety. The plan token carries `schema.bases:read` on one base
+ * and was probed against the live base: a records read and a schema write both
+ * answered 403.
  *
  * ⚠️ **No `secrets.X != ''` guard belongs in the workflow step that runs this.**
  * The old Airtable job passed for months without ever running because of one,
@@ -36,7 +37,7 @@
  *
  * Writes the plan to `$GITHUB_STEP_SUMMARY`, and `changed=true|false` to
  * `$GITHUB_OUTPUT` so the apply job can be asked for an approval only when
- * there is something to approve — the same shape `production-plan` already
+ * there is something to approve. That is the shape `production-plan` already
  * uses for `config.toml`. It needs no env FILE, only the two variables the
  * workflow hands it, so it runs through `cli:no-env`.
  */
@@ -49,9 +50,9 @@ import {
 import { DeployError, say, summary } from "./report.js";
 
 /**
- * Everything that touches the outside world, injected — the same arrangement
- * `preflight.ts` uses and for the same reason: the decision that must not rot
- * is unreachable in a test that has to open a socket.
+ * Everything that touches the outside world, injected. The same arrangement
+ * `preflight.ts` uses, for the same reason: the decision that must not rot is
+ * unreachable in a test that has to open a socket.
  *
  * `fetch` reaches `AirtableClient`, so a test can assert the METHOD of every
  * request this command makes. "Cannot mutate" is then a property the suite
@@ -60,7 +61,7 @@ import { DeployError, say, summary } from "./report.js";
 export interface DeployAirtableDeps {
   env?: NodeJS.ProcessEnv;
   fetch?: typeof globalThis.fetch;
-  /** Where the human-readable lines go. `say()` — that is, stderr — by default. */
+  /** Where the human-readable lines go. Defaults to `say()`, on stderr. */
   report?: (lines: readonly string[]) => void;
 }
 
@@ -147,8 +148,8 @@ export async function runDeployAirtablePlan(
 
   // The gate for the apply job, so the reviewer approval is asked for when
   // there is something to approve rather than on every promotion. Written even
-  // when false — an absent output reads as false to the workflow anyway, and
-  // an explicit one shows in the log which way it went.
+  // when false: an absent output reads as false to the workflow anyway, and an
+  // explicit one shows in the log which way it went.
   const path = env.GITHUB_OUTPUT;
   if (path) appendFileSync(path, `changed=${String(changed)}\n`);
   report([`airtable-plan: changed=${String(changed)}`]);

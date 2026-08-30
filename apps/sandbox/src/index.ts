@@ -6,12 +6,12 @@ import { handleProxyRequest, type ProxyDeps, type Resolution } from "./proxy";
  * Every decision lives in `handleProxyRequest`, which takes its dependencies as
  * arguments so the security properties can be tested against a mock upstream
  * rather than a deployed Worker. What is left here is the two things that can
- * only exist at the edge -- the real credential lookup and the real fetch.
+ * only exist at the edge: the real credential lookup and the real fetch.
  */
 
 export interface Env {
   /**
-   * The platform project's PostgREST endpoint. Not the sandbox's -- this is how
+   * The platform project's PostgREST endpoint. Not the sandbox's. This is how
    * the Worker asks the platform who a token belongs to.
    */
   PLATFORM_REST_URL: string;
@@ -67,10 +67,10 @@ function isHttpUrl(value: string): boolean {
  * Every field the `ok` branch promises is CHECKED here, not asserted. The
  * previous shape was eight `!` assertions, which laundered a null column into a
  * value the type system then swore was a string: a null `publishable_key` built
- * a perfectly well-typed `ok` resolution and the proxy sent the literal string
+ * a well-typed `ok` resolution and the proxy sent the literal string
  * "undefined" upstream as an apikey, and a null `upstream_url` threw
- * `TypeError: Invalid URL` somewhere with no try around it. Both are answers
- * this function owes the caller, so it gives them a named outcome instead.
+ * `TypeError: Invalid URL` with no try around it. Both are answers this
+ * function owes the caller, so it gives them a named outcome instead.
  */
 function toResolution(row: ResolveRow | undefined): Resolution {
   if (!row) return { outcome: "unknown_host" };
@@ -143,8 +143,8 @@ function toResolution(row: ResolveRow | undefined): Resolution {
     case "bad_credential":
       return { outcome: "bad_credential" };
     default:
-      // An outcome this Worker does not recognize is OUR problem -- a database
-      // ahead of a deploy -- not the member's. It used to fall into
+      // An outcome this Worker does not recognize is OUR problem, a database
+      // ahead of a deploy, not the member's. It used to fall into
       // `unknown_host`, telling them their environment was permanently gone.
       console.error(
         `[sandbox] resolve returned unknown outcome: ${row.outcome}`,
@@ -175,8 +175,8 @@ function makeDeps(env: Env, ctx: ExecutionContext): ProxyDeps {
         // A platform outage must not be indistinguishable from a bad token: a
         // 401 would send members hunting for a credential problem that does not
         // exist. It must not read as a MISSING ENVIRONMENT either, which is
-        // what folding it into `unknown_host` did -- an expired proxy token
-        // then told every member on every host that their sandbox was gone for
+        // what folding it into `unknown_host` did: an expired proxy token then
+        // told every member on every host that their sandbox was gone for
         // good. `lookup_failed` is a 503 with a retry hint.
         console.error(
           `[sandbox] resolve failed: ${res.status} ${await res.text()}`,
@@ -217,7 +217,7 @@ function makeDeps(env: Env, ctx: ExecutionContext): ProxyDeps {
         },
       );
       // Logged, never thrown. A failed audit write must not fail a request that
-      // already succeeded -- the alternative is an outage in the log taking the
+      // already succeeded. The alternative is an outage in the log taking the
       // whole sandbox down mid-event.
       if (!res.ok) {
         console.error(`[sandbox] log failed: ${res.status}`);

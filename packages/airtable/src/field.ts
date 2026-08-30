@@ -48,7 +48,7 @@ export type AirtableValue =
 export type Direction = "push" | "pull" | "ignore" | "status";
 
 export interface FieldSpec<TType extends FieldType = FieldType> {
-  /** `fldXXXXXXXXXXXXXX`. The wire format — never the human-readable name. */
+  /** `fldXXXXXXXXXXXXXX`. The wire format, never the human-readable name. */
   readonly id: string;
   readonly type: TType;
   /** What an officer will call it when they report a problem. */
@@ -59,11 +59,11 @@ export interface FieldSpec<TType extends FieldType = FieldType> {
    * For `multipleRecordLinks` only: the registry key of the table this points
    * at.
    *
-   * Required at the type level by `field.link`, because a link field without a
-   * target is not a description of anything the scaffolder can create —
-   * `linkedTableId` is a required option on the Meta API, and the target was
-   * previously recoverable only by reading the field's NAME, which is the one
-   * thing this integration treats as changeable.
+   * Required at the type level by `field.link`. A link field without a target
+   * is not something the scaffolder can create: `linkedTableId` is a required
+   * option on the Meta API, and the target was previously recoverable only by
+   * reading the field's NAME, the one thing this integration treats as
+   * changeable.
    */
   readonly linkTo?: string;
   /**
@@ -72,14 +72,14 @@ export interface FieldSpec<TType extends FieldType = FieldType> {
    *
    * Declaring them buys two things no parser can. The scaffolder creates the
    * field with exactly these choices, so Airtable's own dropdown refuses a
-   * value the platform cannot render -- enforcement moves from a pull parser,
-   * which learns about a bad value only after somebody typed it, to the moment
-   * of typing. And `verify.ts` can then compare the live choice names against
-   * this list, which is the one and only part of `options` it reads.
+   * value the platform cannot render, moving enforcement from a pull parser
+   * that learns about a bad value only after somebody typed it to the moment
+   * of typing. And `verify.ts` compares the live choice names against this
+   * list, the one and only part of `options` it reads.
    *
    * Optional, unlike `linkTo`, because a select with no declared choices is a
-   * real declaration rather than an oversight: it says the platform reads or
-   * writes the column and leaves the vocabulary to the officers.
+   * real declaration rather than an oversight: the platform reads or writes
+   * the column and leaves the vocabulary to the officers.
    */
   readonly choices?: readonly string[];
   /** Present only when direction is "push". */
@@ -115,17 +115,17 @@ export interface IgnoredField<
 /**
  * A platform-owned message channel, written outside the push engine.
  *
- * Exists for exactly one field — `Sync status` — and it is worth its own
- * direction because it breaks the engine's never-blank rule on purpose.
+ * Exists for exactly one field, `Sync status`, and earns its own direction
+ * because it breaks the engine's never-blank rule on purpose.
  *
- * Every pushed field is a projection of Postgres state, and for those, null
+ * Every pushed field is a projection of Postgres state, and for those null
  * means "we have not learned this yet" and must never be written as empty. A
- * refusal message is not a projection: when the officer fixes the row, the
- * message has to be CLEARED, and a stale refusal left sitting in the grid
- * reads as a live problem forever.
+ * refusal message is not a projection: when the officer fixes the row the
+ * message has to be CLEARED, and a stale refusal sitting in the grid reads as
+ * a live problem forever.
  *
- * So it stays declared here — the verifier still requires the field to exist
- * and still lists it for editing lockdown, and it is still single-writer — but
+ * So it stays declared here. The verifier still requires the field to exist
+ * and still lists it for editing lockdown, and it is still single-writer, but
  * the sync writes it directly rather than through `buildPush`.
  */
 export interface StatusField<TType extends FieldType> extends FieldSpec<TType> {
@@ -135,15 +135,14 @@ export interface StatusField<TType extends FieldType> extends FieldSpec<TType> {
 /**
  * A field that has not yet declared a direction.
  *
- * `.push()` and `.pull()` return different types, neither of which carries the
- * other method — so a field declared with both fails to COMPILE rather than
- * being caught at runtime. That turns the rule the whole integration rests on
- * (never create a field both sides write) from a convention somebody has to
- * remember into a type error.
+ * `.push()` and `.pull()` return different types, neither carrying the other
+ * method, so a field declared with both fails to COMPILE. That turns the rule
+ * the whole integration rests on (never create a field both sides write) from
+ * a convention somebody has to remember into a type error.
  *
- * It is the highest-value thing in this design, because a second writer
- * produces no error at runtime. It produces last-writer-wins, silently, weeks
- * later, and the losing write is somebody's dues record.
+ * Worth the machinery because a second writer produces no runtime error. It
+ * produces last-writer-wins, silently, weeks later, and the losing write is
+ * somebody's dues record.
  */
 export class UndirectedField<TType extends FieldType> {
   constructor(
@@ -160,8 +159,8 @@ export class UndirectedField<TType extends FieldType> {
    *
    * The `this` parameter is the enforcement: calling `.matchKey()` on an
    * `email`, `checkbox` or link field is a compile error, because Airtable
-   * would reject it in `fieldsToMergeOn` at write time — which is a far worse
-   * place to find out.
+   * would reject it in `fieldsToMergeOn` at write time, a far worse place to
+   * find out.
    */
   matchKey(
     this: UndirectedField<MergeEligibleType & TType>,
@@ -207,7 +206,7 @@ export class UndirectedField<TType extends FieldType> {
    *
    * Exists so an officer-authored column is recorded as untouched rather than
    * merely absent. "Does the sync know about Notes?" has two very different
-   * answers — absent means nobody looked, `.ignore()` means somebody decided.
+   * answers: absent means nobody looked, `.ignore()` means somebody decided.
    */
   ignore(): IgnoredField<TType> {
     return {
@@ -238,20 +237,20 @@ export class UndirectedField<TType extends FieldType> {
 /**
  * The factory for every type whose declaration is just an id and a name.
  *
- * `link`, `singleSelect` and `multipleSelects` are written out below instead,
- * because each takes an argument that is meaningless for the other types --
- * routing them through `make` would mean offering a third parameter on
- * `field.checkbox` that silently does nothing.
+ * `link`, `singleSelect` and `multipleSelects` are written out below instead.
+ * Each takes an argument meaningless for the other types, and routing them
+ * through `make` would offer a third parameter on `field.checkbox` that
+ * silently does nothing.
  */
 function make<TType extends FieldType>(type: TType) {
   return (id: string, name: string) => new UndirectedField(id, type, name);
 }
 
 export const field = {
-  /** `singleLineText` — the only merge-key-eligible plain text type. */
+  /** `singleLineText`, the only merge-key-eligible plain text type. */
   text: make("singleLineText"),
   longText: make("multilineText"),
-  /** `email` — CANNOT be a merge key. */
+  /** `email`, which CANNOT be a merge key. */
   email: make("email"),
   url: make("url"),
   number: make("number"),
@@ -261,16 +260,15 @@ export const field = {
   /**
    * A single select, and optionally the closed list of choices it may hold.
    *
-   * Optional rather than required -- unlike `link`'s target, which the Meta API
-   * demands before it will create anything -- because both cases are real. A
-   * declared list is the platform saying "these strings are the ones my code
-   * branches on, and Airtable should refuse the rest"; an undeclared one is the
-   * platform saying the column is the officers' to fill however they like.
+   * Optional rather than required, unlike `link`'s target, which the Meta API
+   * demands before it will create anything. Both cases are real: a declared
+   * list says these strings are the ones the platform's code branches on and
+   * Airtable should refuse the rest, an undeclared one says the column is the
+   * officers' to fill however they like.
    *
    * Pass the list `as const` at the call site. The declaration is then the
    * single source for the scaffolder's choice list, the verifier's comparison
-   * and whatever union type the caller derives from it, so the three cannot
-   * disagree.
+   * and whatever union type the caller derives, so the three cannot disagree.
    */
   singleSelect: (id: string, name: string, choices?: readonly string[]) =>
     new UndirectedField(
@@ -300,11 +298,11 @@ export const field = {
   /**
    * A link, and the registry key of what it links to.
    *
-   * The target is a required argument rather than an optional one because
-   * `linkedTableId` is required by the Meta API, so a link field that does not
-   * name its target cannot be scaffolded — and inferring it from the field's
-   * name would make the sync depend on a name being stable, which is the exact
-   * thing field IDs exist to stop mattering.
+   * The target is required rather than optional because `linkedTableId` is
+   * required by the Meta API, so a link field that does not name its target
+   * cannot be scaffolded. Inferring it from the field's name would make the
+   * sync depend on a name being stable, the exact thing field IDs exist to
+   * stop mattering.
    */
   link: (id: string, name: string, linkTo: string) =>
     new UndirectedField(
@@ -343,7 +341,7 @@ export function pullFields(spec: TableSpec): FieldSpec[] {
 }
 
 /**
- * Every field the platform owns — pushed or status.
+ * Every field the platform owns, pushed or status.
  *
  * This, not `pushFields`, is what the field-lockdown checklist reads: an
  * officer editing `Sync status` by hand is the same class of problem as

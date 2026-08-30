@@ -29,7 +29,7 @@
  *   AIRTABLE_BASE_ID=… AIRTABLE_APPLY_PAT=… pnpm devtools deploy airtable-apply
  *
  * Uses a `write` client: `AIRTABLE_APPLY_PAT` first, `AIRTABLE_PAT` as the
- * operator fallback, and never `AIRTABLE_PLAN_PAT` — falling back to a token
+ * operator fallback, and never `AIRTABLE_PLAN_PAT`. Falling back to a token
  * that cannot write would turn a missing credential into a 403 halfway through
  * a schema change.
  */
@@ -39,7 +39,7 @@ import {
   resolveAirtableCredentials,
 } from "../airtable/client.js";
 import { DeployError, say, summary } from "./report.js";
-// Type-only, so nothing about the plan module is imported at run time —
+// Type-only, so nothing about the plan module is imported at run time:
 // `verbatimModuleSyntax` erases the line entirely. The two commands share one
 // dependency shape because a test that drives one should drive the other the
 // same way.
@@ -54,9 +54,9 @@ export interface AirtableApplyResult {
  * Applies the schema the registry declares.
  *
  * @throws {DeployError} when no write credential is available, or when the
- *   base still lacks something the registry declares after the run — which
- *   means Airtable refused a field, and a green apply there would be a lie the
- *   next sync discovers.
+ *   base still lacks something the registry declares after the run. That means
+ *   Airtable refused a field, and a green apply there would be a lie the next
+ *   sync discovers.
  */
 export async function runDeployAirtableApply(
   deps: DeployAirtableDeps = {},
@@ -75,7 +75,7 @@ export async function runDeployAirtableApply(
   report([`airtable-apply: scaffolding ${baseId} with ${variable}`]);
 
   const result = await scaffoldBase(client, {
-    // `say()`, not `log.message` — see `deploy/report.ts`. Each created table
+    // `say()`, not `log.message`; see `deploy/report.ts`. Each created table
     // and field is named as it happens, because a failure halfway through
     // leaves the base partly changed and the log is the only record of how far
     // it got.

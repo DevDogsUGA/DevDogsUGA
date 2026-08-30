@@ -5,8 +5,7 @@ import { Button } from "../ui/Button";
 import Timeselector from "./TimeSelector";
 import ToggleButton from "./ToggleButton";
 
-//Dummy Data
-//TODO: Replace Dummy data
+//TODO: Replace this dummy data
 const majorList = [
   "Psychology",
   "Biology/Biological Sciences",
@@ -21,32 +20,31 @@ const semesterList = [
   `Summer ${new Date().getFullYear() + 1}`,
 ];
 
-//This will change the semester list based on the current month
-// For Janurary: (Spring of this year, Summer of this year, Fall of this year)
+// Which three semesters to offer depends on the current month. getMonth() is
+// 0-indexed, so 0 is January.
 if (new Date().getMonth() == 0) {
   semesterList[0] = `Spring ${new Date().getFullYear()}`;
   semesterList[1] = `Summer ${new Date().getFullYear()}`;
   semesterList[2] = `Fall ${new Date().getFullYear()}`;
 
-  // For Feburary - May: (Summer of this year, Fall of this year, Spring of next year)
+  // February through May.
 } else if (new Date().getMonth() < 5) {
   semesterList[0] = `Summer ${new Date().getFullYear()}`;
   semesterList[1] = `Fall ${new Date().getFullYear()}`;
   semesterList[2] = `Spring ${new Date().getFullYear() + 1}`;
 
-  // For September - December: (Spring of next year, Summer of next year, Fall of next year)
+  // September through December. June through August hit no branch and keep the
+  // declared default.
 } else if (new Date().getMonth() > 7) {
   semesterList[0] = `Spring ${new Date().getFullYear() + 1}`;
   semesterList[1] = `Summer ${new Date().getFullYear() + 1}`;
   semesterList[2] = `Fall ${new Date().getFullYear() + 1}`;
-  //alert(`the month is ${testDay.getMonth()}`);
 }
 
 const creditHoursList = Array.from({ length: 18 }, (_, i) =>
   (i + 1).toString().padStart(2, "0"),
 );
 
-//Questionnare Form
 export const QuestionnareForm = () => {
   const formRef = useRef<HTMLFormElement>(null);
   const [formSubmit, setFormSubmit] = useState(false);
@@ -60,7 +58,6 @@ export const QuestionnareForm = () => {
     }, 1000);
   };
 
-  //Default list of values to filter and enter when selecting days
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -95,7 +92,6 @@ export const QuestionnareForm = () => {
         onSubmit={handleSubmit}
         className="z-10 flex w-full flex-col gap-8"
       >
-        {/* Form Questions and Input */}
         <div>
           <h1>What&apos;s your major?</h1>
           <DropdownSearchInput
@@ -107,7 +103,6 @@ export const QuestionnareForm = () => {
           />
         </div>
         <div>
-          {/* Day Selecter to filter out specific days*/}
           <h1>When do NOT want class?</h1>
           <div className="flex flex-row">
             {days.map((day, index) => (
@@ -126,7 +121,6 @@ export const QuestionnareForm = () => {
             ))}
           </div>
         </div>
-        {/* Time Selector to select a time range */}
         <div className="">
           <h1>Select Time Range</h1>
           <div className="flex flex-row gap-4">
@@ -134,7 +128,6 @@ export const QuestionnareForm = () => {
             <Timeselector name="endTime" clearState={formSubmit} />
           </div>
         </div>
-        {/* Input Fields to enter min and max credit hours */}
         <div>
           <h1>Select Min/Max Credit Hours</h1>
           <div className="flex flex-row gap-4">
@@ -152,7 +145,6 @@ export const QuestionnareForm = () => {
             />
           </div>
         </div>
-        {/* Input field for entering term */}
         <div>
           <h1>Which Term?</h1>
           <DropdownSearchInput
@@ -164,7 +156,6 @@ export const QuestionnareForm = () => {
           />
         </div>
 
-        {/* Form Buttons */}
         <div className="flex items-center gap-6">
           <Button
             text="clear"

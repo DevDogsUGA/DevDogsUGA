@@ -2,9 +2,9 @@
  * The rendering rules, exercised against a registry this file controls.
  *
  * `example.test.ts` asserts the same rules over the REAL manifests, which is
- * what makes them true of the files people actually generate — but the real
- * registry can only show the cases it happens to contain. Three of the rules
- * that matter most have no example in it today:
+ * what makes them true of the files people actually generate. But the real
+ * registry can only show the cases it happens to contain, and three of the
+ * rules that matter most have no example in it today:
  *
  *   * a derivation whose input is filtered OUT of the target file (every real
  *     one resolves, so the check that they resolve passes vacuously);
@@ -22,9 +22,9 @@ import { declare, define, resetRegistry } from "@devdogsuga/env";
 import { renderInit, runEnvInit } from "./example.js";
 
 /**
- * Mocked because `runEnvInit` writes to the REPO ROOT — `PROJECT_ROOT` is
- * resolved from this file's location, not from `cwd` — and the three files it
+ * Mocked because `runEnvInit` writes to the REPO ROOT, and the three files it
  * would create are the ones an operator fills with real credentials.
+ * `PROJECT_ROOT` is resolved from this file's location, not from `cwd`.
  *
  * Nothing else in this file touches the filesystem: the registry here is
  * declared inline rather than discovered, so no manifest is ever imported.
@@ -149,7 +149,7 @@ beforeEach(() => {
   // A SECOND declaration of `HALF_NARROW`, this one WITHOUT the marker.
   //
   // Two manifests disagreeing about a key is a bug the real registry's
-  // completeness test catches — but it catches it after the fact, and until it
+  // completeness test catches, but it catches it after the fact, and until it
   // does, something has to decide what the disagreement means. For every other
   // flag the safe reading is "one app calling it a secret makes it a secret".
   // For this one it inverts: `narrowed` is an EXEMPTION from an exclusion, so
@@ -201,8 +201,8 @@ describe("a vault target's file", () => {
   it("blanks a development default and a secret's shape", () => {
     const staging = renderInit("staging", DATE);
     expect(valueOf(staging, "LOCALHOST")).toBe("");
-    // A `$` in a secret's example is a shape, never a value — the gate that
-    // keeps `DB_URL`'s `<password>` out of a deployed environment.
+    // A `$` in a secret's example is a shape, never a value. This is the gate
+    // that keeps `DB_URL`'s `<password>` out of a deployed environment.
     expect(valueOf(staging, "SECRET_SHAPE")).toBe("");
   });
 
@@ -263,16 +263,16 @@ describe("a vault target's file", () => {
   it("does NOT withhold a narrowed key from the deployed targets", () => {
     // `narrowed` says "a weaker credential exists for the CI tier", not "this
     // key is CI's alone". Reading it the second way would strip a real secret
-    // out of staging and production — a missing credential that pushes
-    // cleanly, which is the failure mode this whole file exists to catch.
+    // out of staging and production: a missing credential that pushes cleanly,
+    // which is the failure mode this whole file exists to catch.
     expect(valueOf(renderInit("staging", DATE), "NARROW_ONE")).toBe("");
     expect(valueOf(renderInit("production", DATE), "NARROW_ONE")).toBe("");
   });
 
   it("drops a section whose every key was filtered out", () => {
     const staging = renderInit("staging", DATE);
-    // `platform` declares one committed constant and nothing else, so a
-    // heading for it would say "this app needs nothing here" — false, and the
+    // `platform` declares one committed constant and nothing else, so a heading
+    // for it would say "this app needs nothing here", which is false, and the
     // reader has no way to tell it from a section that lost its keys to a bug.
     expect(staging).not.toContain("platform (apps/platform/src/env.ts)");
     expect(staging).toContain("supabase — read by config.toml");
@@ -337,9 +337,9 @@ describe("the development file, from the same declarations", () => {
     expect(isCommented(development, "DEV_ONLY")).toBe(true);
     expect(valueOf(development, "MUST_FILL")).toBeNull();
 
-    // A never-store key ships COMMENTED (2026-08-19): never in any remote
-    // store — push refuses it by name — but the operator's own .env may hold
-    // one, and the commented line is the home the BWS prompts' save revives.
+    // A never-store key ships COMMENTED (2026-08-19): never in a remote store,
+    // since push refuses it by name, but the operator's own .env may hold one,
+    // and the commented line is what the BWS prompts' save revives.
     expect(valueOf(development, "VAULT_TOKEN")).toBeNull();
     expect(isCommented(development, "VAULT_TOKEN")).toBe(true);
     // A minted key keeps documentation and no line at all: no value exists.

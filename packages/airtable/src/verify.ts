@@ -30,9 +30,9 @@ export interface VerifyResult {
   findings: Finding[];
   /**
    * Every platform-owned field, as a checklist for the one thing nothing can
-   * verify. `.status()` fields are on it too — an officer typing over a
-   * refusal message is the same class of problem as one typing over an
-   * attendance count, and both are prevented the same way.
+   * verify. `.status()` fields are on it too: an officer typing over a refusal
+   * message is the same class of problem as one typing over an attendance
+   * count, and both are prevented the same way.
    */
   pushChecklist: { table: string; field: string; id: string }[];
   ok: boolean;
@@ -47,10 +47,10 @@ interface LiveTable {
     type: string;
     /**
      * Widened for check 6 alone. The Meta API returns the whole option bag
-     * here -- colours, date formats, precision -- and the verifier reads one
-     * key out of it, `choices`, and only for a field whose spec declares its
-     * own. Everything else in here is deliberately not looked at; see the note
-     * on `createOptionsFor` in `scaffold.ts`.
+     * here, colours and date formats and precision, and the verifier reads one
+     * key out of it: `choices`, and only for a field whose spec declares its
+     * own. Nothing else in here is looked at. See the note on
+     * `createOptionsFor` in `scaffold.ts`.
      */
     options?: Record<string, unknown>;
   }[];
@@ -59,23 +59,23 @@ interface LiveTable {
 /**
  * The six checks.
  *
- *   1. Every registered field ID exists       FATAL — writes into nothing
- *   2. Field types match the registry         FATAL — a text field where a
+ *   1. Every registered field ID exists       FATAL: writes into nothing
+ *   2. Field types match the registry         FATAL: a text field where a
  *                                             date is expected coerces silently
- *   3. The .matchKey() field is merge-eligible FATAL — upsert rejects email,
+ *   3. The .matchKey() field is merge-eligible FATAL: upsert rejects email,
  *                                             computed and other types
- *   4. Match keys are unique-ish              WARN  — Airtable cannot enforce
+ *   4. Match keys are unique-ish              WARN: Airtable cannot enforce
  *                                             uniqueness on most field types
- *   5. Live fields absent from the registry   REPORT — officers may add their
- *                                             own; just list them
- *   6. Declared select choices match the base FATAL — a value the page cannot
+ *   5. Live fields absent from the registry   REPORT: officers may add their
+ *                                             own, just list them
+ *   6. Declared select choices match the base FATAL: a value the page cannot
  *                                             render is worse than no value
  *
  * The list read as most-severe-first until check 6 was added, which is fatal
- * and still numbered last. The numbers are kept as stable identities rather
- * than a ranking: renumbering would quietly repoint every inline comment and
- * test name that says "check 4" at a different check, and a renamed test is
- * indistinguishable from a deleted one in a diff.
+ * and still numbered last. The numbers are stable identities rather than a
+ * ranking: renumbering would repoint every inline comment and test name that
+ * says "check 4" at a different check, and a renamed test is indistinguishable
+ * from a deleted one in a diff.
  */
 export async function verifyBase(
   client: AirtableClient,
@@ -102,9 +102,9 @@ export async function verifyBase(
 
   // Collected for every table up front, independent of whether the schema
   // checks below can run at all. The checklist is most needed immediately
-  // after scaffolding — step 6 of the runbook, before the base has ever been
-  // verified — so building it inside the checks would leave it empty exactly
-  // when somebody is about to walk the UI with it.
+  // after scaffolding, at step 6 of the runbook, before the base has ever been
+  // verified. Building it inside the checks would leave it empty exactly when
+  // somebody is about to walk the UI with it.
   for (const spec of specs) {
     for (const fieldSpec of platformOwnedFields(spec)) {
       pushChecklist.push({
@@ -117,7 +117,7 @@ export async function verifyBase(
 
   for (const spec of specs) {
     // Placeholders are fatal rather than a warning. A placeholder that reaches
-    // a live sync does not error — Airtable accepts the request and the write
+    // a live sync does not error. Airtable accepts the request and the write
     // lands nowhere, so the pass reports success and the data never arrives.
     if (isPlaceholder(spec.id)) {
       findings.push({
@@ -156,7 +156,7 @@ export async function verifyBase(
         continue;
       }
 
-      // Check 1 — existence.
+      // Check 1: existence.
       const liveField = liveFieldsById.get(fieldSpec.id);
       if (!liveField) {
         findings.push({
@@ -168,7 +168,7 @@ export async function verifyBase(
         continue;
       }
 
-      // Check 2 — type. This is the one field IDs exist to survive: a rename
+      // Check 2: type. This is the one field IDs exist to survive. A rename
       // is invisible here, which is the point, but a retyped column is not.
       if (liveField.type !== fieldSpec.type) {
         findings.push({
@@ -179,7 +179,7 @@ export async function verifyBase(
         });
       }
 
-      // Check 3 — merge eligibility of the match key.
+      // Check 3: merge eligibility of the match key.
       if (fieldSpec.isMatchKey && !isMergeEligible(fieldSpec.type)) {
         findings.push({
           severity: "fatal",
@@ -189,22 +189,22 @@ export async function verifyBase(
         });
       }
 
-      // Check 6 — the choice list of a select field that declares one.
+      // Check 6: the choice list of a select field that declares one.
       //
-      // A narrow widening of "compare type, never options", and it is meant to
-      // stay narrow: only choice NAMES, only for fields whose spec declares
-      // them. A colour, a date format, a precision is still the officers' to
-      // change and still not drift. See the same note on `createOptionsFor`.
+      // A narrow widening of "compare type, never options", meant to stay
+      // narrow: only choice NAMES, only for fields whose spec declares them. A
+      // colour, a date format, a precision is still the officers' to change and
+      // still not drift. See the same note on `createOptionsFor`.
       //
       // Fatal rather than a warning because the platform branches on these
       // strings. A choice renamed in the UI does not blank the column and does
-      // not fail a write -- it leaves rows holding a value no branch matches,
+      // not fail a write. It leaves rows holding a value no branch matches,
       // which surfaces as an empty slot on a page that is otherwise working,
-      // and that is worse than the field having no value at all.
+      // worse than the field having no value at all.
       findings.push(...choiceFindings(spec.name, key, fieldSpec, liveField));
     }
 
-    // Check 5 — live fields the registry does not mention. A report, not an
+    // Check 5: live fields the registry does not mention. A report, not an
     // error: the base is the officer console, and officers adding a column for
     // their own tracking is the system working. Listing them just means nobody
     // assumes a hand-added column syncs anywhere.
@@ -219,7 +219,7 @@ export async function verifyBase(
       }
     }
 
-    // Check 4 — duplicate match keys.
+    // Check 4: duplicate match keys.
     if (options.checkDuplicates !== false) {
       const records = await client.listRecords(live.id);
       findings.push(...duplicateKeyFindings(spec, records));
@@ -237,21 +237,20 @@ export async function verifyBase(
  * Compares a select field's live choice names against the ones its spec
  * declares.
  *
- * A set comparison, not a sequence one: Airtable's choice ORDER is the
- * officer's to arrange in the UI, nothing in the platform reads it, and
- * treating a drag-and-drop reorder as schema drift would train people to
- * ignore the verifier. Colours are likewise not looked at.
+ * A set comparison, not a sequence one: choice ORDER is the officer's to
+ * arrange in the UI, nothing in the platform reads it, and treating a
+ * drag-and-drop reorder as drift would train people to ignore the verifier.
+ * Colours are likewise not looked at.
  *
  * Defensive about the shape because this is the only place the verifier reaches
  * into `options`, which the Meta API types as an open bag and the docs describe
  * loosely. Anything unrecognisable becomes a finding rather than a throw: a
- * verifier that dies mid-pass reports nothing at all about the tables it had
- * not reached, which is strictly less useful than a bad base plus a clear
- * message.
+ * verifier that dies mid-pass reports nothing about the tables it had not
+ * reached, which is less useful than a bad base plus a clear message.
  *
- * Exported for the same reason `duplicateKeyFindings` is -- so the comparison
- * can be driven directly against a deliberately broken live shape, without
- * standing up a whole fixture base for each one.
+ * Exported for the same reason `duplicateKeyFindings` is, so the comparison can
+ * be driven against a deliberately broken live shape without standing up a
+ * whole fixture base for each one.
  */
 export function choiceFindings(
   table: string,
@@ -349,10 +348,10 @@ function findById(tables: LiveTable[], id: string): LiveTable | undefined {
  * Formats the result for a terminal.
  *
  * The push checklist is printed on success as well as failure, because it is
- * the one protection nothing can verify: the base schema response is purely
- * structural and carries no permission or editing-restriction data anywhere,
- * so whether field editing is locked down on each `⚙️` field can only ever be
- * checked by a human walking the UI.
+ * the one protection nothing can verify: the base schema response is
+ * structural and carries no permission or editing-restriction data, so whether
+ * field editing is locked down on each `⚙️` field can only be checked by a
+ * human walking the UI.
  */
 export function formatVerifyResult(result: VerifyResult): string {
   const lines: string[] = [];

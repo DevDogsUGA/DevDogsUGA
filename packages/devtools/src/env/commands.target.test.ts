@@ -18,8 +18,8 @@ import { resolve } from "node:path";
  * environment (`preflight | staging | production`, choosing a PROJECT). `init`
  * read the first and mapped `staging` → `.env.staging`; `pull`, `push` and
  * `audit` read the second and defaulted their file to the root `.env`
- * regardless. So the documented workflow — generate `.env.staging`, fill it
- * in, push it — uploaded the DEVELOPMENT values to the staging project and
+ * regardless. So the documented workflow was: generate `.env.staging`, fill it
+ * in, push it. That uploaded the DEVELOPMENT values to the staging project and
  * printed a success line about it.
  *
  * Asserted PER SUBCOMMAND rather than once against `pathFor`. A single helper

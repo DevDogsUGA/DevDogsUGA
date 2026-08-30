@@ -2,15 +2,16 @@
  * The command tree's own invariants, and the coverage claim that rests on it.
  *
  * The claim: **the wizard reaches every command and every option the CLI
- * has.** It holds because there is one declaration — `commands.ts` — that the
- * menu walks, `--help` renders, and every dispatcher in `cli.ts` validates
- * against. This file guards the parts of that which a type cannot: that the
- * names match the ones dispatch actually accepts, that nothing is declared
- * twice, and that a summary stays the one line `--help` prints it as.
+ * has.** It holds because one declaration, `commands.ts`, is what the menu
+ * walks, `--help` renders, and every dispatcher in `cli.ts` validates against.
+ * This file guards the parts of that which a type cannot: that the names match
+ * the ones dispatch actually accepts, that nothing is declared twice, and that
+ * a summary stays the one line `--help` prints it as.
  *
- * `cli.ts` is deliberately NOT imported here — importing it runs `main()`.
- * The names it dispatches on that are not derived from the tree are the two
- * exported tuples below plus a small hand-list, checked against the tree.
+ * `cli.ts` is deliberately NOT imported here, because importing it runs
+ * `main()`. The names it dispatches on that are not derived from the tree are
+ * the two exported tuples below plus a small hand-list, checked against the
+ * tree.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -86,7 +87,7 @@ describe("shape", () => {
 
 describe("prompts", () => {
   /**
-   * Yes adds the flag, with no per-option inversion — so every confirm has to
+   * Yes adds the flag, with no per-option inversion, so every confirm has to
    * be phrased as the flag's own meaning. A message that asks the opposite
    * ("Scan for duplicates?" for `--no-duplicates`) would silently produce the
    * inverse command, which no type catches.
@@ -121,7 +122,7 @@ describe("prompts", () => {
 
   /**
    * An option with no prompt here is one the wizard does not ask about on its
-   * own screen. Every entry below is asked SOMEWHERE — by the command itself
+   * own screen. Every entry below is asked SOMEWHERE: by the command itself
    * from live data (`--app`, `--user`, `--target`, `--apps`, `--filter`), or
    * deliberately never (`--yes`, `--access-token`, `--file`, `--all`). See
    * `CommandOption.prompt`.
@@ -140,7 +141,7 @@ describe("prompts", () => {
       "--access-token",
       "--file",
       // `run`'s two. The multiselect it opens IS this question, asked against
-      // the apps that actually define the task — so a screen asking "which
+      // the apps that actually define the task, so a screen asking "which
       // filter?" first would ask it twice and let the answers disagree.
       "--filter",
       "--all",
@@ -170,8 +171,8 @@ describe("coverage of what the CLI dispatches", () => {
    * Hand-written HERE and nowhere else: `dispatch` reaches these through
    * `first === "..."` comparisons, which no import can enumerate. If a command
    * is added to the CLI and not to the tree, this list is where the omission
-   * surfaces — and the test below turns it into a failure rather than a
-   * command nobody can find in the menu.
+   * surfaces, and the test below turns it into a failure rather than a command
+   * nobody can find in the menu.
    */
   const DISPATCHED = [
     ...STACK_COMMANDS,

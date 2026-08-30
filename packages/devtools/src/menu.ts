@@ -5,7 +5,7 @@
  *
  * **It builds an argv and hands it to the CLI's own dispatcher.** It does not
  * call command functions directly. That is what makes "the menu covers every
- * command" structural instead of aspirational — the menu it replaced held a
+ * command" structural instead of aspirational. The menu it replaced held a
  * hand-written list of ten entries beside a CLI that had grown to sixteen
  * top-level commands and thirty-one subcommands, so `env`, `planner`,
  * `signing-key`, `deploy` and `airtable snapshot` were reachable only by
@@ -19,7 +19,7 @@
  *
  * Its steps want a runner's environment and two of them have a stdout that
  * GitHub or a Worker secret is read from. Choosing one prints the exact line
- * to run instead of running it — see `CommandNode.wizard` for the full reason.
+ * to run instead of running it. See `CommandNode.wizard` for the full reason.
  * They are still in the tree, still selectable, still described.
  */
 import { confirm, log, note, select, text } from "@clack/prompts";
@@ -49,18 +49,16 @@ const BACK_OPTION = { value: BACK, label: "← Back" } as const;
  * The wrapper-free entry point the `deploy` steps use.
  *
  * `pnpm devtools` is `with-env tsx src/cli.ts`, and most of these run in jobs
- * that have no env file yet — write-env is what CREATES it.
+ * that have no env file yet: write-env is what CREATES it.
  *
- * This used to be a hard requirement: the wrapper exited on a missing file, so
+ * This used to be a hard requirement. The wrapper exited on a missing file, so
  * a wrapped `write-env` died on the very file it was about to compose, and the
  * others reported a missing FILE rather than the missing token, the paused
  * project or the missing credential. `with-env` reports the absence and
  * carries on now, so either entry point would work.
  *
- * It still prints THIS one, because the line's whole job is to be pasted into
- * a job step, and `deploy.yaml` invokes `cli:no-env` at every one of those
- * steps. Advice that does not match the workflow it is advice about is worse
- * than advice one hop longer than it needs to be.
+ * It still prints THIS one, because the line is meant to be pasted into a job
+ * step and `deploy.yaml` invokes `cli:no-env` at every one of those steps.
  */
 const NO_ENV_ENTRY = "pnpm --filter @devdogsuga/devtools run cli:no-env deploy";
 
@@ -69,7 +67,7 @@ const NO_ENV_ENTRY = "pnpm --filter @devdogsuga/devtools run cli:no-env deploy";
 /**
  * The commands at one level that are worth showing right now.
  *
- * `when` is the only thing that removes an entry, and it removes very few —
+ * `when` is the only thing that removes an entry, and it removes very few;
  * see `isOffered`. Everything else stays on screen and explains itself
  * through `hintFor` below, because the menu's job is to help someone who does
  * not know a command's name, and it cannot do that for a command it declined
@@ -297,20 +295,20 @@ async function walk(env: Environment): Promise<Chosen | null> {
  *
  * `dispatch` is the CLI's own argv handler, injected rather than imported so
  * that `cli.ts` keeps a single definition of what each command does and the
- * tests can watch what a walk produces without running it. Its return value —
- * the closing line, or `null` for a failure already explained — passes
- * straight through, so a command reached from the menu signs off exactly as
- * it does from the command line.
+ * tests can watch what a walk produces without running it. Its return value
+ * passes straight through, the closing line or `null` for a failure already
+ * explained, so a command reached from the menu signs off exactly as it does
+ * from the command line.
  */
 export async function runMenu(
   dispatch: (argv: string[]) => Promise<string | null>,
   env: Environment = probeEnvironment(),
 ): Promise<string | null> {
-  // Before the first question, not after a failure. Three lines that say what
-  // this machine currently is are the whole explanation for why the database
-  // commands below are flagged — or, on a healthy machine, one glance and
-  // gone. Injected rather than probed inside `walk` so the tests can drive a
-  // machine they describe instead of the one they happen to run on.
+  // Before the first question, not after a failure. Three lines saying what
+  // this machine currently is explain why the database commands below are
+  // flagged, and cost one glance on a healthy machine. Injected rather than
+  // probed inside `walk` so the tests can drive a machine they describe
+  // instead of the one they happen to run on.
   note(describeEnvironment(env), "This machine");
 
   const chosen = await walk(env);

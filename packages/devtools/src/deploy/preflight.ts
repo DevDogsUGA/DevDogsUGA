@@ -1,22 +1,22 @@
 /**
  * `pnpm devtools deploy preflight`
  *
- * Classifies a Supabase project as healthy, paused, or broken — before a
- * deploy spends any credential on it.
+ * Classifies a Supabase project as healthy, paused, or broken before a deploy
+ * spends any credential on it.
  *
- * ## Why this exists at all (security plan §3.2)
+ * ## Why this exists (security plan §3.2)
  *
  * Staging's Supabase project is on the free tier, so it pauses after a week
- * without activity, and staging deploys land roughly weekly. **A paused
- * project is the expected state, not an exception.** Left unhandled it does
- * not announce itself either: the deploy proceeds, the migrations step opens a
- * Postgres connection, and the job dies with a connection error that reads
- * exactly like a broken migration.
+ * without activity, and staging deploys land roughly weekly. A paused project
+ * is the expected state, not an exception. Unhandled, it does not announce
+ * itself: the deploy proceeds until the migrations step opens a Postgres
+ * connection and dies with a connection error that reads exactly like a broken
+ * migration.
  *
- * Supabase publishes a status code for precisely this case — **HTTP 540, "the
- * project the request was being made against has been paused"** — and it comes
- * from the API gateway rather than from Postgres, so one request classifies the
- * project before anything authenticates to it.
+ * Supabase publishes a status code for this case: HTTP 540, "the project the
+ * request was being made against has been paused". It comes from the API
+ * gateway rather than from Postgres, so one request classifies the project
+ * before anything authenticates to it.
  *
  *   540        paused    skip the deploy, annotate, exit 0
  *   200        healthy   proceed
@@ -25,51 +25,46 @@
  * ## Skip rather than fail, and ONLY on 540
  *
  * A staging deploy runs after the merge to `main` has already landed, so
- * failing it blocks nothing — it only paints CI red. If that happens most
- * weeks then red stops meaning anything, which costs more than a stale staging
- * environment does. Every other outcome stays a hard failure, because those
- * are the ones a person has to look at.
+ * failing it blocks nothing and only paints CI red. If that happens most weeks
+ * then red stops meaning anything, which costs more than a stale staging
+ * environment. Every other outcome stays a hard failure, because those are the
+ * ones a person has to look at.
  *
- * Resuming is a dashboard action, and deliberately so: there is no documented
- * Management API restore, and a Management API token carries full account
- * privileges across BOTH Supabase organizations (§1.3) — which is exactly what
- * the staging tier must not hold. So the skip writes the dashboard link and
- * stops there.
+ * Resuming is a dashboard action on purpose: there is no documented Management
+ * API restore, and a Management API token carries full account privileges
+ * across BOTH Supabase organizations (§1.3), which is what the staging tier
+ * must not hold. So the skip writes the dashboard link and stops there.
  *
- * > Rejected: a keep-alive cron on the staging Worker. It works — Supabase
- * > documents that a few requests a day prevent pausing — but it only holds
- * > while staging is deployed and healthy, so the first broken deploy silently
- * > starts a one-week timer to a paused project. Handling the paused state is
- * > honest about what staging is; keeping it warm hides it.
+ * > Rejected: a keep-alive cron on the staging Worker. Supabase documents that
+ * > a few requests a day prevent pausing, but that only holds while staging is
+ * > deployed and healthy, so the first broken deploy silently starts a one-week
+ * > timer to a paused project.
  *
- * ⚠️ **Delete this command when staging moves to a paid project.** Paid
- * projects cannot be paused, and this becomes dead code that will outlive
- * everyone who remembers why it was written.
+ * ⚠️ Delete this command when staging moves to a paid project. Paid projects
+ * cannot be paused, and this becomes dead code.
  *
  * ## ⚠️ The exit code is the interface, and it gates a deploy job
  *
  * Exit 0 for healthy OR paused; 1 for anything else. The workflow reads
  * `paused` from `$GITHUB_OUTPUT` to decide whether to run the deploy, and
- * reads the exit code to decide whether the preflight itself failed — so
+ * reads the exit code to decide whether the preflight itself failed, so
  * "paused" and "broken" must never collapse into one another. Only 540 skips.
  *
- * ## Everything human goes to stderr — the group rule, and doubly so here
+ * ## Everything human goes to stderr
  *
  * Like every command under `deploy/`, this one reports through `say()` rather
  * than `@clack/prompts`, which writes exclusively to stdout (see
- * `deploy/report.ts`). It has a second reason of its own: it runs in GitHub
- * Actions, which merges stdout and stderr into one log, and a command that
- * writes its verdict to one stream and its hints to the other has no
- * guaranteed ordering between them — so the reason for a failure can surface
- * above the failure.
+ * `deploy/report.ts`). Second reason: it runs in GitHub Actions, which merges
+ * stdout and stderr into one log with no guaranteed ordering between them, so
+ * a verdict on one stream and its hints on the other can surface out of order.
  *
  * ## Interface
  *
  *   PROJECT_REF=… PUBLISHABLE_KEY=… pnpm devtools deploy preflight
  *
  * Writes `paused=true|false` to `$GITHUB_OUTPUT` and, when paused, a note to
- * `$GITHUB_STEP_SUMMARY`. It needs no env FILE and no credential — both
- * variables are public (§A.4) — so it runs through `cli:no-env`.
+ * `$GITHUB_STEP_SUMMARY`. It needs no env FILE and no credential. Both
+ * variables are public (§A.4), so it runs through `cli:no-env`.
  */
 import { appendFileSync } from "node:fs";
 import { DeployError, say, summary } from "./report.js";
@@ -80,11 +75,11 @@ export const TIMEOUT_MS = 15_000;
 /**
  * Transport failures get a retry; HTTP statuses do not.
  *
- * The distinction is not fussiness. A status — any status — is the gateway
- * ANSWERING, and this command's whole job is to classify that answer; retrying
- * one would just ask the same question again. A rejected fetch is the absence
- * of an answer, and a DNS blip on a shared runner turning into a red staging
- * deploy is the noise §3.2 spends its whole length trying to avoid.
+ * A status, any status, is the gateway ANSWERING, and classifying that answer
+ * is this command's whole job; retrying would just ask the same question
+ * again. A rejected fetch is the absence of an answer, and a DNS blip on a
+ * shared runner turning into a red staging deploy is the noise §3.2 exists to
+ * avoid.
  */
 export const TRANSPORT_ATTEMPTS = 3;
 
@@ -94,10 +89,10 @@ export const PAUSED_STATUS = 540;
 /**
  * Everything that touches the outside world, injected.
  *
- * The 540-vs-everything-else decision is the one thing here that must not rot,
- * and it is unreachable in a test that has to open a socket or find a real
- * paused project. So the fetch, the environment and the reporter are all
- * parameters, and `preflight.test.ts` drives every branch without a socket.
+ * The 540-vs-everything-else decision must not rot, and it is unreachable in a
+ * test that has to open a socket or find a real paused project. So the fetch,
+ * the environment and the reporter are all parameters, and `preflight.test.ts`
+ * drives every branch without a socket.
  *
  * The two FILE writes are deliberately not injected: `$GITHUB_OUTPUT` and
  * `$GITHUB_STEP_SUMMARY` are paths the environment already supplies, so a test
@@ -107,7 +102,7 @@ export const PAUSED_STATUS = 540;
 export interface PreflightDeps {
   env?: Record<string, string | undefined>;
   fetch?: typeof globalThis.fetch;
-  /** Where the human-readable lines go. `say()` — that is, stderr — by default. */
+  /** Where the human-readable lines go. Defaults to `say()`, so stderr. */
   report?: (lines: readonly string[]) => void;
 }
 
@@ -122,7 +117,7 @@ export interface PreflightVerdict {
 /**
  * Classifies the project.
  *
- * Returning at all means exit 0 — healthy or paused. Anything else throws a
+ * Returning at all means exit 0, healthy or paused. Anything else throws a
  * `DeployError`, which `cli.ts` renders to stderr and turns into exit 1. That
  * mapping IS the contract the deploy job gates on, so the two must not drift:
  * a refusal that returned, or a paused project that threw, would each invert a
@@ -165,7 +160,7 @@ export async function runPreflight(
     );
   }
 
-  // Auth's health endpoint, NOT `/rest/v1/` — the REST root is PostgREST's
+  // Auth's health endpoint, NOT `/rest/v1/`. The REST root is PostgREST's
   // OpenAPI schema document, and Supabase now answers it with 401 "Secret API
   // key required" for every non-secret key, publishable and legacy anon alike
   // (observed 2026-08-20; it failed the first real staging preflight). Health
@@ -200,9 +195,6 @@ export async function runPreflight(
     );
   }
 
-  // 540 is Supabase's own code for a paused project, documented alongside their
-  // other custom gateway statuses. It is not in any HTTP registry, so it is
-  // written as a constant here rather than looked up.
   if (response.status === PAUSED_STATUS) {
     output("paused=true");
     const note = [
@@ -224,8 +216,7 @@ export async function runPreflight(
     ];
     summary(note, env);
     // Echoed to the log as well as the summary tab: a paused staging deploy is
-    // a green job that did nothing, and the job log is where somebody looks
-    // first to find out why.
+    // a green job that did nothing, and the log is where somebody looks first.
     report(note);
     return { paused: true };
   }

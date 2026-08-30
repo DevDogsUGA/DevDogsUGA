@@ -61,7 +61,7 @@ const run = (over: Partial<AuditInput>) => audit({ ...base, ...over });
 
 describe("undeclared keys", () => {
   it("reports them as their own category, not as drift", () => {
-    // The fix is a define() in a manifest, not a push — so the ordinary
+    // The fix is a define() in a manifest, not a push, so the ordinary
     // "in your .env, not in Bitwarden" warning must not fire alongside it,
     // or the reader is told pushing would help when push skips the key.
     const findings = run({
@@ -358,7 +358,7 @@ describe("routing between the two production environments", () => {
 
     it("keeps the strict answer for a caller that passes no predicate", () => {
       // The default. A caller that has not thought about fan-out gets the old
-      // behaviour rather than silence — which is why the first test in this
+      // behaviour rather than silence, which is why the first test in this
       // block passes `accepted` explicitly and this one does not.
       const findings = run({
         local: new Map([["DISCORD_TOKEN", "y"]]),
@@ -542,7 +542,7 @@ describe("minted credentials", () => {
 
   it("is an error when a copy is sitting in Bitwarden", () => {
     // A stored copy is a long-lived token nobody rotates, beside one that
-    // rotates every deploy — and the stale copy is the one an operator reaches
+    // rotates every deploy, and the stale copy is the one an operator reaches
     // for when something breaks.
     const findings = run({ bws: bws({ SANDBOX_PROXY_TOKEN: "eyJ" }), minted });
     expect(findings).toHaveLength(1);
@@ -559,7 +559,7 @@ describe("minted credentials", () => {
   });
 
   it("never says a minted key must be deleted from the Worker", () => {
-    // The failure from marking it `never-store` instead — the intuitive reach,
+    // The failure from marking it `never-store` instead, the intuitive reach
     // since it is indeed never stored. That classification inverts the orphan
     // warning into an error demanding its removal from the one place it has to
     // be, which is worse than the bug it was meant to fix.
@@ -583,7 +583,7 @@ describe("minted credentials", () => {
 describe("GitHub variables", () => {
   // `PROJECT_REF` is public and per-environment, so it lives in the variable
   // store. The point of that store, for this file, is that `gh variable list`
-  // returns the VALUE — so the §3.6 limitation ("names only… a changed value
+  // returns the VALUE, so the §3.6 limitation ("names only… a changed value
   // is undetectable") does not apply to these keys.
   const variables = new Set(["PROJECT_REF"]);
 
@@ -701,7 +701,7 @@ describe("GitHub variables", () => {
   });
 
   it("still compares its value against the local .env", () => {
-    // Variables are in Bitwarden too, so the local axis is unchanged — that is
+    // Variables are in Bitwarden too, so the local axis is unchanged. That is
     // the whole reason `pull` can rebuild a working file.
     const findings = run({
       local: new Map([["PROJECT_REF", "stale"]]),
@@ -721,8 +721,8 @@ describe("a key in the wrong GitHub store", () => {
 
   it("errors on a public key stored as a SECRET", () => {
     // GitHub masks a secret's value in logs by substring. PROJECT_REF as a
-    // secret redacts `https://supabase.com/dashboard/project/***` — the
-    // paused-project gate's entire output — and every Supabase hostname the
+    // secret redacts `https://supabase.com/dashboard/project/***`, the
+    // paused-project gate's entire output, and every Supabase hostname the
     // ref appears inside.
     const findings = run({
       github: [gh("PROJECT_REF")],
@@ -756,7 +756,7 @@ describe("a key in the wrong GitHub store", () => {
 
   it("does not call an unrecognised variable a leaked secret", () => {
     // An unknown name in the variable store is an orphan from a rename. Naming
-    // it a disclosed credential would be a guess, and a loud wrong one — the
+    // it a disclosed credential would be a guess, and a loud wrong one of the
     // kind that trains people to skim the category.
     const findings = run({
       githubVariables: [ghVar("SOME_OLD_NAME", "x")],
@@ -787,8 +787,8 @@ describe("repository-level variables", () => {
    * blind to.
    *
    * An ENVIRONMENT variable shadows a repository variable of the same name, so
-   * a repository-level `AIRTABLE_BASE_ID` — set by hand back when the setup
-   * docs said to — is read by no job, drifts from Bitwarden forever, and turns
+   * a repository-level `AIRTABLE_BASE_ID`, set by hand back when the setup
+   * docs said to, is read by no job, drifts from Bitwarden forever, and turns
    * live the moment somebody removes the environment copy. Every assertion
    * below is a way that could go unnoticed.
    */
@@ -808,7 +808,7 @@ describe("repository-level variables", () => {
 
   it("POSITIVE CONTROL: a scan that found nothing produces no findings", () => {
     // Run first and deliberately. Everything below asserts "a finding exists",
-    // and this establishes that the same inputs can also produce silence — so
+    // and this establishes that the same inputs can also produce silence, so
     // the rest are not passing because these inputs report unconditionally.
     //
     // That the CHECK RAN is reported by `runEnvAudit`'s coverage line, not by
@@ -828,8 +828,8 @@ describe("repository-level variables", () => {
     expect(findings[0]!.key).toBe("AIRTABLE_BASE_ID");
     expect(findings[0]!.store).toBe("github");
     // A warning, not an error: the environment copy wins today, so nothing is
-    // broken. It is the orphan category — state nothing manages and nothing
-    // else would ever mention — which is a warning everywhere else in here.
+    // broken. It is the orphan category, state nothing manages and nothing
+    // else would ever mention, which is a warning everywhere else in here.
     expect(findings[0]!.severity).toBe("warning");
   });
 
@@ -848,8 +848,8 @@ describe("repository-level variables", () => {
   });
 
   it("names the fix, with the key in it", () => {
-    // `gh variable delete AIRTABLE_BASE_ID` — no `--env`, which is the flag
-    // that would delete the managed copy and leave the stale one in charge.
+    // `gh variable delete AIRTABLE_BASE_ID`, with no `--env`, which is the
+    // flag that would delete the managed copy and leave the stale one in charge.
     const [finding] = run({
       repositoryVariables: saw("AIRTABLE_BASE_ID"),
       variables,
@@ -861,8 +861,8 @@ describe("repository-level variables", () => {
 
   it("says nothing about a name the registry does not declare", () => {
     // Another team's variable is another team's business, and a check that
-    // reports every one of them is a check people learn to skim — which
-    // costs the finding above its reader.
+    // reports every one of them is a check people learn to skim, which costs
+    // the finding above its reader.
     //
     // The declared name alongside it is the control: without it this would
     // pass just as well if the whole pass were skipped.
@@ -896,7 +896,7 @@ describe("repository-level variables", () => {
 
   it("keeps 'could not check' distinguishable from 'checked, clean'", () => {
     // Asserted as a comparison rather than as two separate tests, because the
-    // bug is that the two outputs become the SAME output — which two passing
+    // bug is that the two outputs become the SAME output, which two passing
     // tests in different worlds would not notice.
     const failed = run({
       repositoryVariables: { readable: false, reason: "HTTP 403: Forbidden" },
@@ -912,8 +912,8 @@ describe("repository-level variables", () => {
 
   it("does not fail the audit over a check it could not run", () => {
     // A warning, so `runEnvAudit` still exits 0. An unreadable list is a gap
-    // in coverage, not a defect found — and making it exit 1 on every run of
-    // a machine without the permission is how the whole report gets ignored.
+    // in coverage, not a defect found, and making it exit 1 on every run of a
+    // machine without the permission is how the whole report gets ignored.
     expect(
       hasErrors(
         run({
@@ -942,7 +942,7 @@ describe("repository-level variables", () => {
   });
 
   it("errors on a declared SECRET at repository scope, and says to rotate", () => {
-    // Not a shadowing problem at all — secrets and variables are separate
+    // Not a shadowing problem at all. Secrets and variables are separate
     // namespaces, so nothing hides this one. It is a disclosure: the value is
     // readable by everyone who can see the repository's Actions config.
     const findings = run({
@@ -976,7 +976,7 @@ describe("repository-level variables", () => {
 
   it("skips a variable this target does not route", () => {
     // `ignoredFor("preflight")` sweeps in every key that tier was not narrowed
-    // to, and push writes no copy of those here — so there is no managed
+    // to, and push writes no copy of those here, so there is no managed
     // environment copy of ours doing the shadowing, and nothing to report.
     // Every other pass in this file treats an ignored key the same way.
     expect(

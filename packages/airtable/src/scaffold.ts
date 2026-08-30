@@ -6,13 +6,13 @@ import { registry } from "./registry.js";
  * Creating the base from the registry.
  *
  * The base is built by script rather than by clicking, because a base built by
- * hand has no record of how it was built — and the second one, a staging base
- * or a rebuild after somebody deletes a table, is a different base with the
+ * hand has no record of how it was built. The second one, a staging base or a
+ * rebuild after somebody deletes a table, would be a different base with the
  * same name.
  *
  * Idempotent by construction: everything here is "create what is missing".
- * Re-running against a complete base does nothing, which is what makes it safe
- * to run after adding a field to the registry.
+ * Re-running against a complete base does nothing, which makes it safe to run
+ * after adding a field to the registry.
  */
 
 /**
@@ -20,16 +20,16 @@ import { registry } from "./registry.js";
  *
  * Four types take none; the rest reject the request without them. Verified
  * against Airtable's field-model reference on 2026-08-06, then against the
- * real base — the values below are the ones that actually created.
+ * real base. The values below are the ones that actually created.
  *
  * These are creation-time defaults, not a claim about what the field must look
  * like forever. An officer restyling a date format is not drift: `verify.ts`
- * compares `type`, and of `options` it compares exactly one thing -- the choice
- * NAMES of a select field whose spec declares `choices`, because those strings
- * are ones the platform's own code branches on. Colours, date formats,
- * precision, icons and everything else in `options` remain the officers' to
- * change, unchecked and unreported. That widening is deliberate and narrow; it
- * is not the start of comparing `options` generally.
+ * compares `type`, and of `options` exactly one thing, the choice NAMES of a
+ * select field whose spec declares `choices`, because the platform's own code
+ * branches on those strings. Colours, date formats, precision, icons and
+ * everything else in `options` remain the officers' to change, unchecked and
+ * unreported. That widening is narrow on purpose, not the start of comparing
+ * `options` generally.
  */
 export function createOptionsFor(
   spec: FieldSpec,
@@ -66,32 +66,28 @@ export function createOptionsFor(
 
     case "singleSelect":
     case "multipleSelects":
-      // Two cases, and the difference is who owns the vocabulary.
+      // Who owns the vocabulary decides the shape.
       //
       // A spec that DECLARES choices owns it: the field is created holding
       // exactly those, so Airtable's dropdown never offers a value the
       // platform cannot render, and `verify.ts` checks the live names against
-      // the same list.
+      // the same list. A spec that declares none leaves the vocabulary to the
+      // officers, who add choices in the UI. An empty choice list is legal, and
+      // that is the point of it, not a placeholder for a list nobody wrote.
       //
-      // A spec that declares none leaves the vocabulary to the officers.
-      // Creating a select with an empty choice list is legal and immediately
-      // useful, since Airtable lets them add choices in the UI -- that is the
-      // point of the empty list, not a placeholder for a list nobody wrote.
-      //
-      // `{ name }` and no colour, deliberately. The create endpoint takes
-      // choices as `[{ name: "..." }]` with `color` optional, and assigns one
-      // itself when it is left out. Sending our own would make an officer
-      // restyling a choice a permanent disagreement between the base and this
-      // file, over something that is theirs to decide.
+      // `{ name }` and no colour, on purpose. The create endpoint takes choices
+      // as `[{ name: "..." }]` with `color` optional and assigns one itself
+      // when it is left out. Sending our own would make an officer restyling a
+      // choice a permanent disagreement between the base and this file, over
+      // something that is theirs to decide.
       //
       // LIMITATION, and the thing to know if you are here to add a choice:
-      // this only ever runs at CREATION. `scaffoldBase` creates what is
-      // missing and nothing else, and the client has no `updateField`, so
-      // adding a name to a spec's `choices` does NOT reach a field that
-      // already exists -- a re-run skips it entirely. Adding a choice to a
-      // live base is a manual edit in the Airtable UI; `verify.ts`'s choice
-      // check is what tells you the edit is still outstanding, which is why it
-      // is fatal rather than a warning.
+      // this only ever runs at CREATION. `scaffoldBase` creates what is missing
+      // and nothing else, and the client has no `updateField`, so adding a name
+      // to a spec's `choices` does NOT reach a field that already exists. A
+      // re-run skips it. Adding a choice to a live base is a manual edit in the
+      // Airtable UI, and `verify.ts`'s choice check is what tells you the edit
+      // is still outstanding, which is why it is fatal rather than a warning.
       return spec.choices
         ? { choices: spec.choices.map((name) => ({ name })) }
         : { choices: [] };
@@ -120,9 +116,9 @@ export function createOptionsFor(
       // asked. Sending back what was read is what fails.
       //
       // The cost is that officers get a multi-record picker rather than a
-      // single-record one. Cosmetic here — every pull parser reads `v[0]` and
-      // ignores the rest — but it is on the manual checklist, because it is
-      // the officer-facing half of "one meeting per workshop".
+      // single-record one. Cosmetic here, since every pull parser reads `v[0]`
+      // and ignores the rest, but it is on the manual checklist as the
+      // officer-facing half of "one meeting per workshop".
       return { linkedTableId };
   }
 }
@@ -146,7 +142,7 @@ export interface ScaffoldAction {
 
 export interface ScaffoldResult {
   created: ScaffoldAction[];
-  /** The base as it stands afterwards — what `pull-ids` writes from. */
+  /** The base as it stands afterwards, what `pull-ids` writes from. */
   schema: LiveTable[];
 }
 
@@ -155,8 +151,8 @@ export interface ScaffoldResult {
  *
  * Necessary rather than preferable: before the first scaffold every registry id
  * is a placeholder, so there is nothing to match on. After `pull-ids` has run
- * the ids are real, and a re-run matches on those first — a field renamed in
- * the UI must not be created a second time.
+ * the ids are real, and a re-run matches on those first, because a field
+ * renamed in the UI must not be created a second time.
  */
 function findTable(live: LiveTable[], spec: TableSpec): LiveTable | undefined {
   return (
@@ -181,7 +177,7 @@ export async function scaffoldBase(
   client: AirtableClient,
   options: {
     tables?: Record<string, TableSpec>;
-    /** Report progress as it goes — scaffolding is slow enough to narrate. */
+    /** Report progress as it goes. Scaffolding is slow enough to narrate. */
     log?: (message: string) => void;
   } = {},
 ): Promise<ScaffoldResult> {
@@ -273,8 +269,8 @@ export async function scaffoldBase(
 
   // Re-read rather than trusting the accumulated view. Creating a link field
   // also creates its symmetric reverse field in the target table, and that one
-  // is never in a create response -- so anything built from the local copy
-  // would be missing fields the base actually has.
+  // is never in a create response, so anything built from the local copy would
+  // be missing fields the base actually has.
   const schema = (await client.getBaseSchema()).tables;
   return { created, schema };
 }

@@ -1,43 +1,42 @@
 /**
  * Fills the `@devdogsuga/env` registry by importing every manifest.
  *
- * The registry populates as a SIDE EFFECT of importing each manifest module —
- * `declare()` runs at import time — so a process that never imports them sees
- * an empty registry and every derived selector returns nothing. That is the
- * fail-open shape this module exists to close: anything that routes secrets
- * calls `loadRegistry()` first, and `assertRegistryLoaded()` is the guard the
+ * The registry populates as a SIDE EFFECT of importing each manifest module.
+ * `declare()` runs at import time, so a process that never imports them sees an
+ * empty registry and every derived selector returns nothing. That is the
+ * fail-open shape this module closes: anything that routes secrets calls
+ * `loadRegistry()` first, and `assertRegistryLoaded()` is the guard the
  * selectors' consumers use to refuse an empty answer.
  *
- * Discovery is by filename, per the model doc: `src/env.ts`, then `env.ts`,
- * per workspace package — both present is a hard error, because two manifests
- * in one package means two places for the next declaration to land and no rule
- * saying which. No `package.json` pointer: every other tool in this repo is
- * found by filename (`tsconfig.json`, `wrangler.jsonc`, `supadart.yaml`), and
- * a pointer would be the only one of its kind.
+ * Discovery is by filename, per the model doc: `src/env.ts`, then `env.ts`, per
+ * workspace package. Both present is a hard error, because two manifests in one
+ * package means two places for the next declaration to land and no rule saying
+ * which. No `package.json` pointer: every other tool in this repo is found by
+ * filename (`tsconfig.json`, `wrangler.jsonc`, `supadart.yaml`), and a pointer
+ * would be the only one of its kind.
  *
  * Two special cases, both deliberate:
  *
- *   * `supabase/env.ts` sits at the repo root, OUTSIDE the workspace globs —
- *     its variables belong to `config.toml` and the Supabase CLI, not to any
+ *   * `supabase/env.ts` sits at the repo root, OUTSIDE the workspace globs. Its
+ *     variables belong to `config.toml` and the Supabase CLI, not to any
  *     package, so it lives next to the config that reads them.
- *   * `packages/env` is excluded. It exports `define()`/`declare()`; it
- *     declares nothing itself, and importing its `src/env*.ts` internals as a
- *     manifest would be a category error.
+ *   * `packages/env` is excluded. It exports `define()`/`declare()`, declares
+ *     nothing itself, and importing its `src/env*.ts` internals as a manifest
+ *     would be a category error.
  *
- * Most workspace packages declare nothing, so "no env.ts found" is simply
+ * Most workspace packages declare nothing, so "no env.ts found" means
  * not-a-manifest rather than an error.
  *
- * ⚠️ `apps/sandbox` used to be listed here as having no manifest ON PURPOSE,
- * on the grounds that a Worker reads bindings that arrive as a function
- * argument rather than `process.env`. That premise is still true and the
- * conclusion drawn from it was still wrong: a manifest is not only a
- * description of what an app reads at boot, it is the only thing that routes a
- * credential to a deployed environment and the only thing that tells
+ * ⚠️ `apps/sandbox` was once listed here as having no manifest ON PURPOSE, on
+ * the grounds that a Worker reads bindings that arrive as a function argument
+ * rather than `process.env`. That premise is still true and the conclusion
+ * drawn from it was still wrong: a manifest is also the only thing that routes
+ * a credential to a deployed environment and the only thing that tells
  * `env audit` a Worker secret is supposed to be there. Without one,
- * `SANDBOX_PROXY_TOKEN` -- which is minted at deploy time and therefore in no
- * Bitwarden project by design -- was reported as an orphan, i.e. as safe for
- * the §3.6 prune path to delete. `apps/sandbox/env.ts` exists now, and states
- * that reasoning at length.
+ * `SANDBOX_PROXY_TOKEN`, minted at deploy time and therefore in no Bitwarden
+ * project by design, was reported as an orphan, i.e. as safe for the §3.6 prune
+ * path to delete. `apps/sandbox/env.ts` exists now, and states that reasoning
+ * at length.
  */
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -49,12 +48,12 @@ import { PROJECT_ROOT } from "../instance.js";
  * The single in-flight (or settled) load.
  *
  * Node's module cache already makes a second `import()` of the same manifest a
- * no-op, but memoizing the whole pass is asserted here rather than inherited:
- * a future bundler or test runner that re-evaluates modules would otherwise
- * duplicate every declaration, and duplicated declarations are exactly what
- * the completeness test treats as a bug. A failed load stays failed — every
- * later call gets the same rejection, because retrying into a half-populated
- * registry would hide the manifest that broke.
+ * no-op, but memoizing the whole pass is asserted here rather than inherited: a
+ * future bundler or test runner that re-evaluates modules would duplicate every
+ * declaration, and duplicated declarations are what the completeness test
+ * treats as a bug. A failed load stays failed. Every later call gets the same
+ * rejection, because retrying into a half-populated registry would hide the
+ * manifest that broke.
  */
 let loaded: Promise<void> | undefined;
 
@@ -87,13 +86,13 @@ export function assertRegistryLoaded(): void {
 }
 
 async function importManifests(): Promise<void> {
-  // The Next apps' manifests run `createEnv` at import time, and without this
-  // flag they would validate the AMBIENT environment — a devtools process, not
-  // an app build — and throw on whatever is missing. The manifests already
+  // The Next apps' manifests run `createEnv` at import time. Without this flag
+  // they would validate the AMBIENT environment, a devtools process rather than
+  // an app build, and throw on whatever is missing. The manifests already
   // short-circuit their `resolveEnvironment()` call under the flag, so setting
   // it here is the supported "read the declarations, skip the values" mode.
-  // Restored afterward so a long-lived process (tests) does not silently keep
-  // validation off for whatever runs next.
+  // Restored afterward so a long-lived process (tests) does not keep validation
+  // off for whatever runs next.
   const previous = process.env.SKIP_ENV_VALIDATION;
   process.env.SKIP_ENV_VALIDATION = "1";
   try {
@@ -116,7 +115,7 @@ async function importManifests(): Promise<void> {
  * Every manifest file, in a stable order.
  *
  * The workspace members are enumerated by scanning `apps/*` and `packages/*`
- * plus the literal `docs` — deliberately a boring mirror of the three globs in
+ * plus the literal `docs`, a deliberately boring mirror of the three globs in
  * `pnpm-workspace.yaml` rather than a YAML parse: the globs have not changed
  * since the workspace existed, devtools carries no YAML dependency, and a new
  * top-level glob would already mean editing more interesting files than this

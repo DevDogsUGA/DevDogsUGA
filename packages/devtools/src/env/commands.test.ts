@@ -7,8 +7,8 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
  * its own tests cover that thoroughly. This file covers the step after: that
  * the two maps are handed to the two different `gh` commands, and to the right
  * ones. That dispatch is two lines, it has no return value to inspect, and
- * getting it backwards is the one mistake in this design that cannot be undone
- * — a secret written to the variable store is readable by everyone who can see
+ * getting it backwards is the one mistake in this design that cannot be undone:
+ * a secret written to the variable store is readable by everyone who can see
  * the repository's Actions config, and deleting it afterwards does not unread
  * it.
  *
@@ -60,7 +60,7 @@ describe("pushToGithub", () => {
     );
 
     // Whole-call comparisons rather than `toHaveBeenCalledWith`, so a value
-    // that reached BOTH stores fails too — that is the outcome that looks
+    // that reached BOTH stores fails too. That is the outcome that looks
     // healthiest and is worst.
     expect(vi.mocked(setSecret).mock.calls).toEqual([
       ["staging", "DISCORD_TOKEN", "tok"],
@@ -86,15 +86,15 @@ describe("pushToGithub", () => {
    * reviewer-gated production-apply environment", which asserted the OLD rule:
    * the gated environment took the apply-tier pair and nothing else. That rule
    * conflated two constraints and kept the wrong one. Withholding a key from
-   * `production-apply` protects nothing — same Bitwarden project, strictly more
-   * trusted half, behind required reviewers — while the gate is entirely about
-   * what the UNREVIEWED `production` may hold. The old test could pass with
+   * `production-apply` protects nothing: same Bitwarden project, strictly more
+   * trusted half, behind required reviewers. The gate is entirely about what
+   * the UNREVIEWED `production` may hold. The old test could pass with
    * `production.excludeKeys` emptied, which is the failure that matters; the
    * first test below cannot.
    */
   describe("the production split", () => {
     // Literals. The point is these two keys by name, not "whatever the tier
-    // says today" — a test that reads the same derived set as the code under
+    // says today". A test that reads the same derived set as the code under
     // test passes when both are wrong together.
     const APPLY_KEYS = ["AIRTABLE_APPLY_PAT", "SUPABASE_ACCESS_TOKEN"] as const;
 
@@ -102,7 +102,7 @@ describe("pushToGithub", () => {
       // ⚠️ THE INVARIANT, and now the only thing enforcing the reviewer gate:
       // `production` deploys on a push to the production branch with nobody in
       // front of it. A write-capable credential landing there makes
-      // `production-apply`'s required reviewers decorative — the token is
+      // `production-apply`'s required reviewers decorative: the token is
       // already usable without them.
       //
       // Asserted BY NAME and per key, rather than by counting calls: a
@@ -168,7 +168,7 @@ describe("pushToGithub", () => {
         ["production-apply", "SUPABASE_OAUTH_CLIENT_SECRET", "oauth"],
         ["production-apply", "AIRTABLE_APPLY_PAT", "pat-write"],
       ]);
-      // The public one goes to the VARIABLE store in BOTH — which is the half
+      // The public one goes to the VARIABLE store in BOTH. That is the half
       // the old rule made impossible, and the reason `production-airtable` had
       // to be fed a hand-set repository variable.
       expect(vi.mocked(setVariable).mock.calls).toEqual([

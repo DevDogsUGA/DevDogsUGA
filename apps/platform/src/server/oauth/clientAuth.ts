@@ -43,7 +43,7 @@ export async function isTestAccountForClient(
 
 /**
  * Checks whether a real (non-test) user has an active OAuth consent for the
- * given client, verifying they are actually a user of that platform.
+ * given client, which is what makes them a user of that platform.
  */
 export async function hasConsentForClient(
   userId: string,

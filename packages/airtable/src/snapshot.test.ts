@@ -5,10 +5,10 @@ import { normalize, snapshotDrift } from "./snapshot.js";
 /**
  * The offline half of the Airtable checks.
  *
- * These matter more than they look. The snapshot exists so pull-request CI can
- * check the registry without a credential, and a check that cannot fail is
- * worse than no check — it reports success forever over a registry that has
- * drifted, which is the exact failure the live `verify` was written to catch.
+ * The snapshot exists so pull-request CI can check the registry without a
+ * credential. A check that cannot fail is worse than no check: it reports
+ * success forever over a registry that has drifted, the exact failure the live
+ * `verify` was written to catch.
  */
 
 function live(name: string, fields: [string, string][]): LiveTable {
@@ -68,12 +68,11 @@ describe("normalize", () => {
   });
 
   /**
-   * The one exception, and the reason it is worth carving out: `verify.ts`
-   * compares a declared choice list against the base, and a choice renamed in
-   * the UI is a schema change in the sense this file cares about rather than a
-   * restyle. `snapshotDrift` does not compare them yet -- these assertions are
-   * about the data being present and stable, which is what a later offline
-   * comparison would need and what a refresh cannot be re-run to add.
+   * The one exception, and why it is carved out: `verify.ts` compares a
+   * declared choice list against the base, and a choice renamed in the UI is a
+   * schema change rather than a restyle. `snapshotDrift` does not compare them
+   * yet. These assertions are about the data being present and stable, which a
+   * later offline comparison would need and a refresh cannot be re-run to add.
    */
   describe("choice names", () => {
     const select = (options: Record<string, unknown>): LiveTable => ({
@@ -147,11 +146,9 @@ describe("normalize", () => {
 
 describe("snapshotDrift", () => {
   it("reports nothing when the snapshot has everything the registry declares", () => {
-    // The committed snapshot is the real one, so this is the same assertion CI
-    // makes on every pull request.
     const snapshot = { tables: [] as LiveTable[] };
-    // An empty snapshot cannot satisfy the registry, so every table is absent —
-    // which is itself the proof that the check is capable of failing.
+    // An empty snapshot cannot satisfy the registry, so every table is absent,
+    // which is itself proof that the check is capable of failing.
     expect(snapshotDrift(snapshot).length).toBeGreaterThan(0);
   });
 

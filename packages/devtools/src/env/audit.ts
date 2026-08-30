@@ -13,21 +13,21 @@
  *   | Cloudflare         | names only        | presence, orphans        |
  *
  * That asymmetry is the whole design. A GitHub *secret* is write-only, so a
- * clean audit of one does not mean "the values match" — it means "nothing
+ * clean audit of one does not mean "the values match". It means "nothing
  * detectable is wrong", and the report says which is which rather than implying
  * the stronger claim.
  *
  * Timestamps are what rescue that row from being presence-only. Bitwarden
  * reports a `revisionDate` per secret and `gh secret list` reports `updatedAt`,
- * so "was GitHub updated after Bitwarden last changed?" IS answerable — and that
- * is the failure this design actually has, a credential rotated in Bitwarden and
+ * so "was GitHub updated after Bitwarden last changed?" IS answerable. That is
+ * the failure this design actually has: a credential rotated in Bitwarden and
  * never propagated, which a name-only check calls healthy right up until the old
  * one is revoked.
  *
  * ⚠️ GitHub *variables* are the one downstream store that needs none of that
  * reasoning: `gh variable list` returns the value, so the public per-environment
  * keys are compared exactly the way the local file is. Staleness is deliberately
- * NOT applied to them — a timestamp is a proxy for a comparison that could not
+ * NOT applied to them: a timestamp is a proxy for a comparison that could not
  * be made, and using the proxy where the real answer is available would report a
  * variable re-pushed with an identical value as drift. The security plan's §3.6
  * limitation ("names only… a changed value is undetectable") now holds for the
@@ -35,7 +35,7 @@
  *
  * ⚠️ One scope sits outside that table altogether: the repository's OWN
  * variables. Push writes environment-scoped values only, and an environment
- * variable SHADOWS a repository one of the same name — so a repository-level
+ * variable SHADOWS a repository one of the same name, so a repository-level
  * copy of a managed key is read by nothing, drifts forever, and becomes the
  * live value on the day somebody deletes the environment copy. It is checked
  * here for the same reason §3.6's orphans are: nothing manages it, so nothing
@@ -86,7 +86,7 @@ export interface AuditInput {
    *
    * A list rather than a map keyed by name, because one Bitwarden project can
    * feed two GitHub environments and the interesting case is a key appearing in
-   * BOTH — which a name-keyed map would quietly collapse to one.
+   * BOTH, which a name-keyed map would quietly collapse to one.
    */
   github: GithubEntry[];
   /**
@@ -94,15 +94,15 @@ export interface AuditInput {
    *
    * Separate from `github` rather than merged with a discriminator, because
    * GitHub genuinely allows one name to exist as both a secret and a variable
-   * in one environment and resolves the ambiguity by never telling you — see
-   * `deploy/write-env.ts`, which refuses that case outright. Two lists
-   * can represent it; one list keyed by name cannot, and would silently pick a
+   * in one environment and resolves the ambiguity by never telling you. See
+   * `deploy/write-env.ts`, which refuses that case outright. Two lists can
+   * represent it; one list keyed by name cannot, and would silently pick a
    * winner.
    */
   githubVariables?: GithubVariableEntry[];
   /**
-   * Keys that belong in the variable store rather than the secret store —
-   * `variableKeys()` from the registry.
+   * Keys that belong in the variable store rather than the secret store, from
+   * `variableKeys()` in the registry.
    *
    * Drives two things at once: which store a key is compared against, and the
    * pair of misplacement errors. Absent, every key is treated as a secret,
@@ -110,7 +110,7 @@ export interface AuditInput {
    */
   variables?: ReadonlySet<string>;
   /**
-   * Where a key is supposed to live — the PRIMARY environment, the one whose
+   * Where a key is supposed to live: the PRIMARY environment, the one whose
    * absence is an error. `null` means "nowhere in this environment", which is
    * ordinary rather than wrong.
    */
@@ -123,7 +123,7 @@ export interface AuditInput {
    * ordinary production key is now pushed to both, so "not where `route` says"
    * no longer means "misplaced". Folding them back together reports every
    * correctly-pushed copy as a stray to delete, and a reviewer who deletes 46
-   * of those learns to skim the stray finding — which is the one finding that
+   * of those learns to skim the stray finding, which is the one finding that
    * catches an apply-tier credential sitting in the unreviewed environment.
    *
    * Defaults to the old behaviour (`only where route says`), so a caller that
@@ -133,7 +133,7 @@ export interface AuditInput {
   accepted?: (key: string, environment: string) => boolean;
   /** Worker name → secret names on it. Values are unreadable. */
   cloudflare?: Map<string, Set<string>>;
-  /** Keys that legitimately live outside Bitwarden — the non-secrets. */
+  /** Keys that legitimately live outside Bitwarden: the non-secrets. */
   ignore?: ReadonlySet<string>;
   /**
    * Credentials that must never be stored remotely at all.
@@ -154,7 +154,7 @@ export interface AuditInput {
    * exactly right.
    *
    * Without this set the Cloudflare pass below reads "on production-sandbox,
-   * not in Bitwarden" and reports the live proxy credential as an orphan —
+   * not in Bitwarden" and reports the live proxy credential as an orphan,
    * which the plan doc's §3.6 prune path then offers to delete. Marking it the
    * other obvious way, as `never-store`, inverts the error into "must NEVER be
    * a Worker secret" and is just as wrong in the opposite direction.
@@ -162,7 +162,7 @@ export interface AuditInput {
   minted?: ReadonlySet<string>;
   /**
    * Every key the registry knows. When provided, a local key outside it is
-   * reported as UNDECLARED — its own category, not folded into drift, because
+   * reported as UNDECLARED: its own category, not folded into drift, because
    * the fix is different: drift wants a push or a pull, an undeclared key
    * wants a `define()` in the owning manifest (or the line removed). It is
    * also why `env push` skipped it, and the audit should say so rather
@@ -170,15 +170,15 @@ export interface AuditInput {
    */
   declared?: ReadonlySet<string>;
   /**
-   * The repository's OWN variables — the scope with no environment — or the
-   * fact that they could not be listed.
+   * The repository's OWN variables, the scope with no environment, or the fact
+   * that they could not be listed.
    *
    * A union rather than a list, because three states have to stay apart and a
-   * list can only hold two of them: nobody looked (absent — the pre-existing
-   * behaviour, and no claim either way), looked and saw these names
+   * list can only hold two of them: nobody looked (absent: the pre-existing
+   * behaviour, no claim either way), looked and saw these names
    * (`readable`), and TRIED TO LOOK AND COULD NOT (`readable: false`). Listing
    * repository variables can fail where listing environment ones succeeds, so
-   * the third state is ordinary rather than exotic — and collapsing it into an
+   * the third state is ordinary rather than exotic, and collapsing it into an
    * empty list is precisely the bug this check was added to catch, one scope
    * up: a report that says "checked, nothing found" about a check that never
    * ran.
@@ -254,7 +254,7 @@ export function audit(input: AuditInput): Finding[] {
   // saying so is the entire point of the category. What IS checked is the two
   // stores a minted credential must never reach, because a copy in either is a
   // long-lived token nobody rotates sitting beside one that rotates every
-  // deploy — and the stale copy is the one an operator will reach for when
+  // deploy, and the stale copy is the one an operator will reach for when
   // something breaks.
   for (const key of minted) {
     if (input.bws.has(key)) {
@@ -300,8 +300,8 @@ export function audit(input: AuditInput): Finding[] {
   for (const copy of githubVariables) {
     if (!relevant(copy.name) || variables.has(copy.name)) continue;
     // Only for a key the registry calls a secret. An unrecognised name in the
-    // variable store is an orphan from a rename, reported as one below —
-    // calling it a leaked secret would be a guess, and a loud wrong one. With
+    // variable store is an orphan from a rename, reported as one below.
+    // Calling it a leaked secret would be a guess, and a loud wrong one. With
     // no declared set there is no way to tell the two apart, so neither fires.
     if (input.declared === undefined || !input.declared.has(copy.name))
       continue;
@@ -321,8 +321,8 @@ export function audit(input: AuditInput): Finding[] {
   // from inside an environment.
   //
   // ⚠️ An ENVIRONMENT variable SHADOWS a repository variable of the same name.
-  // So a repository-level `AIRTABLE_BASE_ID` — which people were told to set by
-  // hand, before push started routing that key — is not merely redundant: it is
+  // So a repository-level `AIRTABLE_BASE_ID`, which people were told to set by
+  // hand before push started routing that key, is not merely redundant: it is
   // unreadable from every job, holds whatever it held the day it was set, and
   // becomes live the moment somebody deletes the environment copy. Nothing
   // manages it and nothing else here would ever mention it, which makes it the
@@ -347,8 +347,8 @@ export function audit(input: AuditInput): Finding[] {
   const repositoryNames =
     repository !== undefined && repository.readable ? repository.names : [];
   for (const name of repositoryNames) {
-    // Membership in `variables` IS the declaration test for this branch — the
-    // set comes from the registry — which is why it does not also consult
+    // Membership in `variables` IS the declaration test for this branch, since
+    // the set comes from the registry, which is why it does not also consult
     // `declared`. A caller that passed one and forgot the other would
     // otherwise get silence from the check it asked for.
     if (variables.has(name)) {
@@ -369,12 +369,12 @@ export function audit(input: AuditInput): Finding[] {
 
     // A name the registry calls a SECRET, sitting in the readable store one
     // scope up. The environment-level version of this is an error above, and
-    // this is the same finding — with the shadowing sentence removed, because
+    // this is the same finding with the shadowing sentence removed, because
     // there is none: secrets and variables are separate namespaces, so nothing
     // hides this one.
     //
     // ⚠️ Filtered on `ignore` alone, deliberately NOT on the whole of
-    // `relevant()`. An ignored key legitimately lives outside these stores —
+    // `relevant()`. An ignored key legitimately lives outside these stores.
     // `GITHUB_ORG` is a committed constant, and a repository variable holding
     // it is somebody making a reasonable choice. A never-store or minted
     // credential in the READABLE store is the worst case this file knows
@@ -400,7 +400,7 @@ export function audit(input: AuditInput): Finding[] {
   // ── undeclared keys ────────────────────────────────────────────────────────
   // Reported once, here, and then excluded from the drift comparisons below:
   // an undeclared key is invisible to push routing, so "in your .env, not in
-  // Bitwarden" would be true and useless — pushing cannot fix it.
+  // Bitwarden" would be true and useless, since pushing cannot fix it.
   const undeclared = (key: string): boolean =>
     input.declared !== undefined && !input.declared.has(key);
   for (const key of input.local.keys()) {
@@ -459,7 +459,7 @@ export function audit(input: AuditInput): Finding[] {
 
   // ── Bitwarden vs GitHub ────────────────────────────────────────────────────
   // One pass over both stores. Which one a key is compared against is decided
-  // by the registry, not by where the key happened to turn up — otherwise a
+  // by the registry, not by where the key happened to turn up. Otherwise a
   // misplaced copy would define its own correctness and never be reported.
   for (const [key, entry] of input.bws) {
     if (!relevant(key)) continue;
@@ -511,7 +511,7 @@ export function audit(input: AuditInput): Finding[] {
     // The comparison a secret cannot have. Kept distinct from the missing case
     // above on purpose: "absent" is fixed by a push, "drifted" means somebody
     // edited the value in the GitHub UI and the two stores now disagree about
-    // which is real — and the fix has to start by deciding that.
+    // which is real, and the fix has to start by deciding that.
     if (isVariable) {
       const mine = githubVariables.find(
         (g) => g.name === key && g.environment === expected,
@@ -598,8 +598,8 @@ export function audit(input: AuditInput): Finding[] {
  * True when GitHub's copy predates the Bitwarden revision.
  *
  * A missing or unparseable date on either side returns false. A comparison
- * against `NaN` is false anyway, so this is only making that explicit — but the
- * reason to be explicit is that the alternative reading, "unknown means stale",
+ * against `NaN` is false anyway, so this only makes that explicit. The reason
+ * to be explicit is that the alternative reading, "unknown means stale",
  * turns one malformed timestamp into a report that says everything is behind,
  * after which nobody reads it, including on the run where something really is.
  */

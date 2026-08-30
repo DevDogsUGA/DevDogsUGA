@@ -1,31 +1,31 @@
 /**
- * Secrets Manager, through the official SDK — no `bws` binary to install.
+ * Secrets Manager, through the official SDK. No `bws` binary to install.
  *
  * This wrapped the `bws` CLI until 2026-08-19. The CLI was the right call
- * against the raw REST API — Secrets Manager is end-to-end encrypted, the
- * server stores ciphertext, and the key that opens it is derived from the
- * access token by the client, so `fetch` returns blobs and reimplementing the
- * crypto is not a trade worth making. `@bitwarden/sdk-napi` is that same
- * client-side crypto (the same Rust core the CLI wraps), loaded in-process,
- * which buys two things the CLI could not:
+ * against the raw REST API: Secrets Manager is end-to-end encrypted, the
+ * server stores ciphertext, and the client derives the key that opens it from
+ * the access token, so `fetch` returns blobs and reimplementing the crypto is
+ * not a trade worth making. `@bitwarden/sdk-napi` is that same client-side
+ * crypto (the same Rust core the CLI wraps), loaded in-process, which buys two
+ * things the CLI could not:
  *
  *   * **Nothing to install.** The SDK is a dependency of this package, so
- *     `pnpm install` is the whole setup — no more "install bws from the
- *     releases page" step, and no version somebody's laptop drifted on.
+ *     `pnpm install` is the whole setup. No "install bws from the releases
+ *     page" step, and no version somebody's laptop drifted on.
  *   * **No credential in argv.** `bws secret create` took the VALUE as a
- *     positional argument, visible to `ps` for the length of the call — a
+ *     positional argument, visible to `ps` for the length of the call, a
  *     documented property of the tool this wrapper could only apologize for.
  *     In-process values never touch a process table.
  *
  * ⚠️ Imported LAZILY, at the first real call. The SDK is a native module, and
- * loading it at import time would tax every `cli:no-env` path — including the
- * CI guards — with a `.node` binary none of them use.
+ * loading it at import time would tax every `cli:no-env` path, the CI guards
+ * included, with a `.node` binary none of them use.
  *
  * The one thing the SDK needs that the CLI did not: the ORGANIZATION ID. The
  * CLI derived it from the access token's login response; the SDK's every list
- * and create takes it as an argument, and nothing in its surface discovers it.
- * It is a public identifier (a UUID that confers nothing), read from
- * `BWS_ORG_ID` — see the declaration in `packages/devtools/env.ts`.
+ * and create takes it as an argument, and nothing in its API discovers it. It
+ * is a public identifier (a UUID that confers nothing), read from `BWS_ORG_ID`.
+ * See the declaration in `packages/devtools/env.ts`.
  */
 import { mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -60,10 +60,10 @@ export interface BwsSecret {
   /**
    * ISO 8601, when this secret last changed.
    *
-   * Optional because it is not needed to push or pull — but it is the whole
-   * basis of the staleness half of `env audit`, which cannot compare values
-   * (GitHub secrets are write-only) and instead asks whether GitHub was updated
-   * after this.
+   * Optional because push and pull do not need it. It is the whole basis of
+   * the staleness half of `env audit`, which cannot compare values (GitHub
+   * secrets are write-only) and instead asks whether GitHub was updated after
+   * this.
    */
   revisionDate?: string;
 }
@@ -96,7 +96,7 @@ export async function accessToken(): Promise<string> {
     fromVault: readTokenFromVault,
     prompt: promptForToken,
     // The destination is picked when the save is offered, and the pick is
-    // carried into `save` by closure — the two callbacks are halves of one
+    // carried into `save` by closure: the two callbacks are halves of one
     // exchange. `.env` first: it is this repository's own file, `with-env`
     // already loads it, and `env push` refuses the key by name, so the only
     // machine that can read the saved copy is this one.
@@ -162,11 +162,10 @@ let resolvedOrgId: Promise<string> | undefined;
  * prompt with an offer to save.
  *
  * Prompted rather than only refused because it is the one Secrets Manager
- * input with nothing secret about it — a public UUID that identifies and
- * does not authorize — so asking costs nothing and saves a docs round-trip.
- * Where nobody can answer (a pipe), the named refusal below is the answer:
- * an SDK error about a malformed UUID would send somebody debugging the
- * token, which is the one thing that is fine.
+ * input with nothing secret about it: a public UUID that identifies without
+ * authorizing. Where nobody can answer (a pipe), the named refusal below is
+ * the answer, because an SDK error about a malformed UUID would send somebody
+ * debugging the token, which is the one thing that is fine.
  */
 function organizationId(): Promise<string> {
   resolvedOrgId ??= (async () => {
@@ -216,7 +215,7 @@ function organizationId(): Promise<string> {
   return resolvedOrgId;
 }
 
-/** The lazily-loaded, logged-in SDK client — one per process. */
+/** The lazily-loaded, logged-in SDK client, one per process. */
 let sdk: Promise<import("@bitwarden/sdk-napi").BitwardenClient> | undefined;
 
 /**
@@ -225,11 +224,11 @@ let sdk: Promise<import("@bitwarden/sdk-napi").BitwardenClient> | undefined;
  * ⚠️ This file is what stops the 429s. Bitwarden's identity endpoint
  * rate-limits repeated access-token logins hard, and "push preflight, audit,
  * push staging, audit, push production, audit" is six devtools processes in
- * two minutes — six logins without this, ONE with it (the `bws` binary kept
- * a state directory for exactly this reason, and the SDK migration dropped
- * it). Per machine account (the token's client-id UUID is in the filename,
- * public by format), under 0700 directories, outside the repository — it
- * caches an auth token, so it must live where nothing syncs or commits it.
+ * two minutes: six logins without this, ONE with it. The `bws` binary kept a
+ * state directory for exactly this reason, and the SDK migration dropped it.
+ * Per machine account (the token's client-id UUID is in the filename, public
+ * by format), under 0700 directories, and outside the repository, because it
+ * caches an auth token and must live where nothing syncs or commits it.
  */
 function stateFileFor(accessToken: string): string {
   const clientId =
@@ -246,7 +245,7 @@ async function client() {
   sdk ??= (async () => {
     const token = await accessToken();
     // Dynamic, so the native module loads only when a command actually
-    // talks to Secrets Manager — see the header.
+    // talks to Secrets Manager. See the header.
     const { BitwardenClient } = await import("@bitwarden/sdk-napi");
     const instance = new BitwardenClient();
     try {
@@ -274,9 +273,9 @@ async function client() {
  * Turns an SDK failure into something with a next step in it.
  *
  * The two that actually happen are a rejected token and a token that does not
- * cover the project — the latter surfaces as a bare "not found", because a
- * project you cannot see and a project that does not exist are the same
- * answer, deliberately.
+ * cover the project. The latter surfaces as a bare "not found", because a
+ * project you cannot see and a project that does not exist are deliberately
+ * the same answer.
  */
 function describeSdkFailure(err: unknown, doing: string): string {
   const message = err instanceof Error ? err.message : String(err);
@@ -350,8 +349,8 @@ export async function listSecrets(projectId: string): Promise<BwsSecret[]> {
   try {
     // The SDK lists IDENTIFIERS org-wide (only what the token may see), then
     // fetches the values in one batch. Filtered to the project HERE, so the
-    // callers' contract — "the secrets of this project" — survives the
-    // transport change byte-for-byte.
+    // callers' contract, "the secrets of this project", survives the transport
+    // change byte-for-byte.
     const identifiers = (
       await withRateLimitRetry(
         async () => {

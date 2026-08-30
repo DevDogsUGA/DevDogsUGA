@@ -10,16 +10,16 @@ import {
 /**
  * The rewriter that turns `todo("slug")` into a real field id.
  *
- * This runs once per base, by a person, against a file that is then committed —
- * so a mistake here is not caught by the next run. It is caught by nobody. That
- * is the argument for testing a string transform this small.
+ * This runs once per base, by a person, against a file that is then committed.
+ * No later run catches a mistake here, which is why a string transform this
+ * small has tests.
  */
 
 const REGISTRY = join(import.meta.dirname, "registry.ts");
 
 /**
  * A registry-shaped file: the real header, the real `todo` declaration, and a
- * body. Built from the exported constant rather than a copy of it — a fixture
+ * body. Built from the exported constant rather than a copy of it. A fixture
  * that drifts from the text being replaced would pass while the real rewrite
  * silently stopped applying.
  */
@@ -104,9 +104,9 @@ describe("applyDiscoveredIds", () => {
   it("matches the header currently in registry.ts", () => {
     // The transform hard-codes both header paragraphs verbatim. Edit the
     // registry's header by hand and the rewrite silently stops applying, with
-    // nothing to notice it until a base is scaffolded a year from now -- so
-    // assert the file really is in one of the two states this module knows
-    // about, character for character.
+    // nothing to notice until a base is scaffolded a year from now. So assert
+    // the file is in one of the two states this module knows about, character
+    // for character.
     const registry = readFileSync(REGISTRY, "utf8");
 
     expect(

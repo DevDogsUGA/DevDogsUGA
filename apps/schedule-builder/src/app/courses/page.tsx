@@ -68,7 +68,6 @@ export default function CourseSearchPage() {
     },
   });
 
-  // Group rows by course
   const courses = rows.reduce<CourseGroup[]>((acc, row) => {
     const existing = acc.find((c) => c.courseId === row.courseId);
     if (existing) {

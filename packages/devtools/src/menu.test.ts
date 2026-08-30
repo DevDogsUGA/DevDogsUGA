@@ -3,7 +3,7 @@
  *
  * The claim under test is the one the menu exists for: **every command in the
  * tree is reachable from it, and the argv a walk produces is one the CLI
- * accepts.** The menu this replaced could not make that claim — it held ten
+ * accepts.** The menu this replaced could not make that claim. It held ten
  * hand-written entries beside a CLI with sixteen top-level commands, so `env`,
  * `planner`, `signing-key`, `deploy` and `airtable snapshot` had no way in.
  *
@@ -58,8 +58,8 @@ const { UNKNOWN_ENVIRONMENT } = await import("./environment.js");
 /**
  * Runs one walk with the given answers, returning the argv it dispatched.
  *
- * The environment is injected, and defaults to the one that adapts nothing —
- * so every test below describes the machine it means rather than inheriting
+ * The environment is injected, and defaults to the one that adapts nothing, so
+ * every test below describes the machine it means rather than inheriting
  * whichever machine happens to be running the suite. Letting `runMenu` probe
  * for real would make the reachability claim depend on whether the developer
  * had Docker open.
@@ -130,7 +130,7 @@ describe("reach", () => {
       const argv = await walk([...answersFor(path), ...declines]);
 
       if (node.wizard === "show") {
-        // Shown, not run — see `CommandNode.wizard`. Nothing is dispatched.
+        // Shown, not run. See `CommandNode.wizard`; nothing is dispatched.
         expect(argv, path.join(" ")).toBeNull();
         continue;
       }
@@ -246,7 +246,7 @@ describe("adapts to the machine", () => {
    *
    * Walks far enough to open the screen and then runs out of answers on
    * purpose: the mock records what it drew before it gives up, so this reads
-   * the rendered list without having to script a complete walk to a leaf.
+   * the list without scripting a complete walk to a leaf.
    */
   async function screen(env: Environment, to: string[]): Promise<Entry[]> {
     await walk(
@@ -270,9 +270,9 @@ describe("adapts to the machine", () => {
   /**
    * The property that keeps a failed probe from becoming a missing command.
    *
-   * `docker ps` can time out, Docker can be absent, a future probe can fail
-   * in a way nobody predicted. In every one of those cases the menu is the
-   * one it was before any of this existed.
+   * `docker ps` can time out, Docker can be absent, a future probe can fail in
+   * a way nobody predicted. In every one of those cases the menu is the one it
+   * was before any of this existed.
    */
   it("hides nothing when it cannot read the machine", async () => {
     const drawn = labels(await screen(UNKNOWN_ENVIRONMENT, ["link"]));
@@ -285,7 +285,7 @@ describe("adapts to the machine", () => {
     const drawn = await screen(STOPPED, ["catalog"]);
     const roundtrip = drawn.find((entry) => entry.label === "roundtrip");
 
-    // Still on screen — `needs` explains, it does not remove.
+    // Still on screen. `needs` explains, it does not remove.
     expect(roundtrip).toBeDefined();
     expect(roundtrip!.hint).toContain("the local stack is not running");
   });
@@ -308,8 +308,8 @@ describe("adapts to the machine", () => {
   /**
    * The two layers "Supabase" covers, told apart on the line.
    *
-   * `restart` and `reset` sit four entries apart and act on different things
-   * — the containers, and the database inside them. A reader choosing between
+   * `restart` and `reset` sit four entries apart and act on different things:
+   * the containers, and the database inside them. A reader choosing between
    * them should not have to already know that.
    */
   it("says which layer each Supabase command acts on", async () => {

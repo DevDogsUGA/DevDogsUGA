@@ -14,7 +14,7 @@
  *
  * `commands.ts` holds the command tree as data. `help.ts` renders one level of
  * it at a time, and `menu.ts` walks it into an argv that comes back through
- * `dispatch()` below — the same entry a typed command line takes. That is why
+ * `dispatch()` below, the same entry a typed command line takes. That is why
  * the menu covers everything the CLI does: there is no second list of commands
  * anywhere, so there is nothing to fall out of step.
  */
@@ -142,9 +142,9 @@ function flagValue(rest: string[], flag: string): string | undefined {
  * These commands only ever run against a local stack, and that is structural
  * rather than a rule they follow: `detectLocalInstance` reads `supabase
  * status`, which describes the Docker stack on this machine and nothing else.
- * There is no remote project for it to return, which is why the tier check that
- * used to sit here — reading a `production` flag out of the database — bought
- * nothing and has been removed along with the table it read.
+ * There is no remote project for it to return, so the tier check that used to
+ * sit here, reading a `production` flag out of the database, bought nothing and
+ * has been removed along with the table it read.
  */
 async function connect(): Promise<Instance | null> {
   const s = spinner();
@@ -199,11 +199,11 @@ async function runStack(command: StackCommand, target: Target): Promise<void> {
     const { code, lines } = await runStackCommand(command, target);
     for (const line of lines) log.message(line);
     if (code !== 0) {
-      // Lines on a failure ARE the explanation — that is the contract with
+      // Lines on a failure ARE the explanation, which is the contract with
       // `runStackCommand`. "Scroll up for the Supabase CLI's output" is only
-      // true when a delegated script ran, and pointing a reader at output
-      // that does not exist is worse than adding nothing. A failure that has
-      // scrollback worth reading says so in its own line.
+      // true when a delegated script ran, and pointing a reader at output that
+      // does not exist is worse than adding nothing. A failure with scrollback
+      // worth reading says so in its own line.
       if (lines.length === 0) {
         explain(`\`${command}\` did not finish cleanly.`, "", [
           "Scroll up for the output from the Supabase CLI.",
@@ -508,7 +508,7 @@ async function runEnvCommand(rest: string[]): Promise<void> {
 
   // Refused by name rather than ignored. `--env` used to be this flag, and the
   // words it took (`staging`, `production`) are still valid `--target` values,
-  // so a stale invocation would otherwise run with NO target — prompting, or
+  // so a stale invocation would otherwise run with NO target: prompting, or
   // failing as "nobody here to ask", neither of which says what changed.
   if (rest.includes("--env")) {
     explain("`--env` is now `--target`.", "", [
@@ -541,7 +541,7 @@ async function runEnvCommand(rest: string[]): Promise<void> {
   // start: the import pass touches a manifest in nearly every workspace
   // package, and `pnpm devtools reset` (or any stack command) should not pay
   // for declarations it never reads. `env reset` returned above for the
-  // same reason — it edits the local file and consults no key set.
+  // same reason: it edits the local file and consults no key set.
   await loadRegistry();
 
   // `example` and `init` are pure registry → text. They return BEFORE the
@@ -562,8 +562,8 @@ async function runEnvCommand(rest: string[]): Promise<void> {
   if (sub === "init") {
     // Every target, including `development` and `preflight`: init maps target
     // → file and nothing else, and every target has a file. It is the one
-    // subcommand here that needs no Bitwarden project — though WHAT it writes
-    // now depends on the target: see `example.ts`'s header for why a vault
+    // subcommand here that needs no Bitwarden project, though WHAT it writes
+    // now depends on the target. See `example.ts`'s header for why a vault
     // target's file is not the development one under a different name.
     const given = flagValue(rest, "--target") ?? "development";
     if (!isEnvTarget(given)) {
@@ -574,7 +574,7 @@ async function runEnvCommand(rest: string[]): Promise<void> {
       return;
     }
     try {
-      // `--apps` (development only): which projects' sections to render —
+      // `--apps` (development only): which projects' sections to render, as
       // comma-separated app names, plus `devtools` for the operator role.
       // Absent at a terminal, init asks; absent in a pipe, it renders
       // everything, which is what every pre-picker caller got.
@@ -628,7 +628,7 @@ async function runEnvCommand(rest: string[]): Promise<void> {
 
 /**
  * `deploy <write-env | secrets-file | orphans | preflight | mint-token |
- * require-token | airtable-plan | airtable-apply>` — the steps of a deploy job.
+ * require-token | airtable-plan | airtable-apply>`: the steps of a deploy job.
  *
  * The first SIX were files in `scripts/` that imported devtools' own sources
  * through a relative path, which is why `scripts/` needed a tsconfig and a CI
@@ -639,12 +639,12 @@ async function runEnvCommand(rest: string[]): Promise<void> {
  *
  * ## ⚠️ Dispatched BEFORE `intro()`, and it never calls `outro()`
  *
- * Every `@clack/prompts` writer — `intro`, `outro`, `log.*`, `note`, the
- * spinner — writes to STDOUT (measured; see `deploy/report.ts`). Two commands
+ * Every `@clack/prompts` writer writes to STDOUT: `intro`, `outro`, `log.*`,
+ * `note`, the spinner (measured; see `deploy/report.ts`). Two commands
  * in this group have a stdout something downstream parses: `secrets-file`
  * emits `::add-mask::<token>`, which GitHub recognises only on a line of its
  * own, and `mint-token` emits a signed JWT that its caller takes whole. A
- * banner on that stream is not cosmetic — it is an unmasked production
+ * banner on that stream is not cosmetic. It is an unmasked production
  * credential in a public repository's job log, or a Worker secret with a box
  * drawing character in it.
  *
@@ -692,16 +692,16 @@ async function runDeployCommand(rest: string[]): Promise<void> {
 
     // Registry-free like its sibling guards: the main-plan job holds one
     // credential in the step's env: block and composes no file. What it
-    // checks — that DB_URL is the planner role and no more — is the one
-    // property of the preflight tier nothing at rest can verify.
+    // checks, that DB_URL is the planner role and no more, is the one property
+    // of the preflight tier nothing at rest can verify.
     if (sub === "require-planner") {
       await runRequirePlanner();
       return;
     }
 
-    // Healthy AND paused both exit 0 — a paused staging project is the
-    // expected state, not a failure, and the verdict it returns is what the
-    // calling job reads. Anything else throws, and the catch below makes it a
+    // Healthy AND paused both exit 0: a paused staging project is the expected
+    // state, not a failure, and the verdict it returns is what the calling job
+    // reads. Anything else throws, and the catch below makes it a
     // non-zero exit. See the module for why only HTTP 540 is a skip.
     if (sub === "preflight") {
       await runPreflight();
@@ -727,7 +727,7 @@ async function runDeployCommand(rest: string[]): Promise<void> {
     // ⚠️ Two commands rather than one with a `--dry-run` flag. The plan runs
     // from `main`, where a write-capable credential must never be in scope, so
     // "reads only" has to be a property of the code path rather than of an
-    // argument somebody could get wrong — `deploy/airtable-plan.ts` has no
+    // argument somebody could get wrong. `deploy/airtable-plan.ts` has no
     // import of `scaffoldBase` at all. A flag would make the safe case one
     // typo away from the unsafe one.
     if (sub === "airtable-plan") {
@@ -748,7 +748,7 @@ async function runDeployCommand(rest: string[]): Promise<void> {
 
     if (sub === "write-env") {
       // Parsed here rather than with `flagValue`, which cannot tell "absent"
-      // from "given something that looks like a flag" — and `--source --mint`
+      // from "given something that looks like a flag". `--source --mint`
       // silently composing EVERYTHING instead of one manifest's slice is the
       // difference between a narrow config push and a full credential set.
       const index = rest.indexOf("--source");
@@ -776,8 +776,8 @@ async function runDeployCommand(rest: string[]): Promise<void> {
       // `--mint` takes no value now. Refused by name rather than ignored: the
       // old form named a script to run and take the stdout of, so a stale
       // `--mint scripts/mint-sandbox-token.mjs` left as-is would silently drop
-      // the path, mint through the sibling command, and look like it worked —
-      // or, worse, keep working as a way to name any executable on the runner.
+      // the path, mint through the sibling command, and look like it worked.
+      // Or, worse, keep working as a way to name any executable on the runner.
       const mintIndex = rest.indexOf("--mint");
       const after = mintIndex === -1 ? undefined : rest[mintIndex + 1];
       if (after !== undefined && !after.startsWith("--")) {
@@ -819,7 +819,7 @@ async function runDeployCommand(rest: string[]): Promise<void> {
 /**
  * `planner <status|create|reset-password|drop> [--db-url <url>]`
  *
- * Operator-side lifecycle of the `migration_planner` role — see
+ * Operator-side lifecycle of the `migration_planner` role. See
  * `planner/commands.ts` for the commands themselves and for why there is no
  * `retrieve`. Interactive by design (create and reset confirm before writing
  * to production), so unlike the `deploy` group it talks through clack and is
@@ -858,7 +858,7 @@ async function runPlannerCommand(rest: string[]): Promise<void> {
  * `signing-key <generate|import|status> --target <staging|production>`
  *
  * Operator-side like `planner`, and for the same reasons: prompts, env-file
- * writes, and SUPABASE_ACCESS_TOKEN — the apply-tier credential no unattended
+ * writes, and SUPABASE_ACCESS_TOKEN, the apply-tier credential no unattended
  * job outside production-apply may hold. The deploy pipeline only READS the
  * key (`deploy mint-token`); everything that creates or registers it is a
  * human's move. See `signing-key/commands.ts`.
@@ -891,7 +891,7 @@ async function runSigningKeyCommand(rest: string[]): Promise<void> {
 // ── Docs ─────────────────────────────────────────────────────────────────────
 
 /**
- * `docs index [--force]` — the documentation search index.
+ * `docs index [--force]`, the documentation search index.
  *
  * One subcommand today, and a group rather than a top-level `docs-index`
  * because the artifact it reads has more than one thing worth doing to it
@@ -922,8 +922,8 @@ const DONE = "Done.";
  * Routes an argv to a command, and reports what to print when it returns.
  *
  * The wizard calls THIS rather than the command functions, so a menu walk and
- * a typed command line take the identical path. `deploy` is not routed here —
- * it is dispatched before `intro()` in `main()`, for the reason
+ * a typed command line take the identical path. `deploy` is not routed here.
+ * It is dispatched before `intro()` in `main()`, for the reason
  * `runDeployCommand`'s header gives.
  *
  * Returns the `outro()` line, or `null` where the failure has already been
@@ -938,7 +938,7 @@ async function dispatch(argv: string[]): Promise<string | null> {
     return DONE;
   }
 
-  // Reached only from the wizard — a typed `run` or `bw` is handled in
+  // Reached only from the wizard. A typed `run` or `bw` is handled in
   // `main()` before `intro()`. Both exit with their child's status, so
   // neither returns and `outro()` is never reached. That is right: by the
   // time a menu walk gets here the banner is already on screen, above the
@@ -1036,7 +1036,7 @@ async function main(): Promise<void> {
 
   // ⚠️ BEFORE the `--help` check, unlike everything else here. `bw` is a
   // passthrough, so `pnpm devtools bw --help` is a request for Bitwarden's
-  // help, not for ours — answering it with our own would be this CLI talking
+  // help, not for ours. Answering it with our own would be this CLI talking
   // over a tool it promised to get out of the way of.
   if (argv[0] === "bw") {
     await runBw(argv.slice(1));

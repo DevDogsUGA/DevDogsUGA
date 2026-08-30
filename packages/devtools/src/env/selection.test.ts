@@ -16,9 +16,9 @@ import { keysRoutedTo, selectForPush } from "./selection.js";
  * Most tests here are a value that must NOT be uploaded, because that is the
  * direction with no undo: taking a credential back out of Bitwarden and GitHub
  * means rotating it at the issuer and hoping nothing read it in between. The
- * variable half adds a second irreversible direction — a secret sent to the
+ * variable half adds a second irreversible direction. A secret sent to the
  * variable store is published in plaintext to everyone who can read the
- * repository's Actions config — so the routing assertions are two-sided
+ * repository's Actions config, so the routing assertions are two-sided
  * throughout: in the store it belongs to, and NOT in the other one.
  */
 
@@ -44,7 +44,7 @@ const APPLY_ONLY = ["AIRTABLE_APPLY_PAT", "SUPABASE_ACCESS_TOKEN"] as const;
 
 /**
  * The five public per-environment values that `supabase status` supplies
- * locally — and that nothing supplies on a deployed environment.
+ * locally, and that nothing supplies on a deployed environment.
  *
  * Listed here because the tempting-and-wrong reading of `localStack: true` is
  * "absent from .env by design, therefore not needed anywhere". It means absent
@@ -59,7 +59,7 @@ const LOCAL_STACK_VARIABLES = [
   "STORAGE_S3_URL",
 ] as const;
 
-/** Public, `scope: "environment"` — the variable store. */
+/** Public, `scope: "environment"`, so the variable store. */
 const A_VARIABLE = "PROJECT_REF";
 /** Public, but `scope: "default"` (committed) and `"developer"`. Neither store. */
 const COMMITTED_PUBLIC = "DEPLOY_ENV";
@@ -160,8 +160,8 @@ describe("public per-environment values — GitHub variables", () => {
 
   it("routes one to variables and NEVER to secrets", () => {
     // The masking is why. As a secret, PROJECT_REF turns the paused-project
-    // link `.../project/<ref>` into `.../***` — and, being a substring of every
-    // Supabase hostname, redacts unrelated log lines across the repo.
+    // link `.../project/<ref>` into `.../***`. It is also a substring of every
+    // Supabase hostname, so it redacts unrelated log lines across the repo.
     const { push, variables } = selectForPush(
       env({ [A_VARIABLE]: "abcdefghijklmnop", CRON_SECRET: "s" }),
       "staging",
@@ -176,8 +176,8 @@ describe("public per-environment values — GitHub variables", () => {
 
   it("routes the five localStack ones to variables anyway", () => {
     // ⚠️ The trap. `localStack: true` means "supplied by `supabase status` in
-    // DEVELOPMENT, so absent from .env by design" — a statement about the
-    // local stack, not a reason to withhold a deployed value. Staging and
+    // DEVELOPMENT, so absent from .env by design". That is a statement about
+    // the local stack, not a reason to withhold a deployed value. Staging and
     // production have no stack to supply these; skipping them makes a deploy
     // point at nothing, and nothing says so.
     for (const environment of ["staging", "production"] as const) {
@@ -211,7 +211,7 @@ describe("public per-environment values — GitHub variables", () => {
     // POSITIVE CONTROL: the third key in the same file DID route, so "not in
     // variables" is a decision about scope and not a dead code path.
     expect([...variables.keys()]).toEqual([A_VARIABLE]);
-    // And neither is loud — they are ordinary, not dangerous or undeclared.
+    // And neither is loud: they are ordinary, not dangerous or undeclared.
     expect(refused).toEqual([]);
     expect(unknown).toEqual([]);
   });
@@ -246,10 +246,10 @@ describe("public per-environment values — GitHub variables", () => {
   });
 
   it("keeps a minted credential out of both stores", () => {
-    // Structurally excluded twice over — `minted` is dropped from
-    // `variableKeys()` and from `storableKeys()` — because a value found under
-    // this name in somebody's .env is a hand-pasted token, and uploading it
-    // creates exactly the long-lived copy minting exists to avoid.
+    // Excluded twice over: `minted` is dropped from `variableKeys()` and from
+    // `storableKeys()`. A value found under this name in somebody's .env is a
+    // hand-pasted token, and uploading it creates the long-lived copy minting
+    // exists to avoid.
     const { push, variables, refused } = selectForPush(
       env({ SANDBOX_PROXY_TOKEN: "eyJhbGciOi", CRON_SECRET: "s" }),
       "production",
@@ -258,7 +258,7 @@ describe("public per-environment values — GitHub variables", () => {
     expect(variables.has("SANDBOX_PROXY_TOKEN")).toBe(false);
     // Skipped rather than refused: not pushing one is its ordinary state.
     expect(refused).toEqual([]);
-    // POSITIVE CONTROL, again — the call did something.
+    // POSITIVE CONTROL again: the call did something.
     expect(push.get("CRON_SECRET")).toBe("s");
   });
 });
@@ -275,10 +275,10 @@ describe("keys no manifest declares", () => {
     );
     expect(push.has("DISCROD_TOKEN")).toBe(false);
     // Undeclared means unclassified, which includes "no idea which GitHub
-    // store this belongs in" — so it reaches neither.
+    // store this belongs in", so it reaches neither.
     expect(variables.has("DISCROD_TOKEN")).toBe(false);
     expect(unknown).toEqual(["DISCROD_TOKEN"]);
-    // Not conflated with the never-store refusals — different message,
+    // Not conflated with the never-store refusals: different message,
     // different fix.
     expect(refused).toEqual([]);
     // And the declared half of the file still pushes.
@@ -334,7 +334,7 @@ describe("a value that is still the declared derivation", () => {
     // The bug: `env init` writes these lines, push stored them verbatim, and a
     // STORED value beats the registry when the deploy composes an env file. So
     // the literal `https://$PROJECT_REF.supabase.co` arrived as
-    // `from: "variable"`, was never expanded, and was written single-quoted —
+    // `from: "variable"`, was never expanded, and was written single-quoted,
     // which dotenvx takes as fully literal. The deployed app then resolved a
     // host called `$PROJECT_REF.supabase.co` while `env audit` reported NO
     // DRIFT, because the stored value did match the file.
@@ -370,7 +370,7 @@ describe("a value that is still the declared derivation", () => {
   it("PUSHES a value that replaced the derivation", () => {
     // ⚠️ The direction that must not break. Somebody who typed a real value
     // over the formula meant it, and dropping it would upload nothing while
-    // reporting success — a missing secret that `env audit` then agrees with,
+    // reporting success. That is a missing secret `env audit` then agrees with,
     // which is worse than the bug this gate closes.
     const { variables: vars, derived } = selectForPush(
       env({ NEXT_PUBLIC_SUPABASE_URL: "https://abcdefghijklmnop.supabase.co" }),
@@ -396,7 +396,7 @@ describe("a value that is still the declared derivation", () => {
 
   it("PUSHES a secret whose example merely contains a $", () => {
     // The gate is `derivationOf()`, not "looks like a formula". `DB_URL`'s
-    // declared example is `postgresql://postgres.$PROJECT_REF:<password>@…` —
+    // declared example is `postgresql://postgres.$PROJECT_REF:<password>@…`:
     // a real `$REF` with two fill-me holes punched in it, and a SECRET, so it
     // is not a derivation at either gate. A looser predicate here would drop a
     // production database URL on the floor.
@@ -452,7 +452,7 @@ describe("preflight, the target no app boots from", () => {
    * The finding: `keysRoutedTo("preflight")` answered with all 45 routable
    * keys, so `env push --target preflight` on a filled-in file uploaded the
    * token-minting key, the service-role key and the GitHub App private key
-   * into `preflight` — whose GitHub environment is reachable from
+   * into `preflight`, whose GitHub environment is reachable from
    * `main`. §3.5 of the security plan refuses even a general read-only
    * Postgres role at that tier.
    */
@@ -464,7 +464,7 @@ describe("preflight, the target no app boots from", () => {
 
   it("derives its narrowness from deployEnv, not from its name", () => {
     // The premise. `preflight` is the only row with `deployEnv: false`, and
-    // that is what `ignoredFor()` reads — a `membership` column saying the same
+    // that is what `ignoredFor()` reads. A `membership` column saying the same
     // thing twice could drift, and would drift silently in the direction that
     // matters.
     expect(TARGETS.preflight.deployEnv).toBe(false);
@@ -479,13 +479,13 @@ describe("preflight, the target no app boots from", () => {
     ]);
     // Tied to the registry, so "two keys" is the marker's doing rather than a
     // filter that happened to leave two behind. They are the credentials §3.5
-    // stage 1 needs and the only two — a Postgres role that sees the
+    // stage 1 needs and the only two: a Postgres role that sees the
     // migrations table, and a PAT that can read one base's schema.
     //
     // It was three until the base id stopped being routed at all: `BASE_ID` is
     // committed in the registry beside the field ids of the same base, so the
     // schema plan no longer needs to be TOLD which base the PAT may read. That
-    // is the third key leaving, not a marker being read differently — the two
+    // is the third key leaving, not a marker being read differently. The two
     // that remain are both credentials, which is the shape this set should
     // have had all along.
     expect(narrowedKeys()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
@@ -494,7 +494,7 @@ describe("preflight, the target no app boots from", () => {
   it("routes the plan PAT here and NOT the two write-capable Airtable ones", () => {
     // The point of three declarations rather than one key with three values.
     // `main` can reach this environment, so what it may hold is the whole
-    // question — and the answer has to hold for every Airtable token at once.
+    // question, and the answer has to hold for every Airtable token at once.
     const preflight = keysRoutedTo("preflight");
     expect(preflight.has("AIRTABLE_PLAN_PAT")).toBe(true);
     // never-store: refused every remote store, so it is in no target's set.
@@ -515,7 +515,7 @@ describe("preflight, the target no app boots from", () => {
     // second read-only token to rotate for no benefit. Before the tier it
     // rode along because the default routed everywhere an app boots from.
     expect(keysRoutedTo("staging").has("AIRTABLE_PLAN_PAT")).toBe(false);
-    // POSITIVE CONTROL: the other narrowed key still routes to staging —
+    // POSITIVE CONTROL: the other narrowed key still routes to staging.
     // `narrowed` alone must not become a staging exclusion, or DB_URL
     // (narrowed shape one) would vanish from every deployed target.
     //
@@ -560,28 +560,28 @@ describe("preflight, the target no app boots from", () => {
   it("leaves staging and production untouched", () => {
     // The regression that would make this a bug rather than a fix: one branch
     // in `ignoredFor()` narrows preflight, and a branch that ran for every
-    // target would empty all three identically — which looks like it worked.
+    // target would empty all three identically, which looks like it worked.
     //
-    // All three moved by exactly one when `AIRTABLE_PLAN_PAT` was declared —
+    // All three moved by exactly one when `AIRTABLE_PLAN_PAT` was declared:
     // it was an ordinary default-tier secret everywhere except that `narrowed`
     // also let it into preflight, so 45/47/1 became 46/48/2.
     //
     // Then ONLY preflight moved: 2 → 3. `AIRTABLE_BASE_ID` gained `narrowed`
     // on 2026-08-17, and unlike the PAT it was already routed to staging and
-    // production — it is an ordinary `scope: "environment"` public variable, so
+    // production. It is an ordinary `scope: "environment"` public variable, so
     // the marker only added a target rather than a key. A change that moved
     // all three here would mean the marker had been read as something other
     // than "also preflight".
     //
     // Then ONLY staging moved: 46 → 45. `AIRTABLE_PLAN_PAT` became
     // `tier: "plan"`, which says "the two §3.5 plan jobs read this and
-    // nothing else does" — preflight and production keep it, staging drops
+    // nothing else does". Preflight and production keep it, staging drops
     // the read-only spare nobody there could use.
     //
     // Then staging and production moved by two (STUDY_GROUP_FINDER_URL +
     // _CALLBACK, the Dog Pack redirect reservation), and by one more when
     // AIRTABLE_SYNC_PAT moved from Supabase Vault into the platform manifest
-    // (2026-08-19) — one storage mechanism, auditable, Worker-delivered.
+    // (2026-08-19): one storage mechanism, auditable, Worker-delivered.
     //
     // Then all three dropped by one, which is the shape a key leaving the
     // registry's routing entirely should have: `AIRTABLE_BASE_ID` became

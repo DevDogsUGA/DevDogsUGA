@@ -4,9 +4,9 @@
  * §3.5's stage-1 dry run answers "what would these migrations do to
  * production" from `main`, so whatever it authenticates with is reachable
  * from the `main` trust tier. The plan refuses even a general read-only role
- * there — it would put every row of production data behind that boundary —
- * which leaves a role that can read the migrations-history table and nothing
- * else. These two grants are the whole of it:
+ * there, because that puts every row of production data behind that boundary.
+ * What is left is a role that can read the migrations-history table and
+ * nothing else. Two grants are the whole of it:
  *
  *   grant usage  on schema supabase_migrations            to migration_planner;
  *   grant select on supabase_migrations.schema_migrations to migration_planner;
@@ -20,14 +20,14 @@ export const PLANNER_ROLE = "migration_planner";
 
 /**
  * The statements `planner create` runs, in order. Exported so the test can
- * assert the grants byte-for-byte against the security plan's validated pair
- * — a paraphrase here would be a second copy that can drift.
+ * assert the grants byte-for-byte against the security plan's validated pair.
+ * A paraphrase here would be a second copy that can drift.
  *
- * The password is interpolated rather than bound because CREATE ROLE is a
- * utility statement — Postgres does not accept bind parameters in one — and
- * that is safe here ONLY because `generatePassword()` emits the base64url
- * alphabet: no quote, no backslash, nothing needing escape. Do not widen the
- * alphabet without revisiting this.
+ * The password is interpolated rather than bound because Postgres accepts no
+ * bind parameters in a utility statement like CREATE ROLE. That is safe here
+ * ONLY because `generatePassword()` emits the base64url alphabet: no quote,
+ * no backslash, nothing needing escape. Do not widen the alphabet without
+ * revisiting this.
  */
 export function createRoleSql(password: string): string[] {
   return [

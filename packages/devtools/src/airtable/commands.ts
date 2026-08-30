@@ -1,7 +1,7 @@
 /**
  * The three Airtable base commands: scaffold, pull-ids, verify.
  *
- * They are the runbook in docs/platform/airtable-setup.md, in order — create
+ * They are the runbook in docs/platform/airtable-setup.md, in order: create
  * what the registry declares, write the discovered ids back, then diff the two
  * forever after. Everything they know how to do lives in `@devdogsuga/airtable`;
  * what is here is prompting, file I/O and exit codes.
@@ -35,7 +35,7 @@ const REGISTRY = join(PROJECT_ROOT, "packages/airtable/src/registry.ts");
  * Where the runbook goes next, printed at the end of each step.
  *
  * These used to print the `pnpm airtable:*` root aliases, on the grounds that
- * one spelling everywhere beats a shorter one here — the runbook, the registry
+ * one spelling everywhere beats a shorter one here. The runbook, the registry
  * header and the sync panel's error text all said the short form, and a tool
  * that prints a fourth spelling of its own name is a tool people stop trusting
  * the output of.
@@ -181,14 +181,14 @@ export async function runPullIds(): Promise<void> {
 export async function runVerify(checkDuplicates: boolean): Promise<void> {
   // ⚠️ `read` covers the schema half only. Duplicate detection also reads
   // RECORDS (`data.records:read`), which `AIRTABLE_PLAN_PAT` deliberately
-  // cannot do — so on a machine holding both tokens, `verify` with duplicate
+  // cannot do. So on a machine holding both tokens, `verify` with duplicate
   // checking on needs `AIRTABLE_SYNC_PAT`, the second entry in the read row,
   // and says so through `runAirtable`'s hint rather than through a bare 403.
   //
   // That second entry used to be `AIRTABLE_PAT`. Nothing about this hazard
   // changed with it: the plan token is still first because it is narrower, and
-  // it still cannot see a record. Keep `AIRTABLE_PLAN_PAT` out of a laptop
-  // `.env` — it is a CI credential — and the ordering never bites.
+  // it still cannot see a record. Keep `AIRTABLE_PLAN_PAT`, a CI credential,
+  // out of a laptop `.env` and the ordering never bites.
   const credentials = airtableClient({ need: "read" });
   if (!credentials) {
     process.exitCode = 1;
@@ -226,7 +226,7 @@ export async function runVerify(checkDuplicates: boolean): Promise<void> {
  * Refresh the committed schema snapshot, or check the registry against it.
  *
  * `--check` is the half that runs in pull-request CI: it reads the committed
- * file and touches no network, so it needs no credential — which is the whole
+ * file and touches no network, so it needs no credential. That is the whole
  * point, since a token in a PR-triggered workflow is readable by whoever opened
  * the pull request.
  *
