@@ -12,20 +12,19 @@ import {
  * Which deployment this build is for, resolved ONCE, while the schemas below
  * are still being constructed.
  *
- * `resolveEnvironment()` throws `UnknownEnvironmentError` on anything that is
- * not development/staging/production, and throwing at import time is the fix,
- * not a hazard: the old local `switchEnvironment()` treated any value
- * `!== "development"` as deployed, so a stray `DEPLOY_ENV=production-apply`
- * applied the strict schemas while every `=== "production"` gate stayed shut —
- * the app looked configured and served the wrong thing, in both directions at
- * once.
+ * `resolveEnvironment()` throws `UnknownEnvironmentError` on anything but
+ * development/staging/production. Throwing at import time is deliberate: the
+ * old local `switchEnvironment()` treated any value `!== "development"` as
+ * deployed, so a stray `DEPLOY_ENV=production-apply` applied the strict schemas
+ * while every `=== "production"` gate stayed shut. The app looked configured
+ * and served the wrong thing, in both directions.
  *
  * `SKIP_ENV_VALIDATION` short-circuits the resolution rather than riding on
- * `skipValidation` below, because that flag only skips *parsing* — the schema
+ * `skipValidation` below, because that flag only skips *parsing*. The schema
  * *selection* here runs at import time regardless. CI builds set the flag with
  * no `DEPLOY_ENV` at all (unset resolves to development anyway); the guard is
- * for the odd bad value, which should not crash a build that explicitly asked
- * not to validate.
+ * for the odd bad value, which should not crash a build that asked not to
+ * validate.
  */
 const environment = process.env.SKIP_ENV_VALIDATION
   ? "development"
@@ -36,21 +35,21 @@ function switchEnvironment<T, R>(opt: { local: T; deployed: R }) {
 }
 
 /**
- * Server-side variables. Every schema goes through `define()`, which is what
- * records the variable's classification — scope, secrecy, routing — into the
- * `@devdogsuga/env` registry. `.env.example` and the `env push` key lists
- * are derived from these declarations, so an entry here is the whole paper
- * trail a variable gets.
+ * Server-side variables. Every schema goes through `define()`, which records
+ * the variable's scope, secrecy and routing into the `@devdogsuga/env`
+ * registry. The tooling derives `.env.example` and the `env push` key lists
+ * from those records, so an entry here is the whole paper trail a variable
+ * gets.
  */
 const server = {
-  // Not read through `env` -- the resolution above needs it while this schema
-  // is still being constructed, and the call sites are plain
-  // `process.env.DEPLOY_ENV` comparisons. It is declared here purely so it is
-  // registered; `resolveEnvironment()` is what fails a typo, at import time.
+  // Not read through `env`: the resolution above needs it while this schema is
+  // still being constructed, and the call sites are plain
+  // `process.env.DEPLOY_ENV` comparisons. Declared here so it is registered;
+  // `resolveEnvironment()` is what fails a typo, at import time.
   //
   // Set by `wrangler.jsonc` per env block at runtime and by the `cf:build:*`
   // scripts at build time. Never a GitHub environment secret, never in any
-  // .env file, and skipped by `env push` -- it has two agreeing committed
+  // .env file, and skipped by `env push`: it has two agreeing committed
   // sources already.
   DEPLOY_ENV: define(z.enum(DEPLOY_ENVIRONMENTS).default("development"), {
     doc:
@@ -69,8 +68,10 @@ const server = {
     }),
     {
       doc:
-        "The platform app's public URL, and config.toml's auth.site_url. " +
-        "Defaults to http://localhost:3000 in development.",
+        "The public URL of the app this manifest belongs to. config.toml reads " +
+        "it as auth.site_url, and schedule-builder's daily cron dispatcher " +
+        "fetches its own scraper routes through it. Each app defaults to its " +
+        "own localhost port in development.",
       scope: "environment",
       secrecy: "public",
       example: "http://localhost:3000",
@@ -98,10 +99,10 @@ const server = {
     secrecy: "public",
   }),
   // Scope "default" AND a schema default (since 2026-08-20; the DEVDOGS_EPOCH
-  // pattern): one guild is shared by every environment -- the bots differ by
-  // channel, not by guild -- so the committed id doubles as the fallback and
-  // a bare environment boots without the line. A set value still overrides,
-  // which is how ci.env keeps its obvious placeholder.
+  // pattern): every environment shares one guild, since the bots differ by
+  // channel rather than by guild, so the committed id doubles as the fallback
+  // and a bare environment boots without the line. A set value still
+  // overrides, which is how ci.env keeps its obvious placeholder.
   DISCORD_GUILD_ID: define(z.string().default("1231994798165069987"), {
     doc:
       "The club's Discord guild. One shared guild across every environment " +
@@ -122,12 +123,12 @@ const server = {
     scope: "environment",
     secrecy: "secret",
   }),
-  // Channel for operational alerts (see server/discord/alerts.ts). Empty
-  // means "do not post", the same convention AIRTABLE_BASE_ID and
-  // GH_WEBHOOK_SECRET use -- so local development and any environment
-  // that has not opted in stay quiet. That default matters here rather than
-  // being tidiness: staging shares the club's real Discord guild, so a
-  // required value would have staging posting into the officers' channel.
+  // Channel for operational alerts (see server/discord/alerts.ts). Empty means
+  // "do not post", the same convention AIRTABLE_BASE_ID and GH_WEBHOOK_SECRET
+  // use, so local development and any environment that has not opted in stay
+  // quiet. The default is not tidiness: staging shares the club's real Discord
+  // guild, so a required value would have staging posting into the officers'
+  // channel.
   DISCORD_ALERT_CHANNEL_ID: define(z.string().default(""), {
     doc:
       "Channel for operational alerts. Empty means do not post -- the right " +
@@ -148,12 +149,12 @@ const server = {
   }),
   // The DevDogs GitHub App, which replaced an org-owner `ghp_` token. Every
   // GitHub call this platform makes is an organization administration action,
-  // so the old shape meant a compromise of this Worker was an organization
+  // so under the old shape a compromise of this Worker was an organization
   // takeover. See server/github/client.ts.
   //
-  // The id and installation id are NOT secrets -- they are visible in any
-  // webhook payload -- so they are GitHub environment *variables*. The private
-  // key is, and it is a multi-line PEM.
+  // The id and installation id are visible in any webhook payload, so they are
+  // NOT secrets and are GitHub environment *variables*. The private key is a
+  // secret, and a multi-line PEM.
   GH_APP_ID: define(z.coerce.number().int().positive(), {
     doc:
       "The DevDogs GitHub App's id. Not a secret -- it appears in every " +
@@ -199,19 +200,18 @@ const server = {
   ),
   // The repository competition branches live in. Defaulted rather than
   // required: every existing deployment predates competitions, and a new
-  // required variable would stop them booting over a feature they do not
-  // use yet.
+  // required variable would stop them booting over a feature they do not use
+  // yet.
   //
   // The old default, "DevDogs-Website", stopped being a real repository name
   // when this repo was renamed to "DevDogsUGA". Reads survived on GitHub's
-  // redirect; the writes team provisioning performs -- createRef,
-  // addOrUpdateRepoPermissionsInOrg -- are not guaranteed to follow one.
+  // redirect; the writes team provisioning performs, createRef and
+  // addOrUpdateRepoPermissionsInOrg, are not guaranteed to follow one.
   //
-  // This IS the deploy repo, and deliberately so -- the `production` branch,
-  // not a second repository, is the deploy boundary. What that costs is that
-  // a competition team granted push here can reach every other team's branch,
-  // because GitHub team permissions have no branch dimension: the grant is
-  // repository-wide or nothing.
+  // This IS the deploy repo, deliberately: the `production` branch, not a
+  // second repository, is the deploy boundary. The cost is that a competition
+  // team granted push here can reach every other team's branch, because a
+  // GitHub team grant is repository-wide with no branch dimension.
   //
   // The isolation therefore has to come from branch rulesets, one per team,
   // restricting pushes to that team's prefix. Until those exist the isolation
@@ -228,9 +228,9 @@ const server = {
     example: "DevDogsUGA",
     commented: true,
   }),
-  // Verifies `X-Hub-Signature-256` on the PR webhook. Empty means the
-  // webhook route refuses every request -- see the route for why that is the
-  // right default rather than accepting unsigned payloads.
+  // Verifies `X-Hub-Signature-256` on the PR webhook. Empty means the webhook
+  // route refuses every request; see the route for why that beats accepting
+  // unsigned payloads.
   GH_WEBHOOK_SECRET: define(z.string().default(""), {
     doc:
       "Verifies X-Hub-Signature-256 on the pull-request webhook, and it is " +
@@ -243,25 +243,25 @@ const server = {
     secrecy: "secret",
   }),
   // Airtable. Optional because the base is provisioned separately and the
-  // platform has to boot without it — the sync refuses with a named error
+  // platform has to boot without it: the sync refuses with a named error
   // rather than the app failing to start. The sync token moved HERE from
   // Supabase Vault ("airtable_pat") on 2026-08-19, by decision: one storage
   // mechanism, auditable by `env audit`, delivered like every other Worker
-  // secret. What that traded away is officer rotation without a deploy —
-  // rotating it is now Bitwarden → `env push` → next deploy. See
+  // secret. That traded away officer rotation without a deploy. Rotating it is
+  // now Bitwarden → `env push` → next deploy. See
   // docs/platform/airtable-setup.md.
   //
   // The base ID is no longer routed. It is `BASE_ID` in
   // packages/airtable/src/registry.ts, committed beside the tbl/fld ids that
-  // belong to the same base — a second base would need a second registry, so
+  // belong to the same base. A second base would need a second registry, so
   // parameterising this one value never bought the portability it looked like
   // it was buying. That deletes an entry from three Bitwarden projects, a
   // variable from four GitHub environments, and the `narrowed` opt-in that
   // existed only to carry it into `preflight`.
   //
   // ⚠️ Until 2026-08-17 this was left unmarked and set by hand as a
-  // repository-level GitHub variable instead, which every environment sees —
-  // a wider blast radius than the routing, arrived at by trying to be careful.
+  // repository-level GitHub variable instead, which every environment sees: a
+  // wider blast radius than the routing, arrived at by trying to be careful.
   AIRTABLE_BASE_ID: define(z.string().default(""), {
     doc:
       "Override for the committed Airtable base id (BASE_ID in " +
@@ -289,11 +289,10 @@ const server = {
     secrecy: "secret",
     commented: true,
   }),
-  // Supabase OAuth, for sandbox environments. Optional for the same reason
-  // as Airtable: the app is registered separately and the platform has to
-  // boot without it -- provisioning refuses with `not_configured` rather
-  // than the whole app failing to start. See
-  // docs/platform/sandbox-environments.md.
+  // Supabase OAuth, for sandbox environments. Optional for the same reason as
+  // Airtable: the app is registered separately and the platform has to boot
+  // without it, so provisioning refuses with `not_configured` rather than the
+  // whole app failing to start. See docs/platform/sandbox-environments.md.
   //
   // The client id is public, like every OAuth client id: it travels in the
   // clear on each authorization redirect, so treating it as a secret would
@@ -319,12 +318,11 @@ const server = {
   // local Docker stack is running, `.env.generated` supplies these and wins
   // over `.env`, so a blank value in a contributor's file is by design.
   //
-  // Secrecy is per-key, not per-block. API_URL / REST_URL / STORAGE_S3_URL
-  // are public because they are derived from PROJECT_REF, which is itself
-  // never-secret, and the first two are literally what NEXT_PUBLIC_* mirrors
-  // into the browser. The hand-maintained bws arrays pushed them as secrets
-  // by omission; that was an accident of the allowlist shape, not a
-  // classification.
+  // Secrecy is per-key, not per-block. API_URL / REST_URL / STORAGE_S3_URL are
+  // public because they derive from PROJECT_REF, which is itself never-secret,
+  // and the first two are what NEXT_PUBLIC_* mirrors into the browser. The
+  // hand-maintained bws arrays pushed them as secrets by omission; that was an
+  // accident of the allowlist shape, not a classification.
   API_URL: define(z.string(), {
     doc:
       "The Supabase project's base URL. Supplied by .env.generated when the " +
@@ -352,7 +350,7 @@ const server = {
     secrecy: "secret",
     localStack: true,
     // The one key `preflight` carries. Same name, same schema, a role that can
-    // see only the migrations table -- which is the whole of what a migration
+    // see only the migrations table, which is the whole of what a migration
     // dry run needs. See `EnvMeta.narrowed`: without the marker, preflight
     // routed all 45 keys and `env push --target preflight` uploaded the JWT
     // signing key into a project `main` can read.
@@ -432,7 +430,7 @@ const server = {
 };
 
 /**
- * Client-side variables — inlined into the browser bundle, so `NEXT_PUBLIC_`
+ * Client-side variables. Inlined into the browser bundle, so `NEXT_PUBLIC_`
  * prefixed and public by construction.
  */
 const client = {
@@ -465,13 +463,13 @@ const client = {
 };
 
 /**
- * Registers this app's manifest with `@devdogsuga/env` — alongside `createEnv`,
- * not instead of it. @t3-oss keeps doing the real runtime work (the
+ * Registers this app's manifest with `@devdogsuga/env`, alongside `createEnv`
+ * rather than instead of it. @t3-oss keeps doing the real runtime work (the
  * client/server split and the proxy that throws when server config is read in
- * a browser bundle); `declare()` is what makes the variables *visible* to the
- * tooling that derives `.env.example` and the `env push` routing. It
- * throws on any schema that skipped `define()`, so a variable cannot exist
- * here unclassified.
+ * a browser bundle); `declare()` makes the variables *visible* to the tooling
+ * that derives `.env.example` and the `env push` routing. It throws on any
+ * schema that skipped `define()`, so a variable cannot exist here
+ * unclassified.
  */
 declare({ source: "platform", server, client });
 
@@ -482,8 +480,8 @@ export const env = createEnv({
    * Only client keys need listing: Next.js stopped static analysis of
    * server-side `process.env`, so @t3-oss reads those from `process.env`
    * directly (NODE_ENV included). The `NEXT_PUBLIC_*` values are inlined into
-   * the browser bundle by STATIC analysis — each entry must be the literal
-   * text `process.env.NEXT_PUBLIC_FOO`, because a computed lookup is silently
+   * the browser bundle by STATIC analysis. Each entry must be the literal text
+   * `process.env.NEXT_PUBLIC_FOO`, because a computed lookup is silently
    * `undefined` in the browser.
    */
   experimental__runtimeEnv: {
@@ -493,13 +491,12 @@ export const env = createEnv({
     NEXT_PUBLIC_AVATARS_BUCKET: process.env.NEXT_PUBLIC_AVATARS_BUCKET,
   },
   /**
-   * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
-   * useful for Docker builds.
+   * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
    */
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   /**
-   * Makes it so that empty strings are treated as undefined. `SOME_VAR: z.string()` and
-   * `SOME_VAR=''` will throw an error.
+   * Treats empty strings as undefined, so `SOME_VAR: z.string()` with
+   * `SOME_VAR=''` throws.
    */
   emptyStringAsUndefined: true,
 });

@@ -81,13 +81,16 @@ declare({
       secrecy: "secret",
       commented: true,
     }),
-    // auth.site_url and the redirect allowlist. BASE_URL is also declared by
-    // the platform manifest, deliberately with the same classification --
-    // duplicates must agree, and the completeness test asserts it.
+    // auth.site_url and the redirect allowlist. The platform and
+    // schedule-builder manifests declare BASE_URL too, deliberately with the
+    // same meta. Duplicates must agree and the completeness test asserts it,
+    // so the doc is written to fit whichever app is being configured.
     BASE_URL: define(z.url(), {
       doc:
-        "The platform app's public URL, and config.toml's auth.site_url. " +
-        "Defaults to http://localhost:3000 in development.",
+        "The public URL of the app this manifest belongs to. config.toml reads " +
+        "it as auth.site_url, and schedule-builder's daily cron dispatcher " +
+        "fetches its own scraper routes through it. Each app defaults to its " +
+        "own localhost port in development.",
       scope: "environment",
       secrecy: "public",
       example: "http://localhost:3000",

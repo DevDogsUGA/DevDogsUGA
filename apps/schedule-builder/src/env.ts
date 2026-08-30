@@ -14,15 +14,15 @@ import {
  *
  * `resolveEnvironment()` throws `UnknownEnvironmentError` on anything that is
  * not development/staging/production, and throwing at import time is the fix,
- * not a hazard. It matters more here than it looks: under the old local
- * `switchEnvironment()`, an unrecognised value was `!== "development"`, so
- * NEXT_PUBLIC_AUTH_MODE below defaulted to "google" and the app still worked
- * — configured and wrong. An *absent* value still falls the other way, to
- * "devdogs"; `wrangler.jsonc` sets DEPLOY_ENV in every env block, which is
- * what keeps a deployed build off the platform's dev OAuth server.
+ * not a hazard. Under the old local `switchEnvironment()`, an unrecognised
+ * value was `!== "development"`, so NEXT_PUBLIC_AUTH_MODE below defaulted to
+ * "google" and the app still worked while configured wrong. An *absent* value
+ * still falls the other way, to "devdogs". `wrangler.jsonc` sets DEPLOY_ENV in
+ * every env block, which is what keeps a deployed build off the platform's dev
+ * OAuth server.
  *
  * `SKIP_ENV_VALIDATION` short-circuits the resolution because `skipValidation`
- * below only skips *parsing* — the schema selection here runs at import time
+ * below only skips *parsing*: the schema selection here runs at import time
  * regardless, and a build that explicitly asked not to validate should not
  * crash on a stray DEPLOY_ENV. (CI sets the flag with no DEPLOY_ENV at all;
  * unset resolves to development anyway.)
@@ -37,7 +37,7 @@ function switchEnvironment<T, R>(opt: { local: T; deployed: R }) {
 
 /**
  * Server-side variables. Every schema goes through `define()`, which records
- * scope and secrecy into the `@devdogsuga/env` registry — `.env.example` and
+ * scope and secrecy into the `@devdogsuga/env` registry. `.env.example` and
  * the `env push` routing are derived from these declarations. Keys shared
  * with the platform app (the Supabase connection block, CRON_SECRET) are
  * deliberately declared in BOTH manifests with the same metadata: the
@@ -65,12 +65,13 @@ const server = {
     }),
     {
       doc:
-        "The schedule builder's public URL, fetched by the daily cron " +
-        "dispatcher to reach its own scraper routes. Defaults to " +
-        "http://localhost:3001 in development.",
+        "The public URL of the app this manifest belongs to. config.toml reads " +
+        "it as auth.site_url, and schedule-builder's daily cron dispatcher " +
+        "fetches its own scraper routes through it. Each app defaults to its " +
+        "own localhost port in development.",
       scope: "environment",
       secrecy: "public",
-      example: "http://localhost:3001",
+      example: "http://localhost:3000",
     },
   ),
   CRON_SECRET: define(
