@@ -1,10 +1,9 @@
 /**
  * The compiler's two ordering decisions. A project's position comes from its
- * own index page and nothing else — a nested `index.md` positions its folder
- * in the sidebar, and mistaking one for the other would let a generated
- * reference page reshuffle the docs landing page. And the flat page array
- * stays in path order, because it is the lookup table every consumer indexes
- * by path rather than a reading order.
+ * own index page and nothing else: a nested `index.md` positions its folder in
+ * the sidebar, and mistaking one for the other would let a generated reference
+ * page reshuffle the docs landing page. The flat page array stays in path
+ * order, because consumers index it by path rather than read it in order.
  *
  * These run against a real directory: `compileDocs` reads the filesystem, and
  * a fake of `fs` would be testing the fake.

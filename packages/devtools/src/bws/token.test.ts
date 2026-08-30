@@ -9,7 +9,7 @@ import {
 /**
  * Where the token that unlocks all three projects comes from.
  *
- * The failure worth testing is not "it could not find one" — that throws and
+ * The failure worth testing is not "it could not find one", which throws and
  * says so. It is finding the WRONG one: authenticating as a different account
  * than the operator intended, which succeeds, reports nothing, and writes to a
  * project they were not looking at.

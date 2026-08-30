@@ -2,23 +2,22 @@
  * Choosing a target when the command line did not name one.
  *
  * `--target` is optional, and when it is absent this asks rather than guessing.
- * Nothing else in this CLI defaults to anything but the local stack; here there
- * is no safe default to fall back to, because the targets differ precisely in
- * how much damage picking the wrong one does.
+ * There is no safe default to fall back to, because the targets differ
+ * precisely in how much damage picking the wrong one does.
  *
  * Three properties the prompt is built around:
  *
- *   * **Production is never the highlighted option.** The list is ordered
- *     least- to most-dangerous (that order lives in the target table), so a
- *     reflexive Enter selects `preflight`.
- *   * **It refuses to prompt where nobody can answer.** A prompt on a
+ *   * Production is never the highlighted option. The list is ordered least-
+ *     to most-dangerous (that order lives in the target table), so a reflexive
+ *     Enter selects `preflight`.
+ *   * It refuses to prompt where nobody can answer. A prompt on a
  *     non-interactive stdin hangs until the job times out, which reads as a
  *     broken tool rather than a missing argument.
- *   * **`development` is refused by name, not by silence.** It is a real
- *     target — it has a file — and it is the one target with no Bitwarden
- *     project, so `pull`/`push`/`audit` cannot do anything with it. Leaving it
- *     out of the accepted list and letting it fall into "not a target" would
- *     say something false; the message says which fact rules it out.
+ *   * `development` is refused by name, not by silence. It is a real target
+ *     with a file, and it is the one target with no Bitwarden project, so
+ *     `pull`/`push`/`audit` cannot do anything with it. Letting it fall into
+ *     "not a target" would say something false; the message says which fact
+ *     rules it out.
  */
 import { select } from "@clack/prompts";
 import {

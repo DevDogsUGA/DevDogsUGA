@@ -1,21 +1,20 @@
 /**
  * The guard that decides whether `run` is allowed to open a prompt.
  *
- * Worth its own file because every way of getting it wrong is silent. A
- * picker that asks when nobody is listening does not fail — it hangs, holding
- * a CI job open until the workflow's timeout kills it with no output saying
- * why. Nothing downstream would catch that, so it is pinned here.
+ * Worth its own file because every way of getting it wrong is silent. A picker
+ * that asks when nobody is listening hangs instead of failing, holding a CI job
+ * open until the workflow's timeout kills it with no output saying why.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { shouldAsk } from "./pick.js";
 
 /**
- * `process.stdin.isTTY` is a plain data property, not an accessor — Node only
- * defines it at all when stdin IS a terminal, so `vi.spyOn(…, "get")` has
- * nothing to replace and throws. Assigning and restoring by hand is the
- * portable way, and setting it every time matters: on a developer's terminal
- * it is already `true` while under CI it is absent, so a test that left it
- * alone would pass or fail depending on where it ran.
+ * `process.stdin.isTTY` is a plain data property, not an accessor. Node defines
+ * it only when stdin IS a terminal, so `vi.spyOn(…, "get")` has nothing to
+ * replace and throws. Assigning and restoring by hand is the portable way, and
+ * every test must set it: on a developer's terminal it is already `true` while
+ * under CI it is absent, so a test that left it alone would pass or fail
+ * depending on where it ran.
  */
 const REAL_TTY = process.stdin.isTTY;
 

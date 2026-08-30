@@ -1,11 +1,11 @@
 /**
  * The shape every extractor produces and the emitter consumes.
  *
- * There are three extractors — TypeScript components/functions, the App Router,
- * and Dart via a JSON artifact — and exactly one emitter. That is the point of
- * this file: a widget's constructor parameters are a props table by another
- * name, and a reader moving between the Flutter app and the React apps should
- * not have to learn a second page layout.
+ * Three extractors feed it, for TypeScript components/functions, the App
+ * Router, and Dart via a JSON artifact, and exactly one emitter reads it. That
+ * is the point of this file. A widget's constructor parameters are a props
+ * table by another name, and a reader moving between the Flutter app and the
+ * React apps should not have to learn a second page layout.
  *
  * Nothing here is exported from `src/index.ts`. `@devdogsuga/docs` re-exports
  * that module's types, so anything on it widens the graph `apps/platform`
@@ -20,7 +20,7 @@ export interface SourceRef {
 }
 
 /**
- * What a symbol is. Decided mechanically in every case — a kind that needed a
+ * What a symbol is. Decided mechanically in every case. A kind that needed a
  * judgment call would rot the first time someone disagreed with the last call.
  */
 export type SymbolKind =
@@ -39,13 +39,13 @@ export type SymbolKind =
  * A badge shown beside a symbol. Each is derived from the source, never from
  * metadata anyone has to maintain:
  *
- * - `server action` — `"use server"` at the top of the file. Every one of these
- *   is a client-reachable RPC entry point, which is why the server-actions page
- *   is a security surface rather than a convenience.
- * - `client` — `"use client"`. The single most common thing to get wrong when
- *   reusing something.
- * - `default export` — changes how you import it, and 78% of the components are.
- * - `public` / `internal` — presence in the package's own `exports` map. A real
+ * - `server action`: `"use server"` at the top of the file. Every one of these
+ *   is a client-reachable RPC entry point, so the server-actions page is a
+ *   security document.
+ * - `client`: `"use client"`. The most common thing to get wrong when reusing
+ *   something.
+ * - `default export`: changes how you import it, and 78% of the components are.
+ * - `public` / `internal`: presence in the package's own `exports` map. A real
  *   public/private line that already exists in `package.json`, so it is free.
  */
 export type SymbolTag =
@@ -90,26 +90,26 @@ export interface DocSymbol {
   paramsLabel: "Prop" | "Parameter" | null;
   /** Resolved return type. Null when it adds nothing (`void`, a type alias). */
   returns: string | null;
-  /** For `kind: "type"` — the shape, one level deep, never expanded. */
+  /** For `kind: "type"`: the shape, one level deep, never expanded. */
   shape: string | null;
   tags: SymbolTag[];
   source: SourceRef;
   /**
    * Which language the symbol is written in. Decides the code fence and the
    * import syntax, so a Dart widget is not rendered as TypeScript. Absent means
-   * TypeScript — the overwhelmingly common case, and every extractor written
-   * before the Dart pass omitted it.
+   * TypeScript, the common case: every extractor written before the Dart pass
+   * omitted it.
    */
   language?: "typescript" | "dart";
   /**
-   * Props a component inherits rather than declares — every DOM attribute that
+   * Props a component inherits rather than declares: every DOM attribute that
    * arrives with `React.ComponentProps<"div">`, and every prop a Radix
    * primitive passes through.
    *
    * These are counted and named, never listed. A shadcn wrapper resolves to
-   * ~300 props, of which two or three are its own; a table of 300 rows answers
-   * no question a reader has, while "its own two props, plus everything a
-   * `div` takes" answers exactly the one they came with.
+   * ~300 props, two or three of which are its own. A table of 300 rows answers
+   * no question a reader has; "its own two props, plus everything a `div`
+   * takes" answers the one they came with.
    */
   inherited?: InheritedProps | null;
 }
@@ -122,10 +122,10 @@ export interface InheritedProps {
 }
 
 /**
- * One emitted page. Grouping is per directory, one `###` per symbol: 161
+ * One emitted page. Grouping is per directory, one `###` per symbol. 161
  * components plus ~574 functions as individual pages would swamp a sidebar
  * holding ~40 written ones, and the folder mirrors the import path, which is
- * what a reader is actually looking up.
+ * what a reader looks up.
  */
 export interface DocGroup {
   /** Path under `docs/`, no extension: `platform/reference/components/forms`. */
@@ -173,7 +173,7 @@ export interface ExtractResult {
   groups: DocGroup[];
   routes: RouteEntry[];
   coverage: CoverageRow[];
-  /** Non-fatal problems. Warn-only, per §9.5 — never a build failure. */
+  /** Non-fatal problems. Warn-only, per §9.5, never a build failure. */
   warnings: string[];
 }
 

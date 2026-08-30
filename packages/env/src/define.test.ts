@@ -3,8 +3,8 @@
  *
  * Every case asserts both an allow and a deny, for the reason the persona
  * suites give: a test that only checks the allow side passes just as happily
- * when the mechanism is missing entirely — and the mechanism here is a
- * *refusal*, so that failure mode is the likely one.
+ * when the mechanism is missing entirely. The mechanism here is a *refusal*, so
+ * that failure mode is the likely one.
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -276,9 +276,9 @@ describe("derived selectors", () => {
   it("keeps a localStack public value in the variable set", () => {
     // `localStack` says "supplied by `supabase status` in DEVELOPMENT", which
     // is a statement about the local stack and about how `.env.example`
-    // renders — not a reason to withhold the value from staging or production,
-    // where there is no local stack to supply it. Excluding these would point
-    // a deployed Worker at nothing, silently.
+    // renders. It is not a reason to withhold the value from staging or
+    // production, where there is no local stack to supply it. Excluding these
+    // would point a deployed Worker at nothing, silently.
     expect(variableKeys()).toContain("API_URL");
     // The positive control for the assertion above: the set is non-empty and
     // being computed, so `toContain` is not passing over a bug that made
@@ -304,15 +304,15 @@ describe("derived selectors", () => {
   it("never lets a minted key become a variable", () => {
     // In the real registry the one minted key is also a secret, so `secrecy`
     // alone would exclude it and the `minted !== true` clause would be
-    // unfalsifiable — a guard no test can turn red is a guard that will be
+    // unfalsifiable. A guard no test can turn red is a guard that will be
     // deleted as redundant. So this declares the case the clause exists for: a
-    // PUBLIC minted value, which `secrecy` would happily wave through.
+    // PUBLIC minted value, which `secrecy` would wave through.
     //
     // Uploading one is not merely untidy. A minted credential is signed at
     // deploy time and the deploy target holds the only copy, so a value under
-    // that name in somebody's `.env` is hand-pasted — and pushing it creates
-    // the long-lived copy the design exists to avoid, which the next deploy
-    // then silently contradicts.
+    // that name in somebody's `.env` is hand-pasted. Pushing it creates the
+    // long-lived copy the design exists to avoid, which the next deploy then
+    // silently contradicts.
     declare({
       source: "odd-app",
       server: {
@@ -339,8 +339,8 @@ describe("derived selectors", () => {
 
   it("treats one app calling a variable secret as enough", () => {
     // Two apps disagreeing is a bug the completeness test catches. Until it
-    // does, the safe reading is the stricter one — the alternative fails open
-    // in exactly the case that matters.
+    // does, the safe reading is the stricter one. The alternative fails open in
+    // exactly the case that matters.
     declare({
       source: "careless-app",
       server: {
@@ -372,8 +372,8 @@ describe("resolveEnvironment", () => {
 
   it("refuses `example`, which would otherwise load a committed file", () => {
     // The case that makes this an allowlist rather than a filename suffix.
-    // `.env.example` exists, and its placeholders pass most of the schema — the
-    // app would boot, look configured, and point at nothing.
+    // `.env.example` exists, and its placeholders pass most of the schema, so
+    // the app would boot, look configured, and point at nothing.
     expect(() => resolveEnvironment("example")).toThrow(
       UnknownEnvironmentError,
     );
@@ -482,8 +482,8 @@ describe("the target table", () => {
 
   it("declares every row completely", () => {
     // Cheap insurance against a row added with a field left off, which would
-    // read as `undefined` — and an undefined `project` is not `null`, so it
-    // would slip past the vault-target filter as a truthy-ish nothing.
+    // read as `undefined`. An undefined `project` is not `null`, so it would
+    // slip past the vault-target filter as a truthy-ish nothing.
     for (const target of ENV_TARGETS) {
       const spec = TARGETS[target];
       expect(typeof spec.file).toBe("string");

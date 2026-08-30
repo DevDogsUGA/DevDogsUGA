@@ -4,16 +4,17 @@
  * Two things make a synthetic registry the right instrument here rather than
  * the real manifests:
  *
- *   * The rules that matter are about SHAPES of declaration — a `scope:
+ *   * The rules that matter are about SHAPES of declaration: a `scope:
  *     "developer"` key, a `secrecy: "never-store"` one smuggled into the
  *     GitHub context, a derivation whose input is missing, a value that begins
  *     with a quote. The real registry contains an example of some of those and
  *     no example of the rest, so a suite built on it would pass vacuously
  *     exactly where the consequence is highest.
  *   * The command's success path WRITES A FILE, and its real destinations are
- *     `.env.staging` and `.env.production` — on a maintainer's machine, the
- *     files being filled in with live credentials. `root` is a parameter for
- *     that reason and every test here points it at a fresh mkdtemp.
+ *     `.env.staging` and `.env.production`, which on a maintainer's machine
+ *     are the files being filled in with live credentials. `root` is a
+ *     parameter for that reason, and every test here points it at a fresh
+ *     mkdtemp.
  *
  * ⚠️ The environment is injected too. Nothing in this file mutates
  * `process.env`, so a test that got the DEPLOY_ENV wrong fails instead of
@@ -360,8 +361,8 @@ describe("refusals", () => {
 
   it("omits an OPTIONAL derivation whose input has no value", async () => {
     // The real case: STUDY_GROUP_FINDER_URL_CALLBACK derives from
-    // STUDY_GROUP_FINDER_URL, both optional — declared ahead of any web
-    // deployment, with "leave it unset until the deploy exists" as the
+    // STUDY_GROUP_FINDER_URL, both optional, declared ahead of any web
+    // deployment with "leave it unset until the deploy exists" as the
     // documented contract. The first real staging deploy failed here.
     resetRegistry();
     declare({

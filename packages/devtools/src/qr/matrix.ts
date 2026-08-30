@@ -27,8 +27,8 @@ export interface EncodeOptions {
   errorLevel: ErrorLevel;
   /**
    * Fix the version (1–40) instead of taking the smallest that fits. The
-   * reference `attendance/qr.svg` is the smallest — version 4 for its URL at
-   * level H — so this is only for making room under a bigger logo.
+   * reference `attendance/qr.svg` uses the smallest, version 4 for its URL at
+   * level H, so this is only for making room under a bigger logo.
    */
   version?: number;
 }

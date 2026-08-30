@@ -1,7 +1,7 @@
 /**
- * The one emitter. Every extractor — TypeScript, App Router, Dart — renders
- * through here, so the three produce pages a reader recognises as the same
- * kind of page.
+ * The one emitter. The TypeScript, App Router and Dart extractors all render
+ * through here, so the three produce pages a reader recognises as the same kind
+ * of page.
  *
  * The output is markdown that the existing pipeline compiles like any other
  * page: frontmatter, headings that become the TOC, GFM tables. Nothing here
@@ -60,7 +60,7 @@ const CODE_INDENT = /^ {4}/;
  * span.
  *
  * A code span is resolved before a tag is looked for, so `<details>` between
- * backticks opens nothing, and an entity is not decoded inside one — escaping
+ * backticks opens nothing, and an entity is not decoded inside one. Escaping
  * there would put a literal `&lt;` on the page in place of the code the author
  * wrote. The pairing is a run of backticks closed by an equal run *on the same
  * line*, which is narrower than CommonMark, where a span may cross a newline.
@@ -78,44 +78,43 @@ function escapeLine(line: string): string {
 /**
  * Extracted text, made safe to put on a page.
  *
- * Every other line this file emits is written here and can be trusted to mean
- * what it says: the `<details>` blocks below are ours, deliberately, and the
- * site renders raw HTML — `rehype-raw` — so they work. Doc-comment prose is
- * not ours. It is whatever a contributor typed above a declaration, and a
- * sentence like "rather than a bare <details>" is an ordinary thing to type.
- * Rendered, that `<details>` opens a real disclosure widget: the paragraph
- * ends at the tag, and every heading after it is swallowed by an element
- * nothing ever closes. One such comment took the last ten of the components
- * page's fifty-five symbols off the page, and nothing about the markdown
- * looked wrong enough for anyone to catch it.
+ * Every other line this file emits is written here and can be trusted: the
+ * `<details>` blocks below are ours, deliberately, and the site renders raw
+ * HTML through `rehype-raw`, so they work. Doc-comment prose is not ours. It is
+ * whatever a contributor typed above a declaration, and a sentence like "rather
+ * than a bare <details>" is an ordinary thing to type. Rendered, that
+ * `<details>` opens a real disclosure widget: the paragraph ends at the tag,
+ * and every heading after it is swallowed by an element nothing ever closes.
+ * One such comment took the last ten of the components page's fifty-five
+ * symbols off the page, and nothing about the markdown looked wrong enough for
+ * anyone to catch it.
  *
- * Escaping `<` is the whole fix — nothing else opens a tag, a comment, or a
- * CDATA section — and it belongs here rather than in the four extractors
- * because here is where the text stops being data and becomes markup. An
- * extractor that escaped its own output would be guessing what the emitter
- * does with it, and every extractor written afterwards would have to remember
- * to guess the same way.
+ * Escaping `<` is the whole fix, since nothing else opens a tag, a comment, or
+ * a CDATA section. It belongs here rather than in the four extractors because
+ * here is where the text stops being data and becomes markup. An extractor that
+ * escaped its own output would be guessing what the emitter does with it, and
+ * every extractor written afterwards would have to guess the same way.
  *
  * Code is the exception, and finding it takes a line at a time, because a
  * summary does not arrive as one line. `collapseParagraphs` (gen/program.ts)
  * folds each TypeScript paragraph onto a single line, but the Dart extractor
  * says the opposite in `_prose`'s own docstring
- * (apps/study-group-finder/tool/docs_extract.dart) — "Fenced code and list
- * items are left on their own lines, because joining those is the one case
- * where healing a wrap changes what the text means" — and gen/dart.ts hands
- * that straight on as `summary: declaration.doc`. So a Dart summary reaches
- * here with real newlines in it, and Flutter samples are made of generics:
- * escape inside one of those fences and the reader is shown `&lt;Widget>`
- * where the code should be, which is the very failure this function exists to
- * prevent, one block level down.
+ * (apps/study-group-finder/tool/docs_extract.dart): "Fenced code and list items
+ * are left on their own lines, because joining those is the one case where
+ * healing a wrap changes what the text means". gen/dart.ts hands that straight
+ * on as `summary: declaration.doc`. So a Dart summary reaches here with real
+ * newlines in it, and Flutter samples are made of generics: escape inside one
+ * of those fences and the reader is shown `&lt;Widget>` where the code should
+ * be, which is the very failure this function exists to prevent, one block
+ * level down.
  *
  * So the scan walks lines and hands back untouched whatever the renderer will
  * read as code:
  *
  * - A fenced block, opened and closed by `opensFence`/`closesFence`. A fence
  *   nobody closed runs to the end of the text, which is what CommonMark does
- *   with it too — so `opensFence` rather than `fences.ts`'s barer `fenceRun`
- *   is what asks the question, because the two disagree on precisely the lines
+ *   with it too. `opensFence` rather than `fences.ts`'s barer `fenceRun` asks
+ *   the question, because the two disagree on precisely the lines that
  *   `collapseParagraphs` produces. That function folds a whole TypeScript
  *   paragraph onto one line, fences included, and a fenced sample that arrives
  *   here as ``` ```ts const x = a < b; ``` ``` is a paragraph holding a code
@@ -126,24 +125,23 @@ function escapeLine(line: string): string {
  * - A run of lines indented four spaces. That is the same fence seen from
  *   further in: a dartdoc fence written two list levels deep arrives here at
  *   exactly four spaces (`///` and its one conventional space come off, the
- *   markdown indent does not), and both readings of such a run — an indented
- *   code block, or a fence inside the list item — are code, so leaving it
- *   alone is right under either. Nothing else can be indented that far.
- *   Outside a fence both extractors trim what they emit, so the only leading
- *   whitespace that survives extraction is whitespace from inside one.
+ *   markdown indent does not), and both readings of such a run, an indented
+ *   code block or a fence inside the list item, are code, so leaving it alone
+ *   is right under either. Nothing else can be indented that far. Outside a
+ *   fence both extractors trim what they emit, so the only leading whitespace
+ *   that survives extraction is whitespace from inside one.
  * - A code span, by `escapeLine`.
  *
- * Everything else is escaped, which is the direction to be wrong in: a
- * needless escape shows one reader a `&lt;` where a `<` belonged, and a missed
- * tag takes the rest of the page away from all of them. The angle-bracket
- * autolink is what pays for that. `<https://example.com>` in a doc comment
- * reaches the page as `&lt;https://example.com>`, and what the reader gets —
- * rendered through the site's own plugins — is a literal `<` followed by
- * `remark-gfm`'s bare-URL rule linking the rest of it, closing bracket
- * included, so the href ends in `%3E`. The alternative is teaching this
- * function CommonMark's autolink grammar to save a form of link that a bare
- * URL and a `[text](url)` both already give, neither of which has a `<` in it
- * for this function to touch.
+ * Everything else is escaped, which is the direction to be wrong in: a needless
+ * escape shows one reader a `&lt;` where a `<` belonged, and a missed tag takes
+ * the rest of the page away from all of them. The angle-bracket autolink is
+ * what pays for that. `<https://example.com>` in a doc comment reaches the page
+ * as `&lt;https://example.com>`, and what the reader gets, rendered through the
+ * site's own plugins, is a literal `<` followed by `remark-gfm`'s bare-URL rule
+ * linking the rest of it, closing bracket included, so the href ends in `%3E`.
+ * The alternative is teaching this function CommonMark's autolink grammar to
+ * save a form of link that a bare URL and a `[text](url)` both already give,
+ * neither of which has a `<` in it for this function to touch.
  */
 function prose(text: string): string {
   const out: string[] = [];
@@ -151,7 +149,7 @@ function prose(text: string): string {
   let fence: string | null = null;
   /** Whether an indented code block is still running. */
   let indented = false;
-  /** Whether a block could begin on this line — the text starts one, a blank line starts one. */
+  /** Whether a block could begin here: the start of the text, or after a blank line. */
   let opening = true;
 
   for (const line of text.split("\n")) {
@@ -200,21 +198,21 @@ function prose(text: string): string {
  * at.
  *
  * `cell` puts the whole description on one line, because a newline inside a
- * GFM row ends the row — so a fence in a parameter's doc comment does not
- * survive as a fence no matter what this does, and reasoning about the lines
- * it had before the flattening would be reasoning about text the reader never
- * sees. What the reader sees is one line, so one line is what gets escaped:
- * flattened backtick runs that still pair by `escapeLine`'s rule are a code
- * span and are left alone, and everything else is escaped.
+ * GFM row ends the row. A fence in a parameter's doc comment does not survive
+ * as a fence no matter what this does, and reasoning about the lines it had
+ * before the flattening would be reasoning about text the reader never sees.
+ * What the reader sees is one line, so one line is what gets escaped: flattened
+ * backtick runs that still pair by `escapeLine`'s rule are a code span and are
+ * left alone, and everything else is escaped.
  *
  * That rule is narrower than CommonMark's in one direction, and the emitter
  * tests measure both sides of the gap. A flattening that leaves a run with no
- * partner at all — the closing delimiter never reached the description — is
+ * partner at all, where the closing delimiter never reached the description, is
  * markup under CommonMark too, and a `<Widget>` in such a cell renders as a
  * real `<widget>` element opened inside the table; escaping is the only thing
  * that stops it. A flattening whose runs still pair, but with a stray backtick
  * between them, is a code span to CommonMark and inert, while `escapeLine`
- * cannot match across that backtick and escapes anyway — costing the reader a
+ * cannot match across that backtick and escapes anyway, costing the reader a
  * literal `&lt;` inside a sample. Paying that to keep the first case off the
  * page is the trade this function makes deliberately.
  */
@@ -240,18 +238,16 @@ function quote(value: string): string {
  * The line that makes a generated page legible as one. A reader who cannot
  * tell which pages are written will not trust either kind.
  *
- * A GitHub alert rather than a bare blockquote. Every hand-written aside in
- * the corpus is one of these, so a plain `>` was the only quote-shaped thing
- * on the site that rendered as an unstyled rule-and-indent — it read as
- * something the author had quoted rather than as the page telling you what it
- * is.
+ * A GitHub alert rather than a bare blockquote. Every hand-written aside in the
+ * corpus is one of these, so a plain `>` was the only quote-shaped thing on the
+ * site that rendered as an unstyled rule-and-indent: it read as something the
+ * author had quoted rather than as the page telling you what it is.
  *
  * NOTE, not WARNING or CAUTION, even though the sentence is about losing work.
  * This banner is on all hundred-odd generated pages, and a red or amber bar at
  * the top of every one of them is a thing readers learn to look past within a
- * day — at which point the loud styling has cost the warning its audience. Its
- * first job is to say what kind of page this is; the instruction follows from
- * that.
+ * day, at which point the loud styling has cost the warning its audience. Its
+ * first job is to say what kind of page this is; the instruction follows.
  */
 function generatedNotice(sourceHint: string): string {
   return [
@@ -266,9 +262,9 @@ function sourceLink(ref: SourceRef, options: EmitOptions): string {
 
 /**
  * How you reach the symbol. An internal package symbol has no import line worth
- * printing — it is not reachable through the package's `exports` map — so it
- * gets its source path instead. Printing an import that does not resolve is how
- * a generator starts lying.
+ * printing, since it is not reachable through the package's `exports` map, so
+ * it gets its source path instead. Printing an import that does not resolve is
+ * how a generator starts lying.
  */
 function importLine(symbol: DocSymbol): string {
   if (symbol.tags.includes("internal")) {
@@ -289,10 +285,9 @@ function tagLine(symbol: DocSymbol): string | null {
 }
 
 /**
- * A params table, plus — only when the checker's types are too wide to read in
- * a cell — a collapsible holding them in full. That is the one thing a
- * collapsible is for: the detail is there when it is wanted and out of the way
- * when it is not.
+ * A params table, plus a collapsible holding the full types when the checker's
+ * types are too wide to read in a cell. That is the one thing a collapsible is
+ * for: the detail is there when it is wanted and out of the way when it is not.
  */
 function paramsTable(
   params: ParamDoc[],
@@ -418,7 +413,7 @@ export function renderSymbol(symbol: DocSymbol, options: EmitOptions): string {
 
 /**
  * One group as a full page. Kind headings appear only when a page holds more
- * than one kind — a `## Components` heading above nothing but components is
+ * than one kind: a `## Components` heading above nothing but components is
  * noise in the table of contents.
  */
 export function renderGroupPage(group: DocGroup, options: EmitOptions): string {
@@ -499,7 +494,7 @@ export function renderRoutesPage(
         ? route.methods.map((m) => `\`${m}\``).join(" ") || "—"
         : // A title is `export const metadata`'s, so it is prose a contributor
           // wrote as surely as a doc comment is, and it lands in the cell as
-          // itself — no backticks, no link around it. A parameter's
+          // itself, with no backticks and no link around it. A parameter's
           // description is the only other cell on a generated page that does,
           // and it goes through the same `proseCell` for the same reason.
           route.title === null

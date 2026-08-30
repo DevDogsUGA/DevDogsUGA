@@ -1,18 +1,18 @@
 /**
- * `devtools qr <text>` — a QR code in the DevDogs style.
+ * `devtools qr <text>` writes a QR code in the DevDogs style.
  *
  * The style is the one `apps/platform/public/attendance/qr.svg` was made in,
- * by hand, in a web generator. Making the next one the same way means
- * re-finding the settings; this makes the settings the defaults, so
+ * by hand, in a web generator. Making the next one that way means re-finding
+ * the settings, so those settings are the defaults here and
  *
  *     pnpm devtools qr https://devdogsuga.org/attendance
  *
  * writes `qr.svg` and `qr.png` that match it. Every flag is a departure from
  * the reference, and the help text says what the reference value is.
  *
- * Output is one render written in as many formats as asked for: `--out`
- * names the file (its extension picks the format) or the stem when
- * `--format` lists several.
+ * Output is one render written in as many formats as asked for. `--out` names
+ * the file (its extension picks the format), or the stem when `--format` lists
+ * several.
  */
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";

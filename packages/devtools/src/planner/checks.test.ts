@@ -11,7 +11,7 @@ import type { PlannerDb } from "./db.js";
  * The verdict logic, with a database faked at the `PlannerDb.run` seam.
  *
  * Every query in this feature is a constant string, so the fake is a map from
- * query to rows-or-throw — no client library to mock, and a test that hands in
+ * query to rows-or-throw. No client library to mock, and a test that hands in
  * an unexpected query fails by name instead of by silent `undefined`.
  */
 function db(
@@ -46,7 +46,7 @@ describe("checkPlanner", () => {
       }),
     );
     expect(verdict.ok).toBe(true);
-    // The three green lines ARE the evidence — a caller prints them into the
+    // The three green lines ARE the evidence: a caller prints them into the
     // job log, so their content is part of the contract.
     expect(verdict.lines.join("\n")).toMatch(
       /authenticated as migration_planner/,
@@ -68,8 +68,8 @@ describe("checkPlanner", () => {
   });
 
   it("refuses a planner-named role that can read platform.*", async () => {
-    // Same name, wrong grants — the shape `planner create` refuses to repair
-    // in place. Reading the probe SUCCEEDING is the failure.
+    // Same name, wrong grants: the shape `planner create` refuses to repair
+    // in place. The probe SUCCEEDING is the failure.
     const verdict = await checkPlanner(
       db({
         [CHECK_IDENTITY]: [{ who: "migration_planner" }],
@@ -84,7 +84,7 @@ describe("checkPlanner", () => {
     // A database the CLI has never migrated has no supabase_migrations
     // schema at all. "Re-apply the grants" would send somebody granting on a
     // schema that is not there; the fix is initializing the migration
-    // history, and the verdict has to say which disease this is.
+    // history, and the verdict has to say so.
     const missing = Object.assign(
       new Error('schema "supabase_migrations" does not exist'),
       { code: "3F000" },

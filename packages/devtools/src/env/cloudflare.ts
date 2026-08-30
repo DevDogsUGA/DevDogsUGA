@@ -25,11 +25,10 @@ interface WranglerSecret {
 /**
  * Secret names per Worker for one target.
  *
- * Failures are returned as an empty set for that Worker rather than thrown, and
- * the caller is told which ones could not be read. A Worker that has never been
- * deployed is the common case during setup, and it must not stop the audit from
- * reporting everything it CAN see — an audit that refuses to run is an audit
- * nobody runs.
+ * A Worker that fails to read comes back as an empty set rather than a throw,
+ * and the caller is told which ones could not be read. A Worker that has never
+ * been deployed is the common case during setup, and it must not stop the audit
+ * from reporting everything it CAN see.
  */
 export async function listWorkerSecrets(
   target: string,

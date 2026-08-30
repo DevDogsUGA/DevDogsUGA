@@ -1,5 +1,5 @@
 /**
- * `devtools deploy secrets-file` — the credential-handling command.
+ * `devtools deploy secrets-file`, the credential-handling command.
  *
  * Four properties here are the reason a secret does not leak out of a public
  * repository's Actions log, and each of them is a one-character edit away from
@@ -8,8 +8,8 @@
  *   * the temp directory is 0700 and the file inside it 0600;
  *   * a minted token is `::add-mask::`ed BEFORE it is written anywhere, and
  *     that mask line is the ONLY thing on stdout;
- *   * `$GITHUB_OUTPUT` is APPENDED to — GitHub's own writes and any earlier
- *     step's outputs share that file, and a truncating write eats them;
+ *   * `$GITHUB_OUTPUT` is APPENDED to, because GitHub's own writes and any
+ *     earlier step's outputs share that file and a truncating write eats them;
  *   * the job summary and the log carry NAMES, never values.
  *
  * So each is asserted directly rather than inferred, and the token used is a
@@ -239,7 +239,7 @@ describe("the minted credential", () => {
   });
 
   it("masks before writing the token anywhere", async () => {
-    // Ordering, not just presence: a failure between writing and masking
+    // Ordering, not presence: a failure between writing and masking
     // would leave a live credential in the log.
     const writes: string[] = [];
     const spy = vi
@@ -318,8 +318,8 @@ describe("the minted credential", () => {
   });
 
   it("lets a DeployError from the minter through unwrapped", async () => {
-    // `MintError extends DeployError` and already names the thing to fix — an
-    // unset DEPLOY_ENV, a signing key of the wrong length — with detail lines
+    // `MintError extends DeployError` and already names the thing to fix, an
+    // unset DEPLOY_ENV or a signing key of the wrong length, with detail lines
     // `cli.ts` renders. Re-wrapping it would bury the only useful message.
     const mintError = new DeployError("DEPLOY_ENV is unset;", [
       "Run this inside the deploy's own `with-env -c` string.",
@@ -459,7 +459,7 @@ describe("an empty secrets file", () => {
     });
 
     // `--secrets-file` preserves what it omits, so an empty one leaves every
-    // previously set secret in place, unexamined — a no-op that looks like a
+    // previously set secret in place, unexamined. A no-op that looks like a
     // successful rotation.
     await expect(compose({ env: {} })).rejects.toThrow(
       /has no Worker secrets to send/,

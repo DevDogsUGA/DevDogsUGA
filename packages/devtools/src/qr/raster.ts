@@ -4,7 +4,7 @@
  * Every raster format is the same render with a different encoder on the
  * end. The one wrinkle is transparency: the reference is white on nothing,
  * and a JPEG has no nothing, so opaque formats are flattened onto a
- * background — the one asked for, or a contrasting default so the code does
+ * background: the one asked for, or a contrasting default so the code does
  * not vanish into a white page.
  */
 import sharp from "sharp";

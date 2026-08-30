@@ -3,11 +3,11 @@
  *
  * Was `@devdogsuga/oauth-setup`, a package of its own with its own binary. It
  * was separate because it was going to be published for sibling projects to
- * install; nothing here is published, so that separation bought nothing but a
- * second `@clack/prompts` dependency and a second place to look for a CLI.
+ * install; nothing here is published, so that separation bought only a second
+ * `@clack/prompts` dependency and a second place to look for a CLI.
  *
- * It still points at whatever project you run it in, which is the whole point —
- * a forum developer runs it against *their* local Supabase, not this one.
+ * It still points at whatever project you run it in. That is the point: a
+ * forum developer runs it against *their* local Supabase, not this one.
  */
 import { execFile } from "node:child_process";
 import {

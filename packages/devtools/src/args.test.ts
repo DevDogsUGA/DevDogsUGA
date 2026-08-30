@@ -4,9 +4,9 @@ import { positionals } from "./args.js";
 /**
  * The parser that decides which subcommand runs.
  *
- * `env pull`, `env push` and `env audit` do very different things
- * to live credentials, so the failure to guard against is not "no subcommand"
- * — that errors — but the wrong one, picked out of a flag's value.
+ * `env pull`, `env push` and `env audit` do very different things to live
+ * credentials. A missing subcommand errors, so the failure to guard against is
+ * the wrong one, picked out of a flag's value.
  */
 
 describe("positionals", () => {

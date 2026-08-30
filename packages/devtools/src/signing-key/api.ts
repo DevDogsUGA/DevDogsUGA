@@ -1,18 +1,17 @@
 /**
- * The Management API calls behind `devtools signing-key` — and nothing else.
+ * The Management API calls behind `devtools signing-key`, and nothing else.
  *
  * Two endpoints, verified against the Management API reference on 2026-08-19:
  *
  *   POST /v1/projects/{ref}/config/auth/signing-keys   create (import) a key
  *   GET  /v1/projects/{ref}/config/auth/signing-keys   list keys
  *
- * Authenticated with SUPABASE_ACCESS_TOKEN — the operator's personal access
- * token, the same credential `supabase config push` needs and the same rules:
- * apply-tier, devops-only, never in the staging tier. The token travels in a
- * header and is never logged; the response bodies carry no key material
- * (`public_jwk` is null for shared secrets, and the secret itself is never
- * returned — that non-extractability is the whole reason the secret is minted
- * on this side and imported).
+ * Authenticated with SUPABASE_ACCESS_TOKEN, the operator's personal access
+ * token. Same credential `supabase config push` needs, same rules: apply-tier,
+ * devops-only, never in the staging tier. The token travels in a header and is
+ * never logged; the response bodies carry no key material (`public_jwk` is null
+ * for shared secrets, and the secret itself is never returned, which is the
+ * whole reason the secret is minted on this side and imported).
  */
 
 export interface SigningKey {
@@ -82,14 +81,14 @@ async function refuse(
 /**
  * Imports a shared secret as a NEW signing key, which starts in `standby`.
  *
- * ⚠️ The JWK's `k` is base64url over the UTF-8 BYTES OF THE ENV STRING —
+ * ⚠️ The JWK's `k` is base64url over the UTF-8 BYTES OF THE ENV STRING,
  * matching `createHmac("sha256", signingKey)` in `deploy/mint-token.ts`,
  * which keys HMAC with exactly those bytes. Encoding anything else (say,
  * treating the string as base64url and decoding it first) imports a key that
  * verifies none of our tokens, silently, forever.
  *
- * `status` is deliberately not sent: new keys start in `standby`, which is
- * all the sandbox token needs — standby keys verify, they just do not sign
+ * `status` is deliberately not sent: new keys start in `standby`, which is all
+ * the sandbox token needs. Standby keys verify, they just do not sign
  * Supabase's own user sessions. Promoting one to `in_use` changes what signs
  * every session and belongs in the dashboard with a human looking at it.
  */

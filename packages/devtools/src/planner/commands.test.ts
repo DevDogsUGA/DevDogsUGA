@@ -133,7 +133,7 @@ describe("planner create", () => {
     await runPlannerCreate({ connect: harness.connect });
 
     // The CREATE and both GRANTs, in order, in ONE transaction on the admin
-    // connection — a mid-flight failure must leave no grant-less role behind
+    // connection. A mid-flight failure must leave no grant-less role behind
     // for the already-exists refusal to protect.
     expect(harness.statements[0]).toBe("begin");
     expect(harness.statements[1]).toMatch(
@@ -182,8 +182,8 @@ describe("planner create", () => {
   it("refuses a database with no migration history, BEFORE creating anything", async () => {
     // The failure that shaped this: on a database the CLI has never
     // migrated, CREATE ROLE succeeded and the first GRANT failed on the
-    // missing schema — stranding a grant-less role behind the
-    // already-exists refusal. The precondition has to fire first.
+    // missing schema, stranding a grant-less role behind the already-exists
+    // refusal. The precondition has to fire first.
     const harness = fake(false, false);
     await expect(
       runPlannerCreate({ connect: harness.connect }),
@@ -210,9 +210,9 @@ describe("planner drop", () => {
     "postgresql://migration_planner.ref:pw@pooler.example.com:5432/postgres";
 
   it("revokes before dropping, in one transaction, and blanks the dead DB_URL", async () => {
-    // DROP ROLE alone fails on a role that still holds grants — and a role
-    // being dropped for the WRONG shape is exactly the one whose grants
-    // this command cannot enumerate, so DROP OWNED goes first.
+    // DROP ROLE alone fails on a role that still holds grants. A role being
+    // dropped for the WRONG shape is exactly the one whose grants this
+    // command cannot enumerate, so DROP OWNED goes first.
     files.map.set(".env.preflight", `DB_URL="${PLANNER_URL}"\n`);
     const harness = fake(true);
     await runPlannerDrop({ connect: harness.connect });
@@ -220,7 +220,7 @@ describe("planner drop", () => {
     expect(harness.statements).toEqual([
       "begin",
       // Membership first: Supabase's postgres is CREATEROLE, not superuser,
-      // and DROP OWNED requires being a MEMBER of the role — creating it is
+      // and DROP OWNED requires being a MEMBER of the role. Creating it is
       // not enough, which the first real run proved with a permission
       // denial.
       "grant migration_planner to current_user",
@@ -235,7 +235,7 @@ describe("planner drop", () => {
 
   it("leaves a DB_URL that is not the planner's alone", async () => {
     // A hand-set URL under this key is somebody's deliberate state, whatever
-    // it is — blanking it would destroy information the drop knows nothing
+    // it is. Blanking it would destroy information the drop knows nothing
     // about.
     files.map.set(
       ".env.preflight",

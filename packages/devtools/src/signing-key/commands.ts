@@ -1,22 +1,22 @@
 /**
- * `pnpm devtools signing-key <generate|import|status> --target <t>` — the
+ * `pnpm devtools signing-key <generate|import|status> --target <t>`, the
  * lifecycle of SUPABASE_JWT_SIGNING_KEY, the HS256 secret that
  * `deploy mint-token` signs the sandbox proxy token with.
  *
- * An operator group like `planner`, and NOT a `deploy` subcommand, for the
- * same reasons: it prompts, it writes env files, and it holds
- * SUPABASE_ACCESS_TOKEN — the apply-tier credential no unattended job outside
+ * An operator group like `planner`, not a `deploy` subcommand, for the same
+ * reasons: it prompts, it writes env files, and it holds
+ * SUPABASE_ACCESS_TOKEN, the apply-tier credential no unattended job outside
  * `production-apply` may see. The deploy pipeline only ever READS the key
- * (`mint-token`); everything that creates or registers it is a human's move.
+ * (`mint-token`); creating and registering it is a human's move.
  *
- *   generate  mint the secret locally and write it into .env.<target> —
- *             the only copy is the one just written, which is the point:
- *             Supabase's key store is non-extractable, so the side that
- *             signs has to be the side that minted
+ *   generate  mint the secret locally and write it into .env.<target>. The
+ *             only copy is the one just written: Supabase's key store is
+ *             non-extractable, so the side that signs has to be the side that
+ *             minted
  *   import    register that secret with the target's Supabase project as a
  *             shared-secret signing key (Management API). It lands in
  *             `standby`, which verifies custom JWTs without touching what
- *             signs user sessions — rotation to `in_use` stays a deliberate
+ *             signs user sessions. Rotation to `in_use` stays a deliberate
  *             dashboard action
  *   status    list the project's signing keys, so "did the import land" has
  *             an answer that is not the dashboard
@@ -42,7 +42,7 @@ import {
 
 export const SIGNING_KEY = "SUPABASE_JWT_SIGNING_KEY";
 
-/** The deployed targets that hold a signing key — nothing here defaults one. */
+/** The deployed targets that hold a signing key. Nothing here defaults one. */
 const TARGETS = ["staging", "production"] as const;
 type SigningKeyTarget = (typeof TARGETS)[number];
 
@@ -74,9 +74,9 @@ async function readDoc(target: SigningKeyTarget): Promise<{
 }
 
 /**
- * 384 bits, base64url — 64 characters, comfortably past the 32-character
- * schema floor and mint-token's own check. The alphabet needs no quoting in
- * an env file and no escaping anywhere the value travels.
+ * A new signing secret: 384 bits as base64url, 64 characters, past the
+ * 32-character schema floor and mint-token's own check. The alphabet needs no
+ * quoting in an env file and no escaping anywhere the value travels.
  */
 export function generateSigningSecret(): string {
   return randomBytes(48).toString("base64url");
@@ -91,9 +91,9 @@ export async function runSigningKeyGenerate(
   const existing = doc.get(SIGNING_KEY);
   if (existing) {
     // Overwriting is rotation, and rotation has consequences the file cannot
-    // see: every outstanding sandbox token dies, and the copy already
-    // imported into Supabase stops matching this file. Confirmed, not
-    // refused — rotation is a legitimate reason to be here.
+    // see: every outstanding sandbox token dies, and the copy already imported
+    // into Supabase stops matching this file. Confirmed, not refused, because
+    // rotation is a legitimate reason to be here.
     const go = unwrap(
       await confirm({
         message:

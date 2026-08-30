@@ -3,19 +3,18 @@
  *
  *   | `--target`    | File              | Bitwarden project | `DEPLOY_ENV`? |
  *   |---------------|-------------------|-------------------|---------------|
- *   | `development` | `.env`            | — none            | yes           |
+ *   | `development` | `.env`            | none              | yes           |
  *   | `preflight`   | `.env.preflight`  | `preflight`       | **no**        |
  *   | `staging`     | `.env.staging`    | `staging`         | yes           |
  *   | `production`  | `.env.production` | `production`      | yes           |
  *
  * ⚠️ ONE TABLE, ON PURPOSE. This used to be two enums that overlapped in the
- * middle and diverged at both ends — a `DeployEnvironment`
+ * middle and diverged at both ends: a `DeployEnvironment`
  * (`development | staging | production`, deciding WHICH FILE) in this package,
  * and a `BwsEnvironment` (`preflight | staging | production`, deciding WHICH
- * VAULT PROJECT) in devtools — behind a single `--env` flag that meant
- * whichever of the two the subcommand happened to import. The result was not a
- * type error anywhere, because the words `staging` and `production` are in
- * both:
+ * VAULT PROJECT) in devtools, behind a single `--env` flag that meant whichever
+ * of the two the subcommand happened to import. That was not a type error
+ * anywhere, because the words `staging` and `production` are in both:
  *
  *   * `init --env staging` created `.env.staging`, mapping target → file;
  *   * `push --env staging` read the root `.env`, because its path helper
@@ -27,8 +26,8 @@
  * staging values into the development `.env` and never created the file the
  * error was about, so the error repeated.
  *
- * Neither subcommand was wrong about its own enum. The fix is therefore not a
- * better check but a smaller vocabulary: one row per target, every per-target
+ * Neither subcommand was wrong about its own enum, so the fix is a smaller
+ * vocabulary rather than a better check: one row per target, every per-target
  * fact read from that row, and the two old enums derived as SUBSETS of it
  * (`DeployEnvironment`, `VaultTarget`) rather than maintained beside it. A
  * future subcommand can pick a wrong target; it can no longer pick the wrong
@@ -63,14 +62,14 @@ export interface TargetSpec {
    * Bitwarden Secrets Manager project *name*, or `null` when nothing backs it.
    *
    * A name, not an id. A project id is a UUID that means nothing without a
-   * token, so committing one would leak nothing — but it would rot. Ids change
-   * when a project is recreated (which is exactly what happens after a botched
-   * rotation), and a stale id fails as "project not found" rather than as
+   * token, so committing one would leak nothing, but it would rot. Ids change
+   * when a project is recreated, which is what happens after a botched
+   * rotation, and a stale id fails as "project not found" rather than as
    * anything actionable. Resolving by name costs one API call and cannot go
    * stale silently.
    */
   project: string | null;
-  /** Whether `DEPLOY_ENV` may name this target — i.e. whether an app boots from it. */
+  /** Whether `DEPLOY_ENV` may name this target, i.e. whether an app boots from it. */
   deployEnv: boolean;
   /** Extra confirmation before writing anywhere on this target's behalf. */
   guarded: boolean;
@@ -111,12 +110,12 @@ type TargetTable = typeof TARGETS;
 
 export type EnvTarget = keyof TargetTable;
 
-/** Targets with a Bitwarden project — the ones `pull`/`push`/`audit` accept. */
+/** Targets with a Bitwarden project, the ones `pull`/`push`/`audit` accept. */
 export type VaultTarget = {
   [K in EnvTarget]: TargetTable[K]["project"] extends string ? K : never;
 }[EnvTarget];
 
-/** Targets `DEPLOY_ENV` may name — the ones `with-env` will load a file for. */
+/** Targets `DEPLOY_ENV` may name, the ones `with-env` will load a file for. */
 export type DeployEnvironment = {
   [K in EnvTarget]: TargetTable[K]["deployEnv"] extends true ? K : never;
 }[EnvTarget];
@@ -130,7 +129,7 @@ export const VAULT_TARGETS = ENV_TARGETS.filter(
 /**
  * A non-empty tuple type because `z.enum()` requires one, and derived rather
  * than written out because a hand-kept copy is a copy that can disagree with
- * the table. `preflight` is absent here and that is the point — see
+ * the table. `preflight` is absent here and that is the point, see
  * `resolveEnvironment()`.
  *
  * The emptiness check is real rather than an assertion: an empty list would
@@ -186,23 +185,24 @@ export function isGuarded(target: EnvTarget): boolean {
  *
  * ⚠️ DERIVED FROM `deployEnv: false`, and that is a rule rather than a
  * coincidence about the one row that has it. A target no app boots from exists
- * for one purpose: to feed CI's plan jobs — migration and schema DRY RUNS —
- * and a plan job is narrow by construction. It reads, it reports, it changes
- * nothing. So there is no credential such a target needs that a deployed one
- * does not, and the moment a row stops being a deploy environment it also stops
- * having any claim on the deployed credential set. A future non-booting target
- * inherits that, correctly, without anyone remembering to say so.
+ * for one purpose: to feed CI's plan jobs, which are migration and schema DRY
+ * RUNS, and a plan job is narrow by construction. It reads, it reports, it
+ * changes nothing. So there is no credential such a target needs that a
+ * deployed one does not, and the moment a row stops being a deploy environment
+ * it also stops having any claim on the deployed credential set. A future
+ * non-booting target inherits that, correctly, without anyone remembering to
+ * say so.
  *
  * A `membership` column saying the same thing was the obvious alternative and
  * is the worse one: it encodes this partition twice, and the two copies can
- * disagree silently in exactly the bad direction — `deployEnv: false` beside a
+ * disagree silently in exactly the bad direction. `deployEnv: false` beside a
  * membership of "everything" is a non-booting target holding every
  * production-shaped secret, which is what `preflight` was until this existed.
  * `keysRoutedTo("preflight")` returned all 45 routable keys,
  * `SUPABASE_JWT_SIGNING_KEY` and `GH_APP_PRIVATE_KEY` included, into a
  * project whose GitHub environment is reachable from `main`.
  *
- * The other half — WHICH keys — cannot be derived from this table at all, and
+ * The other half, WHICH keys, cannot be derived from this table at all, and
  * lives on the declarations as `EnvMeta.narrowed`.
  */
 export function holdsOnlyNarrowedKeys(target: EnvTarget): boolean {
@@ -223,9 +223,8 @@ export class UnknownEnvironmentError extends Error {
  *
  * ⚠️ AN ALLOWLIST, NOT A PARSE, and the difference is not pedantry. Treating
  * the value as a filename suffix means `DEPLOY_ENV=example` loads
- * `.env.example` — which is a real, committed file whose placeholder values
- * pass most of the schema. The app boots, looks configured, and is pointed at
- * nothing.
+ * `.env.example`, a real committed file whose placeholder values pass most of
+ * the schema. The app boots, looks configured, and is pointed at nothing.
  *
  * The failure mode of an unrecognised value is worse than "not found" in the
  * other direction too: the old `switchEnvironment()` treated anything that was
@@ -234,7 +233,7 @@ export class UnknownEnvironmentError extends Error {
  * Configured and wrong, in both directions at once.
  *
  * ⚠️ `DEPLOY_ENV=preflight` IS REFUSED, and that is not an oversight left over
- * from the two-enum era — do not "fix" the inconsistency by adding it. A
+ * from the two-enum era. Do not "fix" the inconsistency by adding it. A
  * `preflight` row exists in the table because `.env.preflight` is a staging
  * area for pushing credentials into the preflight vault project: someone runs
  * `env init --target preflight`, fills the file in, and pushes it. Nothing

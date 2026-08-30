@@ -1,7 +1,7 @@
 /**
  * `devtools docs index`, which used to be `apps/platform/scripts/index-docs.ts`.
  *
- * The predecessor had no tests — it was a top-level `await main()` in a file
+ * The predecessor had no tests. It was a top-level `await main()` in a file
  * with a `process.exit(0)` at the bottom, which is most of why moving it was
  * worth doing. The properties that matter are the two the deploy depends on:
  * it refuses a non-local database unless told, and the delete that makes that
@@ -123,9 +123,9 @@ describe("runDocsIndex", () => {
 
   /**
    * The property both deploy scripts rely on. Without `--force` and with
-   * nobody to ask, a non-local URL must not be written to at all — this is
-   * what stands between a contributor's working copy and the live search
-   * index, since the delete removes every path the copy does not have.
+   * nobody to ask, a non-local URL must not be written to at all. That is what
+   * stands between a contributor's working copy and the live search index,
+   * since the delete removes every path the copy does not have.
    */
   it("refuses a non-local database when it cannot ask and was not forced", async () => {
     process.env.DB_URL = "postgresql://u:p@db.abc.supabase.co:5432/postgres";

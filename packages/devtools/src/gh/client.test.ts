@@ -4,11 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * The argv each `gh` call builds, and what travels on stdin.
  *
  * Every other suite mocks this module wholesale, so the flags below are
- * covered nowhere else — and this is the layer where being wrong is silent: a
+ * covered nowhere else, and this is the layer where being wrong is silent: a
  * bad flag returns the wrong scope rather than failing. Two of them are
  * load-bearing by their ABSENCE (`listRepositoryVariables` has no `--env`;
- * `stdin.end(value)` has no trailing newline), which is exactly the kind of
- * claim a wholesale mock cannot make.
+ * `stdin.end(value)` has no trailing newline), which is exactly the claim a
+ * wholesale mock cannot make.
  *
  * `child_process` is faked at the module boundary; nothing here can tell you
  * what `gh` itself does with these calls.
@@ -35,7 +35,7 @@ const fake = vi.hoisted(() => {
   };
 
   // `client.ts` promisifies execFile at import, so the fake carries the
-  // registered promisify symbol — without it, promisify would resolve the
+  // registered promisify symbol. Without it, promisify would resolve the
   // bare stdout string and `const { stdout } = …` would come apart.
   const execFile: {
     (...args: unknown[]): void;
@@ -189,7 +189,7 @@ describe("the set calls", () => {
       "staging",
     ]);
     expect(lastSpawn().options.shell).toBe(false);
-    // Not in argv anywhere — `ps` reads argv.
+    // Not in argv anywhere: `ps` reads argv.
     expect(lastSpawn().args).not.toContain("s3cret");
     // And no trailing newline: `gh` stores stdin verbatim, so a stray "\n"
     // becomes part of the secret and every later comparison reads as a wrong

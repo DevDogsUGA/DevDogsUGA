@@ -4,22 +4,22 @@
  * Every console page resolves through `getCallerContext()`, which reads
  * `resolvedUserPermissions`. A user with no roles resolves to
  * all-permissions-false, so on a freshly reset database the console is simply
- * invisible: no error, nothing to click. Somebody has to be able to hold the
- * first role, and on a throwaway instance that somebody is you.
+ * invisible: no error, nothing to click. Somebody has to hold the first role,
+ * and on a throwaway instance that somebody is you.
  *
  * THIS REPLACES `platform.claim_root()`, an RPC any authenticated caller could
  * invoke as long as nobody already held Root, gated on the instance not
- * reporting itself as production. Both halves of that were wrong. The gate was
- * a column in a table — data that had to be set correctly on every instance,
- * could not be checked by CI, and was writable by anything holding the service
- * key. And the capability behind it is a privilege escalation by construction:
- * on a freshly reset production database with sign-up open to the university,
- * Root would have gone to whoever authenticated first.
+ * reporting itself as production. Both halves were wrong. The gate was a column
+ * in a table: data that had to be set correctly on every instance, could not be
+ * checked by CI, and was writable by anything holding the service key. And the
+ * capability behind it is a privilege escalation by construction. On a freshly
+ * reset production database with sign-up open to the university, Root would
+ * have gone to whoever authenticated first.
  *
- * What makes this safe is not a check but a credential. It writes the row with
- * the service key, which is read from `supabase status` — so the authorization
- * is "you already control this database", which is the only true statement
- * available. The equivalent by hand is one INSERT in the Supabase dashboard.
+ * What makes this safe is a credential, not a check. It writes the row with the
+ * service key, read from `supabase status`, so the authorization is "you
+ * already control this database". That is the only true statement available.
+ * By hand the equivalent is one INSERT in the Supabase dashboard.
  */
 import { adminClient, ROOT_ROLE_ID, type Instance } from "./instance.js";
 
@@ -49,7 +49,7 @@ export async function currentRootHolder(
   return { userId, email: user.user?.email ?? "(no email)" };
 }
 
-/** Everyone who could be granted it, newest first. */
+/** Everyone who could be granted it, sorted by email. */
 export async function listCandidates(
   instance: Instance,
 ): Promise<RootHolder[]> {
@@ -66,7 +66,7 @@ export async function listCandidates(
  * Writes the Root grant.
  *
  * `userRoles_root_singleton` is a unique index, so a second grant fails at the
- * database rather than here — this check exists to fail with a sentence a
+ * database rather than here. This check exists to fail with a sentence a
  * contributor can act on, the same reasoning the RPC's version had.
  */
 export async function grantRoot(

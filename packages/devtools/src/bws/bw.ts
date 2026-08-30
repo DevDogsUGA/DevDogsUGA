@@ -1,5 +1,5 @@
 /**
- * `pnpm devtools bw …` — the Bitwarden CLI, passed through untouched.
+ * `pnpm devtools bw …`, the Bitwarden CLI passed through untouched.
  *
  * This is not a command of this CLI wearing a Bitwarden hat. Everything after
  * `bw` goes to the real binary verbatim, and its exit code comes back
@@ -8,8 +8,8 @@
  *
  * It exists because `@bitwarden/cli` is a dependency of this package, so the
  * binary sits in devtools' own `node_modules/.bin` and nowhere else. Before
- * this, reaching it meant a root alias (`pnpm bw`) that did
- * `pnpm --filter @devdogsuga/devtools exec bw` — the last script at the
+ * this, reaching it meant a root alias (`pnpm bw`) that ran
+ * `pnpm --filter @devdogsuga/devtools exec bw`, the last script at the
  * workspace root whose whole job was to reach into this package.
  *
  * ⚠️ `cwd` is deliberately NOT overridden, unlike the turbo spawn in

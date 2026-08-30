@@ -5,15 +5,12 @@ import { hashToken } from "./token";
 /**
  * What the proxy must refuse.
  *
- * Every test here is a negative: the assertions are about requests that must
- * NOT reach upstream, and keys that must NOT be handed out. That framing is
- * deliberate. A proxy's happy path is easy to eyeball in review and easy to
- * notice when broken -- a member says "it doesn't work". A hole is silent, and
- * the person who finds it is not on our side.
+ * Every test here is a negative: requests that must NOT reach upstream, keys
+ * that must NOT be handed out. A broken happy path gets reported by a member.
+ * A hole is silent, and whoever finds it is not on our side.
  *
- * The mock upstream records every request it receives, so "never reached
- * upstream" is asserted against what actually arrived rather than inferred from
- * a status code.
+ * The mock upstream records every request, so "never reached upstream" is
+ * asserted against what arrived rather than inferred from a status code.
  */
 
 const PUB = "dd_publishable_aaaaaaaaaaaaaaaa";
@@ -43,10 +40,10 @@ let logged: { credentialId: string; status: number; path: string }[] = [];
 /**
  * What `defer` was handed.
  *
- * The double used to be `void work`, which drops the promise unexecuted -- so
- * index.ts's documented "a failed audit write must not fail a request that
- * already succeeded" had no coverage at all, and a rejection here could not
- * have been noticed. Collected so a test can await them.
+ * The double used to be `void work`, which drops the promise unexecuted, so
+ * index.ts's "a failed audit write must not fail a request that already
+ * succeeded" had no coverage and a rejection here went unnoticed. Collected so
+ * a test can await them.
  */
 let deferred: Promise<unknown>[] = [];
 
@@ -61,13 +58,13 @@ function ok(scope: "publishable" | "secret"): Resolution {
     publishableKey: REAL_PUBLISHABLE,
     environmentName: "Env A",
   };
-  // The database returns null for a publishable credential. Mirroring that
-  // here is what makes the "cannot be elevated" tests meaningful -- if the
-  // mock handed back a secret key for both scopes, the proxy could be leaking
-  // it and these tests would still pass.
+  // The database returns null for a publishable credential. Mirroring that is
+  // what makes the "cannot be elevated" tests meaningful: if the mock handed
+  // back a secret key for both scopes, the proxy could be leaking it and these
+  // tests would still pass.
   //
   // `scope` and `secretKey` are one discriminated pair in `Resolution`, so this
-  // is now the only shape that TYPECHECKS as well as the only one the database
+  // is the only shape that TYPECHECKS as well as the only one the database
   // produces.
   return scope === "secret"
     ? { ...base, scope: "secret", secretKey: REAL_SECRET }
@@ -208,9 +205,9 @@ describe("requests carrying no usable credential", () => {
     );
     expect(new Set(bodies).size).toBe(1);
     // Pinned to the answer we mean. Uniformity alone is satisfied by any
-    // blanket outcome -- a total outage answers all three identically too --
-    // so it cannot distinguish "deliberately indistinguishable" from "broken
-    // in the same way three times".
+    // blanket outcome; a total outage answers all three identically too. So it
+    // cannot distinguish "deliberately indistinguishable" from "broken in the
+    // same way three times".
     expect(JSON.parse(bodies[0]!)).toMatchObject({
       code: "invalid_credential",
     });
@@ -230,19 +227,16 @@ describe("the secret key", () => {
 
   it("is refused even if the database hands one to a publishable credential", async () => {
     // The independent check. Every other test in this block passes because the
-    // SQL withholds the key, which means they verify the database rather than
-    // the proxy -- confirmed by negative control: deleting the proxy's
-    // elevation check broke none of them.
+    // SQL withholds the key, so they verify the database, not the proxy:
+    // deleting the proxy's elevation check broke none of them.
     //
-    // So this one feeds a deliberately malformed resolution: publishable scope
+    // This one feeds a deliberately malformed resolution: publishable scope
     // carrying a secret key, which `resolve_sandbox_credential` will not
-    // produce today. If it ever does -- a regressed CASE expression, a
-    // hand-written call site -- the proxy must still refuse to use it.
-    //
-    // `Resolution` no longer ADMITS this pairing -- `scope` and `secretKey` are
-    // one discriminated pair -- so the cast is the test's whole point: it
-    // reaches past the type to check that the runtime still refuses a row the
-    // compiler would have caught.
+    // produce today. If a regressed CASE expression or a hand-written call site
+    // ever does produce it, the proxy must still refuse. `Resolution` no longer
+    // ADMITS the pairing, `scope` and `secretKey` being one discriminated pair,
+    // so the cast is the point: it reaches past the type to check that the
+    // runtime still refuses a row the compiler would have caught.
     const deps = await makeDeps({
       resolve: () =>
         Promise.resolve({
@@ -320,9 +314,9 @@ describe("the member token", () => {
         await makeDeps(),
       );
       // The positive assertion FIRST. `not.toContain` over a stringified array
-      // is satisfied by `[]`, so without this the suite's flagship leak guard
-      // stayed green for a proxy that forwarded nothing at all -- it could not
-      // tell a leak-free forward from a total refusal.
+      // is satisfied by `[]`, so without this the flagship leak guard stayed
+      // green for a proxy that forwarded nothing at all. It could not tell a
+      // leak-free forward from a total refusal.
       expect(upstreamCalls).toHaveLength(1);
       expect(JSON.stringify(upstreamCalls)).not.toContain(token);
     }
@@ -402,14 +396,14 @@ describe("the path allowlist", () => {
       await makeDeps(),
     );
     // Whatever it is classified as, the URL sent upstream must be the
-    // normalized one -- the origin must not see a different path than we judged.
+    // normalized one. The origin must not see a different path than we judged.
     expect(upstreamCalls).toHaveLength(1);
     expect(new URL(upstreamCalls[0]!.url).pathname).toBe("/rest/v1/secrets");
   });
 
   it("refuses an unknown path before checking anything else", async () => {
     const res = await handleProxyRequest(req("/admin"), await makeDeps());
-    // No credential -> 401, not 404: the path surface is not enumerable by
+    // No credential gives 401, not 404: which paths exist is not enumerable by
     // anonymous callers.
     expect(res.status).toBe(401);
   });
@@ -535,7 +529,7 @@ describe("upstream failure", () => {
 describe("the member token in a query string", () => {
   it("never reaches upstream on a non-realtime path", async () => {
     // `target.search = url.search` copies the query verbatim, and the rewrite
-    // used to be gated on realtime -- so a REST request carrying `?apikey=`
+    // used to be gated on realtime, so a REST request carrying `?apikey=`
     // handed the member's token to Supabase inside a URL, where it lands in
     // their access logs. The header token is what authenticates; the query
     // parameter is ignored for auth and rewritten regardless.
@@ -589,7 +583,7 @@ describe("CORS", () => {
 
   it("answers a preflight, which cannot carry a credential", async () => {
     // The browser strips `apikey` and `Authorization` from a preflight by
-    // design, so the credential check refused every one of them -- and since
+    // design, so the credential check refused every one of them. And since
     // `apikey` makes every supabase-js call preflighted, that was every
     // cross-origin browser request. Real Supabase answers its own preflights,
     // so the same code worked in production and failed here.
@@ -629,8 +623,8 @@ describe("CORS", () => {
   });
 
   it("does not intercept a non-preflight OPTIONS", async () => {
-    // PostgREST answers OPTIONS on a table. Only a real preflight -- Origin
-    // plus Access-Control-Request-Method -- is short-circuited.
+    // PostgREST answers OPTIONS on a table. Only a real preflight, meaning
+    // Origin plus Access-Control-Request-Method, is short-circuited.
     await handleProxyRequest(
       req("/rest/v1/notes", { token: PUB, method: "OPTIONS" }),
       await makeDeps(),
@@ -640,8 +634,7 @@ describe("CORS", () => {
 
   it("puts the named error code within reach of a browser", async () => {
     // Without an Access-Control-Allow-Origin on the ERROR, the browser reports
-    // an opaque CORS failure and the `code` we went to the trouble of naming
-    // never reaches the console.
+    // an opaque CORS failure and the named `code` never reaches the console.
     const res = await handleProxyRequest(
       new Request(`https://${HOST_OK}/rest/v1/notes`, {
         headers: {
@@ -659,9 +652,10 @@ describe("CORS", () => {
 describe("a WebSocket handshake", () => {
   it("is returned unreconstructed", async () => {
     // `new Response` rejects any status outside 200-599, so rebuilding a 101
-    // threw RangeError -- outside the try around the upstream fetch, so it
-    // escaped the handler and Cloudflare served a 1101 with no audit row. The
-    // `webSocket` handle would not have survived the copy either.
+    // threw RangeError. That throw sat outside the try around the upstream
+    // fetch, so it escaped the handler and Cloudflare served a 1101 with no
+    // audit row. The `webSocket` handle would not have survived the copy
+    // either.
     const handshake = {
       status: 101,
       webSocket: { accept() {} },
@@ -678,10 +672,10 @@ describe("a WebSocket handshake", () => {
   });
 
   it("carries the member token in Sec-WebSocket-Protocol as a credential", async () => {
-    // A browser `new WebSocket(url, ['dd_publishable_...'])` sets no headers --
-    // which is the whole reason this carve-out exists -- yet the header was
-    // only ever REWRITTEN on the way out, never READ on the way in, so the
-    // handshake it was written for was answered 401.
+    // A browser `new WebSocket(url, ['dd_publishable_...'])` sets no headers,
+    // which is the whole reason this carve-out exists. Yet the header was only
+    // ever REWRITTEN on the way out, never READ on the way in, so the handshake
+    // it was written for was answered 401.
     const res = await handleProxyRequest(
       new Request(`https://${HOST_OK}/realtime/v1/websocket`, {
         headers: {
@@ -738,7 +732,7 @@ describe("a WebSocket handshake", () => {
 describe("a platform that cannot be asked", () => {
   it("is a 503 with a retry hint, not a permanent 410", async () => {
     // Folded into `unknown_host`, an outage told every member on every host
-    // "No sandbox environment answers to this hostname" -- the same words used
+    // "No sandbox environment answers to this hostname", the same words used
     // for a hostname that never existed, and 410 means permanently gone. The
     // proxy token carries a 90-day exp, so this is a scheduled event.
     const res = await handleProxyRequest(
@@ -813,8 +807,8 @@ describe("a broken session", () => {
   it("is refused rather than answered as anon", async () => {
     // `Bearer ${userJwt ?? upstreamKey}` substituted the PROJECT KEY for a
     // bearer it could not parse, so an expired or corrupted session got a 200
-    // as `anon` where real Supabase answers 401 -- a sandbox succeeding where
-    // production fails, which is the one outcome this proxy exists to prevent.
+    // as `anon` where real Supabase answers 401. A sandbox succeeding where
+    // production fails is the one outcome this proxy exists to prevent.
     const res = await handleProxyRequest(
       req("/rest/v1/notes", {
         token: PUB,
@@ -851,9 +845,9 @@ describe("the response path", () => {
   it("keeps the OAuth return leg pointing at the proxy", async () => {
     // With `redirect: "manual"` the client follows this Location itself. The
     // project origin is buried in `redirect_uri`, so rewriting only the URL's
-    // own origin would still send the callback -- and the session cookie it
-    // sets -- to a domain this proxy never sees, where revoking the member
-    // token stops nothing.
+    // own origin would still send the callback, and the session cookie it sets,
+    // to a domain this proxy never sees, where revoking the member token stops
+    // nothing.
     const res = await handleProxyRequest(
       req("/auth/v1/authorize?provider=github", { token: PUB }),
       await makeDeps({
@@ -973,7 +967,7 @@ describe("the body cap", () => {
     expect(upstreamCalls).toEqual([]);
     // Enough to reach the cap, plus the one chunk that breaches it, plus the
     // one the stream keeps queued ahead of the reader. Bounded by the cap
-    // either way -- the point is that it is not 400, which is what
+    // either way. The point is that it is not 400, which is what
     // `arrayBuffer()` would have pulled before measuring anything.
     expect(state.pulled).toBeLessThanOrEqual(MAX_BODY_BYTES / chunk + 2);
     expect(state.pulled * chunk).toBeLessThan(2 * MAX_BODY_BYTES);

@@ -1,5 +1,5 @@
 /**
- * `devtools docs index` — the documentation search index.
+ * `devtools docs index` writes the documentation search index.
  *
  * ## Why it lives here
  *
@@ -7,9 +7,9 @@
  * the repository run from more than one place: `pnpm docs:index` by a
  * contributor, and `pnpm docs:index --force` by BOTH deploy scripts, ahead of
  * every staging and production release. A step the deploy depends on is not an
- * app's private tooling, and the rest of that class — `deploy write-env`,
- * `secrets-file`, `orphans`, `preflight`, `mint-token`, `require-token` —
- * moved into this package already, for the reasons `cli.ts` gives.
+ * app's private tooling, and the rest of that class (`deploy write-env`,
+ * `secrets-file`, `orphans`, `preflight`, `mint-token`, `require-token`) moved
+ * into this package already, for the reasons `cli.ts` gives.
  *
  * The three that stayed behind in `apps/platform/scripts/` each have exactly
  * one caller and are about the platform's own generated sources:
@@ -19,10 +19,10 @@
  *
  * ## Why raw SQL rather than Drizzle
  *
- * The predecessor imported `~/server/db` and `~/server/db/schema`, which is a
- * package reaching into an app — the wrong direction, and it would have
- * dragged the platform's whole generated schema into a CLI that installs on a
- * fresh clone. Four columns of one table do not need an ORM, and this package
+ * The predecessor imported `~/server/db` and `~/server/db/schema`, a package
+ * reaching into an app. That is the wrong direction, and it would have dragged
+ * the platform's whole generated schema into a CLI that installs on a fresh
+ * clone. Four columns of one table do not need an ORM, and this package
  * already talks to Postgres exactly this way (see `planner/db.ts`).
  *
  * `search` is a generated column, so this writes title/description/plainText
@@ -44,7 +44,7 @@ export interface DocsPage {
  * The seam, kept as narrow as `planner/db.ts`'s.
  *
  * Parameterised rather than that module's `run(text)`: page content is the one
- * thing here that is not a constant, and it is markdown — apostrophes,
+ * thing here that is not a constant, and it is markdown, with apostrophes,
  * dollar-quoting, whatever a contributor writes. Nothing is interpolated.
  */
 export interface DocsDb {
@@ -144,9 +144,9 @@ export async function indexPages(
  * Loads the built artifact.
  *
  * Imported dynamically so that `@devdogsuga/docs` is only needed by the one
- * command that reads it. Every other command in this CLI — `setup` most of
- * all, which runs on a clone where nothing is built yet — must not pay for a
- * docs build to start.
+ * command that reads it. Every other command in this CLI must not pay for a
+ * docs build to start, `setup` most of all: it runs on a clone where nothing
+ * is built yet.
  */
 async function loadPages(): Promise<readonly DocsPage[]> {
   const { pages } = (await import("@devdogsuga/docs")) as {

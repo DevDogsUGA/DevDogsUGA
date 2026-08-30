@@ -3,9 +3,8 @@
  *
  * The interesting cases are all `"unknown"`. A probe that cannot read the
  * machine must leave the menu exactly as it was, and every assertion below
- * that mentions `"unknown"` is guarding that: the failure mode this design
- * has to avoid is a tool that hides the command you were looking for because
- * a subprocess timed out.
+ * that mentions `"unknown"` guards that. The failure mode to avoid is a tool
+ * that hides the command you were looking for because a subprocess timed out.
  */
 import { describe, expect, it } from "vitest";
 import type { Condition } from "./commands.js";
@@ -42,9 +41,9 @@ describe("holds", () => {
   });
 
   /**
-   * The negation of an unreadable fact is still unreadable — not its opposite.
+   * The negation of an unreadable fact is still unreadable, not its opposite.
    * Collapsing this to `"yes"` would offer `stop` on a machine where nothing
-   * is known to be running, which is the inverse of the point.
+   * is known to be running, the inverse of the point.
    */
   it("keeps unknown unknown through the negation", () => {
     for (const condition of CONDITIONS) {
@@ -99,8 +98,8 @@ describe("blockedBecause", () => {
   it("has a phrase for every condition", () => {
     for (const condition of CONDITIONS) {
       const unmet: Environment = { docker: "no", stack: "yes", envFile: "no" };
-      // `stack-stopped` is the one that is unmet when the stack is UP, so this
-      // environment leaves exactly one condition met and the rest blocked --
+      // `stack-stopped` is the one unmet when the stack is UP, so this
+      // environment leaves exactly one condition met and the rest blocked:
       // enough to prove no condition renders as `undefined`.
       const reason = blockedBecause({ needs: condition }, unmet);
       if (reason !== null) expect(reason, condition).not.toContain("undefined");
@@ -126,11 +125,11 @@ describe("probeEnvironment", () => {
   /**
    * Total, whatever this machine is.
    *
-   * Asserted on shape rather than values because the values are the machine
-   * the suite happens to run on — CI has no Docker, a contributor's laptop
-   * may. What must hold everywhere is that it answers rather than throwing:
-   * every caller treats it as a fact it can read, and a throw here would take
-   * down the menu before it printed anything.
+   * Asserted on shape rather than values because the values are whatever
+   * machine the suite runs on: CI has no Docker, a contributor's laptop may.
+   * What must hold everywhere is that it answers rather than throwing. Every
+   * caller treats it as a fact it can read, and a throw here would take down
+   * the menu before it printed anything.
    */
   it("answers with a well-formed environment and never throws", () => {
     const env = probeEnvironment();

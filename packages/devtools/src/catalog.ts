@@ -3,16 +3,16 @@
  *
  * Neither half of that question had an answer in the CLI before. `doctor` comes
  * closest, but it runs `conformance_check()` for a single app and reports
- * pass/fail per content type -- a diagnostic, not a listing -- and it says
+ * pass/fail per content type, a diagnostic rather than a listing, and it says
  * nothing about reasons at all.
  *
  * It matters more now than it used to, because both halves stopped being
  * editable at runtime. Content types are derived from each app's own schema and
  * report reasons are a platform-owned enum, so there is no configuration page
- * to open and look at; the database is the only source of truth, and this is
+ * to open and look at. The database is the only source of truth, and this is
  * how a contributor reads it. `docs/platform/reporting-and-feedback.md` carries
  * a copy of the reason list for people who are not at a terminal, but that copy
- * is maintained by hand and says so -- this is what settles a disagreement.
+ * is maintained by hand and says so. This is what settles a disagreement.
  *
  * Both calls run as the seeded moderator rather than through an admin client.
  * `list_content_types` is `security definer` behind a `canModerate` check, so
@@ -67,11 +67,10 @@ export async function readCatalog(instance: Instance): Promise<Catalog> {
 /**
  * Formats the catalog for `note()`.
  *
- * Content types are grouped by app because that is how a contributor thinks
- * about them -- "what does *my* app expose?" -- and a type that cannot be
- * quarantined or cannot be addressed is called out inline rather than left to
- * be inferred from a blank column. Those are the two states that look like
- * working configuration and are not.
+ * Content types are grouped by app, because a contributor asks "what does *my*
+ * app expose?". A type that cannot be quarantined or cannot be addressed is
+ * called out inline rather than left to be inferred from a blank column. Those
+ * are the two states that look like working configuration and are not.
  */
 export function renderCatalog(catalog: Catalog): string {
   const lines: string[] = [];

@@ -236,9 +236,9 @@ describe("platform.reports", () => {
 describe("platform.profile durable identity", () => {
   // The profile UPDATE policy is a permissive `auth.uid() = "userId"`, which
   // decides which ROW a member may write, not which columns. Keeping them out
-  // of `ugaEmail` / `legal*` is column-level grants instead, so these cases
-  // exercise a different mechanism from every other test in this file — and
-  // one that fails open if the table-wide UPDATE grant is ever restored.
+  // of `ugaEmail` / `legal*` is column-level grants instead. These cases
+  // exercise a different mechanism from every other test in this file, one
+  // that fails open if the table-wide UPDATE grant is ever restored.
   beforeAll(async () => {
     await admin().from("profile").insert({
       userId: member.userId,
@@ -301,8 +301,8 @@ describe("platform.profile durable identity", () => {
     expect(duplicate?.code).toBe("23505");
 
     // Uppercase is rejected outright rather than stored as a second identity
-    // for the same person — the import lowercases, and this is what keeps a
-    // future writer from bypassing it.
+    // for the same person. The import lowercases, and this check is what keeps
+    // a future writer from bypassing it.
     const { error: mixedCase } = await a.from("profile").insert({
       userId: suspended.userId,
       preferredName: "Suspended Persona",
@@ -402,24 +402,23 @@ describe("platform meetings, teams and attendance", () => {
       endsAt: new Date(Date.now() + 3_600_000).toISOString(),
     });
 
-    // ⚠️ The code, not just "an error happened".
+    // ⚠️ Assert the code, not that some error happened.
     //
     // `expect(insert).not.toBeNull()` was the whole assertion, and it stopped
     // meaning anything the moment this fixture went stale: PostgREST rejected
     // the insert for naming a column that no longer existed, which is an
-    // error, so the test passed — and it would have passed identically with
-    // RLS switched off entirely. A security assertion that a schema typo can
-    // satisfy is not one.
+    // error, so the test passed. It would have passed identically with RLS
+    // switched off entirely.
     //
-    // 42501 is insufficient_privilege, which is what a policy denial actually
-    // raises. PGRST204 (unknown column) and 23502 (not-null violation) now
-    // fail here instead of masquerading as a pass.
+    // 42501 is insufficient_privilege, which is what a policy denial raises.
+    // PGRST204 (unknown column) and 23502 (not-null violation) now fail here
+    // instead of masquerading as a pass.
     expect(insert?.code).toBe("42501");
   });
 
-  // The join code is the entire secret a join code consists of. A row policy
-  // cannot say "every column but one", so this is a column grant — and the
-  // case that matters is the signed-in member, not the anonymous visitor.
+  // The join code is the whole secret. A row policy cannot say "every column
+  // but one", so this is a column grant. The case that matters is the
+  // signed-in member, not the anonymous visitor.
   it("never serves joinCode to any client", async () => {
     const { error: anonRead } = await anon()
       .from("teams")
@@ -497,8 +496,8 @@ describe("platform meetings, teams and attendance", () => {
       });
       expect(granted).toBe(true);
 
-      // Granting one must not grant its neighbours — they are separate
-      // columns precisely because they have different audiences.
+      // Granting one must not grant its neighbours. They are separate
+      // columns because they have different audiences.
       const { data: neighbour } = await a.rpc("has_permission", {
         uid: member.userId,
         perm: "canExportStars",

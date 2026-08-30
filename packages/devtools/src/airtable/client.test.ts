@@ -2,7 +2,7 @@
  * Which Airtable token a command authenticates with.
  *
  * The decision is one line of `find()`, and it is the line that decides whether
- * the §3.5 dry run — which runs from `main` — holds a credential that can
+ * the §3.5 dry run, which runs from `main`, holds a credential that can
  * restructure the officers' base. `AIRTABLE_SYNC_PAT` satisfies a read as well
  * as the plan token does, so "prefers the narrower" is not observable from the
  * happy path: the read assertions below set more than one variable on purpose,
@@ -10,7 +10,7 @@
  * test.
  *
  * The write row has one entry since `AIRTABLE_PAT` was removed, so there is no
- * ordering left to get wrong there — only a fallback that must not reappear,
+ * ordering left to get wrong there, only a fallback that must not reappear,
  * which is what the disjointness test pins.
  *
  * Nothing here opens a socket. `resolveAirtableCredentials` takes both the
@@ -44,8 +44,8 @@ function resolve(need: AirtableCapability, env: NodeJS.ProcessEnv) {
 
 describe("prefer the narrower token", () => {
   it("reads with AIRTABLE_PLAN_PAT even when AIRTABLE_SYNC_PAT is also set", () => {
-    // THE test. Both are set — the state a laptop is in if somebody has pulled
-    // a CI credential into their env file — and the schema-only one has to win.
+    // THE test. Both are set, the state a laptop is in if somebody has pulled
+    // a CI credential into their env file, and the schema-only one has to win.
     const { variable } = resolve("read", {
       AIRTABLE_PLAN_PAT: "plan",
       AIRTABLE_SYNC_PAT: "sync",
@@ -54,7 +54,7 @@ describe("prefer the narrower token", () => {
   });
 
   it("prefers the narrower one whichever order the environment lists them", () => {
-    // Object key order is not the preference — the array is. Written out
+    // The array decides the preference, not object key order. Written out
     // because `find()` over `Object.keys(env)` would pass the test above on a
     // differently-ordered environment and fail on a real one.
     const { variable } = resolve("read", {
@@ -75,7 +75,7 @@ describe("the split between reading and writing", () => {
 
   it("refuses a write with only the sync token, which can read every record", () => {
     // ⚠️ The reason the write row has one entry. AIRTABLE_SYNC_PAT carries
-    // `data.records:read`/`:write` and `schema.bases:read` — enough to rewrite
+    // `data.records:read`/`:write` and `schema.bases:read`: enough to rewrite
     // every dues record and nowhere near enough to reshape the base. Letting
     // it satisfy a write would turn a named refusal into a 403 partway through
     // a schema change, and would put a schema-change path on any machine
@@ -98,7 +98,7 @@ describe("the split between reading and writing", () => {
   });
 
   it("never reaches for the write token to satisfy a read", () => {
-    // AIRTABLE_APPLY_PAT *would* work — it carries schema.bases:read too. That
+    // AIRTABLE_APPLY_PAT *would* work; it carries schema.bases:read too. That
     // is the reason to refuse it: a plan that quietly ran on the write token
     // makes the production-apply reviewer gate decorative, and nothing would
     // ever report that it had happened.
@@ -118,8 +118,8 @@ describe("the split between reading and writing", () => {
 
   it("keeps the two preference lists fully disjoint", () => {
     // The structural statement of the tests above, so a token added to one row
-    // cannot silently join the other. They share no member at all now — the
-    // one they used to share was AIRTABLE_PAT.
+    // cannot silently join the other. They share no member at all now; the one
+    // they used to share was AIRTABLE_PAT.
     expect(CREDENTIAL_PREFERENCE.read).toEqual([
       "AIRTABLE_PLAN_PAT",
       "AIRTABLE_SYNC_PAT",
@@ -163,8 +163,8 @@ describe("the refusal names what it looked at", () => {
   it("refuses an empty string the same way it refuses an unset variable", () => {
     // A workflow referencing a secret the environment does not hold
     // interpolates to "". Treating that as set builds a client that 401s from
-    // a vendor instead of naming the variable — which is exactly the silent
-    // shape this whole change exists to remove.
+    // a vendor instead of naming the variable, exactly the silent shape this
+    // whole change exists to remove.
     expect(() => resolve("read", { AIRTABLE_PLAN_PAT: "" })).toThrow(
       AirtableCredentialError,
     );
@@ -193,7 +193,7 @@ describe("the base id comes from the registry", () => {
 
   it("still honours an override, so a scratch base can be aimed at", () => {
     // The half that keeps the constant from being a hard-coding. Empty is not
-    // an override — a workflow referencing a variable the environment does not
+    // an override: a workflow referencing a variable the environment does not
     // hold interpolates to "", and that must read as "unset" rather than
     // sending the tooling at a base called "".
     expect(
@@ -216,7 +216,7 @@ describe("the base id comes from the registry", () => {
 describe("the airtable group's wrapper", () => {
   it("returns null rather than throwing, so the commands can set an exit code", () => {
     // `explain()` writes to stdout, which is fine for this group and forbidden
-    // in `deploy/` — hence two entry points onto one resolver.
+    // in `deploy/`, hence two entry points onto one resolver.
     expect(airtableClient({ need: "read", env: {}, fetch: noFetch })).toBe(
       null,
     );

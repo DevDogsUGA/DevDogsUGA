@@ -3,11 +3,11 @@
  *
  *   1. Who did Postgres authenticate? (`current_user`)
  *   2. Can it read an application schema? (it must not)
- *   3. Can it read the migrations table? (it must — the dry run is next)
+ *   3. Can it read the migrations table? (it must, the dry run is next)
  *
  * Shared between `deploy require-planner` (which turns a bad answer into a
  * red CI job) and `planner create` / `planner reset-password` (which run the
- * same checks over a fresh connection before calling the credential done) —
+ * same checks over a fresh connection before calling the credential done),
  * so "validated working" means the same thing in both places.
  *
  * ⚠️ Check 2 exists because nothing else can catch the mistake it looks for.
@@ -25,7 +25,7 @@ import type { PlannerDb } from "./db.js";
 export const CHECK_IDENTITY = "select current_user as who";
 /**
  * `platform.profile` because it exists in every tier and holds real member
- * data in production — the exact rows §3.5 refuses to put behind `main`.
+ * data in production: the exact rows §3.5 refuses to put behind `main`.
  */
 export const CHECK_OVERREACH = "select * from platform.profile limit 1";
 export const CHECK_MIGRATIONS =
@@ -33,7 +33,7 @@ export const CHECK_MIGRATIONS =
 
 export interface PlannerVerdict {
   ok: boolean;
-  /** One line per check, in the order run — the report either way. */
+  /** One line per check, in the order run; the report either way. */
   lines: string[];
   /** Set when `ok` is false: what to go and fix. */
   problem?: string;
@@ -87,9 +87,9 @@ export async function checkPlanner(db: PlannerDb): Promise<PlannerVerdict> {
       `can read supabase_migrations.schema_migrations (${String(row?.n)} rows)`,
     );
   } catch (error) {
-    // Two different diseases share this symptom, and the fix for one is a
-    // GRANT while the fix for the other is initializing the database's
-    // migration history — so the message has to say which. 3F000 is
+    // Two causes share this symptom, and the fix for one is a GRANT while
+    // the fix for the other is initializing the database's migration
+    // history, so the message has to say which. 3F000 is
     // invalid_schema_name; the text match covers drivers that drop the code.
     if (isMissingSchema(error)) {
       return {

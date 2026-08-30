@@ -19,15 +19,15 @@
  * enforced here rather than left to whoever last edited a file.
  *
  * ⚠️ THE GATE IS ONE-DIRECTIONAL, and reading it as symmetric is the mistake
- * this file made until 2026-08-17. What the gate asserts is that apply-tier
- * credentials never reach the UNREVIEWED environment — `production.excludeKeys`
- * — and nothing more. It says nothing about what the reviewed environment may
- * additionally hold, because holding more there buys no privilege: it is the
- * same Bitwarden project, and `production-apply` is the strictly MORE trusted
- * of the two. Withholding ordinary keys from it broke every job that runs
- * there — the config push wanted deploy-tier OAuth secrets, the Airtable apply
- * wanted a public base id, the orphan prune wanted a deploy-tier API token — so
- * `production-apply` now receives a SUPERSET of `production`.
+ * this file made until 2026-08-17. What the gate asserts, through
+ * `production.excludeKeys`, is that apply-tier credentials never reach the
+ * UNREVIEWED environment, and nothing more. What the reviewed environment also
+ * holds buys no privilege: it is the same Bitwarden project, and
+ * `production-apply` is the strictly MORE trusted of the two. Withholding
+ * ordinary keys from it broke every job that runs there: the config push wanted
+ * deploy-tier OAuth secrets, the Airtable apply wanted a public base id, the
+ * orphan prune wanted a deploy-tier API token. So `production-apply` now
+ * receives a SUPERSET of `production`.
  */
 import { applyOnlyKeys, planOnlyKeys } from "@devdogsuga/env";
 import { assertRegistryLoaded } from "../env/discovery.js";
@@ -56,7 +56,7 @@ export interface GithubEnvironmentSpec {
    * ⚠️ NULL ON EVERY ROW TODAY, and that is the deliberate state rather than a
    * field nobody got round to filling in. `production-apply` used to carry the
    * apply-tier pair here, on the reasoning that "holding a third credential
-   * makes the reviewer gate stop meaning anything" — which conflated two
+   * makes the reviewer gate stop meaning anything", which conflated two
    * constraints and kept only the one that was not the gate. An allowlist here
    * restricts what the REVIEWED environment may hold; the gate is
    * `production.excludeKeys`, which restricts what the UNREVIEWED one may hold.
@@ -64,8 +64,8 @@ export interface GithubEnvironmentSpec {
    *
    * Kept as a field because the mechanism is worth having and costs one branch
    * in `accepts()`: a future environment that genuinely holds a fixed short
-   * list — a third-party integration's two keys and nothing else — states it
-   * here rather than as an `excludeKeys` of everything else.
+   * list, a third-party integration's two keys and nothing else, states it here
+   * rather than as an `excludeKeys` of everything else.
    */
   onlyKeys: readonly string[] | null;
   /**
@@ -86,8 +86,8 @@ export interface GithubEnvironmentSpec {
  * declarations in `packages/devtools/env.ts`) rather than listed here.
  *
  * Read at ACCESS time, not module load: this module is imported by the CLI
- * before any manifest is, so a snapshot taken now would be empty — and an
- * empty apply set routes the write-capable credentials to the unreviewed
+ * before any manifest is, so a snapshot taken now would be empty, and an empty
+ * apply set routes the write-capable credentials to the unreviewed
  * `production` environment, which is the exact failure the split exists to
  * prevent. The guard turns "forgot to loadRegistry()" into a crash instead.
  */
@@ -130,10 +130,10 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
   // ⚠️ THE REVIEWER GATE, in one property. `excludeKeys` here is the only
   // thing keeping the apply-tier credentials out of an environment that
   // deploys on a push to `production` with nobody in front of it. Widening it
-  // to `[]` — or letting `applyOnly()` answer empty, which is what
-  // `assertRegistryLoaded()` exists to prevent — hands a write-capable token to
-  // an unreviewed deploy. `environments.test.ts` asserts both apply keys by
-  // name against exactly this.
+  // to `[]` hands a write-capable token to an unreviewed deploy, and so does
+  // letting `applyOnly()` answer empty, which is what `assertRegistryLoaded()`
+  // exists to prevent. `environments.test.ts` asserts both apply keys by name
+  // against exactly this.
   production: {
     bwsProject: "production",
     branch: "production",
@@ -147,7 +147,7 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
   // receives, plus the apply-tier pair it may not have.
   //
   // Not a relaxation of the gate. This is the same Bitwarden project behind
-  // required reviewers — the more trusted half of the split — so withholding a
+  // required reviewers, the more trusted half of the split, so withholding a
   // key from it protects nothing and only starves the jobs that run here
   // (`production-config`, `production-airtable`, `prune-orphans`, all of which
   // needed a deploy-tier secret or a public variable and got neither). The gate
@@ -163,10 +163,10 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
 
 // ── Routing ──────────────────────────────────────────────────────────────────
 //
-// One Bitwarden project can feed more than one GitHub environment — production
-// feeds two — so a push has to know which key goes where. Derived from the
-// table above rather than written out a second time: the split IS the reviewer
-// gate, and a hardcoded copy of it is a copy that can disagree.
+// One Bitwarden project can feed more than one GitHub environment; production
+// feeds two. So a push has to know which key goes where. Derived from the table
+// above rather than written out a second time: the split IS the reviewer gate,
+// and a hardcoded copy of it is a copy that can disagree.
 
 /** The GitHub environments fed by one Bitwarden project, in precedence order. */
 export function githubTargets(bwsProject: string): GithubEnvironment[] {
@@ -187,12 +187,12 @@ export function accepts(environment: GithubEnvironment, key: string): boolean {
  * The PRIMARY environment a key belongs in, or `null` for "nowhere here".
  *
  * `null` is not an error. Pushing `staging` with an apply-only credential in
- * the file is the ordinary case — that key belongs to production and simply has
- * no home in the staging environment.
+ * the file is the ordinary case: that key belongs to production and has no home
+ * in the staging environment.
  *
  * ⚠️ "Primary", not "only". Since `production-apply` became a superset, an
  * ordinary production key legitimately lives in TWO environments and this
- * returns the first — the unreviewed one, where the deploy reads it. A caller
+ * returns the first, the unreviewed one, where the deploy reads it. A caller
  * asking "is this copy misplaced?" wants `acceptedBy()` instead; answering that
  * question with this function reports every correctly-pushed copy in
  * `production-apply` as a stray that somebody should delete.
@@ -209,8 +209,8 @@ export function routeTo(
  *
  * The set-shaped question, for callers that compare against what a push
  * actually wrote rather than against one destination. `routeTo()` is this with
- * `[0]` taken, and the difference is only ever visible for `production`
- * — the one project that fans out to two environments.
+ * `[0]` taken, and the difference is only ever visible for `production`, the
+ * one project that fans out to two environments.
  */
 export function acceptedBy(
   bwsProject: string,
@@ -230,7 +230,7 @@ export function acceptedBy(
  *
  * ⚠️ An unrecognised environment is REFUSED, not accepted. The string comes
  * from whatever `gh` listed, and the audit uses this to decide whether a found
- * copy is a stray — so failing open here would silence the finding for a copy
+ * copy is a stray. Failing open here would silence the finding for a copy
  * sitting in an environment this repository has never heard of, which is
  * exactly the case worth hearing about.
  */

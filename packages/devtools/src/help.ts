@@ -3,7 +3,7 @@
  *
  * ## Why this is small
  *
- * The help this replaced was ~200 lines and printed the whole tree — every
+ * The help this replaced was ~200 lines and printed the whole tree: every
  * subcommand of every group, the Bitwarden target table, the four places an
  * access token is looked for, the grants `migration_planner` holds, and which
  * deploy steps must avoid the `with-env` wrapper. A contributor running
@@ -15,9 +15,9 @@
  *      top-level commands; `env --help` lists env's subcommands; `env pull
  *      --help` lists that command's options. Depth is reached by asking for
  *      it.
- *   2. **No more than the caller needs to choose.** Operator internals —
- *      which project a target maps to, how a credential is resolved, what a
- *      deploy job's environment holds — are `docs/`'s job. Help says what a
+ *   2. **No more than the caller needs to choose.** Operator internals are
+ *      `docs/`'s job: which project a target maps to, how a credential is
+ *      resolved, what a deploy job's environment holds. Help says what a
  *      command does and what it takes.
  *
  * Both fall out of rendering `commands.ts` rather than hand-writing prose, so
@@ -59,9 +59,9 @@ function columns(rows: readonly [string, string][]): string[] {
  *
  * Only the Supabase group does. "Supabase" is one word covering the stack and
  * the Postgres database inside it, and a flat list of six leaves the reader to
- * work out which of `restart` and `reset` is which — the distinction that
- * actually costs people an afternoon. A group with no scopes renders exactly
- * as it did: one block, one indent, no headings.
+ * work out which of `restart` and `reset` is which, the distinction that costs
+ * people an afternoon. A group with no scopes renders as it did: one block, one
+ * indent, no headings.
  *
  * The blocks follow declaration order rather than `SCOPES` order, so the tree
  * stays the one place that decides how the group reads. The gutter is sized
@@ -179,9 +179,9 @@ export function renderHelp(path: readonly string[] = []): string {
  *
  * `env pull --help` asks about `["env", "pull"]`; `--help env` asks about
  * nothing, because a flag's value is not a command path. Kept separate from
- * `positionals()` — that one strips a known set of value-taking flags to find
- * a subcommand, and here anything after the first flag is not part of the
- * path at all.
+ * `positionals()`: that one strips a known set of value-taking flags to find a
+ * subcommand, and here anything after the first flag is not part of the path at
+ * all.
  */
 export function helpPath(argv: readonly string[]): string[] {
   const path: string[] = [];

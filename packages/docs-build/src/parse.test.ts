@@ -1,9 +1,9 @@
 /**
  * `order` is the one frontmatter key read as a number, and the only one whose
- * bad values would be invisible: a title typo shows up on the page, whereas a
- * NaN reaching a comparator just leaves the sidebar in some arbitrary order
- * nobody can trace back to the file that caused it. So the rejections are
- * tested as carefully as the acceptance.
+ * bad values are invisible: a title typo shows up on the page, while a NaN
+ * reaching a comparator leaves the sidebar in an arbitrary order nobody can
+ * trace back to the file that caused it. So these test the rejections as
+ * carefully as the acceptance.
  */
 import { describe, expect, it } from "vitest";
 import { parseDocFile } from "./parse.js";
@@ -30,7 +30,7 @@ describe("parseDocFile order", () => {
 
   it("rejects anything that is not a finite number", () => {
     // `.nan` and `.inf` are YAML literals, so these are values a real file can
-    // hold rather than hypotheticals — and both pass `typeof x === "number"`.
+    // hold rather than hypotheticals, and both pass `typeof x === "number"`.
     for (const value of ['"3"', "first", "true", ".nan", ".inf", "-.inf"]) {
       expect(
         parseDocFile(withFrontmatter(`order: ${value}`), "env.md").order,

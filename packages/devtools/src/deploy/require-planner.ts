@@ -6,24 +6,24 @@
  *
  * The preflight credential is the one narrowed value NOTHING can verify at
  * rest: a full-access connection string pasted into `.env.preflight` works
- * identically — the dry run succeeds, `env push` uploads it cleanly, and
+ * identically. The dry run succeeds, `env push` uploads it cleanly, and
  * `env audit` reports no drift forever, because the stored value matches the
- * file it came from. The only place the difference is observable is a live
- * connection, so this guard runs one: it must authenticate as the planner,
- * it must FAIL to read `platform.profile`, and it must succeed in reading the
- * migrations table the dry run is about to plan against. See
- * `planner/checks.ts` for the three checks; `planner create` runs the same
- * ones, so a credential that passed at minting time passes here.
+ * file it came from. Only a live connection shows the difference, so this
+ * guard opens one: it must authenticate as the planner, it must FAIL to read
+ * `platform.profile`, and it must succeed in reading the migrations table the
+ * dry run is about to plan against. See `planner/checks.ts` for the three
+ * checks; `planner create` runs the same ones, so a credential that passed at
+ * minting time passes here.
  *
  * Runs in the `main-plan` job only. `production-plan` runs the same dry run
  * with the PRODUCTION environment's `DB_URL`, which is the full connection
- * string by design — apps boot from it — so this guard would (correctly)
- * refuse there. The narrowing is a property of the preflight tier, not of the
- * dry run.
+ * string by design, since apps boot from it, so this guard would (correctly)
+ * refuse there. The narrowing belongs to the preflight tier, not to the dry
+ * run.
  *
  * Like the rest of the group: `cli:no-env` (the job holds one credential in
  * the step's `env:` block and composes no file), reports through `say()`
- * (stderr), refuses by `DeployError`. One line per check on success — this
+ * (stderr), refuses by `DeployError`. One line per check on success. This
  * runs as its own step, and three green lines are the evidence the §3.5
  * argument leans on.
  */

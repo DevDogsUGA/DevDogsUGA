@@ -5,13 +5,13 @@
  * That claim is made three ways here, because a comment saying "it only reads"
  * is worth nothing on the job that runs from `main`:
  *
- *   1. every HTTP request the plan issues is a GET — measured through an
+ *   1. every HTTP request the plan issues is a GET, measured through an
  *      injected fetch, including against an EMPTY base where a real scaffold
  *      would create seven tables;
  *   2. the plan asks for `need: "read"`, which never consults
  *      `AIRTABLE_APPLY_PAT`, so a job holding only the write token fails
  *      loudly instead of planning with it;
- *   3. the module graph — `deploy/airtable-plan.ts` does not import
+ *   3. the module graph: `deploy/airtable-plan.ts` does not import
  *      `scaffoldBase`, asserted from the source so that a later edit adding it
  *      turns this red rather than quietly widening what the plan can do.
  *
@@ -32,8 +32,8 @@ const BASE = "appTESTTESTTEST01";
 
 /**
  * The committed schema snapshot IS the base the registry agrees with, so
- * replaying it is a base that needs nothing — the `changed: false` case
- * without a hand-written fixture that could drift from the registry.
+ * replaying it is a base that needs nothing: the `changed: false` case without
+ * a hand-written fixture that could drift from the registry.
  */
 const UP_TO_DATE: LiveTable[] = readSnapshot().tables;
 
@@ -119,9 +119,9 @@ describe("airtable-plan cannot mutate", () => {
     // mutation one typo away from the plan.
     //
     // Comments are stripped first, so the two headers stay free to explain
-    // themselves — and so the assertion is about what the module DOES rather
-    // than about what it says. A test that a prose edit can turn red is a test
-    // people learn to work around.
+    // themselves and the assertion is about what the module DOES rather than
+    // what it says. A test that a prose edit can turn red is a test people
+    // learn to work around.
     const strip = (path: string): string =>
       readFileSync(join(PROJECT_ROOT, path), "utf8")
         .replace(/\/\*[\s\S]*?\*\//g, "")

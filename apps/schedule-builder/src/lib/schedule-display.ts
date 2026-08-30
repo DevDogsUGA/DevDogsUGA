@@ -85,9 +85,7 @@ function formatTime(t: string | null): string {
   return `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
-/**
- * Labs share their lecture's colour: "CSCI1302L" keys as "CSCI1302".
- */
+/** Labs share their lecture's colour: "CSCI1302L" keys as "CSCI1302". */
 function colorKey(abbr: string): string {
   const trimmed = abbr.trim();
   return trimmed.endsWith("L") ? trimmed.slice(0, -1) : trimmed;
@@ -95,7 +93,7 @@ function colorKey(abbr: string): string {
 
 /**
  * Transforms the PostgREST plan offerings response into the WeekSchedule
- * format expected by the WeekSchedule / DayClass display components.
+ * format the WeekSchedule and DayClass components render.
  */
 export function toWeekSchedule(offerings: PlanOffering[]): WeekSchedule {
   const colorMap = new Map<string, { bg: string; border: string }>();
@@ -133,8 +131,8 @@ export function toWeekSchedule(offerings: PlanOffering[]): WeekSchedule {
       if (activeDays.length === 0) continue;
 
       const startMinutes = toMinutes(meeting.startTime);
-      // The week grid is a time axis; a TBA meeting has no position on it and
-      // would otherwise pile up at the 8 AM line with zero height.
+      // A TBA meeting has no position on the grid's time axis and would pile
+      // up at the 8 AM line with zero height.
       if (startMinutes === null) continue;
       const timeStart = formatTime(meeting.startTime);
       const timeEnd = formatTime(meeting.endTime);

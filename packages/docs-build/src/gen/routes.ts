@@ -2,8 +2,8 @@
  * The App Router extractor: one row per routable directory, read off the
  * directory tree.
  *
- * The tree already *is* the enumeration of the surface — 42 pages and 22
- * handlers across the two Next apps — and it is the part no written page has
+ * The tree already *is* the enumeration of the routes, 42 pages and 22
+ * handlers across the two Next apps, and it is the part no written page has
  * ever kept current. Everything here is derived from a file that must exist for
  * the route to exist at all, so a route cannot be missing from the table
  * without also being missing from the app.
@@ -139,8 +139,8 @@ function entryFor(
     );
   }
 
-  // Non-null by construction — `entryFor` is only reached when one of them is
-  // present — and the handler wins, because it is what the URL resolves to.
+  // Non-null by construction: `entryFor` is only reached when one of them is
+  // present. The handler wins, because it is what the URL resolves to.
   const backing = route ?? page ?? dir;
   const facts = analyse(ctx, backing, warnings);
 
@@ -179,7 +179,7 @@ function entryFor(
 /**
  * What the page or handler exports. Read off the statements rather than through
  * the checker, because every one of these is a literal the compiler would
- * happily widen — and `dynamic = "force-dynamic"` is worth printing as written.
+ * widen, and `dynamic = "force-dynamic"` is worth printing as written.
  */
 function analyse(
   ctx: TargetContext,
@@ -307,7 +307,7 @@ function nameOf(name: ts.PropertyName): string | null {
 /**
  * `(site)` and `@modal` are organisation, not URL. This tests for a name that
  * is *entirely* parenthesised, which is what keeps the intercepting-route
- * prefixes — `(.)photo`, `(..)feed` — as the real segments they are.
+ * prefixes `(.)photo` and `(..)feed` as the real segments they are.
  */
 function isTransparent(name: string): boolean {
   return /^\(.*\)$/.test(name) || name.startsWith("@");

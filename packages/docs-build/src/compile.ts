@@ -7,13 +7,13 @@ import type { DocsPage, DocsProject } from "./types.js";
 const NOT_A_PROJECT = new Set(["dist", "node_modules", ".turbo"]);
 
 /**
- * Where something that declares no `order` sits. The middle of the range, so
- * that a page can be promoted above the pages that never think about ordering
- * as well as demoted below them — the generator uses both directions, giving
- * the routes and server-actions overviews single digits and the symbol groups
- * 100 and up. `apps/platform`'s sidebar builder carries the same number for
- * the same reason; it takes plain rows rather than this package's types, so
- * the two are kept in step by hand.
+ * Where something that declares no `order` sits. The middle of the range, so a
+ * page can be promoted above the pages that never think about ordering as well
+ * as demoted below them. The generator uses both directions, giving the routes
+ * and server-actions overviews single digits and the symbol groups 100 and up.
+ * `apps/platform`'s sidebar builder carries the same number for the same
+ * reason; it takes plain rows rather than this package's types, so keeping the
+ * two in step is manual.
  */
 const DEFAULT_ORDER = 100;
 
@@ -38,9 +38,9 @@ function isIndexPath(pagePath: string): boolean {
 }
 
 /**
- * Reads every markdown file under `contentRoot`, grouped by project — each
- * immediate subfolder is one project, and the first segment of a page's path
- * is its project.
+ * Reads every markdown file under `contentRoot`, grouped by project. Each
+ * immediate subfolder is one project, and the first segment of a page's path is
+ * its project.
  */
 export function compileDocs(contentRoot: string): {
   projects: DocsProject[];
@@ -81,8 +81,8 @@ export function compileDocs(contentRoot: string): {
       pages.push({ ...parsed, project: slug, path: `${slug}/${rel}` });
 
       // The project's own index page seeds its display name, description and
-      // position on the docs landing page. A nested folder's index page
-      // doesn't — that one positions its own folder in the sidebar, which is
+      // position on the docs landing page. A nested folder's index page does
+      // not; that one positions its own folder in the sidebar, which is
       // `buildDocsTree`'s business rather than this loop's.
       if (isIndexPath(rel) && !rel.includes("/")) {
         if (typeof parsed.frontmatter.name === "string") {
@@ -104,8 +104,8 @@ export function compileDocs(contentRoot: string): {
 
   // Pages stay in path order, which `order` has no business disturbing: this
   // array is the lookup table every consumer indexes by path, and a page's
-  // `order` positions it among its siblings in one folder — a meaning that
-  // only survives inside the sidebar tree, where the siblings are what it is
+  // `order` positions it among its siblings in one folder. That meaning only
+  // survives inside the sidebar tree, where the siblings are what it is
   // compared against. Sorting the flat list by it would interleave folders and
   // produce a sequence that is not the reading order of anything.
   pages.sort((a, b) => a.path.localeCompare(b.path));
@@ -116,8 +116,8 @@ export function compileDocs(contentRoot: string): {
 /**
  * Writes the compiled content as an ESM module plus its declarations.
  *
- * The output is emitted directly rather than run through tsc, so the content
- * package needs no TypeScript toolchain — `docs/` stays markdown plus a
+ * The output is written directly rather than run through tsc, so the content
+ * package needs no TypeScript toolchain: `docs/` stays markdown plus a
  * package.json, with none of this code sitting alongside it.
  */
 export function emitDocsModule(contentRoot: string, outDir: string): number {

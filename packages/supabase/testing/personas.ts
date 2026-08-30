@@ -1,16 +1,15 @@
 /**
  * Harness for RLS persona tests.
  *
- * RLS is now the whole security boundary. Previously an API route was where a
- * check lived and where a reviewer would look for it; with apps writing
- * straight to Postgres, a missing predicate in a policy *is* the vulnerability,
- * and one publishable key reaches every schema. These tests are what stands
- * where route review used to.
+ * RLS is the whole security boundary. Checks used to live in API routes, where
+ * a reviewer would look for them; now apps write straight to Postgres, so a
+ * missing predicate in a policy *is* the vulnerability, and one publishable key
+ * reaches every schema. These tests stand where route review used to.
  *
  * Personas sign in for real (`signInWithPassword`) rather than using
- * hand-signed JWTs, so what is exercised is the same token path production
- * uses -- including whatever claims Supabase Auth actually puts in a token,
- * rather than what we assume it does.
+ * hand-signed JWTs, so these exercise the same token path production uses,
+ * with whatever claims Supabase Auth actually puts in a token rather than the
+ * claims we assume.
  *
  * Requires the local stack: `pnpm devtools link`.
  */
@@ -201,7 +200,7 @@ export async function appId(slug: string): Promise<string> {
 /**
  * An account with a profile: the reportable content on this instance.
  *
- * Cheaper than `createPersona` on purpose — no sign-in round trip — because
+ * Cheaper than `createPersona` on purpose, with no sign-in round trip, because
  * most of these exist only to BE reported, never to act. A test that needs the
  * subject to do something (edit its own profile, say) wants a persona instead.
  *
