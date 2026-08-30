@@ -1,5 +1,5 @@
 /**
- * `pnpm devtools planner <status|create|reset-password|drop>` — the operator
+ * `pnpm devtools planner <status|create|reset-password|drop>`, the operator
  * side of the `migration_planner` role.
  *
  * Four commands because the role has exactly four lifecycle moments:
@@ -10,34 +10,34 @@
  *                   live, written into .env.preflight
  *   reset-password  new password on the existing role, same verification,
  *                   same write
- *   drop            remove it — the recovery path for a role in a shape
+ *   drop            remove it: the recovery path for a role in a shape
  *                   create refuses to repair, and the retirement path if
  *                   the tier is ever redesigned
  *
- * There is no `retrieve`. A Postgres password is not retrievable — the server
- * holds a hash — and the composed DB_URL's home is `.env.preflight`, synced
+ * There is no `retrieve`. A Postgres password is not retrievable, the server
+ * holds a hash, and the composed DB_URL's home is `.env.preflight`, synced
  * outward by `env push --target preflight` and back by `env pull`. Losing the
  * local copy is what `pull` is for; losing every copy is what
  * `reset-password` is for. Printing it here would put a live credential in a
- * terminal scrollback for no state the two of those do not already cover.
+ * terminal scrollback for no state those two do not already cover.
  *
  * ## Where the admin connection comes from
  *
- * Creating a role needs a privileged connection to the PRODUCTION database —
- * the planner exists so `main` can ask "what would these migrations do to
+ * Creating a role needs a privileged connection to the PRODUCTION database.
+ * The planner exists so `main` can ask "what would these migrations do to
  * production". That connection is read from `.env.production`'s `DB_URL`
  * (fetch it with `env pull --target production`), or passed as `--db-url` for
  * the bootstrap case where that file is not populated yet. Both paths write to
  * production, so both confirm first: `production` is a guarded target, and a
  * role created by reflex is a credential nobody meant to mint.
  *
- * ## Verified, not merely written
+ * ## Verified live
  *
  * `create` and `reset-password` end by opening a SECOND connection as the
  * planner and running the same three checks CI's `deploy require-planner`
  * runs. "The role works and cannot overreach" is observed before the command
- * says done — the same property the security plan records as "validated
- * working", re-established on every mint instead of remembered from one.
+ * says done: the property the security plan records as "validated working",
+ * re-established on every mint instead of remembered from one.
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -61,10 +61,10 @@ import {
 const QUERY_ROLE = `select rolcanlogin from pg_roles where rolname = '${PLANNER_ROLE}'`;
 /**
  * The schema the grants attach to. The Supabase CLI creates it the first time
- * it records migration history on a database — so on a database that has
- * never been CLI-migrated (or baselined with `supabase migration repair`)
- * there is nothing to grant on, and `create` has to say that BEFORE issuing
- * CREATE ROLE, or it strands a grant-less role behind a refusal to re-run.
+ * it records migration history on a database, so on a database that has never
+ * been CLI-migrated, or baselined with `supabase migration repair`, there is
+ * nothing to grant on. `create` has to say that BEFORE issuing CREATE ROLE, or
+ * it strands a grant-less role behind a refusal to re-run.
  */
 const QUERY_SCHEMA =
   "select 1 from pg_namespace where nspname = 'supabase_migrations'";
@@ -105,7 +105,7 @@ function preflightPath(): string {
  *
  * Read from the FILE rather than `process.env` so that running this under
  * `with-env` (which loads the development `.env`) cannot silently point a
- * CREATE ROLE at the shared dev database — the wrong database succeeding is
+ * CREATE ROLE at the shared dev database. The wrong database succeeding is
  * worse than the right one refusing.
  */
 async function adminUrl(options: PlannerOptions): Promise<string> {
@@ -176,7 +176,7 @@ export async function runPlannerStatus(
   const connect = options.connect ?? connectDb;
   await withDb(connect, await adminUrl(options), async (db) => {
     // First, because it recolors everything after it: on a database with no
-    // migration history, "missing grants" is not the story — this is.
+    // migration history, the story is the missing history, not the grants.
     const schemaReady = await migrationSchemaExists(db);
 
     const [role] = await db.run(QUERY_ROLE);
@@ -303,8 +303,8 @@ export async function runPlannerCreate(
   await withDb(connect, admin, async (db) => {
     // Before CREATE ROLE, so a database with no migration history refuses
     // cleanly instead of stranding a grant-less role behind the
-    // already-exists refusal below — which is exactly what happened the
-    // first time this ran against a database the CLI had never migrated.
+    // already-exists refusal below. That happened the first time this ran
+    // against a database the CLI had never migrated.
     if (!(await migrationSchemaExists(db))) bailMissingSchema();
 
     if (await roleExists(db)) {
@@ -359,22 +359,22 @@ export async function runPlannerDrop(
     }
     // Three statements, one transaction, and the order is load-bearing twice:
     //
-    //   * DROP OWNED before DROP ROLE — DROP ROLE alone fails on a role that
+    //   * DROP OWNED before DROP ROLE. DROP ROLE alone fails on a role that
     //     still holds grants ("some objects depend on it"), and a role being
-    //     dropped for the WRONG shape — stranded grants, an overreaching
-    //     grant somebody added by hand — is exactly the one whose grants
-    //     this command cannot enumerate. The role owns no objects by design,
-    //     so DROP OWNED only revokes; if somebody ever made it own
-    //     something, dropping that too is what "drop" has to mean for a
-    //     from-scratch re-mint.
-    //   * GRANT before DROP OWNED — Supabase's `postgres` is CREATEROLE, not
-    //     superuser, and DROP OWNED requires MEMBERSHIP in the role: having
-    //     created it (which confers ADMIN on the role, and the right to
-    //     drop it) is not enough, and the first real run failed here with
-    //     "permission denied". Granting the role to ourselves is what a
-    //     non-superuser admin has to do, it is idempotent (a re-grant is a
-    //     NOTICE), and the membership vanishes with the role two statements
-    //     later — or with the rollback.
+    //     dropped for the WRONG shape is exactly the one whose grants this
+    //     command cannot enumerate: stranded grants, or an overreaching grant
+    //     somebody added by hand. The role owns no objects by design, so DROP
+    //     OWNED only revokes; if somebody ever made it own something,
+    //     dropping that too is what "drop" has to mean for a from-scratch
+    //     re-mint.
+    //   * GRANT before DROP OWNED. Supabase's `postgres` is CREATEROLE, not
+    //     superuser, and DROP OWNED requires MEMBERSHIP in the role. Having
+    //     created it, which confers ADMIN on the role and the right to drop
+    //     it, is not enough: the first real run failed here with "permission
+    //     denied". Granting the role to ourselves is what a non-superuser
+    //     admin has to do, it is idempotent (a re-grant is a NOTICE), and the
+    //     membership vanishes with the role two statements later, or with the
+    //     rollback.
     await db.run("begin");
     try {
       await db.run(`grant ${PLANNER_ROLE} to current_user`);
@@ -399,11 +399,11 @@ export async function runPlannerDrop(
     log.success(`Dropped ${PLANNER_ROLE}.`);
   });
 
-  // The stored credential died with the role; a dead value left in place
-  // would push cleanly and audit green, which is this feature's least
-  // favorite shape. Blanked, not deleted — a blank line is the file's
-  // "fill me in" convention — and only when the value is actually the
-  // planner's: a hand-set URL under this key is somebody's deliberate state.
+  // The stored credential died with the role, and a dead value left in place
+  // would push cleanly and audit green. Blanked rather than deleted, because a
+  // blank line is the file's "fill me in" convention. Only when the value is
+  // actually the planner's: a hand-set URL under this key is somebody's
+  // deliberate state.
   const path = preflightPath();
   let doc: EnvDocument;
   try {

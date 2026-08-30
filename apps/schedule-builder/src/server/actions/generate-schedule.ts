@@ -101,7 +101,6 @@ export async function getRecommendedSchedules(
         ).map((r) => r.abbr)
       : [];
 
-  // Build algorithm course structures
   type OfferingAcc = {
     crn: number;
     campusId: number;

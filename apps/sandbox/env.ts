@@ -5,7 +5,7 @@
  * its configuration from the `Env` argument workerd hands `fetch()`, not from
  * `process.env`, so there is no `createEnv` here and no boot that this file
  * could fail. Like `packages/devtools/env.ts` and `apps/study-group-finder/
- * env.ts` it exists for the registry's consumers -- the completeness test, the
+ * env.ts` it exists for the registry's consumers: the completeness test, the
  * `.env.example` generator, `env push` routing, and `env audit`. The
  * sibling `tsconfig.json` names it explicitly, which is what keeps the metadata
  * typechecked.
@@ -14,12 +14,12 @@
  *
  * The old reasoning was: bindings arrive as a function argument, so a manifest
  * would describe nothing. That is true of the RUNTIME and false of everything
- * else. Two concrete failures followed from the absence:
+ * else. Two failures followed from the absence:
  *
  *   1. `env audit` reports any Worker secret it cannot find in Bitwarden as
  *      an orphan, and the plan doc's §3.6 prune path deletes orphans on
- *      `workflow_dispatch`. `SANDBOX_PROXY_TOKEN` is minted, so it is in no
- *      Bitwarden project by design -- which made the live proxy credential
+ *      `workflow_dispatch`. `SANDBOX_PROXY_TOKEN` is minted, so by design it
+ *      is in no Bitwarden project, which made the live proxy credential
  *      indistinguishable from a leftover from a rename. The audit was
  *      recommending its deletion.
  *   2. `SUPABASE_JWT_SIGNING_KEY` had no route to the `production` GitHub
@@ -30,7 +30,7 @@
  * Worker reads its bindings.
  *
  * ⚠️ `zod` is resolved from the repository root's devDependency rather than
- * from this package's own -- `apps/sandbox/package.json` does not list it, and
+ * from this package's own: `apps/sandbox/package.json` does not list it, and
  * adding it was deferred because it means a lockfile change. `supabase/env.ts`
  * already relies on the root copy for the same reason (it is not a workspace
  * package at all), so this works today; add `"zod": "catalog:"` to this
@@ -52,11 +52,10 @@ declare({
     // The plan doc left this open ("`PLATFORM_REST_URL`: `wrangler.jsonc` var
     // or registry entry"), and the committed file answered it by accident: all
     // three environments carried the literal
-    // `https://REPLACE_ME.supabase.co/rest/v1`. That is the whole argument. A
-    // committed `vars` entry is one value for three environments, so the only
-    // way to make it correct is to edit it by hand per deploy -- and the
-    // placeholder surviving in `production` is the measurement of how often
-    // that happens.
+    // `https://REPLACE_ME.supabase.co/rest/v1`. A committed `vars` entry is one
+    // value for three environments, so the only way to make it correct is to
+    // edit it by hand per deploy, and the placeholder surviving in `production`
+    // measures how often that happens.
     //
     // It is per-environment, so it is a registry entry, delivered as
     // `--var PLATFORM_REST_URL:$REST_URL` at deploy time from the same env
@@ -83,7 +82,7 @@ declare({
     // A JWT carrying {"role": "sandbox_proxy"}, signed with the platform
     // project's own signing key by `devtools deploy mint-token`.
     //
-    // NOT a Supabase secret key, and the distinction is the security property:
+    // NOT a Supabase secret key, and that distinction is the security property.
     // `sb_secret_...` keys authorize as `service_role` and cannot be bound to
     // a custom role, so one here would hand the Worker read access to every
     // table in the platform database. `sandbox_proxy` holds EXECUTE on exactly
@@ -110,12 +109,12 @@ declare({
 });
 
 /**
- * What mints the token -- and a SEPARATE source, which is the whole point.
+ * What mints the token, and a SEPARATE source, which is the whole point.
  *
  * `devtools deploy secrets-file` sends a Worker every storable key its app
- * declares, and excludes `:tooling` sources precisely because "a key the
- * DEPLOY needs is not automatically a key the WORKER needs". Declared as plain
- * `sandbox`, this key rode that path onto the proxy Worker itself.
+ * declares, and excludes `:tooling` sources because "a key the DEPLOY needs is
+ * not automatically a key the WORKER needs". Declared as plain `sandbox`, this
+ * key rode that path onto the proxy Worker itself.
  *
  * That is the exact inversion this file's own comments argue against. The
  * signing key mints a token for ANY role, `service_role` included;
@@ -124,16 +123,16 @@ declare({
  * internet-facing proxy the means to escalate itself to everything, and it
  * would sit there as a Cloudflare secret long after the deploy that wrote it.
  *
- * The trust argument that justifies CI holding it -- whoever deploys
- * `apps/platform` can already read `SECRET_KEY` from its own environment, so a
- * pipeline deploying both Workers gains no authority it lacked -- is about the
- * PIPELINE. It says nothing about the Worker, which is a different principal
- * with a much longer-lived and more exposed store. Keep the two apart: the
- * mint script runs on the runner, the token is what reaches the edge.
+ * The trust argument that justifies CI holding it is about the PIPELINE:
+ * whoever deploys `apps/platform` can already read `SECRET_KEY` from its own
+ * environment, so a pipeline deploying both Workers gains no authority it
+ * lacked. It says nothing about the Worker, a different principal with a much
+ * longer-lived and more exposed store. Keep the two apart: the mint script runs
+ * on the runner, the token is what reaches the edge.
  *
  * Still declared here rather than in the devtools operator manifest, because
  * minting that token is its only use in this repository and a reader of
- * `.env.example` should find the whole rotation path in one place -- the
+ * `.env.example` should find the whole rotation path in one place: the
  * endpoint, the minted token, and the key that signs it. `:tooling` sources
  * fold into their app's section when the example is rendered, so that holds.
  *

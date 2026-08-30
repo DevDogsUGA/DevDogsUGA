@@ -3,7 +3,7 @@
  *
  * Two checks, and the second is the one that matters.
  *
- * `conformance()` asks the database what it derived from your schema — is the
+ * `conformance()` asks the database what it derived from your schema: is the
  * table addressable, can an author be attributed, does quarantine have a column
  * to write to, can a client still write that column. All of it is answerable
  * from the catalog, and `platform.conformance_check()` does the answering.
@@ -11,13 +11,13 @@
  * `quarantineRoundTrip()` answers the question the catalog cannot: *does
  * quarantine do anything?* Quarantine is the only moderation outcome whose
  * effect lives in the app's own policies rather than the platform's, so it is
- * the only one that can be wired up wrong while everything appears to work —
- * the platform records the decision, sets the column, and has no way to notice
+ * the only one that can be wired up wrong while everything appears to work.
+ * The platform records the decision, sets the column, and has no way to notice
  * nobody reads it. The only proof is to file, resolve, and then look.
  *
  * It runs against `platform.profile`, where quarantine means FREEZE rather than
  * hide: the display name is reset to the member's name of record and they lose
- * the ability to change it back. A profile cannot be hidden — rosters, teams
+ * the ability to change it back. A profile cannot be hidden: rosters, teams
  * and standings all render the name, and the row is own-row-only over PostgREST
  * anyway, so there is nobody to hide it from. See
  * 20260808000000_platform_profile_moderation.sql.
@@ -77,14 +77,14 @@ export interface RoundTripStep {
  * that the freeze and the name reset both landed.
  *
  * The subject is a THROWAWAY member created for the run, not one of the seeded
- * personas, and that is not squeamishness about touching fixtures. `file_report`
- * corroborates an existing open report rather than filing a second one against
- * the same content — and the seeds ship exactly such a report against the author
- * persona's profile. Reusing it would make this function's first step silently
- * become "add a corroboration", and every assertion after it would be reading
- * the seed's decision instead of its own.
+ * personas, and that is not squeamishness about touching fixtures.
+ * `file_report` corroborates an existing open report rather than filing a
+ * second one against the same content, and the seeds ship exactly such a report
+ * against the author persona's profile. Reusing it would make this function's
+ * first step silently become "add a corroboration", and every assertion after
+ * it would be reading the seed's decision instead of its own.
  *
- * Everything it creates, it deletes — including on the failure paths, which is
+ * Everything it creates, it deletes, including on the failure paths, which is
  * why the teardown is in a `finally`. A contributor running this twice should
  * get the same answer the second time.
  */
@@ -167,9 +167,9 @@ export async function quarantineRoundTrip(
     // ── Act: file a report as the seeded member ─────────────────────────────
     const memberClient = await personaClient(instance, PERSONAS.member);
     // A literal, not a lookup. The vocabulary is a platform-owned enum, so
-    // there is no per-app row to find first -- and if this label ever stops
-    // existing, Postgres rejects the call by type rather than silently
-    // reporting "no reasons configured".
+    // there is no per-app row to find first. If this label ever stops existing,
+    // Postgres rejects the call by type rather than silently reporting "no
+    // reasons configured".
     const { data: filed, error: fileErr } = await memberClient.rpc(
       "file_report",
       {
@@ -238,8 +238,8 @@ export async function quarantineRoundTrip(
 
     // ── Assert: and that the member stopped being able to undo it ───────────
     //
-    // The check that matters. A denied UPDATE under RLS is not an error — it
-    // simply matches no rows — so asserting on `error` here would pass just as
+    // The check that matters. A denied UPDATE under RLS is not an error, it
+    // simply matches no rows, so asserting on `error` here would pass just as
     // happily if the write had landed. Read the value back instead.
     await subject
       .from("profile")

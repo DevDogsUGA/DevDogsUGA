@@ -14,7 +14,7 @@ import {
  *
  * Everything the Worker entry point does beyond this is wiring. Keeping the
  * decisions here means the security properties are testable directly against a
- * mock upstream rather than only through a deployed Worker -- and the security
+ * mock upstream rather than only through a deployed Worker, and the security
  * properties are the reason this component exists.
  */
 
@@ -25,10 +25,10 @@ import {
  * independent fields, which is what makes "a secret-scoped credential without a
  * secret key" unrepresentable rather than merely unwanted. It used to be
  * representable, and the proxy answered it with
- * `resolved.secretKey ?? resolved.publishableKey` -- a silent downgrade to
- * `anon` for a token whose whole purpose is bypassing RLS, indistinguishable in
- * the audit log from a policy bug. `toResolution` now refuses the row instead,
- * and this shape is what stops the fallback from being rewritten later.
+ * `resolved.secretKey ?? resolved.publishableKey`: a silent downgrade to `anon`
+ * for a token whose whole purpose is bypassing RLS, indistinguishable in the
+ * audit log from a policy bug. `toResolution` now refuses the row instead, and
+ * this shape is what stops the fallback from being rewritten later.
  */
 export type Resolution =
   | { outcome: "unknown_host" }
@@ -76,7 +76,7 @@ export const MAX_BODY_BYTES = 1024 * 1024;
  *
  *   - `x-devdogs-*` is ours. An earlier design used `x-devdogs-role: secret` to
  *     request elevation; authority now follows the credential, so the header is
- *     dead. Stripping it is what makes that true rather than merely intended --
+ *     dead. Stripping it is what makes that true rather than merely intended:
  *     a header nobody reads is one somebody will eventually start reading.
  *   - `cf-*` and `x-forwarded-*` describe our edge, not the client's request,
  *     and forwarding them tells upstream things about our infrastructure.
@@ -87,9 +87,9 @@ const STRIPPED_PREFIXES = ["x-devdogs-", "cf-", "x-forwarded-", "x-real-ip"];
  * What a browser is told it may send.
  *
  * Answered here rather than forwarded, because a preflight is the one request
- * that CANNOT carry a credential -- the browser strips `apikey` and
- * `Authorization` from it by design -- so the credential check would refuse
- * every one of them. It did, and that broke every cross-origin browser request
+ * that CANNOT carry a credential: the browser strips `apikey` and
+ * `Authorization` from it by design, so the credential check would refuse every
+ * one of them. It did, and that broke every cross-origin browser request
  * against a sandbox while the identical code worked against real Supabase,
  * which answers its own preflights.
  *

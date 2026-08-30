@@ -3,40 +3,40 @@
  *
  * Materialises `.env.staging` / `.env.production` inside a deploy job.
  *
- * Everything downstream of this command — `cf:build:*`, `cf:deploy:*`,
- * `deploy:*`, `deploy secrets-file`, `deploy mint-token` — reads its
- * configuration through `with-env`, which reads a file on disk. CI has no such
- * file, so one step has to write it. This is that step, and it is the ONLY
- * place in the pipeline that touches the `secrets` and `vars` contexts: after
- * it runs, a deploy job looks exactly like a devops laptop, and every later
- * step can be the same command a person would run by hand.
+ * Everything downstream of this command reads its configuration through
+ * `with-env`, which reads a file on disk: `cf:build:*`, `cf:deploy:*`,
+ * `deploy:*`, `deploy secrets-file`, `deploy mint-token`. CI has no such file,
+ * so one step has to write it. This is that step, and it is the ONLY place in
+ * the pipeline that touches the `secrets` and `vars` contexts. After it runs, a
+ * deploy job looks exactly like a devops laptop, and every later step can be
+ * the same command a person would run by hand.
  *
  * ## ⚠️ This command cannot be run through `with-env`
  *
  * `pnpm devtools` is `with-env tsx src/cli.ts`, and `with-env` refuses to
  * start when the file for `DEPLOY_ENV` is absent. That file is the one this
  * command is about to create, so routing it the ordinary way is a bootstrap
- * cycle: it would die on `MissingEnvFileError` for its own output. The seam is
- * the package's `cli:no-env` script —
+ * cycle: it would die on `MissingEnvFileError` for its own output. Use the
+ * package's `cli:no-env` script instead,
  *
  *     pnpm --filter @devdogsuga/devtools run cli:no-env deploy write-env
  *
- * — which is the same entry point with the `with-env` wrapper removed, and is
- * how `deploy.yaml` invokes it. (`pnpm devtools env example --check` already routes
+ * the same entry point with the `with-env` wrapper removed, and how
+ * `deploy.yaml` invokes it. (`pnpm devtools env example --check` already routes
  * through `cli:no-env` for the mirror-image reason: it must run in a job that
  * deliberately has no env file.) Nothing here reads the ambient environment
  * apart from `DEPLOY_ENV` and the two context variables the workflow sets on
  * the step, so there is nothing for `with-env` to have supplied.
  *
- * ## Where the values come from, and why there are four answers
+ * ## Where the values come from
  *
- *   secret     `${{ secrets.* }}` for the environment — written by a human
+ *   secret     `${{ secrets.* }}` for the environment, written by a human
  *              running `pnpm devtools env push`. CI never reads Bitwarden.
- *   variable   `${{ vars.* }}` — the per-environment values that are NOT
+ *   variable   `${{ vars.* }}`, the per-environment values that are NOT
  *              secrets (`PROJECT_REF`, `BASE_URL`, `PUBLISHABLE_KEY`, …).
  *   derived    an `example` metadata entry that is a `$VAR` formula rather than
  *              a placeholder: `API_URL` is `https://$PROJECT_REF.supabase.co`
- *              and always has been. Security plan §A.4 — "derived at deploy
+ *              and always has been. Security plan §A.4: "derived at deploy
  *              time from PROJECT_REF, never stored".
  *   committed  a `scope: "default"` value, identical in every environment and
  *              carried in the registry (`GITHUB_ORG`, the avatars bucket).
@@ -54,9 +54,8 @@
  * Security plan §A.6: the deploy build needs the ENTIRE server schema, because
  * `@t3-oss/env` validates the whole thing on import and the platform
  * prerenders pages that resolve their gate at build time. So the interesting
- * failure is not a wrong value, it is a missing one — and GitHub hands a
- * missing secret to a workflow as an EMPTY STRING rather than an error
- * (§A.7's closing warning).
+ * failure is a missing value, not a wrong one. GitHub hands a missing secret to
+ * a workflow as an EMPTY STRING rather than an error (§A.7's closing warning).
  *
  * Rather than trust that, this refuses to write a file that would fail the
  * build, and names every key it could not resolve along with where that key
@@ -68,7 +67,7 @@
  * ## Refusals
  *
  * `neverStoreKeys()` appearing in either context is a hard failure. It is
- * mostly unreachable — `env push` will not upload one — but this is the
+ * mostly unreachable, since `env push` will not upload one, but this is the
  * last place to catch a `BWS_ACCESS_TOKEN` added to the repository by hand,
  * and the cost of missing it is every secret the project holds (see the long
  * comment on the declaration in `packages/devtools/env.ts`).
@@ -83,13 +82,13 @@
  *
  * Composes only what one manifest declares, and demands ALL of its secrets
  * rather than only its schema-required keys. That is for a step that exists to
- * mutate one thing — `supabase config push` reads `supabase/env.ts` and
- * nothing else — where the job runs in a GitHub environment holding a
- * deliberately narrow slice of the credentials and the interesting failure is
- * an OAuth provider quietly reconfigured without its secret. Every one of
- * those keys is `.optional()` in the schema (an app boots fine without them;
- * only `config.toml` reads them), so schema-required alone would let the
- * push through with a provider half-configured.
+ * mutate one thing. `supabase config push` reads `supabase/env.ts` and nothing
+ * else, the job runs in a GitHub environment holding a deliberately narrow
+ * slice of the credentials, and the interesting failure is an OAuth provider
+ * reconfigured without its secret. Every one of those keys is `.optional()` in
+ * the schema (an app boots fine without them; only `config.toml` reads them),
+ * so schema-required alone would let the push through with a provider
+ * half-configured.
  */
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -178,7 +177,7 @@ function readContext(
  * call: the file a person fills in by hand and the file this command composes
  * on a runner are the same file, and a second opinion about which `example`
  * values are real would make them differ. See that module for what each of its
- * gates is closing — chiefly `DB_URL`, whose example is a genuine
+ * gates is closing, chiefly `DB_URL`, whose example is a genuine
  * `$PROJECT_REF` derivation with `<password>` and `<host>` punched into it.
  */
 function fromRegistry(meta: EnvEntry["meta"]): Resolved | null {
@@ -206,12 +205,12 @@ class MissingSourceError extends DeployError {}
 /**
  * Expands `$NAME` / `${NAME}` against the values resolved so far.
  *
- * dotenvx would do this at load time and the composed file could simply carry
- * the formula — but only for an unquoted or double-quoted value, and quoting
- * is exactly what this file cannot compromise on (see `quote` below). So the
- * derivations are resolved here and every line ships fully literal: one
- * mechanism, verifiable by reading the file, with no dependence on which of
- * dotenvx's three quoting modes a value happened to land in.
+ * dotenvx would do this at load time and the composed file could carry the
+ * formula, but only for an unquoted or double-quoted value, and quoting is what
+ * this file cannot compromise on (see `quote` below). So the derivations are
+ * resolved here and every line ships fully literal: one mechanism, verifiable
+ * by reading the file, with no dependence on which of dotenvx's three quoting
+ * modes a value landed in.
  */
 function expand(
   key: string,
@@ -243,7 +242,7 @@ function expand(
 
 /**
  * Single quotes, because dotenvx treats a single-quoted value as fully
- * literal — no `$` expansion, no backslash escapes, and multi-line values (the
+ * literal: no `$` expansion, no backslash escapes, and multi-line values (the
  * GitHub App private key) survive verbatim. Verified against dotenvx 2.19 on
  * 2026-08-15, including embedded double quotes, `#`, and a bare `'`.
  *
@@ -266,11 +265,11 @@ function quote(key: string, value: string): string {
 /**
  * Composes the file and writes it.
  *
- * Every refusal is a `DeployError`, and every one of them ALSO lands in the
- * job summary — see the wrapper below. That is deliberate for this command
- * and not for the others in the group: the whole failure mode it exists to
- * catch is a missing credential, and the person who has to go and add it is
- * reading the run page rather than a step's log.
+ * Every refusal is a `DeployError`, and every one of them ALSO lands in the job
+ * summary, via the wrapper below. That is deliberate here and not for the other
+ * commands in the group: the failure mode this exists to catch is a missing
+ * credential, and the person who has to add it is reading the run page rather
+ * than a step's log.
  */
 export async function runDeployWriteEnv(
   options: WriteEnvOptions = {},
@@ -330,19 +329,19 @@ function compose(
 
   const resolved = new Map<string, Resolved>();
   const missing: string[] = [];
-  /** Which keys the write loop may NOT silently drop — see MissingSourceError. */
+  /** Which keys the write loop may NOT silently drop. See MissingSourceError. */
   const requiredKeys = new Set<string>();
 
   for (const [key, entries] of variables()) {
     const meta = entries[0]!.meta;
 
     // One contributor's own value, meaningless anywhere else and required by
-    // nothing — an app that could not boot without one could not boot in CI.
+    // nothing. An app that could not boot without one could not boot in CI.
     if (meta.scope === "developer") continue;
 
-    // `:tooling` suffixes count as the same manifest — the split says "declared
-    // here but not read by the running thing", which is a distinction about the
-    // Worker, not about which step needs the value.
+    // `:tooling` suffixes count as the same manifest. The split says "declared
+    // here but not read by the running thing", a distinction about the Worker,
+    // not about which step needs the value.
     const owned =
       source === null ||
       entries.some(
@@ -353,10 +352,10 @@ function compose(
     const asSecret = ghSecrets[key];
     const asVariable = ghVars[key];
 
-    // GitHub allows a secret and a variable of the same name in one environment,
-    // and resolves the ambiguity by never telling you. Refused: which of the two
-    // a deploy used would depend on this file's precedence rules, and nothing at
-    // the far end could report which value it got.
+    // GitHub allows a secret and a variable of the same name in one environment
+    // and never says which one it means. Refused: which of the two a deploy used
+    // would depend on this file's precedence rules, and nothing at the far end
+    // could report which value it got.
     if (asSecret !== undefined && asVariable !== undefined) {
       throw new DeployError(
         `${key} is set BOTH as a secret and as a variable.`,
@@ -375,7 +374,7 @@ function compose(
           : fromRegistry(meta);
 
     // `undefined` is rejected by at least one manifest's schema, so omitting the
-    // key breaks that app's boot. Derived rather than listed — the schemas are
+    // key breaks that app's boot. Derived rather than listed: the schemas are
     // the same ones the build validates against, so this cannot drift from them.
     // Under `--source`, every secret that manifest declares is required too; see
     // the header for why optional-in-schema is not good enough there.
@@ -479,9 +478,8 @@ function compose(
 /**
  * The line the job log gets: names and provenance only.
  *
- * Never a value, and never a fingerprint either — a fingerprint is useful for
- * comparing two stores by hand, and there is nothing here to compare it
- * against.
+ * Never a value, and never a fingerprint either. A fingerprint helps when
+ * comparing two stores by hand, and there is nothing here to compare against.
  */
 export function renderWriteEnvReport(result: WriteEnvResult): string[] {
   const counts: Record<Provenance, number> = {

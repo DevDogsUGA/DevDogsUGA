@@ -2,14 +2,14 @@
  * The Bitwarden **Password Manager** vault, via the `bw` CLI.
  *
  * A different product from Secrets Manager and a different CLI, which is the
- * whole point: `bws` has no user authentication at all, so the access token it
- * needs has to be held somewhere a person can log in to. That somewhere is the
- * Password Manager vault, and this module is how the tool reads it back rather
- * than making somebody paste a token every session.
+ * point: `bws` has no user authentication at all, so the access token it needs
+ * has to be held somewhere a person can log in to. That somewhere is the
+ * Password Manager vault, and this module reads it back rather than making
+ * somebody paste a token every session.
  *
  * Everything here degrades to `undefined`. A missing `bw`, a locked vault, a
- * declined unlock, a missing item — none of them are errors, because each has a
- * perfectly good fallback (ask). Throwing would turn a convenience into a
+ * declined unlock, a missing item: none of them are errors, because each has a
+ * good fallback, which is to ask. Throwing would turn a convenience into a
  * prerequisite.
  *
  * ⚠️ The token never passes through argv in either direction. Reads use
@@ -27,9 +27,9 @@ const run = promisify(execFile);
 /**
  * The item this looks for, and creates.
  *
- * Named for what it unlocks rather than for this tool, because the person who
- * finds it in the vault six months from now needs to know what it is, not which
- * script wrote it.
+ * Named for what it unlocks rather than for this tool, because whoever finds it
+ * in the vault six months from now needs to know what it is, not which script
+ * wrote it.
  */
 export const VAULT_ITEM_NAME = "DevDogs Secrets Manager access token (admin)";
 
@@ -68,7 +68,7 @@ export async function vaultStatus(): Promise<VaultStatus> {
  * a tool that pops a master-password prompt unannounced is shaped exactly like
  * the thing people are told never to type their master password into.
  *
- * The password is typed straight into `bw` — stdin is inherited, so it never
+ * The password is typed straight into `bw`. stdin is inherited, so it never
  * passes through this process.
  */
 async function session(status: VaultStatus): Promise<string | undefined> {
@@ -105,8 +105,8 @@ async function session(status: VaultStatus): Promise<string | undefined> {
  * Adds the session key, and `--nointeraction` always.
  *
  * The second one is not belt-and-braces. `bw` prompts for a master password on
- * stdin whenever the vault is locked — `bw get template item` against a locked
- * vault does it — and this module runs `bw` with piped stdio, where that prompt
+ * stdin whenever the vault is locked, as `bw get template item` does against a
+ * locked vault, and this module runs `bw` with piped stdio, where that prompt
  * has nobody to answer it and hangs until something gives up. `--nointeraction`
  * turns that into an immediate non-zero exit, which every caller here already
  * treats as "not available, ask instead".
@@ -129,8 +129,8 @@ export async function readTokenFromVault(): Promise<string | undefined> {
   if (status === "unavailable" || status === "unauthenticated") {
     // Said out loud, and only here. By the time this runs the chain has already
     // found nothing in the flag or the environment, so the person is about to
-    // be asked to paste a token — which is exactly when knowing the vault could
-    // have answered instead is worth something.
+    // be asked to paste a token. That is when knowing the vault could have
+    // answered instead is worth something.
     log.info(explainVault(status)!);
     return undefined;
   }
@@ -179,7 +179,7 @@ export async function saveTokenToVault(token: string): Promise<boolean> {
     organizationId: null,
     collectionIds: null,
     folderId: null,
-    type: 1, // login — so `bw get password` can retrieve it in one call
+    type: 1, // login, so `bw get password` can retrieve it in one call
     name: VAULT_ITEM_NAME,
     notes:
       "Bitwarden Secrets Manager access token for the `admin` machine account, " +

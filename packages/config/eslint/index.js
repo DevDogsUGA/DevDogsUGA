@@ -3,10 +3,10 @@ import nextConfig from "eslint-config-next/core-web-vitals";
 // @ts-ignore -- no types for this plugin
 import drizzle from "eslint-plugin-drizzle";
 
-// `eslint-config-next` already registers the `@typescript-eslint` plugin + parser.
-// Spreading `tseslint.configs.*` on top re-registers it and throws
+// `eslint-config-next` already registers the `@typescript-eslint` plugin and
+// parser. Spreading `tseslint.configs.*` on top re-registers it and throws
 // "Cannot redefine plugin @typescript-eslint" (the two packages resolve to
-// different plugin instances). So we harvest just the RULES from the type-checked
+// different plugin instances). So harvest just the RULES from the type-checked
 // presets and layer them onto Next's existing plugin registration.
 const typeCheckedRules = [
   ...tseslint.configs.recommendedTypeChecked,
@@ -22,11 +22,10 @@ const overrideRules = {
     { prefer: "type-imports", fixStyle: "inline-type-imports" },
   ],
   // All three patterns, not just args. The `_` prefix already meant "declared
-  // deliberately, not read" everywhere in this repo -- type-level assertions
-  // like `type _MeetingRowCheck = MeetingRow` that keep a hand-written select
-  // in step with its row type, and `const [_, x] = ...` discards in tests --
-  // but only the args form was configured, so every one of those still warned.
-  // A convention the linter half-honours is one people stop following.
+  // deliberately, not read" everywhere in this repo: type-level assertions like
+  // `type _MeetingRowCheck = MeetingRow` that keep a hand-written select in
+  // step with its row type, and `const [_, x] = ...` discards in tests. Only
+  // the args form was configured, so all of those still warned.
   "@typescript-eslint/no-unused-vars": [
     "warn",
     {

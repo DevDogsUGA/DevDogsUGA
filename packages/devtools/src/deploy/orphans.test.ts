@@ -1,17 +1,17 @@
 /**
- * `devtools deploy orphans` — and, above all, the gate on `--prune`.
+ * `devtools deploy orphans`, and above all the gate on `--prune`.
  *
- * ⚠️ Cloudflare is INJECTED, and that is the whole reason this file can test
- * the thing worth testing. With the real `listWorkerSecrets`, a machine with
- * no wrangler credential returns every Worker as unreadable, `total` is 0, and
- * the command returns before it ever reaches the prune branch. A suite written
- * that way passes whether or not the gate exists — which is exactly the shape
- * of test this repository has been bitten by. So the lister here always
- * returns orphans, and `deleteSecret` records its calls, so "nothing was
- * deleted" is a positive assertion about a reachable branch.
+ * ⚠️ Cloudflare is INJECTED, and that is why this file can test the thing
+ * worth testing. With the real `listWorkerSecrets`, a machine with no wrangler
+ * credential returns every Worker as unreadable, `total` is 0, and the command
+ * returns before it reaches the prune branch. A suite written that way passes
+ * whether or not the gate exists, a shape of test this repository has been
+ * bitten by. So the lister here always returns orphans, and `deleteSecret`
+ * records its calls, so "nothing was deleted" is a positive assertion about a
+ * reachable branch.
  *
  * Each deletion PUBLISHES A NEW VERSION of the code already deployed, so a
- * report path that deleted would be a report path that deployed — bypassing
+ * report path that deleted would be a report path that deployed, bypassing
  * both the promotion PR and the `production-apply` reviewers.
  */
 import { mkdtempSync, readFileSync } from "node:fs";
@@ -116,7 +116,7 @@ describe("what counts as an orphan", () => {
   it("does NOT report a minted key", async () => {
     // `SANDBOX_PROXY_TOKEN` is in no Bitwarden project and no GitHub store by
     // design. An audit reasoning from stored copies alone would offer the live
-    // proxy credential up for deletion — `env audit` had exactly that bug.
+    // proxy credential up for deletion. `env audit` had exactly that bug.
     const result = await audit({
       prune: false,
       env: { DEPLOY_ENV: "production" },
@@ -128,7 +128,7 @@ describe("what counts as an orphan", () => {
   });
 
   it("scopes expectations to the app that owns the Worker", async () => {
-    // PLATFORM_SECRET is declared — just not by sandbox — so finding it on the
+    // PLATFORM_SECRET is declared, just not by sandbox, so finding it on the
     // sandbox Worker is exactly the "sent to the wrong Worker" case.
     const result = await audit({
       prune: false,

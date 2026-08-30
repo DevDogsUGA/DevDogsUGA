@@ -20,9 +20,9 @@ export function isMemberToken(value: string): boolean {
  *
  * Deliberately structural rather than cryptographic: the proxy does NOT verify
  * these. Upstream does, with the signing key, and duplicating that at the edge
- * would mean holding the environment's JWT secret for no gain -- a second copy
- * of a key, to re-answer a question the origin answers anyway. All this decides
- * is "pass through" versus "refuse".
+ * would mean keeping a second copy of the environment's JWT secret to
+ * re-answer a question the origin answers anyway. All this decides is "pass
+ * through" versus "refuse".
  *
  * The segments must be non-empty base64url. A three-dot check alone accepted
  * `a.b.c`, and anything it accepted was forwarded to Supabase as a session.
@@ -46,12 +46,11 @@ export interface PresentedCredential {
    * `Authorization: Bearer <x>` where x is neither a member token nor
    * JWT-shaped.
    *
-   * Reported rather than ignored because the alternative is worse than doing
-   * nothing: with no flag, such a bearer fell through to `userJwt = null` and
-   * the request went upstream carrying the project key, so an expired or
-   * corrupted session was answered `200` as `anon` where real Supabase answers
-   * `401`. A sandbox that succeeds where production fails is the one outcome
-   * this proxy exists to prevent.
+   * Reported rather than ignored: with no flag, such a bearer fell through to
+   * `userJwt = null` and the request went upstream carrying the project key, so
+   * an expired or corrupted session was answered `200` as `anon` where real
+   * Supabase answers `401`. A sandbox that succeeds where production fails is
+   * the one outcome this proxy exists to prevent.
    */
   malformedBearer: boolean;
 }
@@ -59,8 +58,8 @@ export interface PresentedCredential {
 /**
  * Which credential carriers this path class permits beyond the two headers.
  *
- * Both are realtime-only and for the same reason -- a browser `WebSocket`
- * constructor can set neither headers nor much else -- so they travel together.
+ * Both are realtime-only for the same reason, so they travel together: a
+ * browser `WebSocket` constructor can set neither headers nor much else.
  */
 export interface RealtimeCarriers {
   queryParam: boolean;
@@ -116,9 +115,9 @@ export function extractCredential(
 
   // The other half of the same carve-out. `buildUpstreamRequest` has always
   // REWRITTEN a `dd_`-prefixed subprotocol, so the header was treated as a
-  // credential location on the way out while being invisible on the way in --
-  // which meant the header-less browser handshake the carve-out exists for was
-  // answered 401 for want of a credential it was carrying all along.
+  // credential location on the way out while being invisible on the way in. The
+  // header-less browser handshake the carve-out exists for was then answered
+  // 401 for want of a credential it was carrying all along.
   const protocolKey = carriers.protocol
     ? (protocolEntries(request).find(isMemberToken) ?? null)
     : null;
@@ -154,11 +153,11 @@ export function protocolEntries(request: Request): string[] {
  * Does this look like a browser?
  *
  * Upstream refuses secret keys from browsers by matching on `User-Agent`, and
- * the proxy mirrors that. It is not a security control -- a header is trivially
- * forged, and a member who forges it only reaches a key they already hold. It
- * is a FIDELITY control: without it a student ships `dd_secret_` to the browser,
- * it works all week against the sandbox, and the identical code 401s in
- * production. Catching it at the moment it is written is the entire point.
+ * the proxy mirrors that. It is not a security control: a header is easy to
+ * forge, and a member who forges it only reaches a key they already hold. It is
+ * a FIDELITY control. Without it a student ships `dd_secret_` to the browser, it
+ * works all week against the sandbox, and the identical code 401s in
+ * production. Catching it at the moment it is written is the point.
  */
 export function looksLikeBrowser(userAgent: string | null): boolean {
   if (!userAgent) return false;

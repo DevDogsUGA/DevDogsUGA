@@ -13,13 +13,13 @@ import {
  *
  * `audit.ts` decides which collisions are findings and its own tests cover
  * that. This file covers the two things only the command can get wrong, and
- * both of them fail in the same direction — a report that looks clean:
+ * both of them fail in the same direction, a report that looks clean:
  *
  *   * that it LOOKS at all. `gh variable list` with no `--env` is the one call
  *     in this system addressed at the repository rather than at an
  *     environment, and a wiring mistake makes it silently never happen.
  *   * that a run which could not look says so, and that a run which looked
- *     says THAT — the coverage sentence is a claim, and printing it
+ *     says THAT. The coverage sentence is a claim, and printing it
  *     unconditionally turns the one run that checked nothing into the one run
  *     that says it did.
  *
@@ -134,8 +134,8 @@ describe("env audit, at the repository scope", () => {
     // to this target, so a repository-level copy of it is shadowed by the
     // environment one and invisible until that copy is deleted.
     //
-    // `AIRTABLE_BASE_ID` was the exemplar here — users really were told to set
-    // it by hand at repository level before push started routing it — and it
+    // `AIRTABLE_BASE_ID` was the exemplar here. Users really were told to set
+    // it by hand at repository level before push started routing it, and it
     // stopped being one when the base id became a committed constant. It is no
     // longer routed anywhere, so a repository variable holding it is now the
     // `GITHUB_ORG` case the branch below deliberately exempts: somebody
@@ -163,8 +163,8 @@ describe("env audit, at the repository scope", () => {
   it("says it could NOT check when the list call fails", async () => {
     // ⚠️ The one that protects the test above. `gh variable list` needs
     // permissions the environment reads do not, so failing here while
-    // everything else succeeds is ordinary — and an audit that answered it
-    // with silence would report an unchecked scope as a clean one.
+    // everything else succeeds is ordinary, and an audit that answered it with
+    // silence would report an unchecked scope as a clean one.
     vi.mocked(listRepositoryVariables).mockRejectedValue(
       // Shaped like a real one: `describe()` in the gh client appends a
       // paragraph of guidance, and only the first line belongs in a finding.
@@ -198,7 +198,7 @@ describe("env audit, at the repository scope", () => {
   });
 
   it("does not let the failure hide the rest of the audit", async () => {
-    // An audit that refuses to run is an audit nobody runs — the reason the
+    // An audit that refuses to run is an audit nobody runs. That is why the
     // Cloudflare pass returns its unreadable Workers instead of throwing.
     vi.mocked(listRepositoryVariables).mockRejectedValue(
       new GhError("HTTP 403"),
@@ -217,15 +217,15 @@ describe("env audit, the accepted wiring", () => {
    * `accepted: acceptsKey`. The predicate has tests of its own; this is the
    * call site, where dropping the argument falls back to the strict default
    * ("only where `route` says") and reports every correctly-fanned-out
-   * production key as a stray to delete — burying the one stray that matters.
+   * production key as a stray to delete, burying the one stray that matters.
    */
   const AT = "2026-01-01T00:00:00Z";
 
   beforeEach(() => {
     // The production project fans out to two GitHub environments. Both hold
-    // both keys: the ordinary secret legitimately (a push writes the
-    // superset), the apply-tier one half-legitimately — its `production` copy
-    // is the reviewer gate failing open.
+    // both keys: the ordinary secret legitimately, because a push writes the
+    // superset, and the apply-tier one half-legitimately, because its
+    // `production` copy is the reviewer gate failing open.
     const stored = (id: string, key: string) => ({
       id,
       key,
@@ -258,9 +258,9 @@ describe("env audit, the accepted wiring", () => {
   });
 
   it("still names the apply-tier key sitting in the unreviewed environment", async () => {
-    // The positive control for the test above — an `accepted` of "everything
-    // is fine" would also produce no stray findings. This copy is the
-    // reviewer gate failing open, and it must survive the superset logic.
+    // The positive control for the test above. An `accepted` of "everything is
+    // fine" would also produce no stray findings. This copy is the reviewer
+    // gate failing open, and it must survive the superset logic.
     await runEnvAudit({ target: "production", yes: true });
 
     expect(printed()).toMatch(

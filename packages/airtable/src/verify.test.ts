@@ -10,8 +10,8 @@ import { choiceFindings, duplicateKeyFindings, verifyBase } from "./verify.js";
  *
  * Driven through a stub client rather than the real registry, so each check can
  * be pointed at a base that is broken in exactly one way. The real registry
- * gets one assertion of its own below — that it holds no placeholders — because
- * that is the property a stub can never establish.
+ * gets one assertion of its own below, that it holds no placeholders, because a
+ * stub can never establish that property.
  */
 
 interface StubTable {
@@ -41,9 +41,9 @@ function stubClient(
 
 describe("the committed registry", () => {
   it("holds no placeholder IDs", async () => {
-    // Until 2026-08-06 this asserted the opposite -- the base did not exist and
+    // Until 2026-08-06 this asserted the opposite: the base did not exist and
     // every ID was a `fldTODO_*`. Now that it does, the enduring claim is the
-    // inverse: a field declared but never scaffolded must not reach main.
+    // inverse. A field declared but never scaffolded must not reach main.
     //
     // Worth an assertion rather than trusting the runbook, because a
     // placeholder does not fail loudly. Airtable accepts a write to an unknown
@@ -57,8 +57,8 @@ describe("the committed registry", () => {
   });
 
   it("gives every link field a target that exists", async () => {
-    // `linkedTableId` is required by the Meta API, so a link naming a table the
-    // registry does not have is a scaffold that dies partway through -- after
+    // The Meta API requires `linkedTableId`, so a link naming a table the
+    // registry does not have is a scaffold that dies partway through, after
     // creating tables, which is the expensive half to unpick.
     for (const [key, spec] of Object.entries(registry)) {
       for (const [fieldKey, fieldSpec] of Object.entries(spec.fields)) {
@@ -83,9 +83,9 @@ describe("verifyBase", () => {
   });
 
   it("lists every pushed field as a manual checklist", async () => {
-    // The base schema response is purely structural — no permission or
-    // editing-restriction data anywhere in it — so whether each ⚙️ field is
-    // locked down can only ever be checked by a human walking the UI.
+    // The base schema response is structural only, with no permission or
+    // editing-restriction data in it, so whether each ⚙️ field is locked down
+    // can only be checked by a human walking the UI.
     const result = await verifyBase(stubClient([]), { checkDuplicates: false });
     expect(result.pushChecklist.length).toBeGreaterThan(0);
     expect(result.pushChecklist.some((c) => c.field === "⚙️ Platform ID")).toBe(
@@ -221,8 +221,8 @@ describe("the five checks, against a broken base", () => {
 
   it("check 3 — an ineligible match key is fatal", async () => {
     // The registry's type-level guard prevents this being written by hand, so
-    // reaching it needs a cast — which is exactly how it would arrive in
-    // practice, via a field retyped in the Airtable UI.
+    // reaching it needs a cast. That is how it would arrive in practice too,
+    // via a field retyped in the Airtable UI.
     const broken = table("Members", "tblM", {
       platformId: {
         ...fixture.fields.platformId,
@@ -280,11 +280,11 @@ describe("the five checks, against a broken base", () => {
 /**
  * Check 6, against a base whose choice list is wrong in one way at a time.
  *
- * The check exists because a renamed or deleted choice fails silently in the
- * worst way available: nothing errors, no write is rejected, and rows keep
- * holding a string no branch in the platform matches — which renders as an
- * empty slot on a page that otherwise works. Nothing else in the verifier
- * looks at `options`, so if this does not fire, nothing does.
+ * The check exists because a renamed or deleted choice fails silently: nothing
+ * errors, no write is rejected, and rows keep holding a string no branch in the
+ * platform matches, which renders as an empty slot on a page that otherwise
+ * works. Nothing else in the verifier looks at `options`, so if this does not
+ * fire, nothing does.
  */
 describe("check 6 — declared select choices", () => {
   const KIND = ["Workshop", "Social", "Meeting"] as const;
@@ -419,7 +419,7 @@ describe("check 6 — declared select choices", () => {
   it("says nothing about a select whose spec declares no choices", async () => {
     // The narrowness is the point. An undeclared select leaves the vocabulary
     // to the officers, and comparing it would reverse the rule this check was
-    // carefully widened around rather than replacing.
+    // widened around rather than replacing.
     const undeclared = table("Meetings", "tblM", {
       platformId: field
         .text("fldId", "⚙️ Platform ID")

@@ -1,25 +1,24 @@
 /**
- * The operator/tooling manifest: keys no app schema reads. They belong to the
- * person running devtools — pushing secrets, scaffolding Airtable, deploying —
- * so they live with the operator surface rather than in any app's `env.ts`.
+ * The operator manifest: keys no app schema reads. They belong to the person
+ * running devtools, pushing secrets, scaffolding Airtable, deploying.
  *
- * NOTHING IMPORTS THIS FILE at runtime. Like the other package-root
- * manifests it exists for the registry's consumers — the completeness test,
- * the `.env.example` generator, the `env push` routing — and the
- * package's `typecheck` script is what keeps the metadata honest.
+ * NOTHING IMPORTS THIS FILE at runtime. Like the other package-root manifests
+ * it exists for the registry's consumers: the completeness test, the
+ * `.env.example` generator, the `env push` routing. The package's `typecheck`
+ * script is what keeps the metadata honest.
  *
  * This is also where the `never-store` credential is declared, and the
- * classification is the entire point: it is the MOST sensitive value in the
- * repository, refused storage precisely because storing it defeats the thing
- * it protects. See the long-form reasoning in `src/bws/environments.ts`.
+ * classification is the whole point. It is the most sensitive value in the
+ * repository, refused storage because storing it defeats the thing it
+ * protects. See the long-form reasoning in `src/bws/environments.ts`.
  *
  * There were two until `AIRTABLE_PAT` was removed. It was the bootstrap
  * Airtable token, and it earned `never-store` by carrying `schema.bases:write`
- * on an operator's laptop — which is also why it stopped earning a
- * declaration at all: `deploy airtable-apply` does that write behind required
- * reviewers, and every other command it served needs only a read. Creating a
- * base from nothing still needs a person and a token, but that is a one-off
- * with a documented revoke rather than a key the registry carries.
+ * on an operator's laptop. That is also why it stopped earning a declaration
+ * at all: `deploy airtable-apply` does that write behind required reviewers,
+ * and every other command it served needs only a read. Creating a base from
+ * nothing still needs a person and a token, but that is a one-off with a
+ * documented revoke rather than a key the registry carries.
  */
 import { declare, define } from "@devdogsuga/env";
 import { z } from "zod";
@@ -28,14 +27,14 @@ declare({
   source: "devtools",
   server: {
     // Everything here is optional: these are operator credentials, and an
-    // app -- or CI -- that cannot boot without one of them would be wrong.
+    // app or CI that cannot boot without one of them would be wrong.
     // Presence is checked at the point of use, with a named refusal.
     //
     // Local .env storage was refused here until 2026-08-19 and is now
     // OFFERED (the prompt's default save destination), by decision. What
-    // held, holds: the refusals that matter are the REMOTE ones -- `env
-    // push` refuses this key by name, `pull` will not write it back, and
-    // `audit` errors on any remote copy -- because one
+    // held, holds: the refusals that matter are the REMOTE ones. `env push`
+    // refuses this key by name, `pull` will not write it back, and `audit`
+    // errors on any remote copy, because one
     // `${{ secrets.BWS_ACCESS_TOKEN }}` would hand CI every secret we hold,
     // and storing it in a Bitwarden project is a key locked inside the box
     // it opens. A gitignored .env on the operator's own machine is neither
@@ -57,26 +56,26 @@ declare({
     // The narrowest of the three Airtable tokens, and the only one CI may
     // hold outside the reviewer gate. §3.5's stage-1 dry run answers "what
     // would this commit do to the base" from `main`, so whatever it
-    // authenticates with is reachable from the `main` trust tier -- which
-    // rules out AIRTABLE_SYNC_PAT (it can rewrite every record) and rules out
+    // authenticates with is reachable from the `main` trust tier. That rules
+    // out AIRTABLE_SYNC_PAT (it can rewrite every record) and
     // AIRTABLE_APPLY_PAT (that is what the reviewer gate is for). A token
     // that can read a schema and do nothing else is what is left.
     //
-    // It also ruled out AIRTABLE_PAT, the write-capable bootstrap token, until
-    // that key was removed outright -- so the argument now has one fewer
+    // It also ruled out AIRTABLE_PAT, the write-capable bootstrap token,
+    // until that key was removed outright, so the argument now has one fewer
     // candidate to reject rather than a different conclusion.
     //
     // ⚠️ `narrowed: true` here is the SECOND shape of that marker, not the
-    // DB_URL one. There is no wider credential under this name in any target
-    // -- the scope split is between three separate declarations rather than
-    // three values of one key -- so nobody has to remember to mint a weaker
+    // DB_URL one. There is no wider credential under this name in any target.
+    // The scope split is between three separate declarations rather than
+    // three values of one key, so nobody has to remember to mint a weaker
     // variant for preflight. See `EnvMeta.narrowed` for both shapes and for
     // what marking a key wrongly costs.
     //
     // `tier: "plan"`, deliberately: it reaches `preflight` (where `main-plan`
     // runs, via the `narrowed` opt-in) and `production` (where
     // `production-plan` runs) and nothing else. The default tier used to send
-    // it to staging as well, where no job reads it — a read-only spare to
+    // it to staging as well, where no job reads it: a read-only spare to
     // rotate, not a privilege, but a spare with no purpose. `tier: "apply"`
     // would be wrong in the other direction: production-apply ALONE, the one
     // environment the plan never runs in.
@@ -116,8 +115,8 @@ declare({
       tier: "apply",
       commented: true,
     }),
-    // Devops-only, per the model doc: it appears in no contributor flow --
-    // `pnpm dev`, `pnpm build` and every test suite run without it -- so its
+    // Devops-only, per the model doc. It appears in no contributor flow:
+    // `pnpm dev`, `pnpm build` and every test suite run without it, so its
     // absence can never fail validation or block a boot.
     CLOUDFLARE_API_TOKEN: define(z.string().min(1).optional(), {
       doc:
@@ -150,8 +149,8 @@ declare({
     // Developer-scoped even though the VALUE is org-wide: only operators
     // running `env pull/push/audit` on their own machines read it, no app and
     // no CI job does, and developer scope is what keeps a purely local input
-    // out of every routed set. A public identifier — it names the org and
-    // authorizes nothing; every capability comes from BWS_ACCESS_TOKEN.
+    // out of every routed set. A public identifier: it names the org and
+    // authorizes nothing, every capability comes from BWS_ACCESS_TOKEN.
     BWS_ORG_ID: define(z.uuid().optional(), {
       doc:
         "The Bitwarden organization id, needed since the Secrets Manager " +

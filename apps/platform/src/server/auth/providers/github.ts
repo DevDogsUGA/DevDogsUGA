@@ -60,8 +60,8 @@ const profileSchema = z.object({
 
 /**
  * Fetches the GitHub profile, invites the user to the DevDogs organization,
- * and upserts the profile into the `github_profile` table. The identity link
- * itself is managed by Supabase (`auth.identities`).
+ * and upserts the profile into `leaderboardProfiles`. Supabase owns the
+ * identity link itself, in `auth.identities`.
  * @param accessToken The GitHub access token from the Supabase OAuth session.
  * @see `requestAuthorization`
  */
@@ -111,13 +111,12 @@ export async function linkProfile(accessToken: string): Promise<void> {
     .catch(console.error);
 
   // Records the GitHub identity against the member, and nothing more. The
-  // points columns on this table were fed by `syncLeaderboard`, removed 2026-08
-  // when the GitHub-issue leaderboard was dropped; the identity mapping is kept
-  // because whatever replaces it will need to know which GitHub account belongs
-  // to which member, and that is only knowable at link time.
+  // points columns here were fed by `syncLeaderboard`, removed 2026-08 with the
+  // GitHub-issue leaderboard. The mapping is kept because any replacement needs
+  // to know which GitHub account belongs to which member, and link time is the
+  // only moment that is knowable.
   //
-  // Not to be confused with `memberPoints`, which is the competition points
-  // system and is fed by the tally.
+  // Not `memberPoints`, which is the competition points system fed by the tally.
   await db
     .insert(leaderboardProfiles)
     .values({
@@ -135,10 +134,10 @@ export async function linkProfile(accessToken: string): Promise<void> {
 }
 
 /**
- * Removes a GitHub user from the DevDogs organization and unlinks their
- * GitHub identity from Supabase. The `github_profile` row is preserved so
- * that leaderboard data is not lost.
- * The GitHub login is read from `identity_data.user_name`, stored by Supabase
+ * Removes a GitHub user from the DevDogs organization and unlinks their GitHub
+ * identity from Supabase. The `leaderboardProfiles` row survives, since it is
+ * the GitHub-account-to-member mapping.
+ * The GitHub login comes from `identity_data.user_name`, which Supabase stores
  * at link time.
  */
 export async function unlinkProfile(): Promise<void> {

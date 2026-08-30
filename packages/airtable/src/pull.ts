@@ -2,7 +2,7 @@ import type { AirtableRecord } from "./client.js";
 import { matchKeyField, type TableSpec } from "./field.js";
 
 export interface PullResult<T = Record<string, unknown>> {
-  /** Airtable record id — the stable identity across renames and edits. */
+  /** Airtable record id. Stable across renames and edits. */
   airtableRecordId: string;
   /** The platform id from the match key, when the record carries one. */
   platformId: string | null;
@@ -12,15 +12,14 @@ export interface PullResult<T = Record<string, unknown>> {
 /**
  * Parses Airtable records into the shape the sync writes to Postgres.
  *
- * Every record carries its `airtableRecordId`, which is the single most
- * important detail in the integration: record IDs are stable across renames,
- * field edits, view re-sorts and moves between views, so an officer retitling
- * "Sprint 2" updates a row rather than orphaning every attendance record
- * pointing at it.
+ * Every record carries its `airtableRecordId`. Record IDs are stable across
+ * renames, field edits, view re-sorts and moves between views, so an officer
+ * retitling "Sprint 2" updates a row instead of orphaning every attendance
+ * record pointing at it.
  *
- * `platformId` is separately nullable and that is meaningful — a row an
- * officer has just created has no platform id yet, which is exactly how the
- * sync tells "new in Airtable" from "already linked".
+ * `platformId` is nullable on purpose: a row an officer just created has no
+ * platform id yet, which is how the sync tells "new in Airtable" from
+ * "already linked".
  */
 export function applyPull<T = Record<string, unknown>>(
   spec: TableSpec,

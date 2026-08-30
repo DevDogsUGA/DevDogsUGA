@@ -1,38 +1,38 @@
 /**
- * `pnpm devtools run <task>` — which apps a root turbo task runs against.
+ * `pnpm devtools run <task>`: which apps a root turbo task runs against.
  *
  * `pnpm dev` used to start every app in the workspace at once: two Next dev
  * servers on two ports and a Flutter run, when almost nobody is working on
  * more than one. Turborepo has always had `--filter`, so the capability was
- * there — it was the DEFAULT that was wrong, and a default you have to know a
- * flag to escape is one most contributors never escape.
+ * there. The DEFAULT was wrong, and a default you have to know a flag to
+ * escape is one most contributors never escape.
  *
  * So every root turbo script routes through here. With a TTY and no explicit
- * filter it asks; with either of those absent it is a passthrough that costs
- * one process spawn.
+ * filter it asks; without either it is a passthrough that costs one process
+ * spawn.
  *
  * ## Why this lives in devtools now
  *
  * It began here, moved out to `scripts/pick.mjs` as plain Node, and has come
- * back. The move out was justified on two grounds, and re-checking them on
- * 2026-08-27 found one of them false:
+ * back. The move out rested on two grounds, and re-checking them on 2026-08-27
+ * found one of them false:
  *
- *   * **"CI pays for it."** It does not. No workflow invokes the root task
- *     aliases — `ci.yaml` and `deploy.yaml` both call `pnpm turbo run …`
+ *   * "CI pays for it." It does not. No workflow invokes the root task
+ *     aliases: `ci.yaml` and `deploy.yaml` both call `pnpm turbo run …`
  *     directly (`ci.yaml:69`, `:84`, `:183`, `:216`; `deploy.yaml:207`,
- *     `:601`), which never reaches this file. The cost was only ever paid by
- *     a person at a terminal, where it buys the question this exists to ask.
- *     The `CI` guard in `shouldAsk` stays anyway, as insurance against a
- *     runner that one day does type `pnpm build`.
- *   * **"It must not need a build."** This one holds, and is why the module
- *     stays careful. `pnpm build` routes through here, so anything on this
- *     path that had to be compiled first would be a cycle. It is safe because
- *     devtools runs from source under `--conditions=devdogs-source`, and
- *     because the one workspace dependency with no source condition —
- *     `@devdogsuga/docs`, which is `dist`-only — is reached through a lazy
- *     `await import` in `docs/index-pages.ts` and never loads on this path.
- *     ⚠️ A top-level `import` of `@devdogsuga/docs` anywhere in the eager
- *     graph would deadlock `pnpm build` on itself.
+ *     `:601`), which never reaches this file. Only a person at a terminal pays
+ *     it, and there it buys the question this exists to ask. The `CI` guard in
+ *     `shouldAsk` stays as insurance against a runner that one day does type
+ *     `pnpm build`.
+ *   * "It must not need a build." This one holds, and is why the module stays
+ *     careful. `pnpm build` routes through here, so anything on this path that
+ *     had to be compiled first would be a cycle. It is safe because devtools
+ *     runs from source under `--conditions=devdogs-source`, and because the
+ *     one workspace dependency with no source condition (`@devdogsuga/docs`,
+ *     which is `dist`-only) is reached through a lazy `await import` in
+ *     `docs/index-pages.ts` and never loads on this path. ⚠️ A top-level
+ *     `import` of `@devdogsuga/docs` anywhere in the eager graph would
+ *     deadlock `pnpm build` on itself.
  */
 import { spawnSync } from "node:child_process";
 import {
@@ -50,8 +50,8 @@ import { PROJECT_ROOT } from "../environment.js";
  * Where the last answer per task is kept.
  *
  * Under `node_modules/.cache` rather than a dotfile at the root: it is a
- * convenience, not configuration — losing it to a reinstall costs one extra
- * keystroke — and putting it there means no new `.gitignore` entry and no new
+ * convenience, not configuration, and losing it to a reinstall costs one extra
+ * keystroke. Putting it there also means no new `.gitignore` entry and no new
  * file in the listing every contributor sees.
  */
 const MEMORY = join(
@@ -102,16 +102,16 @@ function passthrough(task: string, args: string[]): never {
  *
  * Every one of these is a case where a prompt is either impossible or wrong:
  *
- *   * `CI` — set by GitHub Actions and every other runner. No workflow reaches
+ *   * `CI`, set by GitHub Actions and every other runner. No workflow reaches
  *     this today (see the header), but a workflow that blocked on a
  *     multiselect would hang until its timeout with no output saying why, and
  *     that failure is bad enough to keep guarding against.
- *   * no TTY — a pipe, a `turbo` invoked by a script, an editor task runner.
+ *   * No TTY: a pipe, a `turbo` invoked by a script, an editor task runner.
  *     Nobody is there to answer. Every other picker in this repo checks the
  *     same thing.
- *   * an explicit filter — the caller has already said which packages, and
+ *   * An explicit filter. The caller has already said which packages, and
  *     asking again would be asking them to repeat themselves.
- *   * `DEVDOGS_PICK=0` — the escape hatch, and the recursion guard above.
+ *   * `DEVDOGS_PICK=0`, the escape hatch and the recursion guard above.
  */
 export function shouldAsk(args: string[]): boolean {
   if (process.env.CI) return false;
@@ -129,9 +129,9 @@ export function shouldAsk(args: string[]): boolean {
  * The apps that actually define this task, by package name.
  *
  * `apps/*` only. Packages are libraries an app pulls in, and turbo already
- * builds those through `^build` when it builds the app that needs them — so
- * listing all twelve would be asking a question about things the answer does
- * not change. Reading each `package.json` rather than shelling out to
+ * builds those through `^build` when it builds the app that needs them, so
+ * listing all twelve would ask about things the answer does not change.
+ * Reading each `package.json` rather than shelling out to
  * `turbo run --dry=json`, which is authoritative but costs about a second
  * before the first question.
  */
@@ -198,7 +198,7 @@ function remember(task: string, apps: string[]): void {
  * Runs one root turbo task, asking which apps first where that makes sense.
  *
  * Never returns: every path ends in `passthrough`, which exits with turbo's
- * own status. That is why `cli.ts` dispatches this before `intro()` — there is
+ * own status. That is why `cli.ts` dispatches this before `intro()`. There is
  * no `outro()` to reach, and a banner would land on the stream a dev server is
  * about to take over.
  */
@@ -227,34 +227,30 @@ export async function runTask(argv: string[]): Promise<never> {
   const previous = remembered(task);
 
   const chosen = await multiselect({
-    // The `--all` escape is named here rather than offered as an option.
-    //
-    // There used to be an "everything" entry alongside the apps, and `a` —
-    // clack's toggle-all — replaces most of what it was for. Not all of it,
-    // though, and the difference is worth the half-line it costs to say:
-    // `a` selects every app in THIS list, which is `apps/*`. `--all` passes
-    // no filter at all, which is every package in the workspace.
+    // The `--all` escape is named in the message rather than offered as an
+    // option. An "everything" entry used to sit alongside the apps; clack's
+    // toggle-all `a` replaces most of what it was for, but not all of it. `a`
+    // selects every app in THIS list, which is `apps/*`; `--all` passes no
+    // filter at all, which is every package in the workspace.
     //
     // For `build` those nearly coincide, since filtering to an app pulls its
     // dependencies in through `^build`. For `test`, `lint` and `typecheck`
-    // they do not, and not by a little: those tasks declare `dependsOn:
-    // ["^build"]`, not `^test`, so filtering to the four apps runs four test
-    // tasks while an unfiltered run covers ten packages. Selecting every app
-    // and expecting a workspace-wide test run would quietly skip every suite
-    // in `packages/*`.
+    // they do not: those tasks declare `dependsOn: ["^build"]`, not `^test`,
+    // so filtering to the four apps runs four test tasks while an unfiltered
+    // run covers ten packages. Selecting every app and expecting a
+    // workspace-wide test run would quietly skip every suite in `packages/*`.
     message: `\`${task}\` — which apps? (a selects all; --all runs every package)`,
     options: apps.map((app) => ({
       value: app.name,
       label: app.name,
-      // The actual command, so the choice is made against what will run
-      // rather than against a name.
+      // The actual command, so the choice is made against what runs, not a name.
       hint: app.script.length > 58 ? `${app.script.slice(0, 57)}…` : app.script,
     })),
-    // Only what was picked last time, and only names still on offer — which
-    // also quietly drops the retired "everything" entry from an older cache
-    // rather than preselecting a value nothing would match. Nothing is
-    // preselected on a first run, so with `required` the first answer is a
-    // real choice rather than an Enter through a preselected default.
+    // Only what was picked last time, and only names still on offer, which
+    // also drops the retired "everything" entry from an older cache rather
+    // than preselecting a value nothing would match. Nothing is preselected on
+    // a first run, so with `required` the first answer is a real choice rather
+    // than an Enter through a default.
     initialValues: previous.filter((name) =>
       apps.some((app) => app.name === name),
     ),

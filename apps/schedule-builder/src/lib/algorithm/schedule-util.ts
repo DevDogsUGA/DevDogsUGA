@@ -47,9 +47,9 @@ export function creditHourCeiling(schedule: Schedule): number {
 }
 
 /**
- * True when consecutive classes on a day are far enough apart in time to walk
- * between. Uses the real gap rather than a fixed threshold, so a long break
- * across campus passes and a back-to-back across campus does not.
+ * True when consecutive classes on a day are far enough apart to walk between.
+ * Compares the real gap against the walking time rather than a fixed threshold,
+ * so a long break across campus passes and a back-to-back does not.
  */
 function isWalkable(schedule: Schedule): boolean {
   for (const classes of schedule.days.values()) {
@@ -65,8 +65,8 @@ function isWalkable(schedule: Schedule): boolean {
 
 /**
  * Returns true when the schedule satisfies every hard constraint. Credit hours
- * are compared as a range, so a variable-credit course counts as satisfying a
- * bound it *can* reach.
+ * compare as a range, so a variable-credit course counts as satisfying a bound
+ * it *can* reach.
  */
 export function validateHard(
   schedule: Schedule,
@@ -109,8 +109,8 @@ const WALKING_SPEED_MPH = 3;
 
 /**
  * Haversine walking time in minutes between two classes' buildings. Returns 0
- * when either building has no coordinates, so unknown locations never make a
- * schedule look worse than one we can actually measure.
+ * when either building has no coordinates, so an unknown location never scores
+ * worse than a measured one.
  */
 function walkingMinutes(a: AlgorithmClass, b: AlgorithmClass): number {
   if (
@@ -136,7 +136,7 @@ function walkingMinutes(a: AlgorithmClass, b: AlgorithmClass): number {
   return distanceMiles * (60 / WALKING_SPEED_MPH);
 }
 
-/** Haversine distance in walking minutes between consecutive classes in a day. */
+/** The longest walk, in minutes, between any two consecutive classes on a day. */
 export function computeMaxDistance(schedule: Schedule): number {
   let maxDistance = 0;
 

@@ -1,12 +1,12 @@
 /**
- * Cloudflare cron dispatcher (replaces vercel.json crons). Composed into the
- * deployed worker by cloudflare/worker.ts (see the platform app for the same
- * pattern). One daily trigger fans out to both scraper routes on the worker's
- * own public origin (`env.BASE_URL`); the routes are CRON_SECRET-guarded and
- * unchanged.
+ * Cloudflare cron dispatcher, replacing the vercel.json crons.
+ * cloudflare/worker.ts composes it into the deployed worker, the same pattern
+ * the platform app uses. One daily trigger fans out to both scraper routes on
+ * the worker's own public origin (`env.BASE_URL`); the routes stay
+ * CRON_SECRET-guarded and unchanged.
  *
- * WARNING: the registrar/RMP scrapers are long-running — a single Workers
- * scheduled invocation may exceed CPU/wall-time limits. Consider splitting into
+ * WARNING: the registrar and RMP scrapers are long-running, and one Workers
+ * scheduled invocation may exceed CPU/wall-time limits. Split into
  * Queues/Workflows or chunked runs before production.
  */
 import type { env } from "~/env";
@@ -14,10 +14,9 @@ import type { env } from "~/env";
 /**
  * The bindings this handler reads, derived from the env schema rather than
  * restated. A hand-written interface cannot fail the build when the schema
- * never declared the key — which is how `BASE_URL` was read here for a while
- * without any manifest supplying it, making every run throw `Invalid URL`.
- *
- * Type-only import, so nothing is pulled into the Worker bundle.
+ * never declared the key. That is how `BASE_URL` was read here for a while with
+ * no manifest supplying it, making every run throw `Invalid URL`. The import is
+ * type-only, so nothing lands in the Worker bundle.
  */
 export type CronEnv = Pick<typeof env, "CRON_SECRET" | "BASE_URL">;
 

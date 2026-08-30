@@ -118,7 +118,7 @@ describe("buildPush", () => {
       }),
     ];
     // The member has dropped off the roster, so Postgres has nulled nothing
-    // durable — but suppose it had.
+    // durable. Suppose it had.
     const plan = buildPush(
       members,
       [member({ ugaEmail: null, legalName: null, meetingCount: 4 })],

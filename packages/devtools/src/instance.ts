@@ -1,10 +1,9 @@
 /**
  * Finding the instance to work against, and signing in to it.
  *
- * Detection is automatic wherever possible. `supabase status -o env` already
- * prints everything needed, and asking a contributor to copy a URL and a key
- * out of one terminal into another is exactly the kind of step that makes a
- * tool feel like homework.
+ * Detection is automatic where possible: `supabase status -o env` already
+ * prints everything needed, so nobody has to copy a URL and a key from one
+ * terminal into another.
  */
 import { execFileSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
@@ -14,16 +13,15 @@ import { PROJECT_ROOT } from "./environment.js";
  * The repo root, which is where `supabase/config.toml` lives.
  *
  * The Supabase CLI walks up from its working directory looking for that file,
- * and falls back to `basename(cwd)` as the project name when it finds none --
- * so running it from the wrong place fails with "No such container:
- * supabase_db_<whatever directory you were in>", which is a confusing thing to
- * hand someone. Resolved from a source file rather than from `cwd` so it does
- * not matter where the contributor invoked the tool.
+ * and falls back to `basename(cwd)` as the project name when it finds none, so
+ * running it from the wrong place fails with "No such container:
+ * supabase_db_<whatever directory you were in>". Resolved from a source file
+ * rather than from `cwd` so it does not matter where the contributor invoked
+ * the tool.
  *
- * Defined in `environment.ts` and re-exported here, where it used to live:
- * the probe that runs before the menu's first frame needs this path, and
- * importing it from this module would drag `@supabase/supabase-js` onto that
- * path with it. Every existing importer keeps working.
+ * Defined in `environment.ts` and re-exported here, where it used to live: the
+ * probe that runs before the menu's first frame needs this path, and importing
+ * it from this module would drag `@supabase/supabase-js` onto that path.
  */
 export { PROJECT_ROOT };
 
@@ -32,8 +30,8 @@ export { PROJECT_ROOT };
  *
  * supabase-js encodes the default schema in the client's type, so a `schema`
  * parameter of type `string` produces a client that will not unify with a
- * hand-written `SupabaseClient` annotation. Deriving the type from the factory
- * sidesteps that, and cannot go stale when the options below change.
+ * hand-written `SupabaseClient` annotation. Deriving `DevtoolsClient` from the
+ * factory sidesteps that.
  */
 function makeClient(url: string, key: string, schema: string) {
   return createClient(url, key, {
@@ -72,9 +70,8 @@ export function detectLocalInstance(cwd: string = PROJECT_ROOT): Instance {
   let output: string;
   try {
     // Through `pnpm exec` because the Supabase CLI is a workspace devDependency
-    // rather than something a contributor installs globally -- invoking
-    // `supabase` directly works only on the machines that happen to have it on
-    // PATH, which is not the machine this is written for.
+    // rather than a global install. Invoking `supabase` directly works only on
+    // machines that happen to have it on PATH.
     output = execFileSync("pnpm", ["exec", "supabase", "status", "-o", "env"], {
       cwd,
       encoding: "utf8",
@@ -119,16 +116,13 @@ export function detectLocalInstance(cwd: string = PROJECT_ROOT): Instance {
  *
  * This used to be `assertNotProduction()`, which read a tier out of a singleton
  * `platform."instance"` table and refused anything reporting itself as
- * production. That table is gone, and the check it performed was not the one
- * doing the work: `detectLocalInstance()` above reads `supabase status`, which
- * only ever describes the Docker stack on this machine. A remote project cannot
- * reach these commands in the first place, so the tier column was guarding a
- * door that was already walled up — while being one more thing to set correctly
- * on every instance.
+ * production. That table is gone, and the tier column was guarding a door that
+ * was already walled up: `detectLocalInstance()` above reads `supabase status`,
+ * which only ever describes the Docker stack on this machine, so a remote
+ * project cannot reach these commands in the first place.
  *
- * What was genuinely useful was its error message, because "have you run
- * migrations?" is the failure a contributor actually hits. That is all this
- * does now.
+ * What was useful was its error message, because "have you run migrations?" is
+ * the failure a contributor actually hits. That is all this does now.
  */
 export async function assertMigrated(instance: Instance): Promise<void> {
   const client = makeClient(instance.apiUrl, instance.secretKey, "platform");
@@ -143,7 +137,7 @@ export async function assertMigrated(instance: Instance): Promise<void> {
   }
 }
 
-/** A service-role client. Bypasses RLS — setup and teardown only. */
+/** A service-role client. Bypasses RLS, so setup and teardown only. */
 export function adminClient(
   instance: Instance,
   schema = "platform",
@@ -154,9 +148,9 @@ export function adminClient(
 /**
  * A client signed in as a seeded persona, subject to RLS.
  *
- * Signing in for real rather than hand-signing a JWT, so what gets exercised is
- * the same token path production uses — including whatever claims Supabase Auth
- * actually puts in a token, rather than what we assume it does.
+ * Signs in for real rather than hand-signing a JWT, so the token path exercised
+ * is the one production uses, with whatever claims Supabase Auth actually puts
+ * in a token rather than the ones we assume.
  */
 export async function personaClient(
   instance: Instance,

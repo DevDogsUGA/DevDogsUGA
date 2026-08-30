@@ -59,7 +59,7 @@ type Props<T extends Record<string, ReactNode>> = {
    */
   name?: string;
   /**
-   * Indicates whether the current
+   * Marks the underlying `<select />` as required.
    */
   required?: boolean;
   /**
@@ -78,7 +78,7 @@ type Props<T extends Record<string, ReactNode>> = {
        */
       defaultValue?: keyof T;
       /**
-       * Calculate the text to display based on the curretly selected item
+       * Calculate the text to display based on the currently selected item
        */
       displayText: (selection?: keyof T) => ReactNode;
       /**
@@ -101,7 +101,7 @@ type Props<T extends Record<string, ReactNode>> = {
        */
       defaultValue?: (keyof T)[];
       /**
-       * Calculate the text to display based on the curretly selected items
+       * Calculate the text to display based on the currently selected items
        */
       displayText: (selection: (keyof T)[]) => ReactNode;
       /**
@@ -121,14 +121,10 @@ type Props<T extends Record<string, ReactNode>> = {
 );
 
 /**
- * A wrapper for `<select />` which displays a popover
- * on top of the original element. This popover has a
- * search input, allowing for the user to filter the
- * visible options for selection. Keyboard nagivation
- * and selection of the visible options is supported.
- * Options are NOT rendered in a virtual list; this may
- * result in performance issues for excessively long
- * lists of items.
+ * A wrapper for `<select />` that shows a popover over the original element,
+ * with a search input for filtering the options. Keyboard navigation and
+ * selection work in the popover. Options are NOT virtualized, so very long
+ * lists get slow.
  */
 export default function Combobox<T extends Record<string, ReactNode>>({
   defaultValue,
@@ -233,8 +229,7 @@ export default function Combobox<T extends Record<string, ReactNode>>({
   );
 
   /**
-   * Add functionality when the enter or up/down arrow keys are
-   * pressed.
+   * Handles Enter and the up/down arrow keys.
    */
   const handleKeydown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -272,11 +267,10 @@ export default function Combobox<T extends Record<string, ReactNode>>({
         return;
       }
     },
-    // `filteredOptions` is load-bearing and was missing. Without it this
-    // callback keeps whichever list existed when `highlighted` last changed, so
-    // typing a filter and then pressing ArrowDown walks the PRE-FILTER options
-    // -- the highlight jumps to an entry that is not on screen, and Enter
-    // selects it.
+    // `filteredOptions` is load-bearing and was missing. Without it the callback
+    // keeps whichever list existed when `highlighted` last changed, so typing a
+    // filter then pressing ArrowDown walks the PRE-FILTER options: the highlight
+    // jumps to an entry that is not on screen, and Enter selects it.
     [highlighted, filteredOptions, select],
   );
 
@@ -293,9 +287,9 @@ export default function Combobox<T extends Record<string, ReactNode>>({
           : [defaultValue]
         : [],
     );
-    // `defaultValue`, not `options`. The body never reads `options`, and it is
-    // `defaultValue` that decides what "reset" restores -- so a form reset used
-    // to restore whatever default was current when `options` last changed.
+    // `defaultValue`, not `options`. The body never reads `options`, and
+    // `defaultValue` decides what "reset" restores, so a form reset used to
+    // restore whatever default was current when `options` last changed.
   }, [defaultValue]);
 
   /**
@@ -314,9 +308,7 @@ export default function Combobox<T extends Record<string, ReactNode>>({
   );
 
   /**
-   * When `highlighted` changes, we make sure that the popover
-   * is scrolled such that the currently highlighted option is
-   * visible in the scrollport.
+   * Scrolls the highlighted option into view whenever it changes.
    */
   useEffect(() => {
     if (highlighted === undefined) {

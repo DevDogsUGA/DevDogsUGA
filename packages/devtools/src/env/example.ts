@@ -1,66 +1,60 @@
 /**
  * `pnpm devtools env example [--check]` and `pnpm devtools env init`.
  *
- * `.env.example` used to be the file everybody edited and nobody trusted —
- * the fourth of the four files a new variable had to be added to, and the one
- * whose omission nothing caught. Now it is OUTPUT: the registry the manifests
- * populate is the single source, this module renders it, and CI's `--check`
- * fails on drift the same way it does for `database.types.ts`. Editing the
- * generated file by hand is therefore always wrong; the fix goes in the
- * owning manifest's `doc`/`example`/`commented` metadata.
+ * `.env.example` is OUTPUT, not a file anyone edits. The registry the
+ * manifests populate is the single source, this module renders it, and CI's
+ * `--check` fails on drift the same way it does for `database.types.ts`. A
+ * wrong line is fixed in the owning manifest's `doc`/`example`/`commented`
+ * metadata.
  *
  * ⚠️ Registry-only, on purpose. Nothing here touches Bitwarden, GitHub, the
- * network, or the ambient environment — `cli.ts` dispatches these two
- * subcommands before any token lookup or environment prompt — because the CI
- * job that runs `--check` is deliberately credential-free, and a generator
- * that needed a secret to describe the secrets would not be allowed there.
+ * network, or the ambient environment, and `cli.ts` dispatches these two
+ * subcommands before any token lookup or environment prompt. The CI job that
+ * runs `--check` is deliberately credential-free, and a generator that needed
+ * a secret to describe the secrets would not be allowed there.
  *
  * `env init` is the same renderer pointed at a real env file. It takes any
- * `--target` and writes THAT target's file — `.env`, `.env.preflight`,
- * `.env.staging` or `.env.production` — from the one target table, which is
- * the same table `pull`, `push` and `audit` now default their file from. When
- * `init` mapped target → file and `push` did not, `init --env staging` created
- * `.env.staging` and `push --env staging` uploaded `.env`.
+ * `--target` and writes THAT target's file (`.env`, `.env.preflight`,
+ * `.env.staging`, `.env.production`) from the one target table that `pull`,
+ * `push` and `audit` default their file from. When `init` mapped target to
+ * file and `push` did not, `init --env staging` created `.env.staging` and
+ * `push --env staging` uploaded `.env`.
  *
- * ⚠️ A VAULT TARGET'S FILE IS NOT THE DEVELOPMENT ONE WITH A DIFFERENT NAME,
- * and rendering it as though it were produced a file that was worse than
- * useless: fill in its blanks, push it, and localhost URLs and a placeholder
- * GitHub App private key went to production — after which `env audit` reported
- * NO DRIFT, because the stored values matched the file they came from. Two
- * differences, both mechanical:
+ * ⚠️ A VAULT TARGET'S FILE IS NOT THE DEVELOPMENT ONE WITH A DIFFERENT NAME.
+ * Rendering it as though it were produced a file worse than useless: fill in
+ * its blanks, push it, and localhost URLs and a placeholder GitHub App private
+ * key went to production, after which `env audit` reported NO DRIFT, because
+ * the stored values matched the file they came from. Two differences, both
+ * mechanical:
  *
- *   * **Which keys.** `keysRoutedTo()` — what a push for that target would
+ *   * **Which keys.** `keysRoutedTo()`, what a push for that target would
  *     actually carry somewhere. Not the committed `scope: "default"`
  *     constants, not one contributor's `scope: "developer"` values, and not
  *     the apply-tier credentials outside production, all three of which used
  *     to ship in all three files because all three files were byte-identical
- *     but for the header. `preflight` is narrower again — a target no app boots
- *     from carries only the keys declared `narrowed` — so its file is one line
+ *     but for the header. `preflight` is narrower again: a target no app boots
+ *     from carries only the keys declared `narrowed`, so its file is one line
  *     long today rather than 45.
  *   * **Which values.** Blank, unless `derivationOf()` says the `example` is a
  *     derivation AND every variable it expands from is in the same file. A
  *     development default and a placeholder are both non-empty, and every
  *     consumer downstream skips only EMPTY values.
  *
- * Nothing is commented out in one either, `commented: true` included. That
- * flag encodes a real distinction — an EMPTY value for an enabled OAuth
- * provider makes the Supabase CLI fail with `ProjectConfigParseError`, so
- * "unset" and "empty" are genuinely different states — but not one this file
- * can act on. `push` skips an empty value and never sees a commented line at
- * all, so the two states are the same to it, while a value typed on a
- * commented line is silently NOT pushed. In a file whose entire purpose is to
- * be filled in and pushed, that turns the flag from a safeguard into a trap:
- * `SUPABASE_DB_PASSWORD`, `SUPABASE_JWT_SIGNING_KEY`, `CLOUDFLARE_API_TOKEN`
- * and all four OAuth client secrets shipped commented, i.e. the must-fill keys
- * were the ones that could not be filled. They ship uncommented here; the flag
- * still governs `.env.example` and the development `.env`, where the CLI reads
- * the file and nothing pushes it.
+ * Nothing is commented out in one either, `commented: true` included. The flag
+ * encodes a real distinction: an EMPTY value for an enabled OAuth provider
+ * makes the Supabase CLI fail with `ProjectConfigParseError`, so "unset" and
+ * "empty" differ. `push` cannot act on it. It skips an empty value and never
+ * sees a commented line at all, so a value typed on a commented line is
+ * silently NOT pushed. That made the flag a trap here: `SUPABASE_DB_PASSWORD`,
+ * `SUPABASE_JWT_SIGNING_KEY`, `CLOUDFLARE_API_TOKEN` and all four OAuth client
+ * secrets shipped commented, so the must-fill keys were the ones that could
+ * not be filled. They ship uncommented here; the flag still governs
+ * `.env.example` and the development `.env`, where the CLI reads the file and
+ * nothing pushes it.
  *
- * It REFUSES to touch an existing file, with no `--force` and no prompt: every
- * other write in this toolchain comments out rather than deletes and confirms
- * before overwriting, and "replace my whole env file with blanks" has no
- * legitimate use — `env reset` blanks values recoverably, `env pull` updates
- * them in place.
+ * It REFUSES to touch an existing file, with no `--force` and no prompt.
+ * "Replace my whole env file with blanks" has no legitimate use: `env reset`
+ * blanks values recoverably, `env pull` updates them in place.
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -85,10 +79,10 @@ import { explain } from "../ui.js";
 
 /**
  * Section order is FIXED here rather than inherited from manifest import
- * order, and a key declared by several manifests is rendered once, under the
- * earliest of its sources in this list. Both choices serve the same property:
- * the output is a pure function of the declarations, so `--check` compares
- * content rather than filesystem enumeration accidents.
+ * order, and a key declared by several manifests renders once, under the
+ * earliest of its sources in this list. Both choices keep the output a pure
+ * function of the declarations, so `--check` compares content rather than
+ * filesystem enumeration accidents.
  */
 const SECTION_ORDER = [
   "platform",
@@ -119,9 +113,9 @@ function sectionOf(source: string): string {
 /**
  * The sections a development init may narrow to: the four apps.
  *
- * `supabase` is NOT here and NOT optional — it is the shared database and
- * auth layer every app runs against, so any selection implies it (the caller
- * adds it). `devtools` is not here either, deliberately: it is a ROLE, not a
+ * `supabase` is NOT here and NOT optional. It is the shared database and auth
+ * layer every app runs against, so any selection implies it (the caller adds
+ * it). `devtools` is not here either, deliberately: it is a ROLE, not a
  * project. A contributor picks what they are building; whether they also
  * operate deploys is a separate question the picker asks separately.
  */
@@ -137,7 +131,7 @@ export const APP_SECTIONS = [
  *
  * `some` over a key's declaring sources, so a key SHARED between a chosen and
  * an unchosen app (API_URL, the whole connection block) is included by
- * whichever side was picked — a narrowed file must never lose the
+ * whichever side was picked. A narrowed file must never lose the
  * infrastructure a chosen app boots on just because another app shares it.
  */
 export function keysForSections(chosen: ReadonlySet<string>): Set<string> {
@@ -212,7 +206,7 @@ function sections(): { name: string; blocks: Block[] }[] {
  * The value a vault target's file carries for a key: a derivation, or nothing.
  *
  * `routed` is the rest of the file, and passing it is the whole check. A
- * formula is only a value if the file can expand it — `$BASE_URL/auth/callback`
+ * formula is only a value if the file can expand it. `$BASE_URL/auth/callback`
  * with no `BASE_URL` line above it is not "structure worth keeping", it is a
  * literal dollar sign about to be pushed to Bitwarden, stored, synced to
  * GitHub, and written into a deployed environment verbatim.
@@ -226,9 +220,9 @@ function derivedValue(meta: EnvMeta, routed: ReadonlySet<string>): string {
 }
 
 /**
- * `routed` is absent for `.env.example` and the development `.env` — the two
- * renderings that want every declared key, with its `example` as written —
- * and present for a vault target, where it is both the filter and the set a
+ * `routed` is absent for `.env.example` and the development `.env`, the two
+ * renderings that want every declared key with its `example` as written. It is
+ * present for a vault target, where it is both the filter and the set a
  * derivation's references have to resolve within.
  */
 function renderBlock(
@@ -251,11 +245,11 @@ function renderBlock(
   }
 
   // A never-store credential ships COMMENTED. "Never store" is about REMOTE
-  // stores — push refuses these by name, pull will not write them back, and
-  // audit errors on any remote copy — but the operator's own gitignored .env
-  // may hold one (since 2026-08-19, by decision), and the BWS prompts offer
-  // to save there. The commented line is the documented home that offer
-  // revives; a vault target's file never renders these at all, because
+  // stores: push refuses these by name, pull will not write them back, and
+  // audit errors on any remote copy. The operator's own gitignored .env may
+  // hold one (since 2026-08-19, by decision), and the BWS prompts offer to
+  // save there. The commented line is the documented home that offer revives.
+  // A vault target's file never renders these at all, because
   // `keysRoutedTo()` refuses them.
   if (meta.secrecy === "never-store") {
     return [...lines, `# ${key}=""`];
@@ -265,7 +259,7 @@ function renderBlock(
   // is no value to write: it is signed at deploy time and lives only on the
   // deploy target. A blank `SANDBOX_PROXY_TOKEN=` line would read as a field
   // awaiting a paste, and the paste would be a hand-made token that never
-  // rotates — the exact failure minting exists to remove.
+  // rotates, the exact failure minting exists to remove.
   if (meta.minted) {
     return [
       `# ${key}:`,
@@ -298,8 +292,8 @@ function renderBlock(
  * `routed` absent renders every declared key; present renders that set only.
  *
  * A section whose keys are all filtered out is dropped with them. A heading
- * over nothing reads as "this app needs nothing here", which is a different
- * and false claim.
+ * over nothing reads as "this app needs nothing here", a different and false
+ * claim.
  */
 function renderBody(routed?: ReadonlySet<string>): string[] {
   const lines: string[] = [];
@@ -436,7 +430,7 @@ function targetHeader(target: VaultTarget, count: number): string[] {
 /**
  * A fresh env file for `env init`.
  *
- * Two renderings, not one with a different first line — see the module header.
+ * Two renderings, not one with a different first line. See the module header.
  * `development` wants every declared key with its `example` as written, which
  * is also what `.env.example` wants; a vault target wants what a push for that
  * target routes, blank unless the registry can derive it.
@@ -491,7 +485,7 @@ export function renderInit(
 
 const EXAMPLE_PATH = ".env.example";
 
-/** `KEY=`, `# KEY=` — the assignable (or deliberately commented) lines. */
+/** `KEY=`, `# KEY=`: the assignable (or deliberately commented) lines. */
 const ASSIGNMENT = /^(#\s?)?([A-Z][A-Z0-9_]*)=.*$/;
 
 /** key → full line, for the key-level diff summary. */
@@ -556,10 +550,10 @@ export async function runEnvExample(options: {
 /**
  * The development sections to render: `--apps`, else the picker, else all.
  *
- * `undefined` means "everything", which keeps three callers honest at once:
- * a script with no flag, a pipe with no terminal (the picker refuses to
- * prompt where nobody can answer, like every other picker here), and the
- * vault targets, which never narrow.
+ * `undefined` means "everything", which covers three callers at once: a script
+ * with no flag, a pipe with no terminal (the picker refuses to prompt where
+ * nobody can answer, like every other picker here), and the vault targets,
+ * which never narrow.
  */
 export async function resolveSections(
   apps?: string,
@@ -623,7 +617,7 @@ export async function runEnvInit(
     if ((err as NodeJS.ErrnoException).code === "EEXIST") {
       // A development re-run is ADDITIVE: the picker's whole story is "pick
       // less now, come back for more later", and that story needs the later.
-      // Only keys the file does not mention at all are appended — an active
+      // Only keys the file does not mention at all are appended. An active
       // line holds somebody's value and a commented one holds their decision,
       // and both survive byte-for-byte.
       if (target === "development") {

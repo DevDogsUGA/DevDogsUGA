@@ -8,9 +8,9 @@ import { createOptionsFor, discoverIds, scaffoldBase } from "./scaffold.js";
  * The scaffolder against a fake base.
  *
  * Worth testing without a real base for the reason the whole integration
- * exists: the second base — a staging one, or a rebuild — has to come out the
- * same as the first. A scaffolder that only ever ran once, by hand, against one
- * base is indistinguishable from a scaffolder that works.
+ * exists: the second base, a staging one or a rebuild, has to come out the same
+ * as the first. A scaffolder that only ever ran once, by hand, against one base
+ * is indistinguishable from a scaffolder that works.
  */
 
 /** A base that records what was created, so ordering can be asserted. */
@@ -83,11 +83,11 @@ describe("createOptionsFor", () => {
 
   it("creates a select with the choices its spec declares", () => {
     // The whole point of declaring them: the field arrives holding exactly
-    // these, so Airtable's dropdown refuses a value the platform cannot
-    // render. `toEqual` rather than `toMatchObject` because a colour smuggled
-    // in here would be a permanent disagreement with any officer who restyles
-    // the choice -- the create endpoint assigns one itself when it is left
-    // out, and that is the version we want.
+    // these, so Airtable's dropdown refuses a value the platform cannot render.
+    // `toEqual` rather than `toMatchObject` because a colour smuggled in here
+    // would be a permanent disagreement with any officer who restyles the
+    // choice. The create endpoint assigns one itself when it is left out, and
+    // that is the version we want.
     const spec = field
       .singleSelect("fldX", "Kind", ["Workshop", "Social"] as const)
       .ignore();
@@ -98,9 +98,9 @@ describe("createOptionsFor", () => {
 
   it("still creates an empty select when no choices are declared", () => {
     // Deliberate, not a gap. An undeclared select says the vocabulary belongs
-    // to the officers, and Airtable lets them add choices in the UI -- so the
-    // empty list is the useful thing to create, and this asserts the two cases
-    // stay distinguishable.
+    // to the officers, and Airtable lets them add choices in the UI, so the
+    // empty list is the useful thing to create. This asserts the two cases stay
+    // distinguishable.
     for (const t of ["singleSelect", "multipleSelects"] as const) {
       expect(createOptionsFor(field[t]("fldX", "X").ignore())).toEqual({
         choices: [],
@@ -119,7 +119,7 @@ describe("createOptionsFor", () => {
     // The published reference lists `prefersSingleRecordLink` as required and
     // omits `isReversed` entirely; both are wrong for creation. Measured
     // against the real API, every combination carrying either key returns 422
-    // "not included in the options schema" -- they are response-only, and the
+    // "not included in the options schema". They are response-only, and the
     // create sets them itself. Asserted with toEqual rather than toMatchObject
     // so adding a key back is a test failure rather than a live 422.
     const link = field.link("fldX", "X", "meetings").ignore();
@@ -177,7 +177,7 @@ describe("scaffoldBase", () => {
 
   it("makes the platform id the primary field", async () => {
     // Airtable takes the FIRST field as primary, and a link or checkbox is not
-    // a legal primary field -- so this is a property of argument order, which
+    // a legal primary field, so this is a property of argument order that
     // nothing else would catch.
     const { client } = fakeBase();
     const result = await scaffoldBase(client);
@@ -239,9 +239,9 @@ describe("scaffoldBase", () => {
   });
 
   it("creates a select holding its declared choices", async () => {
-    // `createOptionsFor` being right is not enough -- `newField` decides
-    // whether the options reach the create call at all, and a select created
-    // with no choices accepts anything and looks perfectly fine.
+    // `createOptionsFor` being right is not enough. `newField` decides whether
+    // the options reach the create call at all, and a select created with no
+    // choices accepts anything and looks fine.
     const specs = {
       meetings: table("Meetings", "tblTODO_m", {
         key: field.text("fldTODO_m_key", "⚙️ Platform ID").matchKey().ignore(),
@@ -269,9 +269,9 @@ describe("scaffoldBase", () => {
     // Pinning the limitation rather than the behaviour anyone wants.
     // `scaffoldBase` creates what is missing and the client has no
     // `updateField`, so adding a name to a spec's `choices` never reaches a
-    // live field. Asserted so that whoever changes that has to change this
-    // test too, and so nobody reads a green scaffold run as "the base now has
-    // my new choice" -- `verify.ts`'s choice check is what says otherwise.
+    // live field. Asserted so whoever changes that has to change this test too,
+    // and so nobody reads a green scaffold run as "the base now has my new
+    // choice". `verify.ts`'s choice check is what says otherwise.
     const before = {
       meetings: table("Meetings", "tblTODO_m", {
         key: field.text("fldTODO_m_key", "⚙️ Platform ID").matchKey().ignore(),

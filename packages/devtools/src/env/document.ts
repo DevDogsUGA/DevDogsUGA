@@ -1,20 +1,18 @@
 /**
  * An editable `.env` that survives being edited.
  *
- * The root `.env` is not a data file — it is 150 lines of hard-won commentary
+ * The root `.env` is not a data file. It is 150 lines of hard-won commentary
  * about which value breaks the Supabase CLI when empty, which one must stay
  * commented out, and why. A writer that parses to a Map and serializes back
- * destroys all of it on the first save, and nobody notices until they need the
- * note that is gone.
+ * destroys all of it on the first save.
  *
  * So this keeps the file as **lines** and edits in place. An untouched line is
- * returned byte-for-byte, including its spacing, its quoting style and its
- * trailing comment. Only the lines actually being changed are rewritten.
+ * returned byte-for-byte, including its spacing, quoting style and trailing
+ * comment. Only the lines actually being changed are rewritten.
  *
- * The other half of the contract is that **nothing is ever deleted**. Removing
- * a key comments it out, which keeps the value recoverable from the file itself
- * rather than from somebody's memory of what it used to be — and re-adding it
- * later uncomments the line rather than appending a duplicate.
+ * Nothing is ever deleted. Removing a key comments it out, so the value stays
+ * recoverable from the file itself, and re-adding it later uncomments that line
+ * rather than appending a duplicate.
  */
 
 /**
@@ -22,8 +20,8 @@
  *
  * The prefix is CAPTURED rather than skipped so an update can put it back.
  * Dropping it turns `export FOO=` into `FOO=`, which still parses here and
- * stops being exported to child processes — a difference that shows up as a
- * missing variable three tools downstream.
+ * stops being exported to child processes. That shows up as a missing variable
+ * three tools downstream.
  */
 const ACTIVE = /^(\s*)((?:export\s+)?)([A-Za-z_][A-Za-z0-9_]*)\s*=(.*)$/;
 /** `# KEY=value`, the commented form this tool writes and reads back. */
@@ -55,7 +53,7 @@ export function parseValue(rest: string): string {
   if (text.startsWith("'")) {
     const end = findClosing(text, "'");
     if (end === -1) return text.slice(1);
-    // Single quotes are literal — the only way to store a backslash sequence
+    // Single quotes are literal, the only way to store a backslash sequence
     // verbatim.
     return text.slice(1, end);
   }
@@ -110,10 +108,9 @@ export function splitComment(rest: string): { comment: string } {
 }
 
 /**
- * Where a value came from and when — written on the same line as the value.
+ * Where a value came from and when, written on the same line as the value.
  *
- * The point is answering "is this still what production has?" without running
- * anything. A stamped line says which environment it came from and when, so a
+ * It answers "is this still what production has?" without running anything. A
  * `.env` that has been sitting for three weeks says so rather than looking
  * exactly like one pulled this morning.
  */
@@ -218,8 +215,8 @@ export class EnvDocument {
    * Sets a value, preferring to revive a commented line over appending.
    *
    * Appending when a commented form already exists is how a file ends up with
-   * the same key twice — one of them stale, both of them plausible, and the
-   * loser silently winning depending on which the reader scrolled to.
+   * the same key twice: one stale, both plausible, and which one looks
+   * authoritative depends on where the reader scrolled to.
    */
   set(key: string, value: string, stamp?: Stamp): void {
     const active = this.find(key, false);
@@ -229,8 +226,8 @@ export class EnvDocument {
       const existing = splitComment(match[4]!).comment;
 
       // Somebody's own note gets moved out of the way rather than overwritten.
-      // It was written about this key, so it belongs above the key -- and above
-      // the whole group, since the commented-out history sits between them.
+      // It was written about this key, so it belongs above the whole group:
+      // the commented-out history sits between the note and the key.
       if (stamp && existing !== "" && !isStamp(existing)) {
         this.lines.splice(this.first(key), 0, { raw: existing });
       }
@@ -320,8 +317,8 @@ export class EnvDocument {
    * Blanks every active value without losing one.
    *
    * Each becomes a commented line holding what it was, plus an empty active
-   * line under it — so the file still declares every key it needs (which is
-   * what makes it a usable checklist) while holding nothing.
+   * line under it. The file still declares every key it needs, which is what
+   * makes it a usable checklist, while holding nothing.
    *
    * Already-empty keys are skipped. Commenting out `FOO=""` to write `FOO=""`
    * underneath is churn that makes the next diff harder to read.

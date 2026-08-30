@@ -2,16 +2,15 @@
  * A committed copy of the base's shape, so the registry can be checked without
  * a credential.
  *
- * `verify` answers "does the live base still match the registry", which needs a
- * token and so cannot run in pull-request CI -- on `pull_request` GitHub runs
- * the workflow from the pull request, making any secret readable by its author.
- * This answers the adjacent question that *can* be asked offline: does the
- * registry in this diff still agree with the base as it was last observed.
+ * `verify` asks whether the live base still matches the registry. That needs a
+ * token, so it cannot run in pull-request CI: on `pull_request` GitHub runs the
+ * workflow from the pull request, making any secret readable by its author.
+ * This asks the offline question instead. Does the registry in this diff still
+ * agree with the base as it was last observed.
  *
- * The two catch different things and neither replaces the other. Drift in the
- * base is not caused by any commit and no pull request can fix it, so it
- * belongs on a schedule; a hand-edited field id in a diff is caused by exactly
- * one commit, and belongs on that commit.
+ * Neither replaces the other. Drift in the base is not caused by any commit and
+ * no pull request can fix it, so it belongs on a schedule. A hand-edited field
+ * id is caused by exactly one commit, and belongs on that commit.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -39,24 +38,22 @@ export interface SchemaSnapshot {
  * order.
  *
  * `findTable` matches on table id or name and `hasField` on field id or name,
- * so nothing else is load-bearing. Field `options` is dropped deliberately --
- * it carries colours, date formats and precisions that change without the
- * shape changing, and every such edit would otherwise show up as a diff in a
- * file whose whole value is that a diff means something.
+ * so nothing else is load-bearing. Field `options` is dropped: it carries
+ * colours, date formats and precisions that change without the shape changing,
+ * and every such edit would show up as a diff in a file whose whole value is
+ * that a diff means something.
  *
  * ONE exception, added alongside `verify.ts`'s choice check: the NAMES of a
- * select field's choices survive. Those are strings the platform branches on
- * rather than styling, so they are schema in the sense this file cares about,
- * and a choice renamed in the UI SHOULD show up here as a diff.
+ * select field's choices survive. The platform branches on those strings, so a
+ * choice renamed in the UI SHOULD show up here as a diff. Keeping them is a
+ * precondition, not the check itself. `snapshotDrift` still compares presence
+ * only, and adding an offline choice comparison is a one-function change once
+ * the data is in the file. The data goes in now because the file can only be
+ * refreshed with a live credential, so a snapshot written without the names
+ * would make that later change need a base run first, which is the dependency
+ * the snapshot exists to remove.
  *
- * Keeping them is a precondition, not the check itself: `snapshotDrift` still
- * compares presence only, and adding an offline choice comparison to it is a
- * one-function change once the data is in the file. It is here because the
- * file can only be refreshed with a live credential -- so a snapshot written
- * without the names would make that later change need a base run first, which
- * is exactly the dependency the snapshot exists to remove.
- *
- * Colours are still dropped, and so is every other key in the bag; this is not
+ * Every other key in the bag, colours included, is still dropped. This is not
  * the start of snapshotting `options` generally.
  *
  * Sorted because the Meta API makes no ordering promise, and an unsorted
@@ -83,16 +80,15 @@ export function normalize(tables: LiveTable[]): LiveTable[] {
 /**
  * The surviving sliver of `options`: choice names only, sorted, or nothing.
  *
- * Sorted for the same reason the tables and fields are -- choice order is the
- * officer's to arrange in the UI, and an unsorted list would rewrite itself on
- * the next refresh over a change nobody made.
+ * Sorted because choice order is the officer's to arrange in the UI, and an
+ * unsorted list would rewrite itself on the next refresh over a change nobody
+ * made.
  *
- * A field with no choices at all emits no `options` key rather than an empty
- * one, so every field the base has ever held keeps the exact shape it had
- * before this existed. Read defensively, like `verify.ts`'s copy: a snapshot
- * refresh that throws on an unfamiliar option bag would leave the committed
- * file stale, which is the one state in which the offline check silently
- * passes forever.
+ * A field with no choices emits no `options` key rather than an empty one, so
+ * every field the base has ever held keeps the shape it had before this
+ * existed. Read defensively, like `verify.ts`'s copy: a refresh that throws on
+ * an unfamiliar option bag leaves the committed file stale, the one state in
+ * which the offline check silently passes forever.
  */
 function choiceOptions(field: LiveField): Pick<LiveField, "options"> | object {
   const raw = (field.options as { choices?: unknown } | undefined)?.choices;
@@ -140,9 +136,9 @@ export interface SnapshotDrift {
 /**
  * What the registry declares that the snapshot does not have.
  *
- * Deliberately one-directional. Fields the base has and the registry does not
- * are routine -- Airtable creates the reverse side of every link automatically
- * -- so reporting them here would fail builds for something nobody did.
+ * One-directional on purpose. Fields the base has and the registry does not
+ * are routine, since Airtable creates the reverse side of every link
+ * automatically, so reporting them would fail builds for something nobody did.
  */
 export function snapshotDrift(snapshot: SchemaSnapshot): SnapshotDrift[] {
   return planScaffold(snapshot.tables)

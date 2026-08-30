@@ -4,21 +4,20 @@
  * The wizard used to offer the same commands to everyone: someone whose Docker
  * daemon was not running was invited to reset a database that could not
  * answer, and someone whose stack was already up had no way to stop it at all,
- * because "stop" was not in the tree. Both are the same bug — the menu
+ * because "stop" was not in the tree. Both are the same bug. The menu
  * described the CLI rather than the situation.
  *
- * So this reads three facts and `menu.ts` adapts to them. The facts are
- * deliberately few and deliberately cheap; see `probeEnvironment` for the
- * budget this keeps to and why.
+ * So this reads three facts and `menu.ts` adapts to them. The facts are few
+ * and cheap on purpose; see `probeEnvironment` for the budget and why.
  *
  * ## Unknown is not "no"
  *
  * Every probe can come back `"unknown"`, and that is what a failed probe
- * reports rather than guessing. Nothing is hidden or flagged on `"unknown"` —
- * a machine this cannot read gets the full menu, exactly as before. A tool
- * that hides a command because a `docker ps` timed out is worse than one that
- * never adapted at all, because the command it hides is the one you were
- * looking for.
+ * reports rather than guessing. Nothing is hidden or flagged on `"unknown"`: a
+ * machine this cannot read gets the full menu, exactly as before. A tool that
+ * hides a command because a `docker ps` timed out is worse than one that never
+ * adapted at all, because the command it hides is the one you were looking
+ * for.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -28,11 +27,11 @@ import type { Condition } from "./commands.js";
 /**
  * The repo root, which is where `supabase/config.toml` and `.env` live.
  *
- * Defined here rather than in `instance.ts` — which is where it used to live,
- * and still re-exports it from — because that module pulls in
- * `@supabase/supabase-js`, and this one runs before the menu's first frame.
- * Resolved from this file rather than `cwd` so it does not matter where the
- * contributor invoked the tool from.
+ * Defined here rather than in `instance.ts`, where it used to live and which
+ * still re-exports it, because that module pulls in `@supabase/supabase-js`
+ * and this one runs before the menu's first frame. Resolved from this file
+ * rather than `cwd` so it does not matter where the contributor invoked the
+ * tool from.
  */
 export const PROJECT_ROOT = join(import.meta.dirname, "..", "..", "..");
 
@@ -53,8 +52,8 @@ export interface Environment {
  *
  * What the tests use, and what any caller that would rather not probe can
  * pass. Because nothing is hidden or flagged on `"unknown"`, this is exactly
- * the pre-adaptation menu — which is what makes it a safe thing to fall back
- * to rather than a special case to remember.
+ * the pre-adaptation menu, which makes it a safe fallback rather than a
+ * special case to remember.
  */
 export const UNKNOWN_ENVIRONMENT: Environment = {
   docker: "unknown",
@@ -69,8 +68,8 @@ export const UNKNOWN_ENVIRONMENT: Environment = {
  *
  * `timeout` because a Docker daemon that is starting up (or a VM that has just
  * been resumed) accepts the connection and then never answers, and the failure
- * that produces is a menu which hangs before printing anything — with no
- * output to explain what it is waiting for.
+ * that produces is a menu that hangs before printing anything, with no output
+ * to explain what it is waiting for.
  */
 function run(file: string, args: string[]): string | null {
   try {
@@ -89,15 +88,15 @@ function run(file: string, args: string[]): string | null {
  * The container name prefix the Supabase CLI gives this project's stack.
  *
  * Read with a regex rather than a TOML parser: it is one line, the shape has
- * been stable across every CLI version this repo has seen, and putting a
- * parser on the startup path of a menu to read a single string is the kind of
- * cost that stays invisible until it is the reason the tool feels slow.
+ * been stable across every CLI version this repo has seen, and a parser on a
+ * menu's startup path to read one string is a cost that stays invisible until
+ * it is why the tool feels slow.
  *
  * Falling back to the bare `supabase_db_` prefix means a machine whose
- * `config.toml` cannot be read still detects *a* stack. That is a deliberate
- * over-match: the cost of over-matching is offering `stop` to someone running
- * a different Supabase project, which they can decline, and the cost of
- * under-matching is telling someone their running stack is down.
+ * `config.toml` cannot be read still detects *a* stack. That over-match is
+ * deliberate: over-matching offers `stop` to someone running a different
+ * Supabase project, which they can decline, while under-matching tells someone
+ * their running stack is down.
  */
 function containerPrefix(): string {
   try {
@@ -119,12 +118,12 @@ function containerPrefix(): string {
  * the wizard's first screen and anything slower would be paid on every
  * invocation to save a few of them later.
  *
- * Notably it does NOT call `supabase status`, which is the authoritative
- * answer and takes the better part of a second — it shells out through `pnpm
- * exec` and then talks to every service in the stack. `docker ps` answers the
- * only question the menu actually has (is it up?) in a fraction of that, and
- * the commands that need real credentials still go through
- * `detectLocalInstance`, which asks the authority at the moment it matters.
+ * It does NOT call `supabase status`, which is the authoritative answer but
+ * takes the better part of a second: it shells out through `pnpm exec` and
+ * then talks to every service in the stack. `docker ps` answers the only
+ * question the menu has (is it up?) in a fraction of that, and the commands
+ * that need real credentials still go through `detectLocalInstance`, which
+ * asks the authority at the moment it matters.
  */
 export function probeEnvironment(): Environment {
   const envFile: Known = existsSync(join(PROJECT_ROOT, ".env")) ? "yes" : "no";

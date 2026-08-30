@@ -8,9 +8,9 @@ import { explain } from "../ui.js";
  * Deliberately NOT `apps/platform/src/server/airtable/credentials.ts`. That
  * path reads the token from Vault, which is right for the running platform and
  * wrong here: these commands run before the platform is configured, some of
- * them need `schema.bases:write` — a scope the sync token should not carry —
- * and they are run either by a person at a terminal who has the token in hand
- * or by a deploy job the workflow handed one to.
+ * them need `schema.bases:write`, a scope the sync token should not carry, and
+ * they are run either by a person at a terminal who has the token in hand or
+ * by a deploy job the workflow handed one to.
  *
  * So: environment only, and a loud failure rather than a fallback.
  *
@@ -28,20 +28,19 @@ import { explain } from "../ui.js";
  * read does not need but `verify --duplicates` does.
  *
  * ⚠️ **The write row has ONE entry, and the empty second slot is deliberate.**
- * There is no operator token any more. `AIRTABLE_PAT` — the bootstrap
- * credential that used to sit at the end of both rows — was removed once
+ * There is no operator token any more. `AIRTABLE_PAT`, the bootstrap
+ * credential that used to sit at the end of both rows, was removed once
  * `deploy airtable-apply` existed: it carried `schema.bases:write` on a laptop
  * indefinitely, and every job it served is now either a read or the
- * reviewer-gated apply. A schema change therefore has exactly one path, and it
- * is the one with reviewers in front of it.
+ * reviewer-gated apply. A schema change has exactly one path, and it is the one
+ * with reviewers in front of it.
  *
  * ⚠️ **Neither row falls back across the split.** `AIRTABLE_PLAN_PAT` is absent
- * from the write row because it cannot do the job — falling back to it would
- * turn a missing apply credential into a 403 halfway through a schema change,
- * which is the worst of both outcomes. `AIRTABLE_APPLY_PAT` is absent from the
- * read row because it CAN do the job, and that is exactly the reason not to
- * use it: a plan that quietly ran on the write token would make the reviewer
- * gate in front of it decorative.
+ * from the write row because it cannot do the job: falling back to it would
+ * turn a missing apply credential into a 403 halfway through a schema change.
+ * `AIRTABLE_APPLY_PAT` is absent from the read row because it CAN do the job,
+ * and that is exactly the reason not to use it: a plan that quietly ran on the
+ * write token would make the reviewer gate in front of it decorative.
  *
  * ⚠️ **A brand-new base is the one thing this cannot do.** `POST /v0/meta/bases`
  * needs the workspace-creator role, which no scope grants, so creating a base
@@ -83,7 +82,7 @@ const SCOPES: Record<AirtableCapability, string> = {
  * Its own class, with `detail` alongside `message`, because two very different
  * callers have to render it: the `airtable` group turns it into an `explain()`
  * box on stdout, and the `deploy` group turns it into a `DeployError` on
- * stderr (stdout there is machine-read — see `deploy/report.ts`). A thrown
+ * stderr (stdout there is machine-read; see `deploy/report.ts`). A thrown
  * `Error` with a formatted multi-line message would force one of them to
  * re-parse the other's layout.
  */
@@ -117,8 +116,7 @@ export interface AirtableCredentialOptions {
   /**
    * Injected so the tests can drive both rows and every fallback without
    * mutating the ambient environment of whatever else the runner has in the
-   * same process — and, more to the point, without a real token being the
-   * thing that decides which branch runs.
+   * same process, and without a real token deciding which branch runs.
    */
   env?: NodeJS.ProcessEnv;
   /** Injected for the same reason `AirtableClient` takes one: no sockets in tests. */
@@ -129,7 +127,7 @@ export interface AirtableCredentialOptions {
  * Resolves the credential for a capability, or throws naming what it looked at.
  *
  * @throws {AirtableCredentialError} when none of the variables for `need`
- *   holds a value. The base id can no longer be missing — it is committed.
+ *   holds a value. The base id can no longer be missing: it is committed.
  */
 export function resolveAirtableCredentials(
   options: AirtableCredentialOptions,
@@ -198,8 +196,8 @@ export function resolveAirtableCredentials(
  *
  * Kept because those four commands report through `@clack/prompts` and set an
  * exit code rather than propagating. The `deploy` group calls
- * `resolveAirtableCredentials` directly — it must not touch `explain`, which
- * writes to stdout.
+ * `resolveAirtableCredentials` directly, because it must not touch `explain`,
+ * which writes to stdout.
  */
 export function airtableClient(
   options: AirtableCredentialOptions,

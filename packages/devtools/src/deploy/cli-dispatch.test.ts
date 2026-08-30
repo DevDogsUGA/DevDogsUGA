@@ -5,10 +5,10 @@
  *
  * The property under test is one the in-process suites structurally cannot
  * see: that **nothing decorative reaches stdout**. `cli.ts` opens with
- * `intro("DevDogs devtools")`, and every `@clack/prompts` writer — `intro`,
- * `outro`, `log.*`, `note`, the spinner — writes to stdout, not stderr
+ * `intro("DevDogs devtools")`, and every `@clack/prompts` writer goes to
+ * stdout, not stderr: `intro`, `outro`, `log.*`, `note`, the spinner
  * (measured on 2026-08-16 by running each with the streams captured apart).
- * That is fine for a contributor at a terminal and fatal here: `deploy
+ * That is fine for a contributor at a terminal and fatal here. `deploy
  * secrets-file` emits `::add-mask::<token>`, which GitHub recognises only on a
  * line of its own, and `deploy mint-token` emits a JWT its caller takes whole.
  * A banner on that stream is an unmasked production credential in a public
@@ -130,11 +130,11 @@ describe("stdout stays clean for every deploy command", () => {
       "airtable-plan",
     ]);
     expect(stdout).toBe("");
-    // The refusal names the missing TOKEN now. It used to name the missing
-    // base id, which came first and so was what an empty environment hit —
-    // the base id is a committed constant, so the credential is the only
-    // thing left that can be absent. The property under test is unchanged:
-    // a missing credential is red and says which variable.
+    // The refusal names the missing TOKEN. It used to name the missing base
+    // id, which came first and so was what an empty environment hit; the base
+    // id is a committed constant now, so the credential is the only thing left
+    // that can be absent. The property under test is unchanged: a missing
+    // credential is red and says which variable.
     expect(stderr).toContain("No Airtable token that can read");
     expect(code).toBe(1);
   });

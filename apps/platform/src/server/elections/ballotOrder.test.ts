@@ -6,9 +6,8 @@ const IDS = TEAMS.map((t) => t.teamId);
 
 describe("presentedOrder", () => {
   it("is stable for one voter across renders", () => {
-    // The property the whole seeded design exists for. A fresh shuffle per
-    // render would move options under somebody mid-reorder, and would make "I
-    // put us second" unverifiable against what they submitted.
+    // A fresh shuffle per render would move options under somebody mid-reorder,
+    // and would make "I put us second" unverifiable against what they submitted.
     const seed = seedFrom("election-1", "user-1");
     const first = presentedOrder(TEAMS, null, seed);
     const second = presentedOrder(TEAMS, null, seed);
@@ -38,8 +37,8 @@ describe("presentedOrder", () => {
   });
 
   it("shuffles an officer ballot completely", () => {
-    // Officer ballots get the same treatment despite there being one of them,
-    // because that one carries the weight of an entire category.
+    // Null ownTeamId pins nothing. There is only one officer ballot, but it
+    // carries the weight of an entire category, so it shuffles too.
     const order = presentedOrder(
       TEAMS,
       null,
@@ -50,8 +49,8 @@ describe("presentedOrder", () => {
 
   it("does not consistently favour the alphabetically first team", () => {
     // The bias the shuffle exists to remove: a prefilled alphabetical list
-    // quietly rewards teams whose names sort early. Across many voters, "a"
-    // should land first about 1/4 of the time (4 unpinned slots), not always.
+    // rewards teams whose names sort early. Nothing is pinned here, so across
+    // many voters "a" should lead about 1/5 of the time (5 teams), not always.
     let firstIsA = 0;
     for (let i = 0; i < 400; i += 1) {
       const order = presentedOrder(

@@ -7,11 +7,11 @@ import { SCHEDULE_SPAN_MINUTES } from "~/lib/schedule-display";
 
 type DayClassProps = ClassData;
 
-// Convert 12-hours to 24-hours
+// A 12-hour time string to minutes since midnight.
 function convertToMinutes(time: string): number {
   const [hour, minute] = time.split(":").map((val) => parseInt(val, 10));
   const suffix = time.slice(-2).toLowerCase();
-  let convertedTime = hour! * 60 + minute!; // The ! assers the tyoe of hour and minute as number since they could be undefined. If there's an error it means one of these is undefined.
+  let convertedTime = hour! * 60 + minute!; // The `!`s assume the string parsed; a NaN here means it did not.
   if (suffix === "pm" && hour !== 12) {
     convertedTime += 12 * 60;
   }
@@ -21,14 +21,14 @@ function convertToMinutes(time: string): number {
   return convertedTime;
 }
 
-// Duration of course for the day
+// Length of the day's meeting, in minutes.
 function getDuration(timeStart: string, timeEnd: string): number {
   const startMinutes = convertToMinutes(timeStart);
   const endMinutes = convertToMinutes(timeEnd);
   return endMinutes - startMinutes;
 }
 
-// Allows course block info window to resize itself relative to the screen size
+// Sizes the course info window relative to the viewport.
 function useResize() {
   const [width, setWidth] = useState("80vw");
   const [height, setHeight] = useState("70vh");
@@ -44,7 +44,7 @@ function useResize() {
   return { width, height };
 }
 
-// Creates array for week schedule display table
+// Builds the rows of the week schedule display table.
 function getWeekLayout(
   otherTimes: string[],
   currentDay: string,
@@ -52,8 +52,7 @@ function getWeekLayout(
   timeEnd: string,
   locationShort: string,
 ): string[] {
-  // 10 strings for week display
-  // 2 for each day: the time and location
+  // 10 slots: the time and the location for each of the five weekdays.
   const weekInfo: string[] = ["", "", "", "", "", "", "", "", "", ""];
   const otherDays: string = otherTimes[0] ?? "";
 
@@ -90,7 +89,7 @@ function getWeekLayout(
     }
   }
 
-  // Add the other days the class has times on, if applicable
+  // Add the other days the class meets on, if any
   for (let i = 0; i <= otherDays.length; i++) {
     switch (otherDays[i]) {
       // Monday
@@ -118,7 +117,6 @@ function getWeekLayout(
         weekInfo[8] = otherTimes[1] ?? "";
         weekInfo[9] = otherTimes[2] ?? "";
         break;
-      // Nothing left to search
       default:
         break;
     }
@@ -154,7 +152,7 @@ function CourseInfo({
   semester,
   credits,
   crn,
-  // Uncomment to use parameters, currently unused
+  // Unused; uncomment to use.
   // openSeats,
   // maxSeats,
   // waitlist,
@@ -165,12 +163,9 @@ function CourseInfo({
   currentDay,
   otherTimes,
 }: DayClassProps) {
-  // Borders
   const outerBorder = `border-b-2 border-r-2 border-l-2 ${borderColor} rounded-3xl`;
   const innerBorder = `border-r-2 ${borderColor}`;
-  // Dynamic dimensions based on browser window size
   const { width, height } = useResize();
-  // Store class times and locations for the whole week
   const weekInfo = getWeekLayout(
     otherTimes,
     currentDay,
@@ -201,7 +196,6 @@ function CourseInfo({
           maxHeight: "90vh",
         }}
       >
-        {/* Header: Course name and CRN */}
         <div className={`relative z-50 ${bgColor} rounded-lg p-8`}>
           <div className="text-right font-bold text-white/90">
             <p>CRN: {crn}</p>
@@ -211,10 +205,7 @@ function CourseInfo({
           </h2>
         </div>
 
-        {/* Content */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Course Info:
-            Lists the course's essential attributes and a description at the bottom.*/}
           <div className={`p-8 ${innerBorder} w-1/2 overflow-auto`}>
             <p>
               {" "}
@@ -250,8 +241,6 @@ function CourseInfo({
             <p> {description} </p>
           </div>
 
-          {/* Weekly Schedule for Class:
-              Right half of course block info window. Shows times and locations for the course throughout the entire week at a glance.*/}
           <div className={`w-1/2 overflow-auto p-8`}>
             <p className="text-center text-2xl font-bold underline">
               {" "}
@@ -362,14 +351,13 @@ export default function DayClass({
   currentDay,
   otherTimes,
 }: DayClassProps) {
-  // Blocks and hour lines share one coordinate space — percent of the
-  // 8 AM–10 PM span — so they stay aligned at any container height. Pixel
-  // offsets could not, since the grid itself is sized in percentages.
+  // Blocks and hour lines share one coordinate space, percent of the 8 AM to
+  // 10 PM span, so they stay aligned at any container height. Pixel offsets
+  // could not, since the grid itself is sized in percentages.
   const duration = getDuration(timeStart, timeEnd);
   const startPosition = `${((timeDifference ?? 0) * 100) / SCHEDULE_SPAN_MINUTES}%`;
   const classHeight = `${(Number.isFinite(duration) ? Math.max(duration, 0) : 0) * (100 / SCHEDULE_SPAN_MINUTES)}%`;
 
-  // Open course block info popup
   const [courseBlockClicked, setcourseBlockClicked] = useState(false);
   const courseBlockInfo = () => {
     setcourseBlockClicked(!courseBlockClicked);

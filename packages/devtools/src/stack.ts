@@ -32,9 +32,9 @@ export type StackCommand = (typeof STACK_COMMANDS)[number];
  * Everything except the lifecycle pair.
  *
  * `stop` and `restart` act on the Docker stack on this machine, so they have
- * no `--remote` or `--team` meaning — there is no container to stop on a
- * hosted project. Derived with `Exclude` rather than written out a second
- * time, so `teamCommand` below cannot silently fall out of step with
+ * no `--remote` or `--team` meaning: there is no container to stop on a hosted
+ * project. Derived with `Exclude` rather than written out a second time, so
+ * `teamCommand` below cannot silently fall out of step with
  * `STACK_COMMANDS`: adding a command to that tuple and forgetting it here is a
  * type error at the `switch`, which is where it should be.
  */
@@ -113,7 +113,7 @@ async function platformCall<T>(path: string, body: unknown): Promise<T> {
  *
  * This is where the scoped-token design earns its keep at the ergonomics level.
  * The member sees `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY` and
- * picks between them exactly as they will in production — rather than the proxy
+ * picks between them exactly as they will in production, rather than the proxy
  * quietly deciding for them, which is what the deleted JWT-minting path did.
  */
 async function writeEnv(response: LinkResponse): Promise<string[]> {
@@ -215,9 +215,9 @@ async function teamCommand(
  * Stop, then start again.
  *
  * Two delegated scripts rather than one, because `supabase restart` does not
- * exist — the CLI's own answer to a changed `config.toml` is a stop/start
- * pair. Doing it here turns that into one menu entry, rather than two
- * commands the contributor has to know to run in that order.
+ * exist. The CLI's own answer to a changed `config.toml` is a stop/start pair.
+ * Doing it here turns that into one menu entry, rather than two commands the
+ * contributor has to know to run in that order.
  *
  * A failed stop short-circuits. Starting a stack that never went down would
  * report success and leave the config change unapplied, which is the one
@@ -227,7 +227,7 @@ async function restartLocal(): Promise<{ code: number; lines: string[] }> {
   const code = await runScript("stop-local-stack");
   if (code !== 0) {
     // Names its own scrollback, because a failure that arrives with lines is
-    // taken by `cli.ts` to have explained itself — see the contract there.
+    // taken by `cli.ts` to have explained itself. See the contract there.
     return {
       code,
       lines: [
@@ -242,7 +242,7 @@ async function restartLocal(): Promise<{ code: number; lines: string[] }> {
 /**
  * What `status --local` says now that it can answer for itself.
  *
- * It used to print "Run `supabase status` for the local stack" — a status
+ * It used to print "Run `supabase status` for the local stack", a status
  * command whose entire output was the name of a different status command.
  * `environment.ts` already reads the two facts that question is really
  * asking about, so this reports them and names the next step.
@@ -275,7 +275,7 @@ export async function runStackCommand(
   command: StackCommand,
   target: Target,
 ): Promise<{ code: number; lines: string[] }> {
-  // The lifecycle pair is handled first, and every branch returns — which is
+  // The lifecycle pair is handled first, and every branch returns. That is
   // also what narrows `command` to `TeamCommand` for the dispatch below.
   if (command === "stop" || command === "restart") {
     if (target.kind !== "local") {

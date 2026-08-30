@@ -16,7 +16,7 @@ export default function WeekSchedule({ weekData }: WeekScheduleProps) {
   const [prev, setPrev] = useState<string | undefined>(undefined);
 
   /**
-   * Handler updating next/prev scroll buttons for scroll/resize events.
+   * Updates the next/prev scroll buttons on scroll and resize.
    */
   const handleScroll = useCallback(function (this: HTMLElement) {
     const bounds = this.getBoundingClientRect();
@@ -83,7 +83,7 @@ export default function WeekSchedule({ weekData }: WeekScheduleProps) {
   }, [handleScroll]);
 
   /*
-   * Create lines for each hour under each day. (8AM to 10PM)
+   * One line per hour under each day, 8 AM to 10 PM.
    */
   const createHourlySections = useCallback(() => {
     const sections = [];
@@ -131,7 +131,6 @@ export default function WeekSchedule({ weekData }: WeekScheduleProps) {
         <CaretDoubleRightIcon weight="bold" />
       </button>
 
-      {/* Viewport of schedule display */}
       <section
         className="grid h-[750px] w-full snap-x snap-mandatory grid-cols-[1rem_repeat(5,calc((100%-1rem)/var(--cols)))] overflow-x-auto scroll-smooth rounded-lg bg-pink-200/50 py-4 [--cols:1] sm:[--cols:2] md:overflow-hidden lg:[--cols:3] xl:[--cols:4] 2xl:[--cols:5]"
         ref={scrollportRef}
@@ -140,13 +139,10 @@ export default function WeekSchedule({ weekData }: WeekScheduleProps) {
 
         {Object.entries(weekData).map(([day, classes]) => (
           <div className="snap-end snap-always pr-4" data-title={day} key={day}>
-            {/* One day's schedule */}
             <article className="flex h-full w-full flex-col gap-4 rounded-xl bg-white px-0 py-0">
-              {/* Day label */}
               <h2 className="text rounded-lg bg-[#222233] px-4 py-3 text-center text-xl font-bold text-white">
                 {day}
               </h2>
-              {/* Class list */}
               <div className="relative h-full">
                 {createHourlySections()}
                 {classes.map((classData, index) => (
