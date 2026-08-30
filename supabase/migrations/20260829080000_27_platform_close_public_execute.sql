@@ -1,0 +1,77 @@
+-- Close PUBLIC's EXECUTE on the platform schema, and keep it closed.
+--
+-- This file creates no object of any kind. It is two privilege statements, and
+-- it runs last for one reason: `revoke ... on all functions in schema` acts on
+-- the functions that exist at the moment it runs. Move it earlier, or add a
+-- function after it, and the revoke misses what came later. The second
+-- statement is what covers "later", and it only covers creations that happen
+-- after it, so the two together are a floor rather than a fence.
+
+
+-- Close what is open now
+--
+-- Postgres grants EXECUTE to PUBLIC on every new function, and PUBLIC is every
+-- role in the cluster, not "the client". Measured on the live local database
+-- before this revoke first existed: `sandbox_proxy`, a role created to hold no
+-- privileges at all, could execute 18 of this schema's functions, every one of
+-- them SECURITY DEFINER. SECURITY DEFINER is the part that bites, because those
+-- functions run as their owner, so the calling role's empty table grants stop
+-- nothing. `claim_root`, which granted its caller every permission in the
+-- system, was among the 18 and has since been removed for related reasons.
+--
+-- Safe for every legitimate caller. The per-schema `grant all on functions`
+-- default privilege in the first migration gives anon, authenticated and
+-- service_role an EXPLICIT grant on each function as it is created
+-- (`{anon=X,authenticated=X,service_role=X}`), so removing PUBLIC removes only
+-- the grant that lets unlisted roles in. The "did not take the API roles down
+-- with it" assertion in resolveCredential.db-test.ts fails loudly if that ever
+-- stops being true.
+--
+-- This does not replace the per-function revokes elsewhere in the set. Those
+-- are narrower on purpose: resolve_content, apply_content_action and the
+-- resolve_report_as / dismiss_report_as pair also drop anon and authenticated,
+-- and log_proxy_request and resolve_sandbox_credential drop service_role too and
+-- grant to sandbox_proxy alone. Idempotent, and a no-op on any function whose
+-- own file already revoked PUBLIC by hand.
+revoke execute on all functions in schema "platform" from public;
+
+
+-- Keep it closed, in the global form, which is the only form that works
+--
+-- The obvious statement here is `alter default privileges in schema "platform"
+-- revoke execute on functions from public`. It is a silent no-op, and the old
+-- history shipped it: the schema-wide revoke above was issued once, the scoped
+-- default-privileges line was meant to hold it, and the next migration to drop
+-- and recreate functions reopened all ten of them with nothing failing.
+--
+-- The reason is in the catalog. `pg_default_acl` stores a DELTA that Postgres
+-- merges on top of `acldefault()` at creation time, and PUBLIC's EXECUTE lives
+-- in `acldefault()`, never in the row. A revoke can only remove entries the row
+-- actually contains, so the scoped form has nothing to subtract and writes no
+-- pg_default_acl row at all. Measured on PostgreSQL 17.6, every way the scoped
+-- form can be written leaves PUBLIC on the new function.
+--
+-- With no `in schema`, `defaclnamespace` is 0 and Postgres stores the COMPLETE
+-- ACL rather than a delta, so "PUBLIC is absent" becomes expressible. That is
+-- the whole difference. The wider scope, functions created by this role in this
+-- database, in any schema, is the price of the statement working; three things
+-- bound it:
+--
+--   * Extensions are exempt. Postgres does not apply default ACLs to objects
+--     created by an extension script, so gen_random_uuid() and pg_trgm's
+--     similarity() keep PUBLIC EXECUTE and keep working for anon.
+--   * Supabase's own objects are untouched. auth, storage, realtime and graphql
+--     are owned by supabase_admin and supabase_auth_admin, and default
+--     privileges are per-owner.
+--   * The three app schemas grant explicitly, per the first migration, so the
+--     roles that should reach a function still do.
+--
+-- Supabase already ships this posture for the `public` schema, whose stored row
+-- reads `{postgres=X}` with no PUBLIC entry.
+--
+-- After this, a new platform function arrives as
+-- `{postgres=X, anon=X, authenticated=X, service_role=X}`: reachable by the
+-- three API roles and nothing else. Letting some other role call one becomes an
+-- explicit `grant execute` that shows up in a diff, instead of a default nobody
+-- reads.
+alter default privileges revoke execute on functions from public;
