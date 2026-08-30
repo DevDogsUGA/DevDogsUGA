@@ -1,8 +1,9 @@
 /**
  * Treats an empty string as "absent": returns `undefined` when the value is
  * empty (or already nullish), otherwise the value unchanged. Use for optional
- * fields where `""` should be omitted rather than sent — the intent behind the
- * common `value || undefined` idiom, without the nullish-coalescing footgun.
+ * fields where `""` should be omitted rather than sent. This is the intent
+ * behind the common `value || undefined` idiom, without the nullish-coalescing
+ * footgun.
  */
 export function emptyToUndefined(
   value: string | null | undefined,

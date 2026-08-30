@@ -43,8 +43,8 @@ export async function pushMemberRoleChange(
 /**
  * Run when a user links their Discord account. Grants any synced DevDogs
  * roles whose linked Discord role the user already holds on Discord.
- * Soft-fails (returns without throwing) if the member can't be fetched —
- * this must never block the link flow.
+ * Soft-fails (returns without throwing) if the member can't be fetched.
+ * This must never block the link flow.
  */
 export async function syncRolesOnLink(
   userId: string,

@@ -158,8 +158,8 @@ describe("stdout stays clean for every deploy command", () => {
     });
     expect(plan.stdout).toBe("");
     // Anchored on the preference LINE rather than the bare token name. Both
-    // refusals also mention the other row's token in prose — naming what was
-    // deliberately not consulted is half the message — so a bare
+    // refusals also mention the other row's token in prose: naming what was
+    // deliberately not consulted is half the message, so a bare
     // `toContain("AIRTABLE_APPLY_PAT")` would match that sentence and the
     // negative control below would be unsatisfiable.
     expect(plan.stderr).toContain(
@@ -207,7 +207,7 @@ describe("argument refusals", () => {
   });
 
   it("refuses the old `--mint <script>` form by name", async () => {
-    // Ignoring the path would silently keep working — and keep looking like a
+    // Ignoring the path would silently keep working, and keep looking like a
     // way to name any executable on the runner whose stdout becomes a Worker
     // secret.
     const { code, stdout, stderr } = await devtools([

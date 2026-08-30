@@ -17,8 +17,8 @@ interface Props {
  * What a folder shows when it has no index page to stand in for it: its
  * contents, as the same tiles the docs landing page offers projects on.
  *
- * The marks wear the project's own fill rather than a colour per entry —
- * every tile here belongs to one section of one project, so a colour would be
+ * The marks wear the project's own fill rather than a colour per entry.
+ * Every tile here belongs to one section of one project, so a colour would be
  * decoration pretending to be information. The glyph still separates a page
  * from a subfolder you can open.
  */

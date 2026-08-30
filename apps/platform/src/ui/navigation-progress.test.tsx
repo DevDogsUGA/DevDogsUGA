@@ -39,7 +39,7 @@ describe("NavigationProgress", () => {
     const link = renderWithLink();
 
     // Stand in for the unsaved-changes guard: capture phase, on the document,
-    // preventDefault only — exactly what settings-form does.
+    // preventDefault only, exactly what settings-form does.
     const guard = (e: MouseEvent) => e.preventDefault();
     document.addEventListener("click", guard, true);
     try {

@@ -11,8 +11,9 @@ export type AvailableTerm = {
 };
 
 // Mirrors the "Spring 2026 / Summer 2026 / Fall 2026" term-selector pills on
-// https://reg.uga.edu/registration/schedule-of-classes/ — those pills are
-// populated by reading ACADEMIC_PERIOD off of these same three CSVs.
+// https://reg.uga.edu/registration/schedule-of-classes/
+// Those pills are populated by reading ACADEMIC_PERIOD off of these same
+// three CSVs.
 export async function detectAvailableTerms(): Promise<AvailableTerm[]> {
   const results: AvailableTerm[] = [];
 

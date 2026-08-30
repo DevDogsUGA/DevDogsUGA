@@ -189,7 +189,7 @@ describe("computeEndTime", () => {
 
 describe("validateHard walking distance", () => {
   const northCampus = { latitude: 33.9575, longitude: -83.375 };
-  // ~1.4 miles away — roughly 28 minutes on foot.
+  // ~1.4 miles away, roughly 28 minutes on foot.
   const farAway = { latitude: 33.938, longitude: -83.3675 };
 
   it("rejects a back-to-back pair that cannot be walked in the gap", () => {

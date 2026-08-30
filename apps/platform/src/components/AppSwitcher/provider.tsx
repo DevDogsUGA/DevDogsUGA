@@ -80,7 +80,7 @@ export function AppSwitcherProvider({ children }: { children: ReactNode }) {
 
 /**
  * Wraps any button element, merging data-state and a toggle handler onto the
- * child — following the Radix data-attribute pattern. The click position seeds
+ * child, following the Radix data-attribute pattern. The click position seeds
  * the overlay's expand-animation origin.
  */
 export function AppSwitcherTrigger({ children }: { children: ReactElement }) {

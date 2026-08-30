@@ -26,7 +26,7 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // Refresh session — do not add logic between createServerClient and getUser
+  // Refresh session. Do not add logic between createServerClient and getUser
   const {
     data: { user },
   } = await supabase.auth.getUser();

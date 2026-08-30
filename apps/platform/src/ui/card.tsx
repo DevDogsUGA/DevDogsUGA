@@ -25,7 +25,7 @@ function Root({
  *
  * `description` exists because the alternative was passing a `<p>` as the
  * action child, which put a summary line into a flex row built for a title and
- * a button — the audit log did exactly that. Actions still go in `children`.
+ * a button. The audit log did exactly that. Actions still go in `children`.
  */
 function Header({
   title,

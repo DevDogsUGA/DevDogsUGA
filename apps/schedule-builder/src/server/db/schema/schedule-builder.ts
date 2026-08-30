@@ -260,7 +260,10 @@ export const userSavedPlans = scheduleBuilder.table(
 
 // ─── Academic period selector ─────────────────────────────────────────────────
 
-/** One row per academic period — only periods that have at least one offering. */
+/**
+ * One row per academic period, but only for periods that have at least one
+ * offering.
+ */
 export const availableTerms = scheduleBuilder.view("availableTerms").as((qb) =>
   qb
     .select({

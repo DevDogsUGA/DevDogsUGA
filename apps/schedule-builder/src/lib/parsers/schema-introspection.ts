@@ -63,7 +63,7 @@ export function detectTarget(table: PgTable): TargetInfo {
     }
   }
 
-  // Priority 4: serial-PK-only — plain INSERT, no natural dedup key
+  // Priority 4: serial-PK-only. Plain INSERT, no natural dedup key
   const info: TargetInfo = {
     target: [],
     uniqueKeys: [],

@@ -22,7 +22,7 @@ export interface Course {
   courseSections?: CourseSection[];
 }
 
-/** A row from the `offeringSearch` view — one course offering (section). */
+/** A row from the `offeringSearch` view: one course offering (section). */
 export interface OfferingSearchRow {
   crn: number;
   courseId: number;

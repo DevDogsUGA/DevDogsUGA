@@ -20,7 +20,7 @@ function client(fetchImpl: typeof globalThis.fetch) {
 
 describe("listRecords", () => {
   it("asks for field IDs, not field names", async () => {
-    // returnFieldsByFieldId is response-only — it does NOT make a request body
+    // returnFieldsByFieldId is response-only. It does NOT make a request body
     // ID-keyed, that is simply allowed. A client that sets the flag and then
     // writes by name reads one way and writes the other, and only notices on
     // the first rename.
@@ -117,8 +117,8 @@ describe("upsertRecords", () => {
 
 describe("rate limiting", () => {
   it("backs off and retries a 429", async () => {
-    // The 5 requests/second per-base limit is universal — it does not lift
-    // with the plan — so backoff is required at every tier.
+    // The 5 requests/second per-base limit is universal: it does not lift
+    // with the plan, so backoff is required at every tier.
     let call = 0;
     const fetchMock = vi.fn(async () =>
       call++ === 0

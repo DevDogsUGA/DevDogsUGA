@@ -1,5 +1,5 @@
 /**
- * The trail above a docs page or folder — the project, then the folders it
+ * The trail above a docs page or folder: the project, then the folders it
  * sits under. Text rather than links: the sidebar beside it already navigates
  * to every one of these, and a row of near-identical links above the title
  * competes with it.

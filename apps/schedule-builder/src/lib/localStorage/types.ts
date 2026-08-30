@@ -5,7 +5,7 @@ export type DraftCourse = {
   excludedCrns: number[];
   /**
    * `userPlanDraftCourses.courseId` is a to-one FK, so the PostgREST embed
-   * returns a single object (null when the row is missing) — not an array.
+   * returns a single object (null when the row is missing), not an array.
    */
   courses: { abbr: string; courseNumber: string; title: string } | null;
 };

@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Fetch part-of-term calendars over HTTP up front, before opening a
-  // transaction — these are slow external requests and must not hold a DB
+  // transaction. These are slow external requests and must not hold a DB
   // connection open while they run.
   const partOfTermRows = (
     await Promise.all(

@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
  * Nothing here, and why.
  *
  * Always takes a reason rather than only a title. Most empty states on this
- * platform are temporal — no meetings scheduled *yet*, no results *until the
- * tally runs*, no teams *until somebody makes one* — and "No meetings" alone
+ * platform are temporal: no meetings scheduled *yet*, no results *until the
+ * tally runs*, no teams *until somebody makes one*. And "No meetings" alone
  * reads as a fault in the page rather than as the current state of the club.
  */
 export default function EmptyState({

@@ -21,7 +21,7 @@ export function escapeHtml(text: string): string {
  * description contains) and sorted descending.
  *
  * Entries flagged `matchOwnTextOnly` additionally need at least one token to
- * land outside their breadcrumbs — see the flag's note in ./types.
+ * land outside their breadcrumbs. See the flag's note in ./types.
  */
 export function matchEntries(
   entries: SearchEntry[],
