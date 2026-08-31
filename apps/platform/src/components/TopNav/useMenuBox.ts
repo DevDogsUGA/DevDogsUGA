@@ -30,6 +30,11 @@ export interface MenuBox {
    * Only a vertical tier needs it, to aim an arrow at the row it came from.
    */
   triggerY: number;
+  /**
+   * The same middle, measured across from the container's left. The placed
+   * tier's counterpart, aiming the arrow under the bar at its trigger.
+   */
+  triggerX: number;
 }
 
 interface Options {
@@ -127,12 +132,14 @@ export function useMenuBox({
 
     let left = 0;
     let rowLeft = 0;
+    let triggerX = 0;
     if (place) {
       const rect = trigger.getBoundingClientRect();
       const containerLeft = container.getBoundingClientRect().left;
       const row = trigger.closest("li");
       rowLeft =
         row === null ? 0 : row.getBoundingClientRect().left - containerLeft;
+      triggerX = Math.round(rect.left + rect.width / 2 - containerLeft);
       // The trigger's own edge, never the panel's: "end" lines the panel's
       // right edge up with the trigger's right edge.
       const aligned =
@@ -171,6 +178,7 @@ export function useMenuBox({
       rightGap: place ? container.clientWidth - left - width : 0,
       rowLeft,
       triggerY,
+      triggerX,
     };
 
     const last = measured.current;
@@ -182,7 +190,8 @@ export function useMenuBox({
       last.height === next.height &&
       last.rightGap === next.rightGap &&
       last.rowLeft === next.rowLeft &&
-      last.triggerY === next.triggerY
+      last.triggerY === next.triggerY &&
+      last.triggerX === next.triggerX
     ) {
       return;
     }

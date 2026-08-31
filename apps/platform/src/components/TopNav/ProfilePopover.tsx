@@ -264,6 +264,7 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
               aria-hidden
               data-slot="nav-sub-indicator"
               data-state={subValue === "" ? "hidden" : "visible"}
+              data-travelling={travelling || undefined}
               style={{ top: `${box?.triggerY ?? 0}px` }}
               className={NAV_SUB_ARROW}
             />

@@ -91,29 +91,28 @@ export const NAV_SUB_CONTENT = `${PANEL} ${CLIP} ${DOWN}`;
  * The half of the square inside the card has to be indistinguishable from the
  * card, which is why both are opaque. See NAV_SURFACE.
  */
-const ARROW = "size-2.5 rotate-45 border-mauve-800 bg-mauve-950";
-
-/** Points up, at a trigger in the bar above it. */
-export const NAV_ARROW = `${ARROW} -translate-y-1/2 border-t border-l`;
-
-/**
- * The tier-1 arrow's track.
+/*
+ * Placed by hand, not by Radix's Indicator, which this used to be. The
+ * Indicator renders nothing until it has found and measured its trigger, and
+ * it does that in a passive effect plus a ResizeObserver, a frame or two after
+ * the commit that mounts the viewport. It unmounts on close, so every open
+ * paid that again: the card was 50ms into its fold before the arrow's fade
+ * began. The shell already measures the open trigger before paint for the
+ * viewport's sake, so the arrow hangs off the same measurement and changes
+ * state in the same commit as the box it points from.
  *
- * Radix portals the Indicator into a wrapper spanning the list and positions it
- * over whichever trigger is open. This adds the drop to the panel's edge, the
- * centring within the trigger, and movement on the panel's own duration and
- * easing, so arrow and panel read as one thing moving.
+ * `top-2` is the viewport's top edge: the strip the viewport sits in hangs the
+ * same 0.5rem below the bar. Pulled onto that edge by half of itself both
+ * ways, so `left` can be the trigger's centre.
  *
- * No height, so it takes part in none of the bar's layout. It is a line to hang
- * the arrow off, and the arrow is pulled back onto it by half itself.
- *
- * It arrives and leaves on an animation rather than a transition. Radix keeps
- * the indicator mounted only while an animation is running on it, and a
- * transition to zero opacity is not one, so the arrow was torn out of the DOM
- * the instant the menu closed, 140ms before the panel finished folding.
+ * The fade is keyed on `data-state` and runs on the fold's own numbers, 180ms
+ * out on the way in and 140ms in on the way out; `opacity-0` is what holds
+ * after the out animation ends, since the arrow stays mounted now. The slide
+ * between triggers is gated on `data-travelling` exactly as the viewport's is,
+ * so a menu opening cold never animates in from wherever the arrow last was.
  */
-export const NAV_ARROW_TRACK =
-  "top-full z-10 mt-2 flex h-0 justify-center transition-[transform,width] duration-200 ease-out data-[state=visible]:animate-nav-arrow-in data-[state=hidden]:animate-nav-arrow-out";
+export const NAV_ARROW =
+  "absolute top-2 z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 border-t border-l border-mauve-800 bg-mauve-950 transition-none data-[travelling]:transition-[left] data-[travelling]:duration-200 data-[travelling]:ease-out data-[state=visible]:animate-nav-arrow-in data-[state=hidden]:animate-nav-arrow-out data-[state=hidden]:opacity-0";
 
 /**
  * The tier-2 arrow, placed by hand rather than by Radix.
@@ -129,6 +128,15 @@ export const NAV_ARROW_TRACK =
  * both spoken for by the shape of it. Above the sub-panel, for the same reason
  * the tier-1 arrow is above its card: it has to hide the stretch of outline it
  * stands on.
+ *
+ * The fade takes each direction's timing from the state it is heading INTO,
+ * which is how transitions resolve: 180ms ease-out arriving, to match the
+ * fold-in, 140ms ease-in leaving, to match the fold-out. One 140ms ease-in
+ * both ways used to sit dead through the fold-in's brisk ease-out start, so
+ * the arrow read as arriving after the panel it points at. The `top` slide is
+ * gated on `data-travelling` like every other movement between two open
+ * panels, so an opening sub-menu gets an arrow at its row rather than one
+ * sliding down from wherever the last open left it.
  */
 export const NAV_SUB_ARROW =
-  "absolute right-[calc(100%+0.5rem)] z-10 size-2.5 translate-x-1/2 -translate-y-1/2 rotate-45 border-t border-r border-mauve-800 bg-mauve-950 [transition:top_200ms_ease-out,opacity_140ms_ease-in] data-[state=hidden]:opacity-0";
+  "absolute right-[calc(100%+0.5rem)] z-10 size-2.5 translate-x-1/2 -translate-y-1/2 rotate-45 border-t border-r border-mauve-800 bg-mauve-950 [transition:opacity_180ms_ease-out] data-[state=hidden]:[transition:opacity_140ms_ease-in] data-[state=hidden]:opacity-0 data-[travelling]:[transition:top_200ms_ease-out,opacity_180ms_ease-out]";

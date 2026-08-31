@@ -11,7 +11,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { NAV_ARROW, NAV_ARROW_TRACK, NAV_SURFACE } from "./navPanel";
+import { NAV_ARROW, NAV_SURFACE } from "./navPanel";
 import { useMenuBox } from "./useMenuBox";
 
 /** The item values the navbar's top tier can hold. */
@@ -71,9 +71,10 @@ export function useNavPanelRef() {
  * appear elsewhere. The panels inside it are transparent and clipped. See
  * navPanel.
  *
- * Two smaller things. The arrow is a Radix Indicator, portalled into a track
- * spanning the list and told which trigger is active, so it needs no measuring
- * of its own and moves on the same 200ms the panel travels on. And the viewport
+ * Two smaller things. The arrow is placed by hand from the same measurement,
+ * not left to Radix's Indicator, which cannot render until an effect and a
+ * ResizeObserver have found its trigger and so started its fade a frame or two
+ * after the viewport had begun folding; see NAV_ARROW. And the viewport
  * grows a lip above itself: the panel sits clear of the bar, and the pointer
  * must never cross a gap it can lose the menu in. Radix cancels its close timer
  * on the viewport's pointerenter, so a lip that is part of the viewport's own
@@ -108,15 +109,6 @@ export default function NavShell({ children }: { children: ReactNode }) {
         <NavigationMenu.List className="flex h-16 items-center gap-1 px-4 md:px-6">
           {children}
         </NavigationMenu.List>
-
-        {/* Portalled into the track Radix wraps the list in, and positioned by
-            Radix over whichever trigger is open. Only the movement is ours. */}
-        <NavigationMenu.Indicator
-          data-slot="nav-indicator"
-          className={NAV_ARROW_TRACK}
-        >
-          <span className={NAV_ARROW} />
-        </NavigationMenu.Indicator>
 
         {/* Spans the bar so the anchor offset is measured in the same
             coordinate space it is applied in, and lets nothing through. An
@@ -169,6 +161,23 @@ export default function NavShell({ children }: { children: ReactNode }) {
               className={`data-[state=closed]:animate-nav-fold-out data-[state=open]:animate-nav-fold-in pointer-events-auto relative origin-top transition-none before:absolute before:inset-x-0 before:-top-2 before:h-2 before:content-[''] data-[travelling]:transition-[width,height] data-[travelling]:duration-200 data-[travelling]:ease-out ${NAV_SURFACE}`}
             />
           </div>
+
+          {/* After the strip, so it paints over the card's top edge. It stays
+              mounted across opens, unlike the Radix Indicator it replaces, so
+              its state flips in the very commit that opens or closes the
+              viewport and the two fade as one. Hidden with the strip until the
+              first measurement; see NAV_ARROW for the rest. */}
+          <span
+            aria-hidden
+            data-slot="nav-indicator"
+            data-state={value === "" ? "hidden" : "visible"}
+            data-travelling={travelling || undefined}
+            style={{
+              left: box === null ? 0 : `${box.triggerX}px`,
+              visibility: box === null ? "hidden" : undefined,
+            }}
+            className={NAV_ARROW}
+          />
         </div>
       </NavigationMenu.Root>
     </Context.Provider>

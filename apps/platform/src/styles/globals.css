@@ -79,11 +79,9 @@
   --animate-nav-content-out-up: nav-content-out-up 120ms ease-in;
   --animate-nav-content-out-down: nav-content-out-down 120ms ease-in;
   --animate-nav-fade-in: nav-fade-in 160ms ease-out;
-  /* Deliberately the fold's own timings. The arrow is not folding — an
-     animation touching `transform` would throw away the inline one Radix
-     positions it with, and drop it back to the start of the bar — but it has
-     to arrive and leave on exactly the fold's schedule, or it is a second
-     thing happening near the first. */
+  /* Deliberately the fold's own timings. The arrow is not folding, only
+     fading, but it has to arrive and leave on exactly the fold's schedule, or
+     it is a second thing happening near the first. */
   --animate-nav-arrow-in: nav-fade-in 180ms ease-out;
   --animate-nav-arrow-out: nav-fade-out 140ms ease-in;
 }
