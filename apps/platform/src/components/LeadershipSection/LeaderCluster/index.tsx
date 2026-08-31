@@ -30,12 +30,14 @@ interface Props {
 
 const SPRING = { type: "spring", stiffness: 200, damping: 26 } as const;
 
-/** Entrance fold per side: the popup swings open from its anchored edge. */
-const FOLD: Record<PopupSide, { rotateX?: number; rotateY?: number }> = {
-  right: { rotateY: -20 },
-  left: { rotateY: 20 },
-  bottom: { rotateX: 20 },
-  top: { rotateX: -20 },
+/**
+ * Entrance fold per side: the popup swings open from its anchored edge, far
+ * edge starting tipped away from the viewer. Positive rotateY sends the
+ * element's right edge into the screen, so the sign follows which edge is far.
+ */
+const FOLD: Record<PopupSide, { rotateY: number }> = {
+  right: { rotateY: 20 },
+  left: { rotateY: -20 },
 };
 
 interface PopupProps {
@@ -61,7 +63,7 @@ function LeaderPopup({ profile, layout, reduceMotion, popupRef }: PopupProps) {
     // measures this wrapper because its rect doesn't wobble mid-fold.
     <div
       ref={popupRef}
-      className="absolute z-30 w-64"
+      className="absolute z-30 w-80"
       style={{
         left: place.left,
         top: place.top,
@@ -75,7 +77,7 @@ function LeaderPopup({ profile, layout, reduceMotion, popupRef }: PopupProps) {
           transformOrigin: place.transformOrigin,
         }}
         initial={{ opacity: 0, ...fold }}
-        animate={{ opacity: 1, rotateX: 0, rotateY: 0 }}
+        animate={{ opacity: 1, rotateY: 0 }}
         exit={{
           opacity: 0,
           ...fold,

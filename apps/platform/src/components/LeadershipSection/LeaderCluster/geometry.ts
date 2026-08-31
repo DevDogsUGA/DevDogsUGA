@@ -17,7 +17,7 @@ export const CONTAINER_W = 920;
 export const CONTAINER_H = 660;
 export const CARD_W = 120;
 export const CARD_H = 180;
-export const POPUP_W = 256;
+export const POPUP_W = 320;
 /** Gap between the open card's edge and its popup. */
 export const POPUP_GAP = 24;
 /**
@@ -31,11 +31,11 @@ const HIT_PAD = 8;
 /** Forgiveness around an open card + popup before the pointer lets it close. */
 const STICKY_PAD = 16;
 
-/** Within this |cx| of the container's center line, popups open vertically. */
+/** Right of this cx, popups open leftward; everywhere else, rightward. */
 const CENTER_BAND = 50;
 
 /** The side of the card its popup opens on. */
-export type PopupSide = "left" | "right" | "top" | "bottom";
+export type PopupSide = "left" | "right";
 
 export interface Point {
   x: number;
@@ -50,20 +50,18 @@ export interface Rect {
 }
 
 /**
- * Popups open toward the container's center so they never hang off the edge:
- * right-half cards open leftward, top-center cards open downward. Exact
- * center (only reachable with a degenerate layout) falls back to "right".
+ * Popups open horizontally, toward the container's center where it matters:
+ * cards on the right half open leftward so they never hang off the edge, and
+ * everything else — the center column included — opens rightward, reading
+ * direction.
  */
 export function popupSideFor(l: CardLayout): PopupSide {
-  if (Math.abs(l.cx) < CENTER_BAND) {
-    return l.cy < 0 ? "bottom" : l.cy > 0 ? "top" : "right";
-  }
-  return l.cx > 0 ? "left" : "right";
+  return l.cx > CENTER_BAND ? "left" : "right";
 }
 
-/** X displacement of an open card. Vertical popups don't displace the card. */
+/** X displacement of an open card: away from its popup. */
 export function openShiftX(side: PopupSide): number {
-  return side === "left" ? OPEN_SHIFT : side === "right" ? -OPEN_SHIFT : 0;
+  return side === "left" ? OPEN_SHIFT : -OPEN_SHIFT;
 }
 
 /** A card's resting center in container coordinates, scatter jitter included. */
@@ -132,11 +130,10 @@ export function holdsPointer(region: Rect, p: Point): boolean {
 
 /**
  * Where a card sits while another card's popup is open: pushed along the line
- * between the two resting centers, harder the closer they are. When the popup
- * opens vertically the pushed cards clear out sideways instead, weighted by
- * how squarely they sit in the popup's path, so none of them crosses it.
- * Returns the card's animation offset with its scatter jitter folded in, the
- * same coordinates the resting offset uses.
+ * between the two resting centers, harder the closer they are, and harder in
+ * x than y because the popup claims horizontal room. Returns the card's
+ * animation offset with its scatter jitter folded in, the same coordinates
+ * the resting offset uses.
  */
 export function repelOffset(l: CardLayout, open: CardLayout): Point {
   const dx = l.cx - open.cx;
@@ -144,13 +141,6 @@ export function repelOffset(l: CardLayout, open: CardLayout): Point {
   const dist = Math.hypot(dx, dy);
   if (dist === 0) return { x: l.tx, y: l.ty };
   const strength = Math.max(0, 1 - dist / 600) * 170;
-  const side = popupSideFor(open);
-  if (side === "top" || side === "bottom") {
-    const popupDirY = side === "bottom" ? 1 : -1;
-    const inPath = Math.max(0, (dy * popupDirY) / dist);
-    const dirX = (dx / dist) * (1 - inPath) + (l.cx >= 0 ? 1 : -1) * inPath;
-    return { x: l.tx + dirX * strength * (1 + inPath), y: 0 };
-  }
   return {
     x: l.tx + (dx / dist) * strength * 1.5,
     y: l.ty + (dy / dist) * strength * 0.7,
@@ -178,38 +168,20 @@ export function popupPlacement(l: CardLayout, shiftX: number): PopupPlacement {
   const side = popupSideFor(l);
   const c = cardCenter(l);
   const cx = c.x + shiftX;
-  switch (side) {
-    case "right":
-      return {
-        left: cx + CARD_W / 2 + POPUP_GAP,
-        top: c.y,
-        x: "0%",
-        y: "-50%",
-        transformOrigin: "left center",
-      };
-    case "left":
-      return {
-        left: cx - CARD_W / 2 - POPUP_GAP,
-        top: c.y,
-        x: "-100%",
-        y: "-50%",
-        transformOrigin: "right center",
-      };
-    case "bottom":
-      return {
-        left: cx,
-        top: c.y + CARD_H / 2 + POPUP_GAP,
-        x: "-50%",
-        y: "0%",
-        transformOrigin: "top center",
-      };
-    case "top":
-      return {
-        left: cx,
-        top: c.y - CARD_H / 2 - POPUP_GAP,
-        x: "-50%",
-        y: "-100%",
-        transformOrigin: "bottom center",
-      };
+  if (side === "right") {
+    return {
+      left: cx + CARD_W / 2 + POPUP_GAP,
+      top: c.y,
+      x: "0%",
+      y: "-50%",
+      transformOrigin: "left center",
+    };
   }
+  return {
+    left: cx - CARD_W / 2 - POPUP_GAP,
+    top: c.y,
+    x: "-100%",
+    y: "-50%",
+    transformOrigin: "right center",
+  };
 }

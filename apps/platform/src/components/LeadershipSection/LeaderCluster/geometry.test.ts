@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { computeClusterLayout, type CardLayout } from "./clusterLayout";
 import {
-  CARD_H,
   CARD_W,
   CONTAINER_H,
   CONTAINER_W,
   OPEN_SHIFT,
+  POPUP_W,
   cardCenter,
   hitTest,
   holdsPointer,
@@ -19,16 +19,17 @@ import {
 const at = (l: CardLayout) => cardCenter(l);
 
 describe("popupSideFor", () => {
-  it("opens toward the container center", () => {
+  it("opens right-half cards leftward and everything else rightward", () => {
     expect(popupSideFor({ cx: 300, cy: 0, deg: 0, tx: 0, ty: 0 })).toBe("left");
     expect(popupSideFor({ cx: -300, cy: 0, deg: 0, tx: 0, ty: 0 })).toBe(
       "right",
     );
+    // Center-column cards open rightward too, wherever they sit vertically.
     expect(popupSideFor({ cx: 10, cy: -200, deg: 0, tx: 0, ty: 0 })).toBe(
-      "bottom",
+      "right",
     );
     expect(popupSideFor({ cx: -10, cy: 200, deg: 0, tx: 0, ty: 0 })).toBe(
-      "top",
+      "right",
     );
   });
 });
@@ -77,7 +78,7 @@ describe("openRegion", () => {
     const place = popupPlacement(l, shift);
     // The popup's on-screen box: x:-100% puts its right edge at place.left.
     const popupRect = {
-      left: place.left - 256,
+      left: place.left - POPUP_W,
       right: place.left,
       top: place.top - 150,
       bottom: place.top + 150,
@@ -98,8 +99,6 @@ describe("openShiftX / popupPlacement", () => {
   it("slides the card opposite its popup so the pair stays centered", () => {
     expect(openShiftX("left")).toBe(OPEN_SHIFT);
     expect(openShiftX("right")).toBe(-OPEN_SHIFT);
-    expect(openShiftX("top")).toBe(0);
-    expect(openShiftX("bottom")).toBe(0);
   });
 
   it("anchors the popup against the shifted card's near edge", () => {
@@ -110,12 +109,14 @@ describe("openShiftX / popupPlacement", () => {
     expect(place.transformOrigin).toBe("left center");
   });
 
-  it("centers vertical popups on the card and clears by the card height", () => {
-    const l: CardLayout = { cx: 0, cy: -240, deg: 0, tx: 0, ty: 0 }; // side: bottom
-    const place = popupPlacement(l, 0);
-    expect(place.left).toBe(at(l).x);
-    expect(place.top).toBe(at(l).y + CARD_H / 2 + 24);
-    expect(place.x).toBe("-50%");
+  it("opens center-column cards rightward, vertically centered on the card", () => {
+    const l: CardLayout = { cx: 0, cy: -240, deg: 0, tx: 0, ty: 0 };
+    const shift = openShiftX(popupSideFor(l));
+    const place = popupPlacement(l, shift);
+    expect(place.left).toBe(at(l).x - OPEN_SHIFT + CARD_W / 2 + 24);
+    expect(place.top).toBe(at(l).y);
+    expect(place.y).toBe("-50%");
+    expect(place.transformOrigin).toBe("left center");
   });
 });
 
@@ -126,15 +127,6 @@ describe("repelOffset", () => {
     const above: CardLayout = { cx: 300, cy: -200, deg: 0, tx: 0, ty: 0 };
     expect(repelOffset(right, open).x).toBeGreaterThan(right.tx);
     expect(repelOffset(above, open).y).toBeLessThan(0);
-  });
-
-  it("clears cards sideways out of a vertical popup's path", () => {
-    const open: CardLayout = { cx: 10, cy: -240, deg: 0, tx: 0, ty: 0 }; // opens downward
-    const inPath: CardLayout = { cx: 30, cy: -40, deg: 0, tx: 0, ty: 0 };
-    const off = repelOffset(inPath, open);
-    // Right-half card dives right, and never into the popup's vertical lane.
-    expect(off.x).toBeGreaterThan(50);
-    expect(off.y).toBe(0);
   });
 
   it("weakens with distance until it vanishes", () => {
