@@ -147,7 +147,9 @@ function DesktopCluster({ profiles }: Props) {
     }
 
     // Test against the layout as displayed: while a card is open the others
-    // stand repelled, and the user aims at where a card is, not where it was.
+    // stand repelled, and each claims its whole resting→repelled band, so the
+    // user can aim at where a card is, where it was, or anywhere it fled
+    // through.
     setOpen(hitTest(layout, p, reduceMotion ? undefined : openLayout));
   }
 

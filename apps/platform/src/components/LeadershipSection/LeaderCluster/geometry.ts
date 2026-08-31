@@ -32,6 +32,18 @@ const HIT_PAD = 8;
 /** Forgiveness around an open card + popup before the pointer lets it close. */
 const STICKY_PAD = 16;
 
+/** Nominal popup height when planning repulsion; the real height tracks the bio. */
+const POPUP_CLEAR_H = 360;
+/**
+ * Half-extents of the zone a repelled card's center must leave to stand fully
+ * clear of an open pair's hold region: the pair's claim (x: card + slide +
+ * popup, which is symmetric about the resting center; y: the taller of card
+ * and popup) plus STICKY_PAD, plus the fleeing card's own half-size and a
+ * margin absorbing its scatter jitter.
+ */
+export const CLEAR_X = OPEN_SHIFT + CARD_W / 2 + STICKY_PAD + CARD_W / 2 + 8;
+export const CLEAR_Y = POPUP_CLEAR_H / 2 + STICKY_PAD + CARD_H / 2 + 8;
+
 /** Right of this cx, popups open leftward; everywhere else, rightward. */
 const CENTER_BAND = 50;
 
@@ -75,13 +87,15 @@ export function cardCenter(l: CardLayout): Point {
 
 /**
  * The card whose footprint contains the pointer, or null. While a card is
- * open its neighbours stand repelled — up to a card-width past their resting
- * spots — so pass `open` to test each card's *displayed* footprint instead of
- * its resting one. Without this, leaving an open card toward a repelled
- * neighbour can never hit it: the neighbour flees ahead of the cursor while
- * its resting footprint stays behind, already swept past under the popup.
- * Footprints can overlap once inflated by HIT_PAD; the nearest center wins so
- * the choice is unambiguous and continuous as the pointer sweeps across.
+ * open its neighbours stand repelled, so — mirroring what `openRegion` does
+ * for the open card itself — each neighbour claims the whole swept band from
+ * its resting footprint to its repelled one, not just one end. Either end
+ * alone fails in practice: aim at the resting spot and the card has already
+ * fled; chase it to its repelled spot and a flight longer than a card-width
+ * leaves a dead gap after the hold region, where everything closes and the
+ * card springs back behind the cursor. Claims can overlap; the card whose
+ * resting→repelled segment is nearest wins, so the choice is unambiguous and
+ * continuous as the pointer sweeps across.
  */
 export function hitTest(
   layouts: readonly CardLayout[],
@@ -91,10 +105,35 @@ export function hitTest(
   let best: number | null = null;
   let bestDistSq = Infinity;
   layouts.forEach((l, i) => {
+    const r = cardCenter(l);
     const off = open ? repelOffset(l, open) : { x: l.tx, y: l.ty };
-    const dx = Math.abs(p.x - (CONTAINER_W / 2 + l.cx + off.x));
-    const dy = Math.abs(p.y - (CONTAINER_H / 2 + l.cy + off.y));
-    if (dx > CARD_W / 2 + HIT_PAD || dy > CARD_H / 2 + HIT_PAD) return;
+    const d = {
+      x: CONTAINER_W / 2 + l.cx + off.x,
+      y: CONTAINER_H / 2 + l.cy + off.y,
+    };
+    if (
+      p.x < Math.min(r.x, d.x) - CARD_W / 2 - HIT_PAD ||
+      p.x > Math.max(r.x, d.x) + CARD_W / 2 + HIT_PAD ||
+      p.y < Math.min(r.y, d.y) - CARD_H / 2 - HIT_PAD ||
+      p.y > Math.max(r.y, d.y) + CARD_H / 2 + HIT_PAD
+    ) {
+      return;
+    }
+    // Rank by distance to the resting→repelled segment: how near the pointer
+    // is to anywhere the card stands along its spring. With no card open the
+    // segment is a point and this is the plain nearest-center rule.
+    const vx = d.x - r.x;
+    const vy = d.y - r.y;
+    const lenSq = vx * vx + vy * vy;
+    const t =
+      lenSq === 0
+        ? 0
+        : Math.max(
+            0,
+            Math.min(1, ((p.x - r.x) * vx + (p.y - r.y) * vy) / lenSq),
+          );
+    const dx = p.x - (r.x + t * vx);
+    const dy = p.y - (r.y + t * vy);
     const distSq = dx * dx + dy * dy;
     if (distSq < bestDistSq) {
       bestDistSq = distSq;
@@ -138,9 +177,15 @@ export function holdsPointer(region: Rect, p: Point): boolean {
 /**
  * Where a card sits while another card's popup is open: pushed along the line
  * between the two resting centers, harder the closer they are, and harder in
- * x than y because the popup claims horizontal room. Returns the card's
- * animation offset with its scatter jitter folded in, the same coordinates
- * the resting offset uses.
+ * x than y because the popup claims horizontal room. The cluster is a narrow
+ * arc and the popup spans nearly its whole width, so that push alone can
+ * strand a diagonal neighbour half-hidden under the popup — mostly invisible
+ * and, because the hold region owns the pointer there, mostly untargetable.
+ * When the pushed footprint would still sit inside the pair's claimed zone,
+ * the push extends along its own direction until the card stands fully clear,
+ * so every neighbour ends up whole and visible around the popup. Returns the
+ * card's animation offset with its scatter jitter folded in, the same
+ * coordinates the resting offset uses.
  */
 export function repelOffset(l: CardLayout, open: CardLayout): Point {
   const dx = l.cx - open.cx;
@@ -148,10 +193,29 @@ export function repelOffset(l: CardLayout, open: CardLayout): Point {
   const dist = Math.hypot(dx, dy);
   if (dist === 0) return { x: l.tx, y: l.ty };
   const strength = Math.max(0, 1 - dist / 600) * 170;
-  return {
-    x: l.tx + (dx / dist) * strength * 1.5,
-    y: l.ty + (dy / dist) * strength * 0.7,
-  };
+  let vx = (dx / dist) * strength * 1.5;
+  let vy = (dy / dist) * strength * 0.7;
+  const len = Math.hypot(vx, vy);
+  if (
+    len > 0 &&
+    Math.abs(dx + vx) < CLEAR_X &&
+    Math.abs(dy + vy) < CLEAR_Y &&
+    Math.abs(dx) < CLEAR_X &&
+    Math.abs(dy) < CLEAR_Y
+  ) {
+    // Extend to where the ray from the resting center leaves the clear zone.
+    // The pushed point is inside it, so this only ever lengthens the push.
+    const ux = vx / len;
+    const uy = vy / len;
+    const exitX =
+      ux === 0 ? Infinity : ((ux > 0 ? CLEAR_X : -CLEAR_X) - dx) / ux;
+    const exitY =
+      uy === 0 ? Infinity : ((uy > 0 ? CLEAR_Y : -CLEAR_Y) - dy) / uy;
+    const t = Math.min(exitX, exitY);
+    vx = ux * t;
+    vy = uy * t;
+  }
+  return { x: l.tx + vx, y: l.ty + vy };
 }
 
 export interface PopupPlacement {

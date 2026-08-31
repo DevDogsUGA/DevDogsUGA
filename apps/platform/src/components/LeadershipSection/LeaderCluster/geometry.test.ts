@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { computeClusterLayout, type CardLayout } from "./clusterLayout";
 import {
   CARD_W,
+  CLEAR_X,
+  CLEAR_Y,
   CONTAINER_H,
   CONTAINER_W,
   OPEN_SHIFT,
@@ -56,6 +58,21 @@ describe("hitTest", () => {
     // footprint — which is exactly why resting-only hit-testing loses it.
     expect(pushed.x).toBeGreaterThan(CARD_W / 2);
     const p = { x: CONTAINER_W / 2 + pushed.x, y: CONTAINER_H / 2 };
+    expect(hitTest([open, neighbor], p)).toBeNull();
+    expect(hitTest([open, neighbor], p, open)).toBe(1);
+  });
+
+  it("claims the whole swept band between resting and repelled footprints", () => {
+    const open: CardLayout = { cx: -140, cy: 0, deg: 0, tx: 0, ty: 0 };
+    const neighbor: CardLayout = { cx: 0, cy: 0, deg: 0, tx: 0, ty: 0 };
+    const pushed = repelOffset(neighbor, open);
+    // This close a pair, the flight exceeds a card-width, so a probe halfway
+    // along it sits in the dead gap between the two footprints…
+    expect(pushed.x).toBeGreaterThan(CARD_W + 16);
+    const p = { x: CONTAINER_W / 2 + pushed.x / 2, y: CONTAINER_H / 2 };
+    expect(p.x).toBeGreaterThan(CONTAINER_W / 2 + CARD_W / 2 + 8);
+    expect(p.x).toBeLessThan(CONTAINER_W / 2 + pushed.x - CARD_W / 2 - 8);
+    // …caught while the neighbor is repelled, empty once everything rests.
     expect(hitTest([open, neighbor], p)).toBeNull();
     expect(hitTest([open, neighbor], p, open)).toBe(1);
   });
@@ -139,6 +156,20 @@ describe("repelOffset", () => {
     const above: CardLayout = { cx: 300, cy: -200, deg: 0, tx: 0, ty: 0 };
     expect(repelOffset(right, open).x).toBeGreaterThan(right.tx);
     expect(repelOffset(above, open).y).toBeLessThan(0);
+  });
+
+  it("extends the push until a diagonal neighbor clears the pair's zone", () => {
+    // A middle-arc pair: the plain radial push splits between x and y and
+    // clears neither the popup's far edge nor its bottom.
+    const open: CardLayout = { cx: -145, cy: -180, deg: 0, tx: 0, ty: 0 };
+    const diag: CardLayout = { cx: 1, cy: -4, deg: 0, tx: 0, ty: 0 };
+    const off = repelOffset(diag, open);
+    const relX = Math.abs(diag.cx + off.x - open.cx);
+    const relY = Math.abs(diag.cy + off.y - open.cy);
+    expect(Math.max(relX - CLEAR_X, relY - CLEAR_Y)).toBeGreaterThan(-0.01);
+    // The extension keeps the push's own direction: still down-and-right.
+    expect(off.x).toBeGreaterThan(0);
+    expect(off.y).toBeGreaterThan(0);
   });
 
   it("weakens with distance until it vanishes", () => {
