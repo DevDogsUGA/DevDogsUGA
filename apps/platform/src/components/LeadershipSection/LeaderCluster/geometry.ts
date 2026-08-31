@@ -8,9 +8,10 @@ import type { CardLayout } from "./clusterLayout";
  * a feedback loop: a card slides under the resting cursor, "hovers" itself,
  * and the layout reshuffles again. The previous implementation suppressed
  * that with a hover lock and settle timers; this one removes the loop instead
- * by hit-testing the pointer against the *resting* layout, which never moves.
- * The mapping from pointer position to hovered card is a pure function of
- * this module, so the animation state can never feed back into it.
+ * by hit-testing the pointer against the layout the current state *says* is
+ * displayed — resting, or repelled by the open card — never against live DOM
+ * positions. The mapping from pointer position to hovered card is a pure
+ * function of this module, so the animation itself can never feed back into it.
  */
 
 export const CONTAINER_W = 920;
@@ -73,20 +74,26 @@ export function cardCenter(l: CardLayout): Point {
 }
 
 /**
- * The card whose resting footprint contains the pointer, or null. Footprints
- * can overlap once inflated by HIT_PAD; the nearest center wins so the choice
- * is unambiguous and continuous as the pointer sweeps across the cluster.
+ * The card whose footprint contains the pointer, or null. While a card is
+ * open its neighbours stand repelled — up to a card-width past their resting
+ * spots — so pass `open` to test each card's *displayed* footprint instead of
+ * its resting one. Without this, leaving an open card toward a repelled
+ * neighbour can never hit it: the neighbour flees ahead of the cursor while
+ * its resting footprint stays behind, already swept past under the popup.
+ * Footprints can overlap once inflated by HIT_PAD; the nearest center wins so
+ * the choice is unambiguous and continuous as the pointer sweeps across.
  */
 export function hitTest(
   layouts: readonly CardLayout[],
   p: Point,
+  open?: CardLayout,
 ): number | null {
   let best: number | null = null;
   let bestDistSq = Infinity;
   layouts.forEach((l, i) => {
-    const c = cardCenter(l);
-    const dx = Math.abs(p.x - c.x);
-    const dy = Math.abs(p.y - c.y);
+    const off = open ? repelOffset(l, open) : { x: l.tx, y: l.ty };
+    const dx = Math.abs(p.x - (CONTAINER_W / 2 + l.cx + off.x));
+    const dy = Math.abs(p.y - (CONTAINER_H / 2 + l.cy + off.y));
     if (dx > CARD_W / 2 + HIT_PAD || dy > CARD_H / 2 + HIT_PAD) return;
     const distSq = dx * dx + dy * dy;
     if (distSq < bestDistSq) {

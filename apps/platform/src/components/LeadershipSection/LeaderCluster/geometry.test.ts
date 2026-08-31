@@ -48,6 +48,18 @@ describe("hitTest", () => {
     expect(hitTest(layout, { x: CONTAINER_W, y: CONTAINER_H })).toBeNull();
   });
 
+  it("tracks repelled footprints while another card is open", () => {
+    const open: CardLayout = { cx: -300, cy: 0, deg: 0, tx: 0, ty: 0 };
+    const neighbor: CardLayout = { cx: 0, cy: 0, deg: 0, tx: 0, ty: 0 };
+    const pushed = repelOffset(neighbor, open);
+    // The push is big enough to carry the card clear of its own resting
+    // footprint — which is exactly why resting-only hit-testing loses it.
+    expect(pushed.x).toBeGreaterThan(CARD_W / 2);
+    const p = { x: CONTAINER_W / 2 + pushed.x, y: CONTAINER_H / 2 };
+    expect(hitTest([open, neighbor], p)).toBeNull();
+    expect(hitTest([open, neighbor], p, open)).toBe(1);
+  });
+
   it("prefers the nearer center where inflated footprints overlap", () => {
     const a: CardLayout = { cx: -70, cy: 0, deg: 0, tx: 0, ty: 0 };
     const b: CardLayout = { cx: 50, cy: 0, deg: 0, tx: 0, ty: 0 };

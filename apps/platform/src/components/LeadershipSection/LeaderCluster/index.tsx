@@ -106,8 +106,8 @@ type CardTarget = {
  * The spread-out-on-hover cluster.
  *
  * All hover state lives in one `open` index, driven by hit-testing the
- * pointer against the resting layout in `./geometry` — never by mouseenter
- * on the cards, which move. An open card holds the pointer while it stays
+ * pointer against the layout `./geometry` computes from that same state —
+ * never by mouseenter on the cards, which move. An open card holds the pointer while it stays
  * inside the card + popup region, which is what lets the mouse cross the gap
  * into the popup with no close timers, hover locks, or invisible bridge
  * elements. Keyboard gets the same states: focusing a tile opens it, its
@@ -146,7 +146,9 @@ function DesktopCluster({ profiles }: Props) {
       }
     }
 
-    setOpen(hitTest(layout, p));
+    // Test against the layout as displayed: while a card is open the others
+    // stand repelled, and the user aims at where a card is, not where it was.
+    setOpen(hitTest(layout, p, reduceMotion ? undefined : openLayout));
   }
 
   return (
