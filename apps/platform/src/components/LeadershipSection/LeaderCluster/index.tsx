@@ -52,29 +52,41 @@ function LeaderPopup({ profile, layout, reduceMotion, popupRef }: PopupProps) {
   const meta = formatLeaderMeta(profile.pronouns, profile.year);
 
   return (
-    <motion.div
+    // The centering translate lives on this static wrapper, not in the fold's
+    // transform. transform-origin conjugates an element's whole transform
+    // chain, so a translate in the same chain drags the perspective's
+    // projection center along with it and the fold comes out skewed. Split
+    // across two elements, the inner transform is exactly the old keyframes':
+    // perspective(800px) rotateY/X(±20deg) about the near edge. The ref also
+    // measures this wrapper because its rect doesn't wobble mid-fold.
+    <div
       ref={popupRef}
-      className="shadow-block-md absolute z-30 flex w-64 flex-col gap-3 rounded-sm border-2 border-mauve-900 bg-amber-50 p-4 shadow-black"
+      className="absolute z-30 w-64"
       style={{
         left: place.left,
         top: place.top,
-        x: place.x,
-        y: place.y,
-        transformPerspective: 800,
-        transformOrigin: place.transformOrigin,
+        transform: `translate(${place.x}, ${place.y})`,
       }}
-      initial={{ opacity: 0, ...fold }}
-      animate={{ opacity: 1, rotateX: 0, rotateY: 0 }}
-      exit={{
-        opacity: 0,
-        ...fold,
-        transition: { duration: 0.18, ease: "easeIn" },
-      }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
     >
-      {meta && <p className="text-xs text-mauve-500">{meta}</p>}
-      <LeaderDetails profile={profile} />
-    </motion.div>
+      <motion.div
+        className="shadow-block-md flex flex-col gap-3 rounded-sm border-2 border-mauve-900 bg-amber-50 p-4 shadow-black"
+        style={{
+          transformPerspective: 800,
+          transformOrigin: place.transformOrigin,
+        }}
+        initial={{ opacity: 0, ...fold }}
+        animate={{ opacity: 1, rotateX: 0, rotateY: 0 }}
+        exit={{
+          opacity: 0,
+          ...fold,
+          transition: { duration: 0.18, ease: "easeIn" },
+        }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
+      >
+        {meta && <p className="text-xs text-mauve-500">{meta}</p>}
+        <LeaderDetails profile={profile} />
+      </motion.div>
+    </div>
   );
 }
 
