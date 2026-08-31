@@ -33,11 +33,7 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-export function computeClusterLayout(
-  n: number,
-  _containerW: number,
-  _containerH: number,
-): CardLayout[] {
+export function computeClusterLayout(n: number): CardLayout[] {
   const DEG = Math.PI / 180;
 
   // n0 is the smallest group and goes to the inner ring, which has the least

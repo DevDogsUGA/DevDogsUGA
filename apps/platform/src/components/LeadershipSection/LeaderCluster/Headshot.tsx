@@ -13,24 +13,6 @@ function initials(name: string) {
     .join("");
 }
 
-/**
- * The line under a leader's name: pronouns, class year, or both.
- *
- * Built by filtering rather than interpolating, because for this board most of
- * it is missing. Nobody stated pronouns and one officer of seven gave a
- * graduation year, so the template this replaced, `{pronouns} · Class of
- * {year}`, would have rendered a bare " · Class of " under six names. Empty
- * string means the caller omits the element.
- */
-export function formatLeaderMeta(
-  pronouns: string | null,
-  year: string | null,
-): string {
-  return [pronouns, year ? `Class of ${year}` : null]
-    .filter(Boolean)
-    .join(" · ");
-}
-
 interface Props {
   name: string;
   src: string | null;
@@ -58,12 +40,12 @@ export default function Headshot({ name, src, sizes }: Props) {
 
   if (!src || failed) {
     return (
-      <div
+      <span
         aria-hidden
         className="font-display flex size-full items-center justify-center bg-amber-100 text-lg font-extrabold text-mauve-700"
       >
         {initials(name)}
-      </div>
+      </span>
     );
   }
 

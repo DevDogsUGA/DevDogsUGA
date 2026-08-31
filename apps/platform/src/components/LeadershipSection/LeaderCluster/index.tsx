@@ -1,99 +1,274 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "motion/react";
-import LeaderHoverCard, { type LeaderHoverCardProps } from "./LeaderHoverCard";
-import { computeClusterLayout } from "~/app/(site)/clusterLayout";
-
-const CONTAINER_W = 920;
-const CONTAINER_H = 660;
-const CARD_HALF_W = 60;
-const CARD_HALF_H = 90;
-const POPUP_HALF_FOOTPRINT = (256 + 24) / 2;
-const CENTER_THRESHOLD = 50;
-
-function getHoverSide(
-  cx: number,
-  cy: number,
-): "left" | "right" | "top" | "bottom" {
-  if (Math.abs(cx) < CENTER_THRESHOLD) {
-    return cy < 0 ? "bottom" : cy > 0 ? "top" : "right";
-  }
-  return cx > 0 ? "left" : "right";
-}
+import { Fragment, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { Dialog, DialogContent, DialogTitle } from "~/ui/dialog";
+import { computeClusterLayout, type CardLayout } from "./clusterLayout";
+import {
+  CARD_H,
+  CARD_W,
+  CONTAINER_H,
+  CONTAINER_W,
+  hitTest,
+  holdsPointer,
+  openRegion,
+  openShiftX,
+  popupPlacement,
+  popupSideFor,
+  repelOffset,
+  type Point,
+  type PopupSide,
+} from "./geometry";
+import { formatLeaderMeta, type LeaderProfile } from "./profile";
+import Headshot from "./Headshot";
+import LeaderDetails from "./LeaderDetails";
+import LeaderTile from "./LeaderTile";
 
 interface Props {
-  profiles: LeaderHoverCardProps[];
+  profiles: LeaderProfile[];
+}
+
+const SPRING = { type: "spring", stiffness: 200, damping: 26 } as const;
+
+/** Entrance fold per side: the popup swings open from its anchored edge. */
+const FOLD: Record<PopupSide, { rotateX?: number; rotateY?: number }> = {
+  right: { rotateY: -20 },
+  left: { rotateY: 20 },
+  bottom: { rotateX: 20 },
+  top: { rotateX: -20 },
+};
+
+interface PopupProps {
+  profile: LeaderProfile;
+  layout: CardLayout;
+  reduceMotion: boolean;
+  popupRef: (el: HTMLDivElement | null) => void;
+}
+
+function LeaderPopup({ profile, layout, reduceMotion, popupRef }: PopupProps) {
+  const side = popupSideFor(layout);
+  const place = popupPlacement(layout, reduceMotion ? 0 : openShiftX(side));
+  const fold = reduceMotion ? {} : FOLD[side];
+  const meta = formatLeaderMeta(profile.pronouns, profile.year);
+
+  return (
+    <motion.div
+      ref={popupRef}
+      className="shadow-block-md absolute z-30 flex w-64 flex-col gap-3 rounded-sm border-2 border-mauve-900 bg-amber-50 p-4 shadow-black"
+      style={{
+        left: place.left,
+        top: place.top,
+        x: place.x,
+        y: place.y,
+        transformPerspective: 800,
+        transformOrigin: place.transformOrigin,
+      }}
+      initial={{ opacity: 0, ...fold }}
+      animate={{ opacity: 1, rotateX: 0, rotateY: 0 }}
+      exit={{
+        opacity: 0,
+        ...fold,
+        transition: { duration: 0.18, ease: "easeIn" },
+      }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+    >
+      {meta && <p className="text-xs text-mauve-500">{meta}</p>}
+      <LeaderDetails profile={profile} />
+    </motion.div>
+  );
+}
+
+// A type alias, not an interface: motion's `animate` prop type wants the
+// implicit index signature only aliases carry.
+type CardTarget = {
+  x: number;
+  y: number;
+  rotate: number;
+  scale: number;
+  opacity: number;
+};
+
+/**
+ * The spread-out-on-hover cluster.
+ *
+ * All hover state lives in one `open` index, driven by hit-testing the
+ * pointer against the resting layout in `./geometry` — never by mouseenter
+ * on the cards, which move. An open card holds the pointer while it stays
+ * inside the card + popup region, which is what lets the mouse cross the gap
+ * into the popup with no close timers, hover locks, or invisible bridge
+ * elements. Keyboard gets the same states: focusing a tile opens it, its
+ * popup is next in tab order, Escape or focus leaving the cluster closes.
+ */
+function DesktopCluster({ profiles }: Props) {
+  const [open, setOpen] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement | null>(null);
+  const reduceMotion = useReducedMotion() ?? false;
+
+  const layout = useMemo(
+    () => computeClusterLayout(profiles.length),
+    [profiles.length],
+  );
+  const openLayout = open === null ? undefined : layout[open];
+
+  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const box = containerRef.current?.getBoundingClientRect();
+    if (!box) return;
+    const p: Point = { x: e.clientX - box.left, y: e.clientY - box.top };
+
+    if (openLayout) {
+      const shift = reduceMotion ? 0 : openShiftX(popupSideFor(openLayout));
+      if (holdsPointer(openRegion(openLayout, shift), p)) return;
+      const popupEl = popupRef.current;
+      if (popupEl) {
+        const r = popupEl.getBoundingClientRect();
+        const popupRegion = {
+          left: r.left - box.left,
+          top: r.top - box.top,
+          right: r.right - box.left,
+          bottom: r.bottom - box.top,
+        };
+        if (holdsPointer(popupRegion, p)) return;
+      }
+    }
+
+    setOpen(hitTest(layout, p));
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative mx-auto hidden lg:block"
+      style={{ width: CONTAINER_W, height: CONTAINER_H }}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={() => setOpen(null)}
+      onBlurCapture={(e) => {
+        const next = e.relatedTarget;
+        if (!(next instanceof Node) || !containerRef.current?.contains(next)) {
+          setOpen(null);
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") setOpen(null);
+      }}
+    >
+      {profiles.map((member, i) => {
+        const l = layout[i];
+        if (!l) return null;
+        const isOpen = open === i;
+
+        let target: CardTarget;
+        if (isOpen) {
+          target = {
+            x: reduceMotion ? 0 : openShiftX(popupSideFor(l)),
+            y: 0,
+            rotate: 0,
+            scale: reduceMotion ? 1 : 1.06,
+            opacity: 1,
+          };
+        } else if (openLayout) {
+          const off = reduceMotion
+            ? { x: l.tx, y: l.ty }
+            : repelOffset(l, openLayout);
+          target = {
+            ...off,
+            rotate: l.deg,
+            scale: reduceMotion ? 1 : 0.88,
+            opacity: 0.55,
+          };
+        } else {
+          target = { x: l.tx, y: l.ty, rotate: l.deg, scale: 1, opacity: 1 };
+        }
+
+        return (
+          <Fragment key={member.slug}>
+            <motion.div
+              className="absolute"
+              style={{
+                left: CONTAINER_W / 2 + l.cx - CARD_W / 2,
+                top: CONTAINER_H / 2 + l.cy - CARD_H / 2,
+                zIndex: isOpen ? 20 : 0,
+              }}
+              initial={false}
+              animate={target}
+              transition={SPRING}
+            >
+              <LeaderTile
+                profile={member}
+                aria-expanded={isOpen}
+                onFocus={() => setOpen(i)}
+              />
+            </motion.div>
+            {/* Sibling of its own card rather than appended after the whole
+                cluster, so tabbing off an open tile reaches the popup's links
+                before the next tile takes the popup over. */}
+            <AnimatePresence>
+              {isOpen && (
+                <LeaderPopup
+                  key={member.slug}
+                  profile={member}
+                  layout={l}
+                  reduceMotion={reduceMotion}
+                  popupRef={(el) => {
+                    if (el) popupRef.current = el;
+                  }}
+                />
+              )}
+            </AnimatePresence>
+          </Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+/** One grid tile plus the bottom sheet it opens. Grid mode has no hover. */
+function GridLeader({ profile }: { profile: LeaderProfile }) {
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const meta = formatLeaderMeta(profile.pronouns, profile.year);
+
+  return (
+    <>
+      <LeaderTile profile={profile} onClick={() => setSheetOpen(true)} />
+      <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
+        <DialogContent className="data-open:slide-in-from-bottom-8 data-closed:slide-out-to-bottom-8 top-auto bottom-0 left-0 max-h-[85dvh] w-full max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-b-none border-t-2 border-black bg-white p-0 sm:max-w-none">
+          <DialogTitle className="sr-only">{profile.name}</DialogTitle>
+          <div className="flex flex-col gap-4 p-6 pt-10">
+            <div className="flex items-start gap-4">
+              <div className="shadow-block-md relative size-20 shrink-0 overflow-hidden rounded-full border-2 border-amber-900 shadow-amber-500">
+                <Headshot
+                  name={profile.name}
+                  src={profile.imageSrc}
+                  // `size-20`, fixed. This sheet only ever opens below lg.
+                  sizes="80px"
+                />
+              </div>
+              <div>
+                <p className="font-display text-base leading-tight font-extrabold text-black">
+                  {profile.name}
+                </p>
+                {meta && (
+                  <p className="mt-0.5 text-xs text-mauve-500">{meta}</p>
+                )}
+                {profile.titles.map((t) => (
+                  <p
+                    key={t}
+                    className="mt-0.5 text-xs font-semibold text-amber-700"
+                  >
+                    {t}
+                  </p>
+                ))}
+              </div>
+            </div>
+            <LeaderDetails profile={profile} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 export default function LeaderCluster({ profiles }: Props) {
-  const [hovered, setHovered] = useState<number | null>(null);
-  const [hoverLocked, setHoverLocked] = useState(false);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
-  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
-  const prevHoveredRef = useRef<number | null>(null);
-  const closingIndexRef = useRef<number | null>(null);
-  const settledRef = useRef(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dims, setDims] = useState({ w: CONTAINER_W, h: CONTAINER_H });
-
-  const cancelClose = useCallback(() => {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-  }, []);
-
-  const scheduleClose = useCallback(() => {
-    closeTimerRef.current = setTimeout(() => setHovered(null), 150);
-  }, []);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      const { width, height } = entry!.contentRect;
-      setDims({ w: Math.round(width), h: Math.round(height) });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  // When a card closes, the rest of the cluster animates back into place.
-  // Lock new hovers until that settles AND the user moves the mouse again,
-  // so the layout shift can't immediately trigger another card to open.
-  useEffect(() => {
-    if (prevHoveredRef.current !== null && hovered === null) {
-      settledRef.current = false;
-      closingIndexRef.current = prevHoveredRef.current;
-      setHoverLocked(true);
-      settleTimerRef.current = setTimeout(() => {
-        settledRef.current = true;
-      }, 600);
-    }
-    prevHoveredRef.current = hovered;
-  }, [hovered]);
-
-  const handleMouseMove = useCallback(() => {
-    if (hoverLocked && settledRef.current) {
-      setHoverLocked(false);
-    }
-  }, [hoverLocked]);
-
-  useEffect(
-    () => () => {
-      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-      if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
-    },
-    [],
-  );
-
-  const layout = useMemo(
-    () => computeClusterLayout(profiles.length, dims.w, dims.h),
-    [profiles.length, dims.w, dims.h],
-  );
-
   return (
     <>
       <div className="lg:hidden">
@@ -103,7 +278,7 @@ export default function LeaderCluster({ profiles }: Props) {
         >
           {profiles.slice(0, 2).map((member) => (
             <div key={member.slug} data-animate="fade-up">
-              <LeaderHoverCard {...member} />
+              <GridLeader profile={member} />
             </div>
           ))}
         </div>
@@ -113,115 +288,13 @@ export default function LeaderCluster({ profiles }: Props) {
         >
           {profiles.slice(2).map((member) => (
             <div key={member.slug} data-animate="fade-up">
-              <LeaderHoverCard {...member} />
+              <GridLeader profile={member} />
             </div>
           ))}
         </div>
       </div>
 
-      <div
-        ref={containerRef}
-        className="relative mx-auto hidden perspective-[0px] lg:block"
-        style={{ width: CONTAINER_W, height: CONTAINER_H }}
-        onMouseMove={handleMouseMove}
-      >
-        {profiles.map((member, i) => {
-          const { cx, cy, deg, tx, ty } = layout[i] ?? {
-            cx: 0,
-            cy: 0,
-            deg: 0,
-            tx: 0,
-            ty: 0,
-          };
-          const left = dims.w / 2 + cx - CARD_HALF_W;
-          const top = dims.h / 2 + cy - CARD_HALF_H;
-
-          const hoverSide = getHoverSide(cx, cy);
-          const popupAnimX =
-            hoverSide === "left"
-              ? +POPUP_HALF_FOOTPRINT
-              : hoverSide === "right"
-                ? -POPUP_HALF_FOOTPRINT
-                : 0;
-
-          let animX = tx;
-          let animY = ty;
-          let animRotate = deg;
-          let animScale = 1;
-          let animOpacity = 1;
-          let animZ = 1;
-
-          if (hovered !== null && hovered !== i) {
-            const hLayout = layout[hovered] ?? { cx: 0, cy: 0 };
-            const hoveredSide = getHoverSide(hLayout.cx, hLayout.cy);
-            const isVertical =
-              hoveredSide === "top" || hoveredSide === "bottom";
-            const dx = cx - hLayout.cx;
-            const dy = cy - hLayout.cy;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const strength = Math.max(0, 1 - dist / 600) * 170;
-            if (dist > 0) {
-              if (isVertical) {
-                const popupDirY = hoveredSide === "bottom" ? 1 : -1;
-                const inPath = Math.max(0, (dy * popupDirY) / dist);
-                const dirX =
-                  (dx / dist) * (1 - inPath) + (cx >= 0 ? 1 : -1) * inPath;
-                animX = tx + dirX * strength * (1.0 + inPath * 1.0);
-                animY = 0;
-              } else {
-                animX = tx + (dx / dist) * strength * 1.5;
-                animY = ty + (dy / dist) * strength * 0.7;
-              }
-            }
-            animScale = 0.88;
-            animOpacity = 0.55;
-            animZ = 0;
-          } else if (hovered === i) {
-            animX = popupAnimX;
-            animY = 0;
-            animRotate = 0;
-            animScale = 1.06;
-            animZ = 10;
-          }
-
-          return (
-            <motion.div
-              key={member.slug}
-              className="absolute"
-              style={{ left, top }}
-              animate={{
-                x: animX,
-                y: animY,
-                rotate: animRotate,
-                scale: animScale,
-                opacity: animOpacity,
-                zIndex: animZ,
-              }}
-              transition={{ type: "spring", stiffness: 200, damping: 26 }}
-              onAnimationComplete={() => {
-                if (closingIndexRef.current === i) {
-                  settledRef.current = true;
-                  closingIndexRef.current = null;
-                  if (settleTimerRef.current)
-                    clearTimeout(settleTimerRef.current);
-                }
-              }}
-            >
-              <LeaderHoverCard
-                {...member}
-                hoverSide={hoverSide}
-                hoverLocked={hoverLocked}
-                onHoverStart={() => {
-                  if (hoverLocked) return;
-                  cancelClose();
-                  setHovered(i);
-                }}
-                onHoverEnd={scheduleClose}
-              />
-            </motion.div>
-          );
-        })}
-      </div>
+      <DesktopCluster profiles={profiles} />
     </>
   );
 }

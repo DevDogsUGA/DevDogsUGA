@@ -3,7 +3,7 @@ import { cacheLife } from "next/cache";
 import { db } from "~/server/db";
 import { env } from "~/env";
 import { profileLinks, profiles, roles, userRoles } from "~/server/db/schema";
-import type { LeaderProfile } from "~/components/LeadershipSection/LeaderCluster/LeaderHoverCard";
+import type { LeaderProfile } from "~/components/LeadershipSection/LeaderCluster/profile";
 
 /**
  * The executive board for the homepage's Leadership section.
