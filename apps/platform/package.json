@@ -111,7 +111,7 @@
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/env": "workspace:*",
-    "@next/env": "^16.3.4",
+    "@next/env": "16.3.2",
     "@opennextjs/cloudflare": "catalog:",
     "@supabase/auth-js": "^2.112.3",
     "@tailwindcss/postcss": "catalog:",
