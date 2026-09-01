@@ -44,7 +44,10 @@
   // the local workerd predates the configured date. Bump this alongside
   // wrangler; the adapter warns once it is more than six months stale.
   "compatibility_date": "2026-07-22",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
   // Inheritable, and identical everywhere, so it stays at the top level.
   "assets": {
     "directory": ".open-next/assets",
@@ -58,7 +61,6 @@
       "invocation_logs": true,
     },
   },
-
   // --- development (top level) ---------------------------------------------
   // No `routes` and no `triggers`: an accidental env-less deploy should be
   // inert, not a second worker competing for the apex or firing the crons a
@@ -84,10 +86,11 @@
   "send_email": [
     {
       "name": "EMAIL",
-      "allowed_sender_addresses": ["noreply@mail.devdogsuga.org"],
+      "allowed_sender_addresses": [
+        "noreply@mail.devdogsuga.org"
+      ],
     },
   ],
-
   "env": {
     // ========================================================================
     // staging
@@ -122,12 +125,16 @@
         {
           "binding": "HYPERDRIVE",
           "id": "7ca9f62ed356489f956cc854a17d7eed",
+          // Optional. Can be used to connect to a local database for local development with `wrangler dev`
+          "localConnectionString": "${DB_URL}"
         },
       ],
       "send_email": [
         {
           "name": "EMAIL",
-          "allowed_sender_addresses": ["noreply@mail.devdogsuga.org"],
+          "allowed_sender_addresses": [
+            "noreply@mail.devdogsuga.org"
+          ],
         },
       ],
       // ASSUMPTION, and the one value here nobody has confirmed: staging is
@@ -153,7 +160,6 @@
         "crons": [],
       },
     },
-
     // ========================================================================
     // production
     // ========================================================================
@@ -216,7 +222,9 @@
       "send_email": [
         {
           "name": "EMAIL",
-          "allowed_sender_addresses": ["noreply@mail.devdogsuga.org"],
+          "allowed_sender_addresses": [
+            "noreply@mail.devdogsuga.org"
+          ],
         },
       ],
       // The production apex. It is currently bound to the pre-monorepo worker,
@@ -233,7 +241,12 @@
       // Cron triggers replace the old vercel.json crons. cloudflare/scheduled.ts
       // routes each cron to its existing CRON_SECRET-guarded /api route.
       "triggers": {
-        "crons": ["0 0 * * *", "*/15 * * * *", "*/10 * * * *", "*/5 * * * *"],
+        "crons": [
+          "0 0 * * *",
+          "*/15 * * * *",
+          "*/10 * * * *",
+          "*/5 * * * *"
+        ],
       },
     },
   },
