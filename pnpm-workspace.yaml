@@ -28,7 +28,11 @@ overrides:
 # package stay as literal ranges in that package's package.json.
 catalog:
   # --- Framework / runtime ---
-  next: ^16.3.4
+  # 16.3.4 regressed OpenNext/Workers response streaming: dynamic app routes
+  # can finish with an unresolved render promise, which workerd cancels as
+  # "hung and would never generate a response". Keep the last deployed-good
+  # patch pinned until the adapter/runtime combination is verified again.
+  next: 16.3.2
   react: ^19.2.8
   react-dom: ^19.2.8
 
