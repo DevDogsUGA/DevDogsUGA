@@ -7,10 +7,12 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "devdogs-source": "./src/index.ts",
       "default": "./dist/index.js"
     },
     "./event": {
       "types": "./dist/event.d.ts",
+      "devdogs-source": "./src/event.ts",
       "default": "./dist/event.js"
     }
   },
