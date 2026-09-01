@@ -27,8 +27,6 @@ export default function RoleDescriptionField({ id, profile }: ProfileData) {
     el.style.height = `${el.scrollHeight}px`;
   }, [roleDescription]);
 
-  const lineCount = roleDescription.split("\n").length;
-
   return (
     <SettingsField
       id="roleDescription"
@@ -39,7 +37,6 @@ export default function RoleDescriptionField({ id, profile }: ProfileData) {
       save={saveRoleDescription}
       reset={resetRoleDescription}
       meta={`${roleDescription.length} / ${PROFILE_LIMITS.roleDescription} characters`}
-      secondaryMeta={lineCount > 1 ? `${lineCount} / 3 lines` : undefined}
     >
       <div
         className={`group focus-within:shadow-block-sm relative flex overflow-hidden rounded-sm border bg-mauve-900 text-sm transition-shadow ${roleDescriptionError ? "border-rose-400" : "border-mauve-600 hover:border-mauve-500"}`}
@@ -51,6 +48,7 @@ export default function RoleDescriptionField({ id, profile }: ProfileData) {
           value={roleDescription}
           onChange={(e) => setRoleDescription(e.target.value)}
           aria-invalid={roleDescriptionError ? true : undefined}
+          maxLength={PROFILE_LIMITS.roleDescription}
           rows={1}
           name="roleDescription"
           placeholder="Describe what you do in this role…"

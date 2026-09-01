@@ -261,7 +261,6 @@ export default function MissionSection({ topEdge, bottomEdge }: Props) {
         // whose top is where pt-(--section-skew-slope) begins, so the slanted
         // top edge clears the nav too and not just the copy below it.
         className="relative w-full scroll-mt-20 overflow-hidden pt-(--section-skew-slope) pb-(--section-skew-slope)"
-        data-animate="fade-up"
       >
         <SectionBackground
           topEdge={topEdge}
@@ -271,22 +270,22 @@ export default function MissionSection({ topEdge, bottomEdge }: Props) {
         />
         <div className="relative z-10 mx-auto flex max-w-6xl flex-col gap-10 px-6 py-14 md:flex-row md:gap-4 md:px-12 md:py-20">
           <SpinStarImage />
-          <div className="w-full max-w-prose space-y-4 text-left text-base/relaxed text-mauve-700 *:text-balance md:text-right md:text-lg/relaxed">
+          <div className="w-full max-w-prose space-y-4 text-left text-base/relaxed font-medium text-mauve-800 *:text-balance md:text-right md:text-lg/relaxed">
             <h2 className="font-display mb-8 text-left text-4xl font-extrabold text-black md:text-right md:text-5xl">
               Our Mission
             </h2>
             <p>
-              DevDogs is a student-run club at UGA where members learn real
-              skills and build software that matters.
+              DevDogs is the large-scale application development club at UGA
+              dedicated to benefitting our community through code.
             </p>
             <p>
-              Every week: a workshop on the concepts behind our project, then a
-              competition where you ship what you learned straight to the
-              codebase.
+              All of our projects are free, open-source, and designed to teach
+              students industry-standard technologies and best-practices for
+              collaboration in a fun and welcoming environment.
             </p>
             <p>
               Whether you&rsquo;re writing your first line of code or your
-              thousandth — there&rsquo;s a place for you here.
+              thousandth, there&rsquo;s a place for you here.
             </p>
           </div>
         </div>

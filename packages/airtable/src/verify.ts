@@ -8,6 +8,7 @@ import {
   type TableSpec,
 } from "./field.js";
 import { isPlaceholder, registry } from "./registry.js";
+import { AIRTABLE_DATETIME_TIME_ZONE } from "./scaffold.js";
 
 /**
  * Diffs the live base against the registry.
@@ -57,7 +58,7 @@ interface LiveTable {
 }
 
 /**
- * The six checks.
+ * The seven checks.
  *
  *   1. Every registered field ID exists       FATAL: writes into nothing
  *   2. Field types match the registry         FATAL: a text field where a
@@ -70,6 +71,8 @@ interface LiveTable {
  *                                             own, just list them
  *   6. Declared select choices match the base FATAL: a value the page cannot
  *                                             render is worse than no value
+ *   7. Datetimes use the club timezone       FATAL: an authored wall-clock
+ *                                             time becomes the wrong instant
  *
  * The list read as most-severe-first until check 6 was added, which is fatal
  * and still numbered last. The numbers are stable identities rather than a
@@ -124,7 +127,7 @@ export async function verifyBase(
         severity: "fatal",
         table: spec.name,
         message:
-          "Table ID is still a placeholder — run `pnpm devtools airtable scaffold` then `pnpm devtools airtable pull-ids`",
+          "Table ID is still a placeholder — run `pnpm devtools airtable apply`",
       });
       continue;
     }
@@ -151,7 +154,7 @@ export async function verifyBase(
           table: spec.name,
           field: key,
           message:
-            "Field ID is still a placeholder — run `pnpm devtools airtable scaffold` then `pnpm devtools airtable pull-ids`",
+            "Field ID is still a placeholder — run `pnpm devtools airtable apply`",
         });
         continue;
       }
@@ -202,6 +205,13 @@ export async function verifyBase(
       // which surfaces as an empty slot on a page that is otherwise working,
       // worse than the field having no value at all.
       findings.push(...choiceFindings(spec.name, key, fieldSpec, liveField));
+
+      // Check 7: Airtable interprets an officer's typed wall-clock time using
+      // this field option before returning a UTC instant through the API.
+      // UTC here turns a typed 6 PM into 2 PM when the site renders it in EDT.
+      findings.push(
+        ...dateTimeTimezoneFindings(spec.name, key, fieldSpec, liveField),
+      );
     }
 
     // Check 5: live fields the registry does not mention. A report, not an
@@ -231,6 +241,28 @@ export async function verifyBase(
     pushChecklist,
     ok: !findings.some((f) => f.severity === "fatal"),
   };
+}
+
+export function dateTimeTimezoneFindings(
+  table: string,
+  field: string,
+  spec: FieldSpec,
+  live: { name: string; options?: Record<string, unknown> },
+): Finding[] {
+  if (spec.type !== "dateTime") return [];
+
+  const actual = live.options?.timeZone;
+  if (actual === AIRTABLE_DATETIME_TIME_ZONE) return [];
+
+  const reported = typeof actual === "string" ? `"${actual}"` : "no timezone";
+  return [
+    {
+      severity: "fatal",
+      table,
+      field,
+      message: `Field "${live.name}" uses ${reported}; expected "${AIRTABLE_DATETIME_TIME_ZONE}" so officer-entered times are interpreted as Eastern`,
+    },
+  ];
 }
 
 /**

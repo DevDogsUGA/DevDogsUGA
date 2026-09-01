@@ -103,9 +103,9 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
           title="Projects"
           cta="Browse Projects"
           icon={RocketIcon}
-          textColor="text-emerald-950"
-          bg="bg-emerald-400"
-          darkBg="bg-emerald-600"
+          textColor="text-amber-950"
+          bg="bg-amber-400"
+          darkBg="bg-amber-600"
           blobs={PROJECTS_BLOBS}
           href="#projects"
           zIndexClass="z-20"
@@ -135,8 +135,8 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         <MarqueeItem>Learn By Doing</MarqueeItem>
         <MarqueeItem>Apply Real Skills</MarqueeItem>
         <MarqueeItem>Software That Matters</MarqueeItem>
-        <MarqueeItem>Student-Run At UGA</MarqueeItem>
-        <MarqueeItem>First Line Or Thousandth</MarqueeItem>
+        <MarqueeItem>SWE @ UGA</MarqueeItem>
+        <MarqueeItem>Industry-Standard Tech</MarqueeItem>
         <MarqueeItem>A Place For You</MarqueeItem>
         <MarqueeItem>Community Impact</MarqueeItem>
       </SectionMarquee>
@@ -145,18 +145,16 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
 
       <SectionMarquee
         slope="bs"
-        bg="bg-emerald-600"
-        className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-emerald-100 shadow-emerald-900`}
+        bg="bg-amber-600"
+        className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-amber-100 shadow-amber-900`}
         icon={LightningIcon}
       >
-        <MarqueeItem>Real Products, Real Users</MarqueeItem>
-        <MarqueeItem>Not A Toy App</MarqueeItem>
+        <MarqueeItem>By Students, For Students</MarqueeItem>
+        <MarqueeItem>New Features Every Week</MarqueeItem>
         <MarqueeItem>Shipped Every Semester</MarqueeItem>
-        <MarqueeItem>100% Open Source</MarqueeItem>
-        <MarqueeItem>Design, Engineering, Product</MarqueeItem>
-        <MarqueeItem>Ship Every Week</MarqueeItem>
-        <MarqueeItem>Build Your Streak</MarqueeItem>
-        <MarqueeItem>Link Your GitHub</MarqueeItem>
+        <MarqueeItem>Real Projects for Real Users</MarqueeItem>
+        <MarqueeItem>Design, Frontend, Backend</MarqueeItem>
+        <MarqueeItem>100% Free and Open Source</MarqueeItem>
       </SectionMarquee>
 
       <EventsSection topEdge="bs" bottomEdge="bs" />
@@ -167,14 +165,13 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-cyan-100 shadow-cyan-900`}
         icon={StarIcon}
       >
-        <MarqueeItem>One Feature, One Week</MarqueeItem>
-        <MarqueeItem>Every Team At Once</MarqueeItem>
+        <MarqueeItem>One Feature, Every Week</MarqueeItem>
+        <MarqueeItem>Every Team at Once</MarqueeItem>
         <MarqueeItem>Weekly Workshops</MarqueeItem>
-        <MarqueeItem>Ship A Pull Request</MarqueeItem>
+        <MarqueeItem>Ship a Pull Request</MarqueeItem>
         <MarqueeItem>Build Sessions</MarqueeItem>
-        <MarqueeItem>One Merges, The Rest Close</MarqueeItem>
-        <MarqueeItem>Showing Up Earns The Star</MarqueeItem>
-        <MarqueeItem>Some Weeks Just The Workshop</MarqueeItem>
+        <MarqueeItem>Show off to Your Friends</MarqueeItem>
+        <MarqueeItem>Vote for the Best</MarqueeItem>
       </SectionMarquee>
 
       <PartnersSection topEdge="bs" bottomEdge="fs" />
@@ -185,15 +182,13 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         className={`${MARQUEE_TEXT_CLS} text-shadow-block-sm text-purple-100 shadow-purple-900`}
         icon={DiamondIcon}
       >
-        <MarqueeItem>350+ Active Members</MarqueeItem>
         <MarqueeItem>Software Engineers</MarqueeItem>
         <MarqueeItem>UI Designers</MarqueeItem>
+        <MarqueeItem>UX Researchers</MarqueeItem>
+        <MarqueeItem>Software Engineers</MarqueeItem>
         <MarqueeItem>Data Scientists</MarqueeItem>
         <MarqueeItem>Project Leaders</MarqueeItem>
         <MarqueeItem>Community Builders</MarqueeItem>
-        <MarqueeItem>Sponsorship & Recruiting</MarqueeItem>
-        <MarqueeItem>Mentorship</MarqueeItem>
-        <MarqueeItem>UGA Athens</MarqueeItem>
       </SectionMarquee>
 
       <LeadershipSection topEdge="fs" bottomEdge="flat" />

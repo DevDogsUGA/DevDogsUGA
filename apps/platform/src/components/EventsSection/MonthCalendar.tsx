@@ -32,6 +32,7 @@ import {
   ArrowUpRightIcon,
   CaretLeftIcon,
   CaretRightIcon,
+  MapPinIcon,
 } from "@phosphor-icons/react/ssr";
 import type { MeetingInRange } from "~/server/loaders/meetings";
 import { resolveMeetingSegments } from "~/lib/meetingSegments";
@@ -43,10 +44,12 @@ import {
   CHIP_DARK_CLS,
   isCancelled,
   meetingBadges,
+  NEUTRAL_CHIP_DARK_CLS,
   primaryBadge,
 } from "~/components/EventsSection/meetingView";
-import { clubDay, formatEventSpan } from "~/lib/eventTime";
-import { meetingTitle } from "~/lib/meetingTitle";
+import { locationLine } from "~/components/EventsSection/FindUs/buildings";
+import { clubDay, formatEventSpan, formatRelative } from "~/lib/eventTime";
+import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
 
 /**
  * The month label. Formatted from a `Date.UTC` instant read back in UTC, so
@@ -92,73 +95,93 @@ function meetingBadge(meeting: MeetingInRange): SegmentBadge | null {
   return primaryBadge({ kind: meeting.kind, segments });
 }
 
-function MeetingDetail({ meeting }: { meeting: MeetingInRange }) {
+function MeetingDetail({
+  meeting,
+  now,
+}: {
+  meeting: MeetingInRange;
+  now: Date;
+}) {
   const { segments } = resolveMeetingSegments(meeting);
   // Derived chips and the officer's kind, composed in one place rather than
   // here: a night an officer named has no segments at all, so a band that
   // rendered only the derived set would show it nothing.
   const badges = meetingBadges({ kind: meeting.kind, segments });
   const notice = cancellationNotice(meeting);
+  const cancelled = notice !== null;
+  const happeningNow = now >= meeting.startsAt && now < meeting.endsAt;
+  const elsewhere = meeting.building !== null && meeting.building !== "DLW";
 
   return (
-    <div className="flex w-56 flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        {/* The cancellation chip REPLACES the night's own chips rather than
-            joining them. Beside an emerald "Workshop" it would read as one more
-            attribute of an evening going ahead, and somebody is hovering the
-            square because they are deciding whether to walk over. */}
-        {notice !== null ? (
-          <span
-            className={`${cancelledBadge(CANCELLED_LABEL).chipDark} ${CHIP_DARK_CLS}`}
-          >
-            {CANCELLED_LABEL}
-          </span>
-        ) : (
-          badges.map((badge) => (
-            <span
-              key={badge.label}
-              className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
-            >
-              {badge.label}
-            </span>
-          ))
-        )}
+    <div className="group relative flex w-64 cursor-pointer flex-col gap-2">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <p
+          className={`font-display leading-tight font-extrabold text-white ${cancelled ? "line-through decoration-2" : ""}`}
+        >
+          {meetingTitle(meeting, meeting.workshops)}
+        </p>
+        <span
+          className={`text-xs font-semibold ${cancelled ? "text-rose-300" : "text-mauve-400"}`}
+        >
+          {cancelled
+            ? CANCELLED_LABEL
+            : happeningNow
+              ? "Happening now"
+              : formatRelative(meeting.startsAt, now)}
+        </span>
       </div>
-      {/* The date leads, because it is the one field guaranteed to be here and
-          because it confirms which square you hovered. A name appears BELOW it
-          and only when an officer wrote one, which is what makes Cold Start and
-          Midterm Study Session stand out in a month of nights that carry no
-          title at all. */}
-      {/* Struck through rather than removed: the hour is why somebody opened
-          this, and deleting it leaves them wondering whether they hovered the
-          wrong square. Struck, it answers the question and withdraws it. */}
-      <p
-        className={`font-display leading-tight font-extrabold ${
-          notice !== null
-            ? "text-mauve-400 line-through decoration-2"
-            : "text-white"
-        }`}
-      >
+      {cancelled && meeting.cancellationReason !== null && (
+        <p className="text-xs text-rose-300">{meeting.cancellationReason}</p>
+      )}
+      <p className="text-xs text-mauve-300">
         {formatEventSpan(meeting.startsAt, meeting.endsAt)}
       </p>
-      {notice !== null && (
-        <p className="text-xs/relaxed font-semibold text-rose-300">{notice}</p>
-      )}
-      {meeting.nameOverride !== null && (
-        <p className="text-sm leading-tight font-semibold text-white">
-          {meeting.nameOverride}
-        </p>
-      )}
-      {/* Suppressed on a cancelled night. The room is the one claim here that
-          is purely an instruction, sending somebody to a door, and there is
-          nothing behind it that evening. */}
-      {notice === null && meeting.location !== null && (
-        <p className="text-xs/snug text-mauve-400">{meeting.location}</p>
-      )}
-      {meeting.summary !== null && (
-        <p className="border-t border-white/10 pt-2 text-xs/relaxed text-mauve-300">
-          {meeting.summary}
-        </p>
+      <p className="flex items-center gap-1.5 text-xs/snug text-mauve-300">
+        <MapPinIcon
+          aria-hidden
+          className="shrink-0 text-mauve-400"
+          weight="fill"
+        />
+        {locationLine(meeting.building, meeting.location) ??
+          "Room to be announced"}
+        {elsewhere && (
+          <span
+            className={`${NEUTRAL_CHIP_DARK_CLS} ${CHIP_DARK_CLS} ml-2 inline-block`}
+          >
+            Not the usual room
+          </span>
+        )}
+      </p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {badges.map((badge) => (
+          <span
+            key={badge.label}
+            className={`${badge.chipDark} ${CHIP_DARK_CLS}`}
+          >
+            {badge.label}
+          </span>
+        ))}
+      </div>
+      {(meeting.judgedCompetitions.length > 0 ||
+        meeting.workshops.length > 0) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {meeting.judgedCompetitions.map((judging) => (
+            <span
+              key={judging.competitionId}
+              className={`${CHIP_DARK_CLS} border-rose-400/30 bg-rose-500/10 text-rose-300`}
+            >
+              Judging: {workshopLabel(judging)}
+            </span>
+          ))}
+          {meeting.workshops.map((workshop) => (
+            <span
+              key={workshop.workshopId}
+              className={`${CHIP_DARK_CLS} border-emerald-400/30 bg-emerald-500/10 text-emerald-300`}
+            >
+              {workshopLabel(workshop)}
+            </span>
+          ))}
+        </div>
       )}
       {/* `Link`, not `a`. `/events/[slug]` is a route dialog whose frame is a
           nested layout over the calendar (see its `layout.tsx`). A client
@@ -167,7 +190,7 @@ function MeetingDetail({ meeting }: { meeting: MeetingInRange }) {
           reloads the whole route. */}
       <Link
         href={`/events/${meeting.slug}`}
-        className="inline-flex w-fit items-center gap-1 text-xs font-semibold text-white hover:underline"
+        className="ml-auto inline-flex w-fit items-center gap-1 text-xs font-semibold text-white group-hover:underline after:absolute after:inset-0 focus-visible:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
         Event details <ArrowUpRightIcon />
       </Link>
@@ -180,7 +203,13 @@ function MeetingDetail({ meeting }: { meeting: MeetingInRange }) {
  * list-plus-detail split rather than stacking both details and growing past
  * the viewport.
  */
-function MultiMeetingMenu({ meetings }: { meetings: MeetingInRange[] }) {
+function MultiMeetingMenu({
+  meetings,
+  now,
+}: {
+  meetings: MeetingInRange[];
+  now: Date;
+}) {
   const [activeMeeting, setActiveMeeting] = useState<MeetingInRange | null>(
     null,
   );
@@ -249,7 +278,7 @@ function MultiMeetingMenu({ meetings }: { meetings: MeetingInRange[] }) {
                   exit={{ y: `${-dir * 100}%` }}
                   transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
                 >
-                  <MeetingDetail meeting={activeMeeting} />
+                  <MeetingDetail meeting={activeMeeting} now={now} />
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -264,11 +293,20 @@ const PAGE_BUTTON_CLS =
   "flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm border border-mauve-600 bg-mauve-800 text-white transition-colors hover:border-white disabled:cursor-not-allowed disabled:border-mauve-800 disabled:text-mauve-600 disabled:hover:border-mauve-800";
 
 interface Props {
-  /** Every meeting in the loaded window, ascending. Usually three months. */
+  /**
+   * Every meeting in the loaded window, ascending.
+   *
+   * The window is a month back and forward as far as the base goes, so it is
+   * three months in an empty summer and a whole semester the week a semester
+   * is authored. `bounds` is derived from the same span; see `forwardBound`
+   * in `events/layout.tsx`.
+   */
   meetings: MeetingInRange[];
-  /** Which month to show first. 0-indexed month, matching Date#getMonth. */
-  initialYear: number;
-  initialMonth: number;
+  now: Date;
+  /** Controlled so scrolling the adjacent list and paging buttons update the
+   * same month rather than racing two pieces of state. */
+  view: { year: number; month: number };
+  onViewChange: (view: { year: number; month: number }) => void;
   /** Today, in the club's timezone, for the "today" highlight. Null when
    *  today falls outside the loaded window. */
   today: { year: number; month: number; day: number } | null;
@@ -277,21 +315,23 @@ interface Props {
     from: { year: number; month: number };
     to: { year: number; month: number };
   };
+  highlightedMeetingId?: string | null;
 }
 
 export default function MonthCalendar({
   meetings,
-  initialYear,
-  initialMonth,
+  now,
+  view,
+  onViewChange,
   today,
   bounds,
+  highlightedMeetingId = null,
 }: Props) {
   // Which month the grid draws. Seeded from props, resolved server-side rather
   // than read from the clock here. A client component's SSR pass cannot sit
   // inside a `"use cache"` scope, so any clock read here would drop the page out
   // of the prerendered shell, and would let SSR and hydration disagree about
   // what month it is.
-  const [view, setView] = useState({ year: initialYear, month: initialMonth });
   const { year, month } = view;
 
   const viewIdx = monthIndex(year, month);
@@ -426,7 +466,7 @@ export default function MonthCalendar({
     // unmount; leaving it open would strand the popover mid-air over a month
     // it no longer describes.
     closeImmediate();
-    setView({ year: Math.floor(next / 12), month: next % 12 });
+    onViewChange({ year: Math.floor(next / 12), month: next % 12 });
   }
 
   const meetingsByDay = new Map<number, MeetingInRange[]>();
@@ -521,6 +561,9 @@ export default function MonthCalendar({
         <div className="grid grid-cols-7 gap-px">
           {cells.map((day, idx) => {
             const dayMeetings = day ? (meetingsByDay.get(day) ?? []) : [];
+            const highlighted = dayMeetings.some(
+              (meeting) => meeting.id === highlightedMeetingId,
+            );
 
             const cellContent = (
               <>
@@ -530,7 +573,7 @@ export default function MonthCalendar({
                     {dayMeetings.map((meeting) => (
                       <span
                         key={meeting.id}
-                        className={`size-1 rounded-full ${meetingBadge(meeting)?.dotDark ?? "bg-mauve-400"}`}
+                        className={`size-1 rounded-full ${meetingBadge(meeting)?.dotDark ?? "bg-mauve-400"} ${meeting.id === highlightedMeetingId ? "ring-2 ring-white ring-offset-1 ring-offset-mauve-900" : ""}`}
                       />
                     ))}
                   </div>
@@ -555,7 +598,7 @@ export default function MonthCalendar({
                 // cell mounted across a month change with new contents.
                 key={`${year}-${month}-${idx}`}
                 type="button"
-                className={`${baseClass} relative cursor-pointer rounded before:absolute before:-inset-x-2 before:-inset-y-1.5 before:content-[''] hover:bg-white/10`}
+                className={`${baseClass} relative cursor-pointer rounded before:absolute before:-inset-x-2 before:-inset-y-1.5 before:content-[''] hover:bg-white/10 ${highlighted ? "bg-white/15" : ""}`}
                 aria-expanded={open && active?.day === day}
                 aria-haspopup="dialog"
                 onMouseEnter={(e) =>
@@ -648,9 +691,15 @@ export default function MonthCalendar({
                     >
                       {active &&
                         (active.meetings.length === 1 ? (
-                          <MeetingDetail meeting={active.meetings[0]!} />
+                          <MeetingDetail
+                            meeting={active.meetings[0]!}
+                            now={now}
+                          />
                         ) : (
-                          <MultiMeetingMenu meetings={active.meetings} />
+                          <MultiMeetingMenu
+                            meetings={active.meetings}
+                            now={now}
+                          />
                         ))}
                     </motion.div>
                   </AnimatePresence>

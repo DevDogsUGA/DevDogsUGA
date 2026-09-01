@@ -29,6 +29,7 @@ const UGA_DOMAIN = "@uga.edu";
 
 interface AttendanceValues {
   myId: string | null;
+  meeting: string | null;
   workshop: string | null;
   source: string | null;
 }
@@ -115,12 +116,27 @@ async function resolveUser(
 /**
  * Import one pass of attendance records.
  *
- * Runs after `pullWorkshops`, because a response names a workshop by Airtable
- * record id and only that pass knows what those map to.
+ * Runs after `pullMeetings` and `pullWorkshops`, because a response names both
+ * by Airtable record id and only those passes know what the ids map to.
+ *
+ * ## The meeting arrives as itself now
+ *
+ * It used to be derived from the Workshop link, which was the only link the
+ * form had. That worked for exactly as long as every night ran a workshop. The
+ * events rework added Interest Meeting, Social and dedicated judging nights,
+ * none of which run one, so a response about those had an empty Workshop cell
+ * and hit the completeness gate below — skipped, silently, on every pass
+ * forever. The form could not describe the meetings it was most needed for.
+ *
+ * So `Meeting` is a link of its own and the workshop is optional beside it,
+ * which is the shape `platform.attendance` has had all along: keyed on the
+ * meeting, with `workshopId` nullable. Either link alone is enough. Both are
+ * allowed and are checked against each other rather than one being ignored.
  */
 export async function pullAttendance(
   records: AirtableRecord[],
   workshopIds: Map<string, string>,
+  meetingIds: Map<string, string>,
 ): Promise<AttendanceOutcome> {
   const out: AttendanceOutcome = {
     imported: 0,
@@ -139,10 +155,15 @@ export async function pullAttendance(
 
   if (parsed.length === 0) return out;
 
-  // Every workshop's meeting, in one read. `attendance` is keyed on the
-  // MEETING, with the workshop as a dimension on that row, so the meeting has
-  // to be derived rather than asked for. A form collecting both could disagree
-  // with itself, and the composite foreign key would then reject the row.
+  // Every workshop's meeting, in one read.
+  //
+  // Two jobs now, where this used to have one. It is still the fallback for a
+  // response that named only a room, which is every response written before
+  // the Meeting link existed. And it is the second opinion the mismatch rule
+  // compares against: the composite foreign key on `(workshopId, meetingId)`
+  // would reject a row whose two links disagree, as a failed INSERT in the
+  // middle of the pull, so the disagreement is caught here and refused by name
+  // instead.
   const workshopRows = await db
     .select({ id: workshops.id, meetingId: workshops.meetingId })
     .from(workshops);
@@ -154,15 +175,27 @@ export async function pullAttendance(
 
   for (const record of parsed) {
     const email = myIdToEmail(record.values.myId);
+    const hasMeetingLink = record.values.meeting !== null;
+    const hasWorkshopLink = record.values.workshop !== null;
+
+    const linkedMeetingId = record.values.meeting
+      ? (meetingIds.get(record.values.meeting) ?? null)
+      : null;
     const workshopId = record.values.workshop
       ? (workshopIds.get(record.values.workshop) ?? null)
       : null;
-    const meetingId = workshopId ? (meetingOf.get(workshopId) ?? null) : null;
+    const workshopMeetingId = workshopId
+      ? (meetingOf.get(workshopId) ?? null)
+      : null;
 
-    // Incomplete rather than wrong. A form response mid-submission, or a
-    // workshop whose own record was incomplete this pass, will be complete next
-    // time. Writing a complaint into it would be noise.
-    if (record.values.myId === null || record.values.workshop === null) {
+    // Incomplete rather than wrong. A form response mid-submission will be
+    // complete next time, and writing a complaint into it would be noise.
+    //
+    // Linking NEITHER is the incomplete case; linking either one is enough,
+    // which is the whole point of the second link. A link that is present and
+    // did not resolve is a different thing and falls through to the rules
+    // below, because it will not resolve on its own.
+    if (record.values.myId === null || (!hasMeetingLink && !hasWorkshopLink)) {
       out.skipped += 1;
       continue;
     }
@@ -171,11 +204,29 @@ export async function pullAttendance(
       airtableRecordId: record.airtableRecordId,
       rawMyId: record.values.myId,
       email,
+      hasMeetingLink,
+      linkedMeetingId,
+      hasWorkshopLink,
       workshopId,
-      meetingId,
+      workshopMeetingId,
     });
     if (rules.refusals.length > 0) {
       out.refusals.push(...rules.refusals);
+      continue;
+    }
+
+    // The form's own answer wins when it gave one, and the workshop's meeting
+    // is the fallback for a response that named only a room. `checkAttendance`
+    // has already refused the case where the two disagree, so this coalesce
+    // cannot pick a side of an argument — by the time it runs there is at most
+    // one answer.
+    const meetingId = linkedMeetingId ?? workshopMeetingId;
+    if (meetingId === null) {
+      // Unreachable by the rules above: a resolved workshop always has a
+      // meeting, since `workshops."meetingId"` is `not null`. Kept because it
+      // is what narrows the type, and a `!` here would be a lie the day
+      // somebody adds a third way in.
+      out.skipped += 1;
       continue;
     }
 
@@ -186,7 +237,7 @@ export async function pullAttendance(
     }
     if (resolved.created) out.accountsCreated += 1;
 
-    const key = `${meetingId!}:${resolved.userId}`;
+    const key = `${meetingId}:${resolved.userId}`;
     if (claimed.has(key)) {
       // A member who sat in two workshops of one meeting. The schema collapses
       // that to one row on purpose, so "attended twice" is unrepresentable.
@@ -206,13 +257,16 @@ export async function pullAttendance(
 
     // `onConflictDoUpdate` on the meeting/member key rather than an insert:
     // the member may already have a row from a check-in code or an officer.
-    // Airtable owns the workshop dimension now, so it wins on `workshopId`.
-    // `method` and `recordedBy` are left alone, because overwriting them would
-    // rewrite how an earlier row says it was captured.
+    // Airtable owns the workshop dimension now, so it wins on `workshopId`,
+    // INCLUDING when the answer is null: a response naming only the meeting is
+    // a member saying they were at the night and in no workshop, which is a
+    // statement rather than an absence of one. `method` and `recordedBy` are
+    // left alone, because overwriting them would rewrite how an earlier row
+    // says it was captured.
     const [row] = await db
       .insert(attendance)
       .values({
-        meetingId: meetingId!,
+        meetingId,
         workshopId,
         userId: resolved.userId,
         method: "airtable",

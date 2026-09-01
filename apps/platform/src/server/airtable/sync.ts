@@ -22,7 +22,9 @@ import {
   checkCompetition,
   checkCompetitionValues,
   checkMeeting,
+  checkProject,
   describeIncompleteMeeting,
+  describeUnbuiltWorkshop,
   checkWorkshop,
   checkWorkshopValues,
   type Refusal,
@@ -577,6 +579,30 @@ export async function pullWorkshops(
       continue;
     }
 
+    // Neither skip below is silent any more, and that is the fix for
+    // "workshops aren't syncing alongside events".
+    //
+    // Both `continue`s here used to write nothing at all. A workshop whose
+    // Meeting had not synced, or whose Project link named a Projects row the
+    // platform does not own, sat in the base pass after pass with a clean
+    // `⚙️ Sync status`, no row in Postgres and nothing on the schedule. The
+    // pull was working; it just never said what it was waiting for, so the
+    // only evidence was an absence somebody had to notice. The meetings pass
+    // learned this same lesson already — see `meeting_incomplete`.
+    const unbuilt = describeUnbuiltWorkshop({
+      hasMeetingLink: record.values.meeting !== null,
+      meetingResolved: meetingId !== null,
+      hasProjectLink: !projectCleared,
+      projectResolved: projectId !== null,
+    });
+    if (unbuilt) {
+      out.refusals.push({
+        table: "workshops",
+        airtableRecordId: record.airtableRecordId,
+        ...unbuilt,
+      });
+    }
+
     // Only the MEETING link is required. `projectId` became nullable with the
     // events rework, so a career-readiness session, which belongs to no
     // codebase and never will, can be created with its project cell empty
@@ -818,31 +844,179 @@ export async function pullCompetitions(
 
 // ── Projects ─────────────────────────────────────────────────────────────────
 
-/**
- * Projects are platform-authored, so this resolves rather than writes.
- *
- * The push step mirrors them into Airtable; all this needs is the record id
- * each one landed on, so workshop links can be resolved back to a project.
- */
-export async function projectIdMap(
-  records: AirtableRecord[],
-): Promise<Map<string, string>> {
-  const parsed = applyPull(projectsSpec, records);
-  const known = await db.select({ id: projects.id }).from(projects);
-  const ids = new Set(known.map((p) => p.id));
+interface ProjectValues {
+  displayName: string | null;
+  sortOrder: number | null;
+}
 
-  const map = new Map<string, string>();
+/**
+ * Projects, pulled — and this pass replaced a `projectIdMap` that only ever
+ * read.
+ *
+ * Projects were the one officer-facing table the platform OWNED. It pushed
+ * them out and resolved links by matching `⚙️ Platform ID` back to a row it
+ * had authored, which meant a Projects record an officer created in Airtable
+ * could never resolve: it had no platform id, nothing would ever issue it one,
+ * and the workshop pointing at it was skipped on every pass. Nor was there any
+ * other way to get a project, since nothing in the platform could create one
+ * either. See the note on `projectsSpec` for the whole shape of that.
+ *
+ * The slug is derived once on insert and never recomputed, exactly like a
+ * meeting's, and for a sharper reason: `stars.csv` is keyed on it across
+ * semesters, so regenerating it when an officer fixes a capital letter would
+ * rewrite an export somebody already downloaded.
+ *
+ * ## The archive here is NOT filtered out of the reads, on purpose
+ *
+ * Every other archivable table is hidden everywhere once `deletedAt` is set,
+ * and the seven `leftJoin(projects, ...)` sites deliberately do not follow
+ * that. A project is joined as a LABEL for something that already happened: a
+ * workshop that taught it, a star somebody earned for sitting in it. Filtering
+ * the join would blank the name off both, which is the precise outcome the
+ * soft archive exists to prevent — it would make deleting an Airtable row
+ * destroy history rather than merely retire a project.
+ *
+ * So the archive means "stop offering this", and the only read that has to
+ * respect it is one that offers a choice. There is no such read today. The
+ * existing-rows query below is the other exception, and must stay unfiltered
+ * for a different reason: restoring a deleted Airtable record has to re-adopt
+ * its old row by `airtableRecordId`, and a filtered read would miss it and try
+ * to insert a duplicate slug instead.
+ */
+export async function pullProjects(
+  records: AirtableRecord[],
+): Promise<PullOutcome> {
+  const out = emptyOutcome();
+  const parsed = applyPull<ProjectValues>(projectsSpec, records);
+
+  const existing = await db
+    .select({
+      id: projects.id,
+      airtableRecordId: projects.airtableRecordId,
+      slug: projects.slug,
+    })
+    .from(projects);
+
+  const byRecordId = new Map(
+    existing
+      .filter((p) => p.airtableRecordId !== null)
+      .map((p) => [p.airtableRecordId!, p]),
+  );
+  const usedSlugs = new Set(existing.map((p) => p.slug));
+
+  const rawByRecordId = new Map(records.map((r) => [r.id, r.fields]));
+
   for (const record of parsed) {
-    if (record.platformId && ids.has(record.platformId)) {
-      map.set(record.airtableRecordId, record.platformId);
+    const v = record.values;
+    const current = byRecordId.get(record.airtableRecordId);
+
+    // Before the completeness gate, like the meeting value rules: a name too
+    // long to publish is too long whether the row is new or not.
+    const raw = rawByRecordId.get(record.airtableRecordId) ?? {};
+    const rules = checkProject({
+      airtableRecordId: record.airtableRecordId,
+      rawDisplayName: raw[projectsSpec.fields.displayName.id],
+      displayName: v.displayName,
+    });
+    out.refusals.push(...rules.refusals);
+
+    // The name is the only thing a project needs. `sortOrder` has a default in
+    // the schema, so a project an officer has not placed yet is still a
+    // project.
+    if (v.displayName === null) {
+      out.skipped += 1;
+      if (current) out.idMap.set(record.airtableRecordId, current.id);
+      // Said out loud, for the reason `meeting_incomplete` is: a row that is
+      // merely unfinished looks exactly like one the sync never reached.
+      //
+      // Unless the name ARRIVED and was refused just above. The parser returns
+      // null for "empty" and for "too long" alike, and only the first is an
+      // unfinished row. `checkProject` has already written the better message
+      // for the second, and adding this one would stack two explanations of
+      // one problem in a single cell.
+      if (!rules.rejectedFields.has("displayName")) {
+        out.refusals.push({
+          table: "projects",
+          airtableRecordId: record.airtableRecordId,
+          code: "project_incomplete",
+          message:
+            "Not on the site yet: this project needs a Name. Nothing else " +
+            "about the row is wrong — it appears within fifteen minutes of " +
+            "one being typed.",
+        });
+      }
+      continue;
+    }
+
+    // `displayName` is non-null past the gate above, which is what makes this
+    // simpler than the meetings equivalent: the parser returns null both for
+    // "empty" and for "too long", and BOTH are handled up there, so there is
+    // no refused-field to drop from the write here.
+    const values = {
+      displayName: v.displayName,
+      // Null means the officer emptied the cell. The column is `not null` with
+      // a default, so it goes back to 0 rather than being written as null.
+      sortOrder: v.sortOrder ?? 0,
+      // Un-archives, and it has to be written on every update rather than only
+      // when the row is archived. `archiveMissing` sets this the moment a
+      // record stops being listed, so restoring one from Airtable's trash
+      // brings back a row that is still `deletedAt` and therefore still
+      // invisible everywhere. Clearing it here is what makes the archive
+      // reversible, which is the property the whole soft delete rests on.
+      deletedAt: null,
+    };
+
+    if (current) {
+      const written = await tryWrite(
+        out,
+        "projects",
+        record.airtableRecordId,
+        () =>
+          db.update(projects).set(values).where(eq(projects.id, current.id)),
+      );
+      out.idMap.set(record.airtableRecordId, current.id);
+      if (written.ok) out.upserted += 1;
+      continue;
+    }
+
+    // Derived once, here. See the note above: this string is in `stars.csv`.
+    const slug = uniqueSlug(v.displayName, usedSlugs);
+    usedSlugs.add(slug);
+
+    const written = await tryWrite(
+      out,
+      "projects",
+      record.airtableRecordId,
+      () =>
+        db
+          .insert(projects)
+          .values({
+            ...values,
+            slug,
+            airtableRecordId: record.airtableRecordId,
+          })
+          .returning({ id: projects.id }),
+    );
+
+    const inserted = written.ok ? written.value[0] : undefined;
+    if (inserted) {
+      out.idMap.set(record.airtableRecordId, inserted.id);
+      out.upserted += 1;
     }
   }
-  return map;
+
+  out.archived = await archiveMissing(
+    projects,
+    parsed.map((p) => p.airtableRecordId),
+  );
+
+  return out;
 }
 
 // ── Archival ─────────────────────────────────────────────────────────────────
 
-type ArchivableTable = typeof meetings | typeof workshops | typeof competitions;
+type ArchivableTable =
+  typeof projects | typeof meetings | typeof workshops | typeof competitions;
 
 /**
  * Deletion in Airtable is a soft archive here, never a hard delete.

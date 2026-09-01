@@ -27,10 +27,10 @@ Three things you will actually reach for:
 
 Every read and write goes over the wire with field **ids**, not names, which is
 what lets an officer rename a column without breaking anything. Ids are written
-into `registry.ts` by `pnpm devtools airtable pull-ids` after
-`pnpm devtools airtable scaffold` has created the field; a declaration still
-carrying a `todo()` placeholder makes `verify` fail rather than warn, because a
-placeholder that reaches a live sync writes into nothing and reports success.
+into `registry.ts` by `pnpm devtools airtable apply`, in the same run that
+creates the field; a declaration still carrying a `todo()` placeholder makes
+`verify` fail rather than warn, because a placeholder that reaches a live sync
+writes into nothing and reports success.
 
 `applyPull` returns each row's `airtableRecordId` alongside a nullable
 `platformId`, and that pair is the integration's whole identity model: record

@@ -203,6 +203,35 @@ export const getUpcomingMeetings = cache(
   },
 );
 
+/**
+ * When the furthest-out scheduled meeting starts, or null if there are none.
+ *
+ * Exists so the calendar's forward bound can follow the base instead of a
+ * constant. `/events` asked for a fixed three-month window on the stated
+ * grounds that "two months is as far ahead as the base is ever filled in",
+ * which stopped being true the first time officers authored a whole semester
+ * at once. Everything past that bound synced into Postgres and appeared
+ * nowhere: not on the calendar, not in the schedule list, and not reachable by
+ * paging, because `bounds.to` is derived from the same number. From an
+ * officer's side of the base that is indistinguishable from the sync ignoring
+ * the rows.
+ *
+ * Cancelled nights count. They are on the schedule, struck through, which is
+ * exactly what somebody holding one in their calendar needs to see — the same
+ * reason `getMeetingsInRange` keeps them.
+ *
+ * One indexed row, ordered on the column the range read already filters on.
+ */
+export const getFurthestMeetingStart = cache(async (): Promise<Date | null> => {
+  const [row] = await db
+    .select({ startsAt: meetings.startsAt })
+    .from(meetings)
+    .where(isNull(meetings.deletedAt))
+    .orderBy(desc(meetings.startsAt))
+    .limit(1);
+  return row?.startsAt ?? null;
+});
+
 /** Meetings that are over, most recent first. */
 export const getPastMeetings = cache(
   async (limit = 25, offset = 0): Promise<MeetingSummary[]> => {
@@ -568,10 +597,15 @@ export const getMeetingJudging = cache(
  * Every non-archived meeting starting in `[from, to)`, ascending, with the
  * workshops it runs and the competitions it judges.
  *
- * Half-open on purpose. The calendar pages by month and asks for a three-month
- * window at a time, so the ranges it requests are adjacent; a closed upper
- * bound would put a meeting starting exactly at midnight on the first of a
- * month into two windows at once, and the page would draw it twice.
+ * Half-open on purpose. The calendar pages by month and asks for whole months
+ * at a time, so the ranges it requests are adjacent; a closed upper bound would
+ * put a meeting starting exactly at midnight on the first of a month into two
+ * windows at once, and the page would draw it twice.
+ *
+ * The window is a month back and forward as far as the base goes, which is
+ * three months in an empty summer and a whole semester the week a semester is
+ * authored. It was a fixed three months, and everything past that synced into
+ * this table and appeared on no surface; see `getFurthestMeetingStart`.
  *
  * Bounded on `startsAt`, unlike `getUpcomingMeetings`: a calendar grid asks
  * "which square does this go in", and that is the start. The in-progress

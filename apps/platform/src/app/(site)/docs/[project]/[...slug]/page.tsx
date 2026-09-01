@@ -54,16 +54,34 @@ export async function generateMetadata({
   const projectSlug = decodeURIComponent(project);
   const path = slug.map(decodeURIComponent).join("/");
 
+  // The link card. Docs pages live under a catch-all, and Next refuses an
+  // `opengraph-image.tsx` inside one ("Catch-all must be the last part of the
+  // URL"), so this is the one public route whose card comes from a route
+  // handler instead of the file convention. It takes the project and path
+  // rather than a title, and looks them up itself — see the handler.
+  const card = {
+    images: [
+      {
+        url: `/og/docs?project=${encodeURIComponent(projectSlug)}&path=${encodeURIComponent(path)}`,
+        width: 1200,
+        height: 630,
+      },
+    ],
+  };
+
   const page = getDocsPage(projectSlug, path);
   if (page) {
     return {
       title: `${page.title} | DevDogs Docs`,
       description: page.description ?? undefined,
+      openGraph: card,
     };
   }
 
   const folder = getDocsFolder(projectSlug, path);
-  if (folder) return { title: `${folder.name} | DevDogs Docs` };
+  if (folder) {
+    return { title: `${folder.name} | DevDogs Docs`, openGraph: card };
+  }
 
   return {};
 }

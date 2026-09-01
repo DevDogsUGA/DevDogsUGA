@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { StaticImageData } from "next/image";
 import type { ReactNode } from "react";
 import type { MeetingSegment } from "~/lib/meetingSegments";
@@ -75,12 +75,13 @@ interface Beat {
 const BEATS: Beat[] = [
   {
     day: "Monday",
-    title: "Workshop, Then Kickoff",
+    title: "Workshop, then Kickoff",
     body: (
       <>
-        One workshop per project, all at once — each self-contained, and none
-        assuming you were here last week. Most end with &ldquo;now go build
-        this&rdquo; — that&rsquo;s the kickoff.
+        Every workshop is self-contained, and none assumes you were here last
+        week. Then, once you have the tools, we kick off the competition: split
+        up into teams and build the best implementation of that week&rsquo;s
+        feature.
       </>
     ),
     segments: ["workshop", "kickoff"],
@@ -96,8 +97,9 @@ const BEATS: Beat[] = [
     title: "Build Session",
     body: (
       <>
-        The room&rsquo;s open and officers are around. Build with your team, get
-        your laptop set up, or just come work.
+        Catch up on workshop materials, meet up with your teammates for
+        hackathons, get unblocked with support from focus leads and club
+        officers, or just come hang out and get work done!
       </>
     ),
     // No segment: a build session is AUTHORED on the meeting rather than
@@ -126,12 +128,12 @@ const BEATS: Beat[] = [
   },
   {
     day: "Next Monday",
-    title: "Judging, Then It All Starts Again",
+    title: "Judging, then It All Starts Again",
     body: (
       <>
-        Teams demo, the winning pull request merges, the rest close. Showing up
-        earns the star either way. Then a new workshop kicks off the next one —
-        some weeks it&rsquo;s just the workshop.
+        Teams demo in front of the club, officers and members vote on the best
+        implementation, and the winning pull request merges. Then, a new
+        workshop kicks off the next one.
       </>
     ),
     segments: ["judging"],
@@ -142,14 +144,8 @@ const BEATS: Beat[] = [
 ];
 
 /**
- * The two dialects' neutrals. Class strings are CONSTANT per tone, and which
- * card is live is a data attribute, never a class change. `[data-animate]`
- * starts at `opacity: 0` in globals.css and only becomes visible when
- * AnimationInit adds `.is-visible`, a class added outside React to an element
- * React believes it owns. Deriving className from hover state makes React
- * rewrite the class attribute and delete `is-visible`, and the observer has
- * already unobserved the node, so nothing puts it back. Hovering a card deletes
- * the card.
+ * The two dialects' neutrals. Class strings are constant per tone, and which
+ * card is live is represented by a data attribute.
  *
  * The caret is part of the card: a rotated square in the card's own fill, two
  * of its borders drawn and the corner between them rounded off, laid over the
@@ -256,9 +252,51 @@ export default function HowItWorks({
   // `null` is the resting state, not "beat 0": static plays underneath until a
   // pointer lands on a card.
   const [hovered, setHovered] = useState<number | null>(null);
+  const [touched, setTouched] = useState<number | null>(null);
+  const [scrolled, setScrolled] = useState<number | null>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const beatRefs = useRef<Array<HTMLLIElement | null>>([]);
+
+  // On the stacked layout, the strip stays under the nav while the cards move
+  // past it. The first beat starts active; as soon as its card's top edge
+  // reaches the strip, the next beat takes over.
+  useEffect(() => {
+    const mobile = window.matchMedia("(max-width: 63.999rem)");
+    let frame = 0;
+
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (!mobile.matches || !timelineRef.current) {
+          setScrolled(null);
+          return;
+        }
+
+        const line = timelineRef.current.getBoundingClientRect().bottom;
+        const intersected = beatRefs.current.filter(
+          (beat) => beat !== null && beat.getBoundingClientRect().top <= line,
+        ).length;
+        setScrolled(Math.min(intersected, BEATS.length - 1));
+      });
+    };
+
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    mobile.addEventListener("change", update);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      mobile.removeEventListener("change", update);
+    };
+  }, []);
+
+  const activeIndex = hovered ?? touched ?? scrolled;
   // noUncheckedIndexedAccess is on, so this is Beat | undefined either way,
   // which is what the television wants anyway, since undefined IS static.
-  const active = hovered === null ? undefined : BEATS[hovered];
+  const active = activeIndex === null ? undefined : BEATS[activeIndex];
   const t = TONES[tone];
 
   return (
@@ -266,58 +304,36 @@ export default function HowItWorks({
       id={id}
       aria-labelledby={`${id}-heading`}
       className="flex scroll-mt-28 flex-col gap-8"
-      // The console page reveals nothing on scroll, that being the marketing
-      // pages' idiom, so the attribute only exists on the light plate.
-      data-animate={tone === "light" ? "fade-up" : undefined}
     >
-      {/* The heading spans the whole section rather than sitting in the text
-          column, so it titles the television as much as the words. The set is
-          part of this section, not an illustration hung beside it.
-          Left-justified, so it starts on the same line the paragraphs do. */}
       <div className="flex flex-col gap-4">
-        <h2
-          id={`${id}-heading`}
-          className={`font-display text-2xl font-extrabold md:text-3xl ${t.heading}`}
-        >
-          A Week in DevDogs
-        </h2>
-
         {/* Flex rather than the eight-column grid this used to be. On a grid
             the set was centred in ITS OWN cell, so the run between the prose's
             right edge (the paragraphs stop at `max-w-prose`, well short of the
             column) and the start of the set's column was dead space the
             centring never saw. `flex-1` gives the set the width left over after
-            the prose, and centring inside that is centring in the gap a reader
-            sees. */}
-        {/* `lg:gap-0` so that leftover space really does start at the prose's
-            right edge. A gap would push the set's box inward and centre it in
-            something narrower than the gap a reader sees, the same error this
-            layout was changed to fix, just smaller. */}
+            the prose. */}
         <div className="flex flex-col gap-8 lg:flex-row lg:items-stretch lg:gap-0">
-          <div className="flex max-w-prose flex-col gap-4 text-left">
+          <div className="flex max-w-prose flex-col gap-4 text-left font-medium text-mauve-800">
+            <h2
+              id={`${id}-heading`}
+              className={`font-display text-2xl font-extrabold md:text-3xl ${t.heading}`}
+            >
+              A Week in DevDogs
+            </h2>
             <p className={`text-base/relaxed text-balance ${t.intro}`}>
-              One feature, one week, every team at once. Monday&rsquo;s workshop
-              teaches the tools and hands out the build; teams ship a pull
-              request by the next Monday; we demo, one merges, and that
-              night&rsquo;s workshop kicks off the next one.
-            </p>
-            <p className={`text-base/relaxed text-balance ${t.intro}`}>
-              That&rsquo;s a sprint — and it&rsquo;s how every project on the
-              platform grows, one merged feature at a time. Some weeks are just
-              the workshop. Those count too.
+              Every DevDogs project grows one merged feature at a time, with a
+              new feature for each project every week.
             </p>
           </div>
-          {/* The set's cell stretches to the row, and the set is absolutely
-              positioned inside it from `lg`, so its own height contributes
-              nothing: the row is as tall as the WORDS and the set fits that,
-              never taller. In flow its natural height would set the row, and
-              the television would decide how tall the prose beside it looked.
-              With the heading out of the row, "as tall as the words" is the
-              body text alone. */}
-          <div className="mx-auto w-full max-w-sm lg:relative lg:mx-0 lg:max-w-none lg:flex-1">
-            <div className="lg:absolute lg:inset-0 lg:flex lg:justify-center">
+          {/* The set is absolutely positioned from `lg`, so its deliberately
+              oversized height contributes nothing to the row: the timeline
+              stays exactly where the title and description put it. Its top edge
+              shares the prose's top edge, and the extra height overflows below. */}
+          <div className="mx-auto hidden w-full max-w-sm lg:relative lg:mx-0 lg:block lg:max-w-none lg:flex-1">
+            <div className="lg:absolute lg:inset-0 lg:flex lg:items-start lg:justify-end">
               <CrtTv
-                className={`lg:h-full lg:w-auto lg:max-w-full ${t.tvShadow}`}
+                className={`lg:h-[clamp(11rem,16vw,14rem)] lg:w-auto lg:max-w-full ${t.tvShadow}`}
+                channel={active?.strip ?? null}
                 showing={
                   active?.gif ? { key: active.title, image: active.gif } : null
                 }
@@ -335,7 +351,10 @@ export default function HowItWorks({
       {/* `gap-y-5`: the light cards cast a block drop-shadow, and anything
           tighter let it bleed into the strip's black cutout. */}
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-8 lg:gap-x-4 lg:gap-y-5">
-        <div className="relative py-5 lg:col-span-8 lg:row-start-2">
+        <div
+          ref={timelineRef}
+          className="sticky top-16 z-20 py-5 lg:static lg:col-span-8 lg:row-start-2"
+        >
           {cutout && <Cutout />}
           {/* Inside a cutout the strip sits on the page's black, whatever
               plate the rest of the section is on, so it takes the dark
@@ -349,15 +368,30 @@ export default function HowItWorks({
 
         <ol
           className="group/beats flex flex-col gap-4 lg:contents"
-          data-hovering={hovered !== null}
+          data-hovering={activeIndex !== null}
         >
           {BEATS.map((beat, i) => (
             <li
               key={beat.title}
-              data-active={hovered === i}
+              ref={(node) => {
+                beatRefs.current[i] = node;
+              }}
+              tabIndex={0}
+              data-active={activeIndex === i}
               className={`${t.beat} ${beat.place.side === "above" ? t.caretDown : t.caretUp} ${CARET_X[beat.place.caret ?? "null"]} ${COL_START[beat.place.col]} ${SIDE[beat.place.side]} lg:col-span-2`}
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
+              onFocus={() => setHovered(i)}
+              onBlur={() => setHovered(null)}
+              onClick={() => {
+                if (
+                  window.matchMedia("(hover: none) and (min-width: 64rem)")
+                    .matches
+                ) {
+                  setHovered(null);
+                  setTouched((current) => (current === i ? null : i));
+                }
+              }}
             >
               <p className={t.beatDay}>{beat.day}</p>
               <h3 className={t.beatTitle}>{beat.title}</h3>

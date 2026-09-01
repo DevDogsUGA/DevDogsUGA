@@ -90,10 +90,11 @@ jobs:
       # deployed worker's cron.
       #
       # Unconditional rather than --affected: the registry is edited by hand
-      # after `pull-ids`, and a hand-edited id is exactly the mistake with no
-      # other detection. It costs no network and about a second.
+      # after `airtable apply` writes the ids into it, and a hand-edited id is
+      # exactly the mistake with no other detection. It costs no network and
+      # about a second.
       - name: Registry agrees with the schema snapshot
-        run: pnpm devtools airtable snapshot --check
+        run: pnpm devtools airtable check
       # .env.example is GENERATED from the env manifests; this regenerates it
       # in memory and byte-compares -- the same pattern the database job uses
       # for database.types.ts. Credential-free by construction: the generator

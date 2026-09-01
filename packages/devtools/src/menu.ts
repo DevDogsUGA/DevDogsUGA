@@ -8,7 +8,7 @@
  * command" structural instead of aspirational. The menu it replaced held a
  * hand-written list of ten entries beside a CLI that had grown to sixteen
  * top-level commands and thirty-one subcommands, so `env`, `planner`,
- * `signing-key`, `deploy` and `airtable snapshot` were reachable only by
+ * `signing-key`, `deploy` and `airtable check` were reachable only by
  * someone who already knew their names. A contributor who does not know a
  * command name is the entire audience for this file.
  *

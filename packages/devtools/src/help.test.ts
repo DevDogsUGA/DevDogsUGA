@@ -18,8 +18,8 @@ describe("the top level", () => {
   it("fits on a screen", () => {
     // The old one was 190. A bound rather than a snapshot: this should be free
     // to grow a command without a test edit, and not free to grow a section.
-    // 45 lines with `qr`; the headroom is for commands, not for a group.
-    expect(root.split("\n").length).toBeLessThan(48);
+    // 48 lines with `images`; the headroom is for commands, not for a group.
+    expect(root.split("\n").length).toBeLessThan(51);
   });
 
   it("names every top-level command", () => {

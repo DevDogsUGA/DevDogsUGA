@@ -96,7 +96,7 @@ export default function DocsMenu({
     <NavigationMenu.Item value={DOCS_MENU} className="hidden md:block">
       <NavMenuTrigger active={active} className={`${className} gap-2`}>
         {label}
-        <CaretDownIcon aria-hidden className="size-3.5" />
+        <CaretDownIcon aria-hidden weight="bold" className="size-3.5" />
       </NavMenuTrigger>
 
       <NavigationMenu.Content

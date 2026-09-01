@@ -1,8 +1,8 @@
 -- The 2026-27 executive board.
 --
 -- Content, so it lives with the content. The schema this needs --
--- `roleDescription` widened to 512, and the three academic array columns --
--- is 20260827000000_platform_officer_profiles.sql, and it has to be: a
+-- `roleDescription` widened to 512, and the academic program tables --
+-- is 20260829010000_01_platform_profile.sql, and it has to be: a
 -- migration is the only thing that reaches a database nobody is allowed to
 -- drop. The seven people are a different kind of fact, and a file called
 -- `03_officers.sql` says what it holds in a way a timestamped migration
@@ -30,8 +30,8 @@
 -- ============================================================
 --
 -- Every write below is a gap-fill: `coalesce` for scalars,
--- replace-only-when-empty for the arrays, `on conflict do nothing` for the
--- rest. An officer who has already written their own role description, set
+-- `on conflict do nothing` for the academic selections and links, and the
+-- same pattern for the rest. An officer who has already written their own role description, set
 -- their own graduation year or picked their own preferred name keeps every bit
 -- of it. That matters more than it looks -- these submissions were emailed in
 -- July, `roleDescription` is editable from /account, and the account is the
@@ -120,9 +120,9 @@ create temporary table "officer_submissions" (
   "preferredName" text not null,
   "title" text,
   "roleDescription" text not null,
-  "majors" text[] not null,
-  "minors" text[] not null,
-  "certificates" text[] not null,
+  -- Numeric UGA Bulletin detail ids. They distinguish credentials with the
+  -- same program name (Computer Science BS and MS are separate rows).
+  "programIds" integer[] not null,
   "graduationYear" integer,
   -- 'spring' | 'summer' | 'fall'. Cast to the enum on the way into profile.
   -- Every date below reads "May 20xx" on the resume, which is spring.
@@ -168,42 +168,41 @@ create temporary table "officer_submissions" (
 
 insert into "officer_submissions" (
   "slug", "email", "preferredName", "title", "roleDescription",
-  "majors", "minors", "certificates", "graduationYear", "graduationSemester",
+  "programIds", "graduationYear", "graduationSemester",
   "altEmails", "pronouns", "showGithub", "showLinkedin", "seededId"
 ) values
   (
     'jack-harrington', 'jbh36784@uga.edu', 'Jack Harrington',
     'Vice President',
     'Jack Harrington is a Computer Science student at the University of Georgia with a passion for building full-stack software that solves real-world problems. As Vice President, Jack helps coordinate the student-led software projects DevDogs runs for the UGA community. As a Software Engineer Intern with the U.S. Air Force, he has built production software in a collaborative engineering environment, and he contributes to SpectraGuru, an open-source spectrum analysis platform for research.',
-    array['Computer Science']::text[], '{}', '{}', 2027, 'spring',
+    array[73962, 84091]::integer[], 2027, 'spring',
     array['jackharrington290@gmail.com']::text[],
     array['he', 'him']::text[], true, true,
     '00000000-0000-4000-b000-000000000001'
   ),
   (
     'zayan-hoodani', 'zkh27085@uga.edu', 'Zayan Hoodani',
-    'Event Director',
-    'Zayan Hoodani is a sophomore studying Computer Science while pursuing a certificate in Cybersecurity and Privacy. As Event Director, Zayan facilitates events and works to create a fun, collaborative environment. He is a NetOps Intern at GreenSky, architecting automated systems for cloud network segmentation on AWS and provisioning physical switch infrastructure, and Director of R&D at The Hack Pack. Zayan loves anything to do with cybersecurity and AI.',
-    array['Computer Science']::text[], '{}',
-    array['Cybersecurity and Privacy']::text[], 2028, 'spring',
+    'Events Director',
+    'Zayan Hoodani is a sophomore studying Computer Science while pursuing a certificate in Cybersecurity and Privacy. As Events Director, Zayan facilitates events and works to create a fun, collaborative environment. He is a NetOps Intern at GreenSky, architecting automated systems for cloud network segmentation on AWS and provisioning physical switch infrastructure, and Director of R&D at The Hack Pack. Zayan loves anything to do with cybersecurity and AI.',
+    array[73962, 19969]::integer[], 2028, 'spring',
     array['zayanhoodani@gmail.com']::text[],
     array['he', 'him']::text[], false, true,
     '00000000-0000-4000-b000-000000000002'
   ),
   (
     'nandan-praveen', 'np43598@uga.edu', 'Nandan Praveen',
-    'Flutter Project Head',
-    'Nandan Praveen is a sophomore majoring in Computer Systems Engineering, currently serving as Flutter Project Head and formerly a Focus Lead at DevDogs. His work spans Flutter, Next.js, MySQL, and Supabase, orchestrating both the UI/UX of the app and the backend while helping developers grow in core and advanced concepts. Outside DevDogs, Nandan does ML research with UGA''s VIPR lab, building image-based models using PyTorch and TensorFlow.',
-    array['Computer Systems Engineering']::text[], '{}', '{}', 2029, 'spring',
+    'DogPack Project Manager',
+    'Nandan Praveen is a sophomore majoring in Computer Systems Engineering, currently serving as DogPack Project Manager and Flutter Focus Lead at DevDogs. His work spans Flutter, Next.js, MySQL, and Supabase, orchestrating both the UI/UX of the app and the backend while helping developers grow in core and advanced concepts. Outside DevDogs, Nandan does ML research with UGA''s VIPR lab, building image-based models using PyTorch and TensorFlow.',
+    array[45516]::integer[], 2029, 'spring',
     array['nandan@uga.edu']::text[],
     array['he', 'him']::text[], true, false,
     '00000000-0000-4000-b000-000000000003'
   ),
   (
     'shruti-mishra', 'sbm64430@uga.edu', 'Shruti Mishra',
-    'Focus Lead, Backend Integration',
-    'Shruti Mishra is a sophomore at the University of Georgia studying Computer Science with an emphasis in Artificial Intelligence. Shruti serves as the Focus Lead for Backend Integration on the DevDogs leadership team, is a member of the UGAHacks Tech Team helping develop the website for UGA''s annual hackathon, and serves on the Outreach Team for HackPack, UGA''s cybersecurity club. She is passionate about software engineering and AI.',
-    array['Computer Science']::text[], '{}', '{}', 2027, 'spring',
+    'Backend Integration Focus Lead',
+    'Shruti Mishra is a sophomore at the University of Georgia studying Computer Science with an emphasis in Artificial Intelligence. Shruti serves as the Backend Integration Focus Lead on the DevDogs leadership team, is a member of the UGAHacks Tech Team helping develop the website for UGA''s annual hackathon, and serves on the Outreach Team for HackPack, UGA''s cybersecurity club. She is passionate about software engineering and AI.',
+    array[73962]::integer[], 2027, 'spring',
     array['shruti.mishra@uga.edu', 'shrutibmishra1@gmail.com']::text[],
     array['she', 'her']::text[], true, false,
     '00000000-0000-4000-b000-000000000004'
@@ -212,10 +211,9 @@ insert into "officer_submissions" (
     -- Submitted as Ashlee Peacox; Armani is the name she goes by. Her wording,
     -- her pronouns -- see the note above.
     'armani-peacox', 'aap86342@uga.edu', 'Armani Peacox',
-    'Campus Coordinator',
-    'Armani is a Computer Science and Interdisciplinary Art student at the University of Georgia with a passion for game development. She serves as the Campus Coordinator for UGA''s Dev Dogs chapter and is actively involved in TheHackPack, Girls Who Code, and the Powerlifting & Bodybuilding Club. Her interests include gameplay programming, game design, virtual and augmented reality, human-computer interaction, and digital art.',
-    array['Computer Science', 'Interdisciplinary Art']::text[], '{}',
-    array['New Media']::text[], null, null,
+    'Campus Outreach Director',
+    'Armani is a Computer Science and Interdisciplinary Art student at the University of Georgia with a passion for game development. She serves as the Campus Outreach Director for UGA''s Dev Dogs chapter and is actively involved in TheHackPack, Girls Who Code, and the Powerlifting & Bodybuilding Club. Her interests include gameplay programming, game design, virtual and augmented reality, human-computer interaction, and digital art.',
+    array[73962, 86044, 62630]::integer[], null, null,
     array['ashlee.peacox@uga.edu']::text[],
     array['she', 'her']::text[], false, false,
     '00000000-0000-4000-b000-000000000005'
@@ -224,7 +222,7 @@ insert into "officer_submissions" (
     'gabrielle-rose', 'glr26038@uga.edu', 'Gabrielle Rose',
     'UI/UX Focus Lead',
     'Gabrielle Rose is pursuing a degree in Computer Science with a focus on front-end development, human-computer interaction, and UI/UX design, and is passionate about creating intuitive, user-centered technologies that solve real-world problems. In the future, Gabrielle aspires to bridge the gap between people and technology by designing digital solutions that create meaningful impact and empower communities to confidently engage with technology.',
-    array['Computer Science']::text[], '{}', '{}', 2028, 'spring',
+    array[73962]::integer[], 2028, 'spring',
     array['gabrielle.rose@uga.edu']::text[],
     array['she', 'her']::text[], false, true,
     '00000000-0000-4000-b000-000000000006'
@@ -235,7 +233,7 @@ insert into "officer_submissions" (
     'kyle-quach', 'gq72484@uga.edu', 'Kyle Quach',
     'Next.js Focus Lead',
     'Kyle Quach is a sophomore majoring in Computer Science at the University of Georgia. Kyle''s interests span software development to AI engineering, and he sometimes develops games on the side. He has built projects with tech stacks such as Java, C#, Python, and JavaScript, as well as frameworks like React and Spring. As an aspiring software developer, Kyle looks forward to building software that contributes meaningfully to people''s daily lives.',
-    array['Computer Science']::text[], '{}', '{}', 2028, 'spring',
+    array[73962]::integer[], 2028, 'spring',
     array['giakhang.quach@uga.edu']::text[],
     array['he', 'him']::text[], true, true,
     '00000000-0000-4000-b000-000000000007'
@@ -276,12 +274,15 @@ select
 from (values
   ('President', 1),
   ('Vice President', 2),
-  ('Event Director', 3),
-  ('Flutter Project Head', 4),
-  ('Focus Lead, Backend Integration', 5),
+  ('Events Director', 3),
+  ('DogPack Project Manager', 4),
+  ('Backend Integration Focus Lead', 5),
   ('UI/UX Focus Lead', 6),
   ('Next.js Focus Lead', 7),
-  ('Campus Coordinator', 8)
+  ('Campus Outreach Director', 8),
+  ('DevOps Director', 9),
+  ('DogDays Project Manager', 10),
+  ('Flutter Focus Lead', 11)
 ) as t("title", "ord")
 on conflict ("title") do update set
   "isLeadership" = true,
@@ -327,20 +328,23 @@ where lower(u."email") = s."email"
 -- ============================================================
 --
 -- `preferredName` is NOT NULL and so can only be supplied on insert; an
--- existing profile keeps whatever name its owner chose. Everything else is
--- coalesced or replaced-only-when-empty.
+-- existing profile keeps whatever name its owner chose. The involvement fields
+-- deliberately assert that every current officer is on the DevDogs roster;
+-- the normal roster import remains authoritative after seeding.
 insert into "platform"."profile" (
   "userId", "preferredName", "roleDescription",
-  "majors", "minors", "certificates",
   "graduationYear", "graduationSemester", "pronouns",
-  "showGithub", "showLinkedin"
+  "showGithub", "showLinkedin",
+  "involvementFirstName", "involvementLastName", "involvementImportedAt"
 )
 select
   s."userId", s."preferredName", s."roleDescription",
-  s."majors", s."minors", s."certificates",
   s."graduationYear",
   s."graduationSemester"::"platform"."graduationSemester",
-  s."pronouns", s."showGithub", s."showLinkedin"
+  s."pronouns", s."showGithub", s."showLinkedin",
+  split_part(s."preferredName", ' ', 1),
+  substring(s."preferredName" from position(' ' in s."preferredName") + 1),
+  now()
 from "officer_submissions" s
 where s."userId" is not null
 on conflict ("userId") do update set
@@ -356,15 +360,51 @@ on conflict ("userId") do update set
   "pronouns" = coalesce(
     "platform"."profile"."pronouns", excluded."pronouns"
   ),
-  "majors" = case
-    when cardinality("platform"."profile"."majors") = 0
-    then excluded."majors" else "platform"."profile"."majors" end,
-  "minors" = case
-    when cardinality("platform"."profile"."minors") = 0
-    then excluded."minors" else "platform"."profile"."minors" end,
-  "certificates" = case
-    when cardinality("platform"."profile"."certificates") = 0
-    then excluded."certificates" else "platform"."profile"."certificates" end;
+  "involvementFirstName" = excluded."involvementFirstName",
+  "involvementLastName" = excluded."involvementLastName",
+  "involvementImportedAt" = excluded."involvementImportedAt";
+
+-- The officer subset makes a reset immediately useful before the first daily
+-- scrape. The cron upsert owns these same Bulletin ids and refreshes every
+-- field from the source without changing profile selections.
+insert into "platform"."academicPrograms"
+  ("id", "name", "credential", "category", "schoolCode", "bulletinUrl", "lastSeenAt")
+values
+  (73962, 'Computer Science', 'BS', 'undergraduate_major', 'ARTS',
+    'https://bulletin.uga.edu/Program/Details/73962?IDc=ARTS', now()),
+  (84091, 'Computer Science', 'MS', 'graduate_major', 'ARTS',
+    'https://bulletin.uga.edu/Program/Details/84091?IDc=ARTS', now()),
+  (19969, 'Undergraduate Certificate in Cybersecurity and Privacy', 'CERT-UG',
+    'undergraduate_certificate', 'ARTS',
+    'https://bulletin.uga.edu/Program/Details/19969?IDc=ARTS', now()),
+  (45516, 'Computer Systems Engineering', 'BSCSE', 'undergraduate_major', 'FENGR',
+    'https://bulletin.uga.edu/Program/Details/45516?IDc=FENGR', now()),
+  (86044, 'Art: Interdisciplinary Art', 'AB', 'undergraduate_major', 'ARTS',
+    'https://bulletin.uga.edu/Program/Details/86044?IDc=ARTS', now()),
+  (62630, 'Undergraduate Certificate in New Media', 'CERT-UG',
+    'undergraduate_certificate', 'JOUR',
+    'https://bulletin.uga.edu/Program/Details/62630?IDc=JOUR', now()),
+  (77932, 'Sociology', 'AB', 'undergraduate_major', 'ARTS',
+    'https://bulletin.uga.edu/Program/Details/77932?IDc=ARTS', now())
+on conflict ("id") do update set
+  "name" = excluded."name",
+  "credential" = excluded."credential",
+  "category" = excluded."category",
+  "schoolCode" = excluded."schoolCode",
+  "bulletinUrl" = excluded."bulletinUrl",
+  "active" = true,
+  "lastSeenAt" = excluded."lastSeenAt",
+  "updatedAt" = now();
+
+insert into "platform"."profileAcademicPrograms"
+  ("userId", "programId", "sortOrder")
+select
+  s."userId", p."programId", (p."ordinality" - 1)::smallint
+from "officer_submissions" s
+cross join lateral unnest(s."programIds") with ordinality
+  as p("programId", "ordinality")
+where s."userId" is not null
+on conflict do nothing;
 
 -- ============================================================
 -- Links
@@ -434,6 +474,18 @@ join "platform"."roles" r on r."title" = s."title"
 where s."userId" is not null and s."title" is not null
 on conflict do nothing;
 
+-- Secondary leadership roles.
+insert into "platform"."userRoles" ("userId", "roleId")
+select s."userId", r."id"
+from "officer_submissions" s
+join (values
+  ('jack-harrington', 'DogDays Project Manager'),
+  ('nandan-praveen', 'Flutter Focus Lead')
+) as secondary("slug", "title") on secondary."slug" = s."slug"
+join "platform"."roles" r on r."title" = secondary."title"
+where s."userId" is not null
+on conflict do nothing;
+
 drop table "officer_submissions";
 
 -- ============================================================
@@ -470,7 +522,8 @@ on conflict ("id") do nothing;
 
 insert into "platform"."profile" (
   "userId", "preferredName", "roleDescription",
-  "majors", "graduationYear", "graduationSemester", "pronouns"
+  "graduationYear", "graduationSemester", "pronouns",
+  "involvementFirstName", "involvementLastName", "involvementImportedAt"
 )
 select u."id", 'Sloan Finger',
   'Sloan Finger is President of DevDogs, leading the executive board and the '
@@ -478,8 +531,9 @@ select u."id", 'Sloan Finger',
   'spring 2027, Sloan built and maintains the DevDogs platform -- this site '
   'and the console the club runs on -- and works on the developer tooling and '
   'deployment infrastructure behind them.',
-  array['Computer Science', 'Sociology']::text[], 2027, 'spring',
-  array['he', 'him']::text[]
+  2027, 'spring',
+  array['he', 'him']::text[],
+  'Sloan', 'Finger', now()
 from "auth"."users" u
 where lower(u."email") = 'jsf51288@uga.edu'
 on conflict ("userId") do update set
@@ -494,10 +548,27 @@ on conflict ("userId") do update set
   ),
   "pronouns" = coalesce(
     "platform"."profile"."pronouns", excluded."pronouns"
-  );
+  ),
+  "involvementFirstName" = excluded."involvementFirstName",
+  "involvementLastName" = excluded."involvementLastName",
+  "involvementImportedAt" = excluded."involvementImportedAt";
+
+insert into "platform"."profileAcademicPrograms"
+  ("userId", "programId", "sortOrder")
+select u."id", p."programId", p."sortOrder"
+from "auth"."users" u
+cross join (values (73962, 0), (77932, 1)) as p("programId", "sortOrder")
+where lower(u."email") = 'jsf51288@uga.edu'
+on conflict do nothing;
 
 insert into "platform"."userRoles" ("userId", "roleId")
 select u."id", r."id"
 from "auth"."users" u, "platform"."roles" r
 where lower(u."email") = 'jsf51288@uga.edu' and r."title" = 'President'
+on conflict do nothing;
+
+insert into "platform"."userRoles" ("userId", "roleId")
+select u."id", r."id"
+from "auth"."users" u, "platform"."roles" r
+where lower(u."email") = 'jsf51288@uga.edu' and r."title" = 'DevOps Director'
 on conflict do nothing;

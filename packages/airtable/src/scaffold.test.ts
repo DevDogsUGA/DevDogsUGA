@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { AirtableClient, type LiveTable, type NewField } from "./client.js";
 import { field, table } from "./field.js";
 import { registry } from "./registry.js";
-import { createOptionsFor, discoverIds, scaffoldBase } from "./scaffold.js";
+import {
+  AIRTABLE_DATETIME_TIME_ZONE,
+  createOptionsFor,
+  discoverIds,
+  scaffoldBase,
+} from "./scaffold.js";
 
 /**
  * The scaffolder against a fake base.
@@ -73,12 +78,15 @@ describe("createOptionsFor", () => {
     });
   });
 
-  it("pins dateTime to UTC", () => {
-    // The platform stores instants; a base-local timezone would introduce a
-    // second interpretation of the same column.
+  it("pins dateTime to the club timezone", () => {
+    // Airtable uses this to interpret the wall-clock time an officer enters,
+    // then returns the resulting instant through the API as UTC ISO-8601.
     expect(
       createOptionsFor(field.dateTime("fldX", "X").ignore()),
-    ).toMatchObject({ timeZone: "utc", dateFormat: { name: "iso" } });
+    ).toMatchObject({
+      timeZone: AIRTABLE_DATETIME_TIME_ZONE,
+      dateFormat: { name: "iso" },
+    });
   });
 
   it("creates a select with the choices its spec declares", () => {

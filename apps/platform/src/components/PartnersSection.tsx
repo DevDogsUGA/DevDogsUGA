@@ -58,10 +58,7 @@ interface Props {
 export default function PartnersSection({ topEdge, bottomEdge }: Props) {
   return (
     <div className="mx-4 overflow-hidden rounded-xl md:mx-6">
-      <section
-        className="relative w-full overflow-hidden pt-(--section-skew-slope) pb-(--section-skew-slope)"
-        data-animate="scale-up"
-      >
+      <section className="relative w-full overflow-hidden pt-(--section-skew-slope) pb-(--section-skew-slope)">
         <SectionBackground
           topEdge={topEdge}
           bottomEdge={bottomEdge}
@@ -70,20 +67,24 @@ export default function PartnersSection({ topEdge, bottomEdge }: Props) {
         />
         <div className="relative z-10 mx-auto max-w-6xl px-6 py-14 md:px-12 md:py-20">
           <div className="flex flex-wrap gap-6 md:flex-nowrap md:items-center md:gap-16">
-            <div className="w-full max-w-prose space-y-4 text-balance">
+            <div className="w-full max-w-prose space-y-4 font-medium text-balance text-mauve-800 md:text-lg/relaxed">
               <h2 className="font-display mb-8 text-left text-4xl font-extrabold text-black md:text-5xl">
                 Partners
               </h2>
-              <p className="text-base/relaxed text-mauve-700">
-                DevDogs is a student-run software club at UGA with 350+ active
-                members, building real products for the community every
-                semester.
+              <p>
+                DevDogs is the large-scale application development club at UGA
+                building real products for the community every semester.
               </p>
-              <p className="text-base/relaxed text-mauve-700">
-                Partnering with DevDogs puts your brand in front of driven
-                students, with sponsorship, recruiting, and mentorship
-                opportunities.
+              <p>
+                Partnering with us puts your brand in front of driven students,
+                with sponsorship, recruiting, and mentorship opportunities.
               </p>
+              <p>
+                We strive to be a part of supporting the next generation of UI
+                designers, UX researchers, software engineers, data scientists,
+                project leaders, community builders, and everything in-between.
+              </p>
+              <p>If you want in on the action, let&rsquo;s talk.</p>
               <LinkButton
                 href="mailto:devdogs@uga.edu"
                 className="hover:shadow-block-md transition-lift mt-8 flex w-fit items-center gap-2 rounded-sm border-2 border-black bg-white px-4 py-2 text-sm font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5"

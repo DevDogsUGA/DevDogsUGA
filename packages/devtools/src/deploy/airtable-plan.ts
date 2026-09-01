@@ -72,7 +72,7 @@ export interface AirtablePlanVerdict {
 }
 
 /**
- * One plan entry as a line, matching what `airtable scaffold --dry-run` prints.
+ * One plan entry as a line, matching what `airtable apply --dry-run` prints.
  *
  * Deliberately the same text in both places. A contributor who runs the dry run
  * on a laptop and then reads the job summary should be comparing two outputs,

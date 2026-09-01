@@ -61,9 +61,12 @@ function LeaderPopup({ profile, layout, reduceMotion, popupRef }: PopupProps) {
     // across two elements, the inner transform is exactly the old keyframes':
     // perspective(800px) rotateY/X(±20deg) about the near edge. The ref also
     // measures this wrapper because its rect doesn't wobble mid-fold.
+    // The active portrait stays at z-20 through this panel's exit. Keeping
+    // the panel below it makes both halves of the fold pass behind the
+    // headshot, while z-10 still clears every surrounding card at z-0.
     <div
       ref={popupRef}
-      className="absolute z-30 w-80"
+      className="absolute z-10 w-80"
       style={{
         left: place.left,
         top: place.top,
@@ -85,7 +88,12 @@ function LeaderPopup({ profile, layout, reduceMotion, popupRef }: PopupProps) {
         }}
         transition={{ duration: 0.18, ease: "easeOut" }}
       >
-        {meta && <p className="text-xs text-mauve-500">{meta}</p>}
+        <div className="space-y-0.5">
+          <p className="font-display text-xl leading-tight font-extrabold text-mauve-950">
+            {profile.name}
+          </p>
+          {meta && <p className="text-xs text-mauve-500">{meta}</p>}
+        </div>
         <LeaderDetails profile={profile} />
       </motion.div>
     </div>
@@ -115,6 +123,7 @@ type CardTarget = {
  */
 function DesktopCluster({ profiles }: Props) {
   const [open, setOpen] = useState<number | null>(null);
+  const [exiting, setExiting] = useState<Set<number>>(() => new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
   const reduceMotion = useReducedMotion() ?? false;
@@ -124,6 +133,13 @@ function DesktopCluster({ profiles }: Props) {
     [profiles.length],
   );
   const openLayout = open === null ? undefined : layout[open];
+
+  function changeOpen(next: number | null) {
+    if (open !== null && open !== next) {
+      setExiting((current) => new Set(current).add(open));
+    }
+    setOpen(next);
+  }
 
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
     const box = containerRef.current?.getBoundingClientRect();
@@ -150,7 +166,7 @@ function DesktopCluster({ profiles }: Props) {
     // stand repelled, and each claims its whole resting→repelled band, so the
     // user can aim at where a card is, where it was, or anywhere it fled
     // through.
-    setOpen(hitTest(layout, p, reduceMotion ? undefined : openLayout));
+    changeOpen(hitTest(layout, p, reduceMotion ? undefined : openLayout));
   }
 
   return (
@@ -159,15 +175,15 @@ function DesktopCluster({ profiles }: Props) {
       className="relative mx-auto hidden lg:block"
       style={{ width: CONTAINER_W, height: CONTAINER_H }}
       onPointerMove={handlePointerMove}
-      onPointerLeave={() => setOpen(null)}
+      onPointerLeave={() => changeOpen(null)}
       onBlurCapture={(e) => {
         const next = e.relatedTarget;
         if (!(next instanceof Node) || !containerRef.current?.contains(next)) {
-          setOpen(null);
+          changeOpen(null);
         }
       }}
       onKeyDown={(e) => {
-        if (e.key === "Escape") setOpen(null);
+        if (e.key === "Escape") changeOpen(null);
       }}
     >
       {profiles.map((member, i) => {
@@ -205,7 +221,7 @@ function DesktopCluster({ profiles }: Props) {
               style={{
                 left: CONTAINER_W / 2 + l.cx - CARD_W / 2,
                 top: CONTAINER_H / 2 + l.cy - CARD_H / 2,
-                zIndex: isOpen ? 20 : 0,
+                zIndex: isOpen || exiting.has(i) ? 20 : 0,
               }}
               initial={false}
               animate={target}
@@ -214,13 +230,21 @@ function DesktopCluster({ profiles }: Props) {
               <LeaderTile
                 profile={member}
                 aria-expanded={isOpen}
-                onFocus={() => setOpen(i)}
+                onFocus={() => changeOpen(i)}
               />
             </motion.div>
             {/* Sibling of its own card rather than appended after the whole
                 cluster, so tabbing off an open tile reaches the popup's links
                 before the next tile takes the popup over. */}
-            <AnimatePresence>
+            <AnimatePresence
+              onExitComplete={() =>
+                setExiting((current) => {
+                  const next = new Set(current);
+                  next.delete(i);
+                  return next;
+                })
+              }
+            >
               {isOpen && (
                 <LeaderPopup
                   key={member.slug}
@@ -290,22 +314,16 @@ export default function LeaderCluster({ profiles }: Props) {
   return (
     <>
       <div className="lg:hidden">
-        <div
-          className="mx-auto mb-6 grid max-w-3xl grid-cols-1 justify-items-center gap-y-8 sm:grid-cols-2 sm:gap-x-2 sm:gap-y-0"
-          data-animate-stagger
-        >
+        <div className="mx-auto mb-6 grid max-w-3xl grid-cols-1 justify-items-center gap-y-8 sm:grid-cols-2 sm:gap-x-2 sm:gap-y-0">
           {profiles.slice(0, 2).map((member) => (
-            <div key={member.slug} data-animate="fade-up">
+            <div key={member.slug}>
               <GridLeader profile={member} />
             </div>
           ))}
         </div>
-        <div
-          className="mt-8 grid grid-cols-2 justify-items-center gap-x-2 gap-y-8 sm:grid-cols-3"
-          data-animate-stagger
-        >
+        <div className="mt-8 grid grid-cols-2 justify-items-center gap-x-2 gap-y-8 sm:grid-cols-3">
           {profiles.slice(2).map((member) => (
-            <div key={member.slug} data-animate="fade-up">
+            <div key={member.slug}>
               <GridLeader profile={member} />
             </div>
           ))}

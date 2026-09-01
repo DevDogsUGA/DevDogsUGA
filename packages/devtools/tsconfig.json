@@ -5,11 +5,16 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2025"],
     "types": ["node"],
-    "noEmit": true
+    "noEmit": true,
+    // The image templates in @devdogsuga/og are JSX, and `images` renders them
+    // here. `react-jsx` rather than `react` so the sources need no React import
+    // of their own — Satori reads the plain {type, props} objects the automatic
+    // runtime produces, and never mounts them.
+    "jsx": "react-jsx"
   },
   // `env.ts` at the package root is the operator/tooling environment
   // manifest — nothing imports it, so without an explicit entry here it
   // would never be typechecked and its define() metadata would be
   // unenforced.
-  "include": ["src/**/*.ts", "env.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "env.ts"]
 }

@@ -30,7 +30,7 @@ Clients read their own rows only; every client write is denied. Officer reads go
 
 Since 2026-08-06 the capture surface is an **Airtable form**. Workshops are run with one already — poll questions get asked in the room anyway — and a co-branded event's roster pastes into the same table rather than teaching the platform to import somebody else's scheme. Beside it, `method = 'officer'` marks a row an officer added by hand, and `method = 'discord'` is reserved for a slash command that no code path writes. Every capture route ends in the same row, distinguished only by that column.
 
-The form asks for a **MyID, not an email** — `jdoe`, not `jdoe@uga.edu` — and the importer appends the domain. Sign-in is Google restricted to `hd=uga.edu`, so an address outside that domain could never be signed into by anybody: it would hold somebody's attendance permanently out of reach. A response naming another domain is refused as `attendance_bad_myid`, with the reason written back into that record's `⚙️ Sync status`. The form asks only for the workshop; the meeting is derived from it, because a form collecting both could disagree with itself.
+The form asks for a **MyID, not an email** — `jdoe`, not `jdoe@uga.edu` — and the importer appends the domain. Sign-in is Google restricted to `hd=uga.edu`, so an address outside that domain could never be signed into by anybody: it would hold somebody's attendance permanently out of reach. A response naming another domain is refused as `attendance_bad_myid`, with the reason written back into that record's `⚙️ Sync status`.
 
 Most first-time attendees have no account, so the import creates one — and two rules make that safe, both asserted by tests rather than by this page.
 
@@ -42,6 +42,14 @@ Most first-time attendees have no account, so the import creates one — and two
 The import writes a profile whose `preferredName` is the MyID, and deliberately **not** `ugaEmail` or the legal-name columns. Those are durable identity from the Involvement roster and `profile_ugaEmail_key` is unique — a self-declared MyID sitting there would raise a unique violation the next time the roster import reached the real owner of that address, inside a transaction, aborting the import for the entire club. One typo, everybody's roster.
 
 </details>
+
+### The form asks for the meeting, and the workshop only if there was one
+
+It used to ask **only** for the workshop, deriving the meeting from it on the argument that a form collecting both could disagree with itself. That was right about the risk and wrong about the remedy, and the events rework made the cost visible: an Interest Meeting, a Social and a dedicated judging night run no workshops, so a response about one of them had nothing to pick, arrived with an empty cell, and was dropped by the importer's completeness gate — silently, on every pass, forever. The nights the form was least able to describe were the ones with no other capture surface.
+
+So `Meeting` is a link of its own and `Workshop` is optional beside it. Either link alone is enough: a response naming only the workshop still resolves its meeting the old way, which is why existing responses needed no backfill. The disagreement the old design avoided is now a rule rather than an impossibility — two links naming different nights are refused as `attendance_workshop_meeting_mismatch`, because only the officer knows which cell is the typo, and the composite foreign key would otherwise reject the row as a failed insert in the middle of a pull.
+
+Nothing about the schema changed. `attendance."workshopId"` has been nullable since the table existed, for exactly the member this now records: present at the meeting, in no workshop, and no workshop star.
 
 A member who sat in two workshops of one meeting produces two responses and one row: the second is **refused** as `attendance_meeting_already_recorded` rather than dropped, because both responses are legitimate and the schema collapses them on purpose — so the officer is told instead of left to notice.
 

@@ -1,10 +1,15 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { TestAccount } from "~/server/actions/testAccounts";
 import { expectUserWith } from "~/server/auth";
 import { db } from "~/server/db";
-import { profiles, roles, userRoles } from "~/server/db/schema";
+import {
+  academicPrograms,
+  profiles,
+  roles,
+  userRoles,
+} from "~/server/db/schema";
 import {
   getInvolvementFullName,
   getVerificationStatus,
@@ -20,32 +25,49 @@ export type AssignedRole = {
 export const getProfilePageData = cache(async () => {
   const user = await expectUserWith({
     profile: {
-      with: { links: { orderBy: (t, { asc }) => asc(t.sortOrder) } },
+      with: {
+        links: { orderBy: (t, { asc }) => asc(t.sortOrder) },
+        academicPrograms: {
+          with: { program: true },
+          orderBy: (t, { asc }) => asc(t.sortOrder),
+        },
+      },
     },
     githubIdentity: { columns: { identityData: true } },
     discordIdentity: { columns: { identityData: true } },
     linkedinIdentity: { columns: { identityData: true } },
   }).catch(() => redirect("/auth"));
 
-  const [, assignedRoleRows, verification] = await Promise.all([
-    !user.profile?.viewedConsole
-      ? db
-          .update(profiles)
-          .set({ viewedConsole: true })
-          .where(eq(profiles.userId, user.id))
-      : Promise.resolve(),
-    db
-      .select({
-        roleId: userRoles.roleId,
-        roleTitle: roles.title,
-        roleColor: roles.color,
-        isLeadership: roles.isLeadership,
-      })
-      .from(userRoles)
-      .innerJoin(roles, eq(roles.id, userRoles.roleId))
-      .where(eq(userRoles.userId, user.id)),
-    getVerificationStatus(user.id),
-  ]);
+  const [, assignedRoleRows, verification, availableAcademicPrograms] =
+    await Promise.all([
+      !user.profile?.viewedConsole
+        ? db
+            .update(profiles)
+            .set({ viewedConsole: true })
+            .where(eq(profiles.userId, user.id))
+        : Promise.resolve(),
+      db
+        .select({
+          roleId: userRoles.roleId,
+          roleTitle: roles.title,
+          roleColor: roles.color,
+          isLeadership: roles.isLeadership,
+        })
+        .from(userRoles)
+        .innerJoin(roles, eq(roles.id, userRoles.roleId))
+        .where(eq(userRoles.userId, user.id)),
+      getVerificationStatus(user.id),
+      db
+        .select({
+          id: academicPrograms.id,
+          name: academicPrograms.name,
+          credential: academicPrograms.credential,
+          category: academicPrograms.category,
+        })
+        .from(academicPrograms)
+        .where(eq(academicPrograms.active, true))
+        .orderBy(asc(academicPrograms.name), asc(academicPrograms.credential)),
+    ]);
 
   const assignedRoles: AssignedRole[] = assignedRoleRows.map(
     ({ roleId, roleTitle, roleColor }) => ({ roleId, roleTitle, roleColor }),
@@ -63,6 +85,9 @@ export const getProfilePageData = cache(async () => {
     isVerified,
     involvementFullName,
     isLeader,
+    selectedAcademicPrograms:
+      profile?.academicPrograms.map(({ program }) => program) ?? [],
+    availableAcademicPrograms,
   };
 });
 

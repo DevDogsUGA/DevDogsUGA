@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
-import { CRON_ROUTES } from "./scheduled";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { CRON_ROUTES, scheduled } from "./scheduled";
 
 /**
  * Every cron path must correspond to a route that exists.
@@ -57,4 +57,53 @@ describe("cron dispatcher", () => {
       expect(path.startsWith("/api/")).toBe(false);
     }
   });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("continues dispatching sibling routes, then reports failures", async () => {
+    const paths = CRON_ROUTES["0 0 * * *"] ?? [];
+    const fetchMock = vi.fn(async (input: string | URL | Request) =>
+      Promise.resolve(
+        new Response(null, {
+          status: readRequestUrl(input).endsWith("/cron/sandbox-refresh")
+            ? 503
+            : 200,
+        }),
+      ),
+    );
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      scheduled(
+        { cron: "0 0 * * *" },
+        {
+          BASE_URL: "https://example.test",
+          CRON_SECRET: "secret",
+        },
+      ),
+    ).rejects.toThrow("/cron/sandbox-refresh: HTTP 503");
+
+    expect(fetchMock).toHaveBeenCalledTimes(paths.length);
+    expect(
+      fetchMock.mock.calls.map(([input]) => readRequestUrl(input)),
+    ).toEqual(paths.map((path) => `https://example.test${path}`));
+    expect(errorSpy).toHaveBeenCalledWith(
+      "cron_dispatch_failed",
+      expect.objectContaining({ cron: "0 0 * * *" }),
+    );
+  });
 });
+
+function readRequestUrl(input: string | URL | Request): string {
+  return typeof input === "string"
+    ? input
+    : input instanceof URL
+      ? input.href
+      : input.url;
+}

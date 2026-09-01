@@ -51,14 +51,45 @@
 -- The reference is for surfaces that link a workshop to the thing it ships,
 -- not an identity claim. It also means this file has to run after the app
 -- registry.
+--
+-- Officer-authored in Airtable, like the three tables below it, which it was
+-- NOT at first: it was platform-authored and pushed, the only table here that
+-- moved that direction. Nothing wrote it. There was no console page, no
+-- action, no seed, and RLS denies every client write, so the only inserts in
+-- the repo were test fixtures -- while `pullWorkshops` required a project link
+-- to resolve before it would create a workshop. An officer typing a project
+-- name into Airtable's link picker got a row with no `⚙️ Platform ID`, which
+-- `projectIdMap` could not adopt and never would, so their workshop was
+-- skipped on every pass. The direction was the cause and this is the fix: the
+-- table now arrives the same way meetings and workshops do.
+--
+-- `slug` is DERIVED on insert from the display name and never recomputed, the
+-- same rule `meetings.slug` follows and for a sharper reason: `stars.csv` is
+-- keyed on it across semesters, so regenerating it on a rename would rewrite
+-- history that has already been exported.
 create table "platform"."projects" (
-  "id"          uuid not null default gen_random_uuid(),
-  "slug"        text not null,
-  "displayName" text not null,
-  "appId"       uuid,
-  "sortOrder"   double precision not null default 0,
+  "id"               uuid not null default gen_random_uuid(),
+  "slug"             text not null,
+  "displayName"      text not null,
+  "appId"            uuid,
+  "sortOrder"        double precision not null default 0,
+  -- The same pair every officer-authored table here carries, and for the same
+  -- reasons: identity that survives a rename, and an archive rather than a
+  -- delete. The archive matters more here than anywhere except attendance --
+  -- `memberStars` groups on the workshop's `projectId`, so hard-deleting a
+  -- project an officer removed by mistake would drop the project off stars
+  -- members had already earned.
+  "airtableRecordId" text,
+  "deletedAt"        timestamptz,
   constraint "projects_pkey" primary key ("id"),
   constraint "projects_slug_key" unique ("slug"),
+  constraint "projects_airtableRecordId_key" unique ("airtableRecordId"),
+  -- A cap this column did not need while the platform wrote it, and needs now
+  -- that an officer does. The name is printed as a chip on the schedule and as
+  -- a star's label, so an unbounded string is a broken layout on a public
+  -- page. 80 matches `workshops_title_length`; both are row labels.
+  -- `PROJECT_NAME_MAX_LENGTH` in the registry is the parser in front of it.
+  constraint "projects_displayName_length" check (length("displayName") <= 80),
   constraint "projects_appId_fkey" foreign key ("appId")
     references "platform"."apps"("id") on update cascade on delete set null
 );
@@ -356,6 +387,8 @@ alter table "platform"."competitions" enable row level security;
 -- Every public read filters on `"deletedAt" is null`, and the archived rows
 -- are a rounding error against the live ones, so these are partial.
 
+create index "projects_live_idx" on "platform"."projects" ("sortOrder")
+  where "deletedAt" is null;
 create index "meetings_live_idx" on "platform"."meetings" ("startsAt")
   where "deletedAt" is null;
 create index "workshops_live_idx" on "platform"."workshops" ("meetingId")

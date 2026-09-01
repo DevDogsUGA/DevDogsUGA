@@ -5,6 +5,7 @@ import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supa
 
 export const platform = pgSchema("platform");
 export const graduationSemesterInPlatform = platform.enum("graduationSemester", ["spring", "summer", "fall"])
+export const academicProgramCategoryInPlatform = platform.enum("academicProgramCategory", ["undergraduate_major", "graduate_major", "undergraduate_minor", "undergraduate_certificate", "graduate_certificate", "professional_program"])
 export const credentialTypeInPlatform = platform.enum("credentialType", ["email_password", "totp", "email_password_totp"])
 export const roleTypeInPlatform = platform.enum("roleType", ["default", "root", "custom"])
 export const contentActionInPlatform = platform.enum("contentAction", ["quarantine", "no_action"])
@@ -51,6 +52,28 @@ export const airtableSyncStateInPlatform = platform.table.withRLS("airtableSyncS
 
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 check("airtableSyncState_run_window", sql`(("runStartedAt" IS NULL) = ("runExpiresAt" IS NULL))`),check("airtableSyncState_singleton", sql`id`),]);
+
+export const academicProgramsInPlatform = platform.table.withRLS("academicPrograms", {
+	id: integer().primaryKey(),
+	name: text().notNull(),
+	credential: text().notNull(),
+	category: academicProgramCategoryInPlatform().notNull(),
+	schoolCode: text(),
+	bulletinUrl: text().notNull(),
+	active: boolean().default(true).notNull(),
+	lastSeenAt: timestamp({ withTimezone: true }).notNull(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	index("academicPrograms_active_name_idx").using("btree", table.active.asc().nullsLast(), table.name.asc().nullsLast(), table.credential.asc().nullsLast()),
+	pgPolicy("authenticated_select", { for: "select", to: ["authenticated"], using: sql`true` }),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+check("academicPrograms_credential_nonempty", sql`(btrim(credential) <> ''::text)`),check("academicPrograms_id_positive", sql`(id > 0)`),check("academicPrograms_name_nonempty", sql`(btrim(name) <> ''::text)`),]);
 
 export const appsInPlatform = platform.table.withRLS("apps", {
 	id: uuid().defaultRandom().primaryKey(),
@@ -496,9 +519,6 @@ export const profileInPlatform = platform.table.withRLS("profile", {
 	involvementLastName: text(),
 	involvementImportedAt: timestamp(),
 	roleDescription: varchar({ length: 512 }),
-	majors: text().array().notNull().default([]),
-	minors: text().array().notNull().default([]),
-	certificates: text().array().notNull().default([]),
 	ugaEmail: text(),
 	legalFirstName: text(),
 	legalLastName: text(),
@@ -534,14 +554,34 @@ export const profileLinksInPlatform = platform.table.withRLS("profileLinks", {
 	pgPolicy("crud_authenticated_policy_update", { for: "update", to: ["authenticated"], using: sql`(( SELECT auth.uid() AS uid) = "userId")`, withCheck: sql`(( SELECT auth.uid() AS uid) = "userId")` }),
 ]);
 
+export const profileAcademicProgramsInPlatform = platform.table.withRLS("profileAcademicPrograms", {
+	userId: uuid().notNull().references(() => profileInPlatform.userId, { onDelete: "cascade", onUpdate: "cascade" } ),
+	programId: integer().notNull().references(() => academicProgramsInPlatform.id, { onDelete: "restrict", onUpdate: "cascade" } ),
+	sortOrder: smallint().notNull(),
+}, (table) => [
+	primaryKey({ columns: [table.userId, table.programId], name: "profileAcademicPrograms_pkey"}),
+	unique("profileAcademicPrograms_userId_sortOrder_key").on(table.userId, table.sortOrder),
+	pgPolicy("crud_authenticated_policy_select", { for: "select", to: ["authenticated"], using: sql`(( SELECT auth.uid() AS uid) = "userId")` }),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+check("profileAcademicPrograms_sortOrder_nonnegative", sql`("sortOrder" >= 0)`),]);
+
 export const projectsInPlatform = platform.table.withRLS("projects", {
 	id: uuid().defaultRandom().primaryKey(),
 	slug: text().notNull(),
 	displayName: text().notNull(),
 	appId: uuid().references(() => appsInPlatform.id, { onDelete: "set null", onUpdate: "cascade" } ),
 	sortOrder: doublePrecision().default(0).notNull(),
+	airtableRecordId: text(),
+	deletedAt: timestamp({ withTimezone: true }),
 }, (table) => [
+	index("projects_live_idx").using("btree", table.sortOrder.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	unique("projects_slug_key").on(table.slug),
+	unique("projects_airtableRecordId_key").on(table.airtableRecordId),
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
 
 	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
@@ -1021,6 +1061,7 @@ export const resolvedUserPermissionsInPlatform = platform.materializedView("reso
 
 // Schema-suffix aliases, appended by scripts/post-pull.ts
 export { graduationSemesterInPlatform as graduationSemester };
+export { academicProgramCategoryInPlatform as academicProgramCategory };
 export { credentialTypeInPlatform as credentialType };
 export { roleTypeInPlatform as roleType };
 export { contentActionInPlatform as contentAction };
@@ -1045,6 +1086,7 @@ export { checkInMethodInPlatform as checkInMethod };
 export { reportReasonInPlatform as reportReason };
 export { quarantineEffectInPlatform as quarantineEffect };
 export { airtableSyncStateInPlatform as airtableSyncState };
+export { academicProgramsInPlatform as academicPrograms };
 export { appsInPlatform as apps };
 export { attendanceInPlatform as attendance };
 export { ballotRankingsInPlatform as ballotRankings };
@@ -1068,6 +1110,7 @@ export { pairwiseTalliesInPlatform as pairwiseTallies };
 export { pointsInPlatform as points };
 export { profileInPlatform as profile };
 export { profileLinksInPlatform as profileLinks };
+export { profileAcademicProgramsInPlatform as profileAcademicPrograms };
 export { projectsInPlatform as projects };
 export { proxyRequestLogInPlatform as proxyRequestLog };
 export { reportCorroborationsInPlatform as reportCorroborations };

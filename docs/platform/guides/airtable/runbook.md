@@ -6,24 +6,61 @@ order: 3
 
 # Runbook
 
-Standing a base up from nothing, in order — several of these fail confusingly out of order. Follow it once per base; after that, adding a field is the two-step scaffold in [Base setup](/docs/platform/guides/airtable/base-setup). For what a field declaration means, start at the [registry](/docs/platform/guides/airtable). Every credential named here is routed by [Env](/docs/toolkit/guides/env).
+Standing a base up from nothing, in order — several of these fail confusingly out of order. Follow it once per base; after that, adding a field is one `apply` — see [Base setup](/docs/platform/guides/airtable/base-setup). For what a field declaration means, start at the [registry](/docs/platform/guides/airtable). Every credential named here is routed by [Env](/docs/toolkit/guides/env).
 
 ## The order
 
 1. **Create the workspace**, separate from other club Airtable use, so the sync's call budget is not shared with project management.
 2. **Create the bootstrap token** on that workspace: `schema.bases:read`, `schema.bases:write`, `data.records:read`, `data.records:write`. ⚠️ **Mint it as whoever created the workspace** — base creation needs the workspace creator role, which no scope can grant; a collaborator's token fails only at step 4.
-3. **Put it in `.env` as `AIRTABLE_APPLY_PAT`.** That is the write-capable name the tooling resolves, and it stays in your file only until step 11. There is no separate scaffolding key: a fourth token existed for this and was removed, because the only job it kept after step 4 was one a read can do.
-4. **`pnpm devtools airtable scaffold`** creates the seven tables and their fields. Use `--dry-run` first: the first real run is against a base somebody cares about.
-5. **`pnpm devtools airtable pull-ids`**, then format and commit `registry.ts`. Steps 4 and 5 are what replace `fldTODO_*` placeholders. Record the new base's id as `BASE_ID` in the same file while you are there — it is committed beside the ids this step writes, not routed through the env system.
-6. **Walk the manual checklist** `verify` prints — field editing permissions first, since nothing can check them for you. Airtable's default `Table 1` is deleted here too.
-7. **`pnpm devtools airtable verify`** must exit clean. If it does not, fix the base rather than the registry: the registry is what the code agrees with.
-8. **Seed Projects** with one sync pass. Projects are platform-owned and pushed, so the table populates itself and officers get a linked-record list.
-9. **Build the attendance form** against the Attendance table — a MyID field and a Workshop link at minimum. `Source` distinguishes a form response from a co-branded import.
-10. **Only then author a meeting.** Earlier produces a workshop linked to nothing.
-11. **Mint the sync token** — same workspace, everything except `schema.bases:write` — set it as `AIRTABLE_SYNC_PAT`, delete `AIRTABLE_APPLY_PAT` from `.env`, and revoke the bootstrap token. It does not come back: later schema changes go through `deploy airtable-apply`, which holds the apply token in the `production-apply` environment behind required reviewers.
-12. **Grant an officer role `canTriggerSync`** and run one pass from the console.
+3. **Put it in `.env` as `AIRTABLE_APPLY_PAT`.** That is the write-capable name the tooling resolves, and it stays in your file only until step 10. There is no separate scaffolding key: a fourth token existed for this and was removed, because the only job it kept after step 4 was one a read can do.
+4. **`pnpm devtools airtable apply`** creates the seven tables and their fields, writes the discovered ids into `registry.ts`, formats it with Prettier, and refreshes `schema-snapshot.json`. Use `--dry-run` first: the first real run is against a base somebody cares about. Then commit both files — this is what replaces the `todo()` placeholders. Record the new base's id as `BASE_ID` in `registry.ts` while you are there; it is committed beside the ids this step writes, not routed through the env system.
+5. **Walk the manual checklist** `apply` prints — field editing permissions first, since nothing can check them for you. Airtable's default `Table 1` is deleted here too.
+6. **`pnpm devtools airtable verify`** must exit clean. If it does not, fix the base rather than the registry: the registry is what the code agrees with.
+7. **Author the projects** directly in the Projects table — a Name each, and an Order if the schedule should list them in a particular sequence. They used to arrive by themselves, pushed from Postgres, which is why this step used to say "seed with one sync pass"; the table is officer-authored now. Nothing else can create one.
+8. **Build the attendance form** against the Attendance table — a MyID field and a **Meeting** link at minimum, with the Workshop link beside it and **not required**. `Source` distinguishes a form response from a co-branded import. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance) for why the workshop is optional: an Interest Meeting, a Social and a judging night run no workshops, and a form that demanded one could not describe them.
+9. **Only then author a meeting.** Earlier produces a workshop linked to nothing.
+10. **Mint the sync token** — same workspace, everything except `schema.bases:write` — set it as `AIRTABLE_SYNC_PAT`, delete `AIRTABLE_APPLY_PAT` from `.env`, and revoke the bootstrap token. It does not come back: later schema changes go through `deploy airtable-apply`, which holds the apply token in the `production-apply` environment behind required reviewers.
+11. **Grant an officer role `canTriggerSync`** and run one pass from the console.
 
-⚠️ **Do not give the runtime a write-capable token.** It could then reshape the base with nothing downstream to notice. The keys are separate and the resolver's write row names `AIRTABLE_APPLY_PAT` alone, so a lingering copy of anything else cannot win by accident — and after step 11 no laptop holds a token that can write a schema at all.
+## Bringing an existing base up to the current registry
+
+Two fields on Projects are declared with `todo()` placeholders, which means the
+sync **refuses every pass** with `schema_invalid` until the base has them. That
+refusal is the point — a placeholder reaching a live sync writes into nothing
+and reports success — but it does mean these steps are not optional and are not
+a background task.
+
+1. **`pnpm devtools airtable apply --dry-run`**, then without the flag. It
+   creates `Order` (a number) and `⚙️ Sync status` on Projects, replaces
+   `todo("projects_sort_order")` and `todo("projects_sync_status")` in
+   `registry.ts` with the real `fld` ids, and refreshes
+   `schema-snapshot.json` from the same schema read. It formats `registry.ts`
+   automatically; commit both files. That is what turns the suite green: `verify.test.ts` asserts no
+   placeholder reaches main, `run.test.ts` fails on the same finding through
+   `verifyBase`, and three tests in `devtools` replay the committed snapshot as
+   a base that needs nothing.
+2. **Delete `⚙️ Slug` from Projects by hand.** The scaffolder is create-only
+   and will not remove it. It is no longer in the registry, so `verify` reports
+   it as an extra field rather than failing, but it is a column showing
+   officers a value they cannot edit and must not rely on — the slug is derived
+   on insert and never recomputed.
+3. **Lock down `⚙️ Sync status`** on Projects, the way step 5 above describes
+   for every other platform-owned column.
+4. **`pnpm devtools airtable verify`** must exit clean.
+
+### The projects themselves
+
+The Projects table is authored by officers now, and the platform has no way to
+create a row in it. Existing Postgres projects have no `airtableRecordId`, so
+the pull will not adopt them; type each project into the Projects table and let
+the pull create it. Then **re-point every workshop's Project link** at the row
+that appears, and delete whatever was linked before.
+
+⚠️ **The base is shared — staging and production use the same one.** `BASE_ID`
+is a committed constant. A sync pass from a local checkout writes to the club's
+real base, so this is not something to rehearse against a copy.
+
+⚠️ **Do not give the runtime a write-capable token.** It could then reshape the base with nothing downstream to notice. The keys are separate and the resolver's write row names `AIRTABLE_APPLY_PAT` alone, so a lingering copy of anything else cannot win by accident — and after step 10 no laptop holds a token that can write a schema at all.
 
 ## The member push
 

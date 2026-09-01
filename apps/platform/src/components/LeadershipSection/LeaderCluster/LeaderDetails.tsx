@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react/ssr";
-import type { LeaderProfile } from "./profile";
+import type { LeaderAcademicProgramType, LeaderProfile } from "./profile";
 
 const linkCls =
   "flex items-center gap-1.5 rounded-sm border-2 border-black px-2.5 py-1 text-xs font-semibold text-black transition-lift hover:bg-rose-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-block-sm";
@@ -18,6 +18,19 @@ function FieldLine({ label, values }: { label: string; values: string[] }) {
   );
 }
 
+const ACADEMIC_FIELDS: {
+  type: LeaderAcademicProgramType;
+  label: string;
+}[] = [
+  { type: "major", label: "Major" },
+  { type: "masters_program", label: "Master's program" },
+  { type: "doctoral_program", label: "Doctoral program" },
+  { type: "graduate_program", label: "Graduate program" },
+  { type: "minor", label: "Minor" },
+  { type: "certificate", label: "Certificate" },
+  { type: "professional_program", label: "Professional program" },
+];
+
 /**
  * The body an officer's popup and bottom sheet share: academics, bio, links.
  * Returns bare flex items — the host provides the column and its gap. Name
@@ -28,9 +41,19 @@ export default function LeaderDetails({ profile }: { profile: LeaderProfile }) {
   return (
     <>
       <div className="flex flex-col gap-0.5 text-xs text-mauve-600">
-        <FieldLine label="Major" values={profile.majors} />
-        <FieldLine label="Minor" values={profile.minors} />
-        <FieldLine label="Cert" values={profile.certificates} />
+        {ACADEMIC_FIELDS.map(({ type, label }) => (
+          <FieldLine
+            key={type}
+            label={label}
+            values={[
+              ...new Set(
+                profile.programs
+                  .filter((program) => program.type === type)
+                  .map((program) => program.name),
+              ),
+            ]}
+          />
+        ))}
       </div>
       {profile.bio && (
         <p className="text-xs leading-relaxed text-mauve-700">{profile.bio}</p>
@@ -45,7 +68,7 @@ export default function LeaderDetails({ profile }: { profile: LeaderProfile }) {
               rel="noopener noreferrer"
               className={linkCls}
             >
-              <ArrowSquareOutIcon size={12} /> {link.title}
+              <ArrowSquareOutIcon size={12} weight="bold" /> {link.title}
             </Link>
           ))}
         </div>

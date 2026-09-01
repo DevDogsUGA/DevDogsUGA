@@ -10,7 +10,7 @@ Airtable is the officers' console. One base holds seven tables, and a sync pass 
 
 ## The field registry
 
-Everything the sync reads or writes is declared in one place, `packages/airtable/src/registry.ts` — seven tables (Members, Projects, Meetings, Workshops, Competitions, Teams, Attendance) and 45 fields, each holding the real ID pulled from the live base. That is what makes "we may want to push something else later" a one-line change rather than an archaeology exercise across the push, the pull, and the verifier.
+Everything the sync reads or writes is declared in one place, `packages/airtable/src/registry.ts` — seven tables (Members, Projects, Meetings, Workshops, Competitions, Teams, Attendance) and 52 fields, each holding the real ID pulled from the live base. That is what makes "we may want to push something else later" a one-line change rather than an archaeology exercise across the push, the pull, and the verifier.
 
 ```ts
 export const members = table("Members", "tblLTJtir40NrL87x", {
@@ -57,9 +57,17 @@ Every read passes `returnFieldsByFieldId=true`, so responses come back keyed the
 - **Batching at exactly 10**, which is `BATCH_SIZE` and not a tunable: exceeding it is a 422.
 - **Backoff on 429, never on 422.** The five-requests-per-second per-base limit is universal, so retrying a rate limit is always right; retrying a malformed request never helps.
 
+## Projects changed direction
+
+Projects were the one officer-facing table the platform **owned**: it pushed the rows and Airtable held a mirror. That was wrong, and the way it was wrong is worth keeping written down, because the symptom looked like anything but its cause.
+
+Nothing in the platform could create a project. No console page, no server action, no seed, and RLS denies every client write — the only inserts in the repo were test fixtures. Meanwhile `pullWorkshops` refused to create a workshop whose Project link did not resolve, and links resolved only by matching `⚙️ Platform ID` back to a row the platform had authored. So an officer doing the obvious thing — typing a project name into Airtable's link picker — got a Projects row with no platform id, which nothing would ever issue one to, and their workshop was skipped on every pass forever. It was reported as "workshops aren't syncing".
+
+Pulling the table removes the failure rather than reporting it: the Project link resolves through the pull's idMap exactly like the Meeting link beside it. `pushProjects` and `projectIdMap` are gone, and `⚙️ Slug` went with them — the slug is derived from the name on insert and never recomputed, because `stars.csv` is keyed on it across semesters and regenerating it on a rename would rewrite an export somebody already has.
+
 ## Attendance is the exception
 
-Six of the seven tables are either platform-owned and pushed or officer-authored and pulled. **Attendance is the one Airtable creates rows in** — from a form filled in during a workshop, or a co-branded event's roster pasted in — and the platform writes back only `⚙️ Platform ID` and `⚙️ Sync status`. The first makes a re-import idempotent and shows an officer that a response landed; the second carries the refusal when it did not — an unknown MyID, or a workshop link the platform cannot resolve. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance) for why the form collects a MyID rather than an email address.
+Six of the seven tables are either platform-owned and pushed or officer-authored and pulled. **Attendance is the one Airtable creates rows in** — from a form filled in during a workshop, or a co-branded event's roster pasted in — and the platform writes back only `⚙️ Platform ID` and `⚙️ Sync status`. The first makes a re-import idempotent and shows an officer that a response landed; the second carries the refusal when it did not — an unknown MyID, a Meeting or Workshop link the platform cannot resolve, or two links naming different nights. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance) for why the form collects a MyID rather than an email address.
 
 ## Read next
 

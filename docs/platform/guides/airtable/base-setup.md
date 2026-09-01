@@ -46,15 +46,25 @@ The same restriction rules out merging on anything computed. `⚙️ Meetings at
 
 ## The scripts
 
-`packages/airtable/src` holds everything that decides anything — `scaffold.ts` creates what is missing, `verify.ts` diffs live against registry, `ids.ts` rewrites `todo("slug")` placeholders with real IDs, `snapshot.ts` refreshes or checks the committed schema snapshot. `packages/devtools/src/airtable` holds only prompting, file I/O, and exit codes. Run them as `pnpm devtools airtable scaffold` (which takes `--dry-run`), `pnpm devtools airtable pull-ids`, `pnpm devtools airtable verify`, and `pnpm devtools airtable snapshot`.
+`packages/airtable/src` holds everything that decides anything — `scaffold.ts` creates what is missing, `verify.ts` diffs live against registry, `ids.ts` rewrites `todo("slug")` placeholders with real IDs, `snapshot.ts` refreshes or checks the committed schema snapshot. `packages/devtools/src/airtable` holds only prompting, file I/O, and exit codes.
+
+Four library functions, **three** commands, and the mismatch is deliberate:
+
+| Command                              | What it touches                                             |
+| ------------------------------------ | ----------------------------------------------------------- |
+| `airtable check`                     | Two committed files. No token, no network — what CI runs.   |
+| `airtable verify`                    | Reads the live base.                                        |
+| `airtable apply` (takes `--dry-run`) | Writes the base, `registry.ts`, and `schema-snapshot.json`. |
+
+`apply` is `scaffold.ts`, `ids.ts` and `snapshot.ts` in one errand because that is how they were always run: in that order, off one schema read, with the repository in a wrong state at every point in between. Splitting them let you stop halfway, and stopping halfway is a registry that is half real ids and half placeholders — which verifies as fatal but looks finished.
 
 Scaffolding is idempotent — everything it does is "create what is missing" — and runs in **two passes**: tables and their non-link fields first, links second, once every target table has an ID. Ordering tables by dependency would break the first time two of them link to each other.
 
-⚠️ **A `fldTODO_*` placeholder is fatal to `verify`, deliberately.** A placeholder reaching a live sync does not error: Airtable accepts the request, the write lands nowhere, and the pass reports success. `scaffold` then `pull-ids` are what replace them.
+⚠️ **A `fldTODO_*` placeholder is fatal to `verify`, deliberately.** A placeholder reaching a live sync does not error: Airtable accepts the request, the write lands nowhere, and the pass reports success. `apply` is what replaces them, in the same run that creates the field.
 
 ## Verifying the base
 
-`verify.ts` runs in three places — by hand, in CI as the credential-free `pnpm devtools airtable snapshot --check`, and inside `runAirtableSync` **before the lease is claimed**, where a fatal finding refuses the whole pass with `schema_invalid` rather than writing into a shape it does not recognise.
+`verify.ts` runs in three places — by hand, in CI as the credential-free `pnpm devtools airtable check`, and inside `runAirtableSync` **before the lease is claimed**, where a fatal finding refuses the whole pass with `schema_invalid` rather than writing into a shape it does not recognise.
 
 <details>
 <summary>What are the six checks, and how badly does each fail?</summary>

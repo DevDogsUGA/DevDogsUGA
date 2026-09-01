@@ -2,8 +2,51 @@ import { asc, eq, inArray, sql } from "drizzle-orm";
 import { cacheLife } from "next/cache";
 import { db } from "~/server/db";
 import { env } from "~/env";
-import { profileLinks, profiles, roles, userRoles } from "~/server/db/schema";
-import type { LeaderProfile } from "~/components/LeadershipSection/LeaderCluster/profile";
+import {
+  academicPrograms,
+  profileAcademicPrograms,
+  profileLinks,
+  profiles,
+  roles,
+  userRoles,
+} from "~/server/db/schema";
+import type {
+  LeaderAcademicProgram,
+  LeaderProfile,
+} from "~/components/LeadershipSection/LeaderCluster/profile";
+
+type AcademicProgramCategory = typeof academicPrograms.$inferSelect.category;
+
+const LEADER_PROGRAM_TYPE_BY_CATEGORY: Record<
+  Exclude<AcademicProgramCategory, "graduate_major">,
+  LeaderAcademicProgram["type"]
+> = {
+  undergraduate_major: "major",
+  undergraduate_minor: "minor",
+  undergraduate_certificate: "certificate",
+  graduate_certificate: "certificate",
+  professional_program: "professional_program",
+};
+
+const DOCTORAL_CREDENTIALS = new Set(["PHD", "EDD", "DMA"]);
+
+function leaderProgramType(
+  category: AcademicProgramCategory,
+  credential: string,
+): LeaderAcademicProgram["type"] {
+  if (category !== "graduate_major") {
+    return LEADER_PROGRAM_TYPE_BY_CATEGORY[category];
+  }
+
+  const normalizedCredential = credential.toUpperCase().replace(/[^A-Z]/g, "");
+  if (DOCTORAL_CREDENTIALS.has(normalizedCredential)) {
+    return "doctoral_program";
+  }
+  if (normalizedCredential.startsWith("M") || normalizedCredential === "LLM") {
+    return "masters_program";
+  }
+  return "graduate_program";
+}
 
 /**
  * The executive board for the homepage's Leadership section.
@@ -42,9 +85,6 @@ export async function getCurrentOfficers(): Promise<LeaderProfile[]> {
       roleDescription: profiles.roleDescription,
       pronouns: profiles.pronouns,
       graduationYear: profiles.graduationYear,
-      majors: profiles.majors,
-      minors: profiles.minors,
-      certificates: profiles.certificates,
       // An officer can hold more than one leadership role; the card prints
       // every title. Ordered by rank so the senior one reads first.
       titles: sql<
@@ -64,26 +104,57 @@ export async function getCurrentOfficers(): Promise<LeaderProfile[]> {
   // Second query rather than a join: joining a one-to-many onto an already
   // grouped result multiplies the rows and would need a second aggregate to
   // undo. Officers are a handful of people once an hour.
-  const links = await db
-    .select({
-      userId: profileLinks.userId,
-      title: profileLinks.title,
-      url: profileLinks.url,
-    })
-    .from(profileLinks)
-    .where(
-      inArray(
-        profileLinks.userId,
-        rows.map((row) => row.userId),
-      ),
-    )
-    .orderBy(asc(profileLinks.sortOrder));
+  const [links, programRows] = await Promise.all([
+    db
+      .select({
+        userId: profileLinks.userId,
+        title: profileLinks.title,
+        url: profileLinks.url,
+      })
+      .from(profileLinks)
+      .where(
+        inArray(
+          profileLinks.userId,
+          rows.map((row) => row.userId),
+        ),
+      )
+      .orderBy(asc(profileLinks.sortOrder)),
+    db
+      .select({
+        userId: profileAcademicPrograms.userId,
+        name: academicPrograms.name,
+        category: academicPrograms.category,
+        credential: academicPrograms.credential,
+      })
+      .from(profileAcademicPrograms)
+      .innerJoin(
+        academicPrograms,
+        eq(academicPrograms.id, profileAcademicPrograms.programId),
+      )
+      .where(
+        inArray(
+          profileAcademicPrograms.userId,
+          rows.map((row) => row.userId),
+        ),
+      )
+      .orderBy(asc(profileAcademicPrograms.sortOrder)),
+  ]);
 
   const linksByUser = new Map<string, { title: string; url: string }[]>();
   for (const link of links) {
     const list = linksByUser.get(link.userId) ?? [];
     list.push({ title: link.title, url: link.url });
     linksByUser.set(link.userId, list);
+  }
+
+  const programsByUser = new Map<string, LeaderAcademicProgram[]>();
+  for (const program of programRows) {
+    const list = programsByUser.get(program.userId) ?? [];
+    list.push({
+      name: program.name,
+      type: leaderProgramType(program.category, program.credential),
+    });
+    programsByUser.set(program.userId, list);
   }
 
   return rows.map((row) => ({
@@ -100,9 +171,7 @@ export async function getCurrentOfficers(): Promise<LeaderProfile[]> {
     pronouns:
       row.pronouns && row.pronouns.length > 0 ? row.pronouns.join("/") : null,
     year: row.graduationYear === null ? null : String(row.graduationYear),
-    majors: row.majors,
-    minors: row.minors,
-    certificates: row.certificates,
+    programs: programsByUser.get(row.userId) ?? [],
     // `roleDescription`, not `bio`: the 127-character `bio` is the blurb on a
     // member's own profile, while this is the officer bio written for this
     // section. Null until the officer writes one.

@@ -21,12 +21,12 @@ export interface DiscoveredIds {
 
 export interface ApplyIdsResult {
   source: string;
-  /** How many `todo()` / `todoTable()` calls were replaced. */
+  /** How many placeholder calls or stale resolved IDs were replaced. */
   replaced: number;
   /**
-   * Placeholders with no call to replace, and a header that no longer matches.
-   * Surfaced rather than thrown: a stale header is worth reporting and not
-   * worth refusing a correct set of IDs over.
+   * IDs with no source expression to replace, and a header that no longer
+   * matches. Surfaced rather than thrown: a stale header is worth reporting
+   * and not worth refusing a correct set of IDs over.
    */
   warnings: string[];
 }
@@ -44,11 +44,11 @@ export const HEADER_PLACEHOLDER_SECTION = ` * ## Field IDs are placeholders unti
  * Every \`id\` below is a PLACEHOLDER. The base has not been scaffolded yet, and
  * the bootstrapping order is deliberately circular-looking:
  *
- *   1. \`pnpm devtools airtable scaffold\` reads the shape below — table names, field
- *      names, types — and creates what is missing through the Meta API.
- *   2. It reads the schema back and prints the real field IDs.
- *   3. \`pnpm devtools airtable pull-ids\` writes them in here, and the result is
- *      committed.
+ *   1. \`pnpm devtools airtable apply\` reads the shape below — table names,
+ *      field names, types — and creates what is missing through the Meta API.
+ *   2. The same run reads the schema back and writes the real field IDs in
+ *      here, alongside a refreshed \`schema-snapshot.json\`.
+ *   3. Both files are committed.
  *
  * After that first run the IDs are source. \`verify.ts\` FAILS on any remaining
  * placeholder rather than warning, because a placeholder that reaches a live
@@ -57,13 +57,13 @@ export const HEADER_PLACEHOLDER_SECTION = ` * ## Field IDs are placeholders unti
 
 export const HEADER_REAL_SECTION = ` * ## The IDs below are real, and are the wire format
  *
- * Written by \`pnpm devtools airtable pull-ids\` from the live base. Every read and write
- * goes over the wire with these rather than with field NAMES, which is what
- * lets an officer rename a column without breaking the sync.
+ * Written by \`pnpm devtools airtable apply\` from the live base. Every read and
+ * write goes over the wire with these rather than with field NAMES, which is
+ * what lets an officer rename a column without breaking the sync.
  *
- * To add a field: declare it here with a \`todo("slug")\` id, run
- * \`pnpm devtools airtable scaffold\` to create it, then \`pnpm devtools airtable pull-ids\` to fill
- * the real id in. \`verify.ts\` FAILS on any remaining placeholder rather than
+ * To add a field: declare it here with a \`todo("slug")\` id and run
+ * \`pnpm devtools airtable apply\`, which creates it in the base and fills the
+ * real id in here. \`verify.ts\` FAILS on any remaining placeholder rather than
  * warning, because a placeholder that reaches a live sync writes into nothing
  * and reports success.
  */`;
@@ -93,11 +93,14 @@ function hasPlaceholderCalls(source: string): boolean {
 }
 
 /**
- * Replace every `todo("slug")` call with the id the base assigned it.
+ * Replace every registry ID that disagrees with the live field it resolved to.
  *
- * Only the placeholders are considered. Every already-resolved entry maps its
- * own real id to itself, and warning about those made adding ONE table print
- * six complaints about the six that were already fine.
+ * Most entries are either placeholders becoming real for the first time, or
+ * already-resolved IDs mapping to themselves. The third case matters just as
+ * much: deleting and recreating an Airtable field preserves its name but gives
+ * it a new ID. `discoverIds` finds that replacement by name, and ignoring it
+ * here leaves `registry.ts` stale while `apply` reports success and refreshes
+ * the snapshot with the new ID.
  */
 export function applyDiscoveredIds(
   source: string,
@@ -113,14 +116,30 @@ export function applyDiscoveredIds(
   ];
 
   for (const [ids, helper] of passes) {
-    for (const [placeholder, real] of Object.entries(ids)) {
-      if (!isPlaceholder(placeholder)) continue;
-      const slug = slugOf(placeholder);
-      const call = new RegExp(`${helper}\\("${escape(slug)}"\\)`, "g");
+    for (const [registered, real] of Object.entries(ids)) {
+      if (registered === real) continue;
+
       const before = next;
-      next = next.replace(call, `"${real}"`);
+      if (isPlaceholder(registered)) {
+        const slug = slugOf(registered);
+        const call = new RegExp(`${helper}\\("${escape(slug)}"\\)`, "g");
+        next = next.replace(call, `"${real}"`);
+        if (next === before) {
+          warnings.push(`no ${helper}("${slug}") call to replace`);
+        }
+      } else {
+        // Registry source is formatted with double quotes, but accept single
+        // quotes too so this transform does not depend on Prettier having run
+        // before it. Exact quoted literals avoid touching prose or a longer ID.
+        next = next
+          .replaceAll(`"${registered}"`, `"${real}"`)
+          .replaceAll(`'${registered}'`, `'${real}'`);
+        if (next === before) {
+          warnings.push(`no registry literal for stale ID ${registered}`);
+        }
+      }
+
       if (next !== before) replaced += 1;
-      else warnings.push(`no ${helper}("${slug}") call to replace`);
     }
   }
 
@@ -128,7 +147,11 @@ export function applyDiscoveredIds(
   // does not: it opens by telling the reader that every ID below is fake.
   if (next.includes(HEADER_PLACEHOLDER_SECTION)) {
     next = next.replace(HEADER_PLACEHOLDER_SECTION, HEADER_REAL_SECTION);
-  } else if (replaced > 0 && !hasPlaceholderCalls(next)) {
+  } else if (
+    replaced > 0 &&
+    !hasPlaceholderCalls(next) &&
+    !next.includes(HEADER_REAL_SECTION)
+  ) {
     warnings.push(
       "The registry header no longer matches the text this rewrite replaces. " +
         "Check that it does not still claim the IDs are placeholders.",

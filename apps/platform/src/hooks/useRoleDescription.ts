@@ -2,11 +2,11 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { normalizeShortText, sanitizeShortTextInput } from "~/lib/shortText";
 import { createClient } from "~/supabase/client";
 import { validateRoleDescription } from "~/lib/validation/profile";
+import { acceptRoleDescriptionInput } from "~/lib/roleDescriptionInput";
 
-export const normalizeRoleDescription = normalizeShortText;
+export const normalizeRoleDescription = (value: string) => value.trim();
 
 /**
  * `saveRoleDescription` neither catches nor toasts: the page-wide save bar
@@ -17,7 +17,7 @@ export function useRoleDescription(
   initialRoleDescription: string | null,
 ) {
   const initial = initialRoleDescription
-    ? normalizeShortText(initialRoleDescription)
+    ? normalizeRoleDescription(initialRoleDescription)
     : "";
   const [roleDescription, setRoleDescriptionRaw] = useState(initial);
   const [savedRoleDescription, setSavedRoleDescription] = useState(initial);
@@ -39,7 +39,9 @@ export function useRoleDescription(
   });
 
   function setRoleDescription(raw: string) {
-    setRoleDescriptionRaw(sanitizeShortTextInput(raw));
+    setRoleDescriptionRaw((current) =>
+      acceptRoleDescriptionInput(current, raw),
+    );
   }
 
   return {
@@ -48,7 +50,7 @@ export function useRoleDescription(
     roleDescriptionDirty: roleDescription !== savedRoleDescription,
     roleDescriptionError: validateRoleDescription(roleDescription),
     saveRoleDescription: () =>
-      mutation.mutateAsync(normalizeShortText(roleDescription)),
+      mutation.mutateAsync(normalizeRoleDescription(roleDescription)),
     resetRoleDescription: () => setRoleDescriptionRaw(savedRoleDescription),
     isRoleDescriptionPending: mutation.isPending,
   };

@@ -44,14 +44,28 @@ const WORKSHOP_IDS = new Map([
   ["recWorkshopB", IDS.workshopB],
 ]);
 
+/** The same, for meetings, as `pullMeetings` returns. */
+const MEETING_IDS = new Map([
+  ["recMeetingA", IDS.meetingA],
+  ["recMeetingB", IDS.meetingB],
+]);
+
 function record(
   id: string,
-  fields: { myId?: string; workshop?: string; source?: string },
+  fields: {
+    myId?: string;
+    meeting?: string;
+    workshop?: string;
+    source?: string;
+  },
 ): AirtableRecord {
   return {
     id,
     fields: {
       ...(fields.myId === undefined ? {} : { [F.myId.id]: fields.myId }),
+      ...(fields.meeting === undefined
+        ? {}
+        : { [F.meeting.id]: [fields.meeting] }),
       ...(fields.workshop === undefined
         ? {}
         : { [F.workshop.id]: [fields.workshop] }),
@@ -136,6 +150,7 @@ describe("importing a response", () => {
     const out = await pullAttendance(
       [record("recR1", { myId: "attendee1", workshop: "recWorkshopA" })],
       WORKSHOP_IDS,
+      MEETING_IDS,
     );
 
     expect(out.imported).toBe(1);
@@ -161,6 +176,7 @@ describe("importing a response", () => {
     await pullAttendance(
       [record("recR1", { myId: "attendee1", workshop: "recWorkshopA" })],
       WORKSHOP_IDS,
+      MEETING_IDS,
     );
 
     const [user] = await db.execute<{
@@ -186,6 +202,7 @@ describe("importing a response", () => {
     await pullAttendance(
       [record("recR1", { myId: "attendee1", workshop: "recWorkshopA" })],
       WORKSHOP_IDS,
+      MEETING_IDS,
     );
 
     const [profile] = await db.execute<{
@@ -207,6 +224,7 @@ describe("importing a response", () => {
     const out = await pullAttendance(
       [record("recR1", { myId: "existing", workshop: "recWorkshopA" })],
       WORKSHOP_IDS,
+      MEETING_IDS,
     );
 
     expect(out.imported).toBe(1);
@@ -222,8 +240,8 @@ describe("re-importing", () => {
     const records = [
       record("recR1", { myId: "attendee1", workshop: "recWorkshopA" }),
     ];
-    await pullAttendance(records, WORKSHOP_IDS);
-    const second = await pullAttendance(records, WORKSHOP_IDS);
+    await pullAttendance(records, WORKSHOP_IDS, MEETING_IDS);
+    const second = await pullAttendance(records, WORKSHOP_IDS, MEETING_IDS);
 
     expect(second.accountsCreated).toBe(0);
     expect(await attendanceRows()).toHaveLength(1);
@@ -238,8 +256,9 @@ describe("re-importing", () => {
     await pullAttendance(
       [record("recR1", { myId: "attendee1", workshop: "recWorkshopA" })],
       WORKSHOP_IDS,
+      MEETING_IDS,
     );
-    const out = await pullAttendance([], WORKSHOP_IDS);
+    const out = await pullAttendance([], WORKSHOP_IDS, MEETING_IDS);
 
     expect(out.removed).toBe(1);
     expect(await attendanceRows()).toHaveLength(0);
@@ -253,9 +272,9 @@ describe("re-importing", () => {
     const records = [
       record("recR1", { myId: "attendee1", workshop: "recWorkshopA" }),
     ];
-    await pullAttendance(records, WORKSHOP_IDS);
-    await pullAttendance([], WORKSHOP_IDS);
-    await pullAttendance(records, WORKSHOP_IDS);
+    await pullAttendance(records, WORKSHOP_IDS, MEETING_IDS);
+    await pullAttendance([], WORKSHOP_IDS, MEETING_IDS);
+    await pullAttendance(records, WORKSHOP_IDS, MEETING_IDS);
 
     const rows = await attendanceRows();
     expect(rows).toHaveLength(1);
@@ -284,6 +303,7 @@ describe("re-importing", () => {
     await pullAttendance(
       [record("recR1", { myId: "existing", workshop: "recWorkshopA" })],
       WORKSHOP_IDS,
+      MEETING_IDS,
     );
 
     const attached = await attendanceRows();
@@ -292,7 +312,7 @@ describe("re-importing", () => {
       airtableRecordId: "recR1",
     });
 
-    const out = await pullAttendance([], WORKSHOP_IDS);
+    const out = await pullAttendance([], WORKSHOP_IDS, MEETING_IDS);
 
     expect(out.removed).toBe(0);
     const rows = await attendanceRows();
@@ -305,7 +325,7 @@ describe("re-importing", () => {
       insert into platform.attendance ("meetingId", "userId", method, "recordedBy")
       values (${IDS.meetingB}::uuid, ${IDS.member}::uuid, 'officer', ${IDS.member}::uuid)`);
 
-    const out = await pullAttendance([], WORKSHOP_IDS);
+    const out = await pullAttendance([], WORKSHOP_IDS, MEETING_IDS);
 
     expect(out.removed).toBe(0);
     expect(await attendanceRows()).toHaveLength(1);
@@ -323,6 +343,7 @@ describe("one attendance per member per meeting", () => {
         record("recR2", { myId: "attendee1", workshop: "recWorkshopA2" }),
       ],
       WORKSHOP_IDS,
+      MEETING_IDS,
     );
 
     expect(out.imported).toBe(1);
@@ -342,6 +363,7 @@ describe("one attendance per member per meeting", () => {
         record("recR2", { myId: "attendee1", workshop: "recWorkshopB" }),
       ],
       WORKSHOP_IDS,
+      MEETING_IDS,
     );
 
     expect(out.imported).toBe(2);
@@ -360,6 +382,7 @@ describe("what it refuses and what it skips", () => {
         }),
       ],
       WORKSHOP_IDS,
+      MEETING_IDS,
     );
 
     expect(out.imported).toBe(0);
@@ -376,26 +399,132 @@ describe("what it refuses and what it skips", () => {
     const out = await pullAttendance(
       [record("recR1", { myId: "attendee1", workshop: "recNotThere" })],
       WORKSHOP_IDS,
+      MEETING_IDS,
     );
 
     expect(out.refusals[0]!.code).toBe("attendance_unknown_workshop");
     expect(out.accountsCreated).toBe(0);
   });
 
+  it("refuses a meeting that is not in the base", async () => {
+    const out = await pullAttendance(
+      [record("recR1", { myId: "attendee1", meeting: "recNotThere" })],
+      WORKSHOP_IDS,
+      MEETING_IDS,
+    );
+
+    expect(out.refusals[0]!.code).toBe("attendance_unknown_meeting");
+    expect(out.accountsCreated).toBe(0);
+  });
+
+  it("refuses two links that name different nights", async () => {
+    // The composite foreign key on `(workshopId, meetingId)` would reject this
+    // row anyway, as a failed INSERT in the middle of the pull. Refusing by
+    // name is the same protection with an answer attached, and this is the
+    // test that proves the rule fires BEFORE the constraint does.
+    const out = await pullAttendance(
+      [
+        record("recR1", {
+          myId: "attendee1",
+          meeting: "recMeetingA",
+          workshop: "recWorkshopB",
+        }),
+      ],
+      WORKSHOP_IDS,
+      MEETING_IDS,
+    );
+
+    expect(out.imported).toBe(0);
+    expect(out.refusals).toHaveLength(1);
+    expect(out.refusals[0]!.code).toBe("attendance_workshop_meeting_mismatch");
+    expect(await attendanceRows()).toHaveLength(0);
+  });
+
   it("skips an incomplete response without complaining", async () => {
     // A form response mid-submission will be complete on the next pass.
     // Writing a refusal into it would be noise an officer learns to ignore.
+    //
+    // "Incomplete" now means NEITHER link, not "no workshop": a response
+    // naming only the meeting is complete, and the test below is the one that
+    // says so.
     const out = await pullAttendance(
       [
         record("recR1", { myId: "attendee1" }),
         record("recR2", { workshop: "recWorkshopA" }),
       ],
       WORKSHOP_IDS,
+      MEETING_IDS,
     );
 
     expect(out.skipped).toBe(2);
     expect(out.refusals).toEqual([]);
     expect(out.accountsCreated).toBe(0);
+  });
+});
+
+describe("a night with no workshops", () => {
+  /**
+   * The reason the Meeting link exists.
+   *
+   * An Interest Meeting, a Social and a dedicated judging night all run no
+   * workshops, so a form whose only link was the Workshop had nothing to pick.
+   * Every response about one of those arrived with an empty cell and was
+   * dropped by the completeness gate, silently, on every pass. The schema was
+   * never the obstacle — `attendance."workshopId"` has been nullable all along.
+   */
+  it("imports a response naming only the meeting", async () => {
+    const out = await pullAttendance(
+      [record("recR1", { myId: "attendee1", meeting: "recMeetingA" })],
+      WORKSHOP_IDS,
+      MEETING_IDS,
+    );
+
+    expect(out.imported).toBe(1);
+    expect(out.refusals).toEqual([]);
+
+    const rows = await attendanceRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.meetingId).toBe(IDS.meetingA);
+    // Present at the meeting, in no workshop. No workshop star follows, which
+    // is correct rather than a loss: there was no room to be in.
+    expect(rows[0]!.workshopId).toBeNull();
+  });
+
+  it("still collapses two responses for one meeting into one row", async () => {
+    // The meeting/member uniqueness does not care which link named the
+    // meeting, and this is the case that would have found out if it did.
+    const out = await pullAttendance(
+      [
+        record("recR1", { myId: "attendee1", meeting: "recMeetingA" }),
+        record("recR2", { myId: "attendee1", workshop: "recWorkshopA" }),
+      ],
+      WORKSHOP_IDS,
+      MEETING_IDS,
+    );
+
+    expect(out.imported).toBe(1);
+    expect(out.refusals).toHaveLength(1);
+    expect(out.refusals[0]!.code).toBe("attendance_meeting_already_recorded");
+    expect(await attendanceRows()).toHaveLength(1);
+  });
+
+  it("takes the meeting from the form when both links agree", async () => {
+    const out = await pullAttendance(
+      [
+        record("recR1", {
+          myId: "attendee1",
+          meeting: "recMeetingA",
+          workshop: "recWorkshopA",
+        }),
+      ],
+      WORKSHOP_IDS,
+      MEETING_IDS,
+    );
+
+    expect(out.imported).toBe(1);
+    const rows = await attendanceRows();
+    expect(rows[0]!.meetingId).toBe(IDS.meetingA);
+    expect(rows[0]!.workshopId).toBe(IDS.workshopA);
   });
 });
 
@@ -412,6 +541,7 @@ describe("alongside a row an officer already made", () => {
     const out = await pullAttendance(
       [record("recR1", { myId: "existing", workshop: "recWorkshopA" })],
       WORKSHOP_IDS,
+      MEETING_IDS,
     );
 
     expect(out.imported).toBe(1);

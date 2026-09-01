@@ -34,6 +34,45 @@ export type Database = {
   }
   platform: {
     Tables: {
+      academicPrograms: {
+        Row: {
+          active: boolean
+          bulletinUrl: string
+          category: Database["platform"]["Enums"]["academicProgramCategory"]
+          createdAt: string
+          credential: string
+          id: number
+          lastSeenAt: string
+          name: string
+          schoolCode: string | null
+          updatedAt: string
+        }
+        Insert: {
+          active?: boolean
+          bulletinUrl: string
+          category: Database["platform"]["Enums"]["academicProgramCategory"]
+          createdAt?: string
+          credential: string
+          id: number
+          lastSeenAt: string
+          name: string
+          schoolCode?: string | null
+          updatedAt?: string
+        }
+        Update: {
+          active?: boolean
+          bulletinUrl?: string
+          category?: Database["platform"]["Enums"]["academicProgramCategory"]
+          createdAt?: string
+          credential?: string
+          id?: number
+          lastSeenAt?: string
+          name?: string
+          schoolCode?: string | null
+          updatedAt?: string
+        }
+        Relationships: []
+      }
       airtableSyncState: {
         Row: {
           id: boolean
@@ -875,7 +914,6 @@ export type Database = {
       profile: {
         Row: {
           bio: string | null
-          certificates: string[]
           graduationSemester:
             | Database["platform"]["Enums"]["graduationSemester"]
             | null
@@ -886,8 +924,6 @@ export type Database = {
           involvementLastName: string | null
           legalFirstName: string | null
           legalLastName: string | null
-          majors: string[]
-          minors: string[]
           preferredName: string
           pronouns: string[] | null
           quarantinedBy: string | null
@@ -902,7 +938,6 @@ export type Database = {
         }
         Insert: {
           bio?: string | null
-          certificates?: string[]
           graduationSemester?:
             | Database["platform"]["Enums"]["graduationSemester"]
             | null
@@ -913,8 +948,6 @@ export type Database = {
           involvementLastName?: string | null
           legalFirstName?: string | null
           legalLastName?: string | null
-          majors?: string[]
-          minors?: string[]
           preferredName: string
           pronouns?: string[] | null
           quarantinedBy?: string | null
@@ -929,7 +962,6 @@ export type Database = {
         }
         Update: {
           bio?: string | null
-          certificates?: string[]
           graduationSemester?:
             | Database["platform"]["Enums"]["graduationSemester"]
             | null
@@ -940,8 +972,6 @@ export type Database = {
           involvementLastName?: string | null
           legalFirstName?: string | null
           legalLastName?: string | null
-          majors?: string[]
-          minors?: string[]
           preferredName?: string
           pronouns?: string[] | null
           quarantinedBy?: string | null
@@ -961,6 +991,46 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "reportResolutions"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      profileAcademicPrograms: {
+        Row: {
+          programId: number
+          sortOrder: number
+          userId: string
+        }
+        Insert: {
+          programId: number
+          sortOrder: number
+          userId: string
+        }
+        Update: {
+          programId?: number
+          sortOrder?: number
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profileAcademicPrograms_programId_academicPrograms_id_fkey"
+            columns: ["programId"]
+            isOneToOne: false
+            referencedRelation: "academicPrograms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profileAcademicPrograms_userId_profile_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "profileAcademicPrograms_userId_profile_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "profileWithVerification"
+            referencedColumns: ["userId"]
           },
         ]
       }
@@ -1008,21 +1078,27 @@ export type Database = {
       }
       projects: {
         Row: {
+          airtableRecordId: string | null
           appId: string | null
+          deletedAt: string | null
           displayName: string
           id: string
           slug: string
           sortOrder: number
         }
         Insert: {
+          airtableRecordId?: string | null
           appId?: string | null
+          deletedAt?: string | null
           displayName: string
           id?: string
           slug: string
           sortOrder?: number
         }
         Update: {
+          airtableRecordId?: string | null
           appId?: string | null
+          deletedAt?: string | null
           displayName?: string
           id?: string
           slug?: string
@@ -2086,6 +2162,13 @@ export type Database = {
       }
     }
     Enums: {
+      academicProgramCategory:
+        | "undergraduate_major"
+        | "graduate_major"
+        | "undergraduate_minor"
+        | "undergraduate_certificate"
+        | "graduate_certificate"
+        | "professional_program"
       checkInMethod: "discord" | "officer" | "airtable"
       contentAction: "quarantine" | "no_action"
       contentVisibility: "public" | "restricted"
@@ -3549,6 +3632,14 @@ export const Constants = {
   },
   platform: {
     Enums: {
+      academicProgramCategory: [
+        "undergraduate_major",
+        "graduate_major",
+        "undergraduate_minor",
+        "undergraduate_certificate",
+        "graduate_certificate",
+        "professional_program",
+      ],
       checkInMethod: ["discord", "officer", "airtable"],
       contentAction: ["quarantine", "no_action"],
       contentVisibility: ["public", "restricted"],

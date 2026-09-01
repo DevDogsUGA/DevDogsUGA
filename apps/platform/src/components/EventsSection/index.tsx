@@ -54,15 +54,14 @@ interface Props {
  */
 export default async function EventsSection({ topEdge, bottomEdge }: Props) {
   return (
-    <div className="mx-4 overflow-hidden rounded-xl md:mx-6">
+    <div className="mx-4 overflow-clip rounded-xl md:mx-6">
       <section
         id="events"
         // scroll-mt clears the h-16 sticky TopNav when a marquee card jumps to
         // #id, the same idea as `ui/card`. It is measured from the border box,
         // whose top is where pt-(--section-skew-slope) begins, so the slanted
         // top edge clears the nav as well as the copy below it.
-        className="relative w-full scroll-mt-20 overflow-hidden pt-(--section-skew-slope) pb-(--section-skew-slope)"
-        data-animate="fade-up"
+        className="relative w-full scroll-mt-20 overflow-clip pt-(--section-skew-slope) pb-(--section-skew-slope)"
       >
         <SectionBackground
           topEdge={topEdge}
@@ -77,10 +76,7 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
         <div className="relative z-10 mx-auto max-w-6xl space-y-20 px-6 py-8 md:px-12">
           {/* What is coming, first: the section's header, the next three
               nights as a short stack, and the door to the rest. */}
-          <div
-            className="flex flex-col items-center gap-6"
-            data-animate="fade-up"
-          >
+          <div className="flex flex-col items-center gap-6">
             {/* The same header the Projects section uses: centred, the heading
                 two sizes up from the explainer's, one short paragraph under
                 it, so the two sections read as siblings. */}
@@ -88,17 +84,17 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
               <h2 className="font-display mb-8 text-4xl font-extrabold text-black md:text-5xl">
                 Events
               </h2>
-              <div className="mx-auto flex max-w-2xl flex-col gap-3 text-base/relaxed text-mauve-700">
+              <div className="mx-auto flex max-w-2xl flex-col gap-3 text-base/relaxed font-medium text-mauve-800">
                 <p>
-                  DevDogs meets every Monday of the semester — workshops,
-                  competitions, and open build nights. Here&rsquo;s what&rsquo;s
-                  next.
+                  DevDogs meets regularly on Mondays and Wednesdays: we host
+                  workshops, hackathons, and open build nights. Here&rsquo;s
+                  what&rsquo;s next.
                 </p>
               </div>
             </div>
             <UpcomingStack meetings={await nextMeetings(UPCOMING_COUNT)} />
             <LinkButton href="/events" className={FOOTER_LINK_CLS}>
-              All events <ArrowRightIcon />
+              All events <ArrowRightIcon weight="bold" />
             </LinkButton>
           </div>
 
@@ -117,9 +113,16 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
               would read as the edge of a box on a section that has none. The
               centre carries the weight, which is where the eye crosses from one
               half to the other. */}
-          <hr className="h-0.5 rounded-full border-0 bg-gradient-to-r from-transparent via-violet-400 to-transparent" />
+          <hr
+            id="how-it-works"
+            className="h-0.5 scroll-mt-20 rounded-full border-0 bg-gradient-to-r from-transparent via-violet-400 to-transparent"
+          />
 
-          <HowItWorks cutout />
+          {/* The public anchor belongs to the divider above: that is the visual
+              start of this half of the Events section. This private id keeps
+              the explainer heading's aria relationship unique without making
+              hash navigation skip the section's top. */}
+          <HowItWorks id="how-it-works-content" cutout />
         </div>
       </section>
     </div>

@@ -38,6 +38,8 @@ export const PROFILE_LIMITS = {
   /** Length of a single pronoun, e.g. "theirs". */
   pronounChars: 6,
   pronounCount: 4,
+  /** Enough for double degrees plus certificates without making a profile card unbounded. */
+  academicProgramCount: 12,
   /** `platform."profileLinks".title` is `varchar(64)`. */
   linkTitle: 64,
   linkCount: 5,
@@ -69,10 +71,6 @@ export function validatePreferredName(value: string): string | null {
 
 // ---------------------------------------------------------------------------
 // Bio and role description
-//
-// Both are free text capped at the same column width. They are validated
-// against the NORMALIZED value, the one that actually gets written, so a
-// trailing space or a blank line can never be the thing that trips the limit.
 // ---------------------------------------------------------------------------
 
 function validateShortText(value: string, noun: string): string | null {
@@ -88,8 +86,13 @@ export function validateBio(value: string): string | null {
 }
 
 export function validateRoleDescription(value: string): string | null {
-  const normalized = normalizeShortText(value);
-  if (normalized.length > PROFILE_LIMITS.roleDescription) {
+  if (/\r|\n/.test(value)) {
+    return "Keep your role description on one line.";
+  }
+  if (/\s{2,}/u.test(value)) {
+    return "Use only one space between words in your role description.";
+  }
+  if (value.trim().length > PROFILE_LIMITS.roleDescription) {
     return `Keep your role description to ${PROFILE_LIMITS.roleDescription} characters or fewer.`;
   }
   return null;
@@ -111,6 +114,23 @@ export function validatePronouns(values: string[]): string | null {
   }
   if (new Set(values).size !== values.length) {
     return "Remove the duplicate pronoun.";
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Academic programs
+// ---------------------------------------------------------------------------
+
+export function validateAcademicProgramIds(values: number[]): string | null {
+  if (values.length > PROFILE_LIMITS.academicProgramCount) {
+    return `Add at most ${PROFILE_LIMITS.academicProgramCount} programs.`;
+  }
+  if (values.some((id) => !Number.isInteger(id) || id < 1)) {
+    return "Select programs from the UGA Bulletin list.";
+  }
+  if (new Set(values).size !== values.length) {
+    return "Remove the duplicate program.";
   }
   return null;
 }
@@ -229,6 +249,10 @@ export const roleDescriptionSchema = refined(
   validateRoleDescription,
 );
 export const pronounsSchema = refined(z.array(z.string()), validatePronouns);
+export const academicProgramIdsSchema = refined(
+  z.array(z.number()),
+  validateAcademicProgramIds,
+);
 export const linkTitleSchema = refined(z.string(), validateLinkTitle);
 export const linkUrlSchema = refined(z.string(), validateLinkUrl);
 

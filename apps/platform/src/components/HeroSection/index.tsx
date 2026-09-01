@@ -132,7 +132,7 @@ export default function HeroSection() {
         <Hypno />
         <div className="relative z-10 mx-auto w-full max-w-6xl px-6 py-10 md:py-24">
           <div className="flex flex-col items-center gap-10 md:flex-row md:items-center md:gap-12">
-            <div className="flex flex-1 flex-col items-start gap-8">
+            <div className="flex flex-1 flex-col items-start gap-8 md:gap-10">
               <h1
                 className="font-display text-5xl/none font-extrabold text-white sm:text-6xl/none lg:text-7xl/none"
                 style={{ filter: "drop-shadow(4px 4px 0 #e11d48)" }}
@@ -143,10 +143,9 @@ export default function HeroSection() {
                 <br />
                 EVERY WEEK.
               </h1>
-              <p className="max-w-md text-lg text-balance text-mauve-300">
-                DevDogs runs weekly workshops and competitions where UGA
-                students apply real skills and ship features for community
-                projects.
+              <p className="max-w-md text-lg font-medium text-balance text-mauve-200 md:text-xl">
+                Learn industry standard tech and compete in hackathons, building
+                features for projects benefitting the UGA community.
               </p>
               <div className="flex flex-wrap gap-3">
                 <LinkButton
@@ -156,14 +155,14 @@ export default function HeroSection() {
                   className="transition-lift hover:shadow-block-md flex items-center gap-2 rounded-sm border border-black bg-cyan-400 px-6 py-2.5 font-bold text-black shadow-none hover:-translate-x-1 hover:-translate-y-1 hover:shadow-amber-400"
                 >
                   Join DevDogs
-                  <ArrowRightIcon />
+                  <ArrowRightIcon weight="bold" />
                 </LinkButton>
                 <LinkButton
                   href="#events"
                   className="hover:shadow-block-md flex items-center gap-2 rounded-sm border border-mauve-300 bg-mauve-100 px-6 py-2.5 font-semibold text-mauve-700 shadow-none shadow-mauve-500 transition-[translate,box-shadow,border-color] hover:-translate-x-1 hover:-translate-y-1 hover:border-black"
                 >
                   See Events
-                  <CalendarDotsIcon />
+                  <CalendarDotsIcon weight="bold" />
                 </LinkButton>
               </div>
             </div>

@@ -5,9 +5,19 @@ import EventsPage, {
 } from "~/components/EventsSection/EventsPage";
 import EventsUnavailable from "~/components/EventsSection/EventsUnavailable";
 import CheckInIsland from "~/components/EventsSection/CheckInIsland";
+import EventsScrollReset from "~/components/EventsSection/EventsScrollReset";
 import UnderConstruction from "~/components/UnderConstruction";
-import { clubDay, clubMonthStart } from "~/lib/eventTime";
-import { getMeetingsInRange, getPastMeetings } from "~/server/loaders/meetings";
+import {
+  addMonths,
+  clubDay,
+  clubMonthStart,
+  scheduleWindow,
+} from "~/lib/eventTime";
+import {
+  getFurthestMeetingStart,
+  getMeetingsInRange,
+  getPastMeetings,
+} from "~/server/loaders/meetings";
 
 /**
  * The schedule lives in the layout rather than in `page.tsx` so that it stays
@@ -30,6 +40,7 @@ export default function EventsLayout({ children }: LayoutProps<"/events">) {
 
   return (
     <>
+      <EventsScrollReset />
       {/* Created OUTSIDE the cache scope and passed in as an element, so its
           clock read stays legal and uncached while everything around it is
           served from the entry. Same pattern the homepage uses for StreakCTA.
@@ -100,12 +111,15 @@ async function getSchedule(): Promise<Omit<EventsPageProps, "checkIn">> {
   const now = new Date();
   const today = clubDay(now);
 
-  // A month back and two forward. Back, because the calendar should let
-  // somebody page to the meeting they just missed; forward, because a semester
-  // is announced in chunks and two months is as far ahead as the base is ever
-  // filled in. Three months is also one query. See `getMeetingsInRange`.
-  const from = addMonths(today.year, today.month, -1);
-  const to = addMonths(today.year, today.month, 2);
+  // A month back, and forward as far as the base actually goes.
+  //
+  // The forward half used to be a constant two months, which is what hid a
+  // whole semester the first time one was authored in a single sitting. The
+  // arithmetic lives in `scheduleWindow` beside the rest of the club-calendar
+  // maths, where it is testable and where the reason is written down; this
+  // read is the only new cost, one indexed row.
+  const furthest = await getFurthestMeetingStart();
+  const { from, to } = scheduleWindow(today, furthest);
 
   const [meetings, past] = await Promise.all([
     getMeetingsInRange(clubMonthStart(from), clubMonthStart(to)),
@@ -125,18 +139,9 @@ async function getSchedule(): Promise<Omit<EventsPageProps, "checkIn">> {
       from: { year: from.year, month: from.month },
       // Inclusive for the calendar's paging, so `to` names the last month a
       // reader can reach rather than the exclusive bound of the query.
-      to: addMonths(to.year, to.month, -1),
+      to: addMonths(to, -1),
     },
   };
 }
 
 const PAST_PAGE_SIZE = 8;
-
-function addMonths(
-  year: number,
-  month: number,
-  delta: number,
-): { year: number; month: number } {
-  const total = year * 12 + month + delta;
-  return { year: Math.floor(total / 12), month: total % 12 };
-}

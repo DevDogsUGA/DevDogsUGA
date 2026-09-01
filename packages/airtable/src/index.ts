@@ -34,6 +34,7 @@ export {
 } from "./client.js";
 
 export {
+  AIRTABLE_DATETIME_TIME_ZONE,
   scaffoldBase,
   discoverIds,
   createOptionsFor,
@@ -62,6 +63,7 @@ export {
   MEETING_SUMMARY_MAX_LENGTH,
   RSVP_URL_ALLOWED_HOSTS,
   WORKSHOP_DESCRIPTION_MAX_LENGTH,
+  PROJECT_NAME_MAX_LENGTH,
   WORKSHOP_TITLE_MAX_LENGTH,
   normalizeMeetingSummary,
   parseAirtableDateTime,
@@ -84,7 +86,6 @@ export {
   type CompetitionRow,
   type MeetingRow,
   type MemberRow,
-  type ProjectRow,
   type RegistryTable,
   type TeamRow,
   type WorkshopRow,
@@ -102,6 +103,7 @@ export { applyPull, type PullResult } from "./pull.js";
 export {
   verifyBase,
   choiceFindings,
+  dateTimeTimezoneFindings,
   duplicateKeyFindings,
   formatVerifyResult,
   type Finding,
@@ -118,4 +120,5 @@ export {
   SnapshotMissingError,
   type SchemaSnapshot,
   type SnapshotDrift,
+  type SnapshotIdMismatch,
 } from "./snapshot.js";

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { checkAttendance, myIdToEmail } from "./refusals";
 
 /**
- * MyID parsing and the two refusal rules, with no database anywhere near them.
+ * MyID parsing and the refusal rules, with no database anywhere near them.
  *
  * These want a test each and no fixture. What a person types into a form in a
  * noisy room is the least predictable input this system has, and every case
@@ -53,16 +53,44 @@ describe("myIdToEmail", () => {
 });
 
 describe("checkAttendance", () => {
+  // A form response naming both links, which is the ordinary workshop night.
   const ok = {
     airtableRecordId: "recA",
     rawMyId: "jdoe",
     email: "jdoe@uga.edu",
+    hasMeetingLink: true,
+    linkedMeetingId: "m1",
+    hasWorkshopLink: true,
     workshopId: "w1",
-    meetingId: "m1",
+    workshopMeetingId: "m1",
   };
 
   it("passes a complete, resolvable response", () => {
     expect(checkAttendance(ok).refusals).toEqual([]);
+  });
+
+  it("passes a response naming only the meeting", () => {
+    // The case the second link was added for: an Interest Meeting, a Social or
+    // a judging night runs no workshops, so there is nothing to pick and an
+    // empty Workshop cell is the correct answer rather than a missing one.
+    const result = checkAttendance({
+      ...ok,
+      hasWorkshopLink: false,
+      workshopId: null,
+      workshopMeetingId: null,
+    });
+    expect(result.refusals).toEqual([]);
+  });
+
+  it("passes a response naming only the workshop", () => {
+    // Every response written before the Meeting link existed looks like this,
+    // and so does one an officer files from the workshop's own grid.
+    const result = checkAttendance({
+      ...ok,
+      hasMeetingLink: false,
+      linkedMeetingId: null,
+    });
+    expect(result.refusals).toEqual([]);
   });
 
   it("refuses an unusable MyID and quotes it back", () => {
@@ -80,21 +108,38 @@ describe("checkAttendance", () => {
   });
 
   it("refuses a workshop the platform does not know", () => {
+    // Present and unresolvable, which is the distinction the whole rule turns
+    // on: an EMPTY cell is now a legitimate answer, and a filled one naming a
+    // workshop that is not on the site is not.
     const result = checkAttendance({
       ...ok,
       workshopId: null,
-      meetingId: null,
+      workshopMeetingId: null,
     });
     expect(result.refusals).toHaveLength(1);
     expect(result.refusals[0]!.code).toBe("attendance_unknown_workshop");
   });
 
-  it("refuses a workshop that resolved but has no meeting", () => {
-    // Different cause from the above, same consequence: attendance is keyed on
-    // the meeting rather than the workshop, so without a meeting there is no
-    // key to write.
-    const result = checkAttendance({ ...ok, meetingId: null });
-    expect(result.refusals[0]!.code).toBe("attendance_unknown_workshop");
+  it("refuses a meeting the platform does not know", () => {
+    // Usually a meeting still missing a start or an end time, so it exists in
+    // the base and is not published. Named separately from the workshop case
+    // because the officer has to go and look at a different row.
+    const result = checkAttendance({ ...ok, linkedMeetingId: null });
+    expect(result.refusals).toHaveLength(1);
+    expect(result.refusals[0]!.code).toBe("attendance_unknown_meeting");
+  });
+
+  it("refuses two links that name different nights", () => {
+    // The disagreement the old derive-from-the-workshop design made
+    // unrepresentable. The composite foreign key would reject this row anyway;
+    // refusing by name says which two cells to look at instead of failing an
+    // INSERT mid-pull.
+    const result = checkAttendance({ ...ok, workshopMeetingId: "m2" });
+    expect(result.refusals).toHaveLength(1);
+    expect(result.refusals[0]!.code).toBe(
+      "attendance_workshop_meeting_mismatch",
+    );
+    expect(result.rejectedFields).toEqual(new Set(["meeting", "workshop"]));
   });
 
   it("reports the MyID first when both are wrong", () => {
@@ -105,7 +150,7 @@ describe("checkAttendance", () => {
       rawMyId: "nope@gmail.com",
       email: null,
       workshopId: null,
-      meetingId: null,
+      workshopMeetingId: null,
     });
     expect(result.refusals).toHaveLength(1);
     expect(result.refusals[0]!.code).toBe("attendance_bad_myid");

@@ -103,18 +103,17 @@ export const segmentBadge: Record<MeetingSegment, SegmentBadge> = {
  * happens twice a semester, and every hue spent makes the ones that matter
  * less distinct. Adding another is one entry here.
  *
- * Cyan is the one hue `segmentBadge` does not spend: judging is rose, workshop
- * and kickoff share emerald, `open` is amber. It is also the colour
- * `CompetitionTimeline` draws the build week in, so the chip and the
- * illustration agree without anybody keeping them in step.
+ * Sky is the one hue `segmentBadge` does not spend: judging is rose, workshop
+ * and kickoff share emerald, `open` is amber. `CompetitionTimeline` reads this
+ * same badge for its Wednesday dot, so the page and illustration cannot drift.
  */
 export const kindBadge: Record<string, SegmentBadge> = {
   "Build Session": {
-    bg: "bg-cyan-400",
+    bg: "bg-sky-400",
     text: "text-black",
-    dot: "bg-cyan-500",
-    chipDark: "border-cyan-400/30 bg-cyan-500/10 text-cyan-300",
-    dotDark: "bg-cyan-400",
+    dot: "bg-sky-500",
+    chipDark: "border-sky-400/30 bg-sky-500/10 text-sky-300",
+    dotDark: "bg-sky-400",
     label: "Build Session",
   },
 };
@@ -137,7 +136,7 @@ function neutralKindBadge(kind: string): SegmentBadge {
  * `segments[0]` alone is not enough. `resolveMeetingSegments` suppresses
  * `open` whenever a `kind` is set, so the segment list is *empty* for every
  * authored night, and a lookup that consulted only segments would fall through
- * to a default for a build session whose own chip is cyan: one night in two
+ * to a default for a build session whose own chip is sky: one night in two
  * colours, in the module whose premise is that colour is information.
  *
  * Kind wins when present because it is the more specific claim. An officer

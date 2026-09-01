@@ -76,7 +76,7 @@ Each root task is a thin alias for the same thing: `pnpm build` is `pnpm devtool
 
 `.github/workflows/ci.yaml` runs on every pull request and holds no secrets at all — on `pull_request` GitHub runs the workflow definition _from the pull request_, so any credential in scope would be readable by whoever opened it. Four jobs:
 
-- **validate** — `lint`, `typecheck` and `test` across the affected packages, plus two unconditional comparisons that need no credential: the Airtable registry against its committed schema snapshot (`pnpm devtools airtable snapshot --check`), and `.env.example` against the env manifests (`pnpm devtools env example --check`).
+- **validate** — `lint`, `typecheck` and `test` across the affected packages, plus two unconditional comparisons that need no credential: the Airtable registry against its committed schema snapshot (`pnpm devtools airtable check`), and `.env.example` against the env manifests (`pnpm devtools env example --check`).
 - **database** — starts the real local Supabase stack on an empty volume, which makes it the "every migration applies from scratch" check too. Then: the committed `database.types.ts` still matches the migrations, the RLS suite, the platform query and privilege-surface suite, and a production build of both Next apps with env validation **enforced**.
 - **format** — `pnpm format:check` over the whole repo.
 - **flutter** — `flutter analyze` and `flutter test`, only when `study-group-finder` is affected.

@@ -42,6 +42,8 @@ interface Props {
   user: NavUserClientData;
   /** The viewer's own pages, listed flat under the sub-menus. */
   items: NavItem[];
+  /** Competition pages are withheld while that feature is hidden in production. */
+  showCompetitions: boolean;
   /** Console pages this viewer may see. Already filtered server-side. */
   consoleItems: ConsoleItem[];
 }
@@ -71,7 +73,12 @@ const CLOSE_DELAY = 150;
  * that owns it is its triggers, its panel and the gap between them, and leaving
  * that region starts a timer long enough to cross the gap and no longer.
  */
-export default function ProfilePopover({ user, items, consoleItems }: Props) {
+export default function ProfilePopover({
+  user,
+  items,
+  showCompetitions,
+  consoleItems,
+}: Props) {
   const verification = useVerification();
   const shell = useNavShell();
   const panelRef = useNavPanelRef();
@@ -135,7 +142,7 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
           />
           {verification?.isVerified === false && (
             <span className="absolute -right-0.5 -bottom-0.5 flex size-3 items-center justify-center rounded-full bg-mauve-950">
-              <WarningCircleIcon className="size-2.5 text-amber-400" />
+              <WarningCircleIcon className="size-2.5 text-rose-400" />
             </span>
           )}
         </NavMenuTrigger>
@@ -200,7 +207,10 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
                   <span className="flex items-center gap-1 text-xs text-mauve-400">
                     {user.highestRole.title}
                     {verification?.isVerified && (
-                      <SealCheckIcon className="size-3 text-emerald-400" />
+                      <SealCheckIcon
+                        weight="bold"
+                        className="size-3 text-emerald-400"
+                      />
                     )}
                   </span>
                 </div>
@@ -215,7 +225,9 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
                   onPointerEnter={keepOpen}
                   onPointerLeave={closeSoon}
                 >
-                  <NavSubMenu {...COMPETITION_GROUP} panelRef={subPanelRef} />
+                  {showCompetitions && (
+                    <NavSubMenu {...COMPETITION_GROUP} panelRef={subPanelRef} />
+                  )}
                   <NavSubMenu
                     {...CONSOLE_GROUP}
                     items={consoleItems}
@@ -223,17 +235,16 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
                   />
                 </NavigationMenu.List>
 
-                {/* Competitions is two static pages, so there is always a row
-                  above this even where an unpermissioned Console renders
-                  nothing and the band collapses to one. */}
-                <div className={POPOVER_DIVIDER} />
+                {(showCompetitions || consoleItems.length > 0) && (
+                  <div className={POPOVER_DIVIDER} />
+                )}
 
                 {items.map((item) => {
                   const Icon = icons[item.icon];
                   return (
                     <NavigationMenu.Link key={item.href} asChild>
                       <Link href={item.href} className={POPOVER_ROW}>
-                        <Icon />
+                        <Icon weight="bold" />
                         {item.label}
                       </Link>
                     </NavigationMenu.Link>
@@ -248,7 +259,7 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
                     className={`${POPOVER_ROW} text-rose-300 hover:bg-rose-950 hover:text-rose-50`}
                     type="submit"
                   >
-                    <SignOutIcon />
+                    <SignOutIcon weight="bold" />
                     Sign Out
                   </button>
                 </form>

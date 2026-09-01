@@ -112,7 +112,7 @@ export async function runDeployAirtableApply(
         ...found.missing.map((m) => `  ${m}`),
         "",
         "Airtable refused something, or the scaffolder has a bug. Do NOT run",
-        "`airtable pull-ids` against this base — it would write a registry that",
+        "`airtable apply` against this base — it would write a registry that",
         "is half real ids and half placeholders, which looks finished.",
       ],
     );

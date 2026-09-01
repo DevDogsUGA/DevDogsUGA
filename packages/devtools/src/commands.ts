@@ -347,6 +347,65 @@ export const GROUPS: readonly CommandGroup[] = [
     title: "Brand",
     commands: [
       {
+        name: "images",
+        summary: "Render a club image at one or more sizes.",
+        hint: "brand/*, page/*, app/*, event/*, or * for all",
+        // No subcommands: graphics are positional, and several can be named at
+        // once. Two axes — WHICH picture and at WHAT SIZE — and every flag here
+        // answers one of them so the command need not ask. Omit them and it
+        // asks; that is the whole design, since the same command serves an
+        // officer exporting one meeting's poster and a script rendering the lot.
+        options: [
+          {
+            flag: "--format",
+            value: "<a,b,…>",
+            summary:
+              "Sizes to render: og, gdgc-wide, gdgc-square, savvycal, email-*, icon-*.",
+            // Not prompted here: the command asks itself, from the formats the
+            // chosen graphics actually support, which a static list cannot know.
+          },
+          {
+            flag: "--all-formats",
+            summary: "Every size the named graphics support.",
+            prompt: {
+              kind: "confirm",
+              message: "Render every size these support?",
+              initial: false,
+            },
+          },
+          {
+            flag: "--out",
+            value: "<dir>",
+            summary: "Write everything into one directory, flat.",
+            prompt: {
+              kind: "text",
+              message:
+                "Write into which directory? (blank: where each belongs)",
+              placeholder: "~/images",
+              optional: true,
+            },
+          },
+          {
+            flag: "--default-out",
+            summary: "Write each image where it belongs in the repo.",
+            prompt: {
+              kind: "confirm",
+              message: "Write each one to its own default directory?",
+              initial: true,
+            },
+          },
+          {
+            flag: "--no-output",
+            summary: "List what would be written, and what each size is for.",
+            prompt: {
+              kind: "confirm",
+              message: "Just list what would be written?",
+              initial: false,
+            },
+          },
+        ],
+      },
+      {
         name: "qr",
         summary: "Write a QR code in the attendance-poster style.",
         hint: "svg, png, jpg, webp, avif, tiff",
@@ -625,9 +684,14 @@ export const GROUPS: readonly CommandGroup[] = [
         summary: "The officers' base: check it, or bring it up to date.",
         subcommands: [
           {
+            name: "check",
+            summary: "Diff the registry against the committed snapshot.",
+            hint: "no token, no network — what CI runs",
+          },
+          {
             name: "verify",
             summary: "Diff the live base against the registry.",
-            hint: "reads only — start here",
+            hint: "reads the base — start here",
             options: [
               {
                 flag: "--no-duplicates",
@@ -643,9 +707,9 @@ export const GROUPS: readonly CommandGroup[] = [
             ],
           },
           {
-            name: "scaffold",
-            summary: "Create what the registry declares.",
-            hint: "writes to the base",
+            name: "apply",
+            summary: "Create what the registry declares, then write back.",
+            hint: "writes the base AND two committed files",
             options: [
               {
                 flag: "--dry-run",
@@ -654,27 +718,6 @@ export const GROUPS: readonly CommandGroup[] = [
                   kind: "confirm",
                   message:
                     "Dry run — report what it would create, create nothing?",
-                  initial: true,
-                },
-              },
-            ],
-          },
-          {
-            name: "pull-ids",
-            summary: "Write discovered ids into registry.ts.",
-            hint: "edits a committed source file",
-          },
-          {
-            name: "snapshot",
-            summary: "Refresh the committed schema snapshot.",
-            hint: "or check it, as CI does",
-            options: [
-              {
-                flag: "--check",
-                summary: "Verify the snapshot is current. Needs no token.",
-                prompt: {
-                  kind: "confirm",
-                  message: "Check only, without refreshing the committed file?",
                   initial: true,
                 },
               },

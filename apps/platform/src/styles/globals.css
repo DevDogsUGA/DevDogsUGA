@@ -51,6 +51,7 @@
   /* Duration through a variable so a hovered card can hurry the stripes
      without a second keyframe set: see CompetitionTimeline. */
   --animate-slants: slants var(--slants-duration, 0.8s) linear infinite;
+  --animate-tv-lamp-flicker: tv-lamp-flicker 900ms steps(1, end) infinite;
   /* A paired dialog's aside being dealt out from behind its primary, and
      back; the primary's tilt as it slides over. See ui/dialog-shell. */
   --animate-pair-aside-in: pair-aside-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1)
@@ -285,44 +286,6 @@
   display: none;
 }
 
-/* ── Section scroll-in animations ───────────────────────────────────────── */
-/* Applied via data-animate attribute; JS adds .is-visible once in viewport  */
-[data-animate] {
-  transition:
-    opacity 0.65s ease,
-    transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-[data-animate="fade-up"] {
-  opacity: 0;
-  transform: translateY(36px) scale(0.95);
-}
-
-[data-animate="fade-left"] {
-  opacity: 0;
-  transform: translateX(-44px) scale(0.95) rotate(1deg);
-}
-
-[data-animate="fade-right"] {
-  opacity: 0;
-  transform: translateX(44px) scale(0.95) rotate(-1deg);
-}
-
-[data-animate="scale-up"] {
-  opacity: 0;
-  transform: scale(0.86) rotate(-2deg);
-}
-
-[data-animate="fade-in"] {
-  opacity: 0;
-  transform: scale(0.94);
-}
-
-[data-animate].is-visible {
-  opacity: 1;
-  transform: none;
-}
-
 /* The search dialog's indeterminate bar: a third-width segment crossing a
    track it overflows, so -100%..300% of its own width spans edge to edge. */
 @keyframes search-progress {
@@ -541,6 +504,25 @@
   }
 }
 
+/* A tuned CRT channel briefly drops its coloured lamp back to neutral gray. */
+@keyframes tv-lamp-flicker {
+  0%,
+  18%,
+  24%,
+  56%,
+  63%,
+  100% {
+    opacity: 1;
+  }
+
+  20%,
+  22%,
+  58%,
+  61% {
+    opacity: 0;
+  }
+}
+
 /* The card shuffle. The aside starts a full panel to the left — under the
    primary — tilted back like a card being slid out of a deck, swings past
    level as it clears, and settles. `--pair-travel` is set by the panel;
@@ -690,30 +672,6 @@
   }
 }
 
-/* Without JavaScript every `[data-animate]` section stays at `opacity: 0`
-   forever: the variants below start hidden and only `.is-visible`, added by
-   `ui/animation-init.tsx` once an IntersectionObserver fires, brings them back.
-   That makes the entire homepage below the hero invisible to anyone whose
-   script failed, was blocked, or is still parsing — and to any crawler that
-   does not execute JS. The reveal is decoration; the content is not, so when
-   scripting is off the content simply stays where it is.
-
-   `scripting` is Media Queries 5 (Chrome 120, Firefox 113, Safari 17). Older
-   browsers ignore the block and get today's behaviour, which is the right way
-   round for a progressive enhancement. */
-@media (scripting: none) {
-  [data-animate],
-  [data-animate="fade-up"],
-  [data-animate="fade-left"],
-  [data-animate="fade-right"],
-  [data-animate="scale-up"],
-  [data-animate="fade-in"] {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-}
-
 @keyframes collapsible-closed {
   0% {
     height: var(--radix-collapsible-content-height);
@@ -830,10 +788,10 @@
 
 /* ── Section diagonal cut overlays ───────────────────────────────────────── */
 /* Approach: sections are plain rounded rectangles (border-radius on the      */
-/* outer wrapper + overflow:hidden). Inside each section, absolutely-          */
+/* outer wrapper + overflow:clip). Inside each section, absolutely-            */
 /* positioned black triangle divs cut the diagonal edges. The outer wrapper's */
-/* overflow:hidden rounds the triangle corners automatically — no clip-path    */
-/* rounding needed, works in every browser since 2016.                        */
+/* clipping rounds the triangle corners automatically — no clip-path rounding */
+/* needed, while sticky descendants still use the viewport scroll container.  */
 /*                                                                             */
 /* Naming: t = top, b = bottom, bs = `\` slope, fs = `/` slope.               */
 /* Each class sets only the clip-path; position/size/colour are set via       */
@@ -1484,11 +1442,11 @@
 @utility slants {
   background-image: linear-gradient(
     45deg,
-    rgb(255 255 255 / 0.28) 25%,
+    rgb(255 255 255 / var(--slants-alpha, 0.28)) 25%,
     transparent 25%,
     transparent 50%,
-    rgb(255 255 255 / 0.28) 50%,
-    rgb(255 255 255 / 0.28) 75%,
+    rgb(255 255 255 / var(--slants-alpha, 0.28)) 50%,
+    rgb(255 255 255 / var(--slants-alpha, 0.28)) 75%,
     transparent 75%
   );
   background-size: 1rem 1rem;

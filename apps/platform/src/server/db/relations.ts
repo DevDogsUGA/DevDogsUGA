@@ -76,6 +76,10 @@ export const relations = defineRelations(
         from: r.profile.userId,
         to: r.profileLinks.userId,
       }),
+      academicPrograms: r.many.profileAcademicPrograms({
+        from: r.profile.userId,
+        to: r.profileAcademicPrograms.userId,
+      }),
       oauthRegistration: r.one.oauthRegistrations({
         from: r.profile.userId,
         to: r.oauthRegistrations.userId,
@@ -87,6 +91,24 @@ export const relations = defineRelations(
         from: r.profileLinks.userId,
         to: r.profile.userId,
         optional: false,
+      }),
+    },
+    profileAcademicPrograms: {
+      profile: r.one.profile({
+        from: r.profileAcademicPrograms.userId,
+        to: r.profile.userId,
+        optional: false,
+      }),
+      program: r.one.academicPrograms({
+        from: r.profileAcademicPrograms.programId,
+        to: r.academicPrograms.id,
+        optional: false,
+      }),
+    },
+    academicPrograms: {
+      profiles: r.many.profileAcademicPrograms({
+        from: r.academicPrograms.id,
+        to: r.profileAcademicPrograms.programId,
       }),
     },
     oauthRegistrations: {

@@ -81,8 +81,8 @@ interface Props {
   description: string;
   /** The section's unique "go read it" line, paired with an arrow icon. */
   cta: string;
-  /** Drawn above the copy, filled, in {@link textColor}. */
-  icon: ComponentType<{ className?: string; weight?: "fill" }>;
+  /** Drawn above the bold copy in {@link textColor}. */
+  icon: ComponentType<{ className?: string; weight?: "bold" }>;
   /**
    * One literal Tailwind color class (e.g. `"text-rose-950"`), applied to the
    * whole text block so the icon, which draws in `currentColor`, and every
@@ -169,7 +169,7 @@ export default function StatCard({
         >
           <Icon
             className={`size-8 sm:size-10 ${RECEDE_ON_HOVER}`}
-            weight="fill"
+            weight="bold"
           />
           <p
             className={`font-display flex flex-col items-center gap-0.5 sm:gap-1 ${RECEDE_ON_HOVER}`}

@@ -5,12 +5,14 @@ import {
   linkTitleSchema,
   graduationSchema,
   validateBio,
+  validateAcademicProgramIds,
   validateGraduation,
   validateLinkTitle,
   validateLinkUrl,
   validateLinks,
   validatePreferredName,
   validatePronouns,
+  validateRoleDescription,
 } from "./profile";
 
 /**
@@ -61,6 +63,26 @@ describe("validateBio", () => {
   });
 });
 
+describe("validateRoleDescription", () => {
+  it("accepts a single-line description at the database limit", () => {
+    expect(
+      validateRoleDescription("a".repeat(PROFILE_LIMITS.roleDescription)),
+    ).toBeNull();
+  });
+
+  it("refuses descriptions over the database limit", () => {
+    expect(
+      validateRoleDescription("a".repeat(PROFILE_LIMITS.roleDescription + 1)),
+    ).not.toBeNull();
+  });
+
+  it("refuses newlines and consecutive whitespace", () => {
+    expect(validateRoleDescription("first line\nsecond line")).not.toBeNull();
+    expect(validateRoleDescription("two  spaces")).not.toBeNull();
+    expect(validateRoleDescription("space \t tab")).not.toBeNull();
+  });
+});
+
 describe("validatePronouns", () => {
   it("accepts a normal set", () => {
     expect(validatePronouns(["they", "them"])).toBeNull();
@@ -82,6 +104,25 @@ describe("validatePronouns", () => {
       validatePronouns(["a".repeat(PROFILE_LIMITS.pronounChars + 1)]),
     ).not.toBeNull();
     expect(validatePronouns(["they", "they"])).not.toBeNull();
+  });
+});
+
+describe("validateAcademicProgramIds", () => {
+  it("accepts distinct Bulletin ids", () => {
+    expect(validateAcademicProgramIds([73962, 84091])).toBeNull();
+  });
+
+  it("refuses invalid ids, duplicates and selections over the cap", () => {
+    expect(validateAcademicProgramIds([0])).not.toBeNull();
+    expect(validateAcademicProgramIds([73962, 73962])).not.toBeNull();
+    expect(
+      validateAcademicProgramIds(
+        Array.from(
+          { length: PROFILE_LIMITS.academicProgramCount + 1 },
+          (_, index) => index + 1,
+        ),
+      ),
+    ).not.toBeNull();
   });
 });
 

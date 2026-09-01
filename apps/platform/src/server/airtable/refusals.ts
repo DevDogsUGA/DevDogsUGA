@@ -1,5 +1,6 @@
 import {
   MEETING_CANCELLATION_REASON_MAX_LENGTH,
+  PROJECT_NAME_MAX_LENGTH,
   MEETING_NAME_OVERRIDE_MAX_LENGTH,
   MEETING_SUMMARY_MAX_LENGTH,
   normalizeMeetingSummary,
@@ -106,7 +107,7 @@ function formatList(items: string[]): string {
 
 /** What the sync refused, and why, in words an officer can act on. */
 export interface Refusal {
-  table: "meetings" | "workshops" | "competitions" | "attendance";
+  table: "projects" | "meetings" | "workshops" | "competitions" | "attendance";
   airtableRecordId: string;
   /** Machine-readable, for the console and for tests. */
   code: RefusalCode;
@@ -121,6 +122,9 @@ export type RefusalCode =
   // The backstop for a bad value no rule here has learned to name yet. See
   // `tryWrite` in `sync.ts`.
   | "row_write_failed"
+  // A state rather than a refusal, like `meeting_incomplete`.
+  | "project_incomplete"
+  | "project_name_too_long"
   | "meeting_summary_too_long"
   | "meeting_cancellation_reason_too_long"
   | "meeting_reason_without_cancellation"
@@ -132,13 +136,20 @@ export type RefusalCode =
   | "workshop_project_cleared"
   | "workshop_title_too_long"
   | "workshop_description_too_long"
+  // A state rather than a refusal, like `meeting_incomplete`: the row has a
+  // link the pull could not follow, so there is not enough of it to become a
+  // workshop yet. See `describeUnbuiltWorkshop`.
+  | "workshop_incomplete"
+  | "workshop_project_unknown"
   | "competition_max_team_size_invalid"
   | "competition_requirement_count_invalid"
   | "requirement_count_after_finalize"
   | "judging_before_workshop"
   | "judging_moved_after_freeze"
   | "attendance_bad_myid"
+  | "attendance_unknown_meeting"
   | "attendance_unknown_workshop"
+  | "attendance_workshop_meeting_mismatch"
   | "attendance_meeting_already_recorded";
 
 /**
@@ -157,6 +168,59 @@ export interface RuleResult {
 
 function empty(): RuleResult {
   return { refusals: [], rejectedFields: new Set() };
+}
+
+// ── Projects ─────────────────────────────────────────────────────────────────
+
+export interface ProjectFacts {
+  airtableRecordId: string;
+  /** Exactly what Airtable returned for `Name`, before any parsing. */
+  rawDisplayName: AirtableValue;
+  /** What the registry parser made of it. Null if it refused the value. */
+  displayName: string | null;
+}
+
+/**
+ * The one value rule projects have, and it is new with the table's direction.
+ *
+ * Nothing guarded this column while the platform wrote it: a value the
+ * platform authored could not surprise it, so `projects."displayName"` had no
+ * length constraint at all. Officer-authored, it needs the same guard every
+ * other written string here has — the name is printed as a chip on the
+ * schedule and as a star's label, and `projects_displayName_length` is a check
+ * constraint, so an 81st character would be a rejected INSERT in the middle of
+ * the pull rather than a refused field.
+ *
+ * Refused rather than truncated, for the reason the meeting summary is: half a
+ * project name under a workshop is worse than the previous name staying up
+ * while somebody shortens the replacement.
+ */
+export function checkProject(facts: ProjectFacts): RuleResult {
+  // The parser returns null for "empty" too, and an empty name is not a
+  // refusal — it is a row an officer has not finished. Only a value that
+  // ARRIVED and could not be published is ruled on here.
+  if (
+    facts.displayName === null &&
+    normalizeMeetingSummary(facts.rawDisplayName) !== null
+  ) {
+    return {
+      refusals: [
+        {
+          table: "projects",
+          airtableRecordId: facts.airtableRecordId,
+          code: "project_name_too_long",
+          message:
+            `Not applied: a project name has to be ${PROJECT_NAME_MAX_LENGTH} ` +
+            "characters or fewer. It is printed as a chip beside a workshop " +
+            "and as the label on a star, so it is a label rather than a " +
+            "description. The name already on the site is unchanged.",
+        },
+      ],
+      rejectedFields: new Set(["displayName"]),
+    };
+  }
+
+  return empty();
 }
 
 // ── Meetings ─────────────────────────────────────────────────────────────────
@@ -383,6 +447,87 @@ function presentText(raw: AirtableValue): string | null {
 }
 
 // ── Workshops ────────────────────────────────────────────────────────────────
+
+/**
+ * What to put in `⚙️ Sync status` for a workshop the pull could not build.
+ *
+ * The insert path in `pullWorkshops` has two `continue`s, one for an
+ * unresolved Meeting link and one for an unresolved Project link, and until
+ * now BOTH were silent. A workshop typed into the base sat there pass after
+ * pass with a clean status cell, no row in Postgres and nothing on the
+ * schedule, and the only way to find out was to notice the absence. That is
+ * the complaint "workshops aren't syncing alongside events" in its entirety:
+ * not a broken pull, a working one that never said what it was waiting for.
+ *
+ * The two cases need different words because they resolve differently, and one
+ * of them does not resolve on its own at all:
+ *
+ *   * **The Meeting link** is the ordinary half-filled row. The meeting is
+ *     usually incomplete this pass and complete the next, so this is worded as
+ *     a state for the reason `describeIncompleteMeeting` is, and carries
+ *     `workshop_incomplete` rather than a refusal code.
+ *
+ *   * **The Project link** is the same kind of thing now, and used to be a
+ *     different kind entirely. Projects were platform-authored and PUSHED, so
+ *     a Projects row an officer typed into the link picker had no
+ *     `⚙️ Platform ID`, never got one, and was permanently unresolvable behind
+ *     a cell that looked filled in. That was the bug this whole function was
+ *     first written to explain. Projects are pulled now, so an unresolved link
+ *     means the project row simply has not synced yet — usually because it
+ *     still needs a Name — and it resolves on its own like the meeting does.
+ *     It keeps a code of its own only because the officer has to go and look
+ *     at a different row.
+ *
+ * Returns null when the row is fine, so the caller can write nothing and let
+ * `.status()` clear whatever was there.
+ */
+export function describeUnbuiltWorkshop(facts: {
+  /** Whether the Meeting cell holds a link at all. */
+  hasMeetingLink: boolean;
+  /** Whether that link resolved to a meeting on the site. */
+  meetingResolved: boolean;
+  /** Whether the Project cell holds a link at all. */
+  hasProjectLink: boolean;
+  /** Whether that link resolved to a project the platform owns. */
+  projectResolved: boolean;
+}): { code: RefusalCode; message: string } | null {
+  // Meeting first, because it is the required one: a row missing both is
+  // missing the meeting, and saying so is the next keystroke.
+  if (!facts.hasMeetingLink) {
+    return {
+      code: "workshop_incomplete",
+      message:
+        "Not on the site yet: this workshop needs a Meeting. Nothing else " +
+        "about the row is wrong — it appears within fifteen minutes of the " +
+        "link being filled in.",
+    };
+  }
+
+  if (!facts.meetingResolved) {
+    return {
+      code: "workshop_incomplete",
+      message:
+        "Not on the site yet: the linked Meeting is not on the site itself, " +
+        "usually because it still needs a start or an end time. Check that " +
+        "row's own ⚙️ Sync status — this workshop follows within fifteen " +
+        "minutes of it being complete.",
+    };
+  }
+
+  if (facts.hasProjectLink && !facts.projectResolved) {
+    return {
+      code: "workshop_project_unknown",
+      message:
+        "Not on the site yet: the linked Project is not on the site itself, " +
+        "usually because it still needs a Name. Check that row's own " +
+        "⚙️ Sync status — this workshop follows within fifteen minutes of it " +
+        "being complete. Clear the cell instead if this session teaches a " +
+        "skill rather than a codebase; a workshop does not need a project.",
+    };
+  }
+
+  return null;
+}
 
 export interface WorkshopFacts {
   airtableRecordId: string;
@@ -802,21 +947,46 @@ export interface AttendanceFacts {
   rawMyId: string | null;
   /** The address `myIdToEmail` made of it, or null if it could not. */
   email: string | null;
+  /** Whether the Meeting cell holds a link at all. */
+  hasMeetingLink: boolean;
+  /** Resolved from the Meeting link, or null if it did not resolve. */
+  linkedMeetingId: string | null;
+  /** Whether the Workshop cell holds a link at all. */
+  hasWorkshopLink: boolean;
   /** Resolved from the Workshop link, or null if it did not resolve. */
   workshopId: string | null;
-  /** Derived from the workshop, or null if that workshop has no meeting. */
-  meetingId: string | null;
+  /**
+   * The meeting that workshop belongs to, or null when there is no workshop.
+   *
+   * Not the row's meeting — that is `linkedMeetingId` above when the form
+   * named one. This is the second opinion the mismatch rule compares against.
+   */
+  workshopMeetingId: string | null;
 }
 
 /**
- * The two ways an attendance response cannot be stored.
+ * The ways an attendance response cannot be stored.
  *
- * Both are refusals rather than skips, and the distinction is worth stating
- * because the rest of the pull leans the other way. An officer half-filling a
- * meeting row will finish it in thirty seconds, so complaining is noise. A
- * response naming `jdoe@gmail.com`, or naming a workshop that is not in the
- * base, will still be wrong on the next pass and every pass after, and nobody
- * finds out unless somebody is told.
+ * All refusals rather than skips, and the distinction is worth stating because
+ * the rest of the pull leans the other way. An officer half-filling a meeting
+ * row will finish it in thirty seconds, so complaining is noise. A response
+ * naming `jdoe@gmail.com`, or naming a workshop that is not in the base, will
+ * still be wrong on the next pass and every pass after, and nobody finds out
+ * unless somebody is told.
+ *
+ * ## Why the Meeting is asked for rather than derived
+ *
+ * It used to be derived from the Workshop, on the argument that a form
+ * collecting both could disagree with itself. The events rework made that
+ * untenable: an Interest Meeting, a Social and a judging night run no
+ * workshops, so a response about one of them had nothing to link and was
+ * dropped in silence by the completeness gate in `pullAttendance`.
+ *
+ * The disagreement the old design was avoiding is real, so it gets a rule
+ * (`attendance_workshop_meeting_mismatch`) instead of being made
+ * unrepresentable. That trade is the right way round: the cost of the rule is
+ * a message in one officer's cell, and the cost of the old design was every
+ * workshop-less night being unattendable.
  */
 export function checkAttendance(facts: AttendanceFacts): RuleResult {
   // An address outside uga.edu can never be signed into. Sign-in is Google
@@ -840,7 +1010,28 @@ export function checkAttendance(facts: AttendanceFacts): RuleResult {
     };
   }
 
-  if (facts.workshopId === null || facts.meetingId === null) {
+  // A link that is present and did not resolve, on either side. Both are
+  // permanent as far as this row is concerned: the linked row is not on the
+  // site, and nothing about THIS record will change that.
+  if (facts.hasMeetingLink && facts.linkedMeetingId === null) {
+    return {
+      refusals: [
+        {
+          table: "attendance",
+          airtableRecordId: facts.airtableRecordId,
+          code: "attendance_unknown_meeting",
+          message:
+            "Refused: the linked Meeting is not on the site. Check that " +
+            "row's own ⚙️ Sync status — a meeting still missing a start or " +
+            "an end time is not published yet, and attendance cannot hang " +
+            "off one.",
+        },
+      ],
+      rejectedFields: new Set(["meeting"]),
+    };
+  }
+
+  if (facts.hasWorkshopLink && facts.workshopId === null) {
     return {
       refusals: [
         {
@@ -849,11 +1040,40 @@ export function checkAttendance(facts: AttendanceFacts): RuleResult {
           code: "attendance_unknown_workshop",
           message:
             "Refused: the linked Workshop is not one the platform knows " +
-            "about. A workshop needs both its Meeting and its Project filled " +
-            "in before attendance can hang off it.",
+            "about. Check that row's own ⚙️ Sync status — a workshop needs " +
+            "its Meeting filled in, and a Project the platform owns or none " +
+            "at all, before attendance can hang off it.",
         },
       ],
       rejectedFields: new Set(["workshop"]),
+    };
+  }
+
+  // Both links resolved and they disagree. This is the case the old
+  // derive-from-the-workshop design existed to make unrepresentable, and the
+  // composite foreign key on `(workshopId, meetingId)` would reject the row
+  // anyway — as a failed INSERT rather than as an answer. Refused by name
+  // instead, because only the officer knows which of the two cells is the
+  // typo.
+  if (
+    facts.linkedMeetingId !== null &&
+    facts.workshopMeetingId !== null &&
+    facts.linkedMeetingId !== facts.workshopMeetingId
+  ) {
+    return {
+      refusals: [
+        {
+          table: "attendance",
+          airtableRecordId: facts.airtableRecordId,
+          code: "attendance_workshop_meeting_mismatch",
+          message:
+            "Refused: the linked Workshop belongs to a different Meeting " +
+            "than the one linked here. Attendance is one row per member per " +
+            "meeting with the workshop as a detail on it, so the two have to " +
+            "agree. Fix whichever cell is wrong.",
+        },
+      ],
+      rejectedFields: new Set(["meeting", "workshop"]),
     };
   }
 

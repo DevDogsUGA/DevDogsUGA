@@ -174,12 +174,7 @@ export default function RootLayout({
         {/* NavigationProgress reads usePathname(), which is dynamic under
             Cache Components and must sit inside a <Suspense> boundary. It
             renders null, so the prerendered shell shows nothing for it until
-            it hydrates.
-
-            AnimationInit deliberately does NOT live here. It mutates the
-            `class` attribute of [data-animate] elements, which React owns, so
-            it has to run after the page body has hydrated. See
-            (site)/layout.tsx. */}
+            it hydrates. */}
         <Suspense>
           <NavigationProgress />
         </Suspense>

@@ -10,13 +10,13 @@ import { field, table, type AirtableValue } from "./field.js";
  *
  * ## The IDs below are real, and are the wire format
  *
- * Written by `pnpm devtools airtable pull-ids` from the live base. Every read and write
- * goes over the wire with these rather than with field NAMES, which is what
- * lets an officer rename a column without breaking the sync.
+ * Written by `pnpm devtools airtable apply` from the live base. Every read and
+ * write goes over the wire with these rather than with field NAMES, which is
+ * what lets an officer rename a column without breaking the sync.
  *
- * To add a field: declare it here with a `todo("slug")` id, run
- * `pnpm devtools airtable scaffold` to create it, then `pnpm devtools airtable pull-ids` to fill
- * the real id in. `verify.ts` FAILS on any remaining placeholder rather than
+ * To add a field: declare it here with a `todo("slug")` id and run
+ * `pnpm devtools airtable apply`, which creates it in the base and fills the
+ * real id in here. `verify.ts` FAILS on any remaining placeholder rather than
  * warning, because a placeholder that reaches a live sync writes into nothing
  * and reports success.
  */
@@ -25,9 +25,9 @@ import { field, table, type AirtableValue } from "./field.js";
  * Marks an ID as not-yet-discovered. See `isPlaceholder`.
  *
  * Stays exported after the base is scaffolded, because adding a field later
- * uses the same two steps: declare it with a `todo()` id, run
- * `pnpm devtools airtable scaffold` to create it, then
- * `pnpm devtools airtable pull-ids` to replace this call with the real one.
+ * takes the same route: declare it with a `todo()` id, then run
+ * `pnpm devtools airtable apply`, which creates it in the base and replaces
+ * this call with the real one.
  */
 export function todo(slug: string): string {
   return `fldTODO_${slug}`;
@@ -76,12 +76,6 @@ export interface MemberRow {
   legalFirstName: string | null;
   legalLastName: string | null;
   meetingCount: number;
-}
-
-export interface ProjectRow {
-  id: string;
-  slug: string;
-  displayName: string;
 }
 
 export interface MeetingRow {
@@ -188,6 +182,16 @@ export const MEETING_NAME_OVERRIDE_MAX_LENGTH = 80;
  * constraint is a violation inside the pull, which takes down the whole pass.
  */
 export const MEETING_CANCELLATION_REASON_MAX_LENGTH = 160;
+
+/**
+ * Matches `projects_displayName_length`.
+ *
+ * The column had no cap while the platform wrote it, because a value the
+ * platform authored could not surprise it. It is officer-typed now, printed as
+ * a chip on the schedule and as a star's label, so it needs the same guard
+ * every other authored string here has.
+ */
+export const PROJECT_NAME_MAX_LENGTH = 80;
 
 /** Matches `workshops_title_length`. A row label, so it is short by design. */
 export const WORKSHOP_TITLE_MAX_LENGTH = 80;
@@ -477,17 +481,68 @@ export const members = table("Members", "tblLTJtir40NrL87x", {
   notes: field.longText("fldmpCcukx7kkNMZs", "Notes").ignore(),
 });
 
+/**
+ * Projects, officer-authored.
+ *
+ * ⚠️ This table used to move the OTHER WAY, and the flip is the fix for a bug
+ * rather than a preference.
+ *
+ * It was the one officer-facing table that was pushed: the platform owned the
+ * rows and Airtable held a read-only mirror. Nothing in the platform could
+ * create one. There was no console page, no server action and no seed, RLS
+ * denies every client write, and the only inserts anywhere in the repo were
+ * test fixtures — while `pullWorkshops` refused to create a workshop whose
+ * Project link did not resolve. An officer doing the obvious thing, typing a
+ * project name into Airtable's link picker, produced a Projects row with no
+ * `⚙️ Platform ID`; `projectIdMap` accepted only rows carrying one, so the
+ * link was unresolvable, and it stayed unresolvable on every pass forever
+ * because no amount of waiting issues an id to a row the platform never made.
+ * Their workshop simply never appeared.
+ *
+ * Pulling it removes the failure instead of reporting it. The Project link now
+ * resolves through the pull's idMap exactly like the Meeting link beside it,
+ * and `pushProjects` and `projectIdMap` are both gone.
+ *
+ * `⚙️ Slug` is gone with them. The slug is derived once on insert from the
+ * name and never recomputed — the rule `meetings.slug` follows, and sharper
+ * here, because `stars.csv` is keyed on it across semesters and regenerating
+ * it on a rename would rewrite an export somebody already has. A column
+ * showing officers a value they cannot edit and must not rely on was worth
+ * less than the confusion it invited.
+ *
+ * `⚙️ Platform ID` stays, pushed and the match key, because `applyPull` reads
+ * one on every table. It is written by nothing now, which is exactly the state
+ * `meetings` is in: identity here is the Airtable record id.
+ */
 export const projects = table("Projects", "tblqcG8xDrOMuBTvF", {
   platformId: field
     .text("fldniryZw7v0j7MuD", "⚙️ Platform ID")
     .matchKey()
-    .push((p: ProjectRow) => p.id),
-  slug: field
-    .text("fldqQiRT2jDhlsrWC", "⚙️ Slug")
-    .push((p: ProjectRow) => p.slug),
-  displayName: field
-    .text("fldaDoMwYJlhoxODU", "Name")
-    .push((p: ProjectRow) => p.displayName),
+    .push((p: { id: string }) => p.id),
+
+  // What the officers call it: "Platform", "Optimal Schedule Builder".
+  //
+  // Refused past the cap rather than truncated, like every other authored
+  // string here. Half a project name under a workshop chip is worse than the
+  // previous name staying up while somebody shortens it.
+  displayName: field.text("fldaDoMwYJlhoxODU", "Name").pull((v) => {
+    const text = normalizeMeetingSummary(v);
+    if (text === null) return null;
+    return text.length > PROJECT_NAME_MAX_LENGTH ? null : text;
+  }),
+
+  // Where it sits among the other projects, which decides the order workshops
+  // are listed in on a meeting. Officer-facing on purpose: the ordering is an
+  // editorial call about which project leads the night, and it was a column
+  // only the platform could change.
+  //
+  // Non-integers are fine and the type is `double precision` for that reason:
+  // 1.5 slots a project between two others without renumbering the rest.
+  sortOrder: field
+    .number("fldxSJc7VLT9Msruq", "Order")
+    .pull((v) => (typeof v === "number" && Number.isFinite(v) ? v : null)),
+
+  syncStatus: field.longText("fldVGonACJHsZpQif", "⚙️ Sync status").status(),
 });
 
 /**
@@ -673,7 +728,7 @@ export const competitions = table("Competitions", "tbltrW1Xum127cNwy", {
     .text("flduPP0rsaJ7Sjl1J", "Branch slug")
     .pull((v) => (typeof v === "string" ? v : null)),
   workshop: field
-    .link("fldge0I3DNLH0b7BN", "Workshop", "workshops")
+    .link("fldu9sZHLPg0TTGpX", "Workshop", "workshops")
     .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
   judgingStartsAt: field
     .dateTime("fld9p3FVXCuFWJF7b", "Judging starts")
@@ -754,7 +809,8 @@ export const teamsTable = table("Teams", "tblfXjgqCZiJnnD4x", {
  * Only `⚙️ Platform ID` and `⚙️ Sync status`. The first is the imported row's
  * uuid, which makes a re-import idempotent and shows an officer that a
  * response landed. The second carries the refusal when it did not: an unknown
- * MyID, or a workshop link the platform cannot resolve.
+ * MyID, a link the platform cannot resolve, or a Meeting and a Workshop that
+ * name different nights.
  */
 export const attendanceTable = table("Attendance", "tblVgyeo1q9vk0ddD", {
   platformId: field
@@ -768,11 +824,31 @@ export const attendanceTable = table("Attendance", "tblVgyeo1q9vk0ddD", {
     .text("fldmscaBQzdP4qhMP", "MyID")
     .pull((v) => (typeof v === "string" ? v.trim().toLowerCase() : null)),
 
-  // Which room. The meeting is derived from the workshop rather than asked
-  // for: `attendance` is keyed on the meeting, and a form that collected both
-  // could disagree with itself.
+  // Which night. Asked for DIRECTLY, and the reason it has to be is the
+  // events rework: an Interest Meeting, a Social and a judging night all run
+  // no workshops at all, so a form whose only link was the one below could not
+  // describe them. Every response naming such a night had no workshop to pick,
+  // arrived here with an empty cell, and was dropped in silence.
+  //
+  // `attendance` is keyed on the meeting, so this is now the key arriving as
+  // itself rather than being inferred. The workshop stays beside it as the
+  // dimension it always was.
+  meeting: field
+    .link("fldFehEX3HmzKW2yv", "Meeting", "meetings")
+    .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
+
+  // Which room, when there was a choice of rooms. Optional now.
+  //
+  // It used to be required, and the meeting was derived from it, on the
+  // argument that a form collecting both could disagree with itself. That
+  // argument was right about the risk and wrong about the remedy: the
+  // disagreement is real, so `pullAttendance` refuses a response whose two
+  // links name different nights, rather than making one of them
+  // unrepresentable. Null is an ordinary value here — it means a night with
+  // nothing to pick, which is what `attendance."workshopId"` was made nullable
+  // for.
   workshop: field
-    .link("fldbZHdOlT5G0rAPP", "Workshop", "workshops")
+    .link("fldqmEA9hK4QyBKZE", "Workshop", "workshops")
     .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
 
   // How the row got here, for the officer's benefit rather than the

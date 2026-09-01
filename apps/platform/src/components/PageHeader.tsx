@@ -14,6 +14,8 @@ interface Props extends PropsWithChildren {
   title: string;
   description?: ReactNode;
   accent: AccentColor;
+  /** Vertically center actions against the complete title/description block. */
+  centerActions?: boolean;
 }
 
 /**
@@ -29,6 +31,7 @@ export default function PageHeader({
   description,
   accent,
   children,
+  centerActions = false,
 }: Props) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-4 px-1">
@@ -42,7 +45,13 @@ export default function PageHeader({
           <p className="max-w-prose text-sm text-mauve-400">{description}</p>
         )}
       </div>
-      {children && <div className="flex items-center gap-2">{children}</div>}
+      {children && (
+        <div
+          className={`flex items-center gap-2 ${centerActions ? "self-center" : ""}`}
+        >
+          {children}
+        </div>
+      )}
     </div>
   );
 }

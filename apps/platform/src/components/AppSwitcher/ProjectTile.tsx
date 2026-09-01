@@ -26,6 +26,7 @@ export default function ProjectTile({ project, onNavigate }: Props) {
   const { icon, iconBg, blurb, url, badge } = project.switcher;
   const Icon = icons[icon];
   const [open, setOpen] = useState(false);
+  const isComingSoon = badge?.label === "Public Beta";
 
   const shell = "relative flex items-center gap-4 rounded-md border px-4 py-3";
 
@@ -58,7 +59,7 @@ export default function ProjectTile({ project, onNavigate }: Props) {
           {/* The button wraps the name and stretches over the whole tile with
               its own ::after, so the tile acts as one control without nesting
               block content inside a button element. */}
-          {url ? (
+          {url && !isComingSoon ? (
             <button
               type="button"
               onClick={() => setOpen(true)}
@@ -75,13 +76,19 @@ export default function ProjectTile({ project, onNavigate }: Props) {
     </>
   );
 
-  if (!url) {
+  if (!url || isComingSoon) {
     return (
       <div
         aria-disabled="true"
-        className={`${shell} cursor-not-allowed border-mauve-700 bg-mauve-800 opacity-60`}
+        className={`${shell} cursor-not-allowed border-mauve-700 bg-mauve-800 ${isComingSoon ? "" : "opacity-60"}`}
       >
         {body}
+        {isComingSoon && (
+          <span className="pointer-events-none absolute -top-1 -right-4 z-10 w-40 rotate-6 overflow-hidden border-y-2 border-black bg-amber-300 px-2 py-1 text-center font-mono text-[0.625rem]/none font-black tracking-widest text-black uppercase shadow-sm">
+            <span className="relative z-10 bg-amber-300 px-1">Coming Soon</span>
+            <span className="absolute inset-0 -z-0 bg-[repeating-linear-gradient(135deg,transparent_0,transparent_7px,rgb(0_0_0/0.18)_7px,rgb(0_0_0/0.18)_11px)]" />
+          </span>
+        )}
       </div>
     );
   }

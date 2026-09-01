@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LiveTable } from "./client.js";
-import { normalize, snapshotDrift } from "./snapshot.js";
+import { normalize, readSnapshot, snapshotDrift } from "./snapshot.js";
 
 /**
  * The offline half of the Airtable checks.
@@ -38,10 +38,9 @@ describe("normalize", () => {
     expect(result[1]?.fields.map((f) => f.name)).toEqual(["alpha", "beta"]);
   });
 
-  it("drops field options, which change without the shape changing", () => {
-    // A date format, a precision, a checkbox icon: all of them are the
-    // officers' to change, and every such edit would otherwise land as a diff
-    // in a file whose whole value is that a diff means something.
+  it("keeps a datetime timezone but drops its presentation options", () => {
+    // The timezone controls which instant a typed wall-clock time represents;
+    // date and time formats only control presentation in the grid.
     const withOptions: LiveTable = {
       ...live("Members", [["fld1", "Joined"]]),
       fields: [
@@ -50,7 +49,7 @@ describe("normalize", () => {
           name: "Joined",
           type: "dateTime",
           options: {
-            timeZone: "utc",
+            timeZone: "America/New_York",
             dateFormat: { name: "iso" },
             timeFormat: { name: "24hour" },
           },
@@ -63,8 +62,8 @@ describe("normalize", () => {
       id: "fld1",
       name: "Joined",
       type: "dateTime",
+      options: { timeZone: "America/New_York" },
     });
-    expect(table?.fields[0]).not.toHaveProperty("options");
   });
 
   /**
@@ -156,5 +155,36 @@ describe("snapshotDrift", () => {
     const drift = snapshotDrift({ tables: [] });
     expect(drift.every((d) => d.absent)).toBe(true);
     expect(drift.map((d) => d.table)).toContain("Members");
+  });
+
+  it("flags a recreated field that kept its name but changed identity", () => {
+    const snapshot = structuredClone(readSnapshot());
+    const attendance = snapshot.tables.find((t) => t.name === "Attendance")!;
+    const workshop = attendance.fields.find((f) => f.name === "Workshop")!;
+    const registryId = workshop.id;
+    workshop.id = "fldRecreatedWorkshop";
+
+    const drift = snapshotDrift(snapshot);
+    expect(drift).toContainEqual(
+      expect.objectContaining({
+        table: "Attendance",
+        idMismatches: expect.arrayContaining([
+          {
+            field: "Workshop",
+            registryId,
+            snapshotId: "fldRecreatedWorkshop",
+          },
+        ]),
+      }),
+    );
+  });
+
+  it("allows a field rename when its stable id still matches", () => {
+    const snapshot = structuredClone(readSnapshot());
+    const attendance = snapshot.tables.find((t) => t.name === "Attendance")!;
+    const workshop = attendance.fields.find((f) => f.name === "Workshop")!;
+    workshop.name = "Room";
+
+    expect(snapshotDrift(snapshot)).toEqual([]);
   });
 });

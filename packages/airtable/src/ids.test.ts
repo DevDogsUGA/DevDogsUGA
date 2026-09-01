@@ -64,6 +64,21 @@ describe("applyDiscoveredIds", () => {
     expect(result.warnings).toEqual([]);
   });
 
+  it("replaces a resolved id when Airtable recreated the field", () => {
+    const result = applyDiscoveredIds(
+      source(`const workshop = field("fldOld123", "Workshop");`).replace(
+        HEADER_PLACEHOLDER_SECTION,
+        HEADER_REAL_SECTION,
+      ),
+      { tables: {}, fields: { fldOld123: "fldNew456" } },
+    );
+
+    expect(result.replaced).toBe(1);
+    expect(result.source).toContain('field("fldNew456", "Workshop")');
+    expect(result.source).not.toContain("fldOld123");
+    expect(result.warnings).toEqual([]);
+  });
+
   it("warns when a placeholder has no call to replace", () => {
     const result = applyDiscoveredIds(source(`const nothing = 1;`), {
       tables: {},

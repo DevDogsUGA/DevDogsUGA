@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { AirtableClient, type AirtableRecord } from "./client.js";
 import { field, table } from "./field.js";
 import { isPlaceholder, registry } from "./registry.js";
-import { choiceFindings, duplicateKeyFindings, verifyBase } from "./verify.js";
+import {
+  choiceFindings,
+  dateTimeTimezoneFindings,
+  duplicateKeyFindings,
+  verifyBase,
+} from "./verify.js";
 
 /**
  * verify.ts against a fixture base, asserting each check fires on a
@@ -22,7 +27,7 @@ interface StubTable {
     id: string;
     name: string;
     type: string;
-    /** Only ever `choices`, and only for check 6. */
+    /** Choice names for check 6 and datetime timezone for check 7. */
     options?: Record<string, unknown>;
   }[];
 }
@@ -449,6 +454,69 @@ describe("check 6 — declared select choices", () => {
           somethingAirtableAddedLater: true,
         },
       }),
+    ).toEqual([]);
+  });
+});
+
+describe("check 7 — datetime timezone", () => {
+  const spec = field.dateTime("fldStarts", "Starts at").ignore();
+
+  it("is wired into live base verification", async () => {
+    const fixture = table("Meetings", "tblM", { startsAt: spec });
+    const result = await verifyBase(
+      stubClient([
+        {
+          id: "tblM",
+          name: "Meetings",
+          primaryFieldId: "fldStarts",
+          fields: [
+            {
+              id: "fldStarts",
+              name: "Starts at",
+              type: "dateTime",
+              options: { timeZone: "utc" },
+            },
+          ],
+        },
+      ]),
+      { checkDuplicates: false, tables: { meetings: fixture } },
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.findings).toContainEqual(
+      expect.objectContaining({ severity: "fatal", field: "startsAt" }),
+    );
+  });
+
+  it("accepts the DST-aware club timezone", () => {
+    expect(
+      dateTimeTimezoneFindings("Meetings", "startsAt", spec, {
+        name: "Starts at",
+        options: { timeZone: "America/New_York" },
+      }),
+    ).toEqual([]);
+  });
+
+  it("rejects UTC and a missing timezone", () => {
+    for (const options of [{ timeZone: "utc" }, undefined]) {
+      const findings = dateTimeTimezoneFindings("Meetings", "startsAt", spec, {
+        name: "Starts at",
+        options,
+      });
+      expect(findings).toEqual([
+        expect.objectContaining({ severity: "fatal", field: "startsAt" }),
+      ]);
+    }
+  });
+
+  it("ignores options on fields that are not datetimes", () => {
+    expect(
+      dateTimeTimezoneFindings(
+        "Meetings",
+        "name",
+        field.text("fldName", "Name").ignore(),
+        { name: "Name", options: { timeZone: "utc" } },
+      ),
     ).toEqual([]);
   });
 });

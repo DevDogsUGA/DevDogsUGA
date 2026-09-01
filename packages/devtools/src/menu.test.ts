@@ -5,7 +5,7 @@
  * tree is reachable from it, and the argv a walk produces is one the CLI
  * accepts.** The menu this replaced could not make that claim. It held ten
  * hand-written entries beside a CLI with sixteen top-level commands, so `env`,
- * `planner`, `signing-key`, `deploy` and `airtable snapshot` had no way in.
+ * `planner`, `signing-key`, `deploy` and `airtable check` had no way in.
  *
  * `@clack/prompts` is mocked rather than driven: the point is which questions
  * get asked and what argv comes out, not how a terminal renders them.
@@ -119,12 +119,21 @@ describe("reach", () => {
       const node = findCommand(path)!;
 
       // Enough "no"s and blanks to decline every option prompt on the way out.
-      const declines = (node.options ?? []).map((option) => {
-        if (option.prompt?.kind === "confirm") return false;
-        if (option.prompt?.kind === "text") return "";
-        if (option.prompt?.kind === "select")
-          return option.prompt.choices[0]!.value;
-        return undefined;
+      //
+      // Promptless options are FILTERED OUT rather than mapped to `undefined`.
+      // The wizard never asks about them (see `CommandOption.prompt`), so an
+      // entry for one is an extra answer that shifts every later prompt onto
+      // the wrong value — a `false` reaching a text prompt, which fails as
+      // `unwrap(...).trim is not a function` rather than as anything readable.
+      // It stayed hidden while every promptless flag happened to sit last in
+      // its command's list.
+      const declines = (node.options ?? []).flatMap((option): unknown[] => {
+        const { prompt } = option;
+        if (!prompt) return [];
+        if (prompt.kind === "confirm") return [false];
+        if (prompt.kind === "text") return [""];
+
+        return [prompt.choices[0]!.value];
       });
 
       const argv = await walk([...answersFor(path), ...declines]);
@@ -151,20 +160,20 @@ describe("options become argv", () => {
     const argv = await walk([
       groupOf("airtable")!,
       findCommand(["airtable"])!,
-      findCommand(["airtable", "scaffold"])!,
+      findCommand(["airtable", "apply"])!,
       true,
     ]);
-    expect(argv).toEqual(["airtable", "scaffold", "--dry-run"]);
+    expect(argv).toEqual(["airtable", "apply", "--dry-run"]);
   });
 
   it("adds nothing when it is answered no", async () => {
     const argv = await walk([
       groupOf("airtable")!,
       findCommand(["airtable"])!,
-      findCommand(["airtable", "scaffold"])!,
+      findCommand(["airtable", "apply"])!,
       false,
     ]);
-    expect(argv).toEqual(["airtable", "scaffold"]);
+    expect(argv).toEqual(["airtable", "apply"]);
   });
 
   it("emits a select choice that is a flag on its own", async () => {

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   describeIncompleteMeeting,
+  describeUnbuiltWorkshop,
   checkCompetition,
+  checkProject,
   checkCompetitionValues,
   checkMeeting,
   checkWorkshop,
@@ -12,12 +14,14 @@ import {
 } from "./refusals";
 import {
   MEETING_CANCELLATION_REASON_MAX_LENGTH,
+  PROJECT_NAME_MAX_LENGTH,
   MEETING_NAME_OVERRIDE_MAX_LENGTH,
   MEETING_SUMMARY_MAX_LENGTH,
   WORKSHOP_DESCRIPTION_MAX_LENGTH,
   WORKSHOP_TITLE_MAX_LENGTH,
   competitions as competitionsSpec,
   meetings as meetingsSpec,
+  projects as projectsSpec,
   parseRsvpUrl,
   workshops as workshopsSpec,
 } from "@devdogsuga/airtable";
@@ -671,6 +675,159 @@ describe("describeIncompleteMeeting", () => {
  * for the value, because a rule that fires while the parser still accepts the
  * text would let the write through regardless.
  */
+describe("describeUnbuiltWorkshop", () => {
+  /**
+   * The insert path in `pullWorkshops` had two silent `continue`s, and this is
+   * what replaced them.
+   *
+   * Silence was the whole bug. A workshop whose Meeting had not synced, or
+   * whose Project link named a Projects row the platform does not own, sat in
+   * the base with a clean status cell and no row in Postgres, pass after pass.
+   * From the officer's side that is "workshops aren't syncing", with nothing
+   * anywhere naming a cause.
+   *
+   * Like `describeIncompleteMeeting`, these assert WORDING, and for the same
+   * reason: the meeting case is a row that will finish itself and must not be
+   * complained at, and the project case is one that will not and must not be
+   * described as waiting.
+   */
+  const built = {
+    hasMeetingLink: true,
+    meetingResolved: true,
+    hasProjectLink: true,
+    projectResolved: true,
+  };
+
+  it("says nothing about a workshop that will be inserted", () => {
+    expect(describeUnbuiltWorkshop(built)).toBeNull();
+  });
+
+  it("says nothing about a workshop with no project, which is legal now", () => {
+    // `projectId` became nullable with the events rework: a career-readiness
+    // session belongs to no codebase and never will.
+    expect(
+      describeUnbuiltWorkshop({
+        ...built,
+        hasProjectLink: false,
+        projectResolved: false,
+      }),
+    ).toBeNull();
+  });
+
+  it("asks for the meeting when the cell is empty", () => {
+    const result = describeUnbuiltWorkshop({
+      ...built,
+      hasMeetingLink: false,
+      meetingResolved: false,
+    })!;
+    expect(result.code).toBe("workshop_incomplete");
+    expect(result.message).toContain("needs a Meeting");
+    // A state, not a complaint. This row is thirty seconds from being right.
+    expect(result.message).toContain("Not on the site yet");
+  });
+
+  it("points at the meeting's own row when the link does not resolve", () => {
+    const result = describeUnbuiltWorkshop({
+      ...built,
+      meetingResolved: false,
+    })!;
+    expect(result.code).toBe("workshop_incomplete");
+    expect(result.message).toContain("⚙️ Sync status");
+  });
+
+  it("names the meeting first when both links are unresolved", () => {
+    // The meeting is the required one, so it is the next keystroke. Reporting
+    // the project instead would send an officer to fix the cell that is not
+    // blocking the row.
+    const result = describeUnbuiltWorkshop({
+      hasMeetingLink: false,
+      meetingResolved: false,
+      hasProjectLink: true,
+      projectResolved: false,
+    })!;
+    expect(result.code).toBe("workshop_incomplete");
+  });
+
+  it("points at the project's own row when the link does not resolve", () => {
+    // This used to describe a PERMANENT dead end: projects were pushed, so a
+    // Projects row created from the link picker had no ⚙️ Platform ID and
+    // never got one. Projects are pulled now, so the row resolves on its own
+    // once it has a name — the same shape as the meeting case, keeping a code
+    // of its own because the officer has to look at a different row.
+    const result = describeUnbuiltWorkshop({
+      ...built,
+      projectResolved: false,
+    })!;
+    expect(result.code).toBe("workshop_project_unknown");
+    expect(result.message).toContain("⚙️ Sync status");
+    // Still worth saying, because a workshop genuinely may not have one.
+    expect(result.message).toContain("Clear the cell");
+  });
+});
+
+describe("project names", () => {
+  /**
+   * The only value rule projects have, and it did not exist until the table
+   * changed direction.
+   *
+   * `projects."displayName"` had no length constraint at all while the
+   * platform wrote it, because a value the platform authored could not
+   * surprise it. Officer-authored, it guards a check constraint, and a rule
+   * guarding a constraint is the kind whose absence costs the whole pass
+   * rather than one bad card.
+   */
+  const named = (name: string) => ({
+    airtableRecordId: "recP",
+    rawDisplayName: name,
+    displayName:
+      name.trim().length > 0 && name.trim().length <= PROJECT_NAME_MAX_LENGTH
+        ? name.trim()
+        : null,
+  });
+
+  it("passes an ordinary name", () => {
+    expect(checkProject(named("Optimal Schedule Builder")).refusals).toEqual(
+      [],
+    );
+  });
+
+  it("stays silent on an empty cell", () => {
+    // Not a refusal: a project an officer has not named yet is an unfinished
+    // row, and `pullProjects` reports that as a state instead. Complaining
+    // here would fire on every half-typed row.
+    const result = checkProject({
+      airtableRecordId: "recP",
+      rawDisplayName: "",
+      displayName: null,
+    });
+    expect(result.refusals).toEqual([]);
+  });
+
+  it("refuses a name past the cap and drops the field", () => {
+    const result = checkProject(named("P".repeat(PROJECT_NAME_MAX_LENGTH + 1)));
+    expect(result.refusals).toHaveLength(1);
+    expect(result.refusals[0]!.code).toBe("project_name_too_long");
+    expect(result.refusals[0]!.table).toBe("projects");
+    expect(result.rejectedFields).toEqual(new Set(["displayName"]));
+  });
+
+  it("allows exactly the cap", () => {
+    // The boundary the check constraint is written at. One test either side,
+    // because `<=` and `<` are the same length in a diff.
+    expect(
+      checkProject(named("P".repeat(PROJECT_NAME_MAX_LENGTH))).refusals,
+    ).toEqual([]);
+  });
+
+  it("agrees with the registry parser about what is too long", () => {
+    // A rule that fires while the parser still ACCEPTS the value would let the
+    // write through anyway and the constraint would abort the pass. The two
+    // have to draw the line in the same place.
+    const tooLong = "P".repeat(PROJECT_NAME_MAX_LENGTH + 1);
+    expect(projectsSpec.fields.displayName.parse(tooLong)).toBeNull();
+  });
+});
+
 describe("meeting name", () => {
   it("stays silent when no name is written", () => {
     // The ordinary case, and by a wide margin: most nights have no name at

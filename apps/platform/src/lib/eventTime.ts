@@ -9,8 +9,21 @@
  * The CSV export writes ISO 8601 with an explicit offset for the same reason: a
  * bare local timestamp is read in whatever zone the reader is in. Here we name
  * the zone, there the offset.
+ *
+ * The zone itself is DECLARED in `@devdogsuga/og/event` and re-exported here,
+ * so this module stays the one place the app imports it from. It moved because
+ * a second renderer needs it: `pnpm devtools images` draws the same event cards
+ * to disk for the GDG on Campus platform, and a CLI cannot import a module out
+ * of this Next app. One definition, two callers, rather than a constant copied
+ * into a package where nothing would notice it drifting.
+ *
+ * That entry point imports nothing at all — deliberately, because
+ * `lib/meetingTitle.ts` imports EVENT_TZ and is safe for a client component.
+ * Routing it through `@devdogsuga/og`'s index instead would put a few hundred
+ * kilobytes of embedded fonts one bundler decision away from the browser.
  */
-export const EVENT_TZ = "America/New_York";
+export { EVENT_TZ } from "@devdogsuga/og/event";
+import { EVENT_TZ } from "@devdogsuga/og/event";
 
 const DAY_PARTS = new Intl.DateTimeFormat("en-US", {
   timeZone: EVENT_TZ,
@@ -173,6 +186,79 @@ const OFFSET_PARTS = new Intl.DateTimeFormat("en-US", {
 export function clubDateKey(at: Date): string {
   const { year, month, day } = clubDateParts(at);
   return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/**
+ * How far past the current month the schedule may reach. See `scheduleWindow`.
+ *
+ * Twelve rather than something tighter because a spring semester authored in
+ * November is ordinary and must not be clipped. This is a guard against a
+ * mistyped year, not a statement about how far ahead the club plans.
+ */
+export const MAX_MONTHS_AHEAD = 12;
+
+/** `{ year, month }` with a 0-indexed month, the shape `clubDay` returns. */
+export interface ClubMonth {
+  year: number;
+  /** 0-indexed, matching `clubDay` and `Date#getMonth`. */
+  month: number;
+}
+
+/** Months since year zero, so two `ClubMonth`s can be compared or offset. */
+export function addMonths(at: ClubMonth, delta: number): ClubMonth {
+  const total = at.year * 12 + at.month + delta;
+  return { year: Math.floor(total / 12), month: total % 12 };
+}
+
+function monthIndex({ year, month }: ClubMonth): number {
+  return year * 12 + month;
+}
+
+/**
+ * The months `/events` loads: one back, and forward as far as the base goes.
+ *
+ * ⚠️ The forward bound must follow the DATA, and it used to be a constant.
+ *
+ * That was the bug. The window was fixed at two months ahead on the stated
+ * grounds that "a semester is announced in chunks and two months is as far
+ * ahead as the base is ever filled in". The first time officers authored a
+ * whole semester in one sitting, that stopped being true and the comment
+ * became the defect: every meeting past the bound synced into Postgres and
+ * appeared on no surface at all. Not on the calendar, not in the schedule
+ * list, and not reachable by paging either, because the page derives its
+ * paging bounds from this same span. From the officers' side of Airtable that
+ * is indistinguishable from the sync ignoring the rows, which is exactly what
+ * it was reported as.
+ *
+ * Two clamps, and they are different in kind. The floor is a promise to the
+ * reader: an empty base still gets a calendar somebody can page forward
+ * through rather than one that dead-ends on today. The ceiling is a guard
+ * against a typo, because a meeting entered as 2126 would otherwise hand the
+ * calendar a thousand empty months to walk.
+ *
+ * Returns `to` EXCLUSIVE, matching `getMeetingsInRange`. The last meeting on
+ * the books is inside the window because the bound is the month after it.
+ */
+export function scheduleWindow(
+  today: ClubMonth,
+  /** When the furthest-out meeting starts, or null if there are none. */
+  furthest: Date | null,
+): { from: ClubMonth; to: ClubMonth } {
+  const from = addMonths(today, -1);
+  const floor = addMonths(today, 2);
+
+  if (furthest === null) return { from, to: floor };
+
+  // `clubDay`, never `getUTCMonth()`. A 20:00 meeting on the last day of a
+  // month is already the following month in UTC, and filing it one square
+  // forward would widen the window by a month for no reason — or, on the 31st
+  // of December, by a year. Same rollover the rest of this file exists for.
+  const wanted = addMonths(clubDay(furthest), 1);
+  const ceiling = addMonths(today, MAX_MONTHS_AHEAD);
+
+  if (monthIndex(wanted) < monthIndex(floor)) return { from, to: floor };
+  if (monthIndex(wanted) > monthIndex(ceiling)) return { from, to: ceiling };
+  return { from, to: wanted };
 }
 
 /**

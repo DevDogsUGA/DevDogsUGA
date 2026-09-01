@@ -1,0 +1,12 @@
+{
+  // `pnpm typecheck` covers the generator too, which `tsconfig.json` cannot
+  // include: anything under `rootDir` is emitted, and `scripts/generate.ts` is
+  // a repo-local tool that reads apps/platform and writes src/generated. It
+  // belongs in CI's typecheck and not in the published `dist`.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src", "scripts", "vitest.config.ts"]
+}

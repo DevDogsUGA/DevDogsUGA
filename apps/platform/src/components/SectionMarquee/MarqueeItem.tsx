@@ -7,7 +7,7 @@ import type { ComponentType, ReactNode } from "react";
  */
 export type MarqueeIcon = ComponentType<{
   size?: number;
-  weight?: "fill";
+  weight?: "bold";
 }>;
 
 /**
@@ -32,10 +32,7 @@ export default function MarqueeItem({
       <span>{children}</span>
       {Icon ? (
         <span className="drop-shadow-block-sm opacity-60">
-          {/* Filled rather than outlined: at 18px against uppercase display
-              text, an outline reads as a smudge and a solid shape reads as a
-              mark. */}
-          <Icon size={18} weight="fill" />
+          <Icon size={18} weight="bold" />
         </span>
       ) : null}
     </span>

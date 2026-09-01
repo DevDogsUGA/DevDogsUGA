@@ -126,3 +126,8 @@ apps/study-group-finder/tool/*.docs.json
 # contributor ever needs to run the sync.
 .ds-sync/
 **/.design-sync/
+
+# `pnpm devtools images` writes event posters here. They are exports headed for
+# the GDG platform — one per meeting, made once — rather than the committed
+# brand assets the rest of that command renders, so they stay out of the tree.
+.images/

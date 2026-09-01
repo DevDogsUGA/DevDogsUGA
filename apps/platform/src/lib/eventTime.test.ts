@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { clubDay, clubDateKey, clubMonthStart } from "./eventTime";
+import {
+  clubDay,
+  clubDateKey,
+  clubMonthStart,
+  MAX_MONTHS_AHEAD,
+  scheduleWindow,
+} from "./eventTime";
 
 /**
  * The zone arithmetic, tested at the one hour it goes wrong.
@@ -66,5 +72,96 @@ describe("clubMonthStart", () => {
     expect(clubDateKey(clubMonthStart({ year: 2026, month: 8 }))).toBe(
       "2026-09-01",
     );
+  });
+});
+
+describe("scheduleWindow", () => {
+  /**
+   * The forward bound, which was a constant and hid a semester.
+   *
+   * `/events` asked for a fixed two months ahead. Everything past that synced
+   * into Postgres and appeared nowhere — not on the calendar, not in the list,
+   * and not reachable by paging, since the page derives its paging bounds from
+   * the same span. Reported, accurately from the outside, as "events after
+   * September don't sync at all".
+   */
+  const august = { year: 2026, month: 7 };
+
+  it("always looks a month back", () => {
+    expect(scheduleWindow(august, null).from).toEqual({
+      year: 2026,
+      month: 6,
+    });
+  });
+
+  it("still spans three months when the base is empty", () => {
+    // The floor. A summer with nothing on the books must still render a
+    // calendar somebody can page through, not one that dead-ends on today.
+    expect(scheduleWindow(august, null).to).toEqual({ year: 2026, month: 9 });
+  });
+
+  it("reaches past the floor to the last meeting on the books", () => {
+    // ⚠️ The regression. A semester authored through 3 December used to stop
+    // being visible at the end of September.
+    const december = new Date("2026-12-03T23:00:00.000Z");
+    expect(scheduleWindow(august, december).to).toEqual({
+      year: 2027,
+      month: 0,
+    });
+  });
+
+  it("does not shrink below the floor for a near meeting", () => {
+    // The base holding nothing past this week is the ordinary state for most
+    // of the year, and it must not collapse the calendar to one month.
+    const thisWeek = new Date("2026-08-25T22:00:00.000Z");
+    expect(scheduleWindow(august, thisWeek).to).toEqual({
+      year: 2026,
+      month: 9,
+    });
+  });
+
+  it("clamps a mistyped year rather than paging to it", () => {
+    // A meeting entered as 2126 would otherwise hand the calendar twelve
+    // hundred empty months to walk through.
+    const typo = new Date("2126-09-15T22:00:00.000Z");
+    expect(scheduleWindow(august, typo).to).toEqual(
+      // August 2026 plus the cap.
+      { year: 2027, month: 7 },
+    );
+    expect(MAX_MONTHS_AHEAD).toBe(12);
+  });
+
+  it("does not widen by a month for a 20:00 meeting on the last day", () => {
+    // The rollover this whole file exists for, in its newest disguise. A
+    // social at 20:00 Eastern on 31 October has `startsAt` = 1 November in
+    // UTC, and reading the month off that would page the calendar a month
+    // further than the base goes.
+    const halloween = new Date("2026-11-01T00:00:00.000Z");
+    expect(clubDay(halloween).month).toBe(9);
+    expect(scheduleWindow(august, halloween).to).toEqual({
+      year: 2026,
+      month: 10,
+    });
+  });
+
+  it("does not widen by a YEAR for one on New Year's Eve", () => {
+    // The same slip, at the one boundary where it costs twelve months. A
+    // 20:00 party on 31 December 2026 is 01:00 UTC on 1 January 2027, so the
+    // naive reading lands the bound in February and the calendar offers a
+    // month of empty squares past the end of the base.
+    const newYearsEve = new Date("2027-01-01T01:00:00.000Z");
+    expect(clubDay(newYearsEve)).toEqual({ year: 2026, month: 11, day: 31 });
+    expect(scheduleWindow(august, newYearsEve).to).toEqual({
+      year: 2027,
+      month: 0,
+    });
+  });
+
+  it("crosses a year end without arithmetic drift", () => {
+    const november = { year: 2026, month: 10 };
+    expect(scheduleWindow(november, null)).toEqual({
+      from: { year: 2026, month: 9 },
+      to: { year: 2027, month: 0 },
+    });
   });
 });

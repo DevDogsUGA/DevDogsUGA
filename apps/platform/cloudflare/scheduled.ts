@@ -54,6 +54,11 @@ export const CRON_ROUTES: Record<string, string[]> = {
     // gone, because a transient upstream error would tear down a healthy
     // environment's credentials and secrets.
     "/cron/sandbox-reconcile",
+    // Mirrors the UGA Bulletin's program catalog for the account Academics
+    // combobox. Last in the daily group because it deliberately spaces roughly
+    // 42 upstream page requests; a slow or rate-limited Bulletin must not delay
+    // the GitHub and sandbox repair passes above.
+    "/cron/academic-programs",
   ],
   // Airtable polls rather than subscribes. Webhooks exist but expire on a
   // 7-day refresh cycle and deliver cursor-based payloads that have to be
@@ -88,9 +93,26 @@ export async function scheduled(
 
   // Sequential rather than concurrent: these passes share a connection pool,
   // and a five-minute cadence has no deadline that parallelism would help.
+  // Continue after a failed route so one upstream outage cannot starve the
+  // other jobs sharing its cron expression, then fail the invocation so Worker
+  // observability still records the problem instead of reporting a false
+  // success.
+  const failures: string[] = [];
   for (const path of paths) {
-    await fetch(`${env.BASE_URL}${path}`, {
-      headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
-    });
+    try {
+      const response = await fetch(`${env.BASE_URL}${path}`, {
+        headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
+      });
+      if (!response.ok) failures.push(`${path}: HTTP ${response.status}`);
+    } catch (error) {
+      failures.push(
+        `${path}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  if (failures.length > 0) {
+    console.error("cron_dispatch_failed", { cron: event.cron, failures });
+    throw new Error(`Cron routes failed: ${failures.join("; ")}`);
   }
 }

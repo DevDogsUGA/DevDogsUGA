@@ -2,6 +2,9 @@ import type { AirtableClient, LiveTable, NewField } from "./client.js";
 import type { FieldSpec, TableSpec } from "./field.js";
 import { registry } from "./registry.js";
 
+/** The timezone in which officers author every event datetime. */
+export const AIRTABLE_DATETIME_TIME_ZONE = "America/New_York";
+
 /**
  * Creating the base from the registry.
  *
@@ -51,12 +54,12 @@ export function createOptionsFor(
     case "date":
       return { dateFormat: { name: "iso" } };
 
-    // UTC, deliberately. The platform stores instants and the officer console
-    // is read in one place, so a base-local timezone would only introduce a
-    // second interpretation of the same column.
+    // Officers author club events as Eastern wall-clock times. Airtable still
+    // returns the resulting instant as UTC ISO-8601; this setting tells it how
+    // to interpret the time entered in the grid and follows DST automatically.
     case "dateTime":
       return {
-        timeZone: "utc",
+        timeZone: AIRTABLE_DATETIME_TIME_ZONE,
         dateFormat: { name: "iso" },
         timeFormat: { name: "24hour" },
       };

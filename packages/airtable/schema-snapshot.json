@@ -16,6 +16,11 @@
           "type": "multilineText"
         },
         {
+          "id": "fldFehEX3HmzKW2yv",
+          "name": "Meeting",
+          "type": "multipleRecordLinks"
+        },
+        {
           "id": "fldmscaBQzdP4qhMP",
           "name": "MyID",
           "type": "singleLineText"
@@ -26,7 +31,7 @@
           "type": "singleSelect"
         },
         {
-          "id": "fldbZHdOlT5G0rAPP",
+          "id": "fldqmEA9hK4QyBKZE",
           "name": "Workshop",
           "type": "multipleRecordLinks"
         }
@@ -60,7 +65,10 @@
         {
           "id": "fld9p3FVXCuFWJF7b",
           "name": "Judging starts",
-          "type": "dateTime"
+          "type": "dateTime",
+          "options": {
+            "timeZone": "America/New_York"
+          }
         },
         {
           "id": "fldGij8ChmqGklbwh",
@@ -73,7 +81,7 @@
           "type": "number"
         },
         {
-          "id": "fldge0I3DNLH0b7BN",
+          "id": "fldu9sZHLPg0TTGpX",
           "name": "Workshop",
           "type": "multipleRecordLinks"
         }
@@ -98,6 +106,11 @@
           "id": "fldyPrtUDL9iuhLA1",
           "name": "⚙️ Sync status",
           "type": "multilineText"
+        },
+        {
+          "id": "fldShK6WZbWz35UgO",
+          "name": "Attendance",
+          "type": "multipleRecordLinks"
         },
         {
           "id": "fldZT0taFyXVb7Bls",
@@ -154,17 +167,18 @@
         {
           "id": "fld5JjWXM1om14UHs",
           "name": "Cancelled",
-          "type": "dateTime"
-        },
-        {
-          "id": "fldmhd0w0I2h88UTZ",
-          "name": "Check-in closes",
-          "type": "dateTime"
+          "type": "dateTime",
+          "options": {
+            "timeZone": "America/New_York"
+          }
         },
         {
           "id": "fldEjZPZGVJG3qZEl",
           "name": "Ends at",
-          "type": "dateTime"
+          "type": "dateTime",
+          "options": {
+            "timeZone": "America/New_York"
+          }
         },
         {
           "id": "fldsGXvpFlZenWEPq",
@@ -205,7 +219,10 @@
         {
           "id": "fld0iXyGZpgW7zJWF",
           "name": "Starts at",
-          "type": "dateTime"
+          "type": "dateTime",
+          "options": {
+            "timeZone": "America/New_York"
+          }
         },
         {
           "id": "fld2t0yGBtegiryKy",
@@ -267,14 +284,19 @@
           "type": "singleLineText"
         },
         {
-          "id": "fldqQiRT2jDhlsrWC",
-          "name": "⚙️ Slug",
-          "type": "singleLineText"
+          "id": "fldVGonACJHsZpQif",
+          "name": "⚙️ Sync status",
+          "type": "multilineText"
         },
         {
           "id": "fldaDoMwYJlhoxODU",
           "name": "Name",
           "type": "singleLineText"
+        },
+        {
+          "id": "fldxSJc7VLT9Msruq",
+          "name": "Order",
+          "type": "number"
         },
         {
           "id": "fldWQXMUDMWVFJK2T",
@@ -346,12 +368,12 @@
           "type": "multilineText"
         },
         {
-          "id": "fldxI3wgrnNwFEotu",
+          "id": "fldXma4qTVMbEfdwt",
           "name": "Attendance",
           "type": "multipleRecordLinks"
         },
         {
-          "id": "fld0UvdnfDtTgG1nU",
+          "id": "fldawwmK6EnM1D2Qj",
           "name": "Competitions",
           "type": "multipleRecordLinks"
         },

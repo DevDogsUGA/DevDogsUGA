@@ -11,7 +11,7 @@ export interface Badge {
    * "where am I going" and read fine as words alone; the homepage cards carry
    * states you scan repeatedly down a grid, where a shape lands faster.
    */
-  icon?: ComponentType<{ className?: string }>;
+  icon?: ComponentType<{ className?: string; weight?: "bold" }>;
   bg: string;
   text: string;
 }
@@ -123,10 +123,10 @@ export const PROJECTS: Project[] = [
     badge: MAINTENANCE,
     year: "2026 – present",
     title: "DevDogs Platform",
-    tagline: "Member Portal & Dev Tools",
+    tagline: "Member Portal and Dev Tools",
     titleColor: "text-mauve-950",
     description:
-      "The site you're on. A member portal and developer platform for the club — profiles, contribution streaks, an OAuth server our other apps sign in against, and the tooling that runs DevDogs.",
+      "The site you're on. A member portal and developer platform for the club: community profiles, documentation, and all the tooling that runs DevDogs.",
     switcher: {
       icon: "HouseIcon",
       iconBg: "bg-cyan-400",
@@ -155,7 +155,7 @@ export const PROJECTS: Project[] = [
     tagline: "Schedule Builder",
     titleColor: "text-red-700",
     description:
-      "Plan your semester against live UGA registrar data. Answer a short questionnaire, and DogDays generates conflict-free schedules — weighing professor ratings, walking distance between buildings, and the credits you already have.",
+      "Plan your semester against live UGA registrar data. Answer a short questionnaire, and DogDays generates conflict-free schedules, considering professor ratings, walking distance between buildings, and the credits you already have.",
     switcher: {
       icon: "DogDaysIcon",
       iconBg: "bg-red-400",
@@ -185,7 +185,7 @@ export const PROJECTS: Project[] = [
     tagline: "Study Group Finder",
     titleColor: "text-purple-700",
     description:
-      "Our first mobile app: find the people already studying what you're studying. Match with classmates by course, form a group, and pick a time that works — built in Flutter for iOS and Android.",
+      "Our first mobile app: find the people already studying what you're studying. Match with classmates by course, form a group, and pick a time and place that works for everyone!",
     switcher: {
       icon: "DogPackIcon",
       iconBg: "bg-purple-400",
@@ -202,11 +202,11 @@ export const PROJECTS: Project[] = [
   {
     badge: PAUSED,
     year: "2025 – 2026",
-    title: "Community Resource Forum",
-    tagline: "Athens Services Directory",
-    titleColor: "text-emerald-700",
+    title: "Wuphf",
+    tagline: "Community Resource Forum",
+    titleColor: "text-mauve-950",
     description:
-      "A searchable hub connecting Athens residents to local community services, events, and organizations. Development is paused before launch — the groundwork is built and waiting on a team to carry it the rest of the way.",
+      "A searchable hub connecting UGA students to resources for academic support, campus involvement, and career development. Contributions were paused to due greater interest in other projects.",
     switcher: {
       icon: "MagnifyingGlassIcon",
       iconBg: "bg-emerald-400",
@@ -222,9 +222,9 @@ export const PROJECTS: Project[] = [
     year: "2023 – 2024",
     title: "Better Bus Tracker",
     tagline: "Campus Transit, Live",
-    titleColor: "text-sky-700",
+    titleColor: "text-mauve-950",
     description:
-      "A native Android app for riding UGA transit: buses moving on the map in real time, and arrival times for the stop you are actually standing at. Development is paused, and the source was never published.",
+      "A native Android app for riding UGA transit: buses moving on the map in real time, and arrival times for the stop you are actually standing at. Contributions were paused to due greater interest in other projects.",
     // No `switcher`: nothing of this one shipped and nothing is being built,
     // so it stays on the homepage as history and off the switcher.
     contributions: "closed",

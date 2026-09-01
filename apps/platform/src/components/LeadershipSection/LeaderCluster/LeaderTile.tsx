@@ -25,7 +25,7 @@ export default function LeaderTile({ profile, className, ...props }: Props) {
       )}
       {...props}
     >
-      <span className="shadow-block-md relative block size-28 overflow-hidden rounded-full border-3 border-mauve-950 shadow-rose-700">
+      <span className="shadow-block-md relative block size-28 overflow-hidden rounded-full border-3 border-mauve-950 shadow-mauve-700">
         <Headshot
           name={profile.name}
           src={profile.imageSrc}

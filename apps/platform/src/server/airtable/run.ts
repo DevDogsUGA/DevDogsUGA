@@ -23,14 +23,13 @@ import {
   pullTeamGrades,
   pushDerivedCounts,
   pushMembers,
-  pushProjects,
   pushTeams,
   writeSyncStatus,
 } from "./push";
 import {
-  projectIdMap,
   pullCompetitions,
   pullMeetings,
+  pullProjects,
   pullWorkshops,
 } from "./sync";
 import type { Refusal } from "./refusals";
@@ -222,19 +221,19 @@ export async function runAirtableSync(
       attendance: await client.listRecords(attendanceSpec.id),
     };
 
-    // Projects go up first: a workshop's Project link can only be resolved
-    // against records that already exist in the base.
-    const projectPush = await pushProjects(client, listed.projects);
-    add(pushed, projectPush);
-
-    const projectRecords =
-      projectPush.created > 0
-        ? await client.listRecords(projectsSpec.id)
-        : listed.projects;
-
     // Pull order is a dependency order, not a preference: workshops resolve
-    // meeting links, competitions resolve workshop links.
-    const projectIds = await projectIdMap(projectRecords);
+    // both project and meeting links, competitions resolve workshop links, and
+    // attendance resolves meeting and workshop links.
+    //
+    // Projects used to be PUSHED here instead, ahead of everything, with a
+    // re-list afterwards so a record created this pass could be linked to. All
+    // of that is gone: the table is officer-authored now, for the reason
+    // `pullProjects` gives, so it is simply the first pull rather than a push
+    // the rest of the pass had to wait on.
+    const projectOutcome = await pullProjects(listed.projects);
+    addPull(pulled, projectOutcome);
+    refusals.push(...projectOutcome.refusals);
+    const projectIds = projectOutcome.idMap;
 
     const meetingOutcome = await pullMeetings(listed.meetings);
     addPull(pulled, meetingOutcome);
@@ -255,14 +254,15 @@ export async function runAirtableSync(
     addPull(pulled, competitionOutcome);
     refusals.push(...competitionOutcome.refusals);
 
-    // Attendance after workshops, because a response names its workshop by
-    // Airtable record id and only that pass knows what those map to. Before
-    // the pushes, so the ⚙️ Attendance counts a member reads in the base
+    // Attendance after meetings and workshops, because a response names both
+    // by Airtable record id and only those passes know what the ids map to.
+    // Before the pushes, so the ⚙️ Attendance counts a member reads in the base
     // include what this pass just imported rather than lagging a
     // fifteen-minute cycle behind the form they watched somebody submit.
     const attendanceOutcome = await pullAttendance(
       listed.attendance,
       workshopOutcome.idMap,
+      meetingOutcome.idMap,
     );
     pulled.upserted += attendanceOutcome.imported;
     pulled.skipped += attendanceOutcome.skipped;

@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
   useSyncExternalStore,
+  type ComponentProps,
   type ReactNode,
 } from "react";
 import { ArrowLeftIcon } from "@phosphor-icons/react/ssr";
@@ -43,6 +44,8 @@ interface Props {
   pair?: DialogPairRole;
   /** What the stacked aside's back button says it returns to. */
   backLabel?: string;
+  /** Override the focus target selected when the dialog opens. */
+  onOpenAutoFocus?: ComponentProps<typeof DialogContent>["onOpenAutoFocus"];
 }
 
 /**
@@ -106,6 +109,7 @@ export default function DialogShell({
   tone = "light",
   pair,
   backLabel = "Back",
+  onOpenAutoFocus,
 }: Props) {
   const wide = useSideBySide();
   const isAside = pair === "aside";
@@ -142,6 +146,7 @@ export default function DialogShell({
         data-aside={isPrimary ? asideOpen : undefined}
         // Stacked, the aside's way out is the back button below, not an X.
         showCloseButton={!stackedAside}
+        onOpenAutoFocus={onOpenAutoFocus}
         onInteractOutside={paired ? keepPairOpen : undefined}
         overlayClassName={t.overlay}
         className={`flex max-h-[85dvh] w-full flex-col gap-4 overflow-hidden p-5 ring-0 sm:max-w-xl ${t.panel} ${role.panel}`}

@@ -26,7 +26,7 @@ export default async function StreakCTA() {
         <p className="text-sm text-mauve-600">
           Keep your{" "}
           <span className="font-bold text-amber-700">
-            <FlameIcon className="mr-0.5 mb-0.5 inline" />
+            <FlameIcon weight="bold" className="mr-0.5 mb-0.5 inline" />
             {streak}-week streak
           </span>{" "}
           alive — contribute before the week ends.
@@ -36,9 +36,9 @@ export default async function StreakCTA() {
           target="_blank"
           className="transition-lift hover:shadow-block-sm flex shrink-0 items-center gap-2 rounded-sm border-2 border-amber-500 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-amber-500"
         >
-          <GithubLogoIcon />
+          <GithubLogoIcon weight="bold" />
           Complete an Issue
-          <ArrowRightIcon className="text-xs" />
+          <ArrowRightIcon weight="bold" className="text-xs" />
         </Link>
       </div>
     );
@@ -56,9 +56,9 @@ export default async function StreakCTA() {
         target="_blank"
         className="transition-lift hover:shadow-block-sm flex shrink-0 items-center gap-2 rounded-sm border-2 border-black bg-mauve-950 px-4 py-2 text-sm font-semibold text-white hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-cyan-400"
       >
-        <GithubLogoIcon />
+        <GithubLogoIcon weight="bold" />
         DevDogs on GitHub
-        <ArrowRightIcon className="text-xs" />
+        <ArrowRightIcon weight="bold" className="text-xs" />
       </Link>
     </div>
   );

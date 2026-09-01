@@ -6,7 +6,6 @@ import { AppSwitcherProvider } from "~/components/AppSwitcher/provider";
 import Footer from "~/components/Footer";
 import TopNav from "~/components/TopNav";
 import NavUserProvider from "~/components/TopNav/NavUserProvider";
-import AnimationInit from "~/ui/animation-init";
 
 export default function SiteLayout({ children }: LayoutProps<"/">) {
   return (
@@ -43,24 +42,6 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
                 nothing. */}
             <Suspense fallback={<div className="min-h-screen" />}>
               {children}
-              {/* Mounted inside the content boundary, not in the root layout.
-                  AnimationInit adds `.is-visible` to [data-animate] elements,
-                  and `class` is an attribute React owns on those nodes. From
-                  the root layout it hydrated in its own boundary, ahead of the
-                  page body, so it rewrote classes on server HTML React had not
-                  hydrated yet, and React reported:
-
-                    <section id="projects"
-                    +  className="relative w-full overflow-hidden pt-(--sect..."
-                    -  className="relative w-full overflow-hidden pt-(--sect..."
-                       data-animate="fade-up">
-
-                  React then re-rendered the subtree, replacing the very nodes
-                  the IntersectionObserver held, leaving those sections stuck at
-                  their `opacity: 0` base state permanently. Committing in the
-                  same boundary as `children` means the body is hydrated before
-                  a single class is touched. */}
-              <AnimationInit />
             </Suspense>
           </main>
 

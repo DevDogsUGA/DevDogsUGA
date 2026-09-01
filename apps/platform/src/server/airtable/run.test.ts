@@ -1,4 +1,5 @@
 import {
+  AIRTABLE_DATETIME_TIME_ZONE,
   AirtableClient,
   registry,
   type FieldSpec,
@@ -37,9 +38,6 @@ vi.mock("../discord/alerts", () => alerts);
 
 const writes = vi.hoisted(() => ({
   pushMembers: vi.fn(() =>
-    Promise.resolve({ created: 0, updated: 0, unchanged: 0 }),
-  ),
-  pushProjects: vi.fn(() =>
     Promise.resolve({ created: 0, updated: 0, unchanged: 0 }),
   ),
   pushTeams: vi.fn(() =>
@@ -109,7 +107,15 @@ vi.mock("./sync", () => ({
       idMap: new Map(),
     }),
   ),
-  projectIdMap: vi.fn(() => Promise.resolve(new Map())),
+  pullProjects: vi.fn(() =>
+    Promise.resolve({
+      upserted: 0,
+      archived: 0,
+      skipped: 0,
+      refusals: [],
+      idMap: new Map(),
+    }),
+  ),
 }));
 
 const { runAirtableSync } = await import("./run");
@@ -131,18 +137,18 @@ function matchingSchema() {
         id: spec.id,
         name: spec.name,
         primaryFieldId: fields[0]!.id,
-        // `verifyBase` compares choice names for every field that declares
-        // them, so the fixture has to mirror what the Meta API returns for a
-        // select. Without that, each test built on "a base that matches" fails
-        // with `schema_invalid` the moment a field declares a list. Colour and
-        // choice id are left out because the check compares names only.
+        // Mirror the two option values `verifyBase` treats as semantic: select
+        // choice names and a datetime's timezone. Presentation-only options
+        // such as colours and date formats remain absent on purpose.
         fields: fields.map((f) => ({
           id: f.id,
           name: f.name,
           type: f.type,
           ...(f.choices
             ? { options: { choices: f.choices.map((name) => ({ name })) } }
-            : {}),
+            : f.type === "dateTime"
+              ? { options: { timeZone: AIRTABLE_DATETIME_TIME_ZONE } }
+              : {}),
         })),
       };
     }),
@@ -412,6 +418,6 @@ describe("runAirtableSync with no token", () => {
     await runAirtableSync({ trigger: "cron" });
 
     expect(lease.claimSyncLease).not.toHaveBeenCalled();
-    expect(writes.pushProjects).not.toHaveBeenCalled();
+    expect(writes.pushMembers).not.toHaveBeenCalled();
   });
 });

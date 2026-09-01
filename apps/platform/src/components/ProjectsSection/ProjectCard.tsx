@@ -83,6 +83,7 @@ export default function ProjectCard({
 
   // Same guard, same reason: only the apps with a drawn mark carry one.
   const mark = icon ? PROJECT_ICONS[icon] : null;
+  const isComingSoon = liveUrl?.label === "Public Beta";
 
   return (
     <div
@@ -92,7 +93,9 @@ export default function ProjectCard({
         <span
           className={`flex items-center gap-1 rounded-sm ${badge.bg} ${badge.text} ${t.chipPad} ${t.label} font-bold tracking-wide uppercase`}
         >
-          {BadgeIcon && <BadgeIcon className={`${t.chipIcon} shrink-0`} />}
+          {BadgeIcon && (
+            <BadgeIcon weight="bold" className={`${t.chipIcon} shrink-0`} />
+          )}
           {badge.label}
         </span>
         <span
@@ -145,27 +148,47 @@ export default function ProjectCard({
         </div>
       )}
       {/* Both buttons carry the streak CTA's shapes and its black block shadow:
-          the outline for the secondary repo link, the solid fill for the site. */}
+          the solid site CTA comes first, followed by the secondary repo link. */}
       {(githubUrl ?? liveUrl) && (
         <div
-          className={`flex justify-end gap-3 border-t ${t.rule} ${t.footPad}`}
+          className={`flex justify-end gap-4 border-t ${t.rule} ${t.footPad}`}
         >
+          {liveUrl && !isComingSoon && (
+            <Link
+              href={liveUrl.href}
+              target="_blank"
+              className={`transition-lift hover:shadow-block-md flex shrink-0 items-center gap-2 rounded-sm border-2 border-black bg-emerald-400 ${t.button} font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5`}
+            >
+              <ArrowSquareOutIcon weight="bold" /> {liveUrl.label}
+            </Link>
+          )}
+          {liveUrl && isComingSoon && (
+            <div className="relative isolate shrink-0 pt-1">
+              <button
+                type="button"
+                disabled
+                className={`flex cursor-not-allowed items-center gap-2 rounded-sm border-2 border-black bg-purple-800 ${t.button} font-semibold text-purple-50`}
+              >
+                <ArrowSquareOutIcon weight="bold" /> {liveUrl.label}
+              </button>
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-0 left-1/2 z-10 w-[115%] -translate-x-1/2 -rotate-6 overflow-hidden border-y-2 border-black bg-amber-300 px-2 py-0.5 text-center font-mono text-[0.6rem]/none font-black tracking-widest text-black uppercase shadow-sm"
+              >
+                <span className="relative z-10 bg-amber-300 px-1">
+                  Coming Soon
+                </span>
+                <span className="absolute inset-0 -z-0 bg-[repeating-linear-gradient(135deg,transparent_0,transparent_7px,rgb(0_0_0/0.18)_7px,rgb(0_0_0/0.18)_11px)]" />
+              </span>
+            </div>
+          )}
           {githubUrl && (
             <Link
               href={githubUrl}
               target="_blank"
               className={`transition-lift hover:shadow-block-md flex shrink-0 items-center gap-2 rounded-sm border-2 border-black ${t.fill} ${t.button} font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5`}
             >
-              <GithubLogoIcon /> GitHub
-            </Link>
-          )}
-          {liveUrl && (
-            <Link
-              href={liveUrl.href}
-              target="_blank"
-              className={`transition-lift hover:shadow-block-md flex shrink-0 items-center gap-2 rounded-sm border-2 border-black bg-emerald-400 ${t.button} font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5`}
-            >
-              <ArrowSquareOutIcon /> {liveUrl.label}
+              <GithubLogoIcon weight="bold" /> GitHub
             </Link>
           )}
         </div>

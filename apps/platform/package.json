@@ -33,6 +33,7 @@
     "@devdogsuga/drizzle": "workspace:*",
     "@devdogsuga/email": "workspace:*",
     "@devdogsuga/env": "workspace:*",
+    "@devdogsuga/og": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
     "@discordjs/builders": "^1.14.1",
     "@discordjs/rest": "^2.6.3",
@@ -110,7 +111,7 @@
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/env": "workspace:*",
-    "@next/env": "^16.3.2",
+    "@next/env": "^16.3.4",
     "@opennextjs/cloudflare": "catalog:",
     "@supabase/auth-js": "^2.112.3",
     "@tailwindcss/postcss": "catalog:",

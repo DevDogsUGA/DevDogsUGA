@@ -61,7 +61,7 @@ export default function UnderConstruction() {
               className="transition-lift hover:shadow-block-md flex items-center gap-2 rounded-sm border border-black bg-cyan-400 px-6 py-2.5 font-bold text-black shadow-none hover:-translate-x-1 hover:-translate-y-1 hover:shadow-amber-400"
             >
               Go Home
-              <ArrowRightIcon />
+              <ArrowRightIcon weight="bold" />
             </LinkButton>
           </div>
         </section>

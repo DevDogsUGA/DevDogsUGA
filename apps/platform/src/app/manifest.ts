@@ -36,19 +36,32 @@ export default function manifest(): MetadataRoute.Manifest {
     /**
      * `app/icon.png` is served at `/icon.png`, the URL Next derives for a
      * STATIC metadata icon file. (The `?<generated>` hash in the docs is on the
-     * `<link>` it writes, not on the route.) It is 299x299, declared honestly
-     * rather than rounded to 512: a browser scales the icon it is given, and a
-     * lie here only misleads whichever one picks by size.
+     * `<link>` it writes, not on the route.)
      *
-     * That single size is also why this manifest does not claim installability.
-     * Chrome wants 192 and 512 before it offers to install, and there is no
-     * second rendering of the logo in this repo to point at. Adding one is a
-     * design task.
+     * This used to be one 299x299 rendering, and this comment used to say that
+     * Chrome wants 192 and 512 before it offers to install, that there was no
+     * second rendering of the logo to point at, and that making one was a
+     * design task. That task is done: `pnpm devtools images icons` renders the
+     * mark at every size a platform asks for, from one template in
+     * `@devdogsuga/og`. So the two Chrome wants are declared here, and the app
+     * is installable.
+     *
+     * `purpose` stays `any` and does NOT claim `maskable`. A maskable icon has
+     * to keep its content inside the middle 80% so a launcher can crop it to
+     * whatever shape it likes, and this mark spends its outer edge on the
+     * border and the block shadow that make it look like the rest of the site.
+     * Declaring it maskable would let Android crop those off.
      */
     icons: [
       {
+        src: "/brand/icons/platform-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
         src: "/icon.png",
-        sizes: "299x299",
+        sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },

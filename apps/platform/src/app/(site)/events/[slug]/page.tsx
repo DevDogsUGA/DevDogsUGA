@@ -270,21 +270,16 @@ export default async function MeetingPage({
         <p className="text-sm/relaxed text-mauve-300">{meeting.summary}</p>
       )}
 
-      <section className="flex flex-col gap-2">
-        {/* h3, not h2. The dialog's own title is the h2 here, since Radix
+      {(judged.length > 0 || workshops.length > 0) && (
+        <section className="flex flex-col gap-2">
+          {/* h3, not h2. The dialog's own title is the h2 here, since Radix
             renders `DialogTitle` as one and uses it for the accessible name, so
             a section inside the body has to sit a level below it rather than
             beside it, or a screen reader reads the agenda as a sibling of the
             meeting rather than part of it. */}
-        <h3 className="font-display text-xs font-extrabold tracking-wide text-mauve-400 uppercase">
-          Agenda
-        </h3>
-        {judged.length === 0 && workshops.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-mauve-700 bg-white/5 p-3 text-sm text-mauve-300">
-            Nothing on the agenda yet — come build whatever you&rsquo;re working
-            on.
-          </p>
-        ) : (
+          <h3 className="font-display text-xs font-extrabold tracking-wide text-mauve-400 uppercase">
+            Agenda
+          </h3>
           <ul className="flex flex-col gap-2">
             {/* Judging first, and only judging carries a time: `judgingStartsAt`
                 is authored, and two competitions judged the same night really do
@@ -302,8 +297,8 @@ export default async function MeetingPage({
               <WorkshopRow key={workshop.workshopId} workshop={workshop} />
             ))}
           </ul>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Neither action survives a cancellation. An RSVP button on a night that
           is not happening collects replies to nothing, and a check-in link
@@ -402,11 +397,9 @@ function JudgingRow({ judging }: { judging: MeetingRangeJudging }) {
 }
 
 function WorkshopRow({ workshop }: { workshop: MeetingWorkshop }) {
-  // A workshop with no competition is a *supplementary* session: complete on
-  // its own, worth exactly one star, and an ordinary thing for a Wednesday. So
-  // it gets its own chip and its own sentence rather than an empty slot where a
-  // competition link would have gone. The absence is the fact, not a gap in the
-  // data.
+  // A workshop with no competition is complete on its own and still earns the
+  // workshop badge. It needs no second descriptor restating that relationship;
+  // the absence of a team count already distinguishes it from a kickoff.
   const badge =
     workshop.competitionSlug === null
       ? segmentBadge.workshop
@@ -433,13 +426,13 @@ function WorkshopRow({ workshop }: { workshop: MeetingWorkshop }) {
             {workshopLabel(workshop)}
           </Link>
         )}
-        <span className="text-xs text-mauve-400">
-          {workshop.competitionSlug === null
-            ? "Supplementary session"
-            : workshop.teamCount === 1
+        {workshop.competitionSlug !== null && (
+          <span className="text-xs text-mauve-400">
+            {workshop.teamCount === 1
               ? "1 team so far"
               : `${workshop.teamCount} teams so far`}
-        </span>
+          </span>
+        )}
       </span>
       <span className={`${badge.chipDark} ${CHIP_DARK_CLS} ml-auto`}>
         {badge.label}
@@ -449,7 +442,7 @@ function WorkshopRow({ workshop }: { workshop: MeetingWorkshop }) {
           leaves the badge's `ml-auto` alignment intact. Putting it inside that
           column would force `items-start` on a class `JudgingRow` shares. */}
       {workshop.description !== null && (
-        <span className="basis-full text-xs/relaxed text-mauve-600">
+        <span className="basis-full text-xs/relaxed text-mauve-400">
           {workshop.description}
         </span>
       )}

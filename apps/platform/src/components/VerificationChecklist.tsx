@@ -36,35 +36,46 @@ function CheckItem({
   href?: string;
   onNavigate?: () => void;
 }>) {
-  return (
-    <li className="flex items-start gap-2 text-sm">
+  const content = (
+    <>
       <span
-        className={`mt-0.5 shrink-0 ${met ? "text-emerald-400" : "text-mauve-500"}`}
+        className={`mt-0.5 shrink-0 ${met ? "text-emerald-500/60" : "text-rose-400"}`}
       >
         {met ? <CheckIcon className="size-4" /> : <XIcon className="size-4" />}
       </span>
       <span
-        className={`flex flex-1 items-start justify-between gap-2 ${met ? "text-white" : "text-mauve-400"}`}
+        className={`flex flex-1 items-start justify-between gap-2 ${met ? "text-mauve-400" : "text-white"}`}
       >
         <span>{children}</span>
         {!met && href && (
-          <Link
-            href={href}
-            onClick={onNavigate}
-            className="mt-px shrink-0 text-mauve-500 transition-colors hover:text-white"
-            aria-label="Go to setting"
-          >
-            <ArrowRightIcon className="size-4" />
-          </Link>
+          <ArrowRightIcon className="mt-px size-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
         )}
       </span>
+    </>
+  );
+
+  return (
+    <li className="text-sm">
+      {!met && href ? (
+        <Link
+          href={href}
+          onClick={onNavigate}
+          className="group hover:bg-accent focus-visible:ring-ring -mx-2 flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+          {content}
+        </Link>
+      ) : (
+        <div className="-mx-2 flex items-start gap-2 px-2 py-1.5">
+          {content}
+        </div>
+      )}
     </li>
   );
 }
 
 function GroupLabel({ children }: PropsWithChildren) {
   return (
-    <p className="text-xs font-semibold tracking-wide text-mauve-500 uppercase">
+    <p className="pb-1.5 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
       {children}
     </p>
   );
@@ -85,9 +96,9 @@ export default function VerificationChecklist({
         </p>
       )}
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-0">
         <GroupLabel>Become an official member</GroupLabel>
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-0">
           <CheckItem met={involvementFullName !== null}>
             <span className="flex items-center gap-[1ch]">
               <span>
@@ -133,9 +144,9 @@ export default function VerificationChecklist({
         </ul>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-0">
         <GroupLabel>Complete your profile</GroupLabel>
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-0">
           <CheckItem
             met={verificationStatus.hasPronouns}
             href="/account#pronouns"
@@ -153,9 +164,9 @@ export default function VerificationChecklist({
         </ul>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-0">
         <GroupLabel>Start contributing</GroupLabel>
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-0">
           <CheckItem
             met={verificationStatus.hasGithub}
             href="/account#github"

@@ -50,9 +50,8 @@ import { runOAuthSetup } from "./oauth/wizard.js";
 import { runSetup } from "./setup.js";
 import {
   runAirtable,
-  runPullIds,
-  runScaffold,
-  runSnapshot,
+  runApply,
+  runCheck,
   runVerify,
 } from "./airtable/commands.js";
 import { readCatalog, renderCatalog } from "./catalog.js";
@@ -96,6 +95,7 @@ import { runMenu } from "./menu.js";
 import { runDocsIndex } from "./docs/index-pages.js";
 import { runTask } from "./run/pick.js";
 import { runBw } from "./bws/bw.js";
+import { runImages } from "./images/commands.js";
 import { runQr } from "./qr/commands.js";
 
 const DOCTOR_COMMANDS = [
@@ -411,9 +411,9 @@ async function runGrantRoot(
 /**
  * Runs one of the three base commands, asking which if it was not told.
  *
- * The order in the picker is the runbook order, and the hints say what each one
- * writes to: these touch a base officers use every day, so "which of these is
- * safe to run right now" has to be answerable from the menu alone.
+ * The picker is ordered least dangerous first, and the hints say what each one
+ * touches: these run against a base officers use every day, so "which of these
+ * is safe to run right now" has to be answerable from the menu alone.
  */
 async function runAirtableCommand(rest: string[]): Promise<void> {
   const sub =
@@ -423,47 +423,38 @@ async function runAirtableCommand(rest: string[]): Promise<void> {
         message: "What should I do with the Airtable base?",
         options: [
           {
+            value: "check",
+            label: "Check the registry against the committed snapshot",
+            hint: "no token, no network — what CI runs",
+          },
+          {
             value: "verify",
-            label: "Check the base against the registry",
-            hint: "reads only — start here",
+            label: "Diff the live base against the registry",
+            hint: "reads the base — start here",
           },
           {
-            value: "scaffold",
-            label: "Create missing tables and fields",
-            hint: "writes to the base",
-          },
-          {
-            value: "pull-ids",
-            label: "Write discovered ids into registry.ts",
-            hint: "edits a committed source file",
-          },
-          {
-            value: "snapshot",
-            label: "Refresh the committed schema snapshot",
-            hint: "--check verifies it instead, as CI does",
+            value: "apply",
+            label: "Bring the base up to the registry, then write back",
+            hint: "writes the base AND two committed files",
           },
         ],
       }),
     );
 
+  if (sub === "check") {
+    await runAirtable(() => {
+      runCheck();
+    });
+    return;
+  }
   if (sub === "verify") {
     // Duplicate detection reads every record in every table, which is the
     // expensive part of a verify and pointless on a base with no rows yet.
     await runAirtable(() => runVerify(!rest.includes("--no-duplicates")));
     return;
   }
-  if (sub === "scaffold") {
-    await runAirtable(() => runScaffold(rest.includes("--dry-run")));
-    return;
-  }
-  if (sub === "pull-ids") {
-    await runAirtable(() => runPullIds());
-    return;
-  }
-  if (sub === "snapshot") {
-    // `--check` is credential-free and is what pull-request CI runs; the
-    // default refreshes the committed file and needs the token.
-    await runAirtable(() => runSnapshot(rest.includes("--check")));
+  if (sub === "apply") {
+    await runAirtable(() => runApply(rest.includes("--dry-run")));
     return;
   }
 
@@ -959,6 +950,14 @@ async function dispatch(argv: string[]): Promise<string | null> {
 
   if (first === "docs") {
     await runDocsCommand(rest);
+    return DONE;
+  }
+
+  if (first === "images") {
+    // `connect` is passed rather than called: only event graphics need a
+    // database, and `images page/*` must not demand a running stack to draw
+    // pictures that come entirely out of this repo.
+    await runImages(rest, { connect });
     return DONE;
   }
 

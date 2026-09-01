@@ -51,7 +51,7 @@ function SheetSection({
             onClick={onNavigate}
             className="flex items-center gap-2.5 rounded-sm px-2 py-2 text-sm font-medium text-mauve-200 transition-colors hover:bg-mauve-800 hover:text-white"
           >
-            <Icon className="size-4.5 shrink-0 text-mauve-400" />
+            <Icon weight="bold" className="size-4.5 shrink-0 text-mauve-400" />
             {item.label}
           </Link>
         );

@@ -32,12 +32,24 @@ export interface LeaderProfile {
   imageSrc: string | null;
   pronouns: string | null;
   year: string | null;
-  majors: string[];
-  minors: string[];
-  certificates: string[];
+  programs: LeaderAcademicProgram[];
   /** `profile.roleDescription`. Null until the officer writes one. */
   bio: string | null;
   links: { title: string; url: string }[];
+}
+
+export type LeaderAcademicProgramType =
+  | "major"
+  | "masters_program"
+  | "doctoral_program"
+  | "graduate_program"
+  | "minor"
+  | "certificate"
+  | "professional_program";
+
+export interface LeaderAcademicProgram {
+  name: string;
+  type: LeaderAcademicProgramType;
 }
 
 /**

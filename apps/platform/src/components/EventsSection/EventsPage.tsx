@@ -1,22 +1,24 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRightIcon, ArrowUpRightIcon } from "@phosphor-icons/react/ssr";
+import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import AccentBlobs from "~/ui/accent-blobs";
 import { ConsoleCard } from "~/ui/card";
 import PageHeader from "~/components/PageHeader";
-import { INVOLVEMENT_NETWORK_EVENTS_URL } from "~/config/nav";
 import type { MeetingInRange, MeetingSummary } from "~/server/loaders/meetings";
-import MonthCalendar from "./MonthCalendar";
-import ScheduleList from "./ScheduleList";
-import PastMeetings from "./PastMeetings";
+import EventsSchedule from "./EventsSchedule";
 
-/** `h-9` is the `text-3xl` line height, so the button centres on the h1's
- *  line rather than hanging from the header's top edge. */
 const HEADER_LINK_CLS =
   "flex h-9 items-center gap-2 rounded-lg border border-mauve-600 bg-mauve-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:border-white";
 
 export interface EventsPageProps {
-  /** Every meeting in the loaded window, ascending. Usually three months. */
+  /**
+   * Every meeting in the loaded window, ascending.
+   *
+   * The window is a month back and forward as far as the base goes, so it is
+   * three months in an empty summer and a whole semester the week a semester
+   * is authored. `bounds` is derived from the same span; see `forwardBound`
+   * in `events/layout.tsx`.
+   */
   meetings: MeetingInRange[];
   past: MeetingSummary[];
   /** How many past meetings exist beyond `past`, for the archive's paging. */
@@ -85,22 +87,14 @@ export default function EventsPage({
         title="Events"
         description="Every meeting, past and coming."
         accent="cyan"
+        centerActions
       >
         {/* The explainer left this page when it became strictly a schedule, so
-            the first link says where it went rather than keeping a second copy
-            here in step by hand. The Involvement Network is where RSVPs
-            live. */}
+            the link says where it went rather than keeping a second copy here
+            in step by hand. */}
         <Link href="/#how-it-works" className={HEADER_LINK_CLS}>
-          How a week works <ArrowRightIcon />
+          A Week in DevDogs <ArrowRightIcon />
         </Link>
-        <a
-          href={INVOLVEMENT_NETWORK_EVENTS_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={HEADER_LINK_CLS}
-        >
-          View Us on the Involvement Network <ArrowUpRightIcon />
-        </a>
       </PageHeader>
 
       <ConsoleCard.Root id="schedule">
@@ -112,29 +106,15 @@ export default function EventsPage({
           {/* The calendar is the narrower column: it answers "what does the
               month look like", a glance, while the list answers "what is
               actually on", which is reading. */}
-          <div className="grid grid-cols-1 gap-x-10 gap-y-10 lg:grid-cols-5">
-            <div className="lg:col-span-2">
-              {/* Opens on the CURRENT month, not the window's first. The
-                  window reaches a month back so somebody can page to what just
-                  happened; opening there would show past meetings to a visitor
-                  asking what is next. */}
-              <MonthCalendar
-                meetings={meetings}
-                initialYear={today?.year ?? bounds.from.year}
-                initialMonth={today?.month ?? bounds.from.month}
-                today={today}
-                bounds={bounds}
-              />
-            </div>
-            <div className="flex flex-col gap-10 lg:col-span-3">
-              <ScheduleList meetings={upcoming} now={now} />
-              <PastMeetings
-                meetings={past}
-                moreCount={pastMoreCount}
-                page={pastPage}
-              />
-            </div>
-          </div>
+          <EventsSchedule
+            meetings={upcoming}
+            past={past}
+            pastMoreCount={pastMoreCount}
+            pastPage={pastPage}
+            now={now}
+            today={today}
+            bounds={bounds}
+          />
         </ConsoleCard.Content>
       </ConsoleCard.Root>
     </div>

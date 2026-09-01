@@ -64,7 +64,7 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
           id: "academics",
           label: "Academics",
           description:
-            "Your degree programs as the club has them recorded. Read-only for now — ask an officer if anything here is wrong.",
+            "Select all of your UGA programs of study, including majors, minors, graduate programs, and certificates.",
         },
         {
           id: "bio",

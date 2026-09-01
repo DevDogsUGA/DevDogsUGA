@@ -80,7 +80,7 @@ async function AccountContent() {
             <Field
               id="academics"
               label="Academics"
-              description="Your degree programs as the club has them recorded. Read-only for now — ask an officer if anything here is wrong."
+              description="Select all of your UGA programs of study, including majors, minors, graduate programs, and certificates."
             >
               <AcademicFields {...data} />
             </Field>

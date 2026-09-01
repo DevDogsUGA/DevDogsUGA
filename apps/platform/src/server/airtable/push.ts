@@ -1,12 +1,12 @@
 import {
   attendanceTable as attendanceSpec,
+  projects as projectsSpec,
   buildPush,
   buildUpdate,
   competitions as competitionsSpec,
   meetings as meetingsSpec,
   members as membersSpec,
   mergeOn,
-  projects as projectsSpec,
   statusField,
   teamsTable as teamsSpec,
   workshops as workshopsSpec,
@@ -15,7 +15,6 @@ import {
   type CompetitionRow,
   type MeetingRow,
   type MemberRow,
-  type ProjectRow,
   type TableSpec,
   type TeamRow,
   type WorkshopRow,
@@ -28,7 +27,6 @@ import {
   competitionStandings,
   meetings,
   profiles,
-  projects,
   teamMembers,
   teams,
   workshops,
@@ -84,21 +82,6 @@ export async function pushMembers(
     .from(profiles);
 
   return upsert<MemberRow>(client, membersSpec, rows, existing);
-}
-
-export async function pushProjects(
-  client: AirtableClient,
-  existing: AirtableRecord[],
-): Promise<PushCounts> {
-  const rows = await db
-    .select({
-      id: projects.id,
-      slug: projects.slug,
-      displayName: projects.displayName,
-    })
-    .from(projects);
-
-  return upsert<ProjectRow>(client, projectsSpec, rows, existing);
 }
 
 /**
@@ -311,6 +294,7 @@ export async function writeSyncStatus(
   client: AirtableClient,
   refusals: Refusal[],
   listed: {
+    projects: AirtableRecord[];
     meetings: AirtableRecord[];
     workshops: AirtableRecord[];
     competitions: AirtableRecord[];
@@ -325,6 +309,10 @@ export async function writeSyncStatus(
   }
 
   const tables: [TableSpec, AirtableRecord[]][] = [
+    // Projects joined this list when the table stopped being pushed. Without
+    // it a refused project name computes a refusal and then drops it, which is
+    // the silence the whole `⚙️ Sync status` field exists to end.
+    [projectsSpec, listed.projects],
     [meetingsSpec, listed.meetings],
     [workshopsSpec, listed.workshops],
     [competitionsSpec, listed.competitions],

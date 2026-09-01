@@ -17,7 +17,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { LiveField, LiveTable } from "./client.js";
-import { planScaffold } from "./scaffold.js";
+import type { TableSpec } from "./field.js";
+import { registry } from "./registry.js";
 
 /**
  * Package root rather than `src/`: this is data, not source, and nothing
@@ -38,23 +39,17 @@ export interface SchemaSnapshot {
  * order.
  *
  * `findTable` matches on table id or name and `hasField` on field id or name,
- * so nothing else is load-bearing. Field `options` is dropped: it carries
- * colours, date formats and precisions that change without the shape changing,
- * and every such edit would show up as a diff in a file whose whole value is
- * that a diff means something.
+ * so most options are dropped: colours, date formats and precisions can change
+ * without changing the integration. Two values survive because the platform
+ * assigns them meaning: declared select names and a datetime's timezone.
  *
- * ONE exception, added alongside `verify.ts`'s choice check: the NAMES of a
- * select field's choices survive. The platform branches on those strings, so a
- * choice renamed in the UI SHOULD show up here as a diff. Keeping them is a
- * precondition, not the check itself. `snapshotDrift` still compares presence
- * only, and adding an offline choice comparison is a one-function change once
- * the data is in the file. The data goes in now because the file can only be
- * refreshed with a live credential, so a snapshot written without the names
- * would make that later change need a base run first, which is the dependency
- * the snapshot exists to remove.
+ * The choice-name exception was added alongside `verify.ts`'s choice check.
+ * The platform branches on those strings, so a rename SHOULD show up here.
+ * Datetime timezone is the other exception: it controls which instant a typed
+ * wall-clock time becomes, rather than merely how the grid presents it.
  *
  * Every other key in the bag, colours included, is still dropped. This is not
- * the start of snapshotting `options` generally.
+ * snapshotting `options` generally.
  *
  * Sorted because the Meta API makes no ordering promise, and an unsorted
  * snapshot would re-order itself on refresh and bury the real change.
@@ -72,7 +67,7 @@ export function normalize(tables: LiveTable[]): LiveTable[] {
           id: field.id,
           name: field.name,
           type: field.type,
-          ...choiceOptions(field),
+          ...meaningfulOptions(field),
         })),
     }));
 }
@@ -90,7 +85,14 @@ export function normalize(tables: LiveTable[]): LiveTable[] {
  * an unfamiliar option bag leaves the committed file stale, the one state in
  * which the offline check silently passes forever.
  */
-function choiceOptions(field: LiveField): Pick<LiveField, "options"> | object {
+function meaningfulOptions(
+  field: LiveField,
+): Pick<LiveField, "options"> | object {
+  if (field.type === "dateTime") {
+    const timeZone = field.options?.timeZone;
+    return typeof timeZone === "string" ? { options: { timeZone } } : {};
+  }
+
   const raw = (field.options as { choices?: unknown } | undefined)?.choices;
   if (!Array.isArray(raw)) return {};
 
@@ -119,7 +121,7 @@ export function readSnapshot(file: string = snapshotPath): SchemaSnapshot {
     raw = readFileSync(file, "utf8");
   } catch {
     throw new SnapshotMissingError(
-      `No schema snapshot at ${file}. Create one with \`pnpm devtools airtable snapshot\`.`,
+      `No schema snapshot at ${file}. Create one with \`pnpm devtools airtable apply\`.`,
     );
   }
   return JSON.parse(raw) as SchemaSnapshot;
@@ -131,21 +133,80 @@ export interface SnapshotDrift {
   absent: boolean;
   /** Field names the registry declares and the snapshot does not have. */
   missing: string[];
+  /** Same-named tables or fields whose Airtable identity has changed. */
+  idMismatches: SnapshotIdMismatch[];
+}
+
+export interface SnapshotIdMismatch {
+  /** Omitted when the mismatch is the table itself. */
+  field?: string;
+  registryId: string;
+  snapshotId: string;
 }
 
 /**
- * What the registry declares that the snapshot does not have.
+ * What in the registry disagrees with the last observed live schema.
  *
  * One-directional on purpose. Fields the base has and the registry does not
  * are routine, since Airtable creates the reverse side of every link
  * automatically, so reporting them would fail builds for something nobody did.
+ *
+ * Identity is deliberately stricter than scaffolding. The scaffolder falls
+ * back to names so it can bootstrap placeholders and adopt recreated fields;
+ * this check runs after `apply` and must prove that adoption was written back.
+ * A same-named field with a different ID is exactly the state that makes the
+ * runtime preflight refuse every sync pass.
  */
 export function snapshotDrift(snapshot: SchemaSnapshot): SnapshotDrift[] {
-  return planScaffold(snapshot.tables)
-    .filter((plan) => !plan.exists || plan.missing.length > 0)
-    .map((plan) => ({
-      table: plan.table,
-      absent: !plan.exists,
-      missing: plan.missing.map((field) => field.name),
-    }));
+  const specs = Object.values(registry as unknown as Record<string, TableSpec>);
+
+  return specs.flatMap((spec): SnapshotDrift[] => {
+    const byId = snapshot.tables.find((table) => table.id === spec.id);
+    const byName = snapshot.tables.find((table) => table.name === spec.name);
+    const live = byId ?? byName;
+
+    if (!live) {
+      return [
+        {
+          table: spec.name,
+          absent: true,
+          missing: [],
+          idMismatches: [],
+        },
+      ];
+    }
+
+    const idMismatches: SnapshotIdMismatch[] = [];
+    if (live.id !== spec.id) {
+      idMismatches.push({ registryId: spec.id, snapshotId: live.id });
+    }
+
+    const missing: string[] = [];
+    for (const field of Object.values(spec.fields)) {
+      if (live.fields.some((candidate) => candidate.id === field.id)) continue;
+
+      const sameName = live.fields.find(
+        (candidate) => candidate.name === field.name,
+      );
+      if (sameName) {
+        idMismatches.push({
+          field: field.name,
+          registryId: field.id,
+          snapshotId: sameName.id,
+        });
+      } else {
+        missing.push(field.name);
+      }
+    }
+
+    if (missing.length === 0 && idMismatches.length === 0) return [];
+    return [
+      {
+        table: spec.name,
+        absent: false,
+        missing,
+        idMismatches,
+      },
+    ];
+  });
 }

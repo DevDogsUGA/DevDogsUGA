@@ -13,7 +13,7 @@ export default function SignInButton() {
         className="flex items-center gap-1.5 rounded-sm border border-black bg-cyan-400 px-3 py-1 text-sm font-semibold text-black transition-[translate,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_var(--color-amber-400)] md:px-4 md:py-1.5"
       >
         Sign In
-        <ArrowRightIcon />
+        <ArrowRightIcon weight="bold" />
       </button>
     </SignInUnavailableDialog>
   );

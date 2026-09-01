@@ -3,6 +3,7 @@
 import { useId } from "react";
 import type { StaticImageData } from "next/image";
 import { useTvStatic } from "./useTvStatic";
+import type { StripDay } from "./CompetitionTimeline";
 
 /**
  * A CRT television, drawn rather than photographed, with a live screen.
@@ -72,6 +73,8 @@ interface Props {
    * `<Image>` on the beat title.
    */
   showing: { key: string; image: StaticImageData } | null;
+  /** The card selecting this channel, which drives the physical controls. */
+  channel: StripDay | null;
   className?: string;
 }
 
@@ -152,41 +155,56 @@ const PICTURE = { x: 36, y: 98, width: 188, height: 158 } as const;
 /*
  * The club's colours, used as light rather than as decoration.
  *
- * Cyan is the body and mauve is the fittings: the bezel, the trim, the knobs.
- * The fittings used to be rose, chosen when the plates under the set were rose
- * or mauve, and a rose bezel on a rose plate was a television with no edge. The
- * homepage plate is cyan now, which puts the body on its own colour instead;
- * what holds the set off its background either way is the black stroke around
- * every face, not a contrast of hue. Grey fittings are also what the real thing
- * had. Amber appears exactly once, on the power lamp, where a colour nothing
- * else on the set wears is the point.
+ * Walnut is the body, with an aged champagne control plate and dark bakelite
+ * knobs. Together they recall the wood veneer and mixed metal/plastic fittings
+ * of a domestic 1970s set. What holds the cabinet off the plate is still the
+ * black stroke around every face rather than a contrast of hue. The power lamp
+ * borrows the selected timeline marker's hue, so the controls answer the card
+ * currently tuning the set.
  *
  * Each ramp is a single hue darkening, never a hue shift, because the eye reads
  * lightness as form. A gradient that changed hue across a face would look like
  * two materials meeting rather than one surface turning away.
  */
-const CYAN = {
-  50: "#ecfeff",
-  200: "#a5f3fc",
-  500: "#06b6d4",
-  600: "#0891b2",
-  900: "#164e63",
+const WALNUT = {
+  50: "#f7ead3",
+  200: "#d9bb8b",
+  500: "#9a6838",
+  600: "#754923",
+  900: "#3b2516",
 } as const;
-/** Tailwind's `mauve` ramp, the same one the console pages are painted in. */
-const MAUVE = {
-  100: "oklch(96% 0.003 325.6)",
-  200: "oklch(86.5% 0.012 325.68)",
-  700: "oklch(43.5% 0.029 321.78)",
+const CHAMPAGNE = {
+  light: "#eadbb9",
+  dark: "#9b8057",
 } as const;
-const LAMP = "#fbbf24"; // amber-400
+const BAKELITE = {
+  light: "#6b4930",
+  dark: "#2d2018",
+} as const;
+const LAMP_IDLE = "#78716c"; // stone-500
+const LAMP_CHANNEL = {
+  monday: "#10b981", // emerald-500
+  wednesday: "#0ea5e9", // sky-500
+  week: "#eab308", // yellow-500
+  nextMonday: "#f43f5e", // rose-500
+} satisfies Record<StripDay, string>;
 
-export default function CrtTv({ showing, className }: Props) {
+/** Each channel has a repeatable mechanical position for both controls. */
+const KNOB_ROTATION = {
+  monday: [35, -20],
+  wednesday: [80, 35],
+  week: [135, 90],
+  nextMonday: [190, 145],
+} satisfies Record<StripDay, readonly [number, number]>;
+
+export default function CrtTv({ showing, channel, className }: Props) {
   // Strip everything that is not alphanumeric rather than just the colons the
   // rest of the codebase strips: React 19 hands back `«r0»`, not `:r0:`, so a
   // colon-only replace is now a no-op and these ids end up inside `url(#…)`.
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const id = (name: string) => `crt-${name}-${uid}`;
   const noSignal = useTvStatic();
+  const knobRotation = channel === null ? [0, 0] : KNOB_ROTATION[channel];
 
   return (
     <svg
@@ -230,8 +248,8 @@ export default function CrtTv({ showing, className }: Props) {
           x2="360"
           y2="300"
         >
-          <stop offset="0" stopColor={CYAN[600]} />
-          <stop offset="1" stopColor={CYAN[900]} />
+          <stop offset="0" stopColor={WALNUT[600]} />
+          <stop offset="1" stopColor={WALNUT[900]} />
         </linearGradient>
 
         {/* The top, lightest, brightest at the front-left corner nearest the
@@ -244,8 +262,8 @@ export default function CrtTv({ showing, className }: Props) {
           x2="356"
           y2="50"
         >
-          <stop offset="0" stopColor={CYAN[50]} />
-          <stop offset="1" stopColor={CYAN[200]} />
+          <stop offset="0" stopColor={WALNUT[50]} />
+          <stop offset="1" stopColor={WALNUT[200]} />
         </linearGradient>
 
         {/* The front, the middle value: lighter than the side it turns away
@@ -258,8 +276,8 @@ export default function CrtTv({ showing, className }: Props) {
           x2="300"
           y2="300"
         >
-          <stop offset="0" stopColor={CYAN[200]} />
-          <stop offset="1" stopColor={CYAN[500]} />
+          <stop offset="0" stopColor={WALNUT[200]} />
+          <stop offset="1" stopColor={WALNUT[500]} />
         </linearGradient>
 
         <linearGradient
@@ -270,8 +288,8 @@ export default function CrtTv({ showing, className }: Props) {
           x2="288"
           y2="288"
         >
-          <stop offset="0" stopColor={MAUVE[200]} />
-          <stop offset="1" stopColor={MAUVE[700]} />
+          <stop offset="0" stopColor={CHAMPAGNE.light} />
+          <stop offset="1" stopColor={CHAMPAGNE.dark} />
         </linearGradient>
 
         <linearGradient
@@ -282,8 +300,8 @@ export default function CrtTv({ showing, className }: Props) {
           x2="281"
           y2="211"
         >
-          <stop offset="0" stopColor={CYAN[50]} />
-          <stop offset="1" stopColor={MAUVE[100]} />
+          <stop offset="0" stopColor={BAKELITE.light} />
+          <stop offset="1" stopColor={BAKELITE.dark} />
         </linearGradient>
 
         {/* The tube surround stays near-black whatever the cabinet is wearing:
@@ -400,8 +418,15 @@ export default function CrtTv({ showing, className }: Props) {
           fill={`url(#${id("trim")})`}
           strokeWidth="3"
         />
-        {[140, 196].map((cy) => (
-          <g key={cy}>
+        {[140, 196].map((cy, i) => (
+          <g
+            key={cy}
+            className="transition-transform duration-500 ease-out motion-reduce:transition-none"
+            style={{
+              transform: `rotate(${knobRotation[i]}deg)`,
+              transformOrigin: `266px ${cy}px`,
+            }}
+          >
             <circle
               cx="266"
               cy={cy}
@@ -416,11 +441,25 @@ export default function CrtTv({ showing, className }: Props) {
               y1={cy}
               x2={cy === 140 ? 275 : 258}
               y2={cy === 140 ? 151 : 206}
+              stroke={CHAMPAGNE.light}
               strokeWidth="3"
             />
           </g>
         ))}
-        <circle cx="266" cy="252" r="7" fill={LAMP} strokeWidth="2.5" />
+        {/* Gray is the unselected lamp and the low frame of the flicker. The
+            coloured layer blinks away irregularly to expose it underneath. */}
+        <circle cx="266" cy="252" r="7" fill={LAMP_IDLE} strokeWidth="2.5" />
+        {channel !== null && (
+          <circle
+            key={channel}
+            cx="266"
+            cy="252"
+            r="7"
+            fill={LAMP_CHANNEL[channel]}
+            stroke="none"
+            className="motion-safe:animate-tv-lamp-flicker"
+          />
+        )}
 
         {/* ── Speaker ──────────────────────────────────────────────────────
             Across the chin. A blank strip under a tube reads as a mistake; a
@@ -430,7 +469,7 @@ export default function CrtTv({ showing, className }: Props) {
             rather than lines: the bezel's bottom reaches y≈262, and the outline
             is 3.5 wide centred on y=300, so it eats up to 298. The lines are
             placed against those inner edges, not the nominal ones. */}
-        <g stroke={CYAN[900]} strokeWidth="4" opacity="0.5">
+        <g stroke={WALNUT[900]} strokeWidth="4" opacity="0.5">
           {[269, 280, 291].map((y) => (
             <line key={y} x1="48" y1={y} x2="212" y2={y} />
           ))}

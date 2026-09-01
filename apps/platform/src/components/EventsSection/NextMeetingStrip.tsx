@@ -82,7 +82,7 @@ export default function NextMeetingStrip({
   const ended = now >= meeting.endsAt;
 
   return (
-    <div className={ROW_CLS} data-animate="fade-up">
+    <div className={ROW_CLS}>
       {/* `min-w-0` so a long meeting name truncates instead of refusing to
           shrink below its longest word, which is how a 390px viewport gets a
           horizontal scrollbar. */}
@@ -157,7 +157,7 @@ export default function NextMeetingStrip({
           from here is an ordinary navigation to /events with the meeting's
           dialog already open. */}
       <Link href={`/events/${meeting.slug}`} className={ROW_LINK_CLS}>
-        Details <ArrowRightIcon />
+        Details <ArrowRightIcon weight="bold" />
       </Link>
     </div>
   );
@@ -174,7 +174,7 @@ export default function NextMeetingStrip({
  */
 function NothingScheduled() {
   return (
-    <div className={ROW_CLS} data-animate="fade-up">
+    <div className={ROW_CLS}>
       <div className="min-w-0 space-y-1.5">
         <p className={EYEBROW_CLS}>Next meeting</p>
         <p className="font-display text-xl font-extrabold text-black">
@@ -192,7 +192,7 @@ function NothingScheduled() {
         rel="noopener noreferrer"
         className={ROW_LINK_CLS}
       >
-        Involvement Network <ArrowUpRightIcon />
+        Involvement Network <ArrowUpRightIcon weight="bold" />
       </a>
     </div>
   );

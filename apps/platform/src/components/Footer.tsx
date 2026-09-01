@@ -94,9 +94,9 @@ export default async function Footer() {
             </p>
 
             <p className="text-center text-balance lg:text-left">
-              Every semester, members collaborate across design, engineering,
-              and product to ship real software for real users — learning
-              industry-standard tooling along the way.
+              Every semester, DevDogs members collaborate across design,
+              frontend, and backend to ship real software for real users,
+              learning industry-standard tooling along the way.
             </p>
           </div>
 

@@ -79,7 +79,7 @@ export default function NavSubMenu({
         data-nav-sub-trigger=""
         className={`${POPOVER_ROW} cursor-default select-none data-[state=open]:bg-mauve-800`}
       >
-        <CaretLeftIcon className={POPOVER_ROW_CARET} />
+        <CaretLeftIcon weight="bold" className={POPOVER_ROW_CARET} />
         {label}
       </NavigationMenu.Trigger>
 

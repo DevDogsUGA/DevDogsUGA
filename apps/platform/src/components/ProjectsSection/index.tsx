@@ -5,22 +5,23 @@ import SectionBackground, {
 } from "~/ui/section-background";
 import { PROJECTS } from "~/config/projects";
 import ProjectCard from "./ProjectCard";
+import Link from "next/link";
 
 const OPEN_PROJECTS = PROJECTS.filter((p) => p.contributions === "open");
 const CLOSED_PROJECTS = PROJECTS.filter((p) => p.contributions === "closed");
 
 export const PROJECTS_BLOBS: BlobDef[] = [
-  { cx: "20%", cy: "30%", rx: "55%", ry: "50%", fill: "#a7f3d0" }, // emerald
-  { cx: "78%", cy: "65%", rx: "50%", ry: "55%", fill: "#34d399", opacity: 0.6 }, // emerald
-  { cx: "74%", cy: "12%", rx: "44%", ry: "36%", fill: "#a5b4fc", opacity: 0.5 }, // indigo
+  { cx: "20%", cy: "28%", rx: "50%", ry: "55%", fill: "#fde68a" }, // amber
+  { cx: "78%", cy: "68%", rx: "55%", ry: "50%", fill: "#fbbf24", opacity: 0.7 }, // amber
   {
-    cx: "10%",
-    cy: "78%",
-    rx: "38%",
-    ry: "32%",
-    fill: "#c7d2fe",
+    cx: "72%",
+    cy: "12%",
+    rx: "42%",
+    ry: "36%",
+    fill: "#fda4af",
     opacity: 0.45,
-  }, // indigo
+  }, // rose
+  { cx: "12%", cy: "80%", rx: "40%", ry: "32%", fill: "#f9a8d4", opacity: 0.5 }, // rose
 ];
 
 /* Parked, not deleted: the header is centered copy for now, with no room for
@@ -75,12 +76,11 @@ export default function ProjectsSection({
         // box, whose top is where pt-(--section-skew-slope) begins, so the
         // slanted top edge clears the nav too, not just the copy below it.
         className="relative w-full scroll-mt-20 overflow-hidden pt-(--section-skew-slope) pb-(--section-skew-slope)"
-        data-animate="fade-up"
       >
         <SectionBackground
           topEdge={topEdge}
           bottomEdge={bottomEdge}
-          base="#f0fdf4"
+          base="#fffbeb"
           blobs={PROJECTS_BLOBS}
         />
         <div className="relative z-10 mx-auto max-w-6xl space-y-16 px-6 py-12 md:px-12 md:py-16">
@@ -88,14 +88,24 @@ export default function ProjectsSection({
             <h2 className="font-display mb-8 text-4xl font-extrabold text-black md:text-5xl">
               Projects
             </h2>
-            <div className="mx-auto flex max-w-2xl flex-col gap-3 text-base/relaxed text-mauve-700">
+            <div className="mx-auto flex max-w-prose flex-col gap-5 text-base font-medium text-mauve-800 *:text-balance">
               <p>
-                At DevDogs, every project is a real product built for real users
-                — not a toy app or a class assignment.
+                Every semester, DevDogs members collaborate across design,
+                frontend, and backend to ship a product consumed by real users.
+                Our projects are built by students, for students.
               </p>
               <p>
-                Each semester, members collaborate across design, engineering,
-                and product to ship something that matters.
+                We&rsquo;re committed to keeping all of our active projects free
+                and open-source, and all of those projects live in a{" "}
+                <Link
+                  href="https://opensource.org/license/BSD-3-clause"
+                  prefetch={false}
+                  target="_blank"
+                  className="underline hover:no-underline"
+                >
+                  BSD-licensed
+                </Link>{" "}
+                monorepo on GitHub.
               </p>
             </div>
             {/* <RotatedImage /> */}

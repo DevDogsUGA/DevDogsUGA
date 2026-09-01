@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
 import {
@@ -11,6 +11,7 @@ import {
   NEUTRAL_CHIP_DARK_CLS,
   segmentBadge,
 } from "~/components/EventsSection/meetingView";
+import type { SegmentBadge } from "~/components/EventsSection/meetingView";
 import { locationLine } from "~/components/EventsSection/FindUs/buildings";
 import { INVOLVEMENT_NETWORK_EVENTS_URL } from "~/config/nav";
 import {
@@ -62,6 +63,8 @@ interface Props {
    * one read, threaded down, instead of a dozen a few ms apart.
    */
   now: Date;
+  onVisibleMeetingChange?: (meetingId: string | null) => void;
+  onHighlightedMeetingChange?: (meetingId: string | null) => void;
 }
 
 /**
@@ -132,19 +135,25 @@ function weekLabel(key: string): string {
  * `parseMeetingKind` upstream and `meetings_kind_choices` in the database. This
  * comment used to say otherwise; the reason is availability, not open-endedness.
  */
-function availableFilters(meetings: MeetingInRange[]): string[] {
-  const labels = new Set<string>();
+function availableFilters(meetings: MeetingInRange[]): SegmentBadge[] {
+  const filters = new Map<string, SegmentBadge>();
   for (const meeting of meetings) {
     const { segments } = resolveMeetingSegments(meeting);
     for (const badge of meetingBadges({ kind: meeting.kind, segments })) {
-      labels.add(badge.label);
+      if (!filters.has(badge.label)) filters.set(badge.label, badge);
     }
   }
-  return [...labels];
+  return [...filters.values()];
 }
 
-export default function ScheduleList({ meetings, now }: Props) {
+export default function ScheduleList({
+  meetings,
+  now,
+  onVisibleMeetingChange,
+  onHighlightedMeetingChange,
+}: Props) {
   const [active, setActive] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const filters = availableFilters(meetings);
   // Filter FIRST, then group. The order is the whole implementation of "an
@@ -170,6 +179,31 @@ export default function ScheduleList({ meetings, now }: Props) {
     else weeks.push({ key, meetings: [meeting] });
   }
 
+  useEffect(() => {
+    const root = listRef.current;
+    if (!root || !onVisibleMeetingChange) return;
+
+    const rows = [...root.querySelectorAll<HTMLElement>("[data-meeting-id]")];
+    const visibleRows = new Set<Element>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) visibleRows.add(entry.target);
+          else visibleRows.delete(entry.target);
+        }
+        // Entries only contains rows whose intersection changed. Retain the
+        // full set so the next row takes over when the first one scrolls out.
+        const visible = rows.find((row) => visibleRows.has(row));
+        if (visible) {
+          onVisibleMeetingChange(visible.dataset.meetingId ?? null);
+        }
+      },
+      { rootMargin: "-15% 0px -55% 0px", threshold: 0 },
+    );
+    rows.forEach((row) => observer.observe(row));
+    return () => observer.disconnect();
+  }, [onVisibleMeetingChange, shown]);
+
   return (
     <section className="flex flex-col gap-4" aria-labelledby="schedule-heading">
       <h3
@@ -189,19 +223,25 @@ export default function ScheduleList({ meetings, now }: Props) {
           role="group"
           aria-label="Filter the schedule"
         >
-          {filters.map((label) => (
+          {filters.map((badge) => (
             <button
-              key={label}
+              key={badge.label}
               type="button"
-              aria-pressed={active === label}
-              onClick={() => setActive(active === label ? null : label)}
-              className={`${CHIP_DARK_CLS} cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-                active === label
+              aria-pressed={active === badge.label}
+              onClick={() =>
+                setActive(active === badge.label ? null : badge.label)
+              }
+              className={`${CHIP_DARK_CLS} inline-flex cursor-pointer items-center gap-1.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                active === badge.label
                   ? "border-white bg-white text-black"
                   : `${NEUTRAL_CHIP_DARK_CLS} hover:border-white/50`
               }`}
             >
-              {label}
+              <span
+                aria-hidden
+                className={`inline-block size-1.5 shrink-0 rounded-full ${badge.dotDark}`}
+              />
+              {badge.label}
             </button>
           ))}
         </div>
@@ -217,7 +257,7 @@ export default function ScheduleList({ meetings, now }: Props) {
         // there is a way back.
         <NoMatches onClear={() => setActive(null)} />
       ) : (
-        <div className="flex flex-col gap-6">
+        <div ref={listRef} className="flex flex-col gap-6">
           {weeks.map((week) => (
             <div key={week.key} className="flex flex-col gap-2">
               <h4 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
@@ -229,7 +269,12 @@ export default function ScheduleList({ meetings, now }: Props) {
                   be a child of `ul`, whose only legal children are `li`. */}
               <ul className="flex flex-col gap-2">
                 {week.meetings.map((meeting) => (
-                  <ScheduleRow key={meeting.id} meeting={meeting} now={now} />
+                  <ScheduleRow
+                    key={meeting.id}
+                    meeting={meeting}
+                    now={now}
+                    onHighlight={onHighlightedMeetingChange}
+                  />
                 ))}
               </ul>
             </div>
@@ -294,7 +339,15 @@ function EmptySchedule() {
   );
 }
 
-function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
+function ScheduleRow({
+  meeting,
+  now,
+  onHighlight,
+}: {
+  meeting: MeetingInRange;
+  now: Date;
+  onHighlight?: (meetingId: string | null) => void;
+}) {
   // Derived chips and the officer's kind, composed together. Both are shown: a
   // social that also runs a workshop is a real night, and a row printing only
   // the kind would drop the workshop. `segments` is empty for a night an officer
@@ -320,7 +373,17 @@ function ScheduleRow({ meeting, now }: { meeting: MeetingInRange; now: Date }) {
   const elsewhere = meeting.building !== null && meeting.building !== "DLW";
 
   return (
-    <li className="relative flex gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-4 md:gap-5">
+    <li
+      data-meeting-id={meeting.id}
+      className="relative flex gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-4 transition-colors focus-within:border-white/30 focus-within:bg-white/10 hover:border-white/30 hover:bg-white/10 md:gap-5"
+      onPointerEnter={() => onHighlight?.(meeting.id)}
+      onPointerLeave={() => onHighlight?.(null)}
+      onFocus={() => onHighlight?.(meeting.id)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget))
+          onHighlight?.(null);
+      }}
+    >
       {/*
         Hidden from assistive tech: the span below prints the same date in full,
         so announcing "Wed 10" first only makes every row take twice as long to

@@ -145,6 +145,11 @@ describe("prompts", () => {
       // filter?" first would ask it twice and let the answers disagree.
       "--filter",
       "--all",
+      // `images`. The formats a graphic can be drawn at depend on WHICH
+      // graphic — the matrix is sparse — so the command asks after the
+      // graphics are chosen, from the union of what they support. A static
+      // list here would offer sizes that get silently skipped.
+      "--format",
     ]);
     const unasked = new Set<string>();
 
@@ -184,6 +189,7 @@ describe("coverage of what the CLI dispatches", () => {
     "oauth",
     "airtable",
     "docs",
+    "images",
     "qr",
     "env",
     "planner",
@@ -211,12 +217,7 @@ describe("coverage of what the CLI dispatches", () => {
       "example",
       "reset",
     ]);
-    expect(subcommandNames(["airtable"])).toEqual([
-      "verify",
-      "scaffold",
-      "pull-ids",
-      "snapshot",
-    ]);
+    expect(subcommandNames(["airtable"])).toEqual(["check", "verify", "apply"]);
     expect(subcommandNames(["planner"])).toEqual([
       "status",
       "create",

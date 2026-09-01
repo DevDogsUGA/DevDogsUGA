@@ -2,9 +2,9 @@
 -- Member profiles
 -- ============================================================
 --
--- The "graduationSemester" enum, platform.profile and platform."profileLinks",
--- the "profileWithVerification" view, and the four policies whose predicates
--- are already final here.
+-- The profile enums, platform.profile, its links and academic-program tables,
+-- the "profileWithVerification" view, and the policies whose predicates are
+-- already final here.
 --
 -- The one thing to know before editing this file: the table is created with a
 -- table-wide UPDATE grant it must not keep. The schemas file's `alter default
@@ -16,6 +16,15 @@
 -- the grant before touching it.
 
 create type "platform"."graduationSemester" as enum ('spring', 'summer', 'fall');
+
+create type "platform"."academicProgramCategory" as enum (
+  'undergraduate_major',
+  'graduate_major',
+  'undergraduate_minor',
+  'undergraduate_certificate',
+  'graduate_certificate',
+  'professional_program'
+);
 
 
 -- ============================================================
@@ -45,11 +54,6 @@ create type "platform"."graduationSemester" as enum ('spring', 'summer', 'fall')
 -- Leadership section, and the bios officers actually submitted run 448 to 959
 -- characters. 512 is the board's compromise.
 --
--- majors, minors and certificates are `not null default '{}'` so that "no
--- minor" and "not filled in" are one shape to every reader. An empty list
--- renders as nothing, which is what both mean. "pronouns" stays nullable
--- precisely because those two states differ for a scalar.
---
 -- Column order below is deliberate and matches the order the old migrations
 -- added them in. Nothing depends on it, but a diff against a live database
 -- is easier to read when attnum lines up.
@@ -75,10 +79,7 @@ create table "platform"."profile" (
   "ugaEmail" text,
   "legalFirstName" text,
   "legalLastName" text,
-  "identitySourcedAt" timestamptz,
-  "majors" text[] not null default '{}',
-  "minors" text[] not null default '{}',
-  "certificates" text[] not null default '{}'
+  "identitySourcedAt" timestamptz
 );
 
 alter table "platform"."profile" enable row level security;
@@ -97,6 +98,45 @@ create table "platform"."profileLinks" (
 
 alter table "platform"."profileLinks" enable row level security;
 
+-- One row per credential-bearing result in the UGA Bulletin. The Bulletin
+-- renders Computer Science BS, MS and PHD as three links under one heading;
+-- using its numeric detail id as the key preserves that distinction. Missing
+-- rows are marked inactive by the daily sync rather than deleted so a brief
+-- upstream omission cannot erase a member's recorded program.
+create table "platform"."academicPrograms" (
+  "id" integer not null,
+  "name" text not null,
+  "credential" text not null,
+  "category" platform."academicProgramCategory" not null,
+  -- Four current Bulletin rows omit IDc entirely; null records that source
+  -- shape instead of inventing a school code.
+  "schoolCode" text,
+  "bulletinUrl" text not null,
+  "active" boolean not null default true,
+  "lastSeenAt" timestamptz not null,
+  "createdAt" timestamptz not null default now(),
+  "updatedAt" timestamptz not null default now(),
+  constraint "academicPrograms_id_positive" check ("id" > 0),
+  constraint "academicPrograms_name_nonempty" check (btrim("name") <> ''),
+  constraint "academicPrograms_credential_nonempty" check (btrim("credential") <> '')
+);
+
+alter table "platform"."academicPrograms" enable row level security;
+
+-- The normalized replacement for the old majors/minors/certificates arrays.
+-- sortOrder records the member's chip order and makes a whole selection stable
+-- across reads. Writes go through the authenticated server action; browser
+-- table writes stay closed below.
+create table "platform"."profileAcademicPrograms" (
+  "userId" uuid not null,
+  "programId" integer not null,
+  "sortOrder" smallint not null,
+  constraint "profileAcademicPrograms_sortOrder_nonnegative"
+    check ("sortOrder" >= 0)
+);
+
+alter table "platform"."profileAcademicPrograms" enable row level security;
+
 
 -- ============================================================
 -- Keys, indexes and foreign keys
@@ -108,6 +148,18 @@ create unique index "profileLinks_pkey" on platform."profileLinks" using btree (
 
 create unique index "profileLinks_userId_sortOrder_key" on platform."profileLinks" using btree ("userId", "sortOrder");
 
+create unique index "academicPrograms_pkey"
+  on platform."academicPrograms" using btree ("id");
+
+create index "academicPrograms_active_name_idx"
+  on platform."academicPrograms" using btree ("active", "name", "credential");
+
+create unique index "profileAcademicPrograms_pkey"
+  on platform."profileAcademicPrograms" using btree ("userId", "programId");
+
+create unique index "profileAcademicPrograms_userId_sortOrder_key"
+  on platform."profileAcademicPrograms" using btree ("userId", "sortOrder");
+
 alter table "platform"."profile"
   add constraint "profile_pkey" primary key using index "profile_pkey";
 
@@ -117,6 +169,16 @@ alter table "platform"."profileLinks"
 alter table "platform"."profileLinks"
   add constraint "profileLinks_userId_sortOrder_key" unique using index "profileLinks_userId_sortOrder_key";
 
+alter table "platform"."academicPrograms"
+  add constraint "academicPrograms_pkey" primary key using index "academicPrograms_pkey";
+
+alter table "platform"."profileAcademicPrograms"
+  add constraint "profileAcademicPrograms_pkey" primary key using index "profileAcademicPrograms_pkey";
+
+alter table "platform"."profileAcademicPrograms"
+  add constraint "profileAcademicPrograms_userId_sortOrder_key"
+  unique using index "profileAcademicPrograms_userId_sortOrder_key";
+
 alter table "platform"."profile"
   add constraint "profile_userId_users_id_fkey"
   foreign key ("userId") references auth.users(id) on update cascade on delete cascade;
@@ -124,6 +186,14 @@ alter table "platform"."profile"
 alter table "platform"."profileLinks"
   add constraint "profileLinks_userId_profile_userId_fkey"
   foreign key ("userId") references platform.profile("userId") on update cascade on delete cascade;
+
+alter table "platform"."profileAcademicPrograms"
+  add constraint "profileAcademicPrograms_userId_profile_userId_fkey"
+  foreign key ("userId") references platform.profile("userId") on update cascade on delete cascade;
+
+alter table "platform"."profileAcademicPrograms"
+  add constraint "profileAcademicPrograms_programId_academicPrograms_id_fkey"
+  foreign key ("programId") references platform."academicPrograms"("id") on update cascade on delete restrict;
 
 -- Case-folded rather than case-sensitive: MyID addresses are handed out in one
 -- case and typed in another, and two spellings of one address would become two
@@ -179,11 +249,14 @@ create or replace view "platform"."profileWithVerification" with (security_invok
 -- Policies: the four whose predicates are final here
 -- ============================================================
 --
--- Both tables carry four policies each under the same four names. This file
--- creates only the four that will never change again:
+-- profile and profileLinks gain their remaining mutation policies in file 26.
+-- The academic catalog and selections are server-written, so their restrictive
+-- mutation policies are final here.
 --
 --   profile        delete, insert, select
---   profileLinks   select
+--   profileLinks              select
+--   academicPrograms          select + deny browser writes
+--   profileAcademicPrograms   select + deny browser writes
 --
 -- The other four (profile update, profileLinks insert/update/delete) gain a
 -- freeze and suspension check and are created in final form in file 26, which
@@ -229,6 +302,67 @@ create policy "crud_authenticated_policy_select"
   to authenticated
 using ((( SELECT auth.uid() AS uid) = "userId"));
 
+-- Every signed-in member needs the same catalog to populate the account
+-- combobox. Anonymous traffic reaches officer academics through the server
+-- projection, never by reading this table through PostgREST.
+create policy "authenticated_select"
+  on "platform"."academicPrograms"
+  as permissive
+  for select
+  to authenticated
+using (true);
+
+create policy "no_client_insert"
+  on "platform"."academicPrograms"
+  as restrictive
+  for insert
+  to anon, authenticated
+with check (false);
+
+create policy "no_client_update"
+  on "platform"."academicPrograms"
+  as restrictive
+  for update
+  to anon, authenticated
+using (false)
+with check (false);
+
+create policy "no_client_delete"
+  on "platform"."academicPrograms"
+  as restrictive
+  for delete
+  to anon, authenticated
+using (false);
+
+create policy "crud_authenticated_policy_select"
+  on "platform"."profileAcademicPrograms"
+  as permissive
+  for select
+  to authenticated
+using ((( SELECT auth.uid() AS uid) = "userId"));
+
+create policy "no_client_insert"
+  on "platform"."profileAcademicPrograms"
+  as restrictive
+  for insert
+  to anon, authenticated
+with check (false);
+
+create policy "no_client_update"
+  on "platform"."profileAcademicPrograms"
+  as restrictive
+  for update
+  to anon, authenticated
+using (false)
+with check (false);
+
+create policy "no_client_delete"
+  on "platform"."profileAcademicPrograms"
+  as restrictive
+  for delete
+  to anon, authenticated
+using (false);
+
 
 -- ============================================================
 -- Which columns a browser may write
@@ -252,10 +386,6 @@ revoke update on "platform"."profile" from authenticated, anon;
 -- since the table above is now declared in one piece, this list is the ONLY
 -- thing keeping it that way:
 --
---   majors, minors, certificates    no write path yet. Values come from officer
---                                   submissions, /account renders all three
---                                   disabled, and a member-editable field needs
---                                   validation, moderation and an audit story.
 --   ugaEmail, legalFirstName,       durable identity, sourced from the roster,
 --   legalLastName,                  never from self-declaration.
 --   identitySourcedAt
@@ -307,5 +437,8 @@ comment on column "platform"."profile"."identitySourcedAt" is
 comment on column "platform"."profile"."roleDescription" is
   'The officer bio shown on the homepage Leadership section. Editable by the holder from /account, but only surfaced there for members whose roles include one with "isLeadership". Distinct from "bio", which is the 127-character blurb on the member''s own profile.';
 
-comment on column "platform"."profile"."majors" is
-  'Degree programs, as printed. Read-only in the UI for now -- seeded from officer submissions, with no member-facing write path.';
+comment on table "platform"."academicPrograms" is
+  'Daily mirror of credential-bearing programs from the UGA Bulletin. Rows missing from one successful scrape are retained with active=false so profile history is not deleted.';
+
+comment on table "platform"."profileAcademicPrograms" is
+  'A member''s ordered programs of study, keyed to distinct Bulletin credentials so identically named bachelor''s and master''s programs remain separate.';

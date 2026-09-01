@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { segmentBadge } from "./meetingView";
+import { kindBadge, segmentBadge } from "./meetingView";
 
 /**
  * One week of the club, drawn as the loop it is.
@@ -9,7 +9,8 @@ import { segmentBadge } from "./meetingView";
  * off, the next Monday judges it, and the moment judging is done that same
  * night's workshop kicks off the next one. So the strip is the middle of a
  * chain, not one bar with two ends: last week's bar arrives from the left in
- * grey and ends in rose at the first Monday, this week's runs cyan from there
+ * grey and ends in rose at the first Monday, this week's runs muted yellow from
+ * there
  * to the next Monday, where an emerald kickoff dot starts the one after, whose
  * bar leaves to the right in grey. Grey is "not the week in view"; the dots on
  * the Monday in view are always coloured, because that Monday's meeting always
@@ -203,22 +204,33 @@ export default function CompetitionTimeline({
         <span
           aria-hidden
           className={`${BAR_CLS} ${edge.left} ${t.tail} [mask-image:linear-gradient(to_right,transparent,black_70%)]`}
-          style={{ right: `calc(100% - ${HALF})` }}
+          style={{
+            right: `calc(100% - ${HALF})`,
+            animationDuration: "1.05s",
+          }}
         />
         {/* This week's: Monday's emerald dot to next Monday's rose one. When
-            the build-week card is hovered it brightens and the stripes hurry.
-            `--slants-duration` is what `animate-slants` reads. */}
+            the build-week card is hovered it shifts lighter and the stripes hurry.
+            Its inline duration retimes the already-running animation when the
+            active card changes. */}
         <span
           aria-hidden
           data-active={active === "week"}
-          className={`${BAR_CLS} bg-cyan-500 transition-[filter] duration-300 data-[active=true]:brightness-125 data-[active=true]:[--slants-duration:0.3s]`}
-          style={{ left: HALF, right: HALF }}
+          className={`${BAR_CLS} bg-yellow-600 transition-colors duration-300 data-[active=true]:bg-yellow-500 data-[active=true]:[--slants-alpha:0.36]`}
+          style={{
+            left: HALF,
+            right: HALF,
+            animationDuration: active === "week" ? "0.22s" : "0.62s",
+          }}
         />
         {/* Next week's, if there is one: grey, fading out to the right. */}
         <span
           aria-hidden
           className={`${BAR_CLS} ${edge.right} ${t.tail} [mask-image:linear-gradient(to_right,black_30%,transparent)]`}
-          style={{ left: `calc(100% - ${HALF})` }}
+          style={{
+            left: `calc(100% - ${HALF})`,
+            animationDuration: "1.05s",
+          }}
         />
 
         <Cell col={MEETING_COL} active={active === "monday"} halo={t.halo}>
@@ -239,9 +251,9 @@ export default function CompetitionTimeline({
           halo={t.halo}
         >
           <Dot
-            dot={segmentBadge.open.dot}
+            dot={kindBadge["Build Session"]!.dot}
             ring={t.dotRing}
-            label="Wednesday: open build"
+            label="Wednesday: build session"
           />
         </Cell>
         <Cell col={JUDGING_COL} active={active === "nextMonday"} halo={t.halo}>

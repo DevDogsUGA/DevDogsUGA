@@ -36,6 +36,9 @@ export const VALUE_FLAGS = new Set([
   "--color",
   "--ecl",
   "--format",
+  // `images`: so `images --format og page/events` reads `og` as the format and
+  // `page/events` as the graphic, not both as graphics.
+  "--format",
   "--logo",
   "--logo-padding",
   "--logo-size",
