@@ -153,9 +153,18 @@ describe("stdout stays clean for every deploy command", () => {
     // The refusal a real job hits: the base id variable is there and the
     // token secret is not. Both commands have to say WHICH variable, and
     // each has to name its own row rather than a shared list.
-    const plan = await devtools(["deploy", "airtable-plan"], {
-      AIRTABLE_BASE_ID: "appTESTTESTTEST01",
-    });
+    // These are independent processes. Run them together: this is the only
+    // case in the suite that needs two full CLI boots, and doing those boots
+    // serially can exhaust Vitest's per-test timeout on a cold CI runner even
+    // though either command comfortably completes on its own.
+    const [plan, apply] = await Promise.all([
+      devtools(["deploy", "airtable-plan"], {
+        AIRTABLE_BASE_ID: "appTESTTESTTEST01",
+      }),
+      devtools(["deploy", "airtable-apply"], {
+        AIRTABLE_BASE_ID: "appTESTTESTTEST01",
+      }),
+    ]);
     expect(plan.stdout).toBe("");
     // Anchored on the preference LINE rather than the bare token name. Both
     // refusals also mention the other row's token in prose: naming what was
@@ -167,9 +176,6 @@ describe("stdout stays clean for every deploy command", () => {
     );
     expect(plan.code).toBe(1);
 
-    const apply = await devtools(["deploy", "airtable-apply"], {
-      AIRTABLE_BASE_ID: "appTESTTESTTEST01",
-    });
     expect(apply.stdout).toBe("");
     // One name, because the write row has one entry: there is no operator
     // token behind AIRTABLE_APPLY_PAT to fall back to.
