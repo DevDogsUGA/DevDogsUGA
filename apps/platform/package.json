@@ -23,8 +23,8 @@
     "cf:preview": "with-env opennextjs-cloudflare preview",
     "cf:build:staging": "DEPLOY_ENV=staging with-env opennextjs-cloudflare build",
     "cf:build:production": "DEPLOY_ENV=production with-env opennextjs-cloudflare build",
-    "cf:deploy:staging": "pnpm docs:index --force && DEPLOY_ENV=staging with-env -c 'pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token && opennextjs-cloudflare deploy -e staging ${DEPLOY_SECRETS_FILE:+--secrets-file $DEPLOY_SECRETS_FILE}'",
-    "cf:deploy:production": "pnpm docs:index --force && DEPLOY_ENV=production with-env -c 'pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token && opennextjs-cloudflare deploy -e production ${DEPLOY_SECRETS_FILE:+--secrets-file $DEPLOY_SECRETS_FILE}'"
+    "cf:deploy:staging": "pnpm docs:index --force && DEPLOY_ENV=staging with-env -c 'pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token && CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE=$DB_URL opennextjs-cloudflare deploy -e staging ${DEPLOY_SECRETS_FILE:+--secrets-file $DEPLOY_SECRETS_FILE}'",
+    "cf:deploy:production": "pnpm docs:index --force && DEPLOY_ENV=production with-env -c 'pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token && CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE=$DB_URL opennextjs-cloudflare deploy -e production ${DEPLOY_SECRETS_FILE:+--secrets-file $DEPLOY_SECRETS_FILE}'"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

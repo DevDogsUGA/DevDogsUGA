@@ -125,8 +125,6 @@
         {
           "binding": "HYPERDRIVE",
           "id": "7ca9f62ed356489f956cc854a17d7eed",
-          // Optional. Can be used to connect to a local database for local development with `wrangler dev`
-          "localConnectionString": "${DB_URL}"
         },
       ],
       "send_email": [
