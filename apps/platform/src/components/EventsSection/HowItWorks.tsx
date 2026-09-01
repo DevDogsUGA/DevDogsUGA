@@ -353,7 +353,7 @@ export default function HowItWorks({
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-8 lg:gap-x-4 lg:gap-y-5">
         <div
           ref={timelineRef}
-          className="sticky top-16 z-20 py-5 lg:static lg:col-span-8 lg:row-start-2"
+          className="sticky top-16 z-20 py-5 lg:relative lg:top-auto lg:z-auto lg:col-span-8 lg:row-start-2"
         >
           {cutout && <Cutout />}
           {/* Inside a cutout the strip sits on the page's black, whatever
