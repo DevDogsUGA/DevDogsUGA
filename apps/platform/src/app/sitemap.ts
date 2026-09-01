@@ -13,7 +13,7 @@ import {
  *
  * Two halves, and the split is the whole design of this file:
  *
- *   - Everything derivable WITHOUT a database: the seven authored routes, plus
+ *   - Everything derivable WITHOUT a database: the six authored routes, plus
  *     every docs page, which `@devdogsuga/docs` compiles into the bundle at
  *     build time (see `server/docs/queries.ts`). An in-memory walk over a
  *     constant that cannot throw and cannot be slow.
@@ -51,18 +51,15 @@ const url = (path: string) => `${BASE}${path}`;
 /**
  * The routes that exist whatever the database says.
  *
- * `/community` and `/partners` currently render the under-construction
- * placeholder, and `/` and `/events` do so in production builds. They are still
- * listed: a sitemap names URLs, not the state of what is behind them today, and
- * a list that changed shape with `DEPLOY_ENV` would drop the club's whole
- * marketing site from production's sitemap, the one environment where it is
- * read. Every one of these is reachable from `config/nav.ts` without a session.
+ * `/partners` currently renders the under-construction placeholder. It is still
+ * listed because a sitemap names URLs, not the state of what is behind them
+ * today. `/community` is absent because it redirects to the Involvement Network
+ * roster in production. Every route here is reachable without a session.
  */
 const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: url("/"), changeFrequency: "monthly", priority: 1 },
   { url: url("/events"), changeFrequency: "weekly", priority: 0.9 },
   { url: url("/docs"), changeFrequency: "weekly", priority: 0.8 },
-  { url: url("/community"), changeFrequency: "monthly", priority: 0.7 },
   { url: url("/partners"), changeFrequency: "monthly", priority: 0.7 },
   // Its own URL because it is handed around on its own, pasted into Discord or
   // printed as a QR code, which is the same reason it carries its own metadata.

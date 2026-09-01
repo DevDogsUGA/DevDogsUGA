@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import UnderConstruction from "~/components/UnderConstruction";
+import { INVOLVEMENT_NETWORK_ROSTER_URL } from "~/config/nav";
 
 /**
  * The description is the one `config/nav.ts` already gives this link in the
@@ -18,16 +20,14 @@ export const metadata: Metadata = {
 };
 
 /**
- * `"use cache"` sits on the component rather than at the top of the file, where
- * it used to be. At file level the directive claims every export, and
- * `metadata` above is a plain object rather than the async function the
- * transform expects. With one default export there is nothing else for the
- * file-level form to cache anyway.
+ * The platform's community page is not built yet. Production sends visitors
+ * to the Involvement Network roster with a temporary redirect so browsers do
+ * not remember the detour after the local page launches.
  */
-export default async function Community() {
-  "use cache";
-
-  if (process.env.DEPLOY_ENV === "production") return <UnderConstruction />;
+export default function Community() {
+  if (process.env.DEPLOY_ENV === "production") {
+    redirect(INVOLVEMENT_NETWORK_ROSTER_URL);
+  }
 
   return <UnderConstruction />;
 }

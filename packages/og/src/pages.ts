@@ -50,12 +50,6 @@ export const PAGE_CARDS: Record<string, PageCardCopy> = {
     eyebrow: "Docs",
     accent: ACCENT.emerald400,
   },
-  "/community": {
-    title: "Community",
-    description: "Meet the members and leadership of DevDogs.",
-    eyebrow: "Community",
-    accent: ACCENT.purple400,
-  },
   "/partners": {
     title: "Partners",
     description: "Organizations and sponsors that partner with DevDogs.",
