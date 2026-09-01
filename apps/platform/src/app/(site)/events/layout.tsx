@@ -6,7 +6,6 @@ import EventsPage, {
 import EventsUnavailable from "~/components/EventsSection/EventsUnavailable";
 import CheckInIsland from "~/components/EventsSection/CheckInIsland";
 import EventsScrollReset from "~/components/EventsSection/EventsScrollReset";
-import UnderConstruction from "~/components/UnderConstruction";
 import {
   addMonths,
   clubDay,
@@ -34,10 +33,6 @@ import {
  * caught below, by hand.
  */
 export default function EventsLayout({ children }: LayoutProps<"/events">) {
-  // Build-time, not request-time, like the homepage: whatever DEPLOY_ENV holds
-  // during `next build` decides which branch ships.
-  if (process.env.DEPLOY_ENV === "production") return <UnderConstruction />;
-
   return (
     <>
       <EventsScrollReset />

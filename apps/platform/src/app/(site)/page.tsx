@@ -17,7 +17,6 @@ import PartnersSection from "~/components/PartnersSection";
 import LeadershipSection from "~/components/LeadershipSection";
 import StatCard from "~/ui/stat-card";
 import StreakCTA from "~/components/ProjectsSection/StreakCTA";
-import UnderConstruction from "~/components/UnderConstruction";
 import JsonLd, { siteGraph } from "~/lib/structuredData";
 
 const MARQUEE_TEXT_CLS =
@@ -43,10 +42,8 @@ export default function HomePage() {
           crawler that finds several copies of a node has to pick one. The apex
           is where a search engine looks for them.
 
-          It sits out here rather than inside {@link HomeSections} because that
-          function returns `<UnderConstruction />` and nothing else in a
-          production build. Putting the graph inside would have made production,
-          the only deployment anybody crawls, the one place it went missing. */}
+          It sits out here rather than inside {@link HomeSections} because it
+          describes the site rather than the cached page sections themselves. */}
       <JsonLd data={siteGraph()} />
       <HomeSections streakCta={<StreakCTA />} />
     </>
@@ -62,12 +59,6 @@ export default function HomePage() {
  */
 async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
   "use cache";
-
-  // Build-time, not request-time: this page is prerendered, so whatever
-  // DEPLOY_ENV holds during `next build` decides which branch ships. That is
-  // why cf:build and cf:deploy set it for the build and not just for the
-  // Worker's runtime vars.
-  if (process.env.DEPLOY_ENV === "production") return <UnderConstruction />;
 
   return (
     <main className="flex flex-col gap-4 bg-black py-4 md:gap-6 md:py-6">

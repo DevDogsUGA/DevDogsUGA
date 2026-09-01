@@ -439,6 +439,9 @@ export default function AnnouncementBanner() {
 
             <Link
               href={action.href}
+              // The current /leadership action redirects off-site, so Next
+              // must not follow it speculatively while the banner is visible.
+              prefetch={false}
               {...(action.external
                 ? { target: "_blank", rel: "noopener noreferrer" }
                 : {})}
