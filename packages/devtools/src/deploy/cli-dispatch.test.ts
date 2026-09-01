@@ -29,12 +29,20 @@
 import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { PROJECT_ROOT } from "../instance.js";
 
 const run = promisify(execFile);
 const TSX = join(PROJECT_ROOT, "node_modules", ".bin", "tsx");
 const CLI = join(PROJECT_ROOT, "packages", "devtools", "src", "cli.ts");
+// A cold CLI boot reached 5.02s under the full CI workload. Every test in this
+// file intentionally boots a real TypeScript process, so use a subprocess-sized
+// deadline rather than Vitest's unit-test default.
+const CLI_TEST_TIMEOUT = 15_000;
+vi.setConfig({ testTimeout: CLI_TEST_TIMEOUT });
+afterAll(() => {
+  vi.resetConfig();
+});
 
 interface Result {
   code: number;

@@ -33,13 +33,13 @@
     "push-migrations": "with-env supabase db push && pnpm generate-types",
     "push-config": "with-env supabase config push",
     "reset-remote-database": "with-env supabase db reset --linked && pnpm generate-types && pnpm seed-buckets",
-    "generate-types": "with-env supabase gen types --linked > src/database.types.ts && pnpm build",
+    "generate-types": "with-env supabase gen types --linked > src/database.types.ts && pnpm exec prettier --write src/database.types.ts && pnpm build",
     "seed-buckets": "with-env supabase seed buckets --linked",
     "start-local-stack": "with-env supabase start && with-env supabase status -o env > ../../.env.generated && pnpm seed-buckets:local",
     "stop-local-stack": "with-env supabase stop && node -e \"require('node:fs').rmSync('../../.env.generated',{force:true})\"",
-    "reset-local-database": "with-env supabase db reset && with-env supabase gen types --local > src/database.types.ts && pnpm build && pnpm seed-buckets:local",
+    "reset-local-database": "with-env supabase db reset && with-env supabase gen types --local > src/database.types.ts && pnpm exec prettier --write src/database.types.ts && pnpm build && pnpm seed-buckets:local",
     "seed-buckets:local": "with-env supabase seed buckets --local --yes",
-    "generate-types:local": "with-env supabase gen types --local > src/database.types.ts && pnpm build"
+    "generate-types:local": "with-env supabase gen types --local > src/database.types.ts && pnpm exec prettier --write src/database.types.ts && pnpm build"
   },
   "dependencies": {
     "@supabase/ssr": "catalog:",
