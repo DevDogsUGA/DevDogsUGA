@@ -28,6 +28,23 @@ interface Props {
 }
 
 /**
+ * Name an absolute outbound destination when we can. Some outbound controls
+ * deliberately use a same-origin redirect (for example `/leadership`) so the
+ * target can change in one place. Those paths are still external links, but
+ * they are not valid inputs to the one-argument URL constructor.
+ */
+export function describeExternalDestination(url: string): string {
+  try {
+    const hostname = new URL(url).hostname;
+    if (hostname) return `This link goes to ${hostname}.`;
+  } catch {
+    // A relative redirect has no hostname until the server follows it.
+  }
+
+  return "This link opens outside this site.";
+}
+
+/**
  * The question every switcher link asks when pressed: follow it, or share it?
  *
  * Asking outright replaced a long press only touch could reach and a
@@ -71,7 +88,7 @@ export default function OpenOrShareDialog({
             </DialogTitle>
             <DialogDescription className="text-xs text-mauve-400">
               {external
-                ? `This link goes to ${new URL(url).hostname}.`
+                ? describeExternalDestination(url)
                 : "This link stays on this site."}
             </DialogDescription>
           </DialogHeader>
