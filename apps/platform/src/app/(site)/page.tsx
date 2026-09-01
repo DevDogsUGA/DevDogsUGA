@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import {
   CalendarDotsIcon,
   CompassIcon,
@@ -16,23 +15,11 @@ import EventsSection, { EVENTS_BLOBS } from "~/components/EventsSection";
 import PartnersSection from "~/components/PartnersSection";
 import LeadershipSection from "~/components/LeadershipSection";
 import StatCard from "~/ui/stat-card";
-import StreakCTA from "~/components/ProjectsSection/StreakCTA";
 import JsonLd, { siteGraph } from "~/lib/structuredData";
 
 const MARQUEE_TEXT_CLS =
   "py-4 font-display text-base font-bold tracking-widest uppercase";
 
-/**
- * The homepage. It stays uncached so it can construct `<StreakCTA />`, the one
- * per-visitor thing here. Everything else lives in the cached
- * {@link HomeSections} below.
- *
- * Pass the element down rather than rendering it inside the cached body. An
- * element created out here renders outside the cache boundary, so its
- * `cookies()` read is legal and it streams into the Suspense that
- * ProjectsSection puts around it. Rendering it inside fails the build with
- * "used `cookies()` inside \"use cache\"".
- */
 export default function HomePage() {
   return (
     <>
@@ -45,7 +32,7 @@ export default function HomePage() {
           It sits out here rather than inside {@link HomeSections} because it
           describes the site rather than the cached page sections themselves. */}
       <JsonLd data={siteGraph()} />
-      <HomeSections streakCta={<StreakCTA />} />
+      <HomeSections />
     </>
   );
 }
@@ -57,7 +44,7 @@ export default function HomePage() {
  * re-rendered the whole marketing page on the server. Every section here is
  * static copy or reads the cached calendar frame, so caching is accurate.
  */
-async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
+async function HomeSections() {
   "use cache";
 
   return (
@@ -132,7 +119,7 @@ async function HomeSections({ streakCta }: { streakCta: ReactNode }) {
         <MarqueeItem>Community Impact</MarqueeItem>
       </SectionMarquee>
 
-      <ProjectsSection topEdge="fs" bottomEdge="bs" streakCta={streakCta} />
+      <ProjectsSection topEdge="fs" bottomEdge="bs" />
 
       <SectionMarquee
         slope="bs"

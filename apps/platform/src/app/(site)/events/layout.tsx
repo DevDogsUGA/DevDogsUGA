@@ -38,9 +38,9 @@ export default function EventsLayout({ children }: LayoutProps<"/events">) {
       <EventsScrollReset />
       {/* Created OUTSIDE the cache scope and passed in as an element, so its
           clock read stays legal and uncached while everything around it is
-          served from the entry. Same pattern the homepage uses for StreakCTA.
-          Whether a check-in form is live is true for about two hours a week and
-          must never be answered from a five-minute-old cache entry. */}
+          served from the entry. Whether a check-in form is live is true for
+          about two hours a week and must never be answered from a
+          five-minute-old cache entry. */}
       <EventsBody
         checkIn={
           // Its own boundary so a slow read cannot hold up the schedule; the

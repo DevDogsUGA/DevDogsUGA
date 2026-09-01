@@ -1,54 +1,72 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
+import { wasNavigationBlocked } from "~/lib/navigationGuard";
 
 type Phase = "idle" | "loading" | "done";
 
 export default function NavigationProgress() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
   const [phase, setPhase] = useState<Phase>("idle");
   const [animKey, setAnimKey] = useState(0);
   const phaseRef = useRef<Phase>("idle");
   const doneTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Mirror the latest phase into a ref (after commit) so the pathname effect can
-  // read it without taking `phase` as a dependency.
-  useEffect(() => {
-    phaseRef.current = phase;
-  });
+  useEffect(
+    () => () => {
+      clearTimeout(doneTimerRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (phaseRef.current === "idle") return;
+    phaseRef.current = "done";
     setPhase("done");
     clearTimeout(doneTimerRef.current);
-    doneTimerRef.current = setTimeout(() => setPhase("idle"), 600);
-  }, [pathname]);
+    doneTimerRef.current = setTimeout(() => {
+      phaseRef.current = "idle";
+      setPhase("idle");
+    }, 600);
+  }, [pathname, search]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      // Someone ahead of us already cancelled this navigation, so there is no
-      // page load to report. This listener is on the bubble phase, so anything
-      // that ran in capture, such as the account page's unsaved-changes guard
-      // (see ~/ui/settings-form), has already had its say by now.
-      //
-      // Without this the bar starts a load that will never finish: it only
-      // clears when `pathname` changes, and a cancelled click never changes it,
-      // so it creeps to 85% and sits there for the rest of the session.
-      if (e.defaultPrevented) return;
-      if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
-      const a = (e.target as Element).closest("a");
-      if (!a?.getAttribute("href") || a.getAttribute("target")) return;
+      // `defaultPrevented` cannot identify a cancelled navigation: Next sets it
+      // on every `<Link>` click it handles. The unsaved-changes guard marks the
+      // original event explicitly before cancelling it instead.
+      if (wasNavigationBlocked(e)) return;
+      if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
+        return;
+      }
+      if (!(e.target instanceof Element)) return;
+      const a = e.target.closest("a[href]");
+      if (
+        !(a instanceof HTMLAnchorElement) ||
+        a.hasAttribute("download") ||
+        a.getAttribute("target")
+      ) {
+        return;
+      }
       try {
         const url = new URL(a.href, location.href);
         if (url.origin !== location.origin) return;
-        if (url.pathname === location.pathname && !url.search) return;
+        if (
+          url.pathname === location.pathname &&
+          url.search === location.search
+        ) {
+          return;
+        }
       } catch {
         return;
       }
       clearTimeout(doneTimerRef.current);
       setAnimKey((k) => k + 1);
+      phaseRef.current = "loading";
       setPhase("loading");
     }
     document.addEventListener("click", handleClick);
@@ -60,6 +78,7 @@ export default function NavigationProgress() {
   return (
     <div
       data-slot="navigation-progress"
+      data-phase={phase}
       className="pointer-events-none fixed top-0 right-0 left-0 z-[9999] h-[2px]"
       aria-hidden="true"
     >

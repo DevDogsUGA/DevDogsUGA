@@ -23,9 +23,9 @@
   //      anything real.
   //
   // NON-INHERITABLE keys must be repeated in full in every environment:
-  // `vars`, `services`, `images`, `r2_buckets`, `send_email`. Omitting one does
-  // not fall back to the top level -- the binding is simply absent, and the
-  // failure shows up at runtime. Verified against wrangler 4.118:
+  // `vars`, `services`, `images`, `r2_buckets`, `hyperdrive`, `send_email`.
+  // Omitting one does not fall back to the top level -- the binding is simply
+  // absent, and the failure shows up at runtime. Verified against wrangler 4.118:
   //   pnpm exec wrangler deploy --dry-run --env production
   // prints the resolved binding list and warns about every key left behind.
   // ==========================================================================
@@ -114,6 +114,16 @@
           "bucket_name": "staging-platform-cache",
         },
       ],
+      // Hyperdrive pools connections to Supabase's DIRECT database endpoint.
+      // SQL result caching is disabled on the configuration: these queries are
+      // permission-sensitive and often follow writes. The ID is public and the
+      // origin credential stays encrypted in Cloudflare.
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE",
+          "id": "7ca9f62ed356489f956cc854a17d7eed",
+        },
+      ],
       "send_email": [
         {
           "name": "EMAIL",
@@ -177,6 +187,12 @@
         {
           "binding": "NEXT_INC_CACHE_R2_BUCKET",
           "bucket_name": "production-platform-cache",
+        },
+      ],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE",
+          "id": "2bb3ae474d974fe99e4f36b3c5aaf896",
         },
       ],
       // Transactional email. Supabase's sender is auth-only (signup

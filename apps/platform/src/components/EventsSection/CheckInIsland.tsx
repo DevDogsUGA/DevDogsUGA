@@ -18,8 +18,7 @@ import { ACTION_DARK_CLS } from "./meetingView";
  * an element. An element constructed outside a cache scope renders outside it
  * too, which keeps this read live while the page around it is served from the
  * cache entry. Rendering it *inside* the cached body would bake one moment's
- * answer into the entry, the same pattern and the same reason as `StreakCTA`
- * on the homepage.
+ * answer into the entry.
  *
  * It re-reads the meeting rather than taking one as a prop, deliberately: a
  * prop from the cached scope would carry the cached `now` with it, bringing

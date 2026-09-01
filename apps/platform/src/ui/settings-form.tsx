@@ -11,7 +11,10 @@ import {
   type ReactNode,
 } from "react";
 import { useUnsavedChangesWarning } from "~/hooks/useUnsavedChangesWarning";
-import { shouldInterceptNavigation } from "~/lib/navigationGuard";
+import {
+  blockNavigation,
+  shouldInterceptNavigation,
+} from "~/lib/navigationGuard";
 import { toast } from "~/lib/toast";
 
 /**
@@ -179,14 +182,12 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
       );
       if (!intercept) return;
 
-      // preventDefault alone is enough, and deliberately not stopPropagation.
-      // Link's own click handler ends with `if (e.defaultPrevented) return`
-      // before it navigates (see next/dist/client/app-dir/link.js), and this
-      // listener is on the document in the capture phase, so it has already run
-      // by the time React builds the synthetic event. Killing propagation would
-      // also silence every unrelated handler on the way down, such as a menu
-      // closing itself when its own link was clicked.
-      event.preventDefault();
+      // Mark the event for NavigationProgress and call preventDefault, but
+      // deliberately do not stop propagation. Link's own click handler ends
+      // with `if (e.defaultPrevented) return` before it navigates (see
+      // next/dist/client/app-dir/link.js), while unrelated handlers such as a
+      // menu closing itself still get the click.
+      blockNavigation(event);
       setBlockedAt((n) => n + 1);
     }
 
