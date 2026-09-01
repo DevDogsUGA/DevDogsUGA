@@ -5,10 +5,9 @@ import postgres from "postgres";
 /**
  * The connection options every app shares.
  *
- * `prepare: false` is required, not a preference: the apps connect through
- * Supabase's transaction-mode pooler, which hands a different backend to each
- * transaction and therefore cannot keep a named prepared statement alive
- * between them.
+ * `prepare: false` keeps the application clients compatible with both
+ * Supabase poolers and Hyperdrive without relying on server-side prepared
+ * statement state. Drizzle Kit uses its own direct connection configuration.
  */
 const CONNECTION_OPTIONS = { prepare: false } as const;
 
@@ -39,6 +38,8 @@ export interface CreateDbOptions {
    * reference alive.
    */
   cache?: boolean;
+  /** Maximum connections opened by this client. */
+  max?: number;
 }
 
 /**
@@ -52,10 +53,12 @@ export interface CreateDbOptions {
 export function createDb<TRelations extends AnyRelations>(
   url: string,
   relations: TRelations,
-  { cache = process.env.NODE_ENV !== "production" }: CreateDbOptions = {},
+  { cache = process.env.NODE_ENV !== "production", max }: CreateDbOptions = {},
 ) {
   const cached = cache ? connectionCache().get(url) : undefined;
-  const client = cached ?? postgres(url, CONNECTION_OPTIONS);
+  const options =
+    max === undefined ? CONNECTION_OPTIONS : { ...CONNECTION_OPTIONS, max };
+  const client = cached ?? postgres(url, options);
 
   if (cache && !cached) connectionCache().set(url, client);
 

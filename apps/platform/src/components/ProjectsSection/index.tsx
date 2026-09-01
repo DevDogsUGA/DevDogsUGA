@@ -1,4 +1,3 @@
-import { Suspense, type ReactNode } from "react";
 import SectionBackground, {
   type BlobDef,
   type EdgeType,
@@ -52,21 +51,9 @@ function RotatedImage() {
 interface Props {
   topEdge: EdgeType;
   bottomEdge: EdgeType;
-  /**
-   * The streak call-to-action, which reads the visitor's session and so cannot
-   * be prerendered. It is passed in rather than rendered here because this
-   * section renders inside the homepage's `"use cache"` scope, and `cookies()`
-   * is an error anywhere inside one. Created by an uncached caller, the element
-   * renders outside the cache boundary and streams into the Suspense below.
-   */
-  streakCta: ReactNode;
 }
 
-export default function ProjectsSection({
-  topEdge,
-  bottomEdge,
-  streakCta,
-}: Props) {
+export default function ProjectsSection({ topEdge, bottomEdge }: Props) {
   return (
     <div className="mx-4 overflow-hidden rounded-xl md:mx-6">
       <section
@@ -126,12 +113,6 @@ export default function ProjectsSection({
               ))}
             </div>
           </div>
-
-          {/* No wrapper: `StreakCTA` returns null for most visitors, and
-              Suspense renders no element of its own, so the section's spacing
-              skips it entirely rather than leaving a gap. The CTA centers
-              itself when it does render. */}
-          <Suspense fallback={null}>{streakCta}</Suspense>
         </div>
       </section>
     </div>

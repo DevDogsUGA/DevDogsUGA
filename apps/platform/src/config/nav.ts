@@ -252,6 +252,11 @@ export const SWITCHER_PRIMARY: SwitcherEntry = {
  */
 export const SWITCHER_LINKS: SwitcherEntry[] = [
   {
+    label: "Leadership Team Application",
+    href: "/leadership",
+    external: true,
+  },
+  {
     label: "UGA Involvement Network Listing",
     href: INVOLVEMENT_NETWORK_URL,
     favicon: involvementFavicon,

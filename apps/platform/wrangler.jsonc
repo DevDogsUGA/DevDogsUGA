@@ -23,9 +23,9 @@
   //      anything real.
   //
   // NON-INHERITABLE keys must be repeated in full in every environment:
-  // `vars`, `services`, `images`, `r2_buckets`, `send_email`. Omitting one does
-  // not fall back to the top level -- the binding is simply absent, and the
-  // failure shows up at runtime. Verified against wrangler 4.118:
+  // `vars`, `services`, `images`, `r2_buckets`, `hyperdrive`, `send_email`.
+  // Omitting one does not fall back to the top level -- the binding is simply
+  // absent, and the failure shows up at runtime. Verified against wrangler 4.118:
   //   pnpm exec wrangler deploy --dry-run --env production
   // prints the resolved binding list and warns about every key left behind.
   // ==========================================================================
@@ -44,7 +44,10 @@
   // the local workerd predates the configured date. Bump this alongside
   // wrangler; the adapter warns once it is more than six months stale.
   "compatibility_date": "2026-07-22",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
   // Inheritable, and identical everywhere, so it stays at the top level.
   "assets": {
     "directory": ".open-next/assets",
@@ -58,7 +61,6 @@
       "invocation_logs": true,
     },
   },
-
   // --- development (top level) ---------------------------------------------
   // No `routes` and no `triggers`: an accidental env-less deploy should be
   // inert, not a second worker competing for the apex or firing the crons a
@@ -84,10 +86,11 @@
   "send_email": [
     {
       "name": "EMAIL",
-      "allowed_sender_addresses": ["noreply@mail.devdogsuga.org"],
+      "allowed_sender_addresses": [
+        "noreply@mail.devdogsuga.org"
+      ],
     },
   ],
-
   "env": {
     // ========================================================================
     // staging
@@ -114,10 +117,22 @@
           "bucket_name": "staging-platform-cache",
         },
       ],
+      // Hyperdrive pools connections to Supabase's DIRECT database endpoint.
+      // SQL result caching is disabled on the configuration: these queries are
+      // permission-sensitive and often follow writes. The ID is public and the
+      // origin credential stays encrypted in Cloudflare.
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE",
+          "id": "7ca9f62ed356489f956cc854a17d7eed",
+        },
+      ],
       "send_email": [
         {
           "name": "EMAIL",
-          "allowed_sender_addresses": ["noreply@mail.devdogsuga.org"],
+          "allowed_sender_addresses": [
+            "noreply@mail.devdogsuga.org"
+          ],
         },
       ],
       // ASSUMPTION, and the one value here nobody has confirmed: staging is
@@ -143,7 +158,6 @@
         "crons": [],
       },
     },
-
     // ========================================================================
     // production
     // ========================================================================
@@ -179,6 +193,12 @@
           "bucket_name": "production-platform-cache",
         },
       ],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE",
+          "id": "2bb3ae474d974fe99e4f36b3c5aaf896",
+        },
+      ],
       // Transactional email. Supabase's sender is auth-only (signup
       // confirmation, magic link, password recovery) with no general-purpose
       // send API, so team invitations go through the Workers binding instead.
@@ -200,7 +220,9 @@
       "send_email": [
         {
           "name": "EMAIL",
-          "allowed_sender_addresses": ["noreply@mail.devdogsuga.org"],
+          "allowed_sender_addresses": [
+            "noreply@mail.devdogsuga.org"
+          ],
         },
       ],
       // The production apex. It is currently bound to the pre-monorepo worker,
@@ -217,7 +239,12 @@
       // Cron triggers replace the old vercel.json crons. cloudflare/scheduled.ts
       // routes each cron to its existing CRON_SECRET-guarded /api route.
       "triggers": {
-        "crons": ["0 0 * * *", "*/15 * * * *", "*/10 * * * *", "*/5 * * * *"],
+        "crons": [
+          "0 0 * * *",
+          "*/15 * * * *",
+          "*/10 * * * *",
+          "*/5 * * * *"
+        ],
       },
     },
   },

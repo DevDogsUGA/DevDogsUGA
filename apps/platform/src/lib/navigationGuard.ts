@@ -32,6 +32,24 @@ export interface NavigationIntent {
   altKey: boolean;
 }
 
+const blockedNavigationEvents = new WeakSet<Event>();
+
+/**
+ * Prevent an in-app navigation and identify the cancellation to global UI.
+ *
+ * Next's App Router also calls `preventDefault()` when it claims a normal
+ * `<Link>` click. Consumers therefore cannot use `defaultPrevented` to tell a
+ * blocked navigation from one that Next is actively handling.
+ */
+export function blockNavigation(event: Event): void {
+  blockedNavigationEvents.add(event);
+  event.preventDefault();
+}
+
+export function wasNavigationBlocked(event: Event): boolean {
+  return blockedNavigationEvents.has(event);
+}
+
 /**
  * Whether this click is an in-app navigation a dirty form should hold back.
  *
