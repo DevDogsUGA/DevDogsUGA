@@ -33,5 +33,5 @@ export interface OfferingSearchRow {
   firstName: string | null;
   lastName: string | null;
   seatsAvailable: number;
-  active: boolean;
+  cancelled: boolean;
 }

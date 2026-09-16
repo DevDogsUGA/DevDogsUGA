@@ -46,7 +46,7 @@ export default function CourseSearchPage() {
       let req = supabase
         .from("offeringSearch")
         .select(
-          "crn, courseId, abbr, courseNumber, title, maxCreditHours, firstName, lastName, seatsAvailable, active",
+          "crn, courseId, abbr, courseNumber, title, maxCreditHours, firstName, lastName, seatsAvailable, cancelled",
         )
         .eq("academicPeriod", academicPeriod!);
 

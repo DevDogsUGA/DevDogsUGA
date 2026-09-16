@@ -17,14 +17,10 @@ export class InstructorCollector extends LookupCollector<
         return {
           firstName,
           lastName,
-          totalReviews: 0,
-          averageRating: 0,
-          difficultyRating: 0,
-          wouldTakeAgainRating: 0,
         };
       },
       (data) => `${data.firstName}::${data.lastName}`,
-      { set: [] }, // no-op update on conflict, preserving existing RMP data
+      { set: [] }, // no-op on conflict: the full name is the identity, nothing else to refresh
     );
   }
 }

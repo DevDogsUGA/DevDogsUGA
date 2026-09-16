@@ -484,10 +484,6 @@ export const instructorsInScheduleBuilder = scheduleBuilder.table.withRLS("instr
 	id: serial().primaryKey(),
 	firstName: varchar().notNull(),
 	lastName: varchar().notNull(),
-	totalReviews: integer().default(0).notNull(),
-	averageRating: real().default(0).notNull(),
-	difficultyRating: real().default(0).notNull(),
-	wouldTakeAgainRating: integer().default(0).notNull(),
 }, (table) => [
 	unique("unique_full_name").on(table.firstName, table.lastName),
 	pgPolicy("public_read", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
@@ -522,7 +518,8 @@ export const offeringsInScheduleBuilder = scheduleBuilder.table.withRLS("offerin
 	maximumEnrollment: integer().notNull(),
 	actualEnrollment: integer().notNull(),
 	seatsAvailable: integer().notNull(),
-	active: boolean().notNull(),
+	cancelled: boolean().notNull().default(false),
+	lastSeenAt: timestamp().notNull().default(sql`now()`),
 	academicPeriod: integer().notNull().references(() => termsInScheduleBuilder.academicPeriod),
 	partOfTerm: varchar().notNull(),
 	courseId: integer().notNull().references(() => coursesInScheduleBuilder.id),
@@ -872,7 +869,7 @@ export const availableTermsInScheduleBuilder = scheduleBuilder.view("availableTe
 export const offeringSearchInScheduleBuilder = scheduleBuilder.materializedView("offeringSearch", {	crn: integer(),
 	academicPeriod: integer(),
 	seatsAvailable: integer(),
-	active: boolean(),
+	cancelled: boolean(),
 	courseId: integer(),
 	abbr: varchar(),
 	courseNumber: varchar(),
@@ -882,7 +879,7 @@ export const offeringSearchInScheduleBuilder = scheduleBuilder.materializedView(
 	firstName: varchar(),
 	lastName: varchar(),
 	searchVector: customType({ dataType: () => 'tsvector' })("search_vector"),
-}).as(sql`SELECT offerings.crn, offerings."academicPeriod", offerings."seatsAvailable", offerings.active, courses.id AS "courseId", courses.abbr, courses."courseNumber", courses.title, courses."maxCreditHours", instructors.id AS "instructorId", instructors."firstName", instructors."lastName", to_tsvector('english'::regconfig, (((((((COALESCE(courses.title, ''::character varying)::text || ' '::text) || COALESCE(courses.abbr, ''::character varying)::text) || ' '::text) || COALESCE(courses."courseNumber", ''::character varying)::text) || ' '::text) || COALESCE(instructors."lastName", ''::character varying)::text) || ' '::text) || COALESCE(instructors."firstName", ''::character varying)::text) AS search_vector FROM schedule_builder.offerings JOIN schedule_builder.courses ON courses.id = offerings."courseId" LEFT JOIN schedule_builder.instructors ON instructors.id = offerings."instructorId"`);
+}).as(sql`SELECT offerings.crn, offerings."academicPeriod", offerings."seatsAvailable", offerings.cancelled, courses.id AS "courseId", courses.abbr, courses."courseNumber", courses.title, courses."maxCreditHours", instructors.id AS "instructorId", instructors."firstName", instructors."lastName", to_tsvector('english'::regconfig, (((((((COALESCE(courses.title, ''::character varying)::text || ' '::text) || COALESCE(courses.abbr, ''::character varying)::text) || ' '::text) || COALESCE(courses."courseNumber", ''::character varying)::text) || ' '::text) || COALESCE(instructors."lastName", ''::character varying)::text) || ' '::text) || COALESCE(instructors."firstName", ''::character varying)::text) AS search_vector FROM schedule_builder.offerings JOIN schedule_builder.courses ON courses.id = offerings."courseId" LEFT JOIN schedule_builder.instructors ON instructors.id = offerings."instructorId"`);
 
 export const decryptedSecretsInVault = vault.view("decrypted_secrets", {	id: uuid(),
 	name: text(),
