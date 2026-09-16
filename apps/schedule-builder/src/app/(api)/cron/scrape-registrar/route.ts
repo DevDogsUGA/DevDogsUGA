@@ -14,9 +14,9 @@ import {
   SubjectCollector,
   bulkUpsert,
   detectAvailableTerms,
-  fetchPartsOfTerm,
   upsertPartsOfTerm,
 } from "~/lib/parsers";
+import { resolvePartsOfTermPerTerm } from "~/lib/parsers/termPartsOfTerm";
 import { db } from "~/server/db";
 import { terms } from "~/server/db/schema";
 
@@ -31,14 +31,24 @@ export async function GET(req: NextRequest) {
 
   // Fetch part-of-term calendars over HTTP up front, before opening a
   // transaction. These are slow external requests and must not hold a DB
-  // connection open while they run.
-  const partOfTermRows = (
-    await Promise.all(
-      availableTerms.map(({ academicPeriod }) =>
-        fetchPartsOfTerm(academicPeriod),
-      ),
-    )
-  ).flat();
+  // connection open while they run. Parts-of-term is required per term (it
+  // sets course start/end dates), but the registrar lookup can fail for an
+  // individual term (e.g. a missing calendar year); that must exclude only
+  // that term from this run, not fail the whole route.
+  const { succeeded, failed } = await resolvePartsOfTermPerTerm(availableTerms);
+
+  if (failed.length > 0) {
+    console.error("[scrape-registrar] parts-of-term failures:", failed);
+  }
+
+  if (succeeded.length === 0) {
+    return NextResponse.json(
+      { error: "No terms detected", failed },
+      { status: 502 },
+    );
+  }
+
+  const partOfTermRows = succeeded.flatMap((t) => t.partOfTermRows);
 
   // ─── Phase 1: collect every row in memory (pure, no DB I/O) ────────────────
   const subjects = new SubjectCollector();
@@ -52,7 +62,7 @@ export async function GET(req: NextRequest) {
   const offerings = new OfferingCollector();
   const meetings = new MeetingCollector();
 
-  for (const { rows } of availableTerms) {
+  for (const { rows } of succeeded) {
     for (const row of rows) {
       subjects.collect(row);
       colleges.collect(row);
@@ -73,7 +83,7 @@ export async function GET(req: NextRequest) {
       await bulkUpsert(
         tx,
         terms,
-        availableTerms.map(({ academicPeriod, description }) => ({
+        succeeded.map(({ academicPeriod, description }) => ({
           academicPeriod,
           description,
         })),
@@ -138,9 +148,10 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    periods: availableTerms.map((t) => t.academicPeriod),
+    periods: succeeded.map((t) => t.academicPeriod),
     courses: courseCount,
     offerings: offeringCount,
     meetings: meetingCount,
+    failed,
   });
 }
