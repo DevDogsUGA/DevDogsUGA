@@ -189,6 +189,14 @@ jobs:
         run: |
           pnpm turbo run build --filter 'platform^...'
           pnpm --filter platform run test:db
+      # Vitest resolves @devdogsuga/drizzle and friends from their dist/,
+      # which a fresh checkout doesn't have — the `pnpm --filter ... run`
+      # invocation bypasses turbo's ^build ordering, so build the app's
+      # dependencies first (cached for the build step below).
+      - name: Query validity + privilege surface (schedule-builder)
+        run: |
+          pnpm turbo run build --filter 'schedule-builder^...'
+          pnpm --filter schedule-builder run test:db
       # The Supabase half comes from .env.generated, so the build renders
       # against a real Postgres and a real PostgREST rather than a mock. The
       # NEXT_PUBLIC pair is derived rather than hardcoded: it has to match the

@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:db": "with-env vitest run --config vitest.db.config.ts",
     "test:coverage": "vitest run --coverage",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx}\" --cache",
