@@ -133,16 +133,12 @@ async function mergeDraftPrefs(
 
     // Only fill nullable fields that are null server-side
     const patch: Partial<
-      Record<
-        "prefStartTime" | "prefEndTime" | "inputCampus" | "gapDay",
-        string | null
-      >
+      Record<"prefStartTime" | "prefEndTime" | "inputCampus", string | null>
     > = {};
     for (const field of [
       "prefStartTime",
       "prefEndTime",
       "inputCampus",
-      "gapDay",
     ] as const) {
       if (existing.data[field] === null && localPrefs[field] !== null) {
         patch[field] = localPrefs[field];

@@ -16,14 +16,6 @@ export const timeOptions = {
   "22:00": "10 PM",
 };
 
-export const gapDayOptions = {
-  M: "Monday",
-  T: "Tuesday",
-  W: "Wednesday",
-  R: "Thursday",
-  F: "Friday",
-};
-
 export const campusOptions = {
   Athens: "Athens",
   Buckhead: "Buckhead",

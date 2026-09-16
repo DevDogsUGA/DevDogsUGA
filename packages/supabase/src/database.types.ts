@@ -3068,7 +3068,6 @@ export type Database = {
       userPlanDrafts: {
         Row: {
           academicPeriod: number;
-          gapDay: string | null;
           inputCampus: string | null;
           maxCreditHours: number;
           minCreditHours: number;
@@ -3076,11 +3075,9 @@ export type Database = {
           prefStartTime: string | null;
           showFilledClasses: boolean;
           userId: string;
-          walking: boolean;
         };
         Insert: {
           academicPeriod: number;
-          gapDay?: string | null;
           inputCampus?: string | null;
           maxCreditHours?: number;
           minCreditHours?: number;
@@ -3088,11 +3085,9 @@ export type Database = {
           prefStartTime?: string | null;
           showFilledClasses?: boolean;
           userId: string;
-          walking?: boolean;
         };
         Update: {
           academicPeriod?: number;
-          gapDay?: string | null;
           inputCampus?: string | null;
           maxCreditHours?: number;
           minCreditHours?: number;
@@ -3100,7 +3095,6 @@ export type Database = {
           prefStartTime?: string | null;
           showFilledClasses?: boolean;
           userId?: string;
-          walking?: boolean;
         };
         Relationships: [];
       };

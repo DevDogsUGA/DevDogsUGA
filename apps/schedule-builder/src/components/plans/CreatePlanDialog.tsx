@@ -18,11 +18,7 @@ import { useDraftPrefs } from "~/hooks/data/useDraftPrefs";
 import { useDraftCourses } from "~/hooks/data/useDraftCourses";
 import { useSavedPlans } from "~/hooks/data/useSavedPlans";
 import { getRecommendedSchedules } from "~/server/actions/generate-schedule";
-import {
-  campusOptions,
-  gapDayOptions,
-  timeOptions,
-} from "~/lib/scheduleFilterOptions";
+import { campusOptions, timeOptions } from "~/lib/scheduleFilterOptions";
 import { type DraftCourse } from "~/lib/localStorage/types";
 import { formatCourseCode } from "~/lib/courseCode";
 
@@ -155,10 +151,8 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
   const startTime = draftPrefs.prefStartTime ?? "08:00";
   const endTime = draftPrefs.prefEndTime ?? "22:00";
   const campus = draftPrefs.inputCampus ?? "Athens";
-  const gapDay = draftPrefs.gapDay ?? null;
   const minCreditHours = draftPrefs.minCreditHours;
   const maxCreditHours = draftPrefs.maxCreditHours;
-  const walking = draftPrefs.walking;
   const showFilledClasses = draftPrefs.showFilledClasses;
 
   const startTimeOptions = Object.fromEntries(
@@ -268,12 +262,10 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
         excludedCourseIDs: [],
         prefStartTime: startTime ? parseInt(startTime) : 8,
         prefEndTime: endTime ? parseInt(endTime) : 22,
-        gapDay: gapDay ?? "",
         inputCampus: campus,
         minCreditHours,
         maxCreditHours,
         showFilledClasses,
-        walking,
       });
 
       // An empty CRN list is not a plan. Saving one produces a plan whose
@@ -411,20 +403,6 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                   />
                 </label>
 
-                <label className="col-span-2 flex items-center justify-center gap-4 border-b-2 border-stone-400/40 pb-4 text-neutral-700 not-disabled:hover:text-black has-disabled:cursor-not-allowed has-disabled:opacity-60 sm:pb-6">
-                  <input
-                    className="form-checkbox size-6 rounded-md border-2 border-stone-300 text-red-700 not-disabled:hover:border-stone-400 focus:ring-red-700"
-                    type="checkbox"
-                    checked={walking}
-                    onChange={(e) =>
-                      setPref("walking", e.currentTarget.checked)
-                    }
-                  />
-                  <span className="text-left leading-tight text-balance">
-                    Walking Distance Between Classes
-                  </span>
-                </label>
-
                 <label className="col-span-2 grid grid-cols-subgrid items-center">
                   <span className="pl-3 text-right font-bold">Campus</span>
                   <Combobox
@@ -436,23 +414,6 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                       s ? campusOptions[s] : "Select a Campus"
                     }
                     onChange={(v) => v && setPref("inputCampus", v)}
-                  />
-                </label>
-
-                <label className="col-span-2 grid grid-cols-subgrid items-center">
-                  <span className="pl-3 text-right font-bold">Gap Day</span>
-                  <Combobox
-                    value={
-                      (gapDay ?? undefined) as
-                        keyof typeof gapDayOptions | undefined
-                    }
-                    options={gapDayOptions}
-                    preserveOrdering
-                    searchPlaceholder="Search Gap Days"
-                    displayText={(s) =>
-                      s ? gapDayOptions[s] : "Select a Gap Day"
-                    }
-                    onChange={(v) => setPref("gapDay", v ?? null)}
                   />
                 </label>
 

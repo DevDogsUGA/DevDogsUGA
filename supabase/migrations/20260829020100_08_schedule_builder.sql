@@ -190,10 +190,8 @@ create table "schedule_builder"."userPlanDrafts" (
   "prefStartTime"      time,
   "prefEndTime"        time,
   "inputCampus"        varchar,
-  "gapDay"             varchar,
   "minCreditHours"     integer default 12 not null,
   "maxCreditHours"     integer default 18 not null,
-  "walking"            boolean default false not null,
   "showFilledClasses"  boolean default false not null,
   constraint "userPlanDrafts_pkey" primary key ("userId", "academicPeriod")
 );

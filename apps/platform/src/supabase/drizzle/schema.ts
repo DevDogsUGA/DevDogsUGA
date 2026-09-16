@@ -591,10 +591,8 @@ export const userPlanDraftsInScheduleBuilder = scheduleBuilder.table.withRLS("us
 	prefStartTime: time(),
 	prefEndTime: time(),
 	inputCampus: varchar(),
-	gapDay: varchar(),
 	minCreditHours: integer().default(12).notNull(),
 	maxCreditHours: integer().default(18).notNull(),
-	walking: boolean().default(false).notNull(),
 	showFilledClasses: boolean().default(false).notNull(),
 }, (table) => [
 	primaryKey({ columns: [table.userId, table.academicPeriod], name: "userPlanDrafts_pkey"}),

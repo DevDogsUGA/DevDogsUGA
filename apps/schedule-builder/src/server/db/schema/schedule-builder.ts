@@ -228,10 +228,8 @@ export const userPlanDrafts = scheduleBuilder.table(
     prefStartTime: d.time(),
     prefEndTime: d.time(),
     inputCampus: d.varchar(),
-    gapDay: d.varchar(),
     minCreditHours: d.integer().notNull().default(12),
     maxCreditHours: d.integer().notNull().default(18),
-    walking: d.boolean().notNull().default(false),
     showFilledClasses: d.boolean().notNull().default(false),
   }),
   (t) => [
