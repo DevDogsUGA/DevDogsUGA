@@ -35,6 +35,46 @@ function extractDate(cellText: string): string | null {
   return isValid(d) ? format(d, "yyyy-MM-dd") : null;
 }
 
+// ─── Calendar ID Resolver ─────────────────────────────────────────────────────
+
+export function resolveCalendarId(
+  $page: ReturnType<typeof cheerio.load>,
+  academicPeriod: number,
+): string {
+  // Calculate the starting year for this academic period
+  const year = Math.floor(academicPeriod / 100);
+  const startingYear =
+    academicPeriod % 100 === 8 ? year : year - 1;
+
+  // Iterate through options in the calendar year selector
+  let calendarId: string | undefined;
+  $page("select.cal-year-select option").each((_i, el) => {
+    const $el = $page(el);
+
+    // Skip Archive entries (data-nav="url")
+    if ($el.attr("data-nav") === "url") {
+      return;
+    }
+
+    // Extract the leading 4-digit year from the option text
+    // Normalize whitespace and handle various dash variants
+    const optionText = $el.text().trim().replace(/\s+/g, " ");
+    const matchedYear = optionText.match(/^(\d{4})/)?.[1];
+
+    if (matchedYear !== undefined && parseInt(matchedYear, 10) === startingYear) {
+      calendarId = $el.attr("value");
+    }
+  });
+
+  if (!calendarId) {
+    throw new Error(
+      `No calendar found for academic period ${academicPeriod}`,
+    );
+  }
+
+  return calendarId;
+}
+
 // ─── Fetch (pure HTTP, no DB, safe to run outside a transaction) ───────────────
 
 export async function fetchPartsOfTerm(
@@ -45,15 +85,7 @@ export async function fetchPartsOfTerm(
     "https://reg.uga.edu/calendars/parts-of-term",
   );
   const $page = cheerio.load(await calendarPageRes.text());
-  const targetYearText = academicYearText(academicPeriod);
-
-  let calendarId: string | undefined;
-  $page("#cal_dropdown option").each((_i, el) => {
-    if ($page(el).text().trim() === targetYearText) {
-      calendarId = $page(el).attr("value");
-    }
-  });
-  if (!calendarId) throw new Error(`No calendar found for "${targetYearText}"`);
+  const calendarId = resolveCalendarId($page, academicPeriod);
 
   // Step 2: Fetch the calendar HTML via the registrar's AJAX endpoint.
   const ajaxRes = await fetch("https://reg.uga.edu/wp-admin/admin-ajax.php", {
