@@ -12,10 +12,12 @@
 /*
  * DogDays theme tokens.
  *
- * The colorway is zinc for neutrals with the DogDays red as primary — the
- * same red the OG package's `ACCENT.red400/red700` transcribe, which is
- * Tailwind's stock red scale, so `red-*` utilities and the generated brand
- * assets agree by construction.
+ * The colorway: DogDays red as primary — the same red the OG package's
+ * `ACCENT.red400/red700` transcribe, which is Tailwind's stock red scale, so
+ * `red-*` utilities and the generated brand assets agree by construction —
+ * over pink-washed neutrals in light and navy-washed neutrals in dark, both
+ * carried over from the app's original palette (`pink-50` pages, `#222233`
+ * headers). `navy` is that `#222233` as a standing accent in either scheme.
  *
  * Light is the default; dark follows the system preference (no toggle), so
  * the tokens flip in a `prefers-color-scheme` media query rather than under
@@ -23,36 +25,48 @@
  * and only use raw `zinc-*`/`red-*` (or `dark:`) for one-off shades.
  */
 :root {
-  --background: var(--color-zinc-50);
+  --background: var(--color-pink-50);
   --surface: var(--color-white);
-  --surface-muted: var(--color-zinc-100);
-  --edge: var(--color-zinc-200);
-  --edge-strong: var(--color-zinc-300);
+  --surface-muted: color-mix(
+    in oklab,
+    var(--color-pink-100) 60%,
+    var(--color-white)
+  );
+  --edge: var(--color-pink-100);
+  --edge-strong: color-mix(
+    in oklab,
+    var(--color-pink-300) 55%,
+    var(--color-zinc-300)
+  );
   --foreground: var(--color-zinc-900);
   --muted: var(--color-zinc-500);
   --primary: var(--color-red-700);
   --primary-strong: var(--color-red-800);
-  --primary-soft: var(--color-red-50);
+  --primary-soft: var(--color-pink-100);
   --accent: var(--color-red-700);
+  --navy: #222233;
+  --navy-foreground: var(--color-white);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: var(--color-zinc-950);
-    --surface: var(--color-zinc-900);
-    --surface-muted: var(--color-zinc-800);
-    --edge: var(--color-zinc-800);
-    --edge-strong: var(--color-zinc-700);
+    --background: #17171f;
+    --surface: #222233;
+    --surface-muted: #2e2e46;
+    --edge: #32324b;
+    --edge-strong: #454568;
     --foreground: var(--color-zinc-100);
-    --muted: var(--color-zinc-400);
+    --muted: #a6a6bd;
     --primary: var(--color-red-600);
     --primary-strong: var(--color-red-700);
     --primary-soft: color-mix(
       in oklab,
-      var(--color-red-500) 14%,
+      var(--color-red-500) 16%,
       var(--surface)
     );
     --accent: var(--color-red-400);
+    --navy: #2e2e46;
+    --navy-foreground: var(--color-zinc-100);
   }
 }
 
@@ -68,6 +82,8 @@
   --color-primary-strong: var(--primary-strong);
   --color-primary-soft: var(--primary-soft);
   --color-accent: var(--accent);
+  --color-navy: var(--navy);
+  --color-navy-foreground: var(--navy-foreground);
 }
 
 /*

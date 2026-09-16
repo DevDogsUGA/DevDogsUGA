@@ -83,7 +83,7 @@ export default function WeekSchedule({ weekData }: WeekScheduleProps) {
             data-title={day}
             className={`${day === activeDay ? "flex" : "hidden md:flex"} min-w-0 flex-col`}
           >
-            <h2 className="bg-surface-muted flex h-9 shrink-0 items-center justify-center rounded-md text-sm font-semibold">
+            <h2 className="bg-navy text-navy-foreground flex h-9 shrink-0 items-center justify-center rounded-md text-sm font-semibold">
               {day}
             </h2>
             <div

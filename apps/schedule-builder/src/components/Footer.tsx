@@ -26,22 +26,22 @@ const SOCIALS = [
 
 export function Footer() {
   return (
-    <footer className="border-edge bg-surface text-muted border-t px-4 py-6 text-sm">
+    <footer className="bg-navy px-4 py-6 text-sm text-zinc-400">
       <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row">
         <Link
           href="/"
-          className="text-foreground flex items-center gap-2 transition-opacity hover:opacity-80"
+          className="text-navy-foreground flex items-center gap-2 transition-opacity hover:opacity-80"
         >
           <DogDaysMark size={22} color="currentColor" />
           <span className="font-display text-base leading-none font-semibold tracking-tight">
             DogDays
           </span>
-          <span className="text-muted mt-px text-xs">by UGA DevDogs</span>
+          <span className="mt-px text-xs text-zinc-400">by UGA DevDogs</span>
         </Link>
 
         <nav className="flex items-center gap-5">
           <a
-            className="hover:text-foreground transition-colors"
+            className="hover:text-navy-foreground transition-colors"
             href="https://devdogs.uga.edu/"
             target="_blank"
             rel="noopener"
@@ -49,7 +49,7 @@ export function Footer() {
             About Us
           </a>
           <a
-            className="hover:text-foreground transition-colors"
+            className="hover:text-navy-foreground transition-colors"
             href="https://linktr.ee/devdogs"
             target="_blank"
             rel="noopener"
@@ -64,7 +64,7 @@ export function Footer() {
                 href={href}
                 target="_blank"
                 rel="noopener"
-                className="hover:bg-surface-muted hover:text-foreground rounded-md p-1.5 text-xl transition-colors"
+                className="hover:text-navy-foreground rounded-md p-1.5 text-xl transition-colors hover:bg-white/10"
               >
                 <Icon weight="bold" />
               </a>

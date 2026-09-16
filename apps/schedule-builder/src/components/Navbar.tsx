@@ -10,6 +10,7 @@ import {
 import { DogDaysMark } from "@devdogsuga/og";
 import Link from "next/link";
 import { TermSelector } from "~/components/TermSelector";
+import { Button } from "~/components/ui/Button";
 import { UserAvatar } from "~/components/ui/UserAvatar";
 import signIn from "~/lib/signIn";
 import { supabase } from "~/supabase/client";
@@ -89,15 +90,9 @@ export function Navbar() {
             </li>
           ) : (
             <li className="col-span-2 flex items-center justify-center pl-3">
-              <button
-                className="border-primary-strong bg-primary ring-primary-strong hover:bg-primary-soft hover:text-accent flex w-full cursor-default items-center justify-center gap-1.5 rounded-sm border-b-2 px-3 py-1.5 text-sm font-medium text-white shadow-sm ring-1 transition-colors focus:mt-0.5 focus:border-b-0"
-                onClick={signIn}
-                type="button"
-              >
-                <span className="contents">
-                  Get Started <SignInIcon weight="bold" />
-                </span>
-              </button>
+              <Button size="sm" className="w-full" onClick={signIn}>
+                Get Started <SignInIcon weight="bold" />
+              </Button>
             </li>
           )}
         </ul>
