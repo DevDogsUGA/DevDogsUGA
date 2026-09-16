@@ -20,13 +20,6 @@ function semesterRowId(academicPeriod: number): number {
   }
 }
 
-function academicYearText(academicPeriod: number): string {
-  const year = Math.floor(academicPeriod / 100);
-  return academicPeriod % 100 === 8
-    ? `${year} - ${year + 1}`
-    : `${year - 1} - ${year}`;
-}
-
 // The registrar stores dates as "M/d/yy"; the last space-delimited token is the date.
 function extractDate(cellText: string): string | null {
   const parts = cellText.trim().split(/\s+/);
@@ -59,7 +52,7 @@ export function resolveCalendarId(
     // Extract the leading 4-digit year from the option text
     // Normalize whitespace and handle various dash variants
     const optionText = $el.text().trim().replace(/\s+/g, " ");
-    const matchedYear = optionText.match(/^(\d{4})/)?.[1];
+    const matchedYear = /^(\d{4})/.exec(optionText)?.[1];
 
     if (matchedYear !== undefined && parseInt(matchedYear, 10) === startingYear) {
       calendarId = $el.attr("value");
