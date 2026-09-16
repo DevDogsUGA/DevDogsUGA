@@ -7,6 +7,7 @@
 # never sticks.
 **/src/server/db/schema/generated/
 apps/platform/cloudflare-env.d.ts
+apps/schedule-builder/cloudflare-env.d.ts
 
 # --- Covered by a NESTED .gitignore, which --ignore-path does not read -------
 #

@@ -16,5 +16,10 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "cloudflare/worker.ts", "eslint.config.js"]
+  "exclude": [
+    "node_modules",
+    "cloudflare/worker.ts",
+    "cloudflare-env.d.ts",
+    "eslint.config.js"
+  ]
 }
