@@ -8,8 +8,9 @@ import {
   CircleNotchIcon,
   MinusIcon,
   SparkleIcon,
-  XIcon,
 } from "@phosphor-icons/react/ssr";
+import { Button } from "~/components/ui/Button";
+import { Dialog } from "~/components/ui/Dialog";
 import Combobox from "~/components/ui/Combobox";
 import { SectionExclusionList } from "~/components/courses/SectionExclusionList";
 import { useOfferingsByCourse } from "~/hooks/queries/useOfferingsByCourse";
@@ -49,7 +50,7 @@ function TriStateCheckbox({
         onChange={onChange}
         className="peer sr-only"
       />
-      <span className="flex size-5 shrink-0 items-center justify-center rounded border-2 border-stone-300 bg-white transition-colors peer-checked:border-red-700 peer-checked:bg-red-700 peer-focus-visible:ring-2 peer-focus-visible:ring-red-700 peer-focus-visible:ring-offset-1">
+      <span className="flex size-5 shrink-0 items-center justify-center rounded border-2 border-edge-strong bg-surface transition-colors peer-checked:border-primary peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-surface">
         {state === "checked" && (
           <CheckIcon weight="bold" className="size-3.5 text-white" />
         )}
@@ -97,7 +98,7 @@ function CourseOfferingsSection({
         : "checked";
 
   return (
-    <div className="border-b border-pink-100 pb-3 last:border-b-0 last:pb-0">
+    <div className="border-b border-edge pb-3 last:border-b-0 last:pb-0">
       <div className="flex items-center gap-3">
         <TriStateCheckbox
           state={checkboxState}
@@ -117,7 +118,7 @@ function CourseOfferingsSection({
           {offerings.length > 0 && (
             <CaretDownIcon
               weight="bold"
-              className={`size-4 shrink-0 text-neutral-400 transition-transform ${open ? "rotate-180" : ""}`}
+              className={`size-4 shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`}
             />
           )}
         </button>
@@ -299,24 +300,33 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
   const bodyLoading = prefsLoading || coursesLoading;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-xl bg-pink-50 shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-4">
-          <h2 className="text-lg font-bold">Create New Plan</h2>
-          <button
-            onClick={onClose}
-            className="text-neutral-400 hover:text-black"
+    <Dialog
+      title="Create New Plan"
+      onClose={onClose}
+      className="max-w-3xl"
+      footer={
+        <>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleGenerate}
+            disabled={isPending || bodyLoading}
+            className="group relative"
           >
-            <XIcon weight="bold" size={20} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <fieldset
+            <span className="flex items-center gap-2 transition-opacity group-disabled:opacity-0">
+              <SparkleIcon weight="bold" />
+              Generate
+            </span>
+            <CircleNotchIcon
+              weight="bold"
+              className="absolute top-1/2 left-1/2 -translate-1/2 animate-spin opacity-0 transition-opacity [animation-duration:500ms] group-disabled:opacity-100"
+            />
+          </Button>
+        </>
+      }
+    >
+      <fieldset
           disabled={isPending}
           className="flex flex-col gap-8 overflow-y-auto px-6 py-4"
         >
@@ -327,14 +337,14 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                 {[0, 1, 2].map((i) => (
                   <div
                     key={i}
-                    className="h-8 w-full animate-pulse rounded bg-neutral-200"
+                    className="h-8 w-full animate-pulse rounded bg-surface-muted"
                   />
                 ))}
               </div>
             ) : draftCourses.length === 0 ? (
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-muted">
                 You haven&apos;t saved any courses yet. Add some on the{" "}
-                <Link href="/courses" className="text-red-700 underline">
+                <Link href="/courses" className="text-accent underline">
                   Courses
                 </Link>{" "}
                 page.
@@ -367,7 +377,7 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                 {[0, 1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className="h-9 w-full animate-pulse rounded bg-neutral-200"
+                    className="h-9 w-full animate-pulse rounded bg-surface-muted"
                   />
                 ))}
               </div>
@@ -417,9 +427,9 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                   />
                 </label>
 
-                <label className="col-span-2 flex items-center justify-center gap-4 border-b-2 border-stone-400/40 pb-4 text-neutral-700 not-disabled:hover:text-black has-disabled:cursor-not-allowed has-disabled:opacity-60 sm:pb-6">
+                <label className="col-span-2 flex items-center justify-center gap-4 border-b-2 border-edge pb-4 text-foreground/80 not-disabled:hover:text-foreground has-disabled:cursor-not-allowed has-disabled:opacity-60 sm:pb-6">
                   <input
-                    className="form-checkbox size-6 rounded-md border-2 border-stone-300 text-red-700 not-disabled:hover:border-stone-400 focus:ring-red-700"
+                    className="form-checkbox size-6 rounded-md border-2 border-edge-strong bg-surface text-primary not-disabled:hover:border-muted focus:ring-primary"
                     type="checkbox"
                     checked={showFilledClasses}
                     onChange={(e) =>
@@ -436,7 +446,7 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                     Min Credit Hours
                   </span>
                   <input
-                    className="flex w-full items-center gap-6 rounded-md border-2 border-stone-300 bg-white px-3 py-1.5 transition-[box-shadow,border-color] not-disabled:hover:border-stone-400 not-disabled:hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex w-full items-center gap-6 rounded-md border-2 border-edge-strong bg-surface px-3 py-1.5 transition-[box-shadow,border-color] not-disabled:hover:border-muted not-disabled:hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                     min={0}
                     max={maxCreditHours}
                     onChange={(e) =>
@@ -453,7 +463,7 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
                     Max Credit Hours
                   </span>
                   <input
-                    className="flex w-full items-center gap-6 rounded-md border-2 border-stone-300 bg-white px-3 py-1.5 transition-[box-shadow,border-color] not-disabled:hover:border-stone-400 not-disabled:hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex w-full items-center gap-6 rounded-md border-2 border-edge-strong bg-surface px-3 py-1.5 transition-[box-shadow,border-color] not-disabled:hover:border-muted not-disabled:hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                     min={minCreditHours}
                     max={18}
                     onChange={(e) =>
@@ -468,33 +478,8 @@ export function CreatePlanDialog({ onClose }: { onClose: () => void }) {
             )}
           </section>
 
-          {error && <p className="text-sm font-medium text-red-700">{error}</p>}
+          {error && <p className="text-sm font-medium text-accent">{error}</p>}
         </fieldset>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-3 border-t border-neutral-200 px-6 py-4">
-          <button
-            onClick={onClose}
-            className="rounded-md px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleGenerate}
-            disabled={isPending || bodyLoading}
-            className="group relative rounded-md border-2 border-red-800 bg-red-700 px-6 py-2 font-medium text-white transition-[background-color,border-color,box-shadow] not-disabled:hover:border-red-950 not-disabled:hover:bg-red-800 not-disabled:hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <span className="flex items-center gap-2 transition-opacity group-disabled:opacity-0">
-              <SparkleIcon weight="bold" />
-              Generate
-            </span>
-            <CircleNotchIcon
-              weight="bold"
-              className="absolute top-1/2 left-1/2 -translate-1/2 animate-spin opacity-0 transition-opacity [animation-duration:500ms] group-disabled:opacity-100"
-            />
-          </button>
-        </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }

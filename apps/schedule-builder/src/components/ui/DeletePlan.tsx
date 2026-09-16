@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "./Button";
+import { Dialog } from "./Dialog";
 
 interface DeletePlanProps {
   onConfirm: () => void;
@@ -14,26 +15,22 @@ export default function DeletePlan({
   planTitle,
 }: DeletePlanProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="rounded-lg border-2 border-black bg-pink-50 p-5">
-        <div className="flex flex-col items-center">
-          <h2 className="mb-4 text-xl text-black">
-            Are you sure you want to delete the plan {planTitle}?
-          </h2>
-          <div className="flex flex-row space-x-4">
-            <Button
-              className="mr-5 px-8 py-2 text-white hover:bg-black"
-              text="Yes"
-              onClick={onConfirm}
-            ></Button>
-            <Button
-              className="ml-5 px-8 py-2 text-white hover:bg-black"
-              text="No"
-              onClick={onCancel}
-            ></Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Dialog
+      title="Delete Plan"
+      onClose={onCancel}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button onClick={onConfirm}>Delete</Button>
+        </>
+      }
+    >
+      <p className="px-6 py-4">
+        Are you sure you want to delete <strong>{planTitle}</strong>? This
+        can&apos;t be undone.
+      </p>
+    </Dialog>
   );
 }

@@ -158,16 +158,16 @@ export const QuestionnareForm = () => {
 
         <div className="flex items-center gap-6">
           <Button
-            text="clear"
+            variant="secondary"
             type="reset"
             onClick={clearInput}
-            className="w-1/2 border-2 bg-white py-3 text-stone-800 transition ease-in-out hover:border-red-700 hover:text-red-700"
-          />
-          <Button
-            text="submit"
-            type="submit"
-            className="w-1/2 border-pink-100 py-3 text-white transition ease-in-out hover:border-2 hover:border-stone-800 hover:bg-green-400 hover:text-stone-800"
-          />
+            className="w-1/2 py-3"
+          >
+            Clear
+          </Button>
+          <Button type="submit" className="w-1/2 py-3">
+            Submit
+          </Button>
         </div>
       </form>
     </div>
