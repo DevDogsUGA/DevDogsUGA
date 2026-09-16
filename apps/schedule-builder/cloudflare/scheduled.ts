@@ -32,9 +32,6 @@ import type { env } from "~/env";
 export type CronEnv = Pick<typeof env, "CRON_SECRET" | "BASE_URL"> &
   Pick<CloudflareEnv, "SCRAPE_WORKFLOW">;
 
-/** Cron expression that triggers the daily registrar `ScrapeWorkflow`. */
-const REGISTRAR_SCRAPE_CRON = "5 14 * * *";
-
 /**
  * Cron expression to the routes it fires and a one-line description.
  *
@@ -46,20 +43,62 @@ const REGISTRAR_SCRAPE_CRON = "5 14 * * *";
  * tick. A flat array and a wildcard `event.cron` match would double-fire every
  * route if a second schedule were ever added — the keyed shape closes that bug.
  *
- * KNOWN GAP: empty now that the registrar cron (`REGISTRAR_SCRAPE_CRON`)
- * triggers a Workflow instead of a route. `devtools cron list` doesn't know
- * about Workflow triggers yet, so it will report that real, firing trigger as
- * firing nothing. Accepted; tracked separately.
+ * Empty on purpose: the only schedule this app has is the daily registrar
+ * scrape, which now starts a Workflow rather than fetching a route (see
+ * `WORKFLOW_CRONS` below). Kept as an exported empty map so the route-dispatch
+ * mechanism — and its `devtools cron` audit — stays wired for whenever a
+ * route-based cron exists again.
  */
 export const CRON_ROUTES: Record<string, { routes: string[]; label: string }> =
   {};
+
+/**
+ * Cron expression to the Workflow binding it starts and a one-line description.
+ * The daily registrar scrape lives here, not in `CRON_ROUTES`: it calls
+ * `SCRAPE_WORKFLOW.create()` (see ScrapeWorkflow.ts) instead of fetching a
+ * route on this worker's own origin.
+ *
+ * This is the single source of truth for the workflow schedule — `scheduled()`
+ * below loops over it, and `devtools cron list` reconciles it against
+ * `wrangler.jsonc triggers.crons` + `workflows[]`, so the trigger that used to
+ * be invisible to the audit (it fired a Workflow, which `cron list` didn't
+ * understand) now reads as a real, reconciled trigger. `devtools cron run`
+ * fires it against a local `wrangler dev`/preview to smoke-test the scrape
+ * before any deploy.
+ */
+export const WORKFLOW_CRONS: Record<
+  string,
+  { binding: string; label: string }
+> = {
+  "5 14 * * *": {
+    binding: "SCRAPE_WORKFLOW",
+    label:
+      "Daily registrar scrape (one retried, checkpointed ScrapeWorkflow step per term)",
+  },
+};
+
+/**
+ * Resolves a `WORKFLOW_CRONS` binding name to the concrete binding on `env`.
+ * Kept beside the data map so `scheduled()` can fire by binding name without
+ * losing the generated type of `env.SCRAPE_WORKFLOW` — a bare `env[binding]`
+ * index would erase it. A binding named in `WORKFLOW_CRONS` but missing here is
+ * a no-op, the same fail-safe direction as an unmatched cron expression.
+ */
+const WORKFLOW_BINDINGS: Record<
+  string,
+  (env: CronEnv) => CronEnv["SCRAPE_WORKFLOW"]
+> = {
+  SCRAPE_WORKFLOW: (env) => env.SCRAPE_WORKFLOW,
+};
 
 export async function scheduled(
   event: { cron: string },
   env: CronEnv,
 ): Promise<void> {
-  if (event.cron === REGISTRAR_SCRAPE_CRON) {
-    await env.SCRAPE_WORKFLOW.create();
+  const workflow = WORKFLOW_CRONS[event.cron];
+  if (workflow) {
+    const resolve = WORKFLOW_BINDINGS[workflow.binding];
+    if (resolve) await resolve(env).create();
   }
 
   const entry = CRON_ROUTES[event.cron];

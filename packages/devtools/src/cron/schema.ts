@@ -1,8 +1,10 @@
 /**
- * Zod schema for the `CRON_ROUTES` export each app's `cloudflare/scheduled.ts`
- * must conform to.
+ * Zod schemas for the two cron-trigger exports an app's
+ * `cloudflare/scheduled.ts` may declare: `CRON_ROUTES` (a schedule that fetches
+ * one or more of the app's own routes) and the optional `WORKFLOW_CRONS` (a
+ * schedule that starts a Cloudflare Workflow instead of hitting a route).
  *
- * devtools enforces this at its import boundary (see `discovery.ts`): an app
+ * devtools enforces both at its import boundary (see `discovery.ts`): an app
  * that drifts from the shape fails the audit and a conformance test, rather
  * than reading as an empty (silently unaudited) map.
  *
@@ -25,3 +27,19 @@ const CronEntry = z.object({
 export const CronRoutes = z.record(z.string(), CronEntry);
 export type CronRoutes = z.infer<typeof CronRoutes>;
 export type CronEntry = z.infer<typeof CronEntry>;
+
+/**
+ * A workflow-backed schedule. `binding` names the Workflows binding the handler
+ * calls `.create()` on (e.g. `SCRAPE_WORKFLOW`); `cron list` reconciles it
+ * against the tier's `wrangler.jsonc` `workflows[].binding` so a schedule
+ * pointed at a binding that tier never declares is reported, not silently
+ * dropped. `label` is the audit's English description, same contract as routes.
+ */
+const WorkflowCronEntry = z.object({
+  binding: z.string().min(1),
+  label: z.string().min(1),
+});
+
+export const WorkflowCrons = z.record(z.string(), WorkflowCronEntry);
+export type WorkflowCrons = z.infer<typeof WorkflowCrons>;
+export type WorkflowCronEntry = z.infer<typeof WorkflowCronEntry>;

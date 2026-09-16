@@ -1,9 +1,10 @@
-// CRON_ROUTES conformance test.
+// CRON_ROUTES / WORKFLOW_CRONS conformance test.
 //
 // Dynamically imports every apps/*/cloudflare/scheduled.ts that exists and
-// zod-validates its CRON_ROUTES export against the contract shape. A missing
-// or invalid export fails the test with the file named — the fail-closed
-// direction.
+// zod-validates its CRON_ROUTES export (required) and WORKFLOW_CRONS export
+// (optional) against the contract shapes. A missing CRON_ROUTES, or a
+// present-but-invalid export of either, fails the test with the file named —
+// the fail-closed direction.
 //
 // Apps without a cloudflare/scheduled.ts (e.g. sandbox) are skipped; their
 // absence is expected, not an error.
@@ -12,7 +13,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { PROJECT_ROOT } from "../environment.js";
-import { CronRoutes } from "./schema.js";
+import { CronRoutes, WorkflowCrons } from "./schema.js";
 
 const APPS = ["platform", "schedule-builder", "sandbox"];
 
@@ -56,6 +57,36 @@ describe("CRON_ROUTES contract", () => {
           expect(
             entry.label.trim().length,
             `${app}: expression "${expr}" must have a non-blank label`,
+          ).toBeGreaterThan(0);
+        }
+      }
+    });
+
+    it(`${app}/cloudflare/scheduled.ts WORKFLOW_CRONS (if present) is valid`, async () => {
+      const mod = await import(pathToFileURL(scheduledPath).href);
+
+      // Optional export: an app with no Workflow schedules omits it entirely,
+      // which is valid and parses as `{}`.
+      const result = WorkflowCrons.safeParse(mod.WORKFLOW_CRONS ?? {});
+      expect(
+        result.success,
+        `${app}/cloudflare/scheduled.ts WORKFLOW_CRONS failed validation:\n` +
+          (!result.success
+            ? result.error.issues
+                .map((i) => `  ${i.path.join(".")}: ${i.message}`)
+                .join("\n")
+            : ""),
+      ).toBe(true);
+
+      if (result.success) {
+        for (const [expr, entry] of Object.entries(result.data)) {
+          expect(
+            entry.binding.trim().length,
+            `${app}: workflow expression "${expr}" must name a binding`,
+          ).toBeGreaterThan(0);
+          expect(
+            entry.label.trim().length,
+            `${app}: workflow expression "${expr}" must have a non-blank label`,
           ).toBeGreaterThan(0);
         }
       }

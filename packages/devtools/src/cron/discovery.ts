@@ -1,14 +1,20 @@
 /**
- * Discovers each app's `CRON_ROUTES` export by dynamically importing its
- * `cloudflare/scheduled.ts`. Mirrors the env-discovery pattern: found by known
- * path, zod-validated at the boundary. An app without the file has no crons
- * and is skipped; an app whose export fails validation throws with the path.
+ * Discovers each app's `CRON_ROUTES` (and optional `WORKFLOW_CRONS`) export by
+ * dynamically importing its `cloudflare/scheduled.ts`. Mirrors the
+ * env-discovery pattern: found by known path, zod-validated at the boundary. An
+ * app without the file has no crons and is skipped; an app whose export fails
+ * validation throws with the path.
  */
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { PROJECT_ROOT } from "../environment.js";
-import { CronRoutes, type CronRoutes as CronRoutesType } from "./schema.js";
+import {
+  CronRoutes,
+  WorkflowCrons,
+  type CronRoutes as CronRoutesType,
+  type WorkflowCrons as WorkflowCronsType,
+} from "./schema.js";
 
 const APPS_WITH_CRONS = ["platform", "schedule-builder"] as const;
 
@@ -17,6 +23,11 @@ export interface AppCronMap {
   /** Absolute path to the scheduled.ts file. */
   path: string;
   routes: CronRoutesType;
+  /**
+   * Workflow-backed schedules. `{}` for an app that exports no `WORKFLOW_CRONS`
+   * (the common case — only schedule-builder has one today).
+   */
+  workflows: WorkflowCronsType;
 }
 
 /**
@@ -50,7 +61,24 @@ export async function discoverCronMaps(): Promise<AppCronMap[]> {
       );
     }
 
-    results.push({ app, path: scheduledPath, routes: parsed.data });
+    // Optional: an app with no Workflow schedules omits the export entirely,
+    // which parses as `{}`. A present-but-malformed export still fails closed.
+    const parsedWorkflows = WorkflowCrons.safeParse(mod.WORKFLOW_CRONS ?? {});
+    if (!parsedWorkflows.success) {
+      throw new Error(
+        `${scheduledPath}: WORKFLOW_CRONS does not match the required shape.\n` +
+          parsedWorkflows.error.issues
+            .map((i) => `  ${i.path.join(".")}: ${i.message}`)
+            .join("\n"),
+      );
+    }
+
+    results.push({
+      app,
+      path: scheduledPath,
+      routes: parsed.data,
+      workflows: parsedWorkflows.data,
+    });
   }
 
   return results;
