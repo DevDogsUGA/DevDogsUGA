@@ -89,7 +89,7 @@ export default function SearchByCRN({
       </label>
 
       {course && (
-        <article className="col-start-2 flex flex-col rounded-md border border-dashed border-primary bg-surface px-3 py-2 text-sm text-accent shadow-inner">
+        <article className="border-primary bg-surface text-accent col-start-2 flex flex-col rounded-md border border-dashed px-3 py-2 text-sm shadow-inner">
           <h3 className="font-semibold">
             {course.subject} {course.courseNumber}
           </h3>

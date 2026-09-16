@@ -36,8 +36,7 @@ export function resolveCalendarId(
 ): string {
   // Calculate the starting year for this academic period
   const year = Math.floor(academicPeriod / 100);
-  const startingYear =
-    academicPeriod % 100 === 8 ? year : year - 1;
+  const startingYear = academicPeriod % 100 === 8 ? year : year - 1;
 
   // Iterate through options in the calendar year selector
   let calendarId: string | undefined;
@@ -54,15 +53,16 @@ export function resolveCalendarId(
     const optionText = $el.text().trim().replace(/\s+/g, " ");
     const matchedYear = /^(\d{4})/.exec(optionText)?.[1];
 
-    if (matchedYear !== undefined && parseInt(matchedYear, 10) === startingYear) {
+    if (
+      matchedYear !== undefined &&
+      parseInt(matchedYear, 10) === startingYear
+    ) {
       calendarId = $el.attr("value");
     }
   });
 
   if (!calendarId) {
-    throw new Error(
-      `No calendar found for academic period ${academicPeriod}`,
-    );
+    throw new Error(`No calendar found for academic period ${academicPeriod}`);
   }
 
   return calendarId;

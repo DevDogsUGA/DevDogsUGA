@@ -32,9 +32,8 @@ vi.mock("~/lib/domain/loadSections", () => ({
 }));
 
 const { getRecommendedSchedules } = await import("./generate-schedule");
-const { filterUsableSections, groupSectionsByCourse } = await import(
-  "~/lib/generation/prepareCourses"
-);
+const { filterUsableSections, groupSectionsByCourse } =
+  await import("~/lib/generation/prepareCourses");
 
 const FULL_TERM: DateRange = { start: "2026-01-08", end: "2026-05-01" };
 // Two real, non-overlapping UGA summer sessions: Maymester ends well before
@@ -155,10 +154,7 @@ describe("getRecommendedSchedules", () => {
       meetings: [meeting("09:00", "09:50", ["monday"])],
     });
 
-    mockLoadSections.mockResolvedValue([
-      maymesterSection,
-      secondSummerSection,
-    ]);
+    mockLoadSections.mockResolvedValue([maymesterSection, secondSummerSection]);
 
     const result = await getRecommendedSchedules({
       academicPeriod: 202605,
@@ -175,9 +171,7 @@ describe("getRecommendedSchedules", () => {
 
     expect(result.error).toBeUndefined();
     expect(result.data).toHaveLength(1);
-    expect(result.data[0]).toEqual(
-      expect.arrayContaining([11111, 22222]),
-    );
+    expect(result.data[0]).toEqual(expect.arrayContaining([11111, 22222]));
     expect(result.data[0]).toHaveLength(2);
   });
 });

@@ -25,9 +25,16 @@
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 import { sql } from "drizzle-orm";
-import { detectAvailableTerms, fetchPartsOfTerm, academicPeriodInfo } from "~/lib/parsers";
+import {
+  detectAvailableTerms,
+  fetchPartsOfTerm,
+  academicPeriodInfo,
+} from "~/lib/parsers";
 import { fetchSemesterCsv } from "~/lib/parsers/AvailableTerms";
-import { reconcileTerm, type TermReconcileResult } from "~/lib/parsers/reconcileTerm";
+import {
+  reconcileTerm,
+  type TermReconcileResult,
+} from "~/lib/parsers/reconcileTerm";
 import type { ResolvedTerm } from "~/lib/parsers/termPartsOfTerm";
 import { createScheduleBuilderDb } from "~/server/db";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";

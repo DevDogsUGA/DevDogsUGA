@@ -8,12 +8,12 @@ export default function NotFound() {
       <h1 className="font-display text-4xl font-semibold sm:text-5xl">
         Page Not Found
       </h1>
-      <p className="max-w-md text-balance text-muted">
+      <p className="text-muted max-w-md text-balance">
         The page you&apos;re looking for doesn&apos;t exist or may have moved.
       </p>
       <Link
         href="/"
-        className="rounded-lg bg-primary px-6 py-2.5 font-semibold text-white transition-colors hover:bg-primary-strong"
+        className="bg-primary hover:bg-primary-strong rounded-lg px-6 py-2.5 font-semibold text-white transition-colors"
       >
         Back Home
       </Link>

@@ -26,7 +26,7 @@ export default function PlansListLayout({ children }: { children: ReactNode }) {
           <h1 className="font-display text-3xl font-semibold">My Plans</h1>
           <Link
             href="/plans/create"
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 font-semibold text-white transition-colors hover:bg-primary-strong"
+            className="bg-primary hover:bg-primary-strong flex items-center gap-1.5 rounded-lg px-5 py-2.5 font-semibold text-white transition-colors"
           >
             <PlusIcon weight="bold" /> Create
           </Link>
@@ -37,22 +37,22 @@ export default function PlansListLayout({ children }: { children: ReactNode }) {
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="h-20 w-full animate-pulse rounded-xl bg-surface-muted"
+                className="bg-surface-muted h-20 w-full animate-pulse rounded-xl"
               />
             ))}
           </div>
         ) : savedPlans.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-edge-strong px-6 py-16 text-center">
+          <div className="border-edge-strong flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-dashed px-6 py-16 text-center">
             <h2 className="text-xl font-semibold">
               You don&apos;t have any saved plans yet.
             </h2>
-            <p className="max-w-sm text-balance text-sm text-muted">
+            <p className="text-muted max-w-sm text-sm text-balance">
               Add some courses, set your preferences, and generate your first
               schedule.
             </p>
             <Link
               href="/plans/create"
-              className="mt-2 rounded-lg bg-primary px-6 py-2.5 font-semibold text-white transition-colors hover:bg-primary-strong"
+              className="bg-primary hover:bg-primary-strong mt-2 rounded-lg px-6 py-2.5 font-semibold text-white transition-colors"
             >
               Create a Plan
             </Link>

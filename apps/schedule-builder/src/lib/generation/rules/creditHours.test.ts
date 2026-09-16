@@ -23,7 +23,9 @@ function section(crn: number, min: number, max: number): Section {
   };
 }
 
-function ctx(overrides: Partial<GenerationConstraints> = {}): GenerationConstraints {
+function ctx(
+  overrides: Partial<GenerationConstraints> = {},
+): GenerationConstraints {
   return {
     excludedCourses: [],
     excludedSections: [],
@@ -48,10 +50,16 @@ describe("maxCreditHoursRule.allowPartialSchedule", () => {
     const partial = [section(1, 3, 3), section(2, 3, 4)];
 
     expect(
-      maxCreditHoursRule.allowPartialSchedule!(partial, ctx({ maxCreditHours: 6 })),
+      maxCreditHoursRule.allowPartialSchedule!(
+        partial,
+        ctx({ maxCreditHours: 6 }),
+      ),
     ).toBe(true);
     expect(
-      maxCreditHoursRule.allowPartialSchedule!(partial, ctx({ maxCreditHours: 10 })),
+      maxCreditHoursRule.allowPartialSchedule!(
+        partial,
+        ctx({ maxCreditHours: 10 }),
+      ),
     ).toBe(true);
   });
 });

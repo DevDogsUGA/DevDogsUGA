@@ -31,18 +31,18 @@ export function Dialog({
   return (
     <RadixDialog.Root open onOpenChange={(open) => !open && onClose()}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="fixed inset-0 z-50 animate-fadeInOverlay bg-black/40" />
+        <RadixDialog.Overlay className="animate-fadeInOverlay fixed inset-0 z-50 bg-black/40" />
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <RadixDialog.Content
-            className={`flex max-h-[90dvh] w-full flex-col rounded-xl border border-edge bg-surface shadow-xl ${className}`}
+            className={`border-edge bg-surface flex max-h-[90dvh] w-full flex-col rounded-xl border shadow-xl ${className}`}
           >
-            <div className="flex items-center justify-between border-b border-edge px-6 py-4">
+            <div className="border-edge flex items-center justify-between border-b px-6 py-4">
               <RadixDialog.Title className="text-lg font-bold">
                 {title}
               </RadixDialog.Title>
               <RadixDialog.Close
                 aria-label="Close"
-                className="rounded-md p-1 text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+                className="text-muted hover:bg-surface-muted hover:text-foreground rounded-md p-1 transition-colors"
               >
                 <XIcon weight="bold" size={20} />
               </RadixDialog.Close>
@@ -53,7 +53,7 @@ export function Dialog({
             </div>
 
             {footer && (
-              <div className="flex justify-end gap-3 border-t border-edge px-6 py-4">
+              <div className="border-edge flex justify-end gap-3 border-t px-6 py-4">
                 {footer}
               </div>
             )}

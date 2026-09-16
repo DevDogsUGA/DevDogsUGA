@@ -38,22 +38,22 @@ export default function Home() {
           <h2 className="font-display text-5xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
             DogDays
           </h2>
-          <p className="text-lg font-medium text-accent sm:text-xl">
+          <p className="text-accent text-lg font-medium sm:text-xl">
             The UGA schedule builder — for students, by students.
           </p>
-          <p className="max-w-xl text-balance text-muted">
+          <p className="text-muted max-w-xl text-balance">
             {APPS.dogdays.blurb}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Link
               href="/plans/create"
-              className="flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-lg font-semibold text-white shadow-sm transition-colors hover:bg-primary-strong"
+              className="bg-primary hover:bg-primary-strong flex items-center gap-2 rounded-lg px-6 py-3 text-lg font-semibold text-white shadow-sm transition-colors"
             >
               Start Now <ArrowRightIcon weight="bold" />
             </Link>
             <Link
               href="/courses"
-              className="rounded-lg border border-edge-strong bg-surface px-6 py-3 text-lg font-medium transition-colors hover:bg-surface-muted"
+              className="border-edge-strong bg-surface hover:bg-surface-muted rounded-lg border px-6 py-3 text-lg font-medium transition-colors"
             >
               Browse Courses
             </Link>
@@ -64,11 +64,11 @@ export default function Home() {
           {FEATURES.map(({ Icon, title, body }) => (
             <li
               key={title}
-              className="flex flex-col gap-2 rounded-xl border border-edge bg-surface p-5"
+              className="border-edge bg-surface flex flex-col gap-2 rounded-xl border p-5"
             >
-              <Icon weight="duotone" className="text-3xl text-accent" />
+              <Icon weight="duotone" className="text-accent text-3xl" />
               <h3 className="font-semibold">{title}</h3>
-              <p className="text-sm text-muted">{body}</p>
+              <p className="text-muted text-sm">{body}</p>
             </li>
           ))}
         </ul>

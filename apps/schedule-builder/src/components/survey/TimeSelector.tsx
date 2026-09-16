@@ -70,7 +70,7 @@ const Timeselector = ({
         onChange={handleChange}
         onKeyDown={handleKeyPress}
         maxLength={5}
-        className={`w-full rounded-md border-2 px-12 py-2 outline-0 hover:border-muted ${className}`}
+        className={`hover:border-muted w-full rounded-md border-2 px-12 py-2 outline-0 ${className}`}
       />
       {/* FormData reads the combined value and meridian from this hidden input. */}
       <input

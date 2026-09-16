@@ -100,25 +100,25 @@ export const DropdownTagInput = ({
     // CONTAINER FOR ENTIRE COMPONENT
     <div className="relative min-w-full">
       <div
-        className={`rounded-md border-2 hover:border-muted ${className} lg:flex`}
+        className={`hover:border-muted rounded-md border-2 ${className} lg:flex`}
       >
         {/* //CONTAINER FOR TAGS */}
         <div
-          className={`rounded-md border-muted bg-surface ${className} no-scrollbar flex flex-shrink-1 items-center gap-7 overflow-x-scroll border-none lg:gap-4 ${tags.length !== 0 ? "px-2 py-1" : ""} ${tags.length === 1 ? "min-w-fit" : ""} lg:max-w-28`}
+          className={`border-muted bg-surface rounded-md ${className} no-scrollbar flex flex-shrink-1 items-center gap-7 overflow-x-scroll border-none lg:gap-4 ${tags.length !== 0 ? "px-2 py-1" : ""} ${tags.length === 1 ? "min-w-fit" : ""} lg:max-w-28`}
         >
           {/* INDIVIDUAL TAGS */}
           {tags.length !== 0 &&
             tags.map((index, key) => (
               <div
                 key={key}
-                className="relative h-6 rounded-l-md bg-primary px-2 lg:mr-3"
+                className="bg-primary relative h-6 rounded-l-md px-2 lg:mr-3"
               >
                 {index}
                 {/* REMOVE BUTTON */}
                 <button
                   type="button"
                   title="Remove Tag"
-                  className="absolute -right-5 z-10 h-6 w-6 rounded-r-md bg-primary"
+                  className="bg-primary absolute -right-5 z-10 h-6 w-6 rounded-r-md"
                   onClick={(e) => removeTag(e, key)}
                 >
                   <Image
@@ -151,7 +151,7 @@ export const DropdownTagInput = ({
       {isOpen && filteredData.length !== 0 && (
         <ul
           ref={dropdownRef}
-          className={`absolute max-h-52 w-full overflow-y-scroll scroll-smooth rounded-md border-2 bg-surface ${className} z-10 px-0`}
+          className={`bg-surface absolute max-h-52 w-full overflow-y-scroll scroll-smooth rounded-md border-2 ${className} z-10 px-0`}
         >
           {/* DROPDOWN ITEMS */}
           {filteredData.map((item, index) => (

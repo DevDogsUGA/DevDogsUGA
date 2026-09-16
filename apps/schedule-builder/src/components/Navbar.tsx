@@ -21,16 +21,16 @@ export function Navbar() {
   const { user, isLoading } = useSession();
 
   return (
-    <nav className="sticky top-0 left-0 z-40 border-t-4 border-b border-t-primary-strong border-b-edge bg-surface px-4">
+    <nav className="border-t-primary-strong border-b-edge bg-surface sticky top-0 left-0 z-40 border-t-4 border-b px-4">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3 py-2 sm:gap-6">
           <h1 className="shrink-0">
             <Link
               href="/"
-              className="flex items-center gap-2 text-foreground transition-opacity hover:opacity-80"
+              className="text-foreground flex items-center gap-2 transition-opacity hover:opacity-80"
             >
               <DogDaysMark size={28} color="currentColor" />
-              <span className="hidden font-display text-xl leading-none font-semibold tracking-tight min-[480px]:block">
+              <span className="font-display hidden text-xl leading-none font-semibold tracking-tight min-[480px]:block">
                 DogDays
               </span>
             </Link>
@@ -56,12 +56,12 @@ export function Navbar() {
 
           {isLoading ? (
             <li className="col-span-2 flex items-center justify-center pl-3">
-              <div className="h-8 w-20 animate-pulse rounded-sm bg-surface-muted" />
+              <div className="bg-surface-muted h-8 w-20 animate-pulse rounded-sm" />
             </li>
           ) : user ? (
             <li className="contents">
               <Dropdown.Root>
-                <Dropdown.Trigger className="flex flex-col items-center gap-0.75 px-3 py-2 text-2xl transition-colors hover:bg-primary-soft">
+                <Dropdown.Trigger className="hover:bg-primary-soft flex flex-col items-center gap-0.75 px-3 py-2 text-2xl transition-colors">
                   <UserAvatar user={user} />
                   <span className="flex items-center gap-[1ch] text-xs leading-none font-medium tracking-[.0125em]">
                     Profile{" "}
@@ -70,13 +70,13 @@ export function Navbar() {
                 </Dropdown.Trigger>
                 <Dropdown.Portal>
                   <Dropdown.Content
-                    className="z-50 flex min-w-40 flex-col rounded-md border border-edge-strong bg-surface py-1.5 text-sm shadow-xl"
+                    className="border-edge-strong bg-surface z-50 flex min-w-40 flex-col rounded-md border py-1.5 text-sm shadow-xl"
                     align="end"
                     sideOffset={-4}
                     alignOffset={4}
                   >
                     <button
-                      className="flex items-center gap-3 py-1 pr-6 pl-3 text-accent transition-colors hover:bg-primary-soft"
+                      className="text-accent hover:bg-primary-soft flex items-center gap-3 py-1 pr-6 pl-3 transition-colors"
                       type="button"
                       onClick={() => void supabase.auth.signOut()}
                     >
@@ -90,7 +90,7 @@ export function Navbar() {
           ) : (
             <li className="col-span-2 flex items-center justify-center pl-3">
               <button
-                className="flex w-full cursor-default items-center justify-center gap-1.5 rounded-sm border-b-2 border-primary-strong bg-primary px-3 py-1.5 text-sm font-medium text-white shadow-sm ring-1 ring-primary-strong transition-colors hover:bg-primary-soft hover:text-accent focus:mt-0.5 focus:border-b-0"
+                className="border-primary-strong bg-primary ring-primary-strong hover:bg-primary-soft hover:text-accent flex w-full cursor-default items-center justify-center gap-1.5 rounded-sm border-b-2 px-3 py-1.5 text-sm font-medium text-white shadow-sm ring-1 transition-colors focus:mt-0.5 focus:border-b-0"
                 onClick={signIn}
                 type="button"
               >

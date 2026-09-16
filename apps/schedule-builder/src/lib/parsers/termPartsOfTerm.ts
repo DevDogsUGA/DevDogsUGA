@@ -28,7 +28,9 @@ export type PartsOfTermResolution = {
 // of this function.
 export async function resolvePartsOfTermPerTerm(
   availableTerms: AvailableTerm[],
-  fetchFn: (academicPeriod: number) => Promise<PartOfTermRow[]> = fetchPartsOfTerm,
+  fetchFn: (
+    academicPeriod: number,
+  ) => Promise<PartOfTermRow[]> = fetchPartsOfTerm,
 ): Promise<PartsOfTermResolution> {
   const succeeded: ResolvedTerm[] = [];
   const failed: FailedTerm[] = [];

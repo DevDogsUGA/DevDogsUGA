@@ -102,7 +102,9 @@ export class MeetingCollector {
     // Nothing to scope the delete to — either this term had no offerings at
     // all, or (with a non-empty `pending`) the guard above already threw.
     if (validCrns.size > 0) {
-      await tx.delete(meetings).where(inArray(meetings.offeringCrn, [...validCrns]));
+      await tx
+        .delete(meetings)
+        .where(inArray(meetings.offeringCrn, [...validCrns]));
     }
     await bulkUpsert(tx, meetings, rows);
     return rows.length;

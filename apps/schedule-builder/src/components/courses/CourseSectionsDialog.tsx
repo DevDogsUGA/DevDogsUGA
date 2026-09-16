@@ -47,14 +47,14 @@ export function CourseSectionsDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-lg rounded-xl bg-surface shadow-xl">
+      <div className="bg-surface w-full max-w-lg rounded-xl shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-edge px-6 py-4">
+        <div className="border-edge flex items-center justify-between border-b px-6 py-4">
           <div>
             <h2 className="text-lg font-bold">
               {formatCourseCode(course.abbr, course.courseNumber)}
             </h2>
-            <p className="text-sm text-foreground/80">{course.title}</p>
+            <p className="text-foreground/80 text-sm">{course.title}</p>
           </div>
           <button
             onClick={onClose}
@@ -66,7 +66,7 @@ export function CourseSectionsDialog({
 
         {/* Offering list */}
         <div className="max-h-80 overflow-y-auto px-6 py-4">
-          <p className="mb-3 text-sm text-muted">
+          <p className="text-muted mb-3 text-sm">
             Uncheck sections to exclude them from schedule generation.
           </p>
           <SectionExclusionList
@@ -77,10 +77,10 @@ export function CourseSectionsDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 border-t border-edge px-6 py-4">
+        <div className="border-edge flex justify-end gap-3 border-t px-6 py-4">
           <button
             onClick={onClose}
-            className="rounded-md px-4 py-2 text-sm font-medium text-foreground/80 hover:bg-surface-muted"
+            className="text-foreground/80 hover:bg-surface-muted rounded-md px-4 py-2 text-sm font-medium"
           >
             Cancel
           </button>
@@ -98,7 +98,7 @@ export function CourseSectionsDialog({
               )
             }
             disabled={upsertCourse.isPending}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-strong disabled:opacity-60"
+            className="bg-primary hover:bg-primary-strong rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {upsertCourse.isPending
               ? "Saving…"

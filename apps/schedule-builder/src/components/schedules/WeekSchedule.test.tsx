@@ -1,17 +1,7 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import WeekSchedule from "./WeekSchedule";
 import type { WeekSchedule as WeekScheduleType } from "~/types/scheduleTypes";
-
-/**
- * toWeekSchedule() now emits Saturday/Sunday keys alongside the weekdays, but
- * the grid used to hardcode exactly 5 day-columns (`repeat(5, ...)` plus
- * `--cols` breakpoints capped at 5). That hardcoding didn't drop any DOM
- * columns (the component already maps over Object.entries(weekData)), but it
- * did mean the CSS grid template never reserved tracks for a 6th/7th day, so
- * this asserts the grid sizing itself tracks the day count instead of a
- * literal 5.
- */
 
 afterEach(() => cleanup());
 
@@ -33,29 +23,58 @@ describe("WeekSchedule", () => {
   it("renders one day-column per key present in weekData, including weekends", () => {
     render(<WeekSchedule weekData={SEVEN_DAY_WEEK} />);
 
-    for (const day of Object.keys(SEVEN_DAY_WEEK)) {
-      expect(screen.getByText(day)).toBeInTheDocument();
-    }
-
     expect(document.querySelectorAll("[data-title]")).toHaveLength(7);
+    for (const day of Object.keys(SEVEN_DAY_WEEK)) {
+      expect(
+        document.querySelector(`[data-title="${day}"]`),
+      ).toBeInTheDocument();
+    }
   });
 
-  it("sizes the grid template to the day count instead of a hardcoded 5 columns", () => {
-    const { container: fiveDayContainer } = render(
+  it("sizes the grid template from the day count via --day-count", () => {
+    // The template's day tracks come from the inline custom property, not a
+    // per-count class-string lookup, so the count must follow the data.
+    const { container: five } = render(
       <WeekSchedule weekData={FIVE_DAY_WEEK} />,
     );
-    const fiveDayGrid = fiveDayContainer.querySelector("section")!;
-    expect(fiveDayGrid.className).toContain("repeat(5,");
-    expect(fiveDayGrid.className).toContain("2xl:[--cols:5]");
+    expect(
+      five.querySelector("section")!.style.getPropertyValue("--day-count"),
+    ).toBe("5");
     cleanup();
 
-    const { container: sevenDayContainer } = render(
+    const { container: seven } = render(
       <WeekSchedule weekData={SEVEN_DAY_WEEK} />,
     );
-    const sevenDayGrid = sevenDayContainer.querySelector("section")!;
-    expect(sevenDayGrid.className).toContain("repeat(7,");
-    expect(sevenDayGrid.className).toContain("2xl:[--cols:7]");
-    // Weekend-containing weeks shouldn't still be capped at the old literal 5.
-    expect(sevenDayGrid.className).not.toContain("2xl:[--cols:5]");
+    expect(
+      seven.querySelector("section")!.style.getPropertyValue("--day-count"),
+    ).toBe("7");
+  });
+
+  it("switches the phone-visible column through the day tabs", () => {
+    render(<WeekSchedule weekData={SEVEN_DAY_WEEK} />);
+
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs).toHaveLength(7);
+    expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+
+    // Only the selected day's column is in the phone layout ("flex"); the
+    // rest are `hidden md:flex`.
+    const columnFor = (day: string) =>
+      document.querySelector(`[data-title="${day}"]`)!;
+    expect(columnFor("Monday").className).not.toContain("hidden");
+    expect(columnFor("Saturday").className).toContain("hidden");
+
+    fireEvent.click(screen.getByRole("tab", { name: "Saturday" }));
+
+    expect(screen.getByRole("tab", { name: "Saturday" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("tab", { name: "Monday" })).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
+    expect(columnFor("Saturday").className).not.toContain("hidden");
+    expect(columnFor("Monday").className).toContain("hidden");
   });
 });

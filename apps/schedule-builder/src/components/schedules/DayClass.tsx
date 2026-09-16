@@ -54,7 +54,22 @@ function getWeekLayout(
   // Day codes match DAY_CODE_MAP in ~/lib/schedule-display.ts: M/T/W/R/F for
   // the weekdays, S/U for Saturday/Sunday (U avoids colliding with Sunday's
   // "S" and Tuesday's/Thursday's letters).
-  const weekInfo: string[] = ["", "", "", "", "", "", "", "", "", "", "", "", "", ""];
+  const weekInfo: string[] = [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+  ];
   const otherDays: string = otherTimes[0] ?? "";
 
   // Add the current day's time and location to the table
@@ -183,9 +198,9 @@ function CourseInfo({
   const defaultCorereq = coreq && coreq.trim() !== "" ? coreq : "None";
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/50">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
       <div
-        className={`relative flex flex-col rounded-lg bg-white ${outerBorder}`}
+        className={`bg-surface relative flex flex-col rounded-lg ${outerBorder}`}
         style={{
           width,
           height,
@@ -241,95 +256,95 @@ function CourseInfo({
             </p>
             <br></br>
             <div className="items-center overflow-x-auto">
-              <table className="w-full table-auto border border-black">
+              <table className="border-edge-strong w-full table-auto border">
                 <thead>
                   <tr>
-                    <th className="border border-black p-2 text-center underline">
+                    <th className="border-edge-strong border p-2 text-center underline">
                       Day
                     </th>
-                    <th className="border border-black p-2 text-center underline">
+                    <th className="border-edge-strong border p-2 text-center underline">
                       Time
                     </th>
-                    <th className="border border-black p-2 text-center underline">
+                    <th className="border-edge-strong border p-2 text-center underline">
                       Location
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="border border-black p-2 text-center font-bold">
+                    <td className="border-edge-strong border p-2 text-center font-bold">
                       Monday
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[0]}
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[1]}
                     </td>
                   </tr>
                   <tr>
-                    <td className="border border-black p-2 text-center font-bold">
+                    <td className="border-edge-strong border p-2 text-center font-bold">
                       Tuesday
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[2]}
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[3]}
                     </td>
                   </tr>
                   <tr>
-                    <td className="border border-black p-2 text-center font-bold">
+                    <td className="border-edge-strong border p-2 text-center font-bold">
                       Wednesday
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[4]}
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[5]}
                     </td>
                   </tr>
                   <tr>
-                    <td className="border border-black p-2 text-center font-bold">
+                    <td className="border-edge-strong border p-2 text-center font-bold">
                       Thursday
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[6]}
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[7]}
                     </td>
                   </tr>
                   <tr>
-                    <td className="border border-black p-2 text-center font-bold">
+                    <td className="border-edge-strong border p-2 text-center font-bold">
                       Friday
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[8]}
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[9]}
                     </td>
                   </tr>
                   <tr>
-                    <td className="border border-black p-2 text-center font-bold">
+                    <td className="border-edge-strong border p-2 text-center font-bold">
                       Saturday
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[10]}
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[11]}
                     </td>
                   </tr>
                   <tr>
-                    <td className="border border-black p-2 text-center font-bold">
+                    <td className="border-edge-strong border p-2 text-center font-bold">
                       Sunday
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[12]}
                     </td>
-                    <td className="border border-black p-2 text-center">
+                    <td className="border-edge-strong border p-2 text-center">
                       {weekInfo[13]}
                     </td>
                   </tr>
@@ -386,11 +401,11 @@ export default function DayClass({
     // resolves against the hour grid. It ignores pointer events so stacked
     // wrappers do not swallow clicks meant for the block beneath them.
     <div
-      className="pointer-events-none absolute inset-0 flex justify-end"
+      className="pointer-events-none absolute inset-0"
       onClick={courseBlockInfo}
     >
       <div
-        className={`pointer-events-auto w-4/6 rounded-lg p-4 transition duration-150 ease-in-out hover:bg-black ${bgColor} flex items-center justify-between`}
+        className={`pointer-events-auto absolute inset-x-0.5 rounded-lg p-2.5 transition duration-150 ease-in-out hover:bg-black ${bgColor} flex items-start justify-between gap-2 overflow-hidden`}
         style={{
           position: "absolute",
           top: startPosition,

@@ -15,7 +15,7 @@ export default function NavigationLink({ href, children }: Props) {
     <li className="contents">
       <Link
         href={href}
-        className="flex flex-col items-center gap-0.75 border-0 border-primary px-3 py-2 transition-colors hover:bg-primary-soft data-active:-mb-px data-active:border-b-2 data-active:pb-1.75 data-active:text-accent data-active:not-hover:bg-primary-soft/60"
+        className="border-primary hover:bg-primary-soft data-active:text-accent data-active:not-hover:bg-primary-soft/60 flex flex-col items-center gap-0.75 border-0 px-3 py-2 transition-colors data-active:-mb-px data-active:border-b-2 data-active:pb-1.75"
         data-active={pathname.startsWith(href) || undefined}
       >
         {children}

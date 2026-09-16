@@ -30,20 +30,18 @@ export function CourseSearchResult({ course }: { course: CourseGroup }) {
 
   return (
     <>
-      <div className="flex items-center justify-between rounded-sm border border-edge bg-surface px-4 py-3">
+      <div className="border-edge bg-surface flex items-center justify-between rounded-sm border px-4 py-3">
         <div className="flex flex-col">
           <span className="font-bold">
             {formatCourseCode(course.abbr, course.courseNumber)}
           </span>
-          <span className="text-sm text-foreground/80">{course.title}</span>
+          <span className="text-foreground/80 text-sm">{course.title}</span>
           {instructorNames && (
-            <span className="text-xs text-muted">{instructorNames}</span>
+            <span className="text-muted text-xs">{instructorNames}</span>
           )}
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-muted">
-            {course.maxCreditHours} cr
-          </span>
+          <span className="text-muted text-xs">{course.maxCreditHours} cr</span>
           <button
             onClick={() => setDialogOpen(true)}
             className="text-accent hover:text-accent"

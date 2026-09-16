@@ -5,7 +5,8 @@ const VARIANT_CLASSES = {
     "bg-primary font-semibold text-white not-disabled:hover:bg-primary-strong",
   secondary:
     "border border-edge-strong bg-surface font-medium text-foreground not-disabled:hover:bg-surface-muted",
-  ghost: "font-medium text-muted not-disabled:hover:bg-surface-muted not-disabled:hover:text-foreground",
+  ghost:
+    "font-medium text-muted not-disabled:hover:bg-surface-muted not-disabled:hover:text-foreground",
 } as const;
 
 const SIZE_CLASSES = {

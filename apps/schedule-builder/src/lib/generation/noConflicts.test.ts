@@ -57,11 +57,7 @@ describe("meetingsConflict / sectionsConflict", () => {
     // concurrently. This is the exact shape of the historical summer bug —
     // if the date-range term were ever dropped from `meetingsConflict`, this
     // assertion would flip to `true` and fail.
-    const a = section(
-      1,
-      [meeting("09:00", "09:50", ["monday"])],
-      MAYMESTER,
-    );
+    const a = section(1, [meeting("09:00", "09:50", ["monday"])], MAYMESTER);
     const b = section(
       2,
       [meeting("09:30", "10:20", ["monday"])],
@@ -73,16 +69,8 @@ describe("meetingsConflict / sectionsConflict", () => {
   });
 
   it("never conflicts when the meetings fall on different weekdays", () => {
-    const a = section(
-      1,
-      [meeting("09:00", "09:50", ["monday"])],
-      FULL_TERM,
-    );
-    const b = section(
-      2,
-      [meeting("09:00", "09:50", ["tuesday"])],
-      FULL_TERM,
-    );
+    const a = section(1, [meeting("09:00", "09:50", ["monday"])], FULL_TERM);
+    const b = section(2, [meeting("09:00", "09:50", ["tuesday"])], FULL_TERM);
 
     expect(sectionsConflict(a, b)).toBe(false);
     expect(noConflicts([a, b])).toBe(true);

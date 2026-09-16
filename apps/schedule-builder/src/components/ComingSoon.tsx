@@ -20,13 +20,12 @@ export function ComingSoon({ title, blurb }: ComingSoonProps) {
           <DogDaysMark size={56} color="currentColor" />
         </span>
         <h1 className="font-display text-4xl font-semibold">{title}</h1>
-        <p className="max-w-md text-balance text-muted">
-          {blurb ??
-            "This part of DogDays isn't ready yet — check back soon."}
+        <p className="text-muted max-w-md text-balance">
+          {blurb ?? "This part of DogDays isn't ready yet — check back soon."}
         </p>
         <Link
           href="/plans"
-          className="rounded-lg bg-primary px-6 py-2.5 font-semibold text-white transition-colors hover:bg-primary-strong"
+          className="bg-primary hover:bg-primary-strong rounded-lg px-6 py-2.5 font-semibold text-white transition-colors"
         >
           Go to My Plans
         </Link>

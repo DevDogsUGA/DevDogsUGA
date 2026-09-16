@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { Meeting, Section } from "../../domain/section";
 import type { GenerationConstraints } from "../constraints";
-import { preferredEndTimeRule, preferredStartTimeRule } from "./preferredTimeWindow";
+import {
+  preferredEndTimeRule,
+  preferredStartTimeRule,
+} from "./preferredTimeWindow";
 
-function testMeeting(startTime: string | null, endTime: string | null): Meeting {
+function testMeeting(
+  startTime: string | null,
+  endTime: string | null,
+): Meeting {
   return { days: ["monday"], startTime, endTime, building: null, room: null };
 }
 

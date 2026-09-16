@@ -22,7 +22,7 @@ const MobileDisplay = {
         <Dialog.Overlay className="data-[state=open]:animate-fadeInOverlay fixed top-0 left-0 z-[999] flex h-[100lvh] w-[100lvw] flex-col justify-end bg-black/40">
           <Dialog.Content
             aria-describedby={undefined}
-            className="shadow-x data-[state=open]:animate-slideUp flex h-[60dvh] w-screen flex-col overflow-hidden rounded-t-xl border-2 border-b-0 border-primary/60 bg-zinc-100 focus:outline-none"
+            className="shadow-x data-[state=open]:animate-slideUp border-primary/60 flex h-[60dvh] w-screen flex-col overflow-hidden rounded-t-xl border-2 border-b-0 bg-zinc-100 focus:outline-none"
           >
             <Dialog.Title className="sr-only">Notifications</Dialog.Title>
             {children}
@@ -43,7 +43,7 @@ const DesktopDisplay = {
           align="end"
           sideOffset={8}
           alignOffset={-8}
-          className="data-[state=open]:animate-slideUpAndFadeIn relative z-[9999] flex h-96 w-80 flex-col overflow-hidden rounded-md border-2 border-primary/60 bg-zinc-100 shadow-xl"
+          className="data-[state=open]:animate-slideUpAndFadeIn border-primary/60 relative z-[9999] flex h-96 w-80 flex-col overflow-hidden rounded-md border-2 bg-zinc-100 shadow-xl"
         >
           {children}
         </Popover.Content>
@@ -116,32 +116,32 @@ export default function Notifications({ initialItems, closeAction }: Props) {
 
   return (
     <Root>
-      <Trigger className="group relative cursor-default rounded-full border-2 border-primary/30 p-1 text-lg text-foreground transition-colors hover:border-primary/60 hover:bg-primary/10 data-[state=open]:border-primary/60 data-[state=open]:bg-primary/10 sm:p-1.5 sm:text-xl">
+      <Trigger className="group border-primary/30 text-foreground hover:border-primary/60 hover:bg-primary/10 data-[state=open]:border-primary/60 data-[state=open]:bg-primary/10 relative cursor-default rounded-full border-2 p-1 text-lg transition-colors sm:p-1.5 sm:text-xl">
         <BellIcon weight="fill" className="hidden sm:block" />
         <BellIcon weight="bold" className="sm:hidden" />
         {items.length > 0 && (
-          <span className="absolute -top-px -right-px size-2 rounded-full bg-primary transition-transform group-data-[state=open]:scale-0 sm:-top-0.5 sm:-right-0.5 sm:size-2.5" />
+          <span className="bg-primary absolute -top-px -right-px size-2 rounded-full transition-transform group-data-[state=open]:scale-0 sm:-top-0.5 sm:-right-0.5 sm:size-2.5" />
         )}
       </Trigger>
       <Content>
         {items.length === 0 || items.every((item) => item.closed === true) ? (
-          <p className="flex flex-1 flex-col items-center justify-center gap-3 text-muted">
+          <p className="text-muted flex flex-1 flex-col items-center justify-center gap-3">
             <TrayIcon weight="duotone" className="text-3xl" />
             <span className="text-xs font-semibold">No new notifications</span>
           </p>
         ) : (
           <Accordion.Root
-            className="w-full flex-col bg-surface text-sm last:shadow-sm"
+            className="bg-surface w-full flex-col text-sm last:shadow-sm"
             value={items.filter((item) => !item.closed).map((item) => item.id)}
             type="multiple"
           >
             {items.map(({ id, content }) => (
               <Accordion.Item key={id} value={id}>
-                <Accordion.Content className="data-[state=closed]:animate-collapse -mt-0.5 overflow-hidden border-b-2 border-primary/30">
+                <Accordion.Content className="data-[state=closed]:animate-collapse border-primary/30 -mt-0.5 overflow-hidden border-b-2">
                   <div className="flex items-start gap-2 px-4 pt-[1.125rem] pb-4">
                     <div className="flex-1">{content}</div>
                     <button
-                      className="rounded-full p-0.5 text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+                      className="text-muted hover:bg-surface-muted hover:text-foreground rounded-full p-0.5 transition-colors"
                       onClick={() => close(id)}
                     >
                       <XIcon weight="bold" />

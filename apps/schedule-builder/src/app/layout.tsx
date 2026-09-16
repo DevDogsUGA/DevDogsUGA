@@ -44,7 +44,7 @@ export default async function RootLayout({
       lang="en"
       className={`${sans.variable} ${display.variable} ${mono.variable}`}
     >
-      <body className="flex min-h-screen flex-col bg-background text-foreground">
+      <body className="bg-background text-foreground flex min-h-screen flex-col">
         <QueryProvider>
           <SessionProvider>
             <TermProvider initialTerms={initialTerms}>

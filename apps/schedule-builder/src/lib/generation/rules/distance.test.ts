@@ -15,9 +15,7 @@ function buildingWithCoords(
   };
 }
 
-function meetingWithBuilding(
-  building: BuildingLocation | null,
-): Meeting {
+function meetingWithBuilding(building: BuildingLocation | null): Meeting {
   return {
     days: ["monday"],
     startTime: "09:00",
@@ -27,10 +25,7 @@ function meetingWithBuilding(
   };
 }
 
-function testSection(
-  crn = 12345,
-  meetings: Meeting[] = [],
-): Section {
+function testSection(crn = 12345, meetings: Meeting[] = []): Section {
   return {
     crn,
     courseAbbr: "CSCI",
@@ -65,10 +60,7 @@ describe("distance rule", () => {
 
   it("score does not throw and returns a number when building coords are null", () => {
     const complete = [
-      testSection(1, [
-        meetingWithBuilding(null),
-        meetingWithBuilding(null),
-      ]),
+      testSection(1, [meetingWithBuilding(null), meetingWithBuilding(null)]),
     ];
 
     const result = distance.score?.(complete, ctx);

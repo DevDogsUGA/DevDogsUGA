@@ -133,28 +133,28 @@ export function AddCourses({ onAddCourse, searchParams }: Props) {
         <Link
           href={subjectView.href}
           data-active={state.view === "subject"}
-          className="w-1/3 rounded-tl-lg rounded-tr-lg rounded-br-none rounded-bl-none bg-surface-muted px-4 py-2 text-left font-bold text-[#CFBEBE] capitalize duration-150 data-[active=true]:bg-primary data-[active=true]:text-white"
+          className="bg-surface-muted data-[active=true]:bg-primary w-1/3 rounded-tl-lg rounded-tr-lg rounded-br-none rounded-bl-none px-4 py-2 text-left font-bold text-[#CFBEBE] capitalize duration-150 data-[active=true]:text-white"
         >
           By Subject
         </Link>
         <Link
           href={instructorView.href}
           data-active={state.view === "instructor"}
-          className="w-1/3 rounded-tl-lg rounded-tr-lg rounded-br-none rounded-bl-none bg-surface-muted px-4 py-2 text-left font-bold text-[#CFBEBE] capitalize duration-150 data-[active=true]:bg-primary data-[active=true]:text-white"
+          className="bg-surface-muted data-[active=true]:bg-primary w-1/3 rounded-tl-lg rounded-tr-lg rounded-br-none rounded-bl-none px-4 py-2 text-left font-bold text-[#CFBEBE] capitalize duration-150 data-[active=true]:text-white"
         >
           By Instructor
         </Link>
         <Link
           href={crnView.href}
           data-active={state.view === "crn"}
-          className="w-1/3 rounded-tl-lg rounded-tr-lg rounded-br-none rounded-bl-none bg-surface-muted px-4 py-2 text-left font-bold text-[#CFBEBE] capitalize duration-150 data-[active=true]:bg-primary data-[active=true]:text-white"
+          className="bg-surface-muted data-[active=true]:bg-primary w-1/3 rounded-tl-lg rounded-tr-lg rounded-br-none rounded-bl-none px-4 py-2 text-left font-bold text-[#CFBEBE] capitalize duration-150 data-[active=true]:text-white"
         >
           By CRN
         </Link>
       </nav>
 
       <form
-        className="flex flex-col gap-16 border-4 border-edge bg-surface px-8 py-10"
+        className="border-edge bg-surface flex flex-col gap-16 border-4 px-8 py-10"
         onSubmit={handleSubmit}
       >
         {state.view === "subject" && <SearchBySubject {...subjectView} />}
@@ -164,7 +164,7 @@ export function AddCourses({ onAddCourse, searchParams }: Props) {
         {state.view === "crn" && <SearchByCRN {...crnView} />}
 
         <button
-          className="flex items-center gap-2 self-end rounded-md border-2 border-primary-strong bg-primary px-6 py-2 font-medium text-white transition-[background-color,border-color,box-shadow] not-disabled:hover:border-primary-strong not-disabled:hover:bg-primary-strong not-disabled:hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+          className="border-primary-strong bg-primary not-disabled:hover:border-primary-strong not-disabled:hover:bg-primary-strong flex items-center gap-2 self-end rounded-md border-2 px-6 py-2 font-medium text-white transition-[background-color,border-color,box-shadow] not-disabled:hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
           disabled={course === null}
           type="submit"
         >
