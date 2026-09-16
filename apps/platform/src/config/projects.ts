@@ -155,7 +155,7 @@ export const PROJECTS: Project[] = [
     tagline: "Schedule Builder",
     titleColor: "text-red-700",
     description:
-      "Plan your semester against live UGA registrar data. Answer a short questionnaire, and DogDays generates conflict-free schedules, considering professor ratings, walking distance between buildings, and the credits you already have.",
+      "Plan your semester against live UGA registrar data. Answer a short questionnaire, and DogDays generates conflict-free schedules, considering walking distance between buildings and the credits you already have.",
     switcher: {
       icon: "DogDaysIcon",
       iconBg: "bg-red-400",
