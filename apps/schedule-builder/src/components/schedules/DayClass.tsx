@@ -1,8 +1,6 @@
 "use client";
 import { type ClassData } from "~/types/scheduleTypes";
 import { useState, useEffect } from "react";
-import { StarIcon } from "@phosphor-icons/react/ssr";
-import { useInstructorRating } from "~/hooks/queries/useInstructorRating";
 import { SCHEDULE_SPAN_MINUTES } from "~/lib/schedule-display";
 
 type DayClassProps = ClassData;
@@ -124,22 +122,6 @@ function getWeekLayout(
   return weekInfo;
 }
 
-interface ProfessorStarsProps {
-  rating: number;
-}
-const ProfessorStars = ({ rating }: ProfessorStarsProps) => {
-  const renderSVGs = () => {
-    return Array.from({ length: rating }, () => (
-      <StarIcon
-        weight="fill"
-        key={rating}
-        className="inline -translate-y-0.5"
-      />
-    ));
-  };
-  return <div className="inline">{renderSVGs()}</div>;
-};
-
 function CourseInfo({
   classTitle,
   className,
@@ -174,14 +156,6 @@ function CourseInfo({
     locationShort,
   );
 
-  const professorName: string[] = professor.split(" ");
-  const firstName: string = professorName[0] ?? "";
-  const lastName: string = professorName.slice(1).join(" ");
-  const ratingQuery = useInstructorRating(firstName, lastName);
-  const avgProfessorData = ratingQuery.data?.averageRating ?? 0;
-  const isAvgZero = avgProfessorData === 0;
-  const numProfessorData = ratingQuery.data?.totalReviews ?? 0;
-  const isNumZero = numProfessorData === 0;
   const defaultPrereq = prereq && prereq.trim() !== "" ? prereq : "None";
   const defaultCorereq = coreq && coreq.trim() !== "" ? coreq : "None";
 
@@ -213,11 +187,7 @@ function CourseInfo({
             </p>
             <p>
               {" "}
-              <b>Professor:</b> {professor}
-              {!(isAvgZero && isNumZero) && " | "}
-              <ProfessorStars rating={avgProfessorData} />
-              {!isAvgZero && !isNumZero && " | "}
-              {!isNumZero && numProfessorData + " reviews"}{" "}
+              <b>Professor:</b> {professor}{" "}
             </p>{" "}
             <br></br>
             <p>
