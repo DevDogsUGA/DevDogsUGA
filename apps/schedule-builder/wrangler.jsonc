@@ -2,8 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   // Worker naming is `${DEPLOY_ENV}-${APP_NAME}`; see apps/platform/wrangler.jsonc
   // for why the top level is the development shape and why `vars`, `services`,
-  // `images`, `r2_buckets` and `send_email` are repeated in full per
-  // environment rather than inherited.
+  // `images`, `r2_buckets`, `hyperdrive` and `send_email` are repeated in full
+  // per environment rather than inherited.
   "name": "development-schedule-builder",
   // See apps/platform/wrangler.jsonc: the scoped deploy token defeats
   // OpenNext's account inference, so the account is pinned. Not a secret.
@@ -71,6 +71,19 @@
           "bucket_name": "staging-schedule-builder-cache",
         },
       ],
+      // Hyperdrive pools connections to Supabase's direct database endpoint so
+      // request-scoped clients don't exhaust Postgres. The id is public; the
+      // origin credential stays encrypted in Cloudflare. SHARED with the
+      // platform Worker -- both point at the same Supabase project per tier, so
+      // this reuses platform's staging Hyperdrive config rather than
+      // provisioning a second one against the same origin. Bound in staging and
+      // production only; development uses DB_URL (see src/server/db/index.ts).
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE",
+          "id": "7ca9f62ed356489f956cc854a17d7eed",
+        },
+      ],
       // Empty ON PURPOSE. The scrape hits UGA's registrar and RateMyProfessors
       // from a shared IP pool; running it twice a day from two workers doubles
       // the load those sites see for no extra coverage, and is the kind of
@@ -125,6 +138,13 @@
         {
           "binding": "NEXT_INC_CACHE_R2_BUCKET",
           "bucket_name": "production-schedule-builder-cache",
+        },
+      ],
+      // See the staging block for why this reuses platform's Hyperdrive config.
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE",
+          "id": "2bb3ae474d974fe99e4f36b3c5aaf896",
         },
       ],
       // Daily registrar/RMP scrape (replaces the vercel.json cron). See
