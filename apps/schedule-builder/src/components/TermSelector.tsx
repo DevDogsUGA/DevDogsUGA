@@ -109,11 +109,11 @@ export function TermSelector() {
       <Select.Item
         key={term.academicPeriod}
         value={String(term.academicPeriod)}
-        className="flex w-full items-center justify-between gap-3 py-1.5 pr-3 pl-3 transition-colors hover:bg-zinc-200"
+        className="flex w-full items-center justify-between gap-3 py-1.5 pr-3 pl-3 transition-colors hover:bg-surface-muted"
       >
         <span className="truncate">{term.description}</span>
         {(courses > 0 || plans > 0) && (
-          <span className="shrink-0 text-xs text-zinc-400">
+          <span className="shrink-0 text-xs text-muted">
             {courses > 0 && `${courses} course${courses !== 1 ? "s" : ""}`}
             {courses > 0 && plans > 0 && ", "}
             {plans > 0 && `${plans} plan${plans !== 1 ? "s" : ""}`}
@@ -128,7 +128,7 @@ export function TermSelector() {
       value={String(academicPeriod)}
       onValueChange={(v) => setAcademicPeriod(Number(v))}
     >
-      <Select.Trigger className="group flex max-w-2xs flex-1 items-center gap-3 rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-[box-shadow,border-color,color] hover:border-zinc-400 hover:inset-shadow-sm">
+      <Select.Trigger className="group flex max-w-2xs flex-1 items-center gap-3 rounded-full border border-edge-strong bg-surface-muted px-3 py-1.5 text-sm font-medium text-foreground/80 transition-[box-shadow,border-color,color] hover:border-muted hover:inset-shadow-sm">
         <span className="w-full flex-1 truncate text-left">
           <Select.Value>
             {
@@ -140,19 +140,19 @@ export function TermSelector() {
         </span>
         <CaretUpDownIcon
           weight="bold"
-          className="text-zinc-500 transition-colors group-hover:text-zinc-800"
+          className="text-muted transition-colors group-hover:text-foreground"
         />
       </Select.Trigger>
 
       <Select.Portal>
         <Select.Content
-          className="z-50 flex max-w-xs min-w-52 flex-col rounded-xl border border-zinc-400 bg-white py-1.5 text-sm shadow-xl"
+          className="z-50 flex max-w-xs min-w-52 flex-col rounded-xl border border-edge-strong bg-surface py-1.5 text-sm shadow-xl"
           position="popper"
           sideOffset={3}
         >
           {openTerms.length > 0 && (
             <Select.Group>
-              <Select.Label className="px-3 pt-1 pb-0.5 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+              <Select.Label className="px-3 pt-1 pb-0.5 text-xs font-semibold tracking-wide text-muted uppercase">
                 Open for Registration
               </Select.Label>
               {openTerms.map(renderItem)}
@@ -160,12 +160,12 @@ export function TermSelector() {
           )}
 
           {openTerms.length > 0 && closedTerms.length > 0 && (
-            <Select.Separator className="mx-2 my-1.5 h-px bg-zinc-200" />
+            <Select.Separator className="mx-2 my-1.5 h-px bg-edge" />
           )}
 
           {closedTerms.length > 0 && (
             <Select.Group>
-              <Select.Label className="px-3 pt-1 pb-0.5 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+              <Select.Label className="px-3 pt-1 pb-0.5 text-xs font-semibold tracking-wide text-muted uppercase">
                 Registration Closed
               </Select.Label>
               {closedTerms.map(renderItem)}

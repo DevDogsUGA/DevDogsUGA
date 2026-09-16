@@ -35,7 +35,7 @@ export function UserAvatar({ user }: UserAvatarProps) {
         src={getAvatarUrl(user)}
         alt={user.email ?? "User avatar"}
       />
-      <Avatar.Fallback className="flex size-full items-center justify-center bg-red-800 text-sm font-semibold text-white inset-ring-2 inset-ring-red-900">
+      <Avatar.Fallback className="flex size-full items-center justify-center bg-primary-strong text-sm font-semibold text-white inset-ring-2 inset-ring-primary-strong">
         {getInitials(user)}
       </Avatar.Fallback>
     </Avatar.Root>

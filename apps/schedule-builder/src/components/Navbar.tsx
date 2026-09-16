@@ -1,16 +1,14 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import {
   CalendarDotsIcon,
   CaretDownIcon,
   ChalkboardTeacherIcon,
   SignInIcon,
   SignOutIcon,
-  XIcon,
 } from "@phosphor-icons/react/ssr";
-import devdog from "~/assets/devdog.svg";
+import { DogDaysMark } from "@devdogsuga/og";
+import Link from "next/link";
 import { TermSelector } from "~/components/TermSelector";
 import { UserAvatar } from "~/components/ui/UserAvatar";
 import signIn from "~/lib/signIn";
@@ -23,23 +21,18 @@ export function Navbar() {
   const { user, isLoading } = useSession();
 
   return (
-    <nav className="sticky top-0 left-0 z-40 border-t-4 border-b border-t-red-800 border-b-zinc-300 bg-white px-4">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between">
-        <div className="flex w-2/5 min-w-100 items-center gap-8 py-2">
-          <h1 className="flex items-center gap-1.5">
-            <Link href="https://devdogs.uga.edu/" target="_blank">
-              <figure className="size-8">
-                <Image alt="Dev Dog" src={devdog} />
-              </figure>
-            </Link>
-            <XIcon weight="bold" className="text-base text-zinc-400" />
+    <nav className="sticky top-0 left-0 z-40 border-t-4 border-b border-t-primary-strong border-b-edge bg-surface px-4">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3 py-2 sm:gap-6">
+          <h1 className="shrink-0">
             <Link
               href="/"
-              className="flex flex-col pl-0.5 text-xs leading-none font-bold text-red-950"
+              className="flex items-center gap-2 text-foreground transition-opacity hover:opacity-80"
             >
-              <span>Optimal</span>
-              <span>Schedule</span>
-              <span>Builder</span>
+              <DogDaysMark size={28} color="currentColor" />
+              <span className="hidden font-display text-xl leading-none font-semibold tracking-tight min-[480px]:block">
+                DogDays
+              </span>
             </Link>
           </h1>
 
@@ -63,12 +56,12 @@ export function Navbar() {
 
           {isLoading ? (
             <li className="col-span-2 flex items-center justify-center pl-3">
-              <div className="h-8 w-20 animate-pulse rounded-sm bg-neutral-200" />
+              <div className="h-8 w-20 animate-pulse rounded-sm bg-surface-muted" />
             </li>
           ) : user ? (
             <li className="contents">
               <Dropdown.Root>
-                <Dropdown.Trigger className="flex flex-col items-center gap-0.75 border-0 border-red-950 px-3 py-2 text-2xl transition-colors hover:bg-red-200">
+                <Dropdown.Trigger className="flex flex-col items-center gap-0.75 px-3 py-2 text-2xl transition-colors hover:bg-primary-soft">
                   <UserAvatar user={user} />
                   <span className="flex items-center gap-[1ch] text-xs leading-none font-medium tracking-[.0125em]">
                     Profile{" "}
@@ -77,13 +70,13 @@ export function Navbar() {
                 </Dropdown.Trigger>
                 <Dropdown.Portal>
                   <Dropdown.Content
-                    className="z-50 flex min-w-40 flex-col rounded-md border border-gray-400 bg-white py-1.5 text-sm shadow-xl"
+                    className="z-50 flex min-w-40 flex-col rounded-md border border-edge-strong bg-surface py-1.5 text-sm shadow-xl"
                     align="end"
                     sideOffset={-4}
                     alignOffset={4}
                   >
                     <button
-                      className="flex items-center gap-3 py-1 pr-6 pl-3 text-red-700 transition-colors hover:bg-red-100 hover:text-red-800"
+                      className="flex items-center gap-3 py-1 pr-6 pl-3 text-accent transition-colors hover:bg-primary-soft"
                       type="button"
                       onClick={() => void supabase.auth.signOut()}
                     >
@@ -97,7 +90,7 @@ export function Navbar() {
           ) : (
             <li className="col-span-2 flex items-center justify-center pl-3">
               <button
-                className="flex w-full cursor-default items-center justify-center gap-1.5 rounded-sm border-b-2 border-red-900 bg-red-800 px-3 py-1.5 text-sm font-medium text-white shadow-sm ring-1 ring-red-950 transition-colors hover:bg-red-50 hover:text-red-800 focus:mt-0.5 focus:border-b-0"
+                className="flex w-full cursor-default items-center justify-center gap-1.5 rounded-sm border-b-2 border-primary-strong bg-primary px-3 py-1.5 text-sm font-medium text-white shadow-sm ring-1 ring-primary-strong transition-colors hover:bg-primary-soft hover:text-accent focus:mt-0.5 focus:border-b-0"
                 onClick={signIn}
                 type="button"
               >
