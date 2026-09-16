@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useState, type ReactNode } from "react";
+import { PlusIcon } from "@phosphor-icons/react/ssr";
 import { Navbar } from "~/components/Navbar";
 import SavedPlan from "~/components/saved-plans/SavedPlan";
 import DeletePlan from "~/components/ui/DeletePlan";
@@ -17,67 +18,69 @@ export default function PlansListLayout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-pink-50">
+    <div className="flex min-h-screen flex-col">
       <Navbar />
 
-      <div className="z-1 mt-20 mr-[10%] mb-0 ml-[10%] flex h-[8vh] items-stretch justify-between">
-        <div className="flex w-[25%] overflow-y-auto rounded-t-lg border-t-2 border-r-2 border-l-2 border-black bg-red-700">
-          <h1 className="mt-auto mr-auto mb-auto ml-auto text-4xl font-bold text-white">
-            My Plans
-          </h1>
+      <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-4 py-8 md:px-6">
+        <div className="flex items-center justify-between gap-4 pb-6">
+          <h1 className="font-display text-3xl font-semibold">My Plans</h1>
+          <Link
+            href="/plans/create"
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 font-semibold text-white transition-colors hover:bg-primary-strong"
+          >
+            <PlusIcon weight="bold" /> Create
+          </Link>
         </div>
-        <Link
-          href="/plans/create"
-          className="my-auto rounded-lg bg-red-700 px-6 py-3 text-lg font-bold text-white hover:bg-black"
-        >
-          Create
-        </Link>
-      </div>
 
-      <div className="z-1 mt-0 mr-auto mb-10 ml-auto flex h-[85vh] w-4/5 flex-col flex-nowrap items-center gap-6 overflow-y-auto rounded-xl rounded-tl-none border-2 border-black bg-white py-10">
         {isLoading ? (
-          <>
+          <div className="flex flex-col gap-4">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="h-24 w-[90%] animate-pulse rounded-xl bg-neutral-200"
+                className="h-20 w-full animate-pulse rounded-xl bg-surface-muted"
               />
             ))}
-          </>
+          </div>
         ) : savedPlans.length === 0 ? (
-          <div className="m-auto flex flex-col items-center justify-center">
-            <h1 className="text-3xl font-bold">
-              You don&apos;t have any saved plans yet.{" "}
-            </h1>
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-edge-strong px-6 py-16 text-center">
+            <h2 className="text-xl font-semibold">
+              You don&apos;t have any saved plans yet.
+            </h2>
+            <p className="max-w-sm text-balance text-sm text-muted">
+              Add some courses, set your preferences, and generate your first
+              schedule.
+            </p>
             <Link
               href="/plans/create"
-              className="mt-5 rounded-lg bg-red-700 px-8 py-4 text-xl font-bold text-white hover:bg-black"
+              className="mt-2 rounded-lg bg-primary px-6 py-2.5 font-semibold text-white transition-colors hover:bg-primary-strong"
             >
-              Create
+              Create a Plan
             </Link>
           </div>
         ) : (
-          sorted.map((plan) => (
-            <motion.div
-              layout
-              key={plan.id}
-              transition={{
-                type: "spring",
-                damping: 20,
-                stiffness: 120,
-                duration: 100,
-              }}
-              className="relative"
-            >
-              <SavedPlan
-                plan={{ id: plan.id, title: plan.title, pinned: plan.pinned }}
-                onPin={() =>
-                  updatePlan.mutate({ id: plan.id, pinned: !plan.pinned })
-                }
-                onDelete={() => setPlanToDelete(plan.id)}
-              />
-            </motion.div>
-          ))
+          <div className="flex flex-col gap-4">
+            {sorted.map((plan) => (
+              <motion.div
+                layout
+                key={plan.id}
+                transition={{
+                  type: "spring",
+                  damping: 20,
+                  stiffness: 120,
+                  duration: 100,
+                }}
+                className="relative"
+              >
+                <SavedPlan
+                  plan={{ id: plan.id, title: plan.title, pinned: plan.pinned }}
+                  onPin={() =>
+                    updatePlan.mutate({ id: plan.id, pinned: !plan.pinned })
+                  }
+                  onDelete={() => setPlanToDelete(plan.id)}
+                />
+              </motion.div>
+            ))}
+          </div>
         )}
       </div>
 

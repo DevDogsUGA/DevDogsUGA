@@ -1,9 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
-import { HeartIcon, TrashIcon } from "@phosphor-icons/react/ssr";
+import {
+  CalendarDotsIcon,
+  HeartIcon,
+  TrashIcon,
+} from "@phosphor-icons/react/ssr";
 
 interface PlanDisplayProps {
   plan: { id: string; title: string; pinned: boolean };
@@ -38,21 +41,17 @@ export default function SavedPlan({ plan, onPin, onDelete }: PlanDisplayProps) {
 
   return (
     <div
-      className="relative z-10 flex w-[70vw] cursor-pointer flex-row items-center gap-4 rounded-xl border-b-8 border-red-700 bg-white px-7 py-4 ring-2 ring-black hover:mt-1 hover:border-b-4 hover:border-red-700 hover:bg-neutral-100 [&:active:not(:has(input:hover,button:hover))]:border-t-4 [&:active:not(:has(input:hover,button:hover))]:border-b-0"
+      className="relative z-10 flex w-full cursor-pointer flex-row items-center gap-4 rounded-xl border border-edge border-l-6 border-l-primary bg-surface px-6 py-4 shadow-xs transition-[border-color,box-shadow,background-color] hover:border-edge-strong hover:border-l-primary-strong hover:shadow-sm"
       onClick={goToPlan}
       role="link"
     >
-      {/* Paw icon */}
-      <Image
-        src="/images/blackpaw.svg"
-        width={64}
-        height={64}
-        className="size-8"
-        alt="black paw"
+      <CalendarDotsIcon
+        weight="duotone"
+        className="size-8 shrink-0 text-accent"
       />
 
       {/* Plan title */}
-      <h2 className="flex-1 text-2xl font-bold text-black">{plan.title}</h2>
+      <h2 className="flex-1 truncate text-2xl font-bold">{plan.title}</h2>
 
       {/* Pin button (gives a saved plan priority over others*/}
       <button
@@ -62,11 +61,11 @@ export default function SavedPlan({ plan, onPin, onDelete }: PlanDisplayProps) {
         onClick={handlePin}
       >
         {plan.pinned ? (
-          <HeartIcon weight="fill" className="size-8 text-red-600 transition" />
+          <HeartIcon weight="fill" className="size-8 text-accent transition" />
         ) : (
           <HeartIcon
             weight="bold"
-            className="m-0.5 size-7 transition-[color,width,height,margin] hover:m-0 hover:size-8 hover:text-red-600"
+            className="m-0.5 size-7 transition-[color,width,height,margin] hover:m-0 hover:size-8 hover:text-accent"
           />
         )}
       </button>
@@ -74,10 +73,10 @@ export default function SavedPlan({ plan, onPin, onDelete }: PlanDisplayProps) {
       <button
         type="button"
         aria-label={`Delete ${plan.title}`}
-        className="cursor-default rounded-md p-0.5 transition-colors hover:bg-red-600/15"
+        className="cursor-default rounded-md p-0.5 transition-colors hover:bg-primary/15"
         onClick={handleDelete}
       >
-        <TrashIcon weight="bold" className="size-7 text-red-600" />
+        <TrashIcon weight="bold" className="size-7 text-accent" />
       </button>
     </div>
   );

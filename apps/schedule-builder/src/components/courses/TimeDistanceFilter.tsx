@@ -43,7 +43,7 @@ export function TimeDistanceFilter() {
         labelText="Start Time"
         items={allTimeSlots}
         placeholder="Start Time"
-        className="border-stone-400"
+        className="border-muted"
         onSelect={handleStartTimeSelect}
         selectedItem={startTime}
       />
@@ -53,7 +53,7 @@ export function TimeDistanceFilter() {
         key={startTime} // remounts the input so its filtered list resets
         items={availableEndTimes}
         placeholder={startTime ? "End Time" : "Select Start Time"}
-        className="border-stone-400"
+        className="border-muted"
         onSelect={(value) => setEndTime(value)}
         selectedItem={endTime}
       />

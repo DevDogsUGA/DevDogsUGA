@@ -93,17 +93,17 @@ export default function CourseSearchPage() {
           placeholder="Search by subject, course number, title, instructor, or CRN…"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          className="w-full rounded-md border-2 border-stone-300 bg-white px-3 py-2 pr-10 transition-[box-shadow,border-color] hover:shadow-sm not-disabled:hover:border-stone-400 focus:outline-none"
+          className="w-full rounded-md border-2 border-edge-strong bg-surface px-3 py-2 pr-10 transition-[box-shadow,border-color] hover:shadow-sm not-disabled:hover:border-muted focus:outline-none"
         />
         {isFetching && (
-          <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-neutral-400">
+          <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted">
             …
           </span>
         )}
       </div>
 
       {query.length > 0 && courses.length === 0 && !isFetching && (
-        <p className="text-center text-sm text-neutral-500">
+        <p className="text-center text-sm text-muted">
           No courses found.
         </p>
       )}

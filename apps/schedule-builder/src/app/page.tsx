@@ -1,72 +1,77 @@
-"use client";
-
-// Returning User: option(saved filter preferences, manual entry, saved plans)
-// New User: option(saved filter preferences, questionnaire page, saved plans)
-
-import { Navbar } from "~/components/Navbar";
-import Image from "next/image";
+import {
+  ArrowRightIcon,
+  CalendarDotsIcon,
+  ChalkboardTeacherIcon,
+  SparkleIcon,
+} from "@phosphor-icons/react/ssr";
+import { APPS, DogDaysMark } from "@devdogsuga/og";
 import Link from "next/link";
-import devdogCobranded from "../../public/images/devdogCobranded.png";
+import { Navbar } from "~/components/Navbar";
+
+const FEATURES = [
+  {
+    Icon: ChalkboardTeacherIcon,
+    title: "Live registrar data",
+    body: "Course and section info scraped straight from UGA's registrar, kept current all semester.",
+  },
+  {
+    Icon: SparkleIcon,
+    title: "Conflict-free schedules",
+    body: "Pick your courses and preferences; DogDays generates every schedule that actually works.",
+  },
+  {
+    Icon: CalendarDotsIcon,
+    title: "Compare and save plans",
+    body: "Keep the candidates side by side, pin your favorite, and tweak until it feels right.",
+  },
+] as const;
 
 export default function Home() {
   return (
     <>
       <Navbar />
-      <div
-        className="relative -mt-14.5 flex h-[calc(100vh-100px)] flex-1 flex-col items-center justify-center gap-16 overflow-hidden bg-cover bg-fixed bg-bottom bg-no-repeat px-4 pt-24 text-center"
-        // style={{
-        //   backgroundImage: `url(${background.src})`,
-        // }}
-      >
-        <div className="flex flex-col items-center px-6 py-8 min-[480px]:px-12 sm:px-16 md:max-w-[80%]">
-          <div className="flex w-full flex-col items-center gap-8 rounded-3xl">
-            <div className="flex translate-y-2 justify-center text-5xl text-nowrap md:translate-y-5 md:text-6xl lg:text-7xl 2xl:text-8xl">
-              <h2 className="font-extrabold text-slate-800">Bulldog Planner</h2>
-            </div>
-            {/* Hero Section */}
-            <div className="flex w-full flex-col items-center gap-8 pr-10 pl-10 sm:gap-0 sm:pr-0 sm:pl-0">
-              <div className="flex w-full items-center justify-center sm:gap-16">
-                <div className="flex translate-x-5 flex-col items-start">
-                  <div className="flex items-center">
-                    <div className="mr-4 h-20 border-l-4 border-red-700"></div>
-                    <div className="flex h-20 flex-col justify-center text-nowrap">
-                      <span className="text-left text-2xl leading-tight font-bold text-nowrap text-red-700 sm:text-3xl xl:text-4xl">
-                        An Optimized
-                        <br />
-                        Schedule Builder
-                      </span>
-                    </div>
-                  </div>
-                  <span className="mt-5 text-left font-medium text-red-700 sm:text-lg xl:text-2xl">
-                    For Students, By Students
-                  </span>
-                </div>
-                <Image
-                  alt="UGA Dev Dogs logo"
-                  height={220}
-                  width={220}
-                  className="h-[180px] w-[180px] translate-x-0 sm:h-[200px] sm:w-[200px] md:h-[220px] md:w-[220px] lg:-translate-x-1"
-                  src={devdogCobranded}
-                />
-              </div>
-              {/* Ready and Start Now Button */}
-              <div className="flex w-full max-w-lg min-w-[350px] -translate-y-0 items-center justify-center text-xl font-bold md:-translate-y-5 xl:-translate-y-3 xl:text-2xl">
-                <p className="-mr-8 w-1/2 cursor-default rounded-l-full bg-[#F8E6EA] bg-pink-100 px-6 py-4 text-left text-neutral-600/40 sm:py-5">
-                  Ready?
-                </p>
-                <Link
-                  className="flex w-3/5 items-center rounded-full bg-red-700 px-6 py-4 pr-1.5 pl-8 text-nowrap text-white shadow-md sm:py-5"
-                  href="/plans/create"
-                >
-                  Start Now!{" "}
-                  <span className="-my-2 mr-3 ml-auto flex size-12 items-center justify-center rounded-full border-2 border-red-900 bg-white pt-0.5 text-[1.5rem] leading-none">
-                    🚀
-                  </span>
-                </Link>
-              </div>
-            </div>
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center gap-14 px-4 py-16 text-center md:px-6">
+        <div className="flex flex-col items-center gap-6">
+          <span className="text-accent">
+            <DogDaysMark size={80} color="currentColor" />
+          </span>
+          <h2 className="font-display text-5xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
+            DogDays
+          </h2>
+          <p className="text-lg font-medium text-accent sm:text-xl">
+            The UGA schedule builder — for students, by students.
+          </p>
+          <p className="max-w-xl text-balance text-muted">
+            {APPS.dogdays.blurb}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Link
+              href="/plans/create"
+              className="flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-lg font-semibold text-white shadow-sm transition-colors hover:bg-primary-strong"
+            >
+              Start Now <ArrowRightIcon weight="bold" />
+            </Link>
+            <Link
+              href="/courses"
+              className="rounded-lg border border-edge-strong bg-surface px-6 py-3 text-lg font-medium transition-colors hover:bg-surface-muted"
+            >
+              Browse Courses
+            </Link>
           </div>
         </div>
+
+        <ul className="grid w-full gap-4 text-left sm:grid-cols-3">
+          {FEATURES.map(({ Icon, title, body }) => (
+            <li
+              key={title}
+              className="flex flex-col gap-2 rounded-xl border border-edge bg-surface p-5"
+            >
+              <Icon weight="duotone" className="text-3xl text-accent" />
+              <h3 className="font-semibold">{title}</h3>
+              <p className="text-sm text-muted">{body}</p>
+            </li>
+          ))}
+        </ul>
       </div>
     </>
   );

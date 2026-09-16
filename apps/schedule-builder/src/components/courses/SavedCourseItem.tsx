@@ -24,14 +24,14 @@ export function SavedCourseItem({
   const info = course.courses;
 
   return (
-    <div className="group relative rounded-sm border border-transparent transition-[border-color,box-shadow,background-color] hover:border-stone-500 hover:bg-stone-500/15 hover:shadow-sm">
+    <div className="group relative rounded-sm border border-transparent transition-[border-color,box-shadow,background-color] hover:border-edge-strong hover:bg-surface-muted hover:shadow-sm">
       <button
         type="button"
         onClick={() => setDialogOpen(true)}
         className="block w-full cursor-default px-2 pt-1 pr-8 pb-3.5 text-left perspective-distant"
       >
         <span className="flex items-center gap-1.5 overflow-hidden font-bold text-ellipsis">
-          <PlusCircleIcon weight="bold" className="text-lg text-green-700" />
+          <PlusCircleIcon weight="bold" className="text-lg text-green-600 dark:text-green-500" />
           {formatCourseCode(info?.abbr, info?.courseNumber)}
         </span>
         <span className="block overflow-hidden pl-6 text-sm text-nowrap text-ellipsis">
@@ -39,19 +39,19 @@ export function SavedCourseItem({
         </span>
         {course.excludedCrns.length > 0 && (
           <span className="flex flex-col gap-0.5 pt-1 pl-7.5">
-            <span className="-ml-1.5 block pb-0.5 text-[0.66rem] font-semibold text-neutral-500 uppercase">
+            <span className="-ml-1.5 block pb-0.5 text-[0.66rem] font-semibold text-muted uppercase">
               Excluding {course.excludedCrns.length} section
               {course.excludedCrns.length !== 1 ? "s" : ""}
             </span>
             {course.excludedCrns.map((crn) => (
               <span key={crn} className="flex items-center gap-1.5 text-sm">
-                <XCircleIcon className="text-base text-red-700" />
+                <XCircleIcon className="text-base text-accent" />
                 CRN {crn}
               </span>
             ))}
           </span>
         )}
-        <span className="absolute top-full right-2 flex origin-top scale-90 rotate-x-270 items-center gap-1 rounded-sm border border-red-700 bg-white px-2 py-px text-xs text-red-700 opacity-0 shadow-xs transition-[transform,scale,opacity,translate] group-hover:-translate-y-1/2 group-hover:scale-100 group-hover:rotate-x-360 group-hover:opacity-100">
+        <span className="absolute top-full right-2 flex origin-top scale-90 rotate-x-270 items-center gap-1 rounded-sm border border-primary bg-surface px-2 py-px text-xs text-accent opacity-0 shadow-xs transition-[transform,scale,opacity,translate] group-hover:-translate-y-1/2 group-hover:scale-100 group-hover:rotate-x-360 group-hover:opacity-100">
           <CursorClickIcon />
           Click to Edit Sections
         </span>
@@ -61,7 +61,7 @@ export function SavedCourseItem({
         type="button"
         onClick={onRemove}
         title="Remove course"
-        className="absolute top-1.5 right-1.5 rounded-sm p-1 text-neutral-400 transition-colors hover:bg-red-700/10 hover:text-red-700"
+        className="absolute top-1.5 right-1.5 rounded-sm p-1 text-muted transition-colors hover:bg-primary/10 hover:text-accent"
       >
         <TrashIcon weight="bold" />
       </button>

@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import ScheduleDisplay from "~/components/schedules/ScheduleDisplay";
-import background from "../../../../public/images/background.png";
 
 interface Props {
   params: Promise<{
@@ -10,20 +9,11 @@ interface Props {
 
 // Page for viewing a generated schedule / saved plan
 export default async function SchedulePage({ params }: Props) {
-  // Render the schedule
   return (
-    <div
-      className="relative -mt-[3.625rem] -mb-[3.625rem] min-h-screen bg-cover bg-fixed bg-bottom bg-no-repeat pt-2"
-      style={{
-        backgroundImage: `url(${background.src})`,
-      }}
-    >
-      {/* Schedule display container */}
-      <div className="flex flex-grow flex-row overflow-y-auto pt-32">
-        <Suspense fallback={<div>Loading...</div>}>
-          <ScheduleDisplay id={(await params).id} />
-        </Suspense>
-      </div>
+    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6 md:px-6">
+      <Suspense fallback={<div>Loading...</div>}>
+        <ScheduleDisplay id={(await params).id} />
+      </Suspense>
     </div>
   );
 }

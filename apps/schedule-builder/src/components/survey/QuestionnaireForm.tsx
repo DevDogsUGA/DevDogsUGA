@@ -110,8 +110,8 @@ export const QuestionnareForm = () => {
                 key={index}
                 data={day}
                 text={day[0]}
-                untoggledStyle="bg-white text-stone-800 hover:border-pink-200 hover:bg-pink-100"
-                toggledStyle="border-red-700 bg-red-700 text-white duration-300 ease-in-out hover:border-pink-100 hover:bg-red-800"
+                untoggledStyle="bg-surface text-foreground hover:border-edge hover:bg-surface-muted"
+                toggledStyle="border-primary bg-primary text-white duration-300 ease-in-out hover:border-edge hover:bg-primary-strong"
                 className={`h-12 flex-1 border-2 sm:h-16 ${
                   index === 0 && "rounded-l-md"
                 } ${index === days.length - 1 && "rounded-r-md"}`}
