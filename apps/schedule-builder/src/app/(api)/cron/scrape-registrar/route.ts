@@ -1,32 +1,31 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { verifyCronSecret } from "~/lib/cron/auth";
+import { detectAvailableTerms } from "~/lib/parsers";
 import {
-  BuildingCollector,
-  CampusCollector,
-  CollegeCollector,
-  CourseCollector,
-  DepartmentCollector,
-  InstructorCollector,
-  MeetingCollector,
-  OfferingCollector,
-  ScheduleTypeCollector,
-  SubjectCollector,
-  bulkUpsert,
-  detectAvailableTerms,
-  upsertPartsOfTerm,
-} from "~/lib/parsers";
+  reconcileTerm,
+  type TermReconcileResult,
+} from "~/lib/parsers/reconcileTerm";
 import { resolvePartsOfTermPerTerm } from "~/lib/parsers/termPartsOfTerm";
 import { db } from "~/server/db";
-import { terms } from "~/server/db/schema";
 
 export async function GET(req: NextRequest) {
   const denied = verifyCronSecret(req);
   if (denied) return denied;
 
-  const availableTerms = await detectAvailableTerms();
+  // A semester's CSV fetch failing (non-ok response or a thrown network
+  // error) excludes only that semester from this run; it must not fail the
+  // whole route the way a single bad fetch silently used to.
+  const { terms: availableTerms, failedFetches } = await detectAvailableTerms();
+  if (failedFetches.length > 0) {
+    console.error("[scrape-registrar] CSV fetch failures:", failedFetches);
+  }
+
   if (availableTerms.length === 0) {
-    return NextResponse.json({ error: "No terms detected" }, { status: 502 });
+    return NextResponse.json(
+      { error: "No terms detected", failedFetches },
+      { status: 502 },
+    );
   }
 
   // Fetch part-of-term calendars over HTTP up front, before opening a
@@ -43,91 +42,32 @@ export async function GET(req: NextRequest) {
 
   if (succeeded.length === 0) {
     return NextResponse.json(
-      { error: "No terms detected", failed },
+      { error: "No terms detected", failedFetches, failed },
       { status: 502 },
     );
   }
 
-  const partOfTermRows = succeeded.flatMap((t) => t.partOfTermRows);
+  // Each term is reconciled in its own transaction, scoped to that term's
+  // rows only (see reconcileTerm.ts). One term's DB failure — a bad row, a
+  // constraint violation — must not roll back or block siblings that already
+  // succeeded, so it's caught here rather than left to abort the loop.
+  const results: TermReconcileResult[] = [];
+  const reconcileFailures: { academicPeriod: number; error: string }[] = [];
 
-  // ─── Phase 1: collect every row in memory (pure, no DB I/O) ────────────────
-  const subjects = new SubjectCollector();
-  const colleges = new CollegeCollector();
-  const departments = new DepartmentCollector();
-  const campuses = new CampusCollector();
-  const scheduleTypes = new ScheduleTypeCollector();
-  const instructors = new InstructorCollector();
-  const buildings = new BuildingCollector();
-  const courses = new CourseCollector();
-  const offerings = new OfferingCollector();
-  const meetings = new MeetingCollector();
-
-  for (const { rows } of succeeded) {
-    for (const row of rows) {
-      subjects.collect(row);
-      colleges.collect(row);
-      departments.collect(row);
-      campuses.collect(row);
-      scheduleTypes.collect(row);
-      instructors.collect(row);
-      buildings.collect(row);
-      courses.collect(row);
-      offerings.collect(row);
-      meetings.collect(row);
+  for (const term of succeeded) {
+    try {
+      results.push(await reconcileTerm(term, db));
+    } catch (err) {
+      reconcileFailures.push({
+        academicPeriod: term.academicPeriod,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
-  // ─── Phase 2: a handful of bulk upserts, in dependency order ───────────────
-  const { courseCount, offeringCount, meetingCount } = await db.transaction(
-    async (tx) => {
-      await bulkUpsert(
-        tx,
-        terms,
-        succeeded.map(({ academicPeriod, description }) => ({
-          academicPeriod,
-          description,
-        })),
-      );
-      await upsertPartsOfTerm(tx, partOfTermRows);
-
-      const [
-        subjectIdMap,
-        collegeIdMap,
-        campusIdMap,
-        scheduleTypeIdMap,
-        instructorIdMap,
-      ] = await Promise.all([
-        subjects.flush(tx),
-        colleges.flush(tx),
-        campuses.flush(tx),
-        scheduleTypes.flush(tx),
-        instructors.flush(tx),
-        buildings.flush(tx),
-      ]);
-
-      const departmentIdMap = await departments.flush(tx, collegeIdMap);
-      const courseIdMap = await courses.flush(
-        tx,
-        subjectIdMap,
-        collegeIdMap,
-        departmentIdMap,
-      );
-      const validCrns = await offerings.flush(
-        tx,
-        courseIdMap,
-        instructorIdMap,
-        scheduleTypeIdMap,
-        campusIdMap,
-      );
-      const meetingCount = await meetings.flush(tx, validCrns);
-
-      return {
-        courseCount: courseIdMap.size,
-        offeringCount: validCrns.size,
-        meetingCount,
-      };
-    },
-  );
+  if (reconcileFailures.length > 0) {
+    console.error("[scrape-registrar] reconcile failures:", reconcileFailures);
+  }
 
   // Ensure indexes and refresh the materialized search view after each scrape.
   // These must be schema-qualified: the postgres-js connection uses the default
@@ -148,10 +88,12 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    periods: succeeded.map((t) => t.academicPeriod),
-    courses: courseCount,
-    offerings: offeringCount,
-    meetings: meetingCount,
+    periods: results.map((r) => r.academicPeriod),
+    courses: results.reduce((sum, r) => sum + r.courseCount, 0),
+    offerings: results.reduce((sum, r) => sum + r.offeringCount, 0),
+    meetings: results.reduce((sum, r) => sum + r.meetingCount, 0),
+    failedFetches,
     failed,
+    reconcileFailures,
   });
 }

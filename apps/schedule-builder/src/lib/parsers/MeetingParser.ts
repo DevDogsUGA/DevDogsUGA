@@ -1,3 +1,4 @@
+import { inArray } from "drizzle-orm";
 import { meetings } from "~/server/db/schema";
 import { bulkUpsert } from "./bulkUpsert";
 import type { DrizzleTransaction, Row } from "./types";
@@ -72,8 +73,15 @@ export class MeetingCollector {
   }
 
   /**
-   * Replaces the contents of the meetings table with the collected rows,
-   * dropping any meeting whose offering didn't resolve to a valid row.
+   * Replaces this term's meetings — those belonging to an offering in
+   * `validCrns` — with the collected rows, dropping any meeting whose
+   * offering didn't resolve to a valid row.
+   *
+   * Meetings have no natural unique key, so `bulkUpsert` can only ever plain-
+   * INSERT them; a re-run without first deleting the prior rows would
+   * duplicate every meeting instead of replacing it. The delete is scoped to
+   * `validCrns` — this term's offerings — rather than the whole table, so a
+   * scrape reconciling one term never touches another term's meetings.
    */
   async flush(tx: DrizzleTransaction, validCrns: Set<number>): Promise<number> {
     const rows = this.pending
@@ -81,17 +89,21 @@ export class MeetingCollector {
       .map(({ crn, ...rest }) => ({ ...rest, offeringCrn: crn }));
 
     // `bulkUpsert` returns early on an empty array, so deleting first would
-    // leave the table truncated. A renamed CSV column used to do exactly that,
-    // silently and with an ok response. Refuse the replacement instead; the
-    // surrounding transaction rolls the whole scrape back.
+    // leave this term with no meetings at all. A renamed CSV column used to do
+    // exactly that, silently and with an ok response. Refuse the replacement
+    // instead; the surrounding transaction rolls this term's reconcile back.
     if (rows.length === 0 && this.pending.length > 0) {
       throw new Error(
         `MeetingParser: ${this.pending.length} meetings collected but none ` +
-          `matched a valid offering — refusing to empty the meetings table.`,
+          `matched a valid offering — refusing to empty this term's meetings.`,
       );
     }
 
-    await tx.delete(meetings);
+    // Nothing to scope the delete to — either this term had no offerings at
+    // all, or (with a non-empty `pending`) the guard above already threw.
+    if (validCrns.size > 0) {
+      await tx.delete(meetings).where(inArray(meetings.offeringCrn, [...validCrns]));
+    }
     await bulkUpsert(tx, meetings, rows);
     return rows.length;
   }
