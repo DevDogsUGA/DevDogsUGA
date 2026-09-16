@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { DayOfWeek } from "./domain/section";
 import {
   SCHEDULE_START_HOUR,
   SCHEDULE_SPAN_MINUTES,
@@ -13,25 +14,30 @@ function offering(
   meetings: {
     startTime: string | null;
     endTime: string | null;
-    monday?: boolean;
+    days?: DayOfWeek[];
   }[],
 ): Offering {
   return {
     crn,
+    courseAbbr: abbr,
+    courseNumber: "1302",
+    courseTitle: "Title",
+    creditHours: { min: 3, max: 3 },
+    campus: { id: 1, abbr: "ATHENS", description: "Athens" },
+    professor: { name: "Ada Lovelace", quality: null },
     seatsAvailable: 5,
     actualEnrollment: 10,
     maximumEnrollment: 20,
-    courses: { abbr, title: "Title", courseNumber: "1302", maxCreditHours: 3 },
-    instructors: { firstName: "Ada", lastName: "Lovelace" },
+    cancelled: false,
+    lastSeenAt: new Date(),
+    academicPeriod: 202508,
+    dateRange: null,
     meetings: meetings.map((m) => ({
-      monday: m.monday ?? true,
-      tuesday: false,
-      wednesday: false,
-      thursday: false,
-      friday: false,
+      days: m.days ?? ["monday"],
       startTime: m.startTime,
       endTime: m.endTime,
-      buildings: { description: "Boyd" },
+      room: null,
+      building: { code: "1", description: "Boyd", lat: null, lon: null },
     })),
   };
 }
@@ -105,5 +111,31 @@ describe("toWeekSchedule", () => {
     const colors = week.Monday!.map((c) => c.bgColor);
     expect(new Set(colors).size).toBe(5);
     expect(colors).not.toContain("bg-gray-500");
+  });
+
+  it("keeps a Saturday-only meeting instead of silently dropping it", () => {
+    const week = toWeekSchedule([
+      offering("CSCI1302", 1, [
+        { startTime: "09:30:00", endTime: "10:45:00", days: ["saturday"] },
+      ]),
+    ]);
+
+    expect(week.Saturday).toBeDefined();
+    expect(week.Saturday).toHaveLength(1);
+    expect(week.Saturday![0]!.timeStart).toBe("9:30 AM");
+    expect(week.Saturday![0]!.currentDay).toBe("S");
+  });
+
+  it("keeps a Sunday-only meeting instead of silently dropping it", () => {
+    const week = toWeekSchedule([
+      offering("CSCI1302", 1, [
+        { startTime: "09:30:00", endTime: "10:45:00", days: ["sunday"] },
+      ]),
+    ]);
+
+    expect(week.Sunday).toBeDefined();
+    expect(week.Sunday).toHaveLength(1);
+    expect(week.Sunday![0]!.timeStart).toBe("9:30 AM");
+    expect(week.Sunday![0]!.currentDay).toBe("U");
   });
 });
