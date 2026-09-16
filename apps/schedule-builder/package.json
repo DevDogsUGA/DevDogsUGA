@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint src",
     "lint:fix": "eslint --fix src",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p cloudflare/tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "with-env vitest run --config vitest.db.config.ts",
@@ -58,6 +58,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260820.1",
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/env": "workspace:*",
     "@opennextjs/cloudflare": "catalog:",

@@ -1,0 +1,31 @@
+{
+  // NOT extending config/tsconfig/next.json, unlike the rest of this package.
+  // That preset targets the Next app: DOM lib and Next's module resolution. This
+  // subtree is bundled by wrangler instead, so it needs bundler resolution and
+  // Workers-runtime globals (Request, Response, ExecutionContext, cloudflare:*
+  // modules) rather than DOM -- the two collide, hence a separate program here.
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2025"],
+    "noEmit": true,
+    "types": ["@cloudflare/workers-types"],
+    /* Path aliases stay local, same as the Next program's tsconfig.json: they
+       resolve against the config file that declares them, so this maps "~/*"
+       to ../src (this file lives one level deeper than the app root). Needed
+       for scheduled.ts's type-only `import type { env } from "~/env"`. */
+    "paths": {
+      "~/*": ["../src/*"]
+    }
+  },
+  "include": ["**/*.ts"],
+  /* scheduled.test.ts runs under `@vitest-environment node` and uses Node
+     builtins (node:fs, node:path, import.meta.dirname) -- fine for vitest,
+     which transpiles per-file and ignores this tsconfig entirely, but wrong
+     for this program to typecheck: adding "node" to `types` above would let
+     Node-only APIs typecheck in worker.ts/scheduled.ts too, and then fail at
+     the edge, which is exactly what a separate Workers-lib program exists to
+     prevent. */
+  "exclude": ["**/*.test.ts"]
+}
