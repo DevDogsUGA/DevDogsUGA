@@ -3,8 +3,8 @@ import {
   InstagramLogoIcon,
   LinkedinLogoIcon,
 } from "@phosphor-icons/react/ssr";
-import { DogDaysMark } from "@devdogsuga/og";
 import Link from "next/link";
+import { DogDaysIcon } from "~/components/DogDaysIcon";
 
 const SOCIALS = [
   {
@@ -30,13 +30,13 @@ export function Footer() {
       <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row">
         <Link
           href="/"
-          className="text-navy-foreground flex items-center gap-2 transition-opacity hover:opacity-80"
+          className="font-display text-navy-foreground text-base font-semibold tracking-tight whitespace-nowrap transition-opacity hover:opacity-80"
         >
-          <DogDaysMark size={22} color="currentColor" />
-          <span className="font-display text-base leading-none font-semibold tracking-tight">
-            DogDays
+          <DogDaysIcon className="mr-1.5 inline-block h-[0.79em] w-auto align-baseline" />
+          DogDays{" "}
+          <span className="font-sans text-xs font-normal text-zinc-400">
+            by UGA DevDogs
           </span>
-          <span className="mt-px text-xs text-zinc-400">by UGA DevDogs</span>
         </Link>
 
         <nav className="flex items-center gap-5">
