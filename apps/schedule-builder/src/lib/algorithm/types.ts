@@ -24,7 +24,13 @@ export interface AlgorithmClass {
 
 export interface Professor {
   name: string;
-  quality: number;
+  /**
+   * `null` when no rating source is available — the shared domain `Section`
+   * model always reports `null` since RateMyProfessors was removed.
+   * `schedule-util.ts`'s quality scoring uses a falsy check, so `null` is
+   * runtime-safe here.
+   */
+  quality: number | null;
 }
 
 export interface AlgorithmSection {

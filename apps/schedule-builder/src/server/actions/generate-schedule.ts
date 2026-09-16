@@ -1,8 +1,10 @@
 "use server";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "~/server/db";
 import * as schema from "~/server/db/schema";
+import { loadSections } from "~/lib/domain/loadSections";
+import type { DayOfWeek as DomainDayOfWeek } from "~/lib/domain/section";
 import {
   algorithmDriver,
   MAX_INPUT_COURSES,
@@ -10,6 +12,7 @@ import {
 } from "~/lib/algorithm/brute-force";
 import type {
   AlgorithmCourse,
+  AlgorithmSection,
   DayOfWeek,
   HConstraints,
   SConstraints,
@@ -40,6 +43,17 @@ const DAY_MAP: Record<string, DayOfWeek> = {
   W: "WEDNESDAY",
   R: "THURSDAY",
   F: "FRIDAY",
+};
+
+/** The domain model's lowercase `DayOfWeek` to the algorithm's uppercase one. */
+const ALGORITHM_DAY_MAP: Record<DomainDayOfWeek, DayOfWeek> = {
+  monday: "MONDAY",
+  tuesday: "TUESDAY",
+  wednesday: "WEDNESDAY",
+  thursday: "THURSDAY",
+  friday: "FRIDAY",
+  saturday: "SATURDAY",
+  sunday: "SUNDAY",
 };
 
 function pad(n: number): string {
@@ -101,165 +115,55 @@ export async function getRecommendedSchedules(
         ).map((r) => r.abbr)
       : [];
 
-  type OfferingAcc = {
-    crn: number;
-    campusId: number;
-    seats: number;
-    instructorFirst: string | null;
-    instructorLast: string | null;
-    avgRating: number;
-    campusAbbr: string;
-    creditHours: { min: number; max: number };
-    meetings: {
-      monday: boolean | null;
-      tuesday: boolean | null;
-      wednesday: boolean | null;
-      thursday: boolean | null;
-      friday: boolean | null;
-      saturday: boolean | null;
-      sunday: boolean | null;
-      startTime: string;
-      endTime: string;
-      buildingLat: number | null;
-      buildingLon: number | null;
-      buildingDesc: string | null;
-    }[];
-  };
+  const allSections = await loadSections(db, {
+    academicPeriod: params.academicPeriod,
+    courseAbbrs: params.inputCourseNumbers,
+  });
 
-  const courseMap = new Map<string, Map<number, OfferingAcc>>();
+  // Sections cancelled since the last sync must not be recommended as CRNs
+  // the student would then try to register for. This is an in-memory rule,
+  // not a query-time filter — `loadSections` never touches `cancelled`.
+  const activeSections = allSections.filter((s) => !s.cancelled);
 
-  const matchingRows = await db
-    .select({
-      courseAbbr: schema.courses.abbr,
-      courseMinCreditHours: schema.courses.minCreditHours,
-      courseMaxCreditHours: schema.courses.maxCreditHours,
-      offeringCrn: schema.offerings.crn,
-      offeringCampusId: schema.offerings.campusId,
-      seatsAvailable: schema.offerings.seatsAvailable,
-      instructorFirst: schema.instructors.firstName,
-      instructorLast: schema.instructors.lastName,
-      averageRating: schema.instructors.averageRating,
-      monday: schema.meetings.monday,
-      tuesday: schema.meetings.tuesday,
-      wednesday: schema.meetings.wednesday,
-      thursday: schema.meetings.thursday,
-      friday: schema.meetings.friday,
-      saturday: schema.meetings.saturday,
-      sunday: schema.meetings.sunday,
-      startTime: schema.meetings.startTime,
-      endTime: schema.meetings.endTime,
-      buildingLat: schema.buildings.latitude,
-      buildingLon: schema.buildings.longitude,
-      buildingDesc: schema.buildings.description,
-      campusAbbr: schema.campuses.abbr,
-    })
-    .from(schema.courses)
-    .innerJoin(
-      schema.offerings,
-      eq(schema.offerings.courseId, schema.courses.id),
-    )
-    .innerJoin(
-      schema.campuses,
-      eq(schema.offerings.campusId, schema.campuses.id),
-    )
-    .leftJoin(
-      schema.instructors,
-      eq(schema.offerings.instructorId, schema.instructors.id),
-    )
-    .leftJoin(
-      schema.meetings,
-      eq(schema.meetings.offeringCrn, schema.offerings.crn),
-    )
-    .leftJoin(
-      schema.buildings,
-      eq(schema.meetings.buildingId, schema.buildings.id),
-    )
-    .where(
-      and(
-        inArray(schema.courses.abbr, params.inputCourseNumbers),
-        eq(schema.offerings.academicPeriod, params.academicPeriod),
-        // Sections cancelled since the last sync must not be recommended as
-        // CRNs the student then tries to register for.
-        eq(schema.offerings.active, true),
-      ),
-    );
+  const filteredSections = activeSections.filter((s) => {
+    if (campusId !== undefined && s.campus.id !== campusId) return false;
+    if (!params.showFilledClasses && s.seatsAvailable <= 0) return false;
+    return true;
+  });
 
-  for (const row of matchingRows) {
-    if (campusId !== undefined && row.offeringCampusId !== campusId) continue;
-    if (!params.showFilledClasses && row.seatsAvailable <= 0) continue;
-
-    if (!courseMap.has(row.courseAbbr))
-      courseMap.set(row.courseAbbr, new Map());
-    const offeringsMap = courseMap.get(row.courseAbbr)!;
-
-    if (!offeringsMap.has(row.offeringCrn)) {
-      offeringsMap.set(row.offeringCrn, {
-        crn: row.offeringCrn,
-        campusId: row.offeringCampusId,
-        seats: row.seatsAvailable,
-        instructorFirst: row.instructorFirst,
-        instructorLast: row.instructorLast,
-        avgRating: row.averageRating ?? 0,
-        campusAbbr: row.campusAbbr,
-        creditHours: {
-          min: row.courseMinCreditHours,
-          max: row.courseMaxCreditHours,
-        },
-        meetings: [],
-      });
-    }
-    // A meeting with no time is TBA (async/online). It occupies no slot, so it
-    // is dropped rather than given the student's own preferred hours, which
-    // would make it collide with everything else that day.
-    if (row.monday != null && row.startTime && row.endTime) {
-      offeringsMap.get(row.offeringCrn)!.meetings.push({
-        ...row,
-        startTime: row.startTime,
-        endTime: row.endTime,
-      });
-    }
+  const courseMap = new Map<string, AlgorithmSection[]>();
+  for (const section of filteredSections) {
+    const sections = courseMap.get(section.courseAbbr) ?? [];
+    sections.push({
+      courseCode: section.courseAbbr,
+      crn: section.crn,
+      professor: {
+        name: section.professor?.name ?? "TBA",
+        quality: section.professor?.quality ?? null,
+      },
+      creditHours: section.creditHours,
+      // A meeting with no time is TBA (async/online). It occupies no slot,
+      // so it is dropped rather than given the student's own preferred
+      // hours, which would make it collide with everything else that day.
+      classes: section.meetings
+        .filter((m) => m.startTime && m.endTime)
+        .map((m) => ({
+          crn: section.crn,
+          days: m.days.map((d) => ALGORITHM_DAY_MAP[d]),
+          startTime: m.startTime!,
+          endTime: m.endTime!,
+          buildingName: m.building?.description ?? "",
+          campus: section.campus.abbr,
+          buildingNumber: m.building?.code ?? "",
+          latitude: m.building?.lat ?? undefined,
+          longitude: m.building?.lon ?? undefined,
+        })),
+    });
+    courseMap.set(section.courseAbbr, sections);
   }
 
   const algorithmCourses: AlgorithmCourse[] = [...courseMap.entries()].map(
-    ([courseAbbr, offeringsMap]) => ({
-      courseCode: courseAbbr,
-      sections: [...offeringsMap.values()].map((o) => ({
-        courseCode: courseAbbr,
-        crn: o.crn,
-        professor: {
-          name: o.instructorFirst
-            ? `${o.instructorFirst} ${o.instructorLast ?? ""}`
-            : "TBA",
-          quality: o.avgRating,
-        },
-        creditHours: o.creditHours,
-        classes: o.meetings.map((m) => {
-          const days: DayOfWeek[] = (
-            [
-              m.monday && "MONDAY",
-              m.tuesday && "TUESDAY",
-              m.wednesday && "WEDNESDAY",
-              m.thursday && "THURSDAY",
-              m.friday && "FRIDAY",
-              m.saturday && "SATURDAY",
-              m.sunday && "SUNDAY",
-            ] as (DayOfWeek | false)[]
-          ).filter((d): d is DayOfWeek => d !== false);
-
-          return {
-            crn: o.crn,
-            days,
-            startTime: m.startTime,
-            endTime: m.endTime,
-            buildingName: m.buildingDesc ?? "",
-            campus: o.campusAbbr,
-            buildingNumber: String(m.buildingLat ?? ""),
-            latitude: m.buildingLat ?? undefined,
-            longitude: m.buildingLon ?? undefined,
-          };
-        }),
-      })),
-    }),
+    ([courseCode, sections]) => ({ courseCode, sections }),
   );
 
   const soft: SConstraints = {
