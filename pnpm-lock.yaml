@@ -203,6 +203,9 @@ importers:
       '@devdogsuga/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@devdogsuga/newsletter':
+        specifier: workspace:*
+        version: link:../../packages/newsletter
       '@devdogsuga/og':
         specifier: workspace:*
         version: link:../../packages/og
@@ -320,6 +323,9 @@ importers:
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
+      jszip:
+        specifier: 3.10.1
+        version: 3.10.1
       lucide-react:
         specifier: ^1.33.0
         version: 1.33.0(react@19.2.8)
@@ -347,6 +353,9 @@ importers:
       postgres:
         specifier: 'catalog:'
         version: 3.4.9
+      qrcode:
+        specifier: 1.5.4
+        version: 1.5.4
       radix-ui:
         specifier: 'catalog:'
         version: 1.6.7(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -465,6 +474,9 @@ importers:
       '@types/papaparse':
         specifier: 'catalog:'
         version: 5.5.2
+      '@types/qrcode':
+        specifier: ^1.5.6
+        version: 1.5.6
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.18
@@ -786,6 +798,9 @@ importers:
       '@devdogsuga/env':
         specifier: workspace:*
         version: link:../env
+      '@devdogsuga/newsletter':
+        specifier: workspace:*
+        version: link:../newsletter
       '@devdogsuga/og':
         specifier: workspace:*
         version: link:../og
@@ -804,9 +819,6 @@ importers:
       prettier:
         specifier: 3.9.6
         version: 3.9.6
-      qrcode:
-        specifier: 1.5.4
-        version: 1.5.4
       satori:
         specifier: ^0.33.4
         version: 0.33.4
@@ -823,18 +835,12 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.2.0
-      '@types/qrcode':
-        specifier: ^1.5.6
-        version: 1.5.6
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.18
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.11(vitest@4.1.11)
-      jsqr:
-        specifier: 1.4.0
-        version: 1.4.0
       react:
         specifier: 'catalog:'
         version: 19.2.8
@@ -975,6 +981,40 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.2.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.1.5(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
+
+  packages/newsletter:
+    dependencies:
+      '@devdogsuga/og':
+        specifier: workspace:*
+        version: link:../og
+      react:
+        specifier: 'catalog:'
+        version: 19.2.8
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.8(react@19.2.8)
+    devDependencies:
+      '@devdogsuga/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.2.0
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.4(@types/react@19.2.18)
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.11(vitest@4.1.11)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -7377,9 +7417,6 @@ packages:
 
   jsonfile@6.2.1:
     resolution: {integrity: sha512-zwOTdL3rFQ/lRdBnntKVOX6k5cKJwEc1HdilT71BWEu7J41gXIB2MRp+vxduPSwZJPWBxEzv4yH1wYLJGUHX4Q==}
-
-  jsqr@1.4.0:
-    resolution: {integrity: sha512-dxLob7q65Xg2DvstYkRpkYtmKm2sPJ9oFhrhmudT1dZvNFFTlroai3AWSpLey/w5vMcLBXRgOJsbXpdN9HzU/A==}
 
   jsx-ast-utils@3.3.5:
     resolution: {integrity: sha512-ZZow9HBI5O6EPgSJLUb8n2NKgmVWTwCvHGwFuJlMjvLFqlGG6pjirPhtdsseaLZjSibD8eegzmYpUZwoIlj2cQ==}
@@ -16314,8 +16351,6 @@ snapshots:
       universalify: 2.0.1
     optionalDependencies:
       graceful-fs: 4.2.11
-
-  jsqr@1.4.0: {}
 
   jsx-ast-utils@3.3.5:
     dependencies:

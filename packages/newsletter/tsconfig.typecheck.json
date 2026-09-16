@@ -1,0 +1,11 @@
+{
+  // `pnpm typecheck` covers the tests and the vitest config too, which
+  // tsconfig.json cannot include: anything under `rootDir` is emitted, and a
+  // `.test.js` inside `dist` is dead weight the platform would still bundle.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src", "vitest.config.ts"]
+}

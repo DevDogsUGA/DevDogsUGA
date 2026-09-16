@@ -20,17 +20,17 @@ const TEAM_ID = 4815162;
 
 describe("per-team ruleset", () => {
   it("restricts exactly the team's own branch", () => {
-    const payload = teamRulesetPayload(COMP, "lantern", TEAM_ID);
+    const payload = teamRulesetPayload(COMP, "sicem", TEAM_ID);
 
     expect(payload.conditions.ref_name.include).toEqual([
-      "refs/heads/team/2026-fall/w02/study-group-finder/lantern",
+      "refs/heads/team/2026-fall/w02/study-group-finder/sicem",
     ]);
     expect(payload.enforcement).toBe("active");
     expect(payload.target).toBe("branch");
   });
 
   it("names the team as the only actor allowed past it", () => {
-    const payload = teamRulesetPayload(COMP, "lantern", TEAM_ID);
+    const payload = teamRulesetPayload(COMP, "sicem", TEAM_ID);
 
     expect(payload.bypass_actors).toEqual([
       { actor_id: TEAM_ID, actor_type: "Team", bypass_mode: "always" },
@@ -40,7 +40,7 @@ describe("per-team ruleset", () => {
   it("restricts updates, which is the rule the isolation rests on", () => {
     // Without `update` the ruleset enforces nothing that matters: the team grant
     // is repository-wide, so every other competition team can already push here.
-    const types = teamRulesetPayload(COMP, "lantern", TEAM_ID).rules.map(
+    const types = teamRulesetPayload(COMP, "sicem", TEAM_ID).rules.map(
       (r) => r.type,
     );
     expect(types).toContain("update");
@@ -51,7 +51,7 @@ describe("per-team ruleset", () => {
     // `creation` would be inert (the branch is cut first) and would break the
     // recovery path. `non_fast_forward` and `pull_request` aggregate across
     // rulesets, so they belong on the integration branch, not here.
-    const types = teamRulesetPayload(COMP, "lantern", TEAM_ID).rules.map(
+    const types = teamRulesetPayload(COMP, "sicem", TEAM_ID).rules.map(
       (r) => r.type,
     );
     expect(types).not.toContain("creation");
@@ -60,18 +60,18 @@ describe("per-team ruleset", () => {
   });
 
   it("uses an exact ref, so one team's ruleset cannot govern another's branch", () => {
-    // The regression this exists for: `team/<comp>/lantern` is a prefix of
-    // `team/<comp>/lantern-2`. Under a glob, lantern's ruleset would match
-    // lantern-2's branch AND name lantern as its bypass actor, handing one team
+    // The regression this exists for: `team/<comp>/sicem` is a prefix of
+    // `team/<comp>/sicem-2`. Under a glob, sicem's ruleset would match
+    // sicem-2's branch AND name sicem as its bypass actor, handing one team
     // push access to another's work, with both rulesets reading correctly in
     // isolation.
-    const include = teamRulesetPayload(COMP, "lantern", TEAM_ID).conditions
+    const include = teamRulesetPayload(COMP, "sicem", TEAM_ID).conditions
       .ref_name.include;
 
     expect(include).toHaveLength(1);
     expect(include[0]).not.toContain("*");
     expect(include[0]).not.toBe(
-      "refs/heads/team/2026-fall/w02/study-group-finder/lantern-2",
+      "refs/heads/team/2026-fall/w02/study-group-finder/sicem-2",
     );
   });
 
@@ -79,11 +79,11 @@ describe("per-team ruleset", () => {
     // Rulesets are addressed by numeric id, which nothing persists, and
     // createRepoRuleset does not reject a duplicate name. A name that cannot be
     // recomputed makes re-provisioning create a second ruleset over one branch.
-    expect(teamRulesetName(COMP, "lantern")).toBe(
-      "team/2026-fall/w02/study-group-finder/lantern",
+    expect(teamRulesetName(COMP, "sicem")).toBe(
+      "team/2026-fall/w02/study-group-finder/sicem",
     );
-    expect(teamRulesetPayload(COMP, "lantern", TEAM_ID).name).toBe(
-      teamRulesetName(COMP, "lantern"),
+    expect(teamRulesetPayload(COMP, "sicem", TEAM_ID).name).toBe(
+      teamRulesetName(COMP, "sicem"),
     );
   });
 });

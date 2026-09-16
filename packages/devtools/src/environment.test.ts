@@ -19,7 +19,7 @@ import {
   type Known,
 } from "./environment.js";
 
-const CONDITIONS: Condition[] = ["docker", "stack-running", "stack-stopped"];
+const CONDITIONS: Condition[] = ["docker", "instance-running", "instance-stopped"];
 
 /** An environment with one fact set and the rest unreadable. */
 function withStack(stack: Known): Environment {
@@ -31,13 +31,13 @@ describe("holds", () => {
     expect(holds("docker", { ...UNKNOWN_ENVIRONMENT, docker: "yes" })).toBe(
       "yes",
     );
-    expect(holds("stack-running", withStack("yes"))).toBe("yes");
-    expect(holds("stack-running", withStack("no"))).toBe("no");
+    expect(holds("instance-running", withStack("yes"))).toBe("yes");
+    expect(holds("instance-running", withStack("no"))).toBe("no");
   });
 
   it("negates a stack it can read", () => {
-    expect(holds("stack-stopped", withStack("no"))).toBe("yes");
-    expect(holds("stack-stopped", withStack("yes"))).toBe("no");
+    expect(holds("instance-stopped", withStack("no"))).toBe("yes");
+    expect(holds("instance-stopped", withStack("yes"))).toBe("no");
   });
 
   /**
@@ -58,11 +58,11 @@ describe("isOffered", () => {
   });
 
   it("withholds one whose condition is definitively unmet", () => {
-    expect(isOffered({ when: "stack-running" }, withStack("no"))).toBe(false);
+    expect(isOffered({ when: "instance-running" }, withStack("no"))).toBe(false);
   });
 
   it("offers one whose condition holds", () => {
-    expect(isOffered({ when: "stack-running" }, withStack("yes"))).toBe(true);
+    expect(isOffered({ when: "instance-running" }, withStack("yes"))).toBe(true);
   });
 
   it("offers everything on a machine it cannot read", () => {
@@ -81,24 +81,24 @@ describe("blockedBecause", () => {
   });
 
   it("explains an unmet need in a phrase that finishes a hint", () => {
-    expect(blockedBecause({ needs: "stack-running" }, withStack("no"))).toBe(
-      "the local stack is not running",
+    expect(blockedBecause({ needs: "instance-running" }, withStack("no"))).toBe(
+      "Supabase is not running on this machine",
     );
   });
 
   it("stays quiet when the need is met, or unreadable", () => {
     expect(
-      blockedBecause({ needs: "stack-running" }, withStack("yes")),
+      blockedBecause({ needs: "instance-running" }, withStack("yes")),
     ).toBeNull();
     expect(
-      blockedBecause({ needs: "stack-running" }, UNKNOWN_ENVIRONMENT),
+      blockedBecause({ needs: "instance-running" }, UNKNOWN_ENVIRONMENT),
     ).toBeNull();
   });
 
   it("has a phrase for every condition", () => {
     for (const condition of CONDITIONS) {
       const unmet: Environment = { docker: "no", stack: "yes", envFile: "no" };
-      // `stack-stopped` is the one unmet when the stack is UP, so this
+      // `instance-stopped` is the one unmet when the stack is UP, so this
       // environment leaves exactly one condition met and the rest blocked:
       // enough to prove no condition renders as `undefined`.
       const reason = blockedBecause({ needs: condition }, unmet);

@@ -474,7 +474,7 @@ export function renderInit(
         ]
       : []),
     "# Fill in the values below. The local Supabase stack supplies the whole",
-    "# connection block: `pnpm devtools link` starts it and writes",
+    "# connection block: `pnpm devtools db start` starts it and writes",
     "# .env.generated, which overlays this file while the stack is running.",
     ...renderBody(sections ? keysForSections(sections) : undefined),
     "",
@@ -662,7 +662,7 @@ export async function runEnvInit(
   log.success(`Created ${file} (${target}).`);
   log.info(
     target === "development"
-      ? "Fill in the values, or run `pnpm devtools link` to start the local " +
+      ? "Fill in the values, or run `pnpm devtools db start` to start the local " +
           "stack — it supplies the whole connection block via .env.generated."
       : "Every value is blank but the `$VAR` derivations, which are how those " +
           "values are built rather than a guess at them. " +

@@ -18,8 +18,9 @@ describe("the top level", () => {
   it("fits on a screen", () => {
     // The old one was 190. A bound rather than a snapshot: this should be free
     // to grow a command without a test edit, and not free to grow a section.
-    // 48 lines with `images`; the headroom is for commands, not for a group.
-    expect(root.split("\n").length).toBeLessThan(51);
+    // Raised from 51 → 62 (Phase 4: Database group) → 68 (Phase 5: planner +
+    // signing-key moved to Database/infra scope) → 70 (Phase 7: completions).
+    expect(root.split("\n").length).toBeLessThan(70);
   });
 
   it("names every top-level command", () => {
@@ -29,27 +30,46 @@ describe("the top level", () => {
   });
 
   /**
-   * "Supabase" names both the containers and the database inside them, and
-   * `restart` and `reset` act on one each. The headings are what stop a
-   * six-line list from making the reader guess which is which.
+   * The merged "Database" group renders as a single plain line at the root —
+   * `db` is its only command, and a group with no scoped commands of its own
+   * gets no headings. The four layers `db` spans now show up one level down,
+   * in `db --help`, tested next.
    */
-  it("heads each layer of the Supabase group", () => {
-    for (const scope of Object.values(SCOPES)) {
-      expect(root).toContain(`  ${scope.help}:`);
-    }
+  it("renders the Database group as one plain line at the root", () => {
+    const start = root.indexOf("\nDatabase:");
+    const end = root.indexOf("\n\n", start + 1);
+    const database = root.slice(start, end === -1 ? undefined : end);
+    // `split("\n")` on a string starting with "\n" gives ["", "Database:", …];
+    // skip both the empty leader and the heading itself.
+    const entries = database.split("\n").slice(2).filter(Boolean);
 
-    const supabase = root.slice(root.indexOf("\nSupabase:"));
-    const stack = supabase.indexOf(SCOPES.supabase.help);
-    const database = supabase.indexOf(SCOPES.postgres.help);
-
-    // The stack's own commands come first; the database sits inside it.
-    expect(stack).toBeGreaterThan(-1);
-    expect(database).toBeGreaterThan(stack);
+    expect(database).not.toContain(SCOPES.machine.help);
+    expect(entries.length).toBe(1);
+    expect(entries[0]).toContain("db");
   });
 
-  it("leaves a group with one layer unheaded", () => {
-    // Only the Supabase group splits. Every other group is a flat block, and
-    // adding a heading to one would be a change nobody asked this to make.
+  /**
+   * "db" names both the containers and the database inside them, and
+   * `restart` and `reset` act on one each. The headings are what stop a
+   * fifteen-line list from making the reader guess which is which.
+   */
+  it("heads each layer of db, in scope order", () => {
+    const db = renderHelp(["db"]);
+    const machine = db.indexOf(SCOPES.machine.help);
+    const repo = db.indexOf(SCOPES.repo.help);
+    const endpoint = db.indexOf(SCOPES.endpoint.help);
+    const infra = db.indexOf(SCOPES.infra.help);
+
+    // Machine, then repo, then endpoint, then infra — declaration order.
+    expect(machine).toBeGreaterThan(-1);
+    expect(repo).toBeGreaterThan(machine);
+    expect(endpoint).toBeGreaterThan(repo);
+    expect(infra).toBeGreaterThan(endpoint);
+  });
+
+  it("leaves a single-scope group unheaded", () => {
+    // Groups that span only one layer (like Moderation) should not have a
+    // scope heading — every entry would sit under it and the heading adds noise.
     // Structural rather than "contains no colon": a summary may hold one.
     const body = root
       .slice(root.indexOf("\nModeration:") + 1)

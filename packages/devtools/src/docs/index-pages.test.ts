@@ -122,12 +122,12 @@ describe("runDocsIndex", () => {
   });
 
   /**
-   * The property both deploy scripts rely on. Without `--force` and with
-   * nobody to ask, a non-local URL must not be written to at all. That is what
-   * stands between a contributor's working copy and the live search index,
+   * The property both deploy scripts rely on. Without `--target remote` and
+   * with nobody to ask, a non-local URL must not be written to at all. That is
+   * what stands between a contributor's working copy and the live search index,
    * since the delete removes every path the copy does not have.
    */
-  it("refuses a non-local database when it cannot ask and was not forced", async () => {
+  it("refuses a non-local database when it cannot ask and --target remote was not given", async () => {
     process.env.DB_URL = "postgresql://u:p@db.abc.supabase.co:5432/postgres";
     const db = recordingDb();
     const wasTty = process.stdin.isTTY;
@@ -151,12 +151,12 @@ describe("runDocsIndex", () => {
     expect(db.log).toEqual([]);
   });
 
-  it("writes to a non-local database when forced", async () => {
+  it("writes to a non-local database when --target remote is given", async () => {
     process.env.DB_URL = "postgresql://u:p@db.abc.supabase.co:5432/postgres";
     const db = recordingDb();
 
     await runDocsIndex({
-      force: true,
+      target: "remote",
       connect: () => db,
       load: () => Promise.resolve(PAGES),
     });

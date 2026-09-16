@@ -21,16 +21,32 @@ import type { env } from "~/env";
 export type CronEnv = Pick<typeof env, "CRON_SECRET" | "BASE_URL">;
 
 /**
+ * Cron expression to the routes it fires and a one-line description.
+ *
  * Route-group segments in parentheses contribute no URL segment, so the
  * handlers under `src/app/(api)/cron/...` are served at `/cron/...`.
+ *
+ * Keyed by expression so `devtools cron list` can reconcile this map against
+ * `wrangler.jsonc triggers.crons` and fire each key's routes as a faithful
+ * tick. A flat array and a wildcard `event.cron` match would double-fire every
+ * route if a second schedule were ever added — the keyed shape closes that bug.
  */
-const SCRAPE_ROUTES = ["/cron/scrape-registrar", "/cron/scrape-rmp"];
+export const CRON_ROUTES: Record<string, { routes: string[]; label: string }> =
+  {
+    "5 14 * * *": {
+      label: "Daily schedule scrape: registrar and RMP",
+      routes: ["/cron/scrape-registrar", "/cron/scrape-rmp"],
+    },
+  };
 
 export async function scheduled(
-  _event: { cron: string },
+  event: { cron: string },
   env: CronEnv,
 ): Promise<void> {
-  for (const path of SCRAPE_ROUTES) {
+  const entry = CRON_ROUTES[event.cron];
+  if (!entry) return;
+
+  for (const path of entry.routes) {
     const url = `${env.BASE_URL}${path}`;
     try {
       const response = await fetch(url, {

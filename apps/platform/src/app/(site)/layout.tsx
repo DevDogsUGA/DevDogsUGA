@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import AnnouncementBanner from "~/components/AnnouncementBanner";
+import AttendanceBanner from "~/components/AttendanceBanner";
 import AppSwitcher from "~/components/AppSwitcher";
 import AutoOpen from "~/components/AppSwitcher/AutoOpen";
 import { AppSwitcherProvider } from "~/components/AppSwitcher/provider";
@@ -61,6 +62,10 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
             cannot live in this client component. Outside the flex column
             because a fixed element contributes nothing to that layout. */}
         <AnnouncementBanner />
+
+        <Suspense>
+          <AttendanceBanner />
+        </Suspense>
 
         <AppSwitcher />
         <Suspense>

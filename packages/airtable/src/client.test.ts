@@ -55,6 +55,22 @@ describe("listRecords", () => {
   });
 });
 
+describe("getRecord", () => {
+  it("fetches one record with fields keyed by stable IDs", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ id: "rec1", fields: { fld1: "value" } }),
+    );
+
+    await expect(client(fetchMock).getRecord("tbl1", "rec1")).resolves.toEqual({
+      id: "rec1",
+      fields: { fld1: "value" },
+    });
+    expect(fetchMock.mock.calls[0]![0]).toBe(
+      "https://api.airtable.com/v0/appX/tbl1/rec1?returnFieldsByFieldId=true",
+    );
+  });
+});
+
 describe("upsertRecords", () => {
   it("batches at 10, which is the API's cap rather than a tunable", async () => {
     const fetchMock = vi.fn(async () =>

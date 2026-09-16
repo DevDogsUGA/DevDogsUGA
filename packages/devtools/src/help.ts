@@ -55,20 +55,23 @@ function columns(rows: readonly [string, string][]): string[] {
 }
 
 /**
- * A group's commands, split into scope blocks when it declares any.
+ * A list of commands, split into scope blocks when any of them declares one.
  *
- * Only the Supabase group does. "Supabase" is one word covering the stack and
- * the Postgres database inside it, and a flat list of six leaves the reader to
- * work out which of `restart` and `reset` is which, the distinction that costs
- * people an afternoon. A group with no scopes renders as it did: one block, one
- * indent, no headings.
+ * Used at two levels: a GROUP's own commands (no group has scoped commands
+ * today — `db` folded the old "Supabase" group's scopes into itself), and a
+ * command's own SUBCOMMANDS (`db`'s: `start`/`connect`/`stop`/`restart` on
+ * this machine, `migration` in the repo, `status`/`migrate`/`reset`/… on an
+ * endpoint, `planner`/`signing-key` naming their own connection). Either way,
+ * a flat list leaves the reader to work out which of `restart` and `reset` is
+ * which, the distinction that costs people an afternoon. A list with no
+ * scopes renders as it always did: one block, one indent, no headings.
  *
  * The blocks follow declaration order rather than `SCOPES` order, so the tree
- * stays the one place that decides how the group reads. The gutter is sized
- * across the whole group, not per block, so the two blocks line up with each
- * other rather than each finding its own column.
+ * stays the one place that decides how the list reads. The gutter is sized
+ * across the whole list, not per block, so every block lines up with the
+ * others rather than each finding its own column.
  */
-function groupBody(commands: readonly CommandNode[]): string[] {
+function scopedBody(commands: readonly CommandNode[]): string[] {
   if (!commands.some((command) => command.scope)) {
     return columns(childRows(commands));
   }
@@ -109,7 +112,7 @@ function renderRoot(): string {
   ];
 
   for (const group of GROUPS) {
-    lines.push("", `${group.title}:`, ...groupBody(group.commands));
+    lines.push("", `${group.title}:`, ...scopedBody(group.commands));
   }
 
   lines.push(
@@ -141,7 +144,7 @@ function renderCommand(path: readonly string[], node: CommandNode): string {
   const lines = [usage, "", node.summary];
 
   if (children.length > 0) {
-    lines.push("", "Subcommands:", ...columns(childRows(children)));
+    lines.push("", "Subcommands:", ...scopedBody(children));
   }
 
   if (options.length > 0) {

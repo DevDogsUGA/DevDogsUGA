@@ -14,7 +14,7 @@
  *
  *   main
  *    └── comp/2026-fall/w02/study-group-finder   judging target, cut from main
- *         ├── team/2026-fall/w02/study-group-finder/lantern
+ *         ├── team/2026-fall/w02/study-group-finder/sicem
  *         └── team/2026-fall/w02/study-group-finder/marble
  *
  * The week segment matters. Competitions recur per project across a semester,

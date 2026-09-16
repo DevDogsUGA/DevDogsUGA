@@ -1,0 +1,22 @@
+{
+  // Emits for production consumers, exactly like @devdogsuga/og: the platform
+  // renders these components inside a server page and the devtools CLI renders
+  // them to strings, and neither loader should have to agree on a JSX setting.
+  // There is deliberately no `devdogs-source` export condition — see the og
+  // index for the failure that rule comes from.
+  "extends": "../config/tsconfig/lib.json",
+  "compilerOptions": {
+    "lib": ["ES2025"],
+    // `react-jsx` keeps React out of every component's import list; the
+    // platform mounts these, but the CLI only ever feeds them to
+    // renderToStaticMarkup, and both consume the automatic runtime's output.
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src"],
+  // Tests are typechecked (tsconfig.typecheck.json includes them) but never
+  // emitted: `dist` is what the platform bundles into a Cloudflare Worker.
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+}

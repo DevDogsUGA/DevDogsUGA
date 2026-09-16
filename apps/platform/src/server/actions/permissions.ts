@@ -47,7 +47,7 @@ const PERMISSION_KEYS = [
   "canViewAuditLog",
   "canCreateCredentials",
   "canManageVerification",
-  "canEditAttendance",
+  "canManageAttendance",
   "canExportStars",
   "canTriggerSync",
   "canVoteAsOfficer",
@@ -98,7 +98,7 @@ const ALL_PERMISSIONS_FALSE: ResolvedPermissions = {
   canViewAuditLog: false,
   canCreateCredentials: false,
   canManageVerification: false,
-  canEditAttendance: false,
+  canManageAttendance: false,
   canExportStars: false,
   canTriggerSync: false,
   canVoteAsOfficer: false,
@@ -132,7 +132,7 @@ export async function resolveUserPermissions(
       canViewAuditLog: resolvedUserPermissions.canViewAuditLog,
       canCreateCredentials: resolvedUserPermissions.canCreateCredentials,
       canManageVerification: resolvedUserPermissions.canManageVerification,
-      canEditAttendance: resolvedUserPermissions.canEditAttendance,
+      canManageAttendance: resolvedUserPermissions.canManageAttendance,
       canExportStars: resolvedUserPermissions.canExportStars,
       canTriggerSync: resolvedUserPermissions.canTriggerSync,
       canVoteAsOfficer: resolvedUserPermissions.canVoteAsOfficer,
@@ -177,7 +177,7 @@ export async function getCallerContext(userId: string): Promise<{
       canViewAuditLog: row.canViewAuditLog,
       canCreateCredentials: row.canCreateCredentials,
       canManageVerification: row.canManageVerification,
-      canEditAttendance: row.canEditAttendance,
+      canManageAttendance: row.canManageAttendance,
       canExportStars: row.canExportStars,
       canTriggerSync: row.canTriggerSync,
       canVoteAsOfficer: row.canVoteAsOfficer,
@@ -214,8 +214,8 @@ export async function canUserManageVerification(
 ): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canManageVerification);
 }
-export async function canUserEditAttendance(userId: string): Promise<boolean> {
-  return resolveUserPermissions(userId).then((p) => p.canEditAttendance);
+export async function canUserManageAttendance(userId: string): Promise<boolean> {
+  return resolveUserPermissions(userId).then((p) => p.canManageAttendance);
 }
 export async function canUserExportStars(userId: string): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canExportStars);

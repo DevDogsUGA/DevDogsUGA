@@ -57,7 +57,7 @@ export async function runSetup(): Promise<void> {
   checks.push(
     has("docker info")
       ? "OK    Docker running (local Supabase stack available)"
-      : "INFO  Docker not running — fine against a hosted project, needed for a local stack",
+      : "INFO  Docker not running — fine against a hosted project, needed to run Supabase on this machine",
   );
 
   checks.push(
@@ -102,23 +102,23 @@ export async function runSetup(): Promise<void> {
 
   if (seededEnv) {
     log.info(
-      ".env starts blank. The local stack fills the connection block for " +
-        "you; only a hosted project needs values typed in.",
+      ".env starts blank. Supabase on this machine fills the connection block " +
+        "for you; only a hosted project needs values typed in.",
     );
   }
 
   note(
     [
       "1. Run `pnpm devtools` again and choose:",
-      "     Supabase → link   — boots the local Docker stack and writes",
-      "                         .env.generated (no credentials needed)",
+      "     Database → start   — boots the local Docker stack and writes",
+      "                          .env.generated (no credentials needed)",
       "",
       "2. pnpm dev --filter platform",
       "",
       "Working against a hosted Supabase project instead? Fill in .env",
       "(dashboard → Project Settings), then:",
-      "  pnpm devtools link --remote",
-      "  pnpm --filter @devdogsuga/supabase generate-types",
+      "  pnpm devtools db connect <project-ref>",
+      "  pnpm devtools db types",
     ].join("\n"),
     "Next steps",
   );

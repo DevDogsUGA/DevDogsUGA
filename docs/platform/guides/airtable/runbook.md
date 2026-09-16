@@ -6,6 +6,11 @@ order: 3
 
 # Runbook
 
+The attendance/reflection replacement has a separate, deliberately deferred
+[dashboard checklist](/docs/platform/guides/airtable/attendance-dashboard-setup).
+It covers field permissions, the attributable Officer Changes form, the
+production-only automation, legacy-field cleanup, and the final rehearsal.
+
 Standing a base up from nothing, in order — several of these fail confusingly out of order. Follow it once per base; after that, adding a field is one `apply` — see [Base setup](/docs/platform/guides/airtable/base-setup). For what a field declaration means, start at the [registry](/docs/platform/guides/airtable). Every credential named here is routed by [Env](/docs/toolkit/guides/env).
 
 ## The order
@@ -13,11 +18,11 @@ Standing a base up from nothing, in order — several of these fail confusingly 
 1. **Create the workspace**, separate from other club Airtable use, so the sync's call budget is not shared with project management.
 2. **Create the bootstrap token** on that workspace: `schema.bases:read`, `schema.bases:write`, `data.records:read`, `data.records:write`. ⚠️ **Mint it as whoever created the workspace** — base creation needs the workspace creator role, which no scope can grant; a collaborator's token fails only at step 4.
 3. **Put it in `.env` as `AIRTABLE_APPLY_PAT`.** That is the write-capable name the tooling resolves, and it stays in your file only until step 10. There is no separate scaffolding key: a fourth token existed for this and was removed, because the only job it kept after step 4 was one a read can do.
-4. **`pnpm devtools airtable apply`** creates the seven tables and their fields, writes the discovered ids into `registry.ts`, formats it with Prettier, and refreshes `schema-snapshot.json`. Use `--dry-run` first: the first real run is against a base somebody cares about. Then commit both files — this is what replaces the `todo()` placeholders. Record the new base's id as `BASE_ID` in `registry.ts` while you are there; it is committed beside the ids this step writes, not routed through the env system.
+4. **`pnpm devtools airtable apply`** creates every missing registered table and field, writes discovered IDs into `registry.ts`, formats it, and refreshes `schema-snapshot.json`. Use `--dry-run` first: a real run targets a base somebody cares about. Commit both files; this replaces the `todo()` placeholders.
 5. **Walk the manual checklist** `apply` prints — field editing permissions first, since nothing can check them for you. Airtable's default `Table 1` is deleted here too.
 6. **`pnpm devtools airtable verify`** must exit clean. If it does not, fix the base rather than the registry: the registry is what the code agrees with.
 7. **Author the projects** directly in the Projects table — a Name each, and an Order if the schedule should list them in a particular sequence. They used to arrive by themselves, pushed from Postgres, which is why this step used to say "seed with one sync pass"; the table is officer-authored now. Nothing else can create one.
-8. **Build the attendance form** against the Attendance table — a MyID field and a **Meeting** link at minimum, with the Workshop link beside it and **not required**. `Source` distinguishes a form response from a co-branded import. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance) for why the workshop is optional: an Interest Meeting, a Social and a judging night run no workshops, and a form that demanded one could not describe them.
+8. **Build the restricted Officer Changes form and production automation** from the [dashboard checklist](/docs/platform/guides/airtable/attendance-dashboard-setup).
 9. **Only then author a meeting.** Earlier produces a workshop linked to nothing.
 10. **Mint the sync token** — same workspace, everything except `schema.bases:write` — set it as `AIRTABLE_SYNC_PAT`, delete `AIRTABLE_APPLY_PAT` from `.env`, and revoke the bootstrap token. It does not come back: later schema changes go through `deploy airtable-apply`, which holds the apply token in the `production-apply` environment behind required reviewers.
 11. **Grant an officer role `canTriggerSync`** and run one pass from the console.

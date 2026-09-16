@@ -43,6 +43,7 @@ export function createOptionsFor(
     case "multilineText":
     case "email":
     case "url":
+    case "createdBy":
       return undefined;
 
     // Integers. Every number the registry pushes is a count or a point total;

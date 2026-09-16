@@ -13,33 +13,32 @@ There is no separate preview tool. Docs are compiled into the platform app, so *
 Two terminals:
 
 ```bash
-pnpm dev        # the app
-pnpm dev:docs   # re-parses docs/ on every save
+pnpm dev                                          # the app
+turbo watch build --filter=@devdogsuga/docs       # re-parses docs/ on every save
 ```
 
-`pnpm dev:docs` is `turbo watch build --filter=@devdogsuga/docs`. On save it re-runs the docs package's build, which rewrites the module the routes import; Turbopack picks up the changed module and hot-reloads the page. No restart.
+The watcher re-runs the docs package's build on every save, which rewrites the module the routes import; Turbopack picks up the changed module and hot-reloads the page. No restart.
 
 Then open <http://localhost:3000/docs>.
 
 > [!TIP]
-> `pnpm dev` alone still works — you just have to restart it to pick up doc edits. Add `pnpm dev:docs` when you are actually writing.
+> `pnpm dev` alone still works — you just have to restart it to pick up doc edits. Run the watcher in a second terminal when you are actually writing.
 
 ## Searching your local docs
 
 Search reads a Postgres index rather than the compiled module, so it takes one extra step to see your working copy. With the local Supabase stack running:
 
 ```bash
-pnpm --filter platform docs:index
+pnpm --filter @devdogsuga/docs build   # build the docs artifact first
+pnpm devtools docs index               # push it into the local search index
 ```
 
-That indexes your working copy into the local stack, so a page you just wrote is findable in the search dialog (`Ctrl`/`⌘` + `K`). Re-run it after further edits — the dev server does not re-index for you. Like every `with-env`-wrapped script it targets the local stack whenever one is running, and prints which env files it loaded.
-
-The command itself is `pnpm devtools docs index`. The `pnpm --filter platform docs:index` spelling is an alias that builds the docs artifact first and then runs it, which is why it is the one to reach for — the bare command reads whatever was last built.
+That indexes your working copy into the local stack, so a page you just wrote is findable in the search dialog (`Ctrl`/`⌘` + `K`). Re-run it after further edits — the dev server does not re-index for you. Like every `with-env`-wrapped command it targets the local stack whenever one is running, and prints which env files it loaded.
 
 > [!WARNING]
 > Without the local stack running, `pnpm dev` and `docs index` point at the **deployed** database. Pages still render from your working copy, but search results come from whatever that database has indexed. Boot the local stack (`pnpm devtools link`) when you care about search.
 >
-> The indexer will not write to a non-local database on its own. It deletes the rows for pages that no longer exist, so running it against a deployed database from a working copy would replace the live search index with your local state. At a terminal it asks first; with no TTY — in a script or a CI job, where there is nobody to ask — it refuses and exits non-zero unless given `--force`. That flag is how the deploy scripts say yes.
+> The indexer will not write to a non-local database on its own. It removes rows for pages that no longer exist, so running it against a deployed database from a working copy would replace the live search index with your local state. At a terminal it asks first; with no TTY — in a script or a CI job, where there is nobody to ask — it refuses and exits non-zero unless `--target remote` is given. That flag is how the deploy scripts say yes.
 
 ## What you are checking
 

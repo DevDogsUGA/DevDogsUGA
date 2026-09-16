@@ -68,6 +68,16 @@
   "vars": {
     "DEPLOY_ENV": "development",
   },
+  "ratelimits": [
+    {
+      "name": "ATTENDANCE_RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 10,
+        "period": 60,
+      },
+    },
+  ],
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
@@ -100,6 +110,16 @@
       "vars": {
         "DEPLOY_ENV": "staging",
       },
+      "ratelimits": [
+        {
+          "name": "ATTENDANCE_RATE_LIMITER",
+          "namespace_id": "1002",
+          "simple": {
+            "limit": 10,
+            "period": 60,
+          },
+        },
+      ],
       // Must equal this environment's worker name -- a self-reference pointing
       // at production would have staging serve production's cached pages.
       "services": [
@@ -166,6 +186,16 @@
       "vars": {
         "DEPLOY_ENV": "production",
       },
+      "ratelimits": [
+        {
+          "name": "ATTENDANCE_RATE_LIMITER",
+          "namespace_id": "1003",
+          "simple": {
+            "limit": 10,
+            "period": 60,
+          },
+        },
+      ],
       "services": [
         {
           "binding": "WORKER_SELF_REFERENCE",

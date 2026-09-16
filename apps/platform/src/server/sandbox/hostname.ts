@@ -15,7 +15,7 @@ import type { DeployEnvironment } from "@devdogsuga/env";
  * staging. `apps/sandbox/wrangler.jsonc` routes staging at
  * `*-sandbox-staging.devdogsuga.org/*`, nothing generated a hostname matching
  * it, and a staging environment provisioned as
- * `lantern-abc-sandbox.devdogsuga.org` matched PRODUCTION's wildcard instead.
+ * `sicem-abc-sandbox.devdogsuga.org` matched PRODUCTION's wildcard instead.
  * The production Worker resolved the token against the production database and
  * answered `410`, so the failure named the member's token, not the routing.
  *

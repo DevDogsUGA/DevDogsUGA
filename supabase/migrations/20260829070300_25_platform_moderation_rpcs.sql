@@ -465,3 +465,102 @@ begin
   return query select true;
 end;
 $$;
+
+-- ============================================================
+-- General audit ledger integration
+-- ============================================================
+--
+-- Domain tables remain the source of moderation workflow state. These
+-- triggers add a chronological projection to auditEvents without copying
+-- report descriptions, snapshots, or moderator notes into the general feed.
+-- Triggering on the durable rows also covers the browser RPCs, console calls,
+-- and future server-side callers through the same path.
+
+create or replace function "platform".audit_report_created()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into "platform"."auditEvents" (
+    "actorType", "actorUserId", "source", "action",
+    "targetType", "targetId", "metadata"
+  ) values (
+    'user', new."reporterUserId", 'platform', 'moderation.report_created',
+    'report', new."id"::text,
+    jsonb_build_object(
+      'appId', new."appId",
+      'contentType', new."contentType",
+      'reason', new."reason"
+    )
+  );
+  return new;
+end;
+$$;
+
+create trigger "reports_append_audit_event"
+  after insert on "platform"."reports"
+  for each row execute function "platform".audit_report_created();
+
+create or replace function "platform".audit_report_corroborated()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into "platform"."auditEvents" (
+    "actorType", "actorUserId", "source", "action",
+    "targetType", "targetId", "metadata"
+  ) values (
+    'user', new."reporterUserId", 'platform', 'moderation.report_corroborated',
+    'report', new."reportId"::text,
+    jsonb_build_object('reason', new."reason")
+  );
+  return new;
+end;
+$$;
+
+create trigger "reportCorroborations_append_audit_event"
+  after insert on "platform"."reportCorroborations"
+  for each row execute function "platform".audit_report_corroborated();
+
+create or replace function "platform".audit_report_resolved()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  event_action text;
+begin
+  event_action := case
+    when new."subjectAction" = 'no_action'
+     and new."filerAction" = 'no_action'
+     and new."contentAction" = 'no_action'
+    then 'moderation.report_dismissed'
+    else 'moderation.report_resolved'
+  end;
+
+  insert into "platform"."auditEvents" (
+    "actorType", "actorUserId", "source", "action",
+    "targetType", "targetId", "metadata"
+  ) values (
+    'user', new."moderatorUserId", 'platform', event_action,
+    'report', new."reportId"::text,
+    jsonb_build_object(
+      'resolutionId', new."id",
+      'subjectAction', new."subjectAction",
+      'filerAction', new."filerAction",
+      'contentAction', new."contentAction",
+      'appliedGlobally', new."appliedGlobally"
+    )
+  );
+  return new;
+end;
+$$;
+
+create trigger "reportResolutions_append_audit_event"
+  after insert on "platform"."reportResolutions"
+  for each row execute function "platform".audit_report_resolved();

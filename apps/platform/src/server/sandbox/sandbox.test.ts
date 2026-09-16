@@ -124,8 +124,8 @@ describe("buildProxyHostname", () => {
   const PROD_SUFFIX = sandboxSuffix("production");
 
   it("produces exactly one label above the apex", () => {
-    const host = buildProxyHostname("Lantern", { ...PROD, suffix: "abc123" });
-    expect(host).toBe("lantern-abc123-sandbox.devdogsuga.org");
+    const host = buildProxyHostname("Sicem", { ...PROD, suffix: "abc123" });
+    expect(host).toBe("sicem-abc123-sandbox.devdogsuga.org");
     // The constraint that keeps it inside the free wildcard certificate.
     expect(host.slice(0, -PROD_SUFFIX.length)).not.toContain(".");
   });
@@ -140,7 +140,7 @@ describe("buildProxyHostname", () => {
   });
 
   it.each([
-    "Lantern",
+    "Sicem",
     "  spaces  everywhere  ",
     "UPPER CASE",
     "emoji \u{1F389} name",
@@ -165,8 +165,8 @@ describe("buildProxyHostname", () => {
   it("is unguessable from the team name alone", () => {
     // The unique constraint handles collisions. This is so that knowing a
     // team exists does not tell you where its instance lives.
-    const a = buildProxyHostname("Lantern", PROD);
-    const b = buildProxyHostname("Lantern", PROD);
+    const a = buildProxyHostname("Sicem", PROD);
+    const b = buildProxyHostname("Sicem", PROD);
     expect(a).not.toBe(b);
   });
 
@@ -189,11 +189,11 @@ describe("buildProxyHostname", () => {
     // matching that route, so staging traffic hit the PRODUCTION Worker, which
     // resolved the token against the production database and answered 410.
     it("builds a staging hostname the staging Worker route matches", () => {
-      const host = buildProxyHostname("Lantern", {
+      const host = buildProxyHostname("Sicem", {
         deployEnv: "staging",
         suffix: "abc123",
       });
-      expect(host).toBe("lantern-abc123-sandbox-staging.devdogsuga.org");
+      expect(host).toBe("sicem-abc123-sandbox-staging.devdogsuga.org");
       // The wildcard is `*-sandbox-staging.devdogsuga.org`, one label deep.
       expect(host.endsWith("-sandbox-staging.devdogsuga.org")).toBe(true);
       expect(host.slice(0, -sandboxSuffix("staging").length)).not.toContain(
@@ -202,7 +202,7 @@ describe("buildProxyHostname", () => {
     });
 
     it("does not let a staging hostname match the production route", () => {
-      const staging = buildProxyHostname("Lantern", {
+      const staging = buildProxyHostname("Sicem", {
         deployEnv: "staging",
         suffix: "abc123",
       });
@@ -213,7 +213,7 @@ describe("buildProxyHostname", () => {
     });
 
     it("does not let a production hostname match the staging route", () => {
-      const production = buildProxyHostname("Lantern", {
+      const production = buildProxyHostname("Sicem", {
         ...PROD,
         suffix: "abc123",
       });
@@ -230,7 +230,7 @@ describe("buildProxyHostname", () => {
         "staging",
         "production",
       ] as const) {
-        const host = buildProxyHostname("Lantern", {
+        const host = buildProxyHostname("Sicem", {
           deployEnv,
           suffix: "abc",
         });

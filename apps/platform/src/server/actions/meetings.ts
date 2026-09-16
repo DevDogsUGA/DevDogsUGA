@@ -4,12 +4,12 @@ import { eq, sql } from "drizzle-orm";
 import { expectSession } from "~/server/auth";
 import { db } from "~/server/db";
 import { teamAwards, teams } from "~/server/db/schema";
-import { canUserEditAttendance } from "~/server/actions/permissions";
+import { canUserManageAttendance } from "~/server/actions/permissions";
 import { TeamActionError, isUniqueViolation } from "~/server/teams/errors";
 
 async function requireOfficer(): Promise<string> {
   const callerId = await expectSession();
-  if (!(await canUserEditAttendance(callerId))) {
+  if (!(await canUserManageAttendance(callerId))) {
     throw new Error("Not authorized");
   }
   return callerId;

@@ -53,7 +53,6 @@ const summaryParse = meetingsSpec.fields.summary.parse;
 const rsvpParse = meetingsSpec.fields.rsvpUrl.parse;
 const reasonParse = meetingsSpec.fields.cancellationReason.parse;
 const nameParse = meetingsSpec.fields.nameOverride.parse;
-const formParse = meetingsSpec.fields.attendanceForm.parse;
 
 function meetingFacts(raw: {
   summary?: string;
@@ -61,7 +60,6 @@ function meetingFacts(raw: {
   cancelledAt?: string;
   cancellationReason?: string;
   nameOverride?: string;
-  attendanceForm?: string;
 }): MeetingFacts {
   return {
     airtableRecordId: "recMeeting",
@@ -76,8 +74,6 @@ function meetingFacts(raw: {
     cancellationReason: reasonParse(raw.cancellationReason),
     rawNameOverride: raw.nameOverride,
     nameOverride: nameParse(raw.nameOverride),
-    rawAttendanceForm: raw.attendanceForm,
-    attendanceForm: formParse(raw.attendanceForm),
   };
 }
 
@@ -858,52 +854,6 @@ describe("meeting name", () => {
 
     expect(checkMeeting(facts).refusals).toEqual([]);
     expect(facts.nameOverride).toHaveLength(MEETING_NAME_OVERRIDE_MAX_LENGTH);
-  });
-});
-
-describe("meeting attendance form", () => {
-  it("stays silent when no form is written", () => {
-    // A meeting with no workshop has no form, and one whose officer has not
-    // made this week's yet is still a meeting.
-    expect(checkMeeting(meetingFacts({})).refusals).toEqual([]);
-  });
-
-  it("accepts an Airtable share link", () => {
-    const facts = meetingFacts({
-      attendanceForm: "https://airtable.com/shrABCDEF123456",
-    });
-
-    expect(checkMeeting(facts).refusals).toEqual([]);
-    expect(facts.attendanceForm).toBe("https://airtable.com/shrABCDEF123456");
-  });
-
-  it("refuses a form on any other host", () => {
-    // The realistic mispaste: an officer who made this week's form in Google
-    // Forms out of habit.
-    const facts = meetingFacts({
-      attendanceForm: "https://docs.google.com/forms/d/e/1FAIpQ/viewform",
-    });
-
-    const result = checkMeeting(facts);
-
-    expect(result.refusals.map((r) => r.code)).toEqual([
-      "meeting_attendance_form_host",
-    ]);
-    expect(result.rejectedFields.has("attendanceFormUrl")).toBe(true);
-    expect(facts.attendanceForm).toBeNull();
-  });
-
-  it("refuses a credential-carrying url on the allowed host", () => {
-    // `new URL` accepts this and the hostname passes, so only the shape check
-    // stops it, and `meetings_attendanceFormUrl_airtable` would reject it.
-    const facts = meetingFacts({
-      attendanceForm: "https://someone@airtable.com/shrABC",
-    });
-
-    expect(checkMeeting(facts).refusals.map((r) => r.code)).toEqual([
-      "meeting_attendance_form_host",
-    ]);
-    expect(facts.attendanceForm).toBeNull();
   });
 });
 

@@ -1,5 +1,5 @@
 /**
- * `pnpm devtools signing-key <generate|import|status> --target <t>`, the
+ * `pnpm devtools db signing-key <generate|import|status> --target <t>`, the
  * lifecycle of SUPABASE_JWT_SIGNING_KEY, the HS256 secret that
  * `deploy mint-token` signs the sandbox proxy token with.
  *
@@ -117,7 +117,7 @@ export async function runSigningKeyGenerate(
   note(
     [
       "Next:",
-      `  1. pnpm devtools signing-key import --target ${target}`,
+      `  1. pnpm devtools db signing-key import --target ${target}`,
       "     (registers it with the Supabase project, as standby)",
       `  2. pnpm devtools env push --target ${target}`,
       "     (Bitwarden + GitHub, like every other secret)",
@@ -150,7 +150,7 @@ export async function runSigningKeyImport(
   if (!secret) {
     bail(
       `${SIGNING_KEY} is empty in ${fileFor(target)} — nothing to import. ` +
-        `Run \`pnpm devtools signing-key generate --target ${target}\` first.`,
+        `Run \`pnpm devtools db signing-key generate --target ${target}\` first.`,
     );
   }
   const projectRef = doc.get("PROJECT_REF");

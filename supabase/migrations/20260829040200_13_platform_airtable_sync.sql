@@ -133,3 +133,49 @@ create policy "no_client_update" on "platform"."airtableSyncState"
   as restrictive for update to anon, authenticated using (false) with check (false);
 create policy "no_client_delete" on "platform"."airtableSyncState"
   as restrictive for delete to anon, authenticated using (false);
+
+-- ============================================================
+-- Officer command receipts
+-- ============================================================
+--
+-- The Airtable form response ID is the delivery identity. The first delivery
+-- snapshots the normalized command and its digest; retries may finish the same
+-- command but may never reinterpret an edited Airtable row as a new command.
+create table "platform"."airtableChangeReceipts" (
+  "formResponseRecordId" text not null,
+  "status"               text not null default 'processing',
+  "payload"              jsonb not null,
+  "payloadDigest"        text not null,
+  "targetType"           text not null,
+  "targetId"             text,
+  "auditEventId"         uuid,
+  "processedAt"          timestamptz,
+  "error"                text,
+  "createdAt"            timestamptz not null default now(),
+  "updatedAt"            timestamptz not null default now(),
+
+  constraint "airtableChangeReceipts_pkey" primary key ("formResponseRecordId"),
+  constraint "airtableChangeReceipts_status_choices"
+    check ("status" in ('processing', 'applied', 'rejected', 'retryable')),
+  constraint "airtableChangeReceipts_payload_bounded"
+    check (pg_column_size("payload") <= 16384),
+  constraint "airtableChangeReceipts_digest_format"
+    check ("payloadDigest" ~ '^[0-9a-f]{64}$'),
+  constraint "airtableChangeReceipts_error_length"
+    check ("error" is null or char_length("error") <= 1000),
+  constraint "airtableChangeReceipts_terminal_processed" check (
+    ("status" in ('applied', 'rejected')) = ("processedAt" is not null)
+  )
+);
+
+alter table "platform"."airtableChangeReceipts" enable row level security;
+
+create index "airtableChangeReceipts_status_updatedAt_idx"
+  on "platform"."airtableChangeReceipts" ("status", "updatedAt");
+
+create policy "no_client_insert" on "platform"."airtableChangeReceipts"
+  as restrictive for insert to anon, authenticated with check (false);
+create policy "no_client_update" on "platform"."airtableChangeReceipts"
+  as restrictive for update to anon, authenticated using (false) with check (false);
+create policy "no_client_delete" on "platform"."airtableChangeReceipts"
+  as restrictive for delete to anon, authenticated using (false);

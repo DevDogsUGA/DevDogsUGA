@@ -1,125 +1,203 @@
--- Attendance: who was in the room.
+-- Attendance, EL reflections, and their immutable revisions.
 --
--- One table, the checkInMethod enum it is the only consumer of, and four
--- policies. Keyed to the MEETING, with the workshop as a dimension rather
--- than part of the key: a member attends a meeting once however many
--- workshops it holds, so "attended twice" is unrepresentable. That is what
--- unique ("meetingId", "userId") buys, and "workshopId" stays nullable so it
--- can record which room they sat in without ever being required.
---
--- The one thing to know before editing: the only permissive policy is
--- own_select, and it is narrow on purpose. Officers read other members'
--- attendance through server actions that check canEditAttendance, never
--- through RLS. Widen own_select and the whole club's attendance is one
--- publishable anon key away from anybody who opens the network tab.
+-- Postgres owns every row in this file. Airtable receives projections and
+-- submits commands, but is never the source of truth. Clients may read only
+-- their own evidence; every write travels through a server-side command.
+
+create type "platform"."checkInMethod" as enum ('qr', 'manual_code', 'officer');
 
 -- ============================================================
--- How a row got here
+-- Attendance
 -- ============================================================
---
--- Three capture paths and the enum lists exactly those three. 'airtable' is
--- the form the member submits in the room, mirrored in by the sync;
--- 'officer' is somebody recording attendance on the member's behalf;
--- 'discord' is the bot command the design note describes.
---
--- 'airtable' is its own value rather than a reuse of 'officer' because
--- "recordedBy" may be non-null only for 'officer'. An imported row labelled
--- 'officer' would either name a recorder who never typed it or fail the
--- check. It is also the honest answer to "how do we know they were there":
--- a form the member submitted is a different claim from an officer asserting
--- it.
---
--- The enum sits in this file, not with the events tables, because
--- attendance."method" is the only thing in the schema that uses it.
-create type "platform"."checkInMethod" as enum ('discord', 'officer', 'airtable');
 
--- ============================================================
--- The ledger
--- ============================================================
---
--- Airtable is where an attendance row is CREATED and Postgres is where it is
--- asked about. The mirror has to exist: "memberStars" is a view over this
--- table and team eligibility is decided from it, and neither can depend on a
--- vendor being reachable or on a fifteen-minute sync being current.
 create table "platform"."attendance" (
-  "id"         uuid not null default gen_random_uuid(),
-  "meetingId"  uuid not null,
-  -- Nullable: an officer correcting a roster after the fact often knows
-  -- somebody was there without knowing which workshop they sat in, and
-  -- refusing the row would lose the attendance to preserve a detail.
-  "workshopId" uuid,
-  "userId"     uuid not null,
-  "method"     "platform"."checkInMethod" not null,
-  -- Set when an officer records the row on somebody's behalf. No foreign key:
-  -- the ledger entry outlives the officer's account.
-  "recordedBy" uuid,
-  "recordedAt" timestamptz not null default now(),
-  -- The Airtable record id, so a re-import updates the row it created rather
-  -- than colliding with it. Identity is the record id, never a name or an
-  -- email, because ids survive an officer fixing a typo and emails do not.
-  -- Nullable, because rows an officer or the bot creates have no Airtable
-  -- record behind them and never will.
-  "airtableRecordId" text,
+  "id"               uuid not null default gen_random_uuid(),
+  "meetingId"        uuid not null,
+  "userId"           uuid not null,
+  "method"           "platform"."checkInMethod" not null,
+  -- Populated only when an officer records or restores attendance. Deliberately
+  -- no FK: the evidence must outlive the officer account.
+  "recordedBy"       uuid,
+  "recordedAt"       timestamptz not null default now(),
+  -- Revocation preserves the original claim. A later scan does not clear these
+  -- columns; restoration is an explicit, audited officer command.
+  "revokedAt"        timestamptz,
+  "revokedBy"        uuid,
+  "revocationReason" text,
 
   constraint "attendance_pkey" primary key ("id"),
   constraint "attendance_meetingId_userId_key" unique ("meetingId", "userId"),
-  -- 'officer' is the only method somebody else can record for you. A row
-  -- naming a recorder under any other method is lying about how the member
-  -- was counted.
   constraint "attendance_recordedBy_only_for_officer"
     check ("recordedBy" is null or "method" = 'officer'),
-
+  constraint "attendance_revocation_together" check (
+    ("revokedAt" is null and "revokedBy" is null and "revocationReason" is null)
+    or
+    ("revokedAt" is not null and "revokedBy" is not null and nullif(btrim("revocationReason"), '') is not null)
+  ),
+  constraint "attendance_revocationReason_length"
+    check ("revocationReason" is null or char_length("revocationReason") <= 500),
   constraint "attendance_meetingId_fkey" foreign key ("meetingId")
-    references "platform"."meetings"("id") on update cascade on delete cascade,
+    references "platform"."meetings"("id") on update cascade on delete restrict,
   constraint "attendance_userId_fkey" foreign key ("userId")
-    references "auth"."users"("id") on update cascade on delete cascade,
-  -- The composite target from the events file. This is what makes "the
-  -- workshop must belong to the meeting" a database guarantee rather than a
-  -- comment: a row naming Monday's meeting and Thursday's workshop is
-  -- rejected. It is also why workshops keeps its otherwise redundant
-  -- workshops_id_meetingId_key.
-  constraint "attendance_workshopId_meetingId_fkey"
-    foreign key ("workshopId", "meetingId")
-    references "platform"."workshops"("id", "meetingId")
-    on update cascade on delete set null
+    references auth."users"("id") on update cascade on delete cascade
 );
 
 alter table "platform"."attendance" enable row level security;
 
--- The star grid and the export both read this by member.
-create index "attendance_userId_idx" on "platform"."attendance" ("userId");
+create index "attendance_userId_idx"
+  on "platform"."attendance" ("userId", "recordedAt" desc);
+create index "attendance_current_meetingId_idx"
+  on "platform"."attendance" ("meetingId") where "revokedAt" is null;
 
--- Partial, so the many null rows from the officer and bot paths do not all
--- have to be distinct from each other. An index rather than a table
--- constraint: it is what the sync's upsert targets, and it stays droppable
--- and rebuildable on its own.
-create unique index "attendance_airtableRecordId_key"
-  on "platform"."attendance" ("airtableRecordId")
-  where "airtableRecordId" is not null;
-
-comment on column "platform"."attendance"."airtableRecordId" is
-  'The Airtable record this row was imported from. Null for rows created by check-in code or by an officer. Unique, so a re-import updates rather than duplicates.';
-
--- ============================================================
--- RLS
--- ============================================================
---
--- A member reads their own rows and nothing else. Every write path is a
--- server action: it decides the method, resolves the workshop, and checks
--- canEditAttendance, none of which a client may assert about itself.
---
--- Both halves matter. own_select is the only permissive policy, so it is the
--- entire client read surface; the three restrictive policies are what stop a
--- client writing under it. The no_client_* names repeat on other tables in
--- this schema on purpose. Policies are per-table, so that is legal, and
--- deduplicating by name would delete live policies.
 create policy "own_select" on "platform"."attendance"
   as permissive for select to authenticated
   using ((select auth.uid()) = "userId");
-
 create policy "no_client_insert" on "platform"."attendance"
   as restrictive for insert to anon, authenticated with check (false);
 create policy "no_client_update" on "platform"."attendance"
   as restrictive for update to anon, authenticated using (false) with check (false);
 create policy "no_client_delete" on "platform"."attendance"
+  as restrictive for delete to anon, authenticated using (false);
+
+-- ============================================================
+-- Reflections
+-- ============================================================
+
+create table "platform"."reflections" (
+  "id"            uuid not null default gen_random_uuid(),
+  "userId"        uuid not null,
+  "meetingId"     uuid,
+  "competitionId" uuid,
+  "content"       text not null default '',
+  -- Null is a draft. A timestamp is retained because submission is an explicit
+  -- member action, not something inferred from the deadline passing.
+  "submittedAt"   timestamptz,
+  "createdAt"     timestamptz not null default now(),
+  "updatedAt"     timestamptz not null default now(),
+
+  constraint "reflections_pkey" primary key ("id"),
+  constraint "reflections_exactly_one_activity" check (
+    (("meetingId" is not null)::int + ("competitionId" is not null)::int) = 1
+  ),
+  constraint "reflections_userId_fkey" foreign key ("userId")
+    references auth."users"("id") on update cascade on delete cascade,
+  constraint "reflections_meetingId_fkey" foreign key ("meetingId")
+    references "platform"."meetings"("id") on update cascade on delete restrict,
+  constraint "reflections_competitionId_fkey" foreign key ("competitionId")
+    references "platform"."competitions"("id") on update cascade on delete restrict
+);
+
+alter table "platform"."reflections" enable row level security;
+
+create unique index "reflections_userId_meetingId_key"
+  on "platform"."reflections" ("userId", "meetingId")
+  where "meetingId" is not null;
+create unique index "reflections_userId_competitionId_key"
+  on "platform"."reflections" ("userId", "competitionId")
+  where "competitionId" is not null;
+create index "reflections_userId_updatedAt_idx"
+  on "platform"."reflections" ("userId", "updatedAt" desc);
+
+create policy "own_select" on "platform"."reflections"
+  as permissive for select to authenticated
+  using ((select auth.uid()) = "userId");
+create policy "no_client_insert" on "platform"."reflections"
+  as restrictive for insert to anon, authenticated with check (false);
+create policy "no_client_update" on "platform"."reflections"
+  as restrictive for update to anon, authenticated using (false) with check (false);
+create policy "no_client_delete" on "platform"."reflections"
+  as restrictive for delete to anon, authenticated using (false);
+
+-- A revision snapshots every officer-editable field, not only the body. That
+-- makes reassignment, submission-time corrections, and content changes equally
+-- reconstructable without putting full reflection text in the audit ledger.
+create table "platform"."reflectionRevisions" (
+  "id"                      uuid not null default gen_random_uuid(),
+  "reflectionId"            uuid not null,
+  "userId"                  uuid not null,
+  "meetingId"               uuid,
+  "competitionId"           uuid,
+  "content"                 text not null,
+  "submittedAt"             timestamptz,
+  "createdAt"               timestamptz not null default now(),
+  "createdByUserId"         uuid,
+  "createdByAirtableUserId" text,
+  "changeReason"            text,
+
+  constraint "reflectionRevisions_pkey" primary key ("id"),
+  constraint "reflectionRevisions_reflectionId_fkey" foreign key ("reflectionId")
+    references "platform"."reflections"("id") on update cascade on delete cascade,
+  constraint "reflectionRevisions_exactly_one_activity" check (
+    (("meetingId" is not null)::int + ("competitionId" is not null)::int) = 1
+  ),
+  constraint "reflectionRevisions_one_actor" check (
+    (("createdByUserId" is not null)::int + ("createdByAirtableUserId" is not null)::int) = 1
+  ),
+  constraint "reflectionRevisions_changeReason_length"
+    check ("changeReason" is null or char_length("changeReason") <= 500)
+);
+
+alter table "platform"."reflectionRevisions" enable row level security;
+
+create index "reflectionRevisions_reflectionId_createdAt_idx"
+  on "platform"."reflectionRevisions" ("reflectionId", "createdAt" desc);
+create index "reflectionRevisions_userId_createdAt_idx"
+  on "platform"."reflectionRevisions" ("userId", "createdAt" desc);
+
+create policy "own_or_auditor_select" on "platform"."reflectionRevisions"
+  as permissive for select to authenticated
+  using (
+    (select auth.uid()) = "userId"
+    or "platform".has_permission((select auth.uid()), 'canViewAuditLog')
+  );
+create policy "no_client_insert" on "platform"."reflectionRevisions"
+  as restrictive for insert to anon, authenticated with check (false);
+create policy "no_client_update" on "platform"."reflectionRevisions"
+  as restrictive for update to anon, authenticated using (false) with check (false);
+create policy "no_client_delete" on "platform"."reflectionRevisions"
+  as restrictive for delete to anon, authenticated using (false);
+
+-- Defense in depth for the owning application role: revisions are append-only
+-- even when a future server path accidentally attempts an update or delete.
+create or replace function "platform".reject_reflection_revision_mutation()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  raise exception 'reflection revisions are append-only' using errcode = '55000';
+end;
+$$;
+
+create trigger "reflectionRevisions_append_only"
+  before update or delete on "platform"."reflectionRevisions"
+  for each row execute function "platform".reject_reflection_revision_mutation();
+
+-- ============================================================
+-- Global EL reflection policy
+-- ============================================================
+
+create table "platform"."reflectionSettings" (
+  "id"                   boolean not null default true,
+  "minimumWordCount"     integer not null default 100,
+  "submissionWindowDays" integer not null default 7,
+  "airtableRecordId"     text,
+  "updatedAt"            timestamptz not null default now(),
+  constraint "reflectionSettings_pkey" primary key ("id"),
+  constraint "reflectionSettings_singleton" check ("id"),
+  constraint "reflectionSettings_minimumWordCount_positive"
+    check ("minimumWordCount" > 0),
+  constraint "reflectionSettings_submissionWindowDays_positive"
+    check ("submissionWindowDays" > 0),
+  constraint "reflectionSettings_airtableRecordId_key" unique ("airtableRecordId")
+);
+
+alter table "platform"."reflectionSettings" enable row level security;
+insert into "platform"."reflectionSettings" ("id") values (true);
+
+create policy "no_client_insert" on "platform"."reflectionSettings"
+  as restrictive for insert to anon, authenticated with check (false);
+create policy "no_client_update" on "platform"."reflectionSettings"
+  as restrictive for update to anon, authenticated using (false) with check (false);
+create policy "no_client_delete" on "platform"."reflectionSettings"
   as restrictive for delete to anon, authenticated using (false);

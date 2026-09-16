@@ -16,16 +16,17 @@
 import { describe, expect, it } from "vitest";
 import {
   allPaths,
+  ENDPOINT,
   findCommand,
   GROUPS,
   SCOPES,
   subcommandList,
   subcommandNames,
+  TIER,
   TOP_LEVEL,
   type CommandNode,
   type Scope,
 } from "./commands.js";
-import { STACK_COMMANDS } from "./stack.js";
 
 /** Every node in the tree, at any depth. */
 function everyNode(): { path: string[]; node: CommandNode }[] {
@@ -122,23 +123,34 @@ describe("prompts", () => {
 
   /**
    * An option with no prompt here is one the wizard does not ask about on its
-   * own screen. Every entry below is asked SOMEWHERE: by the command itself
-   * from live data (`--app`, `--user`, `--target`, `--apps`, `--filter`), or
-   * deliberately never (`--yes`, `--access-token`, `--file`, `--all`). See
-   * `CommandOption.prompt`.
+   * own screen. Every entry below is asked SOMEWHERE, or is one of three
+   * documented categories:
+   *
+   *   * **live-data**: the command asks itself from something live (`--app`,
+   *     `--user`, `--target`, `--apps`, `--filter`).
+   *   * **suppressor**: exists only to suppress a prompt (`--yes`); asking in
+   *     a wizard that IS the prompt makes no sense.
+   *   * **credential**: carries a secret (`--access-token`); interactive path
+   *     resolves it better and typing it makes it visible to shell history.
+   *   * **scripting-only**: meaningful only outside a TTY (`--json`); asking
+   *     in a wizard produces nothing useful.
    *
    * Pinned as an exact set, not a subset: a new promptless flag is either one
-   * of these cases and belongs in the list with a reason, or it is an option
-   * that has quietly become unreachable from the menu.
+   * of these categories and belongs in the list with a reason, or it is an
+   * option that has quietly become unreachable from the menu.
    */
   it("leaves unasked only the flags something else asks for", () => {
     const allowed = new Set([
+      // live-data: the command asks from something live
       "--app",
       "--user",
       "--target",
       "--apps",
+      // suppressor: exists to suppress a prompt, not to be one
       "--yes",
+      // credential: visible in shell history if asked interactively
       "--access-token",
+      // file path: a text box is a worse version of the default
       "--file",
       // `run`'s two. The multiselect it opens IS this question, asked against
       // the apps that actually define the task, so a screen asking "which
@@ -154,18 +166,26 @@ describe("prompts", () => {
       "--all-formats",
       "--out",
       "--default-out",
-      "--no-output",
-      // `emails` asks these after its template picker so the interactive and
-      // scripted paths share one flow.
+      "--dry-run",
+      // `emails` and `newsletter` ask these after their template and issue
+      // pickers so the interactive and scripted paths share one flow.
       "--format",
       "--out",
+      // `newsletter` again: push is the third option in the same outputs
+      // picker, and the mailbox is a default nobody retypes, flag-only.
+      // Sending is flag-only on purpose — a real send should be typed out,
+      // recipients and all, never arrived at through a picker.
+      "--push",
+      "--send",
+      "--to",
+      "--mailbox",
+      // scripting-only: machine-readable output; a wizard asking for JSON
+      // mode produces nothing useful since the wizard itself is the UI.
+      "--json",
     ]);
     const unasked = new Set<string>();
 
     for (const { node } of everyNode()) {
-      // Deploy steps are shown rather than run, so their flags are printed as
-      // part of the invocation instead of being asked for.
-      if (node.wizard === "show") continue;
       for (const option of node.options ?? []) {
         if (!option.prompt) unasked.add(option.flag);
       }
@@ -189,7 +209,7 @@ describe("coverage of what the CLI dispatches", () => {
    * nobody can find in the menu.
    */
   const DISPATCHED = [
-    ...STACK_COMMANDS,
+    "completions",
     "catalog",
     "doctor",
     "roundtrip",
@@ -199,12 +219,17 @@ describe("coverage of what the CLI dispatches", () => {
     "airtable",
     "docs",
     "emails",
+    "newsletter",
     "images",
-    "qr",
     "env",
-    "planner",
-    "signing-key",
-    "deploy",
+    // The merged Supabase/Database group: one top-level command, `db`, whose
+    // dispatch handles `start`, `connect`, `stop`, `restart`, `status`,
+    // `migrate`, `reset`, `migration *`, `types`, `seed *`, `introspect`,
+    // `config *`, `planner *`, `signing-key *` and `exec` beneath it.
+    "db",
+    "gen",
+    "cron",
+    "cf",
     // Both are dispatched twice: once in `main()` ahead of `intro()`, which is
     // what a typed command line reaches, and once in `dispatch` for the walk
     // the wizard hands back. They belong here for the second of those.
@@ -228,82 +253,105 @@ describe("coverage of what the CLI dispatches", () => {
       "reset",
     ]);
     expect(subcommandNames(["airtable"])).toEqual(["check", "verify", "apply"]);
-    expect(subcommandNames(["planner"])).toEqual([
+    expect(subcommandNames(["docs"])).toEqual(["index"]);
+
+    // The merged `db` command. Declaration order is scope order: machine,
+    // repo, endpoint, infra, then the unscoped escape hatch.
+    expect(subcommandNames(["db"])).toEqual([
+      "start",
+      "connect",
+      "stop",
+      "restart",
+      "migration",
+      "status",
+      "migrate",
+      "reset",
+      "types",
+      "seed",
+      "introspect",
+      "config",
+      "planner",
+      "signing-key",
+      "exec",
+    ]);
+    expect(subcommandNames(["db", "migration"])).toEqual(["new", "generate"]);
+    expect(subcommandNames(["db", "seed"])).toEqual(["buckets", "roles"]);
+    expect(subcommandNames(["db", "config"])).toEqual(["push"]);
+    expect(subcommandNames(["db", "planner"])).toEqual([
       "status",
       "create",
       "reset-password",
       "drop",
     ]);
-    expect(subcommandNames(["signing-key"])).toEqual([
+    expect(subcommandNames(["db", "signing-key"])).toEqual([
       "status",
       "generate",
       "import",
     ]);
-    expect(subcommandNames(["docs"])).toEqual(["index"]);
-    expect(subcommandNames(["deploy"])).toEqual([
-      "write-env",
-      "secrets-file",
-      "orphans",
-      "preflight",
-      "mint-token",
-      "require-token",
-      "require-planner",
-      "airtable-plan",
-      "airtable-apply",
-    ]);
-  });
-
-  it("marks every deploy step, and only those, as shown rather than run", () => {
-    for (const { path, node } of everyNode()) {
-      const isDeploy = path[0] === "deploy";
-      expect(node.wizard === "show", path.join(" ")).toBe(isDeploy);
-    }
   });
 });
 
 describe("scopes", () => {
-  const supabase = GROUPS.find((group) => group.title === "Supabase")!;
+  // Scopes used to divide a GROUP's own commands ("Supabase"). Now that group
+  // has merged into "Database", whose only command is `db`, they divide `db`'s
+  // own subcommands instead — the group itself renders as one plain line.
+  const dbSubcommands = () => findCommand(["db"])!.subcommands ?? [];
 
-  it("has a group that spans two layers", () => {
-    expect(supabase).toBeDefined();
+  it("has one merged Database group, containing only db", () => {
+    const group = GROUPS.find((g) => g.title === "Database");
+    expect(group).toBeDefined();
+    expect(group!.commands.map((c) => c.name)).toEqual(["db"]);
+    expect(GROUPS.some((g) => g.title === "Supabase")).toBe(false);
   });
 
   /**
-   * Pinned as "all of them" rather than "the ones that have one": an
-   * unlabelled command in this group is the exact confusion the scopes exist
+   * Pinned as "all of them but `exec`" rather than "the ones that have one":
+   * an unlabelled command under `db` is the exact confusion the scopes exist
    * to remove, and it would render as a stray line under whichever heading
-   * happened to be open.
+   * happened to be open. `exec` is the one deliberate exception — the escape
+   * hatch, unscoped like `bw`.
    */
-  it("labels every command in it", () => {
-    for (const command of supabase.commands) {
-      expect(command.scope, command.name).toBeDefined();
+  it("labels every db subcommand except exec", () => {
+    for (const command of dbSubcommands()) {
+      if (command.name === "exec") {
+        expect(command.scope, command.name).toBeUndefined();
+        continue;
+      }
+      expect(command.scope, `db ${command.name}`).toBeDefined();
     }
   });
 
-  it("labels nothing outside it", () => {
-    const inGroup = new Set<CommandNode>(supabase.commands);
+  it("labels nothing outside db's own subcommands", () => {
+    const inDb = new Set<CommandNode>(dbSubcommands());
+    // `docs index` is deliberately scoped: it connects to a database endpoint
+    // even though its parent group is not a scoped group. Explicit exception,
+    // unrelated to `db`.
+    const SCOPED_EXCEPTIONS = new Set(["docs index"]);
     for (const { path, node } of everyNode()) {
-      if (inGroup.has(node)) continue;
+      if (inDb.has(node)) continue;
+      if (SCOPED_EXCEPTIONS.has(path.join(" "))) continue;
       expect(node.scope, path.join(" ")).toBeUndefined();
     }
   });
 
   /**
-   * `--help` opens a heading every time the scope changes as it walks the
-   * group, so scopes that interleaved would render as four one-line blocks
-   * rather than two readable ones. Declaration order carries that.
+   * `--help` opens a heading every time the scope changes as it walks `db`'s
+   * subcommands, so scopes that interleaved would render as many one-line
+   * blocks rather than four readable ones. Declaration order carries that.
+   * `exec`'s undefined scope neither opens nor closes a heading.
    */
   it("declares each scope in one contiguous run", () => {
     const opened = new Set<Scope>();
     let open: Scope | undefined;
 
-    for (const command of supabase.commands) {
+    for (const command of dbSubcommands()) {
+      if (!command.scope) continue;
       if (command.scope === open) continue;
       expect(
-        opened.has(command.scope!),
-        `${command.name} reopens ${command.scope}`,
+        opened.has(command.scope),
+        `db ${command.name} reopens ${command.scope}`,
       ).toBe(false);
-      opened.add(command.scope!);
+      opened.add(command.scope);
       open = command.scope;
     }
   });
@@ -319,10 +367,136 @@ describe("scopes", () => {
 describe("subcommandList", () => {
   it("reads as a sentence", () => {
     expect(subcommandList(["docs"])).toBe("index");
-    expect(subcommandList(["signing-key"])).toBe("status, generate or import");
+    expect(subcommandList(["db", "signing-key"])).toBe(
+      "status, generate or import",
+    );
   });
 
   it("is empty for a leaf", () => {
     expect(subcommandList(["setup"])).toBe("");
+  });
+});
+
+describe("style guide", () => {
+  /**
+   * (a) Promptless: scripting-only category — enforced by the "leaves unasked"
+   * test above. `--json` joins the allowed set when Phase 7 adds it to commands.
+   *
+   * (b) No bare --local / --remote / --team as an option flag.
+   *
+   * The type simplification: one flag (`--target`), one value, no tie-break.
+   * DATABASE_TARGET's flag is the descriptor `"--local | --remote"`, not either
+   * bare form. This pin keeps that from reverting to two separate boolean flags.
+   */
+  it("uses no bare --local / --remote / --team flags", () => {
+    const banned = new Set(["--local", "--remote", "--team"]);
+    for (const { path, node } of everyNode()) {
+      for (const option of node.options ?? []) {
+        expect(
+          banned.has(option.flag),
+          `${path.join(" ")} ${option.flag}`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  /**
+   * (c) `--tier` draws from one closed enum wherever it carries a select prompt.
+   *
+   * Vacuously true until Phase 3 adds the renamed flag; enforces the set once
+   * it does. Each command may offer a subset (staging + production is fine),
+   * but no value outside the four may appear.
+   */
+  it("--tier choices draw from the canonical tier set", () => {
+    const TIER_VALUES = new Set(["development", "preflight", "staging", "production"]);
+    for (const { path, node } of everyNode()) {
+      for (const option of node.options ?? []) {
+        if (option.flag !== TIER.flag) continue;
+        if (option.prompt?.kind !== "select") continue;
+        for (const choice of option.prompt.choices) {
+          expect(
+            TIER_VALUES.has(choice.value),
+            `${path.join(" ")} --tier has unknown choice "${choice.value}"`,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+
+  /**
+   * (d) Every command that signals danger declares `--yes`.
+   *
+   * The signals: ⚠️ in any node text, or one of the verbs erase / delete /
+   * rotate in the summary or hint. A command that marks itself as destructive
+   * but offers no confirmation-skip is one that scripted callers cannot make
+   * non-interactive without hacking the prompt.
+   */
+  it("declares --yes on every command that signals danger", () => {
+    const DANGER = /⚠️|erase|delete|rotate/;
+    for (const { path, node } of everyNode()) {
+      const text = [node.summary, node.hint ?? ""].join(" ");
+      if (!DANGER.test(text)) continue;
+      const flags = (node.options ?? []).map((o) => o.flag);
+      expect(
+        flags,
+        `${path.join(" ")} has danger signal but lacks --yes`,
+      ).toContain("--yes");
+    }
+  });
+
+  /**
+   * (e) `--dry-run` and `--check` cannot coexist on one command.
+   *
+   * They are two flavors of "do not write": `--dry-run` always exits 0,
+   * `--check` exits 2 on drift. Pairing them leaves the exit code ambiguous.
+   * `--no-output` is the older name for `--dry-run`; Phase 5 renames it.
+   */
+  it("does not declare both --dry-run and --check on one command", () => {
+    for (const { path, node } of everyNode()) {
+      const flags = new Set((node.options ?? []).map((o) => o.flag));
+      expect(
+        flags.has("--dry-run") && flags.has("--check"),
+        `${path.join(" ")} declares both --dry-run and --check`,
+      ).toBe(false);
+    }
+  });
+
+  it("has no --no-output flags (renamed to --dry-run in Phase 5)", () => {
+    for (const { path, node } of everyNode()) {
+      for (const option of node.options ?? []) {
+        expect(option.flag, path.join(" ")).not.toBe("--no-output");
+      }
+    }
+  });
+
+  /**
+   * (f) The `endpoint` scope and the `ENDPOINT` constant are two sides of one
+   * promise: the wizard asks `--target` once at the block level rather than
+   * once per command, so the constant must appear on exactly the LEAF
+   * commands the scope groups.
+   *
+   * A leaf can inherit "endpoint" two ways: it carries the scope directly
+   * (`db status`, `docs index`), or its immediate parent does. The second
+   * case is `db seed buckets`/`db seed roles` and `db config push`: `db seed`
+   * and `db config` carry `scope: "endpoint"` themselves purely so the
+   * `--help` scope-block walk over `db`'s direct subcommands stays contiguous
+   * (see the "scopes" describe block above), and their own leaf children —
+   * which do NOT repeat the scope, per that same block — are where the
+   * endpoint selector actually lives. Container nodes (anything with its own
+   * `subcommands`) are skipped entirely: they never take ENDPOINT themselves.
+   */
+  it("declares ENDPOINT on every endpoint-scope leaf command and no others", () => {
+    for (const { path, node } of everyNode()) {
+      if ((node.subcommands ?? []).length > 0) continue;
+      const parent = path.length > 1 ? findCommand(path.slice(0, -1)) : null;
+      const isEndpointScope =
+        node.scope === "endpoint" ||
+        (!node.scope && parent?.scope === "endpoint");
+      const hasEndpoint = (node.options ?? []).some((o) => o === ENDPOINT);
+      expect(
+        hasEndpoint,
+        `${path.join(" ")} scope/ENDPOINT mismatch`,
+      ).toBe(isEndpointScope);
+    }
   });
 });

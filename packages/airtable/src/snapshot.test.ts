@@ -160,9 +160,11 @@ describe("snapshotDrift", () => {
   it("flags a recreated field that kept its name but changed identity", () => {
     const snapshot = structuredClone(readSnapshot());
     const attendance = snapshot.tables.find((t) => t.name === "Attendance")!;
-    const workshop = attendance.fields.find((f) => f.name === "Workshop")!;
-    const registryId = workshop.id;
-    workshop.id = "fldRecreatedWorkshop";
+    const recordedAt = attendance.fields.find(
+      (f) => f.name === "⚙️ Recorded at",
+    )!;
+    const registryId = recordedAt.id;
+    recordedAt.id = "fldRecreatedRecordedAt";
 
     const drift = snapshotDrift(snapshot);
     expect(drift).toContainEqual(
@@ -170,9 +172,9 @@ describe("snapshotDrift", () => {
         table: "Attendance",
         idMismatches: expect.arrayContaining([
           {
-            field: "Workshop",
+            field: "⚙️ Recorded at",
             registryId,
-            snapshotId: "fldRecreatedWorkshop",
+            snapshotId: "fldRecreatedRecordedAt",
           },
         ]),
       }),
@@ -182,8 +184,10 @@ describe("snapshotDrift", () => {
   it("allows a field rename when its stable id still matches", () => {
     const snapshot = structuredClone(readSnapshot());
     const attendance = snapshot.tables.find((t) => t.name === "Attendance")!;
-    const workshop = attendance.fields.find((f) => f.name === "Workshop")!;
-    workshop.name = "Room";
+    const recordedAt = attendance.fields.find(
+      (f) => f.name === "⚙️ Recorded at",
+    )!;
+    recordedAt.name = "Checked in at";
 
     expect(snapshotDrift(snapshot)).toEqual([]);
   });

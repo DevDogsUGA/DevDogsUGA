@@ -45,6 +45,15 @@ describe("showsAnnouncement", () => {
   it("shows when the router has not resolved a pathname yet", () => {
     expect(showsAnnouncement(null)).toBe(true);
   });
+
+  it("stops showing after the configured deadline", () => {
+    expect(showsAnnouncement("/", new Date("2026-09-16T23:59:59-04:00"))).toBe(
+      true,
+    );
+    expect(showsAnnouncement("/", new Date("2026-09-17T00:00:00-04:00"))).toBe(
+      false,
+    );
+  });
 });
 
 /**

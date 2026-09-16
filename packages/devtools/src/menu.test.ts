@@ -5,7 +5,7 @@
  * tree is reachable from it, and the argv a walk produces is one the CLI
  * accepts.** The menu this replaced could not make that claim. It held ten
  * hand-written entries beside a CLI with sixteen top-level commands, so `env`,
- * `planner`, `signing-key`, `deploy` and `airtable check` had no way in.
+ * `planner`, `signing-key` and `airtable check` had no way in.
  *
  * `@clack/prompts` is mocked rather than driven: the point is which questions
  * get asked and what argv comes out, not how a terminal renders them.
@@ -138,12 +138,6 @@ describe("reach", () => {
 
       const argv = await walk([...answersFor(path), ...declines]);
 
-      if (node.wizard === "show") {
-        // Shown, not run. See `CommandNode.wizard`; nothing is dispatched.
-        expect(argv, path.join(" ")).toBeNull();
-        continue;
-      }
-
       expect(argv, path.join(" ")).not.toBeNull();
       expect(argv!.slice(0, path.length), path.join(" ")).toEqual(path);
     }
@@ -182,65 +176,49 @@ describe("options become argv", () => {
     expect(argv).toEqual(["airtable", "apply"]);
   });
 
-  it("emits a select choice that is a flag on its own", async () => {
+  it("emits --target remote for the ENDPOINT option", async () => {
     const argv = await walk([
-      groupOf("link")!,
-      findCommand(["link"])!,
-      "--remote",
+      groupOf("db")!,
+      findCommand(["db", "status"])!,
+      "remote",
     ]);
-    expect(argv).toEqual(["link", "--remote"]);
-  });
-
-  it("asks for the slug the --team choice needs", async () => {
-    const argv = await walk([
-      groupOf("link")!,
-      findCommand(["link"])!,
-      "--team",
-      "lantern",
-    ]);
-    expect(argv).toEqual(["link", "--team", "lantern"]);
-    expect(asked.at(-1)).toBe("Which team?");
-  });
-
-  it("drops --team rather than emit it with no slug", async () => {
-    // The parser refuses `--team` with nothing after it. Falling back to the
-    // default target beats asking again for something already declined.
-    const argv = await walk([
-      groupOf("link")!,
-      findCommand(["link"])!,
-      "--team",
-      "",
-    ]);
-    expect(argv).toEqual(["link"]);
+    expect(argv).toEqual(["db", "status", "--target", "remote"]);
   });
 
   it("emits a select choice that is a value after its flag", async () => {
     const argv = await walk([
-      groupOf("signing-key")!,
-      findCommand(["signing-key"])!,
-      findCommand(["signing-key", "status"])!,
+      groupOf("db")!,
+      findCommand(["db", "signing-key"])!,
+      findCommand(["db", "signing-key", "status"])!,
       "production",
     ]);
-    expect(argv).toEqual(["signing-key", "status", "--target", "production"]);
+    expect(argv).toEqual([
+      "db",
+      "signing-key",
+      "status",
+      "--target",
+      "production",
+    ]);
   });
 
   it("drops an optional text answered blank", async () => {
     const argv = await walk([
-      groupOf("planner")!,
-      findCommand(["planner"])!,
-      findCommand(["planner", "status"])!,
+      groupOf("db")!,
+      findCommand(["db", "planner"])!,
+      findCommand(["db", "planner", "status"])!,
       "  ",
     ]);
-    expect(argv).toEqual(["planner", "status"]);
+    expect(argv).toEqual(["db", "planner", "status"]);
   });
 });
 
 describe("navigation", () => {
   it("skips the command screen for a group holding one command", async () => {
-    const argv = await walk([groupOf("setup")!]);
-    expect(argv).toEqual(["setup"]);
-    // Group screen only: no second "which command" question.
-    expect(asked).toEqual(["What would you like to do?"]);
+    // "Workspace" holds exactly one command (run). Selecting the group jumps
+    // directly to run's subcommand picker — no "Workspace:" command screen.
+    const argv = await walk(answersFor(["run", "build"]));
+    expect(argv).toEqual(["run", "build"]);
+    expect(asked).toEqual(["What would you like to do?", "run:"]);
   });
 
   it("dispatches nothing when the reader quits", async () => {
@@ -275,11 +253,11 @@ describe("adapts to the machine", () => {
     entries.map((entry) => entry.label);
 
   it("offers stop and restart only while the stack is running", async () => {
-    expect(labels(await screen(RUNNING, ["link"]))).toContain("stop");
-    expect(labels(await screen(RUNNING, ["link"]))).toContain("restart");
+    expect(labels(await screen(RUNNING, ["db"]))).toContain("stop");
+    expect(labels(await screen(RUNNING, ["db"]))).toContain("restart");
 
-    expect(labels(await screen(STOPPED, ["link"]))).not.toContain("stop");
-    expect(labels(await screen(STOPPED, ["link"]))).not.toContain("restart");
+    expect(labels(await screen(STOPPED, ["db"]))).not.toContain("stop");
+    expect(labels(await screen(STOPPED, ["db"]))).not.toContain("restart");
   });
 
   /**
@@ -290,8 +268,8 @@ describe("adapts to the machine", () => {
    * was before any of this existed.
    */
   it("hides nothing when it cannot read the machine", async () => {
-    const drawn = labels(await screen(UNKNOWN_ENVIRONMENT, ["link"]));
-    for (const command of groupOf("link")!.commands) {
+    const drawn = labels(await screen(UNKNOWN_ENVIRONMENT, ["db"]));
+    for (const command of findCommand(["db"])!.subcommands ?? []) {
       expect(drawn, command.name).toContain(command.name);
     }
   });
@@ -302,7 +280,7 @@ describe("adapts to the machine", () => {
 
     // Still on screen. `needs` explains, it does not remove.
     expect(roundtrip).toBeDefined();
-    expect(roundtrip!.hint).toContain("the local stack is not running");
+    expect(roundtrip!.hint).toContain("Supabase is not running on this machine");
   });
 
   it("leaves the hint alone when nothing is in the way", async () => {
@@ -312,30 +290,38 @@ describe("adapts to the machine", () => {
     expect(roundtrip!.hint).toBe(findCommand(["roundtrip"])!.hint);
   });
 
-  it("names only the offered commands in a group's hint", async () => {
+  /**
+   * The "Database" group now holds exactly one command, `db`, and a group
+   * with one command is always offered whole — see `pickCommand`. The
+   * filtering this test used to show at the GROUP level (`link` shown,
+   * `stop` hidden while stopped) happens one screen deeper now, on `db`'s own
+   * subcommand list; "offers stop and restart only while the stack is
+   * running" above covers that. What is still true here is that the group's
+   * own hint names only what it actually contains.
+   */
+  it("names only the offered commands in the Database group's hint", async () => {
     await walk([], STOPPED).catch(() => null);
-    const database = shown[0]!.find((entry) => entry.label === "Supabase");
+    const database = shown[0]!.find((entry) => entry.label === "Database");
 
-    expect(database!.hint).not.toContain("stop");
-    expect(database!.hint).toContain("link");
+    expect(database!.hint).toBe("db");
   });
 
   /**
-   * The two layers "Supabase" covers, told apart on the line.
+   * The layers `db` covers, told apart on the line.
    *
-   * `restart` and `reset` sit four entries apart and act on different things:
-   * the containers, and the database inside them. A reader choosing between
-   * them should not have to already know that.
+   * `restart` and `reset` sit several entries apart and act on different
+   * things: the containers, and the database inside them. A reader choosing
+   * between them should not have to already know that.
    */
-  it("says which layer each Supabase command acts on", async () => {
-    const drawn = await screen(RUNNING, ["link"]);
+  it("says which layer each db command acts on", async () => {
+    const drawn = await screen(RUNNING, ["db"]);
     const hintOf = (name: string) =>
       drawn.find((entry) => entry.label === name)?.hint ?? "";
 
-    expect(hintOf("restart")).toContain("Supabase · ");
-    expect(hintOf("stop")).toContain("Supabase · ");
-    expect(hintOf("reset")).toContain("Postgres · ");
-    expect(hintOf("push")).toContain("Postgres · ");
+    expect(hintOf("restart")).toContain("This machine · ");
+    expect(hintOf("stop")).toContain("This machine · ");
+    expect(hintOf("reset")).toContain("Database · ");
+    expect(hintOf("migrate")).toContain("Database · ");
   });
 
   it("leaves a group without scopes unlabelled", async () => {

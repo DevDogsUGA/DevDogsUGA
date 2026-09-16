@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { checkAttendance, myIdToEmail } from "./refusals";
+import { myIdToEmail } from "./memberIdentity";
+import { checkAttendance } from "./refusals";
 
 /**
  * MyID parsing and the refusal rules, with no database anywhere near them.

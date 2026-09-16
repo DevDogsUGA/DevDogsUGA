@@ -1,10 +1,8 @@
-import { Suspense } from "react";
 import { cacheLife } from "next/cache";
 import EventsPage, {
   type EventsPageProps,
 } from "~/components/EventsSection/EventsPage";
 import EventsUnavailable from "~/components/EventsSection/EventsUnavailable";
-import CheckInIsland from "~/components/EventsSection/CheckInIsland";
 import EventsScrollReset from "~/components/EventsSection/EventsScrollReset";
 import {
   addMonths,
@@ -36,21 +34,7 @@ export default function EventsLayout({ children }: LayoutProps<"/events">) {
   return (
     <>
       <EventsScrollReset />
-      {/* Created OUTSIDE the cache scope and passed in as an element, so its
-          clock read stays legal and uncached while everything around it is
-          served from the entry. Whether a check-in form is live is true for
-          about two hours a week and must never be answered from a
-          five-minute-old cache entry. */}
-      <EventsBody
-        checkIn={
-          // Its own boundary so a slow read cannot hold up the schedule; the
-          // fallback is nothing, because an absent button is the ordinary
-          // state for every hour the club is not meeting.
-          <Suspense fallback={null}>
-            <CheckInIsland />
-          </Suspense>
-        }
-      />
+      <EventsBody />
       {children}
     </>
   );
@@ -65,7 +49,7 @@ export default function EventsLayout({ children }: LayoutProps<"/events">) {
  * be loaded" for the whole revalidate window to everybody. Letting the throw
  * escape the scope leaves nothing cached, and the next request tries again.
  */
-async function EventsBody({ checkIn }: { checkIn: React.ReactNode }) {
+async function EventsBody() {
   let data: Omit<EventsPageProps, "checkIn">;
   try {
     data = await getSchedule();
@@ -78,7 +62,7 @@ async function EventsBody({ checkIn }: { checkIn: React.ReactNode }) {
     // `mauve-900`, one shade lighter than the cards that sit on it, and
     // `flex-1` so a short semester still paints to the footer.
     <div className="flex min-w-0 flex-1 flex-col bg-mauve-900">
-      <EventsPage {...data} checkIn={checkIn} />
+      <EventsPage {...data} checkIn={null} />
     </div>
   );
 }

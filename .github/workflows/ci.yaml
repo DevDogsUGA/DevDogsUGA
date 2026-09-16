@@ -111,6 +111,8 @@ jobs:
       # a second.
       - name: .env.example agrees with the env manifests
         run: pnpm devtools env example --check
+      - name: Cloudflare binding types match the Worker configuration
+        run: pnpm --filter platform cf:typegen:check
       # REMOVED: "Typecheck the deploy scripts" (`tsc -p scripts/tsconfig.json`).
       #
       # It existed because `scripts/` was not a workspace package, so `turbo run

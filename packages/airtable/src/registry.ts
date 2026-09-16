@@ -97,7 +97,6 @@ export interface MeetingRow {
   location: string | null;
   startsAt: string;
   endsAt: string;
-  attendanceFormUrl: string | null;
   attendanceCount: number;
 }
 
@@ -109,7 +108,6 @@ export interface WorkshopRow {
   description: string | null;
   meetingAirtableId: string | null;
   projectAirtableId: string | null;
-  attendanceCount: number;
 }
 
 export interface CompetitionRow {
@@ -120,15 +118,38 @@ export interface CompetitionRow {
   teamCount: number;
 }
 
-/**
- * An imported attendance row, as the platform reports it back.
- *
- * Only the id. Everything else about the row came FROM Airtable, and pushing
- * any of it back would make the platform a second writer of a field the form
- * owns, the exact thing `.push()`/`.pull()` exclusivity exists to prevent.
- */
 export interface AttendanceRow {
   id: string;
+  memberAirtableId: string;
+  meetingAirtableId: string;
+  method: "qr" | "manual_code" | "officer";
+  recordedAt: string;
+  revoked: boolean;
+  revocationReason: string | null;
+}
+
+export interface OfficerChangeRow {
+  formResponseRecordId: string;
+  status: "Pending" | "Applied" | "Rejected" | "Retryable";
+  processedAt: string | null;
+  auditEventId: string | null;
+  error: string | null;
+}
+
+export interface ReflectionRow {
+  id: string;
+  memberAirtableId: string;
+  meetingAirtableId: string | null;
+  competitionAirtableId: string | null;
+  content: string;
+  state: "Draft" | "Submitted";
+  submittedAt: string | null;
+}
+
+export interface PlatformSettingsRow {
+  id: "reflection-policy";
+  minimumWordCount: number;
+  submissionWindowDays: number;
 }
 
 export interface TeamRow {
@@ -367,59 +388,6 @@ export function parseRsvpUrl(value: AirtableValue): string | null {
 }
 
 /**
- * The shape an accepted attendance form link must have, character for
- * character. The JavaScript twin of `meetings_attendanceFormUrl_airtable`.
- *
- * Narrower than the RSVP shape on purpose: that constraint allows `%`, `#` and
- * `:` in the path and this one does not, so reusing the other regex would
- * accept links the database then rejects. That is why the two are written out
- * separately rather than shared.
- */
-const ATTENDANCE_FORM_URL_SHAPE =
-  /^https:\/\/airtable\.com\/[A-Za-z0-9/_?=&.-]+$/;
-
-/** The one host an attendance form may live on. */
-const ATTENDANCE_FORM_URL_HOST = "airtable.com";
-
-/**
- * An attendance form link in canonical form, or null if it is not one this may
- * store.
- *
- * This used to be `typeof v === "string" ? v : null`, which accepted anything
- * an officer could type. `meetings_attendanceFormUrl_airtable` accepts only an
- * https link on airtable.com, so a pasted Google Form was a constraint
- * violation raised in the middle of the pull. That unwinds past every
- * remaining table, so one wrong paste stopped meetings, workshops,
- * competitions, attendance and both pushes, and the officer saw a clean grid.
- *
- * Canonicalized before testing for the same reason `parseRsvpUrl` is: a host
- * comparison is case-insensitive and a regex is not, so `https://AirTable.com/
- * shrX` would otherwise pass the check here and fail the one in Postgres. The
- * string tested is the string stored.
- */
-export function parseAttendanceFormUrl(value: AirtableValue): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  if (trimmed === "") return null;
-
-  let url: URL;
-  try {
-    url = new URL(trimmed);
-  } catch {
-    return null;
-  }
-
-  if (url.protocol !== "https:") return null;
-  if (url.username !== "" || url.password !== "") return null;
-  if (url.hostname.toLowerCase() !== ATTENDANCE_FORM_URL_HOST) return null;
-
-  const canonical = url.toString();
-  if (!ATTENDANCE_FORM_URL_SHAPE.test(canonical)) return null;
-
-  return canonical;
-}
-
-/**
  * An Airtable datetime string, or null when it is not a date at all.
  *
  * Airtable returns ISO-8601 for a date cell, so the guard looks redundant, and
@@ -622,15 +590,6 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
   endsAt: field
     .dateTime("fldEjZPZGVJG3qZEl", "Ends at")
     .pull((v) => parseAirtableDateTime(v)),
-  // The week's attendance form, pasted by an officer.
-  //
-  // Not discoverable: the Meta API returns views as {id, name, type} and a
-  // form's public share token is not among them, so there is no path from
-  // "this meeting" to "this form" that does not go through somebody pasting
-  // it. Measured 2026-08-06.
-  attendanceForm: field
-    .url("fldZT0taFyXVb7Bls", "Attendance form")
-    .pull((v) => parseAttendanceFormUrl(v)),
   // What the night is about, in an officer's own words.
   //
   // Null is the ordinary state, not an error: the events page derives an
@@ -686,6 +645,13 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
       return text.length > MEETING_CANCELLATION_REASON_MAX_LENGTH ? null : text;
     }),
 
+  countsTowardProgress: field
+    .checkbox("fldeFR8rpFsxtrn0o", "Counts toward progress")
+    .pull((v) => v === true),
+  elEligible: field
+    .checkbox("fldQ3kznHDThetBK8", "EL eligible")
+    .pull((v) => v === true),
+
   attendanceCount: field
     .number("fld9RRuEB6SpnqPLP", "⚙️ Attendance")
     .push((m: MeetingRow) => m.attendanceCount),
@@ -731,9 +697,6 @@ export const workshops = table("Workshops", "tblSYPbmIagwyTFq1", {
     return text.length > WORKSHOP_DESCRIPTION_MAX_LENGTH ? null : text;
   }),
 
-  attendanceCount: field
-    .number("fldxdsZmSNmR30O2J", "⚙️ Attendance")
-    .push((w: WorkshopRow) => w.attendanceCount),
   syncStatus: field.longText("flddrtCx3b88sFsHl", "⚙️ Sync status").status(),
 });
 
@@ -769,6 +732,12 @@ export const competitions = table("Competitions", "tbltrW1Xum127cNwy", {
     .pull((v) =>
       typeof v === "number" && Number.isInteger(v) && v > 0 ? v : null,
     ),
+  countsTowardProgress: field
+    .checkbox("fldyTWr0jPHLMd3FO", "Counts toward progress")
+    .pull((v) => v === true),
+  elEligible: field
+    .checkbox("fldWcPMV3MWkjrH9t", "EL eligible")
+    .pull((v) => v === true),
   teamCount: field
     .number("fldss0bnDwAM2YXii", "⚙️ Teams")
     .push((c: CompetitionRow) => c.teamCount),
@@ -799,36 +768,12 @@ export const teamsTable = table("Teams", "tblfXjgqCZiJnnD4x", {
 });
 
 /**
- * Attendance, the one table Airtable CREATES rows in.
+ * A read-only projection of authoritative platform attendance.
  *
- * Every other table here is either platform-owned and pushed, or
- * officer-authored and pulled field by field. This one is different in kind: a
- * row appears because somebody filled in a form in a workshop, or because a
- * co-branded event's roster was pasted in from whatever the other club uses.
- * The platform never writes a record here, only reads them and reports back.
- *
- * ## Why a MyID and not an email field
- *
- * `MyID` is the local part alone: `jdoe`, not `jdoe@uga.edu`. Two reasons, and
- * the second is the load-bearing one:
- *
- *   * It is what somebody standing in a workshop can type without thinking,
- *     which matters when the alternative is a wrong address.
- *   * An `email`-typed field cannot be a `.matchKey()`, since
- *     `fieldsToMergeOn` rejects the type outright. More importantly, accepting
- *     a free-text address would let a response name `someone@gmail.com`.
- *     Sign-in is Google restricted to `hd=uga.edu`, so an address outside that
- *     domain can never be claimed by anybody and would create an account
- *     nobody can reach. Taking the local part and appending the domain
- *     ourselves makes that unrepresentable rather than merely unlikely.
- *
- * ## What the platform writes back
- *
- * Only `⚙️ Platform ID` and `⚙️ Sync status`. The first is the imported row's
- * uuid, which makes a re-import idempotent and shows an officer that a
- * response landed. The second carries the refusal when it did not: an unknown
- * MyID, a link the platform cannot resolve, or a Meeting and a Workshop that
- * name different nights.
+ * Officers no longer create or edit these rows directly. Corrections arrive
+ * as commands through the separate Officer Changes form, are validated and
+ * audited in Postgres, and then appear here on the next push. Deleting a row
+ * is harmless: upsert recreates it from the attendance UUID.
  */
 export const attendanceTable = table("Attendance", "tblVgyeo1q9vk0ddD", {
   platformId: field
@@ -836,48 +781,164 @@ export const attendanceTable = table("Attendance", "tblVgyeo1q9vk0ddD", {
     .matchKey()
     .push((a: AttendanceRow) => a.id),
 
-  // The form's own field. Pulled, lowercased and trimmed by the importer,
-  // because MyIDs are handed out in one case and typed in another.
-  myId: field
-    .text("fldmscaBQzdP4qhMP", "MyID")
-    .pull((v) => (typeof v === "string" ? v.trim().toLowerCase() : null)),
-
-  // Which night. Asked for DIRECTLY, and the reason it has to be is the
-  // events rework: an Interest Meeting, a Social and a judging night all run
-  // no workshops at all, so a form whose only link was the one below could not
-  // describe them. Every response naming such a night had no workshop to pick,
-  // arrived here with an empty cell, and was dropped in silence.
-  //
-  // `attendance` is keyed on the meeting, so this is now the key arriving as
-  // itself rather than being inferred. The workshop stays beside it as the
-  // dimension it always was.
+  member: field
+    .link("fldwJxi1Jm0gzykDW", "⚙️ Member", "members")
+    .push((a: AttendanceRow) => [a.memberAirtableId]),
   meeting: field
     .link("fldFehEX3HmzKW2yv", "Meeting", "meetings")
-    .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
-
-  // Which room, when there was a choice of rooms. Optional now.
-  //
-  // It used to be required, and the meeting was derived from it, on the
-  // argument that a form collecting both could disagree with itself. That
-  // argument was right about the risk and wrong about the remedy: the
-  // disagreement is real, so `pullAttendance` refuses a response whose two
-  // links name different nights, rather than making one of them
-  // unrepresentable. Null is an ordinary value here — it means a night with
-  // nothing to pick, which is what `attendance."workshopId"` was made nullable
-  // for.
-  workshop: field
-    .link("fldqmEA9hK4QyBKZE", "Workshop", "workshops")
-    .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
-
-  // How the row got here, for the officer's benefit rather than the
-  // platform's. A co-branded import and a form response are both 'airtable' as
-  // far as `checkInMethod` is concerned; this says which, in the grid.
-  source: field
-    .singleSelect("fldXEVVndageXQXHy", "Source")
-    .pull((v) => (typeof v === "string" ? v : null)),
-
-  syncStatus: field.longText("fldKo5gUpLqg72pKx", "⚙️ Sync status").status(),
+    .push((a: AttendanceRow) => [a.meetingAirtableId]),
+  method: field
+    .singleSelect("fld4CosVKlvMZpO91", "⚙️ Method", [
+      "QR",
+      "Manual code",
+      "Officer",
+    ] as const)
+    .push((a: AttendanceRow) =>
+      a.method === "manual_code"
+        ? "Manual code"
+        : a.method === "officer"
+          ? "Officer"
+          : "QR",
+    ),
+  recordedAt: field
+    .dateTime("fldy2KTztwZvrt7sZ", "⚙️ Recorded at")
+    .push((a: AttendanceRow) => a.recordedAt),
+  revoked: field
+    .checkbox("fldc2EI4R9TiRsb20", "⚙️ Revoked")
+    .push((a: AttendanceRow) => a.revoked),
+  revocationReason: field
+    .longText("fldeg3snMYlWedD25", "⚙️ Revocation reason")
+    .pushClearable((a: AttendanceRow) => a.revocationReason),
 });
+
+/**
+ * Append-only form responses requesting changes to authoritative state.
+ * Input fields are deliberately ignored by scheduled sync; the targeted
+ * automation snapshots one response, validates it, and writes only the four
+ * processing fields below. Officers never edit Attendance projections.
+ */
+export const officerChangesTable = table(
+  "Officer Changes",
+  "tblxVnlGBq5mbR1u5",
+  {
+    targetId: field.text("fld0kB2uIYOqovM5p", "Target platform ID").ignore(),
+    formResponseRecordId: field
+      .text("fldtsfXM7cflE1ecY", "⚙️ Form response ID")
+      .matchKey()
+      .push((row: OfficerChangeRow) => row.formResponseRecordId),
+    command: field
+      .singleSelect("fldLQGEgssJr29bAz", "Command", [
+        "Add attendance",
+        "Revoke attendance",
+        "Restore attendance",
+        "Grant competition participation",
+        "Revoke competition participation",
+        "Clear competition participation override",
+        "Edit reflection",
+      ] as const)
+      .ignore(),
+    member: field.text("fldpjrEDvWElsjtq8", "Member MyID").ignore(),
+    meetingId: field.text("fld1AGug56uC8kqug", "Meeting platform ID").ignore(),
+    reason: field.longText("fld5pq8yZxG3WLVtM", "Correction reason").ignore(),
+    createdBy: field.createdBy("fldBhPNuG7fGPSeij", "Created by").ignore(),
+    reflectionContent: field
+      .longText("fldywB2BObff6aROE", "Reflection content")
+      .ignore(),
+    clearReflectionContent: field
+      .checkbox("fld2ZgpC34p4NVBFO", "Clear reflection content")
+      .ignore(),
+    reflectionState: field
+      .singleSelect("fldi4rqSZbsGdNew3", "Reflection state", [
+        "Draft",
+        "Submitted",
+      ] as const)
+      .ignore(),
+    newMember: field.text("fld9Q2kYWwy5Ta2Ap", "New member MyID").ignore(),
+    newMeetingId: field
+      .text("fld4Gp3IPgTDiO6wa", "New meeting platform ID")
+      .ignore(),
+    newCompetitionId: field
+      .text("fldEdlPrMkXwh3nQg", "New competition platform ID")
+      .ignore(),
+    status: field
+      .singleSelect("fldjYkqzAiy4HR9hT", "⚙️ Processing status", [
+        "Pending",
+        "Applied",
+        "Rejected",
+        "Retryable",
+      ] as const)
+      .push((row: OfficerChangeRow) => row.status),
+    processedAt: field
+      .dateTime("fld564oqKGXjCp9C9", "⚙️ Processed at")
+      .pushClearable((row: OfficerChangeRow) => row.processedAt),
+    auditEventId: field
+      .text("fldMrPvim5CHD4BaB", "⚙️ Audit event ID")
+      .pushClearable((row: OfficerChangeRow) => row.auditEventId),
+    error: field
+      .longText("fldu8HfCb95aXdGdf", "⚙️ Validation error")
+      .pushClearable((row: OfficerChangeRow) => row.error),
+  },
+);
+
+/** Platform-owned EL evidence. Officer corrections go through Officer Changes. */
+export const elReflectionsTable = table("EL Reflections", "tblU6bJTxyY14SyK1", {
+  platformId: field
+    .text("fldAAdfehG54Cwk6Z", "⚙️ Platform ID")
+    .matchKey()
+    .push((row: ReflectionRow) => row.id),
+  member: field
+    .link("fldjtuJGCQPLrsSBz", "⚙️ Member", "members")
+    .push((row: ReflectionRow) => [row.memberAirtableId]),
+  meeting: field
+    .link("fld3m7QttXHmISBb9", "⚙️ Meeting", "meetings")
+    .pushClearable((row: ReflectionRow) =>
+      row.meetingAirtableId ? [row.meetingAirtableId] : null,
+    ),
+  competition: field
+    .link("fld3PX7K6E6ftUln3", "⚙️ Competition", "competitions")
+    .pushClearable((row: ReflectionRow) =>
+      row.competitionAirtableId ? [row.competitionAirtableId] : null,
+    ),
+  content: field
+    .longText("fldPdvrIG9nKd1bF4", "⚙️ Reflection")
+    .push((row: ReflectionRow) => row.content),
+  state: field
+    .singleSelect("fldBtR3plntD3TRuF", "⚙️ State", [
+      "Draft",
+      "Submitted",
+    ] as const)
+    .push((row: ReflectionRow) => row.state),
+  submittedAt: field
+    .dateTime("fld6hVB5ZKxFs7BhH", "⚙️ Submitted at")
+    .pushClearable((row: ReflectionRow) => row.submittedAt),
+});
+
+/** Singleton officer-authored policy, globally applied to every reflection. */
+export const platformSettingsTable = table(
+  "Platform Settings",
+  "tblHfmgt55SIiugdS",
+  {
+    platformId: field
+      .text("fldvvZtnRXFdyQVyw", "⚙️ Platform ID")
+      .matchKey()
+      .push((row: PlatformSettingsRow) => row.id),
+    minimumWordCount: field
+      .number("fldS8m3OleODDu5eD", "Minimum words")
+      .pull((value) =>
+        typeof value === "number" && Number.isInteger(value) && value > 0
+          ? value
+          : null,
+      ),
+    submissionWindowDays: field
+      .number("fldqWX2nwV7wj9jSk", "Submission window days")
+      .pull((value) =>
+        typeof value === "number" && Number.isInteger(value) && value > 0
+          ? value
+          : null,
+      ),
+    syncStatus: field.longText("fldBRBkoKqgP5CSng", "⚙️ Sync status").status(),
+  },
+);
 
 export const registry = {
   members,
@@ -887,6 +948,9 @@ export const registry = {
   competitions,
   teams: teamsTable,
   attendance: attendanceTable,
+  officerChanges: officerChangesTable,
+  elReflections: elReflectionsTable,
+  platformSettings: platformSettingsTable,
 } as const;
 
 export type RegistryTable = keyof typeof registry;

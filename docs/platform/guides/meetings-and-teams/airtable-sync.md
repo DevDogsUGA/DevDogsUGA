@@ -12,21 +12,27 @@ The split exists because `attendance."meetingId"` needs something that keeps its
 
 ## What lives where
 
-Seven tables, and the direction is **per field, never per table**:
+Ten integration tables, and the direction is **per field, never per table**:
 
-| Table            | Officers author                                                             | The platform writes                                                        |
-| ---------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| **Meetings**     | custom name, times, location, form link, summary, kind, RSVP, cancellation  | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                              |
-| **Workshops**    | Meeting _(link)_, Project _(link, optional)_, title, description            | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                              |
-| **Competitions** | Branch slug, Workshop _(link)_, Judging starts, Requirements, Max team size | ⚙️ Platform ID, ⚙️ Teams, ⚙️ Sync status                                   |
-| **Teams**        | Requirements met                                                            | ⚙️ Platform ID, ⚙️ Name, ⚙️ Members, ⚙️ Submission, ⚙️ Competed, ⚙️ Points |
-| **Members**      | Dues paid                                                                   | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended                |
-| **Projects**     | nothing — a platform-owned mirror                                           | ⚙️ Platform ID, ⚙️ Slug, Name                                              |
-| **Attendance**   | the rows themselves: MyID, Workshop, Source                                 | ⚙️ Platform ID, ⚙️ Sync status                                             |
+| Table                 | Officers author                                                                        | The platform writes                                                        |
+| --------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Meetings**          | custom name, times, location, summary, kind, RSVP, cancellation, progress and EL flags | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                              |
+| **Workshops**         | Meeting _(link)_, Project _(link, optional)_, title, description                       | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                              |
+| **Competitions**      | Branch slug, Workshop _(link)_, Judging starts, Requirements, Max team size            | ⚙️ Platform ID, ⚙️ Teams, ⚙️ Sync status                                   |
+| **Teams**             | Requirements met                                                                       | ⚙️ Platform ID, ⚙️ Name, ⚙️ Members, ⚙️ Submission, ⚙️ Competed, ⚙️ Points |
+| **Members**           | Dues paid                                                                              | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended                |
+| **Projects**          | nothing — a platform-owned mirror                                                      | ⚙️ Platform ID, ⚙️ Slug, Name                                              |
+| **Attendance**        | —                                                                                      | authoritative meeting attendance projection                                |
+| **Officer Changes**   | append-only correction form inputs                                                     | processing result and audit event ID                                       |
+| **EL Reflections**    | —                                                                                      | current reflection evidence                                                |
+| **Platform Settings** | reflection word minimum and submission window                                          | ⚙️ Platform ID, ⚙️ Sync status                                             |
 
 One rule governs the right-hand column: **push only fields the platform owns exclusively, and never create a field both sides write.** Two writers have no conflict-resolution story, and last-writer-wins destroys work silently. Teams is where both directions meet — the grade is an input, the points an output — and the discipline is to resist the Airtable formula between them, which would put the scoring rule in two places that drift. The `⚙️` prefix warns officers off a field; the field editing permissions set by hand enforce it.
 
-Attendance is the one table Airtable **creates** rows in — see [Attendance](/docs/platform/guides/meetings-and-teams/attendance). Projects go the other way: an officer typing "Study Group Findr" would link a workshop to nothing.
+Officer Changes is the only integration table where a form creates rows. The
+platform reads each response through its targeted automation, treats it as a
+validated command, and syncs the result back. Attendance and EL Reflections
+are projections only. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
 
 <details>
 <summary>Which surface does a given officer task belong to?</summary>
@@ -40,7 +46,7 @@ Only officers have Airtable access, so the base is the officer console for anyth
 | Set `Judging starts`, the requirement count, the max team size | Airtable                                             |
 | Grade a team's requirements met                                | Airtable                                             |
 | Record dues                                                    | Airtable                                             |
-| Correct an attendance row                                      | Platform — `setAttendance`                           |
+| Correct attendance, participation, or a reflection             | Airtable — restricted Officer Changes form           |
 | Record a team's entry when there is no PR                      | Platform — `setSubmission`                           |
 | Freeze a roster early                                          | Platform — `setManualLock`                           |
 | Give a team a named award                                      | Platform — `awardTeam`                               |
@@ -60,13 +66,21 @@ The cron fires `*/15 * * * *` at `/airtable/sync`; `requestAirtableSync()` runs 
 
 1. **Verify the base against the registry** before anything is written: a field id that no longer exists is not an error at write time — Airtable accepts the request, the value lands nowhere, and the pass reports success. A drifted base refuses to sync, alerting Discord once.
 2. **Claim the lease**, or return `already_running`; a manual run inside the cooldown returns `rate_limited`.
-3. **Push Projects**, so a workshop's Project link resolves against records that exist.
-4. **Pull Meetings, then Workshops, then Competitions** — a dependency order: workshops resolve meeting links, competitions resolve workshop links.
-5. **Pull Attendance**, after workshops (a response names its workshop by record id) and before the pushes (so the counts include what this pass imported).
-6. **Pull the grades, then push** Members, Teams and the derived counts, comparing against what Airtable holds rather than a hash.
-7. **Write refusals** into each record's `⚙️ Sync status`, release the lease, and advance `lastSyncedAt` **only if the pass completed** — what a partial pass missed is indistinguishable from what it applied.
+3. **Ensure and pull Platform Settings**, retaining the previous policy when an
+   officer enters an invalid value.
+4. **Pull Projects, Meetings, Workshops, then Competitions** in dependency
+   order.
+5. **Pull grades, then push** Members, Attendance, Teams, EL Reflections,
+   Officer Changes acknowledgements, and derived counts. The acknowledgement
+   pass repairs a failed post-command Airtable write without replaying the
+   mutation.
+6. **Write refusals** into each record's `⚙️ Sync status`, release the lease,
+   and advance `lastSyncedAt` only if the pass completed.
 
-A record missing from the base is a **soft archive**: `deletedAt` is set, the row leaves the site, attendance survives. Attendance is the exception, and the only irreversible step.
+A missing officer-authored meeting, workshop, competition, or project is a
+**soft archive**: `deletedAt` is set, the row leaves the site, and attendance
+survives. Platform-authored Attendance and EL Reflections rows are recreated by
+the next push if their Airtable projections are removed.
 
 ## The rules that protect credit
 
@@ -82,7 +96,6 @@ A refusal is per **field**, not per record: fixing a project link and a max team
 | A Summary over 240 characters, or an RSVP link off the allowlisted host | It cannot go on a public page as written                                           |
 | A meeting Name over 80 characters                                       | It cannot go on a public page as written                                           |
 | A workshop Title over 80, or a Description over 280                     | It cannot go on a public page as written                                           |
-| An Attendance form link that is not `https://airtable.com/…`            | Check-in sends members straight to it                                              |
 | `Max team size` below 1, or `Requirements` below 0                      | The database rejects the value, and a rejected write used to stop the whole pass   |
 | A Cancellation reason over 160 characters                               | It cannot go on a public page as written                                           |
 | A Cancellation reason with `Cancelled` empty                            | The reason is only ever shown beside the date it explains                          |

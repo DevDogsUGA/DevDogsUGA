@@ -70,7 +70,7 @@ Three ways past it, each skipping the question entirely:
 
 Each root task is a thin alias for the same thing: `pnpm build` is `pnpm devtools run build`. The picker lives in `packages/devtools/src/run/pick.ts` with every other prompt in the repo.
 
-`pnpm dev:docs` is unchanged: it carries its own filter already.
+For docs authoring, run `turbo watch build --filter=@devdogsuga/docs` in a second terminal — it carries its own filter.
 
 ## What CI actually runs
 

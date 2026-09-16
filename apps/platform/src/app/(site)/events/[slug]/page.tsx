@@ -4,11 +4,9 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import {
   ArrowUpRightIcon,
-  ClipboardTextIcon,
   MapPinIcon,
 } from "@phosphor-icons/react/ssr";
 import {
-  ACTION_DARK_CLS,
   ACTION_PRIMARY_DARK_CLS,
   CANCELLED_LABEL,
   cancellationNotice,
@@ -33,7 +31,6 @@ import {
 } from "~/lib/eventTime";
 import JsonLd, { eventLd } from "~/lib/structuredData";
 import {
-  attendanceFormIsLive,
   getMeetingBySlug,
   getMeetingWorkshops,
   getMeetingJudging,
@@ -299,14 +296,10 @@ export default async function MeetingPage({
         </section>
       )}
 
-      {/* Calendar, RSVP and check-in do not survive a cancellation. Directions
-          does: the room remains useful context for a night whose plans changed. */}
+      {/* Calendar and RSVP do not survive a cancellation. Directions does: the
+          room remains useful context for a night whose plans changed. */}
       {(isMappedBuilding(meeting.building) ||
-        (!cancelled &&
-          (meeting.rsvpUrl !== null ||
-            !ended ||
-            (meeting.attendanceFormUrl !== null &&
-              attendanceFormIsLive(meeting, now))))) && (
+        (!cancelled && (meeting.rsvpUrl !== null || !ended))) && (
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-2">
@@ -328,21 +321,6 @@ export default async function MeetingPage({
             </div>
             {!cancelled && (
               <div className="ml-auto flex flex-wrap justify-end gap-2">
-                {/* `attendanceFormIsLive` answers "is there a link, and is the
-                    meeting on". NOT "is attendance open", which this process
-                    cannot know since the Airtable form's own open and close is
-                    the only gate. */}
-                {meeting.attendanceFormUrl !== null &&
-                  attendanceFormIsLive(meeting, now) && (
-                    <a
-                      href={meeting.attendanceFormUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={ACTION_DARK_CLS}
-                    >
-                      <ClipboardTextIcon /> Check in <ArrowUpRightIcon />
-                    </a>
-                  )}
                 {/* Last in the right-hand group so the light primary action
                     anchors the outer edge of the row. */}
                 {meeting.rsvpUrl !== null && (
@@ -358,13 +336,6 @@ export default async function MeetingPage({
               </div>
             )}
           </div>
-          {meeting.attendanceFormUrl !== null &&
-            attendanceFormIsLive(meeting, now) && (
-              <p className="text-xs text-mauve-400">
-                Officers open and close the check-in form themselves, so it may
-                not be taking responses yet.
-              </p>
-            )}
         </div>
       )}
 

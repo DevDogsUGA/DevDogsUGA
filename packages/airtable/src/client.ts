@@ -133,6 +133,15 @@ export class AirtableClient {
     return records;
   }
 
+  /** Fetch one form response by its immutable Airtable record ID. */
+  async getRecord(tableId: string, recordId: string): Promise<AirtableRecord> {
+    const query = new URLSearchParams({ returnFieldsByFieldId: "true" });
+    return this.request<AirtableRecord>(
+      "GET",
+      `/${this.baseId}/${encodeURIComponent(tableId)}/${encodeURIComponent(recordId)}?${query}`,
+    );
+  }
+
   /**
    * Upsert by a merge key, in batches of 10.
    *

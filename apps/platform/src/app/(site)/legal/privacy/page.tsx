@@ -28,7 +28,7 @@ export default async function Privacy() {
         <strong>Effective Date:</strong> October 10, 2024
       </p>
       <p>
-        <strong>Last Updated:</strong> January 27, 2026
+        <strong>Last Updated:</strong> September 11, 2026
       </p>
       <p>
         At <strong>DevDogs x GDG On Campus (UGA)</strong>, we value
@@ -58,13 +58,23 @@ export default async function Privacy() {
           links.{" "}
         </li>
         <li>
-          <strong>Account &amp; Content:</strong> Encrypted passwords, profile
-          pictures, and any content or resources you post to our Community
-          Forum.{" "}
+          <strong>Account &amp; Content:</strong> Authentication records,
+          profile pictures, and any content or resources you post to our
+          Community Forum.{" "}
         </li>
         <li>
-          <strong>Participation:</strong> Membership status and event attendance
-          history (via Google Developer Groups or check-in forms).
+          <strong>Participation:</strong> Membership status, meeting attendance
+          (including the meeting, check-in time, and check-in method), DevDogs
+          competition participation, stars, and streaks.
+        </li>
+        <li>
+          <strong>Experiential Learning evidence:</strong> Written reflections
+          you draft or submit for eligible DevDogs meetings and competitions.
+        </li>
+        <li>
+          <strong>Operational history:</strong> Officer corrections and an
+          append-only audit history, including who made a change, why it was
+          made, and reflection revisions before and after the change.
         </li>
       </ul>
       <h3 id="-2-how-we-use-your-data-">
@@ -80,9 +90,9 @@ export default async function Privacy() {
           forum contributions.{" "}
         </li>
         <li>
-          <strong>Leaderboards:</strong> Tracking GitHub contributions for
-          project management and Experiential Learning (EL) credit
-          opportunities.{" "}
+          <strong>Participation and progress:</strong> Recording attendance,
+          competition participation, stars, streaks, and evidence for
+          Experiential Learning (EL) opportunities.{" "}
         </li>
         <li>
           <strong>Analytics:</strong> Using anonymized demographic data to show
@@ -108,8 +118,13 @@ export default async function Privacy() {
           administrative user data.{" "}
         </li>
         <li>
-          <strong>Security:</strong> Your password is encrypted and
-          indecipherable even to those with database access.
+          <strong>Security:</strong> Member sign-in uses a UGA Google account;
+          DevDogs does not receive or store your Google password.
+        </li>
+        <li>
+          <strong>EL decisions:</strong> DevDogs collects attendance and
+          reflection evidence only. An independent university process, not
+          DevDogs or its officers, determines whether EL credit is awarded.
         </li>
       </ul>
       <h3 id="-4-your-rights-data-control-">
@@ -131,13 +146,40 @@ export default async function Privacy() {
           &quot;Data Request&quot; or &quot;Data Removal Request.&quot;
         </li>
       </ul>
-      <h3 id="-5-third-party-services-">
-        <strong>5. Third-Party Services</strong>
+      <h3 id="-5-access-and-retention-">
+        <strong>5. Access and Retention</strong>
+      </h3>
+      <ul>
+        <li>
+          Members can view their own attendance, participation, progress, and
+          reflections. These records are not public leaderboards.
+        </li>
+        <li>
+          Authorized officers can access attendance and EL reflection records in
+          Airtable. Officers with Audit Log access can also inspect the full
+          edit history of a reflection.
+        </li>
+        <li>
+          Personal alumni records are currently identified and purged through a
+          manual process. You may also request removal sooner using the process
+          above.
+        </li>
+        <li>
+          Non-identifying aggregate statistics may be preserved indefinitely so
+          the club can understand participation and programming over time.
+        </li>
+      </ul>
+      <h3 id="-6-third-party-services-">
+        <strong>6. Third-Party Services</strong>
       </h3>
       <p>
-        We use external platforms (GitHub, Discord, and Google) to facilitate
-        club operations. If any financial transactions occur (such as dues or
-        merch), they are handled by UGA&#39;s Paciolan system. These services
+        We use external platforms including GitHub, Discord, Google, Airtable,
+        and our hosting and database providers to facilitate club operations.
+        Attendance, participation, member metrics, reflections, and correction
+        status are synchronized to Airtable for officer workflows. Officers may
+        export applicable attendance and reflection evidence for independent
+        university EL review. If any financial transactions occur (such as dues
+        or merch), they are handled by UGA&#39;s Paciolan system. These services
         have their own privacy policies which govern their data handling.
       </p>
     </div>

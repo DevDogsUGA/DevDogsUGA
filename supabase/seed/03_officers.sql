@@ -294,8 +294,18 @@ from (values
   ('Next.js Focus Lead', 7),
   ('Campus Outreach Director', 8),
   ('DevOps Director', 9),
-  ('DogDays Project Manager', 10),
-  ('Flutter Focus Lead', 11)
+  -- Renamed from 'DogDays Project Manager' 2026-09-09, matching the title
+  -- offered to Sidhant (see the incoming-officer scaffold below). Rename
+  -- rather than a second row: `on conflict ("title")` cannot see it, so a
+  -- database that already carries the old title keeps it until the console
+  -- renames it there too.
+  ('DogDays Project Director', 10),
+  ('Flutter Focus Lead', 11),
+  -- Offered to Taha in the 2026-09-04 offer letter (see the incoming-officer
+  -- scaffold at the foot of this file). Created unassigned, like President:
+  -- the title is established by the offer; the holder's row waits on their
+  -- submission.
+  ('Corporate Outreach Director', 12)
 ) as t("title", "ord")
 on conflict ("title") do update set
   "isLeadership" = true,
@@ -499,11 +509,13 @@ where s."userId" is not null and s."title" is not null
 on conflict do nothing;
 
 -- Secondary leadership roles.
+--
+-- Jack Harrington's DogDays assignment was removed 2026-09-09: the role,
+-- renamed DogDays Project Director, goes to Sidhant when his row lands.
 insert into "platform"."userRoles" ("userId", "roleId")
 select s."userId", r."id"
 from "officer_submissions" s
 join (values
-  ('jack-harrington', 'DogDays Project Manager'),
   ('nandan-praveen', 'Flutter Focus Lead')
 ) as secondary("slug", "title") on secondary."slug" = s."slug"
 join "platform"."roles" r on r."title" = secondary."title"
@@ -606,3 +618,68 @@ select u."id", r."id"
 from "auth"."users" u, "platform"."roles" r
 where lower(u."email") = 'jsf51288@uga.edu' and r."title" = 'DevOps Director'
 on conflict do nothing;
+
+-- ============================================================
+-- Incoming officers, September 2026 -- scaffolds, not rows
+-- ============================================================
+--
+-- Three offer letters went out in September (archived alongside the others in
+-- the private archive): Anusha -- Campus Outreach Director, 2026-09-04;
+-- Sidhant -- DogDays Project Director, 2026-09-08; Taha -- Corporate Outreach
+-- Director, 2026-09-04. Each letter asks for photos and a third-person bio by
+-- reply, and none of those replies is on file yet -- which means no legal
+-- name, no MyID address, no bio, no programs, no headshot.
+--
+-- So these are commented out, on the same reasoning as Sloan's block above
+-- was once held back: a live row here needs the officer's real MyID address
+-- to match on, and inventing one is exactly the orphaning hazard described at
+-- the top of this file. Fill each TODO from the reply email, then uncomment
+-- into the officer_submissions insert (they are written in its column order).
+--
+-- Both title questions were settled 2026-09-09:
+--   * Anusha shares Campus Outreach Director with Armani Peacox -- one role,
+--     two holders, which `userRoles` models without ceremony.
+--   * The DogDays role is renamed to 'DogDays Project Director' (see the
+--     roles insert above) and removed from Jack Harrington; it is Sidhant's
+--     to hold once his row lands.
+--
+-- seededIds ...0009 through ...0011 are reserved here so the avatars-bucket
+-- keys are knowable before the headshots arrive, continuing the block above
+-- (Sloan holds ...0008).
+--
+--  (
+--    'anusha-TODO-last-name', 'TODO-myid@uga.edu', 'Anusha TODO',
+--    'TODO', 'TODO',
+--    'Campus Outreach Director',  -- shared with Armani Peacox
+--    'TODO: condensed third-person bio from her reply, <= 512 chars',
+--    array[]::integer[],  -- TODO: Bulletin detail ids from her programs
+--    null, null,          -- TODO: graduation, read off the resume if sent
+--    array[]::text[],     -- TODO: the address she replied from, if not MyID
+--    null,                -- TODO: pronouns, only if she has stated them
+--    false, false,
+--    '00000000-0000-4000-b000-000000000009'
+--  ),
+--  (
+--    'sidhant-TODO-last-name', 'TODO-myid@uga.edu', 'Sidhant TODO',
+--    'TODO', 'TODO',
+--    'DogDays Project Director',
+--    'TODO: condensed third-person bio from his reply, <= 512 chars',
+--    array[]::integer[],
+--    null, null,
+--    array[]::text[],
+--    null,
+--    false, false,
+--    '00000000-0000-4000-b000-000000000010'
+--  ),
+--  (
+--    'taha-TODO-last-name', 'TODO-myid@uga.edu', 'Taha TODO',
+--    'TODO', 'TODO',
+--    'Corporate Outreach Director',
+--    'TODO: condensed third-person bio from his reply, <= 512 chars',
+--    array[]::integer[],
+--    null, null,
+--    array[]::text[],
+--    null,
+--    false, false,
+--    '00000000-0000-4000-b000-000000000011'
+--  )

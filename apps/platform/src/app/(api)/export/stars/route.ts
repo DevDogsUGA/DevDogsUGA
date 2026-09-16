@@ -20,7 +20,7 @@ import {
  * `from`, `to` (ISO dates, on the meeting start) and `project` (a slug).
  *
  * Gated on `canExportStars`, kept deliberately separate from
- * `canEditAttendance`. Correcting one member's check-in and downloading every
+ * `canManageAttendance`. Correcting one member's check-in and downloading every
  * member's email are different powers, and the officer who needs the first
  * rarely needs the second.
  *

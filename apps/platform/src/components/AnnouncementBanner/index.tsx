@@ -212,6 +212,7 @@ function DismissCross({ className }: { className?: string }) {
 export default function AnnouncementBanner() {
   const pathname = usePathname();
   const [dismissed, setDismissed] = useState(false);
+  const [expired, setExpired] = useState(false);
   /** Offset while a finger is on the notice; null when nothing is dragging. */
   const [dragY, setDragY] = useState<number | null>(null);
   /** Set once dismissal is committed to, while the exit plays out. */
@@ -230,7 +231,21 @@ export default function AnnouncementBanner() {
     [],
   );
 
-  if (!ANNOUNCEMENT || dismissed || !showsAnnouncement(pathname)) return null;
+  useEffect(() => {
+    if (!ANNOUNCEMENT) return;
+
+    const remaining = new Date(ANNOUNCEMENT.expiresAt).getTime() - Date.now();
+    if (remaining <= 0) {
+      setExpired(true);
+      return;
+    }
+
+    const timer = setTimeout(() => setExpired(true), remaining);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!ANNOUNCEMENT || expired || dismissed || !showsAnnouncement(pathname))
+    return null;
 
   const { id, eyebrow, message, action, tone } = ANNOUNCEMENT;
   const toneClasses = TONES[tone];

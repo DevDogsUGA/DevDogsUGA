@@ -107,7 +107,13 @@ function formatList(items: string[]): string {
 
 /** What the sync refused, and why, in words an officer can act on. */
 export interface Refusal {
-  table: "projects" | "meetings" | "workshops" | "competitions" | "attendance";
+  table:
+    | "projects"
+    | "meetings"
+    | "workshops"
+    | "competitions"
+    | "attendance"
+    | "platformSettings";
   airtableRecordId: string;
   /** Machine-readable, for the console and for tests. */
   code: RefusalCode;
@@ -124,13 +130,13 @@ export type RefusalCode =
   | "row_write_failed"
   // A state rather than a refusal, like `meeting_incomplete`.
   | "project_incomplete"
+  | "reflection_settings_invalid"
   | "project_name_too_long"
   | "meeting_summary_too_long"
   | "meeting_cancellation_reason_too_long"
   | "meeting_reason_without_cancellation"
   | "meeting_rsvp_host"
   | "meeting_name_too_long"
-  | "meeting_attendance_form_host"
   | "workshop_meeting_changed"
   | "workshop_project_changed"
   | "workshop_project_cleared"
@@ -255,10 +261,6 @@ export interface MeetingFacts {
   rawNameOverride: AirtableValue;
   /** What the registry parser made of it. Null if it refused the value. */
   nameOverride: string | null;
-  /** Exactly what Airtable returned for `Attendance form`, unparsed. */
-  rawAttendanceForm: AirtableValue;
-  /** What the registry parser made of it. Null if it refused the value. */
-  attendanceForm: string | null;
 }
 
 /**
@@ -332,12 +334,10 @@ export function checkMeeting(facts: MeetingFacts): RuleResult {
     });
   }
 
-  // Both of the rules below guard a CHECK CONSTRAINT rather than a layout.
-  // That is a stronger reason than the two above: an unpublishable summary is
-  // a bad card, but a value the constraint rejects is an exception raised in
-  // the middle of the pull, and that unwinds past every table left in the
-  // pass. The parser now returns null for both, so all that is left here is
-  // telling the officer which keystroke did it.
+  // This guards a CHECK CONSTRAINT rather than a layout. That is a stronger
+  // reason than the two above: an unpublishable summary is a bad card, but a
+  // value the constraint rejects is an exception raised in the middle of the
+  // pull, and that unwinds past every table left in the pass.
   const nameText = presentText(facts.rawNameOverride);
   if (nameText !== null && facts.nameOverride === null) {
     result.rejectedFields.add("nameOverride");
@@ -351,21 +351,6 @@ export function checkMeeting(facts: MeetingFacts): RuleResult {
         "shorten it and it will appear within fifteen minutes. Most nights " +
         "need no name at all: the heading is built from the workshops and " +
         "the judging, so clearing this cell is also a fix.",
-    });
-  }
-
-  const formText = presentText(facts.rawAttendanceForm);
-  if (formText !== null && facts.attendanceForm === null) {
-    result.rejectedFields.add("attendanceFormUrl");
-    result.refusals.push({
-      table: "meetings",
-      airtableRecordId: facts.airtableRecordId,
-      code: "meeting_attendance_form_host",
-      message:
-        `Attendance form is "${formText}", which is not a link this can ` +
-        "store. It has not been published — check-in sends members straight " +
-        "to it, so it has to be an https:// address on airtable.com. Open " +
-        "the form in Airtable, use Share form, and paste that link.",
     });
   }
 
@@ -441,9 +426,17 @@ const RSVP_ALLOWED_HOSTS_TEXT = RSVP_URL_ALLOWED_HOSTS.join(" or ");
  */
 function presentText(raw: AirtableValue): string | null {
   if (raw === null || raw === undefined) return null;
-  const text = typeof raw === "string" ? raw : String(raw);
+  const text = describeAirtableValue(raw);
   const trimmed = text.trim();
   return trimmed === "" ? null : trimmed;
+}
+
+function describeAirtableValue(raw: AirtableValue): string {
+  if (raw === null || raw === undefined) return "empty";
+  if (typeof raw === "string") return raw;
+  if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
+  if (Array.isArray(raw)) return raw.join(", ");
+  return raw.email ?? raw.name ?? raw.id;
 }
 
 // ── Workshops ────────────────────────────────────────────────────────────────
@@ -781,7 +774,7 @@ export function checkCompetitionValues(
       airtableRecordId: facts.airtableRecordId,
       code: "competition_max_team_size_invalid",
       message:
-        `Max team size is "${String(facts.rawMaxTeamSize)}", which is not a ` +
+        `Max team size is "${describeAirtableValue(facts.rawMaxTeamSize)}", which is not a ` +
         "team size. It has to be a whole number of at least 1, and it has " +
         "not been applied — the previous value is still in force. Leave the " +
         "cell empty for no limit.",
@@ -797,7 +790,7 @@ export function checkCompetitionValues(
       airtableRecordId: facts.airtableRecordId,
       code: "competition_requirement_count_invalid",
       message:
-        `Requirements is "${String(facts.rawRequirementCount)}", which is ` +
+        `Requirements is "${describeAirtableValue(facts.rawRequirementCount)}", which is ` +
         "not a count. It has to be a whole number, zero or more, and it has " +
         "not been applied — the previous value is still in force. It is the " +
         "denominator every team's requirement score is computed against.",
@@ -909,37 +902,6 @@ function checkJudgingStartsAt(
 }
 
 // ── Attendance ───────────────────────────────────────────────────────────────
-
-const UGA_DOMAIN = "@uga.edu";
-
-/**
- * A MyID as an address, or null if it cannot be one.
- *
- * Accepts a bare local part (`jdoe`) and also a full `@uga.edu` address, since
- * somebody will type one however the form is labelled. Everything else is
- * rejected rather than coerced.
- *
- * The rejection matters more than the parsing. Sign-in is Google restricted to
- * `hd=uga.edu`, so an account created for `someone@gmail.com` could never be
- * signed into by anybody: it would be an unreachable row holding somebody's
- * attendance forever. Refusing is the only outcome that leaves a person able to
- * fix it.
- */
-export function myIdToEmail(raw: string | null): string | null {
-  if (!raw) return null;
-  const value = raw.trim().toLowerCase();
-  if (value === "") return null;
-
-  const local = value.endsWith(UGA_DOMAIN)
-    ? value.slice(0, -UGA_DOMAIN.length)
-    : value;
-
-  // MyIDs are alphanumeric. Anything with an @ left in it named another
-  // domain, and anything with a space is two of something.
-  if (!/^[a-z0-9._-]+$/.test(local)) return null;
-
-  return `${local}${UGA_DOMAIN}`;
-}
 
 export interface AttendanceFacts {
   airtableRecordId: string;

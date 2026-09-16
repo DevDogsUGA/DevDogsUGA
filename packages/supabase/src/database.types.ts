@@ -73,6 +73,56 @@ export type Database = {
         };
         Relationships: [];
       };
+      airtableChangeReceipts: {
+        Row: {
+          auditEventId: string | null;
+          createdAt: string;
+          error: string | null;
+          formResponseRecordId: string;
+          payload: Json;
+          payloadDigest: string;
+          processedAt: string | null;
+          status: string;
+          targetId: string | null;
+          targetType: string;
+          updatedAt: string;
+        };
+        Insert: {
+          auditEventId?: string | null;
+          createdAt?: string;
+          error?: string | null;
+          formResponseRecordId: string;
+          payload: Json;
+          payloadDigest: string;
+          processedAt?: string | null;
+          status?: string;
+          targetId?: string | null;
+          targetType: string;
+          updatedAt?: string;
+        };
+        Update: {
+          auditEventId?: string | null;
+          createdAt?: string;
+          error?: string | null;
+          formResponseRecordId?: string;
+          payload?: Json;
+          payloadDigest?: string;
+          processedAt?: string | null;
+          status?: string;
+          targetId?: string | null;
+          targetType?: string;
+          updatedAt?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "airtableChangeReceipts_auditEventId_fkey";
+            columns: ["auditEventId"];
+            isOneToOne: false;
+            referencedRelation: "auditEvents";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       airtableSyncState: {
         Row: {
           id: boolean;
@@ -150,34 +200,37 @@ export type Database = {
       };
       attendance: {
         Row: {
-          airtableRecordId: string | null;
           id: string;
           meetingId: string;
           method: Database["platform"]["Enums"]["checkInMethod"];
           recordedAt: string;
           recordedBy: string | null;
+          revocationReason: string | null;
+          revokedAt: string | null;
+          revokedBy: string | null;
           userId: string;
-          workshopId: string | null;
         };
         Insert: {
-          airtableRecordId?: string | null;
           id?: string;
           meetingId: string;
           method: Database["platform"]["Enums"]["checkInMethod"];
           recordedAt?: string;
           recordedBy?: string | null;
+          revocationReason?: string | null;
+          revokedAt?: string | null;
+          revokedBy?: string | null;
           userId: string;
-          workshopId?: string | null;
         };
         Update: {
-          airtableRecordId?: string | null;
           id?: string;
           meetingId?: string;
           method?: Database["platform"]["Enums"]["checkInMethod"];
           recordedAt?: string;
           recordedBy?: string | null;
+          revocationReason?: string | null;
+          revokedAt?: string | null;
+          revokedBy?: string | null;
           userId?: string;
-          workshopId?: string | null;
         };
         Relationships: [
           {
@@ -187,12 +240,71 @@ export type Database = {
             referencedRelation: "meetings";
             referencedColumns: ["id"];
           },
+        ];
+      };
+      auditEvents: {
+        Row: {
+          action: string;
+          actorAirtableDisplayName: string | null;
+          actorAirtableUserId: string | null;
+          actorType: string;
+          actorUserId: string | null;
+          afterReflectionRevisionId: string | null;
+          beforeReflectionRevisionId: string | null;
+          correlationId: string | null;
+          createdAt: string;
+          id: string;
+          metadata: Json;
+          source: Database["platform"]["Enums"]["auditEventSource"];
+          targetId: string;
+          targetType: string;
+        };
+        Insert: {
+          action: string;
+          actorAirtableDisplayName?: string | null;
+          actorAirtableUserId?: string | null;
+          actorType: string;
+          actorUserId?: string | null;
+          afterReflectionRevisionId?: string | null;
+          beforeReflectionRevisionId?: string | null;
+          correlationId?: string | null;
+          createdAt?: string;
+          id?: string;
+          metadata?: Json;
+          source: Database["platform"]["Enums"]["auditEventSource"];
+          targetId: string;
+          targetType: string;
+        };
+        Update: {
+          action?: string;
+          actorAirtableDisplayName?: string | null;
+          actorAirtableUserId?: string | null;
+          actorType?: string;
+          actorUserId?: string | null;
+          afterReflectionRevisionId?: string | null;
+          beforeReflectionRevisionId?: string | null;
+          correlationId?: string | null;
+          createdAt?: string;
+          id?: string;
+          metadata?: Json;
+          source?: Database["platform"]["Enums"]["auditEventSource"];
+          targetId?: string;
+          targetType?: string;
+        };
+        Relationships: [
           {
-            foreignKeyName: "attendance_workshopId_meetingId_fkey";
-            columns: ["workshopId", "meetingId"];
+            foreignKeyName: "auditEvents_afterReflectionRevisionId_fkey";
+            columns: ["afterReflectionRevisionId"];
             isOneToOne: false;
-            referencedRelation: "workshops";
-            referencedColumns: ["id", "meetingId"];
+            referencedRelation: "reflectionRevisions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "auditEvents_beforeReflectionRevisionId_fkey";
+            columns: ["beforeReflectionRevisionId"];
+            isOneToOne: false;
+            referencedRelation: "reflectionRevisions";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -281,34 +393,43 @@ export type Database = {
       competitions: {
         Row: {
           airtableRecordId: string | null;
+          countsTowardProgress: boolean;
           deletedAt: string | null;
+          elEligible: boolean;
           id: string;
           judgingMeetingId: string | null;
           judgingStartsAt: string | null;
           maxTeamSize: number | null;
           requirementCount: number | null;
+          seasonId: string | null;
           slug: string;
           workshopId: string;
         };
         Insert: {
           airtableRecordId?: string | null;
+          countsTowardProgress?: boolean;
           deletedAt?: string | null;
+          elEligible?: boolean;
           id?: string;
           judgingMeetingId?: string | null;
           judgingStartsAt?: string | null;
           maxTeamSize?: number | null;
           requirementCount?: number | null;
+          seasonId?: string | null;
           slug: string;
           workshopId: string;
         };
         Update: {
           airtableRecordId?: string | null;
+          countsTowardProgress?: boolean;
           deletedAt?: string | null;
+          elEligible?: boolean;
           id?: string;
           judgingMeetingId?: string | null;
           judgingStartsAt?: string | null;
           maxTeamSize?: number | null;
           requirementCount?: number | null;
+          seasonId?: string | null;
           slug?: string;
           workshopId?: string;
         };
@@ -318,6 +439,13 @@ export type Database = {
             columns: ["judgingMeetingId"];
             isOneToOne: false;
             referencedRelation: "meetings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "competitions_seasonId_fkey";
+            columns: ["seasonId"];
+            isOneToOne: false;
+            referencedRelation: "seasons";
             referencedColumns: ["id"];
           },
           {
@@ -747,56 +875,70 @@ export type Database = {
       meetings: {
         Row: {
           airtableRecordId: string | null;
-          attendanceFormUrl: string | null;
           building: string | null;
           cancellationReason: string | null;
           cancelledAt: string | null;
+          countsTowardProgress: boolean;
           deletedAt: string | null;
+          elEligible: boolean;
           endsAt: string;
           id: string;
           kind: string | null;
           location: string | null;
           nameOverride: string | null;
           rsvpUrl: string | null;
+          seasonId: string | null;
           slug: string;
           startsAt: string;
           summary: string | null;
         };
         Insert: {
           airtableRecordId?: string | null;
-          attendanceFormUrl?: string | null;
           building?: string | null;
           cancellationReason?: string | null;
           cancelledAt?: string | null;
+          countsTowardProgress?: boolean;
           deletedAt?: string | null;
+          elEligible?: boolean;
           endsAt: string;
           id?: string;
           kind?: string | null;
           location?: string | null;
           nameOverride?: string | null;
           rsvpUrl?: string | null;
+          seasonId?: string | null;
           slug: string;
           startsAt: string;
           summary?: string | null;
         };
         Update: {
           airtableRecordId?: string | null;
-          attendanceFormUrl?: string | null;
           building?: string | null;
           cancellationReason?: string | null;
           cancelledAt?: string | null;
+          countsTowardProgress?: boolean;
           deletedAt?: string | null;
+          elEligible?: boolean;
           endsAt?: string;
           id?: string;
           kind?: string | null;
           location?: string | null;
           nameOverride?: string | null;
           rsvpUrl?: string | null;
+          seasonId?: string | null;
           slug?: string;
           startsAt?: string;
           summary?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "meetings_seasonId_fkey";
+            columns: ["seasonId"];
+            isOneToOne: false;
+            referencedRelation: "seasons";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       oauthRegistrations: {
         Row: {
@@ -1145,6 +1287,128 @@ export type Database = {
           },
         ];
       };
+      reflectionRevisions: {
+        Row: {
+          changeReason: string | null;
+          competitionId: string | null;
+          content: string;
+          createdAt: string;
+          createdByAirtableUserId: string | null;
+          createdByUserId: string | null;
+          id: string;
+          meetingId: string | null;
+          reflectionId: string;
+          submittedAt: string | null;
+          userId: string;
+        };
+        Insert: {
+          changeReason?: string | null;
+          competitionId?: string | null;
+          content: string;
+          createdAt?: string;
+          createdByAirtableUserId?: string | null;
+          createdByUserId?: string | null;
+          id?: string;
+          meetingId?: string | null;
+          reflectionId: string;
+          submittedAt?: string | null;
+          userId: string;
+        };
+        Update: {
+          changeReason?: string | null;
+          competitionId?: string | null;
+          content?: string;
+          createdAt?: string;
+          createdByAirtableUserId?: string | null;
+          createdByUserId?: string | null;
+          id?: string;
+          meetingId?: string | null;
+          reflectionId?: string;
+          submittedAt?: string | null;
+          userId?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reflectionRevisions_reflectionId_fkey";
+            columns: ["reflectionId"];
+            isOneToOne: false;
+            referencedRelation: "reflections";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      reflections: {
+        Row: {
+          competitionId: string | null;
+          content: string;
+          createdAt: string;
+          id: string;
+          meetingId: string | null;
+          submittedAt: string | null;
+          updatedAt: string;
+          userId: string;
+        };
+        Insert: {
+          competitionId?: string | null;
+          content?: string;
+          createdAt?: string;
+          id?: string;
+          meetingId?: string | null;
+          submittedAt?: string | null;
+          updatedAt?: string;
+          userId: string;
+        };
+        Update: {
+          competitionId?: string | null;
+          content?: string;
+          createdAt?: string;
+          id?: string;
+          meetingId?: string | null;
+          submittedAt?: string | null;
+          updatedAt?: string;
+          userId?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reflections_competitionId_fkey";
+            columns: ["competitionId"];
+            isOneToOne: false;
+            referencedRelation: "competitions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reflections_meetingId_fkey";
+            columns: ["meetingId"];
+            isOneToOne: false;
+            referencedRelation: "meetings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      reflectionSettings: {
+        Row: {
+          airtableRecordId: string | null;
+          id: boolean;
+          minimumWordCount: number;
+          submissionWindowDays: number;
+          updatedAt: string;
+        };
+        Insert: {
+          airtableRecordId?: string | null;
+          id?: boolean;
+          minimumWordCount?: number;
+          submissionWindowDays?: number;
+          updatedAt?: string;
+        };
+        Update: {
+          airtableRecordId?: string | null;
+          id?: boolean;
+          minimumWordCount?: number;
+          submissionWindowDays?: number;
+          updatedAt?: string;
+        };
+        Relationships: [];
+      };
       reportCorroborations: {
         Row: {
           createdAt: string;
@@ -1305,8 +1569,8 @@ export type Database = {
         Row: {
           canAuditBallots: boolean | null;
           canCreateCredentials: boolean | null;
-          canEditAttendance: boolean | null;
           canExportStars: boolean | null;
+          canManageAttendance: boolean | null;
           canManageRoles: boolean | null;
           canManageSuspensions: boolean | null;
           canManageVerification: boolean | null;
@@ -1330,8 +1594,8 @@ export type Database = {
         Insert: {
           canAuditBallots?: boolean | null;
           canCreateCredentials?: boolean | null;
-          canEditAttendance?: boolean | null;
           canExportStars?: boolean | null;
+          canManageAttendance?: boolean | null;
           canManageRoles?: boolean | null;
           canManageSuspensions?: boolean | null;
           canManageVerification?: boolean | null;
@@ -1355,8 +1619,8 @@ export type Database = {
         Update: {
           canAuditBallots?: boolean | null;
           canCreateCredentials?: boolean | null;
-          canEditAttendance?: boolean | null;
           canExportStars?: boolean | null;
+          canManageAttendance?: boolean | null;
           canManageRoles?: boolean | null;
           canManageSuspensions?: boolean | null;
           canManageVerification?: boolean | null;
@@ -1486,6 +1750,27 @@ export type Database = {
           revokedAt?: string | null;
           secretKeySecretId?: string;
           status?: Database["platform"]["Enums"]["envStatus"];
+        };
+        Relationships: [];
+      };
+      seasons: {
+        Row: {
+          endsAt: string;
+          id: string;
+          name: string;
+          startsAt: string;
+        };
+        Insert: {
+          endsAt: string;
+          id?: string;
+          name: string;
+          startsAt: string;
+        };
+        Update: {
+          endsAt?: string;
+          id?: string;
+          name?: string;
+          startsAt?: string;
         };
         Relationships: [];
       };
@@ -1708,6 +1993,10 @@ export type Database = {
           joinCode: string;
           lockedManuallyAt: string | null;
           name: string;
+          participationOverride: boolean | null;
+          participationOverrideAt: string | null;
+          participationOverrideBy: string | null;
+          participationOverrideReason: string | null;
           requirementsMet: number | null;
           slug: string;
           submissionState:
@@ -1725,6 +2014,10 @@ export type Database = {
           joinCode: string;
           lockedManuallyAt?: string | null;
           name: string;
+          participationOverride?: boolean | null;
+          participationOverrideAt?: string | null;
+          participationOverrideBy?: string | null;
+          participationOverrideReason?: string | null;
           requirementsMet?: number | null;
           slug: string;
           submissionState?:
@@ -1742,6 +2035,10 @@ export type Database = {
           joinCode?: string;
           lockedManuallyAt?: string | null;
           name?: string;
+          participationOverride?: boolean | null;
+          participationOverrideAt?: string | null;
+          participationOverrideBy?: string | null;
+          participationOverrideReason?: string | null;
           requirementsMet?: number | null;
           slug?: string;
           submissionState?:
@@ -1913,30 +2210,16 @@ export type Database = {
       };
       memberStars: {
         Row: {
-          competitionStar: boolean | null;
+          activityId: string | null;
+          activityType: string | null;
+          competitionId: string | null;
+          earnedAt: string | null;
           meetingId: string | null;
-          projectId: string | null;
+          startsAt: string | null;
           userId: string | null;
           won: boolean | null;
-          workshopId: string | null;
-          workshopStar: boolean | null;
         };
-        Relationships: [
-          {
-            foreignKeyName: "workshops_meetingId_fkey";
-            columns: ["meetingId"];
-            isOneToOne: false;
-            referencedRelation: "meetings";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "workshops_projectId_fkey";
-            columns: ["projectId"];
-            isOneToOne: false;
-            referencedRelation: "projects";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       profileWithVerification: {
         Row: {
@@ -1972,8 +2255,8 @@ export type Database = {
         Row: {
           canAuditBallots: boolean | null;
           canCreateCredentials: boolean | null;
-          canEditAttendance: boolean | null;
           canExportStars: boolean | null;
+          canManageAttendance: boolean | null;
           canManageRoles: boolean | null;
           canManageSuspensions: boolean | null;
           canManageVerification: boolean | null;
@@ -2162,7 +2445,9 @@ export type Database = {
         | "undergraduate_certificate"
         | "graduate_certificate"
         | "professional_program";
-      checkInMethod: "discord" | "officer" | "airtable";
+      auditEventSource:
+        "platform" | "qr" | "manual_code" | "airtable_form" | "system";
+      checkInMethod: "qr" | "manual_code" | "officer";
       contentAction: "quarantine" | "no_action";
       contentVisibility: "public" | "restricted";
       credentialStatus: "active" | "disabled" | "revoked";
@@ -2937,6 +3222,7 @@ export type Database = {
           public: boolean | null;
           type: Database["storage"]["Enums"]["buckettype"];
           updated_at: string | null;
+          versioning_status: string;
         };
         Insert: {
           allowed_mime_types?: string[] | null;
@@ -2950,6 +3236,7 @@ export type Database = {
           public?: boolean | null;
           type?: Database["storage"]["Enums"]["buckettype"];
           updated_at?: string | null;
+          versioning_status?: string;
         };
         Update: {
           allowed_mime_types?: string[] | null;
@@ -2963,6 +3250,7 @@ export type Database = {
           public?: boolean | null;
           type?: Database["storage"]["Enums"]["buckettype"];
           updated_at?: string | null;
+          versioning_status?: string;
         };
         Relationships: [];
       };
@@ -3135,9 +3423,12 @@ export type Database = {
       };
       objects: {
         Row: {
+          archived_at: string | null;
           bucket_id: string | null;
           created_at: string | null;
           id: string;
+          is_delete_marker: boolean;
+          is_versioned: boolean;
           last_accessed_at: string | null;
           metadata: Json | null;
           name: string | null;
@@ -3149,9 +3440,12 @@ export type Database = {
           version: string | null;
         };
         Insert: {
+          archived_at?: string | null;
           bucket_id?: string | null;
           created_at?: string | null;
           id?: string;
+          is_delete_marker?: boolean;
+          is_versioned?: boolean;
           last_accessed_at?: string | null;
           metadata?: Json | null;
           name?: string | null;
@@ -3163,9 +3457,12 @@ export type Database = {
           version?: string | null;
         };
         Update: {
+          archived_at?: string | null;
           bucket_id?: string | null;
           created_at?: string | null;
           id?: string;
+          is_delete_marker?: boolean;
+          is_versioned?: boolean;
           last_accessed_at?: string | null;
           metadata?: Json | null;
           name?: string | null;
@@ -3617,7 +3914,14 @@ export const Constants = {
         "graduate_certificate",
         "professional_program",
       ],
-      checkInMethod: ["discord", "officer", "airtable"],
+      auditEventSource: [
+        "platform",
+        "qr",
+        "manual_code",
+        "airtable_form",
+        "system",
+      ],
+      checkInMethod: ["qr", "manual_code", "officer"],
       contentAction: ["quarantine", "no_action"],
       contentVisibility: ["public", "restricted"],
       credentialStatus: ["active", "disabled", "revoked"],

@@ -207,7 +207,7 @@ describe("registry completeness", () => {
     expect(narrowedKeys()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
   });
 
-  it("keeps the three Airtable tokens three separate declarations", () => {
+  it("keeps Airtable credentials in separate declarations", () => {
     // The property that makes `AIRTABLE_PLAN_PAT`'s `narrowed` claim checkable
     // at all. If the scopes were values of ONE key, "the plan token cannot
     // write" would be a fact about whichever value a target happened to hold,
@@ -229,6 +229,7 @@ describe("registry completeness", () => {
     );
     expect(airtable.sort()).toEqual([
       "AIRTABLE_APPLY_PAT",
+      "AIRTABLE_AUTOMATION_SECRET",
       "AIRTABLE_BASE_ID",
       "AIRTABLE_PLAN_PAT",
       "AIRTABLE_SYNC_PAT",

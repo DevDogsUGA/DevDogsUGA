@@ -590,8 +590,8 @@ describe("preflight, the target no app boots from", () => {
     // change that moved only preflight here would mean the `narrowed` marker
     // had been dropped without the scope change, leaving the key still routed
     // to the two deployed targets.
-    expect(keysRoutedTo("staging").size).toBe(47);
-    expect(keysRoutedTo("production").size).toBe(50);
+    expect(keysRoutedTo("staging").size).toBe(49);
+    expect(keysRoutedTo("production").size).toBe(52);
     expect(keysRoutedTo("preflight").size).toBe(2);
   });
 });

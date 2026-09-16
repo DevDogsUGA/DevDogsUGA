@@ -538,6 +538,16 @@ describe("platform.file_report", () => {
         where "reportId" = ${reportId}
       `;
       expect(corroborations!.n).toBe(1);
+
+      const events = await sql()`
+        select "action" from "platform"."auditEvents"
+        where "targetType" = 'report' and "targetId" = ${reportId}
+        order by "createdAt", "id"
+      `;
+      expect(events.map((event) => event.action)).toEqual([
+        "moderation.report_created",
+        "moderation.report_corroborated",
+      ]);
     } finally {
       if (reportId) await deleteReports(reportId);
       await destroySubjects(subject);
@@ -1132,6 +1142,20 @@ describe("platform.resolve_report", () => {
         uid: subject.userId,
       });
       expect(isSuspended).toBe(true);
+
+      const events = await sql()`
+        select "action", "metadata" from "platform"."auditEvents"
+        where "targetType" = 'report' and "targetId" = ${reportId}
+        order by "createdAt", "id"
+      `;
+      expect(events.map((event) => event.action)).toEqual([
+        "moderation.report_created",
+        "moderation.report_resolved",
+      ]);
+      expect(events[1]!.metadata).toMatchObject({
+        subjectAction: "ban",
+        appliedGlobally: true,
+      });
     } finally {
       if (reportId) await deleteReports(reportId);
       await destroySubjects(subject);

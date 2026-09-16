@@ -42,6 +42,11 @@ export const VALUE_FLAGS = new Set([
   "--logo",
   "--logo-padding",
   "--logo-size",
+  // `newsletter`: so `newsletter --mailbox devdogs@uga.edu 3.0.1` reads the
+  // address as the mailbox and only the version as an issue; likewise the
+  // recipients after `--to`.
+  "--mailbox",
+  "--to",
   "--margin",
   "--out",
   "--size",
@@ -53,7 +58,6 @@ export const VALUE_FLAGS = new Set([
   "--file",
   "--source",
   "--target",
-  "--team",
 ]);
 
 export function positionals(argv: readonly string[]): string[] {

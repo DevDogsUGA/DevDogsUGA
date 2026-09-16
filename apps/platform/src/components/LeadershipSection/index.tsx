@@ -77,8 +77,8 @@ export default async function LeadershipSection({
           <div className="mx-auto mt-12 max-w-2xl border-t border-emerald-200 pt-8 text-center">
             <p className="text-sm font-medium text-balance text-mauve-700">
               DevDogs leadership is elected each spring semester, and additional
-              positions in the 2026&ndash;27 leadership team are open to
-              applications from all students.
+              positions in the 2026&ndash;27 leadership team are accepting
+              applications until 11:59 PM on Wednesday, September 16.
             </p>
             <LinkButton
               href="/leadership"

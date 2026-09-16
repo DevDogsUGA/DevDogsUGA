@@ -3,6 +3,7 @@ import {
   competitions as competitionsSpec,
   meetings as meetingsSpec,
   projects as projectsSpec,
+  platformSettingsTable as settingsSpec,
   workshops as workshopsSpec,
   type AirtableRecord,
 } from "@devdogsuga/airtable";
@@ -10,12 +11,12 @@ import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { clubDateKey } from "~/lib/eventTime";
 import { db } from "~/server/db";
 import {
-  attendance,
   competitions,
   competitionStandings,
   meetings,
   projects,
   teams,
+  reflectionSettings,
   workshops,
 } from "~/server/db/schema";
 import {
@@ -62,6 +63,51 @@ export interface PullOutcome extends PullCounts {
   refusals: Refusal[];
   /** Airtable record id → platform uuid, for the tables downstream of this one. */
   idMap: Map<string, string>;
+}
+
+/** Pulls the one globally configurable reflection policy row. */
+export async function pullReflectionSettings(
+  records: AirtableRecord[],
+): Promise<PullOutcome> {
+  const out = emptyOutcome();
+  const parsed = applyPull<{
+    minimumWordCount: number | null;
+    submissionWindowDays: number | null;
+  }>(settingsSpec, records).find(
+    (record) => record.platformId === "reflection-policy",
+  );
+  if (!parsed) {
+    out.skipped += 1;
+    return out;
+  }
+  out.idMap.set(parsed.airtableRecordId, "reflection-policy");
+  const invalid = [
+    parsed.values.minimumWordCount === null ? "Minimum words" : null,
+    parsed.values.submissionWindowDays === null
+      ? "Submission window days"
+      : null,
+  ].filter((value): value is string => value !== null);
+  if (invalid.length > 0) {
+    out.skipped += 1;
+    out.refusals.push({
+      table: "platformSettings",
+      airtableRecordId: parsed.airtableRecordId,
+      code: "reflection_settings_invalid",
+      message: `${invalid.join(" and ")} must be positive whole numbers. The previous global reflection policy is still active.`,
+    });
+    return out;
+  }
+  await db
+    .update(reflectionSettings)
+    .set({
+      minimumWordCount: parsed.values.minimumWordCount!,
+      submissionWindowDays: parsed.values.submissionWindowDays!,
+      airtableRecordId: parsed.airtableRecordId,
+      updatedAt: new Date(),
+    })
+    .where(eq(reflectionSettings.id, true));
+  out.upserted += 1;
+  return out;
 }
 
 function emptyOutcome(): PullOutcome {
@@ -148,12 +194,13 @@ interface MeetingValues {
   location: string | null;
   startsAt: string | null;
   endsAt: string | null;
-  attendanceForm: string | null;
   summary: string | null;
   kind: string | null;
   rsvpUrl: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;
+  countsTowardProgress: boolean;
+  elEligible: boolean;
 }
 
 /**
@@ -249,8 +296,6 @@ export async function pullMeetings(
       cancellationReason: v.cancellationReason,
       rawNameOverride: raw[meetingsSpec.fields.nameOverride.id],
       nameOverride: v.nameOverride,
-      rawAttendanceForm: raw[meetingsSpec.fields.attendanceForm.id],
-      attendanceForm: v.attendanceForm,
     });
     out.refusals.push(...rules.refusals);
 
@@ -295,12 +340,13 @@ export async function pullMeetings(
       location: string | null;
       startsAt: Date;
       endsAt: Date;
-      attendanceFormUrl?: string | null;
       summary?: string | null;
       kind?: string | null;
       rsvpUrl?: string | null;
       cancelledAt?: Date | null;
       cancellationReason?: string | null;
+      countsTowardProgress: boolean;
+      elEligible: boolean;
     } = {
       nameOverride: v.nameOverride,
       // Not part of `complete`, like the three below it: a meeting whose
@@ -310,11 +356,6 @@ export async function pullMeetings(
       location: v.location,
       startsAt: new Date(v.startsAt!),
       endsAt: new Date(v.endsAt!),
-      // Null is a legitimate state, not an incomplete one: a meeting with no
-      // workshop has no form, and one whose officer has not made this week's
-      // yet is a meeting that exists. So it is written through rather than
-      // gating `complete`.
-      attendanceFormUrl: v.attendanceForm,
       // Same reasoning, three more times. Null clears, because an officer
       // deleting a summary means the page should stop showing it.
       summary: v.summary,
@@ -334,6 +375,8 @@ export async function pullMeetings(
       // somebody noticed the cell. So the date decides, and `checkMeeting`
       // tells the officer when their words went unpublished.
       cancellationReason: v.cancelledAt === null ? null : v.cancellationReason,
+      countsTowardProgress: v.countsTowardProgress,
+      elEligible: v.elEligible,
     };
 
     // A refused field is DROPPED from the write rather than written as null.
@@ -342,14 +385,9 @@ export async function pullMeetings(
     // punish the edit twice. The old text stays up until the new one fits.
     if (rules.rejectedFields.has("summary")) delete values.summary;
     if (rules.rejectedFields.has("rsvpUrl")) delete values.rsvpUrl;
-    // Both of these guard a check constraint rather than a layout, so the
-    // consequence of writing them anyway was not a bad card but a rejected
-    // INSERT mid-pull, which ends the pass for every table after this one.
-    // The parser refuses the value and this drops it, so the row keeps the
-    // name and the form it already had while the officer fixes the cell.
+    // This guards a check constraint rather than a layout, so the consequence
+    // of writing it anyway was not a bad card but a rejected INSERT mid-pull.
     if (rules.rejectedFields.has("nameOverride")) delete values.nameOverride;
-    if (rules.rejectedFields.has("attendanceFormUrl"))
-      delete values.attendanceFormUrl;
     // Only reachable while the night IS cancelled; the unpaired case clears
     // the column instead, and says so above. Here the old reason stays up, for
     // the same reason the old summary does.
@@ -451,9 +489,15 @@ export async function pullWorkshops(
       airtableRecordId: workshops.airtableRecordId,
       meetingId: workshops.meetingId,
       projectId: workshops.projectId,
+      // The legacy refusal helper calls this attendanceCount. Workshop-specific
+      // attendance no longer exists; effective competition participation is
+      // the historical evidence that must prevent a destructive move.
       attendanceCount: sql<number>`(
-        select count(*)::int from ${attendance}
-        where ${attendance.workshopId} = ${workshops.id}
+        select count(*)::int
+        from ${competitions} c
+        join ${teams} t on t."competitionId" = c.id
+        where c."workshopId" = ${workshops.id}
+          and coalesce(t."participationOverride", t."competedAt" is not null)
       )`,
     })
     .from(workshops);
@@ -677,6 +721,8 @@ interface CompetitionValues {
   judgingStartsAt: string | null;
   requirementCount: number | null;
   maxTeamSize: number | null;
+  countsTowardProgress: boolean;
+  elEligible: boolean;
 }
 
 export async function pullCompetitions(
@@ -757,7 +803,10 @@ export async function pullCompetitions(
       );
       out.refusals.push(...rules.refusals);
 
-      const values: Record<string, unknown> = {};
+      const values: Record<string, unknown> = {
+        countsTowardProgress: v.countsTowardProgress,
+        elEligible: v.elEligible,
+      };
       if (v.slug !== null) values.slug = v.slug;
       if (v.maxTeamSize !== null) values.maxTeamSize = v.maxTeamSize;
       if (
@@ -822,6 +871,8 @@ export async function pullCompetitions(
             judgingStartsAt,
             requirementCount: v.requirementCount,
             maxTeamSize: v.maxTeamSize,
+            countsTowardProgress: v.countsTowardProgress,
+            elEligible: v.elEligible,
             airtableRecordId: record.airtableRecordId,
           })
           .returning({ id: competitions.id }),

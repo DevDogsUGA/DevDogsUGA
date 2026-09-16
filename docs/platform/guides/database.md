@@ -82,7 +82,6 @@ pnpm devtools reset
 | Target                 | How                                                     |
 | ---------------------- | ------------------------------------------------------- |
 | your own stack         | `pnpm devtools reset`                                   |
-| a team sandbox         | `pnpm devtools push --team <slug>`                      |
 | the shared dev project | `pnpm devtools push --remote`, by hand                  |
 | production             | `production-migrate` in `.github/workflows/deploy.yaml` |
 
@@ -98,7 +97,7 @@ Staging is **not** migrated by that workflow. `staging-preflight` only classifie
 
 `pnpm devtools` with no arguments opens a grouped menu of every command the CLI has, with the options each one takes — the shortest path when you do not already know the name.
 
-Four database commands — `link`, `push`, `reset`, `status` — each take one target: `--local` (the default), `--remote` (the linked Supabase project), or `--team <slug>` (a team's sandbox, reached through the platform). `stop` and `restart` are the other two; they act on the Docker stack on this machine, so they take no target. `link`, `push`, `reset` and `stop` delegate to the `@devdogsuga/supabase` package scripts by name, so those scripts stay the single definition of what a reset is.
+Four database commands — `link`, `push`, `reset`, `status` — each take one target: `--local` (the default) or `--remote` (the linked Supabase project). `stop` and `restart` are the other two; they act on the Docker stack on this machine, so they take no target. `link`, `push`, `reset` and `stop` delegate to the `@devdogsuga/supabase` package scripts by name, so those scripts stay the single definition of what a reset is.
 
 The package scripts worth knowing directly:
 

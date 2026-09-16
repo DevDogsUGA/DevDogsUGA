@@ -73,78 +73,59 @@ create policy "no_client_delete" on "platform"."teamAwards"
 -- The star view
 -- ============================================================
 --
--- Stars are derived, never stored. The rule the whole model follows: derive
--- what is a question about now, store what is a question about a moment that
--- has passed. "Did this member earn a workshop star" is a question about facts
--- already in the ledger, so a stored copy could only ever disagree with them,
--- and would, the first time an officer corrected a roster.
+-- Stars are derived, never stored. A qualifying meeting attendance and a
+-- qualifying competition participation are separate one-star facts.
 --
 -- What is stored is teams."competedAt", because "did this team have a live
 -- entry at the moment judging began" stops being answerable the instant the
 -- losing PRs are closed. That is a question about a past moment, so it is
 -- frozen once and never recomputed.
 --
--- `security_invoker = on` is load-bearing, not boilerplate. Without it the view
--- runs as its owner and returns every member's stars to any client that selects
--- from it, straight through the own-rows-only policy on attendance. With it, a
--- client sees exactly what its own policies allow, and the officer-facing reads
--- go through Drizzle as the owning role instead.
---
--- The view carries workshops."projectId" through as a grouped column rather
--- than joining projects, so a workshop with no project flows through correctly.
--- The loader that reads this view is the piece that has to left-join projects.
+-- The view is server-only. Member surfaces load a caller-filtered slice through
+-- a server loader; granting it directly would expose competition participation
+-- because team rosters are readable by every authenticated member.
 create view "platform"."memberStars"
 with (security_invoker = on) as
-with participation as (
-  -- Attended the workshop.
-  select
-    a."userId",
-    a."workshopId",
-    true  as attended,
-    false as competed,
-    false as won
-  from "platform"."attendance" a
-  where a."workshopId" is not null
-
-  union all
-
-  -- Competed: had a live entry when judging began.
-  select
-    tm."userId",
-    c."workshopId",
-    false,
-    true,
-    false
-  from "platform"."teamMembers" tm
-  join "platform"."teams" t        on t."id" = tm."teamId"
-  join "platform"."competitions" c on c."id" = t."competitionId"
-  where t."competedAt" is not null
-
-  union all
-
-  -- Won.
-  select
-    tm."userId",
-    c."workshopId",
-    false,
-    false,
-    true
-  from "platform"."teamMembers" tm
-  join "platform"."teams" t         on t."id" = tm."teamId"
-  join "platform"."competitions" c  on c."id" = t."competitionId"
-  join "platform"."teamAwards" aw   on aw."teamId" = t."id" and aw."category" = 'winner'
-)
 select
-  p."userId",
-  p."workshopId",
-  w."meetingId",
-  w."projectId",
-  -- Competing implies the workshop star even without an attendance row: a
-  -- member who shipped a feature that week was demonstrably participating,
-  -- and the check-in code is the thing most likely to have been missed.
-  bool_or(p.attended or p.competed) as "workshopStar",
-  bool_or(p.competed)               as "competitionStar",
-  bool_or(p.won)                    as "won"
-from participation p
-join "platform"."workshops" w on w."id" = p."workshopId"
-group by p."userId", p."workshopId", w."meetingId", w."projectId";
+  a."userId",
+  'meeting'::text as "activityType",
+  m."id" as "activityId",
+  m."id" as "meetingId",
+  null::uuid as "competitionId",
+  m."startsAt" as "startsAt",
+  a."recordedAt" as "earnedAt",
+  false as "won"
+from "platform"."attendance" a
+join "platform"."meetings" m on m."id" = a."meetingId"
+where a."revokedAt" is null
+  and m."countsTowardProgress"
+  and m."cancelledAt" is null
+  and m."deletedAt" is null
+
+union all
+
+select
+  tm."userId",
+  'competition'::text as "activityType",
+  c."id" as "activityId",
+  null::uuid as "meetingId",
+  c."id" as "competitionId",
+  opening_meeting."startsAt" as "startsAt",
+  coalesce(t."participationOverrideAt", t."competedAt", c."judgingStartsAt") as "earnedAt",
+  exists (
+    select 1
+    from "platform"."teamAwards" aw
+    where aw."teamId" = t."id" and aw."category" = 'winner'
+  ) as "won"
+from "platform"."teamMembers" tm
+join "platform"."teams" t on t."id" = tm."teamId"
+join "platform"."competitions" c on c."id" = t."competitionId"
+join "platform"."workshops" w on w."id" = c."workshopId"
+join "platform"."meetings" opening_meeting on opening_meeting."id" = w."meetingId"
+where coalesce(t."participationOverride", t."competedAt" is not null)
+  and c."countsTowardProgress"
+  and c."deletedAt" is null
+  and w."deletedAt" is null
+  and opening_meeting."deletedAt" is null;
+
+revoke all on "platform"."memberStars" from anon, authenticated;

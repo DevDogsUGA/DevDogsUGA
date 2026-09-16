@@ -435,8 +435,8 @@ describe("preflight", () => {
     // a change that moved only preflight would mean the marker came off without
     // the scope change.
     expect(target("preflight").active.size).toBe(2);
-    expect(target("staging").active.size).toBe(47);
-    expect(target("production").active.size).toBe(50);
+    expect(target("staging").active.size).toBe(49);
+    expect(target("production").active.size).toBe(52);
   });
 
   it("says in the file itself why it is short, and that nothing is hand-set", () => {

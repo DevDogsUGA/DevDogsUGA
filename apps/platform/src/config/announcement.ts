@@ -27,6 +27,8 @@ export interface Announcement {
    * running the full width of the card.
    */
   message: string;
+  /** The instant after which the notice is no longer shown. */
+  expiresAt: string;
   /** The thing to go do about it. A notice with no action is just noise. */
   action: {
     label: string;
@@ -80,14 +82,20 @@ export const ANNOUNCEMENT: Announcement | null = {
   id: "leadership-applications-2026",
   eyebrow: "Now open",
   message:
-    "Leadership applications for the 2026–27 executive board are open to all students!",
+    "Leadership applications for the 2026–27 executive board close at 11:59 PM on Wednesday, September 16.",
+  // 11:59 PM Eastern on Wednesday, September 16, 2026.
+  expiresAt: "2026-09-17T03:59:59.999Z",
   action: { label: "Apply Now", href: "/leadership", external: true },
   tone: "urgent",
 };
 
 /** Whether the notice belongs on the page currently being rendered. */
-export function showsAnnouncement(pathname: string | null): boolean {
+export function showsAnnouncement(
+  pathname: string | null,
+  now: Date = new Date(),
+): boolean {
   if (!ANNOUNCEMENT) return false;
+  if (now.getTime() > new Date(ANNOUNCEMENT.expiresAt).getTime()) return false;
 
   // A prerendered shell can hand a client component a null pathname before the
   // router resolves. Public pages are the overwhelming majority, so default to
@@ -125,7 +133,9 @@ export function showsAnnouncement(pathname: string | null): boolean {
  * Empty when there is no notice, so `null` really does leave nothing behind.
  */
 export const ANNOUNCEMENT_HIDE_SCRIPT = ANNOUNCEMENT
-  ? `try{if(sessionStorage.getItem(${JSON.stringify(
+  ? `try{if(Date.now()>new Date(${JSON.stringify(
+      ANNOUNCEMENT.expiresAt,
+    )}).getTime()||sessionStorage.getItem(${JSON.stringify(
       ANNOUNCEMENT_STORAGE_KEY,
     )})===${JSON.stringify(
       ANNOUNCEMENT.id,

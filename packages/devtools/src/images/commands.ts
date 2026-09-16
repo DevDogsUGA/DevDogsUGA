@@ -161,7 +161,7 @@ async function loadEvents(
 
     return {
       graphics: [],
-      skipped: "no database reachable — run `pnpm devtools link`",
+      skipped: "no database reachable — run `pnpm devtools db start`",
     };
   }
 

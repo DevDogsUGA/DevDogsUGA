@@ -43,19 +43,15 @@ you say you are on. Node and corepack are warnings when they are wrong; Docker
 and Flutter report as information, because a contributor without either is not
 misconfigured, just not working on that part of the repo.
 
-`pnpm devtools setup` works on a clean clone, which is not something the
-wrapper it runs under used to allow. `pnpm devtools` is `with-env tsx
-src/cli.ts`, and `with-env` once exited when there was no `.env` — so the one
-command whose job is to create that file could not be reached through the
-wrapper that demanded it. That is why a second entry point, `cli:no-env`,
-existed and why the root `setup` alias pointed at it.
+`pnpm devtools setup` works on a clean clone. `pnpm devtools` is `with-env tsx
+src/cli.ts`, and `with-env` reports a missing `.env` and carries on rather than
+exiting — so the one command whose job is to create that file can be reached
+through the same front door as everything else. A command that genuinely needs a
+variable still fails, and fails naming the variable rather than naming a file.
 
-`with-env` now reports the absence and carries on, so there is one front door.
-A command that genuinely needs a variable still fails, and fails naming the
-variable rather than naming a file. `cli:no-env` survives as the seam every
-[deploy](/docs/toolkit/reference/api/devtools/deploy) step uses, where the
-point is not surviving a missing file but declining to load one that is
-present.
+[Deploy](/docs/toolkit/reference/api/devtools/deploy) steps use a separate
+entry point, `devtools-ci`, that never loads an env file — the point there is
+not surviving a missing file but declining to load one that is present.
 
 **Brand** — the club's pictures, rendered rather than drawn. `images` asks two
 questions and every flag answers one of them: **which** picture, and at **what
@@ -97,7 +93,7 @@ in the same typeface.
 **Event graphics need a database**, and that is the one thing about this command
 that is not obvious from typing it. They are built from meeting rows that arrive
 from Airtable through a sync, so `event/*` reads whichever database
-`--local | --remote | --team` points at, and says which one before it renders.
+`--local | --remote` points at, and says which one before it renders.
 An unreachable database under a wildcard is a warning and the other images still
 render; asked for by name it is an error, because there is nothing to degrade
 to. A sync older than two days warns with its age and asks whether to go ahead —
@@ -105,16 +101,11 @@ these images are usually about to be posted somewhere public. Event exports are
 not committed assets, so `--default-out` writes them to a gitignored `.images/`
 rather than into the tree.
 
-`qr` writes a QR code in the style of the attendance poster. Its defaults ARE
-that poster, so `pnpm devtools qr https://devdogsuga.org/attendance` makes the
-next one match, and every flag is a departure the help text names the reference
-value for.
-
 **Supabase** — one heading over two layers, and the menu says which on every
 line. `link`, `stop`, `restart` and `status` act on **the stack**: the Docker
 containers, the auth server, PostgREST, Studio. `push` and `reset` act on **the
 Postgres database inside it**, and survive a restart. `link`, `status`, `push`
-and `reset` each take `--local | --remote | --team <slug>`; `stop` and
+and `reset` each take `--local | --remote`; `stop` and
 `restart` act on this machine's containers and take no target.
 
 That split is not pedantry — `config.toml` is read at `supabase start`, so

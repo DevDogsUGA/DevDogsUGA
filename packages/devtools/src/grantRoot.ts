@@ -85,7 +85,7 @@ export async function grantRoot(
   if (!role) {
     throw new Error(
       "The Root role definition is missing. It comes from supabase/seed/01_roles.sql, " +
-        "which runs on `pnpm devtools reset` — seeds do not run on `push`.",
+        "which runs on `pnpm devtools db reset` — seeds do not run on `db migrate`.",
     );
   }
 
