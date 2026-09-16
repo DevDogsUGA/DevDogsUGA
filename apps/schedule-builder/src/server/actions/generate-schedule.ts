@@ -4,19 +4,16 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "~/server/db";
 import * as schema from "~/server/db/schema";
 import { loadSections } from "~/lib/domain/loadSections";
-import type { DayOfWeek as DomainDayOfWeek } from "~/lib/domain/section";
+import type { GenerationConstraints } from "~/lib/generation/constraints";
 import {
-  algorithmDriver,
+  generateSchedules,
   MAX_INPUT_COURSES,
-  type AlgorithmOutcome,
-} from "~/lib/algorithm/brute-force";
-import type {
-  AlgorithmCourse,
-  AlgorithmSection,
-  DayOfWeek,
-  HConstraints,
-  SConstraints,
-} from "~/lib/algorithm/types";
+  type GenerationOutcome,
+} from "~/lib/generation/engine";
+import {
+  filterUsableSections,
+  groupSectionsByCourse,
+} from "~/lib/generation/prepareCourses";
 
 export interface GenerateScheduleParams {
   academicPeriod: number;
@@ -28,40 +25,18 @@ export interface GenerateScheduleParams {
   prefStartTime: number;
   /** Hour integer 0–23 */
   prefEndTime: number;
-  /** Day letter: "M" | "T" | "W" | "R" | "F" | "" */
-  gapDay: string;
   inputCampus: string;
   minCreditHours: number;
   maxCreditHours: number;
   showFilledClasses: boolean;
-  walking: boolean;
 }
-
-const DAY_MAP: Record<string, DayOfWeek> = {
-  M: "MONDAY",
-  T: "TUESDAY",
-  W: "WEDNESDAY",
-  R: "THURSDAY",
-  F: "FRIDAY",
-};
-
-/** The domain model's lowercase `DayOfWeek` to the algorithm's uppercase one. */
-const ALGORITHM_DAY_MAP: Record<DomainDayOfWeek, DayOfWeek> = {
-  monday: "MONDAY",
-  tuesday: "TUESDAY",
-  wednesday: "WEDNESDAY",
-  thursday: "THURSDAY",
-  friday: "FRIDAY",
-  saturday: "SATURDAY",
-  sunday: "SUNDAY",
-};
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
 
 const FAILURE_MESSAGES: Record<
-  Extract<AlgorithmOutcome, { ok: false }>["reason"],
+  Extract<GenerationOutcome, { ok: false }>["reason"],
   string
 > = {
   "no-courses":
@@ -120,74 +95,35 @@ export async function getRecommendedSchedules(
     courseAbbrs: params.inputCourseNumbers,
   });
 
-  // Sections cancelled since the last sync must not be recommended as CRNs
-  // the student would then try to register for. This is an in-memory rule,
-  // not a query-time filter — `loadSections` never touches `cancelled`.
-  const activeSections = allSections.filter((s) => !s.cancelled);
-
-  const filteredSections = activeSections.filter((s) => {
-    if (campusId !== undefined && s.campus.id !== campusId) return false;
-    if (!params.showFilledClasses && s.seatsAvailable <= 0) return false;
-    return true;
-  });
-
-  const courseMap = new Map<string, AlgorithmSection[]>();
-  for (const section of filteredSections) {
-    const sections = courseMap.get(section.courseAbbr) ?? [];
-    sections.push({
-      courseCode: section.courseAbbr,
-      crn: section.crn,
-      professor: {
-        name: section.professor?.name ?? "TBA",
-        quality: section.professor?.quality ?? null,
-      },
-      creditHours: section.creditHours,
-      // A meeting with no time is TBA (async/online). It occupies no slot,
-      // so it is dropped rather than given the student's own preferred
-      // hours, which would make it collide with everything else that day.
-      classes: section.meetings
-        .filter((m) => m.startTime && m.endTime)
-        .map((m) => ({
-          crn: section.crn,
-          days: m.days.map((d) => ALGORITHM_DAY_MAP[d]),
-          startTime: m.startTime!,
-          endTime: m.endTime!,
-          buildingName: m.building?.description ?? "",
-          campus: section.campus.abbr,
-          buildingNumber: m.building?.code ?? "",
-          latitude: m.building?.lat ?? undefined,
-          longitude: m.building?.lon ?? undefined,
-        })),
-    });
-    courseMap.set(section.courseAbbr, sections);
-  }
-
-  const algorithmCourses: AlgorithmCourse[] = [...courseMap.entries()].map(
-    ([courseCode, sections]) => ({ courseCode, sections }),
+  const usableSections = filterUsableSections(
+    allSections,
+    params.showFilledClasses,
   );
+  const courses = groupSectionsByCourse(usableSections);
 
-  const soft: SConstraints = {
-    gapDay: DAY_MAP[params.gapDay],
+  const ctx: GenerationConstraints = {
+    excludedCourses: excludedCourseAbbrs,
+    excludedSections: params.excludedSectionCrns,
+    campusId,
+    minCreditHours: params.minCreditHours,
+    maxCreditHours: params.maxCreditHours,
+    showFilledClasses: params.showFilledClasses,
     prefStartTime: params.prefStartTime
       ? `${pad(params.prefStartTime)}:00`
       : undefined,
     prefEndTime: params.prefEndTime
       ? `${pad(params.prefEndTime)}:00`
       : undefined,
-    showFilledClasses: params.showFilledClasses,
   };
 
-  const hard: HConstraints = {
-    excludedCourses: excludedCourseAbbrs,
-    excludedSections: params.excludedSectionCrns,
-    campus: params.inputCampus,
-    minCreditHours: params.minCreditHours,
-    maxCreditHours: params.maxCreditHours,
-    walking: params.walking,
-  };
-
-  const outcome = algorithmDriver(algorithmCourses, soft, hard);
-  if (outcome.ok) return { data: outcome.schedules };
+  const outcome = generateSchedules(courses, ctx);
+  if (outcome.ok) {
+    return {
+      data: outcome.schedules.map((schedule) =>
+        schedule.map((section) => section.crn),
+      ),
+    };
+  }
 
   return { data: [], error: FAILURE_MESSAGES[outcome.reason] };
 }
