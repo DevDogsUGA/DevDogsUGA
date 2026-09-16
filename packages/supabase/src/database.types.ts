@@ -2714,31 +2714,19 @@ export type Database = {
       };
       instructors: {
         Row: {
-          averageRating: number;
-          difficultyRating: number;
           firstName: string;
           id: number;
           lastName: string;
-          totalReviews: number;
-          wouldTakeAgainRating: number;
         };
         Insert: {
-          averageRating?: number;
-          difficultyRating?: number;
           firstName: string;
           id?: number;
           lastName: string;
-          totalReviews?: number;
-          wouldTakeAgainRating?: number;
         };
         Update: {
-          averageRating?: number;
-          difficultyRating?: number;
           firstName?: string;
           id?: number;
           lastName?: string;
-          totalReviews?: number;
-          wouldTakeAgainRating?: number;
         };
         Relationships: [];
       };
@@ -2824,13 +2812,14 @@ export type Database = {
       offerings: {
         Row: {
           academicPeriod: number;
-          active: boolean;
           actualEnrollment: number;
           campusId: number;
+          cancelled: boolean;
           courseId: number;
           crn: number;
           crossListingId: string | null;
           instructorId: number | null;
+          lastSeenAt: string;
           maximumEnrollment: number;
           minimumEnrollment: number;
           partOfTerm: string;
@@ -2839,13 +2828,14 @@ export type Database = {
         };
         Insert: {
           academicPeriod: number;
-          active: boolean;
           actualEnrollment: number;
           campusId: number;
+          cancelled?: boolean;
           courseId: number;
           crn: number;
           crossListingId?: string | null;
           instructorId?: number | null;
+          lastSeenAt?: string;
           maximumEnrollment: number;
           minimumEnrollment?: number;
           partOfTerm: string;
@@ -2854,13 +2844,14 @@ export type Database = {
         };
         Update: {
           academicPeriod?: number;
-          active?: boolean;
           actualEnrollment?: number;
           campusId?: number;
+          cancelled?: boolean;
           courseId?: number;
           crn?: number;
           crossListingId?: string | null;
           instructorId?: number | null;
+          lastSeenAt?: string;
           maximumEnrollment?: number;
           minimumEnrollment?: number;
           partOfTerm?: string;
@@ -2868,6 +2859,13 @@ export type Database = {
           seatsAvailable?: number;
         };
         Relationships: [
+          {
+            foreignKeyName: "offerings_academicPeriod_partOfTerm_fkey";
+            columns: ["academicPeriod", "partOfTerm"];
+            isOneToOne: false;
+            referencedRelation: "partsOfTerm";
+            referencedColumns: ["academicPeriod", "code"];
+          },
           {
             foreignKeyName: "offerings_academicPeriod_terms_academicPeriod_fkey";
             columns: ["academicPeriod"];
@@ -3167,7 +3165,7 @@ export type Database = {
         Row: {
           abbr: string | null;
           academicPeriod: number | null;
-          active: boolean | null;
+          cancelled: boolean | null;
           courseId: number | null;
           courseNumber: string | null;
           crn: number | null;
