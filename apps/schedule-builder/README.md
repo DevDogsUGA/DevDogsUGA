@@ -25,8 +25,8 @@ Drizzle schema from the live DB.
 
 ## Course data
 
-Course and instructor data arrive via cron routes (`src/app/(api)/cron/`):
-`scrape-registrar` and `scrape-rmp`, with parsing in `src/lib/parsers/` and
+Course and instructor data arrive via cron route (`src/app/(api)/cron/`):
+`scrape-registrar`, with parsing in `src/lib/parsers/` and
 upserts in `src/lib/sync/`. Schedule generation lives in `src/lib/algorithm/`.
 
 ## Deploy

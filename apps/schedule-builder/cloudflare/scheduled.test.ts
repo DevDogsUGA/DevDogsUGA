@@ -44,6 +44,11 @@ describe("cron dispatcher", () => {
     }
   });
 
+  it("does not include the removed scrape-rmp route", () => {
+    const allRoutes = Object.values(CRON_ROUTES).flatMap((e) => e.routes);
+    expect(allRoutes).not.toContain("/cron/scrape-rmp");
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();

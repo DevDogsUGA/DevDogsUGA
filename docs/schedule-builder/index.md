@@ -25,9 +25,8 @@ different about this app.
 | Upserts into Postgres | `src/lib/sync/`       |
 | Schedule generation   | `src/lib/algorithm/`  |
 
-Course and instructor data arrive on two cron routes — `scrape-registrar` and
-`scrape-rmp` — which parse and then upsert. The generator reads what those
-leave behind; it never scrapes anything itself.
+Course and instructor data arrive on a cron route — `scrape-registrar` — which parses and then upserts. The generator reads what it
+leaves behind; it never scrapes anything itself.
 
 ## Migrations are drafted, not authored
 

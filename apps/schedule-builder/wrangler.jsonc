@@ -84,9 +84,9 @@
           "id": "7ca9f62ed356489f956cc854a17d7eed",
         },
       ],
-      // Empty ON PURPOSE. The scrape hits UGA's registrar and RateMyProfessors
+      // Empty ON PURPOSE. The scrape hits UGA's registrar
       // from a shared IP pool; running it twice a day from two workers doubles
-      // the load those sites see for no extra coverage, and is the kind of
+      // the load that site sees for no extra coverage, and is the kind of
       // thing that gets a range blocked. Trigger it by hand against staging.
       "triggers": {
         "crons": [],
@@ -147,9 +147,9 @@
           "id": "2bb3ae474d974fe99e4f36b3c5aaf896",
         },
       ],
-      // Daily registrar/RMP scrape (replaces the vercel.json cron). See
-      // cloudflare/scheduled.ts. NOTE: the scrapers are long-running --
-      // validate them against Workers CPU/wall-time limits and consider
+      // Daily registrar scrape (replaces the vercel.json cron). See
+      // cloudflare/scheduled.ts. NOTE: the scraper is long-running --
+      // validate it against Workers CPU/wall-time limits and consider
       // Queues/Workflows or chunked runs before relying on a single scheduled
       // invocation.
       "triggers": {

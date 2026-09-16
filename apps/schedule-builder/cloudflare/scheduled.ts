@@ -1,11 +1,11 @@
 /**
  * Cloudflare cron dispatcher, replacing the vercel.json crons.
  * cloudflare/worker.ts composes it into the deployed worker, the same pattern
- * the platform app uses. One daily trigger fans out to both scraper routes on
- * the worker's own public origin (`env.BASE_URL`); the routes stay
+ * the platform app uses. One daily trigger fans out to the scraper route on
+ * the worker's own public origin (`env.BASE_URL`); the route stays
  * CRON_SECRET-guarded and unchanged.
  *
- * WARNING: the registrar and RMP scrapers are long-running, and one Workers
+ * WARNING: the registrar scraper is long-running, and one Workers
  * scheduled invocation may exceed CPU/wall-time limits. Split into
  * Queues/Workflows or chunked runs before production.
  */
@@ -34,8 +34,8 @@ export type CronEnv = Pick<typeof env, "CRON_SECRET" | "BASE_URL">;
 export const CRON_ROUTES: Record<string, { routes: string[]; label: string }> =
   {
     "5 14 * * *": {
-      label: "Daily schedule scrape: registrar and RMP",
-      routes: ["/cron/scrape-registrar", "/cron/scrape-rmp"],
+      label: "Daily registrar scrape",
+      routes: ["/cron/scrape-registrar"],
     },
   };
 
@@ -52,7 +52,7 @@ export async function scheduled(
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
       });
-      // Without this the course and RMP data can silently stop refreshing:
+      // Without this the course data can silently stop refreshing:
       // a 404 or a 500 is as quiet as a success to a bare `await fetch`.
       if (!response.ok) {
         console.error(
