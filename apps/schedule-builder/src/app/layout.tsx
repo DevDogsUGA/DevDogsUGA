@@ -4,6 +4,7 @@ import { SessionProvider } from "~/components/providers/SessionProvider";
 import { TermProvider } from "~/components/providers/TermProvider";
 import { ToastProvider } from "~/hooks/useToast";
 import "~/styles/globals.css";
+import { APPS } from "@devdogsuga/og";
 import { type Metadata } from "next";
 import { Hanken_Grotesk, Alan_Sans, Cascadia_Code } from "next/font/google";
 import { db } from "~/server/db";
@@ -24,11 +25,14 @@ const mono = Cascadia_Code({
   variable: "--font-mono",
 });
 
+// icon.tsx/apple-icon.tsx generate the favicons from the same drawing, so
+// there is deliberately no `icons` entry here to compete with them.
 export const metadata: Metadata = {
-  title: "UGA Optimal Schedule Builder",
-  description:
-    "Optimal Schedule Builder web application for UGA students to generate and design optimal academic schedules",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  title: {
+    default: `${APPS.dogdays.name} — ${APPS.dogdays.tagline}`,
+    template: `%s — ${APPS.dogdays.name}`,
+  },
+  description: APPS.dogdays.blurb,
 };
 export default async function RootLayout({
   children,
@@ -40,7 +44,7 @@ export default async function RootLayout({
       lang="en"
       className={`${sans.variable} ${display.variable} ${mono.variable}`}
     >
-      <body className="flex min-h-screen flex-col bg-pink-50">
+      <body className="flex min-h-screen flex-col bg-background text-foreground">
         <QueryProvider>
           <SessionProvider>
             <TermProvider initialTerms={initialTerms}>

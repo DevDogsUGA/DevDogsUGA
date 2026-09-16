@@ -9,25 +9,82 @@
   --font-mono: var(--font-mono), ui-monospace, monospace;
 }
 
+/*
+ * DogDays theme tokens.
+ *
+ * The colorway is zinc for neutrals with the DogDays red as primary — the
+ * same red the OG package's `ACCENT.red400/red700` transcribe, which is
+ * Tailwind's stock red scale, so `red-*` utilities and the generated brand
+ * assets agree by construction.
+ *
+ * Light is the default; dark follows the system preference (no toggle), so
+ * the tokens flip in a `prefers-color-scheme` media query rather than under
+ * a `.dark` class. Components should reach for these semantic tokens first
+ * and only use raw `zinc-*`/`red-*` (or `dark:`) for one-off shades.
+ */
+:root {
+  --background: var(--color-zinc-50);
+  --surface: var(--color-white);
+  --surface-muted: var(--color-zinc-100);
+  --edge: var(--color-zinc-200);
+  --edge-strong: var(--color-zinc-300);
+  --foreground: var(--color-zinc-900);
+  --muted: var(--color-zinc-500);
+  --primary: var(--color-red-700);
+  --primary-strong: var(--color-red-800);
+  --primary-soft: var(--color-red-50);
+  --accent: var(--color-red-700);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: var(--color-zinc-950);
+    --surface: var(--color-zinc-900);
+    --surface-muted: var(--color-zinc-800);
+    --edge: var(--color-zinc-800);
+    --edge-strong: var(--color-zinc-700);
+    --foreground: var(--color-zinc-100);
+    --muted: var(--color-zinc-400);
+    --primary: var(--color-red-600);
+    --primary-strong: var(--color-red-700);
+    --primary-soft: color-mix(in oklab, var(--color-red-500) 14%, var(--surface));
+    --accent: var(--color-red-400);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+}
+
 .shadow-inner-scroll-y {
   background:
     /* Shadow covers */
-    linear-gradient(white 30%, rgba(255, 255, 255, 0)),
-    linear-gradient(rgba(255, 255, 255, 0), white 70%) 0 100%,
+    linear-gradient(var(--surface) 30%, transparent),
+    linear-gradient(transparent, var(--surface) 70%) 0 100%,
     /* Shadows */
     radial-gradient(
         farthest-side at 50% 0,
-        color-mix(in oklab, var(--color-stone-500) 40%, transparent),
+        color-mix(in oklab, var(--foreground) 30%, transparent),
         transparent
       ),
     radial-gradient(
         farthest-side at 50% 100%,
-        color-mix(in oklab, var(--color-stone-500) 40%, transparent),
+        color-mix(in oklab, var(--foreground) 30%, transparent),
         transparent
       )
       0 100%;
   background-repeat: no-repeat;
-  background-color: white;
+  background-color: var(--surface);
   background-size:
     100% 3.75rem,
     100% 3.75rem,
@@ -36,53 +93,4 @@
 
   /* Opera doesn't support this in the shorthand */
   background-attachment: local, local, scroll, scroll;
-}
-
-.OuterRingAnimation {
-  /* background: black; */
-  text-align: center;
-
-  position: relative;
-}
-
-@property --angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
-.OuterRingAnimation::after,
-.OuterRingAnimation::before {
-  content: "";
-  position: absolute;
-  height: 100%;
-  background-image: conic-gradient(
-    from var(--angle),
-    red,
-    blue,
-    yellow,
-    green,
-    red
-  );
-  width: 100%;
-  top: 50%;
-  left: 50%;
-  translate: -50% -50%;
-  z-index: -1;
-  border-radius: inherit;
-  animation: 3s spin linear infinite;
-}
-
-.OuterRingAnimation::before {
-  filter: blur(1.5rem);
-  opacity: 0.5;
-}
-
-@keyframes spin {
-  from {
-    --angle: 0deg;
-  }
-  to {
-    --angle: 360deg;
-  }
 }

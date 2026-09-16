@@ -1,5 +1,4 @@
 import type { Config } from "tailwindcss";
-import defaultTheme from "tailwindcss/defaultTheme";
 import formsPlugin from "@tailwindcss/forms";
 
 export default {
@@ -30,10 +29,6 @@ export default {
         slideUpAndFadeIn:
           "slideUpAndFadeIn 300ms cubic-bezier(0.87, 0, 0.13, 1)",
         slideUp: "slideUp 200ms cubic-bezier(0.87, 0, 0.13, 1)",
-      },
-      fontFamily: {
-        ...defaultTheme.fontFamily,
-        sans: ["var(--font-sans)", ...defaultTheme.fontFamily.sans],
       },
     },
   },
