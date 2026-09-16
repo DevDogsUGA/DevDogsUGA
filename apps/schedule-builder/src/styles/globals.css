@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @config "../../tailwind.config.ts";
 
+/* The `dark:` variant keys off the `.dark` class on <html>, set before paint
+ * by the inline script in the root layout (stored choice, else the system
+ * preference) and toggled by the navbar's ThemeSwitcher. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans:
     var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
@@ -19,12 +24,13 @@
  * carried over from the app's original palette (`pink-50` pages, `#222233`
  * headers). `navy` is that `#222233` as a standing accent in either scheme.
  *
- * Light is the default; dark follows the system preference (no toggle), so
- * the tokens flip in a `prefers-color-scheme` media query rather than under
- * a `.dark` class. Components should reach for these semantic tokens first
+ * Light is the default; the tokens flip under the `.dark` class (see the
+ * `@custom-variant` note above — system preference applies when no explicit
+ * choice is stored). Components should reach for these semantic tokens first
  * and only use raw `zinc-*`/`red-*` (or `dark:`) for one-off shades.
  */
 :root {
+  color-scheme: light;
   --background: var(--color-pink-50);
   --surface: var(--color-white);
   --surface-muted: color-mix(
@@ -48,26 +54,21 @@
   --navy-foreground: var(--color-white);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #17171f;
-    --surface: #222233;
-    --surface-muted: #2e2e46;
-    --edge: #32324b;
-    --edge-strong: #454568;
-    --foreground: var(--color-zinc-100);
-    --muted: #a6a6bd;
-    --primary: var(--color-red-600);
-    --primary-strong: var(--color-red-700);
-    --primary-soft: color-mix(
-      in oklab,
-      var(--color-red-500) 16%,
-      var(--surface)
-    );
-    --accent: var(--color-red-400);
-    --navy: #2e2e46;
-    --navy-foreground: var(--color-zinc-100);
-  }
+:root.dark {
+  color-scheme: dark;
+  --background: #17171f;
+  --surface: #222233;
+  --surface-muted: #2e2e46;
+  --edge: #32324b;
+  --edge-strong: #454568;
+  --foreground: var(--color-zinc-100);
+  --muted: #a6a6bd;
+  --primary: var(--color-red-600);
+  --primary-strong: var(--color-red-700);
+  --primary-soft: color-mix(in oklab, var(--color-red-500) 16%, var(--surface));
+  --accent: var(--color-red-400);
+  --navy: #2e2e46;
+  --navy-foreground: var(--color-zinc-100);
 }
 
 @theme inline {

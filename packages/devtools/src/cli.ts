@@ -100,6 +100,7 @@ import { runEmails } from "./emails/commands.js";
 import { runNewsletter } from "./newsletter/commands.js";
 import { runGen } from "./gen/commands.js";
 import { runCronList, runCronRun } from "./cron/commands.js";
+import { runWorkflows } from "./workflows/commands.js";
 import { runCf } from "./cf/commands.js";
 
 const DOCTOR_COMMANDS = [
@@ -958,6 +959,12 @@ async function dispatch(argv: string[]): Promise<string | null> {
     }
     process.exitCode = code;
     return DONE;
+  }
+
+  if (first === "workflows") {
+    const code = await runWorkflows(rest);
+    process.exitCode = code;
+    return code === 0 ? DONE : null;
   }
 
   if (first === "env") {

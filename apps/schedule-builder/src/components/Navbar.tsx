@@ -82,7 +82,7 @@ export function Navbar() {
           ) : (
             <li className="pl-1">
               <Button size="sm" onClick={signIn}>
-                Get Started <SignInIcon weight="bold" />
+                Sign In <SignInIcon weight="bold" />
               </Button>
             </li>
           )}

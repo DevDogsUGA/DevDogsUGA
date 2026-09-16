@@ -11,16 +11,25 @@
   // Custom entry composes the OpenNext `fetch` handler with the cron
   // `scheduled` handler (see cloudflare/worker.ts + cloudflare/scheduled.ts).
   "main": "cloudflare/worker.ts",
-  // Matches the `workerd` version pinned in the lockfile (1.20260722.x), which
+  // Matches the `workerd` version pinned in the lockfile (1.20260916.x), which
   // is how the OpenNext adapter derives its own default. Keeping it at the
   // installed runtime's date rather than today's avoids `preview` warning that
   // the local workerd predates the configured date. Bump this alongside
   // wrangler; the adapter warns once it is more than six months stale.
-  "compatibility_date": "2026-07-22",
+  "compatibility_date": "2026-09-16",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS",
+  },
+  // `main` and `assets.directory` are generated, so a clean checkout cannot
+  // otherwise run `wrangler dev`. The shared hook builds only when the
+  // OpenNext artifact is missing or older than this app's inputs. It is also
+  // inherited by staging/production, where the explicit CI build is already
+  // fresh and the hook becomes a cheap no-op.
+  "build": {
+    "command": "pnpm --filter schedule-builder exec node ../../packages/config/opennext/ensure-build.js",
+    "watch_dir": ["src", "cloudflare", "public"],
   },
 
   // --- development (top level) ---------------------------------------------

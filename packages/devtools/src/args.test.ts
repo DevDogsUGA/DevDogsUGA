@@ -29,6 +29,27 @@ describe("positionals", () => {
     expect(positionals(["--target", "production", "pull"])).toEqual(["pull"]);
   });
 
+  it("does not mistake cron and Workflow selectors for routes", () => {
+    expect(
+      positionals([
+        "--app",
+        "platform",
+        "--tier",
+        "production",
+        "--cron",
+        "*/15 * * * *",
+      ]),
+    ).toEqual([]);
+    expect(
+      positionals([
+        "--workflow",
+        "production-schedule-builder-scrape",
+        "--params",
+        "{}",
+      ]),
+    ).toEqual([]);
+  });
+
   it("still consumes the retired --env's value", () => {
     // `--env` was this CLI's spelling of `--target`, and its values are still
     // valid target names. `cli.ts` refuses the flag by name; that refusal only

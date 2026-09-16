@@ -14,7 +14,7 @@ There is one env file per **target**, not one file with modes. This page is the 
 
 Creating it is the one thing `with-env` cannot do, so `pnpm devtools setup` deliberately runs outside the wrapper — it is the one command that works with no `.env` present. [Quickstart](/docs/monorepo/guides/quickstart) has the full order.
 
-When the local Docker stack is up, `with-env` layers `.env.generated` — the stack's own connection block, written by `pnpm devtools link` — on top of `.env`, first file wins. There is no flag for this: `with-env` probes port 54321 every run, so starting the stack switches you onto it and stopping it switches you back.
+When the local Docker stack is up, `with-env` layers `.env.generated` — the stack's own connection block, written by `pnpm devtools db start` — on top of `.env`, first file wins. There is no flag for this: `with-env` probes port 54321 every run, so starting the stack switches you onto it and stopping it switches you back.
 
 ## The four targets
 

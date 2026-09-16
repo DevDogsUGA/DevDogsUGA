@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "_images": "devtools images brand/club brand/club-light --format email-1x,email-2x,email-3x --default-out && devtools images app/platform --format icon-192 --default-out",
+    "_images": "pnpm --workspace-root devtools images brand/club brand/club-light --format email-1x,email-2x,email-3x --default-out && pnpm --workspace-root devtools images app/platform --format icon-192 --default-out",
     "build": "pnpm run _images && next build",
     "dev": "with-env next dev --experimental-https",
     "start": "next start",
@@ -18,7 +18,7 @@
     "test:coverage": "vitest run --coverage",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
-    "cf:preview": "with-env opennextjs-cloudflare preview",
+    "cf:preview": "with-env opennextjs-cloudflare build && with-env opennextjs-cloudflare preview",
     "cf:typegen": "wrangler types cloudflare-env.d.ts --env production --env-interface CloudflareEnv",
     "cf:typegen:check": "wrangler types cloudflare-env.d.ts --env production --env-interface CloudflareEnv --check",
     "cf:build:staging": "DEPLOY_ENV=staging with-env opennextjs-cloudflare build",

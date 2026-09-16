@@ -5,12 +5,10 @@
 // whole table is exercised in memory.
 import { describe, expect, it } from "vitest";
 import {
+  cronChoices,
   devServerHint,
   originReachable,
-  previewHint,
   reconcileMap,
-  scheduledTriggerUrl,
-  SCHEDULED_ENDPOINTS,
 } from "./commands.js";
 import type { AppCronMap } from "./discovery.js";
 
@@ -38,7 +36,9 @@ function scrapeConfig() {
       },
       production: {
         triggers: { crons: ["5 14 * * *"] },
-        workflows: [{ binding: "SCRAPE_WORKFLOW", name: "production-sb-scrape" }],
+        workflows: [
+          { binding: "SCRAPE_WORKFLOW", name: "production-sb-scrape" },
+        ],
       },
     },
   };
@@ -104,17 +104,23 @@ describe("reconcileMap — route crons and gaps", () => {
   });
 });
 
-describe("scheduledTriggerUrl", () => {
-  it("joins origin + endpoint and url-encodes the cron expression", () => {
-    expect(
-      scheduledTriggerUrl("http://localhost:8787", SCHEDULED_ENDPOINTS[0], "5 14 * * *"),
-    ).toBe("http://localhost:8787/cdn-cgi/handler/scheduled?cron=5%2014%20*%20*%20*");
-  });
-
-  it("tolerates a trailing slash on the preview origin", () => {
-    expect(
-      scheduledTriggerUrl("http://localhost:8787/", "/__scheduled", "0 0 * * *"),
-    ).toBe("http://localhost:8787/__scheduled?cron=0%200%20*%20*%20*");
+describe("cronChoices", () => {
+  it("offers Worker-declared jobs even when a tier intentionally schedules none", () => {
+    const m = map({
+      routes: { "0 0 * * *": { routes: ["/cron/x"], label: "nightly" } },
+    });
+    const choices = cronChoices(
+      [m],
+      new Map([[m.app, { env: { staging: { triggers: { crons: [] } } } }]]),
+      "staging",
+    );
+    expect(choices).toEqual([
+      expect.objectContaining({
+        app: "schedule-builder",
+        expr: "0 0 * * *",
+        scheduled: false,
+      }),
+    ]);
   });
 });
 
@@ -139,12 +145,5 @@ describe("not-running hints", () => {
     expect(devServerHint(undefined, "http://localhost:3000")).toContain(
       "--filter <app>",
     );
-  });
-
-  it("previewHint points at cf:preview and the preview origin", () => {
-    const hint = previewHint("schedule-builder", "http://localhost:8787");
-    expect(hint).toContain("pnpm --filter schedule-builder cf:preview");
-    expect(hint).toContain("localhost:8787");
-    expect(hint).toContain("--preview-url");
   });
 });

@@ -89,7 +89,7 @@ catalog:
   supabase: ^2.115.0
   tsx: ^4.23.12
   typescript: ^6.0.3
-  wrangler: ^4.125.0
+  wrangler: ^4.133.0
 
   # --- Testing ---
   # jsdom is held at 29.x on purpose: 30.x raises its floor to node
@@ -187,6 +187,14 @@ minimumReleaseAgeExclude:
   - '@next/swc-win32-x64-msvc@16.3.4'
   - eslint-config-next@16.3.4
   - next@16.3.4
+  - '@cloudflare/workerd-darwin-64@1.20260916.1'
+  - '@cloudflare/workerd-darwin-arm64@1.20260916.1'
+  - '@cloudflare/workerd-linux-64@1.20260916.1'
+  - '@cloudflare/workerd-linux-arm64@1.20260916.1'
+  - '@cloudflare/workerd-windows-64@1.20260916.1'
+  - miniflare@5.20260916.0-alpha
+  - workerd@1.20260916.1
+  - wrangler@4.133.0
 onlyBuiltDependencies:
   - esbuild
   - sharp

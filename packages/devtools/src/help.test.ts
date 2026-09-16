@@ -35,8 +35,8 @@ describe("the top level", () => {
    * gets no headings. The four layers `db` spans now show up one level down,
    * in `db --help`, tested next.
    */
-  it("renders the Database group as one plain line at the root", () => {
-    const start = root.indexOf("\nDatabase:");
+  it("renders db as a plain root entry without its internal scopes", () => {
+    const start = root.indexOf("\nRuntime & infrastructure:");
     const end = root.indexOf("\n\n", start + 1);
     const database = root.slice(start, end === -1 ? undefined : end);
     // `split("\n")` on a string starting with "\n" gives ["", "Database:", …];
@@ -44,8 +44,7 @@ describe("the top level", () => {
     const entries = database.split("\n").slice(2).filter(Boolean);
 
     expect(database).not.toContain(SCOPES.machine.help);
-    expect(entries.length).toBe(1);
-    expect(entries[0]).toContain("db");
+    expect(entries.some((entry) => entry.includes("db"))).toBe(true);
   });
 
   /**

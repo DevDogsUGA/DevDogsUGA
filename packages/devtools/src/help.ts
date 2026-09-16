@@ -109,6 +109,15 @@ function renderRoot(): string {
     "pnpm devtools [command] [options]",
     "",
     "Run with no command to choose from a menu.",
+    "",
+    "Common tasks:",
+    ...columns([
+      ["setup", "Prepare a new checkout"],
+      ["run dev", "Start development servers"],
+      ["db start", "Start Supabase on this machine"],
+      ["db reset", "Rebuild the local database"],
+      ["cron run", "Choose and run a scheduled job"],
+    ]),
   ];
 
   for (const group of GROUPS) {

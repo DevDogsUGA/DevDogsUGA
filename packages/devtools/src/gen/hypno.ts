@@ -1,3 +1,5 @@
+/// <reference lib="dom" />
+
 /**
  * `devtools gen hypno`
  *
@@ -29,8 +31,23 @@ import { join } from "node:path";
 import { createRequire } from "node:module";
 import { PROJECT_ROOT } from "../environment.js";
 
-const SRC = join(PROJECT_ROOT, "apps", "platform", "src", "components", "HeroSection", "Hypno.tsx");
-const OUT = join(PROJECT_ROOT, "apps", "platform", "src", "assets", "hypno.webp");
+const SRC = join(
+  PROJECT_ROOT,
+  "apps",
+  "platform",
+  "src",
+  "components",
+  "HeroSection",
+  "Hypno.tsx",
+);
+const OUT = join(
+  PROJECT_ROOT,
+  "apps",
+  "platform",
+  "src",
+  "assets",
+  "hypno.webp",
+);
 
 const RENDER_PX = 3536;
 const VIEWBOX = 1926.25;
@@ -44,7 +61,10 @@ async function loadChromium() {
   for (const spec of [
     "playwright",
     "playwright-core",
-    join(PROJECT_ROOT, "node_modules/.pnpm/playwright@1.62.1/node_modules/playwright"),
+    join(
+      PROJECT_ROOT,
+      "node_modules/.pnpm/playwright@1.62.1/node_modules/playwright",
+    ),
   ]) {
     try {
       const mod = await import(require_.resolve(spec));
@@ -64,13 +84,17 @@ export async function runGenHypno(): Promise<number> {
   const src = readFileSync(SRC, "utf8");
   const paths = [...src.matchAll(/<path d="([^"]+)"/g)].map((m) => m[1]);
   if (paths.length !== 24) {
-    process.stderr.write(`expected 24 paths in Hypno.tsx, found ${paths.length}\n`);
+    process.stderr.write(
+      `expected 24 paths in Hypno.tsx, found ${paths.length}\n`,
+    );
     return 1;
   }
 
   const strokeW = (2 * VIEWBOX) / RENDER_PX;
 
-  const svg = (px: number) => `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}"
+  const svg = (
+    px: number,
+  ) => `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}"
  viewBox="0 0 ${VIEWBOX} ${VIEWBOX}">
 <g fill="none" stroke="${STROKE}" stroke-width="${strokeW}" stroke-linecap="round" stroke-linejoin="round">
 ${paths.map((d) => `<path d="${d}"/>`).join("\n")}
@@ -83,11 +107,27 @@ ${paths.map((d) => `<path d="${d}"/>`).join("\n")}
 
   const bake = async (target: number, quality: number) =>
     page.evaluate(
-      async ({ markup, target, ss, blur, quality }: { markup: string; target: number; ss: number; blur: number; quality: number }) => {
+      async ({
+        markup,
+        target,
+        ss,
+        blur,
+        quality,
+      }: {
+        markup: string;
+        target: number;
+        ss: number;
+        blur: number;
+        quality: number;
+      }) => {
         const big = target * ss;
         const img = new Image();
-        img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(markup);
-        await new Promise((r) => { img.onload = r; img.onerror = r; });
+        img.src =
+          "data:image/svg+xml;charset=utf-8," + encodeURIComponent(markup);
+        await new Promise((r) => {
+          img.onload = r;
+          img.onerror = r;
+        });
         const hi = document.createElement("canvas");
         hi.width = hi.height = big;
         const hx = hi.getContext("2d")!;
@@ -101,10 +141,17 @@ ${paths.map((d) => `<path d="${d}"/>`).join("\n")}
         lx.drawImage(hi, 0, 0, target, target);
         return lo.toDataURL("image/webp", quality);
       },
-      { markup: svg(target * SS), target, ss: SS, blur: (BLUR_CSS_PX * target) / RENDER_PX, quality },
+      {
+        markup: svg(target * SS),
+        target,
+        ss: SS,
+        blur: (BLUR_CSS_PX * target) / RENDER_PX,
+        quality,
+      },
     );
 
-  const bytes = (dataUrl: string) => Buffer.from(dataUrl.split(",")[1]!, "base64").byteLength;
+  const bytes = (dataUrl: string) =>
+    Buffer.from(dataUrl.split(",")[1]!, "base64").byteLength;
 
   console.log("size  quality   bytes");
   const results: { target: number; q: number; b: number; url: string }[] = [];
@@ -113,16 +160,22 @@ ${paths.map((d) => `<path d="${d}"/>`).join("\n")}
       const url = await bake(target, q);
       const b = bytes(url);
       results.push({ target, q, b, url });
-      console.log(`${String(target).padStart(4)}  ${q.toFixed(2)}   ${String(b).padStart(7)}`);
+      console.log(
+        `${String(target).padStart(4)}  ${q.toFixed(2)}   ${String(b).padStart(7)}`,
+      );
     }
   }
 
   const pick =
-    results.filter((r) => r.b <= BUDGET).sort((a, b) => b.target - a.target || b.q - a.q)[0] ??
+    results
+      .filter((r) => r.b <= BUDGET)
+      .sort((a, b) => b.target - a.target || b.q - a.q)[0] ??
     results.sort((a, b) => a.b - b.b)[0]!;
 
   writeFileSync(OUT, Buffer.from(pick.url.split(",")[1]!, "base64"));
-  console.log(`\nwrote ${OUT}\n  ${pick.target}px @ q=${pick.q} -> ${pick.b} bytes (budget ${BUDGET})`);
+  console.log(
+    `\nwrote ${OUT}\n  ${pick.target}px @ q=${pick.q} -> ${pick.b} bytes (budget ${BUDGET})`,
+  );
 
   await browser.close();
   return 0;

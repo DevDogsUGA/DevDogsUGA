@@ -34,9 +34,7 @@ export function Footer() {
         >
           <DogDaysIcon className="mr-1.5 inline-block h-[0.799em] w-auto align-baseline" />
           DogDays{" "}
-          <span className="font-sans text-xs font-normal text-zinc-400">
-            by UGA DevDogs
-          </span>
+          <span className="font-sans text-xs text-zinc-400">by DevDogs</span>
         </Link>
 
         <nav className="flex items-center gap-5">

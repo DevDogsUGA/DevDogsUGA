@@ -43,7 +43,18 @@ export default async function RootLayout({
     <html
       lang="en"
       className={`${sans.variable} ${display.variable} ${mono.variable}`}
+      suppressHydrationWarning
     >
+      <head>
+        {/* Sets `.dark` before first paint so a stored theme choice (or the
+            system preference) never flashes the wrong scheme. Kept inline and
+            tiny; the ThemeSwitcher owns it after hydration. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(()=>{try{var t=localStorage.getItem("theme");var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className="bg-background text-foreground flex min-h-screen flex-col">
         <QueryProvider>
           <SessionProvider>

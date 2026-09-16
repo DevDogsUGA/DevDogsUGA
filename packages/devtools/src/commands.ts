@@ -4,15 +4,14 @@
  * One declaration, three readers:
  *
  *   * `help.ts` renders it, one level at a time.
- *   * `menu.ts` walks it, so the wizard reaches every command and every option
- *     without a second list to keep in step.
- *   * the docs build reads it for the CLI reference page (see the rewrite
- *     plan's §11.3: the registry generators stay in devtools).
+ *   * `menu.ts` walks its interactive commands and options without a second
+ *     list to keep in step.
+ *   * contributor documentation uses the same group and command vocabulary.
  *
  * It is deliberately inert: names, summaries and option shapes, no imports of
  * anything that runs. `cli.ts` owns dispatch; the wizard turns a walk of this
- * tree into an argv and hands it to that same dispatcher, which keeps "the menu
- * covers the CLI" true by construction rather than by review.
+ * tree into an argv and hands it to that same dispatcher, which keeps menu and
+ * CLI behavior aligned by construction rather than by review.
  *
  * ## What a summary is for
  *
@@ -159,6 +158,14 @@ export interface CommandNode {
    * `--help` heads a block with it; the wizard puts it on the line.
    */
   scope?: Scope;
+  /**
+   * Where this command may be reached.
+   *
+   * Most commands are interactive and therefore appear in both the menu and
+   * `--help`. `cli-only` commands still appear in help and completions, but do
+   * not get a GUI entry: their output is meant to be consumed by a shell.
+   */
+  surface?: "interactive" | "cli-only";
 }
 
 /** Top-level sections. Only `--help` and the wizard's first screen use these. */
@@ -241,7 +248,6 @@ export const JSON_FLAG: CommandOption = {
   summary: "Print machine-readable JSON to stdout.",
 };
 
-
 const VAULT_TARGET: CommandOption = {
   flag: "--target",
   value: "<t>",
@@ -320,7 +326,7 @@ const SIGNING_TARGET: CommandOption = {
 
 // ── The tree ─────────────────────────────────────────────────────────────────
 
-export const GROUPS: readonly CommandGroup[] = [
+const DECLARED_GROUPS: readonly CommandGroup[] = [
   {
     title: "Start here",
     commands: [
@@ -333,6 +339,7 @@ export const GROUPS: readonly CommandGroup[] = [
         name: "completions",
         summary: "Output a shell completion script for devtools.",
         hint: "pipe to source or write to a file",
+        surface: "cli-only",
         options: [
           {
             flag: "--shell",
@@ -341,10 +348,7 @@ export const GROUPS: readonly CommandGroup[] = [
             prompt: {
               kind: "select",
               message: "Which shell?",
-              choices: [
-                { value: "bash" },
-                { value: "zsh" },
-              ],
+              choices: [{ value: "bash" }, { value: "zsh" }],
             },
           },
         ],
@@ -587,7 +591,8 @@ export const GROUPS: readonly CommandGroup[] = [
         subcommands: [
           {
             name: "list",
-            summary: "Every registered cron: schedule, English description, routes.",
+            summary:
+              "Every registered cron: schedule, English description, routes.",
             hint: "the audit view",
             options: [
               {
@@ -598,7 +603,8 @@ export const GROUPS: readonly CommandGroup[] = [
               {
                 flag: "--tier",
                 value: "<t>",
-                summary: "Whose wrangler schedules to read. All tiers if omitted.",
+                summary:
+                  "Whose wrangler schedules to read. All tiers if omitted.",
                 prompt: {
                   kind: "select",
                   message: "Which tier's wrangler schedules?",
@@ -614,44 +620,104 @@ export const GROUPS: readonly CommandGroup[] = [
           },
           {
             name: "run",
-            summary: "Fire a cron route now, exactly as the scheduler would.",
-            hint: "Bearer CRON_SECRET → BASE_URL",
+            summary: "Choose and fire a configured cron schedule now.",
+            hint: "pick a job from the Worker configuration",
             options: [
               {
                 flag: "--app",
                 value: "<slug>",
-                summary: "Whose origin and secret to use.",
-                prompt: {
-                  kind: "text",
-                  message: "App slug? (blank = all)",
-                  optional: true,
-                },
+                summary: "Limit the discovered jobs to one app.",
               },
               {
                 flag: "--tier",
                 value: "<t>",
-                summary: "Whose origin and secret. Defaults to local.",
-                prompt: {
-                  kind: "select",
-                  message: "Which tier's origin?",
-                  choices: [
-                    { value: "development", hint: "the default" },
-                    { value: "staging" },
-                    { value: "production", hint: "⚠️  live data" },
-                  ],
-                },
+                summary:
+                  "development, staging or production. Asked when absent.",
               },
               {
                 flag: "--cron",
                 value: "<expr>",
-                summary: "Fire every route on this schedule instead of one route.",
-                prompt: {
-                  kind: "text",
-                  message: "Cron expression? (blank = single route)",
-                  optional: true,
-                },
+                summary: "Fire this schedule without opening the picker.",
               },
               YES,
+            ],
+          },
+        ],
+      },
+      {
+        name: "workflows",
+        summary:
+          "Cloudflare Workflows: list configured bindings or trigger one.",
+        hint: "pick a workflow from wrangler.jsonc",
+        subcommands: [
+          {
+            name: "list",
+            summary:
+              "List every Workflow binding declared by each Wrangler tier.",
+            options: [
+              {
+                flag: "--app",
+                value: "<slug>",
+                summary: "Limit to one app.",
+              },
+              {
+                flag: "--tier",
+                value: "<t>",
+                summary: "Limit to development, staging or production.",
+              },
+              JSON_FLAG,
+            ],
+          },
+          {
+            name: "run",
+            summary: "Choose and trigger a Workflow through Wrangler.",
+            hint: "local session or a deployed tier",
+            options: [
+              {
+                flag: "--app",
+                value: "<slug>",
+                summary: "Limit the discovered Workflows to one app.",
+              },
+              {
+                flag: "--tier",
+                value: "<t>",
+                summary:
+                  "development, staging or production. Asked when absent.",
+              },
+              {
+                flag: "--workflow",
+                value: "<name>",
+                summary:
+                  "Trigger this configured name without opening the picker.",
+              },
+              {
+                flag: "--params",
+                value: "<json>",
+                summary: "JSON parameters passed to the Workflow instance.",
+              },
+              {
+                flag: "--port",
+                value: "<n>",
+                summary: "Local Wrangler session port. Defaults to 8787.",
+              },
+              YES,
+            ],
+          },
+          {
+            name: "serve",
+            summary: "Start an app-scoped local Wrangler runtime until Ctrl+C.",
+            hint: "secure alternative to bare wrangler dev",
+            options: [
+              {
+                flag: "--app",
+                value: "<slug>",
+                summary: "Serve the development Workflow for this app.",
+              },
+              {
+                flag: "--port",
+                value: "<n>",
+                summary: "Local Wrangler session port. Defaults to 8787.",
+              },
             ],
           },
         ],
@@ -885,7 +951,8 @@ export const GROUPS: readonly CommandGroup[] = [
               },
               {
                 name: "generate",
-                summary: "Generate a migration from an app's Drizzle schema drift.",
+                summary:
+                  "Generate a migration from an app's Drizzle schema drift.",
                 options: [
                   {
                     flag: "--app",
@@ -920,7 +987,8 @@ export const GROUPS: readonly CommandGroup[] = [
           },
           {
             name: "types",
-            summary: "Regenerate database.types.ts, format it, rebuild the package.",
+            summary:
+              "Regenerate database.types.ts, format it, rebuild the package.",
             hint: "after any schema change",
             scope: "endpoint",
             options: [ENDPOINT],
@@ -944,7 +1012,8 @@ export const GROUPS: readonly CommandGroup[] = [
           },
           {
             name: "introspect",
-            summary: "Pull an app's live schema into its generated Drizzle files.",
+            summary:
+              "Pull an app's live schema into its generated Drizzle files.",
             scope: "endpoint",
             options: [
               ENDPOINT,
@@ -976,7 +1045,8 @@ export const GROUPS: readonly CommandGroup[] = [
             subcommands: [
               {
                 name: "status",
-                summary: "Does the role exist, hold its two grants, and no more.",
+                summary:
+                  "Does the role exist, hold its two grants, and no more.",
                 hint: "reads only — start here",
                 options: [DB_URL, JSON_FLAG],
               },
@@ -1017,7 +1087,8 @@ export const GROUPS: readonly CommandGroup[] = [
               },
               {
                 name: "import",
-                summary: "Register that secret with the project as a standby key.",
+                summary:
+                  "Register that secret with the project as a standby key.",
                 options: [SIGNING_TARGET],
               },
             ],
@@ -1025,7 +1096,8 @@ export const GROUPS: readonly CommandGroup[] = [
           // ── unscoped — the escape hatch ─────────────────────────────────
           {
             name: "exec",
-            summary: "Run the Supabase CLI. Everything after -- passes through.",
+            summary:
+              "Run the Supabase CLI. Everything after -- passes through.",
             hint: "the escape hatch",
           },
         ],
@@ -1037,7 +1109,7 @@ export const GROUPS: readonly CommandGroup[] = [
     commands: [
       {
         name: "cf",
-        summary: "An app on the Workers runtime, locally.",
+        summary: "Develop and build an app on the Workers runtime.",
         hint: "preview, typegen — deploys live in CI",
         subcommands: [
           {
@@ -1130,6 +1202,55 @@ export const GROUPS: readonly CommandGroup[] = [
         ],
       },
     ],
+  },
+];
+
+/**
+ * The contributor-facing navigation, grouped by the job somebody is doing.
+ *
+ * Command declarations stay close to their domain-specific option data above;
+ * this projection is the one place that decides how the root help and menu
+ * read. Paths do not change when a command moves between groups.
+ */
+const declaredByName = new Map(
+  DECLARED_GROUPS.flatMap((group) => group.commands).map((command) => [
+    command.name,
+    command,
+  ]),
+);
+
+function commands(...names: string[]): CommandNode[] {
+  return names.map((name) => {
+    const command = declaredByName.get(name);
+    if (!command) throw new Error(`Command "${name}" is not declared.`);
+    return command;
+  });
+}
+
+export const GROUPS: readonly CommandGroup[] = [
+  {
+    title: "Workspace",
+    commands: commands("setup", "oauth", "run", "gen", "docs"),
+  },
+  {
+    title: "Runtime & infrastructure",
+    commands: commands("db", "cf", "cron", "workflows"),
+  },
+  {
+    title: "Content & communications",
+    commands: commands("images", "emails", "newsletter"),
+  },
+  {
+    title: "Configuration & integrations",
+    commands: commands("env", "bw", "airtable"),
+  },
+  {
+    title: "Moderation",
+    commands: commands("catalog", "doctor", "roundtrip", "grant-root"),
+  },
+  {
+    title: "CLI utilities",
+    commands: commands("completions"),
   },
 ];
 
@@ -1301,9 +1422,8 @@ export function groupOf(name: string): CommandGroup | undefined {
 /**
  * The subcommand names under a path, in the order they are declared.
  *
- * This is what the dispatchers in `cli.ts` validate against, and it is why
- * "the wizard covers every command" needs no test to stay true: a subcommand
- * the tree does not declare is refused by the CLI too, and one it does
+ * This is what the dispatchers in `cli.ts` validate against. A subcommand the
+ * tree does not declare is refused by the CLI, and an interactive one it does
  * declare is in the menu. There is one list, and this reads it.
  */
 export function subcommandNames(path: readonly string[]): string[] {

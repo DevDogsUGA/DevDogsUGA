@@ -24,8 +24,39 @@ export const TYPES_FILE = join(
 /** Spawn a pnpm command with inherited stdio; resolves to the exit code. */
 export function run(args: string[]): Promise<number> {
   return new Promise((resolve) => {
-    const child = nodeSpawn("pnpm", args, { stdio: "inherit", cwd: PROJECT_ROOT });
+    const child = nodeSpawn("pnpm", args, {
+      stdio: "inherit",
+      cwd: PROJECT_ROOT,
+    });
     child.on("exit", (code) => resolve(code ?? 1));
+  });
+}
+
+export interface RunWithStderrResult {
+  code: number;
+  stderr: string;
+}
+
+/** Spawn a pnpm command while echoing and retaining stderr for diagnostics. */
+export function runWithStderr(args: string[]): Promise<RunWithStderrResult> {
+  return new Promise((resolve) => {
+    const child = nodeSpawn("pnpm", args, {
+      stdio: ["inherit", "inherit", "pipe"],
+      cwd: PROJECT_ROOT,
+    });
+    let stderr = "";
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+      process.stderr.write(chunk);
+    });
+    child.on("error", (error) => {
+      const message = `${error.message}\n`;
+      stderr += message;
+      process.stderr.write(message);
+      resolve({ code: 1, stderr });
+    });
+    child.on("exit", (code) => resolve({ code: code ?? 1, stderr }));
   });
 }
 
@@ -58,7 +89,11 @@ export const buildSupabase = () =>
 export async function generateTypes(linked: boolean): Promise<number> {
   let out: string;
   try {
-    out = await supabaseCapture("gen", "types", linked ? "--linked" : "--local");
+    out = await supabaseCapture(
+      "gen",
+      "types",
+      linked ? "--linked" : "--local",
+    );
   } catch {
     return 1;
   }

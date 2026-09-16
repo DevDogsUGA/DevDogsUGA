@@ -33,7 +33,7 @@ pnpm format:check # Prettier
 **Touching a policy, a grant, or a `security definer` function?** Run the RLS persona suite as well. It needs a live stack, so `pnpm test` does not reach it:
 
 ```bash
-pnpm devtools link && pnpm devtools reset
+pnpm devtools db start && pnpm devtools db reset
 pnpm --filter @devdogsuga/supabase test:rls
 ```
 
@@ -59,7 +59,7 @@ pnpm --filter <app> exec tsc --noEmit --pretty false
 **Seeing a change render** means a production build, never a second `next dev` — a second one refuses to start, and the first one keeps serving the route table it booted with, which looks like your change didn't take. `next build` reads the full environment even under `SKIP_ENV_VALIDATION` (`next.config.ts` resolves image patterns against `NEXT_PUBLIC_SUPABASE_URL` before validation ever runs) and needs a live database, so run it through `with-env` against the local Supabase stack:
 
 ```bash
-pnpm devtools link && pnpm devtools reset          # local Supabase stack, once
+pnpm devtools db start && pnpm devtools db reset          # local Supabase stack, once
 pnpm exec with-env pnpm --filter <app> run build   # or `run cf:preview`
 ```
 
@@ -142,9 +142,9 @@ SQL is the source of truth; the generated Drizzle schema is regenerated from the
 
 ```bash
 pnpm --filter @devdogsuga/supabase new-migration <name>
-pnpm devtools reset                             # replay everything locally
+pnpm devtools db reset                             # replay everything locally
 pnpm --filter platform db:pull            # refresh Drizzle from the database
-pnpm devtools push --remote                     # apply to the linked project
+pnpm devtools db migrate --target remote                     # apply to the linked project
 ```
 
 ## Documentation

@@ -2,7 +2,7 @@
  * One-command onboarding, the first thing a new contributor runs.
  *
  * Checks prerequisites (warns, never hard-fails on optional tools), seeds the
- * root `.env`, and points at the next step. Deliberately does NOT run remote
+ * root `.env`, and points at the database and OAuth steps. Deliberately does NOT run remote
  * Supabase commands: linking a remote project needs credentials that are not
  * in `.env` yet.
  *
@@ -113,7 +113,10 @@ export async function runSetup(): Promise<void> {
       "     Database → start   — boots the local Docker stack and writes",
       "                          .env.generated (no credentials needed)",
       "",
-      "2. pnpm dev --filter platform",
+      '2. Choose Workspace → oauth to configure "Sign in with DevDogs"',
+      "   after the local database is running.",
+      "",
+      "3. pnpm dev --filter platform",
       "",
       "Working against a hosted Supabase project instead? Fill in .env",
       "(dashboard → Project Settings), then:",

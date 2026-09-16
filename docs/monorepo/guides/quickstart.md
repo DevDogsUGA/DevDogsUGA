@@ -31,19 +31,19 @@ Setup asks which projects you are on and writes a root `.env` carrying only thos
 ## Then either: a local stack
 
 ```bash
-pnpm devtools link      # boots Docker Supabase, writes .env.generated
-pnpm devtools reset     # replays the migrations, then the seeds, then regenerates types
+pnpm devtools db start      # boots Docker Supabase, writes .env.generated
+pnpm devtools db reset     # replays the migrations, then the seeds, then regenerates types
 pnpm dev --filter platform
 ```
 
-Stop it with `pnpm devtools stop`, which also removes `.env.generated`. `pnpm devtools restart` is the stop/start pair under one name, which is how a changed `config.toml` lands.
+Stop it with `pnpm devtools db stop`, which also removes `.env.generated`. `pnpm devtools db restart` is the stop/start pair under one name, which is how a changed `config.toml` lands.
 
 ## Or: a hosted project
 
 Fill in the Supabase values in `.env`, then:
 
 ```bash
-pnpm devtools link --remote
+pnpm devtools db connect <project-ref>
 pnpm --filter @devdogsuga/supabase generate-types
 pnpm dev --filter platform
 ```
@@ -57,9 +57,9 @@ Nothing switches between the two by flag. `with-env` probes port 54321 on every 
 > `pnpm dev --filter platform` and `pnpm --filter platform dev` are not the same command. The first goes through turbo, whose `dev` task depends on `^build`, so workspace packages — the compiled docs among them — are built first. The second bypasses turbo entirely.
 
 <details>
-<summary>What does <code>pnpm devtools reset</code> seed?</summary>
+<summary>What does <code>pnpm devtools db reset</code> seed?</summary>
 
-Two files under `supabase/seed/`, and only on a reset — seeds never run on `pnpm devtools push`.
+Two files under `supabase/seed/`, and only on a reset — seeds never run on `pnpm devtools db migrate`.
 
 **`01_roles.sql`** defines the built-in Member and Root roles, so `pnpm devtools grant-root --user <email>` works on a freshly reset instance without a second command.
 
@@ -75,4 +75,7 @@ Nobody holds Root, deliberately. You are always Root on your own instance, so cl
 
 ## Next
 
-`pnpm devtools` with no arguments opens a grouped menu covering every command the CLI has, along with the options each one takes — so nothing here needs you to remember a name. Then read [Contributing](/docs/monorepo/guides/contributing).
+`pnpm devtools` with no arguments opens the grouped menu of interactive
+commands, so nothing here needs you to remember a name. Shell-only utilities
+remain available through `pnpm devtools --help`. Then read
+[Contributing](/docs/monorepo/guides/contributing).

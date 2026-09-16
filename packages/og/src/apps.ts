@@ -46,7 +46,7 @@ export const APPS: Record<AppKey, AppBrand> = {
     name: "DogDays",
     tagline: "Schedule Builder",
     blurb:
-      "Plan your semester against live University of Georgia registrar data — conflict-free schedules weighing walking distance and the credits you already have.",
+      "Plan your semester against live University of Georgia registrar data. Create conflict-free schedules which weigh walking distance and the credits you already have.",
     host: "dogdays.dev",
     ground: ACCENT.red400,
     mark: "#000000",

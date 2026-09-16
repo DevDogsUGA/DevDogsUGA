@@ -1,6 +1,11 @@
 import * as cheerio from "cheerio";
 import { describe, it, expect, beforeEach } from "vitest";
-import { resolveCalendarId } from "./PartOfTermScraper";
+import {
+  CalendarIndexUnavailableError,
+  CalendarNotFoundError,
+  resolveCalendarId,
+  resolveKnownCalendarId,
+} from "./PartOfTermScraper";
 
 const fixtureHtml = `
 <select class="cal-year-select cal-year-select--alt" data-nav="ajax" data-ajax-url="https://reg.uga.edu/wp-admin/admin-ajax.php" aria-labelledby="cal-year-label-1">
@@ -38,9 +43,14 @@ describe("resolveCalendarId", () => {
   });
 
   it("throws error for out-of-range period (203008)", () => {
-    expect(() => resolveCalendarId($page, 203008)).toThrow(
-      "No calendar found for",
+    expect(() => resolveCalendarId($page, 203008)).toThrowError(
+      CalendarNotFoundError,
     );
+  });
+
+  it("distinguishes an unavailable selector from a missing year", () => {
+    expect(() => resolveCalendarId(cheerio.load("<html></html>"), 202608))
+      .toThrowError(CalendarIndexUnavailableError);
   });
 
   it("does not include Archives URL in error message", () => {
@@ -53,5 +63,22 @@ describe("resolveCalendarId", () => {
         "https://reg.uga.edu/archives/calendars/#parts-of-term",
       );
     }
+  });
+});
+
+describe("resolveKnownCalendarId", () => {
+  it.each([
+    [202508, "1512"],
+    [202602, "1512"],
+    [202605, "1512"],
+    [202608, "1513"],
+    [202702, "1513"],
+    [202705, "1513"],
+  ])("resolves academic period %i to verified calendar %s", (period, id) => {
+    expect(resolveKnownCalendarId(period)).toBe(id);
+  });
+
+  it("does not guess an unverified calendar ID", () => {
+    expect(resolveKnownCalendarId(202708)).toBeUndefined();
   });
 });

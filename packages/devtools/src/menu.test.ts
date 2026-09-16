@@ -1,8 +1,8 @@
 /**
  * The wizard's walk, driven through scripted answers.
  *
- * The claim under test is the one the menu exists for: **every command in the
- * tree is reachable from it, and the argv a walk produces is one the CLI
+ * The claim under test is the one the menu exists for: **every interactive
+ * command in the tree is reachable from it, and the argv a walk produces is one the CLI
  * accepts.** The menu this replaced could not make that claim. It held ten
  * hand-written entries beside a CLI with sixteen top-level commands, so `env`,
  * `planner`, `signing-key` and `airtable check` had no way in.
@@ -109,10 +109,13 @@ describe("reach", () => {
    * leaf in the tree, declining every optional question, and check that the
    * argv names that exact command.
    */
-  it("reaches every command in the tree", async () => {
-    const leaves = allPaths().filter(
-      (path) => (findCommand(path)?.subcommands ?? []).length === 0,
-    );
+  it("reaches every interactive command in the tree", async () => {
+    const leaves = allPaths().filter((path) => {
+      const node = findCommand(path);
+      return (
+        (node?.subcommands ?? []).length === 0 && node?.surface !== "cli-only"
+      );
+    });
     expect(leaves.length).toBeGreaterThan(20);
 
     for (const path of leaves) {
@@ -143,9 +146,12 @@ describe("reach", () => {
     }
   });
 
-  it("offers every group on the first screen", async () => {
+  it("offers interactive groups and omits CLI-only utilities", async () => {
     await walk([GROUPS[0]!, ...[]]).catch(() => null);
     expect(asked[0]).toBe("What would you like to do?");
+    expect(shown[0]?.map((entry) => entry.label)).not.toContain(
+      "CLI utilities",
+    );
   });
 });
 
@@ -153,7 +159,10 @@ describe("options become argv", () => {
   it("lets images ask for graphic, format, and output in CLI order", async () => {
     const argv = await walk([groupOf("images")!, findCommand(["images"])!]);
     expect(argv).toEqual(["images"]);
-    expect(asked).toEqual(["What would you like to do?", "Brand:"]);
+    expect(asked).toEqual([
+      "What would you like to do?",
+      "Content & communications:",
+    ]);
   });
 
   it("adds a flag when the confirm is answered yes", async () => {
@@ -179,6 +188,7 @@ describe("options become argv", () => {
   it("emits --target remote for the ENDPOINT option", async () => {
     const argv = await walk([
       groupOf("db")!,
+      findCommand(["db"])!,
       findCommand(["db", "status"])!,
       "remote",
     ]);
@@ -188,6 +198,7 @@ describe("options become argv", () => {
   it("emits a select choice that is a value after its flag", async () => {
     const argv = await walk([
       groupOf("db")!,
+      findCommand(["db"])!,
       findCommand(["db", "signing-key"])!,
       findCommand(["db", "signing-key", "status"])!,
       "production",
@@ -204,6 +215,7 @@ describe("options become argv", () => {
   it("drops an optional text answered blank", async () => {
     const argv = await walk([
       groupOf("db")!,
+      findCommand(["db"])!,
       findCommand(["db", "planner"])!,
       findCommand(["db", "planner", "status"])!,
       "  ",
@@ -213,12 +225,10 @@ describe("options become argv", () => {
 });
 
 describe("navigation", () => {
-  it("skips the command screen for a group holding one command", async () => {
-    // "Workspace" holds exactly one command (run). Selecting the group jumps
-    // directly to run's subcommand picker — no "Workspace:" command screen.
+  it("opens the Workspace command screen before run's tasks", async () => {
     const argv = await walk(answersFor(["run", "build"]));
     expect(argv).toEqual(["run", "build"]);
-    expect(asked).toEqual(["What would you like to do?", "run:"]);
+    expect(asked).toEqual(["What would you like to do?", "Workspace:", "run:"]);
   });
 
   it("dispatches nothing when the reader quits", async () => {
@@ -242,10 +252,13 @@ describe("adapts to the machine", () => {
    * the list without scripting a complete walk to a leaf.
    */
   async function screen(env: Environment, to: string[]): Promise<Entry[]> {
-    await walk(
-      to.map((name, i) => (i === 0 ? groupOf(name)! : findCommand([name])!)),
-      env,
-    ).catch(() => null);
+    const path: string[] = [];
+    const scripted: unknown[] = [groupOf(to[0]!)!];
+    for (const name of to) {
+      path.push(name);
+      scripted.push(findCommand(path)!);
+    }
+    await walk(scripted, env).catch(() => null);
     return shown.at(-1) ?? [];
   }
 
@@ -280,7 +293,9 @@ describe("adapts to the machine", () => {
 
     // Still on screen. `needs` explains, it does not remove.
     expect(roundtrip).toBeDefined();
-    expect(roundtrip!.hint).toContain("Supabase is not running on this machine");
+    expect(roundtrip!.hint).toContain(
+      "Supabase is not running on this machine",
+    );
   });
 
   it("leaves the hint alone when nothing is in the way", async () => {
@@ -299,11 +314,13 @@ describe("adapts to the machine", () => {
    * running" above covers that. What is still true here is that the group's
    * own hint names only what it actually contains.
    */
-  it("names only the offered commands in the Database group's hint", async () => {
+  it("names the runtime commands in the group's hint", async () => {
     await walk([], STOPPED).catch(() => null);
-    const database = shown[0]!.find((entry) => entry.label === "Database");
+    const database = shown[0]!.find(
+      (entry) => entry.label === "Runtime & infrastructure",
+    );
 
-    expect(database!.hint).toBe("db");
+    expect(database!.hint).toBe("db, cf, cron, workflows");
   });
 
   /**

@@ -58,6 +58,12 @@ export const VALUE_FLAGS = new Set([
   "--file",
   "--source",
   "--target",
+  "--tier",
+  "--cron",
+  "--workflow",
+  "--params",
+  "--port",
+  "--preview-url",
 ]);
 
 export function positionals(argv: readonly string[]): string[] {

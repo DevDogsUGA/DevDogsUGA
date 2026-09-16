@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { parse as parseEnv } from "dotenv";
 import { describe, expect, it } from "vitest";
-import { loadTierEnv } from "./commands.js";
+import { loadTierEnv, resolveBaseUrl } from "./commands.js";
 
 describe("loadTierEnv", () => {
   it("returns a plain object for any tier", () => {
@@ -19,7 +19,8 @@ describe("loadTierEnv", () => {
     const dir = join(tmpdir(), `devtools-crontest-${Date.now()}`);
     mkdirSync(dir, { recursive: true });
     try {
-      const raw = 'BASE_URL="https://staging.devdogs.uga.edu"\nCRON_SECRET="abc123"\n';
+      const raw =
+        'BASE_URL="https://staging.devdogs.uga.edu"\nCRON_SECRET="abc123"\n';
       writeFileSync(join(dir, ".env.staging"), raw);
       const parsed = parseEnv(raw);
       expect(parsed["BASE_URL"]).toBe("https://staging.devdogs.uga.edu");
@@ -44,5 +45,30 @@ describe("describeExpr zero-padding (source check)", () => {
       "utf8",
     );
     expect(src).toContain('padStart(2, "0")');
+  });
+});
+
+describe("resolveBaseUrl", () => {
+  it("uses the selected app's development vars instead of assuming port 3000", () => {
+    expect(resolveBaseUrl("schedule-builder", "development", {}, {})).toBe(
+      "http://localhost:3001",
+    );
+  });
+
+  it("derives a deployed custom domain from the selected Wrangler tier", () => {
+    expect(
+      resolveBaseUrl(
+        "schedule-builder",
+        "production",
+        {
+          env: {
+            production: {
+              routes: [{ pattern: "dogdays.dev", custom_domain: true }],
+            },
+          },
+        },
+        { BASE_URL: "https://wrong.example" },
+      ),
+    ).toBe("https://dogdays.dev");
   });
 });

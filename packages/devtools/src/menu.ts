@@ -5,16 +5,16 @@
  *
  * **It builds an argv and hands it to the CLI's own dispatcher.** It does not
  * call command functions directly. That is what makes "the menu covers every
- * command" structural instead of aspirational. The menu it replaced held a
+ * interactive command" structural instead of aspirational. The menu it replaced held a
  * hand-written list of ten entries beside a CLI that had grown to sixteen
  * top-level commands and thirty-one subcommands, so `env`, `planner`,
  * `signing-key` and `airtable check` were reachable only by someone who
  * already knew their names. A contributor who does not know a command name is
  * the entire audience for this file.
  *
- * Walking `commands.ts` means a command added there is in the menu the same
- * day, with its options, and cannot be forgotten here. Deploy commands live in
- * the separate `devtools-ci` bin and do not appear here.
+ * Walking `commands.ts` means an interactive command added there is in the
+ * menu the same day, with its options. Commands marked `cli-only` and deploy
+ * commands in the separate `devtools-ci` bin do not appear here.
  */
 import { confirm, note, select, text } from "@clack/prompts";
 import {
@@ -54,7 +54,9 @@ function offered(
   nodes: readonly CommandNode[],
   env: Environment,
 ): CommandNode[] {
-  return nodes.filter((node) => isOffered(node, env));
+  return nodes.filter(
+    (node) => node.surface !== "cli-only" && isOffered(node, env),
+  );
 }
 
 /**
@@ -94,7 +96,7 @@ async function pickGroup(env: Environment): Promise<CommandGroup | null> {
           value: group,
           label: group.title,
           // The group's own commands, so the first screen says what is behind
-          // each door rather than making the reader open all six to find out.
+          // each door rather than making the reader open every one to find out.
           hint: offered(group.commands, env)
             .map((command) => command.name)
             .join(", "),

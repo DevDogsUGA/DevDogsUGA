@@ -17,7 +17,8 @@
  * Drizzle client on (unlike `~/server/db`'s `db` proxy, which keys one to
  * the current request via `getCloudflareContext()`). Every step that talks
  * to Postgres therefore builds its own client from
- * `this.env.HYPERDRIVE.connectionString` via `createScheduleBuilderDb`
+ * the deployed Hyperdrive binding (or local `DB_URL`) via
+ * `createScheduleBuilderDb`
  * *inside* the step callback, never cached on `this` -- a step may resume in
  * a brand-new isolate after the Workflow sleeps, crashes, or is rescheduled,
  * and a live Postgres connection can't survive that gap.
@@ -29,6 +30,7 @@ import {
   detectAvailableTerms,
   fetchPartsOfTerm,
   academicPeriodInfo,
+  CalendarNotFoundError,
 } from "~/lib/parsers";
 import { fetchSemesterCsv } from "~/lib/parsers/AvailableTerms";
 import {
@@ -38,6 +40,7 @@ import {
 import type { ResolvedTerm } from "~/lib/parsers/termPartsOfTerm";
 import { createScheduleBuilderDb } from "~/server/db";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
+import { resolveWorkflowDatabaseUrl } from "./database-url";
 
 /**
  * Opaque -- this Workflow is only ever triggered on a cron schedule (see
@@ -95,10 +98,23 @@ export class ScrapeWorkflow extends WorkflowEntrypoint<
 
             // Re-fetched here, not carried over from "detect-available-terms"
             // (see that step's comment for why).
-            const [csv, partOfTermRows] = await Promise.all([
-              fetchSemesterCsv(semester),
-              fetchPartsOfTerm(academicPeriod),
-            ]);
+            let csv: Awaited<ReturnType<typeof fetchSemesterCsv>>;
+            let partOfTermRows: Awaited<ReturnType<typeof fetchPartsOfTerm>>;
+            try {
+              [csv, partOfTermRows] = await Promise.all([
+                fetchSemesterCsv(semester),
+                fetchPartsOfTerm(academicPeriod),
+              ]);
+            } catch (error) {
+              // The registrar does not publish calendars indefinitely. A
+              // missing year cannot heal on retry, so let the outer per-term
+              // catch record it immediately instead of running the same HTTP
+              // request through every default Workflow retry.
+              if (error instanceof CalendarNotFoundError) {
+                throw new NonRetryableError(error.message);
+              }
+              throw error;
+            }
 
             // Deterministic, per-term failures: the registrar's CSV for this
             // semester is gone, or its parts-of-term calendar resolved to
@@ -118,7 +134,7 @@ export class ScrapeWorkflow extends WorkflowEntrypoint<
 
             const term: ResolvedTerm = { ...csv, partOfTermRows };
             const db = createScheduleBuilderDb(
-              this.env.HYPERDRIVE.connectionString,
+              resolveWorkflowDatabaseUrl(this.env),
             );
             return reconcileTerm(term, db);
           },
@@ -137,7 +153,7 @@ export class ScrapeWorkflow extends WorkflowEntrypoint<
     // the postgres-js connection's default search_path ("$user", public)
     // does not include `schedule_builder`.
     await step.do("refresh-view", async () => {
-      const db = createScheduleBuilderDb(this.env.HYPERDRIVE.connectionString);
+      const db = createScheduleBuilderDb(resolveWorkflowDatabaseUrl(this.env));
 
       await db.execute(sql`
         CREATE UNIQUE INDEX IF NOT EXISTS "offeringSearch_crn_idx"

@@ -5,9 +5,10 @@
  * app without the file has no crons and is skipped; an app whose export fails
  * validation throws with the path.
  */
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { parseConfigFileTextToJson } from "typescript";
 import { PROJECT_ROOT } from "../environment.js";
 import {
   CronRoutes,
@@ -16,7 +17,81 @@ import {
   type WorkflowCrons as WorkflowCronsType,
 } from "./schema.js";
 
-const APPS_WITH_CRONS = ["platform", "schedule-builder"] as const;
+export const CRON_TIERS = ["development", "staging", "production"] as const;
+export type CronTier = (typeof CRON_TIERS)[number];
+
+export interface WranglerWorkflow {
+  binding: string;
+  name: string;
+  class_name?: string;
+}
+
+export interface WranglerRoute {
+  pattern?: string;
+  custom_domain?: boolean;
+}
+
+export interface WranglerTierBlock {
+  name?: string;
+  triggers?: { crons?: readonly string[] };
+  workflows?: readonly WranglerWorkflow[];
+  routes?: readonly (string | WranglerRoute)[];
+}
+
+export interface WranglerConfig extends WranglerTierBlock {
+  env?: Record<string, WranglerTierBlock | undefined>;
+}
+
+export interface AppWranglerConfig {
+  app: string;
+  path: string;
+  config: WranglerConfig;
+}
+
+export function isCronTier(value: string): value is CronTier {
+  return (CRON_TIERS as readonly string[]).includes(value);
+}
+
+/** Parse JSONC with TypeScript's production parser, preserving `//` in strings. */
+export function parseWrangler(path: string): WranglerConfig {
+  const result = parseConfigFileTextToJson(path, readFileSync(path, "utf8"));
+  if (result.error) {
+    throw new Error(`${path}: ${result.error.messageText}`);
+  }
+  return result.config as WranglerConfig;
+}
+
+export function blockForTier(
+  config: WranglerConfig,
+  tier: CronTier,
+): WranglerTierBlock {
+  return tier === "development" ? config : (config.env?.[tier] ?? {});
+}
+
+export function cronsForTier(config: WranglerConfig, tier: CronTier): string[] {
+  return [...(blockForTier(config, tier).triggers?.crons ?? [])];
+}
+
+export function workflowsForTier(
+  config: WranglerConfig,
+  tier: CronTier,
+): WranglerWorkflow[] {
+  return [...(blockForTier(config, tier).workflows ?? [])];
+}
+
+/** Every app that actually carries a Wrangler configuration. */
+export function discoverWranglerConfigs(): AppWranglerConfig[] {
+  const appsRoot = join(PROJECT_ROOT, "apps");
+  return readdirSync(appsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .flatMap((entry): AppWranglerConfig[] => {
+      const path = join(appsRoot, entry.name, "wrangler.jsonc");
+      return existsSync(path)
+        ? [{ app: entry.name, path, config: parseWrangler(path) }]
+        : [];
+    })
+    .sort((a, b) => a.app.localeCompare(b.app));
+}
 
 export interface AppCronMap {
   app: string;
@@ -39,7 +114,7 @@ export interface AppCronMap {
 export async function discoverCronMaps(): Promise<AppCronMap[]> {
   const results: AppCronMap[] = [];
 
-  for (const app of APPS_WITH_CRONS) {
+  for (const { app } of discoverWranglerConfigs()) {
     const scheduledPath = join(
       PROJECT_ROOT,
       "apps",

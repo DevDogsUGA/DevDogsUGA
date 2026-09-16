@@ -36,7 +36,7 @@ pnpm devtools docs index               # push it into the local search index
 That indexes your working copy into the local stack, so a page you just wrote is findable in the search dialog (`Ctrl`/`⌘` + `K`). Re-run it after further edits — the dev server does not re-index for you. Like every `with-env`-wrapped command it targets the local stack whenever one is running, and prints which env files it loaded.
 
 > [!WARNING]
-> Without the local stack running, `pnpm dev` and `docs index` point at the **deployed** database. Pages still render from your working copy, but search results come from whatever that database has indexed. Boot the local stack (`pnpm devtools link`) when you care about search.
+> Without the local stack running, `pnpm dev` and `docs index` point at the **deployed** database. Pages still render from your working copy, but search results come from whatever that database has indexed. Boot the local stack (`pnpm devtools db start`) when you care about search.
 >
 > The indexer will not write to a non-local database on its own. It removes rows for pages that no longer exist, so running it against a deployed database from a working copy would replace the live search index with your local state. At a terminal it asks first; with no TTY — in a script or a CI job, where there is nobody to ask — it refuses and exits non-zero unless `--target remote` is given. That flag is how the deploy scripts say yes.
 

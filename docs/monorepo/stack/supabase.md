@@ -42,7 +42,7 @@ revoke execute on function "platform".content_types()
 Policies, grants and `security definer` functions are covered by a separate Vitest suite that needs a live stack, so `pnpm test` does not run it:
 
 ```bash
-pnpm devtools link && pnpm devtools reset
+pnpm devtools db start && pnpm devtools db reset
 pnpm --filter @devdogsuga/supabase test:rls
 ```
 

@@ -38,8 +38,8 @@ function routeExists(urlPath: string): boolean {
 }
 
 describe("cron dispatcher", () => {
-  const entries = Object.entries(CRON_ROUTES).flatMap(([cron, paths]) =>
-    paths.map((path) => ({ cron, path })),
+  const entries = Object.entries(CRON_ROUTES).flatMap(([cron, entry]) =>
+    entry.routes.map((path) => ({ cron, path })),
   );
 
   it("dispatches at least one route", () => {
@@ -64,7 +64,7 @@ describe("cron dispatcher", () => {
   });
 
   it("continues dispatching sibling routes, then reports failures", async () => {
-    const paths = CRON_ROUTES["0 0 * * *"] ?? [];
+    const paths = CRON_ROUTES["0 0 * * *"]?.routes ?? [];
     const fetchMock = vi.fn(async (input: string | URL | Request) =>
       Promise.resolve(
         new Response(null, {

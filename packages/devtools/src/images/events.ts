@@ -18,9 +18,8 @@ import type { EventGraphicSource } from "./graphics.js";
  * database it is looking at and how old the answer is BEFORE it renders
  * anything that might be posted somewhere public.
  *
- * Reads go through `adminClient`, the same service-role client every other
- * database command here uses, so `--local | --remote` means what it already
- * means. `platform` is exposed to PostgREST (`supabase/config.toml`),
+ * Reads go through `adminClient`, against the local instance resolved by the
+ * command. `platform` is exposed to PostgREST (`supabase/config.toml`),
  * and the service role bypasses the RLS that otherwise keeps
  * `airtableSyncState` closed to every client.
  */

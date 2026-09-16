@@ -1,8 +1,8 @@
 /**
  * The command tree's own invariants, and the coverage claim that rests on it.
  *
- * The claim: **the wizard reaches every command and every option the CLI
- * has.** It holds because one declaration, `commands.ts`, is what the menu
+ * The claim: **the wizard reaches every interactive command and option.** It
+ * holds because one declaration, `commands.ts`, is what the menu
  * walks, `--help` renders, and every dispatcher in `cli.ts` validates against.
  * This file guards the parts of that which a type cannot: that the names match
  * the ones dispatch actually accepts, that nothing is declared twice, and that
@@ -182,6 +182,13 @@ describe("prompts", () => {
       // scripting-only: machine-readable output; a wizard asking for JSON
       // mode produces nothing useful since the wizard itself is the UI.
       "--json",
+      // Live/config-derived selectors and scripting inputs. The cron and
+      // Workflow commands ask from Wrangler data when these are absent.
+      "--tier",
+      "--cron",
+      "--workflow",
+      "--params",
+      "--port",
     ]);
     const unasked = new Set<string>();
 
@@ -229,6 +236,7 @@ describe("coverage of what the CLI dispatches", () => {
     "db",
     "gen",
     "cron",
+    "workflows",
     "cf",
     // Both are dispatched twice: once in `main()` ahead of `intro()`, which is
     // what a typed command line reaches, and once in `dispatch` for the walk
@@ -254,6 +262,8 @@ describe("coverage of what the CLI dispatches", () => {
     ]);
     expect(subcommandNames(["airtable"])).toEqual(["check", "verify", "apply"]);
     expect(subcommandNames(["docs"])).toEqual(["index"]);
+    expect(subcommandNames(["cron"])).toEqual(["list", "run"]);
+    expect(subcommandNames(["workflows"])).toEqual(["list", "run", "serve"]);
 
     // The merged `db` command. Declaration order is scope order: machine,
     // repo, endpoint, infra, then the unscoped escape hatch.
@@ -297,10 +307,10 @@ describe("scopes", () => {
   // own subcommands instead — the group itself renders as one plain line.
   const dbSubcommands = () => findCommand(["db"])!.subcommands ?? [];
 
-  it("has one merged Database group, containing only db", () => {
-    const group = GROUPS.find((g) => g.title === "Database");
+  it("places db in Runtime & infrastructure", () => {
+    const group = GROUPS.find((g) => g.title === "Runtime & infrastructure");
     expect(group).toBeDefined();
-    expect(group!.commands.map((c) => c.name)).toEqual(["db"]);
+    expect(group!.commands.map((c) => c.name)).toContain("db");
     expect(GROUPS.some((g) => g.title === "Supabase")).toBe(false);
   });
 
@@ -408,7 +418,12 @@ describe("style guide", () => {
    * but no value outside the four may appear.
    */
   it("--tier choices draw from the canonical tier set", () => {
-    const TIER_VALUES = new Set(["development", "preflight", "staging", "production"]);
+    const TIER_VALUES = new Set([
+      "development",
+      "preflight",
+      "staging",
+      "production",
+    ]);
     for (const { path, node } of everyNode()) {
       for (const option of node.options ?? []) {
         if (option.flag !== TIER.flag) continue;
@@ -493,10 +508,9 @@ describe("style guide", () => {
         node.scope === "endpoint" ||
         (!node.scope && parent?.scope === "endpoint");
       const hasEndpoint = (node.options ?? []).some((o) => o === ENDPOINT);
-      expect(
-        hasEndpoint,
-        `${path.join(" ")} scope/ENDPOINT mismatch`,
-      ).toBe(isEndpointScope);
+      expect(hasEndpoint, `${path.join(" ")} scope/ENDPOINT mismatch`).toBe(
+        isEndpointScope,
+      );
     }
   });
 });
