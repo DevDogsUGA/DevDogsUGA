@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import DayClass from "./DayClass";
 import type { ClassData } from "~/types/scheduleTypes";
 
@@ -10,6 +10,12 @@ import type { ClassData } from "~/types/scheduleTypes";
  * The RateMyProfessors widget has been removed, so CourseInfo should display
  * only the professor name in the "Professor:" line.
  */
+
+// This config doesn't enable Vitest's `globals`, so RTL can't auto-detect a
+// global `afterEach` to register its own cleanup. Without this, the modal
+// left open by one test (courseBlockClicked state + its rendered CourseInfo)
+// leaks into the next test's DOM, producing duplicate "CS 101" matches.
+afterEach(() => cleanup());
 
 const MINIMAL_CLASS_DATA: ClassData = {
   classTitle: "CS 101",
@@ -36,6 +42,30 @@ const MINIMAL_CLASS_DATA: ClassData = {
 };
 
 describe("DayClass", () => {
+  it("renders Saturday and Sunday rows in the weekly schedule table", async () => {
+    const weekendClassData: ClassData = {
+      ...MINIMAL_CLASS_DATA,
+      currentDay: "SU",
+    };
+    render(<DayClass {...weekendClassData} />);
+
+    const courseBlock = screen.getByText("CS 101");
+    await userEvent.click(courseBlock);
+
+    const saturdayRow = screen.getByText("Saturday").closest("tr");
+    const sundayRow = screen.getByText("Sunday").closest("tr");
+    expect(saturdayRow).not.toBeNull();
+    expect(sundayRow).not.toBeNull();
+
+    // Both days should carry the meeting's time/location, not blank cells,
+    // proving getWeekLayout actually maps the S/U day codes rather than
+    // silently falling through its switch's `default` case.
+    expect(saturdayRow).toHaveTextContent("09:00 AM - 10:30 AM");
+    expect(saturdayRow).toHaveTextContent("CS 101");
+    expect(sundayRow).toHaveTextContent("09:00 AM - 10:30 AM");
+    expect(sundayRow).toHaveTextContent("CS 101");
+  });
+
   it("renders professor name without stars or review count", async () => {
     render(<DayClass {...MINIMAL_CLASS_DATA} />);
 

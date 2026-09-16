@@ -10,6 +10,31 @@ interface WeekScheduleProps {
   weekData: WeekScheduleType;
 }
 
+// Tailwind (via @tailwindcss/postcss) statically scans this file's source
+// text for class-name candidates, so an interpolated arbitrary value like
+// `` `2xl:[--cols:${n}]` `` would never be extracted — the generated CSS
+// simply wouldn't exist at runtime. A week has at most 7 days, so this keeps
+// every possible class string literal in the source (one branch per count)
+// while still letting the column count follow the data. The 2xl breakpoint
+// always shows every day at once; sm/lg/xl progressively reveal more columns
+// on the way there, capped at the number of days actually present.
+const GRID_COLUMN_CLASSES: Record<number, string> = {
+  1: "grid-cols-[1rem_repeat(1,calc((100%-1rem)/var(--cols)))] [--cols:1] sm:[--cols:1] lg:[--cols:1] xl:[--cols:1] 2xl:[--cols:1]",
+  2: "grid-cols-[1rem_repeat(2,calc((100%-1rem)/var(--cols)))] [--cols:1] sm:[--cols:2] lg:[--cols:2] xl:[--cols:2] 2xl:[--cols:2]",
+  3: "grid-cols-[1rem_repeat(3,calc((100%-1rem)/var(--cols)))] [--cols:1] sm:[--cols:2] lg:[--cols:3] xl:[--cols:3] 2xl:[--cols:3]",
+  4: "grid-cols-[1rem_repeat(4,calc((100%-1rem)/var(--cols)))] [--cols:1] sm:[--cols:2] lg:[--cols:3] xl:[--cols:4] 2xl:[--cols:4]",
+  5: "grid-cols-[1rem_repeat(5,calc((100%-1rem)/var(--cols)))] [--cols:1] sm:[--cols:2] lg:[--cols:3] xl:[--cols:4] 2xl:[--cols:5]",
+  6: "grid-cols-[1rem_repeat(6,calc((100%-1rem)/var(--cols)))] [--cols:1] sm:[--cols:2] lg:[--cols:3] xl:[--cols:4] 2xl:[--cols:6]",
+  7: "grid-cols-[1rem_repeat(7,calc((100%-1rem)/var(--cols)))] [--cols:1] sm:[--cols:2] lg:[--cols:3] xl:[--cols:4] 2xl:[--cols:7]",
+};
+
+/** Clamp to [1, 7]: a week has 7 days at most, and 0 columns would divide by
+ * zero in the grid's `calc(.../var(--cols))`. */
+function gridColumnClasses(dayCount: number): string {
+  const clamped = Math.min(Math.max(dayCount, 1), 7);
+  return GRID_COLUMN_CLASSES[clamped]!;
+}
+
 export default function WeekSchedule({ weekData }: WeekScheduleProps) {
   const scrollportRef = useRef<HTMLElement>(null);
   const [next, setNext] = useState<string | undefined>(undefined);
@@ -132,7 +157,7 @@ export default function WeekSchedule({ weekData }: WeekScheduleProps) {
       </button>
 
       <section
-        className="grid h-[750px] w-full snap-x snap-mandatory grid-cols-[1rem_repeat(5,calc((100%-1rem)/var(--cols)))] overflow-x-auto scroll-smooth rounded-lg bg-pink-200/50 py-4 [--cols:1] sm:[--cols:2] md:overflow-hidden lg:[--cols:3] xl:[--cols:4] 2xl:[--cols:5]"
+        className={`grid h-[750px] w-full snap-x snap-mandatory overflow-x-auto scroll-smooth rounded-lg bg-pink-200/50 py-4 md:overflow-hidden ${gridColumnClasses(Object.keys(weekData).length)}`}
         ref={scrollportRef}
       >
         <div />

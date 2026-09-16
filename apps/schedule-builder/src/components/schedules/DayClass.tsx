@@ -50,8 +50,11 @@ function getWeekLayout(
   timeEnd: string,
   locationShort: string,
 ): string[] {
-  // 10 slots: the time and the location for each of the five weekdays.
-  const weekInfo: string[] = ["", "", "", "", "", "", "", "", "", ""];
+  // 14 slots: the time and the location for each of the seven days (Mon-Sun).
+  // Day codes match DAY_CODE_MAP in ~/lib/schedule-display.ts: M/T/W/R/F for
+  // the weekdays, S/U for Saturday/Sunday (U avoids colliding with Sunday's
+  // "S" and Tuesday's/Thursday's letters).
+  const weekInfo: string[] = ["", "", "", "", "", "", "", "", "", "", "", "", "", ""];
   const otherDays: string = otherTimes[0] ?? "";
 
   // Add the current day's time and location to the table
@@ -80,6 +83,16 @@ function getWeekLayout(
       case "F":
         weekInfo[8] = timeStart + " - " + timeEnd;
         weekInfo[9] = locationShort;
+        break;
+
+      case "S":
+        weekInfo[10] = timeStart + " - " + timeEnd;
+        weekInfo[11] = locationShort;
+        break;
+
+      case "U":
+        weekInfo[12] = timeStart + " - " + timeEnd;
+        weekInfo[13] = locationShort;
         break;
 
       default:
@@ -114,6 +127,16 @@ function getWeekLayout(
       case "F":
         weekInfo[8] = otherTimes[1] ?? "";
         weekInfo[9] = otherTimes[2] ?? "";
+        break;
+      // Saturday
+      case "S":
+        weekInfo[10] = otherTimes[1] ?? "";
+        weekInfo[11] = otherTimes[2] ?? "";
+        break;
+      // Sunday
+      case "U":
+        weekInfo[12] = otherTimes[1] ?? "";
+        weekInfo[13] = otherTimes[2] ?? "";
         break;
       default:
         break;
@@ -286,6 +309,28 @@ function CourseInfo({
                     </td>
                     <td className="border border-black p-2 text-center">
                       {weekInfo[9]}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="border border-black p-2 text-center font-bold">
+                      Saturday
+                    </td>
+                    <td className="border border-black p-2 text-center">
+                      {weekInfo[10]}
+                    </td>
+                    <td className="border border-black p-2 text-center">
+                      {weekInfo[11]}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="border border-black p-2 text-center font-bold">
+                      Sunday
+                    </td>
+                    <td className="border border-black p-2 text-center">
+                      {weekInfo[12]}
+                    </td>
+                    <td className="border border-black p-2 text-center">
+                      {weekInfo[13]}
                     </td>
                   </tr>
                 </tbody>
