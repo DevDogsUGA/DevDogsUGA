@@ -2,8 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   // Worker naming is `${DEPLOY_ENV}-${APP_NAME}`; see apps/platform/wrangler.jsonc
   // for why the top level is the development shape and why `vars`, `services`,
-  // `images`, `r2_buckets`, `hyperdrive` and `send_email` are repeated in full
-  // per environment rather than inherited.
+  // `images`, `r2_buckets`, `hyperdrive`, `workflows` and `send_email` are
+  // repeated in full per environment rather than inherited.
   "name": "development-schedule-builder",
   // See apps/platform/wrangler.jsonc: the scoped deploy token defeats
   // OpenNext's account inference, so the account is pinned. Not a secret.
@@ -49,6 +49,17 @@
       "bucket_name": "development-schedule-builder-cache",
     },
   ],
+  // Backs the daily registrar scrape (see cloudflare/ScrapeWorkflow.ts +
+  // cloudflare/scheduled.ts). Bound in every environment, including
+  // development, so the class registers with wrangler/`wrangler dev`
+  // regardless of whether this tier's cron trigger is live.
+  "workflows": [
+    {
+      "binding": "SCRAPE_WORKFLOW",
+      "name": "development-schedule-builder-scrape",
+      "class_name": "ScrapeWorkflow",
+    },
+  ],
 
   "env": {
     "staging": {
@@ -82,6 +93,14 @@
         {
           "binding": "HYPERDRIVE",
           "id": "7ca9f62ed356489f956cc854a17d7eed",
+        },
+      ],
+      // See the top-level block for what this binds.
+      "workflows": [
+        {
+          "binding": "SCRAPE_WORKFLOW",
+          "name": "staging-schedule-builder-scrape",
+          "class_name": "ScrapeWorkflow",
         },
       ],
       // Empty ON PURPOSE. The scrape hits UGA's registrar
@@ -147,11 +166,19 @@
           "id": "2bb3ae474d974fe99e4f36b3c5aaf896",
         },
       ],
+      // See the top-level block for what this binds.
+      "workflows": [
+        {
+          "binding": "SCRAPE_WORKFLOW",
+          "name": "production-schedule-builder-scrape",
+          "class_name": "ScrapeWorkflow",
+        },
+      ],
       // Daily registrar scrape (replaces the vercel.json cron). See
-      // cloudflare/scheduled.ts. NOTE: the scraper is long-running --
-      // validate it against Workers CPU/wall-time limits and consider
-      // Queues/Workflows or chunked runs before relying on a single scheduled
-      // invocation.
+      // cloudflare/scheduled.ts + cloudflare/ScrapeWorkflow.ts: the scrape
+      // runs as a Workflow (one retried, checkpointed step per term) rather
+      // than inside this single scheduled invocation, so it isn't bound by
+      // that invocation's own CPU/wall-time limits.
       "triggers": {
         "crons": ["5 14 * * *"],
       },
