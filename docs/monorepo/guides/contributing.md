@@ -39,6 +39,59 @@ pnpm --filter @devdogsuga/supabase test:rls
 
 Every case there asserts an allow **and** a deny. A test that only checks the allow side passes just as happily when the policy is missing entirely.
 
+### Phantom errors from a checkout that has never run `next dev`
+
+`typecheck`, `lint` and `test` all `dependsOn: ["^build"]` in `turbo.json` — the workspace packages an app imports, never Next itself. Next's own generated globals (`PageProps`/`LayoutProps`, the image module declarations, `next-env.d.ts`) come only from `next dev` or `next build`, so a fresh checkout, a worktree, or any laptop that has never run one fails `tsc --noEmit` / `eslint src` on names the framework provides, before it reaches anything you actually changed. Generate them once, the same way CI's "Generate the Next type stubs" step does, and the phantom errors disappear:
+
+```bash
+pnpm turbo run build --filter '<app>^...'   # workspace deps the Next config imports (e.g. ~/env)
+pnpm --filter <app> exec next typegen       # writes the stubs; no build, no database
+```
+
+A full `pnpm --filter <app> run build` also produces them, but typegen alone is faster and needs no database.
+
+**Capturing `tsc` output anywhere other than a live terminal** — a log file, a subagent, a CI step you're debugging locally — pass `--pretty false`. Its default output uses ANSI escapes that corrupt non-interactive captures, turning real errors into unreadable ones:
+
+```bash
+pnpm --filter <app> exec tsc --noEmit --pretty false
+```
+
+**Seeing a change render** means a production build, never a second `next dev` — a second one refuses to start, and the first one keeps serving the route table it booted with, which looks like your change didn't take. `next build` reads the full environment even under `SKIP_ENV_VALIDATION` (`next.config.ts` resolves image patterns against `NEXT_PUBLIC_SUPABASE_URL` before validation ever runs) and needs a live database, so run it through `with-env` against the local Supabase stack:
+
+```bash
+pnpm devtools link && pnpm devtools reset          # local Supabase stack, once
+pnpm exec with-env pnpm --filter <app> run build   # or `run cf:preview`
+```
+
+**A worktree** branches from `origin/main`, which drifts far behind local `main` between pushes — reset it before trusting anything it builds, then repeat the typegen and env setup above from scratch, since none of it exists in a new worktree:
+
+```bash
+git -C <worktree> reset --hard main
+pnpm install
+pnpm turbo run build --filter '<app>^...'   # workspace deps, not the app itself
+cp <primary-worktree>/.env .env             # gitignored — doesn't come with the worktree
+pnpm exec with-env pnpm --filter <app> run build
+```
+
+**After editing a `wrangler.jsonc` binding**, the Worker's generated types drift from the config until regenerated. Check first — it mirrors CI's own step and fails on drift without writing anything — then regenerate and commit the diff:
+
+```bash
+pnpm --filter <app> run cf:typegen:check   # fails if the committed types are stale
+pnpm --filter <app> run cf:typegen         # regenerates cloudflare-env.d.ts; commit the diff
+```
+
+Chained in the order CI runs them, `<app>` is `platform` or `schedule-builder`:
+
+```bash
+pnpm --filter <app> exec next typegen
+pnpm --filter <app> exec tsc --noEmit --pretty false
+pnpm --filter <app> exec eslint src
+pnpm --filter <app> test
+pnpm --filter <app> run cf:typegen:check
+pnpm format:check
+pnpm exec with-env pnpm --filter <app> run build
+```
+
 ### Which apps a root task runs against
 
 Every root turbo script — `dev`, `build`, `test`, `lint`, `lint:fix`, `typecheck` — asks which apps you mean before it runs:
