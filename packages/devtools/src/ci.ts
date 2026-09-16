@@ -121,7 +121,7 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
 
     const deployArgs = [
       "--filter",
-      "@devdogsuga/platform",
+      "platform",
       "exec",
       "opennextjs-cloudflare",
       "deploy",
@@ -141,7 +141,7 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
   } else if (app === "schedule-builder") {
     const deployArgs = [
       "--filter",
-      "@devdogsuga/schedule-builder",
+      "schedule-builder",
       "exec",
       "opennextjs-cloudflare",
       "deploy",
@@ -151,12 +151,16 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
     if (secretsFile) deployArgs.push("--secrets-file", secretsFile);
     steps.push({
       label: `Deploy schedule-builder (${tier})`,
-      fn: () => pnpm(deployArgs),
+      fn: () =>
+        pnpm(deployArgs, {
+          CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE:
+            process.env.DB_URL ?? "",
+        }),
     });
   } else {
     const deployArgs = [
       "--filter",
-      "@devdogsuga/sandbox",
+      "sandbox",
       "exec",
       "wrangler",
       "deploy",
