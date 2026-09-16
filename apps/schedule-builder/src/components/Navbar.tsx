@@ -24,14 +24,14 @@ export function Navbar() {
   return (
     <header className="border-t-primary-strong border-b-edge bg-surface sticky top-0 left-0 z-40 border-t-2 border-b">
       <nav className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-4 sm:gap-4 md:px-6">
-        {/* The mark flows in the text run — `h-[0.79em] w-auto align-baseline`
+        {/* The mark flows in the text run — `h-[0.799em] w-auto align-baseline`
             stands its calendar body on the baseline at Alan Sans cap height,
             the same lockup the platform's project cards use. */}
         <Link
           href="/"
-          className="font-display text-foreground shrink-0 text-xl font-bold whitespace-nowrap transition-opacity hover:opacity-80"
+          className="font-display text-foreground shrink-0 text-xl font-semibold whitespace-nowrap transition-opacity hover:opacity-80"
         >
-          <DogDaysIcon className="mr-2 inline-block h-[0.79em] w-auto align-baseline max-[400px]:mr-0 max-[400px]:h-6 max-[400px]:align-middle" />
+          <DogDaysIcon className="mr-2 inline-block h-[0.799em] w-auto align-baseline max-[400px]:mr-0 max-[400px]:h-6 max-[400px]:align-middle" />
           <span className="max-[400px]:sr-only">DogDays</span>
         </Link>
 

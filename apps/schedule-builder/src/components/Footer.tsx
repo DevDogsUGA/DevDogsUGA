@@ -32,7 +32,7 @@ export function Footer() {
           href="/"
           className="font-display text-navy-foreground text-base font-semibold tracking-tight whitespace-nowrap transition-opacity hover:opacity-80"
         >
-          <DogDaysIcon className="mr-1.5 inline-block h-[0.79em] w-auto align-baseline" />
+          <DogDaysIcon className="mr-1.5 inline-block h-[0.799em] w-auto align-baseline" />
           DogDays{" "}
           <span className="font-sans text-xs font-normal text-zinc-400">
             by UGA DevDogs

@@ -12,7 +12,7 @@ export default function Home() {
         {/* The same baseline lockup as the navbar, writ large: the mark rides
             in the text run with its body at Alan Sans cap height. */}
         <h2 className="font-display text-5xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
-          <DogDaysIcon className="text-accent mr-[0.35em] inline-block h-[0.79em] w-auto align-baseline" />
+          <DogDaysIcon className="text-accent mr-[0.35em] inline-block h-[0.799em] w-auto align-baseline" />
           DogDays
         </h2>
         <p className="text-accent text-lg font-medium sm:text-xl">
