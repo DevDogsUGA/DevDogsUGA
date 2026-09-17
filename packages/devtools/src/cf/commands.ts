@@ -5,6 +5,7 @@
  * passes through to wrangler for `cf exec`.
  */
 import { run } from "../db/run.js";
+import { createTemporaryWranglerEnv } from "./local-env.js";
 
 const CF_APPS = new Set(["platform", "schedule-builder", "sandbox"]);
 
@@ -35,7 +36,53 @@ export async function runCf(argv: readonly string[]): Promise<number> {
       process.stderr.write(`devtools cf preview: unknown app "${app}". Expected: platform, schedule-builder, sandbox.\n`);
       return 1;
     }
-    return run(["--filter", app, "run", "cf:preview"]);
+    if (app === "sandbox") {
+      const runtimeEnv = await createTemporaryWranglerEnv(app);
+      try {
+        return run([
+          "--filter",
+          app,
+          "exec",
+          "wrangler",
+          "dev",
+          "--env-file",
+          runtimeEnv.path,
+        ]);
+      } finally {
+        runtimeEnv.remove();
+      }
+    }
+
+    const build = await run([
+      "--filter",
+      app,
+      "exec",
+      "opennextjs-cloudflare",
+      "build",
+    ]);
+    if (build !== 0) return build;
+
+    // Create this after the framework build. Apart from shortening the time a
+    // credential-bearing file exists, this prevents build-tool temp cleanup
+    // from invalidating the path before Wrangler opens it.
+    const runtimeEnv = await createTemporaryWranglerEnv(app);
+    try {
+      // OpenNext's preview wrapper intentionally disables Wrangler's own env
+      // file loading, so process.env reaches its cache-population phase but
+      // not the Worker runtime. The bundle is already built above; invoke the
+      // project's Wrangler directly so the scoped file becomes Worker vars.
+      return run([
+        "--filter",
+        app,
+        "exec",
+        "wrangler",
+        "dev",
+        "--env-file",
+        runtimeEnv.path,
+      ]);
+    } finally {
+      runtimeEnv.remove();
+    }
   }
 
   if (sub === "typegen") {

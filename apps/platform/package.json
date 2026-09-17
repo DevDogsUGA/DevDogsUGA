@@ -18,7 +18,7 @@
     "test:coverage": "vitest run --coverage",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
-    "cf:preview": "with-env opennextjs-cloudflare build && with-env opennextjs-cloudflare preview",
+    "cf:preview": "pnpm --workspace-root devtools cf preview --app platform",
     "cf:typegen": "wrangler types cloudflare-env.d.ts --env production --env-interface CloudflareEnv",
     "cf:typegen:check": "wrangler types cloudflare-env.d.ts --env production --env-interface CloudflareEnv --check",
     "cf:build:staging": "DEPLOY_ENV=staging with-env opennextjs-cloudflare build",

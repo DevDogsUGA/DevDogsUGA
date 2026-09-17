@@ -1,15 +1,14 @@
 /** Config-derived listing and manual triggering for Cloudflare Workflows. */
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { confirm, select, text } from "@clack/prompts";
-import { declarations } from "@devdogsuga/env";
+import {
+  createTemporaryWranglerEnv,
+  renderWranglerEnvFile,
+} from "../cf/local-env.js";
 import { runWithStderr } from "../db/run.js";
 import { PROJECT_ROOT } from "../environment.js";
-import { loadRegistry } from "../env/discovery.js";
 import { unwrap } from "../ui.js";
 import {
   CRON_TIERS,
@@ -43,10 +42,7 @@ interface TemporaryWranglerSession {
   stop: () => Promise<void>;
 }
 
-interface TemporaryWranglerEnv {
-  path: string;
-  remove: () => void;
-}
+export { renderWranglerEnvFile } from "../cf/local-env.js";
 
 // A clean OpenNext checkout builds before Wrangler can boot. Keep showing that
 // build's inherited output and allow enough time for a production Next build.
@@ -268,46 +264,6 @@ export function wranglerDevArgs(app: string, port: string): string[] {
     port,
     "--show-interactive-dev-session=false",
   ];
-}
-
-export function renderWranglerEnvFile(
-  keys: readonly string[],
-  environment: NodeJS.ProcessEnv,
-): string {
-  return (
-    keys
-      .flatMap((key) => {
-        const value = environment[key];
-        // dotenv preserves single-quoted values byte-for-byte, including
-        // multiline private keys and literal backslash sequences. JSON-style
-        // double quotes would make dotenv expand `\n` and duplicate slashes.
-        return value === undefined ? [] : [`${key}='${value}'`];
-      })
-      .join("\n") + "\n"
-  );
-}
-
-async function createTemporaryWranglerEnv(
-  app: string,
-): Promise<TemporaryWranglerEnv> {
-  await loadRegistry();
-  const keys = [
-    ...new Set(
-      declarations()
-        .filter((entry) => entry.source === app)
-        .map((entry) => entry.key),
-    ),
-  ].sort();
-  const directory = mkdtempSync(join(tmpdir(), "devtools-wrangler-env-"));
-  const path = join(directory, ".dev.vars");
-  writeFileSync(path, renderWranglerEnvFile(keys, process.env), {
-    encoding: "utf8",
-    mode: 0o600,
-  });
-  return {
-    path,
-    remove: () => rmSync(directory, { recursive: true, force: true }),
-  };
 }
 
 /** Probe Wrangler's Workflow explorer API, rather than merely checking a port. */

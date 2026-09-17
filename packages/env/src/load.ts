@@ -28,6 +28,26 @@ export const LOCAL_STACK_PORT = 54321;
 export const GENERATED_FILE = ".env.generated";
 
 /**
+ * Wrangler's local Hyperdrive emulator does not read an application's DB_URL.
+ * It requires this binding-specific process variable instead. Keep DB_URL as
+ * the repository's one source of database credentials and derive Wrangler's
+ * alias only in the child-process environment.
+ */
+export const HYPERDRIVE_LOCAL_CONNECTION_ENV =
+  "CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE";
+
+export function applyWranglerLocalDatabaseAlias(
+  environment: Record<string, string>,
+): void {
+  if (
+    environment[HYPERDRIVE_LOCAL_CONNECTION_ENV] === undefined &&
+    environment.DB_URL !== undefined
+  ) {
+    environment[HYPERDRIVE_LOCAL_CONNECTION_ENV] = environment.DB_URL;
+  }
+}
+
+/**
  * A selected environment's file is missing. The message names the file and the
  * command that materialises it, because "ENOENT: .env.staging" tells a new
  * contributor nothing about `env pull`.

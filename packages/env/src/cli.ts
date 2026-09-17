@@ -33,6 +33,7 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { UnknownEnvironmentError } from "./targets.js";
 import {
+  applyWranglerLocalDatabaseAlias,
   MissingEnvFileError,
   probeLocalStack,
   selectEnvFiles,
@@ -229,6 +230,7 @@ function dotenvxCli(): string {
 // loaded files rather than against whatever pnpm's shell had already expanded.
 if (shellMode && opts.c !== undefined) {
   await loadEnv();
+  applyWranglerLocalDatabaseAlias(env);
   const [{ npath }, { execute }] = await Promise.all([
     import("@yarnpkg/fslib"),
     import("@yarnpkg/shell"),
@@ -260,7 +262,11 @@ if (shellMode && opts.c !== undefined) {
 // `shell: true` is not the fix: it would break on any path containing a space,
 // which on Windows is the ordinary case (`C:\Users\Firstname Lastname\...`).
 const windows = process.platform === "win32";
-if (!windows) await loadEnv();
+// Load in-process on Windows too. dotenvx is still used there as the process
+// launcher for .cmd shims, but the loaded map lets us derive variables (such
+// as Wrangler's Hyperdrive alias) identically on every operating system.
+await loadEnv();
+applyWranglerLocalDatabaseAlias(env);
 
 const child = spawn(
   windows ? process.execPath : args[0]!,
