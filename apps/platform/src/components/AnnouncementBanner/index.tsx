@@ -4,6 +4,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import Link from "next/link";
@@ -180,6 +181,23 @@ const EXIT_MS = 200;
 /** Travel before a press counts as a drag rather than a tap. */
 const DRAG_SLOP = 4;
 
+function isAnnouncementExpired() {
+  return (
+    ANNOUNCEMENT !== null &&
+    Date.now() > new Date(ANNOUNCEMENT.expiresAt).getTime()
+  );
+}
+
+function subscribeToExpiration(onChange: () => void) {
+  if (!ANNOUNCEMENT) return () => undefined;
+
+  const remaining = new Date(ANNOUNCEMENT.expiresAt).getTime() - Date.now();
+  if (remaining <= 0) return () => undefined;
+
+  const timer = setTimeout(onChange, remaining);
+  return () => clearTimeout(timer);
+}
+
 /**
  * The dismiss cross, drawn here rather than taken from Phosphor.
  *
@@ -212,7 +230,11 @@ function DismissCross({ className }: { className?: string }) {
 export default function AnnouncementBanner() {
   const pathname = usePathname();
   const [dismissed, setDismissed] = useState(false);
-  const [expired, setExpired] = useState(false);
+  const expired = useSyncExternalStore(
+    subscribeToExpiration,
+    isAnnouncementExpired,
+    () => false,
+  );
   /** Offset while a finger is on the notice; null when nothing is dragging. */
   const [dragY, setDragY] = useState<number | null>(null);
   /** Set once dismissal is committed to, while the exit plays out. */
@@ -230,19 +252,6 @@ export default function AnnouncementBanner() {
     },
     [],
   );
-
-  useEffect(() => {
-    if (!ANNOUNCEMENT) return;
-
-    const remaining = new Date(ANNOUNCEMENT.expiresAt).getTime() - Date.now();
-    if (remaining <= 0) {
-      setExpired(true);
-      return;
-    }
-
-    const timer = setTimeout(() => setExpired(true), remaining);
-    return () => clearTimeout(timer);
-  }, []);
 
   if (!ANNOUNCEMENT || expired || dismissed || !showsAnnouncement(pathname))
     return null;
