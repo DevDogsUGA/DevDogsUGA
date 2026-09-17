@@ -5,9 +5,10 @@
  * passes through to wrangler for `cf exec`.
  */
 import { run } from "../db/run.js";
+import { isWorkerApp, WORKER_APPS } from "../workers.js";
 import { withWranglerEnv } from "./local-env.js";
 
-const CF_APPS = new Set(["platform", "schedule-builder", "sandbox"]);
+const UNKNOWN_APP_HINT = `Expected: ${WORKER_APPS.join(", ")}.`;
 
 function parseAppAndRest(argv: readonly string[]): { app?: string; rest: readonly string[] } {
   const idx = argv.indexOf("--app");
@@ -32,8 +33,8 @@ export async function runCf(argv: readonly string[]): Promise<number> {
       process.stderr.write("devtools cf preview: --app <slug> is required.\n");
       return 1;
     }
-    if (!CF_APPS.has(app)) {
-      process.stderr.write(`devtools cf preview: unknown app "${app}". Expected: platform, schedule-builder, sandbox.\n`);
+    if (!isWorkerApp(app)) {
+      process.stderr.write(`devtools cf preview: unknown app "${app}". ${UNKNOWN_APP_HINT}\n`);
       return 1;
     }
     if (app === "sandbox") {
@@ -85,8 +86,8 @@ export async function runCf(argv: readonly string[]): Promise<number> {
       process.stderr.write("devtools cf typegen: --app <slug> is required.\n");
       return 1;
     }
-    if (!CF_APPS.has(app)) {
-      process.stderr.write(`devtools cf typegen: unknown app "${app}". Expected: platform, schedule-builder, sandbox.\n`);
+    if (!isWorkerApp(app)) {
+      process.stderr.write(`devtools cf typegen: unknown app "${app}". ${UNKNOWN_APP_HINT}\n`);
       return 1;
     }
     const check = remaining.includes("--check");
@@ -101,8 +102,8 @@ export async function runCf(argv: readonly string[]): Promise<number> {
       process.stderr.write("devtools cf build: --app <slug> is required.\n");
       return 1;
     }
-    if (!CF_APPS.has(app)) {
-      process.stderr.write(`devtools cf build: unknown app "${app}". Expected: platform, schedule-builder, sandbox.\n`);
+    if (!isWorkerApp(app)) {
+      process.stderr.write(`devtools cf build: unknown app "${app}". ${UNKNOWN_APP_HINT}\n`);
       return 1;
     }
     if (!tier || (tier !== "staging" && tier !== "production")) {

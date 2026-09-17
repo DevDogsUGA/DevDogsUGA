@@ -13,9 +13,8 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { PROJECT_ROOT } from "../environment.js";
+import { WORKER_APPS as APPS } from "../workers.js";
 import { CronRoutes, WorkflowCrons } from "./schema.js";
-
-const APPS = ["platform", "schedule-builder", "sandbox"];
 
 describe("CRON_ROUTES contract", () => {
   for (const app of APPS) {

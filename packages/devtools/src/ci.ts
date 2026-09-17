@@ -46,6 +46,7 @@ import { runDocsIndex } from "./docs/index-pages.js";
 import { loadRegistry } from "./env/discovery.js";
 import { positionals } from "./args.js";
 import { findCiCommand, subcommandCiNames } from "./commands.js";
+import { isWorkerApp, WORKER_APPS } from "./workers.js";
 
 function flagValue(rest: string[], flag: string): string | undefined {
   const index = rest.indexOf(flag);
@@ -56,11 +57,14 @@ function flagValue(rest: string[], flag: string): string | undefined {
 
 // ── App orchestrators ─────────────────────────────────────────────────────────
 
-const APPS = ["platform", "schedule-builder", "sandbox"] as const;
-type App = (typeof APPS)[number];
+// `WORKER_APPS` is read from root `workers.json` at runtime rather than
+// declared as a literal tuple, so it cannot narrow to a union of string
+// literals the way the old `["platform", ...] as const` did. `App` stays
+// `string`; `isApp` still refuses anything not in the shared list.
+type App = string;
 
 function isApp(value: string): value is App {
-  return (APPS as readonly string[]).includes(value);
+  return isWorkerApp(value);
 }
 
 /**
@@ -291,7 +295,7 @@ async function runDeployCommand(rest: string[]): Promise<void> {
       if (!app) {
         throw new DeployError("--app <name> is required.", [
           "It names the workspace app whose manifest declares the Worker's",
-          "secrets — platform, schedule-builder or sandbox.",
+          `secrets — ${WORKER_APPS.join(", ")}.`,
         ]);
       }
       const mintIndex = rest.indexOf("--mint");

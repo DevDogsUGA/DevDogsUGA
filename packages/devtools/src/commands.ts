@@ -13,6 +13,11 @@
  * tree into an argv and hands it to that same dispatcher, which keeps menu and
  * CLI behavior aligned by construction rather than by review.
  *
+ * One exception: `WORKER_APP_CHOICES` imports the shared `WORKER_APPS` list
+ * (root `workers.json`) so `cf preview`/`typegen`/`build`'s `--app` choices
+ * cannot drift from the six-site source of truth. It is data — a string
+ * array read from a JSON file — not a function this file calls.
+ *
  * ## What a summary is for
  *
  * Every `summary` is one line and is the ONLY thing `--help` prints for a
@@ -20,6 +25,7 @@
  * order and deploy internals live in `docs/`, not here: `--help` is a map, and
  * a map that reprints the territory is the thing this replaced.
  */
+import { WORKER_APPS } from "./workers.js";
 
 /**
  * One choice in a select prompt.
@@ -32,6 +38,12 @@ export interface OptionChoice {
   label?: string;
   hint?: string;
 }
+
+/** The `--app <slug>` choices shared by `cf preview`/`typegen`/`build`. */
+const WORKER_APP_CHOICES: OptionChoice[] = WORKER_APPS.map((app) => ({
+  value: app,
+  label: app,
+}));
 
 /**
  * A prompt the wizard raises to fill an option the command line would carry.
@@ -1123,11 +1135,7 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
                 prompt: {
                   kind: "select",
                   message: "Which app?",
-                  choices: [
-                    { value: "platform", label: "platform" },
-                    { value: "schedule-builder", label: "schedule-builder" },
-                    { value: "sandbox", label: "sandbox" },
-                  ],
+                  choices: WORKER_APP_CHOICES,
                 },
               },
             ],
@@ -1143,11 +1151,7 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
                 prompt: {
                   kind: "select",
                   message: "Which app?",
-                  choices: [
-                    { value: "platform", label: "platform" },
-                    { value: "schedule-builder", label: "schedule-builder" },
-                    { value: "sandbox", label: "sandbox" },
-                  ],
+                  choices: WORKER_APP_CHOICES,
                 },
               },
               {
@@ -1172,11 +1176,7 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
                 prompt: {
                   kind: "select",
                   message: "Which app?",
-                  choices: [
-                    { value: "platform", label: "platform" },
-                    { value: "schedule-builder", label: "schedule-builder" },
-                    { value: "sandbox", label: "sandbox" },
-                  ],
+                  choices: WORKER_APP_CHOICES,
                 },
               },
               {
