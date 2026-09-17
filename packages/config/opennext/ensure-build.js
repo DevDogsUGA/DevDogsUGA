@@ -12,6 +12,15 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
+// Wrangler also invokes custom builds while generating binding types. That
+// command reads the configuration only and does not need an OpenNext artifact.
+if (process.env.WRANGLER_COMMAND === "types") {
+  process.stdout.write(
+    "Skipping the OpenNext build for Wrangler type generation.\n",
+  );
+  process.exit(0);
+}
+
 const appRoot = process.cwd();
 const worker = join(appRoot, ".open-next", "worker.js");
 const assets = join(appRoot, ".open-next", "assets");
