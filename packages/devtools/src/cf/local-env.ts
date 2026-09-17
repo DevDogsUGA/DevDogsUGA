@@ -20,6 +20,37 @@ export function renderWranglerEnvFile(
   );
 }
 
+/** The app's declared keys, deduped and sorted, from the given entries or the
+ * loaded registry. */
+async function scopedKeys(
+  app: string,
+  entries?: readonly EnvEntry[],
+): Promise<string[]> {
+  if (!entries) {
+    await loadRegistry();
+    entries = declarations();
+  }
+  return [
+    ...new Set(
+      entries.filter((entry) => entry.source === app).map((entry) => entry.key),
+    ),
+  ].sort();
+}
+
+/** Writes the mode-0600 `.dev.vars` into a fresh private temp directory. */
+function materializeEnvFile(
+  keys: readonly string[],
+  environment: NodeJS.ProcessEnv,
+): { directory: string; path: string } {
+  const directory = mkdtempSync(join(tmpdir(), "devtools-wrangler-env-"));
+  const path = join(directory, ".dev.vars");
+  writeFileSync(path, renderWranglerEnvFile(keys, environment), {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  return { directory, path };
+}
+
 /**
  * Runs `fn` with the path to an app-scoped, mode-0600 `.dev.vars` file, and
  * guarantees the file (and its containing directory) is gone before this
@@ -33,24 +64,12 @@ export async function withWranglerEnv<T>(
   fn: (envFilePath: string) => Promise<T>,
   options?: { env?: NodeJS.ProcessEnv; entries?: readonly EnvEntry[] },
 ): Promise<T> {
-  const environment = options?.env ?? process.env;
-  let entries = options?.entries;
-  if (!entries) {
-    await loadRegistry();
-    entries = declarations();
-  }
-  const keys = [
-    ...new Set(
-      entries.filter((entry) => entry.source === app).map((entry) => entry.key),
-    ),
-  ].sort();
-  const directory = mkdtempSync(join(tmpdir(), "devtools-wrangler-env-"));
+  const keys = await scopedKeys(app, options?.entries);
+  const { directory, path } = materializeEnvFile(
+    keys,
+    options?.env ?? process.env,
+  );
   try {
-    const path = join(directory, ".dev.vars");
-    writeFileSync(path, renderWranglerEnvFile(keys, environment), {
-      encoding: "utf8",
-      mode: 0o600,
-    });
     return await fn(path);
   } finally {
     rmSync(directory, { recursive: true, force: true });
@@ -77,26 +96,13 @@ export interface TemporaryWranglerEnv {
  * not a mechanical bracket swap — and duplicating this function's
  * retry/readiness loop across a bracket-shaped variant just to convert the
  * `workflows serve` half would fragment one shared, tested implementation
- * into two for no behavioural gain. See the architecture review this module
- * came from for the full call.
+ * into two for no behavioural gain.
  */
 export async function createTemporaryWranglerEnv(
   app: string,
 ): Promise<TemporaryWranglerEnv> {
-  await loadRegistry();
-  const keys = [
-    ...new Set(
-      declarations()
-        .filter((entry) => entry.source === app)
-        .map((entry) => entry.key),
-    ),
-  ].sort();
-  const directory = mkdtempSync(join(tmpdir(), "devtools-wrangler-env-"));
-  const path = join(directory, ".dev.vars");
-  writeFileSync(path, renderWranglerEnvFile(keys, process.env), {
-    encoding: "utf8",
-    mode: 0o600,
-  });
+  const keys = await scopedKeys(app);
+  const { directory, path } = materializeEnvFile(keys, process.env);
   return {
     path,
     remove: () => rmSync(directory, { recursive: true, force: true }),
