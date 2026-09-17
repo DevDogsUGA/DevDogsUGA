@@ -23,10 +23,7 @@ const MINIMAL_CLASS_DATA: ClassData = {
   description: "An introduction to computer science fundamentals.",
   locationLong: "Computer Science Building, Room 101",
   locationShort: "CS 101",
-  prereq: "None",
-  coreq: "",
   professor: "Dr. Jane Smith",
-  semester: "Spring 2024",
   credits: 3,
   crn: 12345,
   openSeats: 15,
@@ -38,7 +35,6 @@ const MINIMAL_CLASS_DATA: ClassData = {
   timeEnd: "10:30 AM",
   timeDifference: 60,
   currentDay: "MWF",
-  otherTimes: ["09:00 AM - 10:30 AM", "09:00 AM", "10:30 AM"],
 };
 
 describe("DayClass", () => {

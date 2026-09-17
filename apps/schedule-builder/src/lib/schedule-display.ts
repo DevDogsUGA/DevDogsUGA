@@ -138,10 +138,7 @@ export function toWeekSchedule(sections: Section[]): WeekSchedule {
         description: section.courseTitle,
         locationLong: location,
         locationShort: location,
-        prereq: "",
-        coreq: "",
         professor: professorName,
-        semester: "",
         credits: section.creditHours.max,
         crn: section.crn,
         openSeats: section.seatsAvailable,
@@ -158,7 +155,6 @@ export function toWeekSchedule(sections: Section[]): WeekSchedule {
         // rather than re-parsed from the formatted display string.
         timeDifference: startMinutes - SCHEDULE_START_HOUR * 60,
         currentDay: currentDayCode,
-        otherTimes: ["", "", ""],
       };
 
       for (const day of activeDays) {

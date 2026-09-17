@@ -28,8 +28,8 @@ export type OfferingWithDetails = DbOffering & {
 
 /**
  * Flat display record expected by DayClass and WeekSchedule.
- * Computed by toWeekSchedule() in src/lib/schedule-display.ts from
- * PostgREST/Drizzle offering data.
+ * Computed by toWeekSchedule() in src/lib/schedule-display.ts from the
+ * Section domain model.
  */
 export interface ClassData {
   classTitle: string;
@@ -37,10 +37,7 @@ export interface ClassData {
   description: string;
   locationLong: string;
   locationShort: string;
-  prereq: string;
-  coreq: string;
   professor: string;
-  semester: string;
 
   credits: number;
   crn: number;
@@ -56,7 +53,6 @@ export interface ClassData {
   timeDifference: number | null;
 
   currentDay: string;
-  otherTimes: [string, string, string];
 }
 
 export type DaySchedule = Record<string, ClassData[]>;

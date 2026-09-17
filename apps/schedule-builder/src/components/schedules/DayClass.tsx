@@ -44,7 +44,6 @@ function useResize() {
 
 // Builds the rows of the week schedule display table.
 function getWeekLayout(
-  otherTimes: string[],
   currentDay: string,
   timeStart: string,
   timeEnd: string,
@@ -70,7 +69,6 @@ function getWeekLayout(
     "",
     "",
   ];
-  const otherDays: string = otherTimes[0] ?? "";
 
   // Add the current day's time and location to the table
   for (let i = 0; i <= currentDay.length; i++) {
@@ -115,48 +113,6 @@ function getWeekLayout(
     }
   }
 
-  // Add the other days the class meets on, if any
-  for (let i = 0; i <= otherDays.length; i++) {
-    switch (otherDays[i]) {
-      // Monday
-      case "M":
-        weekInfo[0] = otherTimes[1] ?? "";
-        weekInfo[1] = otherTimes[2] ?? "";
-        break;
-      // Tuesday
-      case "T":
-        weekInfo[2] = otherTimes[1] ?? "";
-        weekInfo[3] = otherTimes[2] ?? "";
-        break;
-      // Wednesday
-      case "W":
-        weekInfo[4] = otherTimes[1] ?? "";
-        weekInfo[5] = otherTimes[2] ?? "";
-        break;
-      // Thursday
-      case "R":
-        weekInfo[6] = otherTimes[1] ?? "";
-        weekInfo[7] = otherTimes[2] ?? "";
-        break;
-      // Friday
-      case "F":
-        weekInfo[8] = otherTimes[1] ?? "";
-        weekInfo[9] = otherTimes[2] ?? "";
-        break;
-      // Saturday
-      case "S":
-        weekInfo[10] = otherTimes[1] ?? "";
-        weekInfo[11] = otherTimes[2] ?? "";
-        break;
-      // Sunday
-      case "U":
-        weekInfo[12] = otherTimes[1] ?? "";
-        weekInfo[13] = otherTimes[2] ?? "";
-        break;
-      default:
-        break;
-    }
-  }
   return weekInfo;
 }
 
@@ -166,10 +122,7 @@ function CourseInfo({
   description,
   locationLong,
   locationShort,
-  prereq,
-  coreq,
   professor,
-  semester,
   credits,
   crn,
   // Unused; uncomment to use.
@@ -181,21 +134,11 @@ function CourseInfo({
   timeStart,
   timeEnd,
   currentDay,
-  otherTimes,
 }: DayClassProps) {
   const outerBorder = `border-b-2 border-r-2 border-l-2 ${borderColor} rounded-3xl`;
   const innerBorder = `border-r-2 ${borderColor}`;
   const { width, height } = useResize();
-  const weekInfo = getWeekLayout(
-    otherTimes,
-    currentDay,
-    timeStart,
-    timeEnd,
-    locationShort,
-  );
-
-  const defaultPrereq = prereq && prereq.trim() !== "" ? prereq : "None";
-  const defaultCorereq = coreq && coreq.trim() !== "" ? coreq : "None";
+  const weekInfo = getWeekLayout(currentDay, timeStart, timeEnd, locationShort);
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
@@ -230,20 +173,7 @@ function CourseInfo({
             <br></br>
             <p>
               {" "}
-              <b>Semester:</b> {semester}{" "}
-            </p>
-            <p>
-              {" "}
               <b>Credit Hours:</b> {credits}{" "}
-            </p>{" "}
-            <br></br>
-            <p>
-              {" "}
-              <b>Prerequisites:</b> {defaultPrereq}{" "}
-            </p>
-            <p>
-              {" "}
-              <b>Corequisites:</b> {defaultCorereq}{" "}
             </p>{" "}
             <br></br>
             <p> {description} </p>
@@ -364,10 +294,7 @@ export default function DayClass({
   description,
   locationLong,
   locationShort,
-  prereq,
-  coreq,
   professor,
-  semester,
   credits,
   crn,
   openSeats,
@@ -379,7 +306,6 @@ export default function DayClass({
   timeEnd,
   timeDifference,
   currentDay,
-  otherTimes,
 }: DayClassProps) {
   // Blocks and hour lines share one coordinate space, percent of the 8 AM to
   // 10 PM span, so they stay aligned at any container height. Pixel offsets
@@ -432,10 +358,7 @@ export default function DayClass({
             description={description}
             locationLong={locationLong}
             locationShort={locationShort}
-            prereq={prereq}
-            coreq={coreq}
             professor={professor}
-            semester={semester}
             credits={credits}
             crn={crn}
             openSeats={openSeats}
@@ -447,7 +370,6 @@ export default function DayClass({
             timeEnd={timeEnd}
             timeDifference={timeDifference}
             currentDay={currentDay}
-            otherTimes={otherTimes}
           />
         </div>
       )}
