@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import * as schema from "~/server/db/schema";
 import { loadSections } from "~/lib/domain/loadSections";
@@ -20,19 +20,26 @@ export interface GenerateScheduleParams {
   /** Qualified course abbreviations, e.g. ["CSCI1302", "MATH2250"] */
   inputCourseNumbers: string[];
   excludedSectionCrns: number[];
-  excludedCourseIDs: number[];
-  /** Hour integer 0–23 */
-  prefStartTime: number;
-  /** Hour integer 0–23 */
-  prefEndTime: number;
+  /** "HH:MM", the earliest acceptable start time; omit for no lower bound. */
+  prefStartTime?: string;
+  /** "HH:MM", the latest acceptable end time; omit for no upper bound. */
+  prefEndTime?: string;
   inputCampus: string;
   minCreditHours: number;
   maxCreditHours: number;
   showFilledClasses: boolean;
 }
 
-function pad(n: number): string {
-  return String(n).padStart(2, "0");
+const TIME_OF_DAY = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+
+/**
+ * Server actions are public endpoints, so the "HH:MM" contract documented on
+ * the params cannot be trusted. A malformed bound is dropped rather than
+ * passed through: string-comparing garbage against meeting times would
+ * silently filter out every section.
+ */
+function toTimeOfDay(t: string | undefined): string | undefined {
+  return t !== undefined && TIME_OF_DAY.test(t) ? t : undefined;
 }
 
 const FAILURE_MESSAGES: Record<
@@ -80,16 +87,6 @@ export async function getRecommendedSchedules(
     };
   }
 
-  const excludedCourseAbbrs =
-    params.excludedCourseIDs.length > 0
-      ? (
-          await db
-            .select({ abbr: schema.courses.abbr })
-            .from(schema.courses)
-            .where(inArray(schema.courses.id, params.excludedCourseIDs))
-        ).map((r) => r.abbr)
-      : [];
-
   const allSections = await loadSections(db, {
     academicPeriod: params.academicPeriod,
     courseAbbrs: params.inputCourseNumbers,
@@ -102,18 +99,14 @@ export async function getRecommendedSchedules(
   const courses = groupSectionsByCourse(usableSections);
 
   const ctx: GenerationConstraints = {
-    excludedCourses: excludedCourseAbbrs,
+    excludedCourses: [],
     excludedSections: params.excludedSectionCrns,
     campusId,
     minCreditHours: params.minCreditHours,
     maxCreditHours: params.maxCreditHours,
     showFilledClasses: params.showFilledClasses,
-    prefStartTime: params.prefStartTime
-      ? `${pad(params.prefStartTime)}:00`
-      : undefined,
-    prefEndTime: params.prefEndTime
-      ? `${pad(params.prefEndTime)}:00`
-      : undefined,
+    prefStartTime: toTimeOfDay(params.prefStartTime),
+    prefEndTime: toTimeOfDay(params.prefEndTime),
   };
 
   const outcome = generateSchedules(courses, ctx);

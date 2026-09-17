@@ -4,8 +4,8 @@ import type { DateRange, Meeting, Section } from "~/lib/domain/section";
 // `~/server/db`'s `db` export triggers `~/env`'s `createEnv()` at module
 // load (see `loadSections.ts`'s doc comment), which throws outside a real
 // Next.js/Worker environment. The action only ever uses `db` for the
-// campus/excluded-course lookups exercised below, so a minimal chainable
-// stub is enough — no real Postgres connection required.
+// campus lookup exercised below, so a minimal chainable stub is enough —
+// no real Postgres connection required.
 function emptyChain() {
   const rows: unknown[] = [];
   const promise = Promise.resolve(rows) as Promise<unknown[]> & {
@@ -119,9 +119,6 @@ describe("getRecommendedSchedules", () => {
       academicPeriod: 202605,
       inputCourseNumbers: [],
       excludedSectionCrns: [],
-      excludedCourseIDs: [],
-      prefStartTime: 0,
-      prefEndTime: 0,
       inputCampus: "",
       minCreditHours: 0,
       maxCreditHours: 0,
@@ -160,9 +157,6 @@ describe("getRecommendedSchedules", () => {
       academicPeriod: 202605,
       inputCourseNumbers: ["CSCI1301", "MATH1113"],
       excludedSectionCrns: [],
-      excludedCourseIDs: [],
-      prefStartTime: 0,
-      prefEndTime: 0,
       inputCampus: "",
       minCreditHours: 0,
       maxCreditHours: 0,
@@ -173,5 +167,42 @@ describe("getRecommendedSchedules", () => {
     expect(result.data).toHaveLength(1);
     expect(result.data[0]).toEqual(expect.arrayContaining([11111, 22222]));
     expect(result.data[0]).toHaveLength(2);
+  });
+
+  // The time-of-day preference is a soft score by design (see
+  // preferredTimeWindow.ts): an "HH:MM" bound reorders schedules, never
+  // filters them, and a malformed bound is dropped before it reaches the
+  // engine rather than corrupting the scoring.
+  it('ranks by an "HH:MM" start-time preference and survives a malformed one', async () => {
+    const nineAm = section({ crn: 111, meetings: [meeting("09:00", "09:50")] });
+    const tenAm = section({ crn: 222, meetings: [meeting("10:10", "11:00")] });
+
+    mockLoadSections.mockResolvedValue([nineAm, tenAm]);
+    const bounded = await getRecommendedSchedules({
+      academicPeriod: 202605,
+      inputCourseNumbers: ["CSCI1301"],
+      excludedSectionCrns: [],
+      prefStartTime: "10:00",
+      inputCampus: "",
+      minCreditHours: 0,
+      maxCreditHours: 0,
+      showFilledClasses: true,
+    });
+    expect(bounded.error).toBeUndefined();
+    expect(bounded.data).toEqual([[222], [111]]);
+
+    mockLoadSections.mockResolvedValue([nineAm, tenAm]);
+    const malformed = await getRecommendedSchedules({
+      academicPeriod: 202605,
+      inputCourseNumbers: ["CSCI1301"],
+      excludedSectionCrns: [],
+      prefStartTime: "9am",
+      inputCampus: "",
+      minCreditHours: 0,
+      maxCreditHours: 0,
+      showFilledClasses: true,
+    });
+    expect(malformed.error).toBeUndefined();
+    expect(malformed.data).toHaveLength(2);
   });
 });
