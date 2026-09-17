@@ -28,6 +28,10 @@
  * addressable for jobs that run only one step.
  */
 import { spawn } from "node:child_process";
+import {
+  applyWranglerLocalDatabaseAlias,
+  HYPERDRIVE_LOCAL_CONNECTION_ENV,
+} from "@devdogsuga/env/load";
 import { DeployError, say } from "./deploy/report.js";
 import { renderWriteEnvReport, runDeployWriteEnv } from "./deploy/write-env.js";
 import { runDeploySecretsFile } from "./deploy/secrets-file.js";
@@ -57,6 +61,27 @@ type App = (typeof APPS)[number];
 
 function isApp(value: string): value is App {
   return (APPS as readonly string[]).includes(value);
+}
+
+/**
+ * Wrangler's local Hyperdrive emulator wants its binding-specific alias, not
+ * `DB_URL`. Mirror both of `process.env`'s relevant keys into a scratch
+ * object so the shared `applyWranglerLocalDatabaseAlias` guard — never
+ * clobber an alias someone already set — runs against the same values it
+ * would in-process, then hand back only the alias override for `pnpm()`'s
+ * env merge (`DB_URL` itself reaches the child already, via the base
+ * `process.env` spread).
+ */
+function hyperdriveLocalAliasEnv(): Record<string, string> {
+  const scratch: Record<string, string> = {};
+  const existingAlias = process.env[HYPERDRIVE_LOCAL_CONNECTION_ENV];
+  if (existingAlias !== undefined) {
+    scratch[HYPERDRIVE_LOCAL_CONNECTION_ENV] = existingAlias;
+  }
+  if (process.env.DB_URL !== undefined) scratch.DB_URL = process.env.DB_URL;
+  applyWranglerLocalDatabaseAlias(scratch);
+  delete scratch.DB_URL;
+  return scratch;
 }
 
 /**
@@ -132,11 +157,7 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
 
     steps.push({
       label: `Deploy platform (${tier})`,
-      fn: () =>
-        pnpm(deployArgs, {
-          CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE:
-            process.env.DB_URL ?? "",
-        }),
+      fn: () => pnpm(deployArgs, hyperdriveLocalAliasEnv()),
     });
   } else if (app === "schedule-builder") {
     const deployArgs = [
@@ -151,11 +172,7 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
     if (secretsFile) deployArgs.push("--secrets-file", secretsFile);
     steps.push({
       label: `Deploy schedule-builder (${tier})`,
-      fn: () =>
-        pnpm(deployArgs, {
-          CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE:
-            process.env.DB_URL ?? "",
-        }),
+      fn: () => pnpm(deployArgs, hyperdriveLocalAliasEnv()),
     });
   } else {
     const deployArgs = [
