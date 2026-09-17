@@ -40,6 +40,9 @@ export default function Hypno() {
         } as CSSProperties
       }
     >
+      {/* The baked blur must stay at its native raster size; next/image would
+          generate larger candidates for this deliberately upscaled texture. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={hypno.src}
         alt=""
