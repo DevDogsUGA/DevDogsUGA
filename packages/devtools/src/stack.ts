@@ -8,8 +8,18 @@
 import { rmSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { describeEnvironment, probeEnvironment, PROJECT_ROOT } from "./environment.js";
-import { generateTypes, run, seedBuckets, supabase, supabaseCapture } from "./db/run.js";
+import {
+  describeEnvironment,
+  probeEnvironment,
+  PROJECT_ROOT,
+} from "./environment.js";
+import {
+  generateTypes,
+  run,
+  seedBuckets,
+  supabase,
+  supabaseCapture,
+} from "./db/run.js";
 
 export type Target = { kind: "local" } | { kind: "remote" };
 
@@ -184,10 +194,11 @@ export async function runStackCommand(
   }
 
   if (command === "reset") {
-    const code = await (target.kind === "remote" ? resetRemote() : resetLocal());
+    const code = await (target.kind === "remote"
+      ? resetRemote()
+      : resetLocal());
     return { code, lines: [] };
   }
 
   return { code: 1, lines: [`No handler for ${command}.`] };
 }
-

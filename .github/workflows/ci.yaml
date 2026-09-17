@@ -153,24 +153,23 @@ jobs:
       # "migrations apply cleanly from scratch" check, with no separate reset
       # needed. Also writes .env.generated, which the suites below read.
       #
-      # ⚠️ The stack scripts run through `with-env`, which REFUSES a missing
-      # .env by design — the first real run of this job died on exactly that,
-      # before the synthetic-environment step further down had composed one.
-      # Seeded here from the same committed file that step copies; the later
-      # copy simply overwrites this one and appends the generated values.
-      - name: Seed the env file with-env insists on
+      # ⚠️ The devtools entrypoint and RLS suite run through `with-env`, which
+      # REFUSES a missing .env by design. Seed it before the stack writes the
+      # local connection overlay; the synthetic-environment step later replaces
+      # this file and appends those generated values for the builds.
+      - name: Seed the env file for wrapped checks
         run: cp .github/ci.env .env
       # config.toml enables four OAuth providers with `env()` credentials that
       # CI does not have. Verified: unset resolves to a WARN and exit 0, not an
       # error.
       - name: Start the local Supabase stack
-        run: pnpm --filter @devdogsuga/supabase run start-local-stack
+        run: pnpm devtools db start
       # Catches a migration that changed the schema without the committed types
       # being regenerated -- which typechecks fine everywhere until something
       # reads a column the types still claim exists.
       - name: Generated Database types match the migrations
         run: |
-          pnpm --filter @devdogsuga/supabase run generate-types:local
+          pnpm devtools db types --target local
           git diff --exit-code -- packages/supabase/src/database.types.ts
       # 54 tests. All app schemas share one PostgREST endpoint and one anon key,
       # so RLS -- not the schema boundary -- is what isolates one app's data from

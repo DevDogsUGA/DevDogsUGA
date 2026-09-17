@@ -19,7 +19,11 @@ import {
   type Known,
 } from "./environment.js";
 
-const CONDITIONS: Condition[] = ["docker", "instance-running", "instance-stopped"];
+const CONDITIONS: Condition[] = [
+  "docker",
+  "instance-running",
+  "instance-stopped",
+];
 
 /** An environment with one fact set and the rest unreadable. */
 function withStack(stack: Known): Environment {
@@ -58,11 +62,15 @@ describe("isOffered", () => {
   });
 
   it("withholds one whose condition is definitively unmet", () => {
-    expect(isOffered({ when: "instance-running" }, withStack("no"))).toBe(false);
+    expect(isOffered({ when: "instance-running" }, withStack("no"))).toBe(
+      false,
+    );
   });
 
   it("offers one whose condition holds", () => {
-    expect(isOffered({ when: "instance-running" }, withStack("yes"))).toBe(true);
+    expect(isOffered({ when: "instance-running" }, withStack("yes"))).toBe(
+      true,
+    );
   });
 
   it("offers everything on a machine it cannot read", () => {

@@ -33,7 +33,7 @@ function generateBash(): string {
   return [
     "# devtools bash completion",
     "# Source this file or add it to /etc/bash_completion.d/",
-    "#   eval \"$(pnpm devtools completions --shell bash)\"",
+    '#   eval "$(pnpm devtools completions --shell bash)"',
     "_devtools_complete() {",
     '    local cur="${COMP_WORDS[COMP_CWORD]}"',
     '    local prev="${COMP_WORDS[COMP_CWORD-1]}"',
@@ -41,7 +41,7 @@ function generateBash(): string {
     "",
     "    # Build the command path from all words except the last",
     '    local cmd=""',
-    '    for ((i=1; i<COMP_CWORD; i++)); do',
+    "    for ((i=1; i<COMP_CWORD; i++)); do",
     '        local w="${COMP_WORDS[$i]}"',
     '        if [[ "$w" != --* ]]; then',
     '            cmd="${cmd:+$cmd }$w"',
@@ -95,7 +95,7 @@ function generateZsh(): string {
     "        *) ;;",
     "    esac",
     "",
-    '    compadd -a completions',
+    "    compadd -a completions",
     "}",
     "_devtools",
     "",
@@ -112,8 +112,8 @@ export function runCompletions(argv: string[]): number {
 
   if (shell !== "bash" && shell !== "zsh") {
     process.stderr.write(
-      'devtools completions: --shell must be bash or zsh.\n' +
-        'Example: pnpm devtools completions --shell bash\n',
+      "devtools completions: --shell must be bash or zsh.\n" +
+        "Example: pnpm devtools completions --shell bash\n",
     );
     return 1;
   }

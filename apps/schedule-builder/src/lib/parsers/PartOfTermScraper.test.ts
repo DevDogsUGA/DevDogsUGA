@@ -49,8 +49,9 @@ describe("resolveCalendarId", () => {
   });
 
   it("distinguishes an unavailable selector from a missing year", () => {
-    expect(() => resolveCalendarId(cheerio.load("<html></html>"), 202608))
-      .toThrowError(CalendarIndexUnavailableError);
+    expect(() =>
+      resolveCalendarId(cheerio.load("<html></html>"), 202608),
+    ).toThrowError(CalendarIndexUnavailableError);
   });
 
   it("does not include Archives URL in error message", () => {

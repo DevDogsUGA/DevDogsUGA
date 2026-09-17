@@ -35,10 +35,7 @@ interface AppIntrospectConfig {
 
 const APP_CONFIGS: Record<string, AppIntrospectConfig> = {
   platform: {
-    configs: [
-      "drizzle-introspection.config.ts",
-      "drizzle.config.ts",
-    ],
+    configs: ["drizzle-introspection.config.ts", "drizzle.config.ts"],
     schemaFile: "src/server/db/schema/generated/schema.ts",
     schemaSuffix: "InPlatform",
     crossSchemaImport:
@@ -48,7 +45,11 @@ const APP_CONFIGS: Record<string, AppIntrospectConfig> = {
 
 // ── drizzle-kit pull ──────────────────────────────────────────────────────────
 
-function runDrizzlePull(appDir: string, configFile: string, env: NodeJS.ProcessEnv): Promise<number> {
+function runDrizzlePull(
+  appDir: string,
+  configFile: string,
+  env: NodeJS.ProcessEnv,
+): Promise<number> {
   return new Promise((resolve) => {
     const child = spawn(
       "pnpm",
@@ -63,7 +64,10 @@ function runDrizzlePull(appDir: string, configFile: string, env: NodeJS.ProcessE
 
 function applyPostPullFixups(appDir: string, cfg: AppIntrospectConfig): void {
   const schemaPath = join(appDir, cfg.schemaFile);
-  const relationsPath = join(appDir, cfg.schemaFile.replace("schema.ts", "relations.ts"));
+  const relationsPath = join(
+    appDir,
+    cfg.schemaFile.replace("schema.ts", "relations.ts"),
+  );
 
   // 1. Delete relations.ts
   if (existsSync(relationsPath)) rmSync(relationsPath);
@@ -123,7 +127,9 @@ export async function runIntrospect(app?: string): Promise<number> {
   const cfg = APP_CONFIGS[app];
   if (!cfg) {
     const valid = Object.keys(APP_CONFIGS).join(", ");
-    process.stderr.write(`devtools db introspect: unknown app "${app}". Expected: ${valid}.\n`);
+    process.stderr.write(
+      `devtools db introspect: unknown app "${app}". Expected: ${valid}.\n`,
+    );
     return 1;
   }
 

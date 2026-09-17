@@ -139,10 +139,7 @@ describe("stdout stays clean for every deploy command", () => {
     // already been bitten by: a step guarded on `secrets.X != ''`, which
     // passed green for months without ever running. A missing credential has
     // to be red.
-    const { code, stdout, stderr } = await ci([
-      "deploy",
-      "airtable-plan",
-    ]);
+    const { code, stdout, stderr } = await ci(["deploy", "airtable-plan"]);
     expect(stdout).toBe("");
     // The refusal names the missing TOKEN. It used to name the missing base
     // id, which came first and so was what an empty environment hit; the base
@@ -154,10 +151,7 @@ describe("stdout stays clean for every deploy command", () => {
   });
 
   it("prints no banner when airtable-apply refuses", async () => {
-    const { code, stdout, stderr } = await ci([
-      "deploy",
-      "airtable-apply",
-    ]);
+    const { code, stdout, stderr } = await ci(["deploy", "airtable-apply"]);
     expect(stdout).toBe("");
     expect(stderr).toContain("No Airtable token that can write");
     expect(code).toBe(1);

@@ -10,7 +10,10 @@ import { withWranglerEnv } from "./local-env.js";
 
 const UNKNOWN_APP_HINT = `Expected: ${WORKER_APPS.join(", ")}.`;
 
-function parseAppAndRest(argv: readonly string[]): { app?: string; rest: readonly string[] } {
+function parseAppAndRest(argv: readonly string[]): {
+  app?: string;
+  rest: readonly string[];
+} {
   const idx = argv.indexOf("--app");
   if (idx === -1 || idx + 1 >= argv.length) return { rest: argv };
   const app = argv[idx + 1];
@@ -34,7 +37,9 @@ export async function runCf(argv: readonly string[]): Promise<number> {
       return 1;
     }
     if (!isWorkerApp(app)) {
-      process.stderr.write(`devtools cf preview: unknown app "${app}". ${UNKNOWN_APP_HINT}\n`);
+      process.stderr.write(
+        `devtools cf preview: unknown app "${app}". ${UNKNOWN_APP_HINT}\n`,
+      );
       return 1;
     }
     if (app === "sandbox") {
@@ -68,15 +73,7 @@ export async function runCf(argv: readonly string[]): Promise<number> {
       // file loading, so process.env reaches its cache-population phase but
       // not the Worker runtime. The bundle is already built above; invoke the
       // project's Wrangler directly so the scoped file becomes Worker vars.
-      run([
-        "--filter",
-        app,
-        "exec",
-        "wrangler",
-        "dev",
-        "--env-file",
-        envFile,
-      ]),
+      run(["--filter", app, "exec", "wrangler", "dev", "--env-file", envFile]),
     );
   }
 
@@ -87,7 +84,9 @@ export async function runCf(argv: readonly string[]): Promise<number> {
       return 1;
     }
     if (!isWorkerApp(app)) {
-      process.stderr.write(`devtools cf typegen: unknown app "${app}". ${UNKNOWN_APP_HINT}\n`);
+      process.stderr.write(
+        `devtools cf typegen: unknown app "${app}". ${UNKNOWN_APP_HINT}\n`,
+      );
       return 1;
     }
     const check = remaining.includes("--check");
@@ -103,11 +102,15 @@ export async function runCf(argv: readonly string[]): Promise<number> {
       return 1;
     }
     if (!isWorkerApp(app)) {
-      process.stderr.write(`devtools cf build: unknown app "${app}". ${UNKNOWN_APP_HINT}\n`);
+      process.stderr.write(
+        `devtools cf build: unknown app "${app}". ${UNKNOWN_APP_HINT}\n`,
+      );
       return 1;
     }
     if (!tier || (tier !== "staging" && tier !== "production")) {
-      process.stderr.write("devtools cf build: --tier <staging|production> is required.\n");
+      process.stderr.write(
+        "devtools cf build: --tier <staging|production> is required.\n",
+      );
       return 1;
     }
     return run(["--filter", app, "run", `cf:build:${tier}`]);

@@ -2,10 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import {
-  ArrowUpRightIcon,
-  MapPinIcon,
-} from "@phosphor-icons/react/ssr";
+import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
 import {
   ACTION_PRIMARY_DARK_CLS,
   CANCELLED_LABEL,

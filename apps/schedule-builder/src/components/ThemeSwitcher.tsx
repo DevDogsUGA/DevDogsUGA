@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { DesktopIcon, MoonIcon, SunIcon } from "@phosphor-icons/react/ssr";
 
 type Theme = "system" | "light" | "dark";
 
 const ORDER: Theme[] = ["system", "light", "dark"];
+const THEME_CHANGE_EVENT = "devdogs-theme-change";
 
 const OPTIONS = {
   system: { Icon: DesktopIcon, label: "System theme" },
@@ -21,6 +22,20 @@ function apply(theme: Theme) {
   document.documentElement.classList.toggle("dark", dark);
 }
 
+function getStoredTheme(): Theme {
+  const stored = localStorage.getItem("theme");
+  return stored === "light" || stored === "dark" ? stored : "system";
+}
+
+function subscribeToTheme(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(THEME_CHANGE_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(THEME_CHANGE_EVENT, onChange);
+  };
+}
+
 /**
  * Cycles system → light → dark. The choice lives in `localStorage.theme`
  * ("system" = no entry), which the root layout's inline script also reads so
@@ -28,14 +43,13 @@ function apply(theme: Theme) {
  * clicks and, in system mode, OS preference changes.
  */
 export function ThemeSwitcher() {
-  // null until mounted: the stored choice isn't knowable server-side, so the
-  // first client render must match the SSR placeholder.
-  const [theme, setTheme] = useState<Theme | null>(null);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("theme");
-    setTheme(stored === "light" || stored === "dark" ? stored : "system");
-  }, []);
+  // The server snapshot stays null through hydration. React reads localStorage
+  // immediately afterward, without a mount effect that synchronously sets state.
+  const theme = useSyncExternalStore<Theme | null>(
+    subscribeToTheme,
+    getStoredTheme,
+    () => null,
+  );
 
   useEffect(() => {
     if (theme === null) return;
@@ -56,11 +70,11 @@ export function ThemeSwitcher() {
         const next = ORDER[(ORDER.indexOf(theme ?? "system") + 1) % 3]!;
         if (next === "system") localStorage.removeItem("theme");
         else localStorage.setItem("theme", next);
-        setTheme(next);
+        window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
       }}
       title={current.label}
       aria-label={current.label}
-      className="rounded-lg p-2 text-xl text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+      className="text-muted hover:bg-surface-muted hover:text-foreground rounded-lg p-2 text-xl transition-colors"
     >
       {theme === null ? (
         <span className="block size-[1em]" />

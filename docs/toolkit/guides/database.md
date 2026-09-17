@@ -19,21 +19,21 @@ The target is one flag with a closed set of values, so `local` and `remote`
 cannot both be passed. Omit it and every target-taking subcommand defaults to
 `local`.
 
-| Command       | `--target local`                                | `--target remote`                          |
-| ------------- | ------------------------------------------------ | ------------------------------------------ |
-| `db connect`  | (n/a — registers a hosted project's ref instead)  | `supabase link --project-ref <ref>`        |
-| `db migrate`  | `supabase db push`, then regenerate the types    | the same steps, `--linked`                 |
-| `db reset`    | ⚠️ erases, replays migrations, then seeds        | ⚠️ same, against the linked project        |
-| `db status`   | reports Docker, Supabase here and `.env`         | points at the Supabase dashboard           |
+| Command      | `--target local`                                 | `--target remote`                   |
+| ------------ | ------------------------------------------------ | ----------------------------------- |
+| `db connect` | (n/a — registers a hosted project's ref instead) | `supabase link --project-ref <ref>` |
+| `db migrate` | `supabase db push`, then regenerate the types    | the same steps, `--linked`          |
+| `db reset`   | ⚠️ erases, replays migrations, then seeds        | ⚠️ same, against the linked project |
+| `db status`  | reports Docker, Supabase here and `.env`         | points at the Supabase dashboard    |
 
 `db stop` and `db restart` act on the Docker containers on this machine, so
 they take no target and refuse one — a hosted project has no container here to
 act on:
 
-| Command         | What it does                                               |
-| --------------- | ----------------------------------------------------------- |
-| `db stop`       | `supabase stop`, and removes `.env.generated`               |
-| `db restart`    | stop, then start again — how a changed `config.toml` lands  |
+| Command      | What it does                                               |
+| ------------ | ---------------------------------------------------------- |
+| `db stop`    | `supabase stop`, and removes `.env.generated`              |
+| `db restart` | stop, then start again — how a changed `config.toml` lands |
 
 Both target paths drive the Supabase CLI directly, through the shared helpers
 in `packages/devtools/src/db/run.ts`. This used to delegate to lifecycle

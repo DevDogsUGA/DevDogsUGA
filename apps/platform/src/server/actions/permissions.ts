@@ -214,7 +214,9 @@ export async function canUserManageVerification(
 ): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canManageVerification);
 }
-export async function canUserManageAttendance(userId: string): Promise<boolean> {
+export async function canUserManageAttendance(
+  userId: string,
+): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canManageAttendance);
 }
 export async function canUserExportStars(userId: string): Promise<boolean> {

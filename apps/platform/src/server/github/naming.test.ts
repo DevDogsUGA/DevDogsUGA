@@ -81,18 +81,10 @@ describe("entry matching", () => {
 
   it("matches a team's own head branch and not a sibling's", () => {
     expect(
-      isTeamHead(
-        "team/2026-fall/w02/study-group-finder/sicem",
-        COMP,
-        "sicem",
-      ),
+      isTeamHead("team/2026-fall/w02/study-group-finder/sicem", COMP, "sicem"),
     ).toBe(true);
     expect(
-      isTeamHead(
-        "team/2026-fall/w02/study-group-finder/marble",
-        COMP,
-        "sicem",
-      ),
+      isTeamHead("team/2026-fall/w02/study-group-finder/marble", COMP, "sicem"),
     ).toBe(false);
   });
 

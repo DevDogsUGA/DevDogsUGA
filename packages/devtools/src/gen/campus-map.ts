@@ -57,12 +57,24 @@ const HIGHLIGHTS = [
   { key: "Plant Sciences", osm: "Miller Plant Science", via: "way" },
   { key: "Boyd", osm: "Boyd Graduate Research Center", via: "way" },
   { key: "MLC", osm: "Zell B. Miller Student Learning Center", via: "way" },
-  { key: "Science Learning Center", osm: "Science Learning Center", via: "way" },
-  { key: "Science Library", osm: "Shirley Mathis McBay Science Library", via: "way" },
+  {
+    key: "Science Learning Center",
+    osm: "Science Learning Center",
+    via: "way",
+  },
+  {
+    key: "Science Library",
+    osm: "Shirley Mathis McBay Science Library",
+    via: "way",
+  },
   { key: "Poultry Science", osm: "Poultry Science Building", via: "way" },
   { key: "Main Library", osm: "UGA Main Library", via: "way" },
   { key: "Tate", osm: "Tate Student Center", via: "way" },
-] as const satisfies readonly { key: string; osm: string; via: "way" | "relation" }[];
+] as const satisfies readonly {
+  key: string;
+  osm: string;
+  via: "way" | "relation";
+}[];
 
 const LANDMARKS = [
   "Brumby Hall",
@@ -92,7 +104,10 @@ const STREETS = [
   { osm: "D. W. Brooks Drive", text: "D.W. Brooks Dr", at: 0.35 },
 ];
 
-interface OsmGeomPoint { lat: number; lon: number }
+interface OsmGeomPoint {
+  lat: number;
+  lon: number;
+}
 interface OsmWay {
   id: number;
   tags?: Record<string, string>;
@@ -128,11 +143,19 @@ function simplify(pts: Pt[]): Pt[] {
   return kept;
 }
 
-function makeGeomHelpers(px: (lon: number, lat: number) => Pt, fmt: (n: number) => number, VH: number) {
+function makeGeomHelpers(
+  px: (lon: number, lat: number) => Pt,
+  fmt: (n: number) => number,
+  VH: number,
+) {
   const proj = (geom: OsmGeomPoint[]) =>
     geom.map((g) => px(g.lon, g.lat).map(fmt) as Pt);
   const toPath = (geom: OsmGeomPoint[], close: boolean) =>
-    "M" + simplify(proj(geom)).map((p) => p.join(" ")).join("L") + (close ? "Z" : "");
+    "M" +
+    simplify(proj(geom))
+      .map((p) => p.join(" "))
+      .join("L") +
+    (close ? "Z" : "");
 
   const inFrame = (geom: OsmGeomPoint[]) =>
     geom.some((g) => {
@@ -153,7 +176,12 @@ function makeGeomHelpers(px: (lon: number, lat: number) => Pt, fmt: (n: number) 
 }
 
 const lineLength = (line: Pt[]) =>
-  line.slice(1).reduce((a, p, i) => a + Math.hypot(p[0] - line[i]![0], p[1] - line[i]![1]), 0);
+  line
+    .slice(1)
+    .reduce(
+      (a, p, i) => a + Math.hypot(p[0] - line[i]![0], p[1] - line[i]![1]),
+      0,
+    );
 
 function chain(lines: Pt[][]): Pt[][] {
   const key = (p: Pt) => `${p[0]},${p[1]}`;
@@ -168,7 +196,8 @@ function chain(lines: Pt[][]): Pt[][] {
         const head = key(run[0]!);
         const tail = key(run[run.length - 1]!);
         if (tail === key(c[0]!)) run.push(...c.slice(1));
-        else if (tail === key(c[c.length - 1]!)) run.push(...c.slice(0, -1).reverse());
+        else if (tail === key(c[c.length - 1]!))
+          run.push(...c.slice(0, -1).reverse());
         else if (head === key(c[c.length - 1]!)) run.unshift(...c.slice(0, -1));
         else if (head === key(c[0]!)) run.unshift(...c.slice(1).reverse());
         else continue;
@@ -187,25 +216,38 @@ function clipToFrame(line: Pt[], VH: number, margin = 8): Pt[][] {
   const [maxX, maxY] = [VW - margin, VH - margin];
   const runs: Pt[][] = [];
   let run: Pt[] = [];
-  const flush = () => { if (run.length > 1) runs.push(run); run = []; };
+  const flush = () => {
+    if (run.length > 1) runs.push(run);
+    run = [];
+  };
 
   for (let i = 1; i < line.length; i++) {
     const a = line[i - 1]!;
     const b = line[i]!;
     const [dx, dy] = [b[0] - a[0], b[1] - a[1]];
-    let t0 = 0, t1 = 1, hit = true;
+    let t0 = 0,
+      t1 = 1,
+      hit = true;
     for (const [p, q] of [
-      [-dx, a[0] - minX], [dx, maxX - a[0]],
-      [-dy, a[1] - minY], [dy, maxY - a[1]],
+      [-dx, a[0] - minX],
+      [dx, maxX - a[0]],
+      [-dy, a[1] - minY],
+      [dy, maxY - a[1]],
     ] as [number, number][]) {
-      if (p === 0) { if (q < 0) hit = false; continue; }
+      if (p === 0) {
+        if (q < 0) hit = false;
+        continue;
+      }
       const r = q / p;
       if (p < 0 ? r > t1 : r < t0) hit = false;
       else if (p < 0) t0 = Math.max(t0, r);
       else t1 = Math.min(t1, r);
       if (!hit) break;
     }
-    if (!hit) { flush(); continue; }
+    if (!hit) {
+      flush();
+      continue;
+    }
     const at = (t: number): Pt => [a[0] + dx * t, a[1] + dy * t];
     if (t0 > 0) flush();
     if (run.length === 0) run.push(at(t0));
@@ -216,15 +258,25 @@ function clipToFrame(line: Pt[], VH: number, margin = 8): Pt[][] {
   return runs;
 }
 
-function placeAlong(run: Pt[], frac: number, span: number, fmt: (n: number) => number) {
-  const seg = run.slice(1).map((p, i) => Math.hypot(p[0] - run[i]![0], p[1] - run[i]![1]));
+function placeAlong(
+  run: Pt[],
+  frac: number,
+  span: number,
+  fmt: (n: number) => number,
+) {
+  const seg = run
+    .slice(1)
+    .map((p, i) => Math.hypot(p[0] - run[i]![0], p[1] - run[i]![1]));
   const total = seg.reduce((a, b) => a + b, 0);
   const at = (dist: number): Pt => {
     let d = Math.max(0, Math.min(total, dist));
     for (let i = 0; i < seg.length; i++) {
       if (d <= seg[i]!) {
         const t = seg[i] === 0 ? 0 : d / seg[i]!;
-        return [run[i]![0] + (run[i + 1]![0] - run[i]![0]) * t, run[i]![1] + (run[i + 1]![1] - run[i]![1]) * t];
+        return [
+          run[i]![0] + (run[i + 1]![0] - run[i]![0]) * t,
+          run[i]![1] + (run[i + 1]![1] - run[i]![1]) * t,
+        ];
       }
       d -= seg[i]!;
     }
@@ -254,7 +306,9 @@ async function overpass(query: string): Promise<OsmWay[]> {
     });
     const text = await res.text();
     if (!res.ok || text.startsWith("<")) {
-      console.warn(`  overpass attempt ${attempt + 1} failed (${res.status})${text.startsWith("<") ? " — XML error body" : ""}`);
+      console.warn(
+        `  overpass attempt ${attempt + 1} failed (${res.status})${text.startsWith("<") ? " — XML error body" : ""}`,
+      );
       continue;
     }
     return (JSON.parse(text) as { elements: OsmWay[] }).elements;
@@ -292,11 +346,16 @@ out geom;`);
 }
 
 function centroid(geom: OsmGeomPoint[]): { lat: number; lon: number } {
-  let a = 0, cx = 0, cy = 0;
+  let a = 0,
+    cx = 0,
+    cy = 0;
   for (let i = 0, j = geom.length - 1; i < geom.length; j = i++) {
-    const p = geom[j]!, q = geom[i]!;
+    const p = geom[j]!,
+      q = geom[i]!;
     const f = p.lon * q.lat - q.lon * p.lat;
-    a += f; cx += (p.lon + q.lon) * f; cy += (p.lat + q.lat) * f;
+    a += f;
+    cx += (p.lon + q.lon) * f;
+    cy += (p.lat + q.lat) * f;
   }
   const round = (n: number) => Math.round(n * 1e6) / 1e6;
   return { lat: round(cy / (3 * a)), lon: round(cx / (3 * a)) };
@@ -316,7 +375,8 @@ export async function runGenCampusMap(): Promise<number> {
     if (!hw || !inFrame(e.geometry)) continue;
     if (e.tags?.area === "yes") continue;
     if (MAJOR_HIGHWAYS.has(hw)) roadPaths.major.push(toPath(e.geometry, false));
-    else if (MINOR_HIGHWAYS.has(hw)) roadPaths.minor.push(toPath(e.geometry, false));
+    else if (MINOR_HIGHWAYS.has(hw))
+      roadPaths.minor.push(toPath(e.geometry, false));
     const name = e.tags?.name;
     if (name === undefined) continue;
     const parts = namedRoads.get(name) ?? [];
@@ -326,14 +386,24 @@ export async function runGenCampusMap(): Promise<number> {
 
   const roadLabels = STREETS.map((street) => {
     const parts = namedRoads.get(street.osm);
-    if (parts === undefined) throw new Error(`no OSM way named "${street.osm}" reaches the frame`);
+    if (parts === undefined)
+      throw new Error(`no OSM way named "${street.osm}" reaches the frame`);
     const runs = chain(parts).flatMap((line) => clipToFrame(line, VH));
-    if (runs.length === 0) throw new Error(`"${street.osm}" has no centreline inside the frame`);
-    const longest = runs.reduce((a, r) => lineLength(r) > lineLength(a) ? r : a);
+    if (runs.length === 0)
+      throw new Error(`"${street.osm}" has no centreline inside the frame`);
+    const longest = runs.reduce((a, r) =>
+      lineLength(r) > lineLength(a) ? r : a,
+    );
     const width = street.text.length * 3.6;
     if (lineLength(longest) < width)
-      console.warn(`  ! "${street.text}" is wider than its longest visible run (${fmt(lineLength(longest))}px) — it will overhang both ends`);
-    return { text: street.text, ...placeAlong(longest, street.at, width, fmt), run: fmt(lineLength(longest)) };
+      console.warn(
+        `  ! "${street.text}" is wider than its longest visible run (${fmt(lineLength(longest))}px) — it will overhang both ends`,
+      );
+    return {
+      text: street.text,
+      ...placeAlong(longest, street.at, width, fmt),
+      run: fmt(lineLength(longest)),
+    };
   });
 
   const footprints: string[] = [];
@@ -346,7 +416,13 @@ export async function runGenCampusMap(): Promise<number> {
   interface Highlight {
     path: string;
     center: { lat: number; lon: number };
-    pin: { x: number; top: number; bottom: number; tipTop: number; tipBottom: number };
+    pin: {
+      x: number;
+      top: number;
+      bottom: number;
+      tipTop: number;
+      tipBottom: number;
+    };
   }
   const highlights: Record<string, Highlight> = {};
   for (const b of HIGHLIGHTS) {
@@ -354,7 +430,11 @@ export async function runGenCampusMap(): Promise<number> {
       b.via === "relation"
         ? (await fetchRelationWays(b.osm)).map((w) => w.geometry)
         : elements
-            .filter((e) => (e.tags?.building ?? e.tags?.leisure === "stadium") && e.tags?.name === b.osm)
+            .filter(
+              (e) =>
+                (e.tags?.building ?? e.tags?.leisure === "stadium") &&
+                e.tags?.name === b.osm,
+            )
             .map((e) => e.geometry);
     if (geoms.length === 0) throw new Error(`no OSM footprint for "${b.osm}"`);
     const biggest = geoms.reduce((a, g) => (area(g) > area(a) ? g : a));
@@ -387,23 +467,39 @@ export async function runGenCampusMap(): Promise<number> {
     };
   }
 
-  const labeled = [...HIGHLIGHTS.map((b) => b.osm), ...LANDMARKS].map((name) => {
-    const b = elements.find((e) => (e.tags?.building ?? e.tags?.leisure === "stadium") && e.tags?.name === name);
-    if (!b) {
-      const h = HIGHLIGHTS.find((x) => x.osm === name);
-      const pin = h ? highlights[h.key]?.pin : undefined;
-      if (!pin) throw new Error(`no OSM building found for "${name}"`);
-      return { name, cx: pin.x, cy: fmt((pin.top + pin.bottom) / 2) };
-    }
-    const c = b.geometry.reduce<[number, number]>((a, g) => [a[0] + g.lon, a[1] + g.lat], [0, 0]);
-    const [cx, cy] = px(c[0] / b.geometry.length, c[1] / b.geometry.length).map(fmt);
-    return { name, cx, cy };
-  });
+  const labeled = [...HIGHLIGHTS.map((b) => b.osm), ...LANDMARKS].map(
+    (name) => {
+      const b = elements.find(
+        (e) =>
+          (e.tags?.building ?? e.tags?.leisure === "stadium") &&
+          e.tags?.name === name,
+      );
+      if (!b) {
+        const h = HIGHLIGHTS.find((x) => x.osm === name);
+        const pin = h ? highlights[h.key]?.pin : undefined;
+        if (!pin) throw new Error(`no OSM building found for "${name}"`);
+        return { name, cx: pin.x, cy: fmt((pin.top + pin.bottom) / 2) };
+      }
+      const c = b.geometry.reduce<[number, number]>(
+        (a, g) => [a[0] + g.lon, a[1] + g.lat],
+        [0, 0],
+      );
+      const [cx, cy] = px(
+        c[0] / b.geometry.length,
+        c[1] / b.geometry.length,
+      ).map(fmt);
+      return { name, cx, cy };
+    },
+  );
 
   const header = `// GENERATED by devtools gen campus-map. Do not edit by hand.\n// Map data © OpenStreetMap contributors, ODbL: openstreetmap.org/copyright\n// Frame: lat ${S}..${N}, lon ${W}..${E}, equirectangular, ${VW}x${VH}.\n`;
   const keys = HIGHLIGHTS.map((b) => b.key);
   const entries = (pick: (h: Highlight) => unknown) =>
-    JSON.stringify(Object.fromEntries(keys.map((k) => [k, pick(highlights[k]!)])), null, 2);
+    JSON.stringify(
+      Object.fromEntries(keys.map((k) => [k, pick(highlights[k]!)])),
+      null,
+      2,
+    );
 
   const meta = `${header}
 /** The map's viewBox, also what sizes its placeholder before it loads. */
@@ -437,21 +533,42 @@ export const HIGHLIGHT_PATHS: Record<string, string> = ${entries((h) => h.path)}
 export const HIGHLIGHT_PINS: Record<string, { x: number; top: number; bottom: number; tipTop: number; tipBottom: number }> = ${entries((h) => h.pin)};
 
 /** Street names, on the centreline they name and turned to match it. */
-export const ROAD_LABELS: { text: string; x: number; y: number; angle: number }[] = ${JSON.stringify(roadLabels.map(({ text, x, y, angle }) => ({ text, x, y, angle })), null, 2)};
+export const ROAD_LABELS: { text: string; x: number; y: number; angle: number }[] = ${JSON.stringify(
+    roadLabels.map(({ text, x, y, angle }) => ({ text, x, y, angle })),
+    null,
+    2,
+  )};
 `;
 
-  const dir = join(PROJECT_ROOT, "apps", "platform", "src", "components", "EventsSection", "FindUs");
+  const dir = join(
+    PROJECT_ROOT,
+    "apps",
+    "platform",
+    "src",
+    "components",
+    "EventsSection",
+    "FindUs",
+  );
   writeFileSync(join(dir, "campusMapData.ts"), out);
   writeFileSync(join(dir, "campusMapMeta.ts"), meta);
-  console.log(`wrote ${dir}/campusMapData.ts (${(out.length / 1024).toFixed(1)}KB) + campusMapMeta.ts`);
+  console.log(
+    `wrote ${dir}/campusMapData.ts (${(out.length / 1024).toFixed(1)}KB) + campusMapMeta.ts`,
+  );
   console.log("run prettier --write on both before committing them");
-  console.log(`viewBox 0 0 ${VW} ${VH} | ${roadPaths.major.length} major ways, ${roadPaths.minor.length} minor ways, ${footprints.length} footprints`);
+  console.log(
+    `viewBox 0 0 ${VW} ${VH} | ${roadPaths.major.length} major ways, ${roadPaths.minor.length} minor ways, ${footprints.length} footprints`,
+  );
   for (const b of labeled) console.log(`  LABEL ${b.name} → ${b.cx},${b.cy}`);
   for (const k of keys) {
     const { x, top, bottom, tipTop, tipBottom } = highlights[k]!.pin;
-    console.log(`  PIN ${k} → x ${x}, y ${top}..${bottom}, tip ${tipTop}..${tipBottom}`);
+    console.log(
+      `  PIN ${k} → x ${x}, y ${top}..${bottom}, tip ${tipTop}..${tipBottom}`,
+    );
   }
-  for (const r of roadLabels) console.log(`  ROAD ${r.text} → ${r.x},${r.y} @ ${r.angle}° (${r.run}px visible)`);
+  for (const r of roadLabels)
+    console.log(
+      `  ROAD ${r.text} → ${r.x},${r.y} @ ${r.angle}° (${r.run}px visible)`,
+    );
 
   return 0;
 }

@@ -84,7 +84,8 @@ export const CRON_ROUTES: Record<string, { routes: string[]; label: string }> =
       routes: ["/cron/sync-discord-roles"],
     },
     "*/5 * * * *": {
-      label: "Competition: freeze judging window, tally elections, prewarm sandboxes",
+      label:
+        "Competition: freeze judging window, tally elections, prewarm sandboxes",
       routes: [
         // Freezes `teams."competedAt"` once judging begins. Five minutes rather
         // than ten because the window between judging starting and this running

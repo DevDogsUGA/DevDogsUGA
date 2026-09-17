@@ -15,7 +15,9 @@ const SEED_FILES = [
   join(PROJECT_ROOT, "supabase", "seed", "02_root_bootstrap.sql"),
 ];
 
-export async function runSeedRoles(target: "local" | "remote"): Promise<number> {
+export async function runSeedRoles(
+  target: "local" | "remote",
+): Promise<number> {
   const flag = target === "remote" ? "--linked" : "--local";
   for (const file of SEED_FILES) {
     const code = await supabase("db", "query", "--file", file, flag);

@@ -325,7 +325,9 @@ async function runDeployCommand(rest: string[]): Promise<void> {
             `devtools-ci deploy ${sub}: ${err.message}`,
             ...err.detail.map((line) => `  ${line}`),
           ]
-        : [`devtools-ci deploy ${sub}: ${err instanceof Error ? err.message : String(err)}`],
+        : [
+            `devtools-ci deploy ${sub}: ${err instanceof Error ? err.message : String(err)}`,
+          ],
     );
     process.exitCode = 1;
   }
@@ -364,6 +366,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  process.stderr.write(`devtools-ci: ${err instanceof Error ? err.message : String(err)}\n`);
+  process.stderr.write(
+    `devtools-ci: ${err instanceof Error ? err.message : String(err)}\n`,
+  );
   process.exitCode = 1;
 });
