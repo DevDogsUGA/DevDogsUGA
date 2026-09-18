@@ -39,7 +39,7 @@ export const PROJECT_ROOT = join(import.meta.dirname, "..", "..", "..");
 export type Known = "yes" | "no" | "unknown";
 
 export interface Environment {
-  /** The Docker daemon answers. Without it there is no local stack. */
+  /** The Docker daemon answers. Without it there is no Supabase on this machine. */
   docker: Known;
   /** The local Supabase stack's containers are up. */
   stack: Known;
@@ -164,9 +164,9 @@ export function holds(condition: Condition, env: Environment): Known {
   switch (condition) {
     case "docker":
       return env.docker;
-    case "stack-running":
+    case "instance-running":
       return env.stack;
-    case "stack-stopped":
+    case "instance-stopped":
       // The negation of an unreadable fact is still unreadable.
       if (env.stack === "unknown") return "unknown";
       return env.stack === "no" ? "yes" : "no";
@@ -176,8 +176,8 @@ export function holds(condition: Condition, env: Environment): Known {
 /** What `needs` renders as when it does not hold. Kept short: it is a hint. */
 const UNMET: Record<Condition, string> = {
   docker: "Docker is not running",
-  "stack-running": "the local stack is not running",
-  "stack-stopped": "the local stack is already running",
+  "instance-running": "Supabase is not running on this machine",
+  "instance-stopped": "Supabase is already running on this machine",
 };
 
 /**

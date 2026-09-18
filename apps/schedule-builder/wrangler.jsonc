@@ -2,8 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   // Worker naming is `${DEPLOY_ENV}-${APP_NAME}`; see apps/platform/wrangler.jsonc
   // for why the top level is the development shape and why `vars`, `services`,
-  // `images`, `r2_buckets` and `send_email` are repeated in full per
-  // environment rather than inherited.
+  // `images`, `r2_buckets`, `hyperdrive`, `workflows` and `send_email` are
+  // repeated in full per environment rather than inherited.
   "name": "development-schedule-builder",
   // See apps/platform/wrangler.jsonc: the scoped deploy token defeats
   // OpenNext's account inference, so the account is pinned. Not a secret.
@@ -11,16 +11,25 @@
   // Custom entry composes the OpenNext `fetch` handler with the cron
   // `scheduled` handler (see cloudflare/worker.ts + cloudflare/scheduled.ts).
   "main": "cloudflare/worker.ts",
-  // Matches the `workerd` version pinned in the lockfile (1.20260722.x), which
+  // Matches the `workerd` version pinned in the lockfile (1.20260916.x), which
   // is how the OpenNext adapter derives its own default. Keeping it at the
   // installed runtime's date rather than today's avoids `preview` warning that
   // the local workerd predates the configured date. Bump this alongside
   // wrangler; the adapter warns once it is more than six months stale.
-  "compatibility_date": "2026-07-22",
+  "compatibility_date": "2026-09-16",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS",
+  },
+  // `main` and `assets.directory` are generated, so a clean checkout cannot
+  // otherwise run `wrangler dev`. The shared hook builds only when the
+  // OpenNext artifact is missing or older than this app's inputs. It is also
+  // inherited by staging/production, where the explicit CI build is already
+  // fresh and the hook becomes a cheap no-op.
+  "build": {
+    "command": "pnpm --filter schedule-builder exec node ../../packages/config/opennext/ensure-build.js",
+    "watch_dir": ["src", "cloudflare", "public"],
   },
 
   // --- development (top level) ---------------------------------------------
@@ -49,6 +58,17 @@
       "bucket_name": "development-schedule-builder-cache",
     },
   ],
+  // Backs the daily registrar scrape (see cloudflare/ScrapeWorkflow.ts +
+  // cloudflare/scheduled.ts). Bound in every environment, including
+  // development, so the class registers with wrangler/`wrangler dev`
+  // regardless of whether this tier's cron trigger is live.
+  "workflows": [
+    {
+      "binding": "SCRAPE_WORKFLOW",
+      "name": "development-schedule-builder-scrape",
+      "class_name": "ScrapeWorkflow",
+    },
+  ],
 
   "env": {
     "staging": {
@@ -71,9 +91,30 @@
           "bucket_name": "staging-schedule-builder-cache",
         },
       ],
-      // Empty ON PURPOSE. The scrape hits UGA's registrar and RateMyProfessors
+      // Hyperdrive pools connections to Supabase's direct database endpoint so
+      // request-scoped clients don't exhaust Postgres. The id is public; the
+      // origin credential stays encrypted in Cloudflare. SHARED with the
+      // platform Worker -- both point at the same Supabase project per tier, so
+      // this reuses platform's staging Hyperdrive config rather than
+      // provisioning a second one against the same origin. Bound in staging and
+      // production only; development uses DB_URL (see src/server/db/index.ts).
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE",
+          "id": "7ca9f62ed356489f956cc854a17d7eed",
+        },
+      ],
+      // See the top-level block for what this binds.
+      "workflows": [
+        {
+          "binding": "SCRAPE_WORKFLOW",
+          "name": "staging-schedule-builder-scrape",
+          "class_name": "ScrapeWorkflow",
+        },
+      ],
+      // Empty ON PURPOSE. The scrape hits UGA's registrar
       // from a shared IP pool; running it twice a day from two workers doubles
-      // the load those sites see for no extra coverage, and is the kind of
+      // the load that site sees for no extra coverage, and is the kind of
       // thing that gets a range blocked. Trigger it by hand against staging.
       "triggers": {
         "crons": [],
@@ -127,11 +168,26 @@
           "bucket_name": "production-schedule-builder-cache",
         },
       ],
-      // Daily registrar/RMP scrape (replaces the vercel.json cron). See
-      // cloudflare/scheduled.ts. NOTE: the scrapers are long-running --
-      // validate them against Workers CPU/wall-time limits and consider
-      // Queues/Workflows or chunked runs before relying on a single scheduled
-      // invocation.
+      // See the staging block for why this reuses platform's Hyperdrive config.
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE",
+          "id": "2bb3ae474d974fe99e4f36b3c5aaf896",
+        },
+      ],
+      // See the top-level block for what this binds.
+      "workflows": [
+        {
+          "binding": "SCRAPE_WORKFLOW",
+          "name": "production-schedule-builder-scrape",
+          "class_name": "ScrapeWorkflow",
+        },
+      ],
+      // Daily registrar scrape (replaces the vercel.json cron). See
+      // cloudflare/scheduled.ts + cloudflare/ScrapeWorkflow.ts: the scrape
+      // runs as a Workflow (one retried, checkpointed step per term) rather
+      // than inside this single scheduled invocation, so it isn't bound by
+      // that invocation's own CPU/wall-time limits.
       "triggers": {
         "crons": ["5 14 * * *"],
       },

@@ -12,5 +12,9 @@ export { ScheduleTypeCollector } from "./ScheduleTypeParser";
 export { CampusCollector } from "./CampusParser";
 export { OfferingCollector } from "./OfferingParser";
 export { MeetingCollector } from "./MeetingParser";
-export { fetchPartsOfTerm, upsertPartsOfTerm } from "./PartOfTermScraper";
+export {
+  CalendarNotFoundError,
+  fetchPartsOfTerm,
+  upsertPartsOfTerm,
+} from "./PartOfTermScraper";
 export { detectAvailableTerms, type AvailableTerm } from "./AvailableTerms";

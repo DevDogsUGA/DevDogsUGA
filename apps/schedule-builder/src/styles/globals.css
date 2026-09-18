@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @config "../../tailwind.config.ts";
 
+/* The `dark:` variant keys off the `.dark` class on <html>, set before paint
+ * by the inline script in the root layout (stored choice, else the system
+ * preference) and toggled by the navbar's ThemeSwitcher. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans:
     var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
@@ -9,25 +14,113 @@
   --font-mono: var(--font-mono), ui-monospace, monospace;
 }
 
+/*
+ * DogDays theme tokens.
+ *
+ * The colorway: DogDays red as primary — the same red the OG package's
+ * `ACCENT.red400/red700` transcribe, which is Tailwind's stock red scale, so
+ * `red-*` utilities and the generated brand assets agree by construction —
+ * over pink-washed neutrals in light and navy-washed neutrals in dark, both
+ * carried over from the app's original palette (`pink-50` pages, `#222233`
+ * headers). `navy` is that `#222233` as a standing accent in either scheme.
+ *
+ * Light is the default; the tokens flip under the `.dark` class (see the
+ * `@custom-variant` note above — system preference applies when no explicit
+ * choice is stored). Components should reach for these semantic tokens first
+ * and only use raw `zinc-*`/`red-*` (or `dark:`) for one-off shades.
+ */
+:root {
+  color-scheme: light;
+  --background: var(--color-pink-50);
+  --surface: var(--color-white);
+  --surface-muted: color-mix(
+    in oklab,
+    var(--color-pink-100) 60%,
+    var(--color-white)
+  );
+  --edge: var(--color-pink-100);
+  --edge-strong: color-mix(
+    in oklab,
+    var(--color-pink-300) 55%,
+    var(--color-zinc-300)
+  );
+  --foreground: var(--color-zinc-900);
+  --muted: var(--color-zinc-500);
+  --primary: var(--color-red-700);
+  --primary-strong: var(--color-red-800);
+  --primary-soft: var(--color-pink-100);
+  --accent: var(--color-red-700);
+  --navy: #222233;
+  --navy-foreground: var(--color-white);
+}
+
+:root.dark {
+  color-scheme: dark;
+  --background: #17171f;
+  --surface: #222233;
+  --surface-muted: #2e2e46;
+  --edge: #32324b;
+  --edge-strong: #454568;
+  --foreground: var(--color-zinc-100);
+  --muted: #a6a6bd;
+  --primary: var(--color-red-600);
+  --primary-strong: var(--color-red-700);
+  --primary-soft: color-mix(in oklab, var(--color-red-500) 16%, var(--surface));
+  --accent: var(--color-red-400);
+  --navy: #2e2e46;
+  --navy-foreground: var(--color-zinc-100);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-navy: var(--navy);
+  --color-navy-foreground: var(--navy-foreground);
+}
+
+/*
+ * The week view's grid: a time axis plus one track per day. The day count is
+ * data-driven, passed as an inline `--day-count` custom property, because
+ * Tailwind's static scan could never extract an interpolated arbitrary value.
+ * Below `md` only the selected day's column is rendered, so the template
+ * reserves a single day track there.
+ */
+@utility week-grid {
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+
+  @media (width >= 48rem) {
+    grid-template-columns: 3.5rem repeat(var(--day-count, 5), minmax(0, 1fr));
+  }
+}
+
 .shadow-inner-scroll-y {
   background:
     /* Shadow covers */
-    linear-gradient(white 30%, rgba(255, 255, 255, 0)),
-    linear-gradient(rgba(255, 255, 255, 0), white 70%) 0 100%,
+    linear-gradient(var(--surface) 30%, transparent),
+    linear-gradient(transparent, var(--surface) 70%) 0 100%,
     /* Shadows */
     radial-gradient(
         farthest-side at 50% 0,
-        color-mix(in oklab, var(--color-stone-500) 40%, transparent),
+        color-mix(in oklab, var(--foreground) 30%, transparent),
         transparent
       ),
     radial-gradient(
         farthest-side at 50% 100%,
-        color-mix(in oklab, var(--color-stone-500) 40%, transparent),
+        color-mix(in oklab, var(--foreground) 30%, transparent),
         transparent
       )
       0 100%;
   background-repeat: no-repeat;
-  background-color: white;
+  background-color: var(--surface);
   background-size:
     100% 3.75rem,
     100% 3.75rem,
@@ -36,53 +129,4 @@
 
   /* Opera doesn't support this in the shorthand */
   background-attachment: local, local, scroll, scroll;
-}
-
-.OuterRingAnimation {
-  /* background: black; */
-  text-align: center;
-
-  position: relative;
-}
-
-@property --angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
-.OuterRingAnimation::after,
-.OuterRingAnimation::before {
-  content: "";
-  position: absolute;
-  height: 100%;
-  background-image: conic-gradient(
-    from var(--angle),
-    red,
-    blue,
-    yellow,
-    green,
-    red
-  );
-  width: 100%;
-  top: 50%;
-  left: 50%;
-  translate: -50% -50%;
-  z-index: -1;
-  border-radius: inherit;
-  animation: 3s spin linear infinite;
-}
-
-.OuterRingAnimation::before {
-  filter: blur(1.5rem);
-  opacity: 0.5;
-}
-
-@keyframes spin {
-  from {
-    --angle: 0deg;
-  }
-  to {
-    --angle: 360deg;
-  }
 }

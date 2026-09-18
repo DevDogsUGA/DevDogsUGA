@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AirtableRecord } from "./client.js";
 import { field, table } from "./field.js";
 import { buildPush, mergeOn } from "./push.js";
+import { attendanceTable, type AttendanceRow } from "./registry.js";
 
 interface Member {
   userId: string;
@@ -148,5 +149,58 @@ describe("buildPush", () => {
 
   it("names the match key field for fieldsToMergeOn", () => {
     expect(mergeOn(members)).toEqual(["fldId"]);
+  });
+
+  it("projects authoritative attendance with Airtable record links", () => {
+    const attendance: AttendanceRow = {
+      id: "attendance-1",
+      memberAirtableId: "recMember",
+      meetingAirtableId: "recMeeting",
+      method: "manual_code",
+      recordedAt: "2026-09-11T22:00:00+00:00",
+      revoked: false,
+      revocationReason: null,
+    };
+
+    const plan = buildPush(attendanceTable, [attendance], []);
+    const fields = plan.records[0]!.fields;
+
+    expect(fields[attendanceTable.fields.platformId.id]).toBe("attendance-1");
+    expect(fields[attendanceTable.fields.member.id]).toEqual(["recMember"]);
+    expect(fields[attendanceTable.fields.meeting.id]).toEqual(["recMeeting"]);
+    expect(fields[attendanceTable.fields.method.id]).toBe("Manual code");
+    expect(fields[attendanceTable.fields.recordedAt.id]).toBe(
+      "2026-09-11T22:00:00+00:00",
+    );
+    expect(fields[attendanceTable.fields.revoked.id]).toBe(false);
+    expect(fields[attendanceTable.fields.revocationReason.id]).toBeNull();
+  });
+
+  it("clears an explicitly clearable projection without weakening identity fields", () => {
+    const attendance: AttendanceRow = {
+      id: "attendance-1",
+      memberAirtableId: "recMember",
+      meetingAirtableId: "recMeeting",
+      method: "officer",
+      recordedAt: "2026-09-11T22:00:00+00:00",
+      revoked: false,
+      revocationReason: null,
+    };
+    const existing = [
+      record({
+        [attendanceTable.fields.platformId.id]: attendance.id,
+        [attendanceTable.fields.member.id]: [attendance.memberAirtableId],
+        [attendanceTable.fields.meeting.id]: [attendance.meetingAirtableId],
+        [attendanceTable.fields.method.id]: "Officer",
+        [attendanceTable.fields.recordedAt.id]: attendance.recordedAt,
+        [attendanceTable.fields.revoked.id]: true,
+        [attendanceTable.fields.revocationReason.id]: "Entered in error",
+      }),
+    ];
+
+    const fields = buildPush(attendanceTable, [attendance], existing)
+      .records[0]!.fields;
+    expect(fields[attendanceTable.fields.revoked.id]).toBe(false);
+    expect(fields[attendanceTable.fields.revocationReason.id]).toBeNull();
   });
 });

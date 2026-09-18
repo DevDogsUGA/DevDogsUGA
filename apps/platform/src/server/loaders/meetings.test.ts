@@ -9,7 +9,6 @@ import { describe, expect, it } from "vitest";
  * Anything that genuinely touches `db` belongs in `queries.db-test.ts`.
  */
 import {
-  attendanceFormIsLive,
   isJudgedDuring,
   resolveMeetingSegments,
   type MeetingSegment,
@@ -199,55 +198,5 @@ describe("isJudgedDuring", () => {
     expect(isJudgedDuring(MEETING, new Date("2026-09-17T22:00:00Z"))).toBe(
       false,
     );
-  });
-});
-
-describe("attendanceFormIsLive", () => {
-  // Guarding the narrower claim the function deliberately makes: there is a
-  // link, the meeting is happening, and it has not been called off. It does
-  // not and cannot claim the Airtable form is open.
-  const form = {
-    ...MEETING,
-    attendanceFormUrl: "https://airtable.com/form",
-    cancelledAt: null,
-  };
-
-  it("is live during the meeting when there is a link", () => {
-    expect(attendanceFormIsLive(form, new Date("2026-09-10T23:00:00Z"))).toBe(
-      true,
-    );
-  });
-
-  it("is not live without a link, however open the form may be", () => {
-    expect(
-      attendanceFormIsLive(
-        { ...form, attendanceFormUrl: null },
-        new Date("2026-09-10T23:00:00Z"),
-      ),
-    ).toBe(false);
-  });
-
-  it("is not live before the meeting or after it ends", () => {
-    expect(attendanceFormIsLive(form, new Date("2026-09-10T21:59:00Z"))).toBe(
-      false,
-    );
-    expect(attendanceFormIsLive(form, MEETING.endsAt)).toBe(false);
-  });
-
-  it("is not live on a cancelled night, mid-meeting though it is", () => {
-    // ⚠️ The case the predicate did not cover, at the one instant where every
-    // other clause says yes: the clock is inside the meeting and the link is
-    // there. The guard lived at exactly one of the three call sites, and the
-    // other two were safe only because `getUpcomingMeetings` happens to filter
-    // cancelled rows before they arrive. `getMeetingsInRange` and
-    // `getMeetingBySlug` both keep them, so anything reading through those got
-    // a live check-in button for a night that was called off, and an
-    // attendance row a member then has to argue their way back out of.
-    expect(
-      attendanceFormIsLive(
-        { ...form, cancelledAt: new Date("2026-09-09T12:00:00Z") },
-        new Date("2026-09-10T23:00:00Z"),
-      ),
-    ).toBe(false);
   });
 });

@@ -12,10 +12,15 @@ Next.js, which is most of what makes it different to work on.
 
 Today it is a placeholder: `lib/main.dart` initialises Supabase against the
 **`study_group_finder`** schema and runs `StudyGroupFinderApp`. The schema is
-reserved by `supabase/migrations/20260721000000_study_group_finder_init.sql`,
-which creates it and grants the PostgREST roles — Supabase pre-configures those
-grants for `public` only — but declares no tables. Isolation is by RLS, not by
-the schema boundary.
+reserved by `supabase/migrations/20260829000000_00_schemas_and_grants.sql`,
+which creates all three app schemas and grants the PostgREST roles — Supabase
+pre-configures those grants for `public` only — but declares no tables for this
+one. Isolation is by RLS, not by the schema boundary.
+
+## Guides
+
+- [Local setup](/docs/study-group-finder/guides/local-setup) — the Flutter SDK, running through the workspace, and the placeholder tree
+- [Typed models](/docs/study-group-finder/guides/typed-models) — supadart, the default-schema constraint, and why it's a no-op today
 
 ## Working on it
 

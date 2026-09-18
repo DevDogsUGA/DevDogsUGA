@@ -4,9 +4,9 @@
  * ## Why it lives here
  *
  * It was `apps/platform/scripts/index-docs.ts`, and it was the last script in
- * the repository run from more than one place: `pnpm docs:index` by a
- * contributor, and `pnpm docs:index --force` by BOTH deploy scripts, ahead of
- * every staging and production release. A step the deploy depends on is not an
+ * the repository run from more than one place: `pnpm devtools docs index` by a
+ * contributor, and `devtools-ci` by BOTH deploy scripts, ahead of every
+ * staging and production release. A step the deploy depends on is not an
  * app's private tooling, and the rest of that class (`deploy write-env`,
  * `secrets-file`, `orphans`, `preflight`, `mint-token`, `require-token`) moved
  * into this package already, for the reasons `cli.ts` gives.
@@ -14,7 +14,7 @@
  * The three that stayed behind in `apps/platform/scripts/` each have exactly
  * one caller and are about the platform's own generated sources:
  * `post-pull.ts` patches what `drizzle-kit pull` emits, `generate-campus-map.ts`
- * is hand-run codegen, and `seed-builtin-roles.ts` seeds rows through the
+ * is hand-run codegen, and `db seed roles` seeds rows through the
  * platform's own Drizzle schema. Reuse is the line, not subject matter.
  *
  * ## Why raw SQL rather than Drizzle
@@ -90,9 +90,9 @@ export function isLocalDatabase(url: string): boolean {
 /**
  * Upsert every page by path, then delete the rows whose path is gone.
  *
- * One transaction, and the delete is the reason `--force` exists: run against
- * a deployed database from a working copy, this replaces the live index with
- * whatever happens to be checked out.
+ * One transaction, and the delete is the reason `--target remote` is explicit:
+ * run against a deployed database from a working copy, this replaces the live
+ * index with whatever happens to be checked out.
  */
 export async function indexPages(
   db: DocsDb,
@@ -156,7 +156,8 @@ async function loadPages(): Promise<readonly DocsPage[]> {
 }
 
 export interface DocsIndexOptions {
-  force?: boolean;
+  /** "remote" allows a non-local database (replaces the old --force flag). */
+  target?: "local" | "remote";
   connect?: Connect;
   load?: () => Promise<readonly DocsPage[]>;
 }
@@ -171,7 +172,7 @@ export async function runDocsIndex(
   if (!url) {
     explain("DB_URL is not set.", "", [
       "Run through `pnpm devtools`, which loads your .env.",
-      "`pnpm devtools link` starts the local stack and writes one.",
+      "`pnpm devtools db start` starts Supabase on this machine and writes one.",
     ]);
     process.exitCode = 1;
     return;
@@ -196,14 +197,14 @@ export async function runDocsIndex(
     return;
   }
 
-  // Non-local is opt-in because of the delete. `--force` is how the deploy
-  // scripts say yes; a person gets asked, which the predecessor could not do
-  // from a `process.argv` check in a bare script.
+  // Non-local is opt-in because of the delete. `--target remote` is how the
+  // deploy scripts say yes; a person gets asked, which the predecessor could
+  // not do from a `process.argv` check in a bare script.
   if (!isLocalDatabase(url)) {
-    if (!options.force) {
+    if (options.target !== "remote") {
       if (!process.stdin.isTTY) {
         explain(
-          "That is not a local database, and --force was not given.",
+          "That is not a local database, and --target remote was not given.",
           "",
           [
             "It deletes the rows for pages that no longer exist, so this would",
@@ -223,7 +224,7 @@ export async function runDocsIndex(
       );
       if (!go) bail("Left the index alone.");
     } else {
-      log.warn("Indexing a non-local database, as --force asked.");
+      log.warn("Indexing a non-local database, as --target remote asked.");
     }
   }
 
@@ -237,7 +238,7 @@ export async function runDocsIndex(
   } catch (err) {
     s.stop("The index was not written");
     explain("Writing the docs index failed.", errorMessage(err), [
-      "`pnpm devtools push` applies any migration the table is missing.",
+      "`pnpm devtools db migrate` applies any migration the table is missing.",
     ]);
     process.exitCode = 1;
   } finally {

@@ -64,7 +64,21 @@ export async function GET(request: NextRequest) {
   }
 
   if (user && intent === "sign-in:google") {
-    await google.createUser(user);
+    try {
+      await google.createUser(user);
+    } catch (cause) {
+      if (!(cause instanceof google.NonUgaGoogleAccountError)) throw cause;
+      await supabase.auth.signOut({ scope: "local" });
+      if (callbackPath === "/attendance/complete") {
+        redirect("/attendance?status=uga_required");
+      }
+      redirectWithAccountStatus(
+        callbackPath,
+        "error",
+        "uga_account_required",
+        "google",
+      );
+    }
     redirect(callbackPath);
   }
 

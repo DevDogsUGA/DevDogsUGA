@@ -12,10 +12,10 @@ export default function NavigationLink({ href, children }: Props) {
   const pathname = usePathname();
 
   return (
-    <li className="contents">
+    <li>
       <Link
         href={href}
-        className="flex flex-col items-center gap-0.75 border-0 border-red-950 px-3 py-2 transition-colors hover:bg-red-200 data-active:-mb-px data-active:border-b-2 data-active:pb-1.75 data-active:not-hover:bg-red-50"
+        className="text-muted hover:bg-surface-muted hover:text-foreground data-active:bg-primary-soft data-active:text-accent flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
         data-active={pathname.startsWith(href) || undefined}
       >
         {children}

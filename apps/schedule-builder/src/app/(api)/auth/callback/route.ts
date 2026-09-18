@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { isUgaEmail } from "~/lib/auth";
 import { createClient } from "~/supabase/server";
 
 /**
@@ -24,9 +25,19 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error && isUgaEmail(user?.email)) {
       return NextResponse.redirect(new URL(next, origin));
+    }
+
+    if (!error) {
+      await supabase.auth.signOut({ scope: "local" });
+      return NextResponse.redirect(
+        new URL("/?error=uga_account_required", origin),
+      );
     }
   }
 

@@ -2,7 +2,7 @@
  * One-command onboarding, the first thing a new contributor runs.
  *
  * Checks prerequisites (warns, never hard-fails on optional tools), seeds the
- * root `.env`, and points at the next step. Deliberately does NOT run remote
+ * root `.env`, and points at the database and OAuth steps. Deliberately does NOT run remote
  * Supabase commands: linking a remote project needs credentials that are not
  * in `.env` yet.
  *
@@ -57,7 +57,7 @@ export async function runSetup(): Promise<void> {
   checks.push(
     has("docker info")
       ? "OK    Docker running (local Supabase stack available)"
-      : "INFO  Docker not running — fine against a hosted project, needed for a local stack",
+      : "INFO  Docker not running — fine against a hosted project, needed to run Supabase on this machine",
   );
 
   checks.push(
@@ -74,6 +74,10 @@ export async function runSetup(): Promise<void> {
   // file that is meant to be edited. Like init, an existing file is untouched.
   const env = join(PROJECT_ROOT, ".env");
   let seededEnv = false;
+  // The apps the picker chose, so "Next steps" boots what this contributor is
+  // actually here for rather than a hardcoded default. Null when the .env
+  // already existed (no picker ran) — the generic `pnpm dev` picker covers it.
+  let chosenApps: string[] | null = null;
   if (existsSync(env)) {
     checks.push("OK    .env already exists (left untouched)");
   } else {
@@ -85,6 +89,17 @@ export async function runSetup(): Promise<void> {
     // refuses by name with the recovery step. Re-running `env init` later
     // APPENDS the sections for a new project without touching filled values.
     const sections = await resolveSections();
+    if (sections) {
+      // Lead with the two projects most contributors join; platform and
+      // sandbox are shared auth infrastructure you depend on but rarely edit.
+      const order = [
+        "schedule-builder",
+        "study-group-finder",
+        "platform",
+        "sandbox",
+      ];
+      chosenApps = order.filter((app) => sections.has(app));
+    }
     writeFileSync(
       env,
       renderInit(
@@ -102,23 +117,49 @@ export async function runSetup(): Promise<void> {
 
   if (seededEnv) {
     log.info(
-      ".env starts blank. The local stack fills the connection block for " +
-        "you; only a hosted project needs values typed in.",
+      ".env starts blank. Supabase on this machine fills the connection block " +
+        "for you; only a hosted project needs values typed in.",
     );
   }
+
+  // Boot what the contributor picked. study-group-finder still goes through
+  // the same `pnpm dev --filter` picker path (turbo runs its `flutter run`
+  // task), so the shape is uniform; the SDK note is the only difference.
+  const startSteps =
+    chosenApps && chosenApps.length > 0
+      ? chosenApps.map((app) =>
+          app === "study-group-finder"
+            ? `     pnpm dev --filter study-group-finder   (Flutter — needs the SDK)`
+            : `     pnpm dev --filter ${app}`,
+        )
+      : ["     pnpm dev   — then pick your app from the list"];
 
   note(
     [
       "1. Run `pnpm devtools` again and choose:",
-      "     Supabase → link   — boots the local Docker stack and writes",
-      "                         .env.generated (no credentials needed)",
+      "     Database → start   — boots the local Docker stack and writes",
+      "                          .env.generated (no credentials needed)",
       "",
-      "2. pnpm dev --filter platform",
+      '2. Choose Workspace → oauth to configure "Sign in with DevDogs"',
+      "   after the local database is running. Every app signs in through",
+      "   platform's OAuth server, so this step is shared no matter which",
+      "   project you are building.",
+      "",
+      "3. Start the project you picked:",
+      ...startSteps,
+      ...(chosenApps?.includes("schedule-builder")
+        ? [
+            "",
+            "   schedule-builder starts with an empty catalog. Populate it by",
+            "   triggering the registrar scrape workflow (starts Wrangler for you):",
+            "     pnpm devtools workflows run --app schedule-builder --tier development",
+          ]
+        : []),
       "",
       "Working against a hosted Supabase project instead? Fill in .env",
       "(dashboard → Project Settings), then:",
-      "  pnpm devtools link --remote",
-      "  pnpm --filter @devdogsuga/supabase generate-types",
+      "  pnpm devtools db connect <project-ref>",
+      "  pnpm devtools db types",
     ].join("\n"),
     "Next steps",
   );

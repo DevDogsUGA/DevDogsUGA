@@ -1,11 +1,10 @@
-import { pgSchema, pgTable, serial, varchar, bigint, uuid, integer, text, bigserial, customType, timestamp, pgEnum, boolean, json, jsonb, time, doublePrecision, date, real, inet, smallint, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy, numeric } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, text, varchar, serial, integer, bigserial, timestamp, bigint, pgEnum, boolean, customType, jsonb, json, time, doublePrecision, date, real, inet, smallint, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy, numeric } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 export const auth = pgSchema("auth");
 export const extensions = pgSchema("extensions");
 export const graphql = pgSchema("graphql");
 export const graphqlPublic = pgSchema("graphql_public");
-export const net = pgSchema("net");
 export const pgbouncer = pgSchema("pgbouncer");
 export const realtime = pgSchema("realtime");
 export const scheduleBuilder = pgSchema("schedule_builder");
@@ -14,7 +13,6 @@ export const studyGroupFinder = pgSchema("study_group_finder");
 export const supabaseFunctions = pgSchema("supabase_functions");
 export const supabaseMigrations = pgSchema("supabase_migrations");
 export const vault = pgSchema("vault");
-export const requestStatusInNet = net.enum("request_status", ["PENDING", "SUCCESS", "ERROR"])
 export const buckettypeInStorage = storage.enum("buckettype", ["STANDARD", "ANALYTICS", "VECTOR"])
 export const factorTypeInAuth = auth.enum("factor_type", ["totp", "webauthn", "phone"])
 export const factorStatusInAuth = auth.enum("factor_status", ["unverified", "verified"])
@@ -412,28 +410,6 @@ export const webauthnCredentialsInAuth = auth.table("webauthn_credentials", {
 	index("webauthn_credentials_user_id_idx").using("btree", table.userId.asc().nullsLast()),
 ]);
 
-export const httpResponseInNet = net.table("_http_response", {
-	id: bigint({ mode: 'number' }),
-	statusCode: integer("status_code"),
-	contentType: text("content_type"),
-	headers: jsonb(),
-	content: text(),
-	timedOut: boolean("timed_out"),
-	errorMsg: text("error_msg"),
-	created: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-}, (table) => [
-	index("_http_response_created_idx").using("btree", table.created.asc().nullsLast()),
-]);
-
-export const httpRequestQueueInNet = net.table("http_request_queue", {
-	id: bigserial({ mode: 'number' }).notNull(),
-	method: customType({ dataType: () => 'net.http_method' })().notNull(),
-	url: text().notNull(),
-	headers: jsonb(),
-	body: customType({ dataType: () => 'bytea' })(),
-	timeoutMilliseconds: integer("timeout_milliseconds").notNull(),
-});
-
 export const buildingsInScheduleBuilder = scheduleBuilder.table.withRLS("buildings", {
 	id: integer().primaryKey(),
 	description: varchar().notNull(),
@@ -508,10 +484,6 @@ export const instructorsInScheduleBuilder = scheduleBuilder.table.withRLS("instr
 	id: serial().primaryKey(),
 	firstName: varchar().notNull(),
 	lastName: varchar().notNull(),
-	totalReviews: integer().default(0).notNull(),
-	averageRating: real().default(0).notNull(),
-	difficultyRating: real().default(0).notNull(),
-	wouldTakeAgainRating: integer().default(0).notNull(),
 }, (table) => [
 	unique("unique_full_name").on(table.firstName, table.lastName),
 	pgPolicy("public_read", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
@@ -546,7 +518,8 @@ export const offeringsInScheduleBuilder = scheduleBuilder.table.withRLS("offerin
 	maximumEnrollment: integer().notNull(),
 	actualEnrollment: integer().notNull(),
 	seatsAvailable: integer().notNull(),
-	active: boolean().notNull(),
+	cancelled: boolean().notNull().default(false),
+	lastSeenAt: timestamp().notNull().default(sql`now()`),
 	academicPeriod: integer().notNull().references(() => termsInScheduleBuilder.academicPeriod),
 	partOfTerm: varchar().notNull(),
 	courseId: integer().notNull().references(() => coursesInScheduleBuilder.id),
@@ -618,10 +591,8 @@ export const userPlanDraftsInScheduleBuilder = scheduleBuilder.table.withRLS("us
 	prefStartTime: time(),
 	prefEndTime: time(),
 	inputCampus: varchar(),
-	gapDay: varchar(),
 	minCreditHours: integer().default(12).notNull(),
 	maxCreditHours: integer().default(18).notNull(),
-	walking: boolean().default(false).notNull(),
 	showFilledClasses: boolean().default(false).notNull(),
 }, (table) => [
 	primaryKey({ columns: [table.userId, table.academicPeriod], name: "userPlanDrafts_pkey"}),
@@ -663,9 +634,10 @@ export const bucketsInStorage = storage.table.withRLS("buckets", {
 	allowedMimeTypes: text("allowed_mime_types").array(),
 	ownerId: text("owner_id"),
 	type: buckettypeInStorage().default("STANDARD").notNull(),
+	versioningStatus: text("versioning_status").default("DISABLED").notNull(),
 }, (table) => [
 	uniqueIndex("bname").using("btree", table.name.asc().nullsLast()),
-]);
+check("buckets_versioning_dark_check", sql`(versioning_status = 'DISABLED'::text)`),check("buckets_versioning_standard_only_check", sql`((type = 'STANDARD'::storage.buckettype) OR (versioning_status = 'DISABLED'::text))`),check("buckets_versioning_status_check", sql`(versioning_status = ANY (ARRAY['DISABLED'::text, 'ENABLED'::text, 'SUSPENDED'::text]))`),]);
 
 export const bucketsAnalyticsInStorage = storage.table.withRLS("buckets_analytics", {
 	name: text().notNull(),
@@ -736,17 +708,20 @@ export const objectsInStorage = storage.table.withRLS("objects", {
 	version: text(),
 	ownerId: text("owner_id"),
 	userMetadata: jsonb("user_metadata"),
+	archivedAt: timestamp("archived_at", { withTimezone: true }),
+	isDeleteMarker: boolean("is_delete_marker").default(false).notNull(),
+	isVersioned: boolean("is_versioned").default(false).notNull(),
 }, (table) => [
 	uniqueIndex("bucketid_objname").using("btree", table.bucketId.asc().nullsLast(), table.name.asc().nullsLast()),
 	index("idx_objects_bucket_id_name").using("btree", table.bucketId.asc().nullsLast(), table.name.asc().nullsLast()),
 	index("idx_objects_bucket_id_name_lower").using("btree", table.bucketId.asc().nullsLast(), sql`lower(name)`),
 	index("name_prefix_search").using("btree", table.name.asc().nullsLast().op("text_pattern_ops")),
 
-	pgPolicy("avatar_delete_policy", { for: "delete", to: ["authenticated"], using: sql`((bucket_id = 'avatars'::text) AND (name = (auth.uid())::text))` }),
+	pgPolicy("avatar_delete_policy", { for: "delete", to: ["authenticated"], using: sql`((bucket_id = 'avatars'::text) AND (name = (auth.uid())::text) AND (NOT platform.is_profile_frozen(( SELECT auth.uid() AS uid))))` }),
 
-	pgPolicy("avatar_insert_policy", { for: "insert", to: ["authenticated"], withCheck: sql`((bucket_id = 'avatars'::text) AND (name = (auth.uid())::text) AND (path_tokens = ARRAY[(auth.uid())::text]))` }),
+	pgPolicy("avatar_insert_policy", { for: "insert", to: ["authenticated"], withCheck: sql`((bucket_id = 'avatars'::text) AND (name = (auth.uid())::text) AND (path_tokens = ARRAY[(auth.uid())::text]) AND (NOT platform.is_profile_frozen(( SELECT auth.uid() AS uid))))` }),
 
-	pgPolicy("avatar_update_policy", { for: "update", to: ["authenticated"], using: sql`((bucket_id = 'avatars'::text) AND (name = (auth.uid())::text) AND (path_tokens = ARRAY[(auth.uid())::text]))`, withCheck: sql`((bucket_id = 'avatars'::text) AND (name = (auth.uid())::text) AND (path_tokens = ARRAY[(auth.uid())::text]))` }),
+	pgPolicy("avatar_update_policy", { for: "update", to: ["authenticated"], using: sql`((bucket_id = 'avatars'::text) AND (name = (auth.uid())::text) AND (path_tokens = ARRAY[(auth.uid())::text]) AND (NOT platform.is_profile_frozen(( SELECT auth.uid() AS uid))))`, withCheck: sql`((bucket_id = 'avatars'::text) AND (name = (auth.uid())::text) AND (path_tokens = ARRAY[(auth.uid())::text]) AND (NOT platform.is_profile_frozen(( SELECT auth.uid() AS uid))))` }),
 ]);
 
 export const s3MultipartUploadsInStorage = storage.table.withRLS("s3_multipart_uploads", {
@@ -892,7 +867,7 @@ export const availableTermsInScheduleBuilder = scheduleBuilder.view("availableTe
 export const offeringSearchInScheduleBuilder = scheduleBuilder.materializedView("offeringSearch", {	crn: integer(),
 	academicPeriod: integer(),
 	seatsAvailable: integer(),
-	active: boolean(),
+	cancelled: boolean(),
 	courseId: integer(),
 	abbr: varchar(),
 	courseNumber: varchar(),
@@ -902,7 +877,7 @@ export const offeringSearchInScheduleBuilder = scheduleBuilder.materializedView(
 	firstName: varchar(),
 	lastName: varchar(),
 	searchVector: customType({ dataType: () => 'tsvector' })("search_vector"),
-}).as(sql`SELECT offerings.crn, offerings."academicPeriod", offerings."seatsAvailable", offerings.active, courses.id AS "courseId", courses.abbr, courses."courseNumber", courses.title, courses."maxCreditHours", instructors.id AS "instructorId", instructors."firstName", instructors."lastName", to_tsvector('english'::regconfig, (((((((COALESCE(courses.title, ''::character varying)::text || ' '::text) || COALESCE(courses.abbr, ''::character varying)::text) || ' '::text) || COALESCE(courses."courseNumber", ''::character varying)::text) || ' '::text) || COALESCE(instructors."lastName", ''::character varying)::text) || ' '::text) || COALESCE(instructors."firstName", ''::character varying)::text) AS search_vector FROM schedule_builder.offerings JOIN schedule_builder.courses ON courses.id = offerings."courseId" LEFT JOIN schedule_builder.instructors ON instructors.id = offerings."instructorId"`);
+}).as(sql`SELECT offerings.crn, offerings."academicPeriod", offerings."seatsAvailable", offerings.cancelled, courses.id AS "courseId", courses.abbr, courses."courseNumber", courses.title, courses."maxCreditHours", instructors.id AS "instructorId", instructors."firstName", instructors."lastName", to_tsvector('english'::regconfig, (((((((COALESCE(courses.title, ''::character varying)::text || ' '::text) || COALESCE(courses.abbr, ''::character varying)::text) || ' '::text) || COALESCE(courses."courseNumber", ''::character varying)::text) || ' '::text) || COALESCE(instructors."lastName", ''::character varying)::text) || ' '::text) || COALESCE(instructors."firstName", ''::character varying)::text) AS search_vector FROM schedule_builder.offerings JOIN schedule_builder.courses ON courses.id = offerings."courseId" LEFT JOIN schedule_builder.instructors ON instructors.id = offerings."instructorId"`);
 
 export const decryptedSecretsInVault = vault.view("decrypted_secrets", {	id: uuid(),
 	name: text(),

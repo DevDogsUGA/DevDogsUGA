@@ -74,7 +74,6 @@ export interface MeetingSummary {
   location: string | null;
   startsAt: Date;
   endsAt: Date;
-  attendanceFormUrl: string | null;
   /**
    * An officer's override for what the night is, for the nights structure
    * cannot describe. One of the four `MEETING_KIND_CHOICES`: `Build Session`,
@@ -151,7 +150,6 @@ const summaryColumns = {
   location: meetings.location,
   startsAt: meetings.startsAt,
   endsAt: meetings.endsAt,
-  attendanceFormUrl: meetings.attendanceFormUrl,
   kind: meetings.kind,
   summary: meetings.summary,
   rsvpUrl: meetings.rsvpUrl,
@@ -159,7 +157,12 @@ const summaryColumns = {
     db
       .select({ n: sql`count(*)::int` })
       .from(attendance)
-      .where(eq(attendance.meetingId, meetings.id)),
+      .where(
+        and(
+          eq(attendance.meetingId, meetings.id),
+          isNull(attendance.revokedAt),
+        ),
+      ),
   ),
   workshopCount: correlatedCount(
     db
@@ -322,7 +325,6 @@ export const getWorkshopDetail = cache(
         location: row.location,
         startsAt: row.startsAt,
         endsAt: row.endsAt,
-        attendanceFormUrl: row.attendanceFormUrl,
         kind: row.kind,
         summary: row.summary,
         rsvpUrl: row.rsvpUrl,
@@ -808,7 +810,6 @@ export const getCompetitionBySlug = cache(
  * Kept as a re-export rather than deleted so the existing import sites, which
  * reach for it beside the loaders they already use, keep working.
  */
-export { attendanceFormIsLive } from "~/lib/meetingSegments";
 
 /**
  * Every meeting slug that resolves to a page, newest first, for `sitemap.ts`.

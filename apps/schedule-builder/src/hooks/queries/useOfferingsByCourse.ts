@@ -13,7 +13,7 @@ export function useOfferingsByCourse(
       const { data, error } = await supabase
         .from("offeringSearch")
         .select(
-          "crn, courseId, abbr, courseNumber, title, maxCreditHours, firstName, lastName, seatsAvailable, active",
+          "crn, courseId, abbr, courseNumber, title, maxCreditHours, firstName, lastName, seatsAvailable, cancelled",
         )
         .eq("courseId", courseId)
         .eq("academicPeriod", academicPeriod!)

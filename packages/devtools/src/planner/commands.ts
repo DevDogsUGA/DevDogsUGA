@@ -1,5 +1,5 @@
 /**
- * `pnpm devtools planner <status|create|reset-password|drop>`, the operator
+ * `pnpm devtools db planner <status|create|reset-password|drop>`, the operator
  * side of the `migration_planner` role.
  *
  * Four commands because the role has exactly four lifecycle moments:
@@ -183,7 +183,7 @@ export async function runPlannerStatus(
     if (!role) {
       log.warn(
         schemaReady
-          ? `${PLANNER_ROLE} does not exist. Mint it with \`pnpm devtools planner create\`.`
+          ? `${PLANNER_ROLE} does not exist. Mint it with \`pnpm devtools db planner create\`.`
           : `${PLANNER_ROLE} does not exist — and neither does the ` +
               "supabase_migrations schema, so `planner create` would refuse: " +
               "initialize this database's migration history first " +
@@ -442,7 +442,7 @@ export async function runPlannerResetPassword(
     if (!(await roleExists(db))) {
       bail(
         `${PLANNER_ROLE} does not exist — nothing to reset. Mint it with ` +
-          "`pnpm devtools planner create`.",
+          "`pnpm devtools db planner create`.",
       );
     }
     const password = generatePassword();

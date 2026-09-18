@@ -140,7 +140,7 @@ create table "platform"."roles" (
   -- audience is everyone with base access. All three gate the platform's
   -- surfaces only. Anyone with Airtable access can export the same data from the
   -- base directly and no Postgres permission can stop that.
-  "canEditAttendance" boolean,
+  "canManageAttendance" boolean,
   "canExportStars" boolean,
   "canTriggerSync" boolean,
 

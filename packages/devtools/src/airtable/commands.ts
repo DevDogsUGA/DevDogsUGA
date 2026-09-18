@@ -168,11 +168,16 @@ export async function runApply(dryRun: boolean): Promise<void> {
     );
   }
 
-  // From the same schema the ids came out of, so the two committed files
-  // cannot disagree about which base run produced them.
-  writeSnapshot(result.schema);
+  // Snapshot only the registered integration surface. The officers' base also
+  // contains unrelated operational tables; including them makes `check`
+  // mistake those tables for declarations the scaffolder should recreate.
+  const registeredTableIds = new Set(Object.values(found.tables));
+  const registeredSchema = result.schema.filter((table) =>
+    registeredTableIds.has(table.id),
+  );
+  writeSnapshot(registeredSchema);
   log.success(
-    `Wrote ${String(result.schema.length)} table(s) to schema-snapshot.json.`,
+    `Wrote ${String(registeredSchema.length)} table(s) to schema-snapshot.json.`,
   );
 
   reportWhatNoApiCanDo(result.schema);

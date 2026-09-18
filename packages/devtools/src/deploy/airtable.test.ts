@@ -21,7 +21,7 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readSnapshot, type LiveTable } from "@devdogsuga/airtable";
+import { readSnapshot, registry, type LiveTable } from "@devdogsuga/airtable";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { PROJECT_ROOT } from "../instance.js";
 import { runDeployAirtableApply } from "./airtable-apply.js";
@@ -197,7 +197,7 @@ describe("airtable-plan reports", () => {
     expect(output()).toBe("changed=true\n");
     const text = summary();
     expect(text).toContain("Airtable schema plan — changes pending");
-    for (const table of UP_TO_DATE) {
+    for (const table of Object.values(registry)) {
       expect(text, `${table.name} missing from the plan`).toContain(
         `+ table ${table.name}`,
       );

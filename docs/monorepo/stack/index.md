@@ -15,7 +15,7 @@ Shared versions live in the `catalog:` block of `pnpm-workspace.yaml`.
 | Framework       | [Next.js](/docs/monorepo/stack/nextjs), App Router                              | 16.3.2                           |
 | UI              | React / React DOM                                                               | 19.2.8                           |
 | Styling         | [Tailwind CSS](/docs/monorepo/stack/tailwind)                                   | 4.3.3                            |
-| Hosting         | [Cloudflare Workers](/docs/monorepo/stack/cloudflare), `@opennextjs/cloudflare` | 1.20.2, wrangler 4.125.0         |
+| Hosting         | [Cloudflare Workers](/docs/monorepo/stack/cloudflare), `@opennextjs/cloudflare` | 1.20.2, wrangler 4.133.0         |
 | Data            | [Supabase](/docs/monorepo/stack/supabase) — Postgres 17, `supabase-js`          | 2.112.3, CLI 2.115.0             |
 | Server SQL      | [Drizzle ORM and Kit](/docs/monorepo/stack/drizzle), on `postgres` 3.4.9        | 1.0.0-rc.4                       |
 | Build graph     | [Turborepo](/docs/monorepo/stack/turborepo) and pnpm workspaces                 | 2.10.11, pnpm 11.8.0             |

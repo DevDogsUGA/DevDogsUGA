@@ -26,7 +26,7 @@ const IDS = {
 };
 
 const COMP_SLUG = "2026-fall/w02/pr-webhook-test";
-const TEAM_SLUG = "lantern";
+const TEAM_SLUG = "sicem";
 
 async function cleanup() {
   await db.execute(
@@ -68,7 +68,7 @@ beforeAll(async () => {
   // which is the state a team is in before its first PR event arrives.
   await db.execute(sql`
     insert into platform.teams (id, "competitionId", slug, name, "joinCode", "createdBy")
-    values (${IDS.team}::uuid, ${IDS.competition}::uuid, ${TEAM_SLUG}, 'Lantern',
+    values (${IDS.team}::uuid, ${IDS.competition}::uuid, ${TEAM_SLUG}, 'Sicem',
             'LANTRN', ${IDS.lead}::uuid)
   `);
 });

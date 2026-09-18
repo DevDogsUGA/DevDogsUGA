@@ -77,7 +77,7 @@ rather than compiler sentinels:
 pnpm devtools emails
 pnpm devtools emails '*' --out ~/emails
 pnpm devtools emails TeamInvite --format html,text --out ./previews
-pnpm devtools emails '*' --no-output
+pnpm devtools emails '*' --dry-run
 ```
 
 With no template names, the command opens a picker for the templates, output

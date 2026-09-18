@@ -15,6 +15,7 @@ export type FieldType =
   | "number"
   | "date"
   | "dateTime"
+  | "createdBy"
   | "checkbox"
   | "singleSelect"
   | "multipleSelects"
@@ -42,8 +43,20 @@ export type MergeEligibleType =
   | "singleSelect"
   | "multipleSelects";
 
+export interface AirtableCollaborator {
+  id: string;
+  email?: string;
+  name?: string;
+}
+
 export type AirtableValue =
-  string | number | boolean | null | undefined | string[];
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | string[]
+  | AirtableCollaborator;
 
 export type Direction = "push" | "pull" | "ignore" | "status";
 
@@ -84,6 +97,8 @@ export interface FieldSpec<TType extends FieldType = FieldType> {
   readonly choices?: readonly string[];
   /** Present only when direction is "push". */
   readonly project?: (row: never) => AirtableValue;
+  /** A platform-owned current-state field where null intentionally clears. */
+  readonly clearBlank?: boolean;
   /** Present only when direction is "pull". */
   readonly parse?: (value: AirtableValue) => unknown;
 }
@@ -188,6 +203,27 @@ export class UndirectedField<TType extends FieldType> {
     };
   }
 
+  /**
+   * Pushes a current-state value for which null means "clear Airtable".
+   * Identity fields must use `push`; this is for reversible state such as a
+   * revocation reason that must disappear when the revocation is restored.
+   */
+  pushClearable<TRow>(
+    project: (row: TRow) => AirtableValue,
+  ): PushField<TType, TRow> {
+    return {
+      id: this.id,
+      type: this.type,
+      name: this.name,
+      isMatchKey: this.isMatchKey,
+      linkTo: this.linkTo,
+      choices: this.choices,
+      direction: "push",
+      project,
+      clearBlank: true,
+    };
+  }
+
   pull<TOut>(parse: (value: AirtableValue) => TOut): PullField<TType, TOut> {
     return {
       id: this.id,
@@ -256,6 +292,7 @@ export const field = {
   number: make("number"),
   date: make("date"),
   dateTime: make("dateTime"),
+  createdBy: make("createdBy"),
   checkbox: make("checkbox"),
   /**
    * A single select, and optionally the closed list of choices it may hold.

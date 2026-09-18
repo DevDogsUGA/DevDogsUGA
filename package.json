@@ -7,7 +7,6 @@
     "devtools": "pnpm --filter @devdogsuga/devtools run cli",
     "build": "pnpm devtools run build",
     "dev": "pnpm devtools run dev",
-    "dev:docs": "turbo watch build --filter=@devdogsuga/docs",
     "typecheck": "pnpm devtools run typecheck",
     "lint": "pnpm devtools run lint",
     "lint:fix": "pnpm devtools run lint:fix",

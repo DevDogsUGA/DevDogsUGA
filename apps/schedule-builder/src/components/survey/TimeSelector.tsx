@@ -70,7 +70,7 @@ const Timeselector = ({
         onChange={handleChange}
         onKeyDown={handleKeyPress}
         maxLength={5}
-        className={`w-full rounded-md border-2 px-12 py-2 outline-0 hover:border-stone-400 ${className}`}
+        className={`hover:border-muted w-full rounded-md border-2 px-12 py-2 outline-0 ${className}`}
       />
       {/* FormData reads the combined value and meridian from this hidden input. */}
       <input
@@ -93,7 +93,7 @@ const Timeselector = ({
         text="AM"
         toggledText="PM"
         untoggledStyle="opacity-35 hover:opacity-100"
-        toggledStyle="opacity-100 hover:opacity-50 text-red-700"
+        toggledStyle="opacity-100 hover:opacity-50 text-accent"
         className="absolute -top-1.5 right-0 border-none bg-transparent p-4 hover:bg-transparent"
         onClick={changeMeridian}
         clearState={clearState}

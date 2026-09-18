@@ -8,6 +8,8 @@ import { ANNOUNCEMENT, showsAnnouncement } from "./announcement";
  * case (`/accounts` is not `/account`) that a bare `startsWith` gets wrong.
  */
 describe("showsAnnouncement", () => {
+  const whileActive = new Date("2026-09-16T12:00:00-04:00");
+
   const publicPaths = [
     "/",
     "/community",
@@ -30,20 +32,29 @@ describe("showsAnnouncement", () => {
   ];
 
   it.each(publicPaths)("shows on %s", (pathname) => {
-    expect(showsAnnouncement(pathname)).toBe(true);
+    expect(showsAnnouncement(pathname, whileActive)).toBe(true);
   });
 
   it.each(appPaths)("stays off %s", (pathname) => {
-    expect(showsAnnouncement(pathname)).toBe(false);
+    expect(showsAnnouncement(pathname, whileActive)).toBe(false);
   });
 
   it("does not mistake a sibling route for a hidden prefix", () => {
-    expect(showsAnnouncement("/accounts")).toBe(true);
-    expect(showsAnnouncement("/console-log")).toBe(true);
+    expect(showsAnnouncement("/accounts", whileActive)).toBe(true);
+    expect(showsAnnouncement("/console-log", whileActive)).toBe(true);
   });
 
   it("shows when the router has not resolved a pathname yet", () => {
-    expect(showsAnnouncement(null)).toBe(true);
+    expect(showsAnnouncement(null, whileActive)).toBe(true);
+  });
+
+  it("stops showing after the configured deadline", () => {
+    expect(showsAnnouncement("/", new Date("2026-09-16T23:59:59-04:00"))).toBe(
+      true,
+    );
+    expect(showsAnnouncement("/", new Date("2026-09-17T00:00:00-04:00"))).toBe(
+      false,
+    );
   });
 });
 
@@ -62,7 +73,9 @@ describe("the announcement stays off pages with a settings save bar", () => {
   const saveBarPaths = ["/account"];
 
   it.each(saveBarPaths)("stays off %s", (pathname) => {
-    expect(showsAnnouncement(pathname)).toBe(false);
+    expect(
+      showsAnnouncement(pathname, new Date("2026-09-16T12:00:00-04:00")),
+    ).toBe(false);
   });
 });
 

@@ -6,11 +6,11 @@ order: 1
 
 # Airtable
 
-Airtable is the officers' console. One base holds seven tables, and a sync pass moves data both ways: officer-authored configuration is pulled into Postgres, platform-owned state is pushed back out for officers to read. Read this before adding a field, changing what syncs, or debugging a pass. If you only need to know _what_ syncs and in which direction, that is [Airtable sync](/docs/platform/guides/meetings-and-teams/airtable-sync); for the package's exported functions, the generated [`@devdogsuga/airtable`](/docs/toolkit/reference/api/airtable) reference.
+Airtable is the officers' console. One base holds ten integration tables, and a sync pass moves data both ways: officer-authored configuration is pulled into Postgres, while platform-owned attendance and reflection evidence is pushed back for officers to read. Read this before adding a field, changing what syncs, or debugging a pass. If you only need to know _what_ syncs and in which direction, that is [Airtable sync](/docs/platform/guides/meetings-and-teams/airtable-sync); for the package's exported functions, the generated [`@devdogsuga/airtable`](/docs/toolkit/reference/api/airtable) reference.
 
 ## The field registry
 
-Everything the sync reads or writes is declared in one place, `packages/airtable/src/registry.ts` — seven tables (Members, Projects, Meetings, Workshops, Competitions, Teams, Attendance) and 52 fields, each holding the real ID pulled from the live base. That is what makes "we may want to push something else later" a one-line change rather than an archaeology exercise across the push, the pull, and the verifier.
+Everything the sync reads or writes is declared in one place, `packages/airtable/src/registry.ts`; each table and field holds its stable ID from the live base. That is what makes "we may want to push something else later" a registry change rather than an archaeology exercise across the push, pull, and verifier.
 
 ```ts
 export const members = table("Members", "tblLTJtir40NrL87x", {
@@ -65,9 +65,9 @@ Nothing in the platform could create a project. No console page, no server actio
 
 Pulling the table removes the failure rather than reporting it: the Project link resolves through the pull's idMap exactly like the Meeting link beside it. `pushProjects` and `projectIdMap` are gone, and `⚙️ Slug` went with them — the slug is derived from the name on insert and never recomputed, because `stars.csv` is keyed on it across semesters and regenerating it on a rename would rewrite an export somebody already has.
 
-## Attendance is the exception
+## Corrections are commands
 
-Six of the seven tables are either platform-owned and pushed or officer-authored and pulled. **Attendance is the one Airtable creates rows in** — from a form filled in during a workshop, or a co-branded event's roster pasted in — and the platform writes back only `⚙️ Platform ID` and `⚙️ Sync status`. The first makes a re-import idempotent and shows an officer that a response landed; the second carries the refusal when it did not — an unknown MyID, a Meeting or Workshop link the platform cannot resolve, or two links naming different nights. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance) for why the form collects a MyID rather than an email address.
+Attendance and EL Reflections are platform-owned projections. Officers request missed attendance, revocations, participation overrides, and reflection edits through the restricted Officer Changes form. Its automation sends only the response ID; the platform validates, applies, audits, and acknowledges the command. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
 
 ## Read next
 

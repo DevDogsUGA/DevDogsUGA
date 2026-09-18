@@ -69,21 +69,21 @@ env:
 #
 # ── the two devtools entry points, and why every step names one ──────────────
 #
-# Every step below runs a `devtools deploy <step>` command. They used to be
+# Every step below runs a `devtools-ci deploy <step>` command. They used to be
 # loose files in `scripts/` that reached into devtools' own sources through a
 # relative path; they are commands now, with the same help, refusals and named
 # errors as the rest of the CLI. Which entry point a step uses is NOT a style
 # choice:
 #
-#   run cli          `with-env tsx src/cli.ts` — loads .env.$DEPLOY_ENV first.
-#   run cli:no-env   the same entry point with that wrapper removed.
+#   run ci   `tsx src/ci.ts` — the CI bin; no env file, no wrapper.
+#   run cli  `with-env tsx src/cli.ts` — loads .env.$DEPLOY_ENV first.
 #
 # ⚠️ `deploy write-env` is the step that CREATES .env.$DEPLOY_ENV, so routing
 # it through `with-env` is a bootstrap cycle: it would die on
-# MissingEnvFileError for the file it was about to write.
+# MissingEnvFileError for the file it was about to write. It uses `run ci`.
 #
 # `deploy orphans`, `deploy preflight`, `deploy require-token`,
-# `deploy airtable-plan` and `deploy airtable-apply` are `cli:no-env` for a
+# `deploy airtable-plan` and `deploy airtable-apply` use `run ci` for a
 # different reason — they run in jobs that hold one narrow credential and
 # compose no env file at all, so the wrapped entry point would exit reporting a
 # missing FILE rather than the missing TOKEN, the paused project or the missing
@@ -96,15 +96,17 @@ env:
 # is about the BARE runs in the orphan-audit and prune jobs, and the same entry
 # point is used in both places so there is one answer rather than two.
 #
-# Everything downstream of write-env uses `run cli`, because reading the values
-# it composed is the entire point of those steps.
+# Everything downstream of write-env uses `run ci:env`: the quiet CI entry
+# point wrapped in `with-env`. Reading the values write-env composed is the
+# entire point, while keeping clack banners away from credential-bearing
+# stdout.
 #
 # ⚠️ NOTHING here may run a deploy command through a wrapper that writes to
 # stdout. `deploy secrets-file` emits `::add-mask::<token>`, which GitHub
 # recognises only on a line of its own, and `deploy mint-token` (which
 # `--mint` runs) emits a JWT its caller takes whole. pnpm's own `$ <command>`
 # banner goes to stderr — measured — which is why `pnpm --filter … run` is
-# safe here; `intro()` does not, which is why cli.ts suppresses it for this
+# safe here; `intro()` does not, which is why ci.ts suppresses it for this
 # group.
 
 jobs:
@@ -144,7 +146,7 @@ jobs:
       # and is covered by the same suite as everything else here, rather than
       # being the one step in the pipeline that nothing tests.
       - run: pnpm install --frozen-lockfile
-      # cli:no-env — there is no env file in this job, and there must not be:
+      # run ci — there is no env file in this job, and there must not be:
       # it holds `vars` only, so that one unauthenticated request classifies
       # the project before any credential is in scope.
       - name: Classify the Supabase project
@@ -153,7 +155,7 @@ jobs:
           PROJECT_REF: ${{ vars.PROJECT_REF }}
           PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
         run: >-
-          pnpm --filter @devdogsuga/devtools run cli:no-env deploy preflight
+          pnpm --filter @devdogsuga/devtools run ci deploy preflight
 
   # Staging had no migrate job at all, which meant staging ran whatever schema
   # it happened to be left with. The sandbox proxy made that visible: migration
@@ -235,12 +237,11 @@ jobs:
         env:
           DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
           DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        # ⚠️ cli:no-env, and this is the one place in the file where that is
-        # not interchangeable with `run cli`. This step CREATES the file
-        # `with-env` would insist on reading, so routing it through the wrapper
-        # would fail on MissingEnvFileError for its own output.
+        # ⚠️ run ci — this step CREATES the file `with-env` would insist on
+        # reading, so routing it through the wrapper would fail on
+        # MissingEnvFileError for its own output.
         run: >-
-          pnpm --filter @devdogsuga/devtools run cli:no-env deploy write-env
+          pnpm --filter @devdogsuga/devtools run ci deploy write-env
       - name: Build the workspace packages this app depends on
         run: pnpm turbo run build --filter='${{ matrix.app }}^...'
       # `next build` through OpenNext, with the env schema ENFORCED. sandbox is
@@ -251,14 +252,13 @@ jobs:
       # Written to a mkdtemp 0700 directory and removed below whatever happens.
       - name: Compose the Worker secrets file
         id: secrets
-        # `run cli` — with-env — because the whole job of this step is to read
-        # the values write-env composed. Its stdout carries `::add-mask::` and
-        # nothing else; see the note at the top of this file.
+        # `run ci:env` — the quiet CI entry point under with-env — because the
+        # whole job of this step is to read the values write-env composed. Its
+        # stdout carries `::add-mask::` and nothing else; see the note above.
         run: >-
-          pnpm --filter @devdogsuga/devtools run cli deploy secrets-file
+          pnpm --filter @devdogsuga/devtools run ci:env deploy secrets-file
           --app ${{ matrix.app }} ${{ matrix.mint }}
-      # One step for all three Workers now that apps/sandbox/package.json
-      # carries the same `cf:deploy:*` scripts as the Next apps — the
+      # One step for all three Workers via devtools-ci deploy — the
       # ${DEPLOY_SECRETS_FILE:+--secrets-file …} hook plus, for sandbox,
       # `--var PLATFORM_REST_URL:$REST_URL`. That --var is a deploy-time value
       # rather than a committed wrangler.jsonc entry: one committed value
@@ -268,7 +268,7 @@ jobs:
       - name: Deploy ${{ matrix.app }}
         env:
           DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
-        run: pnpm --filter ${{ matrix.app }} run "cf:deploy:$DEPLOY_ENV"
+        run: pnpm --filter @devdogsuga/devtools run ci:env deploy ${{ matrix.app }} --tier $DEPLOY_ENV
       # The `finally` half of the mkdtemp. A hosted runner is discarded whole,
       # so this is for the self-hosted case and for a job that fails between
       # composing the file and using it.
@@ -312,13 +312,13 @@ jobs:
       # plan succeeds, `env push` uploads it, `env audit` sees no drift. A live
       # connection is the only place the difference shows, so this step opens
       # one: it must authenticate as the planner, FAIL to read
-      # platform.profile, and succeed on the migrations table. `cli:no-env`
+      # platform.profile, and succeed on the migrations table. `run ci`
       # like the other one-credential guards.
       - name: The credential is the planner role, and no more
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
-          pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-planner
+          pnpm --filter @devdogsuga/devtools run ci deploy require-planner
       # ⚠️ `set -o pipefail` is load-bearing, not boilerplate. `supabase db
       # push` exits 1 on a connection failure, and a pipeline without it reports
       # the exit code of `tee` — so a dry run that never connected reads as a
@@ -358,12 +358,12 @@ jobs:
       - name: What would this commit do to the Airtable base?
         env:
           AIRTABLE_PLAN_PAT: ${{ secrets.AIRTABLE_PLAN_PAT }}
-        # cli:no-env, like the other steps in jobs that hold one narrow
+        # run ci, like the other steps in jobs that hold one narrow
         # credential and compose no env file: `with-env` would report a missing
         # FILE rather than the missing TOKEN, which is the one thing this step
         # exists to say.
         run: >-
-          pnpm --filter @devdogsuga/devtools run cli:no-env deploy airtable-plan
+          pnpm --filter @devdogsuga/devtools run ci deploy airtable-plan
 
   # ── production ──────────────────────────────────────────────────────────────
 
@@ -442,7 +442,7 @@ jobs:
         env:
           AIRTABLE_PLAN_PAT: ${{ secrets.AIRTABLE_PLAN_PAT }}
         run: >-
-          pnpm --filter @devdogsuga/devtools run cli:no-env deploy airtable-plan
+          pnpm --filter @devdogsuga/devtools run ci deploy airtable-plan
 
   # Applying the migrations. In `production` rather than `production-apply`,
   # and that placement follows the tiering rather than working around it:
@@ -517,10 +517,10 @@ jobs:
         env:
           DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
           DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        # cli:no-env for the same bootstrap reason as the other write-env
+        # run ci for the same bootstrap reason as the other write-env
         # steps: this composes .env.production, which nothing has written yet.
         run: >-
-          pnpm --filter @devdogsuga/devtools run cli:no-env deploy write-env
+          pnpm --filter @devdogsuga/devtools run ci deploy write-env
           --source supabase
       # SUPABASE_ACCESS_TOKEN is passed here rather than composed: it belongs to
       # the operator manifest, not to supabase's, and `with-env` leaves a value
@@ -583,7 +583,7 @@ jobs:
         env:
           AIRTABLE_APPLY_PAT: ${{ secrets.AIRTABLE_APPLY_PAT }}
         run: >-
-          pnpm --filter @devdogsuga/devtools run cli:no-env deploy airtable-apply
+          pnpm --filter @devdogsuga/devtools run ci deploy airtable-apply
 
   production-deploy:
     needs:
@@ -629,12 +629,11 @@ jobs:
         env:
           DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
           DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        # ⚠️ cli:no-env, and this is the one place in the file where that is
-        # not interchangeable with `run cli`. This step CREATES the file
-        # `with-env` would insist on reading, so routing it through the wrapper
-        # would fail on MissingEnvFileError for its own output.
+        # ⚠️ run ci — this step CREATES the file `with-env` would insist on
+        # reading, so routing it through the wrapper would fail on
+        # MissingEnvFileError for its own output.
         run: >-
-          pnpm --filter @devdogsuga/devtools run cli:no-env deploy write-env
+          pnpm --filter @devdogsuga/devtools run ci deploy write-env
       - name: Build the workspace packages this app depends on
         run: pnpm turbo run build --filter='${{ matrix.app }}^...'
       - name: Build ${{ matrix.app }}
@@ -642,18 +641,18 @@ jobs:
         run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
       - name: Compose the Worker secrets file
         id: secrets
-        # `run cli` — with-env — because the whole job of this step is to read
-        # the values write-env composed. Its stdout carries `::add-mask::` and
-        # nothing else; see the note at the top of this file.
+        # `run ci:env` — the quiet CI entry point under with-env — because the
+        # whole job of this step is to read the values write-env composed. Its
+        # stdout carries `::add-mask::` and nothing else; see the note above.
         run: >-
-          pnpm --filter @devdogsuga/devtools run cli deploy secrets-file
+          pnpm --filter @devdogsuga/devtools run ci:env deploy secrets-file
           --app ${{ matrix.app }} ${{ matrix.mint }}
       # One step for all three Workers; see the staging job for the
       # PLATFORM_REST_URL note.
       - name: Deploy ${{ matrix.app }}
         env:
           DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
-        run: pnpm --filter ${{ matrix.app }} run "cf:deploy:$DEPLOY_ENV"
+        run: pnpm --filter @devdogsuga/devtools run ci:env deploy ${{ matrix.app }} --tier $DEPLOY_ENV
       - name: Remove the Worker secrets file
         if: always()
         env:
@@ -680,7 +679,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # No env file, hence cli:no-env on both lines: this reads secret NAMES
+      # No env file; run ci on both lines: this reads secret NAMES
       # from Cloudflare and needs exactly one credential to do it. The existing
       # guard is invoked rather than reimplemented, so a missing token says who
       # to ask instead of dropping into wrangler's browser OAuth.
@@ -689,8 +688,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token
-          pnpm --filter @devdogsuga/devtools run cli:no-env deploy orphans
+          pnpm --filter @devdogsuga/devtools run ci deploy require-token
+          pnpm --filter @devdogsuga/devtools run ci deploy orphans
 
   # Deleting them is a separate, deliberate, human-triggered run — never
   # chained to a deploy. Each deletion PUBLISHES A NEW VERSION of the code
@@ -728,5 +727,5 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          pnpm --filter @devdogsuga/devtools run cli:no-env deploy require-token
-          pnpm --filter @devdogsuga/devtools run cli:no-env deploy orphans --prune
+          pnpm --filter @devdogsuga/devtools run ci deploy require-token
+          pnpm --filter @devdogsuga/devtools run ci deploy orphans --prune

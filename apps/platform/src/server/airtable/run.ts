@@ -3,6 +3,9 @@ import {
   competitions as competitionsSpec,
   meetings as meetingsSpec,
   members as membersSpec,
+  officerChangesTable as officerChangesSpec,
+  elReflectionsTable as reflectionsSpec,
+  platformSettingsTable as settingsSpec,
   projects as projectsSpec,
   teamsTable as teamsSpec,
   workshops as workshopsSpec,
@@ -10,7 +13,6 @@ import {
   type AirtableClient,
   type AirtableRecord,
 } from "@devdogsuga/airtable";
-import { pullAttendance } from "./attendance";
 import { AirtableNotConfiguredError, getAirtableClient } from "./credentials";
 import {
   claimSyncLease,
@@ -21,8 +23,12 @@ import {
 import { postAlert } from "../discord/alerts";
 import {
   pullTeamGrades,
+  pushAttendance,
   pushDerivedCounts,
   pushMembers,
+  pushOfficerChangeStatuses,
+  pushReflections,
+  ensurePlatformSettings,
   pushTeams,
   writeSyncStatus,
 } from "./push";
@@ -31,6 +37,7 @@ import {
   pullMeetings,
   pullProjects,
   pullWorkshops,
+  pullReflectionSettings,
 } from "./sync";
 import type { Refusal } from "./refusals";
 
@@ -56,10 +63,10 @@ export interface SyncReport {
   pushed: { created: number; updated: number; unchanged: number };
   gradesApplied: number;
   statusWrites: number;
-  /** Accounts created for MyIDs with no platform user yet. */
-  accountsCreated: number;
-  /** Attendance rows removed because their Airtable record was deleted. */
-  attendanceRemoved: number;
+  /** Retained in the response during the ownership-inversion rollout. */
+  accountsCreated: 0;
+  /** Retained in the response during the ownership-inversion rollout. */
+  attendanceRemoved: 0;
   refusals: Refusal[];
   error?: string;
 }
@@ -189,8 +196,6 @@ export async function runAirtableSync(
   const pushed = { created: 0, updated: 0, unchanged: 0 };
   let gradesApplied = 0;
   let statusWrites = 0;
-  let accountsCreated = 0;
-  let attendanceRemoved = 0;
   let failure: unknown = null;
 
   // Declared out here rather than inside the `try`, so the status write below
@@ -204,6 +209,9 @@ export async function runAirtableSync(
     competitions: AirtableRecord[];
     teams: AirtableRecord[];
     attendance: AirtableRecord[];
+    officerChanges: AirtableRecord[];
+    reflections: AirtableRecord[];
+    platformSettings: AirtableRecord[];
   } | null = null;
 
   try {
@@ -219,11 +227,27 @@ export async function runAirtableSync(
       competitions: await client.listRecords(competitionsSpec.id),
       teams: await client.listRecords(teamsSpec.id),
       attendance: await client.listRecords(attendanceSpec.id),
+      officerChanges: await client.listRecords(officerChangesSpec.id),
+      reflections: await client.listRecords(reflectionsSpec.id),
+      platformSettings: await client.listRecords(settingsSpec.id),
     };
 
+    const settingsPush = await ensurePlatformSettings(
+      client,
+      listed.platformSettings,
+    );
+    add(pushed, settingsPush);
+    if (settingsPush.created > 0) {
+      listed.platformSettings = await client.listRecords(settingsSpec.id);
+    }
+    const settingsOutcome = await pullReflectionSettings(
+      listed.platformSettings,
+    );
+    addPull(pulled, settingsOutcome);
+    refusals.push(...settingsOutcome.refusals);
+
     // Pull order is a dependency order, not a preference: workshops resolve
-    // both project and meeting links, competitions resolve workshop links, and
-    // attendance resolves meeting and workshop links.
+    // both project and meeting links, and competitions resolve workshop links.
     //
     // Projects used to be PUSHED here instead, ahead of everything, with a
     // re-list afterwards so a record created this pass could be linked to. All
@@ -254,31 +278,27 @@ export async function runAirtableSync(
     addPull(pulled, competitionOutcome);
     refusals.push(...competitionOutcome.refusals);
 
-    // Attendance after meetings and workshops, because a response names both
-    // by Airtable record id and only those passes know what the ids map to.
-    // Before the pushes, so the ⚙️ Attendance counts a member reads in the base
-    // include what this pass just imported rather than lagging a
-    // fifteen-minute cycle behind the form they watched somebody submit.
-    const attendanceOutcome = await pullAttendance(
-      listed.attendance,
-      workshopOutcome.idMap,
-      meetingOutcome.idMap,
-    );
-    pulled.upserted += attendanceOutcome.imported;
-    pulled.skipped += attendanceOutcome.skipped;
-    // Counted apart from `archived`. An archived meeting keeps its row and
-    // stops being shown; a removed attendance row is gone, and reporting the
-    // two under one label would hide the only irreversible thing a pass does.
-    attendanceRemoved = attendanceOutcome.removed;
-    accountsCreated = attendanceOutcome.accountsCreated;
-    refusals.push(...attendanceOutcome.refusals);
-
     // Grades before the team push, so a team graded this pass gets its points
     // pushed in the same pass rather than fifteen minutes later.
     gradesApplied = await pullTeamGrades(listed.teams);
 
-    add(pushed, await pushMembers(client, listed.members));
+    const memberPush = await pushMembers(client, listed.members);
+    add(pushed, memberPush);
+    // Attendance links use Airtable record IDs. Re-list only when this pass
+    // created members so those new links do not wait for the next cron.
+    if (memberPush.created > 0) {
+      listed.members = await client.listRecords(membersSpec.id);
+    }
+    add(
+      pushed,
+      await pushAttendance(client, listed.attendance, listed.members),
+    );
     add(pushed, await pushTeams(client, listed.teams));
+    add(
+      pushed,
+      await pushReflections(client, listed.reflections, listed.members),
+    );
+    add(pushed, await pushOfficerChangeStatuses(client, listed.officerChanges));
     add(pushed, await pushDerivedCounts(client, listed));
   } catch (error) {
     failure = error;
@@ -335,8 +355,8 @@ export async function runAirtableSync(
     pushed,
     gradesApplied,
     statusWrites,
-    accountsCreated,
-    attendanceRemoved,
+    accountsCreated: 0,
+    attendanceRemoved: 0,
     refusals,
     ...(error === null ? {} : { error }),
   };

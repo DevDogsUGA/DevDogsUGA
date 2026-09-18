@@ -105,7 +105,8 @@ export function buildPush<TRow>(
     let changed = current === undefined;
 
     for (const [fieldId, value] of projected) {
-      if (isBlank(value) && fieldId !== key.id) {
+      const fieldSpec = fields.find((field) => field.id === fieldId)!;
+      if (isBlank(value) && fieldId !== key.id && !fieldSpec.clearBlank) {
         // Only counts as an omission when there was something to preserve.
         if (current && !isBlank(current.fields[fieldId])) omittedBlanks += 1;
         continue;
@@ -174,7 +175,7 @@ export function buildUpdate<TRow>(
 
     for (const fieldSpec of fields) {
       const value = project(fieldSpec, row);
-      if (isBlank(value)) {
+      if (isBlank(value) && !fieldSpec.clearBlank) {
         if (!isBlank(current.fields[fieldSpec.id])) omittedBlanks += 1;
         continue;
       }

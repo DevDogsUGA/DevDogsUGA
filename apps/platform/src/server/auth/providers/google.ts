@@ -8,6 +8,13 @@ import { createSupabaseServerClient } from "~/supabase/server";
 
 const CALLBACK_URL = new URL("/auth/callback", env.BASE_URL).toString();
 
+export class NonUgaGoogleAccountError extends Error {
+  constructor() {
+    super("Only @uga.edu accounts are permitted");
+    this.name = "NonUgaGoogleAccountError";
+  }
+}
+
 export async function requestAuthorization(
   callbackPath: string,
 ): Promise<never> {
@@ -53,8 +60,8 @@ export async function requestAuthorization(
  * @see `requestAuthorization`
  */
 export async function createUser(user: User): Promise<void> {
-  if (!user.email?.endsWith("@uga.edu")) {
-    throw new Error("Only @uga.edu accounts are permitted");
+  if (!user.email?.toLowerCase().endsWith("@uga.edu")) {
+    throw new NonUgaGoogleAccountError();
   }
 
   const preferredName =

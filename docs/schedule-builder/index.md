@@ -6,28 +6,35 @@ order: 30
 
 # Schedule Builder
 
-`apps/schedule-builder` — branded "Optimal Schedule Builder" — is the Next.js app
-that plans a UGA student's semester against real registrar data. It runs on the
-shared DevDogs Supabase project and owns the **`schedule_builder`** Postgres
-schema.
+`apps/schedule-builder` — branded "DogDays" — is the Next.js app that plans a
+UGA student's semester against real registrar data. It runs on the shared
+DevDogs Supabase project and owns the **`schedule_builder`** Postgres schema.
 
 Nothing here repeats the monorepo setup. If you are still getting the repository
 running, start at [Monorepo](/docs/monorepo); for the shared schema rules, read
 [Database](/docs/platform/guides/database) — this page covers only what is
 different about this app.
 
+## Guides
+
+- [Local setup](/docs/schedule-builder/guides/local-setup) — running just this app, its env, and why sign-in needs the platform
+- [Ingestion](/docs/schedule-builder/guides/ingestion) — how registrar data is scraped, parsed, and reconciled into Postgres
+- [Schedule generation](/docs/schedule-builder/guides/generation) — the rule engine, and how to add a rule
+- [Database](/docs/schedule-builder/guides/database) — the `schedule_builder` schema, and why migrations are drafted, not authored
+
 ## Where things are
 
-| Area                  | Path                  |
-| --------------------- | --------------------- |
-| Scrape entry points   | `src/app/(api)/cron/` |
-| Parsing               | `src/lib/parsers/`    |
-| Upserts into Postgres | `src/lib/sync/`       |
-| Schedule generation   | `src/lib/algorithm/`  |
+| Area                    | Path                               |
+| ----------------------- | ---------------------------------- |
+| Scrape entry points     | `src/app/(api)/cron/`              |
+| Parsing                 | `src/lib/parsers/`                 |
+| Reconcile into Postgres | `src/lib/parsers/reconcileTerm.ts` |
+| Schedule generation     | `src/lib/generation/`              |
+| Owned schema            | `src/server/db/schema/`            |
 
-Course and instructor data arrive on two cron routes — `scrape-registrar` and
-`scrape-rmp` — which parse and then upsert. The generator reads what those
-leave behind; it never scrapes anything itself.
+Course and instructor data arrive on a cron route — `scrape-registrar`, or the
+`ScrapeWorkflow` in production — which parses and reconciles it into Postgres.
+The generator reads what that leaves behind; it never scrapes anything itself.
 
 ## Migrations are drafted, not authored
 

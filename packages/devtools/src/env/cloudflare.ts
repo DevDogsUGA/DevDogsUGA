@@ -10,11 +10,13 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { PROJECT_ROOT } from "../instance.js";
+import { WORKER_APPS } from "../workers.js";
 
 const run = promisify(execFile);
 
-/** The apps with a wrangler config, and therefore Worker secrets. */
-export const WORKER_APPS = ["platform", "sandbox", "schedule-builder"] as const;
+/** Re-exported so existing importers of this module (e.g. `deploy/orphans.ts`,
+ * this file's own tests) do not need to know the list moved to `workers.ts`. */
+export { WORKER_APPS };
 
 export class CloudflareError extends Error {}
 

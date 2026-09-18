@@ -1,75 +1,34 @@
-import { and, asc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import { db } from "~/server/db";
-import {
-  competitions,
-  meetings,
-  memberStars,
-  profiles,
-  projects,
-  teamAwards,
-  teamMembers,
-  teams,
-  workshops,
-} from "~/server/db/schema";
+import { memberStars, profiles } from "~/server/db/schema";
 import { usersInAuth } from "~/supabase/drizzle/schema";
 import { csvTimestamp } from "./csv";
 
 /**
- * `stars.csv`: one row per `(member, workshop)`, every meeting, one file.
- *
- * The one export that survived pushing attendance into Airtable, for two
- * reasons the others did not:
- *
- *   * **Stars are derived, not stored.** Getting them into Airtable would mean
- *     pushing a computed row per `(member, workshop)`, the whole participation
- *     matrix, recomputed and re-pushed whenever an officer fixes one
- *     attendance row, against a per-workspace allowance shared with dues and
- *     project management. One streamed endpoint is far cheaper.
- *
- *   * **Their value is cross-meeting**, which is the shape Airtable is worst
- *     at. The point is a member's record across a semester, not one meeting's
- *     roster.
- *
- * It also sidesteps an ambiguity a pushed table would have to resolve:
- * competing earns the workshop star, so a member who skipped the workshop and
- * submitted anyway has a workshop star with no attendance row to hang it on.
- * The Airtable attendance mirror has no row for them; this gives them both
- * stars. Neither is lying; they answer different questions.
- */
-
-/**
- * The column order IS the contract.
- *
- * **Append-only.** New fields go at the end; existing columns are never
- * reordered or renamed. That is what lets a downstream import keep working
- * when the schema grows. The failure mode of getting it wrong is not an error
- * but a spreadsheet where every value is in the wrong column.
+ * The export follows the new one-row-per-star ledger. Attendance is a meeting
+ * fact and participation is a competition fact; neither is attributed to a
+ * workshop merely to fit the former shape.
  */
 export const STARS_COLUMNS = [
   "user_id",
   "preferred_name",
   "email",
   "github_login",
+  "activity_type",
+  "activity_id",
+  "activity_starts_at",
+  "earned_at",
   "meeting_id",
-  "meeting_slug",
-  "meeting_name",
-  "meeting_starts_at",
-  "workshop_id",
-  "project_id",
-  "project_slug",
-  "project_name",
   "competition_id",
-  "workshop_star",
+  "meeting_star",
   "competition_star",
-  "submitted",
   "won",
-  "award_category",
 ] as const;
 
 export interface StarsFilters {
-  /** Inclusive, on the meeting's start. */
   from?: Date;
   to?: Date;
+  /** Limits competition rows to those opened by this project. */
   projectSlug?: string;
 }
 
@@ -78,81 +37,40 @@ export interface StarRow {
   preferredName: string | null;
   email: string | null;
   githubLogin: string | null;
-  meetingId: string;
-  meetingSlug: string;
-  meetingName: string;
-  meetingStartsAt: Date;
-  workshopId: string;
-  /**
-   * All three are null for a star earned at a skill session: the join below is
-   * a left one and `workshops.projectId` is nullable.
-   *
-   * Declared rather than coalesced, unlike `meetingName`. `csvField` already
-   * renders null as an empty cell, so the FILE was always right and only this
-   * type was wrong; coalescing in SQL would change nothing a reader sees while
-   * adding a third place the export's shape is decided.
-   */
-  projectId: string | null;
-  projectSlug: string | null;
-  projectName: string | null;
+  activityType: "meeting" | "competition";
+  activityId: string;
+  activityStartsAt: Date;
+  earnedAt: Date;
+  meetingId: string | null;
   competitionId: string | null;
-  workshopStar: boolean;
+  meetingStar: boolean;
   competitionStar: boolean;
-  submitted: boolean;
   won: boolean;
-  awardCategory: string | null;
 }
 
-/** One CSV line, in `STARS_COLUMNS` order. */
 export function projectStarRow(row: StarRow): unknown[] {
   return [
     row.userId,
     row.preferredName,
     row.email,
     row.githubLogin,
+    row.activityType,
+    row.activityId,
+    csvTimestamp(row.activityStartsAt),
+    csvTimestamp(row.earnedAt),
     row.meetingId,
-    row.meetingSlug,
-    row.meetingName,
-    csvTimestamp(row.meetingStartsAt),
-    row.workshopId,
-    row.projectId,
-    row.projectSlug,
-    row.projectName,
     row.competitionId,
-    row.workshopStar,
+    row.meetingStar,
     row.competitionStar,
-    row.submitted,
     row.won,
-    row.awardCategory,
   ];
 }
 
-/**
- * The rows, in pages.
- *
- * Paged rather than one query for the same reason the response streams: this
- * grows with the club across every semester, and a single `select` would hold
- * the whole result set in the Worker before the first byte reached the client.
- *
- * Ordered by `(meetingStartsAt, userId, workshopId, awardCategory)`, which is
- * deterministic and total. Pagination over a non-total order silently skips or
- * repeats rows at page boundaries.
- *
- * The fourth column is not decoration. `teamAwards_one_winner_per_competition`
- * is a PARTIAL unique index, constraining `category = 'winner'` and nothing
- * else, so one team may hold several non-winner categories for one
- * competition, and the left join below fans one star into a row per category.
- * Those rows agree on the first three columns exactly, so Postgres was free to
- * order them differently between the query for offset 500 and the query for
- * offset 1000, and a member's star could vanish from the export or appear
- * twice depending on which way it chose.
- */
 export async function* streamStarRows(
   filters: StarsFilters = {},
   pageSize = 500,
 ): AsyncGenerator<StarRow> {
   let offset = 0;
-
   for (;;) {
     const page = await starPage(filters, pageSize, offset);
     for (const row of page) yield row;
@@ -166,25 +84,18 @@ async function starPage(
   limit: number,
   offset: number,
 ): Promise<StarRow[]> {
-  // ⚠️ The soft-delete filters come first because they are not optional and
-  // the three below them are.
-  //
-  // This query had none, alone among every read of these tables. Compare
-  // `loaders/stars.ts`, `getMeetingWorkshops`, `getMeetingsInRange`, and the
-  // `meetings_live_idx` / `workshops_live_idx` partial indexes, which are
-  // built on precisely this predicate. Deleting a duplicate meeting in
-  // Airtable dropped it from every page on the site and left it in stars.csv,
-  // which is the file handed to advisors: a member appeared twice, with two
-  // meeting_ids, for one night they attended once.
-  //
-  // Inner joins, so a deleted meeting or workshop removes the row outright.
-  // That is the intent: the star was earned at a session the club has since
-  // said did not happen.
-  const conditions = [isNull(meetings.deletedAt), isNull(workshops.deletedAt)];
-  if (filters.from) conditions.push(gte(meetings.startsAt, filters.from));
-  if (filters.to) conditions.push(lte(meetings.startsAt, filters.to));
+  const conditions = [];
+  if (filters.from) conditions.push(gte(memberStars.startsAt, filters.from));
+  if (filters.to) conditions.push(lte(memberStars.startsAt, filters.to));
   if (filters.projectSlug) {
-    conditions.push(eq(projects.slug, filters.projectSlug));
+    conditions.push(sql`exists (
+      select 1
+      from platform.competitions c
+      join platform.workshops w on w.id = c."workshopId"
+      join platform.projects p on p.id = w."projectId"
+      where c.id = ${memberStars.competitionId}
+        and p.slug = ${filters.projectSlug}
+    )`);
   }
 
   const rows = await db
@@ -198,96 +109,48 @@ async function starPage(
         where i.user_id = ${memberStars.userId} and i.provider = 'github'
         limit 1
       )`,
-      meetingId: meetings.id,
-      meetingSlug: meetings.slug,
-      // The CSV's columns are an append-only contract, so this one has to keep
-      // emitting a value even though `nameOverride` is null for most nights.
-      // Coalescing to the workshop's title and then its project keeps the
-      // cell meaningful; the empty string is the floor, because a reader
-      // already has `meetingSlug` and `meetingStartsAt` in the neighbouring
-      // columns and a literal like "Untitled" would be text the club never
-      // wrote appearing in an export it publishes.
-      meetingName: sql<string>`coalesce(
-        ${meetings.nameOverride},
-        ${workshops.title},
-        ${projects.displayName},
-        ''
-      )`,
-      meetingStartsAt: meetings.startsAt,
-      workshopId: memberStars.workshopId,
-      projectId: projects.id,
-      projectSlug: projects.slug,
-      projectName: projects.displayName,
-      competitionId: competitions.id,
-      workshopStar: memberStars.workshopStar,
-      competitionStar: memberStars.competitionStar,
-      // `submitted` is not `competitionStar`: a team can have a live PR and
-      // still not have competed, because competing is frozen at judging.
-      submitted: sql<boolean>`exists (
-        select 1
-        from ${teams} t
-        join ${teamMembers} tm
-          on tm."teamId" = t."id" and tm."userId" = ${memberStars.userId}
-        where t."competitionId" = ${competitions.id}
-          and t."submissionState" is not null
-      )`,
+      activityType: sql<"meeting" | "competition">`${memberStars.activityType}`,
+      activityId: memberStars.activityId,
+      activityStartsAt: memberStars.startsAt,
+      earnedAt: memberStars.earnedAt,
+      meetingId: memberStars.meetingId,
+      competitionId: memberStars.competitionId,
+      meetingStar: sql<boolean>`${memberStars.activityType} = 'meeting'`,
+      competitionStar: sql<boolean>`${memberStars.activityType} = 'competition'`,
       won: memberStars.won,
-      awardCategory: teamAwards.category,
     })
     .from(memberStars)
-    .innerJoin(meetings, eq(meetings.id, memberStars.meetingId))
-    .innerJoin(workshops, eq(workshops.id, memberStars.workshopId))
-    // Left, like every other read of a workshop's project: `projectId` is
-    // nullable, and a star earned at a skill session is still a star the
-    // export has to carry.
-    .leftJoin(projects, eq(projects.id, memberStars.projectId))
     .leftJoin(profiles, eq(profiles.userId, memberStars.userId))
     .leftJoin(usersInAuth, eq(usersInAuth.id, memberStars.userId))
-    // Deleted competitions are excluded in the JOIN rather than the WHERE,
-    // and the difference is a row. In the WHERE this would still read as
-    // correct, since an unmatched left join gives `deletedAt = null` and
-    // passes `isNull`, but a MATCHED row on a deleted competition would fail
-    // it and take the whole star out of the export. The workshop star does not
-    // stop existing because the competition attached to it was deleted; only
-    // the competition columns should go null.
-    .leftJoin(
-      competitions,
-      and(
-        eq(competitions.workshopId, memberStars.workshopId),
-        isNull(competitions.deletedAt),
-      ),
-    )
-    .leftJoin(
-      teamAwards,
-      and(
-        eq(teamAwards.competitionId, competitions.id),
-        sql`exists (
-          select 1 from ${teamMembers} tm
-          where tm."teamId" = ${teamAwards.teamId}
-            and tm."userId" = ${memberStars.userId}
-        )`,
-      ),
-    )
-    .where(and(...conditions))
+    .where(conditions.length === 0 ? undefined : and(...conditions))
     .orderBy(
-      asc(meetings.startsAt),
+      asc(memberStars.startsAt),
       asc(memberStars.userId),
-      asc(memberStars.workshopId),
-      // See the docblock on `streamStarRows`: without this the fan-out over
-      // award categories makes the order non-total, and OFFSET paging over
-      // a non-total order drops and duplicates rows at the boundaries.
-      asc(teamAwards.category),
+      asc(memberStars.activityType),
+      asc(memberStars.activityId),
     )
     .limit(limit)
     .offset(offset);
 
-  return rows as StarRow[];
+  return rows.map((row) => ({
+    userId: row.userId!,
+    preferredName: row.preferredName,
+    email: row.email,
+    githubLogin: row.githubLogin,
+    activityType: row.activityType,
+    activityId: row.activityId!,
+    activityStartsAt: row.activityStartsAt!,
+    earnedAt: row.earnedAt!,
+    meetingId: row.meetingId,
+    competitionId: row.competitionId,
+    meetingStar: row.meetingStar,
+    competitionStar: row.competitionStar,
+    won: row.won!,
+  }));
 }
 
-/** Parses the query string into filters, ignoring anything unparseable. */
 export function parseStarsFilters(url: URL): StarsFilters {
   const filters: StarsFilters = {};
-
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
   const project = url.searchParams.get("project");
@@ -295,6 +158,5 @@ export function parseStarsFilters(url: URL): StarsFilters {
   if (from && !Number.isNaN(Date.parse(from))) filters.from = new Date(from);
   if (to && !Number.isNaN(Date.parse(to))) filters.to = new Date(to);
   if (project) filters.projectSlug = project;
-
   return filters;
 }

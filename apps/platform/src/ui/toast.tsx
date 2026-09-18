@@ -132,13 +132,13 @@ export default function Toast({ id, message, type }: Props) {
       // its own: nothing here parallaxes, and a background is already cut to
       // the border radius.
       style={{ backgroundImage: TONE_BACKGROUND[type] }}
-      className={`shadow-block-outlined-lg flex w-90 items-start gap-3 rounded-lg border-2 border-black px-4 py-3 text-black ${tone.card} ${tone.blockShadow}`}
+      className={`shadow-block-outlined-lg flex w-90 items-center gap-3 rounded-lg border-2 border-black px-4 py-3 text-black ${tone.card} ${tone.blockShadow}`}
     >
       {/* A disc, not the notice's corner badge: a badge says "something new
           arrived", and a toast is already the arrival. The glyph sits at two
           thirds of the disc, the proportion the nav's avatar badge holds. */}
       <span
-        className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-white ${tone.iconBg}`}
+        className={`flex size-6 shrink-0 items-center justify-center rounded-full text-white ${tone.iconBg}`}
       >
         {type === "success" ? (
           <CheckIcon weight="bold" className="size-4" />
@@ -153,7 +153,7 @@ export default function Toast({ id, message, type }: Props) {
 
       <button
         onClick={() => sonnerToast.dismiss(id)}
-        className="group/dismiss relative mt-0.5 shrink-0 rounded-sm focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none"
+        className="group/dismiss relative shrink-0 rounded-sm focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none"
         aria-label="Dismiss"
       >
         {/* The hover state, as a square that grows in behind the cross rather

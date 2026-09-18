@@ -33,11 +33,64 @@ pnpm format:check # Prettier
 **Touching a policy, a grant, or a `security definer` function?** Run the RLS persona suite as well. It needs a live stack, so `pnpm test` does not reach it:
 
 ```bash
-pnpm devtools link && pnpm devtools reset
+pnpm devtools db start && pnpm devtools db reset
 pnpm --filter @devdogsuga/supabase test:rls
 ```
 
 Every case there asserts an allow **and** a deny. A test that only checks the allow side passes just as happily when the policy is missing entirely.
+
+### Phantom errors from a checkout that has never run `next dev`
+
+`typecheck`, `lint` and `test` all `dependsOn: ["^build"]` in `turbo.json` — the workspace packages an app imports, never Next itself. Next's own generated globals (`PageProps`/`LayoutProps`, the image module declarations, `next-env.d.ts`) come only from `next dev` or `next build`, so a fresh checkout, a worktree, or any laptop that has never run one fails `tsc --noEmit` / `eslint src` on names the framework provides, before it reaches anything you actually changed. Generate them once, the same way CI's "Generate the Next type stubs" step does, and the phantom errors disappear:
+
+```bash
+pnpm turbo run build --filter '<app>^...'   # workspace deps the Next config imports (e.g. ~/env)
+pnpm --filter <app> exec next typegen       # writes the stubs; no build, no database
+```
+
+A full `pnpm --filter <app> run build` also produces them, but typegen alone is faster and needs no database.
+
+**Capturing `tsc` output anywhere other than a live terminal** — a log file, a subagent, a CI step you're debugging locally — pass `--pretty false`. Its default output uses ANSI escapes that corrupt non-interactive captures, turning real errors into unreadable ones:
+
+```bash
+pnpm --filter <app> exec tsc --noEmit --pretty false
+```
+
+**Seeing a change render** means a production build, never a second `next dev` — a second one refuses to start, and the first one keeps serving the route table it booted with, which looks like your change didn't take. `next build` reads the full environment even under `SKIP_ENV_VALIDATION` (`next.config.ts` resolves image patterns against `NEXT_PUBLIC_SUPABASE_URL` before validation ever runs) and needs a live database, so run it through `with-env` against the local Supabase stack:
+
+```bash
+pnpm devtools db start && pnpm devtools db reset          # local Supabase stack, once
+pnpm exec with-env pnpm --filter <app> run build   # or `run cf:preview`
+```
+
+**A worktree** branches from `origin/main`, which drifts far behind local `main` between pushes — reset it before trusting anything it builds, then repeat the typegen and env setup above from scratch, since none of it exists in a new worktree:
+
+```bash
+git -C <worktree> reset --hard main
+pnpm install
+pnpm turbo run build --filter '<app>^...'   # workspace deps, not the app itself
+cp <primary-worktree>/.env .env             # gitignored — doesn't come with the worktree
+pnpm exec with-env pnpm --filter <app> run build
+```
+
+**After editing a `wrangler.jsonc` binding**, the Worker's generated types drift from the config until regenerated. Check first — it mirrors CI's own step and fails on drift without writing anything — then regenerate and commit the diff:
+
+```bash
+pnpm --filter <app> run cf:typegen:check   # fails if the committed types are stale
+pnpm --filter <app> run cf:typegen         # regenerates cloudflare-env.d.ts; commit the diff
+```
+
+Chained in the order CI runs them, `<app>` is `schedule-builder` or `platform` (the two Next apps):
+
+```bash
+pnpm --filter <app> exec next typegen
+pnpm --filter <app> exec tsc --noEmit --pretty false
+pnpm --filter <app> exec eslint src
+pnpm --filter <app> test
+pnpm --filter <app> run cf:typegen:check
+pnpm format:check
+pnpm exec with-env pnpm --filter <app> run build
+```
 
 ### Which apps a root task runs against
 
@@ -46,20 +99,20 @@ Every root turbo script — `dev`, `build`, `test`, `lint`, `lint:fix`, `typeche
 ```
 $ pnpm dev
 ◆  `dev` — which apps? (a selects all; --all runs every package)
-│  ◼ platform            with-env next dev --experimental-https
-│  ◻ schedule-builder    with-env next dev
+│  ◼ schedule-builder    with-env next dev
 │  ◻ study-group-finder  with-env -c 'flutter run …'
+│  ◻ platform            with-env next dev --experimental-https
 ```
 
 `pnpm dev` used to start all three at once — two dev servers and a Flutter run — when almost nobody is working on more than one. The picker is preselected with your last answer for that task, so the common case is Enter. `a` toggles every app in the list, `i` inverts the selection.
 
 Three ways past it, each skipping the question entirely:
 
-| Command                      | What it does                                   |
-| ---------------------------- | ---------------------------------------------- |
-| `pnpm dev --filter platform` | any turbo filter — you have already said which |
-| `pnpm dev --all`             | every package, the old behaviour               |
-| `CI=1 pnpm dev`              | what CI does                                   |
+| Command                              | What it does                                   |
+| ------------------------------------ | ---------------------------------------------- |
+| `pnpm dev --filter schedule-builder` | any turbo filter — you have already said which |
+| `pnpm dev --all`                     | every package, the old behaviour               |
+| `CI=1 pnpm dev`                      | what CI does                                   |
 
 > [!IMPORTANT]
 > `a` and `--all` are not the same thing, and the gap matters most for the tasks you are most likely to run before pushing. `a` selects every app in the list, which is `apps/*`. `--all` passes turbo no filter at all, which is every package in the workspace.
@@ -70,7 +123,7 @@ Three ways past it, each skipping the question entirely:
 
 Each root task is a thin alias for the same thing: `pnpm build` is `pnpm devtools run build`. The picker lives in `packages/devtools/src/run/pick.ts` with every other prompt in the repo.
 
-`pnpm dev:docs` is unchanged: it carries its own filter already.
+For docs authoring, run `turbo watch build --filter=@devdogsuga/docs` in a second terminal — it carries its own filter.
 
 ## What CI actually runs
 
@@ -89,9 +142,9 @@ SQL is the source of truth; the generated Drizzle schema is regenerated from the
 
 ```bash
 pnpm --filter @devdogsuga/supabase new-migration <name>
-pnpm devtools reset                             # replay everything locally
+pnpm devtools db reset                             # replay everything locally
 pnpm --filter platform db:pull            # refresh Drizzle from the database
-pnpm devtools push --remote                     # apply to the linked project
+pnpm devtools db migrate --target remote                     # apply to the linked project
 ```
 
 ## Documentation

@@ -67,13 +67,9 @@ create table "schedule_builder"."scheduleTypes" (
 );
 
 create table "schedule_builder"."instructors" (
-  "id"                   serial primary key,
-  "firstName"            varchar not null,
-  "lastName"             varchar not null,
-  "totalReviews"         integer default 0 not null,
-  "averageRating"        real default 0 not null,
-  "difficultyRating"     real default 0 not null,
-  "wouldTakeAgainRating" integer default 0 not null,
+  "id"          serial primary key,
+  "firstName"   varchar not null,
+  "lastName"    varchar not null,
   -- Name is the only identity the feed gives an instructor, so it has to be
   -- the upsert key. Two people who share both names collapse into one row.
   constraint "unique_full_name" unique ("firstName", "lastName")
@@ -144,7 +140,8 @@ create table "schedule_builder"."offerings" (
   "maximumEnrollment" integer not null,
   "actualEnrollment"  integer not null,
   "seatsAvailable"    integer not null,
-  "active"            boolean not null,
+  "cancelled"         boolean default false not null,
+  "lastSeenAt"        timestamp default now() not null,
   "academicPeriod"    integer not null,
   "partOfTerm"        varchar not null,
   "courseId"          integer not null,
@@ -193,10 +190,8 @@ create table "schedule_builder"."userPlanDrafts" (
   "prefStartTime"      time,
   "prefEndTime"        time,
   "inputCampus"        varchar,
-  "gapDay"             varchar,
   "minCreditHours"     integer default 12 not null,
   "maxCreditHours"     integer default 18 not null,
-  "walking"            boolean default false not null,
   "showFilledClasses"  boolean default false not null,
   constraint "userPlanDrafts_pkey" primary key ("userId", "academicPeriod")
 );
@@ -240,6 +235,9 @@ create table "schedule_builder"."userSavedPlans" (
 -- Cross-listed sections are looked up by their shared id when the UI has to
 -- show one course under another department's number.
 create index "offerings_crossListingId_index" on "schedule_builder"."offerings" ("crossListingId");
+-- Backs the composite FK below, and is what the scrape's per-term upserts and
+-- the term-scoped catalog queries actually filter on.
+create index "offerings_academicPeriod_partOfTerm_index" on "schedule_builder"."offerings" ("academicPeriod", "partOfTerm");
 
 alter table "schedule_builder"."courseDetails" add constraint "courseDetails_courseId_courses_id_fkey" foreign key ("courseId") references "schedule_builder"."courses" ("id");
 alter table "schedule_builder"."courses" add constraint "courses_collegeId_colleges_id_fkey" foreign key ("collegeId") references "schedule_builder"."colleges" ("id");
@@ -253,6 +251,11 @@ alter table "schedule_builder"."offerings" add constraint "offerings_courseId_co
 alter table "schedule_builder"."offerings" add constraint "offerings_instructorId_instructors_id_fkey" foreign key ("instructorId") references "schedule_builder"."instructors" ("id");
 alter table "schedule_builder"."offerings" add constraint "offerings_scheduleTypeId_scheduleTypes_id_fkey" foreign key ("scheduleTypeId") references "schedule_builder"."scheduleTypes" ("id");
 alter table "schedule_builder"."offerings" add constraint "offerings_campusId_campuses_id_fkey" foreign key ("campusId") references "schedule_builder"."campuses" ("id");
+-- Composite, so it does not fit the single-column name shape above: named
+-- after the local table and columns only, the way platform names its own
+-- composite FKs (e.g. teamMembers_teamId_competitionId_fkey), since drizzle-kit
+-- has no readable default for a composite key on its own.
+alter table "schedule_builder"."offerings" add constraint "offerings_academicPeriod_partOfTerm_fkey" foreign key ("academicPeriod", "partOfTerm") references "schedule_builder"."partsOfTerm" ("academicPeriod", "code");
 alter table "schedule_builder"."partsOfTerm" add constraint "partsOfTerm_academicPeriod_terms_academicPeriod_fkey" foreign key ("academicPeriod") references "schedule_builder"."terms" ("academicPeriod");
 alter table "schedule_builder"."userPlanDraftCourses" add constraint "userPlanDraftCourses_courseId_courses_id_fkey" foreign key ("courseId") references "schedule_builder"."courses" ("id");
 
@@ -294,7 +297,7 @@ create materialized view "schedule_builder"."offeringSearch" as (
     "schedule_builder"."offerings"."crn",
     "schedule_builder"."offerings"."academicPeriod",
     "schedule_builder"."offerings"."seatsAvailable",
-    "schedule_builder"."offerings"."active",
+    "schedule_builder"."offerings"."cancelled",
     "schedule_builder"."courses"."id" as "courseId",
     "schedule_builder"."courses"."abbr",
     "schedule_builder"."courses"."courseNumber",

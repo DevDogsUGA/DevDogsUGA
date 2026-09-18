@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * `pnpm devtools [command] [--local | --remote | --team <slug>]`
+ * `pnpm devtools [command] [--target <local|remote>]`
  *
  * Run it with no arguments and it opens a menu. That is the point: a
  * contributor should be able to set up a database and check their moderation
@@ -41,12 +41,25 @@ import {
   transferRoot,
 } from "./grantRoot.js";
 import {
+  connectRemoteProject,
   runStackCommand,
-  STACK_COMMANDS,
   type StackCommand,
   type Target,
 } from "./stack.js";
+import { runConfigPush } from "./db/config-push.js";
+import { runDbExec } from "./db/exec.js";
+import { runGenerateMigration } from "./db/generate-migration.js";
+import { runGenerateTypes } from "./db/generate-types.js";
+import { runIntrospect } from "./db/introspect.js";
+import { runNewMigration } from "./db/new-migration.js";
+import { runSeedBuckets } from "./db/seed-buckets.js";
+import { runSeedRoles } from "./db/seed-roles.js";
 import { runOAuthSetup } from "./oauth/wizard.js";
+import {
+  beginInvocation,
+  recordResolved,
+  reproducibleCommand,
+} from "./invocation.js";
 import { runSetup } from "./setup.js";
 import {
   runAirtable,
@@ -62,16 +75,7 @@ import {
   runEnvReset,
 } from "./env/commands.js";
 import { runEnvExample, runEnvInit } from "./env/example.js";
-import { DeployError, say } from "./deploy/report.js";
-import { renderWriteEnvReport, runDeployWriteEnv } from "./deploy/write-env.js";
-import { runDeploySecretsFile } from "./deploy/secrets-file.js";
-import { runDeployOrphans } from "./deploy/orphans.js";
-import { runMintToken } from "./deploy/mint-token.js";
-import { runDeployAirtablePlan } from "./deploy/airtable-plan.js";
-import { runDeployAirtableApply } from "./deploy/airtable-apply.js";
-import { runPreflight } from "./deploy/preflight.js";
-import { runRequirePlanner } from "./deploy/require-planner.js";
-import { runRequireToken } from "./deploy/require-token.js";
+
 import {
   runPlannerCreate,
   runPlannerDrop,
@@ -90,14 +94,19 @@ import { positionals } from "./args.js";
 import { resolveVaultTarget } from "./pick.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
 import { helpPath, renderHelp } from "./help.js";
-import { findCommand, subcommandList, subcommandNames } from "./commands.js";
+import { subcommandList, subcommandNames } from "./commands.js";
 import { runMenu } from "./menu.js";
 import { runDocsIndex } from "./docs/index-pages.js";
 import { runTask } from "./run/pick.js";
+import { runCompletions } from "./completions.js";
 import { runBw } from "./bws/bw.js";
 import { runImages } from "./images/commands.js";
 import { runEmails } from "./emails/commands.js";
-import { runQr } from "./qr/commands.js";
+import { runNewsletter } from "./newsletter/commands.js";
+import { runGen } from "./gen/commands.js";
+import { runCronList, runCronRun } from "./cron/commands.js";
+import { runWorkflows } from "./workflows/commands.js";
+import { runCf } from "./cf/commands.js";
 
 const DOCTOR_COMMANDS = [
   "doctor",
@@ -107,25 +116,20 @@ const DOCTOR_COMMANDS = [
 ] as const;
 type DoctorCommand = (typeof DOCTOR_COMMANDS)[number];
 
-function isStackCommand(value: string): value is StackCommand {
-  return (STACK_COMMANDS as readonly string[]).includes(value);
-}
-
 function isDoctorCommand(value: string): value is DoctorCommand {
   return (DOCTOR_COMMANDS as readonly string[]).includes(value);
 }
 
 function parseTarget(rest: string[]): Target {
-  const teamIndex = rest.indexOf("--team");
-  if (teamIndex !== -1) {
-    const slug = rest[teamIndex + 1];
-    if (!slug || slug.startsWith("--")) {
-      console.error("--team needs a slug: pnpm devtools link --team lantern");
-      process.exit(1);
-    }
-    return { kind: "team", slug };
+  if (rest.includes("--team")) {
+    console.error(
+      "Team sandboxes are temporarily disabled.\n" +
+        "Use --target local for this machine or --target remote for the linked project.",
+    );
+    process.exit(1);
   }
-  return rest.includes("--remote") ? { kind: "remote" } : { kind: "local" };
+  const t = flagValue(rest, "--target");
+  return t === "remote" ? { kind: "remote" } : { kind: "local" };
 }
 
 function flagValue(rest: string[], flag: string): string | undefined {
@@ -158,7 +162,7 @@ async function connect(): Promise<Instance | null> {
     s.stop("Could not find a running database");
     explain("The local Supabase stack is not reachable.", errorMessage(err), [
       "1. Make sure Docker is running",
-      "2. Run `pnpm devtools link` (or choose Supabase → link in the menu)",
+      "2. Run `pnpm devtools db start` (or choose Database → start in the menu)",
       "3. Confirm with `supabase status`",
     ]);
     return null;
@@ -170,7 +174,7 @@ async function connect(): Promise<Instance | null> {
   } catch (err) {
     s.stop("Connected, but the schema is not there");
     explain("That instance cannot be used here.", errorMessage(err), [
-      "Run `pnpm devtools reset` to rebuild your own database from migrations and seeds.",
+      "Run `pnpm devtools db reset` to rebuild your own database from migrations and seeds.",
     ]);
     return null;
   }
@@ -250,7 +254,7 @@ async function runDoctor(instance: Instance, appSlug?: string): Promise<void> {
   } catch (err) {
     s.stop("The check could not run");
     explain("conformance_check() failed.", errorMessage(err), [
-      `Signing in as ${PERSONAS.moderator} needs the seeds — try \`pnpm devtools reset\`.`,
+      `Signing in as ${PERSONAS.moderator} needs the seeds — try \`pnpm devtools db reset\`.`,
     ]);
     return;
   }
@@ -314,7 +318,7 @@ async function runRoundTrip(instance: Instance): Promise<void> {
       "Something went wrong before the checks could finish.",
       errorMessage(err),
       [
-        "`pnpm devtools reset` rebuilds the database with the seeded personas and the open report they act on.",
+        "`pnpm devtools db reset` rebuilds the database with the seeded personas and the open report they act on.",
       ],
     );
   }
@@ -401,7 +405,7 @@ async function runGrantRoot(
     );
   } catch (err) {
     explain("Could not grant Root.", errorMessage(err), [
-      "Seeds create the Root role definition — try `pnpm devtools reset` first.",
+      "Seeds create the Root role definition — try `pnpm devtools db reset` first.",
     ]);
     process.exitCode = 1;
   }
@@ -531,7 +535,7 @@ async function runEnvCommand(rest: string[]): Promise<void> {
   // Every remaining subcommand reads the registry, which fills only when the
   // env manifests are imported. Loaded HERE, lazily, rather than at CLI
   // start: the import pass touches a manifest in nearly every workspace
-  // package, and `pnpm devtools reset` (or any stack command) should not pay
+  // package, and `pnpm devtools db reset` (or any stack command) should not pay
   // for declarations it never reads. `env reset` returned above for the
   // same reason: it edits the local file and consults no key set.
   await loadRegistry();
@@ -593,6 +597,12 @@ async function runEnvCommand(rest: string[]): Promise<void> {
     return;
   }
 
+  // A target chosen at the prompt (not passed as a flag) is what the rerun
+  // line needs to skip that prompt next time.
+  if (flagValue(rest, "--target") === undefined) {
+    recordResolved("--target", target);
+  }
+
   // Before any command runs, so every `bws` call in it sees the same token.
   setExplicitAccessToken(flagValue(rest, "--access-token"));
 
@@ -616,206 +626,14 @@ async function runEnvCommand(rest: string[]): Promise<void> {
   }
 }
 
-// ── Deploy ───────────────────────────────────────────────────────────────────
-
 /**
- * `deploy <write-env | secrets-file | orphans | preflight | mint-token |
- * require-token | airtable-plan | airtable-apply>`: the steps of a deploy job.
- *
- * The first SIX were files in `scripts/` that imported devtools' own sources
- * through a relative path, which is why `scripts/` needed a tsconfig and a CI
- * typecheck step of its own. They are devtools commands now, and get the
- * documentation, refusals and named errors the rest of the CLI has. The two
- * Airtable steps were never in `scripts/`: they are new work, filling the
- * §3.5 gap the deploy workflow used to describe in a comment.
- *
- * ## ⚠️ Dispatched BEFORE `intro()`, and it never calls `outro()`
- *
- * Every `@clack/prompts` writer writes to STDOUT: `intro`, `outro`, `log.*`,
- * `note`, the spinner (measured; see `deploy/report.ts`). Two commands
- * in this group have a stdout something downstream parses: `secrets-file`
- * emits `::add-mask::<token>`, which GitHub recognises only on a line of its
- * own, and `mint-token` emits a signed JWT that its caller takes whole. A
- * banner on that stream is not cosmetic. It is an unmasked production
- * credential in a public repository's job log, or a Worker secret with a box
- * drawing character in it.
- *
- * So: no `intro`, no `outro`, and nothing in `deploy/` may use `log`, `note`
- * or `explain`. Failures render through `say()`, which is stderr.
- *
- * Nothing here prompts either. There is nobody to ask on a runner, and a
- * command that fell back to a prompt would hang the job rather than fail it.
- */
-async function runDeployCommand(rest: string[]): Promise<void> {
-  // `positionals` rather than `rest[0]`, for the reason its own module gives:
-  // the value of a flag must never be read as a subcommand. Here that would be
-  // `--source production orphans` selecting a subcommand from a manifest name.
-  const [sub] = positionals(rest);
-
-  if (!sub) {
-    // Rendered from the command tree, on stderr like every other word this
-    // group prints. `renderHelp` would be the obvious call, but it returns
-    // one string for stdout, and stdout here is a credential channel.
-    const steps = subcommandNames(["deploy"]);
-    const width = Math.max(...steps.map((name) => name.length)) + 2;
-    say([
-      "devtools deploy: which step?",
-      ...steps.map(
-        (name) =>
-          `  ${name.padEnd(width)}${findCommand(["deploy", name])!.summary}`,
-      ),
-    ]);
-    process.exitCode = 1;
-    return;
-  }
-
-  try {
-    // ── Registry-free steps, dispatched FIRST ──────────────────────────────
-    //
-    // None of these three reads a declaration, and two of them are the ones
-    // that must stay quick: `require-token` is a guard standing in front of a
-    // deploy, and `preflight` classifies a paused project before a job decides
-    // whether to run at all. Loading the registry would import a manifest from
-    // nearly every workspace package to answer a question none of them asks.
-    if (sub === "require-token") {
-      runRequireToken();
-      return;
-    }
-
-    // Registry-free like its sibling guards: the main-plan job holds one
-    // credential in the step's env: block and composes no file. What it
-    // checks, that DB_URL is the planner role and no more, is the one property
-    // of the preflight tier nothing at rest can verify.
-    if (sub === "require-planner") {
-      await runRequirePlanner();
-      return;
-    }
-
-    // Healthy AND paused both exit 0: a paused staging project is the expected
-    // state, not a failure, and the verdict it returns is what the calling job
-    // reads. Anything else throws, and the catch below makes it a
-    // non-zero exit. See the module for why only HTTP 540 is a skip.
-    if (sub === "preflight") {
-      await runPreflight();
-      return;
-    }
-
-    // Reachable by hand for a rotation, but the deploy does NOT come through
-    // here: `secrets-file` calls `runMintToken` in-process with a collecting
-    // sink, which is what removed stdout-as-a-credential-channel from the
-    // pipeline entirely. Run directly, stdout is still the bare JWT.
-    if (sub === "mint-token") {
-      runMintToken();
-      return;
-    }
-
-    // Registry-free for the same reason, and it matters more here than
-    // anywhere else in this group: both run in jobs that hold ONE narrow
-    // Airtable credential and compose no env file, so loading the manifests
-    // would import a declaration from nearly every workspace package to answer
-    // a question neither asks. Which base and which token is all they read,
-    // and both arrive from the workflow's `env:` block.
-    //
-    // ⚠️ Two commands rather than one with a `--dry-run` flag. The plan runs
-    // from `main`, where a write-capable credential must never be in scope, so
-    // "reads only" has to be a property of the code path rather than of an
-    // argument somebody could get wrong. `deploy/airtable-plan.ts` has no
-    // import of `scaffoldBase` at all. A flag would make the safe case one
-    // typo away from the unsafe one.
-    if (sub === "airtable-plan") {
-      await runDeployAirtablePlan();
-      return;
-    }
-
-    if (sub === "airtable-apply") {
-      await runDeployAirtableApply();
-      return;
-    }
-
-    // The registry fills only when the manifests are imported, and all three of
-    // these derive their whole key set from it. Loaded here rather than at CLI
-    // start for the reason `runEnvCommand` gives: the import pass touches a
-    // manifest in nearly every workspace package.
-    await loadRegistry();
-
-    if (sub === "write-env") {
-      // Parsed here rather than with `flagValue`, which cannot tell "absent"
-      // from "given something that looks like a flag". `--source --mint`
-      // silently composing EVERYTHING instead of one manifest's slice is the
-      // difference between a narrow config push and a full credential set.
-      const index = rest.indexOf("--source");
-      const source = index === -1 ? null : rest[index + 1];
-      if (index !== -1 && (!source || source.startsWith("--"))) {
-        throw new DeployError(
-          "--source needs a manifest name, e.g. --source supabase.",
-        );
-      }
-
-      const result = await runDeployWriteEnv({ source });
-      say(renderWriteEnvReport(result));
-      return;
-    }
-
-    if (sub === "secrets-file") {
-      const app = flagValue(rest, "--app");
-      if (!app) {
-        throw new DeployError("--app <name> is required.", [
-          "It names the workspace app whose manifest declares the Worker's",
-          "secrets — platform, schedule-builder or sandbox.",
-        ]);
-      }
-
-      // `--mint` takes no value now. Refused by name rather than ignored: the
-      // old form named a script to run and take the stdout of, so a stale
-      // `--mint scripts/mint-sandbox-token.mjs` left as-is would silently drop
-      // the path, mint through the sibling command, and look like it worked.
-      // Or, worse, keep working as a way to name any executable on the runner.
-      const mintIndex = rest.indexOf("--mint");
-      const after = mintIndex === -1 ? undefined : rest[mintIndex + 1];
-      if (after !== undefined && !after.startsWith("--")) {
-        throw new DeployError("`--mint` no longer takes a script path.", [
-          `Drop the "${after}" after it. There is one minting command in this`,
-          "repository — `devtools deploy mint-token` — and this runs it; which",
-          "variable it fills is derived from the app's manifest, not passed in.",
-        ]);
-      }
-
-      await runDeploySecretsFile({ app, mint: mintIndex !== -1 });
-      return;
-    }
-
-    if (sub === "orphans") {
-      await runDeployOrphans({ prune: rest.includes("--prune") });
-      return;
-    }
-
-    say([
-      `devtools deploy: unknown subcommand "${sub}".`,
-      `  Try ${subcommandList(["deploy"])}.`,
-    ]);
-    process.exitCode = 1;
-  } catch (err) {
-    // stderr, not `explain()`. See the header.
-    say(
-      err instanceof DeployError
-        ? [
-            `devtools deploy ${sub}: ${err.message}`,
-            ...err.detail.map((line) => `  ${line}`),
-          ]
-        : [`devtools deploy ${sub}: ${errorMessage(err)}`],
-    );
-    process.exitCode = 1;
-  }
-}
-
-/**
- * `planner <status|create|reset-password|drop> [--db-url <url>]`
+ * `db planner <status|create|reset-password|drop> [--db-url <url>]`
  *
  * Operator-side lifecycle of the `migration_planner` role. See
  * `planner/commands.ts` for the commands themselves and for why there is no
  * `retrieve`. Interactive by design (create and reset confirm before writing
  * to production), so unlike the `deploy` group it talks through clack and is
- * fine to run as plain `pnpm devtools planner …`.
+ * fine to run as plain `pnpm devtools db planner …`.
  */
 async function runPlannerCommand(rest: string[]): Promise<void> {
   const [sub] = positionals(rest);
@@ -840,14 +658,14 @@ async function runPlannerCommand(rest: string[]): Promise<void> {
 
   log.error(
     sub
-      ? `devtools planner: unknown subcommand "${sub}". Try ${subcommandList(["planner"])}.`
-      : `devtools planner: which of ${subcommandList(["planner"])}?`,
+      ? `devtools db planner: unknown subcommand "${sub}". Try ${subcommandList(["db", "planner"])}.`
+      : `devtools db planner: which of ${subcommandList(["db", "planner"])}?`,
   );
   process.exitCode = 1;
 }
 
 /**
- * `signing-key <generate|import|status> --target <staging|production>`
+ * `db signing-key <generate|import|status> --target <staging|production>`
  *
  * Operator-side like `planner`, and for the same reasons: prompts, env-file
  * writes, and SUPABASE_ACCESS_TOKEN, the apply-tier credential no unattended
@@ -874,8 +692,153 @@ async function runSigningKeyCommand(rest: string[]): Promise<void> {
 
   log.error(
     sub
-      ? `devtools signing-key: unknown subcommand "${sub}". Try ${subcommandList(["signing-key"])}.`
-      : `devtools signing-key: which of ${subcommandList(["signing-key"])}?`,
+      ? `devtools db signing-key: unknown subcommand "${sub}". Try ${subcommandList(["db", "signing-key"])}.`
+      : `devtools db signing-key: which of ${subcommandList(["db", "signing-key"])}?`,
+  );
+  process.exitCode = 1;
+}
+
+// ── Database ─────────────────────────────────────────────────────────────────
+
+/**
+ * `db <subcommand> …` — the merged Supabase/Database group.
+ *
+ * One dispatcher, replacing the flat `isStackCommand`/`isDbCommand` checks
+ * that used to sit in `dispatch` directly: every verb below (`start`,
+ * `migrate`, `types`, `seed roles`, `planner status`, …) used to be its own
+ * top-level command, so a bare `push` told the reader nothing about what it
+ * touched. Nesting them under `db` is what lets `--help db` and the wizard
+ * group them by `scope` (see `commands.ts`) instead of listing all of them
+ * flat. `planner` and `signing-key` keep their own dispatchers unchanged;
+ * this just routes to them one level deeper.
+ */
+async function runDbCommand(rest: string[]): Promise<void> {
+  const [sub, ...subRest] = rest;
+
+  if (sub === "start") {
+    // Machine-local: ignores --target rather than parsing it, the same way
+    // `runStackCommand`'s own "start" branch does.
+    await runStack("start", { kind: "local" });
+    return;
+  }
+
+  if (sub === "connect") {
+    const ref = subRest.find((arg) => !arg.startsWith("-"));
+    const code = await connectRemoteProject(ref);
+    process.exitCode = code === 0 ? 0 : 1;
+    return;
+  }
+
+  if (
+    sub === "stop" ||
+    sub === "restart" ||
+    sub === "status" ||
+    sub === "migrate" ||
+    sub === "reset"
+  ) {
+    await runStack(sub, parseTarget(subRest));
+    return;
+  }
+
+  if (sub === "migration") {
+    const [msub, ...mrest] = subRest;
+
+    if (msub === "new") {
+      const code = await runNewMigration(
+        mrest.find((arg) => !arg.startsWith("-")),
+      );
+      process.exitCode = code === 0 ? 0 : 1;
+      return;
+    }
+    if (msub === "generate") {
+      const code = await runGenerateMigration(flagValue(mrest, "--app"));
+      process.exitCode = code === 0 ? 0 : 1;
+      return;
+    }
+
+    log.error(
+      msub
+        ? `devtools db migration: unknown subcommand "${msub}". Try ${subcommandList(["db", "migration"])}.`
+        : `devtools db migration: which of ${subcommandList(["db", "migration"])}?`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  if (sub === "types") {
+    const code = await runGenerateTypes(parseTarget(subRest));
+    process.exitCode = code === 0 ? 0 : 1;
+    return;
+  }
+
+  if (sub === "seed") {
+    const [ssub, ...srest] = subRest;
+
+    if (ssub === "buckets") {
+      const code = await runSeedBuckets(parseTarget(srest));
+      process.exitCode = code === 0 ? 0 : 1;
+      return;
+    }
+    if (ssub === "roles") {
+      const code = await runSeedRoles(parseTarget(srest).kind);
+      process.exitCode = code === 0 ? 0 : 1;
+      return;
+    }
+
+    log.error(
+      ssub
+        ? `devtools db seed: unknown subcommand "${ssub}". Try ${subcommandList(["db", "seed"])}.`
+        : `devtools db seed: which of ${subcommandList(["db", "seed"])}?`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  if (sub === "introspect") {
+    const code = await runIntrospect(flagValue(subRest, "--app"));
+    process.exitCode = code === 0 ? 0 : 1;
+    return;
+  }
+
+  if (sub === "config") {
+    const [csub] = subRest;
+
+    if (csub === "push") {
+      const code = await runConfigPush();
+      process.exitCode = code === 0 ? 0 : 1;
+      return;
+    }
+
+    log.error(
+      csub
+        ? `devtools db config: unknown subcommand "${csub}". Try ${subcommandList(["db", "config"])}.`
+        : `devtools db config: which of ${subcommandList(["db", "config"])}?`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  if (sub === "planner") {
+    await runPlannerCommand(subRest);
+    return;
+  }
+
+  if (sub === "signing-key") {
+    await runSigningKeyCommand(subRest);
+    return;
+  }
+
+  if (sub === "exec") {
+    const execArgs = subRest[0] === "--" ? subRest.slice(1) : subRest;
+    const code = await runDbExec(execArgs);
+    process.exitCode = code === 0 ? 0 : 1;
+    return;
+  }
+
+  log.error(
+    sub
+      ? `devtools db: unknown subcommand "${sub}". Try ${subcommandList(["db"])}.`
+      : `devtools db: which of ${subcommandList(["db"])}?`,
   );
   process.exitCode = 1;
 }
@@ -883,7 +846,7 @@ async function runSigningKeyCommand(rest: string[]): Promise<void> {
 // ── Docs ─────────────────────────────────────────────────────────────────────
 
 /**
- * `docs index [--force]`, the documentation search index.
+ * `docs index [--target <local|remote>]`, the documentation search index.
  *
  * One subcommand today, and a group rather than a top-level `docs-index`
  * because the artifact it reads has more than one thing worth doing to it
@@ -902,7 +865,8 @@ async function runDocsCommand(rest: string[]): Promise<void> {
     return;
   }
 
-  await runDocsIndex({ force: rest.includes("--force") });
+  const target = parseTarget(rest);
+  await runDocsIndex({ target: target.kind });
 }
 
 // ── Dispatch ─────────────────────────────────────────────────────────────────
@@ -928,6 +892,12 @@ async function dispatch(argv: string[]): Promise<string | null> {
   if (first === "setup") {
     await runSetup();
     return DONE;
+  }
+
+  if (first === "completions") {
+    const code = runCompletions(rest);
+    process.exitCode = code;
+    return code === 0 ? DONE : null;
   }
 
   // Reached only from the wizard. A typed `run` or `bw` is handled in
@@ -967,9 +937,45 @@ async function dispatch(argv: string[]): Promise<string | null> {
     return DONE;
   }
 
-  if (first === "qr") {
-    await runQr(rest);
+  if (first === "newsletter") {
+    await runNewsletter(rest);
     return DONE;
+  }
+
+  if (first === "cf") {
+    const code = await runCf(rest);
+    process.exitCode = code;
+    return DONE;
+  }
+
+  if (first === "gen") {
+    const code = await runGen(rest);
+    process.exitCode = code;
+    return DONE;
+  }
+
+  if (first === "cron") {
+    const sub = rest[0];
+    const cronArgs = rest.slice(1);
+    let code: number;
+    if (sub === "list") {
+      code = await runCronList(cronArgs);
+    } else if (sub === "run") {
+      code = await runCronRun(cronArgs);
+    } else {
+      process.stderr.write(
+        `devtools cron: unknown subcommand "${sub ?? "(none)"}". Expected: list or run.\n`,
+      );
+      code = 1;
+    }
+    process.exitCode = code;
+    return DONE;
+  }
+
+  if (first === "workflows") {
+    const code = await runWorkflows(rest);
+    process.exitCode = code;
+    return code === 0 ? DONE : null;
   }
 
   if (first === "env") {
@@ -977,13 +983,8 @@ async function dispatch(argv: string[]): Promise<string | null> {
     return DONE;
   }
 
-  if (first === "planner") {
-    await runPlannerCommand(rest);
-    return DONE;
-  }
-
-  if (first === "signing-key") {
-    await runSigningKeyCommand(rest);
+  if (first === "db") {
+    await runDbCommand(rest);
     return DONE;
   }
 
@@ -1000,7 +1001,7 @@ async function dispatch(argv: string[]): Promise<string | null> {
     return null;
   }
 
-  if (!isStackCommand(first) && !isDoctorCommand(first)) {
+  if (!isDoctorCommand(first)) {
     log.error(`Unknown command: ${first}`);
     // The top level only. The command is unknown, so there is no level below
     // it to describe, and reprinting the whole tree here is what made the old
@@ -1008,11 +1009,6 @@ async function dispatch(argv: string[]): Promise<string | null> {
     log.message(renderHelp());
     process.exitCode = 1;
     return null;
-  }
-
-  if (isStackCommand(first)) {
-    await runStack(first, parseTarget(rest));
-    return DONE;
   }
 
   const instance = await connect();
@@ -1055,13 +1051,15 @@ async function main(): Promise<void> {
     return;
   }
 
-  // ⚠️ BEFORE `intro()`, and this ordering is load-bearing rather than tidy.
-  // `intro` writes to STDOUT, and `deploy secrets-file` / `deploy mint-token`
-  // have a stdout that GitHub and this CLI respectively PARSE. See the header
-  // on `runDeployCommand`. It returns without an `outro()` for the same
-  // reason.
+  // Deploy has moved to the devtools-ci bin. Point any stray invocations at it
+  // before `intro()`, because `devtools deploy secrets-file` could otherwise
+  // fall through to the wizard banner on a stdout that is a credential channel.
   if (argv[0] === "deploy") {
-    await runDeployCommand(argv.slice(1));
+    process.stderr.write(
+      "deploy has moved to devtools-ci.\n" +
+        "  Use: pnpm devtools-ci deploy <step|app> [flags]\n",
+    );
+    process.exitCode = 1;
     return;
   }
 
@@ -1079,10 +1077,24 @@ async function main(): Promise<void> {
   intro("DevDogs devtools");
 
   // The wizard builds an argv and hands it back to `dispatch`. See `menu.ts`.
-  const closing =
-    argv.length === 0 ? await runMenu(dispatch) : await dispatch(argv);
+  // `runMenu` begins its own recording from the built argv; a typed command
+  // begins here, non-interactive until a runner resolves a flag from a prompt.
+  let closing: string | null;
+  if (argv.length === 0) {
+    closing = await runMenu(dispatch);
+  } else {
+    beginInvocation(argv, false);
+    closing = await dispatch(argv);
+  }
 
-  if (closing) outro(closing);
+  if (closing) {
+    // Only prints when a prompt actually decided something — see
+    // `reproducibleCommand`. Above the outro, so the takeaway is the last
+    // thing on screen.
+    const rerun = reproducibleCommand();
+    if (rerun) note(rerun, "Run it directly next time");
+    outro(closing);
+  }
 }
 
 main().catch((err: unknown) => {

@@ -19,20 +19,18 @@ export function SectionExclusionList({
         return (
           <label
             key={o.crn}
-            className="flex cursor-pointer items-center gap-3 rounded-md border border-transparent p-2 hover:border-neutral-200 hover:bg-white"
+            className="hover:border-edge hover:bg-surface flex cursor-pointer items-center gap-3 rounded-md border border-transparent p-2"
           >
             <input
               type="checkbox"
               checked={included}
               onChange={() => onToggle(o.crn)}
-              className="form-checkbox size-5 rounded border-stone-300 text-red-700 focus:ring-red-700"
+              className="form-checkbox border-edge-strong text-accent focus:ring-primary size-5 rounded"
             />
             <span className="flex-1 text-sm">
               <span className="font-medium">CRN {o.crn}</span> — {instructor}
             </span>
-            <span className="text-xs text-neutral-400">
-              {o.seatsAvailable} seats
-            </span>
+            <span className="text-muted text-xs">{o.seatsAvailable} seats</span>
           </label>
         );
       })}

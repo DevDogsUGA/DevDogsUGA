@@ -10,10 +10,8 @@ export const LocalDraftPrefs = z.object({
   prefStartTime: z.string().nullable().default(null),
   prefEndTime: z.string().nullable().default(null),
   inputCampus: z.string().nullable().default(null),
-  gapDay: z.string().nullable().default(null),
   minCreditHours: z.number().default(12),
   maxCreditHours: z.number().default(18),
-  walking: z.boolean().default(false),
   showFilledClasses: z.boolean().default(false),
 });
 

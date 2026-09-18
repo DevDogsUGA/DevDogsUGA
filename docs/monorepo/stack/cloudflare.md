@@ -6,7 +6,7 @@ order: 2
 
 # Cloudflare
 
-Everything here deploys to Cloudflare Workers: two Next.js apps through `@opennextjs/cloudflare` 1.20.2, plus `sandbox`, a plain Worker. wrangler is 4.125.0. Read this before deploying, adding a binding, or picking a library that speaks HTTP: the restrictions here are unusual and the failures quiet. [Cloudflare's docs](https://developers.cloudflare.com/workers/) teach Workers; this does not.
+Everything here deploys to Cloudflare Workers: two Next.js apps through `@opennextjs/cloudflare` 1.20.2, plus `sandbox`, a plain Worker. wrangler is 4.133.0. Read this before deploying, adding a binding, or picking a library that speaks HTTP: the restrictions here are unusual and the failures quiet. [Cloudflare's docs](https://developers.cloudflare.com/workers/) teach Workers; this does not.
 
 ## The runtime forbids Wasm compilation at request time
 
@@ -30,6 +30,13 @@ Both Next apps' `open-next.config.ts` call `defineDevDogsCloudflareConfig()` fro
 ## wrangler conventions
 
 Workers are named `<environment>-<app>` — `staging-platform`, `production-sandbox`. The top level of each `wrangler.jsonc` is the `development-*` worker, carrying no routes and no cron triggers, so an env-less `wrangler deploy` is inert rather than a second worker competing for the apex.
+
+The two OpenNext Workers point `main` and `assets.directory` at generated
+`.open-next` output. Their Wrangler configs therefore share a custom build hook:
+on a clean checkout, or after an app input changes, direct `wrangler dev`
+generates that output before starting. When `cf:preview` or CI has just built
+the same app, the hook sees a newer artifact and returns without rebuilding.
+The plain `sandbox` Worker needs no such step.
 
 <details>
 <summary>Which wrangler keys have to be repeated in every environment?</summary>

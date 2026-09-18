@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { UnknownEnvironmentError } from "./targets.js";
 import {
+  applyWranglerLocalDatabaseAlias,
   GENERATED_FILE,
+  HYPERDRIVE_LOCAL_CONNECTION_ENV,
   MissingEnvFileError,
   selectEnvFiles,
   type SelectionContext,
@@ -166,5 +168,32 @@ describe(".env.generated is development-only", () => {
       expect(s.warnings).toEqual([]);
       expect(probe).not.toHaveBeenCalled();
     }
+  });
+});
+
+describe("Wrangler local binding aliases", () => {
+  it("derives the Hyperdrive connection from DB_URL", () => {
+    const environment = { DB_URL: "postgres://local/database" };
+    applyWranglerLocalDatabaseAlias(environment);
+    expect(environment[HYPERDRIVE_LOCAL_CONNECTION_ENV]).toBe(
+      environment.DB_URL,
+    );
+  });
+
+  it("preserves an explicit Hyperdrive override", () => {
+    const environment = {
+      DB_URL: "postgres://default/database",
+      [HYPERDRIVE_LOCAL_CONNECTION_ENV]: "postgres://override/database",
+    };
+    applyWranglerLocalDatabaseAlias(environment);
+    expect(environment[HYPERDRIVE_LOCAL_CONNECTION_ENV]).toBe(
+      "postgres://override/database",
+    );
+  });
+
+  it("does not invent an empty connection when DB_URL is absent", () => {
+    const environment: Record<string, string> = {};
+    applyWranglerLocalDatabaseAlias(environment);
+    expect(environment).not.toHaveProperty(HYPERDRIVE_LOCAL_CONNECTION_ENV);
   });
 });

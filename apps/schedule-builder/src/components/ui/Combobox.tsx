@@ -411,10 +411,10 @@ export default function Combobox<T extends Record<string, ReactNode>>({
         asChild
       >
         <button
-          className="flex w-full cursor-default items-center gap-6 rounded-md border-2 border-stone-300 bg-white px-3 py-1.5 transition-[box-shadow,border-color] disabled:cursor-not-allowed disabled:opacity-60 data-[state=open]:pointer-events-none [&:not(:disabled):hover]:border-stone-400 [&:not(:disabled):hover]:shadow-sm"
+          className="border-edge-strong bg-surface [&:not(:disabled):hover]:border-muted flex w-full cursor-default items-center gap-6 rounded-md border-2 px-3 py-1.5 transition-[box-shadow,border-color] disabled:cursor-not-allowed disabled:opacity-60 data-[state=open]:pointer-events-none [&:not(:disabled):hover]:shadow-sm"
           suppressHydrationWarning
         >
-          <span className="flex-1 text-left text-neutral-600 peer-has-[option:checked]:hidden">
+          <span className="text-foreground/80 flex-1 text-left peer-has-[option:checked]:hidden">
             {multiple ? displayText(values) : displayText(values[0])}
           </span>
           <CaretUpDownIcon />
@@ -422,11 +422,11 @@ export default function Combobox<T extends Record<string, ReactNode>>({
       </Popover.Trigger>
 
       <Popover.Portal>
-        <Popover.Content className="-mt-(--radix-popover-trigger-height) flex max-h-56 w-(--radix-popover-trigger-width) max-w-[calc(100dvw-1rem)] flex-col gap-1 rounded-md border-2 border-stone-400 bg-white px-1 py-1 shadow-lg">
-          <label className="peer flex w-full items-center gap-2 rounded-sm bg-neutral-100 px-2 py-1">
-            <MagnifyingGlassIcon className="text-neutral-700" />
+        <Popover.Content className="border-muted bg-surface -mt-(--radix-popover-trigger-height) flex max-h-56 w-(--radix-popover-trigger-width) max-w-[calc(100dvw-1rem)] flex-col gap-1 rounded-md border-2 px-1 py-1 shadow-lg">
+          <label className="peer bg-surface-muted flex w-full items-center gap-2 rounded-sm px-2 py-1">
+            <MagnifyingGlassIcon className="text-foreground/80" />
             <input
-              className="flex-1 bg-transparent placeholder:text-neutral-700 focus:outline-none"
+              className="placeholder:text-foreground/80 flex-1 bg-transparent focus:outline-none"
               onChange={handleFilterChange}
               onKeyDown={handleKeydown}
               placeholder={searchPlaceholder ?? "Search items..."}
@@ -441,7 +441,7 @@ export default function Combobox<T extends Record<string, ReactNode>>({
             <div className="peer contents">
               {filteredOptions.map(({ value, content }) => (
                 <label
-                  className="flex snap-start items-center gap-2 rounded-sm py-1 pr-2 has-checked:font-medium data-highlighted:bg-stone-300"
+                  className="data-highlighted:bg-edge-strong flex snap-start items-center gap-2 rounded-sm py-1 pr-2 has-checked:font-medium"
                   data-highlighted={highlighted === value || undefined}
                   key={String(value)}
                   onMouseEnter={() => setHighlighted(value)}
@@ -458,14 +458,14 @@ export default function Combobox<T extends Record<string, ReactNode>>({
                   />
                   <CheckIcon
                     weight="bold"
-                    className="text-gray-800 opacity-0 peer-checked:opacity-100"
+                    className="text-foreground opacity-0 peer-checked:opacity-100"
                   />
                   {content}
                 </label>
               ))}
             </div>
 
-            <p className="hidden px-2 py-1 text-sm text-neutral-700 italic peer-empty:block">
+            <p className="text-foreground/80 hidden px-2 py-1 text-sm italic peer-empty:block">
               No results.
             </p>
           </fieldset>

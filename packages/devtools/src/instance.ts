@@ -132,7 +132,7 @@ export async function assertMigrated(instance: Instance): Promise<void> {
   if (error) {
     throw new Error(
       `Could not read platform."apps": ${error.message}. ` +
-        "Have migrations been applied? `pnpm devtools reset` rebuilds from scratch.",
+        "Have migrations been applied? `pnpm devtools db reset` rebuilds from scratch.",
     );
   }
 }

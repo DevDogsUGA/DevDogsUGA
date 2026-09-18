@@ -108,7 +108,8 @@ values
   )
 on conflict ("userId") do nothing;
 
--- A custom role, deliberately not Root.
+-- A custom development-fixture role, deliberately not Root and ranked below
+-- the organization roles from 01_roles.sql.
 --
 -- Root stays unheld so a contributor can grant it to themselves on a fresh
 -- instance -- `pnpm devtools grant-root`, which writes the row with the service
@@ -124,9 +125,14 @@ values (
   '00000000-0000-4000-9000-000000000001',
   'Moderator',
   'Seeded persona role: works the report queue, and nothing else.',
-  'custom', 500, true
+  'custom', 5000, true
 )
-on conflict ("id") do nothing;
+on conflict ("id") do update set
+  "title" = excluded."title",
+  "description" = excluded."description",
+  "roleType" = excluded."roleType",
+  "rank" = excluded."rank",
+  "canModerate" = excluded."canModerate";
 
 insert into "platform"."userRoles" ("userId", "roleId")
 values (

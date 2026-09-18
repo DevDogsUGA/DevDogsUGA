@@ -4,11 +4,13 @@
   "private": true,
   "type": "module",
   "bin": {
-    "devtools": "./src/cli.ts"
+    "devtools": "./src/cli.ts",
+    "devtools-ci": "./src/ci.ts"
   },
   "scripts": {
     "cli": "with-env tsx --conditions=devdogs-source src/cli.ts",
-    "cli:no-env": "tsx --conditions=devdogs-source src/cli.ts",
+    "ci": "tsx --conditions=devdogs-source src/ci.ts",
+    "ci:env": "with-env tsx --conditions=devdogs-source src/ci.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -21,13 +23,13 @@
     "@devdogsuga/docs": "workspace:*",
     "@devdogsuga/email": "workspace:*",
     "@devdogsuga/env": "workspace:*",
+    "@devdogsuga/newsletter": "workspace:*",
     "@devdogsuga/og": "workspace:*",
     "@resvg/resvg-js": "^2.6.2",
     "@supabase/supabase-js": "catalog:",
     "dotenv": "^17.4.2",
     "postgres": "catalog:",
     "prettier": "3.9.6",
-    "qrcode": "1.5.4",
     "satori": "^0.33.4",
     "sharp": "0.35.3",
     "zod": "catalog:"
@@ -36,10 +38,8 @@
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/env": "workspace:*",
     "@types/node": "catalog:",
-    "@types/qrcode": "^1.5.6",
     "@types/react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
-    "jsqr": "1.4.0",
     "react": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",

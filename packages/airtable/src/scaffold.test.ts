@@ -183,7 +183,7 @@ describe("scaffoldBase", () => {
     }
   });
 
-  it("makes the platform id the primary field", async () => {
+  it("makes every table's intended text identity the primary field", async () => {
     // Airtable takes the FIRST field as primary, and a link or checkbox is not
     // a legal primary field, so this is a property of argument order that
     // nothing else would catch.
@@ -192,7 +192,11 @@ describe("scaffoldBase", () => {
 
     for (const live of result.schema) {
       const primary = live.fields.find((f) => f.id === live.primaryFieldId);
-      expect(primary?.name, live.name).toBe("⚙️ Platform ID");
+      expect(primary?.name, live.name).toBe(
+        live.name === "Officer Changes"
+          ? "Target platform ID"
+          : "⚙️ Platform ID",
+      );
     }
   });
 

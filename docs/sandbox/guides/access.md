@@ -17,8 +17,9 @@ behaviour rather than the credential model, read
 ## One hostname, two tokens per member
 
 The hostname identifies the **environment**; a token identifies the **member**
-and the authority they are asking for. `pnpm devtools link --team <slug>` calls the
-platform, which issues both tokens and writes `.env.local`:
+and the authority they are asking for. Team sandbox linking is temporarily
+disabled in `devtools`; when it returns, the platform will issue both tokens
+and write `.env.local`:
 
 ```
 SUPABASE_URL=https://<name>-<random>-sandbox.devdogsuga.org

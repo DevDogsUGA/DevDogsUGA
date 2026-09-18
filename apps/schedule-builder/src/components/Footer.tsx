@@ -1,78 +1,75 @@
-import { InstagramLogoIcon, LinkedinLogoIcon } from "@phosphor-icons/react/ssr";
-import Image from "next/image";
+import {
+  GithubLogoIcon,
+  InstagramLogoIcon,
+  LinkedinLogoIcon,
+} from "@phosphor-icons/react/ssr";
+import Link from "next/link";
+import { DogDaysIcon } from "~/components/DogDaysIcon";
+
+const SOCIALS = [
+  {
+    title: "GitHub",
+    href: "https://github.com/DevDogsUGA",
+    Icon: GithubLogoIcon,
+  },
+  {
+    title: "Instagram",
+    href: "https://www.instagram.com/devdogsuga/",
+    Icon: InstagramLogoIcon,
+  },
+  {
+    title: "LinkedIn",
+    href: "https://www.linkedin.com/company/devdogsuga/",
+    Icon: LinkedinLogoIcon,
+  },
+] as const;
 
 export function Footer() {
   return (
-    <footer className="m-4 flex flex-row items-center justify-center gap-y-0 rounded-md border-2 border-neutral-500 bg-neutral-200 px-4 py-0 py-3 text-neutral-600 sm:gap-y-1 sm:py-2 md:gap-x-4 lg:gap-x-6 lg:px-6">
-      <nav className="contents">
-        <div className="flex w-1/5 flex-col justify-start gap-x-4 gap-y-4 text-xl sm:flex-row sm:gap-y-0 sm:text-base">
+    <footer className="bg-navy px-4 py-6 text-sm text-zinc-400">
+      <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row">
+        <Link
+          href="/"
+          className="font-display text-navy-foreground text-base font-semibold tracking-tight whitespace-nowrap transition-opacity hover:opacity-80"
+        >
+          <DogDaysIcon className="mr-1.5 inline-block h-[0.799em] w-auto align-baseline" />
+          DogDays{" "}
+          <span className="font-sans text-xs text-zinc-400">by DevDogs</span>
+        </Link>
+
+        <nav className="flex items-center gap-5">
           <a
-            rel="noopener"
-            className="col-span-2 flex items-center justify-center text-center text-nowrap hover:text-slate-900"
+            className="hover:text-navy-foreground transition-colors"
             href="https://devdogs.uga.edu/"
             target="_blank"
+            rel="noopener"
           >
             About Us
           </a>
           <a
-            className="flex items-center justify-center text-center hover:text-slate-900"
+            className="hover:text-navy-foreground transition-colors"
             href="https://linktr.ee/devdogs"
             target="_blank"
             rel="noopener"
           >
             Contact
           </a>
-        </div>
-
-        {/* WordmarkMascot image */}
-        <div className="flex h-full grow flex-col items-center justify-center py-1 sm:flex-row">
-          <Image
-            src="/images/DevDogsLogo.png"
-            alt="UGA DevDogs Logo"
-            width={100}
-            height={100}
-            className="m-2"
-            priority
-          />
-
-          <Image
-            src="/images/GoogleDevLogo.png"
-            alt="UGA GDG Logo"
-            width={120}
-            height={120}
-            className="m-2"
-            priority
-          />
-        </div>
-
-        {/* Removed Terms of Use */}
-        <a
-          title="blank"
-          className="col-span-2 flex items-center justify-center text-center hover:text-slate-900 min-[480px]:col-span-1"
-          href="#"
-        ></a>
-
-        <div className="flex w-1/5 flex-row justify-end">
-          <a
-            title="Instagram"
-            rel="noopener"
-            className="flex items-center justify-center justify-end px-2 text-4xl text-neutral-500 hover:text-slate-900 sm:text-2xl"
-            href="https://www.instagram.com/devdogsuga/"
-            target="_blank"
-          >
-            <InstagramLogoIcon weight="bold" />
-          </a>
-          <a
-            title="LinkedIn"
-            rel="noopener"
-            className="flex items-center justify-center justify-start px-2 text-4xl text-neutral-500 hover:text-slate-900 sm:text-2xl dark:text-white dark:hover:text-slate-300"
-            href="https://www.linkedin.com/company/devdogsuga/"
-            target="_blank"
-          >
-            <LinkedinLogoIcon weight="bold" />
-          </a>
-        </div>
-      </nav>
+          <span className="flex items-center gap-1">
+            {SOCIALS.map(({ title, href, Icon }) => (
+              <a
+                key={title}
+                title={title}
+                href={href}
+                target="_blank"
+                rel="noopener"
+                className="hover:text-navy-foreground rounded-md p-1.5 text-xl transition-colors hover:bg-white/10"
+              >
+                <Icon weight="bold" />
+              </a>
+            ))}
+          </span>
+        </nav>
+      </div>
     </footer>
   );
 }

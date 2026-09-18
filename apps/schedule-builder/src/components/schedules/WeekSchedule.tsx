@@ -1,8 +1,7 @@
 "use client";
 
+import { type CSSProperties, useState } from "react";
 import { type WeekSchedule as WeekScheduleType } from "~/types/scheduleTypes";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { CaretDoubleRightIcon } from "@phosphor-icons/react/ssr";
 import DayClass from "./DayClass";
 import { SCHEDULE_END_HOUR, SCHEDULE_START_HOUR } from "~/lib/schedule-display";
 
@@ -10,165 +9,107 @@ interface WeekScheduleProps {
   weekData: WeekScheduleType;
 }
 
+const TOTAL_HOURS = SCHEDULE_END_HOUR - SCHEDULE_START_HOUR + 1;
+
+const HOURS = Array.from(
+  { length: TOTAL_HOURS },
+  (_, i) => SCHEDULE_START_HOUR + i,
+);
+
+/** Percentage offset of an hour from the top of the day column. */
+function hourTop(hour: number): string {
+  return `${((hour - SCHEDULE_START_HOUR) * 100) / TOTAL_HOURS}%`;
+}
+
+function hourLabel(hour: number): string {
+  const ampm = hour > 12 ? hour - 12 : hour;
+  const period = hour >= 12 ? "PM" : "AM";
+  return `${ampm} ${period}`;
+}
+
+/**
+ * The week grid. On `md` and up every day gets a column; below that a tab
+ * strip selects a single day, rendered full-width — a state change rather
+ * than the horizontal scroll-snap the layout previously simulated, since
+ * seven columns can't be read on a phone anyway.
+ */
 export default function WeekSchedule({ weekData }: WeekScheduleProps) {
-  const scrollportRef = useRef<HTMLElement>(null);
-  const [next, setNext] = useState<string | undefined>(undefined);
-  const [prev, setPrev] = useState<string | undefined>(undefined);
-
-  /**
-   * Updates the next/prev scroll buttons on scroll and resize.
-   */
-  const handleScroll = useCallback(function (this: HTMLElement) {
-    const bounds = this.getBoundingClientRect();
-    const children = [...this.children];
-
-    setPrev(
-      children
-        .findLast((child) => child.getBoundingClientRect().left < 0)
-        ?.getAttribute("data-title") ?? undefined,
-    );
-
-    setNext(
-      children
-        .find((child) => child.getBoundingClientRect().left > bounds.width)
-        ?.getAttribute("data-title") ?? undefined,
-    );
-  }, []);
-
-  /**
-   * Scroll scrollport left by one day.
-   */
-  const scrollLeft = useCallback(() => {
-    if (scrollportRef.current === null) {
-      return;
-    }
-
-    const scrollport = scrollportRef.current;
-    const target = scrollport.querySelector(":last-of-type")!;
-    scrollport.scrollLeft -= target.clientWidth;
-  }, []);
-
-  /**
-   * Scroll scrollport right by one day.
-   */
-  const scrollRight = useCallback(() => {
-    if (scrollportRef.current === null) {
-      return;
-    }
-
-    const scrollport = scrollportRef.current;
-    const target = scrollport.querySelector(":last-of-type")!;
-    scrollport.scrollLeft += target.clientWidth;
-  }, []);
-
-  // Setup/cleanup for scroll/resize events.
-  useEffect(() => {
-    if (!("window" in globalThis) || scrollportRef.current === null) {
-      return;
-    }
-
-    const controller = new AbortController();
-
-    handleScroll.apply(scrollportRef.current);
-
-    scrollportRef.current.addEventListener("scroll", handleScroll, controller);
-
-    window.addEventListener(
-      "resize",
-      handleScroll.bind(scrollportRef.current),
-      controller,
-    );
-
-    return () => controller.abort();
-  }, [handleScroll]);
-
-  /*
-   * One line per hour under each day, 8 AM to 10 PM.
-   */
-  const createHourlySections = useCallback(() => {
-    const sections = [];
-    const startHour = SCHEDULE_START_HOUR;
-    const endHour = SCHEDULE_END_HOUR;
-    const totalHours = endHour - startHour + 1;
-    const sectionHeight = 50 / totalHours;
-
-    for (let hour = startHour; hour <= endHour; hour++) {
-      // convert 24-hour to am/pm
-      const ampm = hour > 12 ? hour - 12 : hour;
-      const period = hour >= 12 ? "PM" : "AM";
-      sections.push(
-        <div
-          key={hour}
-          className="h- relative w-full border-t border-gray-300"
-          style={{
-            height: `${sectionHeight}%`,
-            top: `${(hour - startHour) * sectionHeight}%`,
-            zIndex: 0, // lines stay behind course blocks
-          }}
-        >
-          <span className="absolute left-0 px-4 text-sm text-gray-500">
-            <div>
-              <span className="font-bold">{ampm}</span> {period}
-            </div>
-          </span>
-        </div>,
-      );
-    }
-
-    return sections;
-  }, []);
+  const days = Object.keys(weekData);
+  const [selectedDay, setSelectedDay] = useState(days[0]);
+  // The selection survives a weekData swap only if the day still exists.
+  const activeDay =
+    selectedDay && days.includes(selectedDay) ? selectedDay : days[0];
 
   return (
-    <div className="relative z-0 mx-auto w-screen max-w-[1800px] overflow-x-hidden px-4">
-      <button
-        className="absolute top-0 left-0 z-10 flex h-full w-8 rotate-180 items-center justify-between rounded-r-lg border-l-2 border-pink-900 bg-pink-50 py-4 text-center font-bold text-pink-900 transition-[left] [writing-mode:vertical-lr] 2xl:hidden [&:not([data-scroll-target])]:-left-8"
-        data-scroll-target={prev}
-        onClick={scrollLeft}
-        type="button"
-      >
-        <CaretDoubleRightIcon weight="bold" />
-        {prev}
-        <CaretDoubleRightIcon weight="bold" />
-      </button>
+    <div className="flex w-full flex-col gap-3 p-3 sm:p-4">
+      <div role="tablist" className="flex gap-1.5 overflow-x-auto md:hidden">
+        {days.map((day) => (
+          <button
+            key={day}
+            type="button"
+            role="tab"
+            aria-selected={day === activeDay}
+            onClick={() => setSelectedDay(day)}
+            className="border-edge aria-selected:border-primary aria-selected:bg-primary not-aria-selected:hover:bg-surface-muted rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors aria-selected:text-white"
+          >
+            {day}
+          </button>
+        ))}
+      </div>
 
       <section
-        className="grid h-[750px] w-full snap-x snap-mandatory grid-cols-[1rem_repeat(5,calc((100%-1rem)/var(--cols)))] overflow-x-auto scroll-smooth rounded-lg bg-pink-200/50 py-4 [--cols:1] sm:[--cols:2] md:overflow-hidden lg:[--cols:3] xl:[--cols:4] 2xl:[--cols:5]"
-        ref={scrollportRef}
+        className="week-grid grid w-full gap-x-2 [--hour-height:2.75rem] md:[--hour-height:3.25rem]"
+        style={{ "--day-count": days.length } as CSSProperties}
       >
-        <div />
+        {/* Time axis */}
+        <div className="flex flex-col">
+          <div className="h-9 shrink-0" />
+          <div className="relative flex-1">
+            {HOURS.map((hour) => (
+              <span
+                key={hour}
+                className="text-muted absolute right-1 -translate-y-1/2 text-xs whitespace-nowrap"
+                style={{ top: hourTop(hour) }}
+              >
+                {hourLabel(hour)}
+              </span>
+            ))}
+          </div>
+        </div>
 
-        {Object.entries(weekData).map(([day, classes]) => (
-          <div className="snap-end snap-always pr-4" data-title={day} key={day}>
-            <article className="flex h-full w-full flex-col gap-4 rounded-xl bg-white px-0 py-0">
-              <h2 className="text rounded-lg bg-[#222233] px-4 py-3 text-center text-xl font-bold text-white">
-                {day}
-              </h2>
-              <div className="relative h-full">
-                {createHourlySections()}
-                {classes.map((classData, index) => (
-                  // Colours and grid offset are computed in toWeekSchedule, so
-                  // the display stays a pure function of its props.
-                  <DayClass
-                    key={`${day}-${classData.classTitle}-${index}`}
-                    {...classData}
-                  />
-                ))}
-              </div>
-            </article>
+        {days.map((day) => (
+          <div
+            key={day}
+            data-title={day}
+            className={`${day === activeDay ? "flex" : "hidden md:flex"} min-w-0 flex-col`}
+          >
+            <h2 className="bg-navy text-navy-foreground flex h-9 shrink-0 items-center justify-center rounded-md text-sm font-semibold">
+              {day}
+            </h2>
+            <div
+              className="relative"
+              style={{ height: `calc(var(--hour-height) * ${TOTAL_HOURS})` }}
+            >
+              {HOURS.map((hour) => (
+                <div
+                  key={hour}
+                  aria-hidden
+                  className="border-edge absolute right-0 left-0 border-t"
+                  style={{ top: hourTop(hour) }}
+                />
+              ))}
+              {weekData[day]?.map((classData, index) => (
+                // Colours and grid offset are computed in toWeekSchedule, so
+                // the display stays a pure function of its props.
+                <DayClass
+                  key={`${day}-${classData.classTitle}-${index}`}
+                  {...classData}
+                />
+              ))}
+            </div>
           </div>
         ))}
       </section>
-
-      <button
-        className="absolute top-0 right-0 z-10 flex h-full w-8 items-center justify-between rounded-r-lg border-l-2 border-pink-900 bg-pink-50 py-4 text-center font-bold text-pink-900 transition-[right] [writing-mode:vertical-rl] 2xl:hidden [&:not([data-scroll-target])]:-right-8"
-        data-scroll-target={next}
-        onClick={scrollRight}
-        type="button"
-      >
-        <CaretDoubleRightIcon weight="bold" />
-        {next}
-        <CaretDoubleRightIcon weight="bold" />
-      </button>
     </div>
   );
 }

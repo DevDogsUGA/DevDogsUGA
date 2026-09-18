@@ -6,15 +6,22 @@ import {
   competitions as competitionsSpec,
   meetings as meetingsSpec,
   members as membersSpec,
+  officerChangesTable as officerChangesSpec,
+  elReflectionsTable as reflectionsSpec,
+  platformSettingsTable as settingsSpec,
   mergeOn,
   statusField,
   teamsTable as teamsSpec,
   workshops as workshopsSpec,
   type AirtableClient,
   type AirtableRecord,
+  type AttendanceRow,
   type CompetitionRow,
   type MeetingRow,
   type MemberRow,
+  type OfficerChangeRow,
+  type PlatformSettingsRow,
+  type ReflectionRow,
   type TableSpec,
   type TeamRow,
   type WorkshopRow,
@@ -22,11 +29,14 @@ import {
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import {
+  airtableChangeReceipts,
   attendance,
   competitions,
   competitionStandings,
   meetings,
   profiles,
+  reflections,
+  reflectionSettings,
   teamMembers,
   teams,
   workshops,
@@ -78,11 +88,191 @@ export async function pushMembers(
       meetingCount: sql<number>`(
         select count(distinct ${attendance.meetingId})::int
         from ${attendance} where ${attendance.userId} = ${profiles.userId}
+          and ${attendance.revokedAt} is null
       )`,
     })
     .from(profiles);
 
   return upsert<MemberRow>(client, membersSpec, rows, existing);
+}
+
+/**
+ * Mirrors authoritative attendance into Airtable for officer reporting.
+ *
+ * Link fields require Airtable record IDs rather than platform UUIDs. Meetings
+ * retain that ID when pulled; members are resolved from the records listed
+ * after the member push so a first-sign-in account can be linked immediately.
+ */
+export async function pushAttendance(
+  client: AirtableClient,
+  existing: AirtableRecord[],
+  existingMembers: AirtableRecord[],
+): Promise<PushCounts> {
+  const memberRecordIdByUserId = new Map<string, string>();
+  for (const record of existingMembers) {
+    const userId = record.fields[membersSpec.fields.platformId.id];
+    if (typeof userId === "string") {
+      memberRecordIdByUserId.set(userId, record.id);
+    }
+  }
+
+  const records = await db
+    .select({
+      id: attendance.id,
+      userId: attendance.userId,
+      meetingAirtableId: meetings.airtableRecordId,
+      method: attendance.method,
+      recordedAt: sql<string>`${attendance.recordedAt}::text`,
+      revoked: sql<boolean>`${attendance.revokedAt} is not null`,
+      revocationReason: attendance.revocationReason,
+    })
+    .from(attendance)
+    .innerJoin(meetings, eq(meetings.id, attendance.meetingId));
+
+  const rows: AttendanceRow[] = [];
+  for (const record of records) {
+    const memberAirtableId = memberRecordIdByUserId.get(record.userId);
+    if (memberAirtableId === undefined || record.meetingAirtableId === null) {
+      continue;
+    }
+    rows.push({
+      id: record.id,
+      memberAirtableId,
+      meetingAirtableId: record.meetingAirtableId,
+      method: record.method,
+      recordedAt: record.recordedAt,
+      revoked: record.revoked,
+      revocationReason: record.revocationReason,
+    });
+  }
+
+  return upsert<AttendanceRow>(client, attendanceSpec, rows, existing);
+}
+
+/**
+ * Repairs processing acknowledgements when the targeted automation applied a
+ * command but its final Airtable PATCH failed. Form responses are addressed by
+ * record id and are never created or interpreted by the scheduled sync.
+ */
+export async function pushOfficerChangeStatuses(
+  client: AirtableClient,
+  existing: AirtableRecord[],
+): Promise<PushCounts> {
+  const receipts = await db
+    .select({
+      formResponseRecordId: airtableChangeReceipts.formResponseRecordId,
+      status: airtableChangeReceipts.status,
+      processedAt: sql<
+        string | null
+      >`${airtableChangeReceipts.processedAt}::text`,
+      auditEventId: airtableChangeReceipts.auditEventId,
+      error: airtableChangeReceipts.error,
+    })
+    .from(airtableChangeReceipts);
+
+  const entries = receipts.map((receipt) => ({
+    recordId: receipt.formResponseRecordId,
+    row: {
+      ...receipt,
+      status:
+        receipt.status === "applied"
+          ? ("Applied" as const)
+          : receipt.status === "rejected"
+            ? ("Rejected" as const)
+            : receipt.status === "retryable"
+              ? ("Retryable" as const)
+              : ("Pending" as const),
+    } satisfies OfficerChangeRow,
+  }));
+  const plan = buildUpdate(officerChangesSpec, entries, existing);
+  if (plan.records.length === 0) {
+    return { created: 0, updated: 0, unchanged: plan.unchanged };
+  }
+  const updated = await client.updateRecords(
+    officerChangesSpec.id,
+    plan.records,
+  );
+  return { created: 0, updated, unchanged: plan.unchanged };
+}
+
+/** Mirrors reflection evidence for officer review and the eventual export. */
+export async function pushReflections(
+  client: AirtableClient,
+  existing: AirtableRecord[],
+  existingMembers: AirtableRecord[],
+): Promise<PushCounts> {
+  const memberIds = new Map<string, string>();
+  for (const record of existingMembers) {
+    const id = record.fields[membersSpec.fields.platformId.id];
+    if (typeof id === "string") memberIds.set(id, record.id);
+  }
+  const records = await db
+    .select({
+      id: reflections.id,
+      userId: reflections.userId,
+      meetingAirtableId: meetings.airtableRecordId,
+      competitionAirtableId: competitions.airtableRecordId,
+      content: reflections.content,
+      submittedAt: sql<string | null>`${reflections.submittedAt}::text`,
+    })
+    .from(reflections)
+    .leftJoin(meetings, eq(meetings.id, reflections.meetingId))
+    .leftJoin(competitions, eq(competitions.id, reflections.competitionId));
+  const rows: ReflectionRow[] = records.flatMap((record) => {
+    const memberAirtableId = memberIds.get(record.userId);
+    if (!memberAirtableId) return [];
+    return [
+      {
+        id: record.id,
+        memberAirtableId,
+        meetingAirtableId: record.meetingAirtableId,
+        competitionAirtableId: record.competitionAirtableId,
+        content: record.content,
+        state: record.submittedAt ? "Submitted" : "Draft",
+        submittedAt: record.submittedAt,
+      },
+    ];
+  });
+  return upsert<ReflectionRow>(client, reflectionsSpec, rows, existing);
+}
+
+/** Creates the singleton settings row with defaults; later edits are pulled. */
+export async function ensurePlatformSettings(
+  client: AirtableClient,
+  existing: AirtableRecord[],
+): Promise<PushCounts> {
+  const key = settingsSpec.fields.platformId;
+  const current = existing.find(
+    (record) => record.fields[key.id] === "reflection-policy",
+  );
+  if (current) return { created: 0, updated: 0, unchanged: 1 };
+  const [policy] = await db
+    .select({
+      minimumWordCount: reflectionSettings.minimumWordCount,
+      submissionWindowDays: reflectionSettings.submissionWindowDays,
+    })
+    .from(reflectionSettings)
+    .limit(1);
+  const row: PlatformSettingsRow = {
+    id: "reflection-policy",
+    minimumWordCount: policy?.minimumWordCount ?? 100,
+    submissionWindowDays: policy?.submissionWindowDays ?? 7,
+  };
+  const result = await client.upsertRecords(
+    settingsSpec.id,
+    [key.id],
+    [
+      {
+        fields: {
+          [key.id]: row.id,
+          [settingsSpec.fields.minimumWordCount.id]: row.minimumWordCount,
+          [settingsSpec.fields.submissionWindowDays.id]:
+            row.submissionWindowDays,
+        },
+      },
+    ],
+  );
+  return { ...result, unchanged: 0 };
 }
 
 /**
@@ -104,7 +294,10 @@ export async function pushTeams(
       name: teams.name,
       competitionAirtableId: competitions.airtableRecordId,
       submissionUrl: teams.submissionUrl,
-      competed: sql<boolean>`${teams.competedAt} is not null`,
+      competed: sql<boolean>`coalesce(
+        ${teams.participationOverride},
+        ${teams.competedAt} is not null
+      )`,
       totalPoints: competitionStandings.totalPoints,
       memberCount: sql<number>`(
         select count(*)::int from ${teamMembers}
@@ -162,11 +355,11 @@ export async function pushDerivedCounts(
       location: meetings.location,
       startsAt: sql<string>`${meetings.startsAt}::text`,
       endsAt: sql<string>`${meetings.endsAt}::text`,
-      attendanceFormUrl: meetings.attendanceFormUrl,
       airtableRecordId: meetings.airtableRecordId,
       attendanceCount: sql<number>`(
         select count(*)::int from ${attendance}
         where ${attendance.meetingId} = ${meetings.id}
+          and ${attendance.revokedAt} is null
       )`,
     })
     .from(meetings)
@@ -178,10 +371,6 @@ export async function pushDerivedCounts(
       meetingAirtableId: sql<string | null>`null`,
       projectAirtableId: sql<string | null>`null`,
       airtableRecordId: workshops.airtableRecordId,
-      attendanceCount: sql<number>`(
-        select count(*)::int from ${attendance}
-        where ${attendance.workshopId} = ${workshops.id}
-      )`,
     })
     .from(workshops)
     .where(isNull(workshops.deletedAt));
@@ -299,7 +488,7 @@ export async function writeSyncStatus(
     meetings: AirtableRecord[];
     workshops: AirtableRecord[];
     competitions: AirtableRecord[];
-    attendance: AirtableRecord[];
+    platformSettings: AirtableRecord[];
   },
 ): Promise<number> {
   const byRecord = new Map<string, string[]>();
@@ -317,12 +506,7 @@ export async function writeSyncStatus(
     [meetingsSpec, listed.meetings],
     [workshopsSpec, listed.workshops],
     [competitionsSpec, listed.competitions],
-    // Attendance carries the refusals a MEMBER caused rather than an officer:
-    // a mistyped MyID, a workshop that is not in the base. Omitting it here
-    // would compute those refusals and then drop them, so the response stays
-    // unimported and nothing in the grid says why, which is worse than having
-    // no rule at all.
-    [attendanceSpec, listed.attendance],
+    [settingsSpec, listed.platformSettings],
   ];
 
   let written = 0;

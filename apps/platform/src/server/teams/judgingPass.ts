@@ -1,11 +1,6 @@
-import { and, eq, isNotNull, isNull, lte, notExists, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { db } from "~/server/db";
-import {
-  attendance,
-  competitions,
-  teamMembers,
-  teams,
-} from "~/server/db/schema";
+import { competitions, teams } from "~/server/db/schema";
 
 /**
  * The judging-start pass. Small, and load-bearing: **no competition star is
@@ -13,10 +8,9 @@ import {
  *
  * Every five minutes, for each competition whose `judgingStartsAt` has passed:
  *
- *   1. Freeze participation, turning each team's live entry into a permanent
- *      fact.
- *   2. Create solo teams for members of that workshop who never joined one, so
- *      attribution has a row to hang on.
+ * Freeze participation, turning each registered team's live entry into a
+ * permanent fact. Meeting attendance never manufactures a competition team:
+ * participation requires both registration and a submitted entry.
  *
  * Nothing else. The roster hard-lock needs no write; it falls out of
  * `judgingStartsAt` in the lock predicate.
@@ -28,15 +22,11 @@ import {
  */
 export interface JudgingPassReport {
   frozen: number;
-  soloTeamsCreated: number;
 }
-
-const SOLO_JOIN_CODE = "SOLO";
 
 export async function runJudgingPass(): Promise<JudgingPassReport> {
   const frozen = await freezeParticipation();
-  const soloTeamsCreated = await createSoloTeams();
-  return { frozen, soloTeamsCreated };
+  return { frozen };
 }
 
 /**
@@ -71,88 +61,4 @@ async function freezeParticipation(): Promise<number> {
     .returning({ id: teams.id });
 
   return rows.length;
-}
-
-/**
- * Gives every attendee of a judged workshop a team, so attribution has a row.
- *
- * A member who attended but never joined a team still earned a workshop star,
- * and the star view reaches attendance directly, so this is not what makes
- * that work. It exists so the standings and award pages, which are keyed by
- * team, have somewhere to put a solo participant rather than dropping them.
- *
- * Skips anybody who already holds a team for the competition, which makes
- * re-running it a no-op.
- */
-async function createSoloTeams(): Promise<number> {
-  const candidates = await db
-    .select({
-      userId: attendance.userId,
-      competitionId: competitions.id,
-    })
-    .from(attendance)
-    .innerJoin(competitions, eq(competitions.workshopId, attendance.workshopId))
-    .where(
-      and(
-        isNotNull(attendance.workshopId),
-        isNotNull(competitions.judgingStartsAt),
-        lte(competitions.judgingStartsAt, sql`now()`),
-        // Correlated NOT EXISTS rather than a tuple NOT IN. Postgres rejects
-        // the obvious spelling, `(userId, competitionId) not in (select ...)`,
-        // with "subquery has too few columns", because Drizzle renders the
-        // projection as a single expression rather than as a row constructor.
-        notExists(
-          db
-            .select({ one: sql`1` })
-            .from(teamMembers)
-            .where(
-              and(
-                eq(teamMembers.userId, attendance.userId),
-                eq(teamMembers.competitionId, competitions.id),
-              ),
-            ),
-        ),
-      ),
-    );
-
-  let created = 0;
-
-  for (const candidate of candidates) {
-    // One transaction per solo team rather than one for all of them: a member
-    // who cannot be placed, because they joined a team in the seconds since
-    // the query above, should not roll back everybody else's.
-    await db
-      .transaction(async (tx) => {
-        const [team] = await tx
-          .insert(teams)
-          .values({
-            competitionId: candidate.competitionId,
-            slug: `solo-${candidate.userId.slice(0, 8)}`,
-            name: "Solo entry",
-            joinCode: SOLO_JOIN_CODE,
-            createdBy: candidate.userId,
-          })
-          .returning({ id: teams.id });
-
-        if (!team) return;
-
-        await tx.insert(teamMembers).values({
-          teamId: team.id,
-          competitionId: candidate.competitionId,
-          userId: candidate.userId,
-          role: "lead",
-        });
-
-        created += 1;
-      })
-      .catch((error: unknown) => {
-        // The unique constraint on ("userId", "competitionId") is the real
-        // enforcement. Losing that race means somebody joined a team between
-        // the select and the insert, which is the outcome this pass wanted.
-        const code = (error as { code?: string } | null)?.code;
-        if (code !== "23505") throw error;
-      });
-  }
-
-  return created;
 }

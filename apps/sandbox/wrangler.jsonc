@@ -8,7 +8,7 @@
   // See apps/platform/wrangler.jsonc: pinned for the scoped deploy token.
   "account_id": "61d185ff419ef7bd5bd4b3d314081a49",
   "main": "src/index.ts",
-  "compatibility_date": "2026-07-22",
+  "compatibility_date": "2026-09-16",
   "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "enabled": true,

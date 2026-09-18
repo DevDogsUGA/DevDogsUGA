@@ -13,10 +13,8 @@ const DEFAULTS: DraftPrefs = {
   prefStartTime: null,
   prefEndTime: null,
   inputCampus: null,
-  gapDay: null,
   minCreditHours: 12,
   maxCreditHours: 18,
-  walking: false,
   showFilledClasses: false,
 };
 
@@ -56,10 +54,8 @@ export function useDraftPrefs() {
           prefStartTime: toTimeOption(data.prefStartTime),
           prefEndTime: toTimeOption(data.prefEndTime),
           inputCampus: data.inputCampus ?? null,
-          gapDay: data.gapDay ?? null,
           minCreditHours: data.minCreditHours,
           maxCreditHours: data.maxCreditHours,
-          walking: data.walking,
           showFilledClasses: data.showFilledClasses,
         };
       }

@@ -28,68 +28,88 @@ import type { env } from "~/env";
 export type CronEnv = Pick<typeof env, "CRON_SECRET" | "BASE_URL">;
 
 /**
- * Cron expression to the routes it fires.
+ * Cron expression to the routes it fires and a one-line description of the
+ * group's purpose.
  *
  * A list per expression, not a single route: Cloudflare fires each schedule
  * once, and more than one pass can want the same cadence. With a bare
  * `Record<string, string>` the second five-minute pass added would have
  * silently replaced the first: a whole subsystem quietly not running, with
  * nothing to notice it by.
+ *
+ * `label` carries the purpose in English so devtools `cron list` can print it
+ * without reading source comments. The shape is enforced by devtools' zod
+ * schema at its import boundary.
  */
-export const CRON_ROUTES: Record<string, string[]> = {
-  "0 0 * * *": [
-    // Repairs team membership a failed API call left wrong. Nightly rather
-    // than more often on purpose: every membership change already fires on
-    // the platform event that caused it, so if this pass is doing meaningful
-    // work regularly then something upstream is broken and a tighter cadence
-    // would hide it.
-    "/cron/github-reconcile",
-    // Supabase OAuth access tokens last 24h, so daily has ample margin. Runs
-    // BEFORE the reconcile below, which needs those tokens to ask whether each
-    // project still exists. Reversing them would have the reconcile skip every
-    // environment whose grant lapsed overnight.
-    "/cron/sandbox-refresh",
-    // Project existence, status drift, 90-day pause expiry, auto-pause. The
-    // sole authority on orphaning: the proxy must never conclude a project is
-    // gone, because a transient upstream error would tear down a healthy
-    // environment's credentials and secrets.
-    "/cron/sandbox-reconcile",
-    // Mirrors the UGA Bulletin's program catalog for the account Academics
-    // combobox. Last in the daily group because it deliberately spaces roughly
-    // 42 upstream page requests; a slow or rate-limited Bulletin must not delay
-    // the GitHub and sandbox repair passes above.
-    "/cron/academic-programs",
-  ],
-  // Airtable polls rather than subscribes. Webhooks exist but expire on a
-  // 7-day refresh cycle and deliver cursor-based payloads that have to be
-  // replayed in order, real complexity for a club calendar that changes a
-  // few times a week. At ~5 requests a pass this is ~13% of the monthly
-  // allowance, and the manual trigger covers the case where 15 minutes is too
-  // long to wait.
-  "*/15 * * * *": ["/airtable/sync"],
-  "*/10 * * * *": ["/cron/sync-discord-roles"],
-  "*/5 * * * *": [
-    // Freezes `teams."competedAt"` once judging begins. Five minutes rather
-    // than ten because the window between judging starting and this running
-    // is the window in which closing a PR costs a team its star.
-    "/cron/judging-start",
-    // Separate from the freeze despite the shared cadence: the tally blocks
-    // on ungraded competitions and on a missing tiebreak ballot, and freezing
-    // participation must happen whether or not grading is done.
-    "/cron/tally-elections",
-    // Wakes sandbox environments with a competition starting inside fifteen
-    // minutes. Five minutes rather than ten because a restore takes 196s
-    // (measured) and the lead time has to absorb a tick landing badly.
-    "/cron/sandbox-prewarm",
-  ],
-};
+export const CRON_ROUTES: Record<string, { routes: string[]; label: string }> =
+  {
+    "0 0 * * *": {
+      label: "Nightly repair: GitHub reconcile, OAuth tokens, sandbox, catalog",
+      routes: [
+        // Repairs team membership a failed API call left wrong. Nightly rather
+        // than more often on purpose: every membership change already fires on
+        // the platform event that caused it, so if this pass is doing meaningful
+        // work regularly then something upstream is broken and a tighter cadence
+        // would hide it.
+        "/cron/github-reconcile",
+        // Supabase OAuth access tokens last 24h, so daily has ample margin.
+        // Runs BEFORE the reconcile below, which needs those tokens to ask
+        // whether each project still exists. Reversing them would have the
+        // reconcile skip every environment whose grant lapsed overnight.
+        "/cron/sandbox-refresh",
+        // Project existence, status drift, 90-day pause expiry, auto-pause.
+        // The sole authority on orphaning: the proxy must never conclude a
+        // project is gone, because a transient upstream error would tear down a
+        // healthy environment's credentials and secrets.
+        "/cron/sandbox-reconcile",
+        // Mirrors the UGA Bulletin's program catalog for the account Academics
+        // combobox. Last in the daily group because it deliberately spaces
+        // roughly 42 upstream page requests; a slow or rate-limited Bulletin
+        // must not delay the GitHub and sandbox repair passes above.
+        "/cron/academic-programs",
+      ],
+    },
+    // Airtable polls rather than subscribes. Webhooks exist but expire on a
+    // 7-day refresh cycle and deliver cursor-based payloads that have to be
+    // replayed in order, real complexity for a club calendar that changes a
+    // few times a week. At ~5 requests a pass this is ~13% of the monthly
+    // allowance, and the manual trigger covers the case where 15 minutes is too
+    // long to wait.
+    "*/15 * * * *": {
+      label: "Airtable sync: events, officers, and member records",
+      routes: ["/airtable/sync"],
+    },
+    "*/10 * * * *": {
+      label: "Discord role sync",
+      routes: ["/cron/sync-discord-roles"],
+    },
+    "*/5 * * * *": {
+      label:
+        "Competition: freeze judging window, tally elections, prewarm sandboxes",
+      routes: [
+        // Freezes `teams."competedAt"` once judging begins. Five minutes rather
+        // than ten because the window between judging starting and this running
+        // is the window in which closing a PR costs a team its star.
+        "/cron/judging-start",
+        // Separate from the freeze despite the shared cadence: the tally blocks
+        // on ungraded competitions and on a missing tiebreak ballot, and
+        // freezing participation must happen whether or not grading is done.
+        "/cron/tally-elections",
+        // Wakes sandbox environments with a competition starting inside fifteen
+        // minutes. Five minutes rather than ten because a restore takes 196s
+        // (measured) and the lead time has to absorb a tick landing badly.
+        "/cron/sandbox-prewarm",
+      ],
+    },
+  };
 
 export async function scheduled(
   event: { cron: string },
   env: CronEnv,
 ): Promise<void> {
-  const paths = CRON_ROUTES[event.cron];
-  if (!paths) return;
+  const entry = CRON_ROUTES[event.cron];
+  if (!entry) return;
+  const paths = entry.routes;
 
   // Sequential rather than concurrent: these passes share a connection pool,
   // and a five-minute cadence has no deadline that parallelism would help.

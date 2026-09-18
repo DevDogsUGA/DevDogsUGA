@@ -1,4 +1,10 @@
-import { index, pgSchema, primaryKey, unique } from "drizzle-orm/pg-core";
+import {
+  foreignKey,
+  index,
+  pgSchema,
+  primaryKey,
+  unique,
+} from "drizzle-orm/pg-core";
 import { desc, eq, sql } from "drizzle-orm";
 import { crudPolicy } from "../policy";
 
@@ -77,10 +83,6 @@ export const instructors = scheduleBuilder.table(
     id: d.serial().primaryKey(),
     firstName: d.varchar().notNull(),
     lastName: d.varchar().notNull(),
-    totalReviews: d.integer().notNull().default(0),
-    averageRating: d.real().notNull().default(0),
-    difficultyRating: d.real().notNull().default(0),
-    wouldTakeAgainRating: d.integer().notNull().default(0),
   }),
   (t) => [unique("unique_full_name").on(t.firstName, t.lastName)],
 );
@@ -143,7 +145,8 @@ export const offerings = scheduleBuilder.table(
     maximumEnrollment: d.integer().notNull(),
     actualEnrollment: d.integer().notNull(),
     seatsAvailable: d.integer().notNull(),
-    active: d.boolean().notNull(),
+    cancelled: d.boolean().notNull().default(false),
+    lastSeenAt: d.timestamp().notNull().defaultNow(),
     academicPeriod: d
       .integer()
       .notNull()
@@ -163,7 +166,19 @@ export const offerings = scheduleBuilder.table(
       .notNull()
       .references(() => campuses.id),
   }),
-  (t) => [index().on(t.crossListingId)],
+  (t) => [
+    index().on(t.crossListingId),
+    foreignKey({
+      columns: [t.academicPeriod, t.partOfTerm],
+      foreignColumns: [partsOfTerm.academicPeriod, partsOfTerm.code],
+      // Composite FKs get no readable name from drizzle-kit on its own (it
+      // falls back to a random id), so this is named explicitly, matching how
+      // platform's own composite FKs (e.g. teamMembers_teamId_competitionId_fkey)
+      // are named: local table + local columns, no reference to the target.
+      name: "offerings_academicPeriod_partOfTerm_fkey",
+    }),
+    index().on(t.academicPeriod, t.partOfTerm),
+  ],
 );
 
 export const locationStatusEnum = scheduleBuilder.enum("locationStatus", [
@@ -213,10 +228,8 @@ export const userPlanDrafts = scheduleBuilder.table(
     prefStartTime: d.time(),
     prefEndTime: d.time(),
     inputCampus: d.varchar(),
-    gapDay: d.varchar(),
     minCreditHours: d.integer().notNull().default(12),
     maxCreditHours: d.integer().notNull().default(18),
-    walking: d.boolean().notNull().default(false),
     showFilledClasses: d.boolean().notNull().default(false),
   }),
   (t) => [
@@ -286,7 +299,7 @@ export const offeringSearch = scheduleBuilder
         crn: offerings.crn,
         academicPeriod: offerings.academicPeriod,
         seatsAvailable: offerings.seatsAvailable,
-        active: offerings.active,
+        cancelled: offerings.cancelled,
         courseId: courses.id.as("courseId"),
         abbr: courses.abbr,
         courseNumber: courses.courseNumber,

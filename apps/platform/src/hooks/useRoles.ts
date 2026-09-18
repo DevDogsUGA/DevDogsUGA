@@ -90,6 +90,11 @@ export function useRoles(
             canViewAuditLog: data.canViewAuditLog ?? null,
             canCreateCredentials: data.canCreateCredentials ?? null,
             canManageVerification: data.canManageVerification ?? null,
+            canManageAttendance: data.canManageAttendance ?? null,
+            canExportStars: data.canExportStars ?? null,
+            canTriggerSync: data.canTriggerSync ?? null,
+            canVoteAsOfficer: data.canVoteAsOfficer ?? null,
+            canAuditBallots: data.canAuditBallots ?? null,
             discordRoleId: null,
             discordSyncedName: null,
             discordRolePosition: null,
@@ -146,6 +151,21 @@ export function useRoles(
                 }),
                 ...(data.canManageVerification !== undefined && {
                   canManageVerification: data.canManageVerification ?? null,
+                }),
+                ...(data.canManageAttendance !== undefined && {
+                  canManageAttendance: data.canManageAttendance ?? null,
+                }),
+                ...(data.canExportStars !== undefined && {
+                  canExportStars: data.canExportStars ?? null,
+                }),
+                ...(data.canTriggerSync !== undefined && {
+                  canTriggerSync: data.canTriggerSync ?? null,
+                }),
+                ...(data.canVoteAsOfficer !== undefined && {
+                  canVoteAsOfficer: data.canVoteAsOfficer ?? null,
+                }),
+                ...(data.canAuditBallots !== undefined && {
+                  canAuditBallots: data.canAuditBallots ?? null,
                 }),
               }
             : r,

@@ -175,9 +175,9 @@ discover it at wake time.
 
 Free projects pause after a week of inactivity, so a team returning from a week
 off meets a paused instance — the standard cold path, not an edge case.
-`pnpm devtools status --team <slug>` reports and wakes in one command; a restore takes
-about 196 seconds, which is why it says "about four minutes" rather than
-spinning.
+The former team-sandbox status command is temporarily disabled while sandbox
+targeting is being reintroduced. A restore takes about 196 seconds, which is
+why the console says "about four minutes" rather than spinning.
 
 Two `not null default true` columns on `sandboxEnvironments` gate the two
 background passes: `prewarmEnabled` lets pre-warm restore an environment,

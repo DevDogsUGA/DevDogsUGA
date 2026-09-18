@@ -87,7 +87,8 @@ export function parseImagesArgs(argv: readonly string[]): ImagesOptions {
     allFormats: normalized.includes("--all-formats"),
     out: flagValue(normalized, "--out"),
     defaultOut: normalized.includes("--default-out"),
-    noOutput: normalized.includes("--no-output"),
+    noOutput:
+      normalized.includes("--dry-run") || normalized.includes("--no-output"),
   };
 }
 
@@ -161,7 +162,7 @@ async function loadEvents(
 
     return {
       graphics: [],
-      skipped: "no database reachable — run `pnpm devtools link`",
+      skipped: "no database reachable — run `pnpm devtools db start`",
     };
   }
 

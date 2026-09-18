@@ -7,13 +7,14 @@ import { supabase } from "~/supabase/client";
  * the shared Google provider. Controlled by NEXT_PUBLIC_AUTH_MODE.
  */
 export default async function signIn() {
-  const provider =
-    env.NEXT_PUBLIC_AUTH_MODE === "google" ? "google" : "custom:devdogs";
+  const usesGoogle = env.NEXT_PUBLIC_AUTH_MODE === "google";
+  const provider = usesGoogle ? "google" : "custom:devdogs";
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
       redirectTo: `${window.location.origin}/auth/callback`,
+      ...(usesGoogle ? { queryParams: { hd: "uga.edu" } } : {}),
     },
   });
 

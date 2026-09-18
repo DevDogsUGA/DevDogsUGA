@@ -23,8 +23,8 @@ describe("branch names", () => {
     expect(integrationBranch(COMP)).toBe(
       "comp/2026-fall/w02/study-group-finder",
     );
-    expect(teamBranch(COMP, "lantern")).toBe(
-      "team/2026-fall/w02/study-group-finder/lantern",
+    expect(teamBranch(COMP, "sicem")).toBe(
+      "team/2026-fall/w02/study-group-finder/sicem",
     );
     expect(teamBranchPattern(COMP)).toBe(
       "team/2026-fall/w02/study-group-finder/*",
@@ -42,8 +42,8 @@ describe("branch names", () => {
 
 describe("github team slug", () => {
   it("survives GitHub's own slugification unchanged", () => {
-    const slug = githubTeamSlug(COMP, "lantern");
-    expect(slug).toBe("comp-2026-fall-w02-study-group-finder-lantern");
+    const slug = githubTeamSlug(COMP, "sicem");
+    expect(slug).toBe("comp-2026-fall-w02-study-group-finder-sicem");
     // What GitHub does to a team name. If this were not already a fixed point,
     // the API would have to be asked what slug it chose before anything could
     // address the team.
@@ -81,18 +81,10 @@ describe("entry matching", () => {
 
   it("matches a team's own head branch and not a sibling's", () => {
     expect(
-      isTeamHead(
-        "team/2026-fall/w02/study-group-finder/lantern",
-        COMP,
-        "lantern",
-      ),
+      isTeamHead("team/2026-fall/w02/study-group-finder/sicem", COMP, "sicem"),
     ).toBe(true);
     expect(
-      isTeamHead(
-        "team/2026-fall/w02/study-group-finder/marble",
-        COMP,
-        "lantern",
-      ),
+      isTeamHead("team/2026-fall/w02/study-group-finder/marble", COMP, "sicem"),
     ).toBe(false);
   });
 
@@ -105,10 +97,10 @@ describe("entry matching", () => {
 describe("parseTeamBranch", () => {
   it("splits a competition slug containing slashes from the team slug", () => {
     expect(
-      parseTeamBranch("team/2026-fall/w02/study-group-finder/lantern"),
+      parseTeamBranch("team/2026-fall/w02/study-group-finder/sicem"),
     ).toEqual({
       competitionSlug: "2026-fall/w02/study-group-finder",
-      teamSlug: "lantern",
+      teamSlug: "sicem",
     });
   });
 
@@ -120,7 +112,7 @@ describe("parseTeamBranch", () => {
   it("ignores branches outside the team namespace", () => {
     expect(parseTeamBranch("main")).toBeNull();
     expect(parseTeamBranch("comp/2026-fall/w02/study-group-finder")).toBeNull();
-    expect(parseTeamBranch("team/lantern")).toBeNull();
+    expect(parseTeamBranch("team/sicem")).toBeNull();
   });
 });
 

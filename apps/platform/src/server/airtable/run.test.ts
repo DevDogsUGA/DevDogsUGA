@@ -40,8 +40,20 @@ const writes = vi.hoisted(() => ({
   pushMembers: vi.fn(() =>
     Promise.resolve({ created: 0, updated: 0, unchanged: 0 }),
   ),
+  pushAttendance: vi.fn(() =>
+    Promise.resolve({ created: 0, updated: 0, unchanged: 0 }),
+  ),
   pushTeams: vi.fn(() =>
     Promise.resolve({ created: 0, updated: 0, unchanged: 0 }),
+  ),
+  pushOfficerChangeStatuses: vi.fn(() =>
+    Promise.resolve({ created: 0, updated: 0, unchanged: 0 }),
+  ),
+  pushReflections: vi.fn(() =>
+    Promise.resolve({ created: 0, updated: 0, unchanged: 0 }),
+  ),
+  ensurePlatformSettings: vi.fn(() =>
+    Promise.resolve({ created: 0, updated: 0, unchanged: 1 }),
   ),
   pushDerivedCounts: vi.fn(() =>
     Promise.resolve({ created: 0, updated: 0, unchanged: 0 }),
@@ -64,18 +76,6 @@ const credentials = vi.hoisted(() => {
   };
 });
 vi.mock("./credentials", () => credentials);
-
-vi.mock("./attendance", () => ({
-  pullAttendance: vi.fn(() =>
-    Promise.resolve({
-      imported: 0,
-      skipped: 0,
-      accountsCreated: 0,
-      refusals: [],
-      idMap: new Map(),
-    }),
-  ),
-}));
 
 vi.mock("./lease", () => lease);
 vi.mock("./push", () => writes);
@@ -110,6 +110,15 @@ vi.mock("./sync", () => ({
   pullProjects: vi.fn(() =>
     Promise.resolve({
       upserted: 0,
+      archived: 0,
+      skipped: 0,
+      refusals: [],
+      idMap: new Map(),
+    }),
+  ),
+  pullReflectionSettings: vi.fn(() =>
+    Promise.resolve({
+      upserted: 1,
       archived: 0,
       skipped: 0,
       refusals: [],
@@ -241,6 +250,34 @@ describe("runAirtableSync schema precondition", () => {
 
     const report = await runAirtableSync({ client: clientWith(schema) });
     expect(report.skipped).toBeUndefined();
+  });
+
+  it("re-lists newly created members before pushing attendance links", async () => {
+    const client = clientWith(matchingSchema());
+    const newMember = {
+      id: "recNewMember",
+      fields: { [registry.members.fields.platformId.id]: "user-1" },
+    };
+    let memberLists = 0;
+    const listRecords = vi.fn((tableId: string) => {
+      if (tableId === registry.members.id) {
+        memberLists += 1;
+        return Promise.resolve(memberLists === 1 ? [] : [newMember]);
+      }
+      return Promise.resolve([]);
+    });
+    Object.assign(client, { listRecords });
+    writes.pushMembers.mockResolvedValueOnce({
+      created: 1,
+      updated: 0,
+      unchanged: 0,
+    });
+
+    const report = await runAirtableSync({ client });
+
+    expect(report.ok).toBe(true);
+    expect(memberLists).toBe(2);
+    expect(writes.pushAttendance).toHaveBeenCalledWith(client, [], [newMember]);
   });
 });
 

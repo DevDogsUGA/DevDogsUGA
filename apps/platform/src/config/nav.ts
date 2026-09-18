@@ -95,6 +95,13 @@ export const SEARCH_ONLY_PAGES: NavItem[] = [
     icon: "ScalesIcon",
     description: "How DevDogs collects, uses, and protects your data.",
   },
+  {
+    label: "Changelog",
+    href: "/changelog",
+    icon: "TerminalWindowIcon",
+    description:
+      "The weekly DevDogs newsletter: what the club is building and where to show up.",
+  },
 ];
 
 /**
@@ -102,6 +109,22 @@ export const SEARCH_ONLY_PAGES: NavItem[] = [
  * itself enforces server-side. Keep these in sync with the page loaders.
  */
 export const CONSOLE_ITEMS: ConsoleItem[] = [
+  {
+    label: "Attendance",
+    href: "/console/attendance",
+    icon: "QrCodeIcon",
+    permission: "canManageAttendance",
+    description:
+      "Present live meeting QR codes, numeric codes, and attendance totals.",
+  },
+  {
+    label: "QR Codes",
+    href: "/console/qr",
+    icon: "QrCodeIcon",
+    permission: "canManageAttendance",
+    description:
+      "Generate branded QR codes for attendance, posters, and other club materials.",
+  },
   {
     label: "Moderation",
     href: "/console/moderation",

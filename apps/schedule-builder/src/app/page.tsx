@@ -1,70 +1,102 @@
 "use client";
 
-// Returning User: option(saved filter preferences, manual entry, saved plans)
-// New User: option(saved filter preferences, questionnaire page, saved plans)
-
-import { Navbar } from "~/components/Navbar";
+import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
+import { APPS } from "@devdogsuga/og";
 import Image from "next/image";
 import Link from "next/link";
-import devdogCobranded from "../../public/images/devdogCobranded.png";
+import { useRouter } from "next/navigation";
+import { DogDaysIcon } from "~/components/DogDaysIcon";
+import { Navbar } from "~/components/Navbar";
+import { useSession } from "~/components/providers/SessionProvider";
+import signIn from "~/lib/signIn";
+
+const ORGS = [
+  {
+    name: "UGA DevDogs",
+    href: "https://devdogs.uga.edu/",
+    light: "/brand/devdogs-logo.svg",
+    dark: "/brand/devdogs-logo-dark.svg",
+    width: 112,
+    height: 30,
+    heightClass: "h-8",
+  },
+  {
+    name: "Google Developer Groups on Campus at UGA",
+    href: "https://gdg.community.dev/gdg-on-campus-university-of-georgia-athens-united-states/",
+    light: "/brand/gdgc-uga-lockup.svg",
+    dark: "/brand/gdgc-uga-lockup-dark.svg",
+    width: 236,
+    height: 31,
+    heightClass: "h-6",
+  },
+] as const;
 
 export default function Home() {
+  const { user } = useSession();
+  const router = useRouter();
+
   return (
     <>
       <Navbar />
-      <div
-        className="relative -mt-14.5 flex h-[calc(100vh-100px)] flex-1 flex-col items-center justify-center gap-16 overflow-hidden bg-cover bg-fixed bg-bottom bg-no-repeat px-4 pt-24 text-center"
-        // style={{
-        //   backgroundImage: `url(${background.src})`,
-        // }}
-      >
-        <div className="flex flex-col items-center px-6 py-8 min-[480px]:px-12 sm:px-16 md:max-w-[80%]">
-          <div className="flex w-full flex-col items-center gap-8 rounded-3xl">
-            <div className="flex translate-y-2 justify-center text-5xl text-nowrap md:translate-y-5 md:text-6xl lg:text-7xl 2xl:text-8xl">
-              <h2 className="font-extrabold text-slate-800">Bulldog Planner</h2>
-            </div>
-            {/* Hero Section */}
-            <div className="flex w-full flex-col items-center gap-8 pr-10 pl-10 sm:gap-0 sm:pr-0 sm:pl-0">
-              <div className="flex w-full items-center justify-center sm:gap-16">
-                <div className="flex translate-x-5 flex-col items-start">
-                  <div className="flex items-center">
-                    <div className="mr-4 h-20 border-l-4 border-red-700"></div>
-                    <div className="flex h-20 flex-col justify-center text-nowrap">
-                      <span className="text-left text-2xl leading-tight font-bold text-nowrap text-red-700 sm:text-3xl xl:text-4xl">
-                        An Optimized
-                        <br />
-                        Schedule Builder
-                      </span>
-                    </div>
-                  </div>
-                  <span className="mt-5 text-left font-medium text-red-700 sm:text-lg xl:text-2xl">
-                    For Students, By Students
-                  </span>
-                </div>
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center gap-6 px-4 py-16 text-center md:px-6">
+        {/* The same baseline lockup as the navbar, writ large: the mark rides
+            in the text run with its body at Alan Sans cap height. */}
+        <h2 className="font-display text-5xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
+          <DogDaysIcon className="text-accent mr-[0.35em] inline-block h-[0.799em] w-auto align-baseline" />
+          DogDays
+        </h2>
+        <p className="text-accent text-lg font-medium sm:text-xl">
+          The UGA schedule builder, built by students, for students.
+        </p>
+        <p className="text-muted max-w-xl text-balance">{APPS.dogdays.blurb}</p>
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() =>
+              user ? router.push("/plans/create") : void signIn()
+            }
+            className="bg-primary hover:bg-primary-strong flex items-center gap-2 rounded-lg px-6 py-3 text-lg font-semibold text-white shadow-sm transition-colors"
+          >
+            Start Now <ArrowRightIcon weight="bold" />
+          </button>
+          <Link
+            href="/courses"
+            className="border-edge-strong bg-surface hover:bg-surface-muted rounded-lg border px-6 py-3 text-lg font-medium transition-colors"
+          >
+            Browse Courses
+          </Link>
+        </div>
+
+        <div className="flex flex-col items-center gap-5 pt-14">
+          <p className="text-muted text-xs font-semibold tracking-widest uppercase">
+            A project of
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-5">
+            {ORGS.map((org) => (
+              <a
+                key={org.name}
+                href={org.href}
+                target="_blank"
+                rel="noopener"
+                title={org.name}
+                className="transition-opacity hover:opacity-75"
+              >
                 <Image
-                  alt="UGA Dev Dogs logo"
-                  height={220}
-                  width={220}
-                  className="h-[180px] w-[180px] translate-x-0 sm:h-[200px] sm:w-[200px] md:h-[220px] md:w-[220px] lg:-translate-x-1"
-                  src={devdogCobranded}
+                  src={org.light}
+                  alt={org.name}
+                  width={org.width}
+                  height={org.height}
+                  className={`${org.heightClass} w-auto dark:hidden`}
                 />
-              </div>
-              {/* Ready and Start Now Button */}
-              <div className="flex w-full max-w-lg min-w-[350px] -translate-y-0 items-center justify-center text-xl font-bold md:-translate-y-5 xl:-translate-y-3 xl:text-2xl">
-                <p className="-mr-8 w-1/2 cursor-default rounded-l-full bg-[#F8E6EA] bg-pink-100 px-6 py-4 text-left text-neutral-600/40 sm:py-5">
-                  Ready?
-                </p>
-                <Link
-                  className="flex w-3/5 items-center rounded-full bg-red-700 px-6 py-4 pr-1.5 pl-8 text-nowrap text-white shadow-md sm:py-5"
-                  href="/plans/create"
-                >
-                  Start Now!{" "}
-                  <span className="-my-2 mr-3 ml-auto flex size-12 items-center justify-center rounded-full border-2 border-red-900 bg-white pt-0.5 text-[1.5rem] leading-none">
-                    🚀
-                  </span>
-                </Link>
-              </div>
-            </div>
+                <Image
+                  src={org.dark}
+                  alt={org.name}
+                  width={org.width}
+                  height={org.height}
+                  className={`${org.heightClass} hidden w-auto dark:block`}
+                />
+              </a>
+            ))}
           </div>
         </div>
       </div>

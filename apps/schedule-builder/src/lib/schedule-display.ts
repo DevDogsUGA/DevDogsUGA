@@ -1,3 +1,4 @@
+import type { Section } from "./domain/section";
 import type { ClassData, WeekSchedule } from "~/types/scheduleTypes";
 
 const BG_COLORS = [
@@ -22,6 +23,8 @@ const DAY_KEYS = [
   "wednesday",
   "thursday",
   "friday",
+  "saturday",
+  "sunday",
 ] as const;
 
 const DAY_NAMES: Record<(typeof DAY_KEYS)[number], string> = {
@@ -30,30 +33,20 @@ const DAY_NAMES: Record<(typeof DAY_KEYS)[number], string> = {
   wednesday: "Wednesday",
   thursday: "Thursday",
   friday: "Friday",
+  saturday: "Saturday",
+  sunday: "Sunday",
 };
 
-type PlanOffering = {
-  crn: number;
-  seatsAvailable: number;
-  actualEnrollment: number;
-  maximumEnrollment: number;
-  courses: {
-    abbr: string;
-    title: string;
-    courseNumber: string;
-    maxCreditHours: number;
-  } | null;
-  instructors: { firstName: string | null; lastName: string | null } | null;
-  meetings: {
-    monday: boolean | null;
-    tuesday: boolean | null;
-    wednesday: boolean | null;
-    thursday: boolean | null;
-    friday: boolean | null;
-    startTime: string | null;
-    endTime: string | null;
-    buildings: { description: string | null } | null;
-  }[];
+// Day-code letters used by DayClass (e.g. "MWF"). Saturday/Sunday use S/U so
+// they don't collide with the weekday letters.
+const DAY_CODE_MAP: Record<(typeof DAY_KEYS)[number], string> = {
+  monday: "M",
+  tuesday: "T",
+  wednesday: "W",
+  thursday: "R",
+  friday: "F",
+  saturday: "S",
+  sunday: "U",
 };
 
 /** First and last hour drawn on the week grid. */
@@ -92,10 +85,10 @@ function colorKey(abbr: string): string {
 }
 
 /**
- * Transforms the PostgREST plan offerings response into the WeekSchedule
- * format the WeekSchedule and DayClass components render.
+ * Transforms the shared Section domain model into the WeekSchedule format
+ * the WeekSchedule and DayClass components render.
  */
-export function toWeekSchedule(offerings: PlanOffering[]): WeekSchedule {
+export function toWeekSchedule(sections: Section[]): WeekSchedule {
   const colorMap = new Map<string, { bg: string; border: string }>();
   let colorIndex = 0;
 
@@ -114,20 +107,18 @@ export function toWeekSchedule(offerings: PlanOffering[]): WeekSchedule {
     Wednesday: [],
     Thursday: [],
     Friday: [],
+    Saturday: [],
+    Sunday: [],
   };
 
-  for (const offering of offerings) {
-    const course = offering.courses;
-    if (!course) continue;
+  for (const section of sections) {
+    const { bg, border } = getColors(colorKey(section.courseAbbr));
+    const professorName = section.professor?.name ?? "TBA";
 
-    const { bg, border } = getColors(colorKey(course.abbr));
-    const instructor = offering.instructors;
-    const professorName = instructor?.lastName
-      ? `${instructor.firstName ?? ""} ${instructor.lastName}`.trim()
-      : "TBA";
-
-    for (const meeting of offering.meetings) {
-      const activeDays = DAY_KEYS.filter((d) => meeting[d]);
+    for (const meeting of section.meetings) {
+      // Filtering DAY_KEYS (rather than iterating meeting.days) fixes the
+      // display order to Monday..Sunday regardless of the input order.
+      const activeDays = DAY_KEYS.filter((d) => meeting.days.includes(d));
       if (activeDays.length === 0) continue;
 
       const startMinutes = toMinutes(meeting.startTime);
@@ -136,35 +127,25 @@ export function toWeekSchedule(offerings: PlanOffering[]): WeekSchedule {
       if (startMinutes === null) continue;
       const timeStart = formatTime(meeting.startTime);
       const timeEnd = formatTime(meeting.endTime);
-      const location = meeting.buildings?.description ?? "TBA";
+      const location = meeting.building?.description ?? "TBA";
 
       // Build the day-code string used by DayClass (e.g. "MWF")
-      const dayCodeMap: Record<(typeof DAY_KEYS)[number], string> = {
-        monday: "M",
-        tuesday: "T",
-        wednesday: "W",
-        thursday: "R",
-        friday: "F",
-      };
-      const currentDayCode = activeDays.map((d) => dayCodeMap[d]).join("");
+      const currentDayCode = activeDays.map((d) => DAY_CODE_MAP[d]).join("");
 
       const classData: ClassData = {
-        classTitle: course.abbr,
-        className: course.courseNumber,
-        description: course.title,
+        classTitle: section.courseAbbr,
+        className: section.courseNumber,
+        description: section.courseTitle,
         locationLong: location,
         locationShort: location,
-        prereq: "",
-        coreq: "",
         professor: professorName,
-        semester: "",
-        credits: course.maxCreditHours,
-        crn: offering.crn,
-        openSeats: offering.seatsAvailable,
-        maxSeats: offering.maximumEnrollment,
+        credits: section.creditHours.max,
+        crn: section.crn,
+        openSeats: section.seatsAvailable,
+        maxSeats: section.maximumEnrollment,
         waitlist: Math.max(
           0,
-          offering.actualEnrollment - offering.maximumEnrollment,
+          section.actualEnrollment - section.maximumEnrollment,
         ),
         bgColor: bg,
         borderColor: border,
@@ -174,7 +155,6 @@ export function toWeekSchedule(offerings: PlanOffering[]): WeekSchedule {
         // rather than re-parsed from the formatted display string.
         timeDifference: startMinutes - SCHEDULE_START_HOUR * 60,
         currentDay: currentDayCode,
-        otherTimes: ["", "", ""],
       };
 
       for (const day of activeDays) {

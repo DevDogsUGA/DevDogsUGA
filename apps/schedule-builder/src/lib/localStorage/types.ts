@@ -27,9 +27,7 @@ export type DraftPrefs = {
   prefStartTime: string | null;
   prefEndTime: string | null;
   inputCampus: string | null;
-  gapDay: string | null;
   minCreditHours: number;
   maxCreditHours: number;
-  walking: boolean;
   showFilledClasses: boolean;
 };

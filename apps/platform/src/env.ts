@@ -91,6 +91,20 @@ const server = {
       secrecy: "secret",
     },
   ),
+  ATTENDANCE_TOKEN_SECRET: define(
+    switchEnvironment({
+      local: z.string().default("local-attendance-secret-not-for-deployment"),
+      deployed: z.string().min(32),
+    }),
+    {
+      doc:
+        "HMAC key for rotating attendance QR challenges, manual codes, and " +
+        "pending OAuth claims. Use a different random value in each " +
+        "environment; changing it invalidates outstanding challenges.",
+      scope: "environment",
+      secrecy: "secret",
+    },
+  ),
   DEVDOGS_EPOCH: define(z.coerce.date().default(new Date(2024, 7, 22)), {
     doc:
       "Epoch used for DevDogs id/time math. The default is the club's " +
@@ -289,6 +303,21 @@ const server = {
     secrecy: "secret",
     commented: true,
   }),
+  AIRTABLE_AUTOMATION_SECRET: define(
+    switchEnvironment({
+      local: z.string().default("local-airtable-automation-secret"),
+      deployed: z.string().min(32),
+    }),
+    {
+      doc:
+        "Narrow bearer secret used only by the Airtable Officer Changes " +
+        "automation endpoint. It must not match AIRTABLE_SYNC_PAT or " +
+        "CRON_SECRET, and staging must never be wired to the live automation.",
+      scope: "environment",
+      secrecy: "secret",
+      commented: true,
+    },
+  ),
   // Supabase OAuth, for sandbox environments. Optional for the same reason as
   // Airtable: the app is registered separately and the platform has to boot
   // without it, so provisioning refuses with `not_configured` rather than the

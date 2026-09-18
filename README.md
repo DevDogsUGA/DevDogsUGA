@@ -34,10 +34,10 @@ docs/                  Markdown for every project, rendered on the platform site
 git clone https://github.com/DevDogsUGA/DevDogsUGA.git
 cd DevDogsUGA
 corepack enable && pnpm install
-pnpm devtools setup
-pnpm devtools link      # boots the local Docker stack; --remote links a hosted project instead
-pnpm devtools reset
-pnpm dev --filter platform
+pnpm devtools setup       # asks which projects you're on, writes your .env
+pnpm devtools db start    # boots the local Docker stack (no credentials); or `db connect <ref>` for a hosted project
+pnpm devtools db reset    # replays migrations, then seeds, then regenerates types
+pnpm dev                  # pick the app you set up — e.g. `pnpm dev --filter schedule-builder`
 ```
 
 Prerequisites, the hosted-Supabase path, and what each step does:
@@ -45,15 +45,15 @@ Prerequisites, the hosted-Supabase path, and what each step does:
 
 ## Docs
 
-| Page                                                        | What it covers                                                    |
-| ----------------------------------------------------------- | ----------------------------------------------------------------- |
-| [Monorepo](docs/monorepo/index.md)                          | Start here — which app owns what, and where to go next            |
-| [Quickstart](docs/monorepo/guides/quickstart.md)            | Clone to a running app                                            |
-| [Contributing](docs/monorepo/guides/contributing.md)        | Branch, pull request, the checks CI runs                          |
-| [Secrets and environments](docs/monorepo/guides/secrets.md) | Which env file is which, and how yours gets filled                |
-| [Stack](docs/monorepo/stack/index.md)                       | Every technology, its pinned version, and where we depart from it |
-| [Platform](docs/platform/index.md)                          | The site, console, docs, and OAuth server                         |
-| [Schedule Builder](docs/schedule-builder/index.md)          | Course schedule planning                                          |
-| [Study Group Finder](docs/study-group-finder/index.md)      | The Flutter app                                                   |
-| [Sandbox](docs/sandbox/index.md)                            | Per-team Supabase instances, and the proxy in front of them       |
-| [Toolkit](docs/toolkit/index.md)                            | The shared packages, and the generated API reference              |
+| Page                                                        | What it covers                                                     |
+| ----------------------------------------------------------- | ------------------------------------------------------------------ |
+| [Monorepo](docs/monorepo/index.md)                          | Start here — which app owns what, and where to go next             |
+| [Quickstart](docs/monorepo/guides/quickstart.md)            | Clone to a running app                                             |
+| [Contributing](docs/monorepo/guides/contributing.md)        | Branch, pull request, the checks CI runs                           |
+| [Secrets and environments](docs/monorepo/guides/secrets.md) | Which env file is which, and how yours gets filled                 |
+| [Stack](docs/monorepo/stack/index.md)                       | Every technology, its pinned version, and where we depart from it  |
+| [Schedule Builder](docs/schedule-builder/index.md)          | Course schedule planning (Next.js) — start here if you're new      |
+| [Study Group Finder](docs/study-group-finder/index.md)      | The Flutter study-group app — start here if you're new             |
+| [Platform](docs/platform/index.md)                          | Shared auth server, site, and console — infra the others depend on |
+| [Sandbox](docs/sandbox/index.md)                            | Shared proxy Worker in front of each team's Supabase project       |
+| [Toolkit](docs/toolkit/index.md)                            | The shared packages, and the generated API reference               |

@@ -38,6 +38,26 @@
 -- declared with teams. No table in this file uses any of them.
 
 -- ============================================================
+-- Seasons
+-- ============================================================
+--
+-- Semester boundaries are data, not date arithmetic hidden in application
+-- code. Activities normally resolve their season from their start timestamp;
+-- the nullable seasonId on an activity is an explicit Airtable-authored
+-- override for exceptional calendars.
+create table "platform"."seasons" (
+  "id"       uuid not null default gen_random_uuid(),
+  "name"     text not null,
+  "startsAt" timestamptz not null,
+  "endsAt"   timestamptz not null,
+  constraint "seasons_pkey" primary key ("id"),
+  constraint "seasons_name_key" unique ("name"),
+  constraint "seasons_endsAt_after_startsAt" check ("endsAt" > "startsAt")
+);
+
+alter table "platform"."seasons" enable row level security;
+
+-- ============================================================
 -- Projects
 -- ============================================================
 --
@@ -146,7 +166,6 @@ create table "platform"."meetings" (
   "endsAt"             timestamptz not null,
   "airtableRecordId"   text,
   "deletedAt"          timestamptz,
-  "attendanceFormUrl"  text,
   "summary"            text,
   "kind"               text,
   "rsvpUrl"            text,
@@ -158,6 +177,9 @@ create table "platform"."meetings" (
   "building"           text,
   "cancelledAt"        timestamptz,
   "cancellationReason" text,
+  "countsTowardProgress" boolean not null default false,
+  "elEligible"           boolean not null default false,
+  "seasonId"             uuid,
   constraint "meetings_pkey" primary key ("id"),
   constraint "meetings_slug_key" unique ("slug"),
   constraint "meetings_airtableRecordId_key" unique ("airtableRecordId"),
@@ -193,13 +215,6 @@ create table "platform"."meetings" (
   constraint "meetings_rsvpUrl_host" check (
     "rsvpUrl" is null
     or "rsvpUrl" ~ '^https://uga\.campuslabs\.com(/[A-Za-z0-9/_?=&.%#:~-]*)?$'
-  ),
-  -- Same reasoning as the RSVP host: this is an href on a public page, and
-  -- constraining the host makes a mispaste a rejected write instead of a link
-  -- nobody thinks to check.
-  constraint "meetings_attendanceFormUrl_airtable" check (
-    "attendanceFormUrl" is null
-    or "attendanceFormUrl" ~ '^https://airtable\.com/[A-Za-z0-9/_?=&.-]+$'
   ),
   -- Every value has a footprint generated from OpenStreetMap by
   -- `apps/platform/scripts/generate-campus-map.ts`, which is where the
@@ -242,7 +257,9 @@ create table "platform"."meetings" (
   constraint "meetings_nameOverride_length" check (
     "nameOverride" is null
     or char_length("nameOverride") <= 80
-  )
+  ),
+  constraint "meetings_seasonId_fkey" foreign key ("seasonId")
+    references "platform"."seasons"("id") on update cascade on delete set null
 );
 
 alter table "platform"."meetings" enable row level security;
@@ -253,9 +270,6 @@ comment on column "platform"."meetings"."nameOverride" is
 comment on column "platform"."meetings"."location" is
   'Where inside "building" -- a room number or the name of a space. Free text, authored in Airtable. Printed beside the building; never parsed to decide anything.';
 
-comment on column "platform"."meetings"."attendanceFormUrl" is
-  'Share link for this meeting''s Airtable attendance form. Pulled from Airtable; null when there is no form. Not discoverable via the API — a form view''s share token is not exposed.';
-
 comment on column "platform"."meetings"."summary" is
   'One or two sentences about this meeting, authored by an officer in Airtable. Null means none was written, and the events page shows a derived agenda instead. Capped at 240 characters; longer text is refused rather than truncated.';
 
@@ -263,7 +277,7 @@ comment on column "platform"."meetings"."kind" is
   'Override naming a meeting whose structure cannot describe it: Build Session, Study Session, Interest Meeting, or Social. Null is the NORMAL case and means "read the derived segments", not "unknown" -- a sprint Monday is fully described by its workshops and its judging, so most rows leave this blank. Not a label for every night.';
 
 comment on column "platform"."meetings"."rsvpUrl" is
-  'Per-meeting RSVP link, normally the meeting''s UGA Involvement Network event page. Pulled from Airtable; null when there is nothing to RSVP to. Distinct from "attendanceFormUrl", which is the in-room check-in form.';
+  'Per-meeting RSVP link, normally the meeting''s UGA Involvement Network event page. Pulled from Airtable; null when there is nothing to RSVP to.';
 
 comment on column "platform"."meetings"."building" is
   'Which building this meeting is in, from the closed list the campus map can draw. Null means nobody has picked one; ''Other'' means somewhere the map does not cover, and the free-text "location" beside it carries the detail either way.';
@@ -364,6 +378,9 @@ create table "platform"."competitions" (
   "requirementCount" smallint,
   "airtableRecordId" text,
   "deletedAt"        timestamptz,
+  "countsTowardProgress" boolean not null default false,
+  "elEligible"           boolean not null default false,
+  "seasonId"             uuid,
   constraint "competitions_pkey" primary key ("id"),
   constraint "competitions_slug_key" unique ("slug"),
   constraint "competitions_workshopId_key" unique ("workshopId"),
@@ -375,7 +392,9 @@ create table "platform"."competitions" (
   constraint "competitions_workshopId_fkey" foreign key ("workshopId")
     references "platform"."workshops"("id") on update cascade on delete cascade,
   constraint "competitions_judgingMeetingId_fkey" foreign key ("judgingMeetingId")
-    references "platform"."meetings"("id") on update cascade on delete set null
+    references "platform"."meetings"("id") on update cascade on delete set null,
+  constraint "competitions_seasonId_fkey" foreign key ("seasonId")
+    references "platform"."seasons"("id") on update cascade on delete set null
 );
 
 alter table "platform"."competitions" enable row level security;
@@ -395,6 +414,7 @@ create index "workshops_live_idx" on "platform"."workshops" ("meetingId")
   where "deletedAt" is null;
 create index "competitions_live_idx" on "platform"."competitions" ("workshopId")
   where "deletedAt" is null;
+create index "seasons_startsAt_idx" on "platform"."seasons" ("startsAt");
 
 -- ============================================================
 -- RLS
@@ -418,6 +438,15 @@ create index "competitions_live_idx" on "platform"."competitions" ("workshopId")
 -- The same four policy names repeat on all four tables. Policy names are
 -- per-table, so this is legal, and deduplicating by name deletes real
 -- policies.
+
+create policy "public_select" on "platform"."seasons"
+  as permissive for select to anon, authenticated using (true);
+create policy "no_client_insert" on "platform"."seasons"
+  as restrictive for insert to anon, authenticated with check (false);
+create policy "no_client_update" on "platform"."seasons"
+  as restrictive for update to anon, authenticated using (false) with check (false);
+create policy "no_client_delete" on "platform"."seasons"
+  as restrictive for delete to anon, authenticated using (false);
 
 create policy "public_select" on "platform"."projects"
   as permissive for select to anon, authenticated using (true);

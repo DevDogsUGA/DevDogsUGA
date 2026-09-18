@@ -15,6 +15,10 @@ import openNextHandler from "../.open-next/worker.js";
 import { scheduled } from "./scheduled";
 
 export * from "../.open-next/worker.js";
+// The Workflow class must be reachable from `main` (this file) for
+// wrangler's `workflows[].class_name: "ScrapeWorkflow"` binding to find it.
+// See wrangler.jsonc and ./ScrapeWorkflow.ts.
+export { ScrapeWorkflow } from "./ScrapeWorkflow";
 
 export default {
   ...openNextHandler,

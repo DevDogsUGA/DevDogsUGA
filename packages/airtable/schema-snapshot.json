@@ -3,12 +3,53 @@
     {
       "id": "tblVgyeo1q9vk0ddD",
       "name": "Attendance",
-      "primaryFieldId": "fldg06bTtZFYVcErp",
+      "primaryFieldId": "fldmscaBQzdP4qhMP",
       "fields": [
+        {
+          "id": "fldwJxi1Jm0gzykDW",
+          "name": "⚙️ Member",
+          "type": "multipleRecordLinks"
+        },
+        {
+          "id": "fld4CosVKlvMZpO91",
+          "name": "⚙️ Method",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "Manual code"
+              },
+              {
+                "name": "Officer"
+              },
+              {
+                "name": "QR"
+              }
+            ]
+          }
+        },
         {
           "id": "fldg06bTtZFYVcErp",
           "name": "⚙️ Platform ID",
           "type": "singleLineText"
+        },
+        {
+          "id": "fldy2KTztwZvrt7sZ",
+          "name": "⚙️ Recorded at",
+          "type": "dateTime",
+          "options": {
+            "timeZone": "America/New_York"
+          }
+        },
+        {
+          "id": "fldeg3snMYlWedD25",
+          "name": "⚙️ Revocation reason",
+          "type": "multilineText"
+        },
+        {
+          "id": "fldc2EI4R9TiRsb20",
+          "name": "⚙️ Revoked",
+          "type": "checkbox"
         },
         {
           "id": "fldKo5gUpLqg72pKx",
@@ -38,6 +79,48 @@
       ]
     },
     {
+      "id": "tblfXjgqCZiJnnD4x",
+      "name": "Competition Teams",
+      "primaryFieldId": "fldkwm2qtSjZdbzPY",
+      "fields": [
+        {
+          "id": "fldDuEeRPzyaRxqIo",
+          "name": "⚙️ Competed",
+          "type": "checkbox"
+        },
+        {
+          "id": "fldu6uDYUQq0ga4qH",
+          "name": "⚙️ Members",
+          "type": "number"
+        },
+        {
+          "id": "fldkwm2qtSjZdbzPY",
+          "name": "⚙️ Name",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldZ7a84yBHOt1x3i",
+          "name": "⚙️ Platform ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldvrkhNok0u2C7zn",
+          "name": "⚙️ Points",
+          "type": "number"
+        },
+        {
+          "id": "fldt81SN59PbB0Wa5",
+          "name": "⚙️ Submission",
+          "type": "url"
+        },
+        {
+          "id": "fldos8CCiyx6FwIdi",
+          "name": "Requirements met",
+          "type": "number"
+        }
+      ]
+    },
+    {
       "id": "tbltrW1Xum127cNwy",
       "name": "Competitions",
       "primaryFieldId": "fld1w9dzXBszwMI0M",
@@ -61,6 +144,31 @@
           "id": "flduPP0rsaJ7Sjl1J",
           "name": "Branch slug",
           "type": "singleLineText"
+        },
+        {
+          "id": "fldnfQFDfeGHQ7Qgn",
+          "name": "Competitions (Nested)",
+          "type": "multipleRecordLinks"
+        },
+        {
+          "id": "fldyTWr0jPHLMd3FO",
+          "name": "Counts toward progress",
+          "type": "checkbox"
+        },
+        {
+          "id": "fldWcPMV3MWkjrH9t",
+          "name": "EL eligible",
+          "type": "checkbox"
+        },
+        {
+          "id": "fldaKMATjk2M7MymC",
+          "name": "EL Reflections",
+          "type": "multipleRecordLinks"
+        },
+        {
+          "id": "fldCNXyYcIRKckgFo",
+          "name": "From field: Competitions (Nested)",
+          "type": "multipleRecordLinks"
         },
         {
           "id": "fld9p3FVXCuFWJF7b",
@@ -88,9 +196,64 @@
       ]
     },
     {
+      "id": "tblU6bJTxyY14SyK1",
+      "name": "EL Reflections",
+      "primaryFieldId": "fldAAdfehG54Cwk6Z",
+      "fields": [
+        {
+          "id": "fld3PX7K6E6ftUln3",
+          "name": "⚙️ Competition",
+          "type": "multipleRecordLinks"
+        },
+        {
+          "id": "fld3m7QttXHmISBb9",
+          "name": "⚙️ Meeting",
+          "type": "multipleRecordLinks"
+        },
+        {
+          "id": "fldjtuJGCQPLrsSBz",
+          "name": "⚙️ Member",
+          "type": "multipleRecordLinks"
+        },
+        {
+          "id": "fldAAdfehG54Cwk6Z",
+          "name": "⚙️ Platform ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldPdvrIG9nKd1bF4",
+          "name": "⚙️ Reflection",
+          "type": "multilineText"
+        },
+        {
+          "id": "fldBtR3plntD3TRuF",
+          "name": "⚙️ State",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "Draft"
+              },
+              {
+                "name": "Submitted"
+              }
+            ]
+          }
+        },
+        {
+          "id": "fld6hVB5ZKxFs7BhH",
+          "name": "⚙️ Submitted at",
+          "type": "dateTime",
+          "options": {
+            "timeZone": "America/New_York"
+          }
+        }
+      ]
+    },
+    {
       "id": "tblYhJZWMnBrZ4ylM",
       "name": "Meetings",
-      "primaryFieldId": "fldIBjOSNweMYXAaj",
+      "primaryFieldId": "fldc0NfTHVxHk8Za0",
       "fields": [
         {
           "id": "fld9RRuEB6SpnqPLP",
@@ -173,6 +336,42 @@
           }
         },
         {
+          "id": "fldeFR8rpFsxtrn0o",
+          "name": "Counts toward progress",
+          "type": "checkbox"
+        },
+        {
+          "id": "fld61God8Kb2X6QMz",
+          "name": "CRETs Status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "Confirmed"
+              },
+              {
+                "name": "N/A"
+              },
+              {
+                "name": "Tentative"
+              },
+              {
+                "name": "To Be Requested"
+              }
+            ]
+          }
+        },
+        {
+          "id": "fldQ3kznHDThetBK8",
+          "name": "EL eligible",
+          "type": "checkbox"
+        },
+        {
+          "id": "fldwrbMsfWgFVSbfR",
+          "name": "EL Reflections",
+          "type": "multipleRecordLinks"
+        },
+        {
           "id": "fldEjZPZGVJG3qZEl",
           "name": "Ends at",
           "type": "dateTime",
@@ -230,6 +429,11 @@
           "type": "multilineText"
         },
         {
+          "id": "fldIZDlHG33yFMpol",
+          "name": "Tasks",
+          "type": "multipleRecordLinks"
+        },
+        {
           "id": "fldANNjZaqMsRkgQZ",
           "name": "Workshops",
           "type": "multipleRecordLinks"
@@ -239,7 +443,7 @@
     {
       "id": "tblLTJtir40NrL87x",
       "name": "Members",
-      "primaryFieldId": "fldXg9IE8LgkjhfKy",
+      "primaryFieldId": "flddUp1hUoD2W79Qa",
       "fields": [
         {
           "id": "fld67SQSbL40XU6aa",
@@ -252,9 +456,24 @@
           "type": "singleLineText"
         },
         {
+          "id": "fldiiwPLhF4cj5qxS",
+          "name": "Accessible Credentials",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldTiVwRRrH86cHSu",
+          "name": "Attendance",
+          "type": "multipleRecordLinks"
+        },
+        {
           "id": "fld3p7eengCBxHjjj",
           "name": "Dues paid",
           "type": "date"
+        },
+        {
+          "id": "fldWSwaV3tLVMQcIK",
+          "name": "EL Reflections",
+          "type": "multipleRecordLinks"
         },
         {
           "id": "fldeFEIojm0OmH0hL",
@@ -279,9 +498,187 @@
       ]
     },
     {
+      "id": "tblxVnlGBq5mbR1u5",
+      "name": "Officer Changes",
+      "primaryFieldId": "fld0kB2uIYOqovM5p",
+      "fields": [
+        {
+          "id": "fldMrPvim5CHD4BaB",
+          "name": "⚙️ Audit event ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldtsfXM7cflE1ecY",
+          "name": "⚙️ Form response ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fld564oqKGXjCp9C9",
+          "name": "⚙️ Processed at",
+          "type": "dateTime",
+          "options": {
+            "timeZone": "America/New_York"
+          }
+        },
+        {
+          "id": "fldjYkqzAiy4HR9hT",
+          "name": "⚙️ Processing status",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "Applied"
+              },
+              {
+                "name": "Pending"
+              },
+              {
+                "name": "Rejected"
+              },
+              {
+                "name": "Retryable"
+              }
+            ]
+          }
+        },
+        {
+          "id": "fldu8HfCb95aXdGdf",
+          "name": "⚙️ Validation error",
+          "type": "multilineText"
+        },
+        {
+          "id": "fld2ZgpC34p4NVBFO",
+          "name": "Clear reflection content",
+          "type": "checkbox"
+        },
+        {
+          "id": "fldLQGEgssJr29bAz",
+          "name": "Command",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "Add attendance"
+              },
+              {
+                "name": "Clear competition participation override"
+              },
+              {
+                "name": "Edit reflection"
+              },
+              {
+                "name": "Grant competition participation"
+              },
+              {
+                "name": "Restore attendance"
+              },
+              {
+                "name": "Revoke attendance"
+              },
+              {
+                "name": "Revoke competition participation"
+              }
+            ]
+          }
+        },
+        {
+          "id": "fld5pq8yZxG3WLVtM",
+          "name": "Correction reason",
+          "type": "multilineText"
+        },
+        {
+          "id": "fldBhPNuG7fGPSeij",
+          "name": "Created by",
+          "type": "createdBy"
+        },
+        {
+          "id": "fld1AGug56uC8kqug",
+          "name": "Meeting platform ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldpjrEDvWElsjtq8",
+          "name": "Member MyID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldEdlPrMkXwh3nQg",
+          "name": "New competition platform ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fld4Gp3IPgTDiO6wa",
+          "name": "New meeting platform ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fld9Q2kYWwy5Ta2Ap",
+          "name": "New member MyID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldywB2BObff6aROE",
+          "name": "Reflection content",
+          "type": "multilineText"
+        },
+        {
+          "id": "fldi4rqSZbsGdNew3",
+          "name": "Reflection state",
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "name": "Draft"
+              },
+              {
+                "name": "Submitted"
+              }
+            ]
+          }
+        },
+        {
+          "id": "fldeJG9OM5j0OUMNK",
+          "name": "Submitted",
+          "type": "checkbox"
+        },
+        {
+          "id": "fld0kB2uIYOqovM5p",
+          "name": "Target platform ID",
+          "type": "singleLineText"
+        }
+      ]
+    },
+    {
+      "id": "tblHfmgt55SIiugdS",
+      "name": "Platform Settings",
+      "primaryFieldId": "fldvvZtnRXFdyQVyw",
+      "fields": [
+        {
+          "id": "fldvvZtnRXFdyQVyw",
+          "name": "⚙️ Platform ID",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldBRBkoKqgP5CSng",
+          "name": "⚙️ Sync status",
+          "type": "multilineText"
+        },
+        {
+          "id": "fldS8m3OleODDu5eD",
+          "name": "Minimum words",
+          "type": "number"
+        },
+        {
+          "id": "fldqWX2nwV7wj9jSk",
+          "name": "Submission window days",
+          "type": "number"
+        }
+      ]
+    },
+    {
       "id": "tblqcG8xDrOMuBTvF",
       "name": "Projects",
-      "primaryFieldId": "fldniryZw7v0j7MuD",
+      "primaryFieldId": "fldaDoMwYJlhoxODU",
       "fields": [
         {
           "id": "fldniryZw7v0j7MuD",
@@ -311,51 +708,9 @@
       ]
     },
     {
-      "id": "tblfXjgqCZiJnnD4x",
-      "name": "Teams",
-      "primaryFieldId": "fldZ7a84yBHOt1x3i",
-      "fields": [
-        {
-          "id": "fldDuEeRPzyaRxqIo",
-          "name": "⚙️ Competed",
-          "type": "checkbox"
-        },
-        {
-          "id": "fldu6uDYUQq0ga4qH",
-          "name": "⚙️ Members",
-          "type": "number"
-        },
-        {
-          "id": "fldkwm2qtSjZdbzPY",
-          "name": "⚙️ Name",
-          "type": "singleLineText"
-        },
-        {
-          "id": "fldZ7a84yBHOt1x3i",
-          "name": "⚙️ Platform ID",
-          "type": "singleLineText"
-        },
-        {
-          "id": "fldvrkhNok0u2C7zn",
-          "name": "⚙️ Points",
-          "type": "number"
-        },
-        {
-          "id": "fldt81SN59PbB0Wa5",
-          "name": "⚙️ Submission",
-          "type": "url"
-        },
-        {
-          "id": "fldos8CCiyx6FwIdi",
-          "name": "Requirements met",
-          "type": "number"
-        }
-      ]
-    },
-    {
       "id": "tblSYPbmIagwyTFq1",
       "name": "Workshops",
-      "primaryFieldId": "fldVVc4st1vNgVzVP",
+      "primaryFieldId": "fldaY1lWS1qBJsqrp",
       "fields": [
         {
           "id": "fldxdsZmSNmR30O2J",

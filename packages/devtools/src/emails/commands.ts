@@ -65,7 +65,7 @@ export function parseEmailArgs(
     names,
     formats: [...new Set(rawFormats)] as EmailFormat[],
     out: resolve(cwd, expandHome(flagValue(argv, "--out") ?? "email-previews")),
-    noOutput: argv.includes("--no-output"),
+    noOutput: argv.includes("--dry-run") || argv.includes("--no-output"),
   };
 }
 

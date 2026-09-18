@@ -17,6 +17,7 @@ import {
   destroyPersonas,
   grantRole,
   makeTestAccount,
+  sql,
   suspend,
   type Persona,
 } from "./personas";
@@ -318,6 +319,8 @@ describe("platform meetings, teams and attendance", () => {
   const workshopId = "cccccccc-0000-4000-a000-000000000001";
   const competitionId = "dddddddd-0000-4000-a000-000000000001";
   const teamId = "eeeeeeee-0000-4000-a000-000000000001";
+  const reflectionId = "ffffffff-0000-4000-a000-000000000001";
+  const auditEventId = "11111111-0000-4000-a000-000000000001";
 
   beforeAll(async () => {
     const a = admin();
@@ -349,15 +352,40 @@ describe("platform meetings, teams and attendance", () => {
       .insert({ teamId, competitionId, userId: member.userId, role: "lead" });
     await a.from("attendance").insert({
       meetingId,
-      workshopId,
       userId: member.userId,
-      method: "airtable",
+      method: "qr",
+    });
+    await a.from("reflections").insert({
+      id: reflectionId,
+      meetingId,
+      userId: member.userId,
+      content: "A draft reflection",
+    });
+    await a.from("auditEvents").insert({
+      id: auditEventId,
+      actorType: "system",
+      source: "system",
+      action: "test.fixture.created",
+      targetType: "meeting",
+      targetId: meetingId,
     });
   }, 60_000);
 
   afterAll(async () => {
-    // meetings cascades to workshops -> competitions -> teams -> members,
-    // and to attendance; projects is restricted by workshops so it goes last.
+    // Append-only triggers intentionally apply to service-role calls as well.
+    // Test cleanup uses the database-owner connection and disables replication
+    // triggers only around these deterministic fixture rows.
+    await sql()`set session_replication_role = replica`;
+    try {
+      await sql()`delete from platform."reflectionRevisions" where "reflectionId" = ${reflectionId}`;
+      await sql()`delete from platform."auditEvents" where id = ${auditEventId}`;
+    } finally {
+      await sql()`set session_replication_role = origin`;
+    }
+    await admin().from("reflections").delete().eq("id", reflectionId);
+    // Attendance deliberately restricts hard deletion of its meeting, so
+    // evidence is removed explicitly before this test fixture's schedule.
+    await admin().from("attendance").delete().eq("meetingId", meetingId);
     await admin().from("meetings").delete().eq("id", meetingId);
     await admin().from("projects").delete().eq("id", projectId);
   });
@@ -456,7 +484,7 @@ describe("platform meetings, teams and attendance", () => {
   });
 
   // Officers read other people's attendance through a server action holding
-  // canEditAttendance, so no broad `authenticated` read has to exist.
+  // canManageAttendance, so no broad `authenticated` read has to exist.
   it("shows a member their own attendance and nobody else's", async () => {
     const { data: own, error } = await member.client
       .from("attendance")
@@ -472,10 +500,105 @@ describe("platform meetings, teams and attendance", () => {
     expect(other ?? []).toHaveLength(0);
   });
 
+  it("does not let any client forge attendance", async () => {
+    const { error } = await member.client.from("attendance").insert({
+      meetingId,
+      userId: moderator.userId,
+      method: "manual_code",
+    });
+    expect(error?.code).toBe("42501");
+  });
+
+  it("shows a member their own reflection and keeps it server-written", async () => {
+    const { data: own, error: ownError } = await member.client
+      .from("reflections")
+      .select("id, content")
+      .eq("id", reflectionId);
+    expect(ownError).toBeNull();
+    expect(own).toEqual([{ id: reflectionId, content: "A draft reflection" }]);
+
+    const { data: other } = await moderator.client
+      .from("reflections")
+      .select("id")
+      .eq("id", reflectionId);
+    expect(other).toEqual([]);
+
+    await member.client
+      .from("reflections")
+      .update({ content: "A forged edit" })
+      .eq("id", reflectionId);
+    const { data: stored } = await admin()
+      .from("reflections")
+      .select("content")
+      .eq("id", reflectionId)
+      .single();
+    expect(stored?.content).toBe("A draft reflection");
+  });
+
+  it("limits revision and audit history to the owner or an auditor", async () => {
+    const { data: revision, error: revisionError } = await admin()
+      .from("reflectionRevisions")
+      .insert({
+        reflectionId,
+        userId: member.userId,
+        meetingId,
+        content: "Submitted reflection snapshot",
+        createdByUserId: member.userId,
+      })
+      .select("id")
+      .single();
+    expect(revisionError).toBeNull();
+
+    const { data: own } = await member.client
+      .from("reflectionRevisions")
+      .select("id")
+      .eq("id", revision!.id);
+    expect(own).toHaveLength(1);
+
+    const { data: beforeGrant } = await moderator.client
+      .from("reflectionRevisions")
+      .select("id")
+      .eq("id", revision!.id);
+    expect(beforeGrant).toEqual([]);
+
+    const roleId = await grantRole(moderator, "Audit Reader", {
+      canViewAuditLog: true,
+    });
+    try {
+      const { data: revisions } = await moderator.client
+        .from("reflectionRevisions")
+        .select("id")
+        .eq("id", revision!.id);
+      expect(revisions).toHaveLength(1);
+
+      const { data: events } = await moderator.client
+        .from("auditEvents")
+        .select("id")
+        .eq("id", auditEventId);
+      expect(events).toHaveLength(1);
+    } finally {
+      await deleteRole(roleId);
+    }
+  });
+
+  it("enforces append-only audit events below the application layer", async () => {
+    const { error } = await admin()
+      .from("auditEvents")
+      .update({ action: "test.fixture.rewritten" })
+      .eq("id", auditEventId);
+    expect(error?.code).toBe("55000");
+
+    const { data } = await member.client
+      .from("auditEvents")
+      .select("id")
+      .eq("id", auditEventId);
+    expect(data).toEqual([]);
+  });
+
   it("resolves the three new permissions", async () => {
     const a = admin();
     for (const perm of [
-      "canEditAttendance",
+      "canManageAttendance",
       "canExportStars",
       "canTriggerSync",
     ] as const) {
@@ -487,12 +610,12 @@ describe("platform meetings, teams and attendance", () => {
     }
 
     const roleId = await grantRole(member, "Attendance Officer", {
-      canEditAttendance: true,
+      canManageAttendance: true,
     });
     try {
       const { data: granted } = await a.rpc("has_permission", {
         uid: member.userId,
-        perm: "canEditAttendance",
+        perm: "canManageAttendance",
       });
       expect(granted).toBe(true);
 

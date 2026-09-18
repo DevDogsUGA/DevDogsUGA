@@ -9,7 +9,8 @@ interface PendingOffering {
   maximumEnrollment: number;
   actualEnrollment: number;
   seatsAvailable: number;
-  active: boolean;
+  cancelled: boolean;
+  lastSeenAt: Date;
   academicPeriod: number;
   partOfTerm: string;
   courseAbbr: string;
@@ -58,7 +59,8 @@ export class OfferingCollector {
         row["SCHEDULE_OFFERING.SEATS_AVAILABLE"] ?? "0",
         10,
       ),
-      active: row["SCHEDULE_OFFERING.STATUS"] === "A",
+      cancelled: row["SCHEDULE_OFFERING.STATUS"] !== "A",
+      lastSeenAt: new Date(),
       academicPeriod,
       partOfTerm,
       courseAbbr,
@@ -93,7 +95,8 @@ export class OfferingCollector {
         maximumEnrollment: o.maximumEnrollment,
         actualEnrollment: o.actualEnrollment,
         seatsAvailable: o.seatsAvailable,
-        active: o.active,
+        cancelled: o.cancelled,
+        lastSeenAt: o.lastSeenAt,
         academicPeriod: o.academicPeriod,
         partOfTerm: o.partOfTerm,
         courseId,

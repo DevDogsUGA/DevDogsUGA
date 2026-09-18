@@ -5,24 +5,18 @@
  *
  * **It builds an argv and hands it to the CLI's own dispatcher.** It does not
  * call command functions directly. That is what makes "the menu covers every
- * command" structural instead of aspirational. The menu it replaced held a
+ * interactive command" structural instead of aspirational. The menu it replaced held a
  * hand-written list of ten entries beside a CLI that had grown to sixteen
  * top-level commands and thirty-one subcommands, so `env`, `planner`,
- * `signing-key`, `deploy` and `airtable check` were reachable only by
- * someone who already knew their names. A contributor who does not know a
- * command name is the entire audience for this file.
+ * `signing-key` and `airtable check` were reachable only by someone who
+ * already knew their names. A contributor who does not know a command name is
+ * the entire audience for this file.
  *
- * Walking `commands.ts` means a command added there is in the menu the same
- * day, with its options, and cannot be forgotten here.
- *
- * ## Why `deploy` is shown rather than run
- *
- * Its steps want a runner's environment and two of them have a stdout that
- * GitHub or a Worker secret is read from. Choosing one prints the exact line
- * to run instead of running it. See `CommandNode.wizard` for the full reason.
- * They are still in the tree, still selectable, still described.
+ * Walking `commands.ts` means an interactive command added there is in the
+ * menu the same day, with its options. Commands marked `cli-only` and deploy
+ * commands in the separate `devtools-ci` bin do not appear here.
  */
-import { confirm, log, note, select, text } from "@clack/prompts";
+import { confirm, note, select, text } from "@clack/prompts";
 import {
   GROUPS,
   SCOPES,
@@ -37,6 +31,7 @@ import {
   probeEnvironment,
   type Environment,
 } from "./environment.js";
+import { beginInvocation } from "./invocation.js";
 import { unwrap } from "./ui.js";
 
 /** Chosen when a submenu should return to the screen above it. */
@@ -44,23 +39,6 @@ const BACK = Symbol("back");
 type Back = typeof BACK;
 
 const BACK_OPTION = { value: BACK, label: "← Back" } as const;
-
-/**
- * The wrapper-free entry point the `deploy` steps use.
- *
- * `pnpm devtools` is `with-env tsx src/cli.ts`, and most of these run in jobs
- * that have no env file yet: write-env is what CREATES it.
- *
- * This used to be a hard requirement. The wrapper exited on a missing file, so
- * a wrapped `write-env` died on the very file it was about to compose, and the
- * others reported a missing FILE rather than the missing token, the paused
- * project or the missing credential. `with-env` reports the absence and
- * carries on now, so either entry point would work.
- *
- * It still prints THIS one, because the line is meant to be pasted into a job
- * step and `deploy.yaml` invokes `cli:no-env` at every one of those steps.
- */
-const NO_ENV_ENTRY = "pnpm --filter @devdogsuga/devtools run cli:no-env deploy";
 
 // ── What this machine is offered ─────────────────────────────────────────────
 
@@ -77,7 +55,9 @@ function offered(
   nodes: readonly CommandNode[],
   env: Environment,
 ): CommandNode[] {
-  return nodes.filter((node) => isOffered(node, env));
+  return nodes.filter(
+    (node) => node.surface !== "cli-only" && isOffered(node, env),
+  );
 }
 
 /**
@@ -117,7 +97,7 @@ async function pickGroup(env: Environment): Promise<CommandGroup | null> {
           value: group,
           label: group.title,
           // The group's own commands, so the first screen says what is behind
-          // each door rather than making the reader open all six to find out.
+          // each door rather than making the reader open every one to find out.
           hint: offered(group.commands, env)
             .map((command) => command.name)
             .join(", "),
@@ -218,26 +198,7 @@ async function askOption(option: CommandOption): Promise<string[]> {
     }),
   );
 
-  const chosen = prompt.choices.find((c) => c.value === choice)!;
-
-  // A choice that IS a flag stands alone (`--local`); anything else is a value
-  // for this option's flag (`--target staging`).
-  const head = choice.startsWith("--") ? [choice] : [option.flag, choice];
-
-  if (!chosen.argValue) return head;
-
-  const value = unwrap(
-    await text({
-      message: chosen.argValue.message,
-      placeholder: chosen.argValue.placeholder,
-      defaultValue: "",
-    }),
-  ).trim();
-
-  // `--team` with no slug is refused by the parser anyway; dropping the flag
-  // here means a blank answer falls back to the default target rather than
-  // ending in an error the wizard could have avoided asking twice about.
-  return value ? [...head, value] : [];
+  return [option.flag, choice];
 }
 
 async function askOptions(node: CommandNode): Promise<string[]> {
@@ -315,21 +276,9 @@ export async function runMenu(
   // Quitting is not a failure, but it has nothing to announce either.
   if (!chosen) return null;
 
-  if (chosen.node.wizard === "show") {
-    note(
-      [
-        `${NO_ENV_ENTRY} ${chosen.argv.slice(1).join(" ")}`,
-        "",
-        chosen.node.summary,
-      ].join("\n"),
-      "Run this in the job, not here",
-    );
-    log.info(
-      "Deploy steps read a runner's environment, and two of them have a " +
-        "stdout that GitHub or a Worker secret is taken from.",
-    );
-    return null;
-  }
-
+  // Every step here was a prompt, so the built argv is the reproducible
+  // command — a runner that prompts further (a bare `workflows run`) appends
+  // the rest through `recordResolved`.
+  beginInvocation(chosen.argv, true);
   return dispatch(chosen.argv);
 }
