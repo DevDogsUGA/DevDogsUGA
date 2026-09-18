@@ -24,13 +24,13 @@ different about this app.
 
 ## Where things are
 
-| Area                  | Path                        |
-| --------------------- | --------------------------- |
-| Scrape entry points   | `src/app/(api)/cron/`       |
-| Parsing               | `src/lib/parsers/`          |
+| Area                    | Path                               |
+| ----------------------- | ---------------------------------- |
+| Scrape entry points     | `src/app/(api)/cron/`              |
+| Parsing                 | `src/lib/parsers/`                 |
 | Reconcile into Postgres | `src/lib/parsers/reconcileTerm.ts` |
-| Schedule generation   | `src/lib/generation/`       |
-| Owned schema          | `src/server/db/schema/`     |
+| Schedule generation     | `src/lib/generation/`              |
+| Owned schema            | `src/server/db/schema/`            |
 
 Course and instructor data arrive on a cron route — `scrape-registrar`, or the
 `ScrapeWorkflow` in production — which parses and reconciles it into Postgres.

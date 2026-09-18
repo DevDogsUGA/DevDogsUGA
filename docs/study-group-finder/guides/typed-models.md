@@ -29,7 +29,7 @@ service key is declared under the `study-group-finder:tooling` source in
 > [!IMPORTANT]
 > Every runtime `--dart-define` value must stay `secrecy: "public"`: values
 > compiled into a Flutter binary are extractable from the shipped app, and a
-> completeness test enforces this. The secret key is *tooling*, used at codegen
+> completeness test enforces this. The secret key is _tooling_, used at codegen
 > time only, and never becomes a `--dart-define`.
 
 ## The default-schema constraint

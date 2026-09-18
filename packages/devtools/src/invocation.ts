@@ -36,7 +36,10 @@ let interactive = false;
  * thing. A typed command starts non-interactive and only earns the line if a
  * runner resolves a missing flag from a prompt.
  */
-export function beginInvocation(base: readonly string[], fromMenu: boolean): void {
+export function beginInvocation(
+  base: readonly string[],
+  fromMenu: boolean,
+): void {
   argv = [...base];
   interactive = fromMenu;
 }

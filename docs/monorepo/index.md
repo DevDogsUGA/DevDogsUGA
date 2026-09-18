@@ -12,12 +12,12 @@ Every DevDogs project lives in one pnpm + Turborepo monorepo: four apps, eight s
 
 Most contributors join one of the first two — **Schedule Builder** (Next.js) or **Study Group Finder** (Flutter). **Platform** and **Sandbox** are shared infrastructure the other apps depend on: platform runs the OAuth server everyone signs in through, and sandbox is the proxy in front of each competition team's Supabase project. You'll read about them, but you'll rarely edit them.
 
-| Directory                 | What it is                                                             | Postgres schema      |
-| ------------------------- | ---------------------------------------------------------------------- | -------------------- |
-| `apps/schedule-builder`   | Next.js — course schedule planning ("DogDays")                         | `schedule_builder`   |
-| `apps/study-group-finder` | Flutter — study groups ("Dog Pack"), still a scaffold                  | `study_group_finder` |
+| Directory                 | What it is                                                              | Postgres schema      |
+| ------------------------- | ----------------------------------------------------------------------- | -------------------- |
+| `apps/schedule-builder`   | Next.js — course schedule planning ("DogDays")                          | `schedule_builder`   |
+| `apps/study-group-finder` | Flutter — study groups ("Dog Pack"), still a scaffold                   | `study_group_finder` |
 | `apps/platform`           | Next.js — shared OAuth server, plus the DevDogs site, console, and docs | `platform`           |
-| `apps/sandbox`            | Cloudflare Worker — the proxy in front of each team's Supabase project | none                 |
+| `apps/sandbox`            | Cloudflare Worker — the proxy in front of each team's Supabase project  | none                 |
 
 Schema-per-app is an organizational boundary, not a security one. Every schema is reachable through the same PostgREST endpoint and the same publishable key, so Row-Level Security is what actually isolates one app's data from another's.
 

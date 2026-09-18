@@ -100,10 +100,10 @@ living next door. It runs on sign-in and copies a signed-out visitor's
 
 ## Where to look
 
-| Concern                     | File                                        |
-| --------------------------- | ------------------------------------------- |
-| Cron route / secret         | `src/app/(api)/cron/scrape-registrar/`, `src/lib/cron/` |
-| Production workflow         | `cloudflare/ScrapeWorkflow.ts`, `scheduled.ts` |
-| Term + calendar discovery   | `src/lib/parsers/AvailableTerms.ts`, `PartOfTermScraper.ts` |
-| Reconcile + collectors      | `src/lib/parsers/reconcileTerm.ts`          |
-| Bulk upsert                 | `src/lib/parsers/bulkUpsert.ts`             |
+| Concern                   | File                                                        |
+| ------------------------- | ----------------------------------------------------------- |
+| Cron route / secret       | `src/app/(api)/cron/scrape-registrar/`, `src/lib/cron/`     |
+| Production workflow       | `cloudflare/ScrapeWorkflow.ts`, `scheduled.ts`              |
+| Term + calendar discovery | `src/lib/parsers/AvailableTerms.ts`, `PartOfTermScraper.ts` |
+| Reconcile + collectors    | `src/lib/parsers/reconcileTerm.ts`                          |
+| Bulk upsert               | `src/lib/parsers/bulkUpsert.ts`                             |

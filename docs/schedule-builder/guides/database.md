@@ -60,7 +60,7 @@ pnpm --filter schedule-builder db:pull       # OTHER schemas → src/supabase/dr
 Despite the name pairing with `db:generate`, `db:pull` uses
 `drizzle-introspection.config.ts`, which filters this app's **own** schema out
 (`"!schedule_builder"`) and writes to `src/supabase/drizzle/`. It exists to give
-you typed access to the schemas this app *reads but does not own*. It will never
+you typed access to the schemas this app _reads but does not own_. It will never
 regenerate `src/server/db/schema/`, and expecting it to is how someone concludes
 their hand-written schema was silently dropped.
 

@@ -52,21 +52,21 @@ enumerating everything and filtering at the end:
 
 Every rule implements the interface in `src/lib/generation/rule.ts`:
 
-| Member                 | Purpose                                                      |
-| ---------------------- | ------------------------------------------------------------ |
-| `isActive`             | Whether this rule participates given the constraints         |
-| `allowSection`         | Reject a single section outright                             |
-| `allowPartialSchedule` | Prune an in-progress combination early                       |
-| `allowSchedule`        | Accept or reject a *complete* schedule                       |
-| `score`                | Contribute to ranking                                        |
-| `importance`           | The weight `score` is multiplied by                          |
+| Member                 | Purpose                                              |
+| ---------------------- | ---------------------------------------------------- |
+| `isActive`             | Whether this rule participates given the constraints |
+| `allowSection`         | Reject a single section outright                     |
+| `allowPartialSchedule` | Prune an in-progress combination early               |
+| `allowSchedule`        | Accept or reject a _complete_ schedule               |
+| `score`                | Contribute to ranking                                |
+| `importance`           | The weight `score` is multiplied by                  |
 
 > [!IMPORTANT]
 > `allowPartialSchedule` **must be monotonic**: if a partial schedule is
 > rejected, every schedule that extends it must also be rejectable. It is called
 > mid-search on incomplete combinations, so a non-monotonic check prunes
 > branches that would have become valid and silently drops correct results.
-> Anything that is only knowable once a schedule is *complete* — a minimum
+> Anything that is only knowable once a schedule is _complete_ — a minimum
 > credit-hour floor, for example — belongs in `allowSchedule`, never in
 > `allowPartialSchedule`.
 

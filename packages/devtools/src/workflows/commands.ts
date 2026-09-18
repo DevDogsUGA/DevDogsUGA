@@ -599,8 +599,7 @@ export async function runWorkflowsRun(
   // a copy-pasteable line that skips that confirm would be a footgun. `--app`
   // is inferred from the chosen Workflow when it was not passed.
   if (givenApp === undefined) recordResolved("--app", choice.app);
-  if (givenWorkflow === undefined)
-    recordResolved("--workflow", choice.binding);
+  if (givenWorkflow === undefined) recordResolved("--workflow", choice.binding);
   if (givenTier === undefined) recordResolved("--tier", tier);
   if (givenPort === undefined && options.port && options.port !== "8787")
     recordResolved("--port", options.port);

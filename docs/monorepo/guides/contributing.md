@@ -108,11 +108,11 @@ $ pnpm dev
 
 Three ways past it, each skipping the question entirely:
 
-| Command                             | What it does                                   |
-| ----------------------------------- | ---------------------------------------------- |
+| Command                              | What it does                                   |
+| ------------------------------------ | ---------------------------------------------- |
 | `pnpm dev --filter schedule-builder` | any turbo filter — you have already said which |
-| `pnpm dev --all`             | every package, the old behaviour               |
-| `CI=1 pnpm dev`              | what CI does                                   |
+| `pnpm dev --all`                     | every package, the old behaviour               |
+| `CI=1 pnpm dev`                      | what CI does                                   |
 
 > [!IMPORTANT]
 > `a` and `--all` are not the same thing, and the gap matters most for the tasks you are most likely to run before pushing. `a` selects every app in the list, which is `apps/*`. `--all` passes turbo no filter at all, which is every package in the workspace.
