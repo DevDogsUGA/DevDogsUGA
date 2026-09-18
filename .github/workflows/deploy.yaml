@@ -96,8 +96,10 @@ env:
 # is about the BARE runs in the orphan-audit and prune jobs, and the same entry
 # point is used in both places so there is one answer rather than two.
 #
-# Everything downstream of write-env uses `run cli`, because reading the values
-# it composed is the entire point of those steps.
+# Everything downstream of write-env uses `run ci:env`: the quiet CI entry
+# point wrapped in `with-env`. Reading the values write-env composed is the
+# entire point, while keeping clack banners away from credential-bearing
+# stdout.
 #
 # ⚠️ NOTHING here may run a deploy command through a wrapper that writes to
 # stdout. `deploy secrets-file` emits `::add-mask::<token>`, which GitHub
@@ -250,11 +252,11 @@ jobs:
       # Written to a mkdtemp 0700 directory and removed below whatever happens.
       - name: Compose the Worker secrets file
         id: secrets
-        # `run cli` — with-env — because the whole job of this step is to read
-        # the values write-env composed. Its stdout carries `::add-mask::` and
-        # nothing else; see the note at the top of this file.
+        # `run ci:env` — the quiet CI entry point under with-env — because the
+        # whole job of this step is to read the values write-env composed. Its
+        # stdout carries `::add-mask::` and nothing else; see the note above.
         run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy secrets-file
+          pnpm --filter @devdogsuga/devtools run ci:env deploy secrets-file
           --app ${{ matrix.app }} ${{ matrix.mint }}
       # One step for all three Workers via devtools-ci deploy — the
       # ${DEPLOY_SECRETS_FILE:+--secrets-file …} hook plus, for sandbox,
@@ -266,7 +268,7 @@ jobs:
       - name: Deploy ${{ matrix.app }}
         env:
           DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
-        run: pnpm --filter @devdogsuga/devtools run ci deploy ${{ matrix.app }} --tier $DEPLOY_ENV
+        run: pnpm --filter @devdogsuga/devtools run ci:env deploy ${{ matrix.app }} --tier $DEPLOY_ENV
       # The `finally` half of the mkdtemp. A hosted runner is discarded whole,
       # so this is for the self-hosted case and for a job that fails between
       # composing the file and using it.
@@ -639,18 +641,18 @@ jobs:
         run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
       - name: Compose the Worker secrets file
         id: secrets
-        # `run cli` — with-env — because the whole job of this step is to read
-        # the values write-env composed. Its stdout carries `::add-mask::` and
-        # nothing else; see the note at the top of this file.
+        # `run ci:env` — the quiet CI entry point under with-env — because the
+        # whole job of this step is to read the values write-env composed. Its
+        # stdout carries `::add-mask::` and nothing else; see the note above.
         run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy secrets-file
+          pnpm --filter @devdogsuga/devtools run ci:env deploy secrets-file
           --app ${{ matrix.app }} ${{ matrix.mint }}
       # One step for all three Workers; see the staging job for the
       # PLATFORM_REST_URL note.
       - name: Deploy ${{ matrix.app }}
         env:
           DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
-        run: pnpm --filter @devdogsuga/devtools run ci deploy ${{ matrix.app }} --tier $DEPLOY_ENV
+        run: pnpm --filter @devdogsuga/devtools run ci:env deploy ${{ matrix.app }} --tier $DEPLOY_ENV
       - name: Remove the Worker secrets file
         if: always()
         env:

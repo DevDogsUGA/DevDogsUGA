@@ -2,19 +2,21 @@
 /**
  * `devtools-ci deploy <app|step> [flags]`
  *
- * The CI entry point. No wizard, no `with-env`, no `@clack/prompts`. Every
- * command in this bin runs in a GitHub Actions job and is expected to report
- * its own results to the log. Failures exit non-zero.
+ * The CI entry point. No wizard and no `@clack/prompts`. Commands that create
+ * the deploy env file run through the bare `ci` package script; commands that
+ * consume that file run through `ci:env`, which wraps this same entry point in
+ * `with-env`. Every command runs in GitHub Actions and reports failures by
+ * exiting non-zero.
  *
  * ## Why a separate bin
  *
- * The contributor CLI (`devtools`) loads `with-env`, prompts interactively,
- * and wraps output in clack's box-drawing. None of that belongs in a deploy
- * job. Two of the step commands — `secrets-file` and `mint-token` — emit a
- * credential or a mask directive on stdout, so any banner on that stream is
- * either an unmasked secret in the job log or a broken `::add-mask::` line.
- * The separation is structural: a separate entry point that never imports
- * clack is one that cannot accidentally add a banner.
+ * The contributor CLI (`devtools`) prompts interactively and wraps output in
+ * clack's box-drawing. None of that belongs in a deploy job. Two step commands
+ * — `secrets-file` and `mint-token` — emit a credential or a mask directive on
+ * stdout, so any banner on that stream is either an unmasked secret in the job
+ * log or a broken `::add-mask::` line. The separation is structural: this
+ * entry point never imports clack. `with-env` reports its selected file on
+ * stderr, leaving the command's stdout protocol intact.
  *
  * ## The deploy orchestrator
  *

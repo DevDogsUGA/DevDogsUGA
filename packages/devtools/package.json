@@ -10,6 +10,7 @@
   "scripts": {
     "cli": "with-env tsx --conditions=devdogs-source src/cli.ts",
     "ci": "tsx --conditions=devdogs-source src/ci.ts",
+    "ci:env": "with-env tsx --conditions=devdogs-source src/ci.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

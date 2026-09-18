@@ -140,4 +140,22 @@ describe("workers.json / workers.ts", () => {
       expect(new Set(apps)).toEqual(new Set(WORKER_APPS));
     }
   });
+
+  it("loads the env file before composing secrets or deploying Workers", () => {
+    const yamlText = readFileSync(
+      join(PROJECT_ROOT, ".github", "workflows", "deploy.yaml"),
+      "utf8",
+    );
+
+    expect(
+      yamlText.match(/run ci:env deploy secrets-file/g),
+      "staging and production secrets-file steps",
+    ).toHaveLength(2);
+    expect(
+      yamlText.match(/run ci:env deploy \$\{\{ matrix\.app \}\}/g),
+      "staging and production Worker deploy steps",
+    ).toHaveLength(2);
+    expect(yamlText).not.toMatch(/run ci deploy secrets-file/);
+    expect(yamlText).not.toMatch(/run ci deploy \$\{\{ matrix\.app \}\}/);
+  });
 });
