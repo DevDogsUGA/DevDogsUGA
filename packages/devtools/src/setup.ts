@@ -74,6 +74,10 @@ export async function runSetup(): Promise<void> {
   // file that is meant to be edited. Like init, an existing file is untouched.
   const env = join(PROJECT_ROOT, ".env");
   let seededEnv = false;
+  // The apps the picker chose, so "Next steps" boots what this contributor is
+  // actually here for rather than a hardcoded default. Null when the .env
+  // already existed (no picker ran) — the generic `pnpm dev` picker covers it.
+  let chosenApps: string[] | null = null;
   if (existsSync(env)) {
     checks.push("OK    .env already exists (left untouched)");
   } else {
@@ -85,6 +89,17 @@ export async function runSetup(): Promise<void> {
     // refuses by name with the recovery step. Re-running `env init` later
     // APPENDS the sections for a new project without touching filled values.
     const sections = await resolveSections();
+    if (sections) {
+      // Lead with the two projects most contributors join; platform and
+      // sandbox are shared auth infrastructure you depend on but rarely edit.
+      const order = [
+        "schedule-builder",
+        "study-group-finder",
+        "platform",
+        "sandbox",
+      ];
+      chosenApps = order.filter((app) => sections.has(app));
+    }
     writeFileSync(
       env,
       renderInit(
@@ -107,6 +122,18 @@ export async function runSetup(): Promise<void> {
     );
   }
 
+  // Boot what the contributor picked. study-group-finder still goes through
+  // the same `pnpm dev --filter` picker path (turbo runs its `flutter run`
+  // task), so the shape is uniform; the SDK note is the only difference.
+  const startSteps =
+    chosenApps && chosenApps.length > 0
+      ? chosenApps.map((app) =>
+          app === "study-group-finder"
+            ? `     pnpm dev --filter study-group-finder   (Flutter — needs the SDK)`
+            : `     pnpm dev --filter ${app}`,
+        )
+      : ["     pnpm dev   — then pick your app from the list"];
+
   note(
     [
       "1. Run `pnpm devtools` again and choose:",
@@ -114,9 +141,20 @@ export async function runSetup(): Promise<void> {
       "                          .env.generated (no credentials needed)",
       "",
       '2. Choose Workspace → oauth to configure "Sign in with DevDogs"',
-      "   after the local database is running.",
+      "   after the local database is running. Every app signs in through",
+      "   platform's OAuth server, so this step is shared no matter which",
+      "   project you are building.",
       "",
-      "3. pnpm dev --filter platform",
+      "3. Start the project you picked:",
+      ...startSteps,
+      ...(chosenApps?.includes("schedule-builder")
+        ? [
+            "",
+            "   schedule-builder starts with an empty catalog. Populate it by",
+            "   triggering the registrar scrape workflow (starts Wrangler for you):",
+            "     pnpm devtools workflows run --app schedule-builder --tier development",
+          ]
+        : []),
       "",
       "Working against a hosted Supabase project instead? Fill in .env",
       "(dashboard → Project Settings), then:",

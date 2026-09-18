@@ -2391,6 +2391,7 @@ export type Database = {
           status: Database["platform"]["Enums"]["reportStatus"];
         }[];
       };
+      require_uga_signup_email: { Args: { event: Json }; Returns: Json };
       resolve_content: {
         Args: { app_slug: string; content_ref: string; content_type: string };
         Returns: Json;
@@ -3214,6 +3215,7 @@ export type Database = {
           public: boolean | null;
           type: Database["storage"]["Enums"]["buckettype"];
           updated_at: string | null;
+          versioning_status: string;
         };
         Insert: {
           allowed_mime_types?: string[] | null;
@@ -3227,6 +3229,7 @@ export type Database = {
           public?: boolean | null;
           type?: Database["storage"]["Enums"]["buckettype"];
           updated_at?: string | null;
+          versioning_status?: string;
         };
         Update: {
           allowed_mime_types?: string[] | null;
@@ -3240,6 +3243,7 @@ export type Database = {
           public?: boolean | null;
           type?: Database["storage"]["Enums"]["buckettype"];
           updated_at?: string | null;
+          versioning_status?: string;
         };
         Relationships: [];
       };
@@ -3412,9 +3416,12 @@ export type Database = {
       };
       objects: {
         Row: {
+          archived_at: string | null;
           bucket_id: string | null;
           created_at: string | null;
           id: string;
+          is_delete_marker: boolean;
+          is_versioned: boolean;
           last_accessed_at: string | null;
           metadata: Json | null;
           name: string | null;
@@ -3426,9 +3433,12 @@ export type Database = {
           version: string | null;
         };
         Insert: {
+          archived_at?: string | null;
           bucket_id?: string | null;
           created_at?: string | null;
           id?: string;
+          is_delete_marker?: boolean;
+          is_versioned?: boolean;
           last_accessed_at?: string | null;
           metadata?: Json | null;
           name?: string | null;
@@ -3440,9 +3450,12 @@ export type Database = {
           version?: string | null;
         };
         Update: {
+          archived_at?: string | null;
           bucket_id?: string | null;
           created_at?: string | null;
           id?: string;
+          is_delete_marker?: boolean;
+          is_versioned?: boolean;
           last_accessed_at?: string | null;
           metadata?: Json | null;
           name?: string | null;

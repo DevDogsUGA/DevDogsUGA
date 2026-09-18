@@ -281,6 +281,11 @@ export type CreateRoleInput = {
   canViewAuditLog?: boolean | null;
   canCreateCredentials?: boolean | null;
   canManageVerification?: boolean | null;
+  canManageAttendance?: boolean | null;
+  canExportStars?: boolean | null;
+  canTriggerSync?: boolean | null;
+  canVoteAsOfficer?: boolean | null;
+  canAuditBallots?: boolean | null;
 };
 
 export async function createRole(
@@ -309,6 +314,11 @@ export async function createRole(
       canViewAuditLog: data.canViewAuditLog ?? null,
       canCreateCredentials: data.canCreateCredentials ?? null,
       canManageVerification: data.canManageVerification ?? null,
+      canManageAttendance: data.canManageAttendance ?? null,
+      canExportStars: data.canExportStars ?? null,
+      canTriggerSync: data.canTriggerSync ?? null,
+      canVoteAsOfficer: data.canVoteAsOfficer ?? null,
+      canAuditBallots: data.canAuditBallots ?? null,
     })
     .returning({ id: roles.id });
 
@@ -369,6 +379,21 @@ export async function updateRole(
       }),
       ...(data.canManageVerification !== undefined && {
         canManageVerification: data.canManageVerification,
+      }),
+      ...(data.canManageAttendance !== undefined && {
+        canManageAttendance: data.canManageAttendance,
+      }),
+      ...(data.canExportStars !== undefined && {
+        canExportStars: data.canExportStars,
+      }),
+      ...(data.canTriggerSync !== undefined && {
+        canTriggerSync: data.canTriggerSync,
+      }),
+      ...(data.canVoteAsOfficer !== undefined && {
+        canVoteAsOfficer: data.canVoteAsOfficer,
+      }),
+      ...(data.canAuditBallots !== undefined && {
+        canAuditBallots: data.canAuditBallots,
       }),
     })
     .where(eq(roles.id, roleId));

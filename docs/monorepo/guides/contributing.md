@@ -80,7 +80,7 @@ pnpm --filter <app> run cf:typegen:check   # fails if the committed types are st
 pnpm --filter <app> run cf:typegen         # regenerates cloudflare-env.d.ts; commit the diff
 ```
 
-Chained in the order CI runs them, `<app>` is `platform` or `schedule-builder`:
+Chained in the order CI runs them, `<app>` is `schedule-builder` or `platform` (the two Next apps):
 
 ```bash
 pnpm --filter <app> exec next typegen
@@ -99,18 +99,18 @@ Every root turbo script — `dev`, `build`, `test`, `lint`, `lint:fix`, `typeche
 ```
 $ pnpm dev
 ◆  `dev` — which apps? (a selects all; --all runs every package)
-│  ◼ platform            with-env next dev --experimental-https
-│  ◻ schedule-builder    with-env next dev
+│  ◼ schedule-builder    with-env next dev
 │  ◻ study-group-finder  with-env -c 'flutter run …'
+│  ◻ platform            with-env next dev --experimental-https
 ```
 
 `pnpm dev` used to start all three at once — two dev servers and a Flutter run — when almost nobody is working on more than one. The picker is preselected with your last answer for that task, so the common case is Enter. `a` toggles every app in the list, `i` inverts the selection.
 
 Three ways past it, each skipping the question entirely:
 
-| Command                      | What it does                                   |
-| ---------------------------- | ---------------------------------------------- |
-| `pnpm dev --filter platform` | any turbo filter — you have already said which |
+| Command                             | What it does                                   |
+| ----------------------------------- | ---------------------------------------------- |
+| `pnpm dev --filter schedule-builder` | any turbo filter — you have already said which |
 | `pnpm dev --all`             | every package, the old behaviour               |
 | `CI=1 pnpm dev`              | what CI does                                   |
 

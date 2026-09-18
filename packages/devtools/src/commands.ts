@@ -1007,7 +1007,7 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
           },
           {
             name: "seed",
-            summary: "Seed storage buckets or the platform's built-in roles.",
+            summary: "Seed storage buckets or the platform's role catalogue.",
             scope: "endpoint",
             subcommands: [
               {
@@ -1017,7 +1017,7 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
               },
               {
                 name: "roles",
-                summary: "Seed the platform's built-in roles.",
+                summary: "Reconcile the platform's role catalogue.",
                 options: [ENDPOINT],
               },
             ],

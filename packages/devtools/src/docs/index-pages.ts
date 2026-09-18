@@ -14,7 +14,7 @@
  * The three that stayed behind in `apps/platform/scripts/` each have exactly
  * one caller and are about the platform's own generated sources:
  * `post-pull.ts` patches what `drizzle-kit pull` emits, `generate-campus-map.ts`
- * is hand-run codegen, and `seed-builtin-roles.ts` seeds rows through the
+ * is hand-run codegen, and `db seed roles` seeds rows through the
  * platform's own Drizzle schema. Reuse is the line, not subject matter.
  *
  * ## Why raw SQL rather than Drizzle

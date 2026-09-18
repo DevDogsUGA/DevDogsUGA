@@ -62,7 +62,7 @@ Row-Level Security is the whole isolation boundary between app schemas — every
 
 ## Seeds
 
-`supabase/seed/*.sql` runs on `pnpm devtools db reset` and only there — `config.toml`'s `[db.seed]` block points at those files, and `db push` applies migrations without them. `01_roles.sql` defines the built-in Member and Root roles; `02_moderation.sql` creates three sign-in-able personas and one open report filed against a real `platform."profile"` row. [Quickstart](/docs/monorepo/guides/quickstart) lists the personas and their password.
+`supabase/seed/*.sql` runs on `pnpm devtools db reset` and only there — `config.toml`'s `[db.seed]` block points at those files, and `db push` applies migrations without them. `01_roles.sql` owns the complete role and permission catalogue without assigning Root; `02_moderation.sql` creates three sign-in-able personas and one open report; and `03_officers.sql` creates officer profiles and assignments. [Quickstart](/docs/monorepo/guides/quickstart) lists the personas and their password.
 
 Seeds are the right home for anything that must never exist in production, precisely because the reset they ride on is never pointed there. Migrations are the wrong home for the same reason.
 
@@ -112,6 +112,6 @@ The package scripts worth knowing directly:
 | `pnpm --filter @devdogsuga/supabase generate-types:local` | The same, from the Docker stack                     |
 | `pnpm --filter @devdogsuga/supabase test:rls`             | The RLS persona suite — needs a running stack       |
 | `pnpm --filter platform db:pull`                          | Re-introspect the Drizzle schema                    |
-| `pnpm --filter platform db:seed-roles`                    | Seed the built-in Member and Root roles             |
+| `pnpm devtools db seed roles`                             | Reconcile the role and permission catalogue         |
 
 </details>

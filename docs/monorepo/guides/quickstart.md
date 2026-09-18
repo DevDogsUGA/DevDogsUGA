@@ -33,7 +33,7 @@ Setup asks which projects you are on and writes a root `.env` carrying only thos
 ```bash
 pnpm devtools db start      # boots Docker Supabase, writes .env.generated
 pnpm devtools db reset     # replays the migrations, then the seeds, then regenerates types
-pnpm dev --filter platform
+pnpm dev --filter schedule-builder   # or study-group-finder, or platform — whichever you set up
 ```
 
 Stop it with `pnpm devtools db stop`, which also removes `.env.generated`. `pnpm devtools db restart` is the stop/start pair under one name, which is how a changed `config.toml` lands.
@@ -45,7 +45,7 @@ Fill in the Supabase values in `.env`, then:
 ```bash
 pnpm devtools db connect <project-ref>
 pnpm --filter @devdogsuga/supabase generate-types
-pnpm dev --filter platform
+pnpm dev --filter schedule-builder   # or whichever app you set up
 ```
 
 > [!IMPORTANT]
@@ -54,14 +54,14 @@ pnpm dev --filter platform
 Nothing switches between the two by flag. `with-env` probes port 54321 on every run: a listening local stack layers `.env.generated` over `.env` and wins, a stopped one falls back to the linked project. Every run prints the files it actually loaded.
 
 > [!NOTE]
-> `pnpm dev --filter platform` and `pnpm --filter platform dev` are not the same command. The first goes through turbo, whose `dev` task depends on `^build`, so workspace packages — the compiled docs among them — are built first. The second bypasses turbo entirely.
+> `pnpm dev --filter schedule-builder` and `pnpm --filter schedule-builder dev` are not the same command. The first goes through turbo, whose `dev` task depends on `^build`, so workspace packages — the compiled docs among them — are built first. The second bypasses turbo entirely. The same distinction holds for any app you filter to.
 
 <details>
 <summary>What does <code>pnpm devtools db reset</code> seed?</summary>
 
-Two files under `supabase/seed/`, and only on a reset — seeds never run on `pnpm devtools db migrate`.
+Three files under `supabase/seed/`, and only on a reset — seeds never run on `pnpm devtools db migrate`.
 
-**`01_roles.sql`** defines the built-in Member and Root roles, so `pnpm devtools grant-root --user <email>` works on a freshly reset instance without a second command.
+**`01_roles.sql`** defines Member, Root, and the organization’s officer roles and permission grants. It never assigns Root, so `pnpm devtools grant-root --user <email>` remains an explicit act by someone who controls the database.
 
 **`02_moderation.sql`** creates three personas and one open report against a real `platform."profile"` row. All three sign in with the password `password`:
 
@@ -69,13 +69,17 @@ Two files under `supabase/seed/`, and only on a reset — seeds never run on `pn
 - `author@devdogs.test`
 - `moderator@devdogs.test`
 
-Nobody holds Root, deliberately. You are always Root on your own instance, so clicking around never denies you anything; signing in as `member@devdogs.test` is the only way to see what an ordinary member sees. Take Root when you want it with `pnpm devtools grant-root`.
+Nobody holds Root, deliberately. Take it explicitly on an instance you control with `pnpm devtools grant-root`; signing in as `member@devdogs.test` remains the way to see what an ordinary member sees.
+
+**`03_officers.sql`** creates the current officer profiles and assigns the organizational roles from `01_roles.sql`.
 
 </details>
 
 ## Next
 
 `pnpm devtools` with no arguments opens the grouped menu of interactive
-commands, so nothing here needs you to remember a name. Shell-only utilities
-remain available through `pnpm devtools --help`. Then read
+commands, so nothing here needs you to remember a name. When a command finishes,
+the CLI prints the flag-complete form of what it ran under **Run it directly
+next time**, so walking the menu once teaches you the command to paste later.
+Shell-only utilities remain available through `pnpm devtools --help`. Then read
 [Contributing](/docs/monorepo/guides/contributing).

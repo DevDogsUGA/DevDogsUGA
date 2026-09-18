@@ -20,6 +20,12 @@ pnpm devtools db --help             # one level deeper
 pnpm devtools db reset --help       # one command's options
 ```
 
+When a command reached through the menu (or one that filled a missing flag from
+a prompt) finishes, the CLI prints the flag-complete form of what it just ran
+under **Run it directly next time** — so you can learn a command by walking the
+menu once, then paste the printed line to skip the prompts on every later run.
+A command you already typed in full prints nothing extra.
+
 ## Start here
 
 ```bash

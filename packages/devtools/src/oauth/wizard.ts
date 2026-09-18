@@ -33,6 +33,7 @@ import {
   upsertDevDogsProvider,
   type LocalSupabaseConfig,
 } from "./db.js";
+import { recordResolved } from "../invocation.js";
 import { bail, unwrap } from "../ui.js";
 
 /** Opens `url` in the user's default browser, cross-platform. */
@@ -108,6 +109,10 @@ export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
   }
 
   baseUrl = baseUrl.replace(/\/+$/, "");
+
+  // A base URL entered at the prompt (not passed as --base-url) is what the
+  // rerun line needs to skip this step next time.
+  if (!baseUrlOverride) recordResolved("--base-url", baseUrl);
 
   // ── Step 2: Provider display name ─────────────────────────────────────────
 

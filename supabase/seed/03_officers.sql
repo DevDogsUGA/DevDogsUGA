@@ -4,7 +4,7 @@
 -- `roleDescription` widened to 512, and the academic program tables --
 -- is 20260829010000_01_platform_profile.sql, and it has to be: a
 -- migration is the only thing that reaches a database nobody is allowed to
--- drop. The seven people are a different kind of fact, and a file called
+-- drop. The people are a different kind of fact, and a file called
 -- `03_officers.sql` says what it holds in a way a timestamped migration
 -- cannot.
 --
@@ -51,13 +51,9 @@
 -- Pronouns are recorded for every officer, and where they came from matters,
 -- because for most of the board there was nothing to find.
 --
--- Armani Peacox's came from her own bio, which is the only one submitted in
--- the third person and says "She serves as the Campus Coordinator". The other
--- seven were supplied by the president, who knows them. Nothing here was
--- inferred from a name: no resume states pronouns, no other submitted bio uses
--- them, and the public GitHub profiles for nandanpraveen, kquakk and
--- smcodes612 list none, nor does zayan.hoodani.me. That search came up empty,
--- which is why asking was the route that worked.
+-- Armani Peacox's and Anusha Tandon's came from their own submitted bios;
+-- Sidhant Dash stated his directly. The remaining values were confirmed by the
+-- president, including Taha Arif's. Nothing here is inferred from a name.
 --
 -- The bios follow. They were written in the third person with they/them
 -- standing in wherever a pronoun was unavoidable, explicitly pending this
@@ -190,8 +186,8 @@ insert into "officer_submissions" (
   (
     'zayan-hoodani', 'zkh27085@uga.edu', 'Zayan Hoodani',
     'Zayan', 'Hoodani',
-    'Events Director',
-    'Zayan Hoodani is a sophomore studying Computer Science while pursuing a certificate in Cybersecurity and Privacy. As Events Director, Zayan facilitates events and works to create a fun, collaborative environment. He is a NetOps Intern at GreenSky, architecting automated systems for cloud network segmentation on AWS and provisioning physical switch infrastructure, and Director of R&D at The Hack Pack. Zayan loves anything to do with cybersecurity and AI.',
+    'External Affairs Director',
+    'Zayan Hoodani is a sophomore studying Computer Science while pursuing a certificate in Cybersecurity and Privacy. As External Affairs Director, Zayan leads the Campus Engagement and Corporate Outreach teams. He is a NetOps Intern at GreenSky, architecting automated systems for cloud network segmentation on AWS and provisioning physical switch infrastructure, and Director of R&D at The Hack Pack. Zayan loves anything to do with cybersecurity and AI.',
     array[73962, 19969]::integer[], 2028, 'spring',
     array['zayanhoodani@gmail.com']::text[],
     array['he', 'him']::text[], false, true,
@@ -208,22 +204,12 @@ insert into "officer_submissions" (
     '00000000-0000-4000-b000-000000000003'
   ),
   (
-    'shruti-mishra', 'sbm64430@uga.edu', 'Shruti Mishra',
-    'Shruti', 'Mishra',
-    'Backend Integration Focus Lead',
-    'Shruti Mishra is a sophomore at the University of Georgia studying Computer Science with an emphasis in Artificial Intelligence. Shruti serves as the Backend Integration Focus Lead on the DevDogs leadership team, is a member of the UGAHacks Tech Team helping develop the website for UGA''s annual hackathon, and serves on the Outreach Team for HackPack, UGA''s cybersecurity club. She is passionate about software engineering and AI.',
-    array[73962]::integer[], 2027, 'spring',
-    array['shruti.mishra@uga.edu', 'shrutibmishra1@gmail.com']::text[],
-    array['she', 'her']::text[], true, false,
-    '00000000-0000-4000-b000-000000000004'
-  ),
-  (
     -- Submitted as Ashlee Peacox; Armani is the name she goes by. Her wording,
     -- her pronouns -- see the note above.
     'armani-peacox', 'aap86342@uga.edu', 'Armani Peacox',
     'Ashlee', 'Peacox',
-    'Campus Outreach Director',
-    'Armani is a Computer Science and Interdisciplinary Art student at the University of Georgia with a passion for game development. She serves as the Campus Outreach Director for UGA''s Dev Dogs chapter and is actively involved in TheHackPack, Girls Who Code, and the Powerlifting & Bodybuilding Club. Her interests include gameplay programming, game design, virtual and augmented reality, human-computer interaction, and digital art.',
+    'Campus Engagement Team',
+    'Armani is a Computer Science and Interdisciplinary Art student at the University of Georgia with a passion for game development. She serves on the Campus Engagement Team for UGA''s DevDogs chapter and is actively involved in TheHackPack, Girls Who Code, and the Powerlifting & Bodybuilding Club. Her interests include gameplay programming, game design, virtual and augmented reality, human-computer interaction, and digital art.',
     array[73962, 86044, 62630]::integer[], null, null,
     array['ashlee.peacox@uga.edu']::text[],
     array['she', 'her']::text[], false, false,
@@ -250,66 +236,37 @@ insert into "officer_submissions" (
     array['giakhang.quach@uga.edu']::text[],
     array['he', 'him']::text[], true, true,
     '00000000-0000-4000-b000-000000000007'
+  ),
+  (
+    'anusha-tandon', 'at17157@uga.edu', 'Anusha Tandon',
+    'Anusha', 'Tandon',
+    'Campus Engagement Team',
+    'Anusha Tandon is a second-year Management Information Systems major with a Computer Science minor. She is interested in software development, data analytics, and information security. As a member of the DevDogs Campus Engagement Team, she hopes to bring more students into the club, connect with potential partners, and help showcase the work of DevDogs members.',
+    array[23268, 67412]::integer[], 2029, 'spring',
+    array['anusha.tandon@uga.edu', 'anushatandon25@gmail.com']::text[],
+    array['she', 'her']::text[], false, false,
+    '00000000-0000-4000-b000-000000000009'
+  ),
+  (
+    'sidhant-dash', 'sd04573@uga.edu', 'Sidhant Dash',
+    'Sidhant', 'Dash',
+    'DogDays Project Manager',
+    'Sidhant Dash is a fourth-year Computer Science student at the University of Georgia with a certificate in New Media. He is interested in frontend and backend development, game development, and UI/UX design. Sidhant serves as the DogDays Project Manager for DevDogs and the Marketing Chair of ACM at UGA. He recently interned at CGI as a software developer and strives to develop software that benefits others while helping developers grow.',
+    array[73962, 62630]::integer[], 2027, 'spring',
+    array['sidhant.dash@uga.edu']::text[],
+    array['he', 'him']::text[], false, false,
+    '00000000-0000-4000-b000-000000000010'
+  ),
+  (
+    'taha-arif', 'tza47676@uga.edu', 'Taha Arif',
+    'Taha', 'Arif',
+    'Corporate Outreach Team',
+    'Taha Arif is a Computer Systems Engineering student at the University of Georgia with interests in embedded systems, problem-solving, and connecting students with technology professionals. As a member of the DevDogs Corporate Outreach Team, he builds relationships with companies and alumni while creating career and networking opportunities for members. He enjoys hands-on programming projects and collaborating with others.',
+    array[45516]::integer[], 2029, 'spring',
+    array['taha.arif@uga.edu']::text[],
+    array['he', 'him']::text[], false, false,
+    '00000000-0000-4000-b000-000000000011'
   );
-
--- ============================================================
--- Officer titles as leadership roles
--- ============================================================
---
--- `isLeadership` is what the homepage selects on and what
--- `resolvedUserPermissions` reads for `isLeader` -- which is also the flag
--- that reveals the Role Description field on /account. Marking these roles
--- leadership is therefore what lets each officer edit the bio their own card
--- prints, which is the point.
---
--- Ranks are allocated above the current maximum rather than fixed: `rank` is
--- UNIQUE and `roles_custom_requires_rank` ties a non-null rank to roleType
--- 'custom', so a hardcoded number would collide with whatever the console has
--- already created. No existing role is leadership, so appending still orders
--- the board correctly among the roles that matter. An existing role keeps its
--- rank and colour -- an officer may have reordered it since.
---
--- President is created and NOT assigned. Sloan Finger holds it as of
--- 2026-08-27; his row is the commented-out block at the foot of this file,
--- waiting on a reviewed bio and the address his account uses.
---
--- No permissions are granted. Every `can*` column is left null, which resolves
--- to false -- being on the homepage is not a reason to gain moderation rights.
-insert into "platform"."roles"
-  ("title", "description", "roleType", "rank", "isLeadership", "showOnProfile")
-select
-  t."title",
-  t."title" || ' of DevDogs.',
-  'custom',
-  (select coalesce(max("rank"), 0) from "platform"."roles") + t."ord",
-  true,
-  true
-from (values
-  ('President', 1),
-  ('Vice President', 2),
-  ('Events Director', 3),
-  ('DogPack Project Manager', 4),
-  ('Backend Integration Focus Lead', 5),
-  ('UI/UX Focus Lead', 6),
-  ('Next.js Focus Lead', 7),
-  ('Campus Outreach Director', 8),
-  ('DevOps Director', 9),
-  -- Renamed from 'DogDays Project Manager' 2026-09-09, matching the title
-  -- offered to Sidhant (see the incoming-officer scaffold below). Rename
-  -- rather than a second row: `on conflict ("title")` cannot see it, so a
-  -- database that already carries the old title keeps it until the console
-  -- renames it there too.
-  ('DogDays Project Director', 10),
-  ('Flutter Focus Lead', 11),
-  -- Offered to Taha in the 2026-09-04 offer letter (see the incoming-officer
-  -- scaffold at the foot of this file). Created unassigned, like President:
-  -- the title is established by the offer; the holder's row waits on their
-  -- submission.
-  ('Corporate Outreach Director', 12)
-) as t("title", "ord")
-on conflict ("title") do update set
-  "isLeadership" = true,
-  "showOnProfile" = true;
 
 -- ============================================================
 -- Accounts
@@ -419,7 +376,11 @@ values
     'undergraduate_certificate', 'JOUR',
     'https://bulletin.uga.edu/Program/Details/62630?IDc=JOUR', now()),
   (77932, 'Sociology', 'AB', 'undergraduate_major', 'ARTS',
-    'https://bulletin.uga.edu/Program/Details/77932?IDc=ARTS', now())
+    'https://bulletin.uga.edu/Program/Details/77932?IDc=ARTS', now()),
+  (23268, 'Management Information Systems', 'BBA', 'undergraduate_major', 'BUS',
+    'https://bulletin.uga.edu/Program/Details/23268?IDc=BUS', now()),
+  (67412, 'Computer Science', 'MINOR', 'undergraduate_minor', 'ARTS',
+    'https://bulletin.uga.edu/Program/Details/67412?IDc=ARTS', now())
 on conflict ("id") do update set
   "name" = excluded."name",
   "credential" = excluded."credential",
@@ -483,7 +444,6 @@ insert into "officer_links" ("slug", "title", "url", "sortOrder") values
   -- portfolio link is nandanpraveen.github.io, and that account resolves to
   -- GitHub user 97852696 named "Nandan Praveen". Derived, then verified.
   ('nandan-praveen',  'GitHub',    'https://github.com/nandanpraveen', 1),
-  ('shruti-mishra',   'GitHub',    'https://github.com/smcodes612', 0),
   ('gabrielle-rose',  'LinkedIn',  'https://www.linkedin.com/in/gabrielle-rose-b79b00308/', 0),
   ('kyle-quach',      'LinkedIn',  'https://www.linkedin.com/in/kyle-quach/', 0),
   ('kyle-quach',      'GitHub',    'https://github.com/kquakk', 1);
@@ -510,8 +470,7 @@ on conflict do nothing;
 
 -- Secondary leadership roles.
 --
--- Jack Harrington's DogDays assignment was removed 2026-09-09: the role,
--- renamed DogDays Project Director, goes to Sidhant when his row lands.
+-- A person can carry more than one leadership responsibility.
 insert into "platform"."userRoles" ("userId", "roleId")
 select s."userId", r."id"
 from "officer_submissions" s
@@ -618,68 +577,3 @@ select u."id", r."id"
 from "auth"."users" u, "platform"."roles" r
 where lower(u."email") = 'jsf51288@uga.edu' and r."title" = 'DevOps Director'
 on conflict do nothing;
-
--- ============================================================
--- Incoming officers, September 2026 -- scaffolds, not rows
--- ============================================================
---
--- Three offer letters went out in September (archived alongside the others in
--- the private archive): Anusha -- Campus Outreach Director, 2026-09-04;
--- Sidhant -- DogDays Project Director, 2026-09-08; Taha -- Corporate Outreach
--- Director, 2026-09-04. Each letter asks for photos and a third-person bio by
--- reply, and none of those replies is on file yet -- which means no legal
--- name, no MyID address, no bio, no programs, no headshot.
---
--- So these are commented out, on the same reasoning as Sloan's block above
--- was once held back: a live row here needs the officer's real MyID address
--- to match on, and inventing one is exactly the orphaning hazard described at
--- the top of this file. Fill each TODO from the reply email, then uncomment
--- into the officer_submissions insert (they are written in its column order).
---
--- Both title questions were settled 2026-09-09:
---   * Anusha shares Campus Outreach Director with Armani Peacox -- one role,
---     two holders, which `userRoles` models without ceremony.
---   * The DogDays role is renamed to 'DogDays Project Director' (see the
---     roles insert above) and removed from Jack Harrington; it is Sidhant's
---     to hold once his row lands.
---
--- seededIds ...0009 through ...0011 are reserved here so the avatars-bucket
--- keys are knowable before the headshots arrive, continuing the block above
--- (Sloan holds ...0008).
---
---  (
---    'anusha-TODO-last-name', 'TODO-myid@uga.edu', 'Anusha TODO',
---    'TODO', 'TODO',
---    'Campus Outreach Director',  -- shared with Armani Peacox
---    'TODO: condensed third-person bio from her reply, <= 512 chars',
---    array[]::integer[],  -- TODO: Bulletin detail ids from her programs
---    null, null,          -- TODO: graduation, read off the resume if sent
---    array[]::text[],     -- TODO: the address she replied from, if not MyID
---    null,                -- TODO: pronouns, only if she has stated them
---    false, false,
---    '00000000-0000-4000-b000-000000000009'
---  ),
---  (
---    'sidhant-TODO-last-name', 'TODO-myid@uga.edu', 'Sidhant TODO',
---    'TODO', 'TODO',
---    'DogDays Project Director',
---    'TODO: condensed third-person bio from his reply, <= 512 chars',
---    array[]::integer[],
---    null, null,
---    array[]::text[],
---    null,
---    false, false,
---    '00000000-0000-4000-b000-000000000010'
---  ),
---  (
---    'taha-TODO-last-name', 'TODO-myid@uga.edu', 'Taha TODO',
---    'TODO', 'TODO',
---    'Corporate Outreach Director',
---    'TODO: condensed third-person bio from his reply, <= 512 chars',
---    array[]::integer[],
---    null, null,
---    array[]::text[],
---    null,
---    false, false,
---    '00000000-0000-4000-b000-000000000011'
---  )

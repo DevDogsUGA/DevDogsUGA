@@ -55,6 +55,11 @@ import { runNewMigration } from "./db/new-migration.js";
 import { runSeedBuckets } from "./db/seed-buckets.js";
 import { runSeedRoles } from "./db/seed-roles.js";
 import { runOAuthSetup } from "./oauth/wizard.js";
+import {
+  beginInvocation,
+  recordResolved,
+  reproducibleCommand,
+} from "./invocation.js";
 import { runSetup } from "./setup.js";
 import {
   runAirtable,
@@ -592,6 +597,12 @@ async function runEnvCommand(rest: string[]): Promise<void> {
     return;
   }
 
+  // A target chosen at the prompt (not passed as a flag) is what the rerun
+  // line needs to skip that prompt next time.
+  if (flagValue(rest, "--target") === undefined) {
+    recordResolved("--target", target);
+  }
+
   // Before any command runs, so every `bws` call in it sees the same token.
   setExplicitAccessToken(flagValue(rest, "--access-token"));
 
@@ -1066,10 +1077,24 @@ async function main(): Promise<void> {
   intro("DevDogs devtools");
 
   // The wizard builds an argv and hands it back to `dispatch`. See `menu.ts`.
-  const closing =
-    argv.length === 0 ? await runMenu(dispatch) : await dispatch(argv);
+  // `runMenu` begins its own recording from the built argv; a typed command
+  // begins here, non-interactive until a runner resolves a flag from a prompt.
+  let closing: string | null;
+  if (argv.length === 0) {
+    closing = await runMenu(dispatch);
+  } else {
+    beginInvocation(argv, false);
+    closing = await dispatch(argv);
+  }
 
-  if (closing) outro(closing);
+  if (closing) {
+    // Only prints when a prompt actually decided something — see
+    // `reproducibleCommand`. Above the outro, so the takeaway is the last
+    // thing on screen.
+    const rerun = reproducibleCommand();
+    if (rerun) note(rerun, "Run it directly next time");
+    outro(closing);
+  }
 }
 
 main().catch((err: unknown) => {

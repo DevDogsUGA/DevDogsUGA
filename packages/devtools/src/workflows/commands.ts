@@ -9,6 +9,7 @@ import {
 } from "../cf/local-env.js";
 import { runWithStderr } from "../db/run.js";
 import { PROJECT_ROOT } from "../environment.js";
+import { recordResolved } from "../invocation.js";
 import { unwrap } from "../ui.js";
 import {
   CRON_TIERS,
@@ -496,6 +497,13 @@ export async function runWorkflowsRun(
   argv: readonly string[],
 ): Promise<number> {
   const options = parseOptions(argv);
+  // What arrived as a flag versus what a prompt will decide — only the latter
+  // is worth recording for the "skip the prompts next time" line, since a flag
+  // is already in the recorded base argv.
+  const givenApp = options.app;
+  const givenTier = options.tier;
+  const givenWorkflow = options.workflow;
+  const givenPort = options.port;
   const tier = await pickTier(options.tier);
   if (!tier) return 1;
 
@@ -585,6 +593,18 @@ export async function runWorkflowsRun(
     options.instanceId = randomUUID();
   }
 
+  // Record the decisions the prompts made, in flag form, so the CLI can print
+  // a command that reruns this without any of them. `--yes` is deliberately
+  // never recorded: it exists to gate a deployed trigger behind a confirm, and
+  // a copy-pasteable line that skips that confirm would be a footgun. `--app`
+  // is inferred from the chosen Workflow when it was not passed.
+  if (givenApp === undefined) recordResolved("--app", choice.app);
+  if (givenWorkflow === undefined)
+    recordResolved("--workflow", choice.binding);
+  if (givenTier === undefined) recordResolved("--tier", tier);
+  if (givenPort === undefined && options.port && options.port !== "8787")
+    recordResolved("--port", options.port);
+
   process.stdout.write(`→ ${choice.name} (${choice.app}, ${tier})\n`);
   try {
     const result = await runWithStderr(workflowTriggerArgs(choice, options));
@@ -659,6 +679,13 @@ export async function runWorkflowsServe(
       "devtools workflows serve: pass --app when no terminal is available.\n",
     );
     return 1;
+  }
+
+  // Record an app chosen at the prompt (a non-default port too), so the rerun
+  // line can start the same session without the picker.
+  if (options.app === undefined) recordResolved("--app", app);
+  if (options.port === undefined && port !== "8787") {
+    recordResolved("--port", port);
   }
 
   if (await isWranglerDevRunning(port)) {

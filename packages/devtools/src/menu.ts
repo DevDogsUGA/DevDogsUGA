@@ -31,6 +31,7 @@ import {
   probeEnvironment,
   type Environment,
 } from "./environment.js";
+import { beginInvocation } from "./invocation.js";
 import { unwrap } from "./ui.js";
 
 /** Chosen when a submenu should return to the screen above it. */
@@ -275,5 +276,9 @@ export async function runMenu(
   // Quitting is not a failure, but it has nothing to announce either.
   if (!chosen) return null;
 
+  // Every step here was a prompt, so the built argv is the reproducible
+  // command — a runner that prompts further (a bare `workflows run`) appends
+  // the rest through `recordResolved`.
+  beginInvocation(chosen.argv, true);
   return dispatch(chosen.argv);
 }

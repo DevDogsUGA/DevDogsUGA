@@ -73,6 +73,7 @@ import {
   type VaultTarget,
 } from "@devdogsuga/env";
 import { assertRegistryLoaded } from "./discovery.js";
+import { recordResolved } from "../invocation.js";
 import { keysRoutedTo } from "./selection.js";
 import { PROJECT_ROOT } from "../instance.js";
 import { explain } from "../ui.js";
@@ -113,6 +114,11 @@ function sectionOf(source: string): string {
 /**
  * The sections a development init may narrow to: the four apps.
  *
+ * Order is the PICKER's order, not the file's (that is `SECTION_ORDER`, fixed
+ * so `.env.example` stays byte-stable). The two projects most contributors
+ * join come first; `platform` and `sandbox` follow as shared auth
+ * infrastructure you depend on but rarely edit.
+ *
  * `supabase` is NOT here and NOT optional. It is the shared database and auth
  * layer every app runs against, so any selection implies it (the caller adds
  * it). `devtools` is not here either, deliberately: it is a ROLE, not a
@@ -120,9 +126,9 @@ function sectionOf(source: string): string {
  * operate deploys is a separate question the picker asks separately.
  */
 export const APP_SECTIONS = [
-  "platform",
   "schedule-builder",
   "study-group-finder",
+  "platform",
   "sandbox",
 ] as const;
 
@@ -579,13 +585,27 @@ export async function resolveSections(
 
   if (!process.stdin.isTTY) return undefined;
 
+  // Hints frame platform and sandbox as shared infrastructure: keep them in
+  // reach (running the local auth server or the proxy yourself needs their
+  // keys), but say plainly that most contributors are not editing them.
+  const APP_HINTS: Record<string, string> = {
+    "schedule-builder": "the DogDays course-schedule planner (Next.js)",
+    "study-group-finder": "the Dog Pack study-group app (Flutter)",
+    platform:
+      "shared auth server — needed only if you run it locally for sign-in; usually you don't edit it",
+    sandbox: "shared proxy Worker — infrastructure, rarely edited",
+  };
   const chosen = unwrap(
     await multiselect({
       message:
         "Which projects are you working on? (The shared Supabase stack is " +
         "always included; re-run init later to add more.)",
       options: [
-        ...APP_SECTIONS.map((app) => ({ value: app as string, label: app })),
+        ...APP_SECTIONS.map((app) => ({
+          value: app as string,
+          label: app,
+          hint: APP_HINTS[app],
+        })),
         {
           value: "devtools",
           label: "deploy & officer tooling",
@@ -608,6 +628,14 @@ export async function runEnvInit(
   const date = new Date().toISOString().slice(0, 10);
   const sections =
     target === "development" ? await resolveSections(apps) : undefined;
+
+  // When the projects came from the picker rather than `--apps`, record them
+  // so the rerun line can reproduce the selection without prompting. `supabase`
+  // is always implied, never an `--apps` value, so it is dropped here.
+  if (apps === undefined && sections !== undefined) {
+    const picked = [...sections].filter((s) => s !== "supabase").sort();
+    if (picked.length > 0) recordResolved("--apps", picked.join(","));
+  }
 
   try {
     // `wx` makes the existence check and the write one atomic operation, so

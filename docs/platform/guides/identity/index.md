@@ -18,6 +18,15 @@ Two things in this repository are called "the DevDogs identity", and they point 
 
 The difference that matters: one issues identity to other people's apps, the other is an identity the platform holds. Neither authenticates the other.
 
+## Who can create an account
+
+DevDogs Auth accepts new public users only when their email is in the exact
+`uga.edu` domain. The `before_user_created` hook in `supabase/config.toml` calls
+`platform.require_uga_signup_email`, so the same check covers password and OAuth
+signup paths before an Auth user is written. Supabase's service-role admin API
+intentionally bypasses Auth hooks; possession of that key is already database
+administrator authority and must remain server-only.
+
 ## A third thing, easily confused with both
 
 The GitHub **OAuth app** — configured as `[auth.external.github]` in `supabase/config.toml` with `GH_CLIENT_ID` and `GH_CLIENT_SECRET` — is what links a member's GitHub profile to their Supabase identity. It is not either column above, and the GitHub App does **not** replace it: member login needs an OAuth scope that GitHub Apps do not have at all. That is the first thing the [GitHub App](/docs/platform/guides/identity/github-app) page covers, and getting it wrong silently breaks the day a student joins.
