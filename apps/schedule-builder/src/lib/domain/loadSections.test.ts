@@ -72,6 +72,18 @@ describe("groupRowsIntoSections", () => {
     expect(sections[0]!.meetings[1]!.days).toEqual(["wednesday"]);
   });
 
+  it("keeps the same CRN in different academic periods as separate sections", () => {
+    const sections = groupRowsIntoSections([
+      row({ academicPeriod: 202702, crn: 61019 }),
+      row({ academicPeriod: 202705, crn: 61019 }),
+    ]);
+
+    expect(sections).toHaveLength(2);
+    expect(sections.map((section) => section.academicPeriod)).toEqual([
+      202702, 202705,
+    ]);
+  });
+
   it("derives dateRange from the fixture's partsOfTerm columns", () => {
     const [section] = groupRowsIntoSections([
       row({ classesBegin: "2026-08-13", classesEnd: "2026-12-03" }),

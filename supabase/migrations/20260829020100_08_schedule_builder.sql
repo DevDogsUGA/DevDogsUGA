@@ -131,10 +131,10 @@ create table "schedule_builder"."partsOfTerm" (
   constraint "partsOfTerm_pkey" primary key ("academicPeriod", "code")
 );
 
--- A section. `crn` is the registrar's course reference number and is the
--- primary key, so a section keeps its identity across scrapes.
+-- A section. Banner reuses `crn` values between academic periods, so neither
+-- value identifies an offering alone.
 create table "schedule_builder"."offerings" (
-  "crn"               integer primary key,
+  "crn"               integer not null,
   "crossListingId"    varchar,
   "minimumEnrollment" integer default 0 not null,
   "maximumEnrollment" integer not null,
@@ -147,7 +147,8 @@ create table "schedule_builder"."offerings" (
   "courseId"          integer not null,
   "instructorId"      integer,
   "scheduleTypeId"    integer not null,
-  "campusId"          integer not null
+  "campusId"          integer not null,
+  constraint "offerings_pkey" primary key ("academicPeriod", "crn")
 );
 
 -- When and where a section meets. One section can have several rows: a lecture
@@ -170,6 +171,7 @@ create table "schedule_builder"."meetings" (
   "locationStatus" "schedule_builder"."locationStatus" default 'TBA'::"schedule_builder"."locationStatus" not null,
   "buildingId"     integer,
   "room"           varchar,
+  "academicPeriod" integer not null,
   "offeringCrn"    integer not null
 );
 
@@ -238,6 +240,7 @@ create index "offerings_crossListingId_index" on "schedule_builder"."offerings" 
 -- Backs the composite FK below, and is what the scrape's per-term upserts and
 -- the term-scoped catalog queries actually filter on.
 create index "offerings_academicPeriod_partOfTerm_index" on "schedule_builder"."offerings" ("academicPeriod", "partOfTerm");
+create index "meetings_academicPeriod_offeringCrn_index" on "schedule_builder"."meetings" ("academicPeriod", "offeringCrn");
 
 alter table "schedule_builder"."courseDetails" add constraint "courseDetails_courseId_courses_id_fkey" foreign key ("courseId") references "schedule_builder"."courses" ("id");
 alter table "schedule_builder"."courses" add constraint "courses_collegeId_colleges_id_fkey" foreign key ("collegeId") references "schedule_builder"."colleges" ("id");
@@ -245,7 +248,7 @@ alter table "schedule_builder"."courses" add constraint "courses_departmentId_de
 alter table "schedule_builder"."courses" add constraint "courses_subjectId_subjects_id_fkey" foreign key ("subjectId") references "schedule_builder"."subjects" ("id");
 alter table "schedule_builder"."departments" add constraint "departments_collegeId_colleges_id_fkey" foreign key ("collegeId") references "schedule_builder"."colleges" ("id");
 alter table "schedule_builder"."meetings" add constraint "meetings_buildingId_buildings_id_fkey" foreign key ("buildingId") references "schedule_builder"."buildings" ("id");
-alter table "schedule_builder"."meetings" add constraint "meetings_offeringCrn_offerings_crn_fkey" foreign key ("offeringCrn") references "schedule_builder"."offerings" ("crn");
+alter table "schedule_builder"."meetings" add constraint "meetings_academicPeriod_offeringCrn_fkey" foreign key ("academicPeriod", "offeringCrn") references "schedule_builder"."offerings" ("academicPeriod", "crn");
 alter table "schedule_builder"."offerings" add constraint "offerings_academicPeriod_terms_academicPeriod_fkey" foreign key ("academicPeriod") references "schedule_builder"."terms" ("academicPeriod");
 alter table "schedule_builder"."offerings" add constraint "offerings_courseId_courses_id_fkey" foreign key ("courseId") references "schedule_builder"."courses" ("id");
 alter table "schedule_builder"."offerings" add constraint "offerings_instructorId_instructors_id_fkey" foreign key ("instructorId") references "schedule_builder"."instructors" ("id");
@@ -283,7 +286,8 @@ create view "schedule_builder"."availableTerms" as (
 -- number, and both halves of the instructor's name.
 --
 -- Two things about it. It is created with no indexes at all, on purpose: the
--- scrape cron runs `create unique index if not exists "offeringSearch_crn_idx"`
+-- scrape cron runs `create unique index if not exists
+-- "offeringSearch_academicPeriod_crn_idx"`
 -- and the GIN `"offeringSearch_fts_idx"` before every refresh, and the unique
 -- one is what makes `refresh materialized view concurrently` legal. Until the
 -- first scrape the view is empty and unindexed, which is correct.

@@ -90,9 +90,13 @@ export async function bulkUpsert<T extends AnyPgTable>(
             .map((k) => [k, sql.raw(`EXCLUDED."${allCols[k]!.name}"`)]),
         );
 
-  const pkKey = Object.entries(allCols).find(([, c]) => c.primary)?.[0] ?? "id";
-  const returning: Record<string, PgColumn> = { [pkKey]: allCols[pkKey]! };
-  for (const k of uniqueKeys) returning[k] = allCols[k]!;
+  const returning: Record<string, PgColumn> = {};
+  for (const [key, col] of Object.entries(allCols)) {
+    if (col.primary) returning[key] = col;
+  }
+  // Table-level composite primary-key columns are not marked `primary` on
+  // their individual PgColumn objects, so always include the conflict keys.
+  for (const key of uniqueKeys) returning[key] = allCols[key]!;
 
   const results: AnyRow[] = [];
   for (const part of chunk(rows, CHUNK_SIZE)) {

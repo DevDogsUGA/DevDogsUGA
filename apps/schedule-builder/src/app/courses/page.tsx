@@ -39,7 +39,11 @@ export default function CourseSearchPage() {
     };
   }, [inputValue]);
 
-  const { data: rows = [], isFetching } = useQuery<OfferingSearchRow[]>({
+  const {
+    data: rows = [],
+    isFetching,
+    error,
+  } = useQuery<OfferingSearchRow[]>({
     queryKey: ["offering-search", academicPeriod, query],
     enabled: !!academicPeriod && query.length > 0,
     queryFn: async () => {
@@ -102,7 +106,13 @@ export default function CourseSearchPage() {
         )}
       </div>
 
-      {query.length > 0 && courses.length === 0 && !isFetching && (
+      {query.length > 0 && error && !isFetching && (
+        <p role="alert" className="text-center text-sm text-red-700">
+          Course search failed. Please try again.
+        </p>
+      )}
+
+      {query.length > 0 && courses.length === 0 && !isFetching && !error && (
         <p className="text-muted text-center text-sm">No courses found.</p>
       )}
 

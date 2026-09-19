@@ -50,7 +50,25 @@ export function detectTarget(table: PgTable): TargetInfo {
     return info;
   }
 
-  // Priority 3: non-serial PK (integer PK whose value comes from the caller, e.g. buildings.id, offerings.crn)
+  // Priority 3: table-level primary key. Composite identities such as an
+  // offering's (academicPeriod, crn) live here rather than on either column.
+  if (config.primaryKeys.length > 0) {
+    const pk = config.primaryKeys[0]!;
+    const uniqueKeys = pk.columns.map(
+      (pkCol) =>
+        Object.entries(cols).find(([, c]) => c.name === pkCol.name)![0],
+    );
+    const info: TargetInfo = {
+      target: pk.columns,
+      uniqueKeys,
+      isSerialOnly: false,
+    };
+    targetCache.set(table, info);
+    return info;
+  }
+
+  // Priority 4: non-serial column PK (integer PK whose value comes from the
+  // caller, e.g. buildings.id).
   for (const [key, col] of Object.entries(cols)) {
     if (col.primary && !col.hasDefault) {
       const info: TargetInfo = {
@@ -63,7 +81,7 @@ export function detectTarget(table: PgTable): TargetInfo {
     }
   }
 
-  // Priority 4: serial-PK-only. Plain INSERT, no natural dedup key
+  // Priority 5: serial-PK-only. Plain INSERT, no natural dedup key
   const info: TargetInfo = {
     target: [],
     uniqueKeys: [],

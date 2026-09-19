@@ -2733,6 +2733,7 @@ export type Database = {
       };
       meetings: {
         Row: {
+          academicPeriod: number;
           buildingId: number | null;
           endDate: string | null;
           endTime: string | null;
@@ -2751,6 +2752,7 @@ export type Database = {
           wednesday: boolean;
         };
         Insert: {
+          academicPeriod: number;
           buildingId?: number | null;
           endDate?: string | null;
           endTime?: string | null;
@@ -2769,6 +2771,7 @@ export type Database = {
           wednesday?: boolean;
         };
         Update: {
+          academicPeriod?: number;
           buildingId?: number | null;
           endDate?: string | null;
           endTime?: string | null;
@@ -2795,18 +2798,18 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "meetings_offeringCrn_offerings_crn_fkey";
-            columns: ["offeringCrn"];
+            foreignKeyName: "meetings_academicPeriod_offeringCrn_fkey";
+            columns: ["academicPeriod", "offeringCrn"];
             isOneToOne: false;
             referencedRelation: "offerings";
-            referencedColumns: ["crn"];
+            referencedColumns: ["academicPeriod", "crn"];
           },
           {
-            foreignKeyName: "meetings_offeringCrn_offerings_crn_fkey";
-            columns: ["offeringCrn"];
+            foreignKeyName: "meetings_academicPeriod_offeringCrn_fkey";
+            columns: ["academicPeriod", "offeringCrn"];
             isOneToOne: false;
             referencedRelation: "offeringSearch";
-            referencedColumns: ["crn"];
+            referencedColumns: ["academicPeriod", "crn"];
           },
         ];
       };

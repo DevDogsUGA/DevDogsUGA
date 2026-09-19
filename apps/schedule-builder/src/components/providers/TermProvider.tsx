@@ -26,7 +26,8 @@ export function TermProvider({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("availableTerms")
-        .select("academicPeriod, description");
+        .select("academicPeriod, description")
+        .order("academicPeriod", { ascending: false });
       if (error) throw error;
       return (data ?? []).map((r) => ({
         academicPeriod: r.academicPeriod!,
@@ -40,9 +41,16 @@ export function TermProvider({
   const { academicPeriod: savedPeriod, setCurrentAcademicPeriod } =
     useCurrentAcademicPeriod();
 
-  // Fall back to the latest available term if no preference is saved yet
+  // A returning user may have saved a term that has since aged out of the
+  // registrar feed. Never let that stale preference drive every catalog query
+  // to an invisible period; fall back to the newest available term.
+  const savedPeriodIsAvailable = availableTerms.some(
+    ({ academicPeriod }) => academicPeriod === savedPeriod,
+  );
   const academicPeriod =
-    savedPeriod ?? availableTerms[0]?.academicPeriod ?? null;
+    (savedPeriodIsAvailable ? savedPeriod : null) ??
+    availableTerms[0]?.academicPeriod ??
+    null;
 
   function setAcademicPeriod(period: number) {
     setCurrentAcademicPeriod(period);

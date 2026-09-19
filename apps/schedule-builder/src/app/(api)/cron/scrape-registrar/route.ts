@@ -73,8 +73,8 @@ export async function GET(req: NextRequest) {
   // These must be schema-qualified: the postgres-js connection uses the default
   // search_path ("$user", public), which does not include `schedule_builder`.
   await db.execute(sql`
-    CREATE UNIQUE INDEX IF NOT EXISTS "offeringSearch_crn_idx"
-      ON "schedule_builder"."offeringSearch" (crn)
+    CREATE UNIQUE INDEX IF NOT EXISTS "offeringSearch_academicPeriod_crn_idx"
+      ON "schedule_builder"."offeringSearch" ("academicPeriod", crn)
   `);
 
   await db.execute(sql`

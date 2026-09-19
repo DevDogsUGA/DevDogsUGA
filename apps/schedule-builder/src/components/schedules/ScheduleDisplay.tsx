@@ -26,9 +26,10 @@ export default function ScheduleDisplay({ id }: Props) {
   const currentPlanIndex = allPlans.findIndex((p) => p.id === id);
 
   const { data: weekData } = useQuery({
-    queryKey: ["plan-offerings", id],
+    queryKey: ["plan-offerings", id, currentPlan?.academicPeriod],
     enabled: !!currentPlan?.crns?.length,
-    queryFn: () => getPlanOfferings(currentPlan!.crns),
+    queryFn: () =>
+      getPlanOfferings(currentPlan!.academicPeriod, currentPlan!.crns),
   });
 
   const handleInputKeyUp = useCallback(
