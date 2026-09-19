@@ -1,21 +1,10 @@
 import { createDb } from "@devdogsuga/drizzle";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { env } from "~/env";
+import { createScheduleBuilderDb, type ScheduleBuilderDb } from "./create";
 import { relations } from "./relations";
 
-/**
- * Build a Drizzle client for a given connection string.
- *
- * Exported — unlike platform's module-private equivalent — because a Cloudflare
- * Workflow step runs with no OpenNext request context to key `currentDb()` on,
- * so the scrape Workflow constructs its own client directly from
- * `this.env.HYPERDRIVE.connectionString`.
- */
-export function createScheduleBuilderDb(url: string, max?: number) {
-  return createDb(url, relations, { cache: false, max });
-}
-
-type ScheduleBuilderDb = ReturnType<typeof createScheduleBuilderDb>;
+export { createScheduleBuilderDb } from "./create";
 type RequestContext = ReturnType<typeof getCloudflareContext>;
 
 interface HyperdriveBinding {

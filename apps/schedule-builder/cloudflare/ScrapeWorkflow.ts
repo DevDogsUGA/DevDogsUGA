@@ -38,7 +38,11 @@ import {
   type TermReconcileResult,
 } from "~/lib/parsers/reconcileTerm";
 import type { ResolvedTerm } from "~/lib/parsers/termPartsOfTerm";
-import { createScheduleBuilderDb } from "~/server/db";
+// Import the env-free leaf, not `~/server/db`: this module is evaluated during
+// Cloudflare's Worker startup validation, before Next's build-time replacement
+// of required `NEXT_PUBLIC_*` values. The request-scoped barrel imports
+// `~/env`, while this factory only needs an explicit connection string.
+import { createScheduleBuilderDb } from "~/server/db/create";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { resolveWorkflowDatabaseUrl } from "./database-url";
 
