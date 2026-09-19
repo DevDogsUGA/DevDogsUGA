@@ -24,8 +24,8 @@ function map(overrides: Partial<AppCronMap> = {}): AppCronMap {
   };
 }
 
-/** A wrangler config where only `production` schedules the workflow, matching
- * the real schedule-builder shape (staging binds it but leaves crons empty). */
+/** A wrangler config where only `production` natively schedules the workflow,
+ * matching the real schedule-builder shape. */
 function scrapeConfig() {
   return {
     workflows: [{ binding: "SCRAPE_WORKFLOW", name: "development-sb-scrape" }],
@@ -35,9 +35,13 @@ function scrapeConfig() {
         workflows: [{ binding: "SCRAPE_WORKFLOW", name: "staging-sb-scrape" }],
       },
       production: {
-        triggers: { crons: ["5 14 * * *"] },
+        triggers: { crons: [] as string[] },
         workflows: [
-          { binding: "SCRAPE_WORKFLOW", name: "production-sb-scrape" },
+          {
+            binding: "SCRAPE_WORKFLOW",
+            name: "production-sb-scrape",
+            schedules: ["5 14 * * *"],
+          },
         ],
       },
     },
@@ -62,9 +66,9 @@ describe("reconcileMap — workflow crons", () => {
 
   it("marks a workflow no tier schedules as never-fires", () => {
     const rows = reconcileMap(workflowMap, scrapeConfig(), TIERS);
-    // staging binds SCRAPE_WORKFLOW but schedules nothing (crons: []).
+    // staging binds SCRAPE_WORKFLOW but gives it no native schedule.
     expect(rows.find((r) => r.tier === "staging")!.status).toBe("never-fires");
-    // development has no top-level triggers.crons at all.
+    // development also binds it without a native schedule.
     expect(rows.find((r) => r.tier === "development")!.status).toBe(
       "never-fires",
     );
@@ -72,12 +76,22 @@ describe("reconcileMap — workflow crons", () => {
 
   it("marks a scheduled workflow whose binding is unbound in that tier as misconfigured", () => {
     const config = scrapeConfig();
-    config.env.production.workflows = []; // scheduled, but binding not declared
+    config.env.production.workflows = []; // metadata exists, binding does not
     const prod = reconcileMap(workflowMap, config, TIERS).find(
       (r) => r.tier === "production",
     )!;
     expect(prod.status).toBe("misconfigured");
     expect(prod.workflowName).toBeUndefined();
+  });
+
+  it("flags a leftover Worker cron even when a native Workflow uses the same expression", () => {
+    const config = scrapeConfig();
+    config.env.production.triggers.crons = ["5 14 * * *"];
+    const prod = reconcileMap(workflowMap, config, ["production"]);
+    expect(prod).toEqual([
+      expect.objectContaining({ kind: "workflow", status: "ok" }),
+      expect.objectContaining({ kind: "route", status: "fires-nothing" }),
+    ]);
   });
 });
 

@@ -27,18 +27,14 @@ function cronEnv(overrides: Partial<CronEnv> = {}): CronEnv {
   return {
     BASE_URL: "https://example.test",
     CRON_SECRET: "secret",
-    SCRAPE_WORKFLOW: {
-      create: vi.fn().mockResolvedValue({ id: "test-instance" }),
-    } as unknown as CronEnv["SCRAPE_WORKFLOW"],
     ...overrides,
   };
 }
 
 describe("cron dispatcher", () => {
   // Currently empty: the registrar cron (the only entry this map ever had)
-  // now triggers the ScrapeWorkflow instead of a route -- see CRON_ROUTES'
-  // own KNOWN GAP comment in ./scheduled.ts. These two checks stay in place,
-  // running against zero entries today, as a guard for whenever a
+  // now has a native Workflow schedule instead of a route. These checks stay
+  // in place, running against zero entries today, as a guard for whenever a
   // route-based cron exists again.
   const entries = Object.entries(CRON_ROUTES).flatMap(([cron, { routes }]) =>
     routes.map((path) => ({ cron, path })),
@@ -61,46 +57,14 @@ describe("cron dispatcher", () => {
     vi.restoreAllMocks();
   });
 
-  it("triggers the ScrapeWorkflow for the daily registrar cron, with no HTTP fetch", async () => {
+  it("does nothing for a cron expression with no route mapped to it", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    const create = vi.fn().mockResolvedValue({ id: "test-instance" });
 
     await expect(
-      scheduled(
-        { cron: "5 14 * * *" },
-        cronEnv({
-          SCRAPE_WORKFLOW: {
-            create,
-          } as unknown as CronEnv["SCRAPE_WORKFLOW"],
-        }),
-      ),
+      scheduled({ cron: "0 0 * * *" }, cronEnv()),
     ).resolves.toBeUndefined();
 
-    expect(create).toHaveBeenCalledTimes(1);
-    // The registrar scrape used to be an HTTP round trip to
-    // /cron/scrape-registrar; it now runs inside the Workflow instance the
-    // line above created, not as a fetch from this handler.
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("does nothing for a cron expression with no route or workflow mapped to it", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-    const create = vi.fn();
-
-    await expect(
-      scheduled(
-        { cron: "0 0 * * *" },
-        cronEnv({
-          SCRAPE_WORKFLOW: {
-            create,
-          } as unknown as CronEnv["SCRAPE_WORKFLOW"],
-        }),
-      ),
-    ).resolves.toBeUndefined();
-
-    expect(create).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
