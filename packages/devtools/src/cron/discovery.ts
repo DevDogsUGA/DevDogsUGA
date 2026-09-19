@@ -24,6 +24,7 @@ export interface WranglerWorkflow {
   binding: string;
   name: string;
   class_name?: string;
+  schedules?: readonly string[];
 }
 
 export interface WranglerRoute {
