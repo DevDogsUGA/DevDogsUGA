@@ -1,10 +1,11 @@
 /**
  * `devtools cron list` and `devtools cron run`.
  *
- * `cron list` reconciles each app's `wrangler.jsonc triggers.crons` (per tier)
- * against its `CRON_ROUTES` and `WORKFLOW_CRONS` exports and surfaces every
+ * `cron list` reconciles each app's Worker `triggers.crons` and native
+ * `workflows[].schedules` (per tier) against its `CRON_ROUTES` and
+ * `WORKFLOW_CRONS` exports and surfaces every
  * failure shape:
- *   - a wrangler schedule matching neither map → fires nothing
+ *   - a Worker cron matching no route map → fires nothing
  *   - a CRON_ROUTES / WORKFLOW_CRONS key no tier schedules → never fires
  *   - a WORKFLOW_CRONS key whose binding that tier's wrangler never declares →
  *     misconfigured
@@ -102,14 +103,12 @@ export interface CronListRow {
 }
 
 /**
- * Reconciles one app's `CRON_ROUTES` + `WORKFLOW_CRONS` against its wrangler
- * schedules for each tier. Pure — it takes the already-read wrangler config —
- * so the reconciliation table is unit-tested without touching the filesystem.
+ * Reconciles one app's `CRON_ROUTES` + `WORKFLOW_CRONS` against its Worker and
+ * Workflow schedules for each tier. Pure — it takes the already-read wrangler
+ * config — so the table is unit-tested without touching the filesystem.
  *
- * A workflow schedule is `ok` only when the tier both schedules the expression
- * AND declares a `workflows[]` binding by the name the map points at; a
- * schedule whose binding that tier never binds is `misconfigured`, the failure
- * that would otherwise deploy a cron firing a Workflow that isn't there.
+ * A workflow schedule is `ok` only when the tier declares the binding named by
+ * the map and that binding natively schedules the expression.
  */
 export function reconcileMap(
   map: AppCronMap,
@@ -121,9 +120,9 @@ export function reconcileMap(
   const workflowExprs = new Set(Object.keys(map.workflows));
 
   for (const tier of tiers) {
-    const scheduled = new Set(cronsForTier(config, tier));
+    const workerScheduled = new Set(cronsForTier(config, tier));
     const boundWorkflows = new Map(
-      workflowsForTier(config, tier).map((w) => [w.binding, w.name]),
+      workflowsForTier(config, tier).map((w) => [w.binding, w]),
     );
 
     for (const expr of routeExprs) {
@@ -136,18 +135,20 @@ export function reconcileMap(
         label: entry.label,
         kind: "route",
         routes: entry.routes,
-        status: scheduled.has(expr) ? "ok" : "never-fires",
+        status: workerScheduled.has(expr) ? "ok" : "never-fires",
       });
     }
 
     for (const expr of workflowExprs) {
       const entry = map.workflows[expr]!;
-      const workflowName = boundWorkflows.get(entry.binding);
-      const status = !scheduled.has(expr)
-        ? "never-fires"
-        : workflowName === undefined
+      const workflow = boundWorkflows.get(entry.binding);
+      const workflowName = workflow?.name;
+      const status =
+        workflow === undefined
           ? "misconfigured"
-          : "ok";
+          : workflow.schedules?.includes(expr)
+            ? "ok"
+            : "never-fires";
       rows.push({
         app: map.app,
         tier,
@@ -162,8 +163,8 @@ export function reconcileMap(
       });
     }
 
-    for (const expr of scheduled) {
-      if (!routeExprs.has(expr) && !workflowExprs.has(expr)) {
+    for (const expr of workerScheduled) {
+      if (!routeExprs.has(expr)) {
         rows.push({
           app: map.app,
           tier,

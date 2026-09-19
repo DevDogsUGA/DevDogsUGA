@@ -58,10 +58,10 @@
       "bucket_name": "development-schedule-builder-cache",
     },
   ],
-  // Backs the daily registrar scrape (see cloudflare/ScrapeWorkflow.ts +
-  // cloudflare/scheduled.ts). Bound in every environment, including
-  // development, so the class registers with wrangler/`wrangler dev`
-  // regardless of whether this tier's cron trigger is live.
+  // Backs the daily registrar scrape (see cloudflare/ScrapeWorkflow.ts).
+  // Bound in every environment, including development, so the class registers
+  // with wrangler/`wrangler dev` regardless of whether this tier has a native
+  // Workflow schedule.
   "workflows": [
     {
       "binding": "SCRAPE_WORKFLOW",
@@ -181,15 +181,18 @@
           "binding": "SCRAPE_WORKFLOW",
           "name": "production-schedule-builder-scrape",
           "class_name": "ScrapeWorkflow",
+          // Workflow schedules are UTC. Keeping this on the binding makes the
+          // trigger visible on the Workflow itself and creates an instance
+          // directly, without a Worker scheduled-handler intermediary.
+          "schedules": ["5 14 * * *"],
         },
       ],
-      // Daily registrar scrape (replaces the vercel.json cron). See
-      // cloudflare/scheduled.ts + cloudflare/ScrapeWorkflow.ts: the scrape
-      // runs as a Workflow (one retried, checkpointed step per term) rather
-      // than inside this single scheduled invocation, so it isn't bound by
-      // that invocation's own CPU/wall-time limits.
+      // Explicitly empty so the next production deploy removes the legacy
+      // Worker cron. Omitting this block leaves deployed Worker cron triggers
+      // unchanged, which would double-start the scrape alongside the native
+      // Workflow schedule above.
       "triggers": {
-        "crons": ["5 14 * * *"],
+        "crons": [],
       },
       // Dog Days production. Unlike the platform's devdogsuga.org there is
       // no cutover -- this worker has never been deployed and nothing else
