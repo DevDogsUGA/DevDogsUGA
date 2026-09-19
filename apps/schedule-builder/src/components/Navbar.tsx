@@ -1,15 +1,14 @@
 "use client";
 
 import {
-  CalendarDotsIcon,
   CaretDownIcon,
-  ChalkboardTeacherIcon,
   SignInIcon,
   SignOutIcon,
 } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 import { DogDaysIcon } from "~/components/DogDaysIcon";
 import { TermSelector } from "~/components/TermSelector";
+import { ThemeSwitcher } from "~/components/ThemeSwitcher";
 import { Button } from "~/components/ui/Button";
 import { UserAvatar } from "~/components/ui/UserAvatar";
 import signIn from "~/lib/signIn";
@@ -40,15 +39,13 @@ export function Navbar() {
         </div>
 
         <ul className="flex shrink-0 items-center gap-1">
-          <NavigationLink href="/courses">
-            <ChalkboardTeacherIcon weight="duotone" className="text-xl" />
-            <span className="max-sm:sr-only">Courses</span>
-          </NavigationLink>
+          <NavigationLink href="/courses">Courses</NavigationLink>
 
-          <NavigationLink href="/plans">
-            <CalendarDotsIcon weight="duotone" className="text-xl" />
-            <span className="max-sm:sr-only">Plans</span>
-          </NavigationLink>
+          <NavigationLink href="/plans">Plans</NavigationLink>
+
+          <li>
+            <ThemeSwitcher />
+          </li>
 
           {isLoading ? (
             <li>
