@@ -17,11 +17,9 @@ export default function Layout({ children }: PropsWithChildren) {
             <h1 className="font-display p-2 pl-1 text-center text-3xl font-semibold md:text-left">
               Add Courses
             </h1>
-            <div className="h-full min-w-full">
-              <div className="border-edge bg-surface flex flex-col gap-16 rounded-xl border px-4 py-8 sm:px-8 sm:py-10">
-                {children}
-              </div>
-            </div>
+            {/* The panel container lives in AddCourses so the tabs can sit on
+                top of it. */}
+            {children}
           </div>
 
           <div className="flex min-h-0 w-full flex-col">

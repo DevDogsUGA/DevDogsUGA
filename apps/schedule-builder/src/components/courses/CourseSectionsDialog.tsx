@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { XIcon } from "@phosphor-icons/react/ssr";
 import { useOfferingsByCourse } from "~/hooks/queries/useOfferingsByCourse";
 import { useDraftCourses } from "~/hooks/data/useDraftCourses";
@@ -11,6 +11,7 @@ import { formatCourseCode } from "~/lib/courseCode";
 export function CourseSectionsDialog({
   course,
   initialExcludedCrns,
+  includeOnlyCrn,
   onClose,
 }: {
   course: {
@@ -20,6 +21,12 @@ export function CourseSectionsDialog({
     title: string;
   };
   initialExcludedCrns?: number[];
+  /**
+   * When adding by CRN, the one section the user asked for. Once the offerings
+   * load, every other section is pre-excluded so only this CRN is included; the
+   * user still confirms via "Add Course".
+   */
+  includeOnlyCrn?: number;
   onClose: () => void;
 }) {
   const isEditing = initialExcludedCrns !== undefined;
@@ -32,6 +39,25 @@ export function CourseSectionsDialog({
     new Set(initialExcludedCrns),
   );
   const { upsertCourse } = useDraftCourses();
+
+  // For the "add by CRN" path, seed the exclusions from the loaded sections so
+  // only the requested CRN stays checked. Runs once, when offerings first
+  // arrive; the user can still toggle afterward.
+  const seededFromCrn = useRef(false);
+  useEffect(() => {
+    if (includeOnlyCrn === undefined || seededFromCrn.current) return;
+    if (offerings.length === 0) return;
+    seededFromCrn.current = true;
+    // Intentional: the initial exclusions can only be derived once the sections
+    // have loaded (they aren't known at mount), and the `seededFromCrn` guard
+    // makes this run exactly once.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setExcludedCrns(
+      new Set(
+        offerings.map((o) => o.crn).filter((crn) => crn !== includeOnlyCrn),
+      ),
+    );
+  }, [includeOnlyCrn, offerings]);
 
   function toggleExclude(crn: number) {
     setExcludedCrns((prev) => {

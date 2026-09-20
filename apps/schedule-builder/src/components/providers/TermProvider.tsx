@@ -57,7 +57,6 @@ export function TermProvider({
     void queryClient.invalidateQueries({ queryKey: ["draft-courses"] });
     void queryClient.invalidateQueries({ queryKey: ["draft-prefs"] });
     void queryClient.invalidateQueries({ queryKey: ["plans"] });
-    void queryClient.invalidateQueries({ queryKey: ["offering-search"] });
   }
 
   return (

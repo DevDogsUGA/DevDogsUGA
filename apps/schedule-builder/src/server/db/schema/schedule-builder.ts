@@ -5,7 +5,7 @@ import {
   primaryKey,
   unique,
 } from "drizzle-orm/pg-core";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { crudPolicy } from "../policy";
 
 // This app owns the `schedule_builder` Postgres schema.
@@ -301,34 +301,6 @@ export const availableTerms = scheduleBuilder.view("availableTerms").as((qb) =>
     .orderBy(desc(terms.academicPeriod)),
 );
 
-// ─── Full-text search ─────────────────────────────────────────────────────────
-
-export const offeringSearch = scheduleBuilder
-  .materializedView("offeringSearch")
-  .as((qb) =>
-    qb
-      .select({
-        crn: offerings.crn,
-        academicPeriod: offerings.academicPeriod,
-        seatsAvailable: offerings.seatsAvailable,
-        cancelled: offerings.cancelled,
-        courseId: courses.id.as("courseId"),
-        abbr: courses.abbr,
-        courseNumber: courses.courseNumber,
-        title: courses.title,
-        maxCreditHours: courses.maxCreditHours,
-        instructorId: instructors.id.as("instructorId"),
-        firstName: instructors.firstName,
-        lastName: instructors.lastName,
-        searchVector: sql<string>`to_tsvector('english',
-        coalesce(${courses.title}, '') || ' ' ||
-        coalesce(${courses.abbr}, '') || ' ' ||
-        coalesce(${courses.courseNumber}, '') || ' ' ||
-        coalesce(${instructors.lastName}, '') || ' ' ||
-        coalesce(${instructors.firstName}, '')
-      )`.as("search_vector"),
-      })
-      .from(offerings)
-      .innerJoin(courses, eq(courses.id, offerings.courseId))
-      .leftJoin(instructors, eq(instructors.id, offerings.instructorId)),
-  );
+// The `offeringSearch` materialized view was removed with the free-text course
+// search: courses are now added via subject / instructor / CRN filters that
+// read the base tables directly.

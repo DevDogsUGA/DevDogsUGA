@@ -12,10 +12,8 @@ import { db } from "~/server/db";
  * inside the database, with no application code that could be unit-tested in
  * its place. `active` is gone in favor of `cancelled` (a scrape marks a section
  * cancelled rather than deleting it) plus `lastSeenAt` (when the scrape last
- * saw it at all); the four RateMyProfessors columns are gone from
- * `instructors` now that nothing reads them; and `offeringSearch`, which has to
- * be rebuilt from scratch because a materialized view's column list cannot be
- * ALTERed, has to carry `cancelled` forward instead of `active`.
+ * saw it at all); and the four RateMyProfessors columns are gone from
+ * `instructors` now that nothing reads them.
  */
 
 const ACADEMIC_PERIOD = 900001;
@@ -167,26 +165,6 @@ async function columnsOf(tableName: string) {
   return rows.map((r) => r.column_name);
 }
 
-/**
- * `information_schema.columns` does not carry materialized views (confirmed
- * against this same local stack: it returns zero rows for `offeringSearch`
- * even though the view exists), so its columns have to come from the catalog
- * directly.
- */
-async function matviewColumnsOf(tableName: string) {
-  const rows = await db.execute<{ attname: string }>(sql`
-    select a.attname
-      from pg_attribute a
-      join pg_class c on c.oid = a.attrelid
-      join pg_namespace n on n.oid = c.relnamespace
-     where n.nspname = 'schedule_builder'
-       and c.relname = ${tableName}
-       and a.attnum > 0
-       and not a.attisdropped
-  `);
-  return rows.map((r) => r.attname);
-}
-
 describe("offerings", () => {
   it("drops `active` in favor of `cancelled` and `lastSeenAt`", async () => {
     const columns = await columnsOf("offerings");
@@ -238,13 +216,5 @@ describe("instructors", () => {
     expect(columns).not.toContain("averageRating");
     expect(columns).not.toContain("difficultyRating");
     expect(columns).not.toContain("wouldTakeAgainRating");
-  });
-});
-
-describe("offeringSearch", () => {
-  it("tracks `cancelled`, not `active`", async () => {
-    const columns = await matviewColumnsOf("offeringSearch");
-    expect(columns).toContain("cancelled");
-    expect(columns).not.toContain("active");
   });
 });

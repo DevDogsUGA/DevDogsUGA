@@ -43,7 +43,7 @@ export interface ProjectSwitcher {
    * overlay; absolute ones open in a new tab.
    */
   url?: string;
-  /** Absent means no pill. Every project carries one today. */
+  /** Absent means no pill. */
   badge?: Badge;
 }
 
@@ -162,7 +162,6 @@ export const PROJECTS: Project[] = [
       blurb:
         "Conflict-free semester schedules, built from live registrar data.",
       url: "https://dogdays.dev",
-      badge: { label: "Public Beta", bg: "bg-emerald-400", text: "text-black" },
     },
     contributions: "open",
     techStack: [
@@ -175,7 +174,7 @@ export const PROJECTS: Project[] = [
     ],
     githubUrl:
       "https://github.com/DevDogsUGA/DevDogsUGA/tree/main/apps/schedule-builder",
-    liveUrl: { href: "https://dogdays.dev", label: "Public Beta" },
+    liveUrl: { href: "https://dogdays.dev", label: "Visit Site" },
   },
   {
     badge: ACTIVE,

@@ -83,7 +83,6 @@ export default function ProjectCard({
 
   // Same guard, same reason: only the apps with a drawn mark carry one.
   const mark = icon ? PROJECT_ICONS[icon] : null;
-  const isComingSoon = liveUrl?.label === "Public Beta";
 
   return (
     <div
@@ -153,7 +152,7 @@ export default function ProjectCard({
         <div
           className={`flex justify-end gap-4 border-t ${t.rule} ${t.footPad}`}
         >
-          {liveUrl && !isComingSoon && (
+          {liveUrl && (
             <Link
               href={liveUrl.href}
               target="_blank"
@@ -161,26 +160,6 @@ export default function ProjectCard({
             >
               <ArrowSquareOutIcon weight="bold" /> {liveUrl.label}
             </Link>
-          )}
-          {liveUrl && isComingSoon && (
-            <div className="relative isolate shrink-0 pt-1">
-              <button
-                type="button"
-                disabled
-                className={`flex cursor-not-allowed items-center gap-2 rounded-sm border-2 border-black bg-purple-800 ${t.button} font-semibold text-purple-50`}
-              >
-                <ArrowSquareOutIcon weight="bold" /> {liveUrl.label}
-              </button>
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute top-0 left-1/2 z-10 w-[115%] -translate-x-1/2 -rotate-6 overflow-hidden border-y-2 border-black bg-amber-300 px-2 py-0.5 text-center font-mono text-[0.6rem]/none font-black tracking-widest text-black uppercase shadow-sm"
-              >
-                <span className="relative z-10 bg-amber-300 px-1">
-                  Coming Soon
-                </span>
-                <span className="absolute inset-0 -z-0 bg-[repeating-linear-gradient(135deg,transparent_0,transparent_7px,rgb(0_0_0/0.18)_7px,rgb(0_0_0/0.18)_11px)]" />
-              </span>
-            </div>
           )}
           {githubUrl && (
             <Link

@@ -17,6 +17,18 @@ import {
   MagnifyingGlassIcon,
 } from "@phosphor-icons/react/ssr";
 
+// The option list is virtualized so a multi-thousand-item Combobox (e.g. every
+// instructor) renders only the rows on screen. Rows are single-line (checkbox +
+// check icon + label), so a fixed height is safe; keep it in sync with the row's
+// inline `height` below.
+const ITEM_HEIGHT = 32;
+// Extra rows rendered above/below the viewport so fast scrolling / keyboard
+// paging never flashes blank space.
+const OVERSCAN = 4;
+// Matches the fieldset's `max-h-[140px]`. Used to size the visible window; a
+// shorter box just over-renders a few rows, never too few.
+const LIST_MAX_HEIGHT = 140;
+
 function getTextContent(node: ReactNode): string {
   if (!node) {
     return "";
@@ -144,6 +156,7 @@ export default function Combobox<T extends Record<string, ReactNode>>({
   const selectRef = useRef<HTMLSelectElement>(null);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
+  const [scrollTop, setScrollTop] = useState(0);
 
   const [selection, setSelection] = useState(
     defaultValue
@@ -189,6 +202,19 @@ export default function Combobox<T extends Record<string, ReactNode>>({
         : [],
     [options, matchableOptions, filter, preserveOrdering],
   );
+
+  // Windowed slice of `filteredOptions` to render. `scrollTop` is fed by the
+  // fieldset's onScroll; the visible count is derived from the fixed row height.
+  const totalOptions = filteredOptions.length;
+  const startIndex = Math.max(
+    0,
+    Math.floor(scrollTop / ITEM_HEIGHT) - OVERSCAN,
+  );
+  const endIndex = Math.min(
+    totalOptions,
+    startIndex + Math.ceil(LIST_MAX_HEIGHT / ITEM_HEIGHT) + OVERSCAN * 2,
+  );
+  const visibleOptions = filteredOptions.slice(startIndex, endIndex);
 
   const [highlighted, setHighlighted] = useState(values[0]);
 
@@ -315,30 +341,34 @@ export default function Combobox<T extends Record<string, ReactNode>>({
       return;
     }
 
+    // Index math, not a DOM query: the highlighted row may be windowed out of
+    // the DOM, so its position is derived from its index. Setting scrollTop
+    // fires onScroll, which re-renders the visible window.
     requestAnimationFrame(() => {
-      const item: HTMLElement | undefined | null =
-        fieldsetRef.current?.querySelector(
-          `label:has([name="${name ?? id}"][value="${String(highlighted)}"])`,
-        );
-
-      if (!fieldsetRef.current || !item) {
+      const el = fieldsetRef.current;
+      if (!el) {
         return;
       }
 
-      const fieldsetTop = fieldsetRef.current.scrollTop;
-      const fieldsetBottom = fieldsetTop + fieldsetRef.current.clientHeight;
-      const itemTop = item.offsetTop;
-      const itemBottom = itemTop + item.clientHeight;
-
-      if (itemBottom > fieldsetBottom) {
-        item.scrollIntoView({ block: "end" });
+      const index = filteredOptions.findIndex(
+        (item) => item.value === highlighted,
+      );
+      if (index < 0) {
+        return;
       }
 
-      if (itemTop < fieldsetTop) {
-        item.scrollIntoView({ block: "start" });
+      const itemTop = index * ITEM_HEIGHT;
+      const itemBottom = itemTop + ITEM_HEIGHT;
+      const viewTop = el.scrollTop;
+      const viewBottom = viewTop + el.clientHeight;
+
+      if (itemTop < viewTop) {
+        el.scrollTop = itemTop;
+      } else if (itemBottom > viewBottom) {
+        el.scrollTop = itemBottom - el.clientHeight;
       }
     });
-  }, [highlighted, id, name, open]);
+  }, [highlighted, filteredOptions, open]);
 
   /**
    * Trigger `handleReset(...)` when the parent form is reset.
@@ -382,8 +412,14 @@ export default function Combobox<T extends Record<string, ReactNode>>({
 
   useEffect(() => {
     // Intentional: reset the keyboard highlight to the first result whenever the
-    // filtered list changes, while still allowing hover/keyboard to move it.
+    // filtered list changes, while still allowing hover/keyboard to move it. The
+    // window scrolls back to the top too, so a stale scrollTop can't leave the
+    // shortened list showing blank space.
+    if (fieldsetRef.current) {
+      fieldsetRef.current.scrollTop = 0;
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    setScrollTop(0);
     setHighlighted(filteredOptions[0]?.value);
   }, [filteredOptions]);
 
@@ -411,13 +447,13 @@ export default function Combobox<T extends Record<string, ReactNode>>({
         asChild
       >
         <button
-          className="border-edge-strong bg-surface [&:not(:disabled):hover]:border-muted flex w-full cursor-default items-center gap-6 rounded-md border-2 px-3 py-1.5 transition-[box-shadow,border-color] disabled:cursor-not-allowed disabled:opacity-60 data-[state=open]:pointer-events-none [&:not(:disabled):hover]:shadow-sm"
+          className="border-edge-strong bg-surface [&:not(:disabled):hover]:border-muted flex w-full min-w-0 cursor-default items-center gap-3 rounded-md border-2 px-3 py-1.5 transition-[box-shadow,border-color] disabled:cursor-not-allowed disabled:opacity-60 data-[state=open]:pointer-events-none [&:not(:disabled):hover]:shadow-sm"
           suppressHydrationWarning
         >
-          <span className="text-foreground/80 flex-1 text-left peer-has-[option:checked]:hidden">
+          <span className="text-foreground/80 min-w-0 flex-1 truncate text-left peer-has-[option:checked]:hidden">
             {multiple ? displayText(values) : displayText(values[0])}
           </span>
-          <CaretUpDownIcon />
+          <CaretUpDownIcon className="shrink-0" />
         </button>
       </Popover.Trigger>
 
@@ -435,39 +471,52 @@ export default function Combobox<T extends Record<string, ReactNode>>({
           </label>
 
           <fieldset
-            className="relative flex max-h-[140px] snap-y snap-mandatory flex-col gap-1 overflow-y-auto"
+            className="relative max-h-[140px] overflow-y-auto"
             ref={fieldsetRef}
+            onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
           >
-            <div className="peer contents">
-              {filteredOptions.map(({ value, content }) => (
-                <label
-                  className="data-highlighted:bg-edge-strong flex snap-start items-center gap-2 rounded-sm py-1 pr-2 has-checked:font-medium"
-                  data-highlighted={highlighted === value || undefined}
-                  key={String(value)}
-                  onMouseEnter={() => setHighlighted(value)}
-                >
-                  <input
-                    className="peer appearance-none"
-                    name={name ?? id}
-                    checked={values.includes(value)}
-                    onChange={() => {
-                      handleOptionChange(value);
-                    }}
-                    value={String(value)}
-                    type="checkbox"
-                  />
-                  <CheckIcon
-                    weight="bold"
-                    className="text-foreground opacity-0 peer-checked:opacity-100"
-                  />
-                  {content}
-                </label>
-              ))}
-            </div>
-
-            <p className="text-foreground/80 hidden px-2 py-1 text-sm italic peer-empty:block">
-              No results.
-            </p>
+            {totalOptions === 0 ? (
+              <p className="text-foreground/80 px-2 py-1 text-sm italic">
+                No results.
+              </p>
+            ) : (
+              <div
+                className="relative"
+                style={{ height: totalOptions * ITEM_HEIGHT }}
+              >
+                {visibleOptions.map(({ value, content }, i) => {
+                  const index = startIndex + i;
+                  return (
+                    <label
+                      className="data-highlighted:bg-edge-strong absolute inset-x-0 flex items-center gap-2 overflow-hidden rounded-sm pr-2 has-checked:font-medium"
+                      data-highlighted={highlighted === value || undefined}
+                      key={String(value)}
+                      onMouseEnter={() => setHighlighted(value)}
+                      style={{ top: index * ITEM_HEIGHT, height: ITEM_HEIGHT }}
+                    >
+                      <input
+                        className="peer shrink-0 appearance-none"
+                        name={name ?? id}
+                        checked={values.includes(value)}
+                        onChange={() => {
+                          handleOptionChange(value);
+                        }}
+                        value={String(value)}
+                        type="checkbox"
+                      />
+                      <CheckIcon
+                        weight="bold"
+                        className="text-foreground shrink-0 opacity-0 peer-checked:opacity-100"
+                      />
+                      {/* Rows are fixed-height for virtualization, so options
+                          must stay one line; long course titles truncate rather
+                          than wrap into the next row. */}
+                      <span className="min-w-0 flex-1 truncate">{content}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           </fieldset>
         </Popover.Content>
       </Popover.Portal>
