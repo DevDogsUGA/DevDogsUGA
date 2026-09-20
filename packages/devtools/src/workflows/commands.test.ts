@@ -1,15 +1,78 @@
-import { describe, expect, it, vi } from "vitest";
-import {
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * `runWorkflowsRun`'s own dependencies, faked at the module boundary for the
+ * "remote-trigger env" tests near the bottom of this file: `discoverWranglerConfigs`
+ * so the Workflow picker sees one controlled app instead of walking `apps/*`
+ * on disk, `runWithStderr` so no `pnpm exec wrangler` ever actually spawns,
+ * and `@devdogsuga/env/load` so a deployed tier's credentials come from a
+ * fixture rather than a real `.env.staging`. Every other test in this file
+ * exercises a pure helper directly and needs none of this.
+ */
+const fixtures = vi.hoisted(() => ({
+  configs: [
+    {
+      app: "schedule-builder",
+      path: "/repo/apps/schedule-builder/wrangler.jsonc",
+      config: {
+        workflows: [
+          {
+            binding: "SCRAPE_WORKFLOW",
+            name: "development-schedule-builder-scrape",
+            class_name: "ScrapeWorkflow",
+          },
+        ],
+        env: {
+          staging: {
+            workflows: [
+              {
+                binding: "SCRAPE_WORKFLOW",
+                name: "staging-schedule-builder-scrape",
+                class_name: "ScrapeWorkflow",
+              },
+            ],
+          },
+        },
+      },
+    },
+  ],
+}));
+
+vi.mock("../cron/discovery.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../cron/discovery.js")>()),
+  discoverWranglerConfigs: vi.fn(() => fixtures.configs),
+}));
+
+vi.mock("../db/run.js", () => ({
+  runWithStderr: vi.fn(async () => ({ code: 0, stderr: "" })),
+  run: vi.fn(async () => 0),
+}));
+
+vi.mock("@devdogsuga/env/load", () => ({
+  loadEnvironment: vi.fn(async () => ({
+    environment: "staging",
+    files: [],
+    env: { CLOUDFLARE_API_TOKEN: "tkn" },
+    warnings: [],
+  })),
+  MissingEnvFileError: class MissingEnvFileError extends Error {},
+}));
+
+const {
   isWranglerDevConnectionFailure,
   isWranglerDevRunning,
   renderWranglerEnvFile,
+  runWorkflowsRun,
   waitForLocalWorkflow,
   workflowChoices,
   workflowTriggerArgs,
   wranglerDevArgs,
   wranglerDevConnectionHint,
   wranglerDevNotRunningHint,
-} from "./commands.js";
+} = await import("./commands.js");
+const { runWithStderr } = await import("../db/run.js");
+const { loadEnvironment, MissingEnvFileError } =
+  await import("@devdogsuga/env/load");
 
 const configs = [
   {
@@ -246,5 +309,66 @@ describe("local Wrangler connection diagnostics", () => {
       "pnpm devtools workflows serve --app schedule-builder --port 9999",
     );
     expect(missing).toContain("--port <number>");
+  });
+});
+
+/**
+ * `runWorkflowsRun`'s remote-trigger env: for any tier but development it
+ * loads that tier's own credentials with `loadEnvironment(tier, { override:
+ * true })` and threads them to `runWithStderr` as the child's env, rather
+ * than leaving `wrangler workflows trigger` to whatever this process
+ * inherited — development's values, since `pnpm devtools` itself runs under
+ * `with-env`. `--tier`, `--workflow` and `--yes` are all passed so the run
+ * never reaches a prompt: `pickTier` and the Workflow picker both defer to a
+ * given flag, and `--yes` stands in for the deployed-tier confirm.
+ */
+describe("runWorkflowsRun remote-trigger env", () => {
+  beforeEach(() => {
+    vi.mocked(runWithStderr)
+      .mockClear()
+      .mockResolvedValue({ code: 0, stderr: "" });
+    vi.mocked(loadEnvironment)
+      .mockReset()
+      .mockResolvedValue({
+        environment: "staging",
+        files: [],
+        env: { CLOUDFLARE_API_TOKEN: "tkn" },
+        warnings: [],
+      });
+  });
+
+  it("threads the loaded tier's env to the trigger, not this process's own", async () => {
+    const code = await runWorkflowsRun([
+      "--tier",
+      "staging",
+      "--workflow",
+      "staging-schedule-builder-scrape",
+      "--yes",
+    ]);
+
+    expect(code).toBe(0);
+    expect(runWithStderr).toHaveBeenCalledOnce();
+    const triggerEnv = vi.mocked(runWithStderr).mock.calls[0]![1] as
+      Record<string, string> | undefined;
+    expect(triggerEnv?.CLOUDFLARE_API_TOKEN).toBe("tkn");
+  });
+
+  it("triggers nothing and returns 1 when the tier's env file is missing", async () => {
+    vi.mocked(loadEnvironment).mockRejectedValueOnce(
+      new MissingEnvFileError(
+        ".env.staging does not exist. Run `pnpm devtools env pull --target staging` to fetch it.",
+      ),
+    );
+
+    const code = await runWorkflowsRun([
+      "--tier",
+      "staging",
+      "--workflow",
+      "staging-schedule-builder-scrape",
+      "--yes",
+    ]);
+
+    expect(code).toBe(1);
+    expect(runWithStderr).not.toHaveBeenCalled();
   });
 });
