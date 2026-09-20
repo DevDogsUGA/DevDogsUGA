@@ -95,7 +95,7 @@ import { resolveVaultTarget } from "./pick.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
 import { helpPath, renderHelp } from "./help.js";
 import { subcommandList, subcommandNames } from "./commands.js";
-import { runMenu } from "./menu.js";
+import { bareGroupStartPath, runMenu } from "./menu.js";
 import { runDocsIndex } from "./docs/index-pages.js";
 import { runTask } from "./run/pick.js";
 import { runCompletions } from "./completions.js";
@@ -1063,13 +1063,23 @@ async function main(): Promise<void> {
     return;
   }
 
+  // A bare command group at a terminal resumes the wizard at that node, so
+  // `devtools db` opens db's subcommand screen instead of printing "which of …?"
+  // and exiting 1. Placed here — before `run`'s passthrough and before intro() —
+  // so every group routes the same way (bare `run` resumes too, while
+  // `run <task>` resolves to a leaf and falls through). Non-interactive callers
+  // get startPath === null and keep the dispatcher's error + exit 1.
+  const startPath = process.stdin.isTTY ? bareGroupStartPath(argv) : null;
+
   // Also before `intro()`, for the neighbouring reason: this one hands stdout
   // to turbo, and through it to a Next dev server or a Flutter run that owns
   // the terminal until Ctrl-C. A banner above that output would be this CLI
   // announcing itself over somebody else's, and the `outro()` below would
   // print "Done." after a dev server was interrupted. `runTask` exits with
-  // turbo's own status and never comes back.
-  if (argv[0] === "run") {
+  // turbo's own status and never comes back. `!startPath` excludes the one
+  // case that is not this: a bare `run` at a terminal, which the block above
+  // already resolved to its own subcommand screen rather than a task to run.
+  if (!startPath && argv[0] === "run") {
     await runTask(argv.slice(1));
     return;
   }
@@ -1082,6 +1092,11 @@ async function main(): Promise<void> {
   let closing: string | null;
   if (argv.length === 0) {
     closing = await runMenu(dispatch);
+  } else if (startPath) {
+    // Same wizard entry as the no-argument path, at the resumed node instead
+    // of the first screen. `env` left `undefined` so `runMenu` probes once,
+    // identically to the bare-invocation branch above.
+    closing = await runMenu(dispatch, undefined, { startPath });
   } else {
     beginInvocation(argv, false);
     closing = await dispatch(argv);
