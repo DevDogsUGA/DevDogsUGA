@@ -204,6 +204,16 @@ insert into "officer_submissions" (
     '00000000-0000-4000-b000-000000000003'
   ),
   (
+    'shruti-mishra', 'sbm64430@uga.edu', 'Shruti Mishra',
+    'Shruti', 'Mishra',
+    'Backend Integration Focus Lead',
+    'Shruti Mishra is a sophomore at the University of Georgia studying Computer Science with an emphasis in Artificial Intelligence. Shruti serves as the Backend Integration Focus Lead on the DevDogs leadership team, is a member of the UGAHacks Tech Team helping develop the website for UGA''s annual hackathon, and serves on the Outreach Team for HackPack, UGA''s cybersecurity club. She is passionate about software engineering and AI.',
+    array[73962]::integer[], 2027, 'spring',
+    array['shruti.mishra@uga.edu', 'shrutibmishra1@gmail.com']::text[],
+    array['she', 'her']::text[], true, false,
+    '00000000-0000-4000-b000-000000000004'
+  ),
+  (
     -- Submitted as Ashlee Peacox; Armani is the name she goes by. Her wording,
     -- her pronouns -- see the note above.
     'armani-peacox', 'aap86342@uga.edu', 'Armani Peacox',
@@ -444,6 +454,7 @@ insert into "officer_links" ("slug", "title", "url", "sortOrder") values
   -- portfolio link is nandanpraveen.github.io, and that account resolves to
   -- GitHub user 97852696 named "Nandan Praveen". Derived, then verified.
   ('nandan-praveen',  'GitHub',    'https://github.com/nandanpraveen', 1),
+  ('shruti-mishra',   'GitHub',    'https://github.com/smcodes612', 0),
   ('gabrielle-rose',  'LinkedIn',  'https://www.linkedin.com/in/gabrielle-rose-b79b00308/', 0),
   ('kyle-quach',      'LinkedIn',  'https://www.linkedin.com/in/kyle-quach/', 0),
   ('kyle-quach',      'GitHub',    'https://github.com/kquakk', 1);
