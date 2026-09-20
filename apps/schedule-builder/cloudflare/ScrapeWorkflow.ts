@@ -25,7 +25,6 @@
  */
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
-import { sql } from "drizzle-orm";
 import {
   detectAvailableTerms,
   fetchPartsOfTerm,
@@ -162,28 +161,6 @@ export class ScrapeWorkflow extends WorkflowEntrypoint<
         });
       }
     }
-
-    // Ensure indexes and refresh the materialized search view after every
-    // scrape, same as the route this Workflow replaced. Schema-qualified:
-    // the postgres-js connection's default search_path ("$user", public)
-    // does not include `schedule_builder`.
-    await step.do("refresh-view", async () => {
-      const db = createScheduleBuilderDb(resolveWorkflowDatabaseUrl(this.env));
-
-      await db.execute(sql`
-        CREATE UNIQUE INDEX IF NOT EXISTS "offeringSearch_academicPeriod_crn_idx"
-          ON "schedule_builder"."offeringSearch" ("academicPeriod", crn)
-      `);
-
-      await db.execute(sql`
-        CREATE INDEX IF NOT EXISTS "offeringSearch_fts_idx"
-          ON "schedule_builder"."offeringSearch" USING gin (search_vector)
-      `);
-
-      await db.execute(
-        sql`REFRESH MATERIALIZED VIEW CONCURRENTLY "schedule_builder"."offeringSearch"`,
-      );
-    });
 
     // Partial writes are useful, but a partially refreshed catalog is not a
     // successful scrape. Mark the instance errored after every viable term had
