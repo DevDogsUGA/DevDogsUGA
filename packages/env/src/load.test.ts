@@ -1,3 +1,6 @@
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { UnknownEnvironmentError } from "./targets.js";
 import {
@@ -335,5 +338,75 @@ describe("loadEnvironment", () => {
       loadCtx({ baseEnv: { DB_URL: "postgres://x" } }),
     );
     expect(loaded.env[HYPERDRIVE_LOCAL_CONNECTION_ENV]).toBe("postgres://x");
+  });
+});
+
+/**
+ * A regression guard against a real shipped bug, run through the REAL dotenvx
+ * (no injected `applyEnvFiles`) against two temp files, because the failure was
+ * specific to dotenvx's own multi-file semantics.
+ *
+ * dotenvx's `overload` (which `override: true` uses) is LAST-file-wins, but the
+ * file list is FIRST-file-wins: `selectEnvFiles` puts `.env.generated` — the
+ * running local stack's connection overlay — AHEAD of `.env`. A re-entrant
+ * development load with `override: true` therefore let `.env` (the hosted
+ * connection) clobber the local overlay, and `workflows serve`/`run` handed a
+ * local wrangler session the HOSTED `DB_URL`. `loadEnvironment` reverses the
+ * list under overload so the first file wins regardless; these assert the
+ * overlay survives override, and that a base value still wins without it.
+ */
+describe("loadEnvironment file precedence, through real dotenvx", () => {
+  // `await run` before the finally, not `return run`: `loadEnvironment` reads
+  // the files asynchronously (after selection yields at the probe), so a
+  // synchronous cleanup would delete them mid-read — dotenvx would then load
+  // nothing while `selection.files`, computed synchronously, still looked right.
+  async function withTwoEnvFiles<T>(
+    run: (dir: string) => Promise<T>,
+  ): Promise<T> {
+    const dir = mkdtempSync(join(tmpdir(), "load-order-"));
+    try {
+      // `.env.generated` (the overlay) precedes `.env`, so it must win.
+      writeFileSync(join(dir, ".env.generated"), 'DB_URL="local"\n');
+      writeFileSync(join(dir, ".env"), 'DB_URL="hosted"\nONLY_BASE="base"\n');
+      return await run(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  function realCtx(dir: string, baseEnv: NodeJS.ProcessEnv) {
+    return {
+      root: dir,
+      exists: (file: string) => existsSync(join(dir, file)),
+      // Selecting development with the probe up prepends `.env.generated`.
+      probeLocalStack: () => true,
+      baseEnv,
+    };
+  }
+
+  it("keeps the overlay file winning under override (dotenvx overload is last-file-wins)", async () => {
+    await withTwoEnvFiles(async (dir) => {
+      const loaded = await loadEnvironment(
+        undefined,
+        { override: true },
+        realCtx(dir, {}),
+      );
+      expect(loaded.files).toEqual([GENERATED_FILE, ".env"]);
+      // The bug returned "hosted" here — `.env` clobbering the overlay.
+      expect(loaded.env.DB_URL).toBe("local");
+      // A key only `.env` declares still survives the reversed application.
+      expect(loaded.env.ONLY_BASE).toBe("base");
+    });
+  });
+
+  it("lets a base value win without override (with-env's shell-beats-file)", async () => {
+    await withTwoEnvFiles(async (dir) => {
+      const loaded = await loadEnvironment(
+        undefined,
+        { override: false },
+        realCtx(dir, { DB_URL: "from-shell" }),
+      );
+      expect(loaded.env.DB_URL).toBe("from-shell");
+    });
   });
 });

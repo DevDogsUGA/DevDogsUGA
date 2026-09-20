@@ -350,7 +350,14 @@ export async function loadEnvironment(
       (async (paths, target, overrideExisting) => {
         const { default: dx } = await import("@dotenvx/dotenvx");
         dx.config({
-          path: paths,
+          // ⚠️ dotenvx's `overload` is LAST-file-wins, but our file list is
+          // FIRST-file-wins: `selectEnvFiles` puts `.env.generated` (the
+          // running local stack's connection overlay) AHEAD of `.env` so it
+          // beats it. Under overload, passing the list as-is would let `.env`
+          // clobber that overlay — pointing a local wrangler session at the
+          // hosted database. Reverse under overload so the first file still
+          // wins while the files as a group still override the ambient env.
+          path: overrideExisting ? [...paths].reverse() : paths,
           processEnv: target,
           quiet: true,
           overload: overrideExisting,
