@@ -15,7 +15,8 @@ Future<void> main() async {
   await Supabase.initialize(
     url: supabaseUrl,
     publishableKey: supabasePublishableKey,
-    postgrestOptions: const PostgrestClientOptions(schema: 'study_group_finder'),
+    postgrestOptions:
+        const PostgrestClientOptions(schema: 'study_group_finder'),
   );
   runApp(const StudyGroupFinderApp());
 }
@@ -33,7 +34,10 @@ class StudyGroupFinderApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const Scaffold(
-        body: Center(child: Text('DevDogs Study Group Finder')),
+        body: Center(
+            child: Text(
+          'DevDogs Study Group Finder',
+        )),
       ),
     );
   }
