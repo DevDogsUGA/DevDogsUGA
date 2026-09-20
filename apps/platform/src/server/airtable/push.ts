@@ -150,9 +150,9 @@ export async function pushAttendance(
 }
 
 /**
- * Repairs processing acknowledgements when the targeted automation applied a
- * command but its final Airtable PATCH failed. Form responses are addressed by
- * record id and are never created or interpreted by the scheduled sync.
+ * Repairs processing acknowledgements when command processing committed but
+ * its final Airtable PATCH failed. Form responses are addressed by record id;
+ * this projection never creates or reinterprets them.
  */
 export async function pushOfficerChangeStatuses(
   client: AirtableClient,

@@ -1,6 +1,6 @@
 ---
 name: Attendance dashboard setup
-description: Deferred manual Airtable setup for attendance corrections, EL reflections, field permissions, forms, and the production automation.
+description: Deferred manual Airtable setup for attendance corrections, EL reflections, field permissions, forms, and sync delivery.
 order: 4
 ---
 
@@ -8,8 +8,8 @@ order: 4
 
 > **Deferred:** Complete this checklist only after the attendance, correction,
 > and reflection implementation is otherwise finished and deployed. Staging and
-> production share this base, so the real automation must point only at the
-> production endpoint.
+> production share this base, so correction processing runs only through the
+> production sync.
 
 The schema CLI creates tables and fields, and `airtable verify` confirms their
 types and stable IDs. Airtable does not expose field editing permissions or all
@@ -19,11 +19,11 @@ dashboard once, using this checklist.
 ## Before changing the dashboard
 
 - Deploy the database changes before the application code.
-- Confirm the production Worker has the narrow Airtable automation secret. Do
-  not reuse `AIRTABLE_SYNC_PAT`, the cron secret, or the schema-apply token.
-- Confirm the production correction endpoint and its final URL.
-- Run `pnpm devtools airtable verify`. Fix fatal findings before enabling an
-  automation.
+- Confirm the production Worker has `AIRTABLE_SYNC_PAT` and the fifteen-minute
+  Airtable schedule. Staging deliberately has no live schedule because both
+  environments share this base.
+- Run `pnpm devtools airtable verify`. Fix fatal findings before accepting form
+  submissions.
 - Run `pnpm devtools airtable apply` if the completed implementation added any
   fields still represented by `todo()` IDs.
 
@@ -62,7 +62,7 @@ restrict direct deletion of command responses as far as the dashboard allows.
   expected by the processor. Never accept a typed submitter name as authority.
 
 After adding `Created by`, update the field registry with its stable field ID
-before enabling the automation. Refresh `schema-snapshot.json` and rerun
+before accepting responses. Refresh `schema-snapshot.json` and rerun
 `airtable verify`.
 
 ## Officer Changes form
@@ -96,51 +96,23 @@ Add prefilled form links or buttons to the Attendance, Teams, and EL Reflections
 officer views after all projection fields exist. Prefill the command and target
 platform ID; never prefill a mutable display name as identity.
 
-## Production automation
+## Production delivery
 
-Create one Airtable automation:
+No Airtable automation is required. The production sync already lists Officer
+Changes every fifteen minutes and processes blank, Pending, and Retryable
+responses before pushing Attendance, Teams, EL Reflections, and processing
+acknowledgements. Applied and Rejected responses are terminal. At most 25
+responses are attempted per pass; any remainder waits for the next pass.
 
-1. Trigger it when an Officer Changes form is submitted.
-2. Add a **Run a script** action.
-3. Add an input variable named `recordId` and select the trigger's **Airtable
-   record ID** token. Do not select the visible primary-field value.
-4. Add a script secret named `automationSecret` with the same value as the
-   production Worker's `AIRTABLE_AUTOMATION_SECRET`. Use Airtable's secret
-   facility, not an ordinary input variable or a literal in the script.
-5. Paste this script. The production endpoint is
-   `https://devdogsuga.org/airtable/officer-changes`.
+The manual dashboard sync calls the same `runAirtableSync` implementation, so
+an authorized officer can process a new response immediately. A transient
+failure marks the receipt Retryable, does not prevent later responses or the
+remaining projections from running, and makes the pass report a failure rather
+than a false success.
 
-   ```js
-   const { recordId } = input.config();
-   const response = await fetch(
-     "https://devdogsuga.org/airtable/officer-changes",
-     {
-       method: "POST",
-       headers: {
-         Authorization: `Bearer ${input.secret.automationSecret}`,
-         "Content-Type": "application/json",
-       },
-       body: JSON.stringify({ recordId }),
-     },
-   );
-
-   if (!response.ok) {
-     throw new Error(`Platform returned HTTP ${response.status}`);
-   }
-   ```
-
-   The endpoint fetches the response from Airtable itself; the script must send
-   no member, attendance, team, or reflection fields.
-
-6. Treat any non-success response as a failed action so Airtable exposes it in
-   automation history. Platform receipts make a retry of the same response
-   safe.
-7. Turn the automation on only after the production endpoint, secret, and
-   receipt reconciliation path have been verified.
-
-Do not create an equivalent live staging automation. The base is shared, and a
-staging automation could apply a real officer command twice or against the
-wrong database.
+Do not enable the unused **Process Officer Changes** automation draft. Airtable
+does not expose Run a script on Team trials, and staging must never independently
+process commands from the shared production base.
 
 ## Cleanup after the replacement is verified
 
@@ -166,8 +138,10 @@ automatically obsolete.
 - Retry an applied response and confirm no second mutation or audit event.
 - Edit a submitted response, retry it, and confirm the changed digest is
   rejected rather than reinterpreted.
-- Simulate failed Airtable status write-back and confirm scheduled
-  reconciliation repairs the projection.
+- Simulate a transient command failure and confirm the next scheduled or manual
+  sync retries it without duplicating any completed mutation.
+- Simulate failed Airtable status write-back and confirm the same sync's status
+  projection, or the next pass, repairs the acknowledgement.
 - Confirm every successful change links to an append-only audit event with the
   Airtable collaborator attribution and reason.
 - Confirm attendance check-in still succeeds while Airtable is unavailable.

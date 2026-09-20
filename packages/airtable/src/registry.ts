@@ -813,8 +813,8 @@ export const attendanceTable = table("Attendance", "tblVgyeo1q9vk0ddD", {
 
 /**
  * Append-only form responses requesting changes to authoritative state.
- * Input fields are deliberately ignored by scheduled sync; the targeted
- * automation snapshots one response, validates it, and writes only the four
+ * Input fields are deliberately ignored by projection writes; the scheduled
+ * or manual sync snapshots one response, validates it, and writes only the
  * processing fields below. Officers never edit Attendance projections.
  */
 export const officerChangesTable = table(

@@ -77,6 +77,19 @@ const credentials = vi.hoisted(() => {
 });
 vi.mock("./credentials", () => credentials);
 
+const officerChanges = vi.hoisted(() => ({
+  processPendingOfficerChanges: vi.fn(() =>
+    Promise.resolve({
+      attempted: 0,
+      applied: 0,
+      rejected: 0,
+      failed: 0,
+      deferred: 0,
+    }),
+  ),
+}));
+vi.mock("./processPendingOfficerChanges", () => officerChanges);
+
 vi.mock("./lease", () => lease);
 vi.mock("./push", () => writes);
 vi.mock("./sync", () => ({
@@ -278,6 +291,55 @@ describe("runAirtableSync schema precondition", () => {
     expect(report.ok).toBe(true);
     expect(memberLists).toBe(2);
     expect(writes.pushAttendance).toHaveBeenCalledWith(client, [], [newMember]);
+  });
+
+  it("processes officer changes in both cron and manual passes", async () => {
+    const client = clientWith(matchingSchema());
+    const response = { id: "recOfficerChange1", fields: {} };
+    Object.assign(client, {
+      listRecords: (tableId: string) =>
+        Promise.resolve(
+          tableId === registry.officerChanges.id ? [response] : [],
+        ),
+    });
+    officerChanges.processPendingOfficerChanges.mockResolvedValue({
+      attempted: 1,
+      applied: 1,
+      rejected: 0,
+      failed: 0,
+      deferred: 0,
+    });
+
+    const report = await runAirtableSync({
+      trigger: "manual",
+      client,
+    });
+
+    expect(officerChanges.processPendingOfficerChanges).toHaveBeenCalledWith(
+      client,
+      [response],
+    );
+    expect(report.officerChanges.applied).toBe(1);
+    expect(report.ok).toBe(true);
+  });
+
+  it("finishes the sync but reports a retryable officer-change failure", async () => {
+    const client = clientWith(matchingSchema());
+    officerChanges.processPendingOfficerChanges.mockResolvedValue({
+      attempted: 2,
+      applied: 1,
+      rejected: 0,
+      failed: 1,
+      deferred: 0,
+    });
+
+    const report = await runAirtableSync({ client });
+
+    expect(writes.pushOfficerChangeStatuses).toHaveBeenCalledOnce();
+    expect(writes.pushDerivedCounts).toHaveBeenCalledOnce();
+    expect(report.ok).toBe(false);
+    expect(report.officerChanges).toMatchObject({ applied: 1, failed: 1 });
+    expect(report.error).toMatch(/will be retried/);
   });
 });
 

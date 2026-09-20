@@ -30,9 +30,9 @@ Ten integration tables, and the direction is **per field, never per table**:
 One rule governs the right-hand column: **push only fields the platform owns exclusively, and never create a field both sides write.** Two writers have no conflict-resolution story, and last-writer-wins destroys work silently. Teams is where both directions meet — the grade is an input, the points an output — and the discipline is to resist the Airtable formula between them, which would put the scoring rule in two places that drift. The `⚙️` prefix warns officers off a field; the field editing permissions set by hand enforce it.
 
 Officer Changes is the only integration table where a form creates rows. The
-platform reads each response through its targeted automation, treats it as a
-validated command, and syncs the result back. Attendance and EL Reflections
-are projections only. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
+scheduled or manual sync treats each new or retryable response as a validated
+command and writes the result back. Attendance and EL Reflections are
+projections only. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
 
 <details>
 <summary>Which surface does a given officer task belong to?</summary>
@@ -70,10 +70,10 @@ The cron fires `*/15 * * * *` at `/airtable/sync`; `requestAirtableSync()` runs 
    officer enters an invalid value.
 4. **Pull Projects, Meetings, Workshops, then Competitions** in dependency
    order.
-5. **Pull grades, then push** Members, Attendance, Teams, EL Reflections,
-   Officer Changes acknowledgements, and derived counts. The acknowledgement
-   pass repairs a failed post-command Airtable write without replaying the
-   mutation.
+5. **Pull grades, process Officer Changes, then push** Members, Attendance,
+   Teams, EL Reflections, Officer Changes acknowledgements, and derived counts.
+   Per-response failures are retryable and isolated; the acknowledgement pass
+   repairs a failed post-command Airtable write without replaying the mutation.
 6. **Write refusals** into each record's `⚙️ Sync status`, release the lease,
    and advance `lastSyncedAt` only if the pass completed.
 

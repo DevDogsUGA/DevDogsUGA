@@ -67,7 +67,7 @@ Pulling the table removes the failure rather than reporting it: the Project link
 
 ## Corrections are commands
 
-Attendance and EL Reflections are platform-owned projections. Officers request missed attendance, revocations, participation overrides, and reflection edits through the restricted Officer Changes form. Its automation sends only the response ID; the platform validates, applies, audits, and acknowledges the command. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
+Attendance and EL Reflections are platform-owned projections. Officers request missed attendance, revocations, participation overrides, and reflection edits through the restricted Officer Changes form. The scheduled or manual Airtable sync discovers each response; the platform validates, applies, audits, and acknowledges the command. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
 
 ## Read next
 
