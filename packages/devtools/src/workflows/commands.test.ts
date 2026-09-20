@@ -355,9 +355,7 @@ describe("runWorkflowsRun remote-trigger env", () => {
 
   it("triggers nothing and returns 1 when the tier's env file is missing", async () => {
     vi.mocked(loadEnvironment).mockRejectedValueOnce(
-      new MissingEnvFileError(
-        ".env.staging does not exist. Run `pnpm devtools env pull --target staging` to fetch it.",
-      ),
+      new MissingEnvFileError("staging", ".env.staging"),
     );
 
     const code = await runWorkflowsRun([
