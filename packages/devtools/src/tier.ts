@@ -1,55 +1,37 @@
 /**
- * The shared `--tier` resolver.
+ * The shared `--tier` resolver for the handful of commands that pick a
+ * deploy tier of their OWN, separate from the session-wide tier
+ * `src/launch.ts` already resolved and entered before this CLI ever runs
+ * (see that file's header, and `@devdogsuga/env/session`, which is where
+ * `availableTiers` and the session-wide policy now live — this module used
+ * to carry its own copy of both, one of two the wizard's tier question also
+ * used to keep before it moved into `launch.ts`).
  *
- * Several commands run under a deploy tier (`cf preview`, `cron run`,
- * `workflows run`) and all three used to ask the same "which tier?" question
- * with a subtly different answer: `cron run` prompted unconditionally the
- * moment `--tier` was absent, `workflows run` did the same behind its own
- * copy of the same picker, and `cf preview` prompted through the command
- * tree's own `select` regardless of whether there was anything to choose
- * between. For the overwhelming majority of contributors — one `.env`, no
- * `.env.staging` or `.env.production` on their machine — that is a question
- * with one possible answer, asked anyway.
- *
- * This module asks it only when the answer is not foregone: when more than
- * one deploy tier's env file is actually present. That is the signature of
- * someone working on the deploy workflow itself, who keeps `.env.staging` or
- * `.env.production` around to test against. Everyone else falls straight
- * through to development, exactly as if `--tier development` had been typed.
+ * `cf preview`, `cron run` and `workflows run` still need a resolver of their
+ * own: each names the tier something it is doing right now — running a
+ * workflow, previewing a build — SEPARATELY from the tier the session as a
+ * whole is running under (`process.env.DEPLOY_ENV`, honoured here as the
+ * fallback below), and a command flag can still name a different one. All
+ * three used to ask the same "which tier?" question with a subtly different
+ * answer, which is what this module unified. It asks only when the answer is
+ * not foregone: when more than one deploy tier's env file is actually
+ * present. That is the signature of someone working on the deploy workflow
+ * itself, who keeps `.env.staging` or `.env.production` around to test
+ * against. Everyone else falls straight through to development, exactly as
+ * if `--tier development` had been typed.
  */
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { select } from "@clack/prompts";
-import {
-  DEPLOY_ENVIRONMENTS,
-  fileFor,
-  isDeployEnvironment,
-} from "@devdogsuga/env";
+import { isDeployEnvironment } from "@devdogsuga/env";
 import type { DeployEnvironment } from "@devdogsuga/env";
+import { availableTiers } from "@devdogsuga/env/session";
+import { DEPLOY_ENVIRONMENTS, fileFor } from "@devdogsuga/env";
 import { PROJECT_ROOT } from "./environment.js";
 import { unwrap } from "./ui.js";
-
-/**
- * Deploy tiers whose canonical `.env.<tier>` file exists, in danger order.
- *
- * `.env.generated` is development's local-stack overlay — written whenever
- * `devtools db start` brings the local Supabase stack up — not a second
- * tier's credentials. Consulting `fileFor(tier)` over `DEPLOY_ENVIRONMENTS`
- * rather than globbing `.env*` is what keeps a running local stack from
- * making development count twice and tripping the prompt for everyone who
- * has ever started it.
- */
-export function availableTiers(
-  exists: (relPath: string) => boolean = (f) =>
-    existsSync(join(PROJECT_ROOT, f)),
-): DeployEnvironment[] {
-  return DEPLOY_ENVIRONMENTS.filter((tier) => exists(fileFor(tier)));
-}
 
 interface ResolveTierOptions {
   /** Stderr prefix, e.g. "devtools cf preview". */
   label?: string;
-  /** Injectable for tests; defaults to `availableTiers()`. */
+  /** Injectable for tests; defaults to `availableTiers(PROJECT_ROOT)`. */
   available?: DeployEnvironment[];
   /**
    * The tier the process has already ENTERED, honoured when no explicit tier
@@ -107,7 +89,7 @@ export async function resolveTier(
     return entered;
   }
 
-  const available = opts.available ?? availableTiers();
+  const available = opts.available ?? (await availableTiers(PROJECT_ROOT));
 
   // Zero or one tier file present: there is nothing to choose between, so
   // asking would be a question with one possible answer. Fall through to

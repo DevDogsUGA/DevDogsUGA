@@ -337,8 +337,7 @@ async function runDeployCommand(rest: string[]): Promise<void> {
 
 // ── Entry ─────────────────────────────────────────────────────────────────────
 
-async function main(): Promise<void> {
-  const argv = process.argv.slice(2);
+export async function main(argv: string[]): Promise<void> {
   const [first, ...rest] = argv;
 
   if (!first || first === "--help" || first === "-h") {
@@ -367,9 +366,17 @@ async function main(): Promise<void> {
   process.exitCode = 1;
 }
 
-main().catch((err) => {
-  process.stderr.write(
-    `devtools-ci: ${err instanceof Error ? err.message : String(err)}\n`,
-  );
-  process.exitCode = 1;
-});
+// Run only from `src/launch-ci.ts` (via the `devtools-ci` bin) or from a
+// bare `run ci` package script for the steps that must not go through
+// `with-env`'s replacement at all — see that file's header. Never
+// self-invoking here: importing this module must not run anything, so
+// `launch-ci.ts` can resolve the deploy tier and enter its environment
+// first.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main(process.argv.slice(2)).catch((err) => {
+    process.stderr.write(
+      `devtools-ci: ${err instanceof Error ? err.message : String(err)}\n`,
+    );
+    process.exitCode = 1;
+  });
+}

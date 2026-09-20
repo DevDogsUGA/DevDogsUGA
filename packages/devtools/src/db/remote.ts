@@ -30,6 +30,42 @@
  *      production, so a reflexive Enter cannot land on it), or a refusal
  *      naming `--tier` off one.
  *
+ * ## The two connection mechanisms in this CLI — pick one, do not invent a third
+ *
+ * This resolver is mechanism ONE: a deploy TIER, read explicitly from that
+ * tier's own `.env.<tier>` FILE, for `--target remote` commands (`db reset`,
+ * `db migrate`, `db config push`, `db seed …`) that name a hosted project the
+ * running process did not necessarily enter.
+ *
+ * Mechanism TWO lives in `db/local-env.ts`'s `resolveLocalToolingEnv`: the
+ * deploy tier this PROCESS already entered into `process.env` (via
+ * `launch.ts`, before `cli.ts` ever dispatched a command), for local-tooling
+ * commands (`db introspect`, `db migration generate`) that have no `--target`
+ * at all and always mean "whatever database this process is already talking
+ * to" — development's `.env.generated` overlay included.
+ *
+ * A future command needing a database connection is one of these two, never
+ * a THIRD ad hoc read of an env file: does it name a `--target remote`
+ * project that may differ from the entered tier (→ `resolveRemoteConnection`
+ * here), or does it just need the connection this process is already
+ * running under (→ `resolveLocalToolingEnv`)? Raw `dotenv.parse()` of a
+ * `.env*` file is not a third option — see `local-env.ts`'s header for what
+ * that shortcut broke.
+ *
+ * ## `db connect` — plausibly vestigial
+ *
+ * `connectRemoteProject` (`stack.ts`) still runs `supabase link
+ * --project-ref <ref>`, the pre-tier-concept way of naming "the remote
+ * project" — remembered by the supabase CLI on disk, outside this
+ * resolver's `.env.<tier>` reads entirely. Since this resolver landed, every
+ * `--target remote` operation resolves its OWN project ref from the tier
+ * file via `--db-url`/`--project-ref` flags, never `--linked`, so nothing in
+ * this CLI still reads what `db connect` writes. It is not obviously dead —
+ * `supabase link` may still matter for someone driving the bare `supabase`
+ * CLI by hand outside `devtools`, and removing a command is a bigger
+ * decision than fixing a bug — but as far as `devtools` itself is concerned,
+ * `db connect` looks vestigial today.
+ *
  * Reports the reason on stderr and returns `null` on every failure path —
  * never throws for an expected failure — so a caller can stop without
  * printing a second explanation of its own. The same contract `resolveTier`
@@ -47,7 +83,8 @@ import {
   MissingEnvFileError,
   type LoadedEnvironment,
 } from "@devdogsuga/env/load";
-import { availableTiers } from "../tier.js";
+import { availableTiers } from "@devdogsuga/env/session";
+import { PROJECT_ROOT } from "../environment.js";
 import { unwrap } from "../ui.js";
 
 /** Every deploy tier except `development` — the ones a hosted project, and
@@ -104,7 +141,7 @@ export async function resolveRemoteConnection(
 ): Promise<RemoteConnection | null> {
   const label = opts.label ?? "devtools db";
 
-  const present = opts.available ?? availableTiers();
+  const present = opts.available ?? (await availableTiers(PROJECT_ROOT));
   const deployed = present.filter((tier) => tier !== "development");
 
   let tier: DeployEnvironment;

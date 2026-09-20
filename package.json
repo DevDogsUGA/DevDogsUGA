@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "devtools": "pnpm --filter @devdogsuga/devtools run cli",
     "build": "pnpm devtools run build",
     "dev": "pnpm devtools run dev",
     "typecheck": "pnpm devtools run typecheck",
@@ -18,6 +17,7 @@
     "node": ">=22.12"
   },
   "devDependencies": {
+    "@devdogsuga/devtools": "workspace:*",
     "@devdogsuga/env": "workspace:*",
     "@types/node": "catalog:",
     "prettier": "3.9.6",

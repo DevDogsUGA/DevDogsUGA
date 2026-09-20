@@ -58,6 +58,7 @@ import { runSeedRoles } from "./db/seed-roles.js";
 import { runOAuthSetup } from "./oauth/wizard.js";
 import {
   beginInvocation,
+  recordEnteredTier,
   recordResolved,
   reproducibleCommand,
 } from "./invocation.js";
@@ -1161,9 +1162,17 @@ async function dispatch(argv: string[]): Promise<string | null> {
 
 // ── Entry ────────────────────────────────────────────────────────────────────
 
-async function main(): Promise<void> {
-  const argv = process.argv.slice(2);
-
+/**
+ * Runs the CLI against an already-resolved argv.
+ *
+ * Exported rather than run at import, so `src/launch.ts` can resolve the
+ * deploy tier and enter its environment BEFORE this module's imports (and the
+ * commands they pull in) ever see `process.env` — see that file's header. The
+ * shebang above stays harmless: importing this module runs nothing, only
+ * `main()` does, and nothing calls it but `launch.ts` and the `import.meta.url`
+ * guard at the bottom of this file, for a direct `tsx src/cli.ts` run.
+ */
+export async function main(argv: string[]): Promise<void> {
   // ⚠️ BEFORE the `--help` check, unlike everything else here. `bw` is a
   // passthrough, so `pnpm devtools bw --help` is a request for Bitwarden's
   // help, not for ours. Answering it with our own would be this CLI talking
@@ -1228,6 +1237,11 @@ async function main(): Promise<void> {
     closing = await runMenu(dispatch, undefined, { startPath });
   } else {
     beginInvocation(argv, false);
+    // `launch.ts` already resolved and entered the session's deploy tier —
+    // see its header — so `process.env.DEPLOY_ENV` names it here for every
+    // path, typed or menu-built, rather than this module resolving a second
+    // opinion.
+    recordEnteredTier(process.env.DEPLOY_ENV ?? "development");
     closing = await dispatch(argv);
   }
 
@@ -1241,7 +1255,13 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err: unknown) => {
-  log.error(errorMessage(err));
-  process.exit(1);
-});
+// Only for a direct `tsx src/cli.ts` run, bypassing `launch.ts` entirely —
+// no deploy tier resolved, no env entered. Not a path anything in this repo
+// takes any more (`launch.ts` always runs first, see its header), kept as a
+// fallback for the same reason `ci.ts`'s guard is.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main(process.argv.slice(2)).catch((err: unknown) => {
+    log.error(errorMessage(err));
+    process.exit(1);
+  });
+}

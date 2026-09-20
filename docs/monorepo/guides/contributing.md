@@ -17,6 +17,20 @@ How a change reaches `main`: the branch and review flow, the commands that repro
 
 Merging to `main` deploys staging. Production is a separate promotion pull request into the `production` branch.
 
+## Running devtools
+
+`pnpm devtools` works from any directory — it is a full binary that discovers the repository root and runs from there. When multiple `.env` tier files exist (a common setup once your branch is deployed), every command requires an explicit tier; pass `--tier <development|staging|production>` at any position in the command, or the interactive prompt will ask. In scripts that cannot answer prompts, set `DEPLOY_ENV` instead or pass the flag.
+
+With-env's tier selection follows the same rules: if only `.env` exists, `with-env` loads it; if multiple `.env.tier` files are present, a script must pass `--tier` or set `DEPLOY_ENV`, and with-env refuses to guess — which is why `pnpm devtools setup` (the one command that runs outside the wrapper) has no tier at all.
+
+```bash
+pnpm devtools db status                                  # development (no tier files = default)
+pnpm devtools db status --tier staging                   # explicit tier, works everywhere
+pnpm devtools --tier staging db status                   # --tier at any position works
+DEPLOY_ENV=staging pnpm devtools db status               # or set DEPLOY_ENV in scripts
+pnpm exec with-env --tier staging pnpm --filter <app> run build  # with-env also respects --tier
+```
+
 ## Before you push
 
 ```bash

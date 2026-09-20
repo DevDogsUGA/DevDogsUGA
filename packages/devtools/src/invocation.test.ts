@@ -32,13 +32,14 @@ describe("invocation recorder", () => {
     );
   });
 
-  it("prefixes the entered tier as DEPLOY_ENV, reproducing it for every command", () => {
+  it("prefixes the entered tier as a --tier flag, reproducing it for every command", () => {
     beginInvocation(["db", "status", "--target", "remote"], true);
     recordEnteredTier("staging");
-    // A `--tier` flag would be ignored by `db`; the `DEPLOY_ENV=` prefix is
-    // what actually reproduces the tier the wizard entered.
+    // `--tier` is the global flag `launch.ts` strips off ANY invocation
+    // before `cli.ts` runs, so leading with it here reproduces the tier
+    // regardless of whether `db` itself parses `--tier`.
     expect(reproducibleCommand()).toBe(
-      "DEPLOY_ENV=staging pnpm devtools db status --target remote",
+      "pnpm devtools --tier staging db status --target remote",
     );
   });
 
@@ -52,7 +53,7 @@ describe("invocation recorder", () => {
     beginInvocation(["cf", "preview", "--app", "platform"], true);
     recordEnteredTier("production");
     expect(reproducibleCommand()).toBe(
-      "DEPLOY_ENV=production pnpm devtools cf preview --app platform",
+      "pnpm devtools --tier production cf preview --app platform",
     );
     // A fresh invocation must not inherit the previous one's tier prefix.
     beginInvocation(["db", "start"], true);

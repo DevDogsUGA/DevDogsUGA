@@ -14,6 +14,11 @@
       "types": "./dist/load.d.ts",
       "devdogs-source": "./src/load.ts",
       "default": "./dist/load.js"
+    },
+    "./session": {
+      "types": "./dist/session.d.ts",
+      "devdogs-source": "./src/session.ts",
+      "default": "./dist/session.js"
     }
   },
   "files": [

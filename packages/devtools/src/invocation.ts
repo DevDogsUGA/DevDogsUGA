@@ -28,11 +28,12 @@ let argv: string[] | null = null;
 let interactive = false;
 
 /**
- * The deploy tier the wizard entered for this session, or `null` for the
- * development default. Reproduced as a `DEPLOY_ENV=<tier>` prefix rather than a
- * `--tier` flag, because it is `DEPLOY_ENV` the wizard actually set and — unlike
- * `--tier`, which only the tier-aware commands parse — it reproduces the tier
- * for EVERY command, `db` and `env` included.
+ * The deploy tier `src/launch.ts` resolved and entered for this session, or
+ * `null` for the development default. Reproduced as a leading `--tier <tier>`
+ * flag, the same global flag `launch.ts` strips off ANY invocation before
+ * `cli.ts` ever runs — see its header — so this reproduces the tier for
+ * EVERY command, `db` and `env` included, exactly as typing `--tier <tier>`
+ * up front would.
  */
 let enteredTier: string | null = null;
 
@@ -80,6 +81,6 @@ export function recordResolved(...fragment: string[]): void {
  */
 export function reproducibleCommand(): string | null {
   if (argv === null || !interactive || argv.length === 0) return null;
-  const prefix = enteredTier ? `DEPLOY_ENV=${enteredTier} ` : "";
-  return `${prefix}pnpm devtools ${argv.join(" ")}`;
+  const tierFlag = enteredTier ? ["--tier", enteredTier] : [];
+  return `pnpm devtools ${[...tierFlag, ...argv].join(" ")}`;
 }

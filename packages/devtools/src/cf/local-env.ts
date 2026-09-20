@@ -21,7 +21,17 @@ export function renderWranglerEnvFile(
 }
 
 /** The app's declared keys, deduped and sorted, from the given entries or the
- * loaded registry. */
+ * loaded registry.
+ *
+ * `scope: "default"` + `commented: true` keys are excluded on purpose. That
+ * pair is exactly `DEPLOY_ENV` and `NODE_ENV`: their committed source is
+ * wrangler.jsonc's per-env `vars` blocks (and the framework), never an env
+ * file — see each key's `define()` doc. Materializing them into the temp
+ * `.dev.vars` this file feeds to `wrangler dev` lets a stray or empty `.env`
+ * value OVERRIDE the tier's wrangler var, which surfaced as a Workflow isolate
+ * reading a blank `DEPLOY_ENV` and throwing "has no HYPERDRIVE binding". Every
+ * other `default` key (GITHUB_ORG, AIRTABLE_BASE_ID, …) is uncommitted-empty
+ * and genuinely sourced from the env file, so only the commented pair is cut. */
 async function scopedKeys(
   app: string,
   entries?: readonly EnvEntry[],
@@ -32,7 +42,13 @@ async function scopedKeys(
   }
   return [
     ...new Set(
-      entries.filter((entry) => entry.source === app).map((entry) => entry.key),
+      entries
+        .filter((entry) => entry.source === app)
+        .filter(
+          (entry) =>
+            !(entry.meta.scope === "default" && entry.meta.commented === true),
+        )
+        .map((entry) => entry.key),
     ),
   ].sort();
 }

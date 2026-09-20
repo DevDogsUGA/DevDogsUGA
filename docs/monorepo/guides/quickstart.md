@@ -81,5 +81,6 @@ Nobody holds Root, deliberately. Take it explicitly on an instance you control w
 commands, so nothing here needs you to remember a name. When a command finishes,
 the CLI prints the flag-complete form of what it ran under **Run it directly
 next time**, so walking the menu once teaches you the command to paste later.
-Shell-only utilities remain available through `pnpm devtools --help`. Then read
-[Contributing](/docs/monorepo/guides/contributing).
+Shell-only utilities remain available through `pnpm devtools --help`.
+
+`pnpm devtools` works from any directory, not just the repository root. For details on tier selection when your project has multiple `.env` files, see [Contributing](/docs/monorepo/guides/contributing).

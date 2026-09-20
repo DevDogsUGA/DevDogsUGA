@@ -21,6 +21,7 @@ import {
   supabaseCapture,
 } from "./db/run.js";
 import type { RemoteConnection } from "./db/remote.js";
+import { refreshSessionEnv } from "./db/session-refresh.js";
 
 export type Target = { kind: "local" } | { kind: "remote" };
 
@@ -127,6 +128,19 @@ async function resetRemote(connection: RemoteConnection): Promise<number> {
   return seedBuckets({ kind: "remote", projectRef: connection.projectRef });
 }
 
+/**
+ * BUG 2's fix, applied at every point `start`/`stop`/`restart` can change
+ * `.env.generated`: on success, refresh this process's entered environment
+ * (see `db/session-refresh.ts`) so the rest of the session — including a
+ * `db introspect` run right after this one — sees the stack's CURRENT
+ * connection, not whatever `process.env` held at launch. A failed stack
+ * command changed nothing on disk, so there is nothing to refresh.
+ */
+async function afterLocalStackChange(code: number): Promise<string[]> {
+  if (code !== 0) return [];
+  return refreshSessionEnv();
+}
+
 // ── The local stack's lifecycle ──────────────────────────────────────────────
 
 /**
@@ -142,17 +156,18 @@ async function resetRemote(connection: RemoteConnection): Promise<number> {
  * outcome worse than a visible failure.
  */
 async function restartLocal(): Promise<{ code: number; lines: string[] }> {
-  const code = await stopLocalStack();
-  if (code !== 0) {
+  const stopCode = await stopLocalStack();
+  if (stopCode !== 0) {
     return {
-      code,
+      code: stopCode,
       lines: [
         "Stopping failed, so nothing was restarted. " +
           "Scroll up for the output from the Supabase CLI.",
       ],
     };
   }
-  return { code: await startLocalStack(), lines: [] };
+  const code = await startLocalStack();
+  return { code, lines: await afterLocalStackChange(code) };
 }
 
 /**
@@ -204,7 +219,8 @@ export async function runStackCommand(
       };
     }
     if (command === "restart") return restartLocal();
-    return { code: await stopLocalStack(), lines: [] };
+    const code = await stopLocalStack();
+    return { code, lines: await afterLocalStackChange(code) };
   }
 
   if (command === "status") {
@@ -223,7 +239,8 @@ export async function runStackCommand(
     // Machine-local: the Docker stack on this machine, so the target is
     // ignored rather than switched on. `db connect` is the remote-project
     // half of the old `link`, and it takes a ref, not a `Target`.
-    return { code: await startLocalStack(), lines: [] };
+    const code = await startLocalStack();
+    return { code, lines: await afterLocalStackChange(code) };
   }
 
   if (command === "migrate") {

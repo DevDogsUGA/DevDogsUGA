@@ -4,14 +4,23 @@ import { describe, expect, it } from "vitest";
 import type { EnvEntry } from "@devdogsuga/env";
 import { createTemporaryWranglerEnv, withWranglerEnv } from "./local-env.js";
 
-/** The fields `withWranglerEnv` reads are `key` and `source`; the rest exist
- * only to satisfy `EnvEntry`'s shape. */
-function entry(key: string, source: string): EnvEntry {
+/** The fields `withWranglerEnv` reads are `key`, `source`, and `meta`; the rest
+ * exist only to satisfy `EnvEntry`'s shape. */
+function entry(
+  key: string,
+  source: string,
+  meta?: Partial<EnvEntry["meta"]>,
+): EnvEntry {
   return {
     key,
     source,
     schema: z.string(),
-    meta: { doc: "test fixture", scope: "environment", secrecy: "public" },
+    meta: {
+      doc: "test fixture",
+      scope: "environment",
+      secrecy: "public",
+      ...meta,
+    },
     client: false,
   };
 }
@@ -33,6 +42,33 @@ describe("withWranglerEnv", () => {
     );
 
     expect(rendered).toBe("ALPHA='a-value'\nZEBRA='z-value'\n");
+  });
+
+  it("excludes commented default-scope keys (DEPLOY_ENV/NODE_ENV) so a stray .env value can't override the wrangler tier var", async () => {
+    const entries = [
+      entry("DEPLOY_ENV", "sandbox", { scope: "default", commented: true }),
+      entry("NODE_ENV", "sandbox", { scope: "default", commented: true }),
+      // A default-scope key that is NOT commented is genuinely env-sourced and
+      // must still be materialized.
+      entry("GITHUB_ORG", "sandbox", { scope: "default" }),
+      entry("API_URL", "sandbox"),
+    ];
+    const env = {
+      DEPLOY_ENV: "",
+      NODE_ENV: "production",
+      GITHUB_ORG: "devdogsuga",
+      API_URL: "https://api.example",
+    };
+
+    const rendered = await withWranglerEnv(
+      "sandbox",
+      async (path) => readFileSync(path, "utf8"),
+      { env, entries },
+    );
+
+    expect(rendered).toBe(
+      "API_URL='https://api.example'\nGITHUB_ORG='devdogsuga'\n",
+    );
   });
 
   it("skips keys with no value in the injected environment", async () => {

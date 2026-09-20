@@ -37,6 +37,7 @@ import {
   loadEnvironment,
   MissingEnvFileError,
 } from "./load.js";
+import { availableTiers, resolveSessionTier } from "./session.js";
 
 // ALMOST NOTHING ELSE IS IMPORTED AT THE TOP LEVEL, deliberately.
 //
@@ -58,6 +59,12 @@ import {
 // the parsing declarative. Anything heavier gets lazy-imported: a top-level
 // import added here for tidiness costs every script in the repository on
 // every run.
+//
+// `./session.js` joins that top-level group for the same reason: it imports
+// only `./targets.js` and `./load.js`, both already paid for above, and
+// defers `node:fs`/`node:path` inside `availableTiers()` exactly like this
+// file's own `findRoot()` does. It adds no new heavy dependency to the
+// common path.
 
 // Walk up for the workspace marker rather than assuming a fixed depth, so the
 // helper keeps working if this package is ever moved.
@@ -92,6 +99,11 @@ const program = new Command("with-env")
   .enablePositionalOptions()
   .passThroughOptions()
   .option("-c <script>", "run a shell script string with the env loaded")
+  .option(
+    "--tier <tier>",
+    "deploy tier to load (development, staging, production); " +
+      "overrides DEPLOY_ENV",
+  )
   .argument("[command...]", "command to run with the env loaded")
   .configureOutput({
     // Re-prefix commander's `error:` lines so a rejected flag (e.g. the
@@ -101,7 +113,7 @@ const program = new Command("with-env")
   });
 
 program.parse();
-const opts = program.opts<{ c?: string }>();
+const opts = program.opts<{ c?: string; tier?: string }>();
 const args = program.args;
 
 const usage =
@@ -121,6 +133,34 @@ if (!shellMode && args.length === 0) {
 // Running as a bin, the cwd is already the package whose script invoked us.
 const cwd = process.cwd();
 
+// Which tier to run under: `--tier` wins outright, then a non-empty
+// `DEPLOY_ENV`, then (an ordinary contributor's machine, at most one tier
+// file present) the sole tier — the ONE policy in `session.ts`, shared with
+// the devtools launcher.
+//
+// ⚠️ NO `prompt` IS PASSED, EVER. `with-env` fronts turbo-parallel tasks and
+// dev servers, none of which has anyone at a keyboard to answer a picker —
+// `isTTY: false` plus an absent `prompt` means two-or-more tier files
+// present with neither `--tier` nor `DEPLOY_ENV` set is ALWAYS an explicit
+// refusal here, never a silent guess or a hang waiting on stdin.
+//
+// This is also what keeps `pnpm devtools` itself working: its launcher sets
+// `DEPLOY_ENV` on every child task before spawning it, so each child
+// resolves by `deployEnv` (case (b) in `resolveSessionTier`) and never
+// reaches the ambiguity refusal above, even on a machine that has pulled
+// down every tier's file.
+const tierExists = (relPath: string) => existsSync(join(root, relPath));
+const resolution = await resolveSessionTier({
+  explicit: opts.tier,
+  deployEnv: process.env.DEPLOY_ENV,
+  available: await availableTiers(root, tierExists),
+  isTTY: false,
+});
+if (!resolution.ok) {
+  console.error(`with-env: ${resolution.reason}`);
+  process.exit(1);
+}
+
 // Decide which files to load, and load them, in one call — selection is
 // still separated from loading inside load.ts, but `with-env` no longer
 // needs to see the seam. This always happens in-process, even on Windows
@@ -132,7 +172,7 @@ const cwd = process.cwd();
 let env: Record<string, string>;
 let envFiles: string[];
 try {
-  const loaded = await loadEnvironment(process.env.DEPLOY_ENV, undefined, {
+  const loaded = await loadEnvironment(resolution.tier, undefined, {
     root,
   });
   for (const warning of loaded.warnings) {
@@ -166,6 +206,14 @@ try {
   // typo pointing at the wrong database, and running "as development" because
   // `production` was misspelled is the silent lie this package exists to
   // prevent.
+  //
+  // That typo is now largely caught earlier: `resolveSessionTier` above
+  // already refuses an unrecognised `--tier` or `DEPLOY_ENV` before
+  // `loadEnvironment` is ever called. This branch is kept as a backstop
+  // regardless — `loadEnvironment` still resolves the tier itself and would
+  // throw exactly this for any future caller that reaches it having skipped
+  // resolution, and a backstop that silently rotted into dead code is worse
+  // than one extra branch.
   if (err instanceof MissingEnvFileError) {
     console.error(`with-env: ${err.message}`);
     console.error("with-env: continuing with no env file loaded.");

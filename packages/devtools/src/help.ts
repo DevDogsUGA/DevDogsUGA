@@ -127,7 +127,13 @@ function renderRoot(): string {
   lines.push(
     "",
     "Options:",
-    ...columns([["--help, -h", "Show this message"]]),
+    ...columns([
+      ["--help, -h", "Show this message"],
+      [
+        "--tier <t>",
+        "Deploy tier for this whole invocation (development, staging, production)",
+      ],
+    ]),
     "",
     "`pnpm devtools <command> --help` shows what that command takes.",
   );
