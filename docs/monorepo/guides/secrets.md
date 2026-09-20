@@ -44,6 +44,12 @@ The order above — least dangerous to most — is the order the interactive pic
 
 `pnpm devtools env --help` lists the six subcommands (`pull`, `push`, `audit`, `init`, `example`, `reset`) and the options each takes; `pnpm devtools` with no arguments walks you through them interactively. Bitwarden Secrets Manager is the source of truth and GitHub environment secrets are a derived copy — [Env](/docs/toolkit/guides/env) is the reference for how the two are kept in step, and [the commands](/docs/toolkit/guides/env/commands) is what `audit` compares.
 
+After a manifest declares a new variable, run `pnpm devtools env init --target
+staging` and then `--target production`. Re-running `init` appends only missing
+keys to each target file and leaves existing lines untouched. Fill the new
+values, then push each target; if Bitwarden already contains them, `env pull`
+adds them to the file with their stored values instead.
+
 Two things worth knowing before you touch any of it:
 
 - `.env.example` is **generated** from the env manifests, and CI byte-compares it. A new variable is declared in its app's manifest; it is never typed into the example by hand.

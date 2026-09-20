@@ -843,8 +843,8 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
           },
           {
             name: "init",
-            summary: "Create a fresh file for a target.",
-            hint: "refuses to touch one that exists",
+            summary: "Create a target file, or append newly declared keys.",
+            hint: "existing lines are never changed",
             options: [
               {
                 flag: "--target",

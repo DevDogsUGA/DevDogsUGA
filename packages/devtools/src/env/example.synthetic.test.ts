@@ -29,9 +29,12 @@ import { renderInit, runEnvInit } from "./example.js";
  * Nothing else in this file touches the filesystem: the registry here is
  * declared inline rather than discovered, so no manifest is ever imported.
  */
-const writeFile = vi.hoisted(() => vi.fn(async () => undefined));
+const { readFile, writeFile } = vi.hoisted(() => ({
+  readFile: vi.fn(async () => ""),
+  writeFile: vi.fn(async () => undefined),
+}));
 
-vi.mock("node:fs/promises", () => ({ writeFile, readFile: vi.fn() }));
+vi.mock("node:fs/promises", () => ({ readFile, writeFile }));
 
 vi.mock("@clack/prompts", () => ({
   cancel: vi.fn(),
@@ -284,6 +287,8 @@ describe("the init command", () => {
 
   beforeEach(() => {
     previousExitCode = process.exitCode;
+    readFile.mockClear();
+    readFile.mockImplementation(async () => "");
     writeFile.mockClear();
     writeFile.mockImplementation(async () => undefined);
   });
@@ -292,7 +297,7 @@ describe("the init command", () => {
     process.exitCode = previousExitCode;
   });
 
-  it("writes the target's file, and refuses to clobber one", async () => {
+  it("writes a fresh target file, then only appends missing keys", async () => {
     await runEnvInit("staging");
 
     const [path, contents, options] = writeFile.mock.calls[0]! as unknown as [
@@ -302,20 +307,30 @@ describe("the init command", () => {
     ];
     expect(path).toMatch(/\.env\.staging$/);
     expect(contents).toContain("ANCHOR=");
-    // `wx` makes the existence check and the write ONE operation. There is no
-    // `--force` and no prompt on purpose: "replace my whole env file with
-    // blanks" has no legitimate use, and this file may hold the only copy of a
-    // deployed environment's credentials.
+    // `wx` makes the fresh-file existence check and write one operation. There
+    // is no `--force`: a rerun reads the existing file and appends omissions.
     expect(options).toEqual({ flag: "wx" });
 
+    const existing = 'ANCHOR="kept"\n';
+    readFile.mockResolvedValue(existing);
     writeFile.mockClear();
-    writeFile.mockImplementation(async () => {
-      throw Object.assign(new Error("EEXIST"), { code: "EEXIST" });
-    });
+    writeFile
+      .mockRejectedValueOnce(
+        Object.assign(new Error("EEXIST"), { code: "EEXIST" }),
+      )
+      .mockResolvedValueOnce(undefined);
 
     await runEnvInit("staging");
-    expect(writeFile).toHaveBeenCalledTimes(1); // no second, forcing attempt
-    expect(process.exitCode).toBe(1);
+    expect(readFile).toHaveBeenCalledTimes(1);
+    expect(writeFile).toHaveBeenCalledTimes(2);
+    const [, appended] = writeFile.mock.calls[1]! as unknown as [
+      string,
+      string,
+    ];
+    expect(appended.startsWith(existing)).toBe(true);
+    expect(appended).toContain('DERIVED_OK="https://$ANCHOR.example.com"');
+    expect(appended.match(/^ANCHOR=/gm)).toHaveLength(1);
+    expect(process.exitCode).toBe(previousExitCode);
   });
 });
 
