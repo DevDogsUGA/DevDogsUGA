@@ -97,12 +97,17 @@ export interface TemporaryWranglerEnv {
  * retry/readiness loop across a bracket-shaped variant just to convert the
  * `workflows serve` half would fragment one shared, tested implementation
  * into two for no behavioural gain.
+ *
+ * `env` mirrors `withWranglerEnv`'s `options.env`: pass a tier's loaded map to
+ * materialize a scoped file from THAT tier rather than the inherited process
+ * environment; omit it to keep today's behavior.
  */
 export async function createTemporaryWranglerEnv(
   app: string,
+  env?: NodeJS.ProcessEnv,
 ): Promise<TemporaryWranglerEnv> {
   const keys = await scopedKeys(app);
-  const { directory, path } = materializeEnvFile(keys, process.env);
+  const { directory, path } = materializeEnvFile(keys, env ?? process.env);
   return {
     path,
     remove: () => rmSync(directory, { recursive: true, force: true }),

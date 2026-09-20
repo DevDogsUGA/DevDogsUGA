@@ -6,7 +6,7 @@
  * open until the workflow's timeout kills it with no output saying why.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { shouldAsk } from "./pick.js";
+import { parseTierArg, shouldAsk } from "./pick.js";
 
 /**
  * `process.stdin.isTTY` is a plain data property, not an accessor. Node defines
@@ -77,5 +77,55 @@ describe("shouldAsk", () => {
     // `--force` is not `-F`, and turbo has flags that begin with these
     // letters. Prefix matching is only ever applied to the `=` form.
     expect(shouldAsk(["--force"])).toBe(true);
+  });
+});
+
+/**
+ * `parseTierArg` is pure — no `process.exit` — specifically so it can be
+ * tested here without going through `passthrough`, which every other path in
+ * `runTask` ends at.
+ */
+describe("parseTierArg", () => {
+  it("strips a valid tier and its value from rest", () => {
+    expect(parseTierArg(["--tier", "staging", "--filter", "platform"])).toEqual(
+      { tier: "staging", rest: ["--filter", "platform"] },
+    );
+  });
+
+  it("accepts development and production too", () => {
+    expect(parseTierArg(["--tier", "development"])).toEqual({
+      tier: "development",
+      rest: [],
+    });
+    expect(parseTierArg(["--tier", "production"])).toEqual({
+      tier: "production",
+      rest: [],
+    });
+  });
+
+  it("errors when --tier has no value", () => {
+    const result = parseTierArg(["--tier"]);
+    expect(result.tier).toBeUndefined();
+    expect(result.error).toContain("--tier requires a value");
+  });
+
+  it("errors when --tier's value looks like another flag", () => {
+    const result = parseTierArg(["--tier", "--filter"]);
+    expect(result.tier).toBeUndefined();
+    expect(result.error).toContain("--tier requires a value");
+  });
+
+  it("errors on a value outside the canonical tier set, preflight included", () => {
+    for (const bad of ["preflight", "prod", "bogus"]) {
+      const result = parseTierArg(["--tier", bad]);
+      expect(result.tier, bad).toBeUndefined();
+      expect(result.error, bad).toContain(`unknown tier "${bad}"`);
+    }
+  });
+
+  it("passes args through unchanged when --tier is absent", () => {
+    expect(parseTierArg(["--filter", "platform", "--all"])).toEqual({
+      rest: ["--filter", "platform", "--all"],
+    });
   });
 });

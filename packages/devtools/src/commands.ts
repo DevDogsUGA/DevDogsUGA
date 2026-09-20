@@ -270,13 +270,17 @@ const VAULT_TARGET: CommandOption = {
 };
 
 /**
- * The two flags every `run` task takes.
+ * The three flags every `run` task takes.
  *
- * Neither carries a `prompt`, and that is the point rather than an omission.
+ * None carries a `prompt`, and that is the point rather than an omission.
  * `run` opens a multiselect of the apps defining the task, so a wizard that
- * asked "every package?" and "which filter?" first would ask the same question
- * three times and let two of the answers contradict the third. `--help` still
- * documents both, which is where someone scripting this will look.
+ * asked "every package?", "which filter?" and "which tier?" up front would
+ * ask the same question three times and let the answers disagree. `--tier`
+ * is promptless for a different reason than `--filter`/`--all`, though: it is
+ * not a question `run` asks itself elsewhere (unlike `cron run`'s own
+ * `--tier`, which opens a live picker) — it is a scripting input with no
+ * wizard equivalent, the same category `--json` sits in. `--help` still
+ * documents all three, which is where someone scripting this will look.
  *
  * Same reasoning as `VAULT_TARGET` above: the command owns the question, so the
  * tree declares the flag and stays quiet.
@@ -290,6 +294,11 @@ const TURBO_OPTIONS: readonly CommandOption[] = [
   {
     flag: "--all",
     summary: "Every package, unfiltered, with nothing asked.",
+  },
+  {
+    flag: "--tier",
+    value: "<t>",
+    summary: "Load a tier's env into the run. CLI-only; never prompted.",
   },
 ];
 
@@ -1138,6 +1147,22 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
                   choices: WORKER_APP_CHOICES,
                 },
               },
+              {
+                flag: "--tier",
+                value: "<t>",
+                summary:
+                  "Preview against a tier's env. Defaults to development.",
+                prompt: {
+                  kind: "select",
+                  message: "Which tier's env should the preview use?",
+                  choices: [
+                    { value: "development", hint: "the default" },
+                    { value: "staging" },
+                    { value: "production", hint: "⚠️  live data" },
+                  ],
+                },
+              },
+              YES,
             ],
           },
           {

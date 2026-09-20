@@ -43,7 +43,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { isCancel, cancel, multiselect } from "@clack/prompts";
+import { cancel, confirm, isCancel, multiselect } from "@clack/prompts";
 import { PROJECT_ROOT } from "../environment.js";
 
 /**
@@ -83,8 +83,16 @@ interface App {
  * `pnpm --filter @devdogsuga/devtools run cli`, this process starts in
  * `packages/devtools`, and a turbo invoked there would scope itself to that
  * one package rather than the workspace.
+ *
+ * `extraEnv`, when given, is a loaded tier's env (see `runTask`'s `--tier`
+ * handling below), merged in ahead of the recursion guard so a caller can
+ * never accidentally unset it.
  */
-function passthrough(task: string, args: string[]): never {
+function passthrough(
+  task: string,
+  args: string[],
+  extraEnv?: NodeJS.ProcessEnv,
+): never {
   const result = spawnSync("turbo", ["run", task, ...args], {
     cwd: PROJECT_ROOT,
     stdio: "inherit",
@@ -92,7 +100,7 @@ function passthrough(task: string, args: string[]): never {
     // package's scripts by default, but a `//#task` entry added later would
     // re-enter this file through the root alias. Seeing the marker, it would
     // pass straight through.
-    env: { ...process.env, DEVDOGS_PICK: "0" },
+    env: { ...process.env, ...extraEnv, DEVDOGS_PICK: "0" },
   });
   process.exit(result.status ?? 1);
 }
@@ -121,6 +129,54 @@ export function shouldAsk(args: string[]): boolean {
     (arg) =>
       FILTERS.includes(arg) || FILTERS.some((f) => arg.startsWith(`${f}=`)),
   );
+}
+
+// ── Tier ─────────────────────────────────────────────────────────────────────
+
+/** The tiers a loaded env can select. `preflight` is not a deploy environment
+ * (see `@devdogsuga/env`'s target table) and is refused here for the same
+ * reason `loadEnvironment` itself would refuse it. */
+const RUN_TIERS = new Set(["development", "staging", "production"]);
+
+export interface TierArgResult {
+  /** The validated tier, or absent when `--tier` was not passed. */
+  tier?: string;
+  /** `args` with `--tier` and its value removed, so turbo never sees them. */
+  rest: string[];
+  /** Set instead of `tier` when parsing failed; `rest` is unchanged on error. */
+  error?: string;
+}
+
+/**
+ * Parses and strips `--tier <value>` from turbo-bound args, mirroring the
+ * `--all` strip above.
+ *
+ * Pure on purpose — no `process.exit` — so this is unit-testable without
+ * going through `passthrough`, which every other path in this file ends at
+ * and which a test cannot observe return from. `runTask` is the one caller,
+ * and it is the one that turns `error` into an exit.
+ */
+export function parseTierArg(args: readonly string[]): TierArgResult {
+  const idx = args.indexOf("--tier");
+  if (idx === -1) return { rest: [...args] };
+
+  const value = args[idx + 1];
+  if (!value || value.startsWith("-")) {
+    return { rest: [...args], error: "devtools run: --tier requires a value." };
+  }
+  if (!RUN_TIERS.has(value)) {
+    return {
+      rest: [...args],
+      error:
+        `devtools run: unknown tier "${value}". ` +
+        "Expected: development, staging, production.",
+    };
+  }
+
+  return {
+    tier: value,
+    rest: [...args.slice(0, idx), ...args.slice(idx + 2)],
+  };
 }
 
 // ── The apps ─────────────────────────────────────────────────────────────────
@@ -214,15 +270,74 @@ export async function runTask(argv: string[]): Promise<never> {
   // every package", which is what the root scripts did before this existed.
   // Removed from the argv so turbo never sees a flag it does not know.
   const all = args.includes("--all");
-  const rest = args.filter((arg) => arg !== "--all");
+  const withoutAll = args.filter((arg) => arg !== "--all");
 
-  if (all || !shouldAsk(rest)) passthrough(task, rest);
+  const tierArg = parseTierArg(withoutAll);
+  if (tierArg.error) {
+    console.error(tierArg.error);
+    process.exit(1);
+  }
+  const { tier, rest } = tierArg;
+
+  // No `--yes` here, deliberately: `run` is a bare turbo passthrough with no
+  // confirmation flag of its own to spare, unlike `cron run`/`workflows run`.
+  // A non-interactive caller that wants production has no way to say so, and
+  // that is the point — the same exposure those two gate behind `--yes` gets
+  // gated behind a terminal existing at all.
+  if (tier === "production") {
+    if (!process.stdin.isTTY) {
+      console.error(
+        "devtools run: --tier production needs a terminal to confirm — " +
+          "nothing ran.",
+      );
+      process.exit(1);
+    }
+    const approved = await confirm({
+      message:
+        `Run \`${task}\` against production? This loads .env.production's ` +
+        "credentials into the child process.",
+      initialValue: false,
+    });
+    if (isCancel(approved) || !approved) {
+      cancel("Nothing ran.");
+      process.exit(0);
+    }
+  }
+
+  let tierEnv: NodeJS.ProcessEnv | undefined;
+  if (tier) {
+    // Dynamic import, not a top-level one: this module is on the `pnpm build`
+    // hot path (see the header), and a bare `pnpm build` with no `--tier`
+    // must never load `@devdogsuga/env/load` or drag dotenvx into the graph.
+    const { loadEnvironment, MissingEnvFileError } =
+      await import("@devdogsuga/env/load");
+    try {
+      // override: true because THIS process runs under `with-env`
+      // (development), so process.env already holds development's values.
+      // Passing the full loaded env — not just DEPLOY_ENV — to turbo matters
+      // because the grandchild `with-env` (started by the app's own script)
+      // resolves variables first-file-wins from ITS OWN process.env: without
+      // the full map, that env would still carry devtools' inherited
+      // development values, which would beat `.env.<tier>` for anything
+      // `.env.<tier>` does not also redeclare.
+      const loaded = await loadEnvironment(tier, { override: true });
+      tierEnv = { ...loaded.env, DEPLOY_ENV: tier };
+    } catch (err) {
+      if (err instanceof MissingEnvFileError) {
+        console.error(`devtools run: ${err.message}`);
+        process.exit(1);
+      }
+      throw err;
+    }
+  }
+
+  if (all || !shouldAsk(rest)) passthrough(task, rest, tierEnv);
 
   const apps = appsWith(task);
 
   // Nothing to choose between: one app, or none that define this task (turbo
   // will say so better than a picker with a single option would).
-  if (apps.length < 2) passthrough(task, rest);
+  if (apps.length < 2) passthrough(task, rest, tierEnv);
 
   const previous = remembered(task);
 
@@ -264,5 +379,9 @@ export async function runTask(argv: string[]): Promise<never> {
 
   remember(task, chosen);
 
-  passthrough(task, [...chosen.map((name) => `--filter=${name}`), ...rest]);
+  passthrough(
+    task,
+    [...chosen.map((name) => `--filter=${name}`), ...rest],
+    tierEnv,
+  );
 }

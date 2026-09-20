@@ -1,39 +1,7 @@
 // Unit tests for cron/commands helpers.
-import { mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { parse as parseEnv } from "dotenv";
 import { describe, expect, it } from "vitest";
-import { loadTierEnv, resolveBaseUrl } from "./commands.js";
-
-describe("loadTierEnv", () => {
-  it("returns a plain object for any tier", () => {
-    const result = loadTierEnv("development");
-    expect(typeof result).toBe("object");
-    expect(result).not.toBeNull();
-  });
-
-  it("returns empty object for a tier whose file is absent", () => {
-    // Use an obviously-nonexistent tier name; falls back to "development" path,
-    // but we can directly test the parse logic with a temp file instead.
-    const dir = join(tmpdir(), `devtools-crontest-${Date.now()}`);
-    mkdirSync(dir, { recursive: true });
-    try {
-      const raw =
-        'BASE_URL="https://staging.devdogs.uga.edu"\nCRON_SECRET="abc123"\n';
-      writeFileSync(join(dir, ".env.staging"), raw);
-      const parsed = parseEnv(raw);
-      expect(parsed["BASE_URL"]).toBe("https://staging.devdogs.uga.edu");
-      expect(parsed["CRON_SECRET"]).toBe("abc123");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("does not throw for an unrecognised tier string", () => {
-    expect(() => loadTierEnv("not-a-tier")).not.toThrow();
-  });
-});
+import { resolveBaseUrl } from "./commands.js";
 
 describe("describeExpr zero-padding (source check)", () => {
   it("source uses padStart for minute component", async () => {

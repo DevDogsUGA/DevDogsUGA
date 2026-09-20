@@ -21,12 +21,14 @@ export const TYPES_FILE = join(
   "database.types.ts",
 );
 
-/** Spawn a pnpm command with inherited stdio; resolves to the exit code. */
-export function run(args: string[]): Promise<number> {
+/** Spawn a pnpm command with inherited stdio; resolves to the exit code. Pass
+ * `env` to run the child against a loaded tier rather than process.env. */
+export function run(args: string[], env?: NodeJS.ProcessEnv): Promise<number> {
   return new Promise((resolve) => {
     const child = nodeSpawn("pnpm", args, {
       stdio: "inherit",
       cwd: PROJECT_ROOT,
+      ...(env ? { env } : {}),
     });
     child.on("exit", (code) => resolve(code ?? 1));
   });
@@ -37,12 +39,17 @@ export interface RunWithStderrResult {
   stderr: string;
 }
 
-/** Spawn a pnpm command while echoing and retaining stderr for diagnostics. */
-export function runWithStderr(args: string[]): Promise<RunWithStderrResult> {
+/** Spawn a pnpm command while echoing and retaining stderr for diagnostics.
+ * Pass `env` to run the child against a loaded tier rather than process.env. */
+export function runWithStderr(
+  args: string[],
+  env?: NodeJS.ProcessEnv,
+): Promise<RunWithStderrResult> {
   return new Promise((resolve) => {
     const child = nodeSpawn("pnpm", args, {
       stdio: ["inherit", "inherit", "pipe"],
       cwd: PROJECT_ROOT,
+      ...(env ? { env } : {}),
     });
     let stderr = "";
     child.stderr.setEncoding("utf8");

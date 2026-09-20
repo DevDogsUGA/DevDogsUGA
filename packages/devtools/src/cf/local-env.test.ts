@@ -2,7 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
 import type { EnvEntry } from "@devdogsuga/env";
-import { withWranglerEnv } from "./local-env.js";
+import { createTemporaryWranglerEnv, withWranglerEnv } from "./local-env.js";
 
 /** The fields `withWranglerEnv` reads are `key` and `source`; the rest exist
  * only to satisfy `EnvEntry`'s shape. */
@@ -93,5 +93,39 @@ describe("withWranglerEnv", () => {
     ).rejects.toThrow("boom");
 
     expect(existsSync(capturedPath)).toBe(false);
+  });
+});
+
+describe("createTemporaryWranglerEnv", () => {
+  // Unlike `withWranglerEnv`, this function takes no `entries` override — its
+  // one caller (`workflows/commands.ts`'s temp session) always wants the real
+  // registry — so this exercises a real app slug (`apps/sandbox/env.ts`
+  // declares `PLATFORM_REST_URL` with `source: "sandbox"`) rather than an
+  // injected fixture.
+  it("materializes from the given env, not process.env, and cleans up on remove()", async () => {
+    const previous = process.env.PLATFORM_REST_URL;
+    // A decoy in process.env: if `createTemporaryWranglerEnv` ever fell back
+    // to `process.env` despite an `env` argument being given, this value
+    // would leak into the file instead of the injected one below.
+    process.env.PLATFORM_REST_URL = "https://process-env-decoy.example/rest/v1";
+    try {
+      const { path, remove } = await createTemporaryWranglerEnv("sandbox", {
+        PLATFORM_REST_URL: "https://injected.example/rest/v1",
+      });
+      try {
+        expect(existsSync(path)).toBe(true);
+        const contents = readFileSync(path, "utf8");
+        expect(contents).toContain(
+          "PLATFORM_REST_URL='https://injected.example/rest/v1'",
+        );
+        expect(contents).not.toContain("process-env-decoy");
+      } finally {
+        remove();
+      }
+      expect(existsSync(path)).toBe(false);
+    } finally {
+      if (previous === undefined) delete process.env.PLATFORM_REST_URL;
+      else process.env.PLATFORM_REST_URL = previous;
+    }
   });
 });

@@ -3,6 +3,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { confirm, select, text } from "@clack/prompts";
+import { MissingEnvFileError, loadEnvironment } from "@devdogsuga/env/load";
 import {
   createTemporaryWranglerEnv,
   renderWranglerEnvFile,
@@ -324,7 +325,25 @@ async function startTemporaryWrangler(
   process.stdout.write(
     `Preparing and starting a temporary Wrangler session for ${app} on port ${port}…\n`,
   );
-  const runtimeEnv = await createTemporaryWranglerEnv(app);
+
+  // Both callers of this function (`workflows serve`, `workflows run --tier
+  // development`) are local-only, so the tier is always development — but
+  // load it explicitly rather than letting the scoped `.dev.vars` fall back
+  // to this process's own inherited env: `override: true` re-reads `.env`
+  // fresh, so an edit made after this process started is picked up instead
+  // of a value it happened to inherit at boot.
+  let loaded: Awaited<ReturnType<typeof loadEnvironment>>;
+  try {
+    loaded = await loadEnvironment("development", { override: true });
+  } catch (err) {
+    if (err instanceof MissingEnvFileError) {
+      process.stderr.write(`devtools workflows: ${err.message}\n`);
+      return null;
+    }
+    throw err;
+  }
+
+  const runtimeEnv = await createTemporaryWranglerEnv(app, loaded.env);
   const child = spawn(
     "pnpm",
     [...wranglerDevArgs(app, port), "--env-file", runtimeEnv.path],
@@ -593,6 +612,27 @@ export async function runWorkflowsRun(
     options.instanceId = randomUUID();
   }
 
+  // A remote trigger (`wrangler workflows trigger --env <tier>`) authenticates
+  // against Cloudflare with that tier's own credentials, which live only in
+  // `.env.<tier>` — never in this process's own inherited env, which is
+  // development's. Loading it here, rather than leaving the child to whatever
+  // this process happened to inherit, is an accepted behavior change: a
+  // remote trigger now requires `.env.<tier>` to be present and authenticates
+  // with ITS credentials, not development's. The local path needs none of
+  // this — the temporary Wrangler session already carries development's env.
+  let triggerEnv: NodeJS.ProcessEnv | undefined;
+  if (tier !== "development") {
+    try {
+      triggerEnv = (await loadEnvironment(tier, { override: true })).env;
+    } catch (err) {
+      if (err instanceof MissingEnvFileError) {
+        process.stderr.write(`devtools workflows run: ${err.message}\n`);
+        return 1;
+      }
+      throw err;
+    }
+  }
+
   // Record the decisions the prompts made, in flag form, so the CLI can print
   // a command that reruns this without any of them. `--yes` is deliberately
   // never recorded: it exists to gate a deployed trigger behind a confirm, and
@@ -606,7 +646,10 @@ export async function runWorkflowsRun(
 
   process.stdout.write(`→ ${choice.name} (${choice.app}, ${tier})\n`);
   try {
-    const result = await runWithStderr(workflowTriggerArgs(choice, options));
+    const result = await runWithStderr(
+      workflowTriggerArgs(choice, options),
+      triggerEnv,
+    );
     if (
       result.code !== 0 &&
       tier === "development" &&
