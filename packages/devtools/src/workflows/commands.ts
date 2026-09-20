@@ -1,6 +1,7 @@
 /** Config-derived listing and manual triggering for Cloudflare Workflows. */
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { createServer } from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
 import { confirm, select, text } from "@clack/prompts";
 import { MissingEnvFileError, loadEnvironment } from "@devdogsuga/env/load";
@@ -43,6 +44,9 @@ interface WorkflowOptions {
 
 interface TemporaryWranglerSession {
   stop: () => Promise<void>;
+  /** The port the session actually bound to — may differ from the requested
+   * one when it was already taken. See `startTemporaryWrangler`. */
+  port: string;
 }
 
 export { renderWranglerEnvFile } from "../cf/local-env.js";
@@ -298,10 +302,56 @@ async function waitForExit(
   ]);
 }
 
+/** Whether nothing is bound to `port` on loopback — a real bind test, not a
+ * connect probe, so it answers the only question that matters here: can Wrangler
+ * take this port? */
+export function isPortFree(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = createServer();
+    server.once("error", () => resolve(false));
+    server.listen({ host: "127.0.0.1", port }, () => {
+      server.close(() => resolve(true));
+    });
+  });
+}
+
+/** The first free port at or after `from`, or null if a bounded scan finds
+ * none. Bounded so an exhausted range fails loudly instead of looping. */
+export async function findFreePort(
+  from: number,
+  attempts = 20,
+): Promise<number | null> {
+  for (let port = from; port < from + attempts && port <= 65_535; port += 1) {
+    if (await isPortFree(port)) return port;
+  }
+  return null;
+}
+
 async function startTemporaryWrangler(
   app: string,
-  port: string,
+  requestedPort: string,
 ): Promise<TemporaryWranglerSession | null> {
+  // Auto-pick a free port when the requested one is taken. The usual culprit is
+  // another project's `wrangler dev` holding the default 8787; without this,
+  // `wrangler dev --port <taken>` cannot bind and the session never becomes
+  // ready — read as "triggering a workflow is broken" rather than "that port is
+  // busy". The trigger below uses whatever port we actually bound.
+  let port = requestedPort;
+  if (!(await isPortFree(Number(port)))) {
+    const free = await findFreePort(Number(port) + 1);
+    if (free === null) {
+      process.stderr.write(
+        `devtools workflows: port ${requestedPort} is in use and no free port ` +
+          `was found near it for a temporary Wrangler session.\n`,
+      );
+      return null;
+    }
+    process.stdout.write(
+      `Port ${requestedPort} is in use; starting the temporary Wrangler session on ${free} instead.\n`,
+    );
+    port = String(free);
+  }
+
   process.stdout.write(
     `Preparing and starting a temporary Wrangler session for ${app} on port ${port}…\n`,
   );
@@ -353,6 +403,7 @@ async function startTemporaryWrangler(
           await stopTemporaryWrangler(child);
           runtimeEnv.remove();
         },
+        port,
       };
     }
     if (startupError || child.exitCode !== null || child.signalCode !== null) {
@@ -420,7 +471,10 @@ async function prepareLocalWrangler(
     }
 
     const temporary = await startTemporaryWrangler(app, port);
-    return temporary ? { port, temporary } : undefined;
+    // `temporary.port` — not `port` — because the session may have landed on a
+    // different port when the requested one was taken; the trigger must aim at
+    // where Wrangler actually came up.
+    return temporary ? { port: temporary.port, temporary } : undefined;
   }
   return { port };
 }
@@ -723,8 +777,10 @@ export async function runWorkflowsServe(
   const session = await startTemporaryWrangler(app, port);
   if (!session) return 1;
 
+  // `session.port`, not `port`: the session auto-picks a free port when the
+  // requested one is taken, so this line must report where it actually landed.
   process.stdout.write(
-    `Wrangler will keep running on port ${port}. Press Ctrl+C to stop it.\n`,
+    `Wrangler will keep running on port ${session.port}. Press Ctrl+C to stop it.\n`,
   );
   await new Promise<void>((resolve) => {
     process.once("SIGINT", resolve);

@@ -1,3 +1,4 @@
+import { createServer } from "node:net";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -59,6 +60,8 @@ vi.mock("@devdogsuga/env/load", () => ({
 }));
 
 const {
+  findFreePort,
+  isPortFree,
   isWranglerDevConnectionFailure,
   isWranglerDevRunning,
   renderWranglerEnvFile,
@@ -368,5 +371,53 @@ describe("runWorkflowsRun remote-trigger env", () => {
 
     expect(code).toBe(1);
     expect(runWithStderr).not.toHaveBeenCalled();
+  });
+});
+
+describe("port probing", () => {
+  /** Bind a real loopback listener on an OS-chosen port for the duration of
+   * `body`, so the helpers see an actually-occupied port rather than a mock. */
+  async function withBoundPort(
+    body: (port: number) => Promise<void>,
+  ): Promise<void> {
+    const server = createServer();
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen({ host: "127.0.0.1", port: 0 }, resolve);
+    });
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      server.close();
+      throw new Error("expected a bound TCP address");
+    }
+    try {
+      await body(address.port);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }
+
+  it("reports a bound port as taken and a closed one as free", async () => {
+    await withBoundPort(async (port) => {
+      expect(await isPortFree(port)).toBe(false);
+    });
+  });
+
+  it("finds a free port, skipping the one that is bound", async () => {
+    await withBoundPort(async (port) => {
+      const free = await findFreePort(port);
+      expect(free).not.toBeNull();
+      expect(free).not.toBe(port);
+      expect(free!).toBeGreaterThan(port);
+      // The returned port must itself be free — not just different.
+      expect(await isPortFree(free!)).toBe(true);
+    });
+  });
+
+  it("returns null when the bounded scan finds nothing free", async () => {
+    await withBoundPort(async (port) => {
+      // A one-slot scan starting at the occupied port cannot succeed.
+      expect(await findFreePort(port, 1)).toBeNull();
+    });
   });
 });
