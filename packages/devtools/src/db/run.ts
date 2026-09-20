@@ -92,14 +92,23 @@ export const prettierWrite = (path: string) =>
 export const buildSupabase = () =>
   run(["--filter", "@devdogsuga/supabase", "build"]);
 
-/** Generate and write Database types from a linked or local project. */
-export async function generateTypes(linked: boolean): Promise<number> {
+/**
+ * `--local` for the Docker stack; for a hosted project, the resolved tier's
+ * OWN `--db-url` rather than the CLI's ambient `--linked` project, which the
+ * caller may not be pointed at. See `db/remote.ts`'s header for why that
+ * distinction is safety-critical for `db reset --target remote`.
+ */
+export type TypesConnection =
+  { kind: "local" } | { kind: "remote"; dbUrl: string };
+
+/** Generate and write Database types from a local or resolved-tier project. */
+export async function generateTypes(conn: TypesConnection): Promise<number> {
   let out: string;
   try {
     out = await supabaseCapture(
       "gen",
       "types",
-      linked ? "--linked" : "--local",
+      ...(conn.kind === "remote" ? ["--db-url", conn.dbUrl] : ["--local"]),
     );
   } catch {
     return 1;
@@ -111,8 +120,27 @@ export async function generateTypes(linked: boolean): Promise<number> {
   return buildSupabase();
 }
 
-/** Seed storage buckets (linked = remote, !linked = local). */
-export const seedBuckets = (linked: boolean) =>
-  linked
-    ? supabase("seed", "buckets", "--linked")
-    : supabase("seed", "buckets", "--local", "--yes");
+/**
+ * `seed buckets` takes no `--db-url` (verified against the supabase 2.115.0
+ * CLI) — only `--project-ref` — so the remote shape here differs from
+ * `TypesConnection`'s.
+ */
+export type BucketsConnection =
+  { kind: "local" } | { kind: "remote"; projectRef: string | undefined };
+
+/** Seed storage buckets on the local stack or a resolved tier's project. */
+export async function seedBuckets(conn: BucketsConnection): Promise<number> {
+  if (conn.kind === "local") {
+    return supabase("seed", "buckets", "--local", "--yes");
+  }
+  // Surfaced here, before the supabase CLI ever runs, rather than left for it
+  // to reject: an empty `--project-ref ""` is exactly the kind of ambiguous
+  // failure this whole module exists to avoid.
+  if (!conn.projectRef) {
+    process.stderr.write(
+      "devtools db: seed buckets --target remote needs PROJECT_REF in the resolved tier's env file.\n",
+    );
+    return 1;
+  }
+  return supabase("seed", "buckets", "--project-ref", conn.projectRef);
+}

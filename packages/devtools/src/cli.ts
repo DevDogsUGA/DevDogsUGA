@@ -52,6 +52,7 @@ import { runGenerateMigration } from "./db/generate-migration.js";
 import { runGenerateTypes } from "./db/generate-types.js";
 import { runIntrospect } from "./db/introspect.js";
 import { runNewMigration } from "./db/new-migration.js";
+import { resolveRemoteConnection, type RemoteConnection } from "./db/remote.js";
 import { runSeedBuckets } from "./db/seed-buckets.js";
 import { runSeedRoles } from "./db/seed-roles.js";
 import { runOAuthSetup } from "./oauth/wizard.js";
@@ -88,7 +89,7 @@ import {
   runSigningKeyStatus,
 } from "./signing-key/commands.js";
 import { loadRegistry } from "./env/discovery.js";
-import { ENV_TARGETS, isEnvTarget } from "@devdogsuga/env";
+import { ENV_TARGETS, fileFor, isEnvTarget } from "@devdogsuga/env";
 import { setExplicitAccessToken } from "./bws/client.js";
 import { positionals } from "./args.js";
 import { resolveVaultTarget } from "./pick.js";
@@ -139,6 +140,32 @@ function flagValue(rest: string[], flag: string): string | undefined {
   return value && !value.startsWith("--") ? value : undefined;
 }
 
+/** What `--target local|remote` resolved to. `dbUrl`/`projectRef` are only
+ * ever present on the `remote` case, once `resolveRemoteConnection` has
+ * actually named the hosted database — never the CLI's ambient `--linked`
+ * project. See `db/remote.ts`. */
+type Endpoint = { kind: "local" } | ({ kind: "remote" } & RemoteConnection);
+
+/**
+ * Resolves a `db <subcommand> --target local|remote [--tier <t>]` endpoint:
+ * the bare local marker, or — after `resolveRemoteConnection` has picked and
+ * entered a deploy tier — that tier's connection. Shared by every endpoint
+ * subcommand that is not `db reset`/`migrate`/`status` (those three go
+ * through `runStack`, which additionally has to skip resolution for
+ * `stop`/`restart` and gate `reset` behind a confirmation).
+ *
+ * Returns `null` (having already written the reason to stderr, inside
+ * `resolveRemoteConnection`) when a remote target could not be resolved, so
+ * the caller can stop without running the underlying op at all.
+ */
+async function resolveEndpoint(subRest: string[]): Promise<Endpoint | null> {
+  const target = parseTarget(subRest);
+  if (target.kind === "local") return { kind: "local" };
+  const connection = await resolveRemoteConnection(subRest);
+  if (!connection) return null;
+  return { kind: "remote", ...connection };
+}
+
 // ── Connecting ───────────────────────────────────────────────────────────────
 
 /**
@@ -184,24 +211,85 @@ async function connect(): Promise<Instance | null> {
 
 // ── Commands ─────────────────────────────────────────────────────────────────
 
-async function runStack(command: StackCommand, target: Target): Promise<void> {
+async function runStack(
+  command: StackCommand,
+  target: Target,
+  rest: string[],
+): Promise<void> {
+  // A remote target needs to know WHICH hosted database before anything else
+  // happens here — including before the reset confirmation below, which has
+  // to name the tier it is about to erase. `stop`/`restart` are the two stack
+  // commands with no remote meaning at all (`runStackCommand` refuses them
+  // outright), so they skip resolution rather than asking a tier question —
+  // or entering a tier's env — for an operation that fails regardless.
+  let connection: RemoteConnection | undefined;
+  if (target.kind === "remote" && command !== "stop" && command !== "restart") {
+    const resolved = await resolveRemoteConnection(rest);
+    if (!resolved) {
+      process.exitCode = 1;
+      return;
+    }
+    connection = resolved;
+  }
+
   // `reset` drops everything. Worth a question, since the menu puts it one
-  // keystroke away from the harmless commands.
+  // keystroke away from the harmless commands. Remote asks a harder
+  // question — which hosted database — and production a harder one still.
   if (command === "reset") {
-    const confirmed = unwrap(
-      await confirm({
-        message:
-          target.kind === "local"
-            ? "This erases your local database and rebuilds it. Continue?"
-            : `This erases the ${target.kind} database and rebuilds it. Continue?`,
-        initialValue: target.kind === "local",
-      }),
-    );
-    if (!confirmed) bail("Left the database alone.");
+    if (connection) {
+      // Named up front, and ONLY the tier and project — never the DB_URL,
+      // which carries the password — so whoever is about to answer "yes"
+      // knows exactly what they are agreeing to erase.
+      log.message(
+        `This will reset the ${connection.tier} database` +
+          (connection.projectRef
+            ? ` (project ${connection.projectRef}).`
+            : "."),
+      );
+    }
+
+    if (connection?.tier === "production") {
+      // ⚠️ SAFETY: production is the one database in this whole CLI that
+      // must never be erased by an unattended or reflexive keystroke. A
+      // non-interactive caller has to spell out `--yes`; an interactive one
+      // is asked regardless of it, so the flag cannot silently skip the one
+      // confirmation that matters most.
+      if (!process.stdin.isTTY) {
+        if (!rest.includes("--yes")) {
+          process.stderr.write(
+            "devtools db reset --target remote: --yes is required to reset production.\n",
+          );
+          process.exitCode = 1;
+          return;
+        }
+      } else {
+        const confirmed = unwrap(
+          await confirm({
+            message:
+              "This PERMANENTLY ERASES the PRODUCTION database " +
+              `(project ${connection.projectRef ?? "unknown"}) and rebuilds ` +
+              "it from migrations. Continue?",
+            initialValue: false,
+          }),
+        );
+        if (!confirmed) bail("Left the database alone.");
+      }
+    } else {
+      const confirmed = unwrap(
+        await confirm({
+          message:
+            target.kind === "local"
+              ? "This erases your local database and rebuilds it. Continue?"
+              : `This erases the ${connection?.tier ?? target.kind} database and rebuilds it. Continue?`,
+          initialValue: target.kind === "local",
+        }),
+      );
+      if (!confirmed) bail("Left the database alone.");
+    }
   }
 
   try {
-    const { code, lines } = await runStackCommand(command, target);
+    const { code, lines } = await runStackCommand(command, target, connection);
     for (const line of lines) log.message(line);
     if (code !== 0) {
       // Lines on a failure ARE the explanation, which is the contract with
@@ -718,7 +806,7 @@ async function runDbCommand(rest: string[]): Promise<void> {
   if (sub === "start") {
     // Machine-local: ignores --target rather than parsing it, the same way
     // `runStackCommand`'s own "start" branch does.
-    await runStack("start", { kind: "local" });
+    await runStack("start", { kind: "local" }, subRest);
     return;
   }
 
@@ -736,7 +824,7 @@ async function runDbCommand(rest: string[]): Promise<void> {
     sub === "migrate" ||
     sub === "reset"
   ) {
-    await runStack(sub, parseTarget(subRest));
+    await runStack(sub, parseTarget(subRest), subRest);
     return;
   }
 
@@ -766,7 +854,16 @@ async function runDbCommand(rest: string[]): Promise<void> {
   }
 
   if (sub === "types") {
-    const code = await runGenerateTypes(parseTarget(subRest));
+    const endpoint = await resolveEndpoint(subRest);
+    if (!endpoint) {
+      process.exitCode = 1;
+      return;
+    }
+    const code = await runGenerateTypes(
+      endpoint.kind === "remote"
+        ? { kind: "remote", dbUrl: endpoint.dbUrl }
+        : { kind: "local" },
+    );
     process.exitCode = code === 0 ? 0 : 1;
     return;
   }
@@ -775,12 +872,30 @@ async function runDbCommand(rest: string[]): Promise<void> {
     const [ssub, ...srest] = subRest;
 
     if (ssub === "buckets") {
-      const code = await runSeedBuckets(parseTarget(srest));
+      const endpoint = await resolveEndpoint(srest);
+      if (!endpoint) {
+        process.exitCode = 1;
+        return;
+      }
+      const code = await runSeedBuckets(
+        endpoint.kind === "remote"
+          ? { kind: "remote", projectRef: endpoint.projectRef }
+          : { kind: "local" },
+      );
       process.exitCode = code === 0 ? 0 : 1;
       return;
     }
     if (ssub === "roles") {
-      const code = await runSeedRoles(parseTarget(srest).kind);
+      const endpoint = await resolveEndpoint(srest);
+      if (!endpoint) {
+        process.exitCode = 1;
+        return;
+      }
+      const code = await runSeedRoles(
+        endpoint.kind === "remote"
+          ? { kind: "remote", dbUrl: endpoint.dbUrl }
+          : { kind: "local" },
+      );
       process.exitCode = code === 0 ? 0 : 1;
       return;
     }
@@ -804,7 +919,21 @@ async function runDbCommand(rest: string[]): Promise<void> {
     const [csub] = subRest;
 
     if (csub === "push") {
-      const code = await runConfigPush();
+      // Remote-only — `config.toml` lives on a hosted project, so there is
+      // no `--target` to parse here, only which tier's project to push to.
+      const connection = await resolveRemoteConnection(subRest);
+      if (!connection) {
+        process.exitCode = 1;
+        return;
+      }
+      if (!connection.projectRef) {
+        process.stderr.write(
+          `devtools db config push: ${fileFor(connection.tier)} has no PROJECT_REF.\n`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+      const code = await runConfigPush(connection.projectRef);
       process.exitCode = code === 0 ? 0 : 1;
       return;
     }

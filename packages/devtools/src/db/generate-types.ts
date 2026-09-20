@@ -1,6 +1,5 @@
-import { type Target } from "../stack.js";
-import { generateTypes } from "./run.js";
+import { generateTypes, type TypesConnection } from "./run.js";
 
-export async function runGenerateTypes(target: Target): Promise<number> {
-  return generateTypes(target.kind === "remote");
+export async function runGenerateTypes(conn: TypesConnection): Promise<number> {
+  return generateTypes(conn);
 }

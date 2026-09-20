@@ -20,6 +20,7 @@ import {
   supabase,
   supabaseCapture,
 } from "./db/run.js";
+import type { RemoteConnection } from "./db/remote.js";
 
 export type Target = { kind: "local" } | { kind: "remote" };
 
@@ -50,7 +51,7 @@ async function startLocalStack(): Promise<number> {
     return 1;
   }
   await writeFile(join(PROJECT_ROOT, ".env.generated"), env);
-  return seedBuckets(false);
+  return seedBuckets({ kind: "local" });
 }
 
 async function stopLocalStack(): Promise<number> {
@@ -82,26 +83,48 @@ export async function connectRemoteProject(ref?: string): Promise<number> {
   return supabase("link", "--project-ref", projectRef);
 }
 
-async function pushMigrations(linked: boolean): Promise<number> {
-  const code = await supabase("db", "push", ...(linked ? ["--linked"] : []));
+async function pushLocalMigrations(): Promise<number> {
+  const code = await supabase("db", "push");
   if (code !== 0) return code;
-  return generateTypes(linked);
+  return generateTypes({ kind: "local" });
+}
+
+/**
+ * `--db-url`, not `--linked`: the resolved tier's OWN connection string,
+ * rather than whatever project the supabase CLI happens to have linked on
+ * this machine. See `db/remote.ts`'s header — the same reasoning applies to
+ * every remote operation in this file.
+ */
+async function pushRemoteMigrations(
+  connection: RemoteConnection,
+): Promise<number> {
+  const code = await supabase("db", "push", "--db-url", connection.dbUrl);
+  if (code !== 0) return code;
+  return generateTypes({ kind: "remote", dbUrl: connection.dbUrl });
 }
 
 async function resetLocal(): Promise<number> {
   const code = await supabase("db", "reset");
   if (code !== 0) return code;
-  const types = await generateTypes(false);
+  const types = await generateTypes({ kind: "local" });
   if (types !== 0) return types;
-  return seedBuckets(false);
+  return seedBuckets({ kind: "local" });
 }
 
-async function resetRemote(): Promise<number> {
-  const code = await supabase("db", "reset", "--linked");
+/**
+ * ⚠️ SAFETY-CRITICAL: drops and re-migrates `connection.dbUrl`. The caller
+ * (`cli.ts`'s `runStack`) has already resolved and confirmed the tier this
+ * acts on — including the hard production gate — before this ever runs.
+ */
+async function resetRemote(connection: RemoteConnection): Promise<number> {
+  const code = await supabase("db", "reset", "--db-url", connection.dbUrl);
   if (code !== 0) return code;
-  const types = await generateTypes(true);
+  const types = await generateTypes({
+    kind: "remote",
+    dbUrl: connection.dbUrl,
+  });
   if (types !== 0) return types;
-  return seedBuckets(true);
+  return seedBuckets({ kind: "remote", projectRef: connection.projectRef });
 }
 
 // ── The local stack's lifecycle ──────────────────────────────────────────────
@@ -155,10 +178,20 @@ function localStatus(): { code: number; lines: string[] } {
   return { code: 0, lines: [describeEnvironment(env), next] };
 }
 
-/** Runs a stack command, returning its exit code and anything to report. */
+/**
+ * Runs a stack command, returning its exit code and anything to report.
+ *
+ * `connection` is the tier's resolved `RemoteConnection` — present exactly
+ * when `target.kind === "remote"` AND the command needs one. The caller
+ * (`cli.ts`'s `runStack`) resolves it, because resolving means possibly
+ * prompting or entering a tier, and `stop`/`restart` reject a remote target
+ * outright with no need to ask any of that first. Local behavior is
+ * unchanged: every local branch below ignores `connection` entirely.
+ */
 export async function runStackCommand(
   command: StackCommand,
   target: Target,
+  connection?: RemoteConnection,
 ): Promise<{ code: number; lines: string[] }> {
   if (command === "stop" || command === "restart") {
     if (target.kind !== "local") {
@@ -178,7 +211,11 @@ export async function runStackCommand(
     if (target.kind === "local") return localStatus();
     return {
       code: 0,
-      lines: ["Check the Supabase dashboard for the linked project."],
+      lines: [
+        connection
+          ? `Check the Supabase dashboard for the ${connection.tier} project (${connection.projectRef ?? "no PROJECT_REF set"}).`
+          : "Check the Supabase dashboard for the linked project.",
+      ],
     };
   }
 
@@ -190,14 +227,29 @@ export async function runStackCommand(
   }
 
   if (command === "migrate") {
-    return { code: await pushMigrations(target.kind === "remote"), lines: [] };
+    if (target.kind === "remote") {
+      if (!connection) {
+        return {
+          code: 1,
+          lines: ["No remote connection was resolved for `migrate`."],
+        };
+      }
+      return { code: await pushRemoteMigrations(connection), lines: [] };
+    }
+    return { code: await pushLocalMigrations(), lines: [] };
   }
 
   if (command === "reset") {
-    const code = await (target.kind === "remote"
-      ? resetRemote()
-      : resetLocal());
-    return { code, lines: [] };
+    if (target.kind === "remote") {
+      if (!connection) {
+        return {
+          code: 1,
+          lines: ["No remote connection was resolved for `reset`."],
+        };
+      }
+      return { code: await resetRemote(connection), lines: [] };
+    }
+    return { code: await resetLocal(), lines: [] };
   }
 
   return { code: 1, lines: [`No handler for ${command}.`] };
