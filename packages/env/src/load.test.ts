@@ -4,6 +4,7 @@ import {
   applyWranglerLocalDatabaseAlias,
   GENERATED_FILE,
   HYPERDRIVE_LOCAL_CONNECTION_ENV,
+  loadEnvironment,
   MissingEnvFileError,
   selectEnvFiles,
   type SelectionContext,
@@ -195,5 +196,144 @@ describe("Wrangler local binding aliases", () => {
     const environment: Record<string, string> = {};
     applyWranglerLocalDatabaseAlias(environment);
     expect(environment).not.toHaveProperty(HYPERDRIVE_LOCAL_CONNECTION_ENV);
+  });
+});
+
+describe("loadEnvironment", () => {
+  /**
+   * A context where every file exists, the probe answers false, and applying
+   * files is a no-op — so a test that doesn't override `applyEnvFiles` never
+   * touches the real filesystem, a socket, or an actual dotenvx install.
+   * `root` is a fake path: supplying it is what lets `loadEnvironment` skip
+   * its own pnpm-workspace.yaml walk (real `node:fs`) entirely.
+   */
+  function loadCtx(
+    overrides: {
+      root?: string;
+      exists?: (file: string) => boolean;
+      probeLocalStack?: () => boolean | Promise<boolean>;
+      applyEnvFiles?: (
+        paths: string[],
+        target: Record<string, string>,
+        override: boolean,
+      ) => void | Promise<void>;
+      baseEnv?: NodeJS.ProcessEnv;
+    } = {},
+  ) {
+    return {
+      root: "/fake/root",
+      exists: () => true,
+      probeLocalStack: () => false,
+      applyEnvFiles: () => {},
+      baseEnv: {},
+      ...overrides,
+    };
+  }
+
+  it("returns the environment and files selectEnvFiles chose, plus a populated env map", async () => {
+    const loaded = await loadEnvironment(
+      "staging",
+      undefined,
+      loadCtx({ baseEnv: { EXISTING: "value" } }),
+    );
+    expect(loaded.environment).toBe("staging");
+    expect(loaded.files).toEqual([".env.staging"]);
+    expect(loaded.env).toEqual({ EXISTING: "value" });
+  });
+
+  it("passes selectEnvFiles's warnings through unchanged", async () => {
+    // Every file "exists" (loadCtx's default) and the probe is refused, so
+    // this reproduces the probe table's "stale .env.generated" row — the
+    // same case `selectEnvFiles` covers above — to prove the warning survives
+    // the trip through `loadEnvironment` rather than being swallowed.
+    const loaded = await loadEnvironment(undefined, undefined, loadCtx());
+    expect(loaded.warnings).toHaveLength(1);
+    expect(loaded.warnings[0]).toMatch(/stale/);
+  });
+
+  it("does not mutate the provided base env, and returns a different object", async () => {
+    const baseEnv = { FOO: "bar" };
+    const snapshot = { ...baseEnv };
+    const loaded = await loadEnvironment(
+      "staging",
+      undefined,
+      loadCtx({ baseEnv }),
+    );
+    expect(baseEnv).toEqual(snapshot);
+    expect(loaded.env).not.toBe(baseEnv);
+  });
+
+  describe("override precedence", () => {
+    // A fake dotenvx: only sets the key if told to override, or if the base
+    // snapshot didn't already have it — the same rule the real dotenvx.config
+    // applies under first-file-wins.
+    function fakeApplyEnvFiles() {
+      return vi.fn(
+        (
+          _paths: string[],
+          target: Record<string, string>,
+          override: boolean,
+        ) => {
+          if (override || target.KEY === undefined) target.KEY = "from-file";
+        },
+      );
+    }
+
+    it("keeps an existing base value when override is false (with-env's own precedence)", async () => {
+      const applyEnvFiles = fakeApplyEnvFiles();
+      const loaded = await loadEnvironment(
+        "staging",
+        { override: false },
+        loadCtx({ baseEnv: { KEY: "from-shell" }, applyEnvFiles }),
+      );
+      expect(loaded.env.KEY).toBe("from-shell");
+      expect(applyEnvFiles).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.any(Object),
+        false,
+      );
+    });
+
+    it("replaces an existing base value when override is true (re-entrant different-tier loads)", async () => {
+      const applyEnvFiles = fakeApplyEnvFiles();
+      const loaded = await loadEnvironment(
+        "staging",
+        { override: true },
+        loadCtx({ baseEnv: { KEY: "from-shell" }, applyEnvFiles }),
+      );
+      expect(loaded.env.KEY).toBe("from-file");
+      expect(applyEnvFiles).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.any(Object),
+        true,
+      );
+    });
+  });
+
+  it("propagates MissingEnvFileError instead of swallowing it", async () => {
+    // Unlike with-env, loadEnvironment is not the one place that knows how to
+    // survive a missing file — that decision belongs to whichever caller asked
+    // for this tier, so the error must reach it.
+    await expect(
+      loadEnvironment("staging", undefined, loadCtx({ exists: () => false })),
+    ).rejects.toThrow(MissingEnvFileError);
+  });
+
+  it("propagates UnknownEnvironmentError for preflight and other non-deploy values", async () => {
+    await expect(
+      loadEnvironment("preflight", undefined, loadCtx()),
+    ).rejects.toThrow(UnknownEnvironmentError);
+    await expect(
+      loadEnvironment("example", undefined, loadCtx()),
+    ).rejects.toThrow(UnknownEnvironmentError);
+  });
+
+  it("derives the Wrangler Hyperdrive alias on the returned env", async () => {
+    const loaded = await loadEnvironment(
+      "staging",
+      undefined,
+      loadCtx({ baseEnv: { DB_URL: "postgres://x" } }),
+    );
+    expect(loaded.env[HYPERDRIVE_LOCAL_CONNECTION_ENV]).toBe("postgres://x");
   });
 });

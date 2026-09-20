@@ -11,7 +11,9 @@
  * The root `"."` export is imported by `apps/platform`, which deploys to
  * Cloudflare Workers; nothing here may ever be re-exported from `index.ts`, or
  * an `import { selectEnvFiles } from "@devdogsuga/env"` in server code fails at
- * the edge instead of at build.
+ * the edge instead of at build. The same is true of `loadEnvironment` below:
+ * it dynamically imports `node:fs`/`node:path`/`node:url` and
+ * `@dotenvx/dotenvx`, none of which exist at the edge.
  */
 import { fileFor, resolveEnvironment } from "./targets.js";
 import type { DeployEnvironment } from "./targets.js";
@@ -199,4 +201,174 @@ export async function probeLocalStack(
     socket.once("connect", () => settle(true));
     socket.once("error", () => settle(false));
   });
+}
+
+/**
+ * Walks up from THIS module's directory for the workspace marker, mirroring
+ * `cli.ts`'s own `findRoot`. The duplication is deliberate rather than a
+ * shared export: `cli.ts` still needs its own root synchronously, before it
+ * can decide the Windows dotenvx-CLI `-f` paths below, and passing that same
+ * root through as `context.root` (as `with-env` now does) is what lets a
+ * caller skip this walk entirely rather than paying for it twice.
+ *
+ * Throws instead of `console.error` + `process.exit`, unlike `cli.ts`'s
+ * version: this is a library function other commands call in-process, and
+ * exiting the whole process out from under an unrelated caller would be a far
+ * worse failure than a rejected promise.
+ */
+async function findRepoRoot(): Promise<string> {
+  const { existsSync } = await import("node:fs");
+  const { dirname, join, resolve } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  let dir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+  for (;;) {
+    if (existsSync(join(dir, "pnpm-workspace.yaml"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) {
+      throw new Error(
+        "loadEnvironment: could not locate the monorepo root " +
+          "(no pnpm-workspace.yaml found above this package).",
+      );
+    }
+    dir = parent;
+  }
+}
+
+/** The result of `loadEnvironment`: what was selected, and what it produced. */
+export interface LoadedEnvironment {
+  environment: DeployEnvironment;
+  /** The env files that were applied, in load order. First file wins (unless override). */
+  files: string[];
+  /**
+   * A FRESH string-only env map: a snapshot of process.env with the selected
+   * files applied and the Wrangler Hyperdrive alias derived. process.env is
+   * NEVER mutated.
+   */
+  env: Record<string, string>;
+  warnings: string[];
+}
+
+export interface LoadEnvironmentOptions {
+  /**
+   * When true, the selected files OVERRIDE values already present in the base
+   * snapshot; when false (the default) existing values win (dotenvx's
+   * first-file-wins, which `with-env` relies on so a shell var beats the file).
+   *
+   * Re-entrant callers loading a DIFFERENT tier than the process already runs
+   * under MUST pass true: `pnpm devtools` itself runs under `with-env`
+   * (development), so its process.env already holds development's values, and
+   * without override a `loadEnvironment("staging")` would keep development's
+   * BASE_URL/DB_URL instead of staging's.
+   */
+  override?: boolean;
+}
+
+/**
+ * Loads a deploy tier's env files into a FRESH map, in-process — the same
+ * selection-then-load `with-env` does at startup (`selectEnvFiles` here plus
+ * dotenvx's Node API), pulled out so any command can load a tier's
+ * environment WITHOUT re-execing itself through the `with-env` bin.
+ *
+ * ⚠️ NODE-ONLY / EDGE-UNSAFE, same as the rest of this module: never
+ * re-export this from `index.ts`. It dynamically imports
+ * `node:fs`/`node:path`/`node:url` (only when `context.root` or
+ * `context.exists` is not supplied) and `@dotenvx/dotenvx` (only when files
+ * are actually applied), none of which resolve at the Cloudflare Workers edge
+ * `apps/platform` deploys to.
+ *
+ * `process.env` (or `context.baseEnv`) is read, never written: `env` on the
+ * result is a new object built from a snapshot of it, so loading one tier
+ * in-process can never leak into, or be clobbered by, a caller's own
+ * `process.env`.
+ *
+ * `MissingEnvFileError` and `UnknownEnvironmentError` from `selectEnvFiles`
+ * are NOT caught here — they propagate. Only `with-env` knows how to survive
+ * a missing file (report it, continue with none loaded); a library function
+ * deciding that on every caller's behalf would take away the choice.
+ *
+ * See `LoadEnvironmentOptions.override` for the precedence subtlety: the
+ * default (false) matches `with-env`'s "a shell var beats the file", which is
+ * only correct when the caller is loading the SAME tier the process already
+ * runs under. A caller loading a DIFFERENT tier — one that did not shape
+ * `process.env` — must pass `override: true`, or that tier's file loses to
+ * values that were never meant to apply to it.
+ */
+export async function loadEnvironment(
+  deployEnv?: string,
+  options?: LoadEnvironmentOptions,
+  // OPTIONAL injected edges for tests — production callers pass nothing and
+  // get the real filesystem, probe, and dotenvx. Mirrors selectEnvFiles's
+  // design.
+  context?: {
+    root?: string;
+    exists?: (file: string) => boolean;
+    probeLocalStack?: () => boolean | Promise<boolean>;
+    applyEnvFiles?: (
+      paths: string[],
+      target: Record<string, string>,
+      override: boolean,
+    ) => void | Promise<void>;
+    baseEnv?: NodeJS.ProcessEnv;
+  },
+): Promise<LoadedEnvironment> {
+  const override = options?.override ?? false;
+  const root = context?.root ?? (await findRepoRoot());
+
+  let exists = context?.exists;
+  if (!exists) {
+    const { existsSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    exists = (file: string) => existsSync(join(root, file));
+  }
+
+  const selection = await selectEnvFiles({
+    deployEnv,
+    exists,
+    probeLocalStack: context?.probeLocalStack ?? (() => probeLocalStack()),
+  });
+
+  // A FRESH string-only snapshot. Both dotenvx and (eventually) @yarnpkg/shell
+  // want string-only maps, so drop the unset keys Node models as undefined —
+  // the same loop `with-env` uses — and never touch the source object.
+  const base = context?.baseEnv ?? process.env;
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(base)) {
+    if (value !== undefined) env[key] = value;
+  }
+
+  // `selectEnvFiles` never returns on success with an empty list — it throws
+  // `MissingEnvFileError` before that, since every environment needs its own
+  // base file — so this guard cannot fire from a real selection. It mirrors
+  // `with-env`'s own early return in spirit anyway: skipping the call rather
+  // than passing an empty `path` keeps dotenvx from falling back to its own
+  // default `.env` lookup, for any injected `context` that manages to defy
+  // the invariant.
+  if (selection.files.length > 0) {
+    const { join } = await import("node:path");
+    const applyEnvFiles =
+      context?.applyEnvFiles ??
+      (async (paths, target, overrideExisting) => {
+        const { default: dx } = await import("@dotenvx/dotenvx");
+        dx.config({
+          path: paths,
+          processEnv: target,
+          quiet: true,
+          overload: overrideExisting,
+        });
+      });
+    await applyEnvFiles(
+      selection.files.map((file) => join(root, file)),
+      env,
+      override,
+    );
+  }
+
+  applyWranglerLocalDatabaseAlias(env);
+
+  return {
+    environment: selection.environment,
+    files: selection.files,
+    env,
+    warnings: selection.warnings,
+  };
 }

@@ -34,9 +34,8 @@ import { Command } from "commander";
 import { UnknownEnvironmentError } from "./targets.js";
 import {
   applyWranglerLocalDatabaseAlias,
+  loadEnvironment,
   MissingEnvFileError,
-  probeLocalStack,
-  selectEnvFiles,
 } from "./load.js";
 
 // ALMOST NOTHING ELSE IS IMPORTED AT THE TOP LEVEL, deliberately.
@@ -122,25 +121,30 @@ if (!shellMode && args.length === 0) {
 // Running as a bin, the cwd is already the package whose script invoked us.
 const cwd = process.cwd();
 
-// Decide which files to load. Selection is separated from loading (load.ts)
-// and always happens in-process, even on Windows where the *loading* is
-// delegated below. The warnings and the loaded-files line are ours either way.
+// Decide which files to load, and load them, in one call — selection is
+// still separated from loading inside load.ts, but `with-env` no longer
+// needs to see the seam. This always happens in-process, even on Windows
+// where the *spawn* below still delegates. `root` was already resolved
+// above (needed regardless, for the Windows -f paths further down), so it is
+// passed through here rather than having loadEnvironment re-walk for
+// pnpm-workspace.yaml a second time. The warnings and the loaded-files line
+// are ours either way.
+let env: Record<string, string>;
 let envFiles: string[];
 try {
-  const selection = await selectEnvFiles({
-    deployEnv: process.env.DEPLOY_ENV,
-    exists: (file) => existsSync(join(root, file)),
-    probeLocalStack: () => probeLocalStack(),
+  const loaded = await loadEnvironment(process.env.DEPLOY_ENV, undefined, {
+    root,
   });
-  for (const warning of selection.warnings) {
+  for (const warning of loaded.warnings) {
     console.error(`with-env: ${warning}`);
   }
   // Required, never a guess: a running local container silently wins over the
   // hosted project, so every run says which files actually won.
   console.error(
-    `with-env: loaded ${selection.files.join(" + ")} (${selection.environment})`,
+    `with-env: loaded ${loaded.files.join(" + ")} (${loaded.environment})`,
   );
-  envFiles = selection.files;
+  envFiles = loaded.files;
+  env = loaded.env;
 } catch (err) {
   // A missing file is reported and survived, NOT refused.
   //
@@ -166,41 +170,21 @@ try {
     console.error(`with-env: ${err.message}`);
     console.error("with-env: continuing with no env file loaded.");
     envFiles = [];
+    // loadEnvironment threw before building anything. Rebuild the base
+    // snapshot and derive the Wrangler alias by hand, the same as its success
+    // path would have, so the Windows delegation and the alias still work
+    // with no env file loaded.
+    env = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (value !== undefined) env[key] = value;
+    }
+    applyWranglerLocalDatabaseAlias(env);
   } else if (err instanceof UnknownEnvironmentError) {
     console.error(`with-env: ${err.message}`);
     process.exit(1);
   } else {
     throw err;
   }
-}
-
-// Both dotenvx and @yarnpkg/shell want a string-only map, so drop the unset
-// keys Node models as undefined.
-const env: Record<string, string> = {};
-for (const [key, value] of Object.entries(process.env)) {
-  if (value !== undefined) env[key] = value;
-}
-
-/**
- * Applies the env files to `env`, in process.
- *
- * dotenvx's Node API follows the same rules as its CLI, first file wins and
- * values already in the environment are left alone, so this and delegating to
- * the CLI produce the same environment.
- */
-async function loadEnv(): Promise<void> {
-  // Nothing selected means the file is absent and we said so above. Returning
-  // here rather than calling `config({ path: [] })` keeps dotenvx from falling
-  // back to its own default `.env` lookup and reporting the same absence a
-  // second time, in its own words.
-  if (envFiles.length === 0) return;
-
-  const { default: dx } = await import("@dotenvx/dotenvx");
-  dx.config({
-    path: envFiles.map((f) => join(root, f)),
-    processEnv: env,
-    quiet: true,
-  });
 }
 
 /**
@@ -229,8 +213,6 @@ function dotenvxCli(): string {
 // -c: evaluate the string with @yarnpkg/shell so $VAR resolves against the
 // loaded files rather than against whatever pnpm's shell had already expanded.
 if (shellMode && opts.c !== undefined) {
-  await loadEnv();
-  applyWranglerLocalDatabaseAlias(env);
   const [{ npath }, { execute }] = await Promise.all([
     import("@yarnpkg/fslib"),
     import("@yarnpkg/shell"),
@@ -262,11 +244,9 @@ if (shellMode && opts.c !== undefined) {
 // `shell: true` is not the fix: it would break on any path containing a space,
 // which on Windows is the ordinary case (`C:\Users\Firstname Lastname\...`).
 const windows = process.platform === "win32";
-// Load in-process on Windows too. dotenvx is still used there as the process
-// launcher for .cmd shims, but the loaded map lets us derive variables (such
-// as Wrangler's Hyperdrive alias) identically on every operating system.
-await loadEnv();
-applyWranglerLocalDatabaseAlias(env);
+// `env` was already loaded once, up front, on both platforms (see above).
+// dotenvx is used below only as the .cmd-safe process launcher on Windows,
+// not as a second loader.
 
 const child = spawn(
   windows ? process.execPath : args[0]!,
