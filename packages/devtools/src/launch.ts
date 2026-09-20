@@ -60,8 +60,15 @@ export function stripTierFlag(argv: readonly string[]): {
   // missing value then reaches `resolveSessionTier` as `explicit: undefined`,
   // which falls through to `DEPLOY_ENV`/the sole tier/the prompt exactly as
   // if `--tier` had never been typed, rather than this function guessing.
-  rest.splice(index, value === undefined ? 1 : 2);
-  return { explicit: value, rest };
+  //
+  // A following token that is itself a flag is treated the same way, NOT
+  // consumed as the value — the guard every other flag-value reader in this
+  // CLI keeps (`cli.ts`'s `flagValue`, `db/remote.ts`'s). Without it,
+  // `--tier --help` would swallow `--help` as a bogus tier and refuse with
+  // "unknown tier" instead of reaching the help bypass below.
+  const missing = value === undefined || value.startsWith("--");
+  rest.splice(index, missing ? 1 : 2);
+  return { explicit: missing ? undefined : value, rest };
 }
 
 /** The real interactive picker: a clack `select`, unwrapped so Ctrl-C exits
@@ -116,21 +123,44 @@ export async function launch(argv: readonly string[]): Promise<void> {
     return;
   }
 
-  const resolution = await resolveSessionTier({
-    explicit,
-    deployEnv: process.env.DEPLOY_ENV,
-    available: await availableTiers(PROJECT_ROOT),
-    isTTY: process.stdin.isTTY === true,
-    prompt: promptTier,
-    promptMessage: "Which deploy tier should these commands use?",
-  });
+  let tier: DeployEnvironment;
+  if (rest[0] === "setup" || rest[0] === "completions") {
+    // Two commands run BEFORE there is a tier to resolve, and forcing the
+    // mandate on them breaks each in its own way:
+    //
+    //   * `setup` exists to CREATE a missing env file. A stale
+    //     `DEPLOY_ENV=staging` in the shell with no `.env.staging` on disk
+    //     would resolve that tier, fail `enterEnvironment` fatally below, and
+    //     lock a new contributor out of the one command that fixes their
+    //     state — a bootstrap deadlock. It is development-only by nature
+    //     (it writes `.env`), so the session tier question has one answer.
+    //   * `completions` runs from shell rc files (`eval "$(pnpm devtools
+    //     completions bash)"`), always non-TTY, and reads no env at all; the
+    //     multi-tier refusal would exit 1 in every new shell on exactly the
+    //     machines of the people working on the deploy workflow.
+    //
+    // Development is still ENTERED below (missing-file tolerated), not
+    // skipped: `setup` under the old `with-env` wrapper saw whatever `.env`
+    // already existed, and keeping that means it can read current values
+    // when offering to rewrite them.
+    tier = "development";
+  } else {
+    const resolution = await resolveSessionTier({
+      explicit,
+      deployEnv: process.env.DEPLOY_ENV,
+      available: await availableTiers(PROJECT_ROOT),
+      isTTY: process.stdin.isTTY === true,
+      prompt: promptTier,
+      promptMessage: "Which deploy tier should these commands use?",
+    });
 
-  if (!resolution.ok) {
-    process.stderr.write(`devtools: ${resolution.reason}\n`);
-    process.exit(1);
+    if (!resolution.ok) {
+      process.stderr.write(`devtools: ${resolution.reason}\n`);
+      process.exit(1);
+    }
+
+    tier = resolution.tier;
   }
-
-  const tier = resolution.tier;
 
   try {
     // `override: false` — a fresh process, so an already-exported shell

@@ -1,6 +1,7 @@
 /**
  * Unit tests for `stripTierFlag`, the one pure piece of `launch.ts`, plus
- * `launch()`'s `--help`/`-h` bypass.
+ * `launch()`'s bypasses: `--help`/`-h`, and the `setup`/`completions`
+ * commands that must run before there is a tier to resolve.
  *
  * Everything else in that module either resolves the real filesystem
  * (`availableTiers`), mutates `process.env` (`enterEnvironment`), or exits
@@ -14,9 +15,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { stripTierFlag } from "./launch.js";
 
 const resolveSessionTier = vi.fn();
+const enterEnvironment = vi.fn(async (..._args: unknown[]) => ({
+  files: [".env"],
+  warnings: [],
+  environment: {},
+}));
 vi.mock("@devdogsuga/env/session", () => ({
   availableTiers: vi.fn(),
-  enterEnvironment: vi.fn(),
+  enterEnvironment: (...args: unknown[]) => enterEnvironment(...args),
   resolveSessionTier: (...args: unknown[]) => resolveSessionTier(...args),
 }));
 
@@ -61,6 +67,16 @@ describe("stripTierFlag", () => {
     });
   });
 
+  it("does not consume a following flag as the tier value", () => {
+    // The guard every other flag-value reader in this CLI keeps. Without it,
+    // `--tier --help` would swallow `--help` as a bogus tier and refuse with
+    // "unknown tier" instead of reaching launch()'s help bypass.
+    expect(stripTierFlag(["--tier", "--help", "db"])).toEqual({
+      explicit: undefined,
+      rest: ["--help", "db"],
+    });
+  });
+
   it("leaves a command's own --tier-shaped flag alone when named differently", () => {
     // Sanity check: this function only ever looks for the literal "--tier"
     // token, so a command's own `--target`/`--app` flags are never touched.
@@ -95,5 +111,32 @@ describe("launch", () => {
     await launch(["--tier", "staging", "db", "--help"]);
     expect(resolveSessionTier).not.toHaveBeenCalled();
     expect(main).toHaveBeenCalledWith(["db", "--help"]);
+  });
+
+  it("a valueless --tier right before --help still reaches the help bypass", async () => {
+    const { launch } = await import("./launch.js");
+    await launch(["--tier", "--help"]);
+    expect(resolveSessionTier).not.toHaveBeenCalled();
+    expect(main).toHaveBeenCalledWith(["--help"]);
+  });
+
+  it("setup skips tier resolution and enters development — the bootstrap-deadlock guard", async () => {
+    // `setup` exists to CREATE a missing env file; resolving a tier first
+    // (say a stale DEPLOY_ENV=staging with no .env.staging) would refuse
+    // before the one command that fixes that state could run.
+    const { launch } = await import("./launch.js");
+    await launch(["setup"]);
+    expect(resolveSessionTier).not.toHaveBeenCalled();
+    expect(enterEnvironment).toHaveBeenCalledWith("development", {
+      override: false,
+    });
+    expect(main).toHaveBeenCalledWith(["setup"]);
+  });
+
+  it("completions skips tier resolution — shell rc files are non-TTY and read no env", async () => {
+    const { launch } = await import("./launch.js");
+    await launch(["completions", "bash"]);
+    expect(resolveSessionTier).not.toHaveBeenCalled();
+    expect(main).toHaveBeenCalledWith(["completions", "bash"]);
   });
 });

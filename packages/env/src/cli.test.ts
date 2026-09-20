@@ -4,23 +4,28 @@
  * `cli.ts` is a top-level script, not an exported function — it calls
  * `program.parse()`, may `process.exit()`, and spawns a child process of its
  * own — so the only way to see what a contributor actually sees (exit code,
- * stderr, and what the wrapped command received) is to run it. These tests
- * spawn the real `tsx`-run script against the REAL repo root, which is the
- * point: this repository genuinely has three deploy-tier files checked in
- * (`.env`, `.env.staging`, `.env.production`), so the ambiguity path below is
- * exercised the same way an ordinary contributor's machine would exercise
- * it, not against a synthetic fixture that could drift from the real table.
+ * stderr, and what the wrapped command received) is to run it.
+ *
+ * The subprocess is pointed at a SYNTHETIC repo root (via
+ * `WITH_ENV_ROOT_FOR_TESTS` — see `cli.ts`'s comment at the override) holding
+ * a known set of tier files, never at the real one. Which `.env*` files exist
+ * at the real root is per-machine state: a contributor who has run `env pull`
+ * has all three tiers, a fresh clone and CI have none, and the first version
+ * of this file asserted the ambiguity refusal against that state — green on
+ * exactly the machines that had pulled staging and production, red everywhere
+ * else, CI included.
  *
  * The child never inherits `process.env`: a developer's shell may already
  * hold `DEPLOY_ENV`, and that would silently pick which branch each test
  * exercises instead of the test itself deciding.
  */
 import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const run = promisify(execFile);
 
@@ -38,6 +43,22 @@ function findRepoRoot(from: string): string {
 const PROJECT_ROOT = findRepoRoot(dirname(fileURLToPath(import.meta.url)));
 const TSX = join(PROJECT_ROOT, "node_modules", ".bin", "tsx");
 const CLI = join(PROJECT_ROOT, "packages", "env", "src", "cli.ts");
+
+/** The synthetic root: all three deploy tiers present, so the ambiguity path
+ * is exercised deterministically on every machine. */
+let fixtureRoot: string;
+beforeAll(() => {
+  fixtureRoot = mkdtempSync(join(tmpdir(), "with-env-cli-test-"));
+  writeFileSync(join(fixtureRoot, ".env"), 'TIER_MARK="development"\n');
+  writeFileSync(join(fixtureRoot, ".env.staging"), 'TIER_MARK="staging"\n');
+  writeFileSync(
+    join(fixtureRoot, ".env.production"),
+    'TIER_MARK="production"\n',
+  );
+});
+afterAll(() => {
+  rmSync(fixtureRoot, { recursive: true, force: true });
+});
 
 // A cold `tsx` boot of a TypeScript process is far slower than an in-process
 // unit test; every test here intentionally pays that cost.
@@ -68,6 +89,7 @@ async function withEnv(
         env: {
           PATH: process.env.PATH ?? "",
           HOME: process.env.HOME ?? "",
+          WITH_ENV_ROOT_FOR_TESTS: fixtureRoot,
           ...env,
         },
       },
@@ -99,13 +121,13 @@ describe("with-env tier resolution", () => {
 
   it("resolves by DEPLOY_ENV without refusing, even with multiple tier files present", async () => {
     const { code, stdout, stderr } = await withEnv(
-      ["node", "-e", "console.log('ok')"],
+      ["node", "-e", "console.log('ok', process.env.TIER_MARK)"],
       { DEPLOY_ENV: "development" },
     );
     expect(stderr).not.toContain("multiple deploy tiers are present");
     expect(stderr).toContain("with-env: loaded");
     expect(stderr).toContain("(development)");
-    expect(stdout).toBe("ok\n");
+    expect(stdout).toBe("ok development\n");
     expect(code).toBe(0);
   });
 
@@ -132,6 +154,16 @@ describe("with-env tier resolution", () => {
     );
     expect(stderr).not.toContain("bogus");
     expect(stderr).toContain("(development)");
+    expect(code).toBe(0);
+  });
+
+  it("loads the selected non-development tier's file, not development's", async () => {
+    const { code, stdout, stderr } = await withEnv(
+      ["--tier", "staging", "node", "-e", "console.log(process.env.TIER_MARK)"],
+      {},
+    );
+    expect(stderr).toContain("(staging)");
+    expect(stdout).toBe("staging\n");
     expect(code).toBe(0);
   });
 

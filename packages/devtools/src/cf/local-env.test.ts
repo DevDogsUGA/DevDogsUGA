@@ -44,7 +44,7 @@ describe("withWranglerEnv", () => {
     expect(rendered).toBe("ALPHA='a-value'\nZEBRA='z-value'\n");
   });
 
-  it("excludes commented default-scope keys (DEPLOY_ENV/NODE_ENV) so a stray .env value can't override the wrangler tier var", async () => {
+  it("excludes the wrangler-owned keys (DEPLOY_ENV/NODE_ENV) BY NAME so a stray .env value can't override the wrangler tier var", async () => {
     const entries = [
       entry("DEPLOY_ENV", "sandbox", { scope: "default", commented: true }),
       entry("NODE_ENV", "sandbox", { scope: "default", commented: true }),
@@ -69,6 +69,32 @@ describe("withWranglerEnv", () => {
     expect(rendered).toBe(
       "API_URL='https://api.example'\nGITHUB_ORG='devdogsuga'\n",
     );
+  });
+
+  it("keeps a default+commented key that is NOT wrangler-owned (the GITHUB_COMPETITION_REPO shape) — exclusion is by name, never by registry-meta heuristic", async () => {
+    // GITHUB_COMPETITION_REPO shares DEPLOY_ENV's registry shape
+    // (scope: "default", commented: true) but is a contributor's deliberate
+    // .env override with no wrangler.jsonc var behind it; a meta-based filter
+    // silently stripped it from `wrangler dev`. See scopedKeys's header.
+    const entries = [
+      entry("GITHUB_COMPETITION_REPO", "sandbox", {
+        scope: "default",
+        commented: true,
+      }),
+      entry("DEPLOY_ENV", "sandbox", { scope: "default", commented: true }),
+    ];
+    const env = {
+      GITHUB_COMPETITION_REPO: "MyFork",
+      DEPLOY_ENV: "development",
+    };
+
+    const rendered = await withWranglerEnv(
+      "sandbox",
+      async (path) => readFileSync(path, "utf8"),
+      { env, entries },
+    );
+
+    expect(rendered).toBe("GITHUB_COMPETITION_REPO='MyFork'\n");
   });
 
   it("skips keys with no value in the injected environment", async () => {

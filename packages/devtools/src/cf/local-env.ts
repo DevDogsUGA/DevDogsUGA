@@ -23,15 +23,23 @@ export function renderWranglerEnvFile(
 /** The app's declared keys, deduped and sorted, from the given entries or the
  * loaded registry.
  *
- * `scope: "default"` + `commented: true` keys are excluded on purpose. That
- * pair is exactly `DEPLOY_ENV` and `NODE_ENV`: their committed source is
- * wrangler.jsonc's per-env `vars` blocks (and the framework), never an env
- * file — see each key's `define()` doc. Materializing them into the temp
- * `.dev.vars` this file feeds to `wrangler dev` lets a stray or empty `.env`
- * value OVERRIDE the tier's wrangler var, which surfaced as a Workflow isolate
- * reading a blank `DEPLOY_ENV` and throwing "has no HYPERDRIVE binding". Every
- * other `default` key (GITHUB_ORG, AIRTABLE_BASE_ID, …) is uncommitted-empty
- * and genuinely sourced from the env file, so only the commented pair is cut. */
+ * `DEPLOY_ENV` and `NODE_ENV` are excluded BY NAME, not by any registry-meta
+ * heuristic. Their committed source is wrangler.jsonc's per-env `vars` blocks
+ * (and the framework), never an env file — see each key's `define()` doc.
+ * Materializing them into the temp `.dev.vars` this file feeds to `wrangler
+ * dev` lets a stray or empty `.env` value OVERRIDE the tier's wrangler var,
+ * which surfaced as a Workflow isolate reading a blank `DEPLOY_ENV` and
+ * throwing "has no HYPERDRIVE binding".
+ *
+ * A `scope: "default"` + `commented: true` filter was tried first and is
+ * WRONG: that shape also matches `GITHUB_COMPETITION_REPO`, an opt-in
+ * override a contributor sets deliberately in their `.env` (its wrangler
+ * config defines no such var), and the heuristic silently stripped it from
+ * `wrangler dev`'s environment. Wrangler-ownership is a fact about
+ * wrangler.jsonc, not about registry metadata, so the two keys it is true
+ * for are named outright. */
+const WRANGLER_OWNED_KEYS = new Set(["DEPLOY_ENV", "NODE_ENV"]);
+
 async function scopedKeys(
   app: string,
   entries?: readonly EnvEntry[],
@@ -44,10 +52,7 @@ async function scopedKeys(
     ...new Set(
       entries
         .filter((entry) => entry.source === app)
-        .filter(
-          (entry) =>
-            !(entry.meta.scope === "default" && entry.meta.commented === true),
-        )
+        .filter((entry) => !WRANGLER_OWNED_KEYS.has(entry.key))
         .map((entry) => entry.key),
     ),
   ].sort();

@@ -80,7 +80,26 @@ function findRoot(from: string): string {
   }
 }
 
-const root = findRoot(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
+// `WITH_ENV_ROOT_FOR_TESTS` is exactly what its name says: `cli.test.ts`
+// spawns this real script as a subprocess, and the root walk above would
+// otherwise land on the REAL repo root — whose set of `.env*` tier files is
+// per-machine state (a contributor who has run `env pull` has three, CI has
+// none), so every tier-resolution assertion would pass or fail on whichever
+// machine ran it. The override points the subprocess at a synthetic root of
+// known fixtures instead. It is announced on stderr on every use, so it can
+// never quietly redirect a real invocation: an env-loading tool silently
+// reading files from somewhere other than the repo root is exactly the lie
+// this package exists to prevent.
+const rootOverride = process.env.WITH_ENV_ROOT_FOR_TESTS;
+if (rootOverride !== undefined && rootOverride !== "") {
+  console.error(
+    `with-env: root overridden by WITH_ENV_ROOT_FOR_TESTS=${rootOverride} (tests only)`,
+  );
+}
+const root =
+  rootOverride !== undefined && rootOverride !== ""
+    ? rootOverride
+    : findRoot(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
 
 // `.enablePositionalOptions()` + `.passThroughOptions()` are what make
 // commander safe here: the first positional ends option parsing, so in
