@@ -28,6 +28,15 @@ let argv: string[] | null = null;
 let interactive = false;
 
 /**
+ * The deploy tier the wizard entered for this session, or `null` for the
+ * development default. Reproduced as a `DEPLOY_ENV=<tier>` prefix rather than a
+ * `--tier` flag, because it is `DEPLOY_ENV` the wizard actually set and — unlike
+ * `--tier`, which only the tier-aware commands parse — it reproduces the tier
+ * for EVERY command, `db` and `env` included.
+ */
+let enteredTier: string | null = null;
+
+/**
  * Start recording for one invocation.
  *
  * `base` is what the dispatcher received: the wizard's built argv, or the argv
@@ -42,6 +51,16 @@ export function beginInvocation(
 ): void {
   argv = [...base];
   interactive = fromMenu;
+  enteredTier = null;
+}
+
+/**
+ * Record the deploy tier the wizard entered up front, so the rerun line carries
+ * it. development is the ambient default, so a prefix for it would be noise and
+ * is dropped.
+ */
+export function recordEnteredTier(tier: string): void {
+  enteredTier = tier === "development" ? null : tier;
 }
 
 /**
@@ -61,5 +80,6 @@ export function recordResolved(...fragment: string[]): void {
  */
 export function reproducibleCommand(): string | null {
   if (argv === null || !interactive || argv.length === 0) return null;
-  return `pnpm devtools ${argv.join(" ")}`;
+  const prefix = enteredTier ? `DEPLOY_ENV=${enteredTier} ` : "";
+  return `${prefix}pnpm devtools ${argv.join(" ")}`;
 }

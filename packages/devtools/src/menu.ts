@@ -17,6 +17,8 @@
  * commands in the separate `devtools-ci` bin do not appear here.
  */
 import { confirm, note, select, text } from "@clack/prompts";
+import { loadEnvironment, MissingEnvFileError } from "@devdogsuga/env/load";
+import type { DeployEnvironment } from "@devdogsuga/env";
 import { positionals } from "./args.js";
 import {
   findCommand,
@@ -33,7 +35,8 @@ import {
   probeEnvironment,
   type Environment,
 } from "./environment.js";
-import { beginInvocation } from "./invocation.js";
+import { beginInvocation, recordEnteredTier } from "./invocation.js";
+import { resolveTier } from "./tier.js";
 import { unwrap } from "./ui.js";
 
 /** Chosen when a submenu should return to the screen above it. */
@@ -304,6 +307,31 @@ export function bareGroupStartPath(argv: readonly string[]): string[] | null {
 // ── Entry ────────────────────────────────────────────────────────────────────
 
 /**
+ * Enters `tier` for the whole session: loads `.env.<tier>` and applies it to
+ * `process.env`, so EVERY command the walk goes on to dispatch — and every
+ * child process it spawns — runs under that tier, not just the handful that
+ * resolve a tier themselves. This is what makes `--tier` a uniform environment
+ * selector rather than a per-command afterthought. `DEPLOY_ENV` is set
+ * alongside so build-time code that branches on it, and each command's own
+ * `resolveTier`, both read the entered tier back.
+ *
+ * development is skipped: `pnpm devtools` already runs under `with-env`, so the
+ * process env IS development's and re-reading it would change nothing.
+ * `override: true` for any other tier makes its `.env.<tier>` win over the
+ * development values `with-env` left in `process.env`.
+ *
+ * `loadEnvironment` itself never writes `process.env` (see its header). This is
+ * the one deliberate top-level write that does — the wizard's equivalent of the
+ * selection `with-env` performs at startup, for the tier chosen here instead.
+ */
+async function enterTier(tier: DeployEnvironment): Promise<void> {
+  if (tier === "development") return;
+  const loaded = await loadEnvironment(tier, { override: true });
+  Object.assign(process.env, loaded.env);
+  process.env.DEPLOY_ENV = tier;
+}
+
+/**
  * Runs the wizard, returning the `outro()` line its command earned.
  *
  * `dispatch` is the CLI's own argv handler, injected rather than imported so
@@ -315,11 +343,19 @@ export function bareGroupStartPath(argv: readonly string[]): string[] | null {
  *
  * `options.startPath`, from `bareGroupStartPath`, skips straight to that
  * node's subcommand screen — see `walk`'s `startPath` branch.
+ *
+ * `options.chooseTier`/`options.enterTier` exist for the tests: the real
+ * defaults reach the filesystem (which tier files exist) and the real prompt,
+ * and a test wants neither.
  */
 export async function runMenu(
   dispatch: (argv: string[]) => Promise<string | null>,
   env: Environment = probeEnvironment(),
-  options: { startPath?: string[] } = {},
+  options: {
+    startPath?: string[];
+    chooseTier?: () => Promise<DeployEnvironment | null>;
+    enterTier?: (tier: DeployEnvironment) => Promise<void>;
+  } = {},
 ): Promise<string | null> {
   // Before the first question, not after a failure. Three lines saying what
   // this machine currently is explain why the database commands below are
@@ -328,13 +364,42 @@ export async function runMenu(
   // instead of the one they happen to run on.
   note(describeEnvironment(env), "This machine");
 
+  // Before the tree, not inside it: which deploy tier does this whole session
+  // run under? Asked once, here, so a `db` or `env` command that never carried
+  // a `--tier` screen still runs against the chosen environment — the uniform
+  // selection the per-command resolvers could not give on their own.
+  // `resolveTier` stays silent unless more than one tier's file is present, so
+  // a one-`.env` machine falls straight through to development, unprompted.
+  const chooseTier =
+    options.chooseTier ??
+    (() =>
+      resolveTier(undefined, "Which deploy tier should these commands use?", {
+        label: "devtools",
+      }));
+  const tier = await chooseTier();
+  if (tier === null) return null; // invalid interactive pick, already explained
+
+  try {
+    await (options.enterTier ?? enterTier)(tier);
+  } catch (err) {
+    // A chosen tier whose file is missing: report it and stop, rather than
+    // walk on to a command that would fail the same way with less context.
+    if (err instanceof MissingEnvFileError) {
+      process.stderr.write(`devtools: ${err.message}\n`);
+      return null;
+    }
+    throw err;
+  }
+
   const chosen = await walk(env, options.startPath);
   // Quitting is not a failure, but it has nothing to announce either.
   if (!chosen) return null;
 
   // Every step here was a prompt, so the built argv is the reproducible
   // command — a runner that prompts further (a bare `workflows run`) appends
-  // the rest through `recordResolved`.
+  // the rest through `recordResolved`, and the entered tier rides along as the
+  // `DEPLOY_ENV=` prefix `recordEnteredTier` adds.
   beginInvocation(chosen.argv, true);
+  recordEnteredTier(tier);
   return dispatch(chosen.argv);
 }

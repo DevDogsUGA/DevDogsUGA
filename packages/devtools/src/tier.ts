@@ -51,6 +51,17 @@ interface ResolveTierOptions {
   label?: string;
   /** Injectable for tests; defaults to `availableTiers()`. */
   available?: DeployEnvironment[];
+  /**
+   * The tier the process has already ENTERED, honoured when no explicit tier
+   * was passed. Injectable for tests; defaults to `process.env.DEPLOY_ENV`.
+   *
+   * The wizard enters a tier once, up front (see `menu.ts`), by loading its
+   * env and setting `DEPLOY_ENV`; a `DEPLOY_ENV=staging pnpm devtools …` on
+   * the command line does the same. Either way a command that resolves its own
+   * tier should use that answer rather than ask a question already settled for
+   * the whole session.
+   */
+  deployEnv?: string;
   /** Injectable for tests; defaults to `process.stdin.isTTY`. */
   isTTY?: boolean;
   /** Injectable for tests; defaults to a clack `select` wrapped in `unwrap`. */
@@ -85,6 +96,15 @@ export async function resolveTier(
       `${label}: unknown tier "${given}". Expected: ${DEPLOY_ENVIRONMENTS.join(", ")}.\n`,
     );
     return null;
+  }
+
+  // Already inside a tier? Honour it instead of prompting. An entered tier is
+  // an answer, exactly like an explicit `--tier` above — including one whose
+  // file is missing, which `loadEnvironment` then reports — so it is validated
+  // for shape only, not existence, and does NOT fall through to the picker.
+  const entered = opts.deployEnv ?? process.env.DEPLOY_ENV;
+  if (entered !== undefined && entered !== "" && isDeployEnvironment(entered)) {
+    return entered;
   }
 
   const available = opts.available ?? availableTiers();

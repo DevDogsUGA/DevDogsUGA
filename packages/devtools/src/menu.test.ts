@@ -11,6 +11,8 @@
  * get asked and what argv comes out, not how a terminal renders them.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MissingEnvFileError } from "@devdogsuga/env/load";
+import type { DeployEnvironment } from "@devdogsuga/env";
 import type { Environment } from "./environment.js";
 
 const answers: unknown[] = [];
@@ -71,6 +73,21 @@ const { GROUPS, TOP_LEVEL, allPaths, findCommand, groupOf } =
 const { UNKNOWN_ENVIRONMENT } = await import("./environment.js");
 
 /**
+ * The tier gate, stubbed out for the walk tests below.
+ *
+ * These tests are about which command a walk reaches and what argv it builds,
+ * not about tier selection (that is `resolveTier`'s own suite). The real
+ * `runMenu` would reach the filesystem — which `.env.<tier>` files exist — and
+ * the real prompt before the first group screen; injecting a development no-op
+ * keeps every walk hermetic and its `asked` sequence about the tree alone. The
+ * tier gate has its own describe block near the bottom.
+ */
+const NO_TIER_GATE = {
+  chooseTier: () => Promise.resolve("development" as DeployEnvironment),
+  enterTier: () => Promise.resolve(),
+};
+
+/**
  * Runs one walk with the given answers, returning the argv it dispatched.
  *
  * The environment is injected, and defaults to the one that adapts nothing, so
@@ -89,10 +106,14 @@ async function walk(
   answers.push(...scripted);
 
   let dispatched: string[] | null = null;
-  await runMenu((argv) => {
-    dispatched = argv;
-    return Promise.resolve("Done.");
-  }, env);
+  await runMenu(
+    (argv) => {
+      dispatched = argv;
+      return Promise.resolve("Done.");
+    },
+    env,
+    NO_TIER_GATE,
+  );
   return dispatched;
 }
 
@@ -118,7 +139,7 @@ async function resume(
       return Promise.resolve("Done.");
     },
     env,
-    { startPath },
+    { ...NO_TIER_GATE, startPath },
   );
   return dispatched;
 }
@@ -275,6 +296,89 @@ describe("navigation", () => {
 
   it("dispatches nothing when the reader quits", async () => {
     expect(await walk([null])).toBeNull();
+  });
+});
+
+describe("tier gate", () => {
+  // The wizard asks for the deploy tier once, before the tree, and enters it —
+  // loading `.env.<tier>` into `process.env` — so every command the walk goes
+  // on to dispatch runs against that tier, `db` and `env` included. Both edges
+  // are injected here so the assertions are about ORDER and CONTROL FLOW, not
+  // about the filesystem `enterTier` would otherwise touch.
+  it("enters the chosen tier before the walk, then dispatches under it", async () => {
+    answers.length = 0;
+    asked.length = 0;
+    shown.length = 0;
+    answers.push(...answersFor(["db", "status"]), "remote");
+
+    const entered: string[] = [];
+    let dispatched: string[] | null = null;
+    await runMenu(
+      (argv) => {
+        dispatched = argv;
+        return Promise.resolve("Done.");
+      },
+      UNKNOWN_ENVIRONMENT,
+      {
+        chooseTier: () => Promise.resolve("staging" as DeployEnvironment),
+        enterTier: (tier) => {
+          // Recorded before the walk runs: dispatch must see the entered tier.
+          expect(dispatched).toBeNull();
+          entered.push(tier);
+          return Promise.resolve();
+        },
+      },
+    );
+
+    expect(entered).toEqual(["staging"]);
+    expect(dispatched).toEqual(["db", "status", "--target", "remote"]);
+  });
+
+  it("aborts before the walk when the tier pick is invalid", async () => {
+    answers.length = 0;
+    asked.length = 0;
+    shown.length = 0;
+
+    let called = false;
+    const result = await runMenu(
+      () => {
+        called = true;
+        return Promise.resolve("Done.");
+      },
+      UNKNOWN_ENVIRONMENT,
+      {
+        chooseTier: () => Promise.resolve(null),
+        enterTier: () => Promise.resolve(),
+      },
+    );
+
+    expect(result).toBeNull();
+    expect(called).toBe(false); // never dispatched
+    expect(asked).toEqual([]); // no group screen was drawn
+  });
+
+  it("stops when the chosen tier's env file is missing", async () => {
+    answers.length = 0;
+    asked.length = 0;
+    shown.length = 0;
+
+    let called = false;
+    const result = await runMenu(
+      () => {
+        called = true;
+        return Promise.resolve("Done.");
+      },
+      UNKNOWN_ENVIRONMENT,
+      {
+        chooseTier: () => Promise.resolve("staging" as DeployEnvironment),
+        enterTier: () =>
+          Promise.reject(new MissingEnvFileError("staging", ".env.staging")),
+      },
+    );
+
+    expect(result).toBeNull();
+    expect(called).toBe(false);
+    expect(asked).toEqual([]);
   });
 });
 

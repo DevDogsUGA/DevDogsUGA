@@ -1,11 +1,11 @@
 /**
  * Unit tests for the shared `--tier` resolver.
  *
- * `availableTiers`'s `exists` and `resolveTier`'s `available`/`isTTY`/`prompt`
- * are all injectable for exactly this file: no test here touches the real
- * filesystem, `process.stdin`, or a real terminal.
+ * `availableTiers`'s `exists` and `resolveTier`'s `available`/`isTTY`/`prompt`/
+ * `deployEnv` are all injectable for exactly this file: no test here touches the
+ * real filesystem, `process.stdin`, a real terminal, or the real `DEPLOY_ENV`.
  */
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { availableTiers, resolveTier } from "./tier.js";
 
 describe("availableTiers", () => {
@@ -37,6 +37,19 @@ describe("availableTiers", () => {
 });
 
 describe("resolveTier", () => {
+  // `resolveTier` reads `process.env.DEPLOY_ENV` as the entered-tier default, so
+  // clear it for the cases that mean to exercise the picker and restore it after
+  // — a developer with `DEPLOY_ENV` exported must not turn these red. The two
+  // entered-tier cases pass `deployEnv` explicitly instead.
+  const saved = process.env.DEPLOY_ENV;
+  beforeEach(() => {
+    delete process.env.DEPLOY_ENV;
+  });
+  afterEach(() => {
+    if (saved === undefined) delete process.env.DEPLOY_ENV;
+    else process.env.DEPLOY_ENV = saved;
+  });
+
   it("returns an explicit valid tier without consulting available/prompt", async () => {
     const prompt = vi.fn();
     const result = await resolveTier("staging", "Which tier?", {
@@ -104,6 +117,30 @@ describe("resolveTier", () => {
       },
       { value: "production", label: "production", hint: "⚠️  live data" },
     ]);
+  });
+
+  it("honours an already-entered tier over the prompt when none was passed", async () => {
+    const prompt = vi.fn();
+    const result = await resolveTier(undefined, "Which tier?", {
+      available: ["development", "production"],
+      isTTY: true,
+      deployEnv: "production",
+      prompt,
+    });
+    expect(result).toBe("production");
+    expect(prompt).not.toHaveBeenCalled();
+  });
+
+  it("ignores an empty or unknown entered tier and asks as usual", async () => {
+    const prompt = vi.fn(async () => "development" as const);
+    const result = await resolveTier(undefined, "Which tier?", {
+      available: ["development", "production"],
+      isTTY: true,
+      deployEnv: "",
+      prompt,
+    });
+    expect(result).toBe("development");
+    expect(prompt).toHaveBeenCalledOnce();
   });
 
   it("refuses a picked tier whose file is not present and points at env pull", async () => {
