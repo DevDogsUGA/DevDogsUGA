@@ -11,6 +11,7 @@ import {
 import { runWithStderr } from "../db/run.js";
 import { PROJECT_ROOT } from "../environment.js";
 import { recordResolved } from "../invocation.js";
+import { resolveTier } from "../tier.js";
 import { unwrap } from "../ui.js";
 import {
   CRON_TIERS,
@@ -103,27 +104,6 @@ function validateTier(
     `devtools workflows ${command}: unknown tier "${value}". Expected: ${CRON_TIERS.join(", ")}.\n`,
   );
   return null;
-}
-
-async function pickTier(given: string | undefined): Promise<CronTier | null> {
-  const valid = validateTier(given, "run");
-  if (valid === null) return null;
-  if (valid) return valid;
-  if (!process.stdin.isTTY) return "development";
-  return unwrap(
-    await select<CronTier>({
-      message: "Which tier should receive the Workflow?",
-      options: CRON_TIERS.map((value) => ({
-        value,
-        hint:
-          value === "development"
-            ? "local Wrangler session"
-            : value === "production"
-              ? "⚠️  live data"
-              : undefined,
-      })),
-    }),
-  );
 }
 
 export function workflowTriggerArgs(
@@ -523,7 +503,11 @@ export async function runWorkflowsRun(
   const givenTier = options.tier;
   const givenWorkflow = options.workflow;
   const givenPort = options.port;
-  const tier = await pickTier(options.tier);
+  const tier = await resolveTier(
+    options.tier,
+    "Which tier should receive the Workflow?",
+    { label: "devtools workflows run" },
+  );
   if (!tier) return 1;
 
   if (options.params) {

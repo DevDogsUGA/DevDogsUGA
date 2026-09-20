@@ -7,6 +7,7 @@
 import { confirm } from "@clack/prompts";
 import { MissingEnvFileError, loadEnvironment } from "@devdogsuga/env/load";
 import { run } from "../db/run.js";
+import { resolveTier } from "../tier.js";
 import { unwrap } from "../ui.js";
 import { isWorkerApp, WORKER_APPS } from "../workers.js";
 import { withWranglerEnv } from "./local-env.js";
@@ -46,18 +47,17 @@ export async function runCf(argv: readonly string[]): Promise<number> {
       return 1;
     }
 
-    const tier = parseTier(rest);
-    if (
-      tier &&
-      tier !== "development" &&
-      tier !== "staging" &&
-      tier !== "production"
-    ) {
-      process.stderr.write(
-        `devtools cf preview: unknown tier "${tier}". Expected: development, staging, production.\n`,
-      );
-      return 1;
-    }
+    // The command tree's own `--tier` option carries no `prompt` (see
+    // `commands.ts`): asking there AND here would ask twice, once on its own
+    // wizard screen and once from this resolver, whenever more than one tier
+    // file is present. `resolveTier` owns both the validation an explicit
+    // `--tier` needs and the conditional prompt an absent one gets.
+    const tier = await resolveTier(
+      parseTier(rest),
+      "Which tier's env should the preview use?",
+      { label: "devtools cf preview" },
+    );
+    if (tier === null) return 1;
 
     // Previewing production means the local Worker talks to live production
     // data (DB_URL, third-party API keys, the lot) from a developer's own
@@ -81,7 +81,7 @@ export async function runCf(argv: readonly string[]): Promise<number> {
     }
 
     let loaded: Awaited<ReturnType<typeof loadEnvironment>> | undefined;
-    if (tier) {
+    if (tier !== "development") {
       try {
         // This process runs under `with-env` (development), so process.env
         // already holds development's values; override: true makes the

@@ -1152,15 +1152,10 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
                 value: "<t>",
                 summary:
                   "Preview against a tier's env. Defaults to development.",
-                prompt: {
-                  kind: "select",
-                  message: "Which tier's env should the preview use?",
-                  choices: [
-                    { value: "development", hint: "the default" },
-                    { value: "staging" },
-                    { value: "production", hint: "⚠️  live data" },
-                  ],
-                },
+                // No prompt: the runtime resolver (`tier.ts`) asks this
+                // itself, conditionally, for both the wizard and a direct
+                // CLI invocation — a `prompt` here would ask it twice, once
+                // on this screen and once when the command actually runs.
               },
               YES,
             ],
