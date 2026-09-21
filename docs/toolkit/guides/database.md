@@ -65,10 +65,13 @@ still holding the old settings. `db restart` is what picks a config change up.
 connection block to `.env.generated`, and seeds the storage buckets. Which
 database a development session means is decided at _launch_, not per command:
 `development:local` requires the stack to actually answer on port 54321 (a
-TCP probe — the file is a hint, the port is the truth) and refuses up front
-with troubleshooting when it does not, rather than falling back to whatever
-`.env` happens to name. `db` and the bare menu are exempt from that refusal
-so `db start` can fix the very state it reports.
+TCP probe — the file is a hint, the port is the truth). When it does not, an
+interactive session **offers to start the stack for you** and then carries on
+with whatever command you ran — you never have to stop, run `db start`, and
+retype it. Decline the offer (or run off a TTY) and it refuses up front with
+troubleshooting rather than falling back to whatever `.env` happens to name.
+`db` and the bare menu are exempt from that refusal so `db start` can fix the
+very state it reports.
 
 `pnpm devtools db connect <project-ref>` runs `supabase link` for anyone
 driving the bare `supabase` CLI by hand. Nothing in devtools reads the link
