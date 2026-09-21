@@ -8,6 +8,7 @@ import {
   GENERATED_FILE,
   HYPERDRIVE_LOCAL_CONNECTION_ENV,
   loadEnvironment,
+  LocalStackOfflineError,
   MissingEnvFileError,
   selectEnvFiles,
   type SelectionContext,
@@ -158,6 +159,89 @@ describe("the probe table (development)", () => {
   });
 });
 
+/**
+ * The explicit answers that OVERRIDE the probe table. `local` escalates the
+ * table's quiet fallbacks into refusals — "I asked for the Docker stack"
+ * must never quietly become "`.env`'s hosted DB_URL answered" — and
+ * `remote` skips both the overlay and the probe outright.
+ */
+describe("an explicit development database (devDatabase)", () => {
+  it("local + port listening: prepends the overlay, exactly like the probe row", async () => {
+    const s = await selectEnvFiles(
+      ctx({ devDatabase: "local", probeLocalStack: () => true }),
+    );
+    expect(s.files).toEqual([GENERATED_FILE, ".env"]);
+    expect(s.warnings).toEqual([]);
+  });
+
+  it("local + port refused: throws offline advice instead of falling back to .env", async () => {
+    const attempt = selectEnvFiles(
+      ctx({ devDatabase: "local", probeLocalStack: () => false }),
+    );
+    await expect(attempt).rejects.toThrow(LocalStackOfflineError);
+    await expect(
+      selectEnvFiles(
+        ctx({ devDatabase: "local", probeLocalStack: () => false }),
+      ),
+    ).rejects.toThrow(/devtools db start.*--dev-db remote|db start/);
+  });
+
+  it("local + port listening + overlay missing: throws regenerate advice, not db start", async () => {
+    const attempt = selectEnvFiles(
+      ctx({
+        devDatabase: "local",
+        exists: (f) => f === ".env",
+        probeLocalStack: () => true,
+      }),
+    );
+    await expect(attempt).rejects.toThrow(LocalStackOfflineError);
+    await expect(
+      selectEnvFiles(
+        ctx({
+          devDatabase: "local",
+          exists: (f) => f === ".env",
+          probeLocalStack: () => true,
+        }),
+      ),
+    ).rejects.toThrow(/supabase status -o env/);
+  });
+
+  it("remote: loads .env alone, warns about the ignored overlay, and never probes", async () => {
+    const probe = vi.fn(() => true);
+    const s = await selectEnvFiles(
+      ctx({ devDatabase: "remote", probeLocalStack: probe }),
+    );
+    expect(s.files).toEqual([".env"]);
+    expect(s.warnings).toHaveLength(1);
+    expect(s.warnings[0]).toMatch(/ignoring \.env\.generated/);
+    expect(probe).not.toHaveBeenCalled();
+  });
+
+  it("remote with no overlay file: silent — nothing to ignore", async () => {
+    const s = await selectEnvFiles(
+      ctx({ devDatabase: "remote", exists: (f) => f === ".env" }),
+    );
+    expect(s.files).toEqual([".env"]);
+    expect(s.warnings).toEqual([]);
+  });
+
+  it("is ignored outside development, so a propagated DEV_DB cannot break staging", async () => {
+    // The launcher exports DEV_DB for its children; a child that explicitly
+    // loads staging (deploy scripts do) must not throw or warn over it.
+    const probe = vi.fn(() => false);
+    const s = await selectEnvFiles(
+      ctx({
+        deployEnv: "staging",
+        devDatabase: "local",
+        probeLocalStack: probe,
+      }),
+    );
+    expect(s.files).toEqual([".env.staging"]);
+    expect(s.warnings).toEqual([]);
+    expect(probe).not.toHaveBeenCalled();
+  });
+});
+
 describe(".env.generated is development-only", () => {
   it("never probes nor loads the overlay for staging/production", async () => {
     // A running local Docker container must never shadow the deployed
@@ -232,6 +316,39 @@ describe("loadEnvironment", () => {
       ...overrides,
     };
   }
+
+  it("honours DEV_DB from the base snapshot when no devDatabase option is given", async () => {
+    // The propagation path: the devtools launcher exports DEV_DB once, and
+    // every later in-process reload (session refresh, a nested with-env)
+    // applies the same answer without naming the variable.
+    const probe = vi.fn(() => true);
+    const loaded = await loadEnvironment(
+      "development",
+      undefined,
+      loadCtx({ baseEnv: { DEV_DB: "remote" }, probeLocalStack: probe }),
+    );
+    expect(loaded.files).toEqual([".env"]);
+    expect(probe).not.toHaveBeenCalled();
+  });
+
+  it("lets an explicit devDatabase option beat DEV_DB", async () => {
+    const loaded = await loadEnvironment(
+      "development",
+      { devDatabase: "local" },
+      loadCtx({ baseEnv: { DEV_DB: "remote" }, probeLocalStack: () => true }),
+    );
+    expect(loaded.files).toEqual([GENERATED_FILE, ".env"]);
+  });
+
+  it("refuses an unrecognised DEV_DB instead of falling back to the probe", async () => {
+    await expect(
+      loadEnvironment(
+        "development",
+        undefined,
+        loadCtx({ baseEnv: { DEV_DB: "docker" } }),
+      ),
+    ).rejects.toThrow('DEV_DB="docker" is not one of: local, remote.');
+  });
 
   it("returns the environment and files selectEnvFiles chose, plus a populated env map", async () => {
     const loaded = await loadEnvironment(

@@ -12,21 +12,21 @@ import { supabase } from "./run.js";
 const SEED_FILES = [join(PROJECT_ROOT, "supabase", "seed", "01_roles.sql")];
 
 /**
- * `--local` for the Docker stack; for a hosted project, `--db-url` against
- * the resolved tier's own connection string rather than `--linked` (the
- * supabase CLI's ambient, tier-unaware project). `db query`, which this runs
- * through, supports `--db-url` the same way `db reset`/`db push` do.
+ * Always `--db-url` — the session's own connection string, never the
+ * supabase CLI's `--local`/`--linked` modes. `db query`, which this runs
+ * through, supports it the same way `db reset`/`db push` do. See
+ * `db/connection.ts`'s header.
  */
-export type RolesConnection =
-  { kind: "local" } | { kind: "remote"; dbUrl: string };
-
-export async function runSeedRoles(
-  connection: RolesConnection,
-): Promise<number> {
-  const flags =
-    connection.kind === "remote" ? ["--db-url", connection.dbUrl] : ["--local"];
+export async function runSeedRoles(dbUrl: string): Promise<number> {
   for (const file of SEED_FILES) {
-    const code = await supabase("db", "query", "--file", file, ...flags);
+    const code = await supabase(
+      "db",
+      "query",
+      "--file",
+      file,
+      "--db-url",
+      dbUrl,
+    );
     if (code !== 0) return code;
   }
   return 0;

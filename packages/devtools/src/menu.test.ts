@@ -227,14 +227,14 @@ describe("options become argv", () => {
     expect(argv).toEqual(["airtable", "apply"]);
   });
 
-  it("emits --target remote for the ENDPOINT option", async () => {
+  it("emits --target remote for docs index's acknowledgment select", async () => {
     const argv = await walk([
-      groupOf("db")!,
-      findCommand(["db"])!,
-      findCommand(["db", "status"])!,
+      groupOf("docs")!,
+      findCommand(["docs"])!,
+      findCommand(["docs", "index"])!,
       "remote",
     ]);
-    expect(argv).toEqual(["db", "status", "--target", "remote"]);
+    expect(argv).toEqual(["docs", "index", "--target", "remote"]);
   });
 
   it("emits a select choice that is a value after its flag", async () => {
@@ -284,26 +284,42 @@ describe("entered-tier recording", () => {
   // `runMenu` to do is read it back off `process.env.DEPLOY_ENV` and record it
   // for the "run it directly next time" line `reproducibleCommand` builds.
   const savedDeployEnv = process.env.DEPLOY_ENV;
+  const savedDevDb = process.env.DEV_DB;
   afterEach(() => {
     if (savedDeployEnv === undefined) delete process.env.DEPLOY_ENV;
     else process.env.DEPLOY_ENV = savedDeployEnv;
+    if (savedDevDb === undefined) delete process.env.DEV_DB;
+    else process.env.DEV_DB = savedDevDb;
   });
 
   it("records the ambient DEPLOY_ENV as the entered tier", async () => {
     process.env.DEPLOY_ENV = "staging";
     const { reproducibleCommand } = await import("./invocation.js");
-    await walk([...answersFor(["db", "status"]), "remote", false]);
+    await walk(answersFor(["db", "status"]));
     expect(reproducibleCommand()).toBe(
-      "pnpm devtools --tier staging db status --target remote",
+      "pnpm devtools --tier staging db status",
     );
   });
 
   it("records nothing extra for the development default", async () => {
     delete process.env.DEPLOY_ENV;
+    delete process.env.DEV_DB;
     const { reproducibleCommand } = await import("./invocation.js");
-    await walk([...answersFor(["db", "status"]), "remote", false]);
+    await walk(answersFor(["db", "status"]));
+    expect(reproducibleCommand()).toBe("pnpm devtools db status");
+  });
+
+  it("records the qualified selector for a development session with DEV_DB", async () => {
+    // Reproducing a session that ANSWERED the development-database question
+    // with a bare `pnpm devtools db status` would re-ask it (or refuse,
+    // non-interactively) on the same machine — the hint must carry the whole
+    // session.
+    delete process.env.DEPLOY_ENV;
+    process.env.DEV_DB = "remote";
+    const { reproducibleCommand } = await import("./invocation.js");
+    await walk(answersFor(["db", "status"]));
     expect(reproducibleCommand()).toBe(
-      "pnpm devtools db status --target remote",
+      "pnpm devtools --tier development:remote db status",
     );
   });
 });
@@ -352,19 +368,12 @@ describe("resuming at a node", () => {
   // the same leaf, with the same argv, as walking there from the top of the
   // tree — it just skips the screens above that group.
   it("reaches the same leaf as a full walk, skipping the group screens", async () => {
-    const full = await walk([
-      ...answersFor(["db", "seed", "buckets"]),
-      "local",
-    ]);
-    expect(full).toEqual(["db", "seed", "buckets", "--target", "local"]);
+    const full = await walk(answersFor(["db", "seed", "buckets"]));
+    expect(full).toEqual(["db", "seed", "buckets"]);
 
     const resumed = await resume(
       ["db"],
-      [
-        findCommand(["db", "seed"])!,
-        findCommand(["db", "seed", "buckets"])!,
-        "local",
-      ],
+      [findCommand(["db", "seed"])!, findCommand(["db", "seed", "buckets"])!],
     );
     expect(resumed).toEqual(full);
 

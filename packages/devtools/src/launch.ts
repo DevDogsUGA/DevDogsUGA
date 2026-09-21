@@ -33,9 +33,15 @@
  */
 import { select } from "@clack/prompts";
 import type { DeployEnvironment } from "@devdogsuga/env";
-import { MissingEnvFileError } from "@devdogsuga/env/load";
+import {
+  LocalStackOfflineError,
+  MissingEnvFileError,
+  probeLocalStack,
+  type DevDatabase,
+} from "@devdogsuga/env/load";
 import {
   availableTiers,
+  developmentRemoteCandidate,
   enterEnvironment,
   resolveSessionTier,
   type TierChoice,
@@ -63,7 +69,7 @@ export function stripTierFlag(argv: readonly string[]): {
   //
   // A following token that is itself a flag is treated the same way, NOT
   // consumed as the value — the guard every other flag-value reader in this
-  // CLI keeps (`cli.ts`'s `flagValue`, `db/remote.ts`'s). Without it,
+  // CLI keeps (`cli.ts`'s `flagValue`). Without it,
   // `--tier --help` or `--tier -h` would swallow the flag as a bogus tier and
   // refuse with "unknown tier" instead of reaching the help bypass below.
   const missing = value === undefined || value.startsWith("-");
@@ -72,12 +78,13 @@ export function stripTierFlag(argv: readonly string[]): {
 }
 
 /** The real interactive picker: a clack `select`, unwrapped so Ctrl-C exits
- * cleanly instead of leaking a cancel symbol into `resolveSessionTier`. */
+ * cleanly instead of leaking a cancel symbol into `resolveSessionTier`.
+ * Values are session selector words (`"development:local"`, `"staging"`…). */
 async function promptTier(
   message: string,
   choices: TierChoice[],
-): Promise<DeployEnvironment> {
-  return unwrap(await select<DeployEnvironment>({ message, options: choices }));
+): Promise<string> {
+  return unwrap(await select<string>({ message, options: choices }));
 }
 
 /**
@@ -124,6 +131,7 @@ export async function launch(argv: readonly string[]): Promise<void> {
   }
 
   let tier: DeployEnvironment;
+  let devDatabase: DevDatabase | undefined;
   if (rest[0] === "setup" || rest[0] === "completions") {
     // Two commands run BEFORE there is a tier to resolve, and forcing the
     // mandate on them breaks each in its own way:
@@ -145,13 +153,33 @@ export async function launch(argv: readonly string[]): Promise<void> {
     // when offering to rewrite them.
     tier = "development";
   } else {
+    // The `.env`-names-a-remote-database lookup (and the port probe that
+    // phrases the local hint) are only paid when the resolution could
+    // actually land on BARE development — an explicit staging/production or
+    // qualified selector, an already-deployed DEPLOY_ENV, or a DEV_DB answer
+    // all settle the question without them, and the lookup imports dotenvx.
+    const deployEnv = process.env.DEPLOY_ENV ?? "";
+    const couldBeBareDevelopment =
+      (process.env.DEV_DB ?? "") === "" &&
+      (explicit === "development" ||
+        (explicit === undefined &&
+          (deployEnv === "" || deployEnv === "development")));
+    const remoteCandidate = couldBeBareDevelopment
+      ? await developmentRemoteCandidate(PROJECT_ROOT)
+      : undefined;
+    const localStackOnline =
+      typeof remoteCandidate === "string" ? await probeLocalStack() : undefined;
+
     const resolution = await resolveSessionTier({
       explicit,
       deployEnv: process.env.DEPLOY_ENV,
+      devDb: process.env.DEV_DB,
       available: await availableTiers(PROJECT_ROOT),
       isTTY: process.stdin.isTTY === true,
       prompt: promptTier,
-      promptMessage: "Which deploy tier should these commands use?",
+      promptMessage: "Which environment should this session use?",
+      remoteCandidate,
+      localStackOnline,
     });
 
     if (!resolution.ok) {
@@ -160,23 +188,64 @@ export async function launch(argv: readonly string[]): Promise<void> {
     }
 
     tier = resolution.tier;
+    devDatabase = resolution.devDatabase;
   }
+
+  // Mandatory, not chattiness: which database a command is about to touch
+  // must never be a guess. Names the QUALIFIED session (`development:local`)
+  // when one was resolved. See `session.ts`'s and `load.ts`'s own headers.
+  const reportEntered = (files: string[], label: string): void => {
+    process.stderr.write(
+      `devtools: loaded ${files.length > 0 ? files.join(", ") : "no env files"} (${label})\n`,
+    );
+  };
+  const sessionLabel =
+    devDatabase === undefined ? tier : `${tier}:${devDatabase}`;
 
   try {
     // `override: false` — a fresh process, so an already-exported shell
     // variable beats the file the same way `with-env` always let it, rather
     // than a stale `.env.<tier>` value silently winning over what the caller
     // just set for this one invocation.
-    const entered = await enterEnvironment(tier, { override: false });
+    const entered = await enterEnvironment(tier, {
+      override: false,
+      devDatabase,
+    });
     for (const warning of entered.warnings) {
       process.stderr.write(`devtools: ${warning}\n`);
     }
-    // Mandatory, not chattiness: which database a command is about to touch
-    // must never be a guess. See `session.ts`'s and `load.ts`'s own headers.
-    process.stderr.write(
-      `devtools: loaded ${entered.files.length > 0 ? entered.files.join(", ") : "no env files"} (${tier})\n`,
-    );
+    reportEntered(entered.files, sessionLabel);
   } catch (err) {
+    if (err instanceof LocalStackOfflineError) {
+      // The session explicitly means the local database and the stack is not
+      // reachable. `db` (whose `start` is the fix, and whose data commands
+      // re-check the connection themselves) and the bare menu (the road to
+      // `db start`) may continue in a degraded, unqualified entry; anything
+      // else stops here, with the error's own troubleshooting, instead of
+      // failing later against whatever `.env` happens to name.
+      process.stderr.write(`devtools: ${err.message}\n`);
+      if (rest.length !== 0 && rest[0] !== "db") process.exit(1);
+      process.stderr.write(
+        "devtools: continuing without the overlay so `db start` can fix this.\n",
+      );
+      const inherited = process.env.DEV_DB;
+      delete process.env.DEV_DB;
+      const entered = await enterEnvironment(tier, { override: false });
+      if (devDatabase !== undefined) {
+        // Children spawned AFTER `db start` succeeds should still inherit
+        // the session's answer; the refresh that follows a successful start
+        // re-applies the overlay under this same variable.
+        process.env.DEV_DB = devDatabase;
+      } else if (inherited !== undefined) {
+        process.env.DEV_DB = inherited;
+      }
+      for (const warning of entered.warnings) {
+        process.stderr.write(`devtools: ${warning}\n`);
+      }
+      reportEntered(entered.files, tier);
+      await dispatch(rest);
+      return;
+    }
     if (!(err instanceof MissingEnvFileError)) throw err;
 
     if (tier === "development") {

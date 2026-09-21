@@ -19,17 +19,21 @@
  * have changed `.env.generated` succeeds.
  *
  * ⚠️ Guarded to development only. `DEPLOY_ENV` naming a deployed tier means
- * this process is doing `--target remote` work against staging or
- * production (see `../db/remote.ts`); blindly re-entering development here
- * would silently overwrite that tier's connection with local values
- * mid-session, for a stack command (`start`/`stop`/`restart`) that only
- * ever touches the LOCAL Docker stack in the first place.
+ * this session targets staging or production (see `../db/connection.ts`);
+ * blindly re-entering development here would silently overwrite that tier's
+ * connection with local values mid-session, for a stack command
+ * (`start`/`stop`/`restart`) that only ever touches the LOCAL Docker stack
+ * in the first place.
  */
 import {
   enterEnvironment as defaultEnterEnvironment,
   type EnteredEnvironment,
 } from "@devdogsuga/env/session";
-import { GENERATED_FILE } from "@devdogsuga/env/load";
+import {
+  DEV_DB_ENV,
+  GENERATED_FILE,
+  LocalStackOfflineError,
+} from "@devdogsuga/env/load";
 
 export interface RefreshSessionEnvOptions {
   /** Injectable for tests; defaults to `process.env.DEPLOY_ENV`. */
@@ -60,6 +64,23 @@ export async function refreshSessionEnv(
   }
 
   const enter = opts.enterEnvironment ?? defaultEnterEnvironment;
-  await enter("development", { override: true });
+  try {
+    await enter("development", { override: true });
+  } catch (err) {
+    if (!(err instanceof LocalStackOfflineError)) throw err;
+    // A `development:local` session whose stack just went down — `db stop`
+    // did exactly what it was asked, so this refresh must not turn that into
+    // a failure. Re-enter unqualified (probe decides: `.env` alone, with its
+    // stale-overlay warning) but LEAVE `DEV_DB` in place: the session still
+    // MEANS the local database, and `db/connection.ts`'s guard is what turns
+    // a later data command into "start the stack", not `.env`'s own DB_URL.
+    const devDb = process.env[DEV_DB_ENV];
+    delete process.env[DEV_DB_ENV];
+    try {
+      await enter("development", { override: true });
+    } finally {
+      if (devDb !== undefined) process.env[DEV_DB_ENV] = devDb;
+    }
+  }
   return [`refreshed ${GENERATED_FILE}`];
 }

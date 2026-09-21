@@ -16,7 +16,6 @@
 import { describe, expect, it } from "vitest";
 import {
   allPaths,
-  ENDPOINT,
   findCommand,
   GROUPS,
   SCOPES,
@@ -485,32 +484,32 @@ describe("style guide", () => {
   });
 
   /**
-   * (f) The `endpoint` scope and the `ENDPOINT` constant are two sides of one
-   * promise: the wizard asks `--target` once at the block level rather than
-   * once per command, so the constant must appear on exactly the LEAF
-   * commands the scope groups.
+   * (f) `--target` never returns to the `db` namespace.
    *
-   * A leaf can inherit "endpoint" two ways: it carries the scope directly
-   * (`db status`, `docs index`), or its immediate parent does. The second
-   * case is `db seed buckets`/`db seed roles` and `db config push`: `db seed`
-   * and `db config` carry `scope: "endpoint"` themselves purely so the
-   * `--help` scope-block walk over `db`'s direct subcommands stays contiguous
-   * (see the "scopes" describe block above), and their own leaf children —
-   * which do NOT repeat the scope, per that same block — are where the
-   * endpoint selector actually lives. Container nodes (anything with its own
-   * `subcommands`) are skipped entirely: they never take ENDPOINT themselves.
+   * The retired endpoint selector (`--target local|remote`) asked a question
+   * the SESSION already answers (`--tier development:local|development:remote|
+   * staging|production`, settled by the launcher before dispatch), and
+   * `cli.ts` refuses the flag by name so old scripts fail loudly. This pin
+   * keeps a future db subcommand from quietly reintroducing the vocabulary.
+   * The `--target` flags that legitimately remain mean OTHER things: the env
+   * commands' vault target, the signing-key/planner tier words, and `docs
+   * index`'s delete acknowledgment (`DOCS_TARGET`) — all outside `db`'s
+   * endpoint scope, except signing-key/planner which name their own
+   * connection (`infra` scope) rather than the session's.
    */
-  it("declares ENDPOINT on every endpoint-scope leaf command and no others", () => {
+  it("keeps --target out of db's endpoint-scope commands", () => {
     for (const { path, node } of everyNode()) {
-      if ((node.subcommands ?? []).length > 0) continue;
+      if (path[0] !== "db") continue;
       const parent = path.length > 1 ? findCommand(path.slice(0, -1)) : null;
       const isEndpointScope =
         node.scope === "endpoint" ||
         (!node.scope && parent?.scope === "endpoint");
-      const hasEndpoint = (node.options ?? []).some((o) => o === ENDPOINT);
-      expect(hasEndpoint, `${path.join(" ")} scope/ENDPOINT mismatch`).toBe(
-        isEndpointScope,
-      );
+      if (!isEndpointScope) continue;
+      for (const option of node.options ?? []) {
+        expect(option.flag, `${path.join(" ")} ${option.flag}`).not.toBe(
+          "--target",
+        );
+      }
     }
   });
 });

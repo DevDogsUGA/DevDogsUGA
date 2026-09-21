@@ -345,6 +345,17 @@ export async function runMenu(
   // the rest through `recordResolved`, and the entered tier rides along as the
   // `--tier` flag `recordEnteredTier` adds.
   beginInvocation(chosen.argv, true);
-  recordEnteredTier(process.env.DEPLOY_ENV ?? "development");
+  // A development session that answered the "which development database?"
+  // question records the QUALIFIED selector, so the "run it directly next
+  // time" line reproduces the whole session — a bare `development` would
+  // re-ask (or refuse, non-interactively) on a machine whose `.env` names a
+  // remote DB_URL.
+  const enteredTier = process.env.DEPLOY_ENV ?? "development";
+  const devDb = process.env.DEV_DB;
+  recordEnteredTier(
+    enteredTier === "development" && (devDb === "local" || devDb === "remote")
+      ? `development:${devDb}`
+      : enteredTier,
+  );
   return dispatch(chosen.argv);
 }

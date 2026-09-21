@@ -97,23 +97,16 @@ export const buildSupabase = () =>
   run(["--filter", "@devdogsuga/supabase", "build"]);
 
 /**
- * `--local` for the Docker stack; for a hosted project, the resolved tier's
- * OWN `--db-url` rather than the CLI's ambient `--linked` project, which the
- * caller may not be pointed at. See `db/remote.ts`'s header for why that
- * distinction is safety-critical for `db reset --target remote`.
+ * Generate and write Database types from the session's database.
+ *
+ * Always `--db-url` — the session's own connection string, never the
+ * supabase CLI's `--local`/`--linked` modes, whose defaults can disagree
+ * with what this process entered. See `db/connection.ts`'s header.
  */
-export type TypesConnection =
-  { kind: "local" } | { kind: "remote"; dbUrl: string };
-
-/** Generate and write Database types from a local or resolved-tier project. */
-export async function generateTypes(conn: TypesConnection): Promise<number> {
+export async function generateTypes(dbUrl: string): Promise<number> {
   let out: string;
   try {
-    out = await supabaseCapture(
-      "gen",
-      "types",
-      ...(conn.kind === "remote" ? ["--db-url", conn.dbUrl] : ["--local"]),
-    );
+    out = await supabaseCapture("gen", "types", "--db-url", dbUrl);
   } catch {
     return 1;
   }
@@ -126,8 +119,8 @@ export async function generateTypes(conn: TypesConnection): Promise<number> {
 
 /**
  * `seed buckets` takes no `--db-url` (verified against the supabase 2.115.0
- * CLI) — only `--project-ref` — so the remote shape here differs from
- * `TypesConnection`'s.
+ * CLI) — it drives the Storage API, not Postgres — so it is the one data
+ * command still keyed on local-vs-hosted rather than on the session's URL.
  */
 export type BucketsConnection =
   { kind: "local" } | { kind: "remote"; projectRef: string | undefined };
@@ -142,7 +135,7 @@ export async function seedBuckets(conn: BucketsConnection): Promise<number> {
   // failure this whole module exists to avoid.
   if (!conn.projectRef) {
     process.stderr.write(
-      "devtools db: seed buckets --target remote needs PROJECT_REF in the resolved tier's env file.\n",
+      "devtools db: seed buckets against a hosted project needs PROJECT_REF in the session's env file.\n",
     );
     return 1;
   }
@@ -152,7 +145,7 @@ export async function seedBuckets(conn: BucketsConnection): Promise<number> {
   // empirically in an unlinked checkout, `--project-ref` names the target
   // directly and `--linked` is just the mode selector for "use that ref",
   // not "use whatever `supabase link` last remembered". So this stays
-  // consistent with `resolveRemoteConnection`'s rule of never depending on
+  // consistent with `db/connection.ts`'s rule of never depending on
   // `--linked`'s persisted state.
   return supabase(
     "seed",

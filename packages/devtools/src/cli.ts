@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * `pnpm devtools [command] [--target <local|remote>]`
+ * `pnpm devtools [--tier <development:local|development:remote|staging|production>] [command]`
  *
  * Run it with no arguments and it opens a menu. That is the point: a
  * contributor should be able to set up a database and check their moderation
@@ -44,15 +44,19 @@ import {
   connectRemoteProject,
   runStackCommand,
   type StackCommand,
-  type Target,
 } from "./stack.js";
 import { runConfigPush } from "./db/config-push.js";
+import {
+  describeDbTarget,
+  isLocalConnection,
+  resolveDbConnection,
+  type DbConnection,
+} from "./db/connection.js";
 import { runDbExec } from "./db/exec.js";
 import { runGenerateMigration } from "./db/generate-migration.js";
 import { runGenerateTypes } from "./db/generate-types.js";
 import { runIntrospect } from "./db/introspect.js";
 import { runNewMigration } from "./db/new-migration.js";
-import { resolveRemoteConnection, type RemoteConnection } from "./db/remote.js";
 import { runSeedBuckets } from "./db/seed-buckets.js";
 import { runSeedRoles } from "./db/seed-roles.js";
 import { runOAuthSetup } from "./oauth/wizard.js";
@@ -122,18 +126,6 @@ function isDoctorCommand(value: string): value is DoctorCommand {
   return (DOCTOR_COMMANDS as readonly string[]).includes(value);
 }
 
-function parseTarget(rest: string[]): Target {
-  if (rest.includes("--team")) {
-    console.error(
-      "Team sandboxes are temporarily disabled.\n" +
-        "Use --target local for this machine or --target remote for the linked project.",
-    );
-    process.exit(1);
-  }
-  const t = flagValue(rest, "--target");
-  return t === "remote" ? { kind: "remote" } : { kind: "local" };
-}
-
 function flagValue(rest: string[], flag: string): string | undefined {
   const index = rest.indexOf(flag);
   if (index === -1) return undefined;
@@ -141,30 +133,27 @@ function flagValue(rest: string[], flag: string): string | undefined {
   return value && !value.startsWith("--") ? value : undefined;
 }
 
-/** What `--target local|remote` resolved to. `dbUrl`/`projectRef` are only
- * ever present on the `remote` case, once `resolveRemoteConnection` has
- * actually named the hosted database — never the CLI's ambient `--linked`
- * project. See `db/remote.ts`. */
-type Endpoint = { kind: "local" } | ({ kind: "remote" } & RemoteConnection);
-
 /**
- * Resolves a `db <subcommand> --target local|remote [--tier <t>]` endpoint:
- * the bare local marker, or — after `resolveRemoteConnection` has picked and
- * entered a deploy tier — that tier's connection. Shared by every endpoint
- * subcommand that is not `db reset`/`migrate`/`status` (those three go
- * through `runStack`, which additionally has to skip resolution for
- * `stop`/`restart` and gate `reset` behind a confirmation).
- *
- * Returns `null` (having already written the reason to stderr, inside
- * `resolveRemoteConnection`) when a remote target could not be resolved, so
- * the caller can stop without running the underlying op at all.
+ * The retired flags a `db` invocation can still carry from muscle memory or
+ * an old script. Refused loudly, never ignored: a flag that looks like it
+ * selects the database while actually deciding nothing is exactly the
+ * silent lie the session vocabulary replaced. The session (`--tier
+ * development:local|development:remote|staging|production`, settled by the
+ * launcher before dispatch) is the ONE selector now.
  */
-async function resolveEndpoint(subRest: string[]): Promise<Endpoint | null> {
-  const target = parseTarget(subRest);
-  if (target.kind === "local") return { kind: "local" };
-  const connection = await resolveRemoteConnection(subRest);
-  if (!connection) return null;
-  return { kind: "remote", ...connection };
+function refuseRetiredDbFlags(rest: readonly string[]): boolean {
+  for (const flag of ["--target", "--team"]) {
+    if (rest.includes(flag)) {
+      process.stderr.write(
+        `devtools db: ${flag} is retired. The session already names the ` +
+          "database — relaunch with --tier development:local, " +
+          "development:remote, staging, or production.\n",
+      );
+      process.exitCode = 1;
+      return true;
+    }
+  }
+  return false;
 }
 
 // ── Connecting ───────────────────────────────────────────────────────────────
@@ -212,38 +201,39 @@ async function connect(): Promise<Instance | null> {
 
 // ── Commands ─────────────────────────────────────────────────────────────────
 
-async function runStack(
-  command: StackCommand,
-  target: Target,
-  rest: string[],
-): Promise<void> {
-  // A remote target needs to know WHICH hosted database before anything else
-  // happens here — including before the reset confirmation below, which has
-  // to name the tier it is about to erase. `stop`/`restart` are the two stack
-  // commands with no remote meaning at all (`runStackCommand` refuses them
-  // outright), so they skip resolution rather than asking a tier question —
-  // or entering a tier's env — for an operation that fails regardless.
-  let connection: RemoteConnection | undefined;
-  if (target.kind === "remote" && command !== "stop" && command !== "restart") {
-    const resolved = await resolveRemoteConnection(rest);
-    if (!resolved) {
+async function runStack(command: StackCommand, rest: string[]): Promise<void> {
+  // The data commands need the session's connection before anything else —
+  // including before the reset confirmation below, which has to name what it
+  // is about to erase. The lifecycle commands (`start`/`stop`/`restart`)
+  // skip resolution outright: they act on this machine's containers, and
+  // `db start` is the FIX for the very state resolution would refuse on.
+  // `status` resolves quietly and treats "nothing resolvable" as an answer.
+  let connection: DbConnection | null = null;
+  if (command === "migrate" || command === "reset") {
+    connection = resolveDbConnection({ label: `devtools db ${command}` });
+    if (!connection) {
       process.exitCode = 1;
       return;
     }
-    connection = resolved;
+  } else if (command === "status") {
+    connection = resolveDbConnection({ quiet: true });
   }
 
-  // `reset` drops everything, and `migrate --target remote` pushes straight
-  // to a live database — both worth a question before they run. Local asks
-  // the harmless-sounding one, remote a harder question — which hosted
-  // database — and production the hardest of all.
-  if (command === "reset" || (command === "migrate" && connection)) {
-    if (connection) {
-      // Named up front, and ONLY the tier and project — never the DB_URL,
-      // which carries the password — so whoever is about to answer "yes"
-      // knows exactly what they are agreeing to.
+  // `reset` drops everything, and a non-local `migrate` pushes straight to a
+  // shared database — both worth a question before they run. The local stack
+  // gets the harmless-sounding question, every hosted database a harder one
+  // naming exactly which, and production the hardest of all.
+  const local = connection !== null && isLocalConnection(connection);
+  if (
+    connection !== null &&
+    (command === "reset" || (command === "migrate" && !local))
+  ) {
+    if (!local) {
+      // Named up front, and ONLY the tier/host and project — never the
+      // DB_URL, which carries the password — so whoever is about to answer
+      // "yes" knows exactly what they are agreeing to.
       log.message(
-        `This will ${command === "reset" ? "reset" : "push migrations to"} the ${connection.tier} database` +
+        `This will ${command === "reset" ? "reset" : "push migrations to"} ${describeDbTarget(connection)}` +
           (connection.projectRef
             ? ` (project ${connection.projectRef}).`
             : "."),
@@ -259,14 +249,13 @@ async function runStack(
     if (!rest.includes("--yes")) {
       if (!process.stdin.isTTY) {
         process.stderr.write(
-          `devtools db ${command}${target.kind === "remote" ? " --target remote" : ""}: ` +
-            "--yes is required to run non-interactively.\n",
+          `devtools db ${command}: --yes is required to run non-interactively.\n`,
         );
         process.exitCode = 1;
         return;
       }
 
-      if (connection?.tier === "production") {
+      if (connection.tier === "production") {
         // Production gets the sternest wording of the three: this is the one
         // database in this whole CLI that must never be touched by a
         // reflexive keystroke.
@@ -286,11 +275,11 @@ async function runStack(
           await confirm({
             message:
               command === "reset"
-                ? target.kind === "local"
+                ? local
                   ? "This erases your local database and rebuilds it. Continue?"
-                  : `This erases the ${connection?.tier ?? target.kind} database and rebuilds it. Continue?`
-                : `This pushes new migrations to the ${connection?.tier ?? target.kind} database. Continue?`,
-            initialValue: target.kind === "local",
+                  : `This erases ${describeDbTarget(connection)} and rebuilds it. Continue?`
+                : `This pushes new migrations to ${describeDbTarget(connection)}. Continue?`,
+            initialValue: local,
           }),
         );
         if (!confirmed) bail("Left the database alone.");
@@ -299,7 +288,7 @@ async function runStack(
   }
 
   try {
-    const { code, lines } = await runStackCommand(command, target, connection);
+    const { code, lines } = await runStackCommand(command, connection);
     for (const line of lines) log.message(line);
     if (code !== 0) {
       // Lines on a failure ARE the explanation, which is the contract with
@@ -811,14 +800,9 @@ async function runSigningKeyCommand(rest: string[]): Promise<void> {
  * this just routes to them one level deeper.
  */
 async function runDbCommand(rest: string[]): Promise<void> {
-  const [sub, ...subRest] = rest;
+  if (refuseRetiredDbFlags(rest)) return;
 
-  if (sub === "start") {
-    // Machine-local: ignores --target rather than parsing it, the same way
-    // `runStackCommand`'s own "start" branch does.
-    await runStack("start", { kind: "local" }, subRest);
-    return;
-  }
+  const [sub, ...subRest] = rest;
 
   if (sub === "connect") {
     const ref = subRest.find((arg) => !arg.startsWith("-"));
@@ -828,13 +812,14 @@ async function runDbCommand(rest: string[]): Promise<void> {
   }
 
   if (
+    sub === "start" ||
     sub === "stop" ||
     sub === "restart" ||
     sub === "status" ||
     sub === "migrate" ||
     sub === "reset"
   ) {
-    await runStack(sub, parseTarget(subRest), subRest);
+    await runStack(sub, subRest);
     return;
   }
 
@@ -864,48 +849,47 @@ async function runDbCommand(rest: string[]): Promise<void> {
   }
 
   if (sub === "types") {
-    const endpoint = await resolveEndpoint(subRest);
-    if (!endpoint) {
+    const connection = resolveDbConnection({ label: "devtools db types" });
+    if (!connection) {
       process.exitCode = 1;
       return;
     }
-    const code = await runGenerateTypes(
-      endpoint.kind === "remote"
-        ? { kind: "remote", dbUrl: endpoint.dbUrl }
-        : { kind: "local" },
-    );
+    const code = await runGenerateTypes(connection.dbUrl);
     process.exitCode = code === 0 ? 0 : 1;
     return;
   }
 
   if (sub === "seed") {
-    const [ssub, ...srest] = subRest;
+    const [ssub] = subRest;
 
     if (ssub === "buckets") {
-      const endpoint = await resolveEndpoint(srest);
-      if (!endpoint) {
+      const connection = resolveDbConnection({
+        label: "devtools db seed buckets",
+      });
+      if (!connection) {
         process.exitCode = 1;
         return;
       }
+      // `seed buckets` drives the Storage API, which has no `--db-url` mode
+      // (see `db/run.ts`), so this is the one data command still keyed on
+      // local-vs-hosted rather than handed the session's URL.
       const code = await runSeedBuckets(
-        endpoint.kind === "remote"
-          ? { kind: "remote", projectRef: endpoint.projectRef }
-          : { kind: "local" },
+        isLocalConnection(connection)
+          ? { kind: "local" }
+          : { kind: "remote", projectRef: connection.projectRef },
       );
       process.exitCode = code === 0 ? 0 : 1;
       return;
     }
     if (ssub === "roles") {
-      const endpoint = await resolveEndpoint(srest);
-      if (!endpoint) {
+      const connection = resolveDbConnection({
+        label: "devtools db seed roles",
+      });
+      if (!connection) {
         process.exitCode = 1;
         return;
       }
-      const code = await runSeedRoles(
-        endpoint.kind === "remote"
-          ? { kind: "remote", dbUrl: endpoint.dbUrl }
-          : { kind: "local" },
-      );
+      const code = await runSeedRoles(connection.dbUrl);
       process.exitCode = code === 0 ? 0 : 1;
       return;
     }
@@ -929,10 +913,22 @@ async function runDbCommand(rest: string[]): Promise<void> {
     const [csub] = subRest;
 
     if (csub === "push") {
-      // Remote-only — `config.toml` lives on a hosted project, so there is
-      // no `--target` to parse here, only which tier's project to push to.
-      const connection = await resolveRemoteConnection(subRest);
+      // Hosted-only — `config.toml` is pushed to a project ref, and the
+      // Docker stack has none (it reads the file directly at `db start`).
+      const connection = resolveDbConnection({
+        label: "devtools db config push",
+      });
       if (!connection) {
+        process.exitCode = 1;
+        return;
+      }
+      if (isLocalConnection(connection)) {
+        process.stderr.write(
+          "devtools db config push: the local stack reads config.toml " +
+            "directly (`db restart` applies changes). Relaunch with --tier " +
+            "development:remote, staging, or production to push it to a " +
+            "hosted project.\n",
+        );
         process.exitCode = 1;
         return;
       }
@@ -1004,8 +1000,12 @@ async function runDocsCommand(rest: string[]): Promise<void> {
     return;
   }
 
-  const target = parseTarget(rest);
-  await runDocsIndex({ target: target.kind });
+  // `docs index`'s `--target remote` is NOT the retired db selector: it is
+  // the explicit acknowledgment its destructive delete requires when DB_URL
+  // is not local (see `docs/index-pages.ts`). The database itself still
+  // comes from the session's DB_URL like everything else.
+  const target = flagValue(rest, "--target") === "remote" ? "remote" : "local";
+  await runDocsIndex({ target });
 }
 
 // ── Dispatch ─────────────────────────────────────────────────────────────────

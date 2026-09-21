@@ -2,13 +2,13 @@
  * The environment `db introspect` and `db migration generate` hand to the
  * `drizzle-kit` child process they spawn.
  *
- * ## Which of the two connection mechanisms this is
+ * ## How this relates to `db/connection.ts`
  *
- * `db/remote.ts`'s header inventories the other one — `resolveRemoteConnection`,
- * a deploy TIER read straight from `.env.<tier>`, for `--target remote` work.
- * This is the local-tooling half: these two commands have no `--target` flag
- * at all, so there is no tier to resolve. What they need is whatever
- * environment THIS PROCESS already entered — `launch.ts` runs before
+ * `db/connection.ts` resolves the session's one database CONNECTION (its
+ * `DB_URL`, with sanity guards) for commands that open one themselves. This
+ * is the other need: a whole ENVIRONMENT to hand a child process. Both read
+ * the same source — whatever THIS PROCESS already entered — `launch.ts`
+ * runs before
  * `cli.ts`'s command dispatch even imports, and enters a tier (development,
  * by default) into `process.env` via `@devdogsuga/env/session`'s
  * `enterEnvironment`, applying `selectEnvFiles`'s overlay-plus-liveness-probe
@@ -27,8 +27,8 @@
  *      worked fine.
  *   b. The precedence was inverted: a raw `.env` parse merged OVER
  *      `process.env` clobbers whatever tier this process actually entered —
- *      backwards from `db/remote.ts`'s own documented expectation (see its
- *      header) that a command reads the tier the process is already running
+ *      backwards from the documented expectation (now `db/connection.ts`'s)
+ *      that a command reads the tier the process is already running
  *      under rather than reimposing development on top of it.
  *
  * `resolveLocalToolingEnv` fixes both by returning `process.env` itself

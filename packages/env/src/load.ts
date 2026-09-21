@@ -30,6 +30,59 @@ export const LOCAL_STACK_PORT = 54321;
 export const GENERATED_FILE = ".env.generated";
 
 /**
+ * Which development database a session means: the local Docker stack's
+ * (`.env.generated`, required LIVE), or the remote one `.env`'s own `DB_URL`
+ * names (overlay skipped entirely, probe not even run).
+ *
+ * `undefined` everywhere it is accepted means "the probe decides", the
+ * behaviour this module has always had — see the probe table on
+ * `selectEnvFiles`. The explicit values exist because the probe's silent
+ * fallback has a sharp edge: with the stack down, a `.env` that carries a
+ * hosted `DB_URL` makes "the development database" quietly mean a remote one,
+ * which is exactly the guess this package exists to prevent for anything
+ * destructive. Only ever meaningful under `development`; other tiers ignore
+ * it, so the propagated `DEV_DB` variable (below) cannot break a child
+ * process that explicitly loads staging or production.
+ */
+export type DevDatabase = "local" | "remote";
+
+export function isDevDatabase(value: string): value is DevDatabase {
+  return value === "local" || value === "remote";
+}
+
+/**
+ * The environment variable that carries a session's `DevDatabase` answer to
+ * child processes, the same way `DEPLOY_ENV` carries the tier: the devtools
+ * launcher asks (or is told) once, exports it, and every nested `with-env`
+ * under that session honours the SAME answer instead of re-running the probe
+ * — without this, a session that chose `remote` would spawn children that
+ * silently re-choose `local` whenever the Docker stack happens to be up.
+ */
+export const DEV_DB_ENV = "DEV_DB";
+
+/**
+ * An explicitly `local` development session, but the local Supabase stack is
+ * not actually reachable. Thrown instead of falling back to `.env` alone,
+ * because that fallback is how a hosted `DB_URL` ends up behind a command
+ * that asked for the Docker stack. The message carries its own
+ * troubleshooting; callers print it and stop (the devtools launcher exempts
+ * `db`/the menu so `db start` can fix the very state being reported).
+ */
+export class LocalStackOfflineError extends Error {
+  constructor(
+    detail: string,
+    advice = "Run `pnpm devtools db start` to bring the stack up (and " +
+      "confirm with `supabase status`), or choose the remote development " +
+      "database with `--tier development:remote`.",
+  ) {
+    super(
+      `the session asked for the local development database, but ${detail} ${advice}`,
+    );
+    this.name = "LocalStackOfflineError";
+  }
+}
+
+/**
  * Wrangler's local Hyperdrive emulator does not read an application's DB_URL.
  * It requires this binding-specific process variable instead. Keep DB_URL as
  * the repository's one source of database credentials and derive Wrangler's
@@ -102,9 +155,13 @@ export interface SelectionContext {
   /**
    * Is anything listening on the local stack port? Only invoked when the
    * environment is development, so tests can assert it stays uncalled for
-   * staging/production.
+   * staging/production — and not even then under `devDatabase: "remote"`,
+   * which skips the overlay outright rather than asking whether it could
+   * apply.
    */
   probeLocalStack: () => boolean | Promise<boolean>;
+  /** See `DevDatabase`. `undefined` means the probe decides, as ever. */
+  devDatabase?: DevDatabase;
 }
 
 /**
@@ -122,7 +179,19 @@ export interface SelectionContext {
  * values: first-file-wins would silently point a staging build at localhost.
  * So the whole table below is gated on `development`.
  *
- * The probe table (file is a hint; the port is the truth):
+ * An explicit `devDatabase` answer overrides the table before it is consulted:
+ *
+ *   * `"local"` — the overlay is REQUIRED and required LIVE. A dead port or a
+ *     missing file throws `LocalStackOfflineError` rather than falling back
+ *     to `.env` alone, because `.env` may carry a hosted `DB_URL` and "I
+ *     asked for the Docker stack" must never quietly become "a remote
+ *     database answered".
+ *   * `"remote"` — the overlay is skipped and the port is not even probed:
+ *     the session has said which database it means, so a running container
+ *     is a fact worth one warning line, not a vote. (Whether the overlay
+ *     file exists is still checked, only to phrase that warning.)
+ *
+ * With no answer, the probe table (file is a hint; the port is the truth):
  *
  *   | `.env.generated` | port 54321 | behaviour                             |
  *   |------------------|------------|---------------------------------------|
@@ -147,6 +216,39 @@ export async function selectEnvFiles(
 
   const files = [envFile];
   const warnings: string[] = [];
+
+  if (environment === "development" && ctx.devDatabase === "remote") {
+    if (ctx.exists(GENERATED_FILE)) {
+      warnings.push(
+        `ignoring ${GENERATED_FILE} — this session targets the remote ` +
+          "development database (DEV_DB=remote), not the local stack.",
+      );
+    }
+    return { environment, files, warnings };
+  }
+
+  if (environment === "development" && ctx.devDatabase === "local") {
+    const generated = ctx.exists(GENERATED_FILE);
+    const listening = await ctx.probeLocalStack();
+    if (!listening) {
+      throw new LocalStackOfflineError(
+        `nothing is listening on 127.0.0.1:${LOCAL_STACK_PORT}` +
+          (generated
+            ? ` (${GENERATED_FILE} exists but is stale).`
+            : ` (and ${GENERATED_FILE} is missing).`),
+      );
+    }
+    if (!generated) {
+      throw new LocalStackOfflineError(
+        `the stack is listening on 127.0.0.1:${LOCAL_STACK_PORT} while ` +
+          `${GENERATED_FILE} — its connection block — is missing.`,
+        "Run `supabase status -o env > " +
+          `${GENERATED_FILE}\` at the repo root to regenerate it.`,
+      );
+    }
+    files.unshift(GENERATED_FILE);
+    return { environment, files, warnings };
+  }
 
   if (environment === "development") {
     const generated = ctx.exists(GENERATED_FILE);
@@ -261,6 +363,15 @@ export interface LoadEnvironmentOptions {
    * BASE_URL/DB_URL instead of staging's.
    */
   override?: boolean;
+  /**
+   * See `DevDatabase`. When absent, the base snapshot's `DEV_DB` variable is
+   * honoured — this is how a session's answer, exported once by the devtools
+   * launcher, reaches every nested `with-env` and in-process reload without
+   * each call site knowing the variable exists. An unrecognised `DEV_DB`
+   * value throws rather than falling back to the probe: a variable that
+   * looks like it selects the database must never decide nothing.
+   */
+  devDatabase?: DevDatabase;
 }
 
 /**
@@ -321,16 +432,31 @@ export async function loadEnvironment(
     exists = (file: string) => existsSync(join(root, file));
   }
 
+  const base = context?.baseEnv ?? process.env;
+
+  let devDatabase = options?.devDatabase;
+  if (devDatabase === undefined) {
+    const inherited = base[DEV_DB_ENV];
+    if (inherited !== undefined && inherited !== "") {
+      if (!isDevDatabase(inherited)) {
+        throw new Error(
+          `${DEV_DB_ENV}="${inherited}" is not one of: local, remote.`,
+        );
+      }
+      devDatabase = inherited;
+    }
+  }
+
   const selection = await selectEnvFiles({
     deployEnv,
     exists,
     probeLocalStack: context?.probeLocalStack ?? (() => probeLocalStack()),
+    devDatabase,
   });
 
   // A FRESH string-only snapshot. Both dotenvx and (eventually) @yarnpkg/shell
   // want string-only maps, so drop the unset keys Node models as undefined —
   // the same loop `with-env` uses — and never touch the source object.
-  const base = context?.baseEnv ?? process.env;
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(base)) {
     if (value !== undefined) env[key] = value;

@@ -35,9 +35,14 @@ import { UnknownEnvironmentError } from "./targets.js";
 import {
   applyWranglerLocalDatabaseAlias,
   loadEnvironment,
+  LocalStackOfflineError,
   MissingEnvFileError,
 } from "./load.js";
-import { availableTiers, resolveSessionTier } from "./session.js";
+import {
+  availableTiers,
+  resolveSessionTier,
+  SESSION_SELECTORS,
+} from "./session.js";
 
 // ALMOST NOTHING ELSE IS IMPORTED AT THE TOP LEVEL, deliberately.
 //
@@ -120,8 +125,8 @@ const program = new Command("with-env")
   .option("-c <script>", "run a shell script string with the env loaded")
   .option(
     "--tier <tier>",
-    "deploy tier to load (development, staging, production); " +
-      "overrides DEPLOY_ENV",
+    `environment to load (${SESSION_SELECTORS.join(", ")}, ` +
+      "or bare development); overrides DEPLOY_ENV",
   )
   .argument("[command...]", "command to run with the env loaded")
   .configureOutput({
@@ -168,10 +173,21 @@ const cwd = process.cwd();
 // resolves by `deployEnv` (case (b) in `resolveSessionTier`) and never
 // reaches the ambiguity refusal above, even on a machine that has pulled
 // down every tier's file.
+//
+// ⚠️ `remoteCandidate` IS DELIBERATELY NOT SUPPLIED, and that is a policy
+// choice, not an omission: bare development under `with-env` keeps the
+// probe deciding the overlay exactly as it always has, even on a machine
+// whose `.env` names a remote database. Refusing there would break every
+// wrapped dev-server and turbo task on such a machine overnight. The
+// devtools launcher — the interactive front door, and the home of the
+// destructive db commands — is where that ambiguity gets asked about; its
+// answer reaches this wrapper as `DEV_DB` (resolved below) or an explicit
+// `--tier development:<local|remote>`.
 const tierExists = (relPath: string) => existsSync(join(root, relPath));
 const resolution = await resolveSessionTier({
   explicit: opts.tier,
   deployEnv: process.env.DEPLOY_ENV,
+  devDb: process.env.DEV_DB,
   available: await availableTiers(root, tierExists),
   isTTY: false,
 });
@@ -188,19 +204,29 @@ if (!resolution.ok) {
 // passed through here rather than having loadEnvironment re-walk for
 // pnpm-workspace.yaml a second time. The warnings and the loaded-files line
 // are ours either way.
+// The mandatory stderr line names the QUALIFIED session when one was
+// resolved (`development:local`), because "which database a command just
+// touched must never be a guess" is the whole reason the line exists.
+const sessionLabel =
+  resolution.devDatabase === undefined
+    ? resolution.tier
+    : `${resolution.tier}:${resolution.devDatabase}`;
+
 let env: Record<string, string>;
 let envFiles: string[];
 try {
-  const loaded = await loadEnvironment(resolution.tier, undefined, {
-    root,
-  });
+  const loaded = await loadEnvironment(
+    resolution.tier,
+    { devDatabase: resolution.devDatabase },
+    { root },
+  );
   for (const warning of loaded.warnings) {
     console.error(`with-env: ${warning}`);
   }
   // Required, never a guess: a running local container silently wins over the
   // hosted project, so every run says which files actually won.
   console.error(
-    `with-env: loaded ${loaded.files.join(" + ")} (${loaded.environment})`,
+    `with-env: loaded ${loaded.files.join(" + ")} (${sessionLabel})`,
   );
   envFiles = loaded.files;
   env = loaded.env;
@@ -246,6 +272,13 @@ try {
       if (value !== undefined) env[key] = value;
     }
     applyWranglerLocalDatabaseAlias(env);
+  } else if (err instanceof LocalStackOfflineError) {
+    // NOT survivable the way a missing file is: this session explicitly
+    // asked for the local database (a flag, or an inherited `DEV_DB`), and
+    // continuing on `.env` alone is how a hosted DB_URL ends up behind a
+    // command that asked for the Docker stack.
+    console.error(`with-env: ${err.message}`);
+    process.exit(1);
   } else if (err instanceof UnknownEnvironmentError) {
     console.error(`with-env: ${err.message}`);
     process.exit(1);
