@@ -176,6 +176,24 @@ export const ISSUES: ChangelogIssue[] = [
     signoff:
       "Doors tonight at 6 in DLW 124. Bring a laptop if you have one, and we'll get you set up to ship either way.",
   },
+  {
+    version: "3.0.1",
+    term: "Fall 2026",
+    sendLabel: "Mon · Sep 14",
+    command: "changelog --date 2026-09-21",
+    title: "Workshops You Won't Want to Miss (DevDogs Changelog v3.0.1)",
+    preview:
+      "Tonight at 6: Next.js and Flutter Workshops. Get started on your web or mobile application development journey.",
+    tagline: "Feature competition #1 kicks off tonight!",
+    intro:
+      "But first, they're saying it's the most important workshops of the semester: Flutter and Next.js, the frameworks underpinning this year's projects. Then, we'll be kicking off our first feature competition!",
+    featuredLabel: "happening_tonight",
+    featured: EVENTS.nextflutter,
+    cta: "RSVP for Cold Start",
+    upcoming: [EVENTS.build2, EVENTS.supabase, EVENTS.build3, EVENTS.career],
+    signoff:
+      "Doors tonight at 6 in DLW 124. Bring a laptop if you have one, but we'll get you set up to ship either way.",
+  },
 ];
 
 export function issueByVersion(version: string): ChangelogIssue | undefined {
