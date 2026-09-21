@@ -1,13 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { DiscordAPIError } from "@discordjs/rest";
+import { Routes } from "discord-api-types/v10";
 import z from "zod";
 import { env } from "~/env";
+import { asBot, asUser } from "~/server/discord/api";
 import { createSupabaseServerClient } from "~/supabase/server";
-import {
-  removeSyncedRolesOnUnlink,
-  syncRolesOnLink,
-} from "~/server/discord/memberSync";
-import { reconcileRoleDefinitions } from "~/server/discord/reconcile";
+import { removeSyncedRolesOnUnlink } from "~/server/discord/memberSync";
 import { isSuccessfulRemovalStatus } from "~/server/auth/connectedAccount";
 
 const CALLBACK_URL = new URL("/auth/callback", env.BASE_URL).toString();
@@ -52,58 +51,30 @@ export async function requestAuthorization(
 
 const profileSchema = z.object({
   id: z.string(),
-  username: z.string(),
-  avatar: z.string().nullish(),
 });
 
 /**
- * Fetches the Discord profile and adds the user to the DevDogs guild.
- * Supabase owns the identity link itself (`auth.identities`).
+ * Adds the linked Discord user to the DevDogs guild, with their preferred name
+ * as the nickname. Supabase owns the identity link itself (`auth.identities`);
+ * this is only the guild-join side effect, and it assigns no roles. Both Discord
+ * calls go through the rate-limit-aware REST client, so a burst of links (a
+ * meeting, an email blast) waits out Discord's rate limits instead of failing.
  * @param accessToken The Discord access token from the Supabase OAuth session.
  * @param preferredName Becomes the member's nickname in the guild.
- * @param userId The DevDogs user, whose roles are synced after the link.
  * @see `requestAuthorization`
  */
 export async function linkProfile(
   accessToken: string,
   preferredName: string,
-  userId: string,
 ): Promise<void> {
-  const discordProfile = await fetch("https://discord.com/api/users/@me", {
-    headers: { Authorization: "Bearer " + accessToken },
-  })
-    .then((res) => res.json())
-    .then((obj) => profileSchema.parseAsync(obj));
-
-  // Add the Discord user to the DevDogs guild
-  const addMemberResult = await fetch(
-    `https://discord.com/api/guilds/${env.DISCORD_GUILD_ID}/members/${discordProfile.id}`,
-    {
-      method: "PUT",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bot ${env.DISCORD_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        access_token: accessToken,
-        nick: preferredName,
-        roles: [],
-      }),
-    },
+  const { id: discordUserId } = profileSchema.parse(
+    await asUser(accessToken).get(Routes.user()),
   );
 
-  if (!addMemberResult.ok) {
-    throw discordApiError("add_guild_member", addMemberResult);
-  }
-
-  // Pull in any synced DevDogs roles the user already holds on Discord, and
-  // refresh synced role names/colors. Both soft-fail so neither blocks linking.
-  await syncRolesOnLink(userId, discordProfile.id).catch((err: unknown) => {
-    logDiscordFailure("sync_roles", err);
-  });
-  await reconcileRoleDefinitions().catch((err: unknown) => {
-    logDiscordFailure("reconcile_role_definitions", err);
+  // `PUT` is idempotent here: Discord returns 204 when the user is already a
+  // member, which the REST client treats as success rather than throwing.
+  await asBot().put(Routes.guildMember(env.DISCORD_GUILD_ID, discordUserId), {
+    body: { access_token: accessToken, nick: preferredName },
   });
 }
 
@@ -146,36 +117,20 @@ export async function unlinkProfile(userId: string): Promise<void> {
   }
 
   try {
-    const result = await fetch(
-      `https://discord.com/api/guilds/${env.DISCORD_GUILD_ID}/members/${discordUserId}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bot ${env.DISCORD_TOKEN}`,
-          "X-Audit-Log-Reason": "Unlinked Discord account on devdogsuga.org",
-        },
-      },
+    await asBot().delete(
+      Routes.guildMember(env.DISCORD_GUILD_ID, discordUserId),
+      { reason: "Unlinked Discord account on devdogsuga.org" },
     );
-
-    if (!isSuccessfulRemovalStatus(result.status)) {
-      discordApiError("remove_guild_member", result);
-    }
   } catch (cause) {
+    // A member who is already gone (404) is a successful removal for us.
+    if (
+      cause instanceof DiscordAPIError &&
+      isSuccessfulRemovalStatus(cause.status)
+    ) {
+      return;
+    }
     logDiscordFailure("remove_guild_member", cause);
   }
-}
-
-function discordApiError(operation: string, response: Response): Error {
-  console.error(
-    JSON.stringify({
-      message: "Connected-account side effect failed",
-      provider: "discord",
-      operation,
-      status: response.status,
-      rateLimitBucket: response.headers.get("x-ratelimit-bucket"),
-    }),
-  );
-  return new Error(`Discord ${operation} failed (${response.status})`);
 }
 
 function logDiscordFailure(operation: string, cause: unknown): void {
