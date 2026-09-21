@@ -492,11 +492,16 @@ export async function pullWorkshops(
       // The legacy refusal helper calls this attendanceCount. Workshop-specific
       // attendance no longer exists; effective competition participation is
       // the historical evidence that must prevent a destructive move.
+      //
+      // The outer column is qualified by hand as "workshops"."id": interpolating
+      // ${workshops.id} renders it bare, and the joined competitions/teams both
+      // carry an "id", so the correlation was ambiguous and the whole query —
+      // and with it every workshop and competition pull — threw each pass.
       attendanceCount: sql<number>`(
         select count(*)::int
         from ${competitions} c
         join ${teams} t on t."competitionId" = c.id
-        where c."workshopId" = ${workshops.id}
+        where c."workshopId" = "workshops"."id"
           and coalesce(t."participationOverride", t."competedAt" is not null)
       )`,
     })
