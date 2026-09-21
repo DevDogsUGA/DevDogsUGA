@@ -7,6 +7,7 @@ export type MemberCheckInMethod = "qr" | "manual_code";
 export type RecordAttendanceResult =
   | { status: "recorded" | "duplicate"; attendanceId: string; recordedAt: Date }
   | { status: "revoked"; attendanceId: string }
+  | { status: "not_counted" }
   | { status: "invalid_meeting" };
 
 /**
@@ -24,15 +25,23 @@ export async function recordMemberAttendance(
     const meetingRows = await tx.execute<{
       id: string;
       cancelledAt: Date | null;
+      countsTowardProgress: boolean;
     }>(
-      sql`select "id", "cancelledAt"
+      sql`select "id", "cancelledAt", "countsTowardProgress"
           from platform.meetings
           where "id" = ${meetingId}::uuid and "deletedAt" is null
           for share`,
     );
     const meeting = meetingRows[0];
-    if (meeting?.cancelledAt !== null) {
+    if (!meeting || meeting.cancelledAt !== null) {
       return { status: "invalid_meeting" };
+    }
+    // The passport view derives stars only from meetings that count toward
+    // progress, so recording attendance for a non-counting meeting would leave
+    // the member with a "recorded" receipt and no visible star. Refuse here
+    // instead, keeping the confirmation honest.
+    if (!meeting.countsTowardProgress) {
+      return { status: "not_counted" };
     }
 
     const [created] = await tx

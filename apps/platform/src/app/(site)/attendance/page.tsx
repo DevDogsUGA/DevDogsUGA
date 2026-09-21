@@ -31,6 +31,10 @@ const STATUS_COPY: Record<
     body: "Your original attendance record is still on file.",
     good: true,
   },
+  not_counted: {
+    title: "This meeting isn’t eligible",
+    body: "That meeting doesn’t count toward your participation passport, so nothing was recorded. If that’s wrong, ask an officer to mark the meeting eligible.",
+  },
   revoked: {
     title: "Attendance needs officer review",
     body: "This attendance record was previously corrected. Please contact an officer on Discord.",

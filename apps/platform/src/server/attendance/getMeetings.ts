@@ -1,4 +1,4 @@
-import { and, asc, desc, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, lte, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import { meetings } from "~/server/db/schema";
 
@@ -33,6 +33,9 @@ export async function getAttendanceMeetings(
       and(
         isNull(meetings.deletedAt),
         isNull(meetings.cancelledAt),
+        // Only meetings that count toward the passport are checkable: the
+        // record path refuses the rest, so offering them would dead-end.
+        eq(meetings.countsTowardProgress, true),
         lte(meetings.startsAt, now),
       ),
     )
