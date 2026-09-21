@@ -233,59 +233,68 @@ async function runStack(
     connection = resolved;
   }
 
-  // `reset` drops everything. Worth a question, since the menu puts it one
-  // keystroke away from the harmless commands. Remote asks a harder
-  // question — which hosted database — and production a harder one still.
-  if (command === "reset") {
+  // `reset` drops everything, and `migrate --target remote` pushes straight
+  // to a live database — both worth a question before they run. Local asks
+  // the harmless-sounding one, remote a harder question — which hosted
+  // database — and production the hardest of all.
+  if (command === "reset" || (command === "migrate" && connection)) {
     if (connection) {
       // Named up front, and ONLY the tier and project — never the DB_URL,
       // which carries the password — so whoever is about to answer "yes"
-      // knows exactly what they are agreeing to erase.
+      // knows exactly what they are agreeing to.
       log.message(
-        `This will reset the ${connection.tier} database` +
+        `This will ${command === "reset" ? "reset" : "push migrations to"} the ${connection.tier} database` +
           (connection.projectRef
             ? ` (project ${connection.projectRef}).`
             : "."),
       );
     }
 
-    if (connection?.tier === "production") {
-      // ⚠️ SAFETY: production is the one database in this whole CLI that
-      // must never be erased by an unattended or reflexive keystroke. A
-      // non-interactive caller has to spell out `--yes`; an interactive one
-      // is asked regardless of it, so the flag cannot silently skip the one
-      // confirmation that matters most.
+    // ⚠️ SAFETY: gates every branch below, including production — `--yes` is
+    // the ONE way past any of them, checked before anything TTY-dependent
+    // runs. clack's `confirm()` never resolves without a TTY (reproduced
+    // against @clack/core@1.4.3), so a non-interactive caller without --yes
+    // must be refused outright rather than left to hang forever on a prompt
+    // nobody is there to answer.
+    if (!rest.includes("--yes")) {
       if (!process.stdin.isTTY) {
-        if (!rest.includes("--yes")) {
-          process.stderr.write(
-            "devtools db reset --target remote: --yes is required to reset production.\n",
-          );
-          process.exitCode = 1;
-          return;
-        }
-      } else {
+        process.stderr.write(
+          `devtools db ${command}${target.kind === "remote" ? " --target remote" : ""}: ` +
+            "--yes is required to run non-interactively.\n",
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      if (connection?.tier === "production") {
+        // Production gets the sternest wording of the three: this is the one
+        // database in this whole CLI that must never be touched by a
+        // reflexive keystroke.
         const confirmed = unwrap(
           await confirm({
             message:
-              "This PERMANENTLY ERASES the PRODUCTION database " +
-              `(project ${connection.projectRef ?? "unknown"}) and rebuilds ` +
-              "it from migrations. Continue?",
+              (command === "reset"
+                ? "This PERMANENTLY ERASES the PRODUCTION database "
+                : "This pushes new migrations to the PRODUCTION database ") +
+              `(project ${connection.projectRef ?? "unknown"}). Continue?`,
             initialValue: false,
           }),
         );
         if (!confirmed) bail("Left the database alone.");
+      } else {
+        const confirmed = unwrap(
+          await confirm({
+            message:
+              command === "reset"
+                ? target.kind === "local"
+                  ? "This erases your local database and rebuilds it. Continue?"
+                  : `This erases the ${connection?.tier ?? target.kind} database and rebuilds it. Continue?`
+                : `This pushes new migrations to the ${connection?.tier ?? target.kind} database. Continue?`,
+            initialValue: target.kind === "local",
+          }),
+        );
+        if (!confirmed) bail("Left the database alone.");
       }
-    } else {
-      const confirmed = unwrap(
-        await confirm({
-          message:
-            target.kind === "local"
-              ? "This erases your local database and rebuilds it. Continue?"
-              : `This erases the ${connection?.tier ?? target.kind} database and rebuilds it. Continue?`,
-          initialValue: target.kind === "local",
-        }),
-      );
-      if (!confirmed) bail("Left the database alone.");
     }
   }
 
@@ -1186,6 +1195,18 @@ export async function main(argv: string[]): Promise<void> {
   // reprinting the top level, which is the whole point of the split.
   if (argv.includes("--help") || argv.includes("-h")) {
     console.log(renderHelp(helpPath(argv)));
+    return;
+  }
+
+  // `completions --shell bash|zsh` is meant for `eval "$(pnpm devtools
+  // completions --shell bash)"`, which executes every line of stdout as a
+  // shell command. Dispatched before `intro()` so the banner — and the
+  // `outro()` below — never land on that stdout; a typed completions
+  // invocation is never part of an interactive wizard walk, so there is no
+  // banner worth keeping here the way there is for the menu.
+  if (argv[0] === "completions") {
+    const code = runCompletions(argv.slice(1));
+    process.exitCode = code;
     return;
   }
 

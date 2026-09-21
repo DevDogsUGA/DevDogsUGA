@@ -251,3 +251,46 @@ describe("runTask --tier production guard", () => {
     expect(options.env.DEPLOY_ENV).toBe("staging");
   });
 });
+
+/**
+ * `passthrough`'s two ways of ending, reached through `runTask` since
+ * `passthrough` itself is not exported. Only the numeric-exit branch is
+ * exercised here — the signal branch calls the real `process.kill` against
+ * this process, and a mock that swallows it would leave the infinite loop
+ * after it (the thing that keeps that branch honestly typed as `never`)
+ * spinning forever with nothing left to interrupt it, hanging the test
+ * runner rather than the process it is meant to end. There is no in-process
+ * way to observe a self-delivered signal without either sending a real one
+ * or faking enough of Node's signal machinery to make the assertion
+ * meaningless.
+ */
+describe("passthrough exit code", () => {
+  beforeEach(() => {
+    vi.mocked(spawnSync).mockClear();
+    vi.spyOn(process, "exit").mockImplementation((code) => {
+      throw new Error(`exit:${code ?? 0}`);
+    });
+  });
+
+  it("exits with turbo's own status", async () => {
+    vi.mocked(spawnSync).mockReturnValue({
+      status: 3,
+      signal: null,
+    } as unknown as ReturnType<typeof spawnSync>);
+    tty(true);
+    vi.stubEnv("CI", "");
+    vi.stubEnv("DEVDOGS_PICK", "");
+    await expect(runTask(["build", "--all"])).rejects.toThrow("exit:3");
+  });
+
+  it("falls back to exit code 1 when turbo reports neither a status nor a signal", async () => {
+    vi.mocked(spawnSync).mockReturnValue({
+      status: null,
+      signal: null,
+    } as unknown as ReturnType<typeof spawnSync>);
+    tty(true);
+    vi.stubEnv("CI", "");
+    vi.stubEnv("DEVDOGS_PICK", "");
+    await expect(runTask(["build", "--all"])).rejects.toThrow("exit:1");
+  });
+});

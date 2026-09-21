@@ -77,6 +77,13 @@ describe("stripTierFlag", () => {
     });
   });
 
+  it("does not consume a single-dash flag as the tier value", () => {
+    expect(stripTierFlag(["--tier", "-h", "db"])).toEqual({
+      explicit: undefined,
+      rest: ["-h", "db"],
+    });
+  });
+
   it("leaves a command's own --tier-shaped flag alone when named differently", () => {
     // Sanity check: this function only ever looks for the literal "--tier"
     // token, so a command's own `--target`/`--app` flags are never touched.
@@ -118,6 +125,13 @@ describe("launch", () => {
     await launch(["--tier", "--help"]);
     expect(resolveSessionTier).not.toHaveBeenCalled();
     expect(main).toHaveBeenCalledWith(["--help"]);
+  });
+
+  it("a valueless --tier right before -h still reaches the help bypass", async () => {
+    const { launch } = await import("./launch.js");
+    await launch(["--tier", "-h"]);
+    expect(resolveSessionTier).not.toHaveBeenCalled();
+    expect(main).toHaveBeenCalledWith(["-h"]);
   });
 
   it("setup skips tier resolution and enters development — the bootstrap-deadlock guard", async () => {

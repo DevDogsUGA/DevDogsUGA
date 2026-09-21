@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { z } from "zod";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { EnvEntry } from "@devdogsuga/env";
 import { createTemporaryWranglerEnv, withWranglerEnv } from "./local-env.js";
 
@@ -154,6 +154,84 @@ describe("withWranglerEnv", () => {
       ),
     ).rejects.toThrow("boom");
 
+    expect(existsSync(capturedPath)).toBe(false);
+  });
+
+  it("registers a SIGINT and a SIGTERM listener while `fn` runs, and removes both before returning", async () => {
+    const before = {
+      SIGINT: process.listenerCount("SIGINT"),
+      SIGTERM: process.listenerCount("SIGTERM"),
+    };
+
+    await withWranglerEnv(
+      "sandbox",
+      async () => {
+        expect(process.listenerCount("SIGINT")).toBe(before.SIGINT + 1);
+        expect(process.listenerCount("SIGTERM")).toBe(before.SIGTERM + 1);
+      },
+      { env: {}, entries: [] },
+    );
+
+    expect(process.listenerCount("SIGINT")).toBe(before.SIGINT);
+    expect(process.listenerCount("SIGTERM")).toBe(before.SIGTERM);
+  });
+
+  it("removes its SIGINT/SIGTERM listeners even when the callback throws", async () => {
+    const before = {
+      SIGINT: process.listenerCount("SIGINT"),
+      SIGTERM: process.listenerCount("SIGTERM"),
+    };
+
+    await expect(
+      withWranglerEnv(
+        "sandbox",
+        async () => {
+          throw new Error("boom");
+        },
+        { env: {}, entries: [] },
+      ),
+    ).rejects.toThrow("boom");
+
+    expect(process.listenerCount("SIGINT")).toBe(before.SIGINT);
+    expect(process.listenerCount("SIGTERM")).toBe(before.SIGTERM);
+  });
+
+  it("a SIGINT delivered mid-callback removes the temp directory (simulated in-process, without sending a real signal)", async () => {
+    // Sending an actual SIGINT would kill the test runner itself; instead,
+    // grab the listener `withWranglerEnv` installed and invoke it directly —
+    // exercising the same cleanup path a real signal would reach, minus the
+    // re-raise (which would terminate this process).
+    let capturedPath = "";
+    const originalKill = process.kill.bind(process);
+    const killSpy = vi
+      .spyOn(process, "kill")
+      .mockImplementation((pid, signal) => {
+        if (signal === "SIGINT") return true; // swallow the re-raise
+        return originalKill(pid, signal);
+      });
+
+    try {
+      await withWranglerEnv(
+        "sandbox",
+        async (path) => {
+          capturedPath = path;
+          const listeners = process.listeners(
+            "SIGINT",
+          ) as NodeJS.SignalsListener[];
+          const installed = listeners.at(-1);
+          if (!installed) throw new Error("no SIGINT listener installed");
+          installed("SIGINT");
+          expect(existsSync(capturedPath)).toBe(false);
+        },
+        { env: {}, entries: [] },
+      );
+    } finally {
+      killSpy.mockRestore();
+    }
+
+    // The `finally`'s own cleanup() call, reached after the simulated
+    // signal, is a no-op thanks to the idempotency guard — no error, and the
+    // directory stays gone.
     expect(existsSync(capturedPath)).toBe(false);
   });
 });

@@ -44,6 +44,11 @@ interface WorkflowOptions {
 
 interface TemporaryWranglerSession {
   stop: () => Promise<void>;
+  /** Skips `stop`'s graceful SIGINT/SIGTERM/SIGKILL escalation and kills the
+   * child outright, then removes the credential file — for a caller that
+   * already asked once and isn't willing to wait through the escalation a
+   * second time (an impatient repeat Ctrl+C). */
+  forceStop: () => void;
   /** The port the session actually bound to — may differ from the requested
    * one when it was already taken. See `startTemporaryWrangler`. */
   port: string;
@@ -403,6 +408,11 @@ async function startTemporaryWrangler(
           await stopTemporaryWrangler(child);
           runtimeEnv.remove();
         },
+        forceStop: () => {
+          process.off("exit", stopOnParentExit);
+          signalProcessGroup(child, "SIGKILL");
+          runtimeEnv.remove();
+        },
         port,
       };
     }
@@ -641,6 +651,11 @@ export async function runWorkflowsRun(
   }
 
   let local: { port: string; temporary?: TemporaryWranglerSession } | undefined;
+  // Uninstalls the signal handlers installed below, when this session's
+  // temporary Wrangler (if any) is stopped through the ordinary `finally`
+  // instead of a signal — set only on that branch, so the no-temporary-
+  // session run leaves nothing to uninstall.
+  let uninstallSignalCleanup: (() => void) | undefined;
   if (tier === "development") {
     local = await prepareLocalWrangler(choice.app, options.port ?? "8787");
     if (!local) return 1;
@@ -648,6 +663,33 @@ export async function runWorkflowsRun(
     // A successful trigger only means "queued". Keep the exact instance ID so
     // we can wait for its terminal status before stopping a temporary server.
     options.instanceId = randomUUID();
+
+    if (local.temporary) {
+      // Everything below can wait up to an hour for the triggered Workflow
+      // (`waitForLocalWorkflow`'s timeout) with a credential-bearing temp env
+      // file on disk and a `wrangler dev` child running. Without a handler,
+      // Ctrl+C during that wait kills only this process — Node's default
+      // SIGINT/SIGTERM disposition — and leaves both behind. `stop()` handles
+      // both (it kills the child and calls the temp env's `remove()`); once
+      // it settles, re-raise the signal with the handler already off, so the
+      // default disposition terminates the process and the exit status still
+      // reflects the signal.
+      const session = local.temporary;
+      let stopping = false;
+      const onSignal = (signal: NodeJS.Signals) => {
+        if (stopping) return;
+        stopping = true;
+        process.off("SIGINT", onSignal);
+        process.off("SIGTERM", onSignal);
+        void session.stop().finally(() => process.kill(process.pid, signal));
+      };
+      process.on("SIGINT", onSignal);
+      process.on("SIGTERM", onSignal);
+      uninstallSignalCleanup = () => {
+        process.off("SIGINT", onSignal);
+        process.off("SIGTERM", onSignal);
+      };
+    }
   }
 
   // A remote trigger (`wrangler workflows trigger --env <tier>`) authenticates
@@ -678,7 +720,17 @@ export async function runWorkflowsRun(
   // is inferred from the chosen Workflow when it was not passed.
   if (givenApp === undefined) recordResolved("--app", choice.app);
   if (givenWorkflow === undefined) recordResolved("--workflow", choice.binding);
-  if (givenTier === undefined) recordResolved("--tier", tier);
+  // Only when `resolveTier` actually decided something itself — its own
+  // prompt, or an explicit `--tier` above (already excluded by `givenTier`).
+  // When it fell through to the tier `launch.ts` already entered for the
+  // whole session, `recordEnteredTier` has that covered with its own
+  // `--tier` prefix; recording it again here would print the flag twice.
+  if (
+    givenTier === undefined &&
+    tier !== (process.env.DEPLOY_ENV ?? "development")
+  ) {
+    recordResolved("--tier", tier);
+  }
   if (givenPort === undefined && options.port && options.port !== "8787")
     recordResolved("--port", options.port);
 
@@ -713,6 +765,7 @@ export async function runWorkflowsRun(
     }
     return result.code;
   } finally {
+    uninstallSignalCleanup?.();
     if (local?.temporary) {
       process.stdout.write("Stopping the temporary Wrangler session…\n");
       await local.temporary.stop();
@@ -783,8 +836,29 @@ export async function runWorkflowsServe(
     `Wrangler will keep running on port ${session.port}. Press Ctrl+C to stop it.\n`,
   );
   await new Promise<void>((resolve) => {
-    process.once("SIGINT", resolve);
-    process.once("SIGTERM", resolve);
+    // `process.on`, not `once`: `once` unregisters itself after the first
+    // signal, so a second Ctrl+C arriving during `session.stop()`'s up-to-
+    // 3-second graceful escalation has no listener left to catch it — Node's
+    // default SIGINT/SIGTERM disposition then kills the process before the
+    // `stop()` below (and its `runtimeEnv.remove()`) ever runs. The
+    // reentrancy guard tells the two calls apart: the first starts the
+    // graceful stop below; any further signal forces it instead, then
+    // re-raises the signal so the exit status still reflects it.
+    let stopping = false;
+    const onSignal = (signal: NodeJS.Signals) => {
+      if (stopping) {
+        process.off("SIGINT", onSignal);
+        process.off("SIGTERM", onSignal);
+        process.stdout.write("Stopping Wrangler (forced)…\n");
+        session.forceStop();
+        process.kill(process.pid, signal);
+        return;
+      }
+      stopping = true;
+      resolve();
+    };
+    process.on("SIGINT", onSignal);
+    process.on("SIGTERM", onSignal);
   });
   process.stdout.write("Stopping Wrangler…\n");
   await session.stop();

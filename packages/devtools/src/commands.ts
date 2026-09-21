@@ -997,7 +997,7 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
             summary: "Apply new migrations to the database.",
             hint: "without erasing anything",
             scope: "endpoint",
-            options: [ENDPOINT],
+            options: [ENDPOINT, YES],
           },
           {
             name: "reset",

@@ -59,6 +59,8 @@ vi.mock("@devdogsuga/env/load", () => ({
   MissingEnvFileError: class MissingEnvFileError extends Error {},
 }));
 
+const { beginInvocation, recordEnteredTier, reproducibleCommand } =
+  await import("../invocation.js");
 const {
   findFreePort,
   isPortFree,
@@ -371,6 +373,39 @@ describe("runWorkflowsRun remote-trigger env", () => {
 
     expect(code).toBe(1);
     expect(runWithStderr).not.toHaveBeenCalled();
+  });
+
+  it("prints --tier only once when it was inherited from the session, not passed", async () => {
+    // `resolveTier` falls through to `process.env.DEPLOY_ENV` — the tier
+    // `launch.ts` already entered for the whole session — when `--tier` is
+    // not passed. `recordEnteredTier` already covers that in the rerun
+    // line's leading `--tier` prefix; the run itself must not record it a
+    // second time.
+    const previousDeployEnv = process.env.DEPLOY_ENV;
+    process.env.DEPLOY_ENV = "staging";
+    try {
+      // Mirrors `cli.ts`'s dispatch order: `beginInvocation` resets the
+      // entered tier, so `recordEnteredTier` must run after it.
+      beginInvocation(
+        ["run", "--workflow", "staging-schedule-builder-scrape", "--yes"],
+        false,
+      );
+      recordEnteredTier("staging");
+
+      const code = await runWorkflowsRun([
+        "--workflow",
+        "staging-schedule-builder-scrape",
+        "--yes",
+      ]);
+
+      expect(code).toBe(0);
+      const rerun = reproducibleCommand();
+      expect(rerun).not.toBeNull();
+      expect(rerun?.match(/--tier/g)).toHaveLength(1);
+    } finally {
+      if (previousDeployEnv === undefined) delete process.env.DEPLOY_ENV;
+      else process.env.DEPLOY_ENV = previousDeployEnv;
+    }
   });
 });
 

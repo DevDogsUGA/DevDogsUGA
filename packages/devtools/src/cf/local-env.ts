@@ -72,13 +72,46 @@ function materializeEnvFile(
   return { directory, path };
 }
 
+/** Signals a `wrangler dev` child normally dies to: Ctrl+C sends SIGINT, and
+ * SIGTERM is how a parent (or `kill`) asks any child to stop. Both bypass a
+ * `finally` block only if the process exits before it runs — which it
+ * doesn't here, since Node keeps running while a signal handler is
+ * registered — so installing one turns "the shell killed us" into an
+ * ordinary early return through the same `finally`. */
+const CLEANUP_SIGNALS: readonly NodeJS.Signals[] = ["SIGINT", "SIGTERM"];
+
+/** Registers `cleanup` on SIGINT/SIGTERM for the duration of a bracket and
+ * returns a function that un-registers it. On signal, `cleanup` runs, the
+ * handler removes itself, and the signal is re-sent to this process so the
+ * default handler (absent any other listener) terminates it with the
+ * conventional 128+signal exit status — the caller's `fn` never resumes. */
+function installSignalCleanup(cleanup: () => void): () => void {
+  const handlers = new Map<NodeJS.Signals, NodeJS.SignalsListener>();
+  for (const signal of CLEANUP_SIGNALS) {
+    const handler: NodeJS.SignalsListener = () => {
+      cleanup();
+      process.off(signal, handler);
+      process.kill(process.pid, signal);
+    };
+    handlers.set(signal, handler);
+    process.on(signal, handler);
+  }
+  return () => {
+    for (const [signal, handler] of handlers) process.off(signal, handler);
+  };
+}
+
 /**
  * Runs `fn` with the path to an app-scoped, mode-0600 `.dev.vars` file, and
  * guarantees the file (and its containing directory) is gone before this
- * resolves or rejects — including when `fn` throws. Prefer this over
- * `createTemporaryWranglerEnv` below for anything whose credential-bearing
- * file's lifetime matches a single call's lifetime: a credential-bearing temp
- * file can never outlive the call that needed it.
+ * resolves or rejects — including when `fn` throws, AND when a SIGINT/SIGTERM
+ * (e.g. the developer's Ctrl+C on a `wrangler dev` child `fn` is awaiting)
+ * arrives while `fn` is still running: without this, the signal kills the
+ * process before the `finally` below gets to run, leaving the credential-
+ * bearing temp directory behind in a world-findable location. Prefer this
+ * over `createTemporaryWranglerEnv` below for anything whose credential-
+ * bearing file's lifetime matches a single call's lifetime: a credential-
+ * bearing temp file can never outlive the call that needed it.
  */
 export async function withWranglerEnv<T>(
   app: string,
@@ -90,10 +123,22 @@ export async function withWranglerEnv<T>(
     keys,
     options?.env ?? process.env,
   );
+  // Idempotent: the signal handler and the `finally` below can both fire
+  // (the handler runs cleanup, then re-raises the signal — which unwinds
+  // `fn` and reaches `finally` on its way out) and rmSync's `force: true`
+  // alone only suppresses ENOENT, not a guarantee against re-entrant calls.
+  let removed = false;
+  const cleanup = () => {
+    if (removed) return;
+    removed = true;
+    rmSync(directory, { recursive: true, force: true });
+  };
+  const uninstall = installSignalCleanup(cleanup);
   try {
     return await fn(path);
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    uninstall();
+    cleanup();
   }
 }
 

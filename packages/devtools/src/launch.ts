@@ -64,9 +64,9 @@ export function stripTierFlag(argv: readonly string[]): {
   // A following token that is itself a flag is treated the same way, NOT
   // consumed as the value — the guard every other flag-value reader in this
   // CLI keeps (`cli.ts`'s `flagValue`, `db/remote.ts`'s). Without it,
-  // `--tier --help` would swallow `--help` as a bogus tier and refuse with
-  // "unknown tier" instead of reaching the help bypass below.
-  const missing = value === undefined || value.startsWith("--");
+  // `--tier --help` or `--tier -h` would swallow the flag as a bogus tier and
+  // refuse with "unknown tier" instead of reaching the help bypass below.
+  const missing = value === undefined || value.startsWith("-");
   rest.splice(index, missing ? 1 : 2);
   return { explicit: missing ? undefined : value, rest };
 }

@@ -77,7 +77,11 @@ interface App {
  *
  * `turbo` resolves from the workspace root's `node_modules/.bin`, which pnpm
  * has already put on PATH. Signals and exit codes pass straight through, so a
- * Ctrl-C in a dev server behaves exactly as it did before this existed.
+ * Ctrl-C in a dev server behaves exactly as it did before this existed: when
+ * the child dies to a signal rather than exiting with a code, this process
+ * re-raises that same signal against itself instead of collapsing it to a
+ * generic exit code, which is what lets a shell watching this process see a
+ * conventional signal death rather than a failure.
  *
  * ⚠️ `cwd` is explicit, and must be. Reached through
  * `pnpm --filter @devdogsuga/devtools run cli`, this process starts in
@@ -102,6 +106,21 @@ function passthrough(
     // pass straight through.
     env: { ...process.env, ...extraEnv, DEVDOGS_PICK: "0" },
   });
+  if (result.signal) {
+    // Restore the default disposition first: any SIGINT/SIGTERM listener
+    // this process itself registered (`@clack/prompts` installs one while a
+    // prompt is open) would otherwise run instead of the OS just ending the
+    // process, which is what re-raising is supposed to produce.
+    process.removeAllListeners(result.signal);
+    process.kill(process.pid, result.signal);
+    // Default disposition means the OS ends this process as part of that
+    // call, so nothing below ever runs long enough to matter — the loop only
+    // keeps this branch honestly typed as `never` rather than falling into
+    // `process.exit`, which would race the signal and report a code instead.
+    for (;;) {
+      /* unreachable */
+    }
+  }
   process.exit(result.status ?? 1);
 }
 

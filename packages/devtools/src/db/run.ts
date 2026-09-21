@@ -30,6 +30,10 @@ export function run(args: string[], env?: NodeJS.ProcessEnv): Promise<number> {
       cwd: PROJECT_ROOT,
       ...(env ? { env } : {}),
     });
+    child.on("error", (error) => {
+      process.stderr.write(`${error.message}\n`);
+      resolve(1);
+    });
     child.on("exit", (code) => resolve(code ?? 1));
   });
 }
@@ -142,5 +146,19 @@ export async function seedBuckets(conn: BucketsConnection): Promise<number> {
     );
     return 1;
   }
-  return supabase("seed", "buckets", "--project-ref", conn.projectRef);
+  // `seed buckets` (unlike `config push`) rejects a bare `--project-ref` as
+  // ambiguous with `--local` and demands `--linked` alongside it. That does
+  // NOT mean it needs an ambient `supabase link` state on disk — verified
+  // empirically in an unlinked checkout, `--project-ref` names the target
+  // directly and `--linked` is just the mode selector for "use that ref",
+  // not "use whatever `supabase link` last remembered". So this stays
+  // consistent with `resolveRemoteConnection`'s rule of never depending on
+  // `--linked`'s persisted state.
+  return supabase(
+    "seed",
+    "buckets",
+    "--project-ref",
+    conn.projectRef,
+    "--linked",
+  );
 }

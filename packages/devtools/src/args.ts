@@ -53,6 +53,7 @@ export const VALUE_FLAGS = new Set([
   "--text",
   "--version",
   "--app",
+  "--apps",
   "--base-url",
   "--env",
   "--file",
@@ -64,6 +65,10 @@ export const VALUE_FLAGS = new Set([
   "--params",
   "--port",
   "--preview-url",
+  "--db-url",
+  "--user",
+  "--filter",
+  "--shell",
 ]);
 
 export function positionals(argv: readonly string[]): string[] {
