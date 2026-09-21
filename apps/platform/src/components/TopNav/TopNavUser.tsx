@@ -1,4 +1,8 @@
-import { ACCOUNT_ITEMS, PROFILE_ITEMS, visibleConsoleItems } from "~/config/nav";
+import {
+  ACCOUNT_ITEMS,
+  PROFILE_ITEMS,
+  visibleConsoleItems,
+} from "~/config/nav";
 import MobileSheet from "./MobileSheet";
 import { NavUserHydrator } from "./NavUserProvider";
 import ProfilePopover from "./ProfilePopover";

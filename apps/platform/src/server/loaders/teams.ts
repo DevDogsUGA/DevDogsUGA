@@ -234,11 +234,12 @@ export const getPendingForUser = cache(
         teamName: teams.name,
         teamSlug: teams.slug,
         competitionSlug: competitions.slug,
-        // A competition is called after its project; it has no name of its
-        // own. `projectId` is nullable, so fall back to the workshop's title
-        // and then to the competition's slug, which is `not null` and already
-        // user-visible in git as the integration branch.
+        // The competition's own title first, then the old chain: it is called
+        // after its project, `projectId` is nullable, so fall back to the
+        // workshop's title and then to the competition's slug, which is
+        // `not null` and already user-visible in git as the integration branch.
         competitionName: sql<string>`coalesce(
+          ${competitions.title},
           ${projects.displayName},
           ${workshops.title},
           ${competitions.slug}

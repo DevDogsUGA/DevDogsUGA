@@ -13,6 +13,7 @@ import {
   type WorkshopFacts,
 } from "./refusals";
 import {
+  COMPETITION_TITLE_MAX_LENGTH,
   MEETING_CANCELLATION_REASON_MAX_LENGTH,
   PROJECT_NAME_MAX_LENGTH,
   MEETING_NAME_OVERRIDE_MAX_LENGTH,
@@ -1020,12 +1021,17 @@ describe("workshop values", () => {
 const maxTeamSizeParse = competitionsSpec.fields.maxTeamSize.parse;
 const requirementCountParse = competitionsSpec.fields.requirementCount.parse;
 
+const competitionTitleParse = competitionsSpec.fields.title.parse;
+
 function competitionValueFacts(raw: {
+  title?: string;
   maxTeamSize?: number;
   requirementCount?: number;
 }) {
   return {
     airtableRecordId: "recCompetition",
+    rawTitle: raw.title,
+    title: competitionTitleParse(raw.title),
     rawMaxTeamSize: raw.maxTeamSize,
     maxTeamSize: maxTeamSizeParse(raw.maxTeamSize),
     rawRequirementCount: raw.requirementCount,
@@ -1075,5 +1081,29 @@ describe("competition numbers", () => {
     expect(checkCompetitionValues(facts).refusals.map((r) => r.code)).toEqual([
       "competition_max_team_size_invalid",
     ]);
+  });
+
+  it("refuses a title longer than a heading and keeps the published one", () => {
+    // Over the cap the parser returns null, and the rule flags `title` so the
+    // caller deletes the key rather than blanking a heading mid-edit -- the
+    // same protection the workshop title has.
+    const long = "x".repeat(COMPETITION_TITLE_MAX_LENGTH + 1);
+    const facts = competitionValueFacts({ title: long });
+    const result = checkCompetitionValues(facts);
+
+    expect(result.refusals.map((r) => r.code)).toEqual([
+      "competition_title_too_long",
+    ]);
+    expect(result.rejectedFields.has("title")).toBe(true);
+    expect(facts.title).toBeNull();
+  });
+
+  it("accepts a title exactly at the limit", () => {
+    const facts = competitionValueFacts({
+      title: "x".repeat(COMPETITION_TITLE_MAX_LENGTH),
+    });
+
+    expect(checkCompetitionValues(facts).refusals).toEqual([]);
+    expect(facts.title).toHaveLength(COMPETITION_TITLE_MAX_LENGTH);
   });
 });

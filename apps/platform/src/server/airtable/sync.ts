@@ -722,6 +722,7 @@ export async function pullWorkshops(
 
 interface CompetitionValues {
   slug: string | null;
+  title: string | null;
   workshop: string | null;
   judgingStartsAt: string | null;
   requirementCount: number | null;
@@ -784,15 +785,16 @@ export async function pullCompetitions(
     const current = byRecordId.get(record.airtableRecordId);
 
     const raw = rawByRecordId.get(record.airtableRecordId) ?? {};
-    out.refusals.push(
-      ...checkCompetitionValues({
-        airtableRecordId: record.airtableRecordId,
-        rawMaxTeamSize: raw[competitionsSpec.fields.maxTeamSize.id],
-        maxTeamSize: v.maxTeamSize,
-        rawRequirementCount: raw[competitionsSpec.fields.requirementCount.id],
-        requirementCount: v.requirementCount,
-      }).refusals,
-    );
+    const valueRules = checkCompetitionValues({
+      airtableRecordId: record.airtableRecordId,
+      rawTitle: raw[competitionsSpec.fields.title.id],
+      title: v.title,
+      rawMaxTeamSize: raw[competitionsSpec.fields.maxTeamSize.id],
+      maxTeamSize: v.maxTeamSize,
+      rawRequirementCount: raw[competitionsSpec.fields.requirementCount.id],
+      requirementCount: v.requirementCount,
+    });
+    out.refusals.push(...valueRules.refusals);
 
     if (current) {
       const rules = checkCompetition(
@@ -811,7 +813,14 @@ export async function pullCompetitions(
       const values: Record<string, unknown> = {
         countsTowardProgress: v.countsTowardProgress,
         elEligible: v.elEligible,
+        // Null MEANS cleared here and reverts the heading to the workshop's
+        // title, exactly as the workshop title reverts to the project's. The
+        // one null that must not be written is an over-length title the parser
+        // refused, which `checkCompetitionValues` flags so the deleted key
+        // below preserves whatever is published.
+        title: v.title,
       };
+      if (valueRules.rejectedFields.has("title")) delete values.title;
       if (v.slug !== null) values.slug = v.slug;
       if (v.maxTeamSize !== null) values.maxTeamSize = v.maxTeamSize;
       if (
@@ -873,6 +882,10 @@ export async function pullCompetitions(
           .values({
             slug,
             workshopId,
+            // Omitted when the parser refused it, for the reason the workshop
+            // insert omits its own: writing a value the check constraint
+            // rejects would throw, and the refusal already said why.
+            title: valueRules.rejectedFields.has("title") ? null : v.title,
             judgingStartsAt,
             requirementCount: v.requirementCount,
             maxTeamSize: v.maxTeamSize,

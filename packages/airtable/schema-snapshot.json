@@ -189,6 +189,11 @@
           "type": "number"
         },
         {
+          "id": "fldoDOJ4BLN85UK8g",
+          "name": "Title",
+          "type": "singleLineText"
+        },
+        {
           "id": "fldu9sZHLPg0TTGpX",
           "name": "Workshop",
           "type": "multipleRecordLinks"

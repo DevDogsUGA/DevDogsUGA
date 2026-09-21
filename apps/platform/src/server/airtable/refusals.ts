@@ -1,6 +1,7 @@
 import {
   MEETING_CANCELLATION_REASON_MAX_LENGTH,
   PROJECT_NAME_MAX_LENGTH,
+  COMPETITION_TITLE_MAX_LENGTH,
   MEETING_NAME_OVERRIDE_MAX_LENGTH,
   MEETING_SUMMARY_MAX_LENGTH,
   normalizeMeetingSummary,
@@ -149,6 +150,7 @@ export type RefusalCode =
   | "workshop_project_unknown"
   | "competition_max_team_size_invalid"
   | "competition_requirement_count_invalid"
+  | "competition_title_too_long"
   | "requirement_count_after_finalize"
   | "judging_before_workshop"
   | "judging_moved_after_freeze"
@@ -739,6 +741,10 @@ export interface CompetitionIncoming {
 
 export interface CompetitionValueFacts {
   airtableRecordId: string;
+  /** Exactly what Airtable returned for `Title`, unparsed. */
+  rawTitle: AirtableValue;
+  /** What the registry parser made of it. Null past the length cap. */
+  title: string | null;
   /** Exactly what Airtable returned for `Max team size`, unparsed. */
   rawMaxTeamSize: AirtableValue;
   /** What the registry parser made of it. Null if it refused the value. */
@@ -759,14 +765,32 @@ export interface CompetitionValueFacts {
  * saying so. Otherwise the number never applies and the officer has no way to
  * find out which of their edits did not take.
  *
- * Unlike the meeting rules, a rejected value here is never written as null:
- * the caller already omits a null number from the update rather than
- * clearing the column, so nothing needs adding to `rejectedFields`.
+ * The two numbers are never written as null: the caller already omits a null
+ * number from the update rather than clearing the column, so nothing needs
+ * adding to `rejectedFields` for them. The title is the exception, and works
+ * like the workshop title — an over-length one adds itself to `rejectedFields`
+ * so the caller keeps the published title rather than erasing it, exactly the
+ * way one extra character must not blank a heading mid-edit.
  */
 export function checkCompetitionValues(
   facts: CompetitionValueFacts,
 ): RuleResult {
   const result = empty();
+
+  const titleText = normalizeMeetingSummary(facts.rawTitle);
+  if (titleText !== null && facts.title === null) {
+    result.rejectedFields.add("title");
+    result.refusals.push({
+      table: "competitions",
+      airtableRecordId: facts.airtableRecordId,
+      code: "competition_title_too_long",
+      message:
+        `Title is ${titleText.length} characters; a competition heading fits ` +
+        `about ${COMPETITION_TITLE_MAX_LENGTH}. It has not been published — ` +
+        "shorten it and it will appear within fifteen minutes. The previous " +
+        "title is still on the site until then.",
+    });
+  }
 
   if (facts.rawMaxTeamSize !== undefined && facts.maxTeamSize === null) {
     result.refusals.push({
