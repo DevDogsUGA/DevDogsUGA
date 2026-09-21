@@ -7,6 +7,7 @@ This guide covers everything from the DevDogs x GDGC Flutter workshop. Follow th
 Flutter is Google's open source, widget based UI toolkit for building apps for mobile, web, desktop, and embedded devices from a single codebase. It uses Dart as its programming language, which is syntactically similar to Java.
 
 This project uses:
+
 - Frontend: Flutter (Dart)
 - Backend: Supabase
 
@@ -78,14 +79,14 @@ Once `flutter doctor` looks good, create a demo project.
 
 Widgets are the building blocks of every Flutter app. Here are a few essentials.
 
-| Widget | Purpose |
-|---|---|
-| `Scaffold` | The base structure for every page you build |
-| `Text` | Displays text on screen |
-| `Button` (e.g. `ElevatedButton`) | Handles taps and user actions |
-| `Row` | Arranges widgets horizontally |
-| `Column` | Arranges widgets vertically |
-| `Card` | Builds clean, elevated layers on screen |
+| Widget                           | Purpose                                     |
+| -------------------------------- | ------------------------------------------- |
+| `Scaffold`                       | The base structure for every page you build |
+| `Text`                           | Displays text on screen                     |
+| `Button` (e.g. `ElevatedButton`) | Handles taps and user actions               |
+| `Row`                            | Arranges widgets horizontally               |
+| `Column`                         | Arranges widgets vertically                 |
+| `Card`                           | Builds clean, elevated layers on screen     |
 
 Try building a simple screen using `Scaffold`, `Column`, `Text`, and `Card` to get comfortable with how widgets nest inside each other.
 
