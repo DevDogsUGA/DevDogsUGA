@@ -201,6 +201,13 @@ export const COMPETITION_ITEMS: NavItem[] = [
 /** Signed-in-only pages listed at the top level of the profile popover. */
 export const ACCOUNT_ITEMS: NavItem[] = [
   {
+    label: "Attendance",
+    href: "/attendance",
+    icon: "StarIcon",
+    description:
+      "Check in with the meeting code and track your participation passport.",
+  },
+  {
     label: "Account",
     href: "/account",
     icon: "UserIcon",
