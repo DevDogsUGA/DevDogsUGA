@@ -33,7 +33,7 @@ export async function recordMemberAttendance(
           for share`,
     );
     const meeting = meetingRows[0];
-    if (!meeting || meeting.cancelledAt !== null) {
+    if (meeting?.cancelledAt !== null) {
       return { status: "invalid_meeting" };
     }
     // The passport view derives stars only from meetings that count toward
