@@ -403,6 +403,7 @@ export type Database = {
           requirementCount: number | null;
           seasonId: string | null;
           slug: string;
+          title: string | null;
           workshopId: string;
         };
         Insert: {
@@ -417,6 +418,7 @@ export type Database = {
           requirementCount?: number | null;
           seasonId?: string | null;
           slug: string;
+          title?: string | null;
           workshopId: string;
         };
         Update: {
@@ -431,6 +433,7 @@ export type Database = {
           requirementCount?: number | null;
           seasonId?: string | null;
           slug?: string;
+          title?: string | null;
           workshopId?: string;
         };
         Relationships: [
