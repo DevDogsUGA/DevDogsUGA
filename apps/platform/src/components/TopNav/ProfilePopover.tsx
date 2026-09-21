@@ -42,8 +42,6 @@ interface Props {
   user: NavUserClientData;
   /** The viewer's own pages, listed flat under the sub-menus. */
   items: NavItem[];
-  /** Competition pages are withheld while that feature is hidden in production. */
-  showCompetitions: boolean;
   /** Console pages this viewer may see. Already filtered server-side. */
   consoleItems: ConsoleItem[];
 }
@@ -73,12 +71,7 @@ const CLOSE_DELAY = 150;
  * that owns it is its triggers, its panel and the gap between them, and leaving
  * that region starts a timer long enough to cross the gap and no longer.
  */
-export default function ProfilePopover({
-  user,
-  items,
-  showCompetitions,
-  consoleItems,
-}: Props) {
+export default function ProfilePopover({ user, items, consoleItems }: Props) {
   const verification = useVerification();
   const shell = useNavShell();
   const panelRef = useNavPanelRef();
@@ -225,9 +218,7 @@ export default function ProfilePopover({
                   onPointerEnter={keepOpen}
                   onPointerLeave={closeSoon}
                 >
-                  {showCompetitions && (
-                    <NavSubMenu {...COMPETITION_GROUP} panelRef={subPanelRef} />
-                  )}
+                  <NavSubMenu {...COMPETITION_GROUP} panelRef={subPanelRef} />
                   <NavSubMenu
                     {...CONSOLE_GROUP}
                     items={consoleItems}
@@ -235,9 +226,7 @@ export default function ProfilePopover({
                   />
                 </NavigationMenu.List>
 
-                {(showCompetitions || consoleItems.length > 0) && (
-                  <div className={POPOVER_DIVIDER} />
-                )}
+                <div className={POPOVER_DIVIDER} />
 
                 {items.map((item) => {
                   const Icon = icons[item.icon];
