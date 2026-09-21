@@ -92,16 +92,12 @@ export async function GET(request: NextRequest) {
       await discord.linkProfile(
         session.provider_token,
         devDogsSession.profile.preferredName,
-        devDogsSession.id,
       );
     } catch (cause) {
+      // Supabase has already linked the identity by this point; the guild-join
+      // is a best-effort side effect, so a failure here is logged but never
+      // surfaced to the user as a failed link.
       logSideEffectFailure("discord", "link", cause);
-      redirectWithAccountStatus(
-        callbackPath,
-        "warning",
-        "external_side_effect_failed",
-        "discord",
-      );
     }
     redirect(callbackPath);
   }

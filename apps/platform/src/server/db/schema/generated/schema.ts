@@ -220,6 +220,7 @@ check("ballots_electorate_matches_teamId", sql`(((electorate = 'teams'::platform
 export const competitionsInPlatform = platform.table.withRLS("competitions", {
 	id: uuid().defaultRandom().primaryKey(),
 	slug: text().notNull(),
+	title: text(),
 	workshopId: uuid().notNull().references(() => workshopsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	judgingMeetingId: uuid().references(() => meetingsInPlatform.id, { onDelete: "set null", onUpdate: "cascade" } ),
 	judgingStartsAt: timestamp({ withTimezone: true }),
@@ -240,7 +241,7 @@ export const competitionsInPlatform = platform.table.withRLS("competitions", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-check("competitions_maxTeamSize_positive", sql`(("maxTeamSize" IS NULL) OR ("maxTeamSize" > 0))`),check("competitions_requirementCount_nonneg", sql`(("requirementCount" IS NULL) OR ("requirementCount" >= 0))`),]);
+check("competitions_maxTeamSize_positive", sql`(("maxTeamSize" IS NULL) OR ("maxTeamSize" > 0))`),check("competitions_requirementCount_nonneg", sql`(("requirementCount" IS NULL) OR ("requirementCount" >= 0))`),check("competitions_title_length", sql`(("title" IS NULL) OR (char_length("title") <= 80))`),]);
 
 export const competitionStandingsInPlatform = platform.table.withRLS("competitionStandings", {
 	competitionId: uuid().notNull().references(() => competitionsInPlatform.id, { onDelete: "cascade" } ),

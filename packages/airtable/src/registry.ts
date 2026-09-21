@@ -221,6 +221,9 @@ export const WORKSHOP_TITLE_MAX_LENGTH = 80;
 /** Matches `workshops_description_length`. Two sentences in the dialog. */
 export const WORKSHOP_DESCRIPTION_MAX_LENGTH = 280;
 
+/** Matches `competitions_title_length`. A page heading, so short by design. */
+export const COMPETITION_TITLE_MAX_LENGTH = 80;
+
 /**
  * Trims and collapses a summary, or null when the officer has written nothing.
  *
@@ -708,6 +711,16 @@ export const competitions = table("Competitions", "tbltrW1Xum127cNwy", {
   slug: field
     .text("flduPP0rsaJ7Sjl1J", "Branch slug")
     .pull((v) => (typeof v === "string" ? v : null)),
+  // What the officers call this competition on its own pages, in their own
+  // words. A competition has no name in the schema otherwise: it borrows the
+  // opening workshop's title, which in turn borrows the project's. This is the
+  // officers naming the week directly. Null falls back to that same chain, so a
+  // competition authored before this field keeps rendering exactly as it did.
+  title: field.text("fldoDOJ4BLN85UK8g", "Title").pull((v) => {
+    const text = normalizeMeetingSummary(v);
+    if (text === null) return null;
+    return text.length > COMPETITION_TITLE_MAX_LENGTH ? null : text;
+  }),
   workshop: field
     .link("fldu9sZHLPg0TTGpX", "Workshop", "workshops")
     .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),

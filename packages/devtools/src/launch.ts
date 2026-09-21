@@ -31,7 +31,7 @@
  * already been made, and `resolveTier` (see `tier.ts`) falls back to reading
  * it off `process.env.DEPLOY_ENV` rather than asking again.
  */
-import { select } from "@clack/prompts";
+import { confirm, select } from "@clack/prompts";
 import type { DeployEnvironment } from "@devdogsuga/env";
 import {
   LocalStackOfflineError,
@@ -218,12 +218,54 @@ export async function launch(argv: readonly string[]): Promise<void> {
   } catch (err) {
     if (err instanceof LocalStackOfflineError) {
       // The session explicitly means the local database and the stack is not
-      // reachable. `db` (whose `start` is the fix, and whose data commands
-      // re-check the connection themselves) and the bare menu (the road to
-      // `db start`) may continue in a degraded, unqualified entry; anything
-      // else stops here, with the error's own troubleshooting, instead of
-      // failing later against whatever `.env` happens to name.
+      // reachable.
       process.stderr.write(`devtools: ${err.message}\n`);
+
+      // Rather than making the contributor stop, run `db start`, and re-run
+      // whatever they meant, offer to bring the stack up right here and then
+      // carry on with their original command. Only on a TTY (there is no one
+      // to answer otherwise), and not when the command is ITSELF a stack
+      // lifecycle command — `db start`/`stop`/`restart` do this on their own,
+      // and `db stop` against an already-down stack must not be interrupted by
+      // an offer to start it. The bare top menu is likewise left to its own
+      // Database → start entry.
+      const lifecycle =
+        rest[0] === "db" &&
+        (rest[1] === "start" || rest[1] === "stop" || rest[1] === "restart");
+      if (process.stdin.isTTY === true && rest.length !== 0 && !lifecycle) {
+        const start = unwrap(
+          await confirm({
+            message: "Start the local Supabase stack now?",
+          }),
+        );
+        if (start) {
+          // Keep the session's local qualifier set so the env refresh that
+          // `runStackCommand("start")` performs on success re-applies the
+          // overlay under it, and the command we dispatch next resolves the
+          // freshly-started local database.
+          if (devDatabase !== undefined) process.env.DEV_DB = devDatabase;
+          const { runStackCommand } = await import("./stack.js");
+          const { code, lines } = await runStackCommand("start", null);
+          for (const line of lines) {
+            process.stderr.write(`devtools: ${line}\n`);
+          }
+          if (code === 0) {
+            await dispatch(rest);
+            return;
+          }
+          process.stderr.write(
+            "devtools: the stack did not start — see the Supabase CLI output " +
+              "above.\n",
+          );
+          process.exit(1);
+        }
+      }
+
+      // Declined, or nobody to ask. `db` (whose `start` is the fix, and whose
+      // data commands re-check the connection themselves) and the bare menu
+      // (the road to `db start`) may continue in a degraded, unqualified
+      // entry; anything else stops here, with the error's own troubleshooting,
+      // instead of failing later against whatever `.env` happens to name.
       if (rest.length !== 0 && rest[0] !== "db") process.exit(1);
       process.stderr.write(
         "devtools: continuing without the overlay so `db start` can fix this.\n",

@@ -1,5 +1,6 @@
 import { createDb } from "@devdogsuga/drizzle";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { after } from "next/server";
 import { env } from "~/env";
 import { createScheduleBuilderDb, type ScheduleBuilderDb } from "./create";
 import { relations } from "./relations";
@@ -61,8 +62,38 @@ function currentDb(): ScheduleBuilderDb {
       5,
     );
     requestDatabases.set(context, database);
+    closeAfterResponse(database);
   }
   return database;
+}
+
+/**
+ * Close the request's postgres.js pool once the response has been sent.
+ *
+ * A pool cannot be reused across invocations -- workerd forbids using one
+ * request's socket in another -- so a fresh client is minted per request. Left
+ * unclosed, each abandoned pool (its sockets, buffers and lifetime timers)
+ * lingers on the isolate heap until GC, and under sustained traffic the isolate
+ * climbs past its 128 MB ceiling and is killed mid-request ("Worker exceeded
+ * memory limit"). `after` runs the close once the response has streamed, when
+ * every query has settled, and fires even on `redirect`/`notFound`/errors; on
+ * Cloudflare it is backed by `ctx.waitUntil`. This is the pattern Cloudflare
+ * documents for Hyperdrive + postgres.js.
+ */
+function closeAfterResponse(database: ScheduleBuilderDb): void {
+  try {
+    after(async () => {
+      try {
+        await database.$client.end({ timeout: 5 });
+      } catch {
+        // A pool that never opened a socket, or already closed, is fine.
+      }
+    });
+  } catch {
+    // `after` throws outside a request scope. The context checks in currentDb
+    // should prevent that; if it slips through, leave the pool to GC rather
+    // than fail the query that needed it.
+  }
 }
 
 /**

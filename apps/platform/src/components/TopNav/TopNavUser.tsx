@@ -1,6 +1,5 @@
 import {
   ACCOUNT_ITEMS,
-  COMPETITION_ITEMS,
   PROFILE_ITEMS,
   visibleConsoleItems,
 } from "~/config/nav";
@@ -17,7 +16,6 @@ import { getNavUser } from "./data";
  */
 export async function TopNavProfile() {
   const user = await getNavUser();
-  const showCompetitions = process.env.DEPLOY_ENV !== "production";
 
   // These land inside the navbar's right-hand cluster, which is already one
   // <li>, so they render plainly. The hydrator renders nothing at all.
@@ -35,7 +33,6 @@ export async function TopNavProfile() {
       <ProfilePopover
         user={{ profile: user.profile, highestRole: user.highestRole }}
         items={ACCOUNT_ITEMS}
-        showCompetitions={showCompetitions}
         consoleItems={visibleConsoleItems(
           user.permissions,
           user.credentialsAccess,
@@ -51,10 +48,6 @@ export async function TopNavProfile() {
 
 export async function TopNavMobile() {
   const user = await getNavUser();
-  const profileItems =
-    process.env.DEPLOY_ENV === "production"
-      ? PROFILE_ITEMS.filter((item) => !COMPETITION_ITEMS.includes(item))
-      : PROFILE_ITEMS;
 
   return (
     <MobileSheet
@@ -63,7 +56,7 @@ export async function TopNavMobile() {
           ? visibleConsoleItems(user.permissions, user.credentialsAccess)
           : []
       }
-      profileItems={profileItems}
+      profileItems={PROFILE_ITEMS}
       signedIn={user !== null}
     />
   );

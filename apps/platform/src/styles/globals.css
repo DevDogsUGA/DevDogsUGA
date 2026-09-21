@@ -5,6 +5,8 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+/* Matches the element that called requestFullscreen() and everything inside it. */
+@custom-variant fullscreen (&:is(:fullscreen, :fullscreen *));
 @plugin "@tailwindcss/typography";
 
 /* Opt-in only. The default strategy also emits a base layer that restyles every
@@ -296,6 +298,19 @@
 
   to {
     translate: 300% 0;
+  }
+}
+
+/* The attendance display's rotation countdown. One animation spans the whole
+   30s code window (a negative animation-delay skips the part that already
+   elapsed), so the bar drains continuously instead of stepping on a JS tick. */
+@keyframes attendance-drain {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
   }
 }
 

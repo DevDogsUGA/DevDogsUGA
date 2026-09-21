@@ -66,7 +66,7 @@ export default function OAuthGateDialog({
     >
       <DialogPortal container={container}>
         <div
-          className="absolute inset-0 z-50 bg-mauve-950/65 backdrop-blur-sm"
+          className="absolute inset-0 z-40 bg-mauve-950/65 backdrop-blur-sm"
           style={{
             maskImage:
               "linear-gradient(to bottom, transparent, transparent 5rem, black 12rem)",

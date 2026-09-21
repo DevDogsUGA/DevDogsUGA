@@ -763,12 +763,14 @@ export const getCompetitionBySlug = cache(
       .select({
         id: competitions.id,
         slug: competitions.slug,
-        // A competition is called after its project, but `projectId` is
-        // nullable now, so the fallbacks matter. The workshop's own title is
-        // the next best name, and the competition's slug is the last resort:
-        // it is `not null`, unique, and already user-visible in git as the
-        // integration branch, so it is a real name rather than invented text.
+        // The competition's own title wins when the officers have written one.
+        // Below it the old chain still stands: a competition is called after
+        // its project, but `projectId` is nullable now, so the workshop's own
+        // title is the next best name, and the competition's slug is the last
+        // resort -- it is `not null`, unique, and already user-visible in git as
+        // the integration branch, so it is a real name rather than invented text.
         name: sql<string>`coalesce(
+          ${competitions.title},
           ${projects.displayName},
           ${workshops.title},
           ${competitions.slug}

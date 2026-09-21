@@ -8,8 +8,14 @@ import postgres from "postgres";
  * `prepare: false` keeps the application clients compatible with both
  * Supabase poolers and Hyperdrive without relying on server-side prepared
  * statement state. Drizzle Kit uses its own direct connection configuration.
+ *
+ * `idle_timeout` lets postgres.js reap an idle socket on its own. The request
+ * clients are closed explicitly once their response is sent (see each app's
+ * `server/db`), so this is a backstop: it caps how long a pool that outlives
+ * its close -- or the long-lived dev/cached client between edits -- keeps a
+ * connection open, rather than holding one for the isolate's lifetime.
  */
-const CONNECTION_OPTIONS = { prepare: false } as const;
+const CONNECTION_OPTIONS = { prepare: false, idle_timeout: 20 } as const;
 
 /**
  * Connections are cached on `globalThis` so Next's dev-server module reloads

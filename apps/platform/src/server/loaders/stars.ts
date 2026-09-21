@@ -35,6 +35,7 @@ export const getStarsForUser = cache(
             'Meeting'
           )
           else coalesce(
+            (select c.title from platform.competitions c where c.id = ${memberStars.competitionId}),
             (
               select w.title
               from platform.competitions c
