@@ -34,10 +34,15 @@ import { Command } from "commander";
 import { UnknownEnvironmentError } from "./targets.js";
 import {
   applyWranglerLocalDatabaseAlias,
+  loadEnvironment,
+  LocalStackOfflineError,
   MissingEnvFileError,
-  probeLocalStack,
-  selectEnvFiles,
 } from "./load.js";
+import {
+  availableTiers,
+  resolveSessionTier,
+  SESSION_SELECTORS,
+} from "./session.js";
 
 // ALMOST NOTHING ELSE IS IMPORTED AT THE TOP LEVEL, deliberately.
 //
@@ -59,6 +64,12 @@ import {
 // the parsing declarative. Anything heavier gets lazy-imported: a top-level
 // import added here for tidiness costs every script in the repository on
 // every run.
+//
+// `./session.js` joins that top-level group for the same reason: it imports
+// only `./targets.js` and `./load.js`, both already paid for above, and
+// defers `node:fs`/`node:path` inside `availableTiers()` exactly like this
+// file's own `findRoot()` does. It adds no new heavy dependency to the
+// common path.
 
 // Walk up for the workspace marker rather than assuming a fixed depth, so the
 // helper keeps working if this package is ever moved.
@@ -74,7 +85,26 @@ function findRoot(from: string): string {
   }
 }
 
-const root = findRoot(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
+// `WITH_ENV_ROOT_FOR_TESTS` is exactly what its name says: `cli.test.ts`
+// spawns this real script as a subprocess, and the root walk above would
+// otherwise land on the REAL repo root — whose set of `.env*` tier files is
+// per-machine state (a contributor who has run `env pull` has three, CI has
+// none), so every tier-resolution assertion would pass or fail on whichever
+// machine ran it. The override points the subprocess at a synthetic root of
+// known fixtures instead. It is announced on stderr on every use, so it can
+// never quietly redirect a real invocation: an env-loading tool silently
+// reading files from somewhere other than the repo root is exactly the lie
+// this package exists to prevent.
+const rootOverride = process.env.WITH_ENV_ROOT_FOR_TESTS;
+if (rootOverride !== undefined && rootOverride !== "") {
+  console.error(
+    `with-env: root overridden by WITH_ENV_ROOT_FOR_TESTS=${rootOverride} (tests only)`,
+  );
+}
+const root =
+  rootOverride !== undefined && rootOverride !== ""
+    ? rootOverride
+    : findRoot(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
 
 // `.enablePositionalOptions()` + `.passThroughOptions()` are what make
 // commander safe here: the first positional ends option parsing, so in
@@ -93,6 +123,11 @@ const program = new Command("with-env")
   .enablePositionalOptions()
   .passThroughOptions()
   .option("-c <script>", "run a shell script string with the env loaded")
+  .option(
+    "--tier <tier>",
+    `environment to load (${SESSION_SELECTORS.join(", ")}, ` +
+      "or bare development); overrides DEPLOY_ENV",
+  )
   .argument("[command...]", "command to run with the env loaded")
   .configureOutput({
     // Re-prefix commander's `error:` lines so a rejected flag (e.g. the
@@ -102,7 +137,7 @@ const program = new Command("with-env")
   });
 
 program.parse();
-const opts = program.opts<{ c?: string }>();
+const opts = program.opts<{ c?: string; tier?: string }>();
 const args = program.args;
 
 const usage =
@@ -122,25 +157,79 @@ if (!shellMode && args.length === 0) {
 // Running as a bin, the cwd is already the package whose script invoked us.
 const cwd = process.cwd();
 
-// Decide which files to load. Selection is separated from loading (load.ts)
-// and always happens in-process, even on Windows where the *loading* is
-// delegated below. The warnings and the loaded-files line are ours either way.
+// Which tier to run under: `--tier` wins outright, then a non-empty
+// `DEPLOY_ENV`, then (an ordinary contributor's machine, at most one tier
+// file present) the sole tier — the ONE policy in `session.ts`, shared with
+// the devtools launcher.
+//
+// ⚠️ NO `prompt` IS PASSED, EVER. `with-env` fronts turbo-parallel tasks and
+// dev servers, none of which has anyone at a keyboard to answer a picker —
+// `isTTY: false` plus an absent `prompt` means two-or-more tier files
+// present with neither `--tier` nor `DEPLOY_ENV` set is ALWAYS an explicit
+// refusal here, never a silent guess or a hang waiting on stdin.
+//
+// This is also what keeps `pnpm devtools` itself working: its launcher sets
+// `DEPLOY_ENV` on every child task before spawning it, so each child
+// resolves by `deployEnv` (case (b) in `resolveSessionTier`) and never
+// reaches the ambiguity refusal above, even on a machine that has pulled
+// down every tier's file.
+//
+// ⚠️ `remoteCandidate` IS DELIBERATELY NOT SUPPLIED, and that is a policy
+// choice, not an omission: bare development under `with-env` keeps the
+// probe deciding the overlay exactly as it always has, even on a machine
+// whose `.env` names a remote database. Refusing there would break every
+// wrapped dev-server and turbo task on such a machine overnight. The
+// devtools launcher — the interactive front door, and the home of the
+// destructive db commands — is where that ambiguity gets asked about; its
+// answer reaches this wrapper as `DEV_DB` (resolved below) or an explicit
+// `--tier development:<local|remote>`.
+const tierExists = (relPath: string) => existsSync(join(root, relPath));
+const resolution = await resolveSessionTier({
+  explicit: opts.tier,
+  deployEnv: process.env.DEPLOY_ENV,
+  devDb: process.env.DEV_DB,
+  available: await availableTiers(root, tierExists),
+  isTTY: false,
+});
+if (!resolution.ok) {
+  console.error(`with-env: ${resolution.reason}`);
+  process.exit(1);
+}
+
+// Decide which files to load, and load them, in one call — selection is
+// still separated from loading inside load.ts, but `with-env` no longer
+// needs to see the seam. This always happens in-process, even on Windows
+// where the *spawn* below still delegates. `root` was already resolved
+// above (needed regardless, for the Windows -f paths further down), so it is
+// passed through here rather than having loadEnvironment re-walk for
+// pnpm-workspace.yaml a second time. The warnings and the loaded-files line
+// are ours either way.
+// The mandatory stderr line names the QUALIFIED session when one was
+// resolved (`development:local`), because "which database a command just
+// touched must never be a guess" is the whole reason the line exists.
+const sessionLabel =
+  resolution.devDatabase === undefined
+    ? resolution.tier
+    : `${resolution.tier}:${resolution.devDatabase}`;
+
+let env: Record<string, string>;
 let envFiles: string[];
 try {
-  const selection = await selectEnvFiles({
-    deployEnv: process.env.DEPLOY_ENV,
-    exists: (file) => existsSync(join(root, file)),
-    probeLocalStack: () => probeLocalStack(),
-  });
-  for (const warning of selection.warnings) {
+  const loaded = await loadEnvironment(
+    resolution.tier,
+    { devDatabase: resolution.devDatabase },
+    { root },
+  );
+  for (const warning of loaded.warnings) {
     console.error(`with-env: ${warning}`);
   }
   // Required, never a guess: a running local container silently wins over the
   // hosted project, so every run says which files actually won.
   console.error(
-    `with-env: loaded ${selection.files.join(" + ")} (${selection.environment})`,
+    `with-env: loaded ${loaded.files.join(" + ")} (${sessionLabel})`,
   );
-  envFiles = selection.files;
+  envFiles = loaded.files;
+  env = loaded.env;
 } catch (err) {
   // A missing file is reported and survived, NOT refused.
   //
@@ -162,45 +251,40 @@ try {
   // typo pointing at the wrong database, and running "as development" because
   // `production` was misspelled is the silent lie this package exists to
   // prevent.
+  //
+  // That typo is now largely caught earlier: `resolveSessionTier` above
+  // already refuses an unrecognised `--tier` or `DEPLOY_ENV` before
+  // `loadEnvironment` is ever called. This branch is kept as a backstop
+  // regardless — `loadEnvironment` still resolves the tier itself and would
+  // throw exactly this for any future caller that reaches it having skipped
+  // resolution, and a backstop that silently rotted into dead code is worse
+  // than one extra branch.
   if (err instanceof MissingEnvFileError) {
     console.error(`with-env: ${err.message}`);
     console.error("with-env: continuing with no env file loaded.");
     envFiles = [];
+    // loadEnvironment threw before building anything. Rebuild the base
+    // snapshot and derive the Wrangler alias by hand, the same as its success
+    // path would have, so the Windows delegation and the alias still work
+    // with no env file loaded.
+    env = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (value !== undefined) env[key] = value;
+    }
+    applyWranglerLocalDatabaseAlias(env);
+  } else if (err instanceof LocalStackOfflineError) {
+    // NOT survivable the way a missing file is: this session explicitly
+    // asked for the local database (a flag, or an inherited `DEV_DB`), and
+    // continuing on `.env` alone is how a hosted DB_URL ends up behind a
+    // command that asked for the Docker stack.
+    console.error(`with-env: ${err.message}`);
+    process.exit(1);
   } else if (err instanceof UnknownEnvironmentError) {
     console.error(`with-env: ${err.message}`);
     process.exit(1);
   } else {
     throw err;
   }
-}
-
-// Both dotenvx and @yarnpkg/shell want a string-only map, so drop the unset
-// keys Node models as undefined.
-const env: Record<string, string> = {};
-for (const [key, value] of Object.entries(process.env)) {
-  if (value !== undefined) env[key] = value;
-}
-
-/**
- * Applies the env files to `env`, in process.
- *
- * dotenvx's Node API follows the same rules as its CLI, first file wins and
- * values already in the environment are left alone, so this and delegating to
- * the CLI produce the same environment.
- */
-async function loadEnv(): Promise<void> {
-  // Nothing selected means the file is absent and we said so above. Returning
-  // here rather than calling `config({ path: [] })` keeps dotenvx from falling
-  // back to its own default `.env` lookup and reporting the same absence a
-  // second time, in its own words.
-  if (envFiles.length === 0) return;
-
-  const { default: dx } = await import("@dotenvx/dotenvx");
-  dx.config({
-    path: envFiles.map((f) => join(root, f)),
-    processEnv: env,
-    quiet: true,
-  });
 }
 
 /**
@@ -229,8 +313,6 @@ function dotenvxCli(): string {
 // -c: evaluate the string with @yarnpkg/shell so $VAR resolves against the
 // loaded files rather than against whatever pnpm's shell had already expanded.
 if (shellMode && opts.c !== undefined) {
-  await loadEnv();
-  applyWranglerLocalDatabaseAlias(env);
   const [{ npath }, { execute }] = await Promise.all([
     import("@yarnpkg/fslib"),
     import("@yarnpkg/shell"),
@@ -262,11 +344,9 @@ if (shellMode && opts.c !== undefined) {
 // `shell: true` is not the fix: it would break on any path containing a space,
 // which on Windows is the ordinary case (`C:\Users\Firstname Lastname\...`).
 const windows = process.platform === "win32";
-// Load in-process on Windows too. dotenvx is still used there as the process
-// launcher for .cmd shims, but the loaded map lets us derive variables (such
-// as Wrangler's Hyperdrive alias) identically on every operating system.
-await loadEnv();
-applyWranglerLocalDatabaseAlias(env);
+// `env` was already loaded once, up front, on both platforms (see above).
+// dotenvx is used below only as the .cmd-safe process launcher on Windows,
+// not as a second loader.
 
 const child = spawn(
   windows ? process.execPath : args[0]!,

@@ -10,8 +10,7 @@
 
 -- Reconcile titles from the previous catalogue when this file is replayed by
 -- `pnpm devtools db seed roles`. Assignments follow the role row, so a rename
--- does not detach an officer. The retired backend role is intentionally removed
--- (and its assignments cascade) rather than lingering as an active role.
+-- does not detach an officer.
 with
   "renamedEvents" as (
     update "platform"."roles" set "title" = 'External Affairs Director'
@@ -32,10 +31,6 @@ with
   "renamedDogDays" as (
     update "platform"."roles" set "title" = 'DogDays Project Manager'
     where "title" = 'DogDays Project Director' returning "id"
-  ),
-  "removedBackendLead" as (
-    delete from "platform"."roles"
-    where "title" = 'Backend Integration Focus Lead' returning "id"
   )
 insert into "platform"."roles" (
   "id", "title", "description", "roleType", "rank",
@@ -135,6 +130,13 @@ values
     'Flutter Focus Lead',
     'Leads the Flutter focus area.',
     'custom', 1100, true, true,
+    null, null, null, null, null, null, null, null, null, true, null
+  ),
+  (
+    '00000000-0000-4000-8000-000000000012',
+    'Backend Integration Focus Lead',
+    'Leads the backend integration focus area.',
+    'custom', 1200, true, true,
     null, null, null, null, null, null, null, null, null, true, null
   )
 on conflict ("title") do update set

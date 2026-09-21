@@ -82,10 +82,10 @@ pnpm devtools db reset
 | Target                 | How                                                     |
 | ---------------------- | ------------------------------------------------------- |
 | your own stack         | `pnpm devtools db reset`                                |
-| the shared dev project | `pnpm devtools db migrate --target remote`, by hand     |
+| the shared dev project | `pnpm devtools --tier development:remote db migrate`    |
 | production             | `production-migrate` in `.github/workflows/deploy.yaml` |
 
-`pnpm devtools db migrate --target remote` runs `supabase db push` against the linked project — only the migrations its history table has not recorded — and then regenerates the `Database` types. Production is pushed by CI behind two dry runs: `main-plan` prints the plan on every merge to `main`, and `production-plan` recomputes it seconds before the real push, because the first goes stale as soon as another promotion lands.
+`pnpm devtools --tier development:remote db migrate` runs `supabase db push --db-url` against the session's database — only the migrations its history table has not recorded — and then regenerates the `Database` types. Production is pushed by CI behind two dry runs: `main-plan` prints the plan on every merge to `main`, and `production-plan` recomputes it seconds before the real push, because the first goes stale as soon as another promotion lands.
 
 Staging is **not** migrated by that workflow. `staging-preflight` only classifies the project as awake or paused, and `staging-deploy` builds and deploys the Workers.
 
@@ -99,9 +99,11 @@ Staging is **not** migrated by that workflow. `staging-preflight` only classifie
 commands — the shortest path when you do not already know the name.
 
 Database operations live under `pnpm devtools db`. Endpoint commands such as
-`status`, `migrate`, `reset`, and `types` take `--target local|remote`, while
-`start`, `stop`, and `restart` act on this machine's containers. Run
-`pnpm devtools db --help` for the full list, grouped by layer.
+`status`, `migrate`, `reset`, and `types` act on the session's database
+(`--tier development:local|development:remote|staging|production`, picked at
+launch), while `start`, `stop`, and `restart` act on this machine's
+containers. Run `pnpm devtools db --help` for the full list, grouped by
+layer.
 
 The package scripts worth knowing directly:
 

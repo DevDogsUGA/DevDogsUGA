@@ -52,8 +52,9 @@ const readFile = vi.hoisted(() =>
   vi.fn(async () => 'DISCORD_TOKEN="local"\nDB_URL="postgresql://local"\n'),
 );
 const writeFile = vi.hoisted(() => vi.fn(async () => undefined));
+const chmod = vi.hoisted(() => vi.fn(async () => undefined));
 
-vi.mock("node:fs/promises", () => ({ readFile, writeFile }));
+vi.mock("node:fs/promises", () => ({ readFile, writeFile, chmod }));
 
 // Prompts would hang on a non-interactive stdin. Every call below passes
 // `yes: true`, so none should be reached; `confirm` throwing makes a

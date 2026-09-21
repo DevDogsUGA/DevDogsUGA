@@ -1,6 +1,5 @@
-import { type Target } from "../stack.js";
-import { seedBuckets } from "./run.js";
+import { seedBuckets, type BucketsConnection } from "./run.js";
 
-export async function runSeedBuckets(target: Target): Promise<number> {
-  return seedBuckets(target.kind === "remote");
+export async function runSeedBuckets(conn: BucketsConnection): Promise<number> {
+  return seedBuckets(conn);
 }

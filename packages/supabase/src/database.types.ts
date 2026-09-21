@@ -2611,13 +2611,6 @@ export type Database = {
             referencedRelation: "courses";
             referencedColumns: ["id"];
           },
-          {
-            foreignKeyName: "courseDetails_courseId_courses_id_fkey";
-            columns: ["courseId"];
-            isOneToOne: false;
-            referencedRelation: "offeringSearch";
-            referencedColumns: ["courseId"];
-          },
         ];
       };
       courses: {
@@ -2733,6 +2726,7 @@ export type Database = {
       };
       meetings: {
         Row: {
+          academicPeriod: number;
           buildingId: number | null;
           endDate: string | null;
           endTime: string | null;
@@ -2751,6 +2745,7 @@ export type Database = {
           wednesday: boolean;
         };
         Insert: {
+          academicPeriod: number;
           buildingId?: number | null;
           endDate?: string | null;
           endTime?: string | null;
@@ -2769,6 +2764,7 @@ export type Database = {
           wednesday?: boolean;
         };
         Update: {
+          academicPeriod?: number;
           buildingId?: number | null;
           endDate?: string | null;
           endTime?: string | null;
@@ -2788,25 +2784,18 @@ export type Database = {
         };
         Relationships: [
           {
+            foreignKeyName: "meetings_academicPeriod_offeringCrn_fkey";
+            columns: ["academicPeriod", "offeringCrn"];
+            isOneToOne: false;
+            referencedRelation: "offerings";
+            referencedColumns: ["academicPeriod", "crn"];
+          },
+          {
             foreignKeyName: "meetings_buildingId_buildings_id_fkey";
             columns: ["buildingId"];
             isOneToOne: false;
             referencedRelation: "buildings";
             referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "meetings_offeringCrn_offerings_crn_fkey";
-            columns: ["offeringCrn"];
-            isOneToOne: false;
-            referencedRelation: "offerings";
-            referencedColumns: ["crn"];
-          },
-          {
-            foreignKeyName: "meetings_offeringCrn_offerings_crn_fkey";
-            columns: ["offeringCrn"];
-            isOneToOne: false;
-            referencedRelation: "offeringSearch";
-            referencedColumns: ["crn"];
           },
         ];
       };
@@ -2896,25 +2885,11 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "offerings_courseId_courses_id_fkey";
-            columns: ["courseId"];
-            isOneToOne: false;
-            referencedRelation: "offeringSearch";
-            referencedColumns: ["courseId"];
-          },
-          {
             foreignKeyName: "offerings_instructorId_instructors_id_fkey";
             columns: ["instructorId"];
             isOneToOne: false;
             referencedRelation: "instructors";
             referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "offerings_instructorId_instructors_id_fkey";
-            columns: ["instructorId"];
-            isOneToOne: false;
-            referencedRelation: "offeringSearch";
-            referencedColumns: ["instructorId"];
           },
           {
             foreignKeyName: "offerings_scheduleTypeId_scheduleTypes_id_fkey";
@@ -3057,13 +3032,6 @@ export type Database = {
             referencedRelation: "courses";
             referencedColumns: ["id"];
           },
-          {
-            foreignKeyName: "userPlanDraftCourses_courseId_courses_id_fkey";
-            columns: ["courseId"];
-            isOneToOne: false;
-            referencedRelation: "offeringSearch";
-            referencedColumns: ["courseId"];
-          },
         ];
       };
       userPlanDrafts: {
@@ -3156,39 +3124,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      offeringSearch: {
-        Row: {
-          abbr: string | null;
-          academicPeriod: number | null;
-          cancelled: boolean | null;
-          courseId: number | null;
-          courseNumber: string | null;
-          crn: number | null;
-          firstName: string | null;
-          instructorId: number | null;
-          lastName: string | null;
-          maxCreditHours: number | null;
-          search_vector: unknown;
-          seatsAvailable: number | null;
-          title: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "offerings_academicPeriod_terms_academicPeriod_fkey";
-            columns: ["academicPeriod"];
-            isOneToOne: false;
-            referencedRelation: "availableTerms";
-            referencedColumns: ["academicPeriod"];
-          },
-          {
-            foreignKeyName: "offerings_academicPeriod_terms_academicPeriod_fkey";
-            columns: ["academicPeriod"];
-            isOneToOne: false;
-            referencedRelation: "terms";
-            referencedColumns: ["academicPeriod"];
-          },
-        ];
-      };
     };
     Functions: {
       [_ in never]: never;
@@ -3215,6 +3150,7 @@ export type Database = {
           public: boolean | null;
           type: Database["storage"]["Enums"]["buckettype"];
           updated_at: string | null;
+          versioning_status: string;
         };
         Insert: {
           allowed_mime_types?: string[] | null;
@@ -3228,6 +3164,7 @@ export type Database = {
           public?: boolean | null;
           type?: Database["storage"]["Enums"]["buckettype"];
           updated_at?: string | null;
+          versioning_status?: string;
         };
         Update: {
           allowed_mime_types?: string[] | null;
@@ -3241,6 +3178,7 @@ export type Database = {
           public?: boolean | null;
           type?: Database["storage"]["Enums"]["buckettype"];
           updated_at?: string | null;
+          versioning_status?: string;
         };
         Relationships: [];
       };
@@ -3413,9 +3351,12 @@ export type Database = {
       };
       objects: {
         Row: {
+          archived_at: string | null;
           bucket_id: string | null;
           created_at: string | null;
           id: string;
+          is_delete_marker: boolean;
+          is_versioned: boolean;
           last_accessed_at: string | null;
           metadata: Json | null;
           name: string | null;
@@ -3427,9 +3368,12 @@ export type Database = {
           version: string | null;
         };
         Insert: {
+          archived_at?: string | null;
           bucket_id?: string | null;
           created_at?: string | null;
           id?: string;
+          is_delete_marker?: boolean;
+          is_versioned?: boolean;
           last_accessed_at?: string | null;
           metadata?: Json | null;
           name?: string | null;
@@ -3441,9 +3385,12 @@ export type Database = {
           version?: string | null;
         };
         Update: {
+          archived_at?: string | null;
           bucket_id?: string | null;
           created_at?: string | null;
           id?: string;
+          is_delete_marker?: boolean;
+          is_versioned?: boolean;
           last_accessed_at?: string | null;
           metadata?: Json | null;
           name?: string | null;

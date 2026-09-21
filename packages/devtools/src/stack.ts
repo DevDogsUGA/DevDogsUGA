@@ -1,9 +1,20 @@
 /**
- * Database commands, over local and remote targets.
+ * Database commands, over the session's database.
  *
- * Previously delegated to `@devdogsuga/supabase` package scripts by name.
- * Now inlined so that package's scripts can be deleted and the supabase CLI
- * is invoked directly through the shared helpers in `db/run.ts`.
+ * Previously delegated to `@devdogsuga/supabase` package scripts by name,
+ * then to a `--target local|remote` flag; now every data command acts on the
+ * ONE database the session entered (see `db/connection.ts`), passed to the
+ * supabase CLI as an explicit `--db-url`. That uniformity is load-bearing:
+ * the CLI's own defaults disagree per subcommand (`db push` defaults to the
+ * LINKED project, `db reset` to `--local`), and `--db-url` is the one
+ * spelling that can neither fall back to `supabase link`'s ambient state
+ * nor quietly pick a different database than the session says.
+ *
+ * The stack-lifecycle commands (`start`/`stop`/`restart`) are the deliberate
+ * exception: they act on this machine's Docker containers, which no DB_URL
+ * names, and they run under any session — starting your local stack while
+ * the session targets staging is odd but harmless, and refusing it would
+ * block the one command that fixes an offline-local session.
  */
 import { rmSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
@@ -15,18 +26,21 @@ import {
 } from "./environment.js";
 import {
   generateTypes,
-  run,
   seedBuckets,
   supabase,
   supabaseCapture,
 } from "./db/run.js";
-
-export type Target = { kind: "local" } | { kind: "remote" };
+import {
+  describeDbTarget,
+  isLocalConnection,
+  type DbConnection,
+} from "./db/connection.js";
+import { refreshSessionEnv } from "./db/session-refresh.js";
 
 // Scope order, matching `db`'s subcommands in `commands.ts`: the four that
-// act on the Supabase stack (`connect` is handled separately below — it takes
-// a positional ref, not a `Target`), then the four that act on the Postgres
-// database inside it.
+// act on the Supabase stack (`connect` is handled separately below — it
+// takes a positional ref), then the two that write the Postgres database
+// inside the session's endpoint.
 export const STACK_COMMANDS = [
   "start",
   "stop",
@@ -50,7 +64,7 @@ async function startLocalStack(): Promise<number> {
     return 1;
   }
   await writeFile(join(PROJECT_ROOT, ".env.generated"), env);
-  return seedBuckets(false);
+  return seedBuckets({ kind: "local" });
 }
 
 async function stopLocalStack(): Promise<number> {
@@ -61,14 +75,10 @@ async function stopLocalStack(): Promise<number> {
 }
 
 /**
- * `db connect [<project-ref>]` — register a hosted project as the remote
- * target.
- *
- * Takes a ref directly (the wizard's positional, or a scripted caller's
- * argument) rather than a `Target`: there is no "local" or "remote" to choose
- * between here, only which hosted project `--target remote` should mean from
- * now on. Falls back to `PROJECT_REF` in the environment when no ref is
- * given, matching what the old `link --target remote` path did.
+ * `db connect [<project-ref>]` — run `supabase link` for whoever drives the
+ * bare supabase CLI by hand. Nothing in devtools reads what it writes any
+ * more (see `db/connection.ts`'s header); it survives as a convenience, not
+ * a dependency.
  */
 export async function connectRemoteProject(ref?: string): Promise<number> {
   const projectRef = ref ?? process.env.PROJECT_REF;
@@ -82,26 +92,47 @@ export async function connectRemoteProject(ref?: string): Promise<number> {
   return supabase("link", "--project-ref", projectRef);
 }
 
-async function pushMigrations(linked: boolean): Promise<number> {
-  const code = await supabase("db", "push", ...(linked ? ["--linked"] : []));
-  if (code !== 0) return code;
-  return generateTypes(linked);
+/** The `seed buckets` shape this connection implies — `--db-url` does not
+ * exist for that subcommand, so it is the one data command still keyed on
+ * local-vs-hosted rather than on the URL itself. */
+function bucketsShape(
+  connection: DbConnection,
+): Parameters<typeof seedBuckets>[0] {
+  return isLocalConnection(connection)
+    ? { kind: "local" }
+    : { kind: "remote", projectRef: connection.projectRef };
 }
 
-async function resetLocal(): Promise<number> {
-  const code = await supabase("db", "reset");
+async function pushMigrations(connection: DbConnection): Promise<number> {
+  const code = await supabase("db", "push", "--db-url", connection.dbUrl);
   if (code !== 0) return code;
-  const types = await generateTypes(false);
-  if (types !== 0) return types;
-  return seedBuckets(false);
+  return generateTypes(connection.dbUrl);
 }
 
-async function resetRemote(): Promise<number> {
-  const code = await supabase("db", "reset", "--linked");
+/**
+ * ⚠️ SAFETY-CRITICAL: drops and re-migrates `connection.dbUrl`. The caller
+ * (`cli.ts`'s `runStack`) has already confirmed the session target —
+ * including the hard production gate — before this ever runs.
+ */
+async function reset(connection: DbConnection): Promise<number> {
+  const code = await supabase("db", "reset", "--db-url", connection.dbUrl);
   if (code !== 0) return code;
-  const types = await generateTypes(true);
+  const types = await generateTypes(connection.dbUrl);
   if (types !== 0) return types;
-  return seedBuckets(true);
+  return seedBuckets(bucketsShape(connection));
+}
+
+/**
+ * BUG 2's fix, applied at every point `start`/`stop`/`restart` can change
+ * `.env.generated`: on success, refresh this process's entered environment
+ * (see `db/session-refresh.ts`) so the rest of the session — including a
+ * `db introspect` run right after this one — sees the stack's CURRENT
+ * connection, not whatever `process.env` held at launch. A failed stack
+ * command changed nothing on disk, so there is nothing to refresh.
+ */
+async function afterLocalStackChange(code: number): Promise<string[]> {
+  if (code !== 0) return [];
+  return refreshSessionEnv();
 }
 
 // ── The local stack's lifecycle ──────────────────────────────────────────────
@@ -119,21 +150,22 @@ async function resetRemote(): Promise<number> {
  * outcome worse than a visible failure.
  */
 async function restartLocal(): Promise<{ code: number; lines: string[] }> {
-  const code = await stopLocalStack();
-  if (code !== 0) {
+  const stopCode = await stopLocalStack();
+  if (stopCode !== 0) {
     return {
-      code,
+      code: stopCode,
       lines: [
         "Stopping failed, so nothing was restarted. " +
           "Scroll up for the output from the Supabase CLI.",
       ],
     };
   }
-  return { code: await startLocalStack(), lines: [] };
+  const code = await startLocalStack();
+  return { code, lines: await afterLocalStackChange(code) };
 }
 
 /**
- * What `status --local` says now that it can answer for itself.
+ * What `status` says for a local session, now that it can answer for itself.
  *
  * `environment.ts` already reads the two facts that question is really asking
  * about, so this reports them and names the next step.
@@ -155,50 +187,58 @@ function localStatus(): { code: number; lines: string[] } {
   return { code: 0, lines: [describeEnvironment(env), next] };
 }
 
-/** Runs a stack command, returning its exit code and anything to report. */
+/**
+ * Runs a stack command, returning its exit code and anything to report.
+ *
+ * `connection` is present exactly when the command writes the database
+ * (`migrate`, `reset`) — the caller (`cli.ts`'s `runStack`) resolves it,
+ * because resolving means possibly refusing with a printed reason, and the
+ * lifecycle commands must keep working with no resolvable database at all
+ * (that is what `db start` is FOR). `status` receives whatever resolved,
+ * or `null`, and degrades to machine facts.
+ */
 export async function runStackCommand(
   command: StackCommand,
-  target: Target,
+  connection: DbConnection | null,
 ): Promise<{ code: number; lines: string[] }> {
-  if (command === "stop" || command === "restart") {
-    if (target.kind !== "local") {
-      return {
-        code: 1,
-        lines: [
-          `\`${command}\` acts on the Docker stack on this machine.`,
-          `A ${target.kind} project has no container here to ${command}.`,
-        ],
-      };
-    }
-    if (command === "restart") return restartLocal();
-    return { code: await stopLocalStack(), lines: [] };
-  }
+  if (command === "restart") return restartLocal();
 
-  if (command === "status") {
-    if (target.kind === "local") return localStatus();
-    return {
-      code: 0,
-      lines: ["Check the Supabase dashboard for the linked project."],
-    };
+  if (command === "stop") {
+    const code = await stopLocalStack();
+    return { code, lines: await afterLocalStackChange(code) };
   }
 
   if (command === "start") {
-    // Machine-local: the Docker stack on this machine, so the target is
-    // ignored rather than switched on. `db connect` is the remote-project
-    // half of the old `link`, and it takes a ref, not a `Target`.
-    return { code: await startLocalStack(), lines: [] };
+    const code = await startLocalStack();
+    return { code, lines: await afterLocalStackChange(code) };
+  }
+
+  if (command === "status") {
+    if (connection === null || isLocalConnection(connection)) {
+      return localStatus();
+    }
+    return {
+      code: 0,
+      lines: [
+        `This session targets ${describeDbTarget(connection)}` +
+          (connection.projectRef
+            ? ` (project ${connection.projectRef}).`
+            : ".") +
+          " Check the Supabase dashboard for its health.",
+      ],
+    };
+  }
+
+  if (connection === null) {
+    return {
+      code: 1,
+      lines: [`No database connection was resolved for \`${command}\`.`],
+    };
   }
 
   if (command === "migrate") {
-    return { code: await pushMigrations(target.kind === "remote"), lines: [] };
+    return { code: await pushMigrations(connection), lines: [] };
   }
 
-  if (command === "reset") {
-    const code = await (target.kind === "remote"
-      ? resetRemote()
-      : resetLocal());
-    return { code, lines: [] };
-  }
-
-  return { code: 1, lines: [`No handler for ${command}.`] };
+  return { code: await reset(connection), lines: [] };
 }

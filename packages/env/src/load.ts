@@ -11,7 +11,9 @@
  * The root `"."` export is imported by `apps/platform`, which deploys to
  * Cloudflare Workers; nothing here may ever be re-exported from `index.ts`, or
  * an `import { selectEnvFiles } from "@devdogsuga/env"` in server code fails at
- * the edge instead of at build.
+ * the edge instead of at build. The same is true of `loadEnvironment` below:
+ * it dynamically imports `node:fs`/`node:path`/`node:url` and
+ * `@dotenvx/dotenvx`, none of which exist at the edge.
  */
 import { fileFor, resolveEnvironment } from "./targets.js";
 import type { DeployEnvironment } from "./targets.js";
@@ -26,6 +28,59 @@ export const LOCAL_STACK_PORT = 54321;
 
 /** The local-stack connection overlay, written by `start-local-stack`. */
 export const GENERATED_FILE = ".env.generated";
+
+/**
+ * Which development database a session means: the local Docker stack's
+ * (`.env.generated`, required LIVE), or the remote one `.env`'s own `DB_URL`
+ * names (overlay skipped entirely, probe not even run).
+ *
+ * `undefined` everywhere it is accepted means "the probe decides", the
+ * behaviour this module has always had — see the probe table on
+ * `selectEnvFiles`. The explicit values exist because the probe's silent
+ * fallback has a sharp edge: with the stack down, a `.env` that carries a
+ * hosted `DB_URL` makes "the development database" quietly mean a remote one,
+ * which is exactly the guess this package exists to prevent for anything
+ * destructive. Only ever meaningful under `development`; other tiers ignore
+ * it, so the propagated `DEV_DB` variable (below) cannot break a child
+ * process that explicitly loads staging or production.
+ */
+export type DevDatabase = "local" | "remote";
+
+export function isDevDatabase(value: string): value is DevDatabase {
+  return value === "local" || value === "remote";
+}
+
+/**
+ * The environment variable that carries a session's `DevDatabase` answer to
+ * child processes, the same way `DEPLOY_ENV` carries the tier: the devtools
+ * launcher asks (or is told) once, exports it, and every nested `with-env`
+ * under that session honours the SAME answer instead of re-running the probe
+ * — without this, a session that chose `remote` would spawn children that
+ * silently re-choose `local` whenever the Docker stack happens to be up.
+ */
+export const DEV_DB_ENV = "DEV_DB";
+
+/**
+ * An explicitly `local` development session, but the local Supabase stack is
+ * not actually reachable. Thrown instead of falling back to `.env` alone,
+ * because that fallback is how a hosted `DB_URL` ends up behind a command
+ * that asked for the Docker stack. The message carries its own
+ * troubleshooting; callers print it and stop (the devtools launcher exempts
+ * `db`/the menu so `db start` can fix the very state being reported).
+ */
+export class LocalStackOfflineError extends Error {
+  constructor(
+    detail: string,
+    advice = "Run `pnpm devtools db start` to bring the stack up (and " +
+      "confirm with `supabase status`), or choose the remote development " +
+      "database with `--tier development:remote`.",
+  ) {
+    super(
+      `the session asked for the local development database, but ${detail} ${advice}`,
+    );
+    this.name = "LocalStackOfflineError";
+  }
+}
 
 /**
  * Wrangler's local Hyperdrive emulator does not read an application's DB_URL.
@@ -100,9 +155,13 @@ export interface SelectionContext {
   /**
    * Is anything listening on the local stack port? Only invoked when the
    * environment is development, so tests can assert it stays uncalled for
-   * staging/production.
+   * staging/production — and not even then under `devDatabase: "remote"`,
+   * which skips the overlay outright rather than asking whether it could
+   * apply.
    */
   probeLocalStack: () => boolean | Promise<boolean>;
+  /** See `DevDatabase`. `undefined` means the probe decides, as ever. */
+  devDatabase?: DevDatabase;
 }
 
 /**
@@ -120,7 +179,19 @@ export interface SelectionContext {
  * values: first-file-wins would silently point a staging build at localhost.
  * So the whole table below is gated on `development`.
  *
- * The probe table (file is a hint; the port is the truth):
+ * An explicit `devDatabase` answer overrides the table before it is consulted:
+ *
+ *   * `"local"` — the overlay is REQUIRED and required LIVE. A dead port or a
+ *     missing file throws `LocalStackOfflineError` rather than falling back
+ *     to `.env` alone, because `.env` may carry a hosted `DB_URL` and "I
+ *     asked for the Docker stack" must never quietly become "a remote
+ *     database answered".
+ *   * `"remote"` — the overlay is skipped and the port is not even probed:
+ *     the session has said which database it means, so a running container
+ *     is a fact worth one warning line, not a vote. (Whether the overlay
+ *     file exists is still checked, only to phrase that warning.)
+ *
+ * With no answer, the probe table (file is a hint; the port is the truth):
  *
  *   | `.env.generated` | port 54321 | behaviour                             |
  *   |------------------|------------|---------------------------------------|
@@ -145,6 +216,39 @@ export async function selectEnvFiles(
 
   const files = [envFile];
   const warnings: string[] = [];
+
+  if (environment === "development" && ctx.devDatabase === "remote") {
+    if (ctx.exists(GENERATED_FILE)) {
+      warnings.push(
+        `ignoring ${GENERATED_FILE} — this session targets the remote ` +
+          "development database (DEV_DB=remote), not the local stack.",
+      );
+    }
+    return { environment, files, warnings };
+  }
+
+  if (environment === "development" && ctx.devDatabase === "local") {
+    const generated = ctx.exists(GENERATED_FILE);
+    const listening = await ctx.probeLocalStack();
+    if (!listening) {
+      throw new LocalStackOfflineError(
+        `nothing is listening on 127.0.0.1:${LOCAL_STACK_PORT}` +
+          (generated
+            ? ` (${GENERATED_FILE} exists but is stale).`
+            : ` (and ${GENERATED_FILE} is missing).`),
+      );
+    }
+    if (!generated) {
+      throw new LocalStackOfflineError(
+        `the stack is listening on 127.0.0.1:${LOCAL_STACK_PORT} while ` +
+          `${GENERATED_FILE} — its connection block — is missing.`,
+        "Run `supabase status -o env > " +
+          `${GENERATED_FILE}\` at the repo root to regenerate it.`,
+      );
+    }
+    files.unshift(GENERATED_FILE);
+    return { environment, files, warnings };
+  }
 
   if (environment === "development") {
     const generated = ctx.exists(GENERATED_FILE);
@@ -199,4 +303,205 @@ export async function probeLocalStack(
     socket.once("connect", () => settle(true));
     socket.once("error", () => settle(false));
   });
+}
+
+/**
+ * Walks up from THIS module's directory for the workspace marker, mirroring
+ * `cli.ts`'s own `findRoot`. The duplication is deliberate rather than a
+ * shared export: `cli.ts` still needs its own root synchronously, before it
+ * can decide the Windows dotenvx-CLI `-f` paths below, and passing that same
+ * root through as `context.root` (as `with-env` now does) is what lets a
+ * caller skip this walk entirely rather than paying for it twice.
+ *
+ * Throws instead of `console.error` + `process.exit`, unlike `cli.ts`'s
+ * version: this is a library function other commands call in-process, and
+ * exiting the whole process out from under an unrelated caller would be a far
+ * worse failure than a rejected promise.
+ */
+async function findRepoRoot(): Promise<string> {
+  const { existsSync } = await import("node:fs");
+  const { dirname, join, resolve } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  let dir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+  for (;;) {
+    if (existsSync(join(dir, "pnpm-workspace.yaml"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) {
+      throw new Error(
+        "loadEnvironment: could not locate the monorepo root " +
+          "(no pnpm-workspace.yaml found above this package).",
+      );
+    }
+    dir = parent;
+  }
+}
+
+/** The result of `loadEnvironment`: what was selected, and what it produced. */
+export interface LoadedEnvironment {
+  environment: DeployEnvironment;
+  /** The env files that were applied, in load order. First file wins (unless override). */
+  files: string[];
+  /**
+   * A FRESH string-only env map: a snapshot of process.env with the selected
+   * files applied and the Wrangler Hyperdrive alias derived. process.env is
+   * NEVER mutated.
+   */
+  env: Record<string, string>;
+  warnings: string[];
+}
+
+export interface LoadEnvironmentOptions {
+  /**
+   * When true, the selected files OVERRIDE values already present in the base
+   * snapshot; when false (the default) existing values win (dotenvx's
+   * first-file-wins, which `with-env` relies on so a shell var beats the file).
+   *
+   * Re-entrant callers loading a DIFFERENT tier than the process already runs
+   * under MUST pass true: `pnpm devtools` itself runs under `with-env`
+   * (development), so its process.env already holds development's values, and
+   * without override a `loadEnvironment("staging")` would keep development's
+   * BASE_URL/DB_URL instead of staging's.
+   */
+  override?: boolean;
+  /**
+   * See `DevDatabase`. When absent, the base snapshot's `DEV_DB` variable is
+   * honoured — this is how a session's answer, exported once by the devtools
+   * launcher, reaches every nested `with-env` and in-process reload without
+   * each call site knowing the variable exists. An unrecognised `DEV_DB`
+   * value throws rather than falling back to the probe: a variable that
+   * looks like it selects the database must never decide nothing.
+   */
+  devDatabase?: DevDatabase;
+}
+
+/**
+ * Loads a deploy tier's env files into a FRESH map, in-process — the same
+ * selection-then-load `with-env` does at startup (`selectEnvFiles` here plus
+ * dotenvx's Node API), pulled out so any command can load a tier's
+ * environment WITHOUT re-execing itself through the `with-env` bin.
+ *
+ * ⚠️ NODE-ONLY / EDGE-UNSAFE, same as the rest of this module: never
+ * re-export this from `index.ts`. It dynamically imports
+ * `node:fs`/`node:path`/`node:url` (only when `context.root` or
+ * `context.exists` is not supplied) and `@dotenvx/dotenvx` (only when files
+ * are actually applied), none of which resolve at the Cloudflare Workers edge
+ * `apps/platform` deploys to.
+ *
+ * `process.env` (or `context.baseEnv`) is read, never written: `env` on the
+ * result is a new object built from a snapshot of it, so loading one tier
+ * in-process can never leak into, or be clobbered by, a caller's own
+ * `process.env`.
+ *
+ * `MissingEnvFileError` and `UnknownEnvironmentError` from `selectEnvFiles`
+ * are NOT caught here — they propagate. Only `with-env` knows how to survive
+ * a missing file (report it, continue with none loaded); a library function
+ * deciding that on every caller's behalf would take away the choice.
+ *
+ * See `LoadEnvironmentOptions.override` for the precedence subtlety: the
+ * default (false) matches `with-env`'s "a shell var beats the file", which is
+ * only correct when the caller is loading the SAME tier the process already
+ * runs under. A caller loading a DIFFERENT tier — one that did not shape
+ * `process.env` — must pass `override: true`, or that tier's file loses to
+ * values that were never meant to apply to it.
+ */
+export async function loadEnvironment(
+  deployEnv?: string,
+  options?: LoadEnvironmentOptions,
+  // OPTIONAL injected edges for tests — production callers pass nothing and
+  // get the real filesystem, probe, and dotenvx. Mirrors selectEnvFiles's
+  // design.
+  context?: {
+    root?: string;
+    exists?: (file: string) => boolean;
+    probeLocalStack?: () => boolean | Promise<boolean>;
+    applyEnvFiles?: (
+      paths: string[],
+      target: Record<string, string>,
+      override: boolean,
+    ) => void | Promise<void>;
+    baseEnv?: NodeJS.ProcessEnv;
+  },
+): Promise<LoadedEnvironment> {
+  const override = options?.override ?? false;
+  const root = context?.root ?? (await findRepoRoot());
+
+  let exists = context?.exists;
+  if (!exists) {
+    const { existsSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    exists = (file: string) => existsSync(join(root, file));
+  }
+
+  const base = context?.baseEnv ?? process.env;
+
+  let devDatabase = options?.devDatabase;
+  if (devDatabase === undefined) {
+    const inherited = base[DEV_DB_ENV];
+    if (inherited !== undefined && inherited !== "") {
+      if (!isDevDatabase(inherited)) {
+        throw new Error(
+          `${DEV_DB_ENV}="${inherited}" is not one of: local, remote.`,
+        );
+      }
+      devDatabase = inherited;
+    }
+  }
+
+  const selection = await selectEnvFiles({
+    deployEnv,
+    exists,
+    probeLocalStack: context?.probeLocalStack ?? (() => probeLocalStack()),
+    devDatabase,
+  });
+
+  // A FRESH string-only snapshot. Both dotenvx and (eventually) @yarnpkg/shell
+  // want string-only maps, so drop the unset keys Node models as undefined —
+  // the same loop `with-env` uses — and never touch the source object.
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(base)) {
+    if (value !== undefined) env[key] = value;
+  }
+
+  // `selectEnvFiles` never returns on success with an empty list — it throws
+  // `MissingEnvFileError` before that, since every environment needs its own
+  // base file — so this guard cannot fire from a real selection. It mirrors
+  // `with-env`'s own early return in spirit anyway: skipping the call rather
+  // than passing an empty `path` keeps dotenvx from falling back to its own
+  // default `.env` lookup, for any injected `context` that manages to defy
+  // the invariant.
+  if (selection.files.length > 0) {
+    const { join } = await import("node:path");
+    const applyEnvFiles =
+      context?.applyEnvFiles ??
+      (async (paths, target, overrideExisting) => {
+        const { default: dx } = await import("@dotenvx/dotenvx");
+        dx.config({
+          // ⚠️ dotenvx's `overload` is LAST-file-wins, but our file list is
+          // FIRST-file-wins: `selectEnvFiles` puts `.env.generated` (the
+          // running local stack's connection overlay) AHEAD of `.env` so it
+          // beats it. Under overload, passing the list as-is would let `.env`
+          // clobber that overlay — pointing a local wrangler session at the
+          // hosted database. Reverse under overload so the first file still
+          // wins while the files as a group still override the ambient env.
+          path: overrideExisting ? [...paths].reverse() : paths,
+          processEnv: target,
+          quiet: true,
+          overload: overrideExisting,
+        });
+      });
+    await applyEnvFiles(
+      selection.files.map((file) => join(root, file)),
+      env,
+      override,
+    );
+  }
+
+  applyWranglerLocalDatabaseAlias(env);
+
+  return {
+    environment: selection.environment,
+    files: selection.files,
+    env,
+    warnings: selection.warnings,
+  };
 }

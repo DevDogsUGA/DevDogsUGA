@@ -40,6 +40,10 @@ import {
   pullReflectionSettings,
 } from "./sync";
 import type { Refusal } from "./refusals";
+import {
+  processPendingOfficerChanges,
+  type OfficerChangeProcessingCounts,
+} from "./processPendingOfficerChanges";
 
 /**
  * One pass, shared verbatim by the cron and the manual trigger.
@@ -62,6 +66,7 @@ export interface SyncReport {
   pulled: { upserted: number; archived: number; skipped: number };
   pushed: { created: number; updated: number; unchanged: number };
   gradesApplied: number;
+  officerChanges: OfficerChangeProcessingCounts;
   statusWrites: number;
   /** Retained in the response during the ownership-inversion rollout. */
   accountsCreated: 0;
@@ -195,6 +200,7 @@ export async function runAirtableSync(
   const pulled = { upserted: 0, archived: 0, skipped: 0 };
   const pushed = { created: 0, updated: 0, unchanged: 0 };
   let gradesApplied = 0;
+  let officerChanges = blankOfficerChangeCounts();
   let statusWrites = 0;
   let failure: unknown = null;
 
@@ -282,6 +288,17 @@ export async function runAirtableSync(
     // pushed in the same pass rather than fifteen minutes later.
     gradesApplied = await pullTeamGrades(listed.teams);
 
+    // The form used to depend on Airtable's Run a script action, which is not
+    // available on Team trials. Process the responses already fetched by this
+    // shared cron/manual pass instead. This placement is after officer-owned
+    // tables have been pulled, so a command can target a meeting or
+    // competition created in the same pass, and before projections are pushed,
+    // so a successful correction is visible without waiting another cycle.
+    officerChanges = await processPendingOfficerChanges(
+      client,
+      listed.officerChanges,
+    );
+
     const memberPush = await pushMembers(client, listed.members);
     add(pushed, memberPush);
     // Attendance links use Airtable record IDs. Re-list only when this pass
@@ -300,6 +317,12 @@ export async function runAirtableSync(
     );
     add(pushed, await pushOfficerChangeStatuses(client, listed.officerChanges));
     add(pushed, await pushDerivedCounts(client, listed));
+
+    if (officerChanges.failed > 0) {
+      failure = new Error(
+        `${officerChanges.failed} officer change${officerChanges.failed === 1 ? "" : "s"} will be retried.`,
+      );
+    }
   } catch (error) {
     failure = error;
   }
@@ -354,6 +377,7 @@ export async function runAirtableSync(
     pulled,
     pushed,
     gradesApplied,
+    officerChanges,
     statusWrites,
     accountsCreated: 0,
     attendanceRemoved: 0,
@@ -370,11 +394,16 @@ function blank(started: number, skipped: SyncReport["skipped"]): SyncReport {
     pulled: { upserted: 0, archived: 0, skipped: 0 },
     pushed: { created: 0, updated: 0, unchanged: 0 },
     gradesApplied: 0,
+    officerChanges: blankOfficerChangeCounts(),
     statusWrites: 0,
     accountsCreated: 0,
     attendanceRemoved: 0,
     refusals: [],
   };
+}
+
+function blankOfficerChangeCounts(): OfficerChangeProcessingCounts {
+  return { attempted: 0, applied: 0, rejected: 0, failed: 0, deferred: 0 };
 }
 
 function add(

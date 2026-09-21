@@ -21,7 +21,25 @@ export function renderWranglerEnvFile(
 }
 
 /** The app's declared keys, deduped and sorted, from the given entries or the
- * loaded registry. */
+ * loaded registry.
+ *
+ * `DEPLOY_ENV` and `NODE_ENV` are excluded BY NAME, not by any registry-meta
+ * heuristic. Their committed source is wrangler.jsonc's per-env `vars` blocks
+ * (and the framework), never an env file — see each key's `define()` doc.
+ * Materializing them into the temp `.dev.vars` this file feeds to `wrangler
+ * dev` lets a stray or empty `.env` value OVERRIDE the tier's wrangler var,
+ * which surfaced as a Workflow isolate reading a blank `DEPLOY_ENV` and
+ * throwing "has no HYPERDRIVE binding".
+ *
+ * A `scope: "default"` + `commented: true` filter was tried first and is
+ * WRONG: that shape also matches `GITHUB_COMPETITION_REPO`, an opt-in
+ * override a contributor sets deliberately in their `.env` (its wrangler
+ * config defines no such var), and the heuristic silently stripped it from
+ * `wrangler dev`'s environment. Wrangler-ownership is a fact about
+ * wrangler.jsonc, not about registry metadata, so the two keys it is true
+ * for are named outright. */
+const WRANGLER_OWNED_KEYS = new Set(["DEPLOY_ENV", "NODE_ENV"]);
+
 async function scopedKeys(
   app: string,
   entries?: readonly EnvEntry[],
@@ -32,7 +50,10 @@ async function scopedKeys(
   }
   return [
     ...new Set(
-      entries.filter((entry) => entry.source === app).map((entry) => entry.key),
+      entries
+        .filter((entry) => entry.source === app)
+        .filter((entry) => !WRANGLER_OWNED_KEYS.has(entry.key))
+        .map((entry) => entry.key),
     ),
   ].sort();
 }
@@ -51,13 +72,46 @@ function materializeEnvFile(
   return { directory, path };
 }
 
+/** Signals a `wrangler dev` child normally dies to: Ctrl+C sends SIGINT, and
+ * SIGTERM is how a parent (or `kill`) asks any child to stop. Both bypass a
+ * `finally` block only if the process exits before it runs — which it
+ * doesn't here, since Node keeps running while a signal handler is
+ * registered — so installing one turns "the shell killed us" into an
+ * ordinary early return through the same `finally`. */
+const CLEANUP_SIGNALS: readonly NodeJS.Signals[] = ["SIGINT", "SIGTERM"];
+
+/** Registers `cleanup` on SIGINT/SIGTERM for the duration of a bracket and
+ * returns a function that un-registers it. On signal, `cleanup` runs, the
+ * handler removes itself, and the signal is re-sent to this process so the
+ * default handler (absent any other listener) terminates it with the
+ * conventional 128+signal exit status — the caller's `fn` never resumes. */
+function installSignalCleanup(cleanup: () => void): () => void {
+  const handlers = new Map<NodeJS.Signals, NodeJS.SignalsListener>();
+  for (const signal of CLEANUP_SIGNALS) {
+    const handler: NodeJS.SignalsListener = () => {
+      cleanup();
+      process.off(signal, handler);
+      process.kill(process.pid, signal);
+    };
+    handlers.set(signal, handler);
+    process.on(signal, handler);
+  }
+  return () => {
+    for (const [signal, handler] of handlers) process.off(signal, handler);
+  };
+}
+
 /**
  * Runs `fn` with the path to an app-scoped, mode-0600 `.dev.vars` file, and
  * guarantees the file (and its containing directory) is gone before this
- * resolves or rejects — including when `fn` throws. Prefer this over
- * `createTemporaryWranglerEnv` below for anything whose credential-bearing
- * file's lifetime matches a single call's lifetime: a credential-bearing temp
- * file can never outlive the call that needed it.
+ * resolves or rejects — including when `fn` throws, AND when a SIGINT/SIGTERM
+ * (e.g. the developer's Ctrl+C on a `wrangler dev` child `fn` is awaiting)
+ * arrives while `fn` is still running: without this, the signal kills the
+ * process before the `finally` below gets to run, leaving the credential-
+ * bearing temp directory behind in a world-findable location. Prefer this
+ * over `createTemporaryWranglerEnv` below for anything whose credential-
+ * bearing file's lifetime matches a single call's lifetime: a credential-
+ * bearing temp file can never outlive the call that needed it.
  */
 export async function withWranglerEnv<T>(
   app: string,
@@ -69,10 +123,22 @@ export async function withWranglerEnv<T>(
     keys,
     options?.env ?? process.env,
   );
+  // Idempotent: the signal handler and the `finally` below can both fire
+  // (the handler runs cleanup, then re-raises the signal — which unwinds
+  // `fn` and reaches `finally` on its way out) and rmSync's `force: true`
+  // alone only suppresses ENOENT, not a guarantee against re-entrant calls.
+  let removed = false;
+  const cleanup = () => {
+    if (removed) return;
+    removed = true;
+    rmSync(directory, { recursive: true, force: true });
+  };
+  const uninstall = installSignalCleanup(cleanup);
   try {
     return await fn(path);
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    uninstall();
+    cleanup();
   }
 }
 
@@ -97,12 +163,17 @@ export interface TemporaryWranglerEnv {
  * retry/readiness loop across a bracket-shaped variant just to convert the
  * `workflows serve` half would fragment one shared, tested implementation
  * into two for no behavioural gain.
+ *
+ * `env` mirrors `withWranglerEnv`'s `options.env`: pass a tier's loaded map to
+ * materialize a scoped file from THAT tier rather than the inherited process
+ * environment; omit it to keep today's behavior.
  */
 export async function createTemporaryWranglerEnv(
   app: string,
+  env?: NodeJS.ProcessEnv,
 ): Promise<TemporaryWranglerEnv> {
   const keys = await scopedKeys(app);
-  const { directory, path } = materializeEnvFile(keys, process.env);
+  const { directory, path } = materializeEnvFile(keys, env ?? process.env);
   return {
     path,
     remove: () => rmSync(directory, { recursive: true, force: true }),

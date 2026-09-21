@@ -52,9 +52,10 @@
  * `.env.example` and the development `.env`, where the CLI reads the file and
  * nothing pushes it.
  *
- * It REFUSES to touch an existing file, with no `--force` and no prompt.
- * "Replace my whole env file with blanks" has no legitimate use: `env reset`
- * blanks values recoverably, `env pull` updates them in place.
+ * Re-running it is ADDITIVE: it appends only newly declared keys that the
+ * target routes and leaves every existing line byte-for-byte. There is no
+ * `--force` path that replaces a whole file with blanks: `env reset` blanks
+ * values recoverably, and `env pull` updates stored values in place.
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -301,7 +302,10 @@ function renderBlock(
  * over nothing reads as "this app needs nothing here", a different and false
  * claim.
  */
-function renderBody(routed?: ReadonlySet<string>): string[] {
+function renderBody(
+  routed?: ReadonlySet<string>,
+  derivationScope: ReadonlySet<string> | undefined = routed,
+): string[] {
   const lines: string[] = [];
   for (const { name, blocks } of sections()) {
     const included =
@@ -312,7 +316,7 @@ function renderBody(routed?: ReadonlySet<string>): string[] {
 
     lines.push("", RULE, `# ${SECTION_LABELS[name] ?? name}`, RULE);
     for (const block of included) {
-      lines.push("", ...renderBlock(block, routed));
+      lines.push("", ...renderBlock(block, derivationScope));
     }
   }
   return lines;
@@ -643,45 +647,19 @@ export async function runEnvInit(
     await writeFile(path, renderInit(target, date, sections), { flag: "wx" });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "EEXIST") {
-      // A development re-run is ADDITIVE: the picker's whole story is "pick
-      // less now, come back for more later", and that story needs the later.
-      // Only keys the file does not mention at all are appended. An active
-      // line holds somebody's value and a commented one holds their decision,
-      // and both survive byte-for-byte.
-      if (target === "development") {
-        const existing = await readFile(path, "utf8");
-        const doc = EnvDocument.parse(existing);
-        const wanted = sections
-          ? keysForSections(sections)
-          : new Set(variables().keys());
-        const missing = new Set(
-          [...wanted].filter((key) => !doc.has(key) && !doc.isCommented(key)),
-        );
-        if (missing.size === 0) {
-          log.info(`${file} already covers that selection — nothing to add.`);
-          return;
-        }
-        const appended = [
-          "",
-          `# --- added by \`pnpm devtools env init\` on ${date} for: ${
-            sections ? [...sections].sort().join(", ") : "everything"
-          } ---`,
-          ...renderBody(missing),
-          "",
-        ].join("\n");
-        await writeFile(path, existing.replace(/\n?$/, "\n") + appended);
-        log.success(
-          `Appended ${missing.size} key${missing.size === 1 ? "" : "s"} to ${file}; existing lines untouched.`,
-        );
+      // A re-run is ADDITIVE for every target. Only keys the file does not
+      // mention at all are appended. An active line holds somebody's value
+      // and a commented one holds their decision; both survive byte-for-byte.
+      const existing = await readFile(path, "utf8");
+      const addition = renderInitAddition(target, date, existing, sections);
+      if (addition === null) {
+        log.info(`${file} already covers that target — nothing to add.`);
         return;
       }
-      explain(`${file} already exists, and init never overwrites.`, "", [
-        `\`pnpm devtools env pull --target ${target}\` updates its` +
-          " values in place.",
-        "To start truly fresh, move the old file aside yourself first — that",
-        "way discarding it is your action, not this tool's.",
-      ]);
-      process.exitCode = 1;
+      await writeFile(path, addition.text);
+      log.success(
+        `Appended ${addition.count} key${addition.count === 1 ? "" : "s"} to ${file}; existing lines untouched.`,
+      );
       return;
     }
     throw err;
@@ -697,4 +675,46 @@ export async function runEnvInit(
           `\`pnpm devtools env pull --target ${target}\` fills the rest from ` +
           "Bitwarden.",
   );
+}
+
+/**
+ * Add newly declared keys to an existing target file without rewriting it.
+ *
+ * Vault-target derivations are evaluated against the complete routed key set,
+ * not merely the missing subset. Otherwise appending NEXT_PUBLIC_SUPABASE_URL
+ * to a file that already contains API_URL would incorrectly render a blank.
+ */
+export function renderInitAddition(
+  target: EnvTarget,
+  date: string,
+  existing: string,
+  sections?: ReadonlySet<string>,
+): { text: string; count: number } | null {
+  const doc = EnvDocument.parse(existing);
+  const wanted = isVaultTarget(target)
+    ? keysRoutedTo(target)
+    : sections
+      ? keysForSections(sections)
+      : new Set(variables().keys());
+  const missing = new Set(
+    [...wanted].filter((key) => !doc.has(key) && !doc.isCommented(key)),
+  );
+  if (missing.size === 0) return null;
+
+  const label = isVaultTarget(target)
+    ? target
+    : sections
+      ? [...sections].sort().join(", ")
+      : "everything";
+  const appended = [
+    "",
+    `# --- added by \`pnpm devtools env init\` on ${date} for: ${label} ---`,
+    ...renderBody(missing, isVaultTarget(target) ? wanted : undefined),
+    "",
+  ].join("\n");
+
+  return {
+    text: existing.replace(/\n?$/, "\n") + appended,
+    count: missing.size,
+  };
 }

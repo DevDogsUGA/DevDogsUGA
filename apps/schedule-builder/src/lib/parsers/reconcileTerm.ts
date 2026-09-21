@@ -107,7 +107,11 @@ export async function reconcileTerm(
       scheduleTypeIdMap,
       campusIdMap,
     );
-    const meetingCount = await meetingCollector.flush(tx, validCrns);
+    const meetingCount = await meetingCollector.flush(
+      tx,
+      term.academicPeriod,
+      validCrns,
+    );
 
     // Anything that used to be in this term's feed but isn't anymore is
     // cancelled, not deleted — past enrollment and saved plans still

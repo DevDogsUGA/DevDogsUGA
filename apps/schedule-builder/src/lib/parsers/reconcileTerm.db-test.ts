@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "~/server/db";
 import {
@@ -33,7 +33,8 @@ const PERIOD_EMPTY = 900103; // reconciled a second time with zero rows
 const CRN_KEEP = 9010001;
 const CRN_DROP = 9010002;
 const CRN_NEW = 9010003;
-const CRN_B = 9010101;
+// Deliberately reused across terms: Banner CRNs are term-local identifiers.
+const CRN_B = CRN_KEEP;
 const CRN_EMPTY_1 = 9010201;
 const CRN_EMPTY_2 = 9010202;
 
@@ -138,6 +139,18 @@ async function cleanup() {
   await db.delete(terms).where(inArray(terms.academicPeriod, PERIODS));
 }
 
+function meetingRows(academicPeriod: number, crn: number) {
+  return db
+    .select()
+    .from(meetings)
+    .where(
+      and(
+        eq(meetings.academicPeriod, academicPeriod),
+        eq(meetings.offeringCrn, crn),
+      ),
+    );
+}
+
 beforeAll(async () => {
   await cleanup();
 
@@ -204,18 +217,9 @@ describe("reconcileTerm", () => {
       .select()
       .from(offerings)
       .where(eq(offerings.academicPeriod, PERIOD_B));
-    const beforeB_meetings = await db
-      .select()
-      .from(meetings)
-      .where(eq(meetings.offeringCrn, CRN_B));
-    const beforeKeepMeetings = await db
-      .select()
-      .from(meetings)
-      .where(eq(meetings.offeringCrn, CRN_KEEP));
-    const beforeDropMeetings = await db
-      .select()
-      .from(meetings)
-      .where(eq(meetings.offeringCrn, CRN_DROP));
+    const beforeB_meetings = await meetingRows(PERIOD_B, CRN_B);
+    const beforeKeepMeetings = await meetingRows(PERIOD_A, CRN_KEEP);
+    const beforeDropMeetings = await meetingRows(PERIOD_A, CRN_DROP);
 
     expect(beforeKeepMeetings).toHaveLength(1);
     expect(beforeDropMeetings).toHaveLength(1);
@@ -263,27 +267,18 @@ describe("reconcileTerm", () => {
 
     // CRN_KEEP's meeting was replaced (deleted + reinserted), not
     // accumulated: exactly one row, with the new time.
-    const afterKeepMeetings = await db
-      .select()
-      .from(meetings)
-      .where(eq(meetings.offeringCrn, CRN_KEEP));
+    const afterKeepMeetings = await meetingRows(PERIOD_A, CRN_KEEP);
     expect(afterKeepMeetings).toHaveLength(1);
     expect(afterKeepMeetings[0]?.startTime).not.toBe(
       beforeKeepMeetings[0]?.startTime,
     );
 
-    const newMeetings = await db
-      .select()
-      .from(meetings)
-      .where(eq(meetings.offeringCrn, CRN_NEW));
+    const newMeetings = await meetingRows(PERIOD_A, CRN_NEW);
     expect(newMeetings).toHaveLength(1);
 
     // CRN_DROP's meeting is untouched — the scoped delete only reaches this
     // run's valid CRNs (KEEP, NEW), not every offering in the term.
-    const afterDropMeetings = await db
-      .select()
-      .from(meetings)
-      .where(eq(meetings.offeringCrn, CRN_DROP));
+    const afterDropMeetings = await meetingRows(PERIOD_A, CRN_DROP);
     expect(afterDropMeetings).toEqual(beforeDropMeetings);
 
     // Term B was never passed to this run's `reconcileTerm` call at all —
@@ -292,10 +287,7 @@ describe("reconcileTerm", () => {
       .select()
       .from(offerings)
       .where(eq(offerings.academicPeriod, PERIOD_B));
-    const afterB_meetings = await db
-      .select()
-      .from(meetings)
-      .where(eq(meetings.offeringCrn, CRN_B));
+    const afterB_meetings = await meetingRows(PERIOD_B, CRN_B);
     expect(afterB_offerings).toEqual(beforeB_offerings);
     expect(afterB_meetings).toEqual(beforeB_meetings);
   });

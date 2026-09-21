@@ -5,7 +5,7 @@ import {
   primaryKey,
   unique,
 } from "drizzle-orm/pg-core";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { crudPolicy } from "../policy";
 
 // This app owns the `schedule_builder` Postgres schema.
@@ -139,7 +139,7 @@ export const courseDetails = scheduleBuilder.table("courseDetails", (d) => ({
 export const offerings = scheduleBuilder.table(
   "offerings",
   (d) => ({
-    crn: d.integer().primaryKey(),
+    crn: d.integer().notNull(),
     crossListingId: d.varchar(),
     minimumEnrollment: d.integer().notNull().default(0),
     maximumEnrollment: d.integer().notNull(),
@@ -167,6 +167,9 @@ export const offerings = scheduleBuilder.table(
       .references(() => campuses.id),
   }),
   (t) => [
+    // Banner reuses CRNs between academic periods. Neither column identifies
+    // an offering alone; every relation and upsert must carry both.
+    primaryKey({ columns: [t.academicPeriod, t.crn] }),
     index().on(t.crossListingId),
     foreignKey({
       columns: [t.academicPeriod, t.partOfTerm],
@@ -187,27 +190,36 @@ export const locationStatusEnum = scheduleBuilder.enum("locationStatus", [
   "RESERVED",
 ]);
 
-export const meetings = scheduleBuilder.table("meetings", (d) => ({
-  id: d.serial().primaryKey(),
-  monday: d.boolean().notNull().default(false),
-  tuesday: d.boolean().notNull().default(false),
-  wednesday: d.boolean().notNull().default(false),
-  thursday: d.boolean().notNull().default(false),
-  friday: d.boolean().notNull().default(false),
-  saturday: d.boolean().notNull().default(false),
-  sunday: d.boolean().notNull().default(false),
-  startDate: d.date(),
-  endDate: d.date(),
-  startTime: d.time(),
-  endTime: d.time(),
-  locationStatus: locationStatusEnum().notNull().default("TBA"),
-  buildingId: d.integer().references(() => buildings.id),
-  room: d.varchar(),
-  offeringCrn: d
-    .integer()
-    .notNull()
-    .references(() => offerings.crn),
-}));
+export const meetings = scheduleBuilder.table(
+  "meetings",
+  (d) => ({
+    id: d.serial().primaryKey(),
+    monday: d.boolean().notNull().default(false),
+    tuesday: d.boolean().notNull().default(false),
+    wednesday: d.boolean().notNull().default(false),
+    thursday: d.boolean().notNull().default(false),
+    friday: d.boolean().notNull().default(false),
+    saturday: d.boolean().notNull().default(false),
+    sunday: d.boolean().notNull().default(false),
+    startDate: d.date(),
+    endDate: d.date(),
+    startTime: d.time(),
+    endTime: d.time(),
+    locationStatus: locationStatusEnum().notNull().default("TBA"),
+    buildingId: d.integer().references(() => buildings.id),
+    room: d.varchar(),
+    academicPeriod: d.integer().notNull(),
+    offeringCrn: d.integer().notNull(),
+  }),
+  (t) => [
+    foreignKey({
+      columns: [t.academicPeriod, t.offeringCrn],
+      foreignColumns: [offerings.academicPeriod, offerings.crn],
+      name: "meetings_academicPeriod_offeringCrn_fkey",
+    }),
+    index().on(t.academicPeriod, t.offeringCrn),
+  ],
+);
 
 // ─── User data ────────────────────────────────────────────────────────────────
 
@@ -289,34 +301,6 @@ export const availableTerms = scheduleBuilder.view("availableTerms").as((qb) =>
     .orderBy(desc(terms.academicPeriod)),
 );
 
-// ─── Full-text search ─────────────────────────────────────────────────────────
-
-export const offeringSearch = scheduleBuilder
-  .materializedView("offeringSearch")
-  .as((qb) =>
-    qb
-      .select({
-        crn: offerings.crn,
-        academicPeriod: offerings.academicPeriod,
-        seatsAvailable: offerings.seatsAvailable,
-        cancelled: offerings.cancelled,
-        courseId: courses.id.as("courseId"),
-        abbr: courses.abbr,
-        courseNumber: courses.courseNumber,
-        title: courses.title,
-        maxCreditHours: courses.maxCreditHours,
-        instructorId: instructors.id.as("instructorId"),
-        firstName: instructors.firstName,
-        lastName: instructors.lastName,
-        searchVector: sql<string>`to_tsvector('english',
-        coalesce(${courses.title}, '') || ' ' ||
-        coalesce(${courses.abbr}, '') || ' ' ||
-        coalesce(${courses.courseNumber}, '') || ' ' ||
-        coalesce(${instructors.lastName}, '') || ' ' ||
-        coalesce(${instructors.firstName}, '')
-      )`.as("search_vector"),
-      })
-      .from(offerings)
-      .innerJoin(courses, eq(courses.id, offerings.courseId))
-      .leftJoin(instructors, eq(instructors.id, offerings.instructorId)),
-  );
+// The `offeringSearch` materialized view was removed with the free-text course
+// search: courses are now added via subject / instructor / CRN filters that
+// read the base tables directly.

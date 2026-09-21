@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * `pnpm devtools [command] [--target <local|remote>]`
+ * `pnpm devtools [--tier <development:local|development:remote|staging|production>] [command]`
  *
  * Run it with no arguments and it opens a menu. That is the point: a
  * contributor should be able to set up a database and check their moderation
@@ -44,9 +44,14 @@ import {
   connectRemoteProject,
   runStackCommand,
   type StackCommand,
-  type Target,
 } from "./stack.js";
 import { runConfigPush } from "./db/config-push.js";
+import {
+  describeDbTarget,
+  isLocalConnection,
+  resolveDbConnection,
+  type DbConnection,
+} from "./db/connection.js";
 import { runDbExec } from "./db/exec.js";
 import { runGenerateMigration } from "./db/generate-migration.js";
 import { runGenerateTypes } from "./db/generate-types.js";
@@ -57,6 +62,7 @@ import { runSeedRoles } from "./db/seed-roles.js";
 import { runOAuthSetup } from "./oauth/wizard.js";
 import {
   beginInvocation,
+  recordEnteredTier,
   recordResolved,
   reproducibleCommand,
 } from "./invocation.js";
@@ -88,14 +94,14 @@ import {
   runSigningKeyStatus,
 } from "./signing-key/commands.js";
 import { loadRegistry } from "./env/discovery.js";
-import { ENV_TARGETS, isEnvTarget } from "@devdogsuga/env";
+import { ENV_TARGETS, fileFor, isEnvTarget } from "@devdogsuga/env";
 import { setExplicitAccessToken } from "./bws/client.js";
 import { positionals } from "./args.js";
 import { resolveVaultTarget } from "./pick.js";
 import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
 import { helpPath, renderHelp } from "./help.js";
 import { subcommandList, subcommandNames } from "./commands.js";
-import { runMenu } from "./menu.js";
+import { bareGroupStartPath, runMenu } from "./menu.js";
 import { runDocsIndex } from "./docs/index-pages.js";
 import { runTask } from "./run/pick.js";
 import { runCompletions } from "./completions.js";
@@ -120,23 +126,34 @@ function isDoctorCommand(value: string): value is DoctorCommand {
   return (DOCTOR_COMMANDS as readonly string[]).includes(value);
 }
 
-function parseTarget(rest: string[]): Target {
-  if (rest.includes("--team")) {
-    console.error(
-      "Team sandboxes are temporarily disabled.\n" +
-        "Use --target local for this machine or --target remote for the linked project.",
-    );
-    process.exit(1);
-  }
-  const t = flagValue(rest, "--target");
-  return t === "remote" ? { kind: "remote" } : { kind: "local" };
-}
-
 function flagValue(rest: string[], flag: string): string | undefined {
   const index = rest.indexOf(flag);
   if (index === -1) return undefined;
   const value = rest[index + 1];
   return value && !value.startsWith("--") ? value : undefined;
+}
+
+/**
+ * The retired flags a `db` invocation can still carry from muscle memory or
+ * an old script. Refused loudly, never ignored: a flag that looks like it
+ * selects the database while actually deciding nothing is exactly the
+ * silent lie the session vocabulary replaced. The session (`--tier
+ * development:local|development:remote|staging|production`, settled by the
+ * launcher before dispatch) is the ONE selector now.
+ */
+function refuseRetiredDbFlags(rest: readonly string[]): boolean {
+  for (const flag of ["--target", "--team"]) {
+    if (rest.includes(flag)) {
+      process.stderr.write(
+        `devtools db: ${flag} is retired. The session already names the ` +
+          "database — relaunch with --tier development:local, " +
+          "development:remote, staging, or production.\n",
+      );
+      process.exitCode = 1;
+      return true;
+    }
+  }
+  return false;
 }
 
 // ── Connecting ───────────────────────────────────────────────────────────────
@@ -184,24 +201,94 @@ async function connect(): Promise<Instance | null> {
 
 // ── Commands ─────────────────────────────────────────────────────────────────
 
-async function runStack(command: StackCommand, target: Target): Promise<void> {
-  // `reset` drops everything. Worth a question, since the menu puts it one
-  // keystroke away from the harmless commands.
-  if (command === "reset") {
-    const confirmed = unwrap(
-      await confirm({
-        message:
-          target.kind === "local"
-            ? "This erases your local database and rebuilds it. Continue?"
-            : `This erases the ${target.kind} database and rebuilds it. Continue?`,
-        initialValue: target.kind === "local",
-      }),
-    );
-    if (!confirmed) bail("Left the database alone.");
+async function runStack(command: StackCommand, rest: string[]): Promise<void> {
+  // The data commands need the session's connection before anything else —
+  // including before the reset confirmation below, which has to name what it
+  // is about to erase. The lifecycle commands (`start`/`stop`/`restart`)
+  // skip resolution outright: they act on this machine's containers, and
+  // `db start` is the FIX for the very state resolution would refuse on.
+  // `status` resolves quietly and treats "nothing resolvable" as an answer.
+  let connection: DbConnection | null = null;
+  if (command === "migrate" || command === "reset") {
+    connection = resolveDbConnection({ label: `devtools db ${command}` });
+    if (!connection) {
+      process.exitCode = 1;
+      return;
+    }
+  } else if (command === "status") {
+    connection = resolveDbConnection({ quiet: true });
+  }
+
+  // `reset` drops everything, and a non-local `migrate` pushes straight to a
+  // shared database — both worth a question before they run. The local stack
+  // gets the harmless-sounding question, every hosted database a harder one
+  // naming exactly which, and production the hardest of all.
+  const local = connection !== null && isLocalConnection(connection);
+  if (
+    connection !== null &&
+    (command === "reset" || (command === "migrate" && !local))
+  ) {
+    if (!local) {
+      // Named up front, and ONLY the tier/host and project — never the
+      // DB_URL, which carries the password — so whoever is about to answer
+      // "yes" knows exactly what they are agreeing to.
+      log.message(
+        `This will ${command === "reset" ? "reset" : "push migrations to"} ${describeDbTarget(connection)}` +
+          (connection.projectRef
+            ? ` (project ${connection.projectRef}).`
+            : "."),
+      );
+    }
+
+    // ⚠️ SAFETY: gates every branch below, including production — `--yes` is
+    // the ONE way past any of them, checked before anything TTY-dependent
+    // runs. clack's `confirm()` never resolves without a TTY (reproduced
+    // against @clack/core@1.4.3), so a non-interactive caller without --yes
+    // must be refused outright rather than left to hang forever on a prompt
+    // nobody is there to answer.
+    if (!rest.includes("--yes")) {
+      if (!process.stdin.isTTY) {
+        process.stderr.write(
+          `devtools db ${command}: --yes is required to run non-interactively.\n`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      if (connection.tier === "production") {
+        // Production gets the sternest wording of the three: this is the one
+        // database in this whole CLI that must never be touched by a
+        // reflexive keystroke.
+        const confirmed = unwrap(
+          await confirm({
+            message:
+              (command === "reset"
+                ? "This PERMANENTLY ERASES the PRODUCTION database "
+                : "This pushes new migrations to the PRODUCTION database ") +
+              `(project ${connection.projectRef ?? "unknown"}). Continue?`,
+            initialValue: false,
+          }),
+        );
+        if (!confirmed) bail("Left the database alone.");
+      } else {
+        const confirmed = unwrap(
+          await confirm({
+            message:
+              command === "reset"
+                ? local
+                  ? "This erases your local database and rebuilds it. Continue?"
+                  : `This erases ${describeDbTarget(connection)} and rebuilds it. Continue?`
+                : `This pushes new migrations to ${describeDbTarget(connection)}. Continue?`,
+            initialValue: local,
+          }),
+        );
+        if (!confirmed) bail("Left the database alone.");
+      }
+    }
   }
 
   try {
-    const { code, lines } = await runStackCommand(command, target);
+    const { code, lines } = await runStackCommand(command, connection);
     for (const line of lines) log.message(line);
     if (code !== 0) {
       // Lines on a failure ARE the explanation, which is the contract with
@@ -713,14 +800,9 @@ async function runSigningKeyCommand(rest: string[]): Promise<void> {
  * this just routes to them one level deeper.
  */
 async function runDbCommand(rest: string[]): Promise<void> {
-  const [sub, ...subRest] = rest;
+  if (refuseRetiredDbFlags(rest)) return;
 
-  if (sub === "start") {
-    // Machine-local: ignores --target rather than parsing it, the same way
-    // `runStackCommand`'s own "start" branch does.
-    await runStack("start", { kind: "local" });
-    return;
-  }
+  const [sub, ...subRest] = rest;
 
   if (sub === "connect") {
     const ref = subRest.find((arg) => !arg.startsWith("-"));
@@ -730,13 +812,14 @@ async function runDbCommand(rest: string[]): Promise<void> {
   }
 
   if (
+    sub === "start" ||
     sub === "stop" ||
     sub === "restart" ||
     sub === "status" ||
     sub === "migrate" ||
     sub === "reset"
   ) {
-    await runStack(sub, parseTarget(subRest));
+    await runStack(sub, subRest);
     return;
   }
 
@@ -766,21 +849,47 @@ async function runDbCommand(rest: string[]): Promise<void> {
   }
 
   if (sub === "types") {
-    const code = await runGenerateTypes(parseTarget(subRest));
+    const connection = resolveDbConnection({ label: "devtools db types" });
+    if (!connection) {
+      process.exitCode = 1;
+      return;
+    }
+    const code = await runGenerateTypes(connection.dbUrl);
     process.exitCode = code === 0 ? 0 : 1;
     return;
   }
 
   if (sub === "seed") {
-    const [ssub, ...srest] = subRest;
+    const [ssub] = subRest;
 
     if (ssub === "buckets") {
-      const code = await runSeedBuckets(parseTarget(srest));
+      const connection = resolveDbConnection({
+        label: "devtools db seed buckets",
+      });
+      if (!connection) {
+        process.exitCode = 1;
+        return;
+      }
+      // `seed buckets` drives the Storage API, which has no `--db-url` mode
+      // (see `db/run.ts`), so this is the one data command still keyed on
+      // local-vs-hosted rather than handed the session's URL.
+      const code = await runSeedBuckets(
+        isLocalConnection(connection)
+          ? { kind: "local" }
+          : { kind: "remote", projectRef: connection.projectRef },
+      );
       process.exitCode = code === 0 ? 0 : 1;
       return;
     }
     if (ssub === "roles") {
-      const code = await runSeedRoles(parseTarget(srest).kind);
+      const connection = resolveDbConnection({
+        label: "devtools db seed roles",
+      });
+      if (!connection) {
+        process.exitCode = 1;
+        return;
+      }
+      const code = await runSeedRoles(connection.dbUrl);
       process.exitCode = code === 0 ? 0 : 1;
       return;
     }
@@ -804,7 +913,33 @@ async function runDbCommand(rest: string[]): Promise<void> {
     const [csub] = subRest;
 
     if (csub === "push") {
-      const code = await runConfigPush();
+      // Hosted-only — `config.toml` is pushed to a project ref, and the
+      // Docker stack has none (it reads the file directly at `db start`).
+      const connection = resolveDbConnection({
+        label: "devtools db config push",
+      });
+      if (!connection) {
+        process.exitCode = 1;
+        return;
+      }
+      if (isLocalConnection(connection)) {
+        process.stderr.write(
+          "devtools db config push: the local stack reads config.toml " +
+            "directly (`db restart` applies changes). Relaunch with --tier " +
+            "development:remote, staging, or production to push it to a " +
+            "hosted project.\n",
+        );
+        process.exitCode = 1;
+        return;
+      }
+      if (!connection.projectRef) {
+        process.stderr.write(
+          `devtools db config push: ${fileFor(connection.tier)} has no PROJECT_REF.\n`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+      const code = await runConfigPush(connection.projectRef);
       process.exitCode = code === 0 ? 0 : 1;
       return;
     }
@@ -865,8 +1000,12 @@ async function runDocsCommand(rest: string[]): Promise<void> {
     return;
   }
 
-  const target = parseTarget(rest);
-  await runDocsIndex({ target: target.kind });
+  // `docs index`'s `--target remote` is NOT the retired db selector: it is
+  // the explicit acknowledgment its destructive delete requires when DB_URL
+  // is not local (see `docs/index-pages.ts`). The database itself still
+  // comes from the session's DB_URL like everything else.
+  const target = flagValue(rest, "--target") === "remote" ? "remote" : "local";
+  await runDocsIndex({ target });
 }
 
 // ── Dispatch ─────────────────────────────────────────────────────────────────
@@ -1032,9 +1171,17 @@ async function dispatch(argv: string[]): Promise<string | null> {
 
 // ── Entry ────────────────────────────────────────────────────────────────────
 
-async function main(): Promise<void> {
-  const argv = process.argv.slice(2);
-
+/**
+ * Runs the CLI against an already-resolved argv.
+ *
+ * Exported rather than run at import, so `src/launch.ts` can resolve the
+ * deploy tier and enter its environment BEFORE this module's imports (and the
+ * commands they pull in) ever see `process.env` — see that file's header. The
+ * shebang above stays harmless: importing this module runs nothing, only
+ * `main()` does, and nothing calls it but `launch.ts` and the `import.meta.url`
+ * guard at the bottom of this file, for a direct `tsx src/cli.ts` run.
+ */
+export async function main(argv: string[]): Promise<void> {
   // ⚠️ BEFORE the `--help` check, unlike everything else here. `bw` is a
   // passthrough, so `pnpm devtools bw --help` is a request for Bitwarden's
   // help, not for ours. Answering it with our own would be this CLI talking
@@ -1051,6 +1198,18 @@ async function main(): Promise<void> {
     return;
   }
 
+  // `completions --shell bash|zsh` is meant for `eval "$(pnpm devtools
+  // completions --shell bash)"`, which executes every line of stdout as a
+  // shell command. Dispatched before `intro()` so the banner — and the
+  // `outro()` below — never land on that stdout; a typed completions
+  // invocation is never part of an interactive wizard walk, so there is no
+  // banner worth keeping here the way there is for the menu.
+  if (argv[0] === "completions") {
+    const code = runCompletions(argv.slice(1));
+    process.exitCode = code;
+    return;
+  }
+
   // Deploy has moved to the devtools-ci bin. Point any stray invocations at it
   // before `intro()`, because `devtools deploy secrets-file` could otherwise
   // fall through to the wizard banner on a stdout that is a credential channel.
@@ -1063,13 +1222,23 @@ async function main(): Promise<void> {
     return;
   }
 
+  // A bare command group at a terminal resumes the wizard at that node, so
+  // `devtools db` opens db's subcommand screen instead of printing "which of …?"
+  // and exiting 1. Placed here — before `run`'s passthrough and before intro() —
+  // so every group routes the same way (bare `run` resumes too, while
+  // `run <task>` resolves to a leaf and falls through). Non-interactive callers
+  // get startPath === null and keep the dispatcher's error + exit 1.
+  const startPath = process.stdin.isTTY ? bareGroupStartPath(argv) : null;
+
   // Also before `intro()`, for the neighbouring reason: this one hands stdout
   // to turbo, and through it to a Next dev server or a Flutter run that owns
   // the terminal until Ctrl-C. A banner above that output would be this CLI
   // announcing itself over somebody else's, and the `outro()` below would
   // print "Done." after a dev server was interrupted. `runTask` exits with
-  // turbo's own status and never comes back.
-  if (argv[0] === "run") {
+  // turbo's own status and never comes back. `!startPath` excludes the one
+  // case that is not this: a bare `run` at a terminal, which the block above
+  // already resolved to its own subcommand screen rather than a task to run.
+  if (!startPath && argv[0] === "run") {
     await runTask(argv.slice(1));
     return;
   }
@@ -1082,8 +1251,18 @@ async function main(): Promise<void> {
   let closing: string | null;
   if (argv.length === 0) {
     closing = await runMenu(dispatch);
+  } else if (startPath) {
+    // Same wizard entry as the no-argument path, at the resumed node instead
+    // of the first screen. `env` left `undefined` so `runMenu` probes once,
+    // identically to the bare-invocation branch above.
+    closing = await runMenu(dispatch, undefined, { startPath });
   } else {
     beginInvocation(argv, false);
+    // `launch.ts` already resolved and entered the session's deploy tier —
+    // see its header — so `process.env.DEPLOY_ENV` names it here for every
+    // path, typed or menu-built, rather than this module resolving a second
+    // opinion.
+    recordEnteredTier(process.env.DEPLOY_ENV ?? "development");
     closing = await dispatch(argv);
   }
 
@@ -1097,7 +1276,13 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err: unknown) => {
-  log.error(errorMessage(err));
-  process.exit(1);
-});
+// Only for a direct `tsx src/cli.ts` run, bypassing `launch.ts` entirely —
+// no deploy tier resolved, no env entered. Not a path anything in this repo
+// takes any more (`launch.ts` always runs first, see its header), kept as a
+// fallback for the same reason `ci.ts`'s guard is.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main(process.argv.slice(2)).catch((err: unknown) => {
+    log.error(errorMessage(err));
+    process.exit(1);
+  });
+}

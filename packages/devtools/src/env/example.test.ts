@@ -38,6 +38,7 @@ import {
   keysForSections,
   renderExample,
   renderInit,
+  renderInitAddition,
   resolveSections,
 } from "./example.js";
 
@@ -356,6 +357,43 @@ describe.each(DEPLOYED_VAULT_TARGETS)("%s", (name) => {
         true,
       );
     }
+  });
+});
+
+describe.each(DEPLOYED_VAULT_TARGETS)("%s additive init", (name) => {
+  it("appends a newly declared missing key without changing existing text", () => {
+    const complete = renderInit(name, DATE);
+    const key = "AIRTABLE_AUTOMATION_SECRET";
+    const incomplete = complete.replace(new RegExp(`^${key}=.*\\n`, "m"), "");
+
+    const addition = renderInitAddition(name, DATE, incomplete);
+
+    expect(addition?.count).toBe(1);
+    expect(addition?.text.startsWith(incomplete)).toBe(true);
+    expect(addition?.text.match(new RegExp(`^${key}=`, "gm"))).toHaveLength(1);
+    expect(addition?.text).toContain(`for: ${name}`);
+  });
+
+  it("preserves a derivation whose dependency was already in the file", () => {
+    const complete = renderInit(name, DATE);
+    const key = "NEXT_PUBLIC_SUPABASE_URL";
+    const incomplete = complete.replace(new RegExp(`^${key}=.*\\n`, "m"), "");
+
+    const addition = renderInitAddition(name, DATE, incomplete);
+
+    expect(addition?.count).toBe(1);
+    expect(addition?.text).toMatch(new RegExp(`^${key}="\\$API_URL"$`, "m"));
+  });
+
+  it("treats a commented key as an existing decision", () => {
+    const complete = renderInit(name, DATE);
+    const key = "AIRTABLE_AUTOMATION_SECRET";
+    const commented = complete.replace(
+      new RegExp(`^${key}=.*$`, "m"),
+      `# ${key}=""`,
+    );
+
+    expect(renderInitAddition(name, DATE, commented)).toBeNull();
   });
 });
 

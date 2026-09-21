@@ -1,39 +1,59 @@
 // Unit tests for cron/commands helpers.
-import { mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { parse as parseEnv } from "dotenv";
-import { describe, expect, it } from "vitest";
-import { loadTierEnv, resolveBaseUrl } from "./commands.js";
+import { describe, expect, it, vi } from "vitest";
 
-describe("loadTierEnv", () => {
-  it("returns a plain object for any tier", () => {
-    const result = loadTierEnv("development");
-    expect(typeof result).toBe("object");
-    expect(result).not.toBeNull();
-  });
+/**
+ * `runCronRun`'s own dependencies, faked at the module boundary for the
+ * `MissingEnvFileError` test near the bottom of this file: `discoverCronMaps`
+ * and `discoverWranglerConfigs` so the picker sees one controlled route cron
+ * instead of walking `apps/*` on disk, and `@devdogsuga/env/load` so the
+ * tier's env load fails the way a missing `.env.staging` would without an
+ * actual missing file. Every other test in this file exercises a pure helper
+ * directly (`resolveBaseUrl`, the source check below) and needs none of this.
+ */
+const fixtures = vi.hoisted(() => ({
+  maps: [
+    {
+      app: "schedule-builder",
+      path: "/repo/apps/schedule-builder/cloudflare/scheduled.ts",
+      routes: {
+        "0 0 * * *": { label: "daily sync", routes: ["/api/cron/daily"] },
+      },
+      workflows: {},
+    },
+  ],
+  configs: [
+    {
+      app: "schedule-builder",
+      path: "/repo/apps/schedule-builder/wrangler.jsonc",
+      config: {
+        env: {
+          staging: { triggers: { crons: ["0 0 * * *"] } },
+        },
+      },
+    },
+  ],
+}));
 
-  it("returns empty object for a tier whose file is absent", () => {
-    // Use an obviously-nonexistent tier name; falls back to "development" path,
-    // but we can directly test the parse logic with a temp file instead.
-    const dir = join(tmpdir(), `devtools-crontest-${Date.now()}`);
-    mkdirSync(dir, { recursive: true });
-    try {
-      const raw =
-        'BASE_URL="https://staging.devdogs.uga.edu"\nCRON_SECRET="abc123"\n';
-      writeFileSync(join(dir, ".env.staging"), raw);
-      const parsed = parseEnv(raw);
-      expect(parsed["BASE_URL"]).toBe("https://staging.devdogs.uga.edu");
-      expect(parsed["CRON_SECRET"]).toBe("abc123");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
+vi.mock("./discovery.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./discovery.js")>()),
+  discoverCronMaps: vi.fn(async () => fixtures.maps),
+  discoverWranglerConfigs: vi.fn(() => fixtures.configs),
+}));
 
-  it("does not throw for an unrecognised tier string", () => {
-    expect(() => loadTierEnv("not-a-tier")).not.toThrow();
-  });
+vi.mock("@devdogsuga/env/load", () => {
+  class MissingEnvFileError extends Error {}
+  return {
+    loadEnvironment: vi.fn(async () => {
+      throw new MissingEnvFileError(
+        ".env.staging does not exist. Run `pnpm devtools env pull --target staging` to fetch it.",
+      );
+    }),
+    MissingEnvFileError,
+  };
 });
+
+const { resolveBaseUrl, runCronRun } = await import("./commands.js");
 
 describe("describeExpr zero-padding (source check)", () => {
   it("source uses padStart for minute component", async () => {
@@ -70,5 +90,36 @@ describe("resolveBaseUrl", () => {
         { BASE_URL: "https://wrong.example" },
       ),
     ).toBe("https://dogdays.dev");
+  });
+});
+
+/**
+ * `runCronRun`'s catch around `loadEnvironment`: a missing tier env file must
+ * read as "run `env pull`", not as an unhandled rejection or a raw
+ * ECONNREFUSED from the fetch further down that a caller would never reach.
+ * `--cron` and `--yes` are both passed so the run gets past the picker and
+ * the deployed-tier confirm without a terminal, and lands on the load.
+ */
+describe("runCronRun MissingEnvFileError", () => {
+  it("reports the missing env file on stderr and returns 1 without firing anything", async () => {
+    const stderr = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+
+    const code = await runCronRun([
+      "--tier",
+      "staging",
+      "--cron",
+      "0 0 * * *",
+      "--yes",
+    ]);
+
+    expect(code).toBe(1);
+    const lines = stderr.mock.calls.map(([chunk]) => String(chunk));
+    expect(lines.some((line) => line.startsWith("devtools cron run:"))).toBe(
+      true,
+    );
+
+    stderr.mockRestore();
   });
 });

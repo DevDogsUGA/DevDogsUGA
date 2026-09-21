@@ -83,4 +83,39 @@ describe("positionals", () => {
   it("does not run past the end on a trailing value flag", () => {
     expect(positionals(["push", "--file"])).toEqual(["push"]);
   });
+
+  it("correctly identifies subcommand when --apps precedes it", () => {
+    expect(
+      positionals(["--apps", "platform,schedule-builder", "init"]),
+    ).toEqual(["init"]);
+  });
+
+  it("correctly identifies subcommand when --db-url precedes it", () => {
+    expect(
+      positionals([
+        "--db-url",
+        "postgresql://localhost/devdogs",
+        "planner",
+        "status",
+      ]),
+    ).toEqual(["planner", "status"]);
+  });
+
+  it("correctly identifies subcommand when --user precedes it", () => {
+    expect(positionals(["--user", "admin@example.com", "grant-root"])).toEqual([
+      "grant-root",
+    ]);
+  });
+
+  it("correctly identifies subcommand when --filter precedes it", () => {
+    expect(positionals(["--filter", "@devdogsuga/platform", "build"])).toEqual([
+      "build",
+    ]);
+  });
+
+  it("correctly identifies subcommand when --shell precedes it", () => {
+    expect(positionals(["--shell", "bash", "completions"])).toEqual([
+      "completions",
+    ]);
+  });
 });

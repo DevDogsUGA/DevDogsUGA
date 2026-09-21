@@ -4,13 +4,13 @@
   "private": true,
   "type": "module",
   "bin": {
-    "devtools": "./src/cli.ts",
-    "devtools-ci": "./src/ci.ts"
+    "devtools": "./bin/devtools.mjs",
+    "devtools-ci": "./bin/devtools-ci.mjs"
   },
   "scripts": {
-    "cli": "with-env tsx --conditions=devdogs-source src/cli.ts",
+    "cli": "node ./bin/devtools.mjs",
     "ci": "tsx --conditions=devdogs-source src/ci.ts",
-    "ci:env": "with-env tsx --conditions=devdogs-source src/ci.ts",
+    "ci:env": "node ./bin/devtools-ci.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

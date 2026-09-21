@@ -10,7 +10,7 @@
  * `@clack/prompts` is mocked rather than driven: the point is which questions
  * get asked and what argv comes out, not how a terminal renders them.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Environment } from "./environment.js";
 
 const answers: unknown[] = [];
@@ -23,11 +23,22 @@ interface Entry {
 }
 const shown: Entry[][] = [];
 
+/**
+ * Selects whichever option the current screen drew last, rather than a
+ * literal scripted value.
+ *
+ * `pickCommand` and `pickSubcommand` both append `BACK_OPTION` after every
+ * entry they offer, so "last" is always Back. `BACK` itself is a symbol
+ * private to `menu.ts` — there is no literal a test can import and push onto
+ * `answers` — so this is how the "reader backs out" tests select it anyway.
+ */
+const PICK_BACK = Symbol("pick-back");
+
 vi.mock("@clack/prompts", () => {
   /** Each prompt takes the next scripted answer and records what it drew. */
   const next = (options: {
     message?: string;
-    options?: Entry[];
+    options?: Array<{ value?: unknown; label?: string; hint?: string }>;
   }): Promise<unknown> => {
     asked.push(options.message ?? "");
     // Recorded BEFORE the throw below, so a walk that runs out of answers
@@ -37,7 +48,11 @@ vi.mock("@clack/prompts", () => {
       shown.push(options.options.map(({ label, hint }) => ({ label, hint })));
     }
     if (answers.length === 0) throw new Error(`unanswered: ${options.message}`);
-    return Promise.resolve(answers.shift());
+    const answer = answers.shift();
+    if (answer === PICK_BACK) {
+      return Promise.resolve(options.options?.at(-1)?.value);
+    }
+    return Promise.resolve(answer);
   };
   return {
     select: next,
@@ -50,7 +65,7 @@ vi.mock("@clack/prompts", () => {
   };
 });
 
-const { runMenu } = await import("./menu.js");
+const { runMenu, bareGroupStartPath } = await import("./menu.js");
 const { GROUPS, TOP_LEVEL, allPaths, findCommand, groupOf } =
   await import("./commands.js");
 const { UNKNOWN_ENVIRONMENT } = await import("./environment.js");
@@ -78,6 +93,33 @@ async function walk(
     dispatched = argv;
     return Promise.resolve("Done.");
   }, env);
+  return dispatched;
+}
+
+/**
+ * Runs one walk resumed at `startPath`, mirroring `walk` above but through
+ * `runMenu`'s `options.startPath` instead of `pickGroup`. What `main()` does
+ * for a bare command group — `devtools db` — at a terminal.
+ */
+async function resume(
+  startPath: string[],
+  scripted: unknown[],
+  env: Environment = UNKNOWN_ENVIRONMENT,
+): Promise<string[] | null> {
+  answers.length = 0;
+  asked.length = 0;
+  shown.length = 0;
+  answers.push(...scripted);
+
+  let dispatched: string[] | null = null;
+  await runMenu(
+    (argv) => {
+      dispatched = argv;
+      return Promise.resolve("Done.");
+    },
+    env,
+    { startPath },
+  );
   return dispatched;
 }
 
@@ -185,14 +227,14 @@ describe("options become argv", () => {
     expect(argv).toEqual(["airtable", "apply"]);
   });
 
-  it("emits --target remote for the ENDPOINT option", async () => {
+  it("emits --target remote for docs index's acknowledgment select", async () => {
     const argv = await walk([
-      groupOf("db")!,
-      findCommand(["db"])!,
-      findCommand(["db", "status"])!,
+      groupOf("docs")!,
+      findCommand(["docs"])!,
+      findCommand(["docs", "index"])!,
       "remote",
     ]);
-    expect(argv).toEqual(["db", "status", "--target", "remote"]);
+    expect(argv).toEqual(["docs", "index", "--target", "remote"]);
   });
 
   it("emits a select choice that is a value after its flag", async () => {
@@ -233,6 +275,116 @@ describe("navigation", () => {
 
   it("dispatches nothing when the reader quits", async () => {
     expect(await walk([null])).toBeNull();
+  });
+});
+
+describe("entered-tier recording", () => {
+  // `src/launch.ts` resolves and enters the session's deploy tier BEFORE this
+  // module ever runs (see `runMenu`'s own header) — so all that is left for
+  // `runMenu` to do is read it back off `process.env.DEPLOY_ENV` and record it
+  // for the "run it directly next time" line `reproducibleCommand` builds.
+  const savedDeployEnv = process.env.DEPLOY_ENV;
+  const savedDevDb = process.env.DEV_DB;
+  afterEach(() => {
+    if (savedDeployEnv === undefined) delete process.env.DEPLOY_ENV;
+    else process.env.DEPLOY_ENV = savedDeployEnv;
+    if (savedDevDb === undefined) delete process.env.DEV_DB;
+    else process.env.DEV_DB = savedDevDb;
+  });
+
+  it("records the ambient DEPLOY_ENV as the entered tier", async () => {
+    process.env.DEPLOY_ENV = "staging";
+    const { reproducibleCommand } = await import("./invocation.js");
+    await walk(answersFor(["db", "status"]));
+    expect(reproducibleCommand()).toBe(
+      "pnpm devtools --tier staging db status",
+    );
+  });
+
+  it("records nothing extra for the development default", async () => {
+    delete process.env.DEPLOY_ENV;
+    delete process.env.DEV_DB;
+    const { reproducibleCommand } = await import("./invocation.js");
+    await walk(answersFor(["db", "status"]));
+    expect(reproducibleCommand()).toBe("pnpm devtools db status");
+  });
+
+  it("records the qualified selector for a development session with DEV_DB", async () => {
+    // Reproducing a session that ANSWERED the development-database question
+    // with a bare `pnpm devtools db status` would re-ask it (or refuse,
+    // non-interactively) on the same machine — the hint must carry the whole
+    // session.
+    delete process.env.DEPLOY_ENV;
+    process.env.DEV_DB = "remote";
+    const { reproducibleCommand } = await import("./invocation.js");
+    await walk(answersFor(["db", "status"]));
+    expect(reproducibleCommand()).toBe(
+      "pnpm devtools --tier development:remote db status",
+    );
+  });
+});
+
+describe("bareGroupStartPath", () => {
+  // What `main()` calls, at a TTY, to decide whether a bare command group
+  // should resume the wizard instead of hitting the dispatcher's "which of
+  // …?" refusal. Pure and tree-driven, so these assert directly rather than
+  // through a scripted walk.
+  it("finds a top-level group", () => {
+    expect(bareGroupStartPath(["db"])).toEqual(["db"]);
+  });
+
+  it("finds a nested group", () => {
+    expect(bareGroupStartPath(["db", "seed"])).toEqual(["db", "seed"]);
+  });
+
+  it("returns null for a leaf command", () => {
+    expect(bareGroupStartPath(["db", "status"])).toBeNull();
+  });
+
+  it("returns null for an unknown subcommand token", () => {
+    expect(bareGroupStartPath(["db", "bogus"])).toBeNull();
+  });
+
+  it("returns null for a bare invocation", () => {
+    // The no-argument wizard already covers this path; treating it as a
+    // "resume" too would just be `pickGroup` reached a second way.
+    expect(bareGroupStartPath([])).toBeNull();
+  });
+
+  it("returns null for a top-level leaf command", () => {
+    expect(bareGroupStartPath(["setup"])).toBeNull();
+  });
+
+  it("ignores flag values ahead of the group name", () => {
+    // `positionals` is what keeps `staging` from being misread as a
+    // subcommand token here — the same bug class `args.ts`'s header warns
+    // against for `env --file push audit`.
+    expect(bareGroupStartPath(["db", "--tier", "staging"])).toEqual(["db"]);
+  });
+});
+
+describe("resuming at a node", () => {
+  // The property `main()` relies on: a walk resumed at a group's path reaches
+  // the same leaf, with the same argv, as walking there from the top of the
+  // tree — it just skips the screens above that group.
+  it("reaches the same leaf as a full walk, skipping the group screens", async () => {
+    const full = await walk(answersFor(["db", "seed", "buckets"]));
+    expect(full).toEqual(["db", "seed", "buckets"]);
+
+    const resumed = await resume(
+      ["db"],
+      [findCommand(["db", "seed"])!, findCommand(["db", "seed", "buckets"])!],
+    );
+    expect(resumed).toEqual(full);
+
+    // The first question is db's own subcommand screen, not the top-level
+    // "What would you like to do?" — there is no group screen to skip past
+    // because a resumed walk never opens one.
+    expect(asked[0]).toBe("db:");
+  });
+
+  it("dispatches nothing when the reader backs out of the resumed screen", async () => {
+    expect(await resume(["db"], [PICK_BACK])).toBeNull();
   });
 });
 

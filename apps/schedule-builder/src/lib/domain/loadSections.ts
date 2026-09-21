@@ -29,9 +29,9 @@ export interface LoadSectionsFilters {
 
 /**
  * One flat row out of the courses ⋈ offerings ⋈ partsOfTerm join, LEFT
- * JOINed out to a single meeting/building. Multiple rows share a `crn` when
- * an offering has more than one meeting; `groupRowsIntoSections` folds them
- * back together.
+ * JOINed out to a single meeting/building. Multiple rows share an
+ * `(academicPeriod, crn)` when an offering has more than one meeting;
+ * `groupRowsIntoSections` folds them back together.
  *
  * Every field here is an identity column carried straight off a table —
  * no derived shape (days arrays, nested objects, usability) belongs in the
@@ -113,18 +113,20 @@ function meetingFromRow(row: SectionRow): Meeting {
 }
 
 /**
- * PURE fold of flat join rows into `Section[]`. Rows sharing a `crn`
- * collapse into one `Section` with one `Meeting` per distinct meeting row.
+ * PURE fold of flat join rows into `Section[]`. Rows sharing an
+ * `(academicPeriod, crn)` collapse into one `Section` with one `Meeting` per
+ * distinct meeting row. Banner reuses CRNs between terms.
  *
  * Deliberately does not filter on `cancelled`/`lastSeenAt` (or anything
  * else) — usability is an in-memory rule for downstream consumers, never a
  * query-time or fold-time filter here.
  */
 export function groupRowsIntoSections(rows: SectionRow[]): Section[] {
-  const sections = new Map<number, Section>();
+  const sections = new Map<string, Section>();
 
   for (const row of rows) {
-    let section = sections.get(row.crn);
+    const key = `${row.academicPeriod}:${row.crn}`;
+    let section = sections.get(key);
     if (!section) {
       section = {
         crn: row.crn,
@@ -156,7 +158,7 @@ export function groupRowsIntoSections(rows: SectionRow[]): Section[] {
             : null,
         meetings: [],
       };
-      sections.set(row.crn, section);
+      sections.set(key, section);
     }
 
     if (row.meetingId !== null) {
@@ -241,7 +243,13 @@ export async function loadSections(
     .innerJoin(campuses, eq(campuses.id, offerings.campusId))
     .innerJoin(scheduleTypes, eq(scheduleTypes.id, offerings.scheduleTypeId))
     .leftJoin(instructors, eq(instructors.id, offerings.instructorId))
-    .leftJoin(meetings, eq(meetings.offeringCrn, offerings.crn))
+    .leftJoin(
+      meetings,
+      and(
+        eq(meetings.academicPeriod, offerings.academicPeriod),
+        eq(meetings.offeringCrn, offerings.crn),
+      ),
+    )
     .leftJoin(buildings, eq(buildings.id, meetings.buildingId));
 
   const rows =

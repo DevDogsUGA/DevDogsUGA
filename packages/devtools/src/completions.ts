@@ -67,7 +67,7 @@ function generateZsh(): string {
   const cases: string[] = [];
   for (const [parent, children] of groups) {
     if (!parent) continue;
-    cases.push(`        "${parent}") words=(${children.join(" ")}) ;;`);
+    cases.push(`        "${parent}") candidates=(${children.join(" ")}) ;;`);
   }
 
   return [
@@ -76,7 +76,7 @@ function generateZsh(): string {
     "# Add to your .zshrc:",
     '#   eval "$(pnpm devtools completions --shell zsh)"',
     "_devtools() {",
-    "    local state words",
+    "    local state",
     `    local -a top_level=(${topLevel})`,
     "",
     "    # Build the command path from all words except the last",
@@ -89,13 +89,13 @@ function generateZsh(): string {
     "        fi",
     "    done",
     "",
-    '    local -a completions=("${top_level[@]}")',
+    '    local -a candidates=("${top_level[@]}")',
     '    case "$cmd" in',
     ...cases,
     "        *) ;;",
     "    esac",
     "",
-    "    compadd -a completions",
+    "    compadd -a candidates",
     "}",
     "_devtools",
     "",

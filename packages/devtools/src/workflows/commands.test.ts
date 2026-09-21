@@ -1,15 +1,83 @@
-import { describe, expect, it, vi } from "vitest";
-import {
+import { createServer } from "node:net";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * `runWorkflowsRun`'s own dependencies, faked at the module boundary for the
+ * "remote-trigger env" tests near the bottom of this file: `discoverWranglerConfigs`
+ * so the Workflow picker sees one controlled app instead of walking `apps/*`
+ * on disk, `runWithStderr` so no `pnpm exec wrangler` ever actually spawns,
+ * and `@devdogsuga/env/load` so a deployed tier's credentials come from a
+ * fixture rather than a real `.env.staging`. Every other test in this file
+ * exercises a pure helper directly and needs none of this.
+ */
+const fixtures = vi.hoisted(() => ({
+  configs: [
+    {
+      app: "schedule-builder",
+      path: "/repo/apps/schedule-builder/wrangler.jsonc",
+      config: {
+        workflows: [
+          {
+            binding: "SCRAPE_WORKFLOW",
+            name: "development-schedule-builder-scrape",
+            class_name: "ScrapeWorkflow",
+          },
+        ],
+        env: {
+          staging: {
+            workflows: [
+              {
+                binding: "SCRAPE_WORKFLOW",
+                name: "staging-schedule-builder-scrape",
+                class_name: "ScrapeWorkflow",
+              },
+            ],
+          },
+        },
+      },
+    },
+  ],
+}));
+
+vi.mock("../cron/discovery.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../cron/discovery.js")>()),
+  discoverWranglerConfigs: vi.fn(() => fixtures.configs),
+}));
+
+vi.mock("../db/run.js", () => ({
+  runWithStderr: vi.fn(async () => ({ code: 0, stderr: "" })),
+  run: vi.fn(async () => 0),
+}));
+
+vi.mock("@devdogsuga/env/load", () => ({
+  loadEnvironment: vi.fn(async () => ({
+    environment: "staging",
+    files: [],
+    env: { CLOUDFLARE_API_TOKEN: "tkn" },
+    warnings: [],
+  })),
+  MissingEnvFileError: class MissingEnvFileError extends Error {},
+}));
+
+const { beginInvocation, recordEnteredTier, reproducibleCommand } =
+  await import("../invocation.js");
+const {
+  findFreePort,
+  isPortFree,
   isWranglerDevConnectionFailure,
   isWranglerDevRunning,
   renderWranglerEnvFile,
+  runWorkflowsRun,
   waitForLocalWorkflow,
   workflowChoices,
   workflowTriggerArgs,
   wranglerDevArgs,
   wranglerDevConnectionHint,
   wranglerDevNotRunningHint,
-} from "./commands.js";
+} = await import("./commands.js");
+const { runWithStderr } = await import("../db/run.js");
+const { loadEnvironment, MissingEnvFileError } =
+  await import("@devdogsuga/env/load");
 
 const configs = [
   {
@@ -246,5 +314,145 @@ describe("local Wrangler connection diagnostics", () => {
       "pnpm devtools workflows serve --app schedule-builder --port 9999",
     );
     expect(missing).toContain("--port <number>");
+  });
+});
+
+/**
+ * `runWorkflowsRun`'s remote-trigger env: for any tier but development it
+ * loads that tier's own credentials with `loadEnvironment(tier, { override:
+ * true })` and threads them to `runWithStderr` as the child's env, rather
+ * than leaving `wrangler workflows trigger` to whatever this process
+ * inherited — development's values, since `pnpm devtools` itself runs under
+ * `with-env`. `--tier`, `--workflow` and `--yes` are all passed so the run
+ * never reaches a prompt: `pickTier` and the Workflow picker both defer to a
+ * given flag, and `--yes` stands in for the deployed-tier confirm.
+ */
+describe("runWorkflowsRun remote-trigger env", () => {
+  beforeEach(() => {
+    vi.mocked(runWithStderr)
+      .mockClear()
+      .mockResolvedValue({ code: 0, stderr: "" });
+    vi.mocked(loadEnvironment)
+      .mockReset()
+      .mockResolvedValue({
+        environment: "staging",
+        files: [],
+        env: { CLOUDFLARE_API_TOKEN: "tkn" },
+        warnings: [],
+      });
+  });
+
+  it("threads the loaded tier's env to the trigger, not this process's own", async () => {
+    const code = await runWorkflowsRun([
+      "--tier",
+      "staging",
+      "--workflow",
+      "staging-schedule-builder-scrape",
+      "--yes",
+    ]);
+
+    expect(code).toBe(0);
+    expect(runWithStderr).toHaveBeenCalledOnce();
+    const triggerEnv = vi.mocked(runWithStderr).mock.calls[0]![1] as
+      Record<string, string> | undefined;
+    expect(triggerEnv?.CLOUDFLARE_API_TOKEN).toBe("tkn");
+  });
+
+  it("triggers nothing and returns 1 when the tier's env file is missing", async () => {
+    vi.mocked(loadEnvironment).mockRejectedValueOnce(
+      new MissingEnvFileError("staging", ".env.staging"),
+    );
+
+    const code = await runWorkflowsRun([
+      "--tier",
+      "staging",
+      "--workflow",
+      "staging-schedule-builder-scrape",
+      "--yes",
+    ]);
+
+    expect(code).toBe(1);
+    expect(runWithStderr).not.toHaveBeenCalled();
+  });
+
+  it("prints --tier only once when it was inherited from the session, not passed", async () => {
+    // `resolveTier` falls through to `process.env.DEPLOY_ENV` — the tier
+    // `launch.ts` already entered for the whole session — when `--tier` is
+    // not passed. `recordEnteredTier` already covers that in the rerun
+    // line's leading `--tier` prefix; the run itself must not record it a
+    // second time.
+    const previousDeployEnv = process.env.DEPLOY_ENV;
+    process.env.DEPLOY_ENV = "staging";
+    try {
+      // Mirrors `cli.ts`'s dispatch order: `beginInvocation` resets the
+      // entered tier, so `recordEnteredTier` must run after it.
+      beginInvocation(
+        ["run", "--workflow", "staging-schedule-builder-scrape", "--yes"],
+        false,
+      );
+      recordEnteredTier("staging");
+
+      const code = await runWorkflowsRun([
+        "--workflow",
+        "staging-schedule-builder-scrape",
+        "--yes",
+      ]);
+
+      expect(code).toBe(0);
+      const rerun = reproducibleCommand();
+      expect(rerun).not.toBeNull();
+      expect(rerun?.match(/--tier/g)).toHaveLength(1);
+    } finally {
+      if (previousDeployEnv === undefined) delete process.env.DEPLOY_ENV;
+      else process.env.DEPLOY_ENV = previousDeployEnv;
+    }
+  });
+});
+
+describe("port probing", () => {
+  /** Bind a real loopback listener on an OS-chosen port for the duration of
+   * `body`, so the helpers see an actually-occupied port rather than a mock. */
+  async function withBoundPort(
+    body: (port: number) => Promise<void>,
+  ): Promise<void> {
+    const server = createServer();
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen({ host: "127.0.0.1", port: 0 }, resolve);
+    });
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      server.close();
+      throw new Error("expected a bound TCP address");
+    }
+    try {
+      await body(address.port);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }
+
+  it("reports a bound port as taken and a closed one as free", async () => {
+    await withBoundPort(async (port) => {
+      expect(await isPortFree(port)).toBe(false);
+    });
+  });
+
+  it("finds a free port, skipping the one that is bound", async () => {
+    await withBoundPort(async (port) => {
+      const free = await findFreePort(port);
+      expect(free).not.toBeNull();
+      expect(free).not.toBe(port);
+      expect(free!).toBeGreaterThan(port);
+      // The returned port must itself be free — not just different.
+      expect(await isPortFree(free!)).toBe(true);
+    });
+  });
+
+  it("returns null when the bounded scan finds nothing free", async () => {
+    await withBoundPort(async (port) => {
+      // A one-slot scan starting at the occupied port cannot succeed.
+      expect(await findFreePort(port, 1)).toBeNull();
+    });
   });
 });

@@ -110,7 +110,8 @@ export type Condition = "docker" | "instance-running" | "instance-stopped";
  *
  *   `machine`  — acts on this machine's containers (`link`, `stop`, `restart`)
  *   `repo`     — reads or writes repository files only (no live connection)
- *   `endpoint` — connects to a database; takes `--target local|remote`
+ *   `endpoint` — connects to the SESSION's database (picked once at launch,
+ *                `--tier development:local|development:remote|staging|production`)
  *   `infra`    — infrastructure-level; touches roles, credentials, or config
  */
 export type Scope = "machine" | "repo" | "endpoint" | "infra";
@@ -125,7 +126,7 @@ export type Scope = "machine" | "repo" | "endpoint" | "infra";
 export const SCOPES: Record<Scope, { menu: string; help: string }> = {
   machine: { menu: "This machine", help: "Supabase on this machine" },
   repo: { menu: "Repo", help: "files in the repo" },
-  endpoint: { menu: "Database", help: "a database you pick with --target" },
+  endpoint: { menu: "Database", help: "the session's database (--tier)" },
   infra: {
     menu: "Hosted",
     help: "hosted infrastructure, each naming its own connection",
@@ -198,37 +199,34 @@ export const EXIT_DRIFT = 2;
 // ── Shared option shapes ─────────────────────────────────────────────────────
 
 /**
- * The closed endpoint selector — one flag, two values.
+ * `docs index`'s delete acknowledgment — NOT a database selector.
  *
- * Used by every `endpoint`-scope command. The test pin in `commands.test.ts`
- * enforces that the two sets match exactly.
- *
- * Choice values are plain words ("local", "remote"), not flag-prefixed: the
- * wizard emits `--target local` rather than the bare `--local` the old tree
- * used. `local` and `remote` are reserved in this namespace so that team slugs
- * can rejoin as plain values when sandboxes return.
+ * The db namespace's old `--target local|remote` flag is retired outright
+ * (the SESSION names the database now — see `db/connection.ts`), but `docs
+ * index` keeps this spelling for a different job: its prune deletes rows,
+ * and running that against a non-local `DB_URL` requires saying so out
+ * loud. The database itself still comes from the session's env.
  */
-export const ENDPOINT: CommandOption = {
+export const DOCS_TARGET: CommandOption = {
   flag: "--target",
   value: "<local|remote>",
-  summary: "Which database. Defaults to local.",
+  summary: "Acknowledge indexing a non-local DB_URL. Defaults to local-only.",
   prompt: {
     kind: "select",
-    message: "Which database?",
+    message: "May this prune a non-local database?",
     choices: [
-      { value: "local", label: "This machine", hint: "the default" },
-      { value: "remote", label: "The linked project" },
+      { value: "local", label: "Local only", hint: "the default" },
+      { value: "remote", label: "Yes — the session's remote DB_URL" },
     ],
   },
 };
 
 /**
- * The deployment tier selector.
- *
- * `--target` names a database; `--tier` names a deployment tier. Sharing the
- * same flag for two different dimensions was what made the old tree unreadable.
- * All commands accepting a tier use THIS constant, so a test can pin "one enum,
- * everywhere."
+ * The deployment-tier selector, for the commands that resolve a tier of
+ * their OWN (cron/workflows run against a chosen tier's env). The session's
+ * global `--tier` — `development:local|development:remote|staging|production`,
+ * stripped by the launcher before dispatch — is a superset of this
+ * vocabulary; this per-command flag still reads plain tiers.
  */
 export const TIER: CommandOption = {
   flag: "--tier",
@@ -270,13 +268,17 @@ const VAULT_TARGET: CommandOption = {
 };
 
 /**
- * The two flags every `run` task takes.
+ * The three flags every `run` task takes.
  *
- * Neither carries a `prompt`, and that is the point rather than an omission.
+ * None carries a `prompt`, and that is the point rather than an omission.
  * `run` opens a multiselect of the apps defining the task, so a wizard that
- * asked "every package?" and "which filter?" first would ask the same question
- * three times and let two of the answers contradict the third. `--help` still
- * documents both, which is where someone scripting this will look.
+ * asked "every package?", "which filter?" and "which tier?" up front would
+ * ask the same question three times and let the answers disagree. `--tier`
+ * is promptless for a different reason than `--filter`/`--all`, though: it is
+ * not a question `run` asks itself elsewhere (unlike `cron run`'s own
+ * `--tier`, which opens a live picker) — it is a scripting input with no
+ * wizard equivalent, the same category `--json` sits in. `--help` still
+ * documents all three, which is where someone scripting this will look.
  *
  * Same reasoning as `VAULT_TARGET` above: the command owns the question, so the
  * tree declares the flag and stays quiet.
@@ -290,6 +292,11 @@ const TURBO_OPTIONS: readonly CommandOption[] = [
   {
     flag: "--all",
     summary: "Every package, unfiltered, with nothing asked.",
+  },
+  {
+    flag: "--tier",
+    value: "<t>",
+    summary: "Load a tier's env into the run. CLI-only; never prompted.",
   },
 ];
 
@@ -812,7 +819,7 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
             summary: "Push the built docs artifact into the search index.",
             hint: "prunes stale rows in the target database",
             scope: "endpoint",
-            options: [ENDPOINT],
+            options: [DOCS_TARGET],
           },
         ],
       },
@@ -843,8 +850,8 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
           },
           {
             name: "init",
-            summary: "Create a fresh file for a target.",
-            hint: "refuses to touch one that exists",
+            summary: "Create a target file, or append newly declared keys.",
+            hint: "existing lines are never changed",
             options: [
               {
                 flag: "--target",
@@ -928,8 +935,8 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
           },
           {
             name: "connect",
-            summary: "Register a hosted project as the remote target.",
-            hint: "what --target remote then means",
+            summary: "Run `supabase link` against a hosted project ref.",
+            hint: "for driving the bare supabase CLI by hand",
             scope: "machine",
           },
           {
@@ -975,27 +982,27 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
               },
             ],
           },
-          // ── endpoint — a database you pick with --target ───────────────
+          // ── endpoint — the session's database ──────────────────────────
           {
             name: "status",
-            summary: "Report the target's health, URLs and keys.",
+            summary: "Report the session database's health, URLs and keys.",
             hint: "reads only",
             scope: "endpoint",
-            options: [ENDPOINT, JSON_FLAG],
+            options: [JSON_FLAG],
           },
           {
             name: "migrate",
             summary: "Apply new migrations to the database.",
             hint: "without erasing anything",
             scope: "endpoint",
-            options: [ENDPOINT],
+            options: [YES],
           },
           {
             name: "reset",
             summary: "Rebuild the database: migrations, seeds, types, buckets.",
             hint: "⚠️  erases the database first",
             scope: "endpoint",
-            options: [ENDPOINT, YES],
+            options: [YES],
           },
           {
             name: "types",
@@ -1003,7 +1010,7 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
               "Regenerate database.types.ts, format it, rebuild the package.",
             hint: "after any schema change",
             scope: "endpoint",
-            options: [ENDPOINT],
+            options: [],
           },
           {
             name: "seed",
@@ -1013,12 +1020,12 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
               {
                 name: "buckets",
                 summary: "Create the storage buckets config.toml declares.",
-                options: [ENDPOINT],
+                options: [],
               },
               {
                 name: "roles",
                 summary: "Reconcile the platform's role catalogue.",
-                options: [ENDPOINT],
+                options: [],
               },
             ],
           },
@@ -1028,7 +1035,6 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
               "Pull an app's live schema into its generated Drizzle files.",
             scope: "endpoint",
             options: [
-              ENDPOINT,
               {
                 flag: "--app",
                 value: "<slug>",
@@ -1038,14 +1044,15 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
           },
           {
             name: "config",
-            summary: "The Supabase config.toml, pushed to a target.",
+            summary:
+              "The Supabase config.toml, pushed to the session's project.",
             scope: "endpoint",
             subcommands: [
               {
                 name: "push",
-                summary: "Push config.toml to the linked project.",
-                hint: "--target remote only",
-                options: [ENDPOINT],
+                summary: "Push config.toml to the session's hosted project.",
+                hint: "hosted sessions only",
+                options: [],
               },
             ],
           },
@@ -1138,6 +1145,17 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
                   choices: WORKER_APP_CHOICES,
                 },
               },
+              {
+                flag: "--tier",
+                value: "<t>",
+                summary:
+                  "Preview against a tier's env. Defaults to development.",
+                // No prompt: the runtime resolver (`tier.ts`) asks this
+                // itself, conditionally, for both the wizard and a direct
+                // CLI invocation — a `prompt` here would ask it twice, once
+                // on this screen and once when the command actually runs.
+              },
+              YES,
             ],
           },
           {

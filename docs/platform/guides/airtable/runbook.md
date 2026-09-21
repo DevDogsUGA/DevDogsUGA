@@ -22,7 +22,7 @@ Standing a base up from nothing, in order — several of these fail confusingly 
 5. **Walk the manual checklist** `apply` prints — field editing permissions first, since nothing can check them for you. Airtable's default `Table 1` is deleted here too.
 6. **`pnpm devtools airtable verify`** must exit clean. If it does not, fix the base rather than the registry: the registry is what the code agrees with.
 7. **Author the projects** directly in the Projects table — a Name each, and an Order if the schedule should list them in a particular sequence. They used to arrive by themselves, pushed from Postgres, which is why this step used to say "seed with one sync pass"; the table is officer-authored now. Nothing else can create one.
-8. **Build the restricted Officer Changes form and production automation** from the [dashboard checklist](/docs/platform/guides/airtable/attendance-dashboard-setup).
+8. **Build the restricted Officer Changes form and verify scheduled/manual command processing** from the [dashboard checklist](/docs/platform/guides/airtable/attendance-dashboard-setup).
 9. **Only then author a meeting.** Earlier produces a workshop linked to nothing.
 10. **Mint the sync token** — same workspace, everything except `schema.bases:write` — set it as `AIRTABLE_SYNC_PAT`, delete `AIRTABLE_APPLY_PAT` from `.env`, and revoke the bootstrap token. It does not come back: later schema changes go through `deploy airtable-apply`, which holds the apply token in the `production-apply` environment behind required reviewers.
 11. **Grant an officer role `canTriggerSync`** and run one pass from the console.

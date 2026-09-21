@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { PlusCircleIcon } from "@phosphor-icons/react/ssr";
-import type { OfferingSearchRow } from "~/types/course";
+import type { SectionRow } from "~/types/course";
 import { CourseSectionsDialog } from "./CourseSectionsDialog";
 import { formatCourseCode } from "~/lib/courseCode";
 
@@ -12,10 +12,17 @@ type CourseGroup = {
   courseNumber: string;
   title: string;
   maxCreditHours: number;
-  offerings: OfferingSearchRow[];
+  offerings: SectionRow[];
 };
 
-export function CourseSearchResult({ course }: { course: CourseGroup }) {
+export function CourseSearchResult({
+  course,
+  includeOnlyCrn,
+}: {
+  course: CourseGroup;
+  /** Forwarded to the sections dialog for the "add by CRN" flow. */
+  includeOnlyCrn?: number;
+}) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const instructorNames = [
@@ -55,6 +62,7 @@ export function CourseSearchResult({ course }: { course: CourseGroup }) {
       {dialogOpen && (
         <CourseSectionsDialog
           course={course}
+          includeOnlyCrn={includeOnlyCrn}
           onClose={() => setDialogOpen(false)}
         />
       )}

@@ -42,9 +42,9 @@ platform-owned fields.
 
 ## Officer corrections
 
-Officers submit the restricted Officer Changes form. Its automation sends only
-the Airtable response record ID to `/airtable/officer-changes`, authenticated
-with `AIRTABLE_AUTOMATION_SECRET`. The platform then:
+Officers submit the restricted Officer Changes form. The shared fifteen-minute
+or manually triggered Airtable sync finds new and retryable responses, then the
+platform:
 
 1. fetches the response from Airtable;
 2. attributes it through Airtable's immutable `Created by` collaborator;
@@ -56,10 +56,10 @@ with `AIRTABLE_AUTOMATION_SECRET`. The platform then:
 7. writes the result back to the response.
 
 Retries cannot apply a command twice. Editing a delivered response changes its
-digest and is rejected. Scheduled sync reconciles status fields if the command
-committed but the final Airtable write failed. See [Attendance dashboard
-setup](/docs/platform/guides/airtable/attendance-dashboard-setup) for the
-deferred form, automation, and field-permission work.
+digest and is rejected. The same scheduled sync reconciles status fields if
+the command committed but the final Airtable write failed. See [Attendance
+dashboard setup](/docs/platform/guides/airtable/attendance-dashboard-setup)
+for the deferred form and field-permission work.
 
 ## EL reflections
 

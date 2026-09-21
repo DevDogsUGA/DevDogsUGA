@@ -86,7 +86,12 @@ catalog:
   "@clack/prompts": ^1.7.0
   "@opennextjs/cloudflare": ^1.20.2
   eslint: ^9.39.5
-  supabase: ^2.115.0
+  # supabase tracks the `latest` dist-tag so every install pulls the newest
+  # CLI — the local dev/migration tool has no lockstep with the runtime SDKs
+  # (@supabase/* above) and its releases are frequent. Kept out of the
+  # minimumReleaseAge hold via minimumReleaseAgeExclude below, so `latest`
+  # actually resolves to the newest version instead of the newest older-than-N.
+  supabase: latest
   tsx: ^4.23.12
   typescript: ^6.0.3
   wrangler: ^4.133.0
@@ -195,6 +200,10 @@ minimumReleaseAgeExclude:
   - miniflare@5.20260916.0-alpha
   - workerd@1.20260916.1
   - wrangler@4.133.0
+  # Version-less on purpose: the catalog pins supabase to `latest`, so no fixed
+  # version can be listed here. The bare name exempts every version, letting
+  # `latest` resolve to the newest release instead of being held back.
+  - supabase
 onlyBuiltDependencies:
   - esbuild
   - sharp

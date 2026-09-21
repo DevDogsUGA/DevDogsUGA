@@ -1,11 +1,11 @@
-import type { OfferingSearchRow } from "~/types/course";
+import type { SectionRow } from "~/types/course";
 
 export function SectionExclusionList({
   offerings,
   excludedCrns,
   onToggle,
 }: {
-  offerings: OfferingSearchRow[];
+  offerings: SectionRow[];
   excludedCrns: Set<number>;
   onToggle: (crn: number) => void;
 }) {

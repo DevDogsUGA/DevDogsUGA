@@ -17,7 +17,9 @@
  * commands in the separate `devtools-ci` bin do not appear here.
  */
 import { confirm, note, select, text } from "@clack/prompts";
+import { positionals } from "./args.js";
 import {
+  findCommand,
   GROUPS,
   SCOPES,
   type CommandGroup,
@@ -31,7 +33,7 @@ import {
   probeEnvironment,
   type Environment,
 } from "./environment.js";
-import { beginInvocation } from "./invocation.js";
+import { beginInvocation, recordEnteredTier } from "./invocation.js";
 import { unwrap } from "./ui.js";
 
 /** Chosen when a submenu should return to the screen above it. */
@@ -217,7 +219,57 @@ interface Chosen {
   argv: string[];
 }
 
-async function walk(env: Environment): Promise<Chosen | null> {
+/**
+ * Descends from `start` through its subcommand screens to a leaf, then asks
+ * that leaf's options.
+ *
+ * Shared by both entries into a walk: the top-of-tree loop below, which calls
+ * this once a group and its first command are chosen, and a resumed walk
+ * (`walk`'s `startPath` branch), which calls it directly on a node the caller
+ * already picked by argv. `while` rather than a single step because the tree
+ * is two deep today and this does not care. The condition counts the OFFERED
+ * children rather than all of them, so a node whose every subcommand is
+ * hidden is treated as the leaf it has become instead of opening a screen
+ * holding only "Back".
+ */
+async function descendFrom(
+  start: CommandNode,
+  pathNames: string[],
+  env: Environment,
+): Promise<Chosen | Back> {
+  let node = start;
+  const path = [...pathNames];
+  while (offered(node.subcommands ?? [], env).length > 0) {
+    const child = await pickSubcommand(node, env);
+    if (child === BACK) return BACK;
+    node = child;
+    path.push(node.name);
+  }
+  return { node, argv: [...path, ...(await askOptions(node))] };
+}
+
+/**
+ * Walks the tree to a leaf and its options, either from the top or resumed at
+ * a known group.
+ *
+ * `startPath`, when given, is a path to a group node from `bareGroupStartPath`
+ * — `["db"]` for `devtools db` — and lands here instead of at `pickGroup`.
+ * There is no group screen above a resumed node (the caller already named it
+ * by typing `db`), so BACK on its first subcommand screen has nowhere to
+ * return to but out, unlike BACK from the top of the tree, which returns to
+ * `pickGroup`.
+ */
+async function walk(
+  env: Environment,
+  startPath?: string[],
+): Promise<Chosen | null> {
+  if (startPath) {
+    const start = findCommand(startPath);
+    if (!start) return null; // defensive: the caller guarantees a group node
+    const chosen = await descendFrom(start, [...startPath], env);
+    return chosen === BACK ? null : chosen;
+  }
+
   for (;;) {
     const group = await pickGroup(env);
     if (!group) return null;
@@ -225,28 +277,28 @@ async function walk(env: Environment): Promise<Chosen | null> {
     const first = await pickCommand(group, env);
     if (first === BACK) continue;
 
-    let node = first;
-    const path = [node.name];
-    let backedOut = false;
+    const chosen = await descendFrom(first, [first.name], env);
+    if (chosen === BACK) continue;
 
-    // `while` rather than a single step: the tree is two deep today and this
-    // does not care. The condition counts the OFFERED children rather than
-    // all of them, so a node whose every subcommand is hidden is treated as
-    // the leaf it has become instead of opening a screen holding only "Back".
-    while (offered(node.subcommands ?? [], env).length > 0) {
-      const child = await pickSubcommand(node, env);
-      if (child === BACK) {
-        backedOut = true;
-        break;
-      }
-      node = child;
-      path.push(node.name);
-    }
-
-    if (backedOut) continue;
-
-    return { node, argv: [...path, ...(await askOptions(node))] };
+    return chosen;
   }
+}
+
+// ── Resuming at a node ───────────────────────────────────────────────────────
+
+/**
+ * The command path when argv names a group with subcommands but no subcommand
+ * token — what `devtools db` and `devtools db seed` are. Returns null for a
+ * leaf command, an unknown token, or a bare invocation (which the no-argument
+ * wizard already covers). The caller resumes the wizard at this node when
+ * stdin is a TTY; a non-TTY caller keeps the dispatcher's "which of …?" exit.
+ */
+export function bareGroupStartPath(argv: readonly string[]): string[] | null {
+  const path = positionals(argv);
+  if (path.length === 0) return null;
+  const node = findCommand(path);
+  if (!node || (node.subcommands ?? []).length === 0) return null;
+  return path;
 }
 
 // ── Entry ────────────────────────────────────────────────────────────────────
@@ -260,10 +312,22 @@ async function walk(env: Environment): Promise<Chosen | null> {
  * passes straight through, the closing line or `null` for a failure already
  * explained, so a command reached from the menu signs off exactly as it does
  * from the command line.
+ *
+ * `options.startPath`, from `bareGroupStartPath`, skips straight to that
+ * node's subcommand screen — see `walk`'s `startPath` branch.
+ *
+ * The deploy tier is NOT asked here any more. `src/launch.ts` resolves and
+ * enters it before `cli.ts` — and therefore this module — is even imported,
+ * so by the time the wizard opens the whole session is already running under
+ * it, exactly as if `--tier` had been typed. Recording it for the "run it
+ * directly next time" line only needs to read `process.env.DEPLOY_ENV` back.
  */
 export async function runMenu(
   dispatch: (argv: string[]) => Promise<string | null>,
   env: Environment = probeEnvironment(),
+  options: {
+    startPath?: string[];
+  } = {},
 ): Promise<string | null> {
   // Before the first question, not after a failure. Three lines saying what
   // this machine currently is explain why the database commands below are
@@ -272,13 +336,26 @@ export async function runMenu(
   // instead of the one they happen to run on.
   note(describeEnvironment(env), "This machine");
 
-  const chosen = await walk(env);
+  const chosen = await walk(env, options.startPath);
   // Quitting is not a failure, but it has nothing to announce either.
   if (!chosen) return null;
 
   // Every step here was a prompt, so the built argv is the reproducible
   // command — a runner that prompts further (a bare `workflows run`) appends
-  // the rest through `recordResolved`.
+  // the rest through `recordResolved`, and the entered tier rides along as the
+  // `--tier` flag `recordEnteredTier` adds.
   beginInvocation(chosen.argv, true);
+  // A development session that answered the "which development database?"
+  // question records the QUALIFIED selector, so the "run it directly next
+  // time" line reproduces the whole session — a bare `development` would
+  // re-ask (or refuse, non-interactively) on a machine whose `.env` names a
+  // remote DB_URL.
+  const enteredTier = process.env.DEPLOY_ENV ?? "development";
+  const devDb = process.env.DEV_DB;
+  recordEnteredTier(
+    enteredTier === "development" && (devDb === "local" || devDb === "remote")
+      ? `development:${devDb}`
+      : enteredTier,
+  );
   return dispatch(chosen.argv);
 }

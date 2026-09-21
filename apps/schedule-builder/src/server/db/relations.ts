@@ -106,8 +106,8 @@ export const relations = defineRelations(tables, (t) => ({
 
   meetings: {
     offering: t.one.offerings({
-      from: t.meetings.offeringCrn,
-      to: t.offerings.crn,
+      from: [t.meetings.academicPeriod, t.meetings.offeringCrn],
+      to: [t.offerings.academicPeriod, t.offerings.crn],
     }),
     building: t.one.buildings({
       from: t.meetings.buildingId,

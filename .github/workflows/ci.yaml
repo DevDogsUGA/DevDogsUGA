@@ -169,7 +169,7 @@ jobs:
       # reads a column the types still claim exists.
       - name: Generated Database types match the migrations
         run: |
-          pnpm devtools db types --target local
+          pnpm devtools db types
           git diff --exit-code -- packages/supabase/src/database.types.ts
       # 54 tests. All app schemas share one PostgREST endpoint and one anon key,
       # so RLS -- not the schema boundary -- is what isolates one app's data from

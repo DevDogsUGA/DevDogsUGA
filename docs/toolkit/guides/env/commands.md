@@ -134,13 +134,21 @@ reads any of it.
 
 </details>
 
-`env init` creates a file for a target. Re-running it on a `.env` that already
-exists is **additive**, not a refusal: it appends only the keys the file does
-not mention at all, under a dated header, and leaves every existing line
-byte-for-byte — an active line holds somebody's value and a commented one holds
-their decision. That is what makes the setup picker's "pick less now, come back
-for more later" true. Every other target refuses instead, and points you at
-`env pull` to update values in place.
+`env init` creates a file for a target. Re-running it on any existing target
+file is **additive**, not destructive: it appends only newly declared keys that
+the target routes, under a dated header, and leaves every existing line
+byte-for-byte. An active line holds somebody's value and a commented one holds
+their decision. This is the command to run after a manifest adds environment
+variables:
+
+```bash
+pnpm devtools env init --target staging
+pnpm devtools env init --target production
+```
+
+The new secret lines are blank for you to fill; derivations such as `$API_URL`
+are preserved. If Bitwarden already holds the values, use `env pull` instead —
+it adds or updates those values in place. Neither command removes stale keys.
 
 `env example` regenerates `.env.example` from the manifests, as CI checks it;
 `env reset` blanks every value in `.env` while keeping each one commented out

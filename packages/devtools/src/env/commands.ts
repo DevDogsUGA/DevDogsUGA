@@ -33,7 +33,7 @@
  *   * **Values are never printed.** Fingerprints tell a rotation from a paste
  *     error and cannot be used to reconstruct anything.
  */
-import { readFile, writeFile } from "node:fs/promises";
+import { chmod, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { confirm, log, note } from "@clack/prompts";
 import { fileFor, variables, type EnvTarget } from "@devdogsuga/env";
@@ -134,10 +134,15 @@ function stampFor(target: VaultTarget, action: Stamp["action"]): Stamp {
  * `group()` runs on every write rather than as its own command: files drift a
  * line at a time, and a tidy pass nobody remembers to run is a tidy pass that
  * never happens.
+ *
+ * Env files contain credentials and must not be world-readable. The mode
+ * parameter only applies on creation, so existing world-readable files are
+ * tightened with chmod after each write.
  */
-async function save(path: string, doc: EnvDocument): Promise<boolean> {
+export async function save(path: string, doc: EnvDocument): Promise<boolean> {
   const moved = doc.group();
-  await writeFile(path, doc.toString());
+  await writeFile(path, doc.toString(), { mode: 0o600 });
+  await chmod(path, 0o600);
   return moved;
 }
 

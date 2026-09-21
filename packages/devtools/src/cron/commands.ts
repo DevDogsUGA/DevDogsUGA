@@ -22,9 +22,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { confirm, select } from "@clack/prompts";
 import { parse as parseEnv } from "dotenv";
-import { fileFor, type EnvTarget } from "@devdogsuga/env";
+import { MissingEnvFileError, loadEnvironment } from "@devdogsuga/env/load";
 import { PROJECT_ROOT } from "../environment.js";
 import { positionals } from "../args.js";
+import { resolveTier } from "../tier.js";
 import { unwrap } from "../ui.js";
 import {
   CRON_TIERS,
@@ -304,33 +305,6 @@ export function cronChoices(
     .sort((a, b) => a.app.localeCompare(b.app) || a.expr.localeCompare(b.expr));
 }
 
-async function resolveTier(
-  given: string | undefined,
-): Promise<CronTier | null> {
-  if (given) {
-    if (isCronTier(given)) return given;
-    process.stderr.write(
-      `devtools cron run: unknown tier "${given}". Expected: ${CRON_TIERS.join(", ")}.\n`,
-    );
-    return null;
-  }
-  if (!process.stdin.isTTY) return "development";
-  return unwrap(
-    await select<CronTier>({
-      message: "Which tier should receive the cron job?",
-      options: CRON_TIERS.map((value) => ({
-        value,
-        hint:
-          value === "development"
-            ? "this machine"
-            : value === "production"
-              ? "⚠️  live data"
-              : undefined,
-      })),
-    }),
-  );
-}
-
 async function confirmDeployed(
   tier: CronTier,
   choice: CronChoice | undefined,
@@ -354,7 +328,11 @@ async function confirmDeployed(
 export async function runCronRun(argv: readonly string[]): Promise<number> {
   const opts = parseCronRunOptions(argv);
   const route = positionals(argv)[0];
-  const tier = await resolveTier(opts.tier);
+  const tier = await resolveTier(
+    opts.tier,
+    "Which tier should receive the cron job?",
+    { label: "devtools cron run" },
+  );
   if (!tier) return 1;
 
   const maps = await discoverCronMaps();
@@ -412,7 +390,21 @@ export async function runCronRun(argv: readonly string[]): Promise<number> {
   if (!(await confirmDeployed(tier, choice, opts.yes ?? false))) return 1;
 
   const app = choice?.app ?? opts.app;
-  const tierEnv = loadTierEnv(tier);
+  let tierEnv: Record<string, string>;
+  try {
+    // override: true because `devtools cron run` itself runs under `with-env`
+    // (development), so process.env already holds development's values; the
+    // tier picked here — development, staging or production, `resolveTier`
+    // above refuses anything else — must win over whatever this process
+    // inherited.
+    tierEnv = (await loadEnvironment(tier, { override: true })).env;
+  } catch (err) {
+    if (err instanceof MissingEnvFileError) {
+      process.stderr.write(`devtools cron run: ${err.message}\n`);
+      return 1;
+    }
+    throw err;
+  }
   const baseUrl = resolveBaseUrl(app, tier, configs.get(app ?? ""), tierEnv);
   const cronSecret = tierEnv["CRON_SECRET"] ?? "";
   const routes = choice?.routes ?? [route!];
@@ -495,25 +487,6 @@ export function devServerHint(
     "The dev server doesn't appear to be running. Start it, then re-run:\n" +
     `  pnpm ${filter} dev\n`
   );
-}
-
-// ── tier env loader ───────────────────────────────────────────────────────────
-
-// exported for unit testing; reads the tier's .env.<tier> file from PROJECT_ROOT
-export function loadTierEnv(tier: string): Record<string, string> {
-  const validTiers: readonly string[] = [
-    "development",
-    "preflight",
-    "staging",
-    "production",
-  ];
-  const safeTarget: EnvTarget = validTiers.includes(tier)
-    ? (tier as EnvTarget)
-    : "development";
-  const filename = fileFor(safeTarget);
-  const envPath = join(PROJECT_ROOT, filename);
-  if (!existsSync(envPath)) return {};
-  return parseEnv(readFileSync(envPath, "utf8"));
 }
 
 function parseCronRunOptions(argv: readonly string[]): CronRunOptions {

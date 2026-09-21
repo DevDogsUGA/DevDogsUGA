@@ -1,10 +1,11 @@
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { meetings } from "~/server/db/schema";
 import { bulkUpsert } from "./bulkUpsert";
 import type { DrizzleTransaction, Row } from "./types";
 import { parseDate, parseTime } from "./utils";
 
 interface PendingMeeting {
+  academicPeriod: number;
   crn: number;
   monday: boolean;
   tuesday: boolean;
@@ -41,7 +42,8 @@ export class MeetingCollector {
       row["SCHEDULE_OFFERING.COURSE_REFERENCE_NUMBER"] ?? "",
       10,
     );
-    if (isNaN(crn)) return;
+    const academicPeriod = parseInt(row.ACADEMIC_PERIOD ?? "", 10);
+    if (isNaN(crn) || isNaN(academicPeriod)) return;
 
     const timeRaw = row.Time ?? "";
     const [startRaw, endRaw] = timeRaw.split(/\s*-\s*/);
@@ -49,6 +51,7 @@ export class MeetingCollector {
     const buildingId = parseInt(buildingRaw, 10);
 
     this.pending.push({
+      academicPeriod,
       crn,
       monday: meetsOn(row["MEETING_TIME.MONDAY_IND"]),
       tuesday: meetsOn(row["MEETING_TIME.TUESDAY_IND"]),
@@ -83,9 +86,15 @@ export class MeetingCollector {
    * `validCrns` — this term's offerings — rather than the whole table, so a
    * scrape reconciling one term never touches another term's meetings.
    */
-  async flush(tx: DrizzleTransaction, validCrns: Set<number>): Promise<number> {
+  async flush(
+    tx: DrizzleTransaction,
+    academicPeriod: number,
+    validCrns: Set<number>,
+  ): Promise<number> {
     const rows = this.pending
-      .filter((m) => validCrns.has(m.crn))
+      .filter(
+        (m) => m.academicPeriod === academicPeriod && validCrns.has(m.crn),
+      )
       .map(({ crn, ...rest }) => ({ ...rest, offeringCrn: crn }));
 
     // `bulkUpsert` returns early on an empty array, so deleting first would
@@ -104,7 +113,12 @@ export class MeetingCollector {
     if (validCrns.size > 0) {
       await tx
         .delete(meetings)
-        .where(inArray(meetings.offeringCrn, [...validCrns]));
+        .where(
+          and(
+            eq(meetings.academicPeriod, academicPeriod),
+            inArray(meetings.offeringCrn, [...validCrns]),
+          ),
+        );
     }
     await bulkUpsert(tx, meetings, rows);
     return rows.length;

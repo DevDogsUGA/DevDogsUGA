@@ -10,15 +10,17 @@
  *      b. Re-inject the cross-schema FK-target import (auth.users etc.)
  *      c. Append InPlatform-suffix aliases so existing imports stay stable
  *
- * `DB_URL` is read from the dev env file (.env) and injected into the subprocess
- * environment, matching what `with-env drizzle-kit pull` used to do.
+ * `DB_URL` comes from `resolveLocalToolingEnv` — the tier this process
+ * already entered (`launch.ts`, before `cli.ts` ever dispatched this
+ * command), `.env.generated` overlay included — and is injected into the
+ * subprocess environment. See `db/local-env.ts`'s header for why this is
+ * NOT a raw `.env` parse.
  */
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { parse as parseEnv } from "dotenv";
-import { fileFor } from "@devdogsuga/env";
 import { PROJECT_ROOT } from "../environment.js";
+import { resolveLocalToolingEnv } from "./local-env.js";
 
 // ── Per-app config ────────────────────────────────────────────────────────────
 
@@ -135,17 +137,14 @@ export async function runIntrospect(app?: string): Promise<number> {
 
   const appDir = join(PROJECT_ROOT, "apps", app);
 
-  // Load DB_URL from the dev env file
-  const envFile = join(PROJECT_ROOT, fileFor("development"));
-  const tierEnv = existsSync(envFile)
-    ? parseEnv(readFileSync(envFile, "utf8"))
-    : {};
-  const env: NodeJS.ProcessEnv = { ...process.env, ...tierEnv };
+  const env = await resolveLocalToolingEnv();
 
   if (!env["DB_URL"]) {
     process.stderr.write(
-      "devtools db introspect: DB_URL is not set in .env. " +
-        "Run `supabase start` first (for local) or set DB_URL to the remote connection string.\n",
+      "devtools db introspect: DB_URL is not set. Run " +
+        "`pnpm devtools db start` first (for local — its connection string " +
+        "lives in .env.generated once the stack is up), or set DB_URL in " +
+        "the deploy tier's env file this process entered.\n",
     );
     return 1;
   }

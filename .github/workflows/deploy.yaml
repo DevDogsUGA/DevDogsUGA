@@ -76,7 +76,7 @@ env:
 # choice:
 #
 #   run ci   `tsx src/ci.ts` — the CI bin; no env file, no wrapper.
-#   run cli  `with-env tsx src/cli.ts` — loads .env.$DEPLOY_ENV first.
+#   run cli  `node bin/devtools.mjs` — resolves the tier and loads its env first.
 #
 # ⚠️ `deploy write-env` is the step that CREATES .env.$DEPLOY_ENV, so routing
 # it through `with-env` is a bootstrap cycle: it would die on
@@ -97,9 +97,10 @@ env:
 # point is used in both places so there is one answer rather than two.
 #
 # Everything downstream of write-env uses `run ci:env`: the quiet CI entry
-# point wrapped in `with-env`. Reading the values write-env composed is the
-# entire point, while keeping clack banners away from credential-bearing
-# stdout.
+# point that resolves the tier and loads the env file write-env composed
+# (`bin/devtools-ci.mjs` -> `src/launch-ci.ts`) before `ci.ts` runs. Reading
+# those values is the entire point, while keeping clack banners away from
+# credential-bearing stdout.
 #
 # ⚠️ NOTHING here may run a deploy command through a wrapper that writes to
 # stdout. `deploy secrets-file` emits `::add-mask::<token>`, which GitHub
@@ -252,8 +253,8 @@ jobs:
       # Written to a mkdtemp 0700 directory and removed below whatever happens.
       - name: Compose the Worker secrets file
         id: secrets
-        # `run ci:env` — the quiet CI entry point under with-env — because the
-        # whole job of this step is to read the values write-env composed. Its
+        # `run ci:env` — the quiet CI entry point that loads the env file — because
+        # the whole job of this step is to read the values write-env composed. Its
         # stdout carries `::add-mask::` and nothing else; see the note above.
         run: >-
           pnpm --filter @devdogsuga/devtools run ci:env deploy secrets-file
@@ -641,8 +642,8 @@ jobs:
         run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
       - name: Compose the Worker secrets file
         id: secrets
-        # `run ci:env` — the quiet CI entry point under with-env — because the
-        # whole job of this step is to read the values write-env composed. Its
+        # `run ci:env` — the quiet CI entry point that loads the env file — because
+        # the whole job of this step is to read the values write-env composed. Its
         # stdout carries `::add-mask::` and nothing else; see the note above.
         run: >-
           pnpm --filter @devdogsuga/devtools run ci:env deploy secrets-file

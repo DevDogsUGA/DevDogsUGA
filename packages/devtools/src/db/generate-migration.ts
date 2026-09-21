@@ -10,16 +10,16 @@
  * real migration under `supabase/migrations/` — never something that runs on
  * its own. `DB_URL` is still required because drizzle-kit's Postgres
  * introspection needs a live connection to compare against, matching what
- * `with-env` supplied before.
+ * `with-env` supplied before — sourced via `resolveLocalToolingEnv`, the
+ * tier this process already entered rather than a raw `.env` parse. See
+ * `db/local-env.ts`'s header.
  */
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { select } from "@clack/prompts";
-import { parse as parseEnv } from "dotenv";
-import { fileFor } from "@devdogsuga/env";
 import { PROJECT_ROOT } from "../environment.js";
 import { unwrap } from "../ui.js";
+import { resolveLocalToolingEnv } from "./local-env.js";
 
 // ── Per-app config ────────────────────────────────────────────────────────────
 
@@ -70,20 +70,19 @@ export async function runGenerateMigration(appSlug?: string): Promise<number> {
 
   const appDir = join(PROJECT_ROOT, "apps", app);
 
-  // Load DB_URL from the dev env file, matching `db introspect`'s approach:
-  // `pnpm devtools` is itself `with-env tsx src/cli.ts`, but drizzle-kit here
-  // runs as its own child process in the app's directory, so it needs the
-  // connection string injected explicitly rather than inherited implicitly.
-  const envFile = join(PROJECT_ROOT, fileFor("development"));
-  const tierEnv = existsSync(envFile)
-    ? parseEnv(readFileSync(envFile, "utf8"))
-    : {};
-  const env: NodeJS.ProcessEnv = { ...process.env, ...tierEnv };
+  // Matching `db introspect`'s approach: `pnpm devtools` enters a tier into
+  // `process.env` before dispatch (`launch.ts`), but drizzle-kit here runs as
+  // its own child process in the app's directory, so that entered
+  // environment needs to be injected explicitly rather than inherited
+  // implicitly.
+  const env = await resolveLocalToolingEnv();
 
   if (!env["DB_URL"]) {
     process.stderr.write(
-      "devtools db migration generate: DB_URL is not set in .env. " +
-        "Run `pnpm devtools db start` first (for local) or set DB_URL to the remote connection string.\n",
+      "devtools db migration generate: DB_URL is not set. Run " +
+        "`pnpm devtools db start` first (for local — its connection string " +
+        "lives in .env.generated once the stack is up), or set DB_URL in " +
+        "the deploy tier's env file this process entered.\n",
     );
     return 1;
   }

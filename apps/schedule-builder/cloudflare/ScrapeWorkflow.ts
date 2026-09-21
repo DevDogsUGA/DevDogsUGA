@@ -2,8 +2,8 @@
 /**
  * Registrar scrape, as a Cloudflare Workflow instead of one long HTTP
  * request (see the former src/app/(api)/cron/scrape-registrar/route.ts,
- * which this supersedes as the cron target -- cloudflare/scheduled.ts now
- * triggers this Workflow directly instead of fetching that route).
+ * which this supersedes as the cron target). The native schedule is declared
+ * on the Workflow binding in wrangler.jsonc.
  *
  * Splitting into one step per term means a single term's failure -- a
  * vanished CSV, a bad calendar lookup, a constraint violation -- can't burn
@@ -25,14 +25,16 @@
  */
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
-import { sql } from "drizzle-orm";
 import {
   detectAvailableTerms,
   fetchPartsOfTerm,
   academicPeriodInfo,
   CalendarNotFoundError,
 } from "~/lib/parsers";
-import { fetchSemesterCsv } from "~/lib/parsers/AvailableTerms";
+import {
+  fetchSemesterCsv,
+  type FailedFetch,
+} from "~/lib/parsers/AvailableTerms";
 import {
   reconcileTerm,
   type TermReconcileResult,
@@ -47,9 +49,7 @@ import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { resolveWorkflowDatabaseUrl } from "./database-url";
 
 /**
- * Opaque -- this Workflow is only ever triggered on a cron schedule (see
- * cloudflare/scheduled.ts's `env.SCRAPE_WORKFLOW.create()`), with no
- * per-instance parameters to carry.
+ * Opaque -- scheduled and manual instances need no per-instance parameters.
  */
 export type ScrapeWorkflowParams = Record<string, never>;
 
@@ -62,6 +62,7 @@ export type ScrapeWorkflowParams = Record<string, never>;
  */
 export type ScrapeWorkflowResult = {
   termResults: TermReconcileResult[];
+  failedFetches: FailedFetch[];
   failures: { academicPeriod: number; error: string }[];
 };
 
@@ -77,21 +78,30 @@ export class ScrapeWorkflow extends WorkflowEntrypoint<
     // NOT the parsed `.rows`. Step output is persisted/replayed by the
     // Workflows engine, and a whole semester's CSV is unbounded; each term's
     // own step re-fetches its CSV from scratch instead.
-    const detected = await step.do("detect-available-terms", async () => {
+    const detection = await step.do("detect-available-terms", async () => {
       const { terms, failedFetches } = await detectAvailableTerms();
       if (failedFetches.length > 0) {
         console.error("[scrape-workflow] CSV fetch failures:", failedFetches);
       }
-      return terms.map(({ academicPeriod, description }) => ({
-        academicPeriod,
-        description,
-      }));
+      return {
+        terms: terms.map(({ academicPeriod, description }) => ({
+          academicPeriod,
+          description,
+        })),
+        failedFetches,
+      };
     });
+
+    if (detection.terms.length === 0) {
+      throw new NonRetryableError(
+        `No registrar terms were detected: ${JSON.stringify(detection.failedFetches)}`,
+      );
+    }
 
     const termResults: TermReconcileResult[] = [];
     const failures: { academicPeriod: number; error: string }[] = [];
 
-    for (const { academicPeriod } of detected) {
+    for (const { academicPeriod } of detection.terms) {
       // One term's failure must not abort the loop -- caught here rather
       // than left to reject `run()` and take every other term down with it.
       try {
@@ -152,28 +162,19 @@ export class ScrapeWorkflow extends WorkflowEntrypoint<
       }
     }
 
-    // Ensure indexes and refresh the materialized search view after every
-    // scrape, same as the route this Workflow replaced. Schema-qualified:
-    // the postgres-js connection's default search_path ("$user", public)
-    // does not include `schedule_builder`.
-    await step.do("refresh-view", async () => {
-      const db = createScheduleBuilderDb(resolveWorkflowDatabaseUrl(this.env));
-
-      await db.execute(sql`
-        CREATE UNIQUE INDEX IF NOT EXISTS "offeringSearch_crn_idx"
-          ON "schedule_builder"."offeringSearch" (crn)
-      `);
-
-      await db.execute(sql`
-        CREATE INDEX IF NOT EXISTS "offeringSearch_fts_idx"
-          ON "schedule_builder"."offeringSearch" USING gin (search_vector)
-      `);
-
-      await db.execute(
-        sql`REFRESH MATERIALIZED VIEW CONCURRENTLY "schedule_builder"."offeringSearch"`,
+    // Partial writes are useful, but a partially refreshed catalog is not a
+    // successful scrape. Mark the instance errored after every viable term had
+    // its chance to reconcile so the dashboard/CLI cannot report a false green.
+    if (detection.failedFetches.length > 0 || failures.length > 0) {
+      throw new NonRetryableError(
+        `Registrar scrape completed partially: ${JSON.stringify({
+          failedFetches: detection.failedFetches,
+          failures,
+          completedPeriods: termResults.map((r) => r.academicPeriod),
+        })}`,
       );
-    });
+    }
 
-    return { termResults, failures };
+    return { termResults, failedFetches: detection.failedFetches, failures };
   }
 }
