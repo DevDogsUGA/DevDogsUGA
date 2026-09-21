@@ -9,6 +9,7 @@ const IDS = {
   meeting: "a1000000-0000-4000-a000-000000000001",
   cancelledMeeting: "a1000000-0000-4000-a000-000000000002",
   member: "a1000000-0000-4000-a000-000000000003",
+  nonCountingMeeting: "a1000000-0000-4000-a000-000000000004",
 };
 
 async function cleanup() {
@@ -20,12 +21,18 @@ async function cleanup() {
     await tx.execute(sql`
       delete from platform."auditEvents"
       where "targetType" = 'attendance'
-        and metadata ->> 'meetingId' in (${IDS.meeting}, ${IDS.cancelledMeeting})
+        and metadata ->> 'meetingId' in (
+          ${IDS.meeting}, ${IDS.cancelledMeeting}, ${IDS.nonCountingMeeting}
+        )
     `);
   });
   await db.execute(sql`
     delete from platform.meetings
-    where id in (${IDS.meeting}::uuid, ${IDS.cancelledMeeting}::uuid)
+    where id in (
+      ${IDS.meeting}::uuid,
+      ${IDS.cancelledMeeting}::uuid,
+      ${IDS.nonCountingMeeting}::uuid
+    )
   `);
   await db.execute(sql`delete from auth.users where id = ${IDS.member}::uuid`);
 }
@@ -39,12 +46,15 @@ beforeAll(async () => {
   `);
   await db.execute(sql`
     insert into platform.meetings
-      (id, slug, "nameOverride", "startsAt", "endsAt", "cancelledAt")
+      (id, slug, "nameOverride", "startsAt", "endsAt", "cancelledAt",
+       "countsTowardProgress")
     values
       (${IDS.meeting}::uuid, 'attendance-test', 'Attendance Test',
-       now() - interval '1 year', now() - interval '364 days', null),
+       now() - interval '1 year', now() - interval '364 days', null, true),
       (${IDS.cancelledMeeting}::uuid, 'attendance-cancelled', 'Cancelled',
-       now(), now() + interval '1 hour', now())
+       now(), now() + interval '1 hour', now(), true),
+      (${IDS.nonCountingMeeting}::uuid, 'attendance-noncounting', 'Not Counting',
+       now() - interval '1 year', now() - interval '364 days', null, false)
   `);
 });
 
@@ -103,6 +113,20 @@ describe("recordMemberAttendance", () => {
 
     const result = await recordMemberAttendance(IDS.meeting, IDS.member, "qr");
     expect(result.status).toBe("revoked");
+  });
+
+  it("refuses a meeting that does not count toward progress, recording nothing", async () => {
+    const result = await recordMemberAttendance(
+      IDS.nonCountingMeeting,
+      IDS.member,
+      "qr",
+    );
+    expect(result).toEqual({ status: "not_counted" });
+
+    const rows = await db.execute<{ count: number }>(sql`
+      select count(*)::int as count from platform.attendance
+      where "meetingId" = ${IDS.nonCountingMeeting}::uuid`);
+    expect(rows[0]!.count).toBe(0);
   });
 
   it("rejects cancelled and unknown meetings independent of clock time", async () => {
