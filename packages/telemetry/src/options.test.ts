@@ -5,13 +5,25 @@ import { buildSentryOptions, composeBeforeSend } from "./options.js";
 describe("buildSentryOptions", () => {
   it("returns undefined when the DSN is falsy", () => {
     expect(
-      buildSentryOptions({ service: "platform", environment: "production", dsn: undefined }),
+      buildSentryOptions({
+        service: "platform",
+        environment: "production",
+        dsn: undefined,
+      }),
     ).toBeUndefined();
     expect(
-      buildSentryOptions({ service: "platform", environment: "production", dsn: null }),
+      buildSentryOptions({
+        service: "platform",
+        environment: "production",
+        dsn: null,
+      }),
     ).toBeUndefined();
     expect(
-      buildSentryOptions({ service: "platform", environment: "production", dsn: "" }),
+      buildSentryOptions({
+        service: "platform",
+        environment: "production",
+        dsn: "",
+      }),
     ).toBeUndefined();
   });
 

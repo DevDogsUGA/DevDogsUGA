@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ErrorEvent } from "@sentry/core";
-import { scrubEmails, scrubEvent, scrubPaths, scrubSecrets, scrubText } from "./scrub.js";
+import {
+  scrubEmails,
+  scrubEvent,
+  scrubPaths,
+  scrubSecrets,
+  scrubText,
+} from "./scrub.js";
 
 describe("scrubPaths", () => {
   it("reduces a POSIX absolute path to its basename", () => {
@@ -14,7 +20,9 @@ describe("scrubPaths", () => {
   });
 
   it("leaves relative-looking text alone", () => {
-    expect(scrubPaths("src/foo.ts imported bar")).toBe("src/foo.ts imported bar");
+    expect(scrubPaths("src/foo.ts imported bar")).toBe(
+      "src/foo.ts imported bar",
+    );
   });
 });
 
@@ -88,7 +96,9 @@ describe("scrubEvent", () => {
     const frame = scrubbed.exception?.values?.[0]?.stacktrace?.frames?.[0];
     expect(frame?.filename).toBe("foo.ts");
     expect(frame?.abs_path).toBe("foo.ts");
-    expect(frame?.context_line).toBe("throw new Error('DISCORD_TOKEN=[redacted]')");
+    expect(frame?.context_line).toBe(
+      "throw new Error('DISCORD_TOKEN=[redacted]')",
+    );
     expect(scrubbed.breadcrumbs?.[0]?.message).toBe(
       "user [redacted-email] clicked",
     );

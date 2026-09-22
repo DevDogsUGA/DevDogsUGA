@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { ERROR_SAMPLE_RATE, isService, tracesSampleRateFor } from "./constants.js";
+import {
+  ERROR_SAMPLE_RATE,
+  isService,
+  tracesSampleRateFor,
+} from "./constants.js";
 
 describe("tracesSampleRateFor", () => {
   it("samples production at 0.2", () => {

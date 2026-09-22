@@ -1,4 +1,9 @@
-import type { ErrorEvent, EventHint, Exception, StackFrame } from "@sentry/core";
+import type {
+  ErrorEvent,
+  EventHint,
+  Exception,
+  StackFrame,
+} from "@sentry/core";
 
 /**
  * Pure scrubbing functions plus the `beforeSend` that composes them.
@@ -16,8 +21,7 @@ import type { ErrorEvent, EventHint, Exception, StackFrame } from "@sentry/core"
 // The lookbehind requires the leading "/" to start a token (start of string,
 // or preceded by whitespace/quote/paren) so "src/foo.ts" in running prose —
 // a relative path, not an absolute one — is left alone.
-const POSIX_PATH =
-  /(?<=^|[\s"'(<])\/(?:[^\s"'()<>:]+\/)+([^\s"'()<>:]+)/g;
+const POSIX_PATH = /(?<=^|[\s"'(<])\/(?:[^\s"'()<>:]+\/)+([^\s"'()<>:]+)/g;
 const WINDOWS_PATH = /[A-Za-z]:\\(?:[^\s"'()<>]+\\)*([^\s"'()<>]+)/g;
 
 /** Replaces absolute filesystem paths in `text` with just their basename. */

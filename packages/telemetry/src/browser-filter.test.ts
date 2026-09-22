@@ -14,7 +14,9 @@ function eventWithFrame(filename: string): ErrorEvent {
 describe("isBrowserNoiseEvent", () => {
   it("flags a chrome-extension frame", () => {
     expect(
-      isBrowserNoiseEvent(eventWithFrame("chrome-extension://abc123/inject.js")),
+      isBrowserNoiseEvent(
+        eventWithFrame("chrome-extension://abc123/inject.js"),
+      ),
     ).toBe(true);
   });
 

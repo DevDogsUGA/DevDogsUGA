@@ -1,4 +1,8 @@
-import type { ErrorEvent, EventHint, Options as SentryOptions } from "@sentry/core";
+import type {
+  ErrorEvent,
+  EventHint,
+  Options as SentryOptions,
+} from "@sentry/core";
 import {
   ERROR_SAMPLE_RATE,
   TAG_KEYS,

@@ -24,9 +24,6 @@ export {
   scrubText,
 } from "./scrub.js";
 
-export {
-  browserNoiseFilter,
-  isBrowserNoiseEvent,
-} from "./browser-filter.js";
+export { browserNoiseFilter, isBrowserNoiseEvent } from "./browser-filter.js";
 
 export { alert } from "./alert.js";

@@ -68,7 +68,8 @@ export function initDevtoolsTelemetry(command: string): void {
 
   if (!devtoolsTelemetryEnabled()) return;
 
-  const dsn = process.env.DEVTOOLS_SENTRY_DSN || PLACEHOLDER_DEVTOOLS_SENTRY_DSN;
+  const dsn =
+    process.env.DEVTOOLS_SENTRY_DSN || PLACEHOLDER_DEVTOOLS_SENTRY_DSN;
   const options = buildSentryOptions({
     service: "devtools",
     environment: devtoolsEnvironment(),

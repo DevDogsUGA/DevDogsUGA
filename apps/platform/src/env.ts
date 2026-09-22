@@ -488,16 +488,19 @@ const client = {
   // wrangler.jsonc's per-env `vars` block and the cf:build:* scripts rather
   // than an `.env` file, so there is nothing for a `.env` assignment to
   // mirror. The cf:build:* scripts set this alongside DEPLOY_ENV instead.
-  NEXT_PUBLIC_DEPLOY_ENV: define(z.enum(DEPLOY_ENVIRONMENTS).default("development"), {
-    doc:
-      "Browser-side copy of DEPLOY_ENV, for the Sentry `environment` tag on " +
-      "client-captured errors. Set alongside DEPLOY_ENV by the cf:build:* " +
-      "scripts; defaults to development because that is what an unset " +
-      "value means everywhere else in this schema.",
-    scope: "environment",
-    secrecy: "public",
-    example: "staging",
-  }),
+  NEXT_PUBLIC_DEPLOY_ENV: define(
+    z.enum(DEPLOY_ENVIRONMENTS).default("development"),
+    {
+      doc:
+        "Browser-side copy of DEPLOY_ENV, for the Sentry `environment` tag on " +
+        "client-captured errors. Set alongside DEPLOY_ENV by the cf:build:* " +
+        "scripts; defaults to development because that is what an unset " +
+        "value means everywhere else in this schema.",
+      scope: "environment",
+      secrecy: "public",
+      example: "staging",
+    },
+  ),
   // The Supabase pair is derived, not set by hand: `.env` assigns each from
   // its server-side counterpart ($API_URL / $PUBLISHABLE_KEY), which is also
   // how the local stack's generated values reach the browser.

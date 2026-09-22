@@ -21,7 +21,11 @@ the normal state of local dev, where no service has a Sentry DSN:
   intended call site is:
 
   ```ts
-  const opts = buildSentryOptions({ service: "platform", environment, dsn: env.SENTRY_DSN });
+  const opts = buildSentryOptions({
+    service: "platform",
+    environment,
+    dsn: env.SENTRY_DSN,
+  });
   if (opts) Sentry.init(opts);
   ```
 
@@ -49,7 +53,7 @@ instead of a new issue per call.
 Discord version it replaces. It has no memory of previous calls, so it
 cannot itself decide whether this is a new failure or the fortieth
 repetition of an old one. That decision belongs to callers: alert on **state
-transitions** (a check going from passing to failing, a new *kind* of
+transitions** (a check going from passing to failing, a new _kind_ of
 failure appearing) — never once per failed run of a background pass. The
 transition-tracking logic that already existed at each `postAlert` call site
 is preserved as-is; only the sink changed.
@@ -100,8 +104,14 @@ returned object is valid input to whichever one a consumer calls.
   browser); pass it via `extraBeforeSend` from client-only init code:
 
   ```ts
-  buildSentryOptions({ service, environment, dsn, extraBeforeSend: [browserNoiseFilter] });
+  buildSentryOptions({
+    service,
+    environment,
+    dsn,
+    extraBeforeSend: [browserNoiseFilter],
+  });
   ```
+
 - **`composeBeforeSend`** — chains `beforeSend`-shaped functions left to
   right, short-circuiting once one drops the event (returns `null`). Used
   internally by `buildSentryOptions`; exported for consumers who need to add
