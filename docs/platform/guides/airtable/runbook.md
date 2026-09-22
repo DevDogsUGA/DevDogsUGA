@@ -49,9 +49,18 @@ a background task.
    it as an extra field rather than failing, but it is a column showing
    officers a value they cannot edit and must not rely on — the slug is derived
    on insert and never recomputed.
-3. **Lock down `⚙️ Sync status`** on Projects, the way step 5 above describes
+3. **Delete `Requirements` from Competitions and `Requirements met` and
+   `⚙️ Points` from Teams by hand.** Scoring and elections were removed from
+   the platform — results collapse to entrants and a recorded winner — and
+   these three fields only ever carried a composite score, a grade, or a
+   tally input. The scaffolder cannot drop them either; `verify` will list
+   them as extra fields rather than fail, but they are dead columns officers
+   might still fill in believing they do something. Rerun `apply` (dry run
+   first) afterward so `schema-snapshot.json` stops listing them — `verify`
+   is read-only and will not refresh it.
+4. **Lock down `⚙️ Sync status`** on Projects, the way step 5 above describes
    for every other platform-owned column.
-4. **`pnpm devtools airtable verify`** must exit clean.
+5. **`pnpm devtools airtable verify`** must exit clean.
 
 ### The projects themselves
 
