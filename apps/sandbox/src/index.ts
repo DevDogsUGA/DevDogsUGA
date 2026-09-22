@@ -329,6 +329,14 @@ const worker = {
       // branch on, no audit row, and nothing in it that tells a member whether
       // to retry. A named 500 is worth more than a stack trace nobody sees.
       console.error("[sandbox] unhandled error:", error);
+      // Reported explicitly rather than left to escape: `withSentry` below
+      // only observes what escapes THIS `fetch` handler, and this catch
+      // deliberately does not rethrow (a 500 with a `code` a client can act
+      // on beats an uncaught exception turning into a 1101 interstitial). No
+      // catch meant no Sentry event at all despite errors being 100%
+      // sampled everywhere -- `captureException` here is what actually gets
+      // one to Sentry.
+      Sentry.captureException(error);
       return jsonResponse(
         500,
         "proxy_error",
