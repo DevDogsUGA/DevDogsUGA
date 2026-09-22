@@ -81,6 +81,12 @@ export async function launchCi(argv: readonly string[]): Promise<void> {
     process.stderr.write(
       `devtools-ci: ${err instanceof Error ? err.message : String(err)}\n`,
     );
+    // Report BEFORE exiting — see `captureDevtoolsError`'s header. `ci.ts`'s
+    // own `main()` already initialized telemetry (it does so at its own
+    // bootstrap, before this throw could happen), so this call only needs to
+    // capture and flush.
+    const { captureDevtoolsError } = await import("./telemetry.js");
+    await captureDevtoolsError(err);
     process.exit(1);
   }
 }

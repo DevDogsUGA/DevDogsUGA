@@ -179,5 +179,38 @@ declare({
       secrecy: "public",
       commented: true,
     }),
+    // Same contract as the four apps' *_SENTRY_DSN (see
+    // `@devdogsuga/telemetry`'s no-op-without-DSN guarantee): optional,
+    // empty means `src/telemetry.ts` never calls `Sentry.init`. Committed
+    // as a `PLACEHOLDER_DEVTOOLS_SENTRY_DSN` constant in that file until the
+    // devtools Sentry project exists; this variable, when set, always wins
+    // over that placeholder. `scope: "environment"` because the CI job that
+    // reports as `environment: "ci"` needs the same value a contributor's
+    // machine (`environment: "local"`) does -- there is no per-deploy-tier
+    // split the way `DEPLOY_ENV` has, only per-target routing.
+    DEVTOOLS_SENTRY_DSN: define(z.string().url().optional(), {
+      doc:
+        "Sentry ingest DSN for the devtools project. Optional -- empty " +
+        "skips Sentry.init entirely, which is the state before the org is " +
+        "onboarded and the state of local development. See " +
+        "src/telemetry.ts.",
+      scope: "environment",
+      secrecy: "public",
+    }),
+    // Reporting is ON by default once DEVTOOLS_SENTRY_DSN is set -- unlike
+    // every other telemetry surface in this workspace, which a consumer
+    // opts INTO by configuring a DSN, this one an operator opts OUT of.
+    // `"0"` is the one recognized value; anything else, including unset,
+    // leaves reporting on. Developer-scoped: it is a per-machine (or
+    // per-job) preference, never something `env push` should route
+    // anywhere.
+    DEVTOOLS_TELEMETRY: define(z.string().optional(), {
+      doc:
+        'Set to "0" to opt out of devtools\' Sentry error reporting (on by ' +
+        "default whenever DEVTOOLS_SENTRY_DSN is configured). See " +
+        "src/telemetry.ts.",
+      scope: "developer",
+      secrecy: "public",
+    }),
   },
 });

@@ -113,6 +113,7 @@ import { runGen } from "./gen/commands.js";
 import { runCronList, runCronRun } from "./cron/commands.js";
 import { runWorkflows } from "./workflows/commands.js";
 import { runCf } from "./cf/commands.js";
+import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
 
 const DOCTOR_COMMANDS = [
   "doctor",
@@ -1182,6 +1183,13 @@ async function dispatch(argv: string[]): Promise<string | null> {
  * guard at the bottom of this file, for a direct `tsx src/cli.ts` run.
  */
 export async function main(argv: string[]): Promise<void> {
+  // Bootstrapped here — after `argv` is parsed off `process.argv`, before any
+  // dispatch below (including `bw`'s passthrough) touches it — so the
+  // `command` tag on whatever this run reports is the same argv every branch
+  // below is about to act on. See `telemetry.ts`'s header for the no-op
+  // contract when no DSN is configured.
+  initDevtoolsTelemetry(argv[0] ?? "menu");
+
   // ⚠️ BEFORE the `--help` check, unlike everything else here. `bw` is a
   // passthrough, so `pnpm devtools bw --help` is a request for Bitwarden's
   // help, not for ours. Answering it with our own would be this CLI talking
@@ -1281,8 +1289,12 @@ export async function main(argv: string[]): Promise<void> {
 // takes any more (`launch.ts` always runs first, see its header), kept as a
 // fallback for the same reason `ci.ts`'s guard is.
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main(process.argv.slice(2)).catch((err: unknown) => {
+  main(process.argv.slice(2)).catch(async (err: unknown) => {
     log.error(errorMessage(err));
+    // Report BEFORE exiting — `process.exit` kills the event loop, taking any
+    // in-flight request to Sentry's ingest endpoint with it. See
+    // `captureDevtoolsError`'s header.
+    await captureDevtoolsError(err);
     process.exit(1);
   });
 }

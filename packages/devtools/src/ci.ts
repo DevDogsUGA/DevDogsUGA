@@ -49,6 +49,7 @@ import { loadRegistry } from "./env/discovery.js";
 import { positionals } from "./args.js";
 import { findCiCommand, subcommandCiNames } from "./commands.js";
 import { isWorkerApp, WORKER_APPS } from "./workers.js";
+import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
 
 function flagValue(rest: string[], flag: string): string | undefined {
   const index = rest.indexOf(flag);
@@ -340,6 +341,12 @@ async function runDeployCommand(rest: string[]): Promise<void> {
 export async function main(argv: string[]): Promise<void> {
   const [first, ...rest] = argv;
 
+  // Same bootstrap point as `cli.ts`'s `main()`: after `argv` is split, before
+  // any dispatch below. `[first, rest[0]]` names the step (`deploy
+  // secrets-file`, `deploy platform`, …) as the `command` tag rather than just
+  // "deploy", which every invocation here would otherwise share.
+  initDevtoolsTelemetry([first, rest[0]].filter(Boolean).join(" ") || "help");
+
   if (!first || first === "--help" || first === "-h") {
     const steps = subcommandCiNames(["deploy"]);
     const width = Math.max(...steps.map((name) => name.length)) + 2;
@@ -373,10 +380,12 @@ export async function main(argv: string[]): Promise<void> {
 // `launch-ci.ts` can resolve the deploy tier and enter its environment
 // first.
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main(process.argv.slice(2)).catch((err) => {
+  main(process.argv.slice(2)).catch(async (err) => {
     process.stderr.write(
       `devtools-ci: ${err instanceof Error ? err.message : String(err)}\n`,
     );
+    // Report BEFORE exiting — see `captureDevtoolsError`'s header.
+    await captureDevtoolsError(err);
     process.exitCode = 1;
   });
 }

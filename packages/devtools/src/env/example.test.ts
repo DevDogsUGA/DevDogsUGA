@@ -478,8 +478,8 @@ describe("preflight", () => {
     // -- the Discord alert channel the Sentry `alert()` sink replaced -- left
     // the registry entirely: net +2 to both deployed targets.
     expect(target("preflight").active.size).toBe(2);
-    expect(target("staging").active.size).toBe(51);
-    expect(target("production").active.size).toBe(54);
+    expect(target("staging").active.size).toBe(52);
+    expect(target("production").active.size).toBe(55);
   });
 
   it("says in the file itself why it is short, and that nothing is hand-set", () => {

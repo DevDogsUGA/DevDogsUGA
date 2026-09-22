@@ -596,8 +596,8 @@ describe("preflight, the target no app boots from", () => {
     // Sentry telemetry was wired into platform, while DISCORD_ALERT_CHANNEL_ID
     // -- the Discord alert channel the Sentry `alert()` sink replaced -- left
     // the registry entirely: net +2 to both deployed targets.
-    expect(keysRoutedTo("staging").size).toBe(51);
-    expect(keysRoutedTo("production").size).toBe(54);
+    expect(keysRoutedTo("staging").size).toBe(52);
+    expect(keysRoutedTo("production").size).toBe(55);
     expect(keysRoutedTo("preflight").size).toBe(2);
   });
 });

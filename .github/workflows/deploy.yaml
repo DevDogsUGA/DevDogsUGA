@@ -202,6 +202,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: staging
+    # Job-level, not read straight from `secrets` in a step `if:` — the
+    # `secrets` context is not available there (only `env`, `github`,
+    # `inputs`, `job`, `matrix`, `needs`, `runner`, `steps`, `strategy`,
+    # `vars` are), so this is the one place the token is lifted out of
+    # `secrets` for the gating steps below to test against `env` instead. Not
+    # a wider exposure than passing it into a step's own `env:` would be —
+    # every step in this job already inherits job-level `env`, and secrets
+    # are masked in logs regardless of which step's `env:` names them.
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
     strategy:
       # The three Workers are independent deploy targets. One failing is worth
       # knowing about on its own; it is not a reason to leave the other two on
@@ -249,7 +259,56 @@ jobs:
       # a plain Worker and wrangler bundles it during the deploy itself.
       - name: Build ${{ matrix.app }}
         if: matrix.app != 'sandbox'
+        env:
+          # Baked into the build so Sentry events from this deploy carry the
+          # git SHA as their release — see `packages/telemetry`'s
+          # `buildSentryOptions({ release })`. Harmless where nothing reads it
+          # yet: an unconsumed env var, not a schema addition.
+          SENTRY_RELEASE: ${{ github.sha }}
         run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
+      # sandbox has no separate build step above — wrangler bundles it at
+      # deploy time (see `matrix.mint`'s neighbouring comment) — so a source
+      # map for it does not exist until something bundles it. `--dry-run`
+      # bundles without publishing or touching any Cloudflare credential, into
+      # a scratch directory the release step below reads. The REAL deploy a
+      # few steps down re-bundles from scratch; that duplication is the cost
+      # of getting a source map out of a Worker with no standalone build step,
+      # and it is cheaper than teaching the real deploy command `--no-bundle`
+      # against a dry-run's output (see the cheatsheet's plain-Worker source
+      # maps section for why that pairing is fragile).
+      - name: Bundle sandbox for source maps (dry run)
+        if: matrix.app == 'sandbox' && env.SENTRY_AUTH_TOKEN != ''
+        run: >-
+          pnpm --filter sandbox exec wrangler deploy -e $DEPLOY_ENV
+          --dry-run --outdir dist-sentry
+      # ⚠️ GATING, PER AN EXPLICIT DECISION: SENTRY_AUTH_TOKEN absent means the
+      # Sentry org is not onboarded yet, and that must be a visible skip, not
+      # a silent one — hence the warning step below rather than folding the
+      # condition into one step with no trace it ran. SENTRY_AUTH_TOKEN
+      # PRESENT and this step failing must fail the job — no
+      # `continue-on-error` — because a configured token that cannot create a
+      # release or upload source maps is a real break, not a best-effort nice-
+      # to-have.
+      - name: Sentry release skipped (SENTRY_AUTH_TOKEN not configured)
+        if: env.SENTRY_AUTH_TOKEN == ''
+        run: echo "::warning::Sentry release for ${{ matrix.app }} skipped — SENTRY_AUTH_TOKEN is not configured (org not onboarded yet)."
+      - name: Create Sentry release and upload source maps (${{ matrix.app }})
+        if: env.SENTRY_AUTH_TOKEN != ''
+        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ matrix.app }}
+        with:
+          environment: ${{ env.DEPLOY_ENV }}
+          release: ${{ github.sha }}
+          # "release" over the deprecated "version" input, and skipping commit
+          # association entirely -- these jobs check out with the default
+          # shallow depth, and this step's whole job here is the release
+          # record and its source maps, not a changelog.
+          set_commits: skip
+          sourcemaps: >-
+            ${{ matrix.app == 'sandbox' && 'apps/sandbox/dist-sentry' || format('apps/{0}/.open-next', matrix.app) }}
       # Written to a mkdtemp 0700 directory and removed below whatever happens.
       - name: Compose the Worker secrets file
         id: secrets
@@ -269,6 +328,10 @@ jobs:
       - name: Deploy ${{ matrix.app }}
         env:
           DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
+          # sandbox has no build step of its own to bake this into (see the
+          # Sentry release step above) — passing it here at least reaches the
+          # Worker as an ordinary env var for whenever something reads it.
+          SENTRY_RELEASE: ${{ github.sha }}
         run: pnpm --filter @devdogsuga/devtools run ci:env deploy ${{ matrix.app }} --tier $DEPLOY_ENV
       # The `finally` half of the mkdtemp. A hosted runner is discarded whole,
       # so this is for the self-hosted case and for a job that fails between
@@ -606,6 +669,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
+    # See the matching comment in staging-deploy: the `secrets` context is not
+    # available in a step's `if:`, so the token is lifted to job-level `env`
+    # for the gating steps below to test against instead.
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -639,7 +707,51 @@ jobs:
         run: pnpm turbo run build --filter='${{ matrix.app }}^...'
       - name: Build ${{ matrix.app }}
         if: matrix.app != 'sandbox'
+        env:
+          # Baked into the build so Sentry events from this deploy carry the
+          # git SHA as their release — see `packages/telemetry`'s
+          # `buildSentryOptions({ release })`. Harmless where nothing reads it
+          # yet: an unconsumed env var, not a schema addition.
+          SENTRY_RELEASE: ${{ github.sha }}
         run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
+      # sandbox has no separate build step above — wrangler bundles it at
+      # deploy time (see `matrix.mint`'s neighbouring comment) — so a source
+      # map for it does not exist until something bundles it. `--dry-run`
+      # bundles without publishing or touching any Cloudflare credential, into
+      # a scratch directory the release step below reads. The REAL deploy a
+      # few steps down re-bundles from scratch; that duplication is the cost
+      # of getting a source map out of a Worker with no standalone build step,
+      # and it is cheaper than teaching the real deploy command `--no-bundle`
+      # against a dry-run's output (see the cheatsheet's plain-Worker source
+      # maps section for why that pairing is fragile).
+      - name: Bundle sandbox for source maps (dry run)
+        if: matrix.app == 'sandbox' && env.SENTRY_AUTH_TOKEN != ''
+        run: >-
+          pnpm --filter sandbox exec wrangler deploy -e $DEPLOY_ENV
+          --dry-run --outdir dist-sentry
+      # ⚠️ GATING, PER AN EXPLICIT DECISION — see the matching comment in the
+      # staging matrix: absent token skips visibly, present-and-failing fails
+      # the job (no `continue-on-error`).
+      - name: Sentry release skipped (SENTRY_AUTH_TOKEN not configured)
+        if: env.SENTRY_AUTH_TOKEN == ''
+        run: echo "::warning::Sentry release for ${{ matrix.app }} skipped — SENTRY_AUTH_TOKEN is not configured (org not onboarded yet)."
+      - name: Create Sentry release and upload source maps (${{ matrix.app }})
+        if: env.SENTRY_AUTH_TOKEN != ''
+        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ matrix.app }}
+        with:
+          environment: ${{ env.DEPLOY_ENV }}
+          release: ${{ github.sha }}
+          # "release" over the deprecated "version" input, and skipping commit
+          # association entirely -- these jobs check out with the default
+          # shallow depth, and this step's whole job here is the release
+          # record and its source maps, not a changelog.
+          set_commits: skip
+          sourcemaps: >-
+            ${{ matrix.app == 'sandbox' && 'apps/sandbox/dist-sentry' || format('apps/{0}/.open-next', matrix.app) }}
       - name: Compose the Worker secrets file
         id: secrets
         # `run ci:env` — the quiet CI entry point that loads the env file — because
@@ -653,6 +765,10 @@ jobs:
       - name: Deploy ${{ matrix.app }}
         env:
           DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
+          # sandbox has no build step of its own to bake this into (see the
+          # Sentry release step above) — passing it here at least reaches the
+          # Worker as an ordinary env var for whenever something reads it.
+          SENTRY_RELEASE: ${{ github.sha }}
         run: pnpm --filter @devdogsuga/devtools run ci:env deploy ${{ matrix.app }} --tier $DEPLOY_ENV
       - name: Remove the Worker secrets file
         if: always()
