@@ -1,8 +1,9 @@
 /**
  * Cloudflare cron dispatcher (replaces vercel.json crons). Composed into the
- * deployed worker by cloudflare/worker.ts, which re-exports the OpenNext
- * `fetch` handler and wires this `scheduled` handler; wrangler `main` points at
- * that entry and `triggers.crons` fires these schedules.
+ * deployed worker by cloudflare/worker.ts, which composes vinext's
+ * `app-router-entry` `fetch` handler and wires this `scheduled` handler;
+ * wrangler `main` points at that entry and `triggers.crons` fires these
+ * schedules.
  *
  * Each cron hits the existing CRON_SECRET-guarded route on the worker's own
  * public origin (`env.BASE_URL`), so no route logic changes. The schedules

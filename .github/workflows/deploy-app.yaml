@@ -81,7 +81,7 @@ jobs:
           pnpm --filter @devdogsuga/devtools run ci deploy write-env
       - name: Build the workspace packages this app depends on
         run: pnpm turbo run build --filter='${{ matrix.app }}^...'
-      # `next build` through OpenNext, with the env schema ENFORCED.
+      # `vinext build`, with the env schema ENFORCED.
       - name: Build ${{ matrix.app }}
         env:
           # SENTRY_RELEASE: read by `devtools`' `ci.ts` at deploy time (a step
@@ -125,14 +125,12 @@ jobs:
           # shallow depth, and this step's whole job here is the release
           # record and its source maps, not a changelog.
           set_commits: skip
-          # schedule-builder's `vinext build` (see its `cf:build:$DEPLOY_ENV`)
-          # writes maps under BOTH `dist/client` (browser bundle) and
-          # `dist/server` (the Worker bundle, `dist/server/index.js.map`) —
-          # unlike OpenNext's single `.open-next` tree, so its path is the
-          # `dist` parent rather than either half alone. platform still
-          # builds through OpenNext until it migrates in a later stage.
-          sourcemaps: >-
-            ${{ matrix.app == 'schedule-builder' && 'apps/schedule-builder/dist' || format('apps/{0}/.open-next', matrix.app) }}
+          # Both Next.js apps build through vinext now (see each app's
+          # `cf:build:$DEPLOY_ENV`), which writes maps under BOTH
+          # `dist/client` (browser bundle) and `dist/server` (the Worker
+          # bundle, `dist/server/index.js.map`), so their path is the `dist`
+          # parent rather than either half alone.
+          sourcemaps: apps/${{ matrix.app }}/dist
       # Written to a mkdtemp 0700 directory and removed below whatever happens.
       - name: Compose the Worker secrets file
         id: secrets

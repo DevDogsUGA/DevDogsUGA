@@ -26,7 +26,11 @@ export interface ClosedIssuesResult {
   };
 }
 
-export { default as ClosedIssues } from "./ClosedIssues.gql";
+// Vite's `?raw` suffix imports the file's contents as a string, replacing the
+// `raw-loader` + `turbopack.rules` wiring next.config.ts carried for
+// Turbopack (Vite has no loader concept; `?raw` is its native equivalent).
+// See graphql.d.ts for the matching `*.gql?raw` module declaration.
+export { default as ClosedIssues } from "./ClosedIssues.gql?raw";
 
 // ── Competitions ─────────────────────────────────────────────────────────────
 //
@@ -87,7 +91,7 @@ export interface CompetitionProjectItemResult {
       } & RawProjectItemFields);
 }
 
-export { default as CompetitionProjectItem } from "./CompetitionProjectItem.gql";
+export { default as CompetitionProjectItem } from "./CompetitionProjectItem.gql?raw";
 
 export interface CompetitionsProjectItemsResult {
   node: null | {
@@ -101,4 +105,4 @@ export interface CompetitionsProjectItemsResult {
   };
 }
 
-export { default as CompetitionsProjectItems } from "./CompetitionsProjectItems.gql";
+export { default as CompetitionsProjectItems } from "./CompetitionsProjectItems.gql?raw";

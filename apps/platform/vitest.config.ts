@@ -1,10 +1,38 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig, mergeConfig } from "vitest/config";
 import { reactPreset } from "@devdogsuga/config/vitest/react";
+import type { Plugin } from "vite";
+
+/**
+ * This app runs under plain Vitest, not `@cloudflare/vitest-pool-workers` --
+ * there's no workerd underneath, so `cloudflare:*` specifiers (e.g.
+ * `~/server/db`'s, `~/server/email/send.ts`'s, and `~/server/attendance/
+ * rateLimit.ts`'s `import { env } from "cloudflare:workers"`) are not
+ * resolvable modules here the way they are under `@cloudflare/vite-plugin`'s
+ * workerd environments (dev/build/deploy). Without this plugin, Vite's
+ * import-analysis fails resolution before a test's `vi.mock("cloudflare:workers",
+ * ...)` ever gets a chance to intercept it -- marking the specifier merely
+ * `external` fixes THAT failure but then Vitest's SSR module runner tries to
+ * hand it to Node's real dynamic `import()`, which doesn't know the scheme
+ * either. Claiming it as an ordinary (non-external) virtual module, with any
+ * loadable placeholder body, keeps it a normal node in Vite's module graph --
+ * which is what lets `vi.mock` swap in a fake `env` per test. See
+ * apps/schedule-builder/vitest.config.ts for the identical plugin.
+ */
+const cloudflareModulesStub: Plugin = {
+  name: "cloudflare-modules-stub",
+  resolveId(id) {
+    if (id.startsWith("cloudflare:")) return id;
+  },
+  load(id) {
+    if (id.startsWith("cloudflare:")) return "export const env = {};";
+  },
+};
 
 export default mergeConfig(
   reactPreset,
   defineConfig({
+    plugins: [cloudflareModulesStub],
     // `~` is the app's import alias everywhere outside tests (tsconfig paths),
     // and Vitest does not read those. Without it, a test touching any module
     // that imports `~/...` fails to TRANSFORM rather than failing an

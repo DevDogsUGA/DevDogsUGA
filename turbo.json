@@ -34,13 +34,13 @@
       "outputs": [
         ".next/**",
         "!.next/cache/**",
-        ".open-next/**",
-        // vinext's own build output (schedule-builder, then platform in a
-        // later stage) -- `dist/**` below already covers the two apps'
-        // `vinext build` output directory itself; `.vinext/**` is its
-        // separate dev/build-time cache dir (route manifests, etc.), which
-        // `vinext build` also writes to and would otherwise miss turbo's
-        // output capture.
+        // vinext's own build output (schedule-builder and platform both) --
+        // `dist/**` below already covers the two apps' `vinext build` output
+        // directory itself; `.vinext/**` is its separate dev/build-time cache
+        // dir (route manifests, etc.), which `vinext build` also writes to
+        // and would otherwise miss turbo's output capture. `.open-next/**`
+        // is gone: both apps are on vinext now and nothing writes there —
+        // see packages/config/opennext/'s deletion in the same commit.
         ".vinext/**",
         "dist/**",
         "build/**",

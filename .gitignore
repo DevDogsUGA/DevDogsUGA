@@ -57,9 +57,7 @@ scripts/spike/
 # vercel
 .vercel
 
-# cloudflare / opennext / vinext
-.open-next/
-**/.open-next/
+# cloudflare / vinext
 .vinext/
 **/.vinext/
 .wrangler/

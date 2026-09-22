@@ -21,13 +21,14 @@
  * `devtools-ci deploy <app> --tier <staging|production>` replaces the three
  * near-identical `cf:deploy:*` shell strings in the app package.json files.
  * It runs `require-token`, then the app-specific deploy commands: docs index
- * for platform, opennextjs-cloudflare for platform (still OpenNext),
- * wrangler for schedule-builder (migrated to vinext -- deploy-app.yaml's
- * separate "Build" step already ran `vinext build`, which leaves a Wrangler
- * "config redirect" at `.wrangler/deploy/config.json` pointing at the
- * generated `dist/server/wrangler.json`; a bare `wrangler deploy` from the
- * app dir resolves through that redirect with no `--config` needed) and
- * sandbox (plain Worker, wrangler bundles it at deploy time).
+ * for platform only, then a plain `wrangler deploy` for all three apps.
+ * Both Next.js apps are on vinext now -- deploy-app.yaml's separate "Build"
+ * step already ran `vinext build` (`cf:build:$DEPLOY_ENV`), which leaves a
+ * Wrangler "config redirect" at `.wrangler/deploy/config.json` pointing at
+ * the generated `dist/server/wrangler.json`; a bare `wrangler deploy` from
+ * the app dir resolves through that redirect with no `--config` needed.
+ * Sandbox (plain Worker, wrangler bundles it at deploy time) always used
+ * this shape, so all three apps now share one deploy step.
  *
  * Step commands (`write-env`, `secrets-file`, etc.) are still individually
  * addressable for jobs that run only one step.
@@ -95,9 +96,9 @@ function hyperdriveLocalAliasEnv(): Record<string, string> {
 /**
  * Runs a command via pnpm, inheriting stdio, returning the exit code.
  *
- * All orchestrator steps are external processes rather than imported functions:
- * opennextjs-cloudflare and wrangler own their own stdout and must not be
- * wrapped.
+ * All orchestrator steps are external processes rather than imported
+ * functions: `wrangler` (and, for platform, the docs build) own their own
+ * stdout and must not be wrapped.
  */
 function pnpm(args: string[], env?: Record<string, string>): Promise<number> {
   return new Promise((resolve) => {
@@ -115,7 +116,7 @@ function pnpm(args: string[], env?: Record<string, string>): Promise<number> {
  * Orchestrates the full deploy for one app:
  *   1. `require-token` guard
  *   2. Docs index (platform only)
- *   3. App deploy via opennextjs-cloudflare / wrangler
+ *   3. App deploy via `wrangler deploy`
  *
  * The `--dry-run` flag prints what would run and exits 0.
  */
@@ -137,6 +138,9 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
 
   const steps: { label: string; fn: () => Promise<number> }[] = [];
 
+  // Platform is the only app with a prestep: it owns the docs site, so its
+  // deploy re-indexes the (already-built-elsewhere) docs into the remote
+  // search store before the Worker goes out.
   if (app === "platform") {
     steps.push({
       label: "Index docs",
@@ -151,76 +155,43 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
         return code;
       },
     });
-
-    const deployArgs = [
-      "--filter",
-      "platform",
-      "exec",
-      "opennextjs-cloudflare",
-      "deploy",
-      "-e",
-      tier,
-    ];
-    if (secretsFile) deployArgs.push("--secrets-file", secretsFile);
-    // See apps/platform/cloudflare/worker.ts's `WorkerEnv` doc: `SENTRY_RELEASE`
-    // is the deploy's git SHA, minted fresh by CI every run rather than a
-    // value Bitwarden holds, so it reaches the Worker as a `--var` here
-    // (opennextjs-cloudflare's `deploy [args..]` forwards unrecognised flags
-    // straight to `wrangler deploy`) rather than through `~/env`'s schema or
-    // the secrets file above. Absent outside a CI-driven deploy.
-    if (process.env.SENTRY_RELEASE) {
-      deployArgs.push("--var", `SENTRY_RELEASE:${process.env.SENTRY_RELEASE}`);
-    }
-
-    steps.push({
-      label: `Deploy platform (${tier})`,
-      fn: () => pnpm(deployArgs, hyperdriveLocalAliasEnv()),
-    });
-  } else if (app === "schedule-builder") {
-    // Migrated to vinext: the target environment is baked in at BUILD time
-    // (deploy-app.yaml's "Build schedule-builder" step already ran
-    // `cf:build:$DEPLOY_ENV`, i.e. `vinext build` with `CLOUDFLARE_ENV=$tier`),
-    // so this step is plain `wrangler deploy`, not `opennextjs-cloudflare
-    // deploy` -- mirrors the sandbox branch below, not platform's. `-e` is
-    // passed anyway (wrangler cross-checks it against the environment the
-    // build was tagged with and errors loudly on a mismatch, rather than
-    // silently deploying the wrong tier).
-    const deployArgs = [
-      "--filter",
-      "schedule-builder",
-      "exec",
-      "wrangler",
-      "deploy",
-      "-e",
-      tier,
-    ];
-    if (secretsFile) deployArgs.push("--secrets-file", secretsFile);
-    if (process.env.SENTRY_RELEASE) {
-      deployArgs.push("--var", `SENTRY_RELEASE:${process.env.SENTRY_RELEASE}`);
-    }
-    steps.push({
-      label: `Deploy schedule-builder (${tier})`,
-      fn: () => pnpm(deployArgs, hyperdriveLocalAliasEnv()),
-    });
-  } else {
-    const deployArgs = [
-      "--filter",
-      "sandbox",
-      "exec",
-      "wrangler",
-      "deploy",
-      "-e",
-      tier,
-    ];
-    if (secretsFile) deployArgs.push("--secrets-file", secretsFile);
-    if (process.env.SENTRY_RELEASE) {
-      deployArgs.push("--var", `SENTRY_RELEASE:${process.env.SENTRY_RELEASE}`);
-    }
-    steps.push({
-      label: `Deploy sandbox (${tier})`,
-      fn: () => pnpm(deployArgs),
-    });
   }
+
+  // All three apps now share one deploy shape: a bare `wrangler deploy -e
+  // <tier>` from the app directory. Both Next.js apps' target environment is
+  // baked in at BUILD time (deploy-app.yaml's separate "Build" step already
+  // ran `cf:build:$DEPLOY_ENV`, i.e. `vinext build` with
+  // `CLOUDFLARE_ENV=$tier`), which leaves a Wrangler "config redirect" at
+  // `.wrangler/deploy/config.json` pointing at `dist/server/wrangler.json`;
+  // sandbox is a plain Worker with no such redirect and no build step at all.
+  // `-e` is passed regardless: for the vinext apps, Wrangler cross-checks it
+  // against the environment the build was tagged with and errors loudly on a
+  // mismatch, rather than silently deploying the wrong tier.
+  const deployArgs = [
+    "--filter",
+    app,
+    "exec",
+    "wrangler",
+    "deploy",
+    "-e",
+    tier,
+  ];
+  if (secretsFile) deployArgs.push("--secrets-file", secretsFile);
+  // See apps/*/cloudflare/worker.ts's `WorkerEnv` doc: `SENTRY_RELEASE` is
+  // the deploy's git SHA, minted fresh by CI every run rather than a value
+  // Bitwarden holds, so it reaches the Worker as a `--var` here rather than
+  // through `~/env`'s schema or the secrets file above. Absent outside a
+  // CI-driven deploy.
+  if (process.env.SENTRY_RELEASE) {
+    deployArgs.push("--var", `SENTRY_RELEASE:${process.env.SENTRY_RELEASE}`);
+  }
+  steps.push({
+    label: `Deploy ${app} (${tier})`,
+    // sandbox has no Hyperdrive binding, so the local-database alias is a
+    // no-op for it; passing it unconditionally keeps this one step shape for
+    // all three apps rather than branching again just to omit it.
+    fn: () => pnpm(deployArgs, hyperdriveLocalAliasEnv()),
+  });
 
   if (dryRun) {
     say([

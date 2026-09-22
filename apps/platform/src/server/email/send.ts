@@ -1,5 +1,6 @@
 import { render, type Templates } from "@devdogsuga/email";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { env as workerEnv } from "cloudflare:workers";
+import { env } from "~/env";
 
 /**
  * Sending, through the Cloudflare Workers `send_email` binding.
@@ -10,8 +11,8 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
  * `auth.users` row, so a team invitation would create an account for somebody
  * who already has one, or for a teammate who never accepts.
  *
- * The platform already runs on Workers via OpenNext, so the binding costs one
- * line of config: no new vendor, no API key, no secret to rotate.
+ * The platform already runs on Workers, so the binding costs one line of
+ * config: no new vendor, no API key, no secret to rotate.
  */
 
 export const SENDER = {
@@ -33,36 +34,10 @@ export type SendFailure =
 export type SendResult =
   { ok: true } | { ok: false; reason: SendFailure; message: string };
 
-interface EmailBinding {
-  send(message: {
-    to: string;
-    from: { email: string; name?: string };
-    subject: string;
-    html: string;
-    text: string;
-  }): Promise<unknown>;
-}
+type EmailBinding = NonNullable<typeof workerEnv.EMAIL>;
 
-/**
- * Why the binding is absent. The two cases deserve opposite reactions: outside
- * a Worker its absence is the normal state of `next dev` and every test, while
- * *inside* a Worker it means the deployment is misconfigured and mail is
- * silently not going out.
- */
-type MissingBinding = "outside-worker" | "worker-unbound";
-
-function binding():
-  { email: EmailBinding } | { email: null; missing: MissingBinding } {
-  try {
-    const { env } = getCloudflareContext();
-    const email = (env as unknown as { EMAIL?: EmailBinding }).EMAIL;
-    return email ? { email } : { email: null, missing: "worker-unbound" };
-  } catch {
-    // Outside a Worker: `next dev` without `--experimental-https`, a test, a
-    // script. Not an error. The caller decides whether a missing binding is
-    // fatal, and for an invitation it is not.
-    return { email: null, missing: "outside-worker" };
-  }
+function binding(): { email: EmailBinding | null } {
+  return { email: workerEnv.EMAIL ?? null };
 }
 
 /** Whether sending could work at all, for the console to branch on. */
@@ -76,14 +51,24 @@ export function isEmailConfigured(): boolean {
 // recipient address.
 let announcedMissing = false;
 
-function announceMissing(missing: MissingBinding, template: string): void {
+/**
+ * Under `vinext dev`, `vinext build`, and the deployed Worker alike, this
+ * runs inside real (or, for tests, stubbed) workerd -- there is no more
+ * "not running in a Worker at all" case the way `next dev` without
+ * `--experimental-https` used to be, since local dev now runs in workerd
+ * too (development's wrangler.jsonc block declares `send_email`). What is
+ * left to distinguish is severity: a missing binding in development or a
+ * test (the vitest `cloudflare:workers` stub always returns an empty `env`)
+ * is expected, while the same gap in a deployed staging/production Worker is
+ * a real misconfiguration silently swallowing every send.
+ */
+function announceMissing(template: string): void {
   if (announcedMissing) return;
   announcedMissing = true;
-  if (missing === "outside-worker") {
-    // Expected in `next dev`, tests, and scripts, so info rather than warn.
+  if (env.DEPLOY_ENV === "development") {
     console.info(
-      `email: skipped "${template}" — not running in a Worker, so there is ` +
-        "no EMAIL binding. Preview templates with " +
+      `email: skipped "${template}" — no EMAIL binding (expected outside a ` +
+        "deployed Worker). Preview templates with " +
         "`pnpm --filter @devdogsuga/email preview`. Further skips are silent.",
     );
   } else {
@@ -112,7 +97,7 @@ export async function sendTemplate<K extends keyof Templates>(
 ): Promise<SendResult> {
   const lookup = binding();
   if (!lookup.email) {
-    announceMissing(lookup.missing, String(name));
+    announceMissing(String(name));
     return {
       ok: false,
       reason: "not_configured",

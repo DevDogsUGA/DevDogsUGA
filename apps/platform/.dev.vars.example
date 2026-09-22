@@ -1,4 +1,4 @@
-# Cloudflare local dev vars for `wrangler dev` / `opennextjs-cloudflare preview`.
+# Cloudflare local dev vars for `wrangler dev` / `vinext dev`.
 # Copy to .dev.vars (gitignored). Mirror the server env the worker needs at
 # runtime (Supabase creds + app secrets). For deployed environments, set
 # non-secret values as wrangler `vars` and secrets via `wrangler secret put`.

@@ -1,5 +1,6 @@
 import { createDb } from "@devdogsuga/drizzle";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { env as workerEnv } from "cloudflare:workers";
+import { cacheForRequest } from "vinext/cache";
 import { after } from "next/server";
 import { env } from "~/env";
 import { relations } from "./relations";
@@ -9,63 +10,45 @@ function createPlatformDb(url: string, max?: number) {
 }
 
 type PlatformDb = ReturnType<typeof createPlatformDb>;
-type RequestContext = ReturnType<typeof getCloudflareContext>;
 
-interface HyperdriveBinding {
-  readonly connectionString: string;
+function localDb(): PlatformDb {
+  return createDb(env.DB_URL, relations);
 }
 
 /**
  * One database client per Worker invocation.
  *
- * OpenNext stores the current Cloudflare context in AsyncLocalStorage, so its
- * context object is a request identity. A WeakMap keeps the client stable for
- * every query and transaction in that request without retaining either after
- * the request becomes unreachable. This is the boundary direct Postgres.js
- * pools cannot cross in Workers.
+ * `cacheForRequest` keys its cache on this factory's own identity against
+ * vinext's per-request store (an `AsyncLocalStorage`-backed context, torn
+ * down once the request's async continuations finish), so calling
+ * `currentDb()` more than once inside the same request reuses the same
+ * client instead of opening a fresh Postgres.js pool per query. Outside a
+ * request scope (`next build`, Node-based tests and scripts) it runs on
+ * every call with no caching -- see `vinext/cache`'s own doc comment. This is
+ * the boundary direct Postgres.js pools cannot cross in Workers. See
+ * apps/schedule-builder/src/server/db/index.ts for the identical pattern.
  */
-const requestDatabases = new WeakMap<RequestContext, PlatformDb>();
-let localDatabase: PlatformDb | undefined;
-
-function localDb(): PlatformDb {
-  return (localDatabase ??= createDb(env.DB_URL, relations));
-}
-
-function requestContext(): RequestContext | null {
-  try {
-    return getCloudflareContext();
-  } catch {
-    // `next build`, Node-based tests and scripts have no Worker request
-    // context. They continue to use DB_URL and the development hot-reload
-    // cache rather than requiring a remote Cloudflare binding.
-    return null;
-  }
-}
-
-function currentDb(): PlatformDb {
-  const context = requestContext();
-  if (!context) return localDb();
-
-  const hyperdrive = (context.env as { HYPERDRIVE?: HyperdriveBinding })
-    .HYPERDRIVE;
-  if (!hyperdrive && env.DEPLOY_ENV !== "development") {
-    throw new Error(
-      `The ${env.DEPLOY_ENV} platform Worker has no HYPERDRIVE binding.`,
-    );
+const currentDb = cacheForRequest((): PlatformDb => {
+  const hyperdrive = workerEnv.HYPERDRIVE;
+  if (!hyperdrive) {
+    if (env.DEPLOY_ENV !== "development") {
+      throw new Error(
+        `The ${env.DEPLOY_ENV} platform Worker has no HYPERDRIVE binding.`,
+      );
+    }
+    // No HYPERDRIVE binding in the development environment's wrangler.jsonc
+    // block (see there); fall back to DB_URL the same way local `next
+    // dev`/`wrangler dev` always has.
+    return localDb();
   }
 
-  let database = requestDatabases.get(context);
-  if (!database) {
-    // Cloudflare recommends no more than five concurrent external connections
-    // from one request. Hyperdrive owns the long-lived origin pool in deployed
-    // environments; workerd preview uses DB_URL but keeps the same request
-    // boundary so it can catch accidental cross-invocation reuse.
-    database = createPlatformDb(hyperdrive?.connectionString ?? env.DB_URL, 5);
-    requestDatabases.set(context, database);
-    closeAfterResponse(database);
-  }
+  // Cloudflare recommends no more than five concurrent external connections
+  // from one request. Hyperdrive owns the long-lived origin pool in deployed
+  // environments.
+  const database = createPlatformDb(hyperdrive.connectionString, 5);
+  closeAfterResponse(database);
   return database;
-}
+});
 
 /**
  * Close the request's postgres.js pool once the response has been sent.
@@ -90,9 +73,11 @@ function closeAfterResponse(database: PlatformDb): void {
       }
     });
   } catch {
-    // `after` throws outside a request scope. The context checks in currentDb
-    // should prevent that; if it slips through, leave the pool to GC rather
-    // than fail the query that needed it.
+    // `after` throws outside a request scope. `closeAfterResponse` is only
+    // ever reached from inside `currentDb`'s Hyperdrive branch, which only
+    // runs with a live HYPERDRIVE binding (never in the request-less
+    // fallback); if a scope slips through anyway, leave the pool to GC
+    // rather than fail the query that needed it.
   }
 }
 

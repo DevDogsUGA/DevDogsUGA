@@ -14,11 +14,11 @@ Two callers render them, and neither one lives here:
 - **`@devdogsuga/devtools`** renders files on disk — `pnpm devtools images`.
 
 That split is the reason this package exports no renderer. The platform must
-use Next's own vendored copy of `@vercel/og`, because `@opennextjs/cloudflare`
-patches exactly that path on the way into a Worker; the CLI needs a build that
-runs under plain Node, which the published `@vercel/og` does not provide. The
-templates are the half they can share, so a change to the brand lands in the
-chapter banner and in a `/events` link preview at once.
+use Next's own vendored copy of `@vercel/og`, bundled for the Worker by
+vinext's build; the CLI needs a build that runs under plain Node, which the
+published `@vercel/og` does not provide. The templates are the half they can
+share, so a change to the brand lands in the chapter banner and in a
+`/events` link preview at once.
 
 ## Two axes
 

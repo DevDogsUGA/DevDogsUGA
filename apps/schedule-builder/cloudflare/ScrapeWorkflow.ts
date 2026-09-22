@@ -13,9 +13,9 @@
  * mid-run resumes from the last completed step instead of restarting the
  * whole scrape.
  *
- * A Workflow step runs with no OpenNext request context to key a cached
- * Drizzle client on (unlike `~/server/db`'s `db` proxy, which keys one to
- * the current request via `getCloudflareContext()`). Every step that talks
+ * A Workflow step runs with no per-request context to key a cached Drizzle
+ * client on (unlike `~/server/db`'s `db` proxy, which keys one to the
+ * current request via vinext's `cacheForRequest`). Every step that talks
  * to Postgres therefore builds its own client from
  * the deployed Hyperdrive binding (or local `DB_URL`) via
  * `createScheduleBuilderDb`

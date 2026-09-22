@@ -129,26 +129,15 @@ export async function runCf(argv: readonly string[]): Promise<number> {
     // environment, so passing DEPLOY_ENV there would be a no-op at best and a
     // stale value baked nowhere at worst.
     //
-    // schedule-builder migrated to vinext: `vinext build` additionally needs
-    // `CLOUDFLARE_ENV=<tier>` (see its `cf:build:<tier>` script) — vinext
-    // bakes the target environment in at BUILD time, and `wrangler dev`
-    // cross-checks it against `-e`/the env it resolves, erroring loudly on a
-    // mismatch rather than silently running the wrong tier. platform still
-    // builds through OpenNext until it migrates in a later stage.
+    // Both Next.js apps are on vinext: `vinext build` additionally needs
+    // `CLOUDFLARE_ENV=<tier>` (see each app's `cf:build:<tier>` script) —
+    // vinext bakes the target environment in at BUILD time, and `wrangler
+    // dev` cross-checks it against `-e`/the env it resolves, erroring loudly
+    // on a mismatch rather than silently running the wrong tier.
     const build = await run(
-      [
-        "--filter",
-        app,
-        "exec",
-        app === "schedule-builder" ? "vinext" : "opennextjs-cloudflare",
-        "build",
-      ],
+      ["--filter", app, "exec", "vinext", "build"],
       tier && loaded
-        ? {
-            ...loaded.env,
-            DEPLOY_ENV: tier,
-            ...(app === "schedule-builder" ? { CLOUDFLARE_ENV: tier } : {}),
-          }
+        ? { ...loaded.env, DEPLOY_ENV: tier, CLOUDFLARE_ENV: tier }
         : undefined,
     );
     if (build !== 0) return build;
@@ -159,14 +148,11 @@ export async function runCf(argv: readonly string[]): Promise<number> {
     return withWranglerEnv(
       app,
       (envFile) =>
-        // OpenNext's preview wrapper intentionally disables Wrangler's own env
-        // file loading, so process.env reaches its cache-population phase but
-        // not the Worker runtime. vinext's build has no such wrapper, but the
-        // same shape works for it too: `wrangler dev` auto-redirects to the
-        // just-built `dist/server/wrangler.json` (a "config redirect" vinext
-        // writes to `.wrangler/deploy/config.json`), so no `--config` flag is
-        // needed either way. The bundle is already built above; invoke the
-        // project's Wrangler directly so the scoped file becomes Worker vars.
+        // `wrangler dev` auto-redirects to the just-built
+        // `dist/server/wrangler.json` (a "config redirect" vinext writes to
+        // `.wrangler/deploy/config.json`), so no `--config` flag is needed.
+        // The bundle is already built above; invoke the project's Wrangler
+        // directly so the scoped file becomes Worker vars.
         run([
           "--filter",
           app,

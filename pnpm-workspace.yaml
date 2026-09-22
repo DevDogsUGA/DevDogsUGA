@@ -94,7 +94,6 @@ catalog:
   # typescript is held at 6.x on purpose: typescript-eslint peer-requires
   # ">=4.8.4 <6.1.0", so TS 7 breaks linting in every package.
   "@clack/prompts": ^1.7.0
-  "@opennextjs/cloudflare": ^1.20.2
   eslint: ^9.39.5
   # supabase tracks the `latest` dist-tag so every install pulls the newest
   # CLI — the local dev/migration tool has no lockstep with the runtime SDKs

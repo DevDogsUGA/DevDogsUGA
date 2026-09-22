@@ -1,29 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
-
-/**
- * `.gql`/`.graphql` files as raw text, the same rule `next.config.ts`'s
- * `turbopack.rules` gives the app itself (`raw-loader`). Vitest resolves
- * modules through Vite, not Turbopack, so it never sees that rule; without
- * an equivalent here, the first db-test to import anything reaching
- * `server/github/queries/index.ts` (this step's competitions module does)
- * fails to TRANSFORM the `.gql` files it re-exports, not to run an
- * assertion.
- *
- * Untyped against Vite's own `Plugin` interface -- `vite` is a transitive
- * dependency of `vitest`, not one this app resolves directly, and importing
- * its types here would ask for a dependency this app does not otherwise
- * need. `defineConfig`'s own `plugins` field accepts this shape structurally.
- */
-function gqlAsRawText() {
-  return {
-    name: "gql-as-raw-text",
-    transform(code: string, id: string) {
-      if (!/\.(gql|graphql)$/.test(id)) return;
-      return { code: `export default ${JSON.stringify(code)};`, map: null };
-    },
-  };
-}
+import type { Plugin } from "vite";
 
 /**
  * Query-validity checks against the local Supabase stack.
@@ -32,8 +9,22 @@ function gqlAsRawText() {
  * a suite that fails when Docker is down is a suite people learn to ignore.
  * `pnpm test` stays hermetic; `pnpm test:db` is the one that proves the SQL.
  */
+
+// See vitest.config.ts's identical plugin: these tests reach `~/server/db`,
+// which imports `env` from `cloudflare:workers`, a specifier plain Vitest
+// (no workerd underneath) cannot otherwise resolve.
+const cloudflareModulesStub: Plugin = {
+  name: "cloudflare-modules-stub",
+  resolveId(id) {
+    if (id.startsWith("cloudflare:")) return id;
+  },
+  load(id) {
+    if (id.startsWith("cloudflare:")) return "export const env = {};";
+  },
+};
+
 export default defineConfig({
-  plugins: [gqlAsRawText()],
+  plugins: [cloudflareModulesStub],
   resolve: {
     alias: { "~": fileURLToPath(new URL("./src", import.meta.url)) },
   },

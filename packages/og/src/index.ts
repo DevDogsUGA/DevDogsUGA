@@ -4,9 +4,9 @@
  * `apps/platform` renders them through `next/og` for Open Graph cards, and
  * `@devdogsuga/devtools` renders them through Satori directly to write files on
  * disk. Nothing here imports a renderer, which is what lets both work: the
- * platform must use Next's own compiled copy of `@vercel/og` (the one
- * `@opennextjs/cloudflare` patches on the way to a Worker), while the CLI needs
- * a build that runs under plain Node. The templates are the shared half.
+ * platform must use Next's own compiled copy of `@vercel/og` (bundled for the
+ * Worker by vinext's build), while the CLI needs a build that runs under
+ * plain Node. The templates are the shared half.
  *
  * A template takes its own `width` and `height` rather than assuming one size.
  * The same card is asked for at a link unfurl's 1.91:1, the GDG platform's

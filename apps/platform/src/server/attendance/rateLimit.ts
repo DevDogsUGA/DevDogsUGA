@@ -1,21 +1,9 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { env as workerEnv } from "cloudflare:workers";
 import { env } from "~/env";
-
-interface RateLimitBinding {
-  limit(options: { key: string }): Promise<{ success: boolean }>;
-}
 
 /** Consume one rotating-code validation attempt. */
 export async function allowAttendanceAttempt(key: string): Promise<boolean> {
-  let binding: RateLimitBinding | undefined;
-  try {
-    const { env: workerEnv } = getCloudflareContext();
-    binding = (workerEnv as { ATTENDANCE_RATE_LIMITER?: RateLimitBinding })
-      .ATTENDANCE_RATE_LIMITER;
-  } catch {
-    // Node tests and `next dev` do not have a Worker request context.
-    return true;
-  }
+  const binding = workerEnv.ATTENDANCE_RATE_LIMITER;
 
   if (!binding) {
     if (env.DEPLOY_ENV === "development") return true;
