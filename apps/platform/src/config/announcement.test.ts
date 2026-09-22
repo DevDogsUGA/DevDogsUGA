@@ -26,8 +26,6 @@ describe("showsAnnouncement", () => {
     "/console/permissions",
     "/teams/requests",
     "/tools/oauth",
-    "/vote",
-    "/vote/some-election",
     "/oauth/consent",
   ];
 

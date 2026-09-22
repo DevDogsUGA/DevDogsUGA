@@ -53,9 +53,8 @@ export default function CreateTeamForm({
     >
       <h2 className="font-semibold text-white">Start a team</h2>
       <p className="text-sm text-mauve-400">
-        You lead the team you create, which means you answer join requests and
-        cast your team&rsquo;s ballot. Everybody else gets in with the join code
-        or an invitation.
+        You lead the team you create, which means you answer its join requests.
+        Everybody else gets in with the join code or an invitation.
       </p>
 
       <label className="flex flex-col gap-1 text-sm">

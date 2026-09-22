@@ -14,11 +14,6 @@ import { competitions, teams } from "~/server/db/schema";
  *
  * Nothing else. The roster hard-lock needs no write; it falls out of
  * `judgingStartsAt` in the lock predicate.
- *
- * Deliberately NOT folded into the election tally cron, though both run every
- * five minutes: the tally blocks on ungraded competitions and on a missing
- * tiebreak ballot, and freezing has to happen whether or not grading is done,
- * or a slow officer costs every team its star.
  */
 export interface JudgingPassReport {
   frozen: number;

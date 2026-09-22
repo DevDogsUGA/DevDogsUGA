@@ -163,28 +163,14 @@ export default async function TeamPage({
         </ConsoleCard.Root>
       )}
 
-      {team.standing !== null && (
-        <ConsoleCard.Root id="standing">
-          <ConsoleCard.Header
-            title={`Finished ${ordinal(team.standing.placement)}`}
-          />
-          <ConsoleCard.Content>
-            <dl className="flex flex-wrap gap-6">
-              <Figure
-                label="Requirements"
-                value={team.standing.requirementPoints}
-              >
-                points
-              </Figure>
-              <Figure label="Election" value={team.standing.electionPoints}>
-                points
-              </Figure>
-              <Figure label="Total" value={team.standing.totalPoints}>
-                points
-              </Figure>
-            </dl>
-          </ConsoleCard.Content>
-        </ConsoleCard.Root>
+      {team.won && (
+        <Callout tone="success">
+          This team won{" "}
+          <Link href={`/competitions/${slug}/results`} className="underline">
+            {competition?.name ?? "this competition"}
+          </Link>
+          .
+        </Callout>
       )}
 
       {!isMember && <JoinPanel {...{ team, mine, slug }} />}
@@ -205,9 +191,6 @@ function Entry({ team }: { team: TeamDetail }) {
   return (
     <ConsoleCard.Root id="entry">
       <ConsoleCard.Header title="Entry" />
-      {/* Two children on purpose: the divider then falls between the state of
-          the pull request and the requirement count, which is graded
-          separately and long afterwards. */}
       <ConsoleCard.Content>
         <div className="flex flex-col gap-2 text-sm">
           {team.submissionState === null ? (
@@ -246,25 +229,6 @@ function Entry({ team }: { team: TeamDetail }) {
             </p>
           )}
         </div>
-
-        <p className="text-sm text-mauve-400">
-          {/* Null is "not graded yet", not zero. Officers fill this in after the
-              fact, so an unscored team must not read as one that met nothing.
-              That is also why only the counted branch gets a badge. */}
-          {team.requirementsMet === null ? (
-            "Requirements have not been graded yet."
-          ) : (
-            <>
-              <Badge
-                variant="success"
-                className="mr-1.5 align-middle tabular-nums"
-              >
-                {team.requirementsMet}
-              </Badge>
-              requirements met.
-            </>
-          )}
-        </p>
       </ConsoleCard.Content>
     </ConsoleCard.Root>
   );
@@ -328,36 +292,4 @@ function JoinPanel({
       requestToJoin={requestToJoin}
     />
   );
-}
-
-function Figure({
-  label,
-  value,
-  children,
-}: {
-  label: string;
-  value: number;
-  children: string;
-}) {
-  return (
-    <div className="flex flex-col">
-      <dt className="text-xs tracking-wide text-mauve-500 uppercase">
-        {label}
-      </dt>
-      <dd className="text-2xl font-bold text-white tabular-nums">
-        {value}
-        <span className="ml-1 text-xs font-normal text-mauve-400">
-          {children}
-        </span>
-      </dd>
-    </div>
-  );
-}
-
-/** 1st, 2nd, 3rd, including the 11th/12th/13th exceptions. */
-function ordinal(n: number): string {
-  const tens = n % 100;
-  if (tens >= 11 && tens <= 13) return `${n}th`;
-  const suffix = ["th", "st", "nd", "rd"][n % 10] ?? "th";
-  return `${n}${suffix}`;
 }

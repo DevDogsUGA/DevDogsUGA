@@ -29,7 +29,6 @@ export default function robots(): MetadataRoute.Robots {
         "/account", // the viewer's own profile
         "/oauth", // /oauth/consent, mid-authorization-flow only
         "/tools", // /tools/oauth, a member's own test client
-        "/vote", // ballots; expectSession() -> /auth
         "/teams", // /teams/requests; expectSession() -> /auth
 
         // (api) route handlers. None render HTML, and several are guarded by

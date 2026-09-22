@@ -16,22 +16,9 @@ import {
   getTeamDetail,
   getPendingForUser,
   getMyTeam,
+  getEntrants,
 } from "./teams";
 import { getStarsForUser, getStarsForWorkshop } from "./stars";
-import {
-  getStandings,
-  getMemberPointsLeaderboard,
-  getMemberPoints,
-} from "./points";
-import {
-  getOpenElections,
-  getElectionBySlug,
-  getBallotOptions,
-  getMyBallot,
-  getElectionResults,
-  getTiebreakDisclosures,
-  getPointsElections,
-} from "./elections";
 import { readSyncState } from "~/server/airtable/lease";
 import { streamStarRows } from "~/server/export/stars";
 
@@ -89,17 +76,12 @@ describe("every loader is valid SQL", () => {
     await getTeamDetail("nope", "nope", NIL);
     await getPendingForUser(NIL);
     await getMyTeam("nope", NIL);
+    await getEntrants("nope");
     expect(true).toBe(true);
   });
   it("stars", async () => {
     await getStarsForUser(NIL);
     await getStarsForWorkshop(NIL);
-    expect(true).toBe(true);
-  });
-  it("points", async () => {
-    await getStandings("nope");
-    await getMemberPointsLeaderboard();
-    await getMemberPoints(NIL);
     expect(true).toBe(true);
   });
   it("the airtable sync state the console renders", async () => {
@@ -118,17 +100,6 @@ describe("every loader is valid SQL", () => {
       10,
     ))
       break;
-    expect(true).toBe(true);
-  });
-
-  it("elections", async () => {
-    await getOpenElections();
-    await getElectionBySlug("nope");
-    await getBallotOptions(NIL);
-    await getMyBallot(NIL, NIL);
-    await getElectionResults(NIL);
-    await getTiebreakDisclosures(NIL);
-    await getPointsElections(NIL);
     expect(true).toBe(true);
   });
 });

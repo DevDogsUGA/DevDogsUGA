@@ -176,19 +176,11 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
 ];
 
 /**
- * The competition program's personal pages. Voting and team requests both
- * answer "what is a competition waiting on me for", so the profile popover
- * nests them in one sub-menu rather than listing them beside Account, which is
- * about the viewer.
+ * The competition program's personal pages. Answers "what is a competition
+ * waiting on me for", so the profile popover nests it in one sub-menu rather
+ * than listing it beside Account, which is about the viewer.
  */
 export const COMPETITION_ITEMS: NavItem[] = [
-  {
-    label: "Vote",
-    href: "/vote",
-    icon: "StarIcon",
-    description:
-      "Rank the competing implementations in any election you can vote in.",
-  },
   {
     label: "Team requests",
     href: "/teams/requests",

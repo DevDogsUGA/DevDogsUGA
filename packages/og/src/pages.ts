@@ -6,9 +6,9 @@ import { ACCENT } from "./brand.js";
  * Keyed by route, and the set of keys is not arbitrary: it is exactly the
  * static half of `apps/platform/src/app/sitemap.ts`. That file is already the
  * club's answer to "which URLs are public", worked out against auth guards and
- * `robots: { index: false }` — the console, the account page, the ballots and
- * the team rosters are all absent from it because none of them is a page a
- * stranger can open. Deriving this list from the same place is what makes
+ * `robots: { index: false }` — the console, the account page and the team
+ * rosters are all absent from it because none of them is a page a stranger can
+ * open. Deriving this list from the same place is what makes
  * "every page except the access-gated ones" a rule rather than a list somebody
  * has to remember to update. `pages.test.ts` asserts the two stay equal.
  *

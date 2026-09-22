@@ -1,11 +1,11 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, or, sql } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "~/server/db";
 import {
   competitions,
-  competitionStandings,
   profiles,
   projects,
+  teamAwards,
   teamMembers,
   teamMembershipRequests,
   teams,
@@ -39,21 +39,14 @@ export interface TeamDetail {
   submissionUrl: string | null;
   competedAt: Date | null;
   acceptingRequests: boolean;
-  requirementsMet: number | null;
-  /** The denominator. Without it "3 requirements met" is not a score. */
-  requirementCount: number | null;
   maxTeamSize: number | null;
   members: TeamMemberRow[];
   /** Null when the roster is open. */
   lock: LockReason | null;
   /** Only ever sent to a member of this team. See `getTeamDetail`. */
   joinCode: string | null;
-  standing: {
-    requirementPoints: number;
-    electionPoints: number;
-    totalPoints: number;
-    placement: number;
-  } | null;
+  /** Whether `teamAwards` carries a `category = 'winner'` row for this team. */
+  won: boolean;
 }
 
 /**
@@ -83,8 +76,6 @@ export const getTeamDetail = cache(
         competedAt: teams.competedAt,
         lockedManuallyAt: teams.lockedManuallyAt,
         acceptingRequests: teams.acceptingRequests,
-        requirementsMet: teams.requirementsMet,
-        requirementCount: competitions.requirementCount,
         maxTeamSize: competitions.maxTeamSize,
         judgingStartsAt: competitions.judgingStartsAt,
       })
@@ -110,15 +101,12 @@ export const getTeamDetail = cache(
       // and who arrived when".
       .orderBy(desc(teamMembers.role), asc(teamMembers.joinedAt));
 
-    const [standing] = await db
-      .select({
-        requirementPoints: competitionStandings.requirementPoints,
-        electionPoints: competitionStandings.electionPoints,
-        totalPoints: competitionStandings.totalPoints,
-        placement: competitionStandings.placement,
-      })
-      .from(competitionStandings)
-      .where(eq(competitionStandings.teamId, row.id));
+    const [award] = await db
+      .select({ id: teamAwards.id })
+      .from(teamAwards)
+      .where(
+        and(eq(teamAwards.teamId, row.id), eq(teamAwards.category, "winner")),
+      );
 
     const isMember =
       viewerId !== null && members.some((m) => m.userId === viewerId);
@@ -133,8 +121,6 @@ export const getTeamDetail = cache(
       submissionUrl: row.submissionUrl,
       competedAt: row.competedAt,
       acceptingRequests: row.acceptingRequests,
-      requirementsMet: row.requirementsMet,
-      requirementCount: row.requirementCount,
       maxTeamSize: row.maxTeamSize,
       members: members,
       lock: lockReason({
@@ -143,15 +129,7 @@ export const getTeamDetail = cache(
         judgingStartsAt: row.judgingStartsAt,
       }),
       joinCode: isMember ? row.joinCode : null,
-      standing:
-        standing === undefined
-          ? null
-          : {
-              requirementPoints: standing.requirementPoints,
-              electionPoints: standing.electionPoints,
-              totalPoints: standing.totalPoints ?? 0,
-              placement: standing.placement,
-            },
+      won: award !== undefined,
     };
   },
 );
@@ -200,6 +178,62 @@ export const getTeamsForCompetition = cache(
         judgingStartsAt: row.judgingStartsAt,
       }),
     }));
+  },
+);
+
+export interface EntrantRow {
+  teamId: string;
+  teamSlug: string;
+  teamName: string;
+  memberCount: number;
+  won: boolean;
+}
+
+/**
+ * A competition's entrants, winner first, for the results page.
+ *
+ * "Entered" is a team that has opened a PR at any point (`submissionState is
+ * not null`) or was frozen at judging (`competedAt is not null`) -- the same
+ * fact `memberStars` reads to award the competition star. All scoring is
+ * off-platform now; the only per-competition state the platform persists is
+ * who won, in `teamAwards`.
+ */
+export const getEntrants = cache(
+  async (competitionSlug: string): Promise<EntrantRow[]> => {
+    const rows = await db
+      .select({
+        teamId: teams.id,
+        teamSlug: teams.slug,
+        teamName: teams.name,
+        memberCount: sql<number>`(
+          select count(*)::int from ${teamMembers}
+          where ${teamMembers.teamId} = ${teams.id}
+        )`,
+        won: sql<boolean>`exists (
+          select 1 from ${teamAwards}
+          where ${teamAwards.teamId} = ${teams.id}
+            and ${teamAwards.category} = 'winner'
+        )`,
+      })
+      .from(teams)
+      .innerJoin(competitions, eq(competitions.id, teams.competitionId))
+      .where(
+        and(
+          eq(competitions.slug, competitionSlug),
+          or(isNotNull(teams.submissionState), isNotNull(teams.competedAt)),
+        ),
+      )
+      // Winner first, then alphabetical: there is nothing else to rank by.
+      .orderBy(
+        sql`(exists (
+          select 1 from ${teamAwards}
+          where ${teamAwards.teamId} = ${teams.id}
+            and ${teamAwards.category} = 'winner'
+        )) desc`,
+        asc(teams.name),
+      );
+
+    return rows;
   },
 );
 

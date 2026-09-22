@@ -10,8 +10,8 @@ import { PAGE_CARDS } from "@devdogsuga/og";
  * has to survive somebody adding a page months from now. `sitemap.ts` already
  * holds the club's answer to which URLs are public — it was worked out against
  * the auth guards and the `robots: { index: false }` exports, and the console,
- * the ballots, the team rosters and the account page are all absent from it for
- * that reason. So the rule here is: the static half of the sitemap and the
+ * the team rosters and the account page are all absent from it for that
+ * reason. So the rule here is: the static half of the sitemap and the
  * cards in `PAGE_CARDS` are the same set of routes, and each one has a file.
  *
  * The sitemap is read as SOURCE rather than imported. Importing it pulls in

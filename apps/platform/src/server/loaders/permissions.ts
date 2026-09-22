@@ -35,8 +35,6 @@ export type RoleRow = {
   canManageAttendance: boolean | null;
   canExportStars: boolean | null;
   canTriggerSync: boolean | null;
-  canVoteAsOfficer: boolean | null;
-  canAuditBallots: boolean | null;
   discordRoleId: string | null;
   discordSyncedName: string | null;
   discordRolePosition: number | null;
@@ -142,8 +140,6 @@ export const getPermissionsPageData = cache(
         canManageAttendance: r.canManageAttendance,
         canExportStars: r.canExportStars,
         canTriggerSync: r.canTriggerSync,
-        canVoteAsOfficer: r.canVoteAsOfficer,
-        canAuditBallots: r.canAuditBallots,
         discordRoleId: r.discordRoleId,
         discordSyncedName: r.discordSyncedName,
         discordRolePosition:

@@ -125,7 +125,7 @@ export default async function CompetitionTeamsPage({
             </span>
             <span className="text-xs text-mauve-400">
               {mine.role === "lead"
-                ? "You lead it — join requests and your team's ballot are yours to answer."
+                ? "You lead it — join requests on it are yours to answer."
                 : "One team per member per competition, so this is the one."}
             </span>
           </span>

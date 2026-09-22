@@ -110,7 +110,6 @@ export interface WorkshopDetail {
     slug: string;
     judgingStartsAt: Date | null;
     maxTeamSize: number | null;
-    requirementCount: number | null;
     teamCount: number;
   } | null;
 }
@@ -280,7 +279,6 @@ export const getWorkshopDetail = cache(
         competitionSlug: competitions.slug,
         judgingStartsAt: competitions.judgingStartsAt,
         maxTeamSize: competitions.maxTeamSize,
-        requirementCount: competitions.requirementCount,
         teamCount: correlatedCount(
           db
             .select({ n: sql`count(*)::int` })
@@ -339,7 +337,6 @@ export const getWorkshopDetail = cache(
               slug: row.competitionSlug!,
               judgingStartsAt: row.judgingStartsAt,
               maxTeamSize: row.maxTeamSize,
-              requirementCount: row.requirementCount,
               teamCount: row.teamCount,
             },
     };
@@ -752,10 +749,10 @@ export interface CompetitionHeader {
 /**
  * One competition, by slug.
  *
- * Exists so a page can tell "no such competition" from "not scored yet".
- * `getStandings` takes a slug and returns team rows, so an empty array merges
- * those two states into one, and they need opposite answers: a 404 and an
- * explanation.
+ * Exists so a page can tell "no such competition" from "nobody has entered
+ * yet". `getEntrants` takes a slug and returns team rows, so an empty array
+ * merges those two states into one, and they need opposite answers: a 404 and
+ * an explanation.
  */
 export const getCompetitionBySlug = cache(
   async (slug: string): Promise<CompetitionHeader | null> => {
@@ -849,12 +846,12 @@ export const getMeetingSlugs = cache(async (): Promise<string[]> => {
  * mirrors that query's filters exactly and selects one column.
  *
  * `judgingStartsAt <= now` is the second filter, and it is about what the page
- * has to say rather than about whether it exists: standings are written by the
- * tally, and the RLS policy on `competitionStandings` only reveals them once
- * an election is tallied. Before judging the route renders "not scored yet",
- * which is a real answer for somebody who followed a link and thin content for
- * a crawler. Null (never scheduled) is excluded by the comparison, which is
- * the intended reading.
+ * has to say rather than about whether it exists: a competition worth crawling
+ * is one whose entry window has closed, so there is a field to show rather
+ * than an empty page. Before judging the route renders "nobody has entered
+ * yet", which is a real answer for somebody who followed a link and thin
+ * content for a crawler. Null (never scheduled) is excluded by the
+ * comparison, which is the intended reading.
  */
 export const getJudgedCompetitionSlugs = cache(async (): Promise<string[]> => {
   const rows = await db
