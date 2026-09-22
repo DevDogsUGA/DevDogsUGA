@@ -140,7 +140,7 @@ async function databaseRoutes(): Promise<MetadataRoute.Sitemap> {
   if (competitions.status === "fulfilled") {
     for (const slug of competitions.value) {
       routes.push({
-        // Results are final once the tally has run; the page exists to be
+        // Results are final once a winner is recorded; the page exists to be
         // linked back to rather than revisited.
         url: url(`/competitions/${encodeURIComponent(slug)}/results`),
         changeFrequency: "yearly",

@@ -6,7 +6,7 @@ import * as Sentry from "@sentry/nextjs";
 
 /**
  * The boundary for every page in the site layout that does not bring its own:
- * the console, the account and tools pages, voting, teams and competitions.
+ * the console, the account and tools pages, teams and competitions.
  * The events segment has its own; see `events/error.tsx`.
  *
  * Until this existed, a loader that threw put Next's unstyled default error
