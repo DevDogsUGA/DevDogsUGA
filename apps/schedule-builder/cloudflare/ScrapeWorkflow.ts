@@ -67,6 +67,10 @@ export type ScrapeWorkflowParams = Record<string, never>;
 interface WorkflowSentryEnv {
   readonly SENTRY_DSN?: string;
   readonly DEPLOY_ENV?: string;
+  /** Git SHA of the deploy; see `cloudflare/worker.ts`'s `WorkerEnv` for why
+   * this isn't part of `~/env`'s schema. Reaches this Worker (and so this
+   * Workflow, which shares its bindings) the same `--var` way. */
+  readonly SENTRY_RELEASE?: string;
 }
 
 /**
@@ -125,13 +129,25 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<
     // `checkinMargin`/`maxRuntime` are generous, not the five/ten-minute
     // platform crons' tight ones: a full scrape fans out over every open
     // term and can run for several minutes.
-    const checkInId = Sentry.captureCheckIn(
-      { monitorSlug: SCRAPE_MONITOR_SLUG, status: "in_progress" },
-      {
-        schedule: { type: "crontab", value: SCRAPE_SCHEDULE },
-        checkinMargin: 30,
-        maxRuntime: 60,
-      },
+    //
+    // Wrapped in its own `step.do` -- everything OUTSIDE a `step.do` call,
+    // including a bare `captureCheckIn`, re-executes from the top of `run()`
+    // on every replay after hibernation/eviction (only `step.do` results are
+    // memoized by the Workflows engine). An unwrapped call here would mint a
+    // brand-new `checkInId` on each resume, orphaning the previous one until
+    // Sentry's own `maxRuntime` timeout marked it a false "missed run."
+    // `step.do` persists and replays its return value instead, so every
+    // resume after the first gets back the SAME `checkInId` without calling
+    // `captureCheckIn` again.
+    const checkInId = await step.do("sentry-checkin-start", async () =>
+      Sentry.captureCheckIn(
+        { monitorSlug: SCRAPE_MONITOR_SLUG, status: "in_progress" },
+        {
+          schedule: { type: "crontab", value: SCRAPE_SCHEDULE },
+          checkinMargin: 30,
+          maxRuntime: 60,
+        },
+      ),
     );
 
     try {
@@ -308,6 +324,7 @@ function scrapeWorkflowSentryOptions(env: WorkflowSentryEnv) {
       service: "schedule-builder",
       environment: env.DEPLOY_ENV ?? "development",
       dsn: env.SENTRY_DSN,
+      release: env.SENTRY_RELEASE,
     }) ?? {}
   );
 }
