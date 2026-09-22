@@ -373,22 +373,29 @@ create table "platform"."competitions" (
   -- configuration point with no way to configure it is a constant kept
   -- somewhere harder to read.
   "maxTeamSize"      smallint,
-  -- Null = not yet graded. Officers fill this in through Airtable once they
-  -- have decided what the feature required.
-  "requirementCount" smallint,
   "airtableRecordId" text,
   "deletedAt"        timestamptz,
   "countsTowardProgress" boolean not null default false,
   "elEligible"           boolean not null default false,
   "seasonId"             uuid,
+  -- What the officers call this competition on its own pages, in their own
+  -- words. A competition had no name of its own before this column: every page
+  -- derived one from the opening workshop's title, which in turn fell back to
+  -- the linked project's display name and finally to the branch slug. Null
+  -- keeps that chain in force, so a competition authored before this column
+  -- keeps rendering exactly as it did. The length check mirrors
+  -- `workshops_title_length` -- both are row/page headings, short by design --
+  -- and the Airtable pull refuses a longer value rather than truncating it,
+  -- leaving the published title in place.
+  "title"            text,
   constraint "competitions_pkey" primary key ("id"),
   constraint "competitions_slug_key" unique ("slug"),
   constraint "competitions_workshopId_key" unique ("workshopId"),
   constraint "competitions_airtableRecordId_key" unique ("airtableRecordId"),
-  constraint "competitions_requirementCount_nonneg"
-    check ("requirementCount" is null or "requirementCount" >= 0),
   constraint "competitions_maxTeamSize_positive"
     check ("maxTeamSize" is null or "maxTeamSize" > 0),
+  constraint "competitions_title_length"
+    check ("title" is null or char_length("title") <= 80),
   constraint "competitions_workshopId_fkey" foreign key ("workshopId")
     references "platform"."workshops"("id") on update cascade on delete cascade,
   constraint "competitions_judgingMeetingId_fkey" foreign key ("judgingMeetingId")
@@ -398,6 +405,9 @@ create table "platform"."competitions" (
 );
 
 alter table "platform"."competitions" enable row level security;
+
+comment on column "platform"."competitions"."title" is
+  'What the officers call this competition on its own pages, in their own words. Null falls back to the opening workshop''s title, then the project''s display name, then the branch slug, so a competition authored before this column keeps rendering exactly as it did.';
 
 -- ============================================================
 -- Live-row indexes

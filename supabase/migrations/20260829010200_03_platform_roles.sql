@@ -84,9 +84,9 @@ alter table "platform"."credentials" enable row level security;
 --
 -- Column ORDER here reproduces the order the old migration history arrived at:
 -- the first six permissions sit where they were originally declared, the last
--- five were added years later in the file's history and so sit after the Discord
--- columns. Grouping all eleven together would read better and would change what
--- `select *` returns in what order. Leave them where they are.
+-- three were added years later in the file's history and so sit after the
+-- Discord columns. Grouping all nine together would read better and would
+-- change what `select *` returns in what order. Leave them where they are.
 --
 -- There is no "canManageFeedback". It existed, the feedback feature was removed,
 -- and the column went with it. Nothing in this repo may write that name again:
@@ -143,14 +143,6 @@ create table "platform"."roles" (
   "canManageAttendance" boolean,
   "canExportStars" boolean,
   "canTriggerSync" boolean,
-
-  -- Election permissions. canVoteAsOfficer casts the single officer ballot;
-  -- canAuditBallots reads ballots belonging to teams other than your own. The
-  -- ballot policies in file 17 call has_permission(uid, 'canAuditBallots'), and
-  -- an unknown permission name resolves to false rather than erroring, so a
-  -- missing column here denies every officer quietly.
-  "canVoteAsOfficer" boolean,
-  "canAuditBallots" boolean,
 
   constraint "roles_pkey" primary key ("id"),
   constraint "roles_title_key" unique ("title"),

@@ -14,7 +14,7 @@
 -- which is what makes this the delivery path rather than a local fixture.
 --
 -- A reset erases the database. That is fine now, before launch, and it stops
--- being fine the moment production carries attendance, ballots or teams that
+-- being fine the moment production carries attendance, awards or teams that
 -- cannot be dropped. After that point an edit here reaches contributors and nothing
 -- else, and the officers' own content is maintained where they already
 -- maintain it -- `roleDescription` and links from /account, titles and role

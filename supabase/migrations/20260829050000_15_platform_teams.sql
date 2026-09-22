@@ -75,8 +75,6 @@ create table "platform"."teams" (
 
   -- Officer override for the case the automatic rules get wrong.
   "lockedManuallyAt" timestamptz,
-  -- null = not yet graded. Officers fill this in through Airtable.
-  "requirementsMet"  smallint,
   "acceptingRequests" boolean not null default true,
   -- Re-forming for the next competition copies the roster and records where it
   -- came from, so "the same team" is visible across weeks without teams being
@@ -90,8 +88,6 @@ create table "platform"."teams" (
   -- reject a row whose team belongs to a different competition.
   constraint "teams_id_competitionId_key" unique ("id", "competitionId"),
 
-  constraint "teams_requirementsMet_nonneg"
-    check ("requirementsMet" is null or "requirementsMet" >= 0),
   -- A submission is all three columns or none of them.
   constraint "teams_submission_url_state_together"
     check (("submissionUrl" is null) = ("submissionState" is null)),
@@ -157,8 +153,8 @@ alter table "platform"."teamMembers" enable row level security;
 create unique index "teamMembers_one_lead_per_team"
   on "platform"."teamMembers" ("teamId") where "role" = 'lead';
 
--- Serves the memberStars and memberPoints views in the two files after this
--- one. Profile renders are the only read path and they are all keyed by user.
+-- Serves the memberStars view in the file after this one. Profile renders are
+-- the only read path and they are all keyed by user.
 create index "teamMembers_userId_teamId_idx"
   on "platform"."teamMembers" ("userId", "teamId");
 
@@ -263,7 +259,7 @@ revoke select on "platform"."teams" from anon, authenticated;
 grant select (
   "id", "competitionId", "slug", "name", "createdBy",
   "submissionUrl", "submittedAt", "submissionState", "competedAt", "participationOverride",
-  "lockedManuallyAt", "requirementsMet", "acceptingRequests", "clonedFromTeamId"
+  "lockedManuallyAt", "acceptingRequests", "clonedFromTeamId"
 ) on "platform"."teams" to anon, authenticated;
 
 -- Rosters are public to signed-in members: the team page shows who is on each
