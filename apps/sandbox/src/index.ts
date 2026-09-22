@@ -44,6 +44,13 @@ export interface Env {
    * cleanly: no init, no network calls, no console spam.
    */
   SENTRY_DSN: string | undefined;
+  /**
+   * Git SHA of the deploy, becoming the Sentry `release` tag. Not a
+   * `wrangler.jsonc` var (it changes every deploy) -- `devtools`' `ci.ts`
+   * passes it as a `--var` alongside `PLATFORM_REST_URL`, so it is absent
+   * outside a CI-driven deploy.
+   */
+  SENTRY_RELEASE?: string;
 }
 
 interface ResolveRow {
@@ -337,6 +344,7 @@ export default Sentry.withSentry(
       service: "sandbox",
       environment: env.DEPLOY_ENV,
       dsn: env.SENTRY_DSN,
+      release: env.SENTRY_RELEASE,
     }),
   worker,
 );
