@@ -3,7 +3,6 @@ import {
   competitions as competitionsSpec,
   meetings as meetingsSpec,
   members as membersSpec,
-  officerChangesTable as officerChangesSpec,
   elReflectionsTable as reflectionsSpec,
   platformSettingsTable as settingsSpec,
   projects as projectsSpec,
@@ -25,7 +24,6 @@ import {
   pushAttendance,
   pushDerivedCounts,
   pushMembers,
-  pushOfficerChangeStatuses,
   pushReflections,
   ensurePlatformSettings,
   pushTeams,
@@ -39,10 +37,6 @@ import {
   pullReflectionSettings,
 } from "./sync";
 import type { Refusal } from "./refusals";
-import {
-  processPendingOfficerChanges,
-  type OfficerChangeProcessingCounts,
-} from "./processPendingOfficerChanges";
 
 /**
  * One pass, shared verbatim by the cron and the manual trigger.
@@ -64,7 +58,6 @@ export interface SyncReport {
   durationMs: number;
   pulled: { upserted: number; archived: number; skipped: number };
   pushed: { created: number; updated: number; unchanged: number };
-  officerChanges: OfficerChangeProcessingCounts;
   statusWrites: number;
   /** Retained in the response during the ownership-inversion rollout. */
   accountsCreated: 0;
@@ -197,7 +190,6 @@ export async function runAirtableSync(
   const refusals: Refusal[] = [];
   const pulled = { upserted: 0, archived: 0, skipped: 0 };
   const pushed = { created: 0, updated: 0, unchanged: 0 };
-  let officerChanges = blankOfficerChangeCounts();
   let statusWrites = 0;
   let failure: unknown = null;
 
@@ -212,7 +204,6 @@ export async function runAirtableSync(
     competitions: AirtableRecord[];
     teams: AirtableRecord[];
     attendance: AirtableRecord[];
-    officerChanges: AirtableRecord[];
     reflections: AirtableRecord[];
     platformSettings: AirtableRecord[];
   } | null = null;
@@ -230,7 +221,6 @@ export async function runAirtableSync(
       competitions: await client.listRecords(competitionsSpec.id),
       teams: await client.listRecords(teamsSpec.id),
       attendance: await client.listRecords(attendanceSpec.id),
-      officerChanges: await client.listRecords(officerChangesSpec.id),
       reflections: await client.listRecords(reflectionsSpec.id),
       platformSettings: await client.listRecords(settingsSpec.id),
     };
@@ -281,17 +271,6 @@ export async function runAirtableSync(
     addPull(pulled, competitionOutcome);
     refusals.push(...competitionOutcome.refusals);
 
-    // The form used to depend on Airtable's Run a script action, which is not
-    // available on Team trials. Process the responses already fetched by this
-    // shared cron/manual pass instead. This placement is after officer-owned
-    // tables have been pulled, so a command can target a meeting or
-    // competition created in the same pass, and before projections are pushed,
-    // so a successful correction is visible without waiting another cycle.
-    officerChanges = await processPendingOfficerChanges(
-      client,
-      listed.officerChanges,
-    );
-
     const memberPush = await pushMembers(client, listed.members);
     add(pushed, memberPush);
     // Attendance links use Airtable record IDs. Re-list only when this pass
@@ -308,14 +287,7 @@ export async function runAirtableSync(
       pushed,
       await pushReflections(client, listed.reflections, listed.members),
     );
-    add(pushed, await pushOfficerChangeStatuses(client, listed.officerChanges));
     add(pushed, await pushDerivedCounts(client, listed));
-
-    if (officerChanges.failed > 0) {
-      failure = new Error(
-        `${officerChanges.failed} officer change${officerChanges.failed === 1 ? "" : "s"} will be retried.`,
-      );
-    }
   } catch (error) {
     failure = error;
   }
@@ -369,7 +341,6 @@ export async function runAirtableSync(
     durationMs: Date.now() - started,
     pulled,
     pushed,
-    officerChanges,
     statusWrites,
     accountsCreated: 0,
     attendanceRemoved: 0,
@@ -385,16 +356,11 @@ function blank(started: number, skipped: SyncReport["skipped"]): SyncReport {
     durationMs: Date.now() - started,
     pulled: { upserted: 0, archived: 0, skipped: 0 },
     pushed: { created: 0, updated: 0, unchanged: 0 },
-    officerChanges: blankOfficerChangeCounts(),
     statusWrites: 0,
     accountsCreated: 0,
     attendanceRemoved: 0,
     refusals: [],
   };
-}
-
-function blankOfficerChangeCounts(): OfficerChangeProcessingCounts {
-  return { attempted: 0, applied: 0, rejected: 0, failed: 0, deferred: 0 };
 }
 
 function add(

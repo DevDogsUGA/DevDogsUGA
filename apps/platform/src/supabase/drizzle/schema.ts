@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, text, varchar, serial, integer, bigserial, timestamp, bigint, pgEnum, boolean, customType, jsonb, json, time, doublePrecision, date, real, inet, smallint, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy, numeric } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, text, uuid, bigserial, integer, serial, varchar, timestamp, boolean, bigint, pgEnum, json, jsonb, customType, time, doublePrecision, date, inet, real, smallint, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy, numeric } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 export const auth = pgSchema("auth");
@@ -505,21 +505,28 @@ export const meetingsInScheduleBuilder = scheduleBuilder.table.withRLS("meetings
 	locationStatus: locationStatusInScheduleBuilder().default("TBA").notNull(),
 	buildingId: integer().references(() => buildingsInScheduleBuilder.id),
 	room: varchar(),
-	offeringCrn: integer().notNull().references(() => offeringsInScheduleBuilder.crn),
+	academicPeriod: integer().notNull(),
+	offeringCrn: integer().notNull(),
 }, (table) => [
+	foreignKey({
+		columns: [table.academicPeriod, table.offeringCrn],
+		foreignColumns: [offeringsInScheduleBuilder.academicPeriod, offeringsInScheduleBuilder.crn],
+		name: "meetings_academicPeriod_offeringCrn_fkey"
+	}),
+	index("meetings_academicPeriod_offeringCrn_index").using("btree", table.academicPeriod.asc().nullsLast(), table.offeringCrn.asc().nullsLast()),
 
 	pgPolicy("public_read", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 ]);
 
 export const offeringsInScheduleBuilder = scheduleBuilder.table.withRLS("offerings", {
-	crn: integer().primaryKey(),
+	crn: integer().notNull(),
 	crossListingId: varchar(),
 	minimumEnrollment: integer().default(0).notNull(),
 	maximumEnrollment: integer().notNull(),
 	actualEnrollment: integer().notNull(),
 	seatsAvailable: integer().notNull(),
-	cancelled: boolean().notNull().default(false),
-	lastSeenAt: timestamp().notNull().default(sql`now()`),
+	cancelled: boolean().default(false).notNull(),
+	lastSeenAt: timestamp().default(sql`now()`).notNull(),
 	academicPeriod: integer().notNull().references(() => termsInScheduleBuilder.academicPeriod),
 	partOfTerm: varchar().notNull(),
 	courseId: integer().notNull().references(() => coursesInScheduleBuilder.id),
@@ -527,6 +534,13 @@ export const offeringsInScheduleBuilder = scheduleBuilder.table.withRLS("offerin
 	scheduleTypeId: integer().notNull().references(() => scheduleTypesInScheduleBuilder.id),
 	campusId: integer().notNull().references(() => campusesInScheduleBuilder.id),
 }, (table) => [
+	primaryKey({ columns: [table.academicPeriod, table.crn], name: "offerings_pkey"}),
+	foreignKey({
+		columns: [table.academicPeriod, table.partOfTerm],
+		foreignColumns: [partsOfTermInScheduleBuilder.academicPeriod, partsOfTermInScheduleBuilder.code],
+		name: "offerings_academicPeriod_partOfTerm_fkey"
+	}),
+	index("offerings_academicPeriod_partOfTerm_index").using("btree", table.academicPeriod.asc().nullsLast(), table.partOfTerm.asc().nullsLast()),
 	index("offerings_crossListingId_index").using("btree", table.crossListingId.asc().nullsLast()),
 
 	pgPolicy("public_read", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
@@ -715,7 +729,10 @@ export const objectsInStorage = storage.table.withRLS("objects", {
 	uniqueIndex("bucketid_objname").using("btree", table.bucketId.asc().nullsLast(), table.name.asc().nullsLast()),
 	index("idx_objects_bucket_id_name").using("btree", table.bucketId.asc().nullsLast(), table.name.asc().nullsLast()),
 	index("idx_objects_bucket_id_name_lower").using("btree", table.bucketId.asc().nullsLast(), sql`lower(name)`),
+	uniqueIndex("idx_objects_current_version").using("btree", table.bucketId.asc().nullsLast(), table.name.asc().nullsLast()).where(sql`(archived_at IS NULL)`),
+	uniqueIndex("idx_objects_null_version").using("btree", table.bucketId.asc().nullsLast(), table.name.asc().nullsLast()).where(sql`(NOT is_versioned)`),
 	index("name_prefix_search").using("btree", table.name.asc().nullsLast().op("text_pattern_ops")),
+	uniqueIndex("objects_bucket_id_name_version_key").using("btree", table.bucketId.asc().nullsLast(), table.name.asc().nullsLast(), table.version.asc().nullsLast()),
 
 	pgPolicy("avatar_delete_policy", { for: "delete", to: ["authenticated"], using: sql`((bucket_id = 'avatars'::text) AND (name = (auth.uid())::text) AND (NOT platform.is_profile_frozen(( SELECT auth.uid() AS uid))))` }),
 
@@ -863,21 +880,6 @@ export const pgStatStatementsInfoInExtensions = extensions.view("pg_stat_stateme
 export const availableTermsInScheduleBuilder = scheduleBuilder.view("availableTerms", {	academicPeriod: integer(),
 	description: varchar(),
 }).as(sql`SELECT terms."academicPeriod", terms.description FROM schedule_builder.terms JOIN schedule_builder.offerings ON offerings."academicPeriod" = terms."academicPeriod" GROUP BY terms."academicPeriod", terms.description ORDER BY terms."academicPeriod" DESC`);
-
-export const offeringSearchInScheduleBuilder = scheduleBuilder.materializedView("offeringSearch", {	crn: integer(),
-	academicPeriod: integer(),
-	seatsAvailable: integer(),
-	cancelled: boolean(),
-	courseId: integer(),
-	abbr: varchar(),
-	courseNumber: varchar(),
-	title: varchar(),
-	maxCreditHours: real(),
-	instructorId: integer(),
-	firstName: varchar(),
-	lastName: varchar(),
-	searchVector: customType({ dataType: () => 'tsvector' })("search_vector"),
-}).as(sql`SELECT offerings.crn, offerings."academicPeriod", offerings."seatsAvailable", offerings.cancelled, courses.id AS "courseId", courses.abbr, courses."courseNumber", courses.title, courses."maxCreditHours", instructors.id AS "instructorId", instructors."firstName", instructors."lastName", to_tsvector('english'::regconfig, (((((((COALESCE(courses.title, ''::character varying)::text || ' '::text) || COALESCE(courses.abbr, ''::character varying)::text) || ' '::text) || COALESCE(courses."courseNumber", ''::character varying)::text) || ' '::text) || COALESCE(instructors."lastName", ''::character varying)::text) || ' '::text) || COALESCE(instructors."firstName", ''::character varying)::text) AS search_vector FROM schedule_builder.offerings JOIN schedule_builder.courses ON courses.id = offerings."courseId" LEFT JOIN schedule_builder.instructors ON instructors.id = offerings."instructorId"`);
 
 export const decryptedSecretsInVault = vault.view("decrypted_secrets", {	id: uuid(),
 	name: text(),

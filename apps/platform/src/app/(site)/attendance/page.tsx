@@ -35,10 +35,6 @@ const STATUS_COPY: Record<
     title: "This meeting isn’t eligible",
     body: "That meeting doesn’t count toward your participation passport, so nothing was recorded. If that’s wrong, ask an officer to mark the meeting eligible.",
   },
-  revoked: {
-    title: "Attendance needs officer review",
-    body: "This attendance record was previously corrected. Please contact an officer on Discord.",
-  },
   invalid_meeting: {
     title: "Meeting unavailable",
     body: "That meeting was canceled, removed, or could not be found.",

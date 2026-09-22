@@ -50,7 +50,7 @@ export async function getReflectionActivities(
     join platform.meetings m on m.id = a."meetingId"
     left join platform.reflections r
       on r."userId" = a."userId" and r."meetingId" = m.id
-    where a."userId" = ${userId}::uuid and a."revokedAt" is null
+    where a."userId" = ${userId}::uuid
       and m."elEligible" and m."deletedAt" is null and m."cancelledAt" is null
 
     union all
@@ -66,7 +66,7 @@ export async function getReflectionActivities(
     left join platform.reflections r
       on r."userId" = tm."userId" and r."competitionId" = c.id
     where tm."userId" = ${userId}::uuid
-      and coalesce(t."participationOverride", t."competedAt" is not null)
+      and t."competedAt" is not null
       and c."elEligible" and c."deletedAt" is null and w."deletedAt" is null
     order by "endsAt" desc, "activityType", "activityId"
   `);

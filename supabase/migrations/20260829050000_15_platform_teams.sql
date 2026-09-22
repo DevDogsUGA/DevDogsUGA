@@ -66,12 +66,6 @@ create table "platform"."teams" (
   "submittedAt"     timestamptz,
   "submissionState" "platform"."submissionState",
   "competedAt"      timestamptz,
-  -- Null follows competedAt; true/false is a durable officer correction. The
-  -- automatic judging pass never rewrites it, so a revocation stays revoked.
-  "participationOverride"       boolean,
-  "participationOverrideAt"     timestamptz,
-  "participationOverrideBy"     uuid,
-  "participationOverrideReason" text,
 
   -- Officer override for the case the automatic rules get wrong.
   "lockedManuallyAt" timestamptz,
@@ -96,19 +90,6 @@ create table "platform"."teams" (
   -- A team cannot have competed without ever having had an entry.
   constraint "teams_competedAt_requires_submission"
     check ("competedAt" is null or "submissionUrl" is not null),
-  constraint "teams_participationOverride_together" check (
-    ("participationOverride" is null
-      and "participationOverrideAt" is null
-      and "participationOverrideBy" is null
-      and "participationOverrideReason" is null)
-    or
-    ("participationOverride" is not null
-      and "participationOverrideAt" is not null
-      and "participationOverrideBy" is not null
-      and nullif(btrim("participationOverrideReason"), '') is not null)
-  ),
-  constraint "teams_participationOverrideReason_length"
-    check ("participationOverrideReason" is null or char_length("participationOverrideReason") <= 500),
 
   constraint "teams_competitionId_fkey" foreign key ("competitionId")
     references "platform"."competitions"("id") on update cascade on delete cascade,
@@ -253,12 +234,11 @@ create policy "no_client_delete" on "platform"."teams"
 -- The revoke and the grant are a pair. Dropping the revoke restores the
 -- schema-wide default privileges from the first migration, which include
 -- "joinCode"; adding "joinCode" to the grant list does the same thing more
--- directly. The override decision is readable so public competition state can
--- show the effective result; its officer, timestamp, and reason remain server-only.
+-- directly.
 revoke select on "platform"."teams" from anon, authenticated;
 grant select (
   "id", "competitionId", "slug", "name", "createdBy",
-  "submissionUrl", "submittedAt", "submissionState", "competedAt", "participationOverride",
+  "submissionUrl", "submittedAt", "submissionState", "competedAt",
   "lockedManuallyAt", "acceptingRequests", "clonedFromTeamId"
 ) on "platform"."teams" to anon, authenticated;
 

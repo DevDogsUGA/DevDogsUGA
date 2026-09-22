@@ -205,7 +205,7 @@ async function eligibleActivity(
       select m."endsAt" from platform.attendance a
       join platform.meetings m on m.id = a."meetingId"
       where a."userId" = ${userId}::uuid and m.id = ${input.activityId}::uuid
-        and a."revokedAt" is null and m."elEligible"
+        and m."elEligible"
         and m."deletedAt" is null and m."cancelledAt" is null
       for share of a, m
     `);
@@ -218,7 +218,7 @@ async function eligibleActivity(
     join platform.competitions c on c.id = t."competitionId"
     join platform.workshops w on w.id = c."workshopId"
     where tm."userId" = ${userId}::uuid and c.id = ${input.activityId}::uuid
-      and coalesce(t."participationOverride", t."competedAt" is not null)
+      and t."competedAt" is not null
       and c."elEligible" and c."deletedAt" is null and w."deletedAt" is null
     for share of tm, t, c, w
   `);

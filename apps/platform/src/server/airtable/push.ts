@@ -6,7 +6,6 @@ import {
   competitions as competitionsSpec,
   meetings as meetingsSpec,
   members as membersSpec,
-  officerChangesTable as officerChangesSpec,
   elReflectionsTable as reflectionsSpec,
   platformSettingsTable as settingsSpec,
   mergeOn,
@@ -19,7 +18,6 @@ import {
   type CompetitionRow,
   type MeetingRow,
   type MemberRow,
-  type OfficerChangeRow,
   type PlatformSettingsRow,
   type ReflectionRow,
   type TableSpec,
@@ -29,7 +27,6 @@ import {
 import { eq, isNull, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import {
-  airtableChangeReceipts,
   attendance,
   competitions,
   meetings,
@@ -87,7 +84,6 @@ export async function pushMembers(
       meetingCount: sql<number>`(
         select count(distinct ${attendance.meetingId})::int
         from ${attendance} where ${attendance.userId} = ${profiles.userId}
-          and ${attendance.revokedAt} is null
       )`,
     })
     .from(profiles);
@@ -122,8 +118,6 @@ export async function pushAttendance(
       meetingAirtableId: meetings.airtableRecordId,
       method: attendance.method,
       recordedAt: sql<string>`${attendance.recordedAt}::text`,
-      revoked: sql<boolean>`${attendance.revokedAt} is not null`,
-      revocationReason: attendance.revocationReason,
     })
     .from(attendance)
     .innerJoin(meetings, eq(meetings.id, attendance.meetingId));
@@ -140,58 +134,10 @@ export async function pushAttendance(
       meetingAirtableId: record.meetingAirtableId,
       method: record.method,
       recordedAt: record.recordedAt,
-      revoked: record.revoked,
-      revocationReason: record.revocationReason,
     });
   }
 
   return upsert<AttendanceRow>(client, attendanceSpec, rows, existing);
-}
-
-/**
- * Repairs processing acknowledgements when command processing committed but
- * its final Airtable PATCH failed. Form responses are addressed by record id;
- * this projection never creates or reinterprets them.
- */
-export async function pushOfficerChangeStatuses(
-  client: AirtableClient,
-  existing: AirtableRecord[],
-): Promise<PushCounts> {
-  const receipts = await db
-    .select({
-      formResponseRecordId: airtableChangeReceipts.formResponseRecordId,
-      status: airtableChangeReceipts.status,
-      processedAt: sql<
-        string | null
-      >`${airtableChangeReceipts.processedAt}::text`,
-      auditEventId: airtableChangeReceipts.auditEventId,
-      error: airtableChangeReceipts.error,
-    })
-    .from(airtableChangeReceipts);
-
-  const entries = receipts.map((receipt) => ({
-    recordId: receipt.formResponseRecordId,
-    row: {
-      ...receipt,
-      status:
-        receipt.status === "applied"
-          ? ("Applied" as const)
-          : receipt.status === "rejected"
-            ? ("Rejected" as const)
-            : receipt.status === "retryable"
-              ? ("Retryable" as const)
-              : ("Pending" as const),
-    } satisfies OfficerChangeRow,
-  }));
-  const plan = buildUpdate(officerChangesSpec, entries, existing);
-  if (plan.records.length === 0) {
-    return { created: 0, updated: 0, unchanged: plan.unchanged };
-  }
-  const updated = await client.updateRecords(
-    officerChangesSpec.id,
-    plan.records,
-  );
-  return { created: 0, updated, unchanged: plan.unchanged };
 }
 
 /** Mirrors reflection evidence for officer review and the eventual export. */
@@ -285,10 +231,7 @@ export async function pushTeams(
       name: teams.name,
       competitionAirtableId: competitions.airtableRecordId,
       submissionUrl: teams.submissionUrl,
-      competed: sql<boolean>`coalesce(
-        ${teams.participationOverride},
-        ${teams.competedAt} is not null
-      )`,
+      competed: sql<boolean>`${teams.competedAt} is not null`,
       memberCount: sql<number>`(
         select count(*)::int from ${teamMembers}
         where ${teamMembers.teamId} = ${teams.id}
@@ -348,7 +291,6 @@ export async function pushDerivedCounts(
       attendanceCount: sql<number>`(
         select count(*)::int from ${attendance}
         where ${attendance.meetingId} = ${meetings.id}
-          and ${attendance.revokedAt} is null
       )`,
     })
     .from(meetings)

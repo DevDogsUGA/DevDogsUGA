@@ -73,56 +73,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      airtableChangeReceipts: {
-        Row: {
-          auditEventId: string | null;
-          createdAt: string;
-          error: string | null;
-          formResponseRecordId: string;
-          payload: Json;
-          payloadDigest: string;
-          processedAt: string | null;
-          status: string;
-          targetId: string | null;
-          targetType: string;
-          updatedAt: string;
-        };
-        Insert: {
-          auditEventId?: string | null;
-          createdAt?: string;
-          error?: string | null;
-          formResponseRecordId: string;
-          payload: Json;
-          payloadDigest: string;
-          processedAt?: string | null;
-          status?: string;
-          targetId?: string | null;
-          targetType: string;
-          updatedAt?: string;
-        };
-        Update: {
-          auditEventId?: string | null;
-          createdAt?: string;
-          error?: string | null;
-          formResponseRecordId?: string;
-          payload?: Json;
-          payloadDigest?: string;
-          processedAt?: string | null;
-          status?: string;
-          targetId?: string | null;
-          targetType?: string;
-          updatedAt?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "airtableChangeReceipts_auditEventId_fkey";
-            columns: ["auditEventId"];
-            isOneToOne: false;
-            referencedRelation: "auditEvents";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       airtableSyncState: {
         Row: {
           id: boolean;
@@ -204,10 +154,6 @@ export type Database = {
           meetingId: string;
           method: Database["platform"]["Enums"]["checkInMethod"];
           recordedAt: string;
-          recordedBy: string | null;
-          revocationReason: string | null;
-          revokedAt: string | null;
-          revokedBy: string | null;
           userId: string;
         };
         Insert: {
@@ -215,10 +161,6 @@ export type Database = {
           meetingId: string;
           method: Database["platform"]["Enums"]["checkInMethod"];
           recordedAt?: string;
-          recordedBy?: string | null;
-          revocationReason?: string | null;
-          revokedAt?: string | null;
-          revokedBy?: string | null;
           userId: string;
         };
         Update: {
@@ -226,10 +168,6 @@ export type Database = {
           meetingId?: string;
           method?: Database["platform"]["Enums"]["checkInMethod"];
           recordedAt?: string;
-          recordedBy?: string | null;
-          revocationReason?: string | null;
-          revokedAt?: string | null;
-          revokedBy?: string | null;
           userId?: string;
         };
         Relationships: [
@@ -245,8 +183,6 @@ export type Database = {
       auditEvents: {
         Row: {
           action: string;
-          actorAirtableDisplayName: string | null;
-          actorAirtableUserId: string | null;
           actorType: string;
           actorUserId: string | null;
           afterReflectionRevisionId: string | null;
@@ -261,8 +197,6 @@ export type Database = {
         };
         Insert: {
           action: string;
-          actorAirtableDisplayName?: string | null;
-          actorAirtableUserId?: string | null;
           actorType: string;
           actorUserId?: string | null;
           afterReflectionRevisionId?: string | null;
@@ -277,8 +211,6 @@ export type Database = {
         };
         Update: {
           action?: string;
-          actorAirtableDisplayName?: string | null;
-          actorAirtableUserId?: string | null;
           actorType?: string;
           actorUserId?: string | null;
           afterReflectionRevisionId?: string | null;
@@ -1042,8 +974,7 @@ export type Database = {
           competitionId: string | null;
           content: string;
           createdAt: string;
-          createdByAirtableUserId: string | null;
-          createdByUserId: string | null;
+          createdByUserId: string;
           id: string;
           meetingId: string | null;
           reflectionId: string;
@@ -1055,8 +986,7 @@ export type Database = {
           competitionId?: string | null;
           content: string;
           createdAt?: string;
-          createdByAirtableUserId?: string | null;
-          createdByUserId?: string | null;
+          createdByUserId: string;
           id?: string;
           meetingId?: string | null;
           reflectionId: string;
@@ -1068,8 +998,7 @@ export type Database = {
           competitionId?: string | null;
           content?: string;
           createdAt?: string;
-          createdByAirtableUserId?: string | null;
-          createdByUserId?: string | null;
+          createdByUserId?: string;
           id?: string;
           meetingId?: string | null;
           reflectionId?: string;
@@ -1736,10 +1665,6 @@ export type Database = {
           joinCode: string;
           lockedManuallyAt: string | null;
           name: string;
-          participationOverride: boolean | null;
-          participationOverrideAt: string | null;
-          participationOverrideBy: string | null;
-          participationOverrideReason: string | null;
           slug: string;
           submissionState:
             Database["platform"]["Enums"]["submissionState"] | null;
@@ -1756,10 +1681,6 @@ export type Database = {
           joinCode: string;
           lockedManuallyAt?: string | null;
           name: string;
-          participationOverride?: boolean | null;
-          participationOverrideAt?: string | null;
-          participationOverrideBy?: string | null;
-          participationOverrideReason?: string | null;
           slug: string;
           submissionState?:
             Database["platform"]["Enums"]["submissionState"] | null;
@@ -1776,10 +1697,6 @@ export type Database = {
           joinCode?: string;
           lockedManuallyAt?: string | null;
           name?: string;
-          participationOverride?: boolean | null;
-          participationOverrideAt?: string | null;
-          participationOverrideBy?: string | null;
-          participationOverrideReason?: string | null;
           slug?: string;
           submissionState?:
             Database["platform"]["Enums"]["submissionState"] | null;
@@ -2136,9 +2053,8 @@ export type Database = {
         | "undergraduate_certificate"
         | "graduate_certificate"
         | "professional_program";
-      auditEventSource:
-        "platform" | "qr" | "manual_code" | "airtable_form" | "system";
-      checkInMethod: "qr" | "manual_code" | "officer";
+      auditEventSource: "platform" | "qr" | "manual_code" | "system";
+      checkInMethod: "qr" | "manual_code";
       contentAction: "quarantine" | "no_action";
       contentVisibility: "public" | "restricted";
       credentialStatus: "active" | "disabled" | "revoked";
@@ -3529,14 +3445,8 @@ export const Constants = {
         "graduate_certificate",
         "professional_program",
       ],
-      auditEventSource: [
-        "platform",
-        "qr",
-        "manual_code",
-        "airtable_form",
-        "system",
-      ],
-      checkInMethod: ["qr", "manual_code", "officer"],
+      auditEventSource: ["platform", "qr", "manual_code", "system"],
+      checkInMethod: ["qr", "manual_code"],
       contentAction: ["quarantine", "no_action"],
       contentVisibility: ["public", "restricted"],
       credentialStatus: ["active", "disabled", "revoked"],

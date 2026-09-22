@@ -192,11 +192,7 @@ describe("scaffoldBase", () => {
 
     for (const live of result.schema) {
       const primary = live.fields.find((f) => f.id === live.primaryFieldId);
-      expect(primary?.name, live.name).toBe(
-        live.name === "Officer Changes"
-          ? "Target platform ID"
-          : "⚙️ Platform ID",
-      );
+      expect(primary?.name, live.name).toBe("⚙️ Platform ID");
     }
   });
 

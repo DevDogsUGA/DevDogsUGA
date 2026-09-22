@@ -156,12 +156,7 @@ const summaryColumns = {
     db
       .select({ n: sql`count(*)::int` })
       .from(attendance)
-      .where(
-        and(
-          eq(attendance.meetingId, meetings.id),
-          isNull(attendance.revokedAt),
-        ),
-      ),
+      .where(eq(attendance.meetingId, meetings.id)),
   ),
   workshopCount: correlatedCount(
     db

@@ -15,7 +15,6 @@ export async function getOfficerAttendanceMeeting(meetingId: string) {
         select count(*)::int
         from ${attendance}
         where ${attendance.meetingId} = ${meetings.id}
-          and ${attendance.revokedAt} is null
       )`,
     })
     .from(meetings)

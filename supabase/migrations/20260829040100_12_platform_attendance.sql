@@ -4,38 +4,26 @@
 -- submits commands, but is never the source of truth. Clients may read only
 -- their own evidence; every write travels through a server-side command.
 
-create type "platform"."checkInMethod" as enum ('qr', 'manual_code', 'officer');
+create type "platform"."checkInMethod" as enum ('qr', 'manual_code');
 
 -- ============================================================
 -- Attendance
 -- ============================================================
 
+-- No officer overrides or corrections: check-in is the only writer, and the
+-- table has no revocation, no manual add, and nothing an officer records on a
+-- member's behalf. A late check-in is handled by re-displaying the rotating
+-- code, not by a correction command, so there is nothing here for anyone but
+-- the member themselves to write.
 create table "platform"."attendance" (
   "id"               uuid not null default gen_random_uuid(),
   "meetingId"        uuid not null,
   "userId"           uuid not null,
   "method"           "platform"."checkInMethod" not null,
-  -- Populated only when an officer records or restores attendance. Deliberately
-  -- no FK: the evidence must outlive the officer account.
-  "recordedBy"       uuid,
   "recordedAt"       timestamptz not null default now(),
-  -- Revocation preserves the original claim. A later scan does not clear these
-  -- columns; restoration is an explicit, audited officer command.
-  "revokedAt"        timestamptz,
-  "revokedBy"        uuid,
-  "revocationReason" text,
 
   constraint "attendance_pkey" primary key ("id"),
   constraint "attendance_meetingId_userId_key" unique ("meetingId", "userId"),
-  constraint "attendance_recordedBy_only_for_officer"
-    check ("recordedBy" is null or "method" = 'officer'),
-  constraint "attendance_revocation_together" check (
-    ("revokedAt" is null and "revokedBy" is null and "revocationReason" is null)
-    or
-    ("revokedAt" is not null and "revokedBy" is not null and nullif(btrim("revocationReason"), '') is not null)
-  ),
-  constraint "attendance_revocationReason_length"
-    check ("revocationReason" is null or char_length("revocationReason") <= 500),
   constraint "attendance_meetingId_fkey" foreign key ("meetingId")
     references "platform"."meetings"("id") on update cascade on delete restrict,
   constraint "attendance_userId_fkey" foreign key ("userId")
@@ -46,8 +34,8 @@ alter table "platform"."attendance" enable row level security;
 
 create index "attendance_userId_idx"
   on "platform"."attendance" ("userId", "recordedAt" desc);
-create index "attendance_current_meetingId_idx"
-  on "platform"."attendance" ("meetingId") where "revokedAt" is null;
+create index "attendance_meetingId_idx"
+  on "platform"."attendance" ("meetingId");
 
 create policy "own_select" on "platform"."attendance"
   as permissive for select to authenticated
@@ -108,9 +96,10 @@ create policy "no_client_update" on "platform"."reflections"
 create policy "no_client_delete" on "platform"."reflections"
   as restrictive for delete to anon, authenticated using (false);
 
--- A revision snapshots every officer-editable field, not only the body. That
--- makes reassignment, submission-time corrections, and content changes equally
--- reconstructable without putting full reflection text in the audit ledger.
+-- A revision snapshots every mutable field, not only the body, so submission
+-- state and content changes are equally reconstructable without putting full
+-- reflection text in the audit ledger. There is no officer-editable path
+-- here — `createdByUserId` is always the member who saved or submitted.
 create table "platform"."reflectionRevisions" (
   "id"                      uuid not null default gen_random_uuid(),
   "reflectionId"            uuid not null,
@@ -120,8 +109,7 @@ create table "platform"."reflectionRevisions" (
   "content"                 text not null,
   "submittedAt"             timestamptz,
   "createdAt"               timestamptz not null default now(),
-  "createdByUserId"         uuid,
-  "createdByAirtableUserId" text,
+  "createdByUserId"         uuid not null,
   "changeReason"            text,
 
   constraint "reflectionRevisions_pkey" primary key ("id"),
@@ -129,9 +117,6 @@ create table "platform"."reflectionRevisions" (
     references "platform"."reflections"("id") on update cascade on delete cascade,
   constraint "reflectionRevisions_exactly_one_activity" check (
     (("meetingId" is not null)::int + ("competitionId" is not null)::int) = 1
-  ),
-  constraint "reflectionRevisions_one_actor" check (
-    (("createdByUserId" is not null)::int + ("createdByAirtableUserId" is not null)::int) = 1
   ),
   constraint "reflectionRevisions_changeReason_length"
     check ("changeReason" is null or char_length("changeReason") <= 500)

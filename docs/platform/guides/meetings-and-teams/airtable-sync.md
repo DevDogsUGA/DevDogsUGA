@@ -12,7 +12,7 @@ The split exists because `attendance."meetingId"` needs something that keeps its
 
 ## What lives where
 
-Ten integration tables, and the direction is **per field, never per table**:
+Nine integration tables, and the direction is **per field, never per table**:
 
 | Table                 | Officers author                                                                        | The platform writes                                             |
 | --------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
@@ -23,33 +23,30 @@ Ten integration tables, and the direction is **per field, never per table**:
 | **Members**           | Dues paid                                                                              | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended     |
 | **Projects**          | nothing — a platform-owned mirror                                                      | ⚙️ Platform ID, ⚙️ Slug, Name                                   |
 | **Attendance**        | —                                                                                      | authoritative meeting attendance projection                     |
-| **Officer Changes**   | append-only correction form inputs                                                     | processing result and audit event ID                            |
 | **EL Reflections**    | —                                                                                      | current reflection evidence                                     |
 | **Platform Settings** | reflection word minimum and submission window                                          | ⚙️ Platform ID, ⚙️ Sync status                                  |
 
 One rule governs the right-hand column: **push only fields the platform owns exclusively, and never create a field both sides write.** Two writers have no conflict-resolution story, and last-writer-wins destroys work silently. Teams is push-only now — scoring is off-platform, so there is no grade to pull back. The `⚙️` prefix warns officers off a field; the field editing permissions set by hand enforce it.
 
-Officer Changes is the only integration table where a form creates rows. The
-scheduled or manual sync treats each new or retryable response as a validated
-command and writes the result back. Attendance and EL Reflections are
-projections only. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
+No integration table lets a form create rows anymore: Attendance and EL
+Reflections are read-only projections, with no officer override or correction
+subsystem behind them. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
 
 <details>
 <summary>Which surface does a given officer task belong to?</summary>
 
 Only officers have Airtable access, so the base is the officer console for anything it can hold — an admin screen not built is a screen not maintained. The line is not "officer-only work", it is **what Airtable can key a row to**.
 
-| Task                                               | Where                                                |
-| -------------------------------------------------- | ---------------------------------------------------- |
-| Create or edit a meeting or a workshop             | Airtable                                             |
-| Open a competition, by linking its workshop        | Airtable                                             |
-| Set `Judging starts`, the max team size            | Airtable                                             |
-| Record dues                                        | Airtable                                             |
-| Correct attendance, participation, or a reflection | Airtable — restricted Officer Changes form           |
-| Record a team's entry when there is no PR          | Platform — `setSubmission`                           |
-| Freeze a roster early                              | Platform — `setManualLock`                           |
-| Give a team a named award, including the winner    | Platform — `awardTeam`                               |
-| Run a pass now                                     | Either — `requestAirtableSync`, or the base's button |
+| Task                                            | Where                                                |
+| ----------------------------------------------- | ---------------------------------------------------- |
+| Create or edit a meeting or a workshop          | Airtable                                             |
+| Open a competition, by linking its workshop     | Airtable                                             |
+| Set `Judging starts`, the max team size         | Airtable                                             |
+| Record dues                                     | Airtable                                             |
+| Record a team's entry when there is no PR       | Platform — `setSubmission`                           |
+| Freeze a roster early                           | Platform — `setManualLock`                           |
+| Give a team a named award, including the winner | Platform — `awardTeam`                               |
+| Run a pass now                                  | Either — `requestAirtableSync`, or the base's button |
 
 Everything on the platform side needs a member or team identity that Airtable holds only as a mirror, and each is a server action gated on the same permission as roster edits — except the sync trigger, which has its own. Scoring is off-platform, so there is no tally to write the `winner` award: an officer records it through `awardTeam`, the same action that gives any other named award.
 
@@ -69,10 +66,7 @@ The cron fires `*/15 * * * *` at `/airtable/sync`; `requestAirtableSync()` runs 
    officer enters an invalid value.
 4. **Pull Projects, Meetings, Workshops, then Competitions** in dependency
    order.
-5. **Process Officer Changes, then push** Members, Attendance, Teams,
-   EL Reflections, Officer Changes acknowledgements, and derived counts.
-   Per-response failures are retryable and isolated; the acknowledgement pass
-   repairs a failed post-command Airtable write without replaying the mutation.
+5. **Push** Members, Attendance, Teams, EL Reflections, and derived counts.
 6. **Write refusals** into each record's `⚙️ Sync status`, release the lease,
    and advance `lastSyncedAt` only if the pass completed.
 

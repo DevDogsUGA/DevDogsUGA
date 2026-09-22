@@ -2,7 +2,6 @@
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "~/server/db";
-import { attendance } from "~/server/db/schema";
 import { recordMemberAttendance } from "./recordAttendance";
 
 const IDS = {
@@ -99,20 +98,6 @@ describe("recordMemberAttendance", () => {
       expect(repeat.attendanceId).toBe(first.attendanceId);
       expect(repeat.recordedAt).toEqual(first.recordedAt);
     }
-  });
-
-  it("does not restore revoked attendance", async () => {
-    await db
-      .update(attendance)
-      .set({
-        revokedAt: new Date(),
-        revokedBy: IDS.member,
-        revocationReason: "Test correction",
-      })
-      .where(sql`${attendance.meetingId} = ${IDS.meeting}::uuid`);
-
-    const result = await recordMemberAttendance(IDS.meeting, IDS.member, "qr");
-    expect(result.status).toBe("revoked");
   });
 
   it("refuses a meeting that does not count toward progress, recording nothing", async () => {

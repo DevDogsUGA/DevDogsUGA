@@ -122,18 +122,8 @@ export interface AttendanceRow {
   id: string;
   memberAirtableId: string;
   meetingAirtableId: string;
-  method: "qr" | "manual_code" | "officer";
+  method: "qr" | "manual_code";
   recordedAt: string;
-  revoked: boolean;
-  revocationReason: string | null;
-}
-
-export interface OfficerChangeRow {
-  formResponseRecordId: string;
-  status: "Pending" | "Applied" | "Rejected" | "Retryable";
-  processedAt: string | null;
-  auditEventId: string | null;
-  error: string | null;
 }
 
 export interface ReflectionRow {
@@ -770,10 +760,9 @@ export const teamsTable = table("Teams", "tblfXjgqCZiJnnD4x", {
 /**
  * A read-only projection of authoritative platform attendance.
  *
- * Officers no longer create or edit these rows directly. Corrections arrive
- * as commands through the separate Officer Changes form, are validated and
- * audited in Postgres, and then appear here on the next push. Deleting a row
- * is harmless: upsert recreates it from the attendance UUID.
+ * Officers do not create or edit these rows directly, and there is no
+ * correction surface: check-in is the only writer. Deleting a row is
+ * harmless: upsert recreates it from the attendance UUID.
  */
 export const attendanceTable = table("Attendance", "tblVgyeo1q9vk0ddD", {
   platformId: field
@@ -791,96 +780,16 @@ export const attendanceTable = table("Attendance", "tblVgyeo1q9vk0ddD", {
     .singleSelect("fld4CosVKlvMZpO91", "⚙️ Method", [
       "QR",
       "Manual code",
-      "Officer",
     ] as const)
     .push((a: AttendanceRow) =>
-      a.method === "manual_code"
-        ? "Manual code"
-        : a.method === "officer"
-          ? "Officer"
-          : "QR",
+      a.method === "manual_code" ? "Manual code" : "QR",
     ),
   recordedAt: field
     .dateTime("fldy2KTztwZvrt7sZ", "⚙️ Recorded at")
     .push((a: AttendanceRow) => a.recordedAt),
-  revoked: field
-    .checkbox("fldc2EI4R9TiRsb20", "⚙️ Revoked")
-    .push((a: AttendanceRow) => a.revoked),
-  revocationReason: field
-    .longText("fldeg3snMYlWedD25", "⚙️ Revocation reason")
-    .pushClearable((a: AttendanceRow) => a.revocationReason),
 });
 
-/**
- * Append-only form responses requesting changes to authoritative state.
- * Input fields are deliberately ignored by projection writes; the scheduled
- * or manual sync snapshots one response, validates it, and writes only the
- * processing fields below. Officers never edit Attendance projections.
- */
-export const officerChangesTable = table(
-  "Officer Changes",
-  "tblxVnlGBq5mbR1u5",
-  {
-    targetId: field.text("fld0kB2uIYOqovM5p", "Target platform ID").ignore(),
-    formResponseRecordId: field
-      .text("fldtsfXM7cflE1ecY", "⚙️ Form response ID")
-      .matchKey()
-      .push((row: OfficerChangeRow) => row.formResponseRecordId),
-    command: field
-      .singleSelect("fldLQGEgssJr29bAz", "Command", [
-        "Add attendance",
-        "Revoke attendance",
-        "Restore attendance",
-        "Grant competition participation",
-        "Revoke competition participation",
-        "Clear competition participation override",
-        "Edit reflection",
-      ] as const)
-      .ignore(),
-    member: field.text("fldpjrEDvWElsjtq8", "Member MyID").ignore(),
-    meetingId: field.text("fld1AGug56uC8kqug", "Meeting platform ID").ignore(),
-    reason: field.longText("fld5pq8yZxG3WLVtM", "Correction reason").ignore(),
-    createdBy: field.createdBy("fldBhPNuG7fGPSeij", "Created by").ignore(),
-    reflectionContent: field
-      .longText("fldywB2BObff6aROE", "Reflection content")
-      .ignore(),
-    clearReflectionContent: field
-      .checkbox("fld2ZgpC34p4NVBFO", "Clear reflection content")
-      .ignore(),
-    reflectionState: field
-      .singleSelect("fldi4rqSZbsGdNew3", "Reflection state", [
-        "Draft",
-        "Submitted",
-      ] as const)
-      .ignore(),
-    newMember: field.text("fld9Q2kYWwy5Ta2Ap", "New member MyID").ignore(),
-    newMeetingId: field
-      .text("fld4Gp3IPgTDiO6wa", "New meeting platform ID")
-      .ignore(),
-    newCompetitionId: field
-      .text("fldEdlPrMkXwh3nQg", "New competition platform ID")
-      .ignore(),
-    status: field
-      .singleSelect("fldjYkqzAiy4HR9hT", "⚙️ Processing status", [
-        "Pending",
-        "Applied",
-        "Rejected",
-        "Retryable",
-      ] as const)
-      .push((row: OfficerChangeRow) => row.status),
-    processedAt: field
-      .dateTime("fld564oqKGXjCp9C9", "⚙️ Processed at")
-      .pushClearable((row: OfficerChangeRow) => row.processedAt),
-    auditEventId: field
-      .text("fldMrPvim5CHD4BaB", "⚙️ Audit event ID")
-      .pushClearable((row: OfficerChangeRow) => row.auditEventId),
-    error: field
-      .longText("fldu8HfCb95aXdGdf", "⚙️ Validation error")
-      .pushClearable((row: OfficerChangeRow) => row.error),
-  },
-);
-
-/** Platform-owned EL evidence. Officer corrections go through Officer Changes. */
+/** Platform-owned EL evidence. There is no officer correction command. */
 export const elReflectionsTable = table("EL Reflections", "tblU6bJTxyY14SyK1", {
   platformId: field
     .text("fldAAdfehG54Cwk6Z", "⚙️ Platform ID")
@@ -948,7 +857,6 @@ export const registry = {
   competitions,
   teams: teamsTable,
   attendance: attendanceTable,
-  officerChanges: officerChangesTable,
   elReflections: elReflectionsTable,
   platformSettings: platformSettingsTable,
 } as const;

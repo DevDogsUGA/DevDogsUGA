@@ -46,7 +46,7 @@ The schema is migrations `20260803000001_platform_meetings_core.sql` through `20
 ## Read next
 
 - [Teams](/docs/platform/guides/meetings-and-teams/teams) — forming one, joining one, the cap, the lead, and re-forming next week.
-- [Attendance](/docs/platform/guides/meetings-and-teams/attendance) — the ledger, check-in, and officer corrections.
+- [Attendance](/docs/platform/guides/meetings-and-teams/attendance) — the ledger and check-in.
 - [Stars & awards](/docs/platform/guides/meetings-and-teams/stars-and-awards) — what participation adds up to.
 - [Airtable sync](/docs/platform/guides/meetings-and-teams/airtable-sync) — where meetings come from, and what flows back.
 

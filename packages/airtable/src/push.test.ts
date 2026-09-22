@@ -36,6 +36,23 @@ const member = (over: Partial<Member> = {}): Member => ({
   ...over,
 });
 
+interface Note {
+  id: string;
+  note: string | null;
+}
+
+// A minimal fixture for `.pushClearable()`, exercised on its own synthetic
+// table rather than a real registry one: nothing left in the registry has a
+// clearable field on `attendanceTable` now that revocation is gone, and the
+// mechanism itself is still load-bearing for the tables that do.
+const notes = table("Notes", "tblN", {
+  platformId: field
+    .text("fldId", "⚙️ Platform ID")
+    .matchKey()
+    .push((n: Note) => n.id),
+  note: field.longText("fldNote", "⚙️ Note").pushClearable((n: Note) => n.note),
+});
+
 const record = (fields: Record<string, unknown>): AirtableRecord => ({
   id: "rec1",
   fields: fields as AirtableRecord["fields"],
@@ -158,8 +175,6 @@ describe("buildPush", () => {
       meetingAirtableId: "recMeeting",
       method: "manual_code",
       recordedAt: "2026-09-11T22:00:00+00:00",
-      revoked: false,
-      revocationReason: null,
     };
 
     const plan = buildPush(attendanceTable, [attendance], []);
@@ -172,35 +187,19 @@ describe("buildPush", () => {
     expect(fields[attendanceTable.fields.recordedAt.id]).toBe(
       "2026-09-11T22:00:00+00:00",
     );
-    expect(fields[attendanceTable.fields.revoked.id]).toBe(false);
-    expect(fields[attendanceTable.fields.revocationReason.id]).toBeNull();
   });
 
   it("clears an explicitly clearable projection without weakening identity fields", () => {
-    const attendance: AttendanceRow = {
-      id: "attendance-1",
-      memberAirtableId: "recMember",
-      meetingAirtableId: "recMeeting",
-      method: "officer",
-      recordedAt: "2026-09-11T22:00:00+00:00",
-      revoked: false,
-      revocationReason: null,
-    };
+    const note: Note = { id: "note-1", note: null };
     const existing = [
       record({
-        [attendanceTable.fields.platformId.id]: attendance.id,
-        [attendanceTable.fields.member.id]: [attendance.memberAirtableId],
-        [attendanceTable.fields.meeting.id]: [attendance.meetingAirtableId],
-        [attendanceTable.fields.method.id]: "Officer",
-        [attendanceTable.fields.recordedAt.id]: attendance.recordedAt,
-        [attendanceTable.fields.revoked.id]: true,
-        [attendanceTable.fields.revocationReason.id]: "Entered in error",
+        [notes.fields.platformId.id]: note.id,
+        [notes.fields.note.id]: "Stale note",
       }),
     ];
 
-    const fields = buildPush(attendanceTable, [attendance], existing)
-      .records[0]!.fields;
-    expect(fields[attendanceTable.fields.revoked.id]).toBe(false);
-    expect(fields[attendanceTable.fields.revocationReason.id]).toBeNull();
+    const fields = buildPush(notes, [note], existing).records[0]!.fields;
+    expect(fields[notes.fields.platformId.id]).toBe("note-1");
+    expect(fields[notes.fields.note.id]).toBeNull();
   });
 });

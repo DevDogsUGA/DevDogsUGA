@@ -501,7 +501,7 @@ export async function pullWorkshops(
         from ${competitions} c
         join ${teams} t on t."competitionId" = c.id
         where c."workshopId" = "workshops"."id"
-          and coalesce(t."participationOverride", t."competedAt" is not null)
+          and t."competedAt" is not null
       )`,
     })
     .from(workshops);

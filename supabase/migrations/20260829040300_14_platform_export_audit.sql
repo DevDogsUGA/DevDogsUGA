@@ -12,7 +12,6 @@ create type "platform"."auditEventSource" as enum (
   'platform',
   'qr',
   'manual_code',
-  'airtable_form',
   'system'
 );
 
@@ -22,8 +21,6 @@ create table "platform"."auditEvents" (
   "actorType"                text not null,
   -- No FK: an audit event outlives the actor account.
   "actorUserId"              uuid,
-  "actorAirtableUserId"      text,
-  "actorAirtableDisplayName" text,
   "source"                   "platform"."auditEventSource" not null,
   "action"                   text not null,
   "targetType"               text not null,
@@ -35,13 +32,11 @@ create table "platform"."auditEvents" (
 
   constraint "auditEvents_pkey" primary key ("id"),
   constraint "auditEvents_actorType_choices"
-    check ("actorType" in ('user', 'airtable_collaborator', 'system')),
+    check ("actorType" in ('user', 'system')),
   constraint "auditEvents_actor_shape" check (
-    ("actorType" = 'user' and "actorUserId" is not null and "actorAirtableUserId" is null)
+    ("actorType" = 'user' and "actorUserId" is not null)
     or
-    ("actorType" = 'airtable_collaborator' and "actorUserId" is null and "actorAirtableUserId" is not null)
-    or
-    ("actorType" = 'system' and "actorUserId" is null and "actorAirtableUserId" is null)
+    ("actorType" = 'system' and "actorUserId" is null)
   ),
   constraint "auditEvents_metadata_bounded"
     check (pg_column_size("metadata") <= 16384),
@@ -90,11 +85,6 @@ $$;
 create trigger "auditEvents_append_only"
   before update or delete on "platform"."auditEvents"
   for each row execute function "platform".reject_audit_event_mutation();
-
-alter table "platform"."airtableChangeReceipts"
-  add constraint "airtableChangeReceipts_auditEventId_fkey"
-  foreign key ("auditEventId") references "platform"."auditEvents"("id")
-  on delete restrict;
 
 -- Who downloaded what.
 --

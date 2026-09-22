@@ -6,7 +6,7 @@ order: 1
 
 # Airtable
 
-Airtable is the officers' console. One base holds ten integration tables, and a sync pass moves data both ways: officer-authored configuration is pulled into Postgres, while platform-owned attendance and reflection evidence is pushed back for officers to read. Read this before adding a field, changing what syncs, or debugging a pass. If you only need to know _what_ syncs and in which direction, that is [Airtable sync](/docs/platform/guides/meetings-and-teams/airtable-sync); for the package's exported functions, the generated [`@devdogsuga/airtable`](/docs/toolkit/reference/api/airtable) reference.
+Airtable is the officers' console. One base holds nine integration tables, and a sync pass moves data both ways: officer-authored configuration is pulled into Postgres, while platform-owned attendance and reflection evidence is pushed back for officers to read. Read this before adding a field, changing what syncs, or debugging a pass. If you only need to know _what_ syncs and in which direction, that is [Airtable sync](/docs/platform/guides/meetings-and-teams/airtable-sync); for the package's exported functions, the generated [`@devdogsuga/airtable`](/docs/toolkit/reference/api/airtable) reference.
 
 ## The field registry
 
@@ -65,9 +65,9 @@ Nothing in the platform could create a project. No console page, no server actio
 
 Pulling the table removes the failure rather than reporting it: the Project link resolves through the pull's idMap exactly like the Meeting link beside it. `pushProjects` and `projectIdMap` are gone, and `⚙️ Slug` went with them — the slug is derived from the name on insert and never recomputed, because `stars.csv` is keyed on it across semesters and regenerating it on a rename would rewrite an export somebody already has.
 
-## Corrections are commands
+## No corrections
 
-Attendance and EL Reflections are platform-owned projections. Officers request missed attendance, revocations, participation overrides, and reflection edits through the restricted Officer Changes form. The scheduled or manual Airtable sync discovers each response; the platform validates, applies, audits, and acknowledges the command. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
+Attendance and EL Reflections are platform-owned, read-only projections. There is no officer override or correction subsystem, and no form that writes back into Postgres — a late check-in is the rotating code shown again, not a request routed through Airtable. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
 
 ## Read next
 

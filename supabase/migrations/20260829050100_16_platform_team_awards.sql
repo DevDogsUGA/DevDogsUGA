@@ -96,8 +96,7 @@ select
   false as "won"
 from "platform"."attendance" a
 join "platform"."meetings" m on m."id" = a."meetingId"
-where a."revokedAt" is null
-  and m."countsTowardProgress"
+where m."countsTowardProgress"
   and m."cancelledAt" is null
   and m."deletedAt" is null
 
@@ -110,7 +109,7 @@ select
   null::uuid as "meetingId",
   c."id" as "competitionId",
   opening_meeting."startsAt" as "startsAt",
-  coalesce(t."participationOverrideAt", t."competedAt", c."judgingStartsAt") as "earnedAt",
+  coalesce(t."competedAt", c."judgingStartsAt") as "earnedAt",
   exists (
     select 1
     from "platform"."teamAwards" aw
@@ -121,7 +120,7 @@ join "platform"."teams" t on t."id" = tm."teamId"
 join "platform"."competitions" c on c."id" = t."competitionId"
 join "platform"."workshops" w on w."id" = c."workshopId"
 join "platform"."meetings" opening_meeting on opening_meeting."id" = w."meetingId"
-where coalesce(t."participationOverride", t."competedAt" is not null)
+where t."competedAt" is not null
   and c."countsTowardProgress"
   and c."deletedAt" is null
   and w."deletedAt" is null

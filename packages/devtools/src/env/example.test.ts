@@ -363,7 +363,7 @@ describe.each(DEPLOYED_VAULT_TARGETS)("%s", (name) => {
 describe.each(DEPLOYED_VAULT_TARGETS)("%s additive init", (name) => {
   it("appends a newly declared missing key without changing existing text", () => {
     const complete = renderInit(name, DATE);
-    const key = "AIRTABLE_AUTOMATION_SECRET";
+    const key = "AIRTABLE_SYNC_PAT";
     const incomplete = complete.replace(new RegExp(`^${key}=.*\\n`, "m"), "");
 
     const addition = renderInitAddition(name, DATE, incomplete);
@@ -387,7 +387,7 @@ describe.each(DEPLOYED_VAULT_TARGETS)("%s additive init", (name) => {
 
   it("treats a commented key as an existing decision", () => {
     const complete = renderInit(name, DATE);
-    const key = "AIRTABLE_AUTOMATION_SECRET";
+    const key = "AIRTABLE_SYNC_PAT";
     const commented = complete.replace(
       new RegExp(`^${key}=.*$`, "m"),
       `# ${key}=""`,
@@ -477,9 +477,13 @@ describe("preflight", () => {
     // Sentry telemetry was wired into platform, while DISCORD_ALERT_CHANNEL_ID
     // -- the Discord alert channel the Sentry `alert()` sink replaced -- left
     // the registry entirely: net +2 to both deployed targets.
+    //
+    // Then both dropped by one more: `AIRTABLE_AUTOMATION_SECRET` left the
+    // registry with the officer-changes automation endpoint it authenticated
+    // -- the whole override/correction subsystem, deleted, not just this key.
     expect(target("preflight").active.size).toBe(2);
-    expect(target("staging").active.size).toBe(52);
-    expect(target("production").active.size).toBe(55);
+    expect(target("staging").active.size).toBe(51);
+    expect(target("production").active.size).toBe(54);
   });
 
   it("says in the file itself why it is short, and that nothing is hand-set", () => {

@@ -98,13 +98,6 @@ function renderReport(report: SyncReport): string {
           String(report.pushed.created + report.pushed.updated),
         ],
         ["Records already up to date", String(report.pushed.unchanged)],
-        ["Officer changes applied", String(report.officerChanges.applied)],
-        ["Officer changes rejected", String(report.officerChanges.rejected)],
-        [
-          "Officer changes awaiting retry",
-          String(report.officerChanges.failed),
-        ],
-        ["Officer changes deferred", String(report.officerChanges.deferred)],
         ["Accounts created", String(report.accountsCreated)],
         ["Attendance removed", String(report.attendanceRemoved)],
         ["Took", `${(report.durationMs / 1000).toFixed(1)}s`],

@@ -596,8 +596,12 @@ describe("preflight, the target no app boots from", () => {
     // Sentry telemetry was wired into platform, while DISCORD_ALERT_CHANNEL_ID
     // -- the Discord alert channel the Sentry `alert()` sink replaced -- left
     // the registry entirely: net +2 to both deployed targets.
-    expect(keysRoutedTo("staging").size).toBe(52);
-    expect(keysRoutedTo("production").size).toBe(55);
+    //
+    // Then both dropped by one more: `AIRTABLE_AUTOMATION_SECRET` left the
+    // registry with the officer-changes automation endpoint it authenticated
+    // -- the whole override/correction subsystem, deleted, not just this key.
+    expect(keysRoutedTo("staging").size).toBe(51);
+    expect(keysRoutedTo("production").size).toBe(54);
     expect(keysRoutedTo("preflight").size).toBe(2);
   });
 });

@@ -6,7 +6,6 @@ export type MemberCheckInMethod = "qr" | "manual_code";
 
 export type RecordAttendanceResult =
   | { status: "recorded" | "duplicate"; attendanceId: string; recordedAt: Date }
-  | { status: "revoked"; attendanceId: string }
   | { status: "not_counted" }
   | { status: "invalid_meeting" };
 
@@ -77,7 +76,6 @@ export async function recordMemberAttendance(
       .select({
         id: attendance.id,
         recordedAt: attendance.recordedAt,
-        revokedAt: attendance.revokedAt,
       })
       .from(attendance)
       .where(
@@ -88,9 +86,6 @@ export async function recordMemberAttendance(
     // The unique conflict guarantees a row. Keep a defensive fallback in case
     // a future command deletes one inside the same transaction boundary.
     if (!existing) return { status: "invalid_meeting" };
-    if (existing.revokedAt !== null) {
-      return { status: "revoked", attendanceId: existing.id };
-    }
     return {
       status: "duplicate",
       attendanceId: existing.id,

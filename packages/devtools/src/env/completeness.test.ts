@@ -235,7 +235,6 @@ describe("registry completeness", () => {
     );
     expect(airtable.sort()).toEqual([
       "AIRTABLE_APPLY_PAT",
-      "AIRTABLE_AUTOMATION_SECRET",
       "AIRTABLE_BASE_ID",
       "AIRTABLE_PLAN_PAT",
       "AIRTABLE_SYNC_PAT",
