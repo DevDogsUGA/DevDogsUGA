@@ -20,7 +20,7 @@ import {
   releaseSyncLease,
   type ClaimResult,
 } from "./lease";
-import { postAlert } from "../discord/alerts";
+import { postAlert } from "../alerts";
 import {
   pullTeamGrades,
   pushAttendance,

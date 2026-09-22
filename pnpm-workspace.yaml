@@ -5,6 +5,7 @@
 # nothing the package needs to work. supabase is `true` here for the same
 # reason it is in the older list — its postinstall fetches the CLI binary.
 allowBuilds:
+  '@sentry/cli': true
   core-js: false
   esbuild: true
   sharp: true
@@ -78,6 +79,8 @@ catalog:
   # (@devdogsuga/telemetry, apps/platform, apps/schedule-builder,
   # apps/sandbox, and packages/devtools all depend on this family).
   "@sentry/core": ^10.75.1
+  "@sentry/cloudflare": ^10.75.1
+  "@sentry/nextjs": ^10.75.1
 
   # --- Styling ---
   "@tailwindcss/forms": ^0.5.11
@@ -212,6 +215,19 @@ minimumReleaseAgeExclude:
   # `latest` resolve to the newest release instead of being held back.
   - supabase
   - '@sentry/core@10.75.1'
+  - '@sentry/browser-utils@10.75.1'
+  - '@sentry/browser@10.75.1'
+  - '@sentry/cloudflare@10.75.1'
+  - '@sentry/feedback@10.75.1'
+  - '@sentry/nextjs@10.75.1'
+  - '@sentry/node-core@10.75.1'
+  - '@sentry/node@10.75.1'
+  - '@sentry/opentelemetry@10.75.1'
+  - '@sentry/react@10.75.1'
+  - '@sentry/replay-canvas@10.75.1'
+  - '@sentry/replay@10.75.1'
+  - '@sentry/server-utils@10.75.1'
+  - '@sentry/vercel-edge@10.75.1'
 onlyBuiltDependencies:
   - esbuild
   - sharp

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * The boundary for every page in the site layout that does not bring its own:
@@ -25,6 +26,10 @@ export default function SiteError({
   retry: () => void;
 }) {
   useEffect(() => {
+    // captureException is safe unconditionally -- it no-ops with no DSN
+    // configured, same contract as everywhere else in this app's Sentry
+    // wiring.
+    Sentry.captureException(error);
     console.error(error);
   }, [error]);
 

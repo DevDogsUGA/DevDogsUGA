@@ -91,6 +91,24 @@ const server = {
       secrecy: "secret",
     },
   ),
+  // Sentry ingest DSN for the "platform" project (see @devdogsuga/telemetry).
+  // Optional and empty by default, deliberately: the org is not onboarded in
+  // every environment yet, and `buildSentryOptions` treats a falsy DSN as
+  // "skip Sentry.init entirely" -- no init, no network calls, no console
+  // noise. A DSN is not a secret (it identifies a project, not a credential
+  // -- anyone can only submit events, never read them), but it reaches the
+  // Worker the same way every other environment variable does: Bitwarden ->
+  // `env push` -> the next deploy. wrangler.jsonc carries no secrets and
+  // never will for this value.
+  SENTRY_DSN: define(z.string().url().optional(), {
+    doc:
+      "Sentry ingest DSN for the platform project. Optional -- empty skips " +
+      "Sentry.init entirely, which is the state before the org is " +
+      "onboarded and the state of local development. Reaches the Worker " +
+      "like every other environment variable.",
+    scope: "environment",
+    secrecy: "public",
+  }),
   ATTENDANCE_TOKEN_SECRET: define(
     switchEnvironment({
       local: z.string().default("local-attendance-secret-not-for-deployment"),
@@ -136,21 +154,6 @@ const server = {
     doc: "The Discord bot token, for role sync and slash commands.",
     scope: "environment",
     secrecy: "secret",
-  }),
-  // Channel for operational alerts (see server/discord/alerts.ts). Empty means
-  // "do not post", the same convention AIRTABLE_BASE_ID and GH_WEBHOOK_SECRET
-  // use, so local development and any environment that has not opted in stay
-  // quiet. The default is not tidiness: staging shares the club's real Discord
-  // guild, so a required value would have staging posting into the officers'
-  // channel.
-  DISCORD_ALERT_CHANNEL_ID: define(z.string().default(""), {
-    doc:
-      "Channel for operational alerts. Empty means do not post -- the right " +
-      "value everywhere except production, because staging shares the " +
-      "club's real Discord guild and a stray value here reaches the " +
-      "officers' channel. Production uses 1532424905193160794.",
-    scope: "environment",
-    secrecy: "public",
   }),
   // Same "default" reasoning as DISCORD_GUILD_ID, schema default included.
   GITHUB_ORG: define(z.string().default("DevDogsUGA"), {
@@ -463,6 +466,36 @@ const server = {
  * prefixed and public by construction.
  */
 const client = {
+  // Browser-side counterpart of SENTRY_DSN -- the "platform" Sentry project's
+  // public DSN is the same value in both places (a DSN is safe in a browser
+  // bundle; it can only submit events, never read them), so this is not
+  // derived from SENTRY_DSN by code, it is set alongside it. Optional for the
+  // same reason: no DSN means `instrumentation-client.ts` skips
+  // `Sentry.init()` entirely.
+  NEXT_PUBLIC_SENTRY_DSN: define(z.string().url().optional(), {
+    doc:
+      "Browser-side Sentry DSN for the platform project. Optional -- empty " +
+      "skips client-side Sentry.init() entirely, same contract as SENTRY_DSN.",
+    scope: "environment",
+    secrecy: "public",
+  }),
+  // The browser has no access to the server-only DEPLOY_ENV (@t3-oss's proxy
+  // would throw), and Sentry's `environment` tag needs to distinguish staging
+  // from production on the client too. Not derived automatically the way
+  // NEXT_PUBLIC_SUPABASE_URL is from API_URL: DEPLOY_ENV itself is set by
+  // wrangler.jsonc's per-env `vars` block and the cf:build:* scripts rather
+  // than an `.env` file, so there is nothing for a `.env` assignment to
+  // mirror. The cf:build:* scripts set this alongside DEPLOY_ENV instead.
+  NEXT_PUBLIC_DEPLOY_ENV: define(z.enum(DEPLOY_ENVIRONMENTS).default("development"), {
+    doc:
+      "Browser-side copy of DEPLOY_ENV, for the Sentry `environment` tag on " +
+      "client-captured errors. Set alongside DEPLOY_ENV by the cf:build:* " +
+      "scripts; defaults to development because that is what an unset " +
+      "value means everywhere else in this schema.",
+    scope: "environment",
+    secrecy: "public",
+    example: "staging",
+  }),
   // The Supabase pair is derived, not set by hand: `.env` assigns each from
   // its server-side counterpart ($API_URL / $PUBLISHABLE_KEY), which is also
   // how the local stack's generated values reach the browser.
@@ -518,6 +551,8 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_AVATARS_BUCKET: process.env.NEXT_PUBLIC_AVATARS_BUCKET,
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    NEXT_PUBLIC_DEPLOY_ENV: process.env.NEXT_PUBLIC_DEPLOY_ENV,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.

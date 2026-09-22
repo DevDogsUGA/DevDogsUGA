@@ -21,8 +21,8 @@
     "cf:preview": "pnpm --workspace-root devtools cf preview --app platform",
     "cf:typegen": "wrangler types cloudflare-env.d.ts --env production --env-interface CloudflareEnv",
     "cf:typegen:check": "wrangler types cloudflare-env.d.ts --env production --env-interface CloudflareEnv --check",
-    "cf:build:staging": "DEPLOY_ENV=staging with-env opennextjs-cloudflare build",
-    "cf:build:production": "DEPLOY_ENV=production with-env opennextjs-cloudflare build"
+    "cf:build:staging": "DEPLOY_ENV=staging NEXT_PUBLIC_DEPLOY_ENV=staging with-env opennextjs-cloudflare build",
+    "cf:build:production": "DEPLOY_ENV=production NEXT_PUBLIC_DEPLOY_ENV=production with-env opennextjs-cloudflare build"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
@@ -34,6 +34,7 @@
     "@devdogsuga/newsletter": "workspace:*",
     "@devdogsuga/og": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
+    "@devdogsuga/telemetry": "workspace:*",
     "@discordjs/builders": "^1.14.1",
     "@discordjs/rest": "^2.6.3",
     "@dnd-kit/core": "^6.3.1",
@@ -54,6 +55,8 @@
     "@radix-ui/react-popover": "catalog:",
     "@radix-ui/react-select": "catalog:",
     "@radix-ui/react-tooltip": "catalog:",
+    "@sentry/cloudflare": "catalog:",
+    "@sentry/nextjs": "catalog:",
     "@shikijs/rehype": "^4.4.3",
     "@shikijs/twoslash": "^4.4.3",
     "@supabase/ssr": "catalog:",

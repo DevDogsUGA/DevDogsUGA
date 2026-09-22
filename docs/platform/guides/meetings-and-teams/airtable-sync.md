@@ -64,7 +64,7 @@ Every synced row carries `airtableRecordId` — unique on `meetings`, `workshops
 
 The cron fires `*/15 * * * *` at `/airtable/sync`; `requestAirtableSync()` runs the same `runAirtableSync` for an officer holding `canTriggerSync`, and an Airtable button field reaches the route because a button can only open a URL. One implementation, because the manual path is the one reached for when something has already gone wrong.
 
-1. **Verify the base against the registry** before anything is written: a field id that no longer exists is not an error at write time — Airtable accepts the request, the value lands nowhere, and the pass reports success. A drifted base refuses to sync, alerting Discord once.
+1. **Verify the base against the registry** before anything is written: a field id that no longer exists is not an error at write time — Airtable accepts the request, the value lands nowhere, and the pass reports success. A drifted base refuses to sync, alerting Sentry once.
 2. **Claim the lease**, or return `already_running`; a manual run inside the cooldown returns `rate_limited`.
 3. **Ensure and pull Platform Settings**, retaining the previous policy when an
    officer enters an invalid value.
@@ -143,7 +143,7 @@ One pass is seven list calls plus a schema read, and the pushes on top of whatev
 
 `AIRTABLE_SYNC_PAT`, from the environment. It was moved out of Supabase Vault — where it lived as `airtable_pat` — on 2026-08-19, which bought one storage mechanism instead of two, made the copy on the Worker visible to `env audit`, and put the token on the same Bitwarden → GitHub → Worker path as every other secret.
 
-What that traded away is worth knowing before somebody needs it in a hurry: an officer can no longer rotate the token from the console without a deploy. Rotation is Bitwarden, then `env push`, then the next deploy's secrets file. A base the platform has no token for still does not fail a boot — the pass returns `not_configured` and touches nothing, because the platform has to run without Airtable. It is no longer _silent_, though: a **scheduled** pass in that state records `not_configured` on the state row the console reads and alerts Discord once, on the transition, exactly as a drifted base does.
+What that traded away is worth knowing before somebody needs it in a hurry: an officer can no longer rotate the token from the console without a deploy. Rotation is Bitwarden, then `env push`, then the next deploy's secrets file. A base the platform has no token for still does not fail a boot — the pass returns `not_configured` and touches nothing, because the platform has to run without Airtable. It is no longer _silent_, though: a **scheduled** pass in that state records `not_configured` on the state row the console reads and alerts Sentry once, on the transition, exactly as a drifted base does.
 
 That distinction only became available when the base id became a committed constant. Before it, "no token" and "nobody has configured this yet" were indistinguishable — an unset base id looked like a fresh clone — so the branch stayed quiet to avoid claiming a base had been contacted when none had. Now the token is the only thing that can be missing, and a cron finding none is a misconfiguration. Manual runs are exempt: `requestAirtableSync` returns the reason to the console on screen, and alerting there would fire on a button press.
 

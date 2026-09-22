@@ -472,9 +472,14 @@ describe("preflight", () => {
     // changing which targets it reaches, so the three counts move together, and
     // a change that moved only preflight would mean the marker came off without
     // the scope change.
+    // Then staging and production moved by two more (SENTRY_DSN,
+    // NEXT_PUBLIC_SENTRY_DSN), and by one more (NEXT_PUBLIC_DEPLOY_ENV) when
+    // Sentry telemetry was wired into platform, while DISCORD_ALERT_CHANNEL_ID
+    // -- the Discord alert channel the Sentry `alert()` sink replaced -- left
+    // the registry entirely: net +2 to both deployed targets.
     expect(target("preflight").active.size).toBe(2);
-    expect(target("staging").active.size).toBe(49);
-    expect(target("production").active.size).toBe(52);
+    expect(target("staging").active.size).toBe(51);
+    expect(target("production").active.size).toBe(54);
   });
 
   it("says in the file itself why it is short, and that nothing is hand-set", () => {

@@ -590,8 +590,14 @@ describe("preflight, the target no app boots from", () => {
     // change that moved only preflight here would mean the `narrowed` marker
     // had been dropped without the scope change, leaving the key still routed
     // to the two deployed targets.
-    expect(keysRoutedTo("staging").size).toBe(49);
-    expect(keysRoutedTo("production").size).toBe(52);
+    //
+    // Then staging and production moved by two more (SENTRY_DSN,
+    // NEXT_PUBLIC_SENTRY_DSN), and by one more (NEXT_PUBLIC_DEPLOY_ENV) when
+    // Sentry telemetry was wired into platform, while DISCORD_ALERT_CHANNEL_ID
+    // -- the Discord alert channel the Sentry `alert()` sink replaced -- left
+    // the registry entirely: net +2 to both deployed targets.
+    expect(keysRoutedTo("staging").size).toBe(51);
+    expect(keysRoutedTo("production").size).toBe(54);
     expect(keysRoutedTo("preflight").size).toBe(2);
   });
 });

@@ -34,7 +34,7 @@ const alerts = vi.hoisted(() => ({
       Promise.resolve(),
   ),
 }));
-vi.mock("../discord/alerts", () => alerts);
+vi.mock("../alerts", () => alerts);
 
 const writes = vi.hoisted(() => ({
   pushMembers: vi.fn(() =>
