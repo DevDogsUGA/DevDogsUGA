@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/cloudflare";
+import { alert, buildSentryOptions } from "@devdogsuga/telemetry";
 import { handleProxyRequest, type ProxyDeps, type Resolution } from "./proxy";
 
 /**
@@ -7,6 +9,14 @@ import { handleProxyRequest, type ProxyDeps, type Resolution } from "./proxy";
  * arguments so the security properties can be tested against a mock upstream
  * rather than a deployed Worker. What is left here is the two things that can
  * only exist at the edge: the real credential lookup and the real fetch.
+ *
+ * Server-side Sentry capture is wired via `@sentry/cloudflare`'s
+ * `withSentry` around the default export below, the same pattern
+ * `apps/schedule-builder/cloudflare/worker.ts` uses and for the same
+ * reason: this is a plain Worker (case 2 of the telemetry cheatsheet), not
+ * a framework runtime with its own instrumentation hook. `SENTRY_DSN`
+ * reaches this Worker like every other environment variable; this file
+ * carries none.
  */
 
 export interface Env {
@@ -25,6 +35,15 @@ export interface Env {
    * reaches exactly two functions.
    */
   SANDBOX_PROXY_TOKEN: string;
+  /** Which deployment this is; becomes the Sentry `environment` tag. */
+  DEPLOY_ENV: string;
+  /**
+   * This app's Sentry ingest DSN (see `@devdogsuga/telemetry`). Empty until
+   * the org is onboarded for this environment -- `buildSentryOptions`
+   * returns `undefined` for a falsy DSN, so `withSentry` below no-ops
+   * cleanly: no init, no network calls, no console spam.
+   */
+  SENTRY_DSN: string | undefined;
 }
 
 interface ResolveRow {
@@ -251,7 +270,22 @@ function jsonResponse(status: number, code: string, message: string): Response {
   });
 }
 
-export default {
+/**
+ * The sandbox subdomain a request is aimed at, for tagging -- never the full
+ * URL (which may carry a `?apikey=…` query param; see `./token.ts`'s
+ * `apikeyParamNames`) and never a header. `hostname` alone names no
+ * credential, so nothing here needs scrubbing beyond "don't capture the rest
+ * of the URL or any header."
+ */
+function requestHostname(request: Request): string | undefined {
+  try {
+    return new URL(request.url).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+const worker = {
   async fetch(
     request: Request,
     env: Env,
@@ -261,6 +295,17 @@ export default {
     if (!env.SANDBOX_PROXY_TOKEN || !env.PLATFORM_REST_URL) {
       console.error(
         "[sandbox] missing SANDBOX_PROXY_TOKEN or PLATFORM_REST_URL",
+      );
+      // A misconfiguration, not a per-request failure: every request answers
+      // the same 503 until the next deploy fixes it. `alert()` fingerprints
+      // by title, so this groups into one Sentry issue no matter how many
+      // requests arrive while misconfigured, rather than paging once per
+      // request -- the transition worth an issue is "this Worker started
+      // answering 503s," not each individual 503.
+      alert(
+        "sandbox proxy misconfigured",
+        ["missing SANDBOX_PROXY_TOKEN or PLATFORM_REST_URL"],
+        { tags: { sandbox_hostname: requestHostname(request) ?? "unknown" } },
       );
       return jsonResponse(
         503,
@@ -285,3 +330,13 @@ export default {
     }
   },
 };
+
+export default Sentry.withSentry(
+  (env: Env) =>
+    buildSentryOptions({
+      service: "sandbox",
+      environment: env.DEPLOY_ENV,
+      dsn: env.SENTRY_DSN,
+    }),
+  worker,
+);

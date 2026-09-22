@@ -86,13 +86,17 @@ describe("registry completeness", () => {
     }
   });
 
-  it("uploads no stored credential to the sandbox Worker", () => {
-    // `deploy secrets-file` sends a Worker every storable key its app's own
-    // manifest declares, excluding `:tooling` sources. For the proxy that set
-    // must stay EMPTY: `PLATFORM_REST_URL` is public and arrives as a `--var`,
-    // `SANDBOX_PROXY_TOKEN` is minted on the runner. Anything else appearing
-    // here is a long-lived secret sitting on an internet-facing Worker that
-    // never asked for one.
+  it("uploads no stored SECRET credential to the sandbox Worker", () => {
+    // `deploy secrets-file` sends a Worker every `storableKeys()` key
+    // (`secrecy: "secret"`, stored in Bitwarden) its app's own manifest
+    // declares, excluding `:tooling` sources -- PLUS every `secrecy:
+    // "public"` key it declares, which is how `PLATFORM_REST_URL`,
+    // `DEPLOY_ENV`, and `SENTRY_DSN` reach the Worker despite none of them
+    // being Bitwarden secrets. What must stay EMPTY here is the
+    // `storableKeys()` set: `SANDBOX_PROXY_TOKEN` is minted on the runner and
+    // excluded from it by construction, and a `secrecy: "secret"` key this
+    // app declares that IS in `storableKeys()` would be a long-lived Bitwarden
+    // secret sitting on an internet-facing Worker that never asked for one.
     //
     // This is a regression test with a name. `SUPABASE_JWT_SIGNING_KEY` was
     // declared `source: "sandbox"` and rode exactly this path onto the proxy: a
@@ -108,8 +112,10 @@ describe("registry completeness", () => {
     // empty and the assertion below passes while checking nothing, and if the
     // proxy token stops being declared here the mint path has moved.
     expect(runtime.map((e) => e.key).sort()).toEqual([
+      "DEPLOY_ENV",
       "PLATFORM_REST_URL",
       "SANDBOX_PROXY_TOKEN",
+      "SENTRY_DSN",
     ]);
 
     const storable = new Set(storableKeys());

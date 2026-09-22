@@ -36,7 +36,7 @@
  * package at all), so this works today; add `"zod": "catalog:"` to this
  * package's devDependencies the next time the lockfile is touched.
  */
-import { declare, define } from "@devdogsuga/env";
+import { DEPLOY_ENVIRONMENTS, declare, define } from "@devdogsuga/env";
 import { z } from "zod";
 
 declare({
@@ -47,6 +47,24 @@ declare({
     // when either is missing, and the signing key is checked by
     // `devtools deploy mint-token` with a named refusal. A required
     // schema here would only break CI, which holds none of them.
+
+    // Which deployment this is, read by `src/index.ts` only to become the
+    // Sentry `environment` tag it passes to `buildSentryOptions`. Same key,
+    // same meta, as `apps/platform/src/env.ts`'s declaration -- duplicate
+    // declarations of one registry key must agree on every field, doc string
+    // included (`completeness.test.ts` enforces this), so this is a copy of
+    // that one rather than an independently worded restatement. Committed by
+    // `wrangler.jsonc`'s top-level `vars` and each `env.<tier>.vars` block
+    // here, exactly as it says.
+    DEPLOY_ENV: define(z.enum(DEPLOY_ENVIRONMENTS).default("development"), {
+      doc:
+        "Which deployment this is: development, staging, or production. Never " +
+        "written into an env file -- wrangler.jsonc's per-env blocks and the " +
+        "cf:build:* scripts are its two committed sources.",
+      scope: "default",
+      secrecy: "public",
+      commented: true,
+    }),
 
     // ── Decided here rather than in wrangler.jsonc ──────────────────────────
     // The plan doc left this open ("`PLATFORM_REST_URL`: `wrangler.jsonc` var
@@ -76,6 +94,30 @@ declare({
       scope: "environment",
       secrecy: "public",
       example: "$REST_URL",
+    }),
+
+    // Sentry ingest DSN for the "sandbox" project (see @devdogsuga/telemetry).
+    // Ordinary registry variable, NOT the `PLATFORM_REST_URL` special case
+    // above: it is the same value in every environment (one Sentry project
+    // per app; `production` vs `staging` is the `environment` tag, not a
+    // different DSN), so it is stored and reaches the Worker the same way
+    // `apps/platform/src/env.ts` and `apps/schedule-builder/src/env.ts`
+    // deliver theirs -- Bitwarden -> `env push` -> `deploy secrets-file` ->
+    // `wrangler deploy --secrets-file`. Optional and empty by default: the
+    // org is not onboarded in every environment yet, and `buildSentryOptions`
+    // treats a falsy DSN as "skip Sentry.init entirely" -- no init, no
+    // network calls, no console noise, which matches local `wrangler dev`
+    // too. A DSN is not a secret (it identifies a project, not a credential
+    // -- anyone can only submit events, never read them).
+    SENTRY_DSN: define(z.string().url().optional(), {
+      doc:
+        "Sentry ingest DSN for this app's Sentry project (see " +
+        "@devdogsuga/telemetry). Optional -- empty skips Sentry.init " +
+        "entirely, which is the state before the org is onboarded and the " +
+        "state of local development. Reaches the Worker like every other " +
+        "environment variable.",
+      scope: "environment",
+      secrecy: "public",
     }),
 
     // ── The credential this whole file exists for ──────────────────────────

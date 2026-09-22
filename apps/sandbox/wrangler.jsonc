@@ -22,8 +22,18 @@
   // The local Supabase stack's PostgREST endpoint, which is what `wrangler dev`
   // should talk to and the one environment whose value IS the same on every
   // machine. Deployed environments carry no `vars` block at all -- see below.
+  //
+  // `DEPLOY_ENV` rides alongside it: unlike `PLATFORM_REST_URL` and
+  // `SANDBOX_PROXY_TOKEN` below, it is not a value the two absent deployed
+  // environments would leave undefined -- it is the Sentry `environment` tag
+  // (`buildSentryOptions`'s `environment` argument, see `src/index.ts`), the
+  // same purpose it serves in `apps/platform/wrangler.jsonc` and
+  // `apps/schedule-builder/wrangler.jsonc`. Committed per-environment here
+  // for the same reason those two commit it: it names no upstream and holds
+  // no credential, so it costs nothing to commit and is wrong exactly nowhere.
   "vars": {
     "PLATFORM_REST_URL": "http://127.0.0.1:54321/rest/v1",
+    "DEPLOY_ENV": "development",
   },
 
   // NEITHER binding is committed for a deployed environment, and both absences
@@ -50,6 +60,9 @@
   "env": {
     "staging": {
       "name": "staging-sandbox",
+      "vars": {
+        "DEPLOY_ENV": "staging",
+      },
       // A distinct wildcard, because two workers cannot both claim
       // `*-sandbox.devdogsuga.org/*`. Still one label deep, which is the
       // constraint that shaped the production pattern: Universal SSL covers the
@@ -77,6 +90,9 @@
 
     "production": {
       "name": "production-sandbox",
+      "vars": {
+        "DEPLOY_ENV": "production",
+      },
       // One route and one wildcard DNS record cover every sandbox environment
       // forever, so creating one writes a database row and does no DNS work at
       // all.

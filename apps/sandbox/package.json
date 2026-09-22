@@ -11,6 +11,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
+  "dependencies": {
+    "@devdogsuga/telemetry": "workspace:*",
+    "@sentry/cloudflare": "catalog:"
+  },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260820.1",
     "@devdogsuga/config": "workspace:*",
