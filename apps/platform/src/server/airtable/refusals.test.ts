@@ -434,55 +434,16 @@ describe("workshops with attendance", () => {
 
 const COMPETITION: CompetitionFacts = {
   airtableRecordId: "recCompetition",
-  isFinalized: false,
   participationFrozen: false,
-  currentRequirementCount: 5,
   currentJudgingStartsAt: new Date("2026-04-10T18:00:00Z"),
   workshopMeetingStartsAt: new Date("2026-04-03T18:00:00Z"),
 };
-
-describe("requirementCount after finalize", () => {
-  it("refuses once standings are published", () => {
-    const result = checkCompetition(
-      { ...COMPETITION, isFinalized: true },
-      { requirementCount: 6, judgingStartsAt: null },
-    );
-
-    expect(result.refusals.map((r) => r.code)).toEqual([
-      "requirement_count_after_finalize",
-    ]);
-  });
-
-  it("allows the same edit before the tally has run", () => {
-    const result = checkCompetition(COMPETITION, {
-      requirementCount: 6,
-      judgingStartsAt: null,
-    });
-
-    expect(result.refusals).toEqual([]);
-  });
-
-  it("allows a no-op write to a finalized competition", () => {
-    // Airtable re-sends the whole record every pass, so the unchanged value
-    // arrives on every single sync. Refusing it would put a permanent refusal
-    // on every finalized competition in the base.
-    const result = checkCompetition(
-      { ...COMPETITION, isFinalized: true },
-      { requirementCount: 5, judgingStartsAt: null },
-    );
-
-    expect(result.refusals).toEqual([]);
-  });
-});
 
 describe("judgingStartsAt", () => {
   it("refuses a move after participation freezes", () => {
     const result = checkCompetition(
       { ...COMPETITION, participationFrozen: true },
-      {
-        requirementCount: null,
-        judgingStartsAt: new Date("2026-04-17T18:00:00Z"),
-      },
+      { judgingStartsAt: new Date("2026-04-17T18:00:00Z") },
     );
 
     expect(result.refusals.map((r) => r.code)).toEqual([
@@ -492,7 +453,6 @@ describe("judgingStartsAt", () => {
 
   it("refuses a time at or before the opening workshop's meeting", () => {
     const result = checkCompetition(COMPETITION, {
-      requirementCount: null,
       judgingStartsAt: new Date("2026-04-01T18:00:00Z"),
     });
 
@@ -503,7 +463,6 @@ describe("judgingStartsAt", () => {
 
   it("refuses a time exactly at the meeting start", () => {
     const result = checkCompetition(COMPETITION, {
-      requirementCount: null,
       judgingStartsAt: new Date("2026-04-03T18:00:00Z"),
     });
 
@@ -514,7 +473,6 @@ describe("judgingStartsAt", () => {
 
   it("allows rescheduling before the freeze", () => {
     const result = checkCompetition(COMPETITION, {
-      requirementCount: null,
       judgingStartsAt: new Date("2026-04-17T18:00:00Z"),
     });
 
@@ -524,10 +482,7 @@ describe("judgingStartsAt", () => {
   it("allows the unchanged value after the freeze", () => {
     const result = checkCompetition(
       { ...COMPETITION, participationFrozen: true },
-      {
-        requirementCount: null,
-        judgingStartsAt: new Date("2026-04-10T18:00:00Z"),
-      },
+      { judgingStartsAt: new Date("2026-04-10T18:00:00Z") },
     );
 
     expect(result.refusals).toEqual([]);
@@ -538,10 +493,7 @@ describe("judgingStartsAt", () => {
     // filling it in is not a move.
     const result = checkCompetition(
       { ...COMPETITION, currentJudgingStartsAt: null },
-      {
-        requirementCount: null,
-        judgingStartsAt: new Date("2026-04-10T18:00:00Z"),
-      },
+      { judgingStartsAt: new Date("2026-04-10T18:00:00Z") },
     );
 
     expect(result.refusals).toEqual([]);
@@ -550,34 +502,10 @@ describe("judgingStartsAt", () => {
   it("does not refuse a competition whose workshop meeting is unknown", () => {
     const result = checkCompetition(
       { ...COMPETITION, workshopMeetingStartsAt: null },
-      {
-        requirementCount: null,
-        judgingStartsAt: new Date("2026-01-01T18:00:00Z"),
-      },
+      { judgingStartsAt: new Date("2026-01-01T18:00:00Z") },
     );
 
     expect(result.refusals).toEqual([]);
-  });
-});
-
-describe("both rules on one record", () => {
-  it("applies the team-size edit while refusing the graded one", () => {
-    const result = checkCompetition(
-      { ...COMPETITION, isFinalized: true, participationFrozen: true },
-      {
-        requirementCount: 9,
-        judgingStartsAt: new Date("2026-05-01T18:00:00Z"),
-      },
-    );
-
-    expect(result.refusals.map((r) => r.code).sort()).toEqual([
-      "judging_moved_after_freeze",
-      "requirement_count_after_finalize",
-    ]);
-    // Rejection is per field, so anything not named here still gets written.
-    expect(result.rejectedFields).toEqual(
-      new Set(["requirementCount", "judgingStartsAt"]),
-    );
   });
 });
 
@@ -1019,23 +947,16 @@ describe("workshop values", () => {
 });
 
 const maxTeamSizeParse = competitionsSpec.fields.maxTeamSize.parse;
-const requirementCountParse = competitionsSpec.fields.requirementCount.parse;
 
 const competitionTitleParse = competitionsSpec.fields.title.parse;
 
-function competitionValueFacts(raw: {
-  title?: string;
-  maxTeamSize?: number;
-  requirementCount?: number;
-}) {
+function competitionValueFacts(raw: { title?: string; maxTeamSize?: number }) {
   return {
     airtableRecordId: "recCompetition",
     rawTitle: raw.title,
     title: competitionTitleParse(raw.title),
     rawMaxTeamSize: raw.maxTeamSize,
     maxTeamSize: maxTeamSizeParse(raw.maxTeamSize),
-    rawRequirementCount: raw.requirementCount,
-    requirementCount: requirementCountParse(raw.requirementCount),
   };
 }
 
@@ -1055,24 +976,6 @@ describe("competition numbers", () => {
       "competition_max_team_size_invalid",
     ]);
     expect(facts.maxTeamSize).toBeNull();
-  });
-
-  it("refuses a negative requirement count", () => {
-    const facts = competitionValueFacts({ requirementCount: -1 });
-
-    expect(checkCompetitionValues(facts).refusals.map((r) => r.code)).toEqual([
-      "competition_requirement_count_invalid",
-    ]);
-    expect(facts.requirementCount).toBeNull();
-  });
-
-  it("accepts a zero requirement count", () => {
-    // Zero requirements is a real competition, unlike a zero-person team.
-    // `competitions_requirementCount_nonneg` allows it, so this must too.
-    const facts = competitionValueFacts({ requirementCount: 0 });
-
-    expect(checkCompetitionValues(facts).refusals).toEqual([]);
-    expect(facts.requirementCount).toBe(0);
   });
 
   it("refuses a fractional team size", () => {

@@ -58,7 +58,6 @@ const writes = vi.hoisted(() => ({
   pushDerivedCounts: vi.fn(() =>
     Promise.resolve({ created: 0, updated: 0, unchanged: 0 }),
   ),
-  pullTeamGrades: vi.fn(() => Promise.resolve(0)),
   writeSyncStatus: vi.fn(() => Promise.resolve(0)),
 }));
 

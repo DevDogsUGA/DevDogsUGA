@@ -98,7 +98,6 @@ function renderReport(report: SyncReport): string {
           String(report.pushed.created + report.pushed.updated),
         ],
         ["Records already up to date", String(report.pushed.unchanged)],
-        ["Grades applied", String(report.gradesApplied)],
         ["Officer changes applied", String(report.officerChanges.applied)],
         ["Officer changes rejected", String(report.officerChanges.rejected)],
         [

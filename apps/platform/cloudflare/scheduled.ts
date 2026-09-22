@@ -110,21 +110,16 @@ export const CRON_ROUTES: Record<
     routes: ["/cron/sync-discord-roles"],
   },
   "*/5 * * * *": {
-    label:
-      "Competition: freeze judging window, tally elections, prewarm sandboxes",
+    label: "Competition: freeze judging window, prewarm sandboxes",
     monitorSlug: "platform-cron-competition-tasks",
     // maxRuntime accounts for the measured 196s sandbox restore inside
-    // sandbox-prewarm, not just the fast freeze/tally routes ahead of it.
+    // sandbox-prewarm, not just the fast freeze route ahead of it.
     monitor: { checkinMargin: 3, maxRuntime: 5 },
     routes: [
       // Freezes `teams."competedAt"` once judging begins. Five minutes rather
       // than ten because the window between judging starting and this running
       // is the window in which closing a PR costs a team its star.
       "/cron/judging-start",
-      // Separate from the freeze despite the shared cadence: the tally blocks
-      // on ungraded competitions and on a missing tiebreak ballot, and
-      // freezing participation must happen whether or not grading is done.
-      "/cron/tally-elections",
       // Wakes sandbox environments with a competition starting inside fifteen
       // minutes. Five minutes rather than ten because a restore takes 196s
       // (measured) and the lead time has to absorb a tick landing badly.

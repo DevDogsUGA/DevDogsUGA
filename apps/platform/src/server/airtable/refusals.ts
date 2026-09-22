@@ -724,18 +724,14 @@ export function checkWorkshop(
 
 export interface CompetitionFacts {
   airtableRecordId: string;
-  /** True once standings have been written: the arithmetic is published. */
-  isFinalized: boolean;
   /** True once `competedAt` has been stamped on any team. */
   participationFrozen: boolean;
-  currentRequirementCount: number | null;
   currentJudgingStartsAt: Date | null;
   /** `startsAt` of the opening workshop's meeting. */
   workshopMeetingStartsAt: Date | null;
 }
 
 export interface CompetitionIncoming {
-  requirementCount: number | null;
   judgingStartsAt: Date | null;
 }
 
@@ -749,25 +745,20 @@ export interface CompetitionValueFacts {
   rawMaxTeamSize: AirtableValue;
   /** What the registry parser made of it. Null if it refused the value. */
   maxTeamSize: number | null;
-  /** Exactly what Airtable returned for `Requirements`, unparsed. */
-  rawRequirementCount: AirtableValue;
-  /** What the registry parser made of it. Null if it refused the value. */
-  requirementCount: number | null;
 }
 
 /**
- * The numbers a competition cannot store.
+ * The number a competition cannot store.
  *
- * `competitions_maxTeamSize_positive` and
- * `competitions_requirementCount_nonneg` are check constraints, so a 0 typed
+ * `competitions_maxTeamSize_positive` is a check constraint, so a 0 typed
  * into Max team size used to be an exception raised inside the pull rather
- * than a refused cell. The parser now rejects both, and the only thing left is
+ * than a refused cell. The parser now rejects it, and the only thing left is
  * saying so. Otherwise the number never applies and the officer has no way to
  * find out which of their edits did not take.
  *
- * The two numbers are never written as null: the caller already omits a null
+ * The number is never written as null: the caller already omits a null
  * number from the update rather than clearing the column, so nothing needs
- * adding to `rejectedFields` for them. The title is the exception, and works
+ * adding to `rejectedFields` for it. The title is the exception, and works
  * like the workshop title — an over-length one adds itself to `rejectedFields`
  * so the caller keeps the published title rather than erasing it, exactly the
  * way one extra character must not blank a heading mid-edit.
@@ -805,60 +796,15 @@ export function checkCompetitionValues(
     });
   }
 
-  if (
-    facts.rawRequirementCount !== undefined &&
-    facts.requirementCount === null
-  ) {
-    result.refusals.push({
-      table: "competitions",
-      airtableRecordId: facts.airtableRecordId,
-      code: "competition_requirement_count_invalid",
-      message:
-        `Requirements is "${describeAirtableValue(facts.rawRequirementCount)}", which is ` +
-        "not a count. It has to be a whole number, zero or more, and it has " +
-        "not been applied — the previous value is still in force. It is the " +
-        "denominator every team's requirement score is computed against.",
-    });
-  }
-
   return result;
 }
 
-/**
- * Two rules: one protecting published results, one protecting the entry state
- * machine.
- */
+/** Protects the entry state machine. */
 export function checkCompetition(
   facts: CompetitionFacts,
   incoming: CompetitionIncoming,
 ): RuleResult {
   const result = empty();
-
-  // A finalized competition rejects edits to `requirementCount`.
-  //
-  // It is the denominator of the requirement score. Changing it after a winner
-  // is announced rewrites arithmetic that has already been published: every
-  // team's requirement points move, and the placement order can move with
-  // them, silently, days after everyone read the result.
-  if (
-    facts.isFinalized &&
-    incoming.requirementCount !== null &&
-    incoming.requirementCount !== facts.currentRequirementCount
-  ) {
-    result.rejectedFields.add("requirementCount");
-    result.refusals.push({
-      table: "competitions",
-      airtableRecordId: facts.airtableRecordId,
-      code: "requirement_count_after_finalize",
-      message:
-        "Refused: this competition has been finalized and its points are " +
-        `published, so Requirements cannot change from ` +
-        `${facts.currentRequirementCount ?? "unset"} to ` +
-        `${incoming.requirementCount}. Every team's score is computed against ` +
-        "that number. If it was wrong, the results have to be re-tallied " +
-        "deliberately rather than drift.",
-    });
-  }
 
   const judging = checkJudgingStartsAt(facts, incoming.judgingStartsAt);
   if (judging) {

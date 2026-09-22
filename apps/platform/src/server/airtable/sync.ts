@@ -12,7 +12,6 @@ import { clubDateKey } from "~/lib/eventTime";
 import { db } from "~/server/db";
 import {
   competitions,
-  competitionStandings,
   meetings,
   projects,
   teams,
@@ -725,7 +724,6 @@ interface CompetitionValues {
   title: string | null;
   workshop: string | null;
   judgingStartsAt: string | null;
-  requirementCount: number | null;
   maxTeamSize: number | null;
   countsTowardProgress: boolean;
   elEligible: boolean;
@@ -742,15 +740,8 @@ export async function pullCompetitions(
     .select({
       id: competitions.id,
       airtableRecordId: competitions.airtableRecordId,
-      requirementCount: competitions.requirementCount,
       judgingStartsAt: competitions.judgingStartsAt,
       workshopMeetingStartsAt: meetings.startsAt,
-      // Standings exist only once the tally has run, which is precisely the
-      // moment the arithmetic becomes published.
-      isFinalized: sql<boolean>`exists (
-        select 1 from ${competitionStandings}
-        where ${competitionStandings.competitionId} = ${competitions.id}
-      )`,
       // Any frozen team means judging has happened for this competition.
       participationFrozen: sql<boolean>`exists (
         select 1 from ${teams}
@@ -768,8 +759,8 @@ export async function pullCompetitions(
       .map((c) => [c.airtableRecordId!, c]),
   );
 
-  // Both numbers below are check-constrained, so the raw cell is needed for
-  // the same reason the meetings pass needs it: the parser returns null for
+  // Max team size is check-constrained, so the raw cell is needed for the
+  // same reason the meetings pass needs it: the parser returns null for
   // "empty" and for "not a number I can store", and only the second is worth
   // a message.
   const rawByRecordId = new Map(records.map((r) => [r.id, r.fields]));
@@ -791,8 +782,6 @@ export async function pullCompetitions(
       title: v.title,
       rawMaxTeamSize: raw[competitionsSpec.fields.maxTeamSize.id],
       maxTeamSize: v.maxTeamSize,
-      rawRequirementCount: raw[competitionsSpec.fields.requirementCount.id],
-      requirementCount: v.requirementCount,
     });
     out.refusals.push(...valueRules.refusals);
 
@@ -800,13 +789,11 @@ export async function pullCompetitions(
       const rules = checkCompetition(
         {
           airtableRecordId: record.airtableRecordId,
-          isFinalized: current.isFinalized,
           participationFrozen: current.participationFrozen,
-          currentRequirementCount: current.requirementCount,
           currentJudgingStartsAt: current.judgingStartsAt,
           workshopMeetingStartsAt: current.workshopMeetingStartsAt,
         },
-        { requirementCount: v.requirementCount, judgingStartsAt },
+        { judgingStartsAt },
       );
       out.refusals.push(...rules.refusals);
 
@@ -823,12 +810,6 @@ export async function pullCompetitions(
       if (valueRules.rejectedFields.has("title")) delete values.title;
       if (v.slug !== null) values.slug = v.slug;
       if (v.maxTeamSize !== null) values.maxTeamSize = v.maxTeamSize;
-      if (
-        v.requirementCount !== null &&
-        !rules.rejectedFields.has("requirementCount")
-      ) {
-        values.requirementCount = v.requirementCount;
-      }
       if (
         judgingStartsAt !== null &&
         !rules.rejectedFields.has("judgingStartsAt")
@@ -887,7 +868,6 @@ export async function pullCompetitions(
             // rejects would throw, and the refusal already said why.
             title: valueRules.rejectedFields.has("title") ? null : v.title,
             judgingStartsAt,
-            requirementCount: v.requirementCount,
             maxTeamSize: v.maxTeamSize,
             countsTowardProgress: v.countsTowardProgress,
             elEligible: v.elEligible,

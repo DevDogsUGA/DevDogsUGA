@@ -159,7 +159,6 @@ export interface TeamRow {
   memberCount: number;
   submissionUrl: string | null;
   competed: boolean;
-  totalPoints: number | null;
 }
 
 // ── Officer-authored meeting copy ────────────────────────────────────────────
@@ -727,19 +726,13 @@ export const competitions = table("Competitions", "tbltrW1Xum127cNwy", {
   judgingStartsAt: field
     .dateTime("fld9p3FVXCuFWJF7b", "Judging starts")
     .pull((v) => parseAirtableDateTime(v)),
-  // Both numbers are bounded here because both are check constraints:
-  // `competitions_requirementCount_nonneg` and
+  // Bounded here because it is a check constraint,
   // `competitions_maxTeamSize_positive`. Typing 0 into Max team size is an
   // ordinary slip and used to be a rejected insert mid-pull, which ends the
   // pass for every table rather than refusing one cell.
   //
   // Non-integers are rejected too. Airtable's number field has a precision
   // setting an officer can change, and 2.5 people is not a team size.
-  requirementCount: field
-    .number("fldu17YKeE2FYBkOc", "Requirements")
-    .pull((v) =>
-      typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null,
-    ),
   maxTeamSize: field
     .number("fldGij8ChmqGklbwh", "Max team size")
     .pull((v) =>
@@ -772,12 +765,6 @@ export const teamsTable = table("Teams", "tblfXjgqCZiJnnD4x", {
   competed: field
     .checkbox("fldDuEeRPzyaRxqIo", "⚙️ Competed")
     .push((t: TeamRow) => t.competed),
-  totalPoints: field
-    .number("fldvrkhNok0u2C7zn", "⚙️ Points")
-    .push((t: TeamRow) => t.totalPoints),
-  requirementsMet: field
-    .number("fldos8CCiyx6FwIdi", "Requirements met")
-    .pull((v) => (typeof v === "number" ? v : null)),
 });
 
 /**

@@ -22,7 +22,6 @@ import {
 } from "./lease";
 import { postAlert } from "../alerts";
 import {
-  pullTeamGrades,
   pushAttendance,
   pushDerivedCounts,
   pushMembers,
@@ -65,7 +64,6 @@ export interface SyncReport {
   durationMs: number;
   pulled: { upserted: number; archived: number; skipped: number };
   pushed: { created: number; updated: number; unchanged: number };
-  gradesApplied: number;
   officerChanges: OfficerChangeProcessingCounts;
   statusWrites: number;
   /** Retained in the response during the ownership-inversion rollout. */
@@ -199,7 +197,6 @@ export async function runAirtableSync(
   const refusals: Refusal[] = [];
   const pulled = { upserted: 0, archived: 0, skipped: 0 };
   const pushed = { created: 0, updated: 0, unchanged: 0 };
-  let gradesApplied = 0;
   let officerChanges = blankOfficerChangeCounts();
   let statusWrites = 0;
   let failure: unknown = null;
@@ -283,10 +280,6 @@ export async function runAirtableSync(
     );
     addPull(pulled, competitionOutcome);
     refusals.push(...competitionOutcome.refusals);
-
-    // Grades before the team push, so a team graded this pass gets its points
-    // pushed in the same pass rather than fifteen minutes later.
-    gradesApplied = await pullTeamGrades(listed.teams);
 
     // The form used to depend on Airtable's Run a script action, which is not
     // available on Team trials. Process the responses already fetched by this
@@ -376,7 +369,6 @@ export async function runAirtableSync(
     durationMs: Date.now() - started,
     pulled,
     pushed,
-    gradesApplied,
     officerChanges,
     statusWrites,
     accountsCreated: 0,
@@ -393,7 +385,6 @@ function blank(started: number, skipped: SyncReport["skipped"]): SyncReport {
     durationMs: Date.now() - started,
     pulled: { upserted: 0, archived: 0, skipped: 0 },
     pushed: { created: 0, updated: 0, unchanged: 0 },
-    gradesApplied: 0,
     officerChanges: blankOfficerChangeCounts(),
     statusWrites: 0,
     accountsCreated: 0,

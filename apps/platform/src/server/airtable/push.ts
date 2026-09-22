@@ -26,13 +26,12 @@ import {
   type TeamRow,
   type WorkshopRow,
 } from "@devdogsuga/airtable";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { eq, isNull, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import {
   airtableChangeReceipts,
   attendance,
   competitions,
-  competitionStandings,
   meetings,
   profiles,
   reflections,
@@ -275,15 +274,7 @@ export async function ensurePlatformSettings(
   return { ...result, unchanged: 0 };
 }
 
-/**
- * Teams, with their computed points.
- *
- * `totalPoints` comes from `competitionStandings`, which only exists once the
- * tally has run, so it is null for a live competition and that is correct. The
- * never-blank rule means a null is omitted rather than written as zero, which
- * matters here more than anywhere: a zero in that column reads as "this team
- * scored nothing", and a blank reads as "not scored yet".
- */
+/** Teams, with their entry state. */
 export async function pushTeams(
   client: AirtableClient,
   existing: AirtableRecord[],
@@ -298,15 +289,13 @@ export async function pushTeams(
         ${teams.participationOverride},
         ${teams.competedAt} is not null
       )`,
-      totalPoints: competitionStandings.totalPoints,
       memberCount: sql<number>`(
         select count(*)::int from ${teamMembers}
         where ${teamMembers.teamId} = ${teams.id}
       )`,
     })
     .from(teams)
-    .innerJoin(competitions, eq(competitions.id, teams.competitionId))
-    .leftJoin(competitionStandings, eq(competitionStandings.teamId, teams.id));
+    .innerJoin(competitions, eq(competitions.id, teams.competitionId));
 
   return upsert<TeamRow>(client, teamsSpec, rows, existing);
 }
@@ -418,53 +407,6 @@ export async function pushDerivedCounts(
 type _MeetingRowCheck = MeetingRow;
 type _WorkshopRowCheck = WorkshopRow;
 type _CompetitionRowCheck = CompetitionRow;
-
-// ── Requirements met (the one pull on a pushed table) ────────────────────────
-
-/**
- * Reads `Requirements met` back into `teams.requirementsMet`.
- *
- * The Teams table is the one place both directions meet, and it is legal
- * because direction is per field: the grade is an input the platform reads,
- * the points are an output the platform writes. Do not add the obvious
- * Airtable formula between them. A formula computing points from the grade
- * would put the scoring rule in two places that will drift.
- *
- * Refused outright for teams whose competition is finalized, for the same
- * reason `requirementCount` is: the score is published.
- */
-export async function pullTeamGrades(
-  records: AirtableRecord[],
-): Promise<number> {
-  const gradeField = teamsSpec.fields.requirementsMet;
-  const keyField = teamsSpec.fields.platformId;
-  let updated = 0;
-
-  for (const record of records) {
-    const teamId = record.fields[keyField.id];
-    const grade = record.fields[gradeField.id];
-    if (typeof teamId !== "string" || typeof grade !== "number") continue;
-
-    const rows = await db
-      .update(teams)
-      .set({ requirementsMet: grade })
-      .where(
-        and(
-          eq(teams.id, teamId),
-          sql`${teams.requirementsMet} is distinct from ${grade}`,
-          sql`not exists (
-            select 1 from ${competitionStandings}
-            where ${competitionStandings.competitionId} = ${teams.competitionId}
-          )`,
-        ),
-      )
-      .returning({ id: teams.id });
-
-    updated += rows.length;
-  }
-
-  return updated;
-}
 
 // ── Sync status write-back ───────────────────────────────────────────────────
 

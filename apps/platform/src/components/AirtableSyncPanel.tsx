@@ -118,7 +118,6 @@ function ReportPanel({ report }: { report: SyncReport }) {
             value={report.pushed.created + report.pushed.updated}
           />
           <Stat label="Already up to date" value={report.pushed.unchanged} />
-          <Stat label="Grades applied" value={report.gradesApplied} />
           {/* Only when it happened. A standing "0" reads as a dial somebody
               could turn; a number appearing the week a workshop runs is the
               signal. These are rows in auth.users, created from a form field
