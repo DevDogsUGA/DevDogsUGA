@@ -125,7 +125,14 @@ jobs:
           # shallow depth, and this step's whole job here is the release
           # record and its source maps, not a changelog.
           set_commits: skip
-          sourcemaps: apps/${{ matrix.app }}/.open-next
+          # schedule-builder's `vinext build` (see its `cf:build:$DEPLOY_ENV`)
+          # writes maps under BOTH `dist/client` (browser bundle) and
+          # `dist/server` (the Worker bundle, `dist/server/index.js.map`) —
+          # unlike OpenNext's single `.open-next` tree, so its path is the
+          # `dist` parent rather than either half alone. platform still
+          # builds through OpenNext until it migrates in a later stage.
+          sourcemaps: >-
+            ${{ matrix.app == 'schedule-builder' && 'apps/schedule-builder/dist' || format('apps/{0}/.open-next', matrix.app) }}
       # Written to a mkdtemp 0700 directory and removed below whatever happens.
       - name: Compose the Worker secrets file
         id: secrets

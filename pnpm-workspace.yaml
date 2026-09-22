@@ -104,7 +104,10 @@ catalog:
   supabase: latest
   tsx: ^4.23.12
   typescript: ^6.0.3
-  wrangler: ^4.133.0
+  # Bumped off 4.133.0 (vinext Phase 0 spike, schedule-builder): the
+  # @cloudflare/vite-plugin version vinext init pulled in declares a
+  # ^4.136.1 peer, and `vinext build` refuses to load config below that.
+  wrangler: ^4.136.3
 
   # --- Testing ---
   # jsdom is held at 29.x on purpose: 30.x raises its floor to node
@@ -209,7 +212,7 @@ minimumReleaseAgeExclude:
   - '@cloudflare/workerd-windows-64@1.20260916.1'
   - miniflare@5.20260916.0-alpha
   - workerd@1.20260916.1
-  - wrangler@4.133.0
+  - wrangler@4.136.3
   # Version-less on purpose: the catalog pins supabase to `latest`, so no fixed
   # version can be listed here. The bare name exempts every version, letting
   # `latest` resolve to the newest release instead of being held back.

@@ -2,36 +2,34 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   // Worker naming is `${DEPLOY_ENV}-${APP_NAME}`; see apps/platform/wrangler.jsonc
   // for why the top level is the development shape and why `vars`, `services`,
-  // `images`, `r2_buckets`, `hyperdrive`, `workflows` and `send_email` are
-  // repeated in full per environment rather than inherited.
+  // `images`, `kv_namespaces`, `hyperdrive` and `workflows` are repeated in
+  // full per environment rather than inherited.
   "name": "development-schedule-builder",
   // See apps/platform/wrangler.jsonc: the scoped deploy token defeats
-  // OpenNext's account inference, so the account is pinned. Not a secret.
+  // vinext/wrangler's account inference, so the account is pinned. Not a
+  // secret.
   "account_id": "61d185ff419ef7bd5bd4b3d314081a49",
-  // Custom entry composes the OpenNext `fetch` handler with the cron
+  // Custom entry composes vinext's app-router `fetch` handler with the cron
   // `scheduled` handler (see cloudflare/worker.ts + cloudflare/scheduled.ts).
   "main": "cloudflare/worker.ts",
   // Matches the `workerd` version pinned in the lockfile (1.20260916.x), which
-  // is how the OpenNext adapter derives its own default. Keeping it at the
+  // is how @cloudflare/vite-plugin derives its own default. Keeping it at the
   // installed runtime's date rather than today's avoids `preview` warning that
   // the local workerd predates the configured date. Bump this alongside
-  // wrangler; the adapter warns once it is more than six months stale.
+  // wrangler; the plugin warns once it is more than six months stale.
   "compatibility_date": "2026-09-16",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // vinext resolves this itself at build time (to `dist/client`, relative to
+  // the emitted `dist/server/wrangler.json`) regardless of what is written
+  // here -- this value only matters for a bare `wrangler dev`/`deploy` run
+  // against this source file directly (no build in between), which is not a
+  // supported path (see `main`: `cloudflare/worker.ts` is TypeScript, not a
+  // built bundle). Kept as the honest pre-build shape rather than a path that
+  // does not exist yet on a clean checkout.
   "assets": {
-    "directory": ".open-next/assets",
+    "directory": "dist/client",
     "binding": "ASSETS",
   },
-  // `main` and `assets.directory` are generated, so a clean checkout cannot
-  // otherwise run `wrangler dev`. The shared hook builds only when the
-  // OpenNext artifact is missing or older than this app's inputs. It is also
-  // inherited by staging/production, where the explicit CI build is already
-  // fresh and the hook becomes a cheap no-op.
-  "build": {
-    "command": "pnpm --filter schedule-builder exec node ../../packages/config/opennext/ensure-build.js",
-    "watch_dir": ["src", "cloudflare", "public"],
-  },
-
   // Not inherited per-env because it isn't an env-scoped field to begin
   // with -- unlike `vars`/`services`/etc., this key applies to the whole
   // Worker resource, so one top-level block (see apps/platform/wrangler.jsonc)
@@ -45,32 +43,43 @@
       "invocation_logs": true,
     },
   },
+  // `vinext init` appended these two keys at the top level. Unlike
+  // `account_id`/`observability`, `cache` and `version_metadata` ARE
+  // non-inheritable -- `wrangler` warns explicitly ("exists at the top
+  // level, but not on env.<x> ... not inherited by environments") if they
+  // are left only here, so both are repeated per env below as well.
+  //
+  // `cache.enabled` turns on vinext's CDN-cache-adapter integration with the
+  // deployed Worker's Cache API (see vite.config.ts's `cdnAdapter()`).
+  "cache": { "enabled": true },
+  // Exposes the deployment's version id to the Worker so Sentry release
+  // tagging and cache-key namespacing can read it without a build-time
+  // `SENTRY_RELEASE` var. Not a secret.
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   // --- development (top level) ---------------------------------------------
   "vars": {
     "DEPLOY_ENV": "development",
   },
-  // OpenNext's memory queue (ISR revalidation of stale `cacheLife` entries)
-  // re-invokes the worker through this binding. Must equal this environment's
-  // own worker name — see apps/platform/wrangler.jsonc for the staging
-  // cross-pollution failure mode.
-  "services": [
+  // vinext's data-cache adapter (`kvDataAdapter()` in vite.config.ts) backs
+  // Next's fetch/`use cache` incremental cache with this KV namespace instead
+  // of OpenNext's R2 bucket -- see the staging/production blocks for why this
+  // one is a clearly-marked placeholder rather than a real id. `wrangler dev`
+  // (unlike `deploy`) runs local-only by default, so a placeholder id is
+  // harmless here: nothing ever resolves it against the real API, it only
+  // names a local SQLite-backed KV emulation on disk.
+  "kv_namespaces": [
     {
-      "binding": "WORKER_SELF_REFERENCE",
-      "service": "development-schedule-builder",
+      "binding": "VINEXT_KV_CACHE",
+      "id": "<no-remote-namespace-development-runs-local-only>",
     },
   ],
   // Next's default image optimiser needs `sharp`, a native Node binary that
-  // cannot run in workerd, so `next/image` requests fail on the deployed worker
-  // without this binding. Non-inheritable, hence repeated per environment.
+  // cannot run in workerd, so `next/image` requests fail on the deployed
+  // worker without this binding. Non-inheritable, hence repeated per
+  // environment.
   "images": {
     "binding": "IMAGES",
   },
-  "r2_buckets": [
-    {
-      "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "development-schedule-builder-cache",
-    },
-  ],
   // Backs the daily registrar scrape (see cloudflare/ScrapeWorkflow.ts).
   // Bound in every environment, including development, so the class registers
   // with wrangler/`wrangler dev` regardless of whether this tier has a native
@@ -89,21 +98,25 @@
       "vars": {
         "DEPLOY_ENV": "staging",
       },
-      "services": [
+      // Real namespace, created via
+      // `with-env --tier staging wrangler kv namespace create
+      // staging-schedule-builder-vinext-cache` (named to match the
+      // R2-bucket-era convention -- `{tier}-schedule-builder-cache` --  with
+      // `-vinext` inserted so the retired R2 bucket and this replacement are
+      // never confused while both still show up in `wrangler r2 bucket list`
+      // / `wrangler kv namespace list` during the Phase 4 cleanup window).
+      "kv_namespaces": [
         {
-          "binding": "WORKER_SELF_REFERENCE",
-          "service": "staging-schedule-builder",
+          "binding": "VINEXT_KV_CACHE",
+          "id": "7fac960f284f4df1ac1ec2f450899449",
         },
       ],
       "images": {
         "binding": "IMAGES",
       },
-      "r2_buckets": [
-        {
-          "binding": "NEXT_INC_CACHE_R2_BUCKET",
-          "bucket_name": "staging-schedule-builder-cache",
-        },
-      ],
+      // See the top-level block: not inherited, repeated per env.
+      "cache": { "enabled": true },
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
       // Hyperdrive pools connections to Supabase's direct database endpoint so
       // request-scoped clients don't exhaust Postgres. The id is public; the
       // origin credential stays encrypted in Cloudflare. SHARED with the
@@ -152,35 +165,29 @@
       "vars": {
         "DEPLOY_ENV": "production",
       },
-      "services": [
+      // Real namespace, created via
+      // `with-env --tier production wrangler kv namespace create
+      // production-schedule-builder-vinext-cache`. Backing store for the data
+      // cache. The binding name is fixed by vinext's `kvDataAdapter()` config
+      // in vite.config.ts. Without it every `fetch`/`use cache` read misses
+      // and re-executes per request -- there is no "dummy adapter" fallback
+      // the way OpenNext's R2 adapter had, the binding is simply undefined
+      // and the adapter throws.
+      //
+      // Created out-of-band (`wrangler kv namespace create`), per worker, so
+      // storage and read/write metrics stay attributable per environment.
+      "kv_namespaces": [
         {
-          "binding": "WORKER_SELF_REFERENCE",
-          "service": "production-schedule-builder",
+          "binding": "VINEXT_KV_CACHE",
+          "id": "c6b32e5e573e4209a5270481f1c5d0da",
         },
       ],
       "images": {
         "binding": "IMAGES",
       },
-      // Backing store for the incremental cache. The binding name is fixed by
-      // the OpenNext adapter. Without it the adapter falls back to its "dummy"
-      // cache, which uploads nothing on deploy and throws on every read --
-      // every prerendered route is then re-rendered per request. This applies
-      // even though this app does not use Cache Components: its 14 fully static
-      // routes go through the incremental cache too, not the ASSETS binding.
-      // See packages/config/opennext/cloudflare.js.
-      //
-      // Created automatically on first deploy, per worker, so storage and
-      // operation metrics stay attributable per environment.
-      //
-      // TODO: add an R2 object lifecycle rule (delete after ~30 days). Cache
-      // keys include the build id, so every deploy writes a fresh copy and
-      // nothing ever removes the previous one.
-      "r2_buckets": [
-        {
-          "binding": "NEXT_INC_CACHE_R2_BUCKET",
-          "bucket_name": "production-schedule-builder-cache",
-        },
-      ],
+      // See the top-level block: not inherited, repeated per env.
+      "cache": { "enabled": true },
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
       // See the staging block for why this reuses platform's Hyperdrive config.
       "hyperdrive": [
         {

@@ -20,9 +20,14 @@
  *
  * `devtools-ci deploy <app> --tier <staging|production>` replaces the three
  * near-identical `cf:deploy:*` shell strings in the app package.json files.
- * It runs `require-token`, then the app-specific deploy commands (docs index
- * for platform, opennextjs-cloudflare for platform/schedule-builder, wrangler
- * for sandbox).
+ * It runs `require-token`, then the app-specific deploy commands: docs index
+ * for platform, opennextjs-cloudflare for platform (still OpenNext),
+ * wrangler for schedule-builder (migrated to vinext -- deploy-app.yaml's
+ * separate "Build" step already ran `vinext build`, which leaves a Wrangler
+ * "config redirect" at `.wrangler/deploy/config.json` pointing at the
+ * generated `dist/server/wrangler.json`; a bare `wrangler deploy` from the
+ * app dir resolves through that redirect with no `--config` needed) and
+ * sandbox (plain Worker, wrangler bundles it at deploy time).
  *
  * Step commands (`write-env`, `secrets-file`, etc.) are still individually
  * addressable for jobs that run only one step.
@@ -172,11 +177,19 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
       fn: () => pnpm(deployArgs, hyperdriveLocalAliasEnv()),
     });
   } else if (app === "schedule-builder") {
+    // Migrated to vinext: the target environment is baked in at BUILD time
+    // (deploy-app.yaml's "Build schedule-builder" step already ran
+    // `cf:build:$DEPLOY_ENV`, i.e. `vinext build` with `CLOUDFLARE_ENV=$tier`),
+    // so this step is plain `wrangler deploy`, not `opennextjs-cloudflare
+    // deploy` -- mirrors the sandbox branch below, not platform's. `-e` is
+    // passed anyway (wrangler cross-checks it against the environment the
+    // build was tagged with and errors loudly on a mismatch, rather than
+    // silently deploying the wrong tier).
     const deployArgs = [
       "--filter",
       "schedule-builder",
       "exec",
-      "opennextjs-cloudflare",
+      "wrangler",
       "deploy",
       "-e",
       tier,
