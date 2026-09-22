@@ -656,8 +656,7 @@ export function checkWorkshop(
         `Refused: this workshop has ${facts.attendanceCount} attendance ` +
         "record(s), so its Meeting cannot be changed — doing so would move " +
         "credit people already earned onto a different meeting. Create a new " +
-        "workshop row instead, or ask an officer to correct the attendance " +
-        "first.",
+        "workshop row instead.",
     });
   }
 
