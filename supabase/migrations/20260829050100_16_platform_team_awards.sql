@@ -24,11 +24,10 @@ create table "platform"."teamAwards" (
   -- One line on why, shown on the hall of fame.
   "citation"      text,
   "mergedPrUrl"   text,
-  -- Nullable, and no foreign key. Nullable because the 'winner' row is written
-  -- by the tally, not authored by anyone, and every value a not-null column
-  -- would force is a lie: a sentinel user, the team's own id, or whichever
-  -- officer happened to trigger the cron. No FK because the award outlives the
-  -- officer's account. Adding either one back breaks a real case.
+  -- Nullable, and no foreign key. Nullable so a row survives an officer
+  -- account being deleted rather than becoming unexplainable or having to
+  -- fall back to a sentinel user. No FK for the same reason: the award
+  -- outlives the officer's account.
   "awardedBy"     uuid,
   "awardedAt"     timestamptz not null default now(),
 
@@ -42,7 +41,7 @@ create table "platform"."teamAwards" (
 );
 
 comment on column "platform"."teamAwards"."awardedBy" is
-  'The officer who authored this award. Null means it was computed by the tally, which is the case for every category = ''winner'' row.';
+  'The officer who authored this award, via awardTeam. Nullable so a row survives that officer''s account being deleted.';
 
 alter table "platform"."teamAwards" enable row level security;
 

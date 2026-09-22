@@ -263,11 +263,11 @@ export function allFolders(nodes: DocsTreeNode[]): DocsTreeFolder[] {
  * Depth-first first page, where `/docs/<project>` redirects to. It walks the
  * array as `buildDocsTree` left it rather than as the sidebar draws it, and the
  * two do disagree at the top level: the sidebar's partition gathers folders
- * below the pages, while the array leaves them interleaved by title, so
- * `docs/platform` sorts `Documentation System/` between `Database & Migrations`
- * and `Elections`. What keeps this from descending into a section there is the
- * project's own `index.md`, which leads its folder whatever else is around
- * it.
+ * below the pages, while the array leaves them interleaved by title, so a
+ * folder can sort between two loose pages there instead of trailing every page
+ * the way the sidebar draws it. What keeps this from descending into a section
+ * there is the project's own `index.md`, which leads its folder whatever else
+ * is around it.
  *
  * Where a project has no root index page, `order` is what moves this target.
  * `/docs/toolkit` lands on `reference/components/index` rather than on the
