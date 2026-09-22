@@ -8,8 +8,18 @@ import { relations } from "./relations";
 
 export { createScheduleBuilderDb } from "./create";
 
+let localDatabase: ScheduleBuilderDb | undefined;
+
+/**
+ * The DB_URL fallback is process-wide, not per-request: memoized at module
+ * scope so `next dev`/`wrangler dev` and any call outside a request scope
+ * (tests, build-time module evaluation) reuse one Postgres.js pool instead of
+ * opening a fresh one on every call. It is intentionally never closed --
+ * there is no per-request boundary to close it against here, and the process
+ * owns it for its lifetime.
+ */
 function localDb(): ScheduleBuilderDb {
-  return createDb(env.DB_URL, relations);
+  return (localDatabase ??= createDb(env.DB_URL, relations));
 }
 
 /**
@@ -21,8 +31,10 @@ function localDb(): ScheduleBuilderDb {
  * more than once inside the same request reuses the same client instead of
  * opening a fresh Postgres.js pool per query. Outside a request scope (tests,
  * build-time module evaluation) it runs on every call with no caching -- see
- * `vinext/cache`'s own doc comment. This is the boundary direct Postgres.js
- * pools cannot cross in Workers.
+ * `vinext/cache`'s own doc comment; the Hyperdrive branch below stays
+ * per-request (see `closeAfterResponse`), while the DB_URL fallback in
+ * `localDb` is memoized at module scope instead. This is the boundary direct
+ * Postgres.js pools cannot cross in Workers.
  */
 const currentDb = cacheForRequest((): ScheduleBuilderDb => {
   const hyperdrive = workerEnv.HYPERDRIVE;

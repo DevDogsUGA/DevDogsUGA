@@ -125,6 +125,20 @@ describe("schedule-builder db module", () => {
     expect(createDbMock).toHaveBeenCalledTimes(2);
   });
 
+  it("reuses one local client across distinct requests when there is no HYPERDRIVE binding", async () => {
+    // `localDb`'s DB_URL fallback is memoized at module scope, independent of
+    // `cacheForRequest`'s per-request cache -- this is the regression case:
+    // without the module-level memo, each new "request" (or any call outside
+    // a request scope) would mint a fresh, never-closed Postgres.js pool.
+    const { db } = await loadDb();
+    trigger(db, "a");
+    expect(createDbMock).toHaveBeenCalledTimes(1);
+
+    newRequest();
+    trigger(db, "b");
+    expect(createDbMock).toHaveBeenCalledTimes(1);
+  });
+
   it("createScheduleBuilderDb builds a cache-less client from a bare url", async () => {
     const { createScheduleBuilderDb } = await loadDb();
     createScheduleBuilderDb("postgres://injected", 3);
