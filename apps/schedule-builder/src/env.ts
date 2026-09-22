@@ -88,6 +88,25 @@ const server = {
       secrecy: "secret",
     },
   ),
+  // Sentry ingest DSN for the "schedule-builder" project (see
+  // @devdogsuga/telemetry). Optional and empty by default, deliberately: the
+  // org is not onboarded in every environment yet, and `buildSentryOptions`
+  // treats a falsy DSN as "skip Sentry.init entirely" -- no init, no network
+  // calls, no console noise. A DSN is not a secret (it identifies a project,
+  // not a credential -- anyone can only submit events, never read them), but
+  // it reaches the Worker the same way every other environment variable
+  // does: Bitwarden -> `env push` -> the next deploy. wrangler.jsonc carries
+  // no secrets and never will for this value.
+  SENTRY_DSN: define(z.string().url().optional(), {
+    doc:
+      "Sentry ingest DSN for this app's Sentry project (see " +
+      "@devdogsuga/telemetry). Optional -- empty skips Sentry.init " +
+      "entirely, which is the state before the org is onboarded and the " +
+      "state of local development. Reaches the Worker like every other " +
+      "environment variable.",
+    scope: "environment",
+    secrecy: "public",
+  }),
   // Derived (.env / .env.generated). `localStack: true` throughout: when the
   // local Docker stack is running, `.env.generated` supplies these and wins
   // over `.env`. Secrecy per key mirrors the platform manifest -- see the
@@ -239,6 +258,40 @@ const server = {
 };
 
 const client = {
+  // Browser-side counterpart of SENTRY_DSN -- the "schedule-builder" Sentry
+  // project's public DSN is the same value in both places (a DSN is safe in
+  // a browser bundle; it can only submit events, never read them), so this
+  // is not derived from SENTRY_DSN by code, it is set alongside it. Optional
+  // for the same reason: no DSN means `instrumentation-client.ts` skips
+  // `Sentry.init()` entirely.
+  NEXT_PUBLIC_SENTRY_DSN: define(z.string().url().optional(), {
+    doc:
+      "Browser-side Sentry DSN for this app's Sentry project. Optional -- " +
+      "empty skips client-side Sentry.init() entirely, same contract as " +
+      "SENTRY_DSN.",
+    scope: "environment",
+    secrecy: "public",
+  }),
+  // The browser has no access to the server-only DEPLOY_ENV (@t3-oss's proxy
+  // would throw), and Sentry's `environment` tag needs to distinguish
+  // staging from production on the client too. Not derived automatically the
+  // way NEXT_PUBLIC_SUPABASE_URL is from API_URL: DEPLOY_ENV itself is set by
+  // wrangler.jsonc's per-env `vars` block and the cf:build:* scripts rather
+  // than an `.env` file, so there is nothing for a `.env` assignment to
+  // mirror. The cf:build:* scripts set this alongside DEPLOY_ENV instead.
+  NEXT_PUBLIC_DEPLOY_ENV: define(
+    z.enum(DEPLOY_ENVIRONMENTS).default("development"),
+    {
+      doc:
+        "Browser-side copy of DEPLOY_ENV, for the Sentry `environment` tag " +
+        "on client-captured errors. Set alongside DEPLOY_ENV by the " +
+        "cf:build:* scripts; defaults to development because that is what " +
+        "an unset value means everywhere else in this schema.",
+      scope: "environment",
+      secrecy: "public",
+      example: "staging",
+    },
+  ),
   NEXT_PUBLIC_SUPABASE_URL: define(z.string().url(), {
     doc:
       "Browser-side copy of API_URL. Derived -- .env assigns it from " +
@@ -295,6 +348,8 @@ export const env = createEnv({
    * `undefined` in the browser.
    */
   experimental__runtimeEnv: {
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    NEXT_PUBLIC_DEPLOY_ENV: process.env.NEXT_PUBLIC_DEPLOY_ENV,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,

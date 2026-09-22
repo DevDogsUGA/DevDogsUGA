@@ -102,10 +102,11 @@ const server = {
   // never will for this value.
   SENTRY_DSN: define(z.string().url().optional(), {
     doc:
-      "Sentry ingest DSN for the platform project. Optional -- empty skips " +
-      "Sentry.init entirely, which is the state before the org is " +
-      "onboarded and the state of local development. Reaches the Worker " +
-      "like every other environment variable.",
+      "Sentry ingest DSN for this app's Sentry project (see " +
+      "@devdogsuga/telemetry). Optional -- empty skips Sentry.init " +
+      "entirely, which is the state before the org is onboarded and the " +
+      "state of local development. Reaches the Worker like every other " +
+      "environment variable.",
     scope: "environment",
     secrecy: "public",
   }),
@@ -474,8 +475,9 @@ const client = {
   // `Sentry.init()` entirely.
   NEXT_PUBLIC_SENTRY_DSN: define(z.string().url().optional(), {
     doc:
-      "Browser-side Sentry DSN for the platform project. Optional -- empty " +
-      "skips client-side Sentry.init() entirely, same contract as SENTRY_DSN.",
+      "Browser-side Sentry DSN for this app's Sentry project. Optional -- " +
+      "empty skips client-side Sentry.init() entirely, same contract as " +
+      "SENTRY_DSN.",
     scope: "environment",
     secrecy: "public",
   }),

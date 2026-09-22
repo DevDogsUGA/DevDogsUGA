@@ -22,15 +22,18 @@
     "cf:dev": "pnpm --workspace-root devtools workflows serve --app schedule-builder",
     "cf:typegen": "wrangler types cloudflare-env.d.ts --env production --env-interface CloudflareEnv",
     "cf:typegen:check": "wrangler types cloudflare-env.d.ts --env production --env-interface CloudflareEnv --check",
-    "cf:build:staging": "DEPLOY_ENV=staging with-env opennextjs-cloudflare build",
-    "cf:build:production": "DEPLOY_ENV=production with-env opennextjs-cloudflare build"
+    "cf:build:staging": "DEPLOY_ENV=staging NEXT_PUBLIC_DEPLOY_ENV=staging with-env opennextjs-cloudflare build",
+    "cf:build:production": "DEPLOY_ENV=production NEXT_PUBLIC_DEPLOY_ENV=production with-env opennextjs-cloudflare build"
   },
   "dependencies": {
     "@devdogsuga/drizzle": "workspace:*",
     "@devdogsuga/env": "workspace:*",
     "@devdogsuga/og": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
+    "@devdogsuga/telemetry": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
+    "@sentry/cloudflare": "catalog:",
+    "@sentry/nextjs": "catalog:",
     "@radix-ui/react-accordion": "catalog:",
     "@radix-ui/react-avatar": "catalog:",
     "@radix-ui/react-dialog": "catalog:",

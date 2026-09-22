@@ -32,6 +32,19 @@
     "watch_dir": ["src", "cloudflare", "public"],
   },
 
+  // Not inherited per-env because it isn't an env-scoped field to begin
+  // with -- unlike `vars`/`services`/etc., this key applies to the whole
+  // Worker resource, so one top-level block (see apps/platform/wrangler.jsonc)
+  // covers development, staging, and production alike. `invocation_logs`
+  // is the second layer the workspace's Sentry design deliberately keeps on
+  // alongside Sentry: Cloudflare's own per-invocation log lines survive even
+  // if the Sentry ingest side is unreachable or unconfigured.
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+    },
+  },
   // --- development (top level) ---------------------------------------------
   "vars": {
     "DEPLOY_ENV": "development",
