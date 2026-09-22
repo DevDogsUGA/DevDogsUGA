@@ -50,7 +50,7 @@ The schema is migrations `20260803000001_platform_meetings_core.sql` through `20
 - [Stars & awards](/docs/platform/guides/meetings-and-teams/stars-and-awards) — what participation adds up to.
 - [Airtable sync](/docs/platform/guides/meetings-and-teams/airtable-sync) — where meetings come from, and what flows back.
 
-Scoring lives next door: the 1000-point competition total splits 600 for requirements met and 400 from scaled election results, and the winner is computed rather than chosen. See [Elections](/docs/platform/guides/elections).
+Scoring is off-platform (officer scores and live voting, run outside the site). The only per-competition state the platform persists is who won — a `teamAwards` row with `category = 'winner'`, written by an officer through `awardTeam` — and the results page collapses to entrants plus that winner, if one has been recorded.
 
 ## Why it's like this
 

@@ -82,7 +82,6 @@ Members is push-only apart from dues, and carries the most identifying data of a
 
 - **Never blank a pushed identity field.** A null in Postgres omits the field from the payload rather than writing an empty value. Null means "we have not learned it", never "it is empty", and the distinction is invisible once written.
 - **Nothing from the profile proper.** `preferredName`, `pronouns`, `bio`, and the social links stay in Postgres: member-authored and mutable, which is the opposite of what this table is for. The registry makes adding a field one line, which is why the boundary has to be written down.
-- **Teams push their points the same way.** `⚙️ Points` comes from `competitionStandings`, which does not exist until the tally has run, so it is null during a live competition — and the never-blank rule keeps that a blank ("not scored yet") rather than a zero ("scored nothing"). See [Scoring](/docs/platform/guides/elections/scoring).
 
 ## When a pass refuses
 

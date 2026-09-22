@@ -14,20 +14,20 @@ The split exists because `attendance."meetingId"` needs something that keeps its
 
 Ten integration tables, and the direction is **per field, never per table**:
 
-| Table                 | Officers author                                                                        | The platform writes                                                        |
-| --------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| **Meetings**          | custom name, times, location, summary, kind, RSVP, cancellation, progress and EL flags | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                              |
-| **Workshops**         | Meeting _(link)_, Project _(link, optional)_, title, description                       | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                              |
-| **Competitions**      | Branch slug, Workshop _(link)_, Judging starts, Requirements, Max team size            | ⚙️ Platform ID, ⚙️ Teams, ⚙️ Sync status                                   |
-| **Teams**             | Requirements met                                                                       | ⚙️ Platform ID, ⚙️ Name, ⚙️ Members, ⚙️ Submission, ⚙️ Competed, ⚙️ Points |
-| **Members**           | Dues paid                                                                              | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended                |
-| **Projects**          | nothing — a platform-owned mirror                                                      | ⚙️ Platform ID, ⚙️ Slug, Name                                              |
-| **Attendance**        | —                                                                                      | authoritative meeting attendance projection                                |
-| **Officer Changes**   | append-only correction form inputs                                                     | processing result and audit event ID                                       |
-| **EL Reflections**    | —                                                                                      | current reflection evidence                                                |
-| **Platform Settings** | reflection word minimum and submission window                                          | ⚙️ Platform ID, ⚙️ Sync status                                             |
+| Table                 | Officers author                                                                        | The platform writes                                             |
+| --------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| **Meetings**          | custom name, times, location, summary, kind, RSVP, cancellation, progress and EL flags | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                   |
+| **Workshops**         | Meeting _(link)_, Project _(link, optional)_, title, description                       | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                   |
+| **Competitions**      | Branch slug, Workshop _(link)_, Judging starts, Max team size                          | ⚙️ Platform ID, ⚙️ Teams, ⚙️ Sync status                        |
+| **Teams**             | —                                                                                      | ⚙️ Platform ID, ⚙️ Name, ⚙️ Members, ⚙️ Submission, ⚙️ Competed |
+| **Members**           | Dues paid                                                                              | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended     |
+| **Projects**          | nothing — a platform-owned mirror                                                      | ⚙️ Platform ID, ⚙️ Slug, Name                                   |
+| **Attendance**        | —                                                                                      | authoritative meeting attendance projection                     |
+| **Officer Changes**   | append-only correction form inputs                                                     | processing result and audit event ID                            |
+| **EL Reflections**    | —                                                                                      | current reflection evidence                                     |
+| **Platform Settings** | reflection word minimum and submission window                                          | ⚙️ Platform ID, ⚙️ Sync status                                  |
 
-One rule governs the right-hand column: **push only fields the platform owns exclusively, and never create a field both sides write.** Two writers have no conflict-resolution story, and last-writer-wins destroys work silently. Teams is where both directions meet — the grade is an input, the points an output — and the discipline is to resist the Airtable formula between them, which would put the scoring rule in two places that drift. The `⚙️` prefix warns officers off a field; the field editing permissions set by hand enforce it.
+One rule governs the right-hand column: **push only fields the platform owns exclusively, and never create a field both sides write.** Two writers have no conflict-resolution story, and last-writer-wins destroys work silently. Teams is push-only now — scoring is off-platform, so there is no grade to pull back. The `⚙️` prefix warns officers off a field; the field editing permissions set by hand enforce it.
 
 Officer Changes is the only integration table where a form creates rows. The
 scheduled or manual sync treats each new or retryable response as a validated
@@ -39,20 +39,19 @@ projections only. See [Attendance](/docs/platform/guides/meetings-and-teams/atte
 
 Only officers have Airtable access, so the base is the officer console for anything it can hold — an admin screen not built is a screen not maintained. The line is not "officer-only work", it is **what Airtable can key a row to**.
 
-| Task                                                           | Where                                                |
-| -------------------------------------------------------------- | ---------------------------------------------------- |
-| Create or edit a meeting or a workshop                         | Airtable                                             |
-| Open a competition, by linking its workshop                    | Airtable                                             |
-| Set `Judging starts`, the requirement count, the max team size | Airtable                                             |
-| Grade a team's requirements met                                | Airtable                                             |
-| Record dues                                                    | Airtable                                             |
-| Correct attendance, participation, or a reflection             | Airtable — restricted Officer Changes form           |
-| Record a team's entry when there is no PR                      | Platform — `setSubmission`                           |
-| Freeze a roster early                                          | Platform — `setManualLock`                           |
-| Give a team a named award                                      | Platform — `awardTeam`                               |
-| Run a pass now                                                 | Either — `requestAirtableSync`, or the base's button |
+| Task                                               | Where                                                |
+| -------------------------------------------------- | ---------------------------------------------------- |
+| Create or edit a meeting or a workshop             | Airtable                                             |
+| Open a competition, by linking its workshop        | Airtable                                             |
+| Set `Judging starts`, the max team size            | Airtable                                             |
+| Record dues                                        | Airtable                                             |
+| Correct attendance, participation, or a reflection | Airtable — restricted Officer Changes form           |
+| Record a team's entry when there is no PR          | Platform — `setSubmission`                           |
+| Freeze a roster early                              | Platform — `setManualLock`                           |
+| Give a team a named award, including the winner    | Platform — `awardTeam`                               |
+| Run a pass now                                     | Either — `requestAirtableSync`, or the base's button |
 
-Everything on the platform side needs a member or team identity that Airtable holds only as a mirror, and each is a server action gated on the same permission as roster edits — except the sync trigger, which has its own, and the `winner` award, which nobody authors at all: the election tally writes it.
+Everything on the platform side needs a member or team identity that Airtable holds only as a mirror, and each is a server action gated on the same permission as roster edits — except the sync trigger, which has its own. Scoring is off-platform, so there is no tally to write the `winner` award: an officer records it through `awardTeam`, the same action that gives any other named award.
 
 </details>
 
@@ -70,8 +69,8 @@ The cron fires `*/15 * * * *` at `/airtable/sync`; `requestAirtableSync()` runs 
    officer enters an invalid value.
 4. **Pull Projects, Meetings, Workshops, then Competitions** in dependency
    order.
-5. **Pull grades, process Officer Changes, then push** Members, Attendance,
-   Teams, EL Reflections, Officer Changes acknowledgements, and derived counts.
+5. **Process Officer Changes, then push** Members, Attendance, Teams,
+   EL Reflections, Officer Changes acknowledgements, and derived counts.
    Per-response failures are retryable and isolated; the acknowledgement pass
    repairs a failed post-command Airtable write without replaying the mutation.
 6. **Write refusals** into each record's `⚙️ Sync status`, release the lease,
@@ -90,17 +89,16 @@ A refusal is per **field**, not per record: fixing a project link and a max team
 | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | A workshop's Meeting or Project, once it has attendance                 | It re-attributes credit people already earned                                      |
 | **Emptying** a workshop's Project, once it has attendance               | It takes the project off stars members have already earned                         |
-| `Requirements` on a finalized competition                               | It is the denominator of a score already published                                 |
 | `Judging starts` at or before the opening workshop's meeting            | Every roster would lock the moment the competition was created                     |
 | `Judging starts` moving once participation is frozen                    | Later reopens settled rosters; earlier locks people out of days they spent joining |
 | A Summary over 240 characters, or an RSVP link off the allowlisted host | It cannot go on a public page as written                                           |
 | A meeting Name over 80 characters                                       | It cannot go on a public page as written                                           |
 | A workshop Title over 80, or a Description over 280                     | It cannot go on a public page as written                                           |
-| `Max team size` below 1, or `Requirements` below 0                      | The database rejects the value, and a rejected write used to stop the whole pass   |
+| `Max team size` below 1                                                 | The database rejects the value, and a rejected write used to stop the whole pass   |
 | A Cancellation reason over 160 characters                               | It cannot go on a public page as written                                           |
 | A Cancellation reason with `Cancelled` empty                            | The reason is only ever shown beside the date it explains                          |
 
-The first five protect **history**. The rest are a different kind — nothing is at risk, the value simply cannot be published — so the refused field is dropped from the write rather than blanked, and whatever was already up stays up until the replacement fits.
+The first four protect **history**. The rest are a different kind — nothing is at risk, the value simply cannot be published — so the refused field is dropped from the write rather than blanked, and whatever was already up stays up until the replacement fits.
 
 **One exception to "dropped rather than blanked":** a Cancellation reason with no `Cancelled` date is written as **null**, not withheld. `meetings_cancellationReason_needs_cancellation` allows a reason only beside the date it explains, so leaving the old value in place would be the constraint violation the refusal exists to prevent. Every other refused field keeps what was published.
 
@@ -130,7 +128,7 @@ The manual cooldown — `MANUAL_COOLDOWN_SECONDS`, one run a minute whoever asks
 <details>
 <summary>Why poll every fifteen minutes instead of subscribing to webhooks?</summary>
 
-Airtable does offer webhooks, but they expire on a seven-day refresh cycle and deliver cursor-based payloads that have to be replayed in order — real complexity for a club calendar that changes a few times a week. Polling a base this small has no failure mode more exotic than "runs again in fifteen minutes", and the manual trigger covers the case where fifteen minutes is too long to wait: an officer fixing a requirement count ten minutes before judging should not have to.
+Airtable does offer webhooks, but they expire on a seven-day refresh cycle and deliver cursor-based payloads that have to be replayed in order — real complexity for a club calendar that changes a few times a week. Polling a base this small has no failure mode more exotic than "runs again in fifteen minutes", and the manual trigger covers the case where fifteen minutes is too long to wait: an officer fixing a Judging starts time ten minutes before it matters should not have to.
 
 One pass is seven list calls plus a schema read, and the pushes on top of whatever changed. The repository's own estimates of what that costs disagree — `cloudflare/scheduled.ts` reckons about five requests a pass and roughly 13% of the monthly call allowance, `run.ts` says roughly seven — so read the percentage as an order of magnitude rather than a measurement.
 

@@ -13,7 +13,6 @@ order: 10
 | Guide                                                        | What it covers                                                                    |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
 | [Meetings & Teams](/docs/platform/guides/meetings-and-teams) | Meetings, workshops, competitions, teams, attendance, stars, and awards           |
-| [Elections](/docs/platform/guides/elections)                 | Ranked ballots over competing implementations, and how a competition is scored    |
 | [Airtable](/docs/platform/guides/airtable)                   | The officer base, the field registry, and what syncs in which direction           |
 | [Reporting](/docs/platform/guides/reporting)                 | The `platform` RPC contract every app calls to report content                     |
 | [Moderation](/docs/platform/guides/moderation)               | How a table becomes reportable and quarantinable, and the traps that hides        |
