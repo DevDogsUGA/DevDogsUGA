@@ -45,13 +45,7 @@ jobs:
         with:
           # Full history so `turbo --affected` can compute the merge base.
           fetch-depth: 0
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       # Next's GENERATED types (PageProps/LayoutProps globals, the image
       # module declarations, next-env.d.ts itself) exist on every laptop that
       # has ever run `next dev` and on no fresh checkout — `tsc --noEmit`
@@ -141,13 +135,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       # The runner's volume is always empty, so this applies every migration to
       # a fresh database and fails if any of them does not apply -- which is the
       # "migrations apply cleanly from scratch" check, with no separate reset
@@ -235,13 +223,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       - name: Prettier check
         run: pnpm format:check
 
@@ -253,13 +235,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       - name: Is study-group-finder affected?
         id: affected
         run: |

@@ -133,20 +133,14 @@ jobs:
       paused: ${{ steps.probe.outputs.paused }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
       # This job used to skip `pnpm install` entirely — the probe was a
       # standalone script importing nothing outside node: builtins, and that
       # kept the job to a few seconds. It is a devtools command now, so the
-      # install is back. The trade is deliberate: a cached install is a few
-      # tens of seconds against a probe that shares the CLI's error reporting
-      # and is covered by the same suite as everything else here, rather than
-      # being the one step in the pipeline that nothing tests.
-      - run: pnpm install --frozen-lockfile
+      # install (part of setup-workspace) is back. The trade is deliberate: a
+      # cached install is a few tens of seconds against a probe that shares the
+      # CLI's error reporting and is covered by the same suite as everything
+      # else here, rather than being the one step in the pipeline nothing tests.
+      - uses: ./.github/actions/setup-workspace
       # run ci — there is no env file in this job, and there must not be:
       # it holds `vars` only, so that one unauthenticated request classifies
       # the project before any credential is in scope.
@@ -182,13 +176,7 @@ jobs:
     environment: staging
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       # run ci — one credential (DB_URL) in the step's env:, no composed env
       # file. `deploy migrate` is the bare `supabase db push --yes`; it does NOT
       # regenerate types, so nothing is written back into the checkout.
@@ -197,167 +185,16 @@ jobs:
           DB_URL: ${{ secrets.DB_URL }}
         run: pnpm --filter @devdogsuga/devtools run ci deploy migrate
 
+  # The per-tier deploy recipe lives in the reusable `deploy-app.yaml`; this
+  # caller is the gating in front of it. `secrets: inherit` is load-bearing —
+  # see that file's header for why the compose step needs it.
   staging-deploy:
     needs: [staging-preflight, staging-migrate]
     if: needs.staging-preflight.outputs.paused != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment: staging
-    # Job-level, not read straight from `secrets` in a step `if:` — the
-    # `secrets` context is not available there (only `env`, `github`,
-    # `inputs`, `job`, `matrix`, `needs`, `runner`, `steps`, `strategy`,
-    # `vars` are), so this is the one place the token is lifted out of
-    # `secrets` for the gating steps below to test against `env` instead. Not
-    # a wider exposure than passing it into a step's own `env:` would be —
-    # every step in this job already inherits job-level `env`, and secrets
-    # are masked in logs regardless of which step's `env:` names them.
-    env:
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-    strategy:
-      # The three Workers are independent deploy targets. One failing is worth
-      # knowing about on its own; it is not a reason to leave the other two on
-      # the previous version.
-      fail-fast: false
-      matrix:
-        include:
-          - app: platform
-            mint: ""
-          - app: schedule-builder
-            mint: ""
-          # The sandbox proxy's credential is SIGNED at deploy time rather than
-          # stored, so it cannot arrive through the env file. `--mint` is a
-          # BARE FLAG now: it runs `devtools deploy mint-token`, a sibling of
-          # the command that calls it, and derives WHICH variable the token
-          # fills from the app's own manifest. It used to name a script to run
-          # and take the stdout of, which made a workflow edit enough to point
-          # the composer at any executable on the runner.
-          - app: sandbox
-            mint: --mint
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      # The ONLY step in this file that reads the `secrets` and `vars` contexts.
-      # After it, the checkout looks like a devops laptop and every later step
-      # is the command a person would run by hand.
-      - name: Compose .env.staging from the environment
-        env:
-          DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
-          DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        # ⚠️ run ci — this step CREATES the file `with-env` would insist on
-        # reading, so routing it through the wrapper would fail on
-        # MissingEnvFileError for its own output.
-        run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy write-env
-      - name: Build the workspace packages this app depends on
-        run: pnpm turbo run build --filter='${{ matrix.app }}^...'
-      # `next build` through OpenNext, with the env schema ENFORCED. sandbox is
-      # a plain Worker and wrangler bundles it during the deploy itself.
-      - name: Build ${{ matrix.app }}
-        if: matrix.app != 'sandbox'
-        env:
-          # SENTRY_RELEASE: read by `devtools`' `ci.ts` at deploy time (a step
-          # below), not by this build — kept here too so a build run outside
-          # that deploy step still carries it, harmlessly, since nothing in
-          # THIS step's output reads it.
-          SENTRY_RELEASE: ${{ github.sha }}
-          # NEXT_PUBLIC_SENTRY_RELEASE: inlined into the CLIENT bundle by
-          # `next build` (the `NEXT_PUBLIC_` prefix is what makes that
-          # happen) so `instrumentation-client.ts`'s browser-side
-          # `Sentry.init` tags its events with the same release the server
-          # side and the `getsentry/action-release` step below associate
-          # source maps with. Not part of `~/env`'s schema — see
-          # `apps/platform/cloudflare/worker.ts`'s `WorkerEnv` doc for why a
-          # per-deploy git SHA doesn't fit `EnvScope`.
-          NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
-        run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
-      # sandbox has no separate build step above — wrangler bundles it at
-      # deploy time (see `matrix.mint`'s neighbouring comment) — so a source
-      # map for it does not exist until something bundles it. `--dry-run`
-      # bundles without publishing or touching any Cloudflare credential, into
-      # a scratch directory the release step below reads. The REAL deploy a
-      # few steps down re-bundles from scratch; that duplication is the cost
-      # of getting a source map out of a Worker with no standalone build step,
-      # and it is cheaper than teaching the real deploy command `--no-bundle`
-      # against a dry-run's output (see the cheatsheet's plain-Worker source
-      # maps section for why that pairing is fragile).
-      - name: Bundle sandbox for source maps (dry run)
-        if: matrix.app == 'sandbox' && env.SENTRY_AUTH_TOKEN != ''
-        run: >-
-          pnpm --filter sandbox exec wrangler deploy -e $DEPLOY_ENV
-          --dry-run --outdir dist-sentry
-      # ⚠️ GATING, PER AN EXPLICIT DECISION: SENTRY_AUTH_TOKEN absent means the
-      # Sentry org is not onboarded yet, and that must be a visible skip, not
-      # a silent one — hence the warning step below rather than folding the
-      # condition into one step with no trace it ran. SENTRY_AUTH_TOKEN
-      # PRESENT and this step failing must fail the job — no
-      # `continue-on-error` — because a configured token that cannot create a
-      # release or upload source maps is a real break, not a best-effort nice-
-      # to-have.
-      - name: Sentry release skipped (SENTRY_AUTH_TOKEN not configured)
-        if: env.SENTRY_AUTH_TOKEN == ''
-        run: echo "::warning::Sentry release for ${{ matrix.app }} skipped — SENTRY_AUTH_TOKEN is not configured (org not onboarded yet)."
-      - name: Create Sentry release and upload source maps (${{ matrix.app }})
-        if: env.SENTRY_AUTH_TOKEN != ''
-        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ matrix.app }}
-        with:
-          environment: ${{ env.DEPLOY_ENV }}
-          release: ${{ github.sha }}
-          # "release" over the deprecated "version" input, and skipping commit
-          # association entirely -- these jobs check out with the default
-          # shallow depth, and this step's whole job here is the release
-          # record and its source maps, not a changelog.
-          set_commits: skip
-          sourcemaps: >-
-            ${{ matrix.app == 'sandbox' && 'apps/sandbox/dist-sentry' || format('apps/{0}/.open-next', matrix.app) }}
-      # Written to a mkdtemp 0700 directory and removed below whatever happens.
-      - name: Compose the Worker secrets file
-        id: secrets
-        # `run ci:env` — the quiet CI entry point that loads the env file — because
-        # the whole job of this step is to read the values write-env composed. Its
-        # stdout carries `::add-mask::` and nothing else; see the note above.
-        run: >-
-          pnpm --filter @devdogsuga/devtools run ci:env deploy secrets-file
-          --app ${{ matrix.app }} ${{ matrix.mint }}
-      # One step for all three Workers via devtools-ci deploy — the
-      # ${DEPLOY_SECRETS_FILE:+--secrets-file …} hook plus, for sandbox,
-      # `--var PLATFORM_REST_URL:$REST_URL`. That --var is a deploy-time value
-      # rather than a committed wrangler.jsonc entry: one committed value
-      # cannot be right for three environments, and the placeholder that
-      # shipped in all three is the measurement of how often it got edited by
-      # hand.
-      - name: Deploy ${{ matrix.app }}
-        env:
-          DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
-          # Read by `ci.ts`'s `runAppDeploy`, which forwards it to
-          # `wrangler deploy` as `--var SENTRY_RELEASE:…` for all three apps
-          # (same mechanism as `--var PLATFORM_REST_URL:…` above) — the ONLY
-          # way this reaches each Worker's runtime `env`, since none of them
-          # read it from `~/env`'s schema or a committed wrangler.jsonc var.
-          # `cloudflare/worker.ts` (platform, schedule-builder),
-          # `ScrapeWorkflow.ts`, and `apps/sandbox/src/index.ts` all pass this
-          # through to `buildSentryOptions({ release })` so captured events
-          # associate with the release this job's `action-release` step
-          # created and uploaded source maps against.
-          SENTRY_RELEASE: ${{ github.sha }}
-        run: pnpm --filter @devdogsuga/devtools run ci:env deploy ${{ matrix.app }} --tier $DEPLOY_ENV
-      # The `finally` half of the mkdtemp. A hosted runner is discarded whole,
-      # so this is for the self-hosted case and for a job that fails between
-      # composing the file and using it.
-      - name: Remove the Worker secrets file
-        if: always()
-        env:
-          DIR: ${{ steps.secrets.outputs.dir }}
-        run: if [ -n "$DIR" ]; then rm -rf "$DIR"; fi
+    uses: ./.github/workflows/deploy-app.yaml
+    with:
+      tier: staging
+    secrets: inherit
 
   # ── plan against production, on merge to main (§3.5 stage 1) ────────────────
 
@@ -379,13 +216,7 @@ jobs:
     environment: preflight
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       # ⚠️ Before the dry run, because the dry run cannot tell the difference.
       # This environment's DB_URL must be the migration_planner role — SELECT
       # on supabase_migrations.schema_migrations and nothing else — and a full
@@ -467,13 +298,7 @@ jobs:
         with:
           # Both ends of the push, so the config diff below can be taken.
           fetch-depth: 0
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       # See main-plan's note: `deploy plan` owns the summary framing and fails
       # the step on a dead connection rather than logging a clean plan.
       - name: What will these migrations do to production?
@@ -545,13 +370,7 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       - name: Apply migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
@@ -572,13 +391,7 @@ jobs:
     environment: production-apply
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       # `--source supabase` composes exactly what config.toml reads — the four
       # OAuth provider pairs, the two site URLs and their callbacks — and
       # demands every secret among them rather than only the schema-required
@@ -640,13 +453,7 @@ jobs:
     environment: production-apply
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       # AIRTABLE_APPLY_PAT is the only Airtable token this environment holds
       # that `production` does NOT — apply-tier routes here and nowhere else,
       # which is what makes the reviewer gate mean something. The command asks
@@ -668,6 +475,8 @@ jobs:
         run: >-
           pnpm --filter @devdogsuga/devtools run ci deploy airtable-apply
 
+  # Same reusable recipe as staging-deploy; the gate here is the promotion PR's
+  # reviewers plus the `production` environment. See deploy-app.yaml.
   production-deploy:
     needs:
       - production-plan
@@ -685,131 +494,10 @@ jobs:
       && needs.production-migrate.result == 'success'
       && needs.production-config.result != 'failure'
       && needs.production-airtable.result != 'failure'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment: production
-    # See the matching comment in staging-deploy: the `secrets` context is not
-    # available in a step's `if:`, so the token is lifted to job-level `env`
-    # for the gating steps below to test against instead.
-    env:
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - app: platform
-            mint: ""
-          - app: schedule-builder
-            mint: ""
-          # See the staging matrix for why --mint takes no argument.
-          - app: sandbox
-            mint: --mint
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Compose .env.production from the environment
-        env:
-          DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
-          DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        # ⚠️ run ci — this step CREATES the file `with-env` would insist on
-        # reading, so routing it through the wrapper would fail on
-        # MissingEnvFileError for its own output.
-        run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy write-env
-      - name: Build the workspace packages this app depends on
-        run: pnpm turbo run build --filter='${{ matrix.app }}^...'
-      - name: Build ${{ matrix.app }}
-        if: matrix.app != 'sandbox'
-        env:
-          # SENTRY_RELEASE: read by `devtools`' `ci.ts` at deploy time (a step
-          # below), not by this build — kept here too so a build run outside
-          # that deploy step still carries it, harmlessly, since nothing in
-          # THIS step's output reads it.
-          SENTRY_RELEASE: ${{ github.sha }}
-          # NEXT_PUBLIC_SENTRY_RELEASE: inlined into the CLIENT bundle by
-          # `next build` (the `NEXT_PUBLIC_` prefix is what makes that
-          # happen) so `instrumentation-client.ts`'s browser-side
-          # `Sentry.init` tags its events with the same release the server
-          # side and the `getsentry/action-release` step below associate
-          # source maps with. Not part of `~/env`'s schema — see
-          # `apps/platform/cloudflare/worker.ts`'s `WorkerEnv` doc for why a
-          # per-deploy git SHA doesn't fit `EnvScope`.
-          NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
-        run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
-      # sandbox has no separate build step above — wrangler bundles it at
-      # deploy time (see `matrix.mint`'s neighbouring comment) — so a source
-      # map for it does not exist until something bundles it. `--dry-run`
-      # bundles without publishing or touching any Cloudflare credential, into
-      # a scratch directory the release step below reads. The REAL deploy a
-      # few steps down re-bundles from scratch; that duplication is the cost
-      # of getting a source map out of a Worker with no standalone build step,
-      # and it is cheaper than teaching the real deploy command `--no-bundle`
-      # against a dry-run's output (see the cheatsheet's plain-Worker source
-      # maps section for why that pairing is fragile).
-      - name: Bundle sandbox for source maps (dry run)
-        if: matrix.app == 'sandbox' && env.SENTRY_AUTH_TOKEN != ''
-        run: >-
-          pnpm --filter sandbox exec wrangler deploy -e $DEPLOY_ENV
-          --dry-run --outdir dist-sentry
-      # ⚠️ GATING, PER AN EXPLICIT DECISION — see the matching comment in the
-      # staging matrix: absent token skips visibly, present-and-failing fails
-      # the job (no `continue-on-error`).
-      - name: Sentry release skipped (SENTRY_AUTH_TOKEN not configured)
-        if: env.SENTRY_AUTH_TOKEN == ''
-        run: echo "::warning::Sentry release for ${{ matrix.app }} skipped — SENTRY_AUTH_TOKEN is not configured (org not onboarded yet)."
-      - name: Create Sentry release and upload source maps (${{ matrix.app }})
-        if: env.SENTRY_AUTH_TOKEN != ''
-        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ matrix.app }}
-        with:
-          environment: ${{ env.DEPLOY_ENV }}
-          release: ${{ github.sha }}
-          # "release" over the deprecated "version" input, and skipping commit
-          # association entirely -- these jobs check out with the default
-          # shallow depth, and this step's whole job here is the release
-          # record and its source maps, not a changelog.
-          set_commits: skip
-          sourcemaps: >-
-            ${{ matrix.app == 'sandbox' && 'apps/sandbox/dist-sentry' || format('apps/{0}/.open-next', matrix.app) }}
-      - name: Compose the Worker secrets file
-        id: secrets
-        # `run ci:env` — the quiet CI entry point that loads the env file — because
-        # the whole job of this step is to read the values write-env composed. Its
-        # stdout carries `::add-mask::` and nothing else; see the note above.
-        run: >-
-          pnpm --filter @devdogsuga/devtools run ci:env deploy secrets-file
-          --app ${{ matrix.app }} ${{ matrix.mint }}
-      # One step for all three Workers; see the staging job for the
-      # PLATFORM_REST_URL note.
-      - name: Deploy ${{ matrix.app }}
-        env:
-          DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
-          # Read by `ci.ts`'s `runAppDeploy`, which forwards it to
-          # `wrangler deploy` as `--var SENTRY_RELEASE:…` for all three apps
-          # (same mechanism as `--var PLATFORM_REST_URL:…` above) — the ONLY
-          # way this reaches each Worker's runtime `env`, since none of them
-          # read it from `~/env`'s schema or a committed wrangler.jsonc var.
-          # `cloudflare/worker.ts` (platform, schedule-builder),
-          # `ScrapeWorkflow.ts`, and `apps/sandbox/src/index.ts` all pass this
-          # through to `buildSentryOptions({ release })` so captured events
-          # associate with the release this job's `action-release` step
-          # created and uploaded source maps against.
-          SENTRY_RELEASE: ${{ github.sha }}
-        run: pnpm --filter @devdogsuga/devtools run ci:env deploy ${{ matrix.app }} --tier $DEPLOY_ENV
-      - name: Remove the Worker secrets file
-        if: always()
-        env:
-          DIR: ${{ steps.secrets.outputs.dir }}
-        run: if [ -n "$DIR" ]; then rm -rf "$DIR"; fi
+    uses: ./.github/workflows/deploy-app.yaml
+    with:
+      tier: production
+    secrets: inherit
 
   # ── orphaned Worker secrets (§3.6) ──────────────────────────────────────────
 
@@ -824,13 +512,7 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       # No env file; run ci on both lines: this reads secret NAMES
       # from Cloudflare and needs exactly one credential to do it. The existing
       # guard is invoked rather than reimplemented, so a missing token says who
@@ -867,13 +549,7 @@ jobs:
     environment: production-apply
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Enable corepack (pnpm)
-        run: corepack enable
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-workspace
       - name: Prune orphaned Worker secrets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
