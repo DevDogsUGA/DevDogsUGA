@@ -38,8 +38,18 @@ import type { env as platformEnv } from "~/env";
  * variable can't drift between what this file expects and what the schema
  * declares). `SENTRY_DSN` is a Worker secret; `DEPLOY_ENV` is set by
  * wrangler.jsonc's per-env `vars` block and the cf:build:* scripts.
+ *
+ * `SENTRY_RELEASE` is NOT part of `~/env`'s schema -- it is the deploy's git
+ * SHA, minted fresh by CI every run rather than a value Bitwarden holds, so
+ * it does not fit `EnvScope`'s "environment"/"default"/"developer" options.
+ * `deploy.yaml`'s `Deploy` step passes it to `wrangler deploy` as a `--var`
+ * (see `devtools`' `ci.ts`), the same mechanism the sandbox app uses for
+ * `PLATFORM_REST_URL`, so it lands here as an ordinary (optional -- absent
+ * outside CI) binding rather than a secret.
  */
-type WorkerEnv = Pick<typeof platformEnv, "SENTRY_DSN" | "DEPLOY_ENV">;
+type WorkerEnv = Pick<typeof platformEnv, "SENTRY_DSN" | "DEPLOY_ENV"> & {
+  readonly SENTRY_RELEASE?: string;
+};
 
 export * from "../.open-next/worker.js";
 
@@ -49,6 +59,7 @@ export default Sentry.withSentry(
       service: "platform",
       environment: env.DEPLOY_ENV,
       dsn: env.SENTRY_DSN,
+      release: env.SENTRY_RELEASE,
     }),
   {
     ...openNextHandler,

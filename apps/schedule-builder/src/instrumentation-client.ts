@@ -28,6 +28,9 @@ const options = buildSentryOptions({
   service: "schedule-builder",
   environment: env.NEXT_PUBLIC_DEPLOY_ENV,
   dsn: env.NEXT_PUBLIC_SENTRY_DSN,
+  // See `apps/platform/src/instrumentation-client.ts` for why this reads
+  // `process.env` directly rather than `env.*` from `~/env`.
+  release: process.env.NEXT_PUBLIC_SENTRY_RELEASE,
   extraBeforeSend: [browserNoiseFilter],
 });
 

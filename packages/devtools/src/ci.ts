@@ -161,6 +161,15 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
       tier,
     ];
     if (secretsFile) deployArgs.push("--secrets-file", secretsFile);
+    // See apps/platform/cloudflare/worker.ts's `WorkerEnv` doc: `SENTRY_RELEASE`
+    // is the deploy's git SHA, minted fresh by CI every run rather than a
+    // value Bitwarden holds, so it reaches the Worker as a `--var` here
+    // (opennextjs-cloudflare's `deploy [args..]` forwards unrecognised flags
+    // straight to `wrangler deploy`) rather than through `~/env`'s schema or
+    // the secrets file above. Absent outside a CI-driven deploy.
+    if (process.env.SENTRY_RELEASE) {
+      deployArgs.push("--var", `SENTRY_RELEASE:${process.env.SENTRY_RELEASE}`);
+    }
 
     steps.push({
       label: `Deploy platform (${tier})`,
@@ -177,6 +186,9 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
       tier,
     ];
     if (secretsFile) deployArgs.push("--secrets-file", secretsFile);
+    if (process.env.SENTRY_RELEASE) {
+      deployArgs.push("--var", `SENTRY_RELEASE:${process.env.SENTRY_RELEASE}`);
+    }
     steps.push({
       label: `Deploy schedule-builder (${tier})`,
       fn: () => pnpm(deployArgs, hyperdriveLocalAliasEnv()),
@@ -194,6 +206,9 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
     if (secretsFile) deployArgs.push("--secrets-file", secretsFile);
     if (process.env.REST_URL) {
       deployArgs.push("--var", `PLATFORM_REST_URL:${process.env.REST_URL}`);
+    }
+    if (process.env.SENTRY_RELEASE) {
+      deployArgs.push("--var", `SENTRY_RELEASE:${process.env.SENTRY_RELEASE}`);
     }
     steps.push({
       label: `Deploy sandbox (${tier})`,

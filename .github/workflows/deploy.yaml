@@ -260,11 +260,20 @@ jobs:
       - name: Build ${{ matrix.app }}
         if: matrix.app != 'sandbox'
         env:
-          # Baked into the build so Sentry events from this deploy carry the
-          # git SHA as their release — see `packages/telemetry`'s
-          # `buildSentryOptions({ release })`. Harmless where nothing reads it
-          # yet: an unconsumed env var, not a schema addition.
+          # SENTRY_RELEASE: read by `devtools`' `ci.ts` at deploy time (a step
+          # below), not by this build — kept here too so a build run outside
+          # that deploy step still carries it, harmlessly, since nothing in
+          # THIS step's output reads it.
           SENTRY_RELEASE: ${{ github.sha }}
+          # NEXT_PUBLIC_SENTRY_RELEASE: inlined into the CLIENT bundle by
+          # `next build` (the `NEXT_PUBLIC_` prefix is what makes that
+          # happen) so `instrumentation-client.ts`'s browser-side
+          # `Sentry.init` tags its events with the same release the server
+          # side and the `getsentry/action-release` step below associate
+          # source maps with. Not part of `~/env`'s schema — see
+          # `apps/platform/cloudflare/worker.ts`'s `WorkerEnv` doc for why a
+          # per-deploy git SHA doesn't fit `EnvScope`.
+          NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
         run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
       # sandbox has no separate build step above — wrangler bundles it at
       # deploy time (see `matrix.mint`'s neighbouring comment) — so a source
@@ -328,9 +337,16 @@ jobs:
       - name: Deploy ${{ matrix.app }}
         env:
           DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
-          # sandbox has no build step of its own to bake this into (see the
-          # Sentry release step above) — passing it here at least reaches the
-          # Worker as an ordinary env var for whenever something reads it.
+          # Read by `ci.ts`'s `runAppDeploy`, which forwards it to
+          # `wrangler deploy` as `--var SENTRY_RELEASE:…` for all three apps
+          # (same mechanism as `--var PLATFORM_REST_URL:…` above) — the ONLY
+          # way this reaches each Worker's runtime `env`, since none of them
+          # read it from `~/env`'s schema or a committed wrangler.jsonc var.
+          # `cloudflare/worker.ts` (platform, schedule-builder),
+          # `ScrapeWorkflow.ts`, and `apps/sandbox/src/index.ts` all pass this
+          # through to `buildSentryOptions({ release })` so captured events
+          # associate with the release this job's `action-release` step
+          # created and uploaded source maps against.
           SENTRY_RELEASE: ${{ github.sha }}
         run: pnpm --filter @devdogsuga/devtools run ci:env deploy ${{ matrix.app }} --tier $DEPLOY_ENV
       # The `finally` half of the mkdtemp. A hosted runner is discarded whole,
@@ -708,11 +724,20 @@ jobs:
       - name: Build ${{ matrix.app }}
         if: matrix.app != 'sandbox'
         env:
-          # Baked into the build so Sentry events from this deploy carry the
-          # git SHA as their release — see `packages/telemetry`'s
-          # `buildSentryOptions({ release })`. Harmless where nothing reads it
-          # yet: an unconsumed env var, not a schema addition.
+          # SENTRY_RELEASE: read by `devtools`' `ci.ts` at deploy time (a step
+          # below), not by this build — kept here too so a build run outside
+          # that deploy step still carries it, harmlessly, since nothing in
+          # THIS step's output reads it.
           SENTRY_RELEASE: ${{ github.sha }}
+          # NEXT_PUBLIC_SENTRY_RELEASE: inlined into the CLIENT bundle by
+          # `next build` (the `NEXT_PUBLIC_` prefix is what makes that
+          # happen) so `instrumentation-client.ts`'s browser-side
+          # `Sentry.init` tags its events with the same release the server
+          # side and the `getsentry/action-release` step below associate
+          # source maps with. Not part of `~/env`'s schema — see
+          # `apps/platform/cloudflare/worker.ts`'s `WorkerEnv` doc for why a
+          # per-deploy git SHA doesn't fit `EnvScope`.
+          NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
         run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
       # sandbox has no separate build step above — wrangler bundles it at
       # deploy time (see `matrix.mint`'s neighbouring comment) — so a source
@@ -765,9 +790,16 @@ jobs:
       - name: Deploy ${{ matrix.app }}
         env:
           DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
-          # sandbox has no build step of its own to bake this into (see the
-          # Sentry release step above) — passing it here at least reaches the
-          # Worker as an ordinary env var for whenever something reads it.
+          # Read by `ci.ts`'s `runAppDeploy`, which forwards it to
+          # `wrangler deploy` as `--var SENTRY_RELEASE:…` for all three apps
+          # (same mechanism as `--var PLATFORM_REST_URL:…` above) — the ONLY
+          # way this reaches each Worker's runtime `env`, since none of them
+          # read it from `~/env`'s schema or a committed wrangler.jsonc var.
+          # `cloudflare/worker.ts` (platform, schedule-builder),
+          # `ScrapeWorkflow.ts`, and `apps/sandbox/src/index.ts` all pass this
+          # through to `buildSentryOptions({ release })` so captured events
+          # associate with the release this job's `action-release` step
+          # created and uploaded source maps against.
           SENTRY_RELEASE: ${{ github.sha }}
         run: pnpm --filter @devdogsuga/devtools run ci:env deploy ${{ matrix.app }} --tier $DEPLOY_ENV
       - name: Remove the Worker secrets file

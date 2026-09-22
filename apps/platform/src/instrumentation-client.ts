@@ -27,6 +27,15 @@ const options = buildSentryOptions({
   service: "platform",
   environment: env.NEXT_PUBLIC_DEPLOY_ENV,
   dsn: env.NEXT_PUBLIC_SENTRY_DSN,
+  // `process.env.NEXT_PUBLIC_SENTRY_RELEASE` directly, not `env.*` from
+  // `~/env` -- it is the deploy's git SHA, set only by `deploy.yaml`'s
+  // `Build` step, not a value that fits `@devdogsuga/env`'s `EnvScope`
+  // (see `apps/platform/cloudflare/worker.ts`'s `WorkerEnv` doc). The
+  // `NEXT_PUBLIC_` prefix is what makes Next.js inline it into this client
+  // bundle; undefined in every environment that doesn't set it (local dev,
+  // any build outside CI), which `buildSentryOptions` treats the same as
+  // "no release" already does for `undefined`.
+  release: process.env.NEXT_PUBLIC_SENTRY_RELEASE,
   extraBeforeSend: [browserNoiseFilter],
 });
 

@@ -35,8 +35,17 @@ import type { env as scheduleBuilderEnv } from "~/env";
  * pattern as the platform app's `WorkerEnv`. `SENTRY_DSN` is a Worker secret;
  * `DEPLOY_ENV` is set by wrangler.jsonc's per-env `vars` block and the
  * cf:build:* scripts.
+ *
+ * `SENTRY_RELEASE` is NOT part of `~/env`'s schema -- see `apps/platform/
+ * cloudflare/worker.ts`'s `WorkerEnv` for why. It reaches this Worker as a
+ * `--var` on `wrangler deploy` (see `devtools`' `ci.ts`), same as platform.
  */
-type WorkerEnv = Pick<typeof scheduleBuilderEnv, "SENTRY_DSN" | "DEPLOY_ENV">;
+type WorkerEnv = Pick<
+  typeof scheduleBuilderEnv,
+  "SENTRY_DSN" | "DEPLOY_ENV"
+> & {
+  readonly SENTRY_RELEASE?: string;
+};
 
 export * from "../.open-next/worker.js";
 // The Workflow class must be reachable from `main` (this file) for
@@ -53,6 +62,7 @@ export default Sentry.withSentry(
       service: "schedule-builder",
       environment: env.DEPLOY_ENV,
       dsn: env.SENTRY_DSN,
+      release: env.SENTRY_RELEASE,
     }),
   {
     ...openNextHandler,
