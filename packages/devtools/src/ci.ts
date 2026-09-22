@@ -42,6 +42,7 @@ import { runMintToken } from "./deploy/mint-token.js";
 import { runDeployAirtablePlan } from "./deploy/airtable-plan.js";
 import { runDeployAirtableApply } from "./deploy/airtable-apply.js";
 import { runPreflight } from "./deploy/preflight.js";
+import { runDeployMigrate, runDeployPlan } from "./deploy/migrations.js";
 import { runRequirePlanner } from "./deploy/require-planner.js";
 import { runRequireToken } from "./deploy/require-token.js";
 import { runDocsIndex } from "./docs/index-pages.js";
@@ -270,6 +271,16 @@ async function runDeployCommand(rest: string[]): Promise<void> {
 
     if (sub === "require-planner") {
       await runRequirePlanner();
+      return;
+    }
+
+    if (sub === "plan") {
+      await runDeployPlan(flagValue(rest, "--label"));
+      return;
+    }
+
+    if (sub === "migrate") {
+      await runDeployMigrate();
       return;
     }
 

@@ -1361,6 +1361,21 @@ export const CI_GROUPS: readonly CommandGroup[] = [
             summary: "Refuse to plan unless DB_URL is the planner role.",
           },
           {
+            name: "plan",
+            summary: "Dry-run the migrations into the job summary.",
+            options: [
+              {
+                flag: "--label",
+                value: "<title>",
+                summary: "Heading for the summary section.",
+              },
+            ],
+          },
+          {
+            name: "migrate",
+            summary: "Apply the migrations to DB_URL.",
+          },
+          {
             name: "airtable-plan",
             summary: "What a scaffold would create. Reads only.",
           },

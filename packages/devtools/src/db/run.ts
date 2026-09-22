@@ -118,6 +118,56 @@ export async function generateTypes(dbUrl: string): Promise<number> {
 }
 
 /**
+ * `supabase db push` over `dbUrl`, inherited stdio, resolving to the exit code.
+ *
+ * The one spelling of the migration push, shared by the contributor `db
+ * migrate` path (`stack.ts`'s `pushMigrations`) and CI's `deploy migrate`.
+ * `--yes` is the unattended apply CI wants; the contributor path omits it so a
+ * human still confirms. Neither variant regenerates types — that is
+ * `pushMigrations`' own second step, layered on top only where a checkout is
+ * meant to be rewritten. A CI apply must NOT write back into the repo, which is
+ * exactly why the bare push is factored out here rather than reused whole.
+ */
+export function dbPush(
+  dbUrl: string,
+  opts: { yes?: boolean } = {},
+): Promise<number> {
+  const args = ["db", "push", "--db-url", dbUrl];
+  if (opts.yes) args.push("--yes");
+  return supabase(...args);
+}
+
+/**
+ * `supabase db push --dry-run` over `dbUrl`, returning the plan text (stdout
+ * and stderr combined, as the workflow's old `2>&1` did).
+ *
+ * Throws on a non-zero exit — which for a dry run means the CONNECTION failed,
+ * not that the plan came back empty. That throw is the invariant `deploy plan`
+ * leans on, and the thing the old shell needed `set -o pipefail` to preserve: a
+ * dead connection must fail the step rather than read as "no migrations to
+ * apply". The child's own output is surfaced in the thrown message, because for
+ * a dry run that output is precisely the reason the operator needs.
+ */
+export async function dbPushDryRun(dbUrl: string): Promise<string> {
+  try {
+    const { stdout, stderr } = await runFile(
+      "pnpm",
+      ["exec", "supabase", "db", "push", "--db-url", dbUrl, "--dry-run"],
+      { cwd: PROJECT_ROOT, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 },
+    );
+    return `${stdout}${stderr}`;
+  } catch (err) {
+    const e = err as { stdout?: string; stderr?: string; message?: string };
+    const detail = `${e.stdout ?? ""}${e.stderr ?? ""}`.trim();
+    throw new Error(
+      detail
+        ? `supabase db push --dry-run failed:\n${detail}`
+        : (e.message ?? "supabase db push --dry-run failed"),
+    );
+  }
+}
+
+/**
  * `seed buckets` takes no `--db-url` (verified against the supabase 2.115.0
  * CLI) — it drives the Storage API, not Postgres — so it is the one data
  * command still keyed on local-vs-hosted rather than on the session's URL.

@@ -25,6 +25,7 @@ import {
   PROJECT_ROOT,
 } from "./environment.js";
 import {
+  dbPush,
   generateTypes,
   seedBuckets,
   supabase,
@@ -104,7 +105,10 @@ function bucketsShape(
 }
 
 async function pushMigrations(connection: DbConnection): Promise<number> {
-  const code = await supabase("db", "push", "--db-url", connection.dbUrl);
+  // The bare push (shared with CI's `deploy migrate`) then the type
+  // regeneration the contributor path layers on top — see `dbPush`'s header
+  // for why the two are split.
+  const code = await dbPush(connection.dbUrl);
   if (code !== 0) return code;
   return generateTypes(connection.dbUrl);
 }

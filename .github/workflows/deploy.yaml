@@ -189,12 +189,13 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # run ci — one credential (DB_URL) in the step's env:, no composed env
+      # file. `deploy migrate` is the bare `supabase db push --yes`; it does NOT
+      # regenerate types, so nothing is written back into the checkout.
       - name: Apply migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: |
-          set -euo pipefail
-          pnpm exec supabase db push --db-url "$DB_URL" --yes
+        run: pnpm --filter @devdogsuga/devtools run ci deploy migrate
 
   staging-deploy:
     needs: [staging-preflight, staging-migrate]
@@ -403,14 +404,18 @@ jobs:
       # push` exits 1 on a connection failure, and a pipeline without it reports
       # the exit code of `tee` — so a dry run that never connected reads as a
       # clean plan.
+      # run ci — one credential (the planner-role DB_URL) in the step's env:,
+      # no composed env file. `deploy plan` captures `supabase db push
+      # --dry-run` and writes the labelled, fenced plan to the job summary
+      # itself; its throw on a failed connection is what the old `set -o
+      # pipefail` protected — a dead connection fails the step rather than
+      # reading as a clean plan.
       - name: What would these migrations do to production?
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: |
-          set -euo pipefail
-          { echo '### Migration plan — production (from `main`)'; echo; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          pnpm exec supabase db push --dry-run --db-url "$DB_URL" 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+        run: >-
+          pnpm --filter @devdogsuga/devtools run ci deploy plan
+          --label 'Migration plan — production (from `main`)'
       # The other half of §3.5 stage 1. It used to be a comment here saying it
       # could not be done: the Airtable commands read AIRTABLE_PAT, which is
       # declared `secrecy: "never-store"`, so no CI job could legitimately hold
@@ -469,14 +474,14 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # See main-plan's note: `deploy plan` owns the summary framing and fails
+      # the step on a dead connection rather than logging a clean plan.
       - name: What will these migrations do to production?
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: |
-          set -euo pipefail
-          { echo '### Migration plan — production'; echo; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          pnpm exec supabase db push --dry-run --db-url "$DB_URL" 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+        run: >-
+          pnpm --filter @devdogsuga/devtools run ci deploy plan
+          --label 'Migration plan — production'
       # `supabase config` has exactly one subcommand — `push`. No pull, no diff,
       # no --dry-run. So config.toml is the highest blast radius (site_url and
       # every OAuth provider) with the least visibility, and its COMMITTED DIFF
@@ -550,9 +555,7 @@ jobs:
       - name: Apply migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: |
-          set -euo pipefail
-          pnpm exec supabase db push --db-url "$DB_URL" --yes
+        run: pnpm --filter @devdogsuga/devtools run ci deploy migrate
 
   # The one mutation with no dry run gets its own approval step, which is what
   # `production-apply` is: the same Bitwarden project as `production`, split
