@@ -45,15 +45,22 @@ export-only. See [Attendance](/docs/platform/guides/meetings-and-teams/attendanc
 
 Only officers have Airtable access, so the base is the officer console for anything it can hold — an admin screen not built is a screen not maintained. The line is not "officer-only work", it is **what Airtable can key a row to**.
 
-| Task                                            | Where                                                                                                         |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Create or edit a meeting or a workshop          | A pull request against `@devdogsuga/club-config`                                                              |
-| Create a competition draft, kick it off         | GitHub (the Competitions Project) — see [Competitions](/docs/platform/guides/meetings-and-teams/competitions) |
-| Record dues                                     | Airtable                                                                                                      |
-| Give a team a named award, including the winner | Platform — `awardTeam`                                                                                        |
-| Run a pass now                                  | Either — `requestAirtableSync`, or the base's button                                                          |
+| Task                                       | Where                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Create or edit a meeting or a workshop     | A pull request against `@devdogsuga/club-config`                                                              |
+| Create a competition draft, kick it off    | GitHub (the Competitions Project) — see [Competitions](/docs/platform/guides/meetings-and-teams/competitions) |
+| Record dues                                | Airtable                                                                                                      |
+| Merge a competition's winning pull request | GitHub — the merge itself is the record; nothing on the platform to run                                       |
+| Run a pass now                             | Either — `requestAirtableSync`, or the base's button                                                          |
 
-`awardTeam` needs a competition and a team identity, neither of which is in this base at all any more: a competition is a GitHub issue mirror and a team is a git branch mirror (see [Teams](/docs/platform/guides/meetings-and-teams/teams)). It is a server action gated on the same permission as roster edits, except the sync trigger, which has its own. Scoring is off-platform, so there is no tally to write the `winner` award: an officer records it through `awardTeam`, the same action that gives any other named award.
+There is no platform action for naming a winner any more. `awardTeam`, an
+officer-run server action that inserted a `teamAwards` row with
+`category = 'winner'`, was deleted by the platform redesign's
+competitions-lifecycle step: merging the winning pull request is already the
+fact GitHub records, and `platform.competitionEntries."mergedAt"` already
+mirrors it, so a second, hand-authored record of the same outcome was one
+more place for the truth to live — and could disagree with it. See
+[Competitions](/docs/platform/guides/meetings-and-teams/competitions).
 
 </details>
 

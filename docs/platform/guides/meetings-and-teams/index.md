@@ -42,7 +42,7 @@ The code is `apps/platform/src/server/` under `teams/`, `github/`, `airtable/`, 
 - [Config-as-code](/docs/platform/guides/meetings-and-teams/club-config) — where meetings and workshops come from now.
 - [Airtable sync](/docs/platform/guides/meetings-and-teams/airtable-sync) — where members still come from.
 
-Scoring is off-platform (officer scores and live voting, run outside the site). The only per-competition state the platform persists is who won — a `teamAwards` row with `category = 'winner'`, written by an officer through `awardTeam` — and the results page collapses to entrants plus that winner, if one has been recorded.
+Scoring is off-platform (officer scores and live voting, run outside the site). The only per-competition state the platform persists is who won, and it is not a separate record at all — `platform.competitionEntries."mergedAt"` IS the answer, set the moment an officer merges the winning pull request — and the results page collapses to entrants plus that winner, if one has merged.
 
 ## Why it's like this
 

@@ -29,13 +29,12 @@ entry pull request, and `memberStars` groups by (member, competition) so a
 team that reopens an entry after the first PR closed still earns its members
 exactly one star, not two.
 
-> [!NOTE]
-> `competitionEntries` is populated by a `pull_request` webhook handler that
-> is not wired up yet — the platform redesign's competitions step landed the
-> table, the RLS, and the `memberStars` view read against it, but nothing
-> writes to it until a later step recognizes an entry PR and a merged winner.
-> Until then the table (and every competition star) is honestly empty rather
-> than a second stub layer papering over it.
+`competitionEntries` is kept current by `server/github/prEvent.ts`'s
+`pull_request` webhook handling (opened, edited, reopened, closed) and the
+nightly `/cron/github-reconcile` backstop (`reconcileEntries`). Winning is
+`competitionEntries."mergedAt" is not null` — merging the winning pull
+request IS recording the winner, there is no separate officer step — see
+[Competitions](/docs/platform/guides/meetings-and-teams/competitions).
 
 ## Streaks
 

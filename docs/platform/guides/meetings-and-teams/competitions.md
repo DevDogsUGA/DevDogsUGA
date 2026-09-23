@@ -9,8 +9,9 @@ order: 3
 A competition is no longer a schedule item this platform owns — it is a
 **mirror of a GitHub issue**, source-of-truth on GitHub the same way a team
 is a mirror of a GitHub branch. Read this before changing
-`server/github/competitions.ts` or `server/github/competitionEvents.ts`; for
-the exported functions, see the generated
+`server/github/competitions.ts`, `server/github/competitionEvents.ts`,
+`server/github/pullRequest.ts` or `server/github/prEvent.ts`; for the
+exported functions, see the generated
 [`server/github`](/docs/platform/reference/server/github) reference.
 
 ## How an officer runs one
@@ -25,17 +26,19 @@ the exported functions, see the generated
    moments, over a `projects_v2_item` webhook — a nightly reconcile is the
    backstop if a delivery is ever missed.
 3. **Teams enter** by opening a pull request from their `team/<slug>` branch
-   into `main` that links the competition's issue (`Closes #123` or GitHub's
-   own "Development" issue-linking UI). Nothing here is enforced by the
-   platform; every rule about what makes a valid entry lives in the repo's
-   own PR conventions.
+   into `main` that links the competition's issue (`Closes #123`,
+   `owner/repo#123`, or a full issue URL — GitHub's own "Development"
+   issue-linking UI writes one of these into the PR body). The platform
+   recognizes the entry within moments, over a `pull_request` webhook — see
+   [Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards)
+   for `platform.competitionEntries`, the mirror this writes.
 4. **Score off-platform** — a live demo night, officer scores, member voting,
    whatever the club runs that week. The platform holds no rubric, no ballot,
    no tally.
-5. **Merge the winning pull request.** The merge itself is not read as a
-   signal yet — recording who won is a manual step, `awardTeam`, an officer's
-   own record of the outcome (unchanged from before this step; see
-   [Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards)).
+5. **Merge the winning pull request.** The merge itself IS the signal: there
+   is no separate step to record a winner. `competitionEntries."mergedAt"`,
+   set from the same `pull_request` webhook, is the only "who won" this
+   platform keeps.
 6. **Close the issue.** Closing is what the mirror reads as "this competition
    is over" — `competitions."closedAt"`, set by the `issues` webhook the
    moment GitHub reports the close, or by the nightly reconcile.
@@ -83,24 +86,25 @@ simply stops being asked to refresh that row. A draft deleted or archived
 before conversion never had a row to begin with, so there is nothing to
 remove either way.
 
-## The two triggers
+## The three triggers
 
 `projects_v2_item` webhooks (`converted` = kickoff, `edited` = a field or the
 item's content changed) and `issues` webhooks (`closed`, `reopened`, `edited`,
-for an issue this table already mirrors) are the live half, wired from
-`/github/webhook` after the signature is verified — see
-`server/github/competitionEvents.ts`. The nightly `/cron/github-reconcile`
-pass is the backstop: it pages through the whole Project and re-applies every
-converted item it finds, the same "GitHub webhooks in near-real-time, a
-nightly pass for what neither reached" shape
+for an issue this table already mirrors) keep `platform.competitions`
+current, wired from `/github/webhook` after the signature is verified — see
+`server/github/competitionEvents.ts`. `pull_request` webhooks (`opened`,
+`edited`, `reopened`, `closed`) keep `platform.competitionEntries` current
+the same way — see `server/github/prEvent.ts` and
+[Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards)
+for what that table is and who reads it.
+
+The nightly `/cron/github-reconcile` pass is the backstop for all three: it
+pages through the whole Project and re-applies every converted item it
+finds, and re-derives every entry from the repo's own pull request list
+(`reconcileEntries`). The same "GitHub webhooks in near-real-time, a nightly
+pass for what neither reached" shape
 [Teams](/docs/platform/guides/meetings-and-teams/teams) uses for the branch
 mirror.
-
-`pull_request` is not handled yet. Recognizing an entry (a team-branch PR
-linking the issue) and recording a winner off the merged one are a later
-step — see [Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards)
-for `platform.competitionEntries`, whose shape already exists, and what
-reads it once it is populated.
 
 ## Followups still open
 
@@ -111,6 +115,7 @@ Two things only Sloan can do:
 --jq .id`), and set `GH_COMPETITIONS_PROJECT_ID`. Unset, ingestion is a
   logged no-op — the platform boots without a Project configured, the same
   contract the Airtable integration used to have.
-- **Enable the `projects_v2_item` and `issues` webhooks**, and grant the
-  GitHub App org-level Projects **read** permission — without it, GraphQL
-  reads against the Project fail even with the node id configured correctly.
+- **Enable the `projects_v2_item`, `issues` and `pull_request` webhooks**,
+  and grant the GitHub App org-level Projects **read** permission — without
+  it, GraphQL reads against the Project fail even with the node id
+  configured correctly.

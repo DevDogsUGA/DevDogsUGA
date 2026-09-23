@@ -40,19 +40,17 @@ Commit the migration, the regenerated types, and the relations change together. 
 <details>
 <summary>What does a table with its policies look like in one migration?</summary>
 
-Everything the table needs, in the file that creates it. Abridged from `20260803000004_platform_team_awards.sql`:
+Everything the table needs, in the file that creates it. Abridged from `20260829050100_16_platform_team_awards.sql`:
 
 ```sql
-alter table "platform"."teamAwards" enable row level security;
+alter table "platform"."competitionEntries" enable row level security;
 
--- At most one winner per competition. Partial, because every other
--- category may repeat.
-create unique index "teamAwards_one_winner_per_competition"
-  on "platform"."teamAwards" ("competitionId") where "category" = 'winner';
+create index "competitionEntries_competitionId_idx"
+  on "platform"."competitionEntries" ("competitionId");
 
-create policy "public_select" on "platform"."teamAwards"
+create policy "public_select" on "platform"."competitionEntries"
   as permissive for select to anon, authenticated using (true);
-create policy "no_client_insert" on "platform"."teamAwards"
+create policy "no_client_insert" on "platform"."competitionEntries"
   as restrictive for insert to anon, authenticated with check (false);
 ```
 
