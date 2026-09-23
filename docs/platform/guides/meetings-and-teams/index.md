@@ -27,16 +27,18 @@ Meeting 1 (Sep 3)        Meeting 2 (Sep 10)       Meeting 3 (Sep 17)
 | `meetings`     | when and where the club gathered, and who showed up             |
 | `workshops`    | the teaching slot for one project recommendation at one meeting |
 | `competitions` | the week of async work a workshop opened, and who won it        |
-| `teams`        | who built it, and what they entered                             |
+| `teams`        | a persistent project team -- see below                          |
 
 There is no `projects` table any more — a workshop's project is free text on the row (`workshops."project"`, e.g. "DogDays", nullable), not a foreign key. See [Config-as-code](/docs/platform/guides/meetings-and-teams/club-config) for why.
 
-Attendance attaches to the meeting with the workshop as a dimension, never to the competition — there is nothing to attend in a week of async work. Teams hang off the competition, so a team belongs to exactly one week.
+Attendance attaches to the meeting with the workshop as a dimension, never to the competition — there is nothing to attend in a week of async work.
+
+**Teams do not hang off a competition any more.** The platform redesign's teams-core step made a team a persistent, competition-independent git branch (`team/<slug>` off `main`); it can enter any number of competitions over its life, not exactly one week. See [Teams](/docs/platform/guides/meetings-and-teams/teams) for the current model.
 
 Three constraints carry most of the meaning:
 
 - **`competitions."workshopId"` is unique.** A workshop opens at most one competition, and the pair is a foreign key rather than an inference from two rows sharing a meeting.
-- **`competitions."judgingStartsAt"` is an authored datetime**, and it is the authority: the roster lock, the star freeze and the competition-closed check all read it. `judgingMeetingId` is a label column beside it, nullable and not written by the sync.
+- **`competitions."judgingStartsAt"` is an authored datetime**, display-only for now: it no longer drives a roster lock or a star freeze -- see [Teams](/docs/platform/guides/meetings-and-teams/teams) for why. `judgingMeetingId` is a label column beside it, nullable and not written by the sync.
 - **`workshops` carries `unique (id, "meetingId")`** solely so attendance can declare a composite foreign key and have the database reject a row naming a workshop from another meeting.
 
 ## Where it lives
@@ -47,7 +49,7 @@ The code is `apps/platform/src/server/` under `teams/`, `airtable/`, `config/` a
 
 ## Read next
 
-- [Teams](/docs/platform/guides/meetings-and-teams/teams) — forming one, joining one, the cap, the lead, and re-forming next week.
+- [Teams](/docs/platform/guides/meetings-and-teams/teams) — forming one, joining one, the two caps, the lead, and disbanding.
 - [Attendance](/docs/platform/guides/meetings-and-teams/attendance) — the ledger and check-in.
 - [Stars & awards](/docs/platform/guides/meetings-and-teams/stars-and-awards) — what participation adds up to.
 - [Config-as-code](/docs/platform/guides/meetings-and-teams/club-config) — where meetings and workshops come from now.
@@ -75,14 +77,13 @@ The general shape of the error: **a table that mixes things you attend with thin
 
 Presentations are their own occasion. They happen at a meeting, but they are not the meeting, and the two start at different moments whenever anything else is on the agenda first.
 
-- **Two competitions judged at one meeting can be judged at different times** — study group finder at 18:00, scheduler at 18:40. Deriving from the meeting would give both the same instant and lock both rosters at once.
+- **Two competitions judged at one meeting can be judged at different times** — study group finder at 18:00, scheduler at 18:40. Deriving from the meeting would give both the same instant, which is wrong even for display.
 - **Judging need not be at a workshop meeting at all.** A dedicated presentations night is a `meetings` row with no workshops and a competition pointing at it.
-- **The lock predicate reads one row** rather than joining `teams → competitions → meetings`. `isLocked` is evaluated on every join attempt and every team page render.
 
-> [!WARNING]
-> The freeze query does **not** use that predicate. `freezeParticipation` spells its filter out in SQL — `submissionState = 'open'` and `judgingStartsAt <= now()` — and so ignores the predicate's third term, `lockedManuallyAt`. A manually locked roster is still frozen by the pass. `lockState.ts` exports `lockedSql()` and `teamLockFilter()` for exactly this case and **nothing calls either of them**, so the two spellings can drift without anything failing.
+A null `judgingStartsAt` means "not scheduled yet", and everything downstream treats it as _not yet_ rather than _never_.
 
-A null `judgingStartsAt` means "not scheduled yet", and everything downstream treats it as _not yet_ rather than _never_: the roster stays open, the freeze skips the competition, and no star is awarded.
+> [!NOTE]
+> This datetime used to be the authority for a roster lock and a star freeze — `isLocked`, `lockState.ts`, and a five-minute `judgingPass.ts` cron that stamped `teams."competedAt"` once judging began. All of it was deleted by the platform redesign's teams-core step, because teams stopped being scoped to a competition at all: there is no "this team's roster" to lock or freeze against ONE competition's clock when the team can be active on several teams and enter any number of competitions. `judgingStartsAt` is display-only until the platform redesign's competitions step gives it a new job.
 
 </details>
 

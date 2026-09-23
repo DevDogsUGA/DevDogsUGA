@@ -18,10 +18,16 @@ so changes are visible on the next read without a backfill.
   the member belongs to a participating team.
 - A competition win decorates its competition star; it is not another star.
 
-Competition participation is frozen at judging from a registered team with an
-entry, and stays frozen: `competedAt` is set once and never rewritten. There
-is no officer override — a team either had a live entry when judging began or
-it did not.
+> [!NOTE]
+> The competition half is currently a STUB. The platform redesign's teams-core
+> step made teams persistent and competition-independent, dropping
+> `teams."competedAt"` and the column team participation used to freeze
+> against — so `memberStars`' competition branch compiles but returns nothing,
+> and every star this view currently produces is a meeting star. The
+> platform redesign's competitions step rewires this to the competition-entry
+> mirror: participation becomes "collaborator on a team-branch that entered
+> before the competition's issue closed", derived from git and GitHub rather
+> than frozen once by a cron pass.
 
 ## Streaks
 
@@ -41,6 +47,7 @@ longest streaks, this week's progress, and the full passport.
 
 There is no officer override or correction subsystem for attendance or
 competition participation. A star is a fact derived straight from the
-attendance ledger and `teams."competedAt"` — there is nothing to revoke and
-nowhere for an exception to live. A late check-in is handled by re-displaying
-the rotating code, not by a correction after the fact.
+attendance ledger (and, once the competitions step lands, the competition-entry
+mirror) — there is nothing to revoke and nowhere for an exception to live. A
+late check-in is handled by re-displaying the rotating code, not by a
+correction after the fact.

@@ -57,7 +57,15 @@ a background task.
    is read-only and will not refresh it.
 4. **Lock down `⚙️ Sync status`** on Projects, the way step 5 above describes
    for every other platform-owned column.
-5. **`pnpm devtools airtable verify`** must exit clean.
+5. **Delete the Teams table, and `Max team size` from Competitions, by
+   hand.** The platform redesign's teams-core step made teams
+   persistent and competition-independent, so neither can be computed from
+   `platform.teams` any more: the Teams table's `⚙️ Platform ID` match key was
+   a team's row in a schema that no longer has one, and `Max team size` had
+   no column left in Postgres to hold what an officer typed into it. Both are
+   dropped from the registry, so `verify` lists them as extra rather than
+   failing; the scaffolder cannot remove them either.
+6. **`pnpm devtools airtable verify`** must exit clean.
 
 ### The projects themselves
 

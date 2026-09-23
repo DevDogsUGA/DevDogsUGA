@@ -47,25 +47,21 @@ The App holds exactly five permissions: `administration: write`, `contents: writ
 
 **Settings → Developer settings → GitHub Apps → New GitHub App**, as an organization app under `DevDogsUGA`.
 
-| Field           | Value                                                                              |
-| --------------- | ---------------------------------------------------------------------------------- |
-| GitHub App name | `DevDogs Platform`                                                                 |
-| Homepage URL    | `https://devdogsuga.org`                                                           |
-| Description     | Team provisioning, repository access and branch rulesets for DevDogs competitions. |
+| Field           | Value                                                                       |
+| --------------- | --------------------------------------------------------------------------- |
+| GitHub App name | `DevDogs Platform`                                                          |
+| Homepage URL    | `https://devdogsuga.org`                                                    |
+| Description     | Team provisioning, repository access and branch rulesets for DevDogs teams. |
 
 **Identifying and authorizing users:** leave every field blank, and leave "Request user authorization (OAuth) during installation" unchecked. Member login stays on the OAuth app because it needs `write:org`.
 
 **Post installation:** Setup URL blank, "Redirect on update" unchecked. A setup URL is for Apps needing per-installation configuration; this one is installed once, on one organization.
 
-**Webhook:** Active, URL `https://devdogsuga.org/github/webhook`, secret the value of `GH_WEBHOOK_SECRET`, SSL verification enabled. The route is `apps/platform/src/app/(api)/github/webhook/route.ts`; it verifies `X-Hub-Signature-256` and **refuses with 503 when that value is empty**, because an unsigned endpoint that writes `submissionState` would let anyone on the internet mark a team as having merged.
+**Webhook:** not configured. The platform redesign's teams-core step removed the one webhook route that used to exist here (`/github/webhook`, which drove the old per-competition entry state machine) along with the `submissionState` columns it wrote; a later step in the same redesign (webhook-fed mirror updates) reintroduces a webhook against the new team-branch model, and this section comes back with it.
 
-**Permissions.** Repository: Administration read and write (`repos.createRepoRuleset`, `getRepoRulesets`, `updateRepoRuleset`, `deleteRepoRuleset`, `teams.addOrUpdateRepoPermissionsInOrg`); Contents read and write (`git.createRef`, `git.getRef`, cutting team branches); Metadata read-only (mandatory); Pull requests read-only (the webhook payload). Organization: Members read and write (`teams.create`, `getByName`, `listMembersInOrg`, `removeMembershipForUserInOrg`, and the org invitation and membership endpoints). Account permissions: none.
-
-**Subscribe to events:** Pull request, and nothing else. It is the only event the route handles; anything else gets a 200 and is ignored.
+**Permissions.** Repository: Administration read and write (`repos.createRepoRuleset`, `getRepoRulesets`, `updateRepoRuleset`, `deleteRepoRuleset`, `teams.addOrUpdateRepoPermissionsInOrg`, `teams.deleteInOrg`); Contents read and write (`git.createRef`, `git.getRef`, cutting team branches); Metadata read-only (mandatory). Organization: Members read and write (`teams.create`, `getByName`, `listMembersInOrg`, `removeMembershipForUserInOrg`, and the org invitation and membership endpoints). Account permissions: none. Pull requests read is not currently granted -- nothing reads it with the webhook gone -- and is expected back alongside the webhook.
 
 **Where can this be installed:** only on this account.
-
-⚠️ If a **repository webhook** already points at the same URL, delete it once the App's webhook is confirmed working. Two deliveries are harmless — `applyPullRequestEvent` is safe to replay — but two places to update the secret is one place to forget.
 
 </details>
 
@@ -100,7 +96,7 @@ Run this for **each** App — production first, then staging with the reduced pe
 
 ## Operating it
 
-Staging is **read-only against GitHub, by construction**: its App holds only `metadata: read` and `pull_requests: read`. A `members` or `administration` entry there is the mistake that matters.
+Staging is **read-only against GitHub, by construction**: its App holds only `metadata: read`. A `members` or `administration` entry there is the mistake that matters.
 
 <details>
 <summary>Why does staging get a second App with different permissions?</summary>
@@ -109,12 +105,12 @@ Staging is **read-only against GitHub, by construction**: its App holds only `me
 
 And staging is the **less** guarded environment: it deploys from `main` on every push, with no reviewer in front of it. Giving it org-write would make a bad merge more dangerous than the owner token this whole change removed.
 
-|              | `DevDogs Platform`                                                 | `DevDogs Platform (staging)`                    |
-| ------------ | ------------------------------------------------------------------ | ----------------------------------------------- |
-| Webhook      | `https://devdogsuga.org/github/webhook`                            | `https://staging.devdogsuga.org/github/webhook` |
-| Repository   | Administration + Contents write, Metadata read, Pull requests read | Metadata read, Pull requests read               |
-| Organization | Members write                                                      | _none_                                          |
-| Private key  | `production`                                                       | `staging`                                       |
+|              | `DevDogs Platform`                             | `DevDogs Platform (staging)` |
+| ------------ | ---------------------------------------------- | ---------------------------- |
+| Webhook      | not configured (see above)                     | not configured               |
+| Repository   | Administration + Contents write, Metadata read | Metadata read                |
+| Organization | Members write                                  | _none_                       |
+| Private key  | `production`                                   | `staging`                    |
 
 Read-only degrades correctly rather than crashing: `provisionTeam` and its neighbours return `failed("api_error", …)` on a 403, so the console shows a clear failure instead of a 500. Nothing in staging calls GitHub unprompted either — `wrangler.jsonc` gives staging `"crons": []`, so `github-reconcile` runs on production alone.
 
