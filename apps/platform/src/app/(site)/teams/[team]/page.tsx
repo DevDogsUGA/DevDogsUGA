@@ -13,7 +13,11 @@ import {
   transferLead,
 } from "~/server/actions/teams";
 import { requireSession } from "~/server/auth/require";
-import { getPendingForUser, getTeamDetail } from "~/server/loaders/teams";
+import {
+  getPendingForUser,
+  getTeamDetail,
+  getTeamEntries,
+} from "~/server/loaders/teams";
 import { isMirrorStale } from "~/server/teams/mirrorFreshness";
 import Badge from "~/ui/badge";
 import Callout from "~/ui/callout";
@@ -64,6 +68,7 @@ export default async function TeamPage({
         (request) => request.teamId === team.id,
       )
     : [];
+  const entries = await getTeamEntries(team.id);
   const checkedAt = new Date();
 
   return (
@@ -140,6 +145,44 @@ export default async function TeamPage({
           </ul>
         </ConsoleCard.Content>
       </ConsoleCard.Root>
+
+      {/* Only rendered once this team has actually opened a PR against a
+          competition -- a team between competitions has nothing here, and
+          an empty card saying so would outrank the roster for attention it
+          does not deserve. */}
+      {entries.length > 0 && (
+        <ConsoleCard.Root id="entries">
+          <ConsoleCard.Header title="Competition entries" />
+          <ConsoleCard.Content>
+            <ul className="flex flex-col gap-2">
+              {entries.map((entry) => (
+                <li
+                  key={entry.prNumber}
+                  className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm"
+                >
+                  <span className="flex items-center gap-3">
+                    <Link
+                      href={`/competitions/${entry.competitionSlug}/results`}
+                      className="font-semibold text-white underline"
+                    >
+                      {entry.competitionTitle}
+                    </Link>
+                    <a
+                      href={entry.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-mauve-400 underline underline-offset-2 hover:text-mauve-200"
+                    >
+                      PR #{entry.prNumber}
+                    </a>
+                  </span>
+                  {entry.won && <Badge variant="success">Winner</Badge>}
+                </li>
+              ))}
+            </ul>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
+      )}
 
       {/* The loader returns `joinCode: null` to everybody not on this team, and
           that null IS the access control; there is no second way to ask for it.

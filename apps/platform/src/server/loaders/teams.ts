@@ -3,6 +3,8 @@ import { cache } from "react";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import {
+  competitionEntries,
+  competitions,
   profiles,
   teamMembers,
   teamMembershipRequests,
@@ -228,27 +230,133 @@ export const getMyTeams = cache(async (userId: string): Promise<MyTeam[]> => {
   }));
 });
 
+/** One PR a team entered a competition with. A team can carry more than one
+ *  -- reopening after a close, or two open at once -- so this is a list on
+ *  `EntrantRow`, not a single link. */
+export interface EntryLink {
+  prNumber: number;
+  url: string;
+  merged: boolean;
+}
+
 export interface EntrantRow {
   teamId: string;
   teamSlug: string;
   teamName: string;
   memberCount: number;
+  /** True the moment any of this team's entries has `mergedAt` set --
+   *  merging IS winning, see `pullRequest.ts`'s module doc. */
+  won: boolean;
+  /** Oldest first, so the page can read top-to-bottom as the entry history. */
+  entries: EntryLink[];
+}
+
+/**
+ * A competition's entrants, for the results page.
+ *
+ * Reads `competitionEntries` (the mirror `server/github/prEvent.ts` keeps),
+ * grouped by team: a team's rows collapse to one `EntrantRow` with every PR
+ * it entered with, because the results page answers "who entered, and who
+ * won" per TEAM, not per pull request. `won` is true the instant any one of
+ * a team's entries merged -- see `pullRequest.ts`'s module doc on why there
+ * is no separate award to read instead.
+ */
+export const getEntrants = cache(
+  async (competitionSlug: string): Promise<EntrantRow[]> => {
+    const rows = await db
+      .select({
+        teamId: teams.id,
+        teamSlug: teams.slug,
+        teamName: teams.name,
+        memberCount: sql<number>`(
+          select count(*)::int from ${teamMembers}
+          where ${teamMembers.teamId} = ${teams.id} and ${teamMembers.leftAt} is null
+        )`,
+        prNumber: competitionEntries.prNumber,
+        url: competitionEntries.url,
+        mergedAt: competitionEntries.mergedAt,
+        openedAt: competitionEntries.openedAt,
+      })
+      .from(competitionEntries)
+      .innerJoin(
+        competitions,
+        eq(competitions.id, competitionEntries.competitionId),
+      )
+      .innerJoin(teams, eq(teams.id, competitionEntries.teamId))
+      .where(eq(competitions.slug, competitionSlug))
+      .orderBy(asc(competitionEntries.openedAt));
+
+    const byTeam = new Map<string, EntrantRow>();
+    for (const row of rows) {
+      let entrant = byTeam.get(row.teamId);
+      if (!entrant) {
+        entrant = {
+          teamId: row.teamId,
+          teamSlug: row.teamSlug,
+          teamName: row.teamName,
+          memberCount: row.memberCount,
+          won: false,
+          entries: [],
+        };
+        byTeam.set(row.teamId, entrant);
+      }
+      const merged = row.mergedAt !== null;
+      entrant.entries.push({ prNumber: row.prNumber, url: row.url, merged });
+      if (merged) entrant.won = true;
+    }
+
+    // Winner(s) first. `Array.prototype.sort` is stable, and `byTeam`'s
+    // insertion order already follows the query's `openedAt` ascending, so
+    // a tie (every non-winner) keeps "whichever team entered first" without
+    // this comparator saying so a second time.
+    return [...byTeam.values()].sort((a, b) => {
+      if (a.won !== b.won) return a.won ? -1 : 1;
+      return 0;
+    });
+  },
+);
+
+export interface TeamEntryRow {
+  competitionId: string;
+  competitionSlug: string;
+  competitionTitle: string;
+  prNumber: number;
+  url: string;
+  openedAt: Date;
   won: boolean;
 }
 
 /**
- * A competition's entrants, winner first, for the results page.
+ * A team's own competition history, newest first, for the team page.
  *
- * ⚠️ STUB. The platform redesign's teams-core step dropped
- * `teams."competitionId"`/`"submissionState"`/`"competedAt"`, so "which teams
- * entered this competition" is no longer a question team rows can answer --
- * that becomes the competitions step's job, reading the competition-entry
- * mirror (a team-branch PR linking the competition's issue) instead. Kept
- * with its old signature, returning nothing, so `results/page.tsx` keeps
- * compiling and rendering "nobody has entered yet" rather than erroring.
+ * One row per pull request rather than collapsed per competition, unlike
+ * `getEntrants` above -- a team looking at its own page wants to see every
+ * PR it opened, not just a rollup, and a team rarely enters the same
+ * competition more than once or twice.
  */
-export const getEntrants = cache(
-  async (_competitionSlug: string): Promise<EntrantRow[]> => {
-    return [];
+export const getTeamEntries = cache(
+  async (teamId: string): Promise<TeamEntryRow[]> => {
+    const rows = await db
+      .select({
+        competitionId: competitions.id,
+        competitionSlug: competitions.slug,
+        competitionTitle: competitions.title,
+        prNumber: competitionEntries.prNumber,
+        url: competitionEntries.url,
+        openedAt: competitionEntries.openedAt,
+        mergedAt: competitionEntries.mergedAt,
+      })
+      .from(competitionEntries)
+      .innerJoin(
+        competitions,
+        eq(competitions.id, competitionEntries.competitionId),
+      )
+      .where(eq(competitionEntries.teamId, teamId))
+      .orderBy(desc(competitionEntries.openedAt));
+
+    return rows.map(({ mergedAt, ...row }) => ({
+      ...row,
+      won: mergedAt !== null,
+    }));
   },
 );

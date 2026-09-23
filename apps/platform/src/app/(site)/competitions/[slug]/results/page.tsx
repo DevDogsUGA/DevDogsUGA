@@ -13,12 +13,15 @@ import { getEntrants } from "~/server/loaders/teams";
  *
  * All scoring is off-platform now (officer scores and live voting, run
  * outside the site). The only per-competition state the platform persists is
- * who won -- a `teamAwards` row with `category = 'winner'` -- so this page
- * collapses to that: the field, and a winner if one has been recorded.
+ * who won, and it is not a separate record at all -- `competitionEntries.
+ * "mergedAt"` IS the answer, set the moment an officer merges the winning
+ * pull request (see `server/github/pullRequest.ts`'s module doc). This page
+ * collapses to that: the entrants, each PR they opened, and a winner if one
+ * has merged.
  *
  * Nothing here reads the clock. Entrants and the winner change only when
- * somebody enters or an officer records one, so there is no `connection()`
- * and the page is a plain uncached read inside the site layout's content
+ * somebody opens or merges a pull request, so there is no `connection()` and
+ * the page is a plain uncached read inside the site layout's content
  * boundary.
  */
 
@@ -92,21 +95,38 @@ export default async function ResultsPage({
               {entrants.map((entrant) => (
                 <li
                   key={entrant.teamId}
-                  className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/5 p-4"
+                  className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 p-4"
                 >
-                  <span className="flex items-center gap-3">
-                    <Link
-                      href={`/competitions/${slug}/teams/${entrant.teamSlug}`}
-                      className="rounded-sm font-semibold text-white underline outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
-                    >
-                      {entrant.teamName}
-                    </Link>
-                    <span className="text-xs text-mauve-400">
-                      {entrant.memberCount}{" "}
-                      {entrant.memberCount === 1 ? "member" : "members"}
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <span className="flex items-center gap-3">
+                      <Link
+                        href={`/teams/${entrant.teamSlug}`}
+                        className="rounded-sm font-semibold text-white underline outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
+                      >
+                        {entrant.teamName}
+                      </Link>
+                      <span className="text-xs text-mauve-400">
+                        {entrant.memberCount}{" "}
+                        {entrant.memberCount === 1 ? "member" : "members"}
+                      </span>
                     </span>
-                  </span>
-                  {entrant.won && <Badge variant="success">Winner</Badge>}
+                    {entrant.won && <Badge variant="success">Winner</Badge>}
+                  </div>
+                  <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-mauve-400">
+                    {entrant.entries.map((entry) => (
+                      <li key={entry.prNumber}>
+                        <a
+                          href={entry.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline underline-offset-2 hover:text-mauve-200"
+                        >
+                          PR #{entry.prNumber}
+                        </a>
+                        {entry.merged && " — merged"}
+                      </li>
+                    ))}
+                  </ul>
                 </li>
               ))}
             </ol>
