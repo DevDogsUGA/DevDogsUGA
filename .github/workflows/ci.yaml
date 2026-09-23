@@ -70,6 +70,15 @@ jobs:
             fi
           fi
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          # These are turbo's globalDependencies equivalents, but pnpm
+          # attributes root-level files to the workspace root package, which
+          # the filters below exclude -- a root-only change would otherwise
+          # select nothing. Force the full package set when one changed.
+          if git diff --quiet "$REF" HEAD -- tsconfig.base.json package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc; then
+            echo "since=--filter=...[$REF]" >> "$GITHUB_OUTPUT"
+          else
+            echo "since=" >> "$GITHUB_OUTPUT"
+          fi
       # Both apps' GENERATED route types (the `VinextRouteTypes` namespace,
       # next-env.d.ts's `vinext/types/augmentations` reference) exist on
       # every laptop that has ever run `vinext dev`/`vinext build` and on no
@@ -136,9 +145,9 @@ jobs:
         run: |
           pnpm -r --if-present --filter './packages/**' --filter './docs' run build
           status=0
-          pnpm -r --if-present --filter "...[${{ steps.base.outputs.ref }}]" --filter '!study-group-finder' --filter '!devdogs-monorepo' run lint || status=1
-          pnpm -r --if-present --filter "...[${{ steps.base.outputs.ref }}]" --filter '!study-group-finder' --filter '!devdogs-monorepo' run typecheck || status=1
-          pnpm -r --if-present --filter "...[${{ steps.base.outputs.ref }}]" --filter '!study-group-finder' --filter '!devdogs-monorepo' run test || status=1
+          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run lint || status=1
+          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run typecheck || status=1
+          pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run test || status=1
           exit $status
       # The publishability gate for meetings and workshops: parses
       # data/meetings.json against the Zod schema and runs the validator
