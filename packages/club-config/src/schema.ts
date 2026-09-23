@@ -51,6 +51,24 @@ export const WORKSHOP_DESCRIPTION_MAX_LENGTH = 280;
  */
 export const RSVP_URL_ALLOWED_HOSTS: readonly string[] = ["uga.campuslabs.com"];
 
+/**
+ * Exact mirror of the DB's `meetings_rsvpUrl_host` check constraint --
+ * literally, not just semantically. `new URL(url).hostname` falls into
+ * precisely the trap that check constraint's comment warns about: it parses
+ * `http://uga.campuslabs.com/x` (wrong scheme) and
+ * `https://someone@uga.campuslabs.com/x` (userinfo) happily, and both
+ * hostnames land on the allowlist even though Postgres's regex rejects both
+ * strings outright. Testing this pattern directly against the whole URL,
+ * the same way the check constraint does, means there is nothing left for
+ * `new URL()` to get cleverer about behind this validator's back -- and it
+ * stays true even if `RSVP_URL_ALLOWED_HOSTS` grows a second host.
+ */
+export const RSVP_URL_PATTERN = new RegExp(
+  `^https://(${RSVP_URL_ALLOWED_HOSTS.map((host) =>
+    host.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+  ).join("|")})(/[A-Za-z0-9/_?=&.%#:~-]*)?$`,
+);
+
 /** Mirrors `meetings_kind_choices`. */
 export const MEETING_KIND_CHOICES = [
   "Build Session",

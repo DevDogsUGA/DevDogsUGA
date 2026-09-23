@@ -121,6 +121,26 @@ describe("RSVP host allowlist", () => {
     expect(result.map((i) => i.code)).toEqual(["meeting_rsvp_host"]);
   });
 
+  // `new URL(url).hostname` parses both of these as the allowed host --
+  // that is exactly the trap the DB's `meetings_rsvpUrl_host` check
+  // constraint's comment warns about. A validator that fell into it would
+  // pass a URL through CI that Postgres then rejects mid-reconcile.
+  it("refuses the allowed host over http", () => {
+    const result = validateClubConfig(
+      config([
+        meeting({ rsvpUrl: "http://uga.campuslabs.com/engage/event/1" }),
+      ]),
+    );
+    expect(result.map((i) => i.code)).toEqual(["meeting_rsvp_host"]);
+  });
+
+  it("refuses the allowed host with userinfo smuggled in", () => {
+    const result = validateClubConfig(
+      config([meeting({ rsvpUrl: "https://attacker@uga.campuslabs.com/x" })]),
+    );
+    expect(result.map((i) => i.code)).toEqual(["meeting_rsvp_host"]);
+  });
+
   it("allows a meeting with no RSVP link", () => {
     const result = validateClubConfig(config([meeting({ rsvpUrl: null })]));
     expect(result).toEqual([]);

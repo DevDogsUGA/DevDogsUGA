@@ -4,6 +4,7 @@ import {
   MEETING_SUMMARY_MAX_LENGTH,
   MEETING_TITLE_MAX_LENGTH,
   RSVP_URL_ALLOWED_HOSTS,
+  RSVP_URL_PATTERN,
   WORKSHOP_DESCRIPTION_MAX_LENGTH,
   WORKSHOP_TITLE_MAX_LENGTH,
   type ClubConfig,
@@ -174,25 +175,18 @@ function checkMeeting(meeting: Meeting, issues: ValidationIssue[]): void {
     });
   }
 
-  if (meeting.rsvpUrl !== null) {
-    const host = safeHostname(meeting.rsvpUrl);
-    if (host === null || !RSVP_URL_ALLOWED_HOSTS.includes(host)) {
-      issues.push({
-        id: meeting.id,
-        code: "meeting_rsvp_host",
-        message:
-          `rsvpUrl "${meeting.rsvpUrl}" is not on an allowed host. It has to ` +
-          `be an https:// address on ${RSVP_URL_ALLOWED_HOSTS.join(" or ")}.`,
-      });
-    }
-  }
-}
-
-function safeHostname(url: string): string | null {
-  try {
-    return new URL(url).hostname.toLowerCase();
-  } catch {
-    return null;
+  // Tested against the whole URL with `RSVP_URL_PATTERN`, not parsed with
+  // `new URL()` and checked by hostname -- see that constant's comment for
+  // why: a hostname-only check would happily wave through the wrong-scheme
+  // and userinfo URLs the DB's check constraint exists to reject.
+  if (meeting.rsvpUrl !== null && !RSVP_URL_PATTERN.test(meeting.rsvpUrl)) {
+    issues.push({
+      id: meeting.id,
+      code: "meeting_rsvp_host",
+      message:
+        `rsvpUrl "${meeting.rsvpUrl}" is not on an allowed host. It has to ` +
+        `be an https:// address on ${RSVP_URL_ALLOWED_HOSTS.join(" or ")}.`,
+    });
   }
 }
 
