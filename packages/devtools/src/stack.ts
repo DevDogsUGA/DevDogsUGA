@@ -37,6 +37,7 @@ import {
   type DbConnection,
 } from "./db/connection.js";
 import { refreshSessionEnv } from "./db/session-refresh.js";
+import { originReachable, resolveBaseUrl } from "./cron/commands.js";
 
 // Scope order, matching `db`'s subcommands in `commands.ts`: the four that
 // act on the Supabase stack (`connect` is handled separately below — it
@@ -120,12 +121,12 @@ async function pushMigrations(connection: DbConnection): Promise<number> {
  *
  * Meetings and workshops are NOT among the tables `supabase/seed/*.sql`
  * populates -- they come from `@devdogsuga/club-config` via
- * `reconcileFromConfig`, which needs a running Next server to reach (it is
- * an authenticated platform route, not a devtools-side function this CLI can
- * call directly without duplicating the app's DB client and Sentry wiring).
- * A fresh local reset is deliberately left to say so rather than pretend
- * those tables are seeded, matching the manual step `club-config.md`
- * documents.
+ * `reconcileFromConfig`, an authenticated platform route rather than a
+ * devtools-side function this CLI can call directly (it needs the app's
+ * Drizzle client, relations and Sentry wiring, none of which belong in this
+ * package). On a local reset this calls that route itself, over the same
+ * origin `cron run` would use, once the reset and rebuild finish -- see
+ * `reconcileConfigAfterReset` for what happens when nothing is listening yet.
  */
 async function reset(connection: DbConnection): Promise<{
   code: number;
@@ -140,15 +141,81 @@ async function reset(connection: DbConnection): Promise<{
   return {
     code: 0,
     lines: isLocalConnection(connection)
-      ? [
-          "Meetings and workshops are not seeded by this reset -- they come " +
-            "from @devdogsuga/club-config. Start the platform app " +
-            "(`pnpm --filter platform dev`) and run `pnpm devtools cron run " +
-            "--app platform --cron '*/15 * * * *' --yes` once to reconcile " +
-            "them locally.",
-        ]
+      ? await reconcileConfigAfterReset()
       : [],
   };
+}
+
+/** Injectable so a test can fake "server up" / "server down" and inspect the
+ * request `reconcileConfigAfterReset` sends, without a real dev server or a
+ * `vi.stubGlobal` on `fetch`. Defaults to the real network. */
+export interface ReconcileConfigDeps {
+  reachable: typeof originReachable;
+  fetch: typeof globalThis.fetch;
+}
+
+/**
+ * Best-effort trigger for `GET /cron/config-reconcile` against the local
+ * platform dev server, so `db reset` leaves meetings and workshops seeded
+ * whenever that server happens to already be up -- the common case for a
+ * repeat reset during development, rather than a first clone. No
+ * `CRON_SECRET` is sent because the route itself skips auth outside a
+ * deployed `DEPLOY_ENV` (see that route's header); this is exactly the
+ * unauthenticated local request `cron run` would send.
+ *
+ * When nothing answers yet -- most likely a first-time reset, before anyone
+ * has run `pnpm --filter platform dev` -- this reports that instead of
+ * silently leaving the tables empty, and names the manual step: start the
+ * server, then either re-run this reset or fire the shared fifteen-minute
+ * cron slot directly with `pnpm devtools cron run`.
+ */
+export async function reconcileConfigAfterReset(
+  deps: ReconcileConfigDeps = {
+    reachable: originReachable,
+    fetch: globalThis.fetch,
+  },
+): Promise<string[]> {
+  const { reachable, fetch: fetchImpl } = deps;
+  const baseUrl = resolveBaseUrl("platform", "development", undefined, {});
+  const manualStep =
+    "Start the platform app (`pnpm --filter platform dev`) and either " +
+    "re-run `pnpm devtools db reset` or run `pnpm devtools cron run --app " +
+    "platform --cron '*/15 * * * *' --yes`.";
+
+  if (!(await reachable(baseUrl))) {
+    return [
+      `Meetings and workshops are not seeded yet -- nothing is listening at ${baseUrl} ` +
+        `to reconcile @devdogsuga/club-config into them. ${manualStep}`,
+    ];
+  }
+
+  const url = new URL("/cron/config-reconcile", baseUrl).toString();
+  let response: Response;
+  try {
+    response = await fetchImpl(url);
+  } catch (err) {
+    return [
+      `Config reconcile request to ${url} failed: ` +
+        `${err instanceof Error ? err.message : String(err)}. ${manualStep}`,
+    ];
+  }
+
+  if (!response.ok) {
+    return [
+      `Config reconcile answered HTTP ${response.status} at ${url}. ${manualStep}`,
+    ];
+  }
+
+  const body = (await response.json()) as
+    { success: true; counts: unknown } | { success: false; reason: string };
+  if (!body.success) {
+    return [
+      `Config reconcile ran but was aborted (${body.reason}) -- meetings and ` +
+        "workshops are still empty. Check the platform dev server's console.",
+    ];
+  }
+
+  return ["Meetings and workshops reconciled from @devdogsuga/club-config."];
 }
 
 /**

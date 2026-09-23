@@ -87,15 +87,19 @@ other cron route):
 
 ## Local development
 
-`pnpm devtools db reset` does not seed meetings or workshops —
-`supabase/seed/*.sql` only ever held roles, moderation fixtures and officers,
-and the reconcile is a platform route rather than a devtools-side function,
-so the reset command cannot call it directly without duplicating the app's
-DB client and Sentry wiring. A fresh local database has zero meetings until
-you trigger the reconcile yourself: start the platform app
-(`pnpm --filter platform dev`) and run `pnpm devtools cron run --app platform
---cron '*/15 * * * *' --yes` once. `db reset` prints this same reminder when
-it finishes against a local database.
+`supabase/seed/*.sql` only ever held roles, moderation fixtures and
+officers — meetings and workshops are not part of it, because they come from
+`@devdogsuga/club-config` via the reconcile, and the reconcile is a platform
+route rather than a devtools-side function (it needs the app's Drizzle
+client, relations and Sentry wiring, none of which belong in devtools). So on
+a local database, `pnpm devtools db reset` calls that route itself once the
+reset finishes — the same unauthenticated request `cron run` would send, to
+`http://localhost:3000` by default. If the platform dev server happens to be
+up already, meetings and workshops come out of the reset seeded, no extra
+step needed. If nothing is listening yet (a first-time reset, before anyone
+has run `pnpm --filter platform dev`), `db reset` says so and names the fix:
+start the platform app, then either re-run `pnpm devtools db reset` or run
+`pnpm devtools cron run --app platform --cron '*/15 * * * *' --yes` directly.
 
 ## Migrated ids
 
