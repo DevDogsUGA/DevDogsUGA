@@ -412,9 +412,10 @@ describe("platform meetings, teams and attendance", () => {
     }
   });
 
-  // No fixture row: nothing populates competitionEntries until a later
-  // step's pull_request webhook handling exists. The mirror still has to be
-  // anon-readable (empty is a legitimate answer) and closed to client writes.
+  // No fixture row here: this is a read-only-policy check, so an empty
+  // table is a legitimate answer. In production the pull_request webhook
+  // and reconcileEntries backstop keep this table populated, but the RLS
+  // policy under test doesn't care whether any rows exist.
   it("publishes competition entries to logged-out visitors, read-only", async () => {
     const client = anon();
     const { data, error } = await client

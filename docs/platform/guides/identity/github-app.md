@@ -62,12 +62,12 @@ The App holds `administration: write`, `contents: write`, `issues: read`, `metad
 - **Payload URL:** `{BASE_URL}/github/webhook`, production's URL only -- staging never receives webhooks, see "Why does staging get a second App" below.
 - **Content type:** `application/json`.
 - **Secret:** 32+ random characters, matching `env.ts`'s `GH_WEBHOOK_SECRET`. Push it (`pnpm devtools env push --target production`), then paste the SAME value into this field -- the route verifies `X-Hub-Signature-256` against it (`server/github/webhookSignature.ts`).
-- **Events, "Let me select individual events":** `Membership`, `Team`, `Branch or tag creation`, `Branch or tag deletion`, `Projects v2 item`, `Issues`. NOT `Pull request` -- PR-linked competition entry is a later step. See [Competitions](/docs/platform/guides/meetings-and-teams/competitions) for what the two new events drive.
+- **Events, "Let me select individual events":** `Membership`, `Team`, `Branch or tag creation`, `Branch or tag deletion`, `Projects v2 item`, `Issues`, `Pull request`. See [Competitions](/docs/platform/guides/meetings-and-teams/competitions) for what the three Projects/Issues/PR events drive.
 - **Active:** checked.
 
 Every event above except `Projects v2 item`/`Issues` is covered by `Members` and `Contents`, already listed next; those two need the **Projects** organization permission added below.
 
-**Permissions.** Repository: Administration read and write (`repos.createRepoRuleset`, `getRepoRulesets`, `updateRepoRuleset`, `deleteRepoRuleset`, `teams.addOrUpdateRepoPermissionsInOrg`, `teams.deleteInOrg`); Contents read and write (`git.createRef`, `git.getRef`, cutting team branches, and the `create`/`delete` webhook events); Issues read-only; Metadata read-only (mandatory). Organization: Members read and write (`teams.create`, `getByName`, `listMembersInOrg`, `removeMembershipForUserInOrg`, the org invitation/membership endpoints, and the `membership`/`team` webhook events); **Projects read-only** (the Competitions Project's GraphQL reads). Account permissions: none. Pull requests read is still not granted -- PR-linked competition entry has not landed.
+**Permissions.** Repository: Administration read and write (`repos.createRepoRuleset`, `getRepoRulesets`, `updateRepoRuleset`, `deleteRepoRuleset`, `teams.addOrUpdateRepoPermissionsInOrg`, `teams.deleteInOrg`); Contents read and write (`git.createRef`, `git.getRef`, cutting team branches, and the `create`/`delete` webhook events); Issues read-only; Pull requests read-only (`pulls.list` for `reconcileEntries`, and the `pull_request` webhook event); Metadata read-only (mandatory). Organization: Members read and write (`teams.create`, `getByName`, `listMembersInOrg`, `removeMembershipForUserInOrg`, the org invitation/membership endpoints, and the `membership`/`team` webhook events); **Projects read-only** (the Competitions Project's GraphQL reads). Account permissions: none.
 
 **Where can this be installed:** only on this account.
 
@@ -98,7 +98,7 @@ Run this for **each** App — production first, then staging with the reduced pe
      --jq '.installations[] | {app: .app_slug, perms: .permissions}'
    ```
 
-   Expect exactly `administration: write`, `contents: write`, `metadata: read`, `members: write` on production -- no `pull_requests` yet; see "Pull requests read" above for when that arrives. Anything else was a mis-tick, and this is the cheapest moment to find it.
+   Expect exactly `administration: write`, `contents: write`, `issues: read`, `pull_requests: read`, `metadata: read`, `members: write`, `organization_projects: read` on production. Anything else was a mis-tick, and this is the cheapest moment to find it.
 
 </details>
 
