@@ -144,9 +144,6 @@ export async function handleTeamEvent(
   database: typeof db,
   payload: TeamEventPayload,
 ): Promise<void> {
-  const platformSlug = platformSlugFromGithubTeamSlug(payload.team.slug);
-  if (platformSlug === null) return;
-
   if (payload.action === "deleted") {
     // The GitHub team is gone, so the mirror's own source of truth for this
     // team just disappeared. Deleting the row here cascades `teamMembers`
@@ -154,11 +151,24 @@ export async function handleTeamEvent(
     // -- and if THIS delivery is what a disband already caused (that action
     // deletes the GitHub team before its own mirror delete), this is a
     // redelivery-safe no-op the moment the action's own delete has landed.
+    const platformSlug = platformSlugFromGithubTeamSlug(payload.team.slug);
+    if (platformSlug === null) return;
     await database.delete(teams).where(eq(teams.slug, platformSlug));
     return;
   }
 
   if (payload.action === "edited" && payload.changes?.name !== undefined) {
+    // Identify the affected team by the PRE-rename name, not
+    // `payload.team.slug` -- that field already carries the rename, so
+    // stripping the `team-` prefix off it produces a slug that never existed
+    // in `teams` and names nothing an on-call engineer can find. The
+    // pre-rename name is what `provisionTeam` actually created the GitHub
+    // team as (`name: slug`), so it is still the real platform slug.
+    const platformSlug = platformSlugFromGithubTeamSlug(
+      payload.changes.name.from,
+    );
+    if (platformSlug === null) return;
+
     // Every GitHub call this platform makes addresses a team BY the slug
     // `naming.ts` derives from the platform's own slug, so a rename made
     // outside the platform breaks every future grant against a name that no
