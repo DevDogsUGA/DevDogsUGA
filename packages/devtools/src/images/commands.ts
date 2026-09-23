@@ -13,25 +13,19 @@
  * and a script can pass every flag and never see a prompt.
  *
  * Event graphics are the one group backed by a database rather than by files in
- * this repo, and the one group that can therefore be unavailable or out of
- * date. See {@link loadEvents} for what the command says when it is.
+ * this repo, and the one group that can therefore be unavailable. See
+ * {@link loadEvents} for what the command says when it is.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { confirm, isTTY, log, note } from "@clack/prompts";
+import { log, note } from "@clack/prompts";
 import { FORMATS, type Format } from "@devdogsuga/og";
 import { positionals } from "../args.js";
 import { adminClient, type Instance } from "../instance.js";
-import { errorMessage, explain, unwrap } from "../ui.js";
-import {
-  describeAge,
-  hoursSince,
-  STALE_AFTER_HOURS,
-  supabaseEvents,
-  type EventReader,
-} from "./events.js";
+import { errorMessage, explain } from "../ui.js";
+import { supabaseEvents, type EventReader } from "./events.js";
 import {
   assertUniqueStems,
   eventGraphics,
@@ -139,12 +133,6 @@ export interface ImagesDeps {
  *     could not.
  *   - **Unreachable, named.** `images 'event/*'` asked for exactly the thing
  *     that is missing. Nothing to degrade to, so it fails.
- *
- * A STALE sync is neither: the data is there and may be fine. It warns with the
- * age, and asks — because the images being rendered are usually about to be
- * posted somewhere public, and "these say the meeting is in DLW" is worth one
- * keystroke of doubt. With no terminal to ask, the warning stands and the
- * render proceeds; a build should not stall on a question.
  */
 async function loadEvents(
   patterns: readonly string[],
@@ -171,41 +159,12 @@ async function loadEvents(
   );
 
   let meetings;
-  let state;
   try {
-    [state, meetings] = await Promise.all([
-      reader.syncState(),
-      reader.meetings(),
-    ]);
+    meetings = await reader.meetings();
   } catch (err) {
     if (required) throw err;
 
     return { graphics: [], skipped: errorMessage(err) };
-  }
-
-  const age = hoursSince(state?.lastSyncedAt ?? null);
-
-  if (age === null) {
-    log.warn(
-      "This database has never synced from Airtable, so its meetings are whatever the seeds put there.",
-    );
-  } else if (age > STALE_AFTER_HOURS) {
-    log.warn(
-      `Airtable last synced ${describeAge(age)} ago` +
-        `${state?.lastStatus ? ` (${state.lastStatus}` : ""}` +
-        `${state?.rowsRefused ? `, ${state.rowsRefused} refused)` : state?.lastStatus ? ")" : ""}` +
-        ". Meeting details may be out of date.",
-    );
-
-    if (isTTY(process.stdout)) {
-      const proceed = unwrap(
-        await confirm({
-          message: "Render from it anyway?",
-          initialValue: true,
-        }),
-      );
-      if (!proceed) throw new Error("Stopped, so the sync can be run first.");
-    }
   }
 
   return { graphics: eventGraphics(meetings), skipped: null };
@@ -380,7 +339,7 @@ function resolvePatterns(patterns: string[], registry: Graphic[]): Graphic[] {
   if (askedForEvents && !haveEvents) {
     throw new Error(
       "This database has no meetings, so there are no event images to render. " +
-        "Sync it from Airtable, or point at a database that has been.",
+        "Reconcile it from `@devdogsuga/club-config`, or point at a database that has been.",
     );
   }
 

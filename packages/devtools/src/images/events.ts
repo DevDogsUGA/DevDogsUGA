@@ -10,47 +10,22 @@ import type { EventGraphicSource } from "./graphics.js";
  * Meetings, for the one group of graphics that cannot be drawn from the repo.
  *
  * Every other graphic is a function of committed files. An event poster is a
- * function of a row that arrives from Airtable through a sync, so
- * `devtools images event/*` needs a running database that has recently been
- * synced — and there is nothing about typing a command that makes that
- * obvious. Making it obvious is most of what this file is for: the reads are
- * small, and {@link EventReader.syncState} exists so the command can say which
- * database it is looking at and how old the answer is BEFORE it renders
- * anything that might be posted somewhere public.
+ * function of meetings reconciled into the database from
+ * `@devdogsuga/club-config`, so `devtools images event/*` needs a running
+ * database that has that config loaded into it — and there is nothing about
+ * typing a command that makes that obvious. Making it obvious is most of what
+ * this file is for: the reads are small, and {@link EventReader} is the seam
+ * the command talks to, so tests never open a socket.
  *
  * Reads go through `adminClient`, against the local instance resolved by the
  * command. `platform` is exposed to PostgREST (`supabase/config.toml`),
- * and the service role bypasses the RLS that otherwise keeps
- * `airtableSyncState` closed to every client.
+ * and the service role bypasses the RLS that otherwise keeps `meetings` and
+ * `workshops` closed to every client.
  */
-
-/** What the Airtable sync last did, as the officer console shows it. */
-export interface SyncState {
-  lastSyncedAt: Date | null;
-  lastStatus: string | null;
-  rowsRefused: number;
-}
 
 /** The seam the command talks to, so tests never open a socket. */
 export interface EventReader {
-  syncState(): Promise<SyncState | null>;
   meetings(): Promise<EventGraphicSource[]>;
-}
-
-/** How old a sync gets before the CLI stops calling the data current. */
-export const STALE_AFTER_HOURS = 48;
-
-export function hoursSince(at: Date | null): number | null {
-  return at === null ? null : (Date.now() - at.getTime()) / 3_600_000;
-}
-
-/** "19 days", "3 hours" — for a warning somebody has to read quickly. */
-export function describeAge(hours: number): string {
-  if (hours < 1) return "under an hour";
-  if (hours < 48)
-    return `${Math.round(hours)} hour${Math.round(hours) === 1 ? "" : "s"}`;
-
-  return `${Math.round(hours / 24)} days`;
 }
 
 interface MeetingRow {
@@ -75,29 +50,6 @@ interface WorkshopRow {
 
 export function supabaseEvents(client: DevtoolsClient): EventReader {
   return {
-    async syncState() {
-      const { data, error } = await client
-        .from("airtableSyncState")
-        .select("lastSyncedAt, lastStatus, rowsRefused")
-        .maybeSingle();
-
-      if (error)
-        throw new Error(`Could not read the sync state: ${error.message}`);
-      if (!data) return null;
-
-      const row = data as {
-        lastSyncedAt: string | null;
-        lastStatus: string | null;
-        rowsRefused: number;
-      };
-
-      return {
-        lastSyncedAt: row.lastSyncedAt ? new Date(row.lastSyncedAt) : null,
-        lastStatus: row.lastStatus,
-        rowsRefused: row.rowsRefused,
-      };
-    },
-
     async meetings() {
       // Cancelled nights are included deliberately: a cancellation is exactly
       // when somebody needs a fresh graphic, and the card has a layout for it.
