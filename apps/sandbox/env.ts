@@ -44,9 +44,11 @@ declare({
   server: {
     // Everything here is `.optional()`. No app boots on these: the Worker
     // checks its two bindings itself and answers 503 `proxy_misconfigured`
-    // when either is missing, and the signing key is checked by
-    // `devtools deploy mint-token` with a named refusal. A required
-    // schema here would only break CI, which holds none of them.
+    // when either is missing. The signing key used to be checked separately,
+    // by `devtools deploy mint-token` with a named refusal, but that command
+    // was deleted with the platform's sandbox integration -- see git history
+    // -- so nothing checks it at all any more. A required schema here would
+    // only break CI, which holds none of them.
 
     // Which deployment this is, read by `src/index.ts` only to become the
     // Sentry `environment` tag it passes to `buildSentryOptions`. Same key,
@@ -122,7 +124,10 @@ declare({
 
     // ── The credential this whole file exists for ──────────────────────────
     // A JWT carrying {"role": "sandbox_proxy"}, signed with the platform
-    // project's own signing key by `devtools deploy mint-token`.
+    // project's own signing key. It was minted by `devtools deploy
+    // mint-token`, which the platform redesign deleted along with the
+    // sandbox integration it authenticated -- see git history for the
+    // command. Nothing mints this value any more.
     //
     // NOT a Supabase secret key, and that distinction is the security property.
     // `sb_secret_...` keys authorize as `service_role` and cannot be bound to
@@ -138,11 +143,13 @@ declare({
       doc:
         "The sandbox Worker's credential for resolve_sandbox_credential and " +
         'log_proxy_request: a JWT carrying {"role": "sandbox_proxy"}, ' +
-        "SIGNED at deploy time from SUPABASE_JWT_SIGNING_KEY and written " +
-        "straight to the Worker. There is no stored copy anywhere -- not " +
-        "here, not in Bitwarden, not in GitHub -- because minting is signing " +
-        "rather than an API call, which is what makes rotating it on every " +
-        "deploy free. 90-day exp, so a pipeline that goes stale fails loudly.",
+        "formerly SIGNED at deploy time from SUPABASE_JWT_SIGNING_KEY and " +
+        "written straight to the Worker by `devtools deploy mint-token`. " +
+        "That command was deleted with the platform's sandbox integration " +
+        "it authenticated -- see git history -- and nothing mints this " +
+        "value any more. Still declared `minted: true` so `env audit` keeps " +
+        "reading its absence from Bitwarden as correct rather than a rename " +
+        "left behind; see the reasoning on `EnvMeta.minted`.",
       scope: "environment",
       secrecy: "secret",
       minted: true,
@@ -151,58 +158,58 @@ declare({
 });
 
 /**
- * What mints the token, and a SEPARATE source, which is the whole point.
+ * What used to mint the token, kept in a SEPARATE source, which was the whole
+ * point.
  *
  * `devtools deploy secrets-file` sends a Worker every storable key its app
  * declares, and excludes `:tooling` sources because "a key the DEPLOY needs is
  * not automatically a key the WORKER needs". Declared as plain `sandbox`, this
- * key rode that path onto the proxy Worker itself.
+ * key would have ridden that path onto the proxy Worker itself.
  *
- * That is the exact inversion this file's own comments argue against. The
- * signing key mints a token for ANY role, `service_role` included;
- * `sandbox_proxy` was built to hold EXECUTE on two functions and no table
- * grants. Uploading the former to the Worker restricted to the latter hands an
- * internet-facing proxy the means to escalate itself to everything, and it
- * would sit there as a Cloudflare secret long after the deploy that wrote it.
+ * That would have been the exact inversion this file's own comments argue
+ * against. The signing key mints a token for ANY role, `service_role`
+ * included; `sandbox_proxy` was built to hold EXECUTE on two functions and no
+ * table grants. Uploading the former to the Worker restricted to the latter
+ * would have handed an internet-facing proxy the means to escalate itself to
+ * everything, and it would have sat there as a Cloudflare secret long after
+ * the deploy that wrote it.
  *
- * The trust argument that justifies CI holding it is about the PIPELINE:
+ * The trust argument that justified CI holding it was about the PIPELINE:
  * whoever deploys `apps/platform` can already read `SECRET_KEY` from its own
- * environment, so a pipeline deploying both Workers gains no authority it
- * lacked. It says nothing about the Worker, a different principal with a much
- * longer-lived and more exposed store. Keep the two apart: the mint script runs
- * on the runner, the token is what reaches the edge.
+ * environment, so a pipeline deploying both Workers gained no authority it
+ * lacked. It said nothing about the Worker, a different principal with a much
+ * longer-lived and more exposed store. The two stayed apart: the mint script
+ * ran on the runner, the token reached the edge.
+ *
+ * `devtools deploy mint-token` -- the command that read this key and produced
+ * `SANDBOX_PROXY_TOKEN` -- was deleted along with the platform's sandbox
+ * integration; see git history for the command itself. Nothing in this
+ * repository mints a token from this key any more.
  *
  * Still declared here rather than in the devtools operator manifest, because
- * minting that token is its only use in this repository and a reader of
- * `.env.example` should find the whole rotation path in one place: the
- * endpoint, the minted token, and the key that signs it. `:tooling` sources
- * fold into their app's section when the example is rendered, so that holds.
- *
- * If the proxy ever moves to a separate, less-trusted pipeline, this key does
- * NOT follow it and the token goes back to being minted out of band.
+ * that history belongs with `SANDBOX_PROXY_TOKEN`: a reader of `.env.example`
+ * finds the whole (now-dead) rotation path in one place -- the endpoint, the
+ * minted token, and the key that signed it. `:tooling` sources fold into
+ * their app's section when the example is rendered, so that still holds.
  */
 declare({
   source: "sandbox:tooling",
   server: {
     SUPABASE_JWT_SIGNING_KEY: define(z.string().min(32).optional(), {
       doc:
-        "The platform Supabase project's JWT signing secret (HS256), used by " +
-        "devtools deploy mint-token to sign SANDBOX_PROXY_TOKEN at " +
-        "deploy time. ⚠️ It can mint a token for ANY role, including a " +
-        "user session -- it is the widest credential in this file by a long " +
-        "way, and it is here only because the sandbox token is the one thing " +
-        "signed with it. Devops-only. Mint and register it with " +
-        "`pnpm devtools signing-key generate` then `signing-key import` " +
-        "(--target staging|production) -- never let Supabase generate it: " +
-        "keys in that system cannot be extracted afterwards, so an imported " +
-        "copy is the only way this side can hold the signing half. The " +
-        "import lands as a standby shared-secret key, which verifies the " +
-        "sandbox token without changing what signs user sessions. The legacy JWT " +
-        "secret is deprecated with no announced removal date; the imported " +
-        "shared secret is the path that outlives it. After migrating a " +
-        "project to signing keys, verify the sandbox token still resolves " +
-        "-- PostgREST v13 tightened custom-JWT validation (2025-07) and " +
-        "some migrated projects needed the key re-imported.",
+        "The platform Supabase project's JWT signing secret (HS256), " +
+        "formerly used by devtools deploy mint-token to sign " +
+        "SANDBOX_PROXY_TOKEN at deploy time. ⚠️ It can mint a token for ANY " +
+        "role, including a user session -- it was the widest credential in " +
+        "this file by a long way, and it was here only because the sandbox " +
+        "token was the one thing signed with it. `devtools deploy " +
+        "mint-token` and the `signing-key generate`/`signing-key import` " +
+        "commands that minted and registered it were deleted with the " +
+        "platform's sandbox integration -- see git history for the exact " +
+        "commands, the import mechanics, and the PostgREST-migration " +
+        "caveats they used to carry. Nothing in this repository mints or " +
+        "imports this value any more; leaving it blank is correct until a " +
+        "replacement integration needs it.",
       scope: "environment",
       secrecy: "secret",
       commented: true,
