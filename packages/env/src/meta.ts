@@ -153,9 +153,9 @@ export type EnvMeta = {
    *     there is no wider credential sharing that name in any target, so the
    *     narrowness is a property of the key rather than of one target's copy
    *     of it, and the claim is checked when the token is minted and cannot
-   *     drift per target. No declaration holds this shape today; the last one
-   *     to (a read-only Airtable PAT, scoped to `schema.bases:read` alone)
-   *     left with that integration.
+   *     drift per target. No declaration holds this shape today — a
+   *     read-only PAT scoped to a single external integration's own API,
+   *     minted once and never widened, is the shape to expect it in.
    *   * **A key that is not a credential at all.** A public identifier
    *     (`secrecy: "public"`, so it is a GitHub *variable* that anyone who can
    *     read the repository's Actions config can read anyway) that names
