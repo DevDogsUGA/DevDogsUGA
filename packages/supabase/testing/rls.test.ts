@@ -649,13 +649,9 @@ describe("platform meetings, teams and attendance", () => {
     expect(data).toEqual([]);
   });
 
-  it("resolves the three new permissions", async () => {
+  it("resolves the two new permissions", async () => {
     const a = admin();
-    for (const perm of [
-      "canManageAttendance",
-      "canExportStars",
-      "canTriggerSync",
-    ] as const) {
+    for (const perm of ["canManageAttendance", "canExportStars"] as const) {
       const { data: before } = await a.rpc("has_permission", {
         uid: member.userId,
         perm,

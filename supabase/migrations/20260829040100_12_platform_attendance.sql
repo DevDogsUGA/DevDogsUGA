@@ -1,8 +1,8 @@
 -- Attendance, EL reflections, and their immutable revisions.
 --
--- Postgres owns every row in this file. Airtable receives projections and
--- submits commands, but is never the source of truth. Clients may read only
--- their own evidence; every write travels through a server-side command.
+-- Postgres owns every row in this file and is the only source of truth.
+-- Clients may read only their own evidence; every write travels through a
+-- server-side command.
 
 create type "platform"."checkInMethod" as enum ('qr', 'manual_code');
 
@@ -166,15 +166,13 @@ create table "platform"."reflectionSettings" (
   "id"                   boolean not null default true,
   "minimumWordCount"     integer not null default 100,
   "submissionWindowDays" integer not null default 7,
-  "airtableRecordId"     text,
   "updatedAt"            timestamptz not null default now(),
   constraint "reflectionSettings_pkey" primary key ("id"),
   constraint "reflectionSettings_singleton" check ("id"),
   constraint "reflectionSettings_minimumWordCount_positive"
     check ("minimumWordCount" > 0),
   constraint "reflectionSettings_submissionWindowDays_positive"
-    check ("submissionWindowDays" > 0),
-  constraint "reflectionSettings_airtableRecordId_key" unique ("airtableRecordId")
+    check ("submissionWindowDays" > 0)
 );
 
 alter table "platform"."reflectionSettings" enable row level security;

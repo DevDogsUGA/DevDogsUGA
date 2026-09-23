@@ -73,51 +73,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      airtableSyncState: {
-        Row: {
-          id: boolean;
-          lastError: string | null;
-          lastManualRunAt: string | null;
-          lastManualRunBy: string | null;
-          lastRefusals: Json | null;
-          lastStatus: string | null;
-          lastSyncedAt: string | null;
-          rowsArchived: number;
-          rowsRefused: number;
-          rowsUpserted: number;
-          runExpiresAt: string | null;
-          runStartedAt: string | null;
-        };
-        Insert: {
-          id?: boolean;
-          lastError?: string | null;
-          lastManualRunAt?: string | null;
-          lastManualRunBy?: string | null;
-          lastRefusals?: Json | null;
-          lastStatus?: string | null;
-          lastSyncedAt?: string | null;
-          rowsArchived?: number;
-          rowsRefused?: number;
-          rowsUpserted?: number;
-          runExpiresAt?: string | null;
-          runStartedAt?: string | null;
-        };
-        Update: {
-          id?: boolean;
-          lastError?: string | null;
-          lastManualRunAt?: string | null;
-          lastManualRunBy?: string | null;
-          lastRefusals?: Json | null;
-          lastStatus?: string | null;
-          lastSyncedAt?: string | null;
-          rowsArchived?: number;
-          rowsRefused?: number;
-          rowsUpserted?: number;
-          runExpiresAt?: string | null;
-          runStartedAt?: string | null;
-        };
-        Relationships: [];
-      };
       apps: {
         Row: {
           contentActioner: string | null;
@@ -546,7 +501,6 @@ export type Database = {
       };
       meetings: {
         Row: {
-          airtableRecordId: string | null;
           building: string | null;
           cancellationReason: string | null;
           cancelledAt: string | null;
@@ -566,7 +520,6 @@ export type Database = {
           surveyUrl: string | null;
         };
         Insert: {
-          airtableRecordId?: string | null;
           building?: string | null;
           cancellationReason?: string | null;
           cancelledAt?: string | null;
@@ -586,7 +539,6 @@ export type Database = {
           surveyUrl?: string | null;
         };
         Update: {
-          airtableRecordId?: string | null;
           building?: string | null;
           cancellationReason?: string | null;
           cancelledAt?: string | null;
@@ -954,21 +906,18 @@ export type Database = {
       };
       reflectionSettings: {
         Row: {
-          airtableRecordId: string | null;
           id: boolean;
           minimumWordCount: number;
           submissionWindowDays: number;
           updatedAt: string;
         };
         Insert: {
-          airtableRecordId?: string | null;
           id?: boolean;
           minimumWordCount?: number;
           submissionWindowDays?: number;
           updatedAt?: string;
         };
         Update: {
-          airtableRecordId?: string | null;
           id?: boolean;
           minimumWordCount?: number;
           submissionWindowDays?: number;
@@ -1141,7 +1090,6 @@ export type Database = {
           canManageSuspensions: boolean | null;
           canManageVerification: boolean | null;
           canModerate: boolean | null;
-          canTriggerSync: boolean | null;
           canViewAuditLog: boolean | null;
           color: string | null;
           createdAt: string;
@@ -1164,7 +1112,6 @@ export type Database = {
           canManageSuspensions?: boolean | null;
           canManageVerification?: boolean | null;
           canModerate?: boolean | null;
-          canTriggerSync?: boolean | null;
           canViewAuditLog?: boolean | null;
           color?: string | null;
           createdAt?: string;
@@ -1187,7 +1134,6 @@ export type Database = {
           canManageSuspensions?: boolean | null;
           canManageVerification?: boolean | null;
           canModerate?: boolean | null;
-          canTriggerSync?: boolean | null;
           canViewAuditLog?: boolean | null;
           color?: string | null;
           createdAt?: string;
@@ -1395,7 +1341,6 @@ export type Database = {
       };
       workshops: {
         Row: {
-          airtableRecordId: string | null;
           configId: string | null;
           deletedAt: string | null;
           description: string | null;
@@ -1405,7 +1350,6 @@ export type Database = {
           title: string | null;
         };
         Insert: {
-          airtableRecordId?: string | null;
           configId?: string | null;
           deletedAt?: string | null;
           description?: string | null;
@@ -1415,7 +1359,6 @@ export type Database = {
           title?: string | null;
         };
         Update: {
-          airtableRecordId?: string | null;
           configId?: string | null;
           deletedAt?: string | null;
           description?: string | null;
@@ -1488,7 +1431,6 @@ export type Database = {
           canManageSuspensions: boolean | null;
           canManageVerification: boolean | null;
           canModerate: boolean | null;
-          canTriggerSync: boolean | null;
           canViewAuditLog: boolean | null;
           isLeader: boolean | null;
           minRank: number | null;

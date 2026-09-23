@@ -116,7 +116,7 @@ create temporary table "officer_submissions" (
   "preferredName" text not null,
   -- Name of record, which is not always the preferred name: Armani submitted as
   -- Ashlee, Kyle as Gia Khang. Kept distinct so `profile.legalName` carries the
-  -- real thing while the card and the Airtable primary show what they go by.
+  -- real thing while the card shows what they go by.
   "legalFirstName" text not null,
   "legalLastName" text not null,
   "title" text,

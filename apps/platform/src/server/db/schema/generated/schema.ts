@@ -46,28 +46,6 @@ export const academicProgramsInPlatform = platform.table.withRLS("academicProgra
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 check("academicPrograms_credential_nonempty", sql`(btrim(credential) <> ''::text)`),check("academicPrograms_id_positive", sql`(id > 0)`),check("academicPrograms_name_nonempty", sql`(btrim(name) <> ''::text)`),]);
 
-export const airtableSyncStateInPlatform = platform.table.withRLS("airtableSyncState", {
-	id: boolean().default(true).primaryKey(),
-	lastSyncedAt: timestamp({ withTimezone: true }),
-	lastStatus: text(),
-	lastError: text(),
-	rowsUpserted: integer().default(0).notNull(),
-	rowsRefused: integer().default(0).notNull(),
-	rowsArchived: integer().default(0).notNull(),
-	runStartedAt: timestamp({ withTimezone: true }),
-	runExpiresAt: timestamp({ withTimezone: true }),
-	lastManualRunAt: timestamp({ withTimezone: true }),
-	lastManualRunBy: uuid().references(() => users.id, { onDelete: "set null", onUpdate: "cascade" } ),
-	lastRefusals: jsonb(),
-}, (table) => [
-
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-check("airtableSyncState_run_window", sql`(("runStartedAt" IS NULL) = ("runExpiresAt" IS NULL))`),check("airtableSyncState_singleton", sql`id`),]);
-
 export const appsInPlatform = platform.table.withRLS("apps", {
 	id: uuid().defaultRandom().primaryKey(),
 	slug: text().notNull(),
@@ -302,7 +280,6 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	location: text(),
 	startsAt: timestamp({ withTimezone: true }).notNull(),
 	endsAt: timestamp({ withTimezone: true }).notNull(),
-	airtableRecordId: text(),
 	configId: text(),
 	surveyUrl: text(),
 	deletedAt: timestamp({ withTimezone: true }),
@@ -317,7 +294,7 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 }, (table) => [
 	uniqueIndex("meetings_configId_live_key").using("btree", table.configId.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	index("meetings_live_idx").using("btree", table.startsAt.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
-	unique("meetings_airtableRecordId_key").on(table.airtableRecordId),	unique("meetings_slug_key").on(table.slug),
+	unique("meetings_slug_key").on(table.slug),
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
 
 	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
@@ -497,10 +474,9 @@ export const reflectionSettingsInPlatform = platform.table.withRLS("reflectionSe
 	id: boolean().default(true).primaryKey(),
 	minimumWordCount: integer().default(100).notNull(),
 	submissionWindowDays: integer().default(7).notNull(),
-	airtableRecordId: text(),
 	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
 }, (table) => [
-	unique("reflectionSettings_airtableRecordId_key").on(table.airtableRecordId),
+
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
 
 	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
@@ -616,7 +592,6 @@ export const rolesInPlatform = platform.table.withRLS("roles", {
 	discordSyncedColor: integer(),
 	canManageAttendance: boolean(),
 	canExportStars: boolean(),
-	canTriggerSync: boolean(),
 }, (table) => [
 	index("roles_isLeadership_rank_idx").using("btree", table.rank.asc().nullsLast()).where(sql`"isLeadership"`),
 	unique("roles_discordRoleId_key").on(table.discordRoleId),	unique("roles_rank_key").on(table.rank),	unique("roles_title_key").on(table.title),
@@ -757,7 +732,6 @@ export const workshopsInPlatform = platform.table.withRLS("workshops", {
 	id: uuid().defaultRandom().primaryKey(),
 	meetingId: uuid().notNull().references(() => meetingsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	project: text(),
-	airtableRecordId: text(),
 	configId: text(),
 	deletedAt: timestamp({ withTimezone: true }),
 	title: text(),
@@ -765,7 +739,7 @@ export const workshopsInPlatform = platform.table.withRLS("workshops", {
 }, (table) => [
 	uniqueIndex("workshops_configId_live_key").using("btree", table.configId.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	index("workshops_live_idx").using("btree", table.meetingId.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
-	unique("workshops_airtableRecordId_key").on(table.airtableRecordId),	unique("workshops_id_meetingId_key").on(table.id, table.meetingId),
+	unique("workshops_id_meetingId_key").on(table.id, table.meetingId),
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
 
 	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
@@ -802,15 +776,13 @@ export const resolvedUserPermissionsInPlatform = platform.materializedView("reso
 	canManageVerification: boolean(),
 	canManageAttendance: boolean(),
 	canExportStars: boolean(),
-	canTriggerSync: boolean(),
 	isLeader: boolean(),
 	minRank: doublePrecision(),
-}).as(sql`WITH root_holders AS ( SELECT ur."userId" FROM platform."userRoles" ur WHERE ur."roleId" = '00000000-0000-0000-0000-000000000002'::uuid ), user_custom_roles AS ( SELECT ur."userId", r.rank, r."isLeadership", r."canModerate", r."canManageRoles", r."canManageSuspensions", r."canViewAuditLog", r."canCreateCredentials", r."canManageVerification", r."canManageAttendance", r."canExportStars", r."canTriggerSync" FROM platform."userRoles" ur JOIN platform.roles r ON r.id = ur."roleId" AND r."roleType" = 'custom'::platform."roleType" ), first_non_null AS ( SELECT ucr."userId", min(ucr.rank) AS "minRank", bool_or(ucr."isLeadership") AS "isLeader", (array_agg(ucr."canModerate" ORDER BY ucr.rank) FILTER (WHERE ucr."canModerate" IS NOT NULL))[1] AS "canModerate", (array_agg(ucr."canManageRoles" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageRoles" IS NOT NULL))[1] AS "canManageRoles", (array_agg(ucr."canManageSuspensions" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageSuspensions" IS NOT NULL))[1] AS "canManageSuspensions", (array_agg(ucr."canViewAuditLog" ORDER BY ucr.rank) FILTER (WHERE ucr."canViewAuditLog" IS NOT NULL))[1] AS "canViewAuditLog", (array_agg(ucr."canCreateCredentials" ORDER BY ucr.rank) FILTER (WHERE ucr."canCreateCredentials" IS NOT NULL))[1] AS "canCreateCredentials", (array_agg(ucr."canManageVerification" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageVerification" IS NOT NULL))[1] AS "canManageVerification", (array_agg(ucr."canManageAttendance" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageAttendance" IS NOT NULL))[1] AS "canManageAttendance", (array_agg(ucr."canExportStars" ORDER BY ucr.rank) FILTER (WHERE ucr."canExportStars" IS NOT NULL))[1] AS "canExportStars", (array_agg(ucr."canTriggerSync" ORDER BY ucr.rank) FILTER (WHERE ucr."canTriggerSync" IS NOT NULL))[1] AS "canTriggerSync" FROM user_custom_roles ucr GROUP BY ucr."userId" ), all_users AS ( SELECT DISTINCT "userRoles"."userId" FROM platform."userRoles" ) SELECT au."userId", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canModerate", false) END AS "canModerate", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageRoles", false) END AS "canManageRoles", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageSuspensions", false) END AS "canManageSuspensions", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canViewAuditLog", false) END AS "canViewAuditLog", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canCreateCredentials", false) END AS "canCreateCredentials", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageVerification", false) END AS "canManageVerification", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageAttendance", false) END AS "canManageAttendance", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canExportStars", false) END AS "canExportStars", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canTriggerSync", false) END AS "canTriggerSync", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."isLeader", false) END AS "isLeader", CASE WHEN rh."userId" IS NOT NULL THEN '-Infinity'::double precision ELSE COALESCE(fnn."minRank", 'Infinity'::double precision) END AS "minRank" FROM all_users au LEFT JOIN root_holders rh ON rh."userId" = au."userId" LEFT JOIN first_non_null fnn ON fnn."userId" = au."userId"`);
+}).as(sql`WITH root_holders AS ( SELECT ur."userId" FROM platform."userRoles" ur WHERE ur."roleId" = '00000000-0000-0000-0000-000000000002'::uuid ), user_custom_roles AS ( SELECT ur."userId", r.rank, r."isLeadership", r."canModerate", r."canManageRoles", r."canManageSuspensions", r."canViewAuditLog", r."canCreateCredentials", r."canManageVerification", r."canManageAttendance", r."canExportStars" FROM platform."userRoles" ur JOIN platform.roles r ON r.id = ur."roleId" AND r."roleType" = 'custom'::platform."roleType" ), first_non_null AS ( SELECT ucr."userId", min(ucr.rank) AS "minRank", bool_or(ucr."isLeadership") AS "isLeader", (array_agg(ucr."canModerate" ORDER BY ucr.rank) FILTER (WHERE ucr."canModerate" IS NOT NULL))[1] AS "canModerate", (array_agg(ucr."canManageRoles" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageRoles" IS NOT NULL))[1] AS "canManageRoles", (array_agg(ucr."canManageSuspensions" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageSuspensions" IS NOT NULL))[1] AS "canManageSuspensions", (array_agg(ucr."canViewAuditLog" ORDER BY ucr.rank) FILTER (WHERE ucr."canViewAuditLog" IS NOT NULL))[1] AS "canViewAuditLog", (array_agg(ucr."canCreateCredentials" ORDER BY ucr.rank) FILTER (WHERE ucr."canCreateCredentials" IS NOT NULL))[1] AS "canCreateCredentials", (array_agg(ucr."canManageVerification" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageVerification" IS NOT NULL))[1] AS "canManageVerification", (array_agg(ucr."canManageAttendance" ORDER BY ucr.rank) FILTER (WHERE ucr."canManageAttendance" IS NOT NULL))[1] AS "canManageAttendance", (array_agg(ucr."canExportStars" ORDER BY ucr.rank) FILTER (WHERE ucr."canExportStars" IS NOT NULL))[1] AS "canExportStars" FROM user_custom_roles ucr GROUP BY ucr."userId" ), all_users AS ( SELECT DISTINCT "userRoles"."userId" FROM platform."userRoles" ) SELECT au."userId", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canModerate", false) END AS "canModerate", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageRoles", false) END AS "canManageRoles", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageSuspensions", false) END AS "canManageSuspensions", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canViewAuditLog", false) END AS "canViewAuditLog", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canCreateCredentials", false) END AS "canCreateCredentials", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageVerification", false) END AS "canManageVerification", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canManageAttendance", false) END AS "canManageAttendance", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."canExportStars", false) END AS "canExportStars", CASE WHEN rh."userId" IS NOT NULL THEN true ELSE COALESCE(fnn."isLeader", false) END AS "isLeader", CASE WHEN rh."userId" IS NOT NULL THEN '-Infinity'::double precision ELSE COALESCE(fnn."minRank", 'Infinity'::double precision) END AS "minRank" FROM all_users au LEFT JOIN root_holders rh ON rh."userId" = au."userId" LEFT JOIN first_non_null fnn ON fnn."userId" = au."userId"`);
 
 // Schema-suffix aliases — appended by devtools db introspect
 export { academicProgramCategoryInPlatform as academicProgramCategory };
 export { academicProgramsInPlatform as academicPrograms };
-export { airtableSyncStateInPlatform as airtableSyncState };
 export { appsInPlatform as apps };
 export { attendanceInPlatform as attendance };
 export { auditEventSourceInPlatform as auditEventSource };

@@ -29,13 +29,11 @@
 -- The meeting is the only one of these a member can be PRESENT at, which is
 -- why attendance keys to it.
 --
--- ## `configId` and `airtableRecordId`, side by side
+-- ## `configId`
 --
 -- `configId` is the identity `server/config/reconcile.ts` upserts and
--- archives on, mirroring what `airtableRecordId` used to be for the same two
--- tables: a stable id, authored once and never recomputed, that survives a
--- rename. `airtableRecordId` stays on both tables for now, and is dropped in
--- the Airtable teardown migration once nothing reads it.
+-- archives on: a stable id, authored once and never recomputed, that
+-- survives a rename.
 --
 -- ## Enums are not here
 --
@@ -49,7 +47,7 @@
 --
 -- Semester boundaries are data, not date arithmetic hidden in application
 -- code. A meeting normally resolves its season from its start timestamp; the
--- nullable seasonId on it is an explicit Airtable-authored override for
+-- nullable seasonId on it is an explicit config-authored override for
 -- exceptional calendars.
 create table "platform"."seasons" (
   "id"       uuid not null default gen_random_uuid(),
@@ -74,17 +72,14 @@ alter table "platform"."seasons" enable row level security;
 -- workshop night because its workshops say so. Storing the same fact twice
 -- guarantees the two copies disagree the first time somebody edits one.
 --
--- Every officer-authored column here is nullable, and the sync's completeness
--- check deliberately ignores all of them: officers fill Airtable fields one
--- keystroke at a time, and a pass landing between two of them must not
--- complain.
+-- Every officer-authored column here is nullable, because most of them are
+-- genuinely optional in config itself -- a night with no kind override, no
+-- RSVP link, no summary -- not because a write landed only partway.
 --
--- `airtableRecordId` is the single most important detail in the integration.
--- Airtable record IDs survive renames, field edits and view re-sorts, so an
--- officer retitling "Sprint 2" updates this row instead of orphaning every
--- attendance record pointing at it. Matching on name or slug instead breaks
--- the first time somebody fixes a typo, and breaks in the worst way: a second
--- row that looks right, while the credit already earned stays on the first.
+-- `configId` is what survives a retitle: matching on name or slug instead
+-- breaks the first time somebody fixes a typo, and breaks in the worst way --
+-- a second row that looks right, while the credit already earned stays on
+-- the first.
 --
 -- `deletedAt` is a soft archive, never a hard delete. A meeting with
 -- attendance rows is a record of who was in a room on a Tuesday, and "I
@@ -111,7 +106,6 @@ create table "platform"."meetings" (
   "location"           text,
   "startsAt"           timestamptz not null,
   "endsAt"             timestamptz not null,
-  "airtableRecordId"   text,
   -- The config-as-code identity: `@devdogsuga/club-config`'s authored `id`
   -- for this meeting. Unique only among LIVE rows (see the partial index
   -- below), so a config item that is retired and later reused -- unlikely,
@@ -119,8 +113,7 @@ create table "platform"."meetings" (
   -- not collide with the archived row it replaces.
   "configId"           text,
   -- Where to send a member after a successful check-in. Null is the ordinary
-  -- case: most nights have nothing to redirect to. Authored in config, not
-  -- Airtable -- it postdates the sync entirely.
+  -- case: most nights have nothing to redirect to.
   "surveyUrl"          text,
   "deletedAt"          timestamptz,
   "summary"            text,
@@ -145,7 +138,6 @@ create table "platform"."meetings" (
   "seasonId"             uuid,
   constraint "meetings_pkey" primary key ("id"),
   constraint "meetings_slug_key" unique ("slug"),
-  constraint "meetings_airtableRecordId_key" unique ("airtableRecordId"),
   constraint "meetings_endsAt_after_startsAt" check ("endsAt" > "startsAt"),
   -- Roughly two sentences, which is what the events card is laid out for. The
   -- number matters less than something enforcing it: without a cap, a summary
@@ -156,12 +148,13 @@ create table "platform"."meetings" (
     "summary" is null
     or char_length("summary") <= 240
   ),
-  -- The backstop for the Airtable single select. Spelled as a list rather
-  -- than an enum on purpose: this list is expected to keep moving, and an
-  -- enum makes each move a migration with a transaction caveat instead of one
-  -- line in a check. The values are Title Case display strings because the
-  -- stored value is both what officers pick and what the chip prints
-  -- verbatim, which is what lets an unrecognised value render as itself.
+  -- The backstop for the config schema's closed enum. Spelled as a list
+  -- rather than a Postgres enum on purpose: this list is expected to keep
+  -- moving, and an enum makes each move a migration with a transaction
+  -- caveat instead of one line in a check. The values are Title Case
+  -- display strings because the stored value is both what officers pick and
+  -- what the chip prints verbatim, which is what lets an unrecognised value
+  -- render as itself.
   constraint "meetings_kind_choices" check (
     "kind" is null
     or "kind" in ('Build Session', 'Study Session', 'Interest Meeting', 'Social')
@@ -183,10 +176,9 @@ create table "platform"."meetings" (
   -- `apps/platform/scripts/generate-campus-map.ts`, which is where the
   -- canonical list lives. Adding a building is three things that move
   -- together and a deploy rather than a click: this list,
-  -- MEETING_BUILDING_CHOICES in the registry parser, and the HIGHLIGHTS table
-  -- in that script, re-run, since a building with no footprint is a pin over
-  -- nothing. The Airtable select has to be widened by hand as well, because
-  -- the scaffolder is create-only.
+  -- MEETING_BUILDING_CHOICES in `@devdogsuga/club-config`'s schema, and the
+  -- HIGHLIGHTS table in that script, re-run, since a building with no
+  -- footprint is a pin over nothing.
   constraint "meetings_building_choices" check (
     "building" is null
     or "building" in (
@@ -279,7 +271,6 @@ create table "platform"."workshops" (
   -- "Workshop (Career Fair Readiness)" recommends nothing, and inventing a
   -- recommendation for it would be worse than leaving the field blank.
   "project"          text,
-  "airtableRecordId" text,
   -- The config-as-code identity, mirroring `meetings.configId`: the authored
   -- `id` of this workshop's entry in a meeting's agenda. Unique only among
   -- live rows.
@@ -295,7 +286,6 @@ create table "platform"."workshops" (
   -- some other meeting. It looks redundant beside the pkey and is not:
   -- dropping it breaks the attendance table's FK.
   constraint "workshops_id_meetingId_key" unique ("id", "meetingId"),
-  constraint "workshops_airtableRecordId_key" unique ("airtableRecordId"),
   constraint "workshops_title_length"
     check ("title" is null or char_length("title") <= 80),
   constraint "workshops_description_length"
@@ -430,11 +420,10 @@ create index "competitions_kickedOffAt_idx"
   on "platform"."competitions" ("kickedOffAt" desc);
 
 -- The config-as-code identity. Partial and unique, rather than a plain unique
--- constraint, for the same reason `airtableRecordId` never needed one: an
--- archived row's id has to be free for reuse, and a plain unique constraint
--- would keep a retired id claimed forever by a row nobody can see. Also what
--- makes these lookups indexed rather than sequential scans -- both tables'
--- reconcile does one per config item, every run.
+-- constraint, because an archived row's id has to be free for reuse: a plain
+-- unique constraint would keep a retired id claimed forever by a row nobody
+-- can see. Also what makes these lookups indexed rather than sequential
+-- scans -- both tables' reconcile does one per config item, every run.
 create unique index "meetings_configId_live_key" on "platform"."meetings" ("configId")
   where "deletedAt" is null;
 create unique index "workshops_configId_live_key" on "platform"."workshops" ("configId")
