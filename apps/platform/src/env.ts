@@ -307,31 +307,6 @@ const server = {
     secrecy: "secret",
     commented: true,
   }),
-  // Supabase OAuth, for sandbox environments. Optional for the same reason as
-  // Airtable: the app is registered separately and the platform has to boot
-  // without it, so provisioning refuses with `not_configured` rather than the
-  // whole app failing to start. See docs/platform/sandbox-environments.md.
-  //
-  // The client id is public, like every OAuth client id: it travels in the
-  // clear on each authorization redirect, so treating it as a secret would
-  // only make logs harder to read. (The hand-maintained bws arrays pushed it
-  // as a secret by omission; this classification is the deliberate one.)
-  SUPABASE_OAUTH_CLIENT_ID: define(z.string().default(""), {
-    doc:
-      "OAuth client id for 'Sign in with DevDogs' against sandbox " +
-      "environments. Empty means provisioning refuses with not_configured, " +
-      "so leave both halves empty unless you are working on sandboxes. " +
-      "Full setup: docs/platform/sandbox-environments.md.",
-    scope: "environment",
-    secrecy: "public",
-  }),
-  SUPABASE_OAUTH_CLIENT_SECRET: define(z.string().default(""), {
-    doc:
-      "OAuth client secret paired with SUPABASE_OAUTH_CLIENT_ID, for " +
-      "sandbox-environment provisioning.",
-    scope: "environment",
-    secrecy: "secret",
-  }),
   // Derived (.env / .env.generated). `localStack: true` throughout: when the
   // local Docker stack is running, `.env.generated` supplies these and wins
   // over `.env`, so a blank value in a contributor's file is by design.

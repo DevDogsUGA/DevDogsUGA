@@ -6,12 +6,10 @@
 --
 -- The one thing to know before editing: every constraint name in this file is
 -- an FK target or an application reference somewhere else. teams_id_competitionId_key
--- is what teamMembers, teamAwards and teamMembershipRequests point at, and
--- teamMembers_teamId_userId_role_key is what the sandbox layer's composite FK
--- points at. Renaming either one breaks a later migration, not this file.
+-- is what teamMembers, teamAwards and teamMembershipRequests point at. Renaming
+-- it breaks a later migration, not this file.
 --
--- This file must run after events core, which creates platform.competitions,
--- and before the sandbox environments file.
+-- This file must run after events core, which creates platform.competitions.
 
 create type "platform"."teamRole" as enum ('lead', 'member');
 create type "platform"."submissionState" as enum ('open', 'closed', 'merged');
@@ -115,9 +113,6 @@ create table "platform"."teamMembers" (
   -- without the column the rule is "no two rows whose teams share a
   -- competition", which is not expressible as a constraint at all.
   constraint "teamMembers_userId_competitionId_key" unique ("userId", "competitionId"),
-  -- FK target for sandbox environment ownership, which needs to name the lead
-  -- of a specific team and have the database enforce that it IS the lead.
-  constraint "teamMembers_teamId_userId_role_key" unique ("teamId", "userId", "role"),
 
   constraint "teamMembers_teamId_competitionId_fkey"
     foreign key ("teamId", "competitionId")

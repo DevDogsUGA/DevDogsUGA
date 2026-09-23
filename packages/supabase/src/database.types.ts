@@ -458,76 +458,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      envAccessLog: {
-        Row: {
-          at: string;
-          environmentId: string;
-          id: number;
-          keysFetched: string[];
-          userId: string;
-        };
-        Insert: {
-          at?: string;
-          environmentId: string;
-          id?: never;
-          keysFetched: string[];
-          userId: string;
-        };
-        Update: {
-          at?: string;
-          environmentId?: string;
-          id?: never;
-          keysFetched?: string[];
-          userId?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "envAccessLog_environmentId_fkey";
-            columns: ["environmentId"];
-            isOneToOne: false;
-            referencedRelation: "sandboxEnvironments";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      envVars: {
-        Row: {
-          environmentId: string;
-          key: string;
-          secretId: string | null;
-          updatedAt: string;
-          updatedBy: string;
-          value: string | null;
-          visibility: Database["platform"]["Enums"]["envVarVisibility"];
-        };
-        Insert: {
-          environmentId: string;
-          key: string;
-          secretId?: string | null;
-          updatedAt?: string;
-          updatedBy: string;
-          value?: string | null;
-          visibility: Database["platform"]["Enums"]["envVarVisibility"];
-        };
-        Update: {
-          environmentId?: string;
-          key?: string;
-          secretId?: string | null;
-          updatedAt?: string;
-          updatedBy?: string;
-          value?: string | null;
-          visibility?: Database["platform"]["Enums"]["envVarVisibility"];
-        };
-        Relationships: [
-          {
-            foreignKeyName: "envVars_environmentId_fkey";
-            columns: ["environmentId"];
-            isOneToOne: false;
-            referencedRelation: "sandboxEnvironments";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       exportAudit: {
         Row: {
           createdAt: string;
@@ -898,41 +828,6 @@ export type Database = {
           },
         ];
       };
-      proxyRequestLog: {
-        Row: {
-          at: string;
-          credentialId: string;
-          id: number;
-          method: string;
-          path: string;
-          status: number;
-        };
-        Insert: {
-          at?: string;
-          credentialId: string;
-          id?: never;
-          method: string;
-          path: string;
-          status: number;
-        };
-        Update: {
-          at?: string;
-          credentialId?: string;
-          id?: never;
-          method?: string;
-          path?: string;
-          status?: number;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "proxyRequestLog_credentialId_fkey";
-            columns: ["credentialId"];
-            isOneToOne: false;
-            referencedRelation: "sandboxCredentials";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       reflectionRevisions: {
         Row: {
           changeReason: string | null;
@@ -1280,116 +1175,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      sandboxCredentials: {
-        Row: {
-          disabledAt: string | null;
-          environmentId: string;
-          id: string;
-          issuedAt: string;
-          lastUsedAt: string | null;
-          revokedAt: string | null;
-          rotatedAt: string | null;
-          scope: Database["platform"]["Enums"]["proxyScope"];
-          status: Database["platform"]["Enums"]["credentialStatus"];
-          tokenHash: string;
-          userId: string;
-        };
-        Insert: {
-          disabledAt?: string | null;
-          environmentId: string;
-          id?: string;
-          issuedAt?: string;
-          lastUsedAt?: string | null;
-          revokedAt?: string | null;
-          rotatedAt?: string | null;
-          scope: Database["platform"]["Enums"]["proxyScope"];
-          status?: Database["platform"]["Enums"]["credentialStatus"];
-          tokenHash: string;
-          userId: string;
-        };
-        Update: {
-          disabledAt?: string | null;
-          environmentId?: string;
-          id?: string;
-          issuedAt?: string;
-          lastUsedAt?: string | null;
-          revokedAt?: string | null;
-          rotatedAt?: string | null;
-          scope?: Database["platform"]["Enums"]["proxyScope"];
-          status?: Database["platform"]["Enums"]["credentialStatus"];
-          tokenHash?: string;
-          userId?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "sandboxCredentials_environmentId_fkey";
-            columns: ["environmentId"];
-            isOneToOne: false;
-            referencedRelation: "sandboxEnvironments";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      sandboxEnvironments: {
-        Row: {
-          apiUrl: string;
-          autoPauseEnabled: boolean;
-          createdAt: string;
-          id: string;
-          jwtSecretId: string;
-          kind: Database["platform"]["Enums"]["envKind"];
-          lastSeenActiveAt: string | null;
-          name: string;
-          ownerUserId: string;
-          prewarmEnabled: boolean;
-          projectRef: string;
-          provisionedAt: string | null;
-          proxyHostname: string;
-          publishableKey: string;
-          revokedAt: string | null;
-          secretKeySecretId: string;
-          status: Database["platform"]["Enums"]["envStatus"];
-        };
-        Insert: {
-          apiUrl: string;
-          autoPauseEnabled?: boolean;
-          createdAt?: string;
-          id?: string;
-          jwtSecretId: string;
-          kind?: Database["platform"]["Enums"]["envKind"];
-          lastSeenActiveAt?: string | null;
-          name: string;
-          ownerUserId: string;
-          prewarmEnabled?: boolean;
-          projectRef: string;
-          provisionedAt?: string | null;
-          proxyHostname: string;
-          publishableKey: string;
-          revokedAt?: string | null;
-          secretKeySecretId: string;
-          status?: Database["platform"]["Enums"]["envStatus"];
-        };
-        Update: {
-          apiUrl?: string;
-          autoPauseEnabled?: boolean;
-          createdAt?: string;
-          id?: string;
-          jwtSecretId?: string;
-          kind?: Database["platform"]["Enums"]["envKind"];
-          lastSeenActiveAt?: string | null;
-          name?: string;
-          ownerUserId?: string;
-          prewarmEnabled?: boolean;
-          projectRef?: string;
-          provisionedAt?: string | null;
-          proxyHostname?: string;
-          publishableKey?: string;
-          revokedAt?: string | null;
-          secretKeySecretId?: string;
-          status?: Database["platform"]["Enums"]["envStatus"];
-        };
-        Relationships: [];
-      };
       seasons: {
         Row: {
           endsAt: string;
@@ -1408,36 +1193,6 @@ export type Database = {
           id?: string;
           name?: string;
           startsAt?: string;
-        };
-        Relationships: [];
-      };
-      supabaseConnections: {
-        Row: {
-          accessTokenSecretId: string;
-          connectedAt: string;
-          expiresAt: string;
-          orgSlug: string;
-          refreshTokenSecretId: string;
-          scopes: string[];
-          userId: string;
-        };
-        Insert: {
-          accessTokenSecretId: string;
-          connectedAt?: string;
-          expiresAt: string;
-          orgSlug: string;
-          refreshTokenSecretId: string;
-          scopes: string[];
-          userId: string;
-        };
-        Update: {
-          accessTokenSecretId?: string;
-          connectedAt?: string;
-          expiresAt?: string;
-          orgSlug?: string;
-          refreshTokenSecretId?: string;
-          scopes?: string[];
-          userId?: string;
         };
         Relationships: [];
       };
@@ -1479,55 +1234,6 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "teams";
             referencedColumns: ["id", "competitionId"];
-          },
-        ];
-      };
-      teamEnvironments: {
-        Row: {
-          attachedAt: string;
-          attachedBy: string;
-          environmentId: string;
-          ownerRole: Database["platform"]["Enums"]["teamRole"];
-          ownerUserId: string;
-          teamId: string;
-        };
-        Insert: {
-          attachedAt?: string;
-          attachedBy: string;
-          environmentId: string;
-          ownerRole?: Database["platform"]["Enums"]["teamRole"];
-          ownerUserId: string;
-          teamId: string;
-        };
-        Update: {
-          attachedAt?: string;
-          attachedBy?: string;
-          environmentId?: string;
-          ownerRole?: Database["platform"]["Enums"]["teamRole"];
-          ownerUserId?: string;
-          teamId?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "teamEnvironments_environmentId_ownerUserId_fkey";
-            columns: ["environmentId", "ownerUserId"];
-            isOneToOne: false;
-            referencedRelation: "sandboxEnvironments";
-            referencedColumns: ["id", "ownerUserId"];
-          },
-          {
-            foreignKeyName: "teamEnvironments_teamId_fkey";
-            columns: ["teamId"];
-            isOneToOne: true;
-            referencedRelation: "teams";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "teamEnvironments_teamId_ownerUserId_ownerRole_fkey";
-            columns: ["teamId", "ownerUserId", "ownerRole"];
-            isOneToOne: false;
-            referencedRelation: "teamMembers";
-            referencedColumns: ["teamId", "userId", "role"];
           },
         ];
       };
@@ -1932,15 +1638,6 @@ export type Database = {
           title: string;
         }[];
       };
-      log_proxy_request: {
-        Args: {
-          credential_id: string;
-          method: string;
-          path: string;
-          status: number;
-        };
-        Returns: undefined;
-      };
       my_reports: {
         Args: { app_slug?: string; only_open?: boolean; since?: string };
         Returns: {
@@ -1990,21 +1687,6 @@ export type Database = {
         };
         Returns: Json;
       };
-      resolve_sandbox_credential: {
-        Args: { hostname: string; token_hash: string };
-        Returns: {
-          credential_id: string;
-          environment_id: string;
-          environment_name: string;
-          outcome: string;
-          project_ref: string;
-          publishable_key: string;
-          scope: Database["platform"]["Enums"]["proxyScope"];
-          secret_key: string;
-          upstream_url: string;
-          user_id: string;
-        }[];
-      };
     };
     Enums: {
       academicProgramCategory:
@@ -2018,25 +1700,13 @@ export type Database = {
       checkInMethod: "qr" | "manual_code";
       contentAction: "quarantine" | "no_action";
       contentVisibility: "public" | "restricted";
-      credentialStatus: "active" | "disabled" | "revoked";
       credentialType: "email_password" | "totp" | "email_password_totp";
-      envKind: "owned" | "branch";
-      envStatus:
-        | "provisioning"
-        | "active"
-        | "paused"
-        | "restoring"
-        | "detached"
-        | "revoked"
-        | "orphaned";
-      envVarVisibility: "shared" | "secret";
       filerAction: "warn" | "suspend" | "no_action";
       graduationSemester: "spring" | "summer" | "fall";
       membershipDirection: "invite" | "request";
       membershipRequestStatus:
         "pending" | "accepted" | "declined" | "withdrawn" | "expired";
       oauthRegistrationType: "development" | "production";
-      proxyScope: "publishable" | "secret";
       quarantineEffect: "hide" | "freeze";
       reportReason:
         | "harassment"
@@ -3410,19 +3080,7 @@ export const Constants = {
       checkInMethod: ["qr", "manual_code"],
       contentAction: ["quarantine", "no_action"],
       contentVisibility: ["public", "restricted"],
-      credentialStatus: ["active", "disabled", "revoked"],
       credentialType: ["email_password", "totp", "email_password_totp"],
-      envKind: ["owned", "branch"],
-      envStatus: [
-        "provisioning",
-        "active",
-        "paused",
-        "restoring",
-        "detached",
-        "revoked",
-        "orphaned",
-      ],
-      envVarVisibility: ["shared", "secret"],
       filerAction: ["warn", "suspend", "no_action"],
       graduationSemester: ["spring", "summer", "fall"],
       membershipDirection: ["invite", "request"],
@@ -3434,7 +3092,6 @@ export const Constants = {
         "expired",
       ],
       oauthRegistrationType: ["development", "production"],
-      proxyScope: ["publishable", "secret"],
       quarantineEffect: ["hide", "freeze"],
       reportReason: [
         "harassment",

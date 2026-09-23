@@ -40,8 +40,6 @@ export default function robots(): MetadataRoute.Robots {
         "/auth", // sign-in entry point and OAuth callback
         "/discord", // Discord interaction webhook, signature-verified
         "/github", // GitHub App webhook, signature-verified
-        "/supabase", // sandbox OAuth authorize/callback
-        "/sandbox", // sandbox environment control
         "/export", // CSV exports, permission-gated
         "/search", // JSON search API; there is no results PAGE to index
         // Not private. It 307s to the UGA Involvement Network listing, and is

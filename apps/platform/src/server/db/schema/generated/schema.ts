@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, bigint, uuid, boolean, varchar, integer, pgEnum, text, timestamp, date, smallint, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, boolean, varchar, integer, pgEnum, text, timestamp, date, smallint, doublePrecision, jsonb, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by devtools db introspect after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -15,11 +15,6 @@ export const teamRoleInPlatform = platform.enum("teamRole", ["lead", "member"])
 export const submissionStateInPlatform = platform.enum("submissionState", ["open", "closed", "merged"])
 export const membershipDirectionInPlatform = platform.enum("membershipDirection", ["invite", "request"])
 export const membershipRequestStatusInPlatform = platform.enum("membershipRequestStatus", ["pending", "accepted", "declined", "withdrawn", "expired"])
-export const envKindInPlatform = platform.enum("envKind", ["owned", "branch"])
-export const envStatusInPlatform = platform.enum("envStatus", ["provisioning", "active", "paused", "restoring", "detached", "revoked", "orphaned"])
-export const credentialStatusInPlatform = platform.enum("credentialStatus", ["active", "disabled", "revoked"])
-export const proxyScopeInPlatform = platform.enum("proxyScope", ["publishable", "secret"])
-export const envVarVisibilityInPlatform = platform.enum("envVarVisibility", ["shared", "secret"])
 export const contentActionInPlatform = platform.enum("contentAction", ["quarantine", "no_action"])
 export const filerActionInPlatform = platform.enum("filerAction", ["warn", "suspend", "no_action"])
 export const subjectActionInPlatform = platform.enum("subjectAction", ["warn", "suspend", "ban", "no_action"])
@@ -241,40 +236,6 @@ export const docsPagesInPlatform = platform.table.withRLS("docsPages", {
 	pgPolicy("docsPages_public_read", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 ]);
 
-export const envAccessLogInPlatform = platform.table.withRLS("envAccessLog", {
-	id: bigint({ mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
-	environmentId: uuid().notNull().references(() => sandboxEnvironmentsInPlatform.id, { onDelete: "cascade" } ),
-	userId: uuid().notNull(),
-	keysFetched: text().array().notNull(),
-	at: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-}, (table) => [
-	index("envAccessLog_environmentId_at_idx").using("btree", table.environmentId.asc().nullsLast(), table.at.desc().nullsFirst()),
-
-	pgPolicy("no_client_select", { as: "restrictive", for: "select", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_write", { as: "restrictive", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-]);
-
-export const envVarsInPlatform = platform.table.withRLS("envVars", {
-	environmentId: uuid().notNull().references(() => sandboxEnvironmentsInPlatform.id, { onDelete: "cascade" } ),
-	key: text().notNull(),
-	value: text(),
-	secretId: uuid(),
-	visibility: envVarVisibilityInPlatform().notNull(),
-	updatedBy: uuid().notNull(),
-	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-}, (table) => [
-	primaryKey({ columns: [table.environmentId, table.key], name: "envVars_pkey"}),
-
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_select", { as: "restrictive", for: "select", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-check("envVars_one_storage", sql`(num_nonnulls(value, "secretId") = 1)`),check("envVars_storage_matches_visibility", sql`(((visibility = 'shared'::platform."envVarVisibility") AND (value IS NOT NULL)) OR ((visibility = 'secret'::platform."envVarVisibility") AND ("secretId" IS NOT NULL)))`),]);
-
 export const exportAuditInPlatform = platform.table.withRLS("exportAudit", {
 	id: uuid().defaultRandom().primaryKey(),
 	userId: uuid().references(() => users.id, { onDelete: "set null", onUpdate: "cascade" } ),
@@ -463,21 +424,6 @@ export const profileLinksInPlatform = platform.table.withRLS("profileLinks", {
 	pgPolicy("crud_authenticated_policy_update", { for: "update", to: ["authenticated"], using: sql`((( SELECT auth.uid() AS uid) = "userId") AND (NOT platform.is_profile_frozen("userId")) AND (NOT platform.is_suspended(( SELECT auth.uid() AS uid))))`, withCheck: sql`((( SELECT auth.uid() AS uid) = "userId") AND (NOT platform.is_suspended(( SELECT auth.uid() AS uid))))` }),
 ]);
 
-export const proxyRequestLogInPlatform = platform.table.withRLS("proxyRequestLog", {
-	id: bigint({ mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
-	credentialId: uuid().notNull().references(() => sandboxCredentialsInPlatform.id, { onDelete: "cascade" } ),
-	method: text().notNull(),
-	path: text().notNull(),
-	status: smallint().notNull(),
-	at: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-}, (table) => [
-	index("proxyRequestLog_credentialId_at_idx").using("btree", table.credentialId.asc().nullsLast(), table.at.desc().nullsFirst()),
-
-	pgPolicy("no_client_select", { as: "restrictive", for: "select", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_write", { as: "restrictive", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-]);
-
 export const reflectionRevisionsInPlatform = platform.table.withRLS("reflectionRevisions", {
 	id: uuid().defaultRandom().primaryKey(),
 	reflectionId: uuid().notNull().references(() => reflectionsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
@@ -663,61 +609,6 @@ export const rolesInPlatform = platform.table.withRLS("roles", {
 	pgPolicy("deny_test_identities", { as: "restrictive", to: ["authenticated"], using: sql`(NOT platform.is_test_identity(( SELECT auth.uid() AS uid)))`, withCheck: sql`(NOT platform.is_test_identity(( SELECT auth.uid() AS uid)))` }),
 check("roles_custom_requires_rank", sql`(("roleType" = 'custom'::platform."roleType") = (rank IS NOT NULL))`),]);
 
-export const sandboxCredentialsInPlatform = platform.table.withRLS("sandboxCredentials", {
-	id: uuid().defaultRandom().primaryKey(),
-	environmentId: uuid().notNull().references(() => sandboxEnvironmentsInPlatform.id, { onDelete: "cascade" } ),
-	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" } ),
-	tokenHash: text().notNull(),
-	scope: proxyScopeInPlatform().notNull(),
-	status: credentialStatusInPlatform().default("active").notNull(),
-	lastUsedAt: timestamp({ withTimezone: true }),
-	disabledAt: timestamp({ withTimezone: true }),
-	rotatedAt: timestamp({ withTimezone: true }),
-	revokedAt: timestamp({ withTimezone: true }),
-	issuedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-}, (table) => [
-	index("sandboxCredentials_userId_idx").using("btree", table.userId.asc().nullsLast()),
-	unique("sandboxCredentials_environmentId_userId_scope_key").on(table.environmentId, table.userId, table.scope),	unique("sandboxCredentials_tokenHash_key").on(table.tokenHash),
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_select", { as: "restrictive", for: "select", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-]);
-
-export const sandboxEnvironmentsInPlatform = platform.table.withRLS("sandboxEnvironments", {
-	id: uuid().defaultRandom().primaryKey(),
-	name: text().notNull(),
-	kind: envKindInPlatform().default("owned").notNull(),
-	ownerUserId: uuid().notNull().references(() => users.id, { onDelete: "restrict" } ),
-	projectRef: text().notNull(),
-	apiUrl: text().notNull(),
-	publishableKey: text().notNull(),
-	secretKeySecretId: uuid().notNull(),
-	jwtSecretId: uuid().notNull(),
-	proxyHostname: text().notNull(),
-	prewarmEnabled: boolean().default(true).notNull(),
-	autoPauseEnabled: boolean().default(true).notNull(),
-	status: envStatusInPlatform().default("provisioning").notNull(),
-	lastSeenActiveAt: timestamp({ withTimezone: true }),
-	provisionedAt: timestamp({ withTimezone: true }),
-	revokedAt: timestamp({ withTimezone: true }),
-	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-}, (table) => [
-	index("sandboxEnvironments_ownerUserId_idx").using("btree", table.ownerUserId.asc().nullsLast()),
-	index("sandboxEnvironments_status_idx").using("btree", table.status.asc().nullsLast()),
-	unique("sandboxEnvironments_id_ownerUserId_key").on(table.id, table.ownerUserId),	unique("sandboxEnvironments_projectRef_key").on(table.projectRef),	unique("sandboxEnvironments_proxyHostname_key").on(table.proxyHostname),
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_select", { as: "restrictive", for: "select", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-]);
-
 export const seasonsInPlatform = platform.table.withRLS("seasons", {
 	id: uuid().defaultRandom().primaryKey(),
 	name: text().notNull(),
@@ -734,26 +625,6 @@ export const seasonsInPlatform = platform.table.withRLS("seasons", {
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 check("seasons_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),]);
-
-export const supabaseConnectionsInPlatform = platform.table.withRLS("supabaseConnections", {
-	userId: uuid().primaryKey().references(() => users.id, { onDelete: "cascade" } ),
-	orgSlug: text().notNull(),
-	accessTokenSecretId: uuid().notNull(),
-	refreshTokenSecretId: uuid().notNull(),
-	expiresAt: timestamp({ withTimezone: true }).notNull(),
-	scopes: text().array().notNull(),
-	connectedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-}, (table) => [
-	index("supabaseConnections_expiresAt_idx").using("btree", table.expiresAt.asc().nullsLast()),
-
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_select", { as: "restrictive", for: "select", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-]);
 
 export const teamAwardsInPlatform = platform.table.withRLS("teamAwards", {
 	id: uuid().defaultRandom().primaryKey(),
@@ -781,35 +652,6 @@ export const teamAwardsInPlatform = platform.table.withRLS("teamAwards", {
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 ]);
 
-export const teamEnvironmentsInPlatform = platform.table.withRLS("teamEnvironments", {
-	teamId: uuid().primaryKey().references(() => teamsInPlatform.id, { onDelete: "cascade" } ),
-	environmentId: uuid().notNull(),
-	ownerUserId: uuid().notNull(),
-	ownerRole: teamRoleInPlatform().default("lead").notNull(),
-	attachedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-	attachedBy: uuid().notNull(),
-}, (table) => [
-	foreignKey({
-		columns: [table.environmentId, table.ownerUserId],
-		foreignColumns: [sandboxEnvironmentsInPlatform.id, sandboxEnvironmentsInPlatform.ownerUserId],
-		name: "teamEnvironments_environmentId_ownerUserId_fkey"
-	}),
-	foreignKey({
-		columns: [table.teamId, table.ownerUserId, table.ownerRole],
-		foreignColumns: [teamMembersInPlatform.teamId, teamMembersInPlatform.userId, teamMembersInPlatform.role],
-		name: "teamEnvironments_teamId_ownerUserId_ownerRole_fkey"
-	}).onUpdate("restrict").onDelete("restrict"),
-	index("teamEnvironments_environmentId_idx").using("btree", table.environmentId.asc().nullsLast()),
-
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_select", { as: "restrictive", for: "select", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-check("teamEnvironments_owner_is_lead", sql`("ownerRole" = 'lead'::platform."teamRole")`),]);
-
 export const teamMembersInPlatform = platform.table.withRLS("teamMembers", {
 	teamId: uuid().notNull(),
 	competitionId: uuid().notNull(),
@@ -825,7 +667,7 @@ export const teamMembersInPlatform = platform.table.withRLS("teamMembers", {
 	}).onUpdate("cascade").onDelete("cascade"),
 	uniqueIndex("teamMembers_one_lead_per_team").using("btree", table.teamId.asc().nullsLast()).where(sql`(role = 'lead'::platform."teamRole")`),
 	index("teamMembers_userId_teamId_idx").using("btree", table.userId.asc().nullsLast(), table.teamId.asc().nullsLast()),
-	unique("teamMembers_teamId_userId_role_key").on(table.teamId, table.userId, table.role),	unique("teamMembers_userId_competitionId_key").on(table.userId, table.competitionId),
+	unique("teamMembers_userId_competitionId_key").on(table.userId, table.competitionId),
 	pgPolicy("authenticated_select", { for: "select", to: ["authenticated"], using: sql`true` }),
 
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
@@ -1002,15 +844,9 @@ export { contentActionInPlatform as contentAction };
 export { contentTypesInPlatform as contentTypes };
 export { contentVisibilityInPlatform as contentVisibility };
 export { credentialRolesInPlatform as credentialRoles };
-export { credentialStatusInPlatform as credentialStatus };
 export { credentialTypeInPlatform as credentialType };
 export { credentialsInPlatform as credentials };
 export { docsPagesInPlatform as docsPages };
-export { envAccessLogInPlatform as envAccessLog };
-export { envKindInPlatform as envKind };
-export { envStatusInPlatform as envStatus };
-export { envVarVisibilityInPlatform as envVarVisibility };
-export { envVarsInPlatform as envVars };
 export { exportAuditInPlatform as exportAudit };
 export { filerActionInPlatform as filerAction };
 export { graduationSemesterInPlatform as graduationSemester };
@@ -1027,8 +863,6 @@ export { profileInPlatform as profile };
 export { profileAcademicProgramsInPlatform as profileAcademicPrograms };
 export { profileLinksInPlatform as profileLinks };
 export { profileWithVerificationInPlatform as profileWithVerification };
-export { proxyRequestLogInPlatform as proxyRequestLog };
-export { proxyScopeInPlatform as proxyScope };
 export { quarantineEffectInPlatform as quarantineEffect };
 export { reflectionRevisionsInPlatform as reflectionRevisions };
 export { reflectionSettingsInPlatform as reflectionSettings };
@@ -1042,14 +876,10 @@ export { reportsInPlatform as reports };
 export { resolvedUserPermissionsInPlatform as resolvedUserPermissions };
 export { roleTypeInPlatform as roleType };
 export { rolesInPlatform as roles };
-export { sandboxCredentialsInPlatform as sandboxCredentials };
-export { sandboxEnvironmentsInPlatform as sandboxEnvironments };
 export { seasonsInPlatform as seasons };
 export { subjectActionInPlatform as subjectAction };
 export { submissionStateInPlatform as submissionState };
-export { supabaseConnectionsInPlatform as supabaseConnections };
 export { teamAwardsInPlatform as teamAwards };
-export { teamEnvironmentsInPlatform as teamEnvironments };
 export { teamMembersInPlatform as teamMembers };
 export { teamMembershipRequestsInPlatform as teamMembershipRequests };
 export { teamRoleInPlatform as teamRole };

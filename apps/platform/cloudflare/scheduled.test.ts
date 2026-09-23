@@ -68,7 +68,7 @@ describe("cron dispatcher", () => {
     const fetchMock = vi.fn(async (input: string | URL | Request) =>
       Promise.resolve(
         new Response(null, {
-          status: readRequestUrl(input).endsWith("/cron/sandbox-refresh")
+          status: readRequestUrl(input).endsWith("/cron/github-reconcile")
             ? 503
             : 200,
         }),
@@ -87,7 +87,7 @@ describe("cron dispatcher", () => {
           CRON_SECRET: "secret",
         },
       ),
-    ).rejects.toThrow("/cron/sandbox-refresh: HTTP 503");
+    ).rejects.toThrow("/cron/github-reconcile: HTTP 503");
 
     expect(fetchMock).toHaveBeenCalledTimes(paths.length);
     expect(

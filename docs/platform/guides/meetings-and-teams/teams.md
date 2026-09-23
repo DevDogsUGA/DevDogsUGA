@@ -59,7 +59,7 @@ Acceptance is validated when answered, never when created: in between, the team 
 
 ## The lead, and the lock
 
-`teamMembers.role` is `lead` or `member`, with a partial unique index allowing exactly one lead per team. The lead invites, answers requests and transfers the role; a transfer demotes before it promotes, because the index rejects the other order. A lead cannot leave a team that still has other members (`lead_must_transfer_first`). The lead also owns the team's sandbox environment, which a composite foreign key from `teamEnvironments` enforces.
+`teamMembers.role` is `lead` or `member`, with a partial unique index allowing exactly one lead per team. The lead invites, answers requests and transfers the role; a transfer demotes before it promotes, because the index rejects the other order. A lead cannot leave a team that still has other members (`lead_must_transfer_first`).
 
 A roster is **locked** — no new members, nothing else — when the team has a live or merged entry, when `judgingStartsAt` has passed, or when an officer set `lockedManuallyAt` through `setManualLock`. The predicate is computed, never stored, and lives once in `server/teams/lockState.ts`.
 

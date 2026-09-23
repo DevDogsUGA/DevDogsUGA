@@ -61,9 +61,9 @@ export const CRON_ROUTES: Record<
   }
 > = {
   "0 0 * * *": {
-    label: "Nightly repair: GitHub reconcile, OAuth tokens, sandbox, catalog",
+    label: "Nightly repair: GitHub reconcile, catalog",
     monitorSlug: "platform-cron-nightly-repair",
-    // Four sequential upstream passes, one of which (academic-programs)
+    // Two sequential upstream passes, the second of which (academic-programs)
     // deliberately spaces ~42 requests -- generous margins rather than the
     // five/ten-minute crons' tight ones.
     monitor: { checkinMargin: 15, maxRuntime: 30 },
@@ -74,20 +74,10 @@ export const CRON_ROUTES: Record<
       // work regularly then something upstream is broken and a tighter cadence
       // would hide it.
       "/cron/github-reconcile",
-      // Supabase OAuth access tokens last 24h, so daily has ample margin.
-      // Runs BEFORE the reconcile below, which needs those tokens to ask
-      // whether each project still exists. Reversing them would have the
-      // reconcile skip every environment whose grant lapsed overnight.
-      "/cron/sandbox-refresh",
-      // Project existence, status drift, 90-day pause expiry, auto-pause.
-      // The sole authority on orphaning: the proxy must never conclude a
-      // project is gone, because a transient upstream error would tear down a
-      // healthy environment's credentials and secrets.
-      "/cron/sandbox-reconcile",
       // Mirrors the UGA Bulletin's program catalog for the account Academics
       // combobox. Last in the daily group because it deliberately spaces
       // roughly 42 upstream page requests; a slow or rate-limited Bulletin
-      // must not delay the GitHub and sandbox repair passes above.
+      // must not delay the GitHub repair pass above.
       "/cron/academic-programs",
     ],
   },
@@ -121,20 +111,14 @@ export const CRON_ROUTES: Record<
     routes: ["/cron/sync-discord-roles"],
   },
   "*/5 * * * *": {
-    label: "Competition: freeze judging window, prewarm sandboxes",
+    label: "Competition: freeze judging window",
     monitorSlug: "platform-cron-competition-tasks",
-    // maxRuntime accounts for the measured 196s sandbox restore inside
-    // sandbox-prewarm, not just the fast freeze route ahead of it.
     monitor: { checkinMargin: 3, maxRuntime: 5 },
     routes: [
       // Freezes `teams."competedAt"` once judging begins. Five minutes rather
       // than ten because the window between judging starting and this running
       // is the window in which closing a PR costs a team its star.
       "/cron/judging-start",
-      // Wakes sandbox environments with a competition starting inside fifteen
-      // minutes. Five minutes rather than ten because a restore takes 196s
-      // (measured) and the lead time has to absorb a tick landing badly.
-      "/cron/sandbox-prewarm",
     ],
   },
 };
