@@ -47,7 +47,14 @@ function slugSegment(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-/** Whether a PR's head ref is this team's branch. */
+/**
+ * Whether a PR's head ref is this team's branch.
+ *
+ * No caller yet: the webhook-fed mirror step (next, not this one) is what
+ * matches an incoming PR against a team. Pre-staged here rather than in that
+ * step because it belongs next to `teamBranch`, the thing it compares
+ * against, and that step needs it correct on day one, not rederived.
+ */
 export function isTeamHead(headRef: string, teamSlug: string): boolean {
   return normalizeRef(headRef) === teamBranch(teamSlug);
 }
