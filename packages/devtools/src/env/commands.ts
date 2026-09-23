@@ -169,10 +169,10 @@ function warnUnknown(unknown: string[]): void {
 /**
  * Says out loud that a refused credential was left behind.
  *
- * A warning rather than a hard stop, because `AIRTABLE_PAT` is legitimately in
- * `.env` while somebody is scaffolding the base, and blocking the whole push
- * then would be wrong. But never silence: somebody who put a token in the file
- * expecting it to sync has to learn that it did not.
+ * A warning rather than a hard stop, because a never-store key can be
+ * legitimately in `.env` for an operator's own use, and blocking the whole
+ * push then would be wrong. But never silence: somebody who put a token in
+ * the file expecting it to sync has to learn that it did not.
  */
 function warnRefused(refused: string[]): void {
   for (const key of refused) {
@@ -185,8 +185,8 @@ function warnRefused(refused: string[]): void {
       );
     } else {
       log.warn(
-        `${key} was NOT uploaded, and must not be. The runtime reads its own, ` +
-          `narrower token from Supabase Vault — see docs/platform/airtable-setup.md.`,
+        `${key} was NOT uploaded, and must not be. See its define() doc in ` +
+          `the owning package's env.ts for why.`,
       );
     }
   }
@@ -503,12 +503,13 @@ export async function pushToGithub(
     // filter twice rather than one filter and a branch. See the header.
     //
     // `production-apply` accepts everything `production` does plus the
-    // apply-tier pair, so a production push writes MOST keys twice: once to the
-    // unreviewed environment the deploy reads, once to the reviewed one whose
-    // three jobs (`production-config`, `production-airtable`, `prune-orphans`)
-    // were previously starved of them. That is not the gate leaking. The gate
-    // is `production.excludeKeys`, which keeps the apply-tier pair out of the
-    // FIRST environment; it has never had anything to say about the second.
+    // apply-tier credential, so a production push writes MOST keys twice: once
+    // to the unreviewed environment the deploy reads, once to the reviewed one
+    // whose jobs (`production-config`, `prune-orphans`) were previously
+    // starved of them. That is not the gate leaking. The gate is
+    // `production.excludeKeys`, which keeps the apply-tier credential out of
+    // the FIRST environment; it has never had anything to say about the
+    // second.
     const chosenSecrets = new Map(
       [...secrets].filter(([key]) => accepts(ghEnvironment, key)),
     );

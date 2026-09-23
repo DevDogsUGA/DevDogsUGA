@@ -102,10 +102,10 @@ describe("pushToGithub", () => {
    * first test below cannot.
    */
   describe("the production split", () => {
-    // Literals. The point is these two keys by name, not "whatever the tier
-    // says today". A test that reads the same derived set as the code under
-    // test passes when both are wrong together.
-    const APPLY_KEYS = ["AIRTABLE_APPLY_PAT", "SUPABASE_ACCESS_TOKEN"] as const;
+    // A literal. The point is this key by name, not "whatever the tier says
+    // today". A test that reads the same derived set as the code under test
+    // passes when both are wrong together.
+    const APPLY_KEYS = ["SUPABASE_ACCESS_TOKEN"] as const;
 
     it("NEVER offers an apply-tier key to the unreviewed production environment", async () => {
       // ⚠️ THE INVARIANT, and now the only thing enforcing the reviewer gate:
@@ -122,7 +122,6 @@ describe("pushToGithub", () => {
       await pushToGithub(
         "production",
         new Map([
-          ["AIRTABLE_APPLY_PAT", "pat-write"],
           ["SUPABASE_ACCESS_TOKEN", "sbp"],
           ["DISCORD_TOKEN", "tok"],
         ]),
@@ -153,20 +152,19 @@ describe("pushToGithub", () => {
       expect(secretsTo("production")).toEqual(["DISCORD_TOKEN"]);
     });
 
-    it("gives production-apply a SUPERSET: ordinary secrets, public variables, and the apply pair", async () => {
-      // The three jobs that run in `production-apply` and were starved by the
+    it("gives production-apply a SUPERSET: ordinary secrets, public variables, and the apply credential", async () => {
+      // Two of the jobs that run in `production-apply` and were starved by the
       // old rule, one key each: `production-config` wanted a deploy-tier OAuth
-      // secret, `production-airtable` wanted a public variable, `prune-orphans`
-      // wanted a deploy-tier API token. Three out of three is a broken rule
-      // rather than three misconfigured jobs.
+      // secret, `prune-orphans` wanted a deploy-tier API token. Both out of
+      // both is a broken rule rather than two misconfigured jobs.
       await pushToGithub(
         "production",
         new Map([
           ["CLOUDFLARE_API_TOKEN", "cf"],
           ["SUPABASE_OAUTH_CLIENT_SECRET", "oauth"],
-          ["AIRTABLE_APPLY_PAT", "pat-write"],
+          ["SUPABASE_ACCESS_TOKEN", "sbp"],
         ]),
-        new Map([["AIRTABLE_BASE_ID", "appTESTTESTTEST01"]]),
+        new Map([["PROJECT_REF", "abcdefghijklmnop"]]),
         true,
       );
 
@@ -175,14 +173,13 @@ describe("pushToGithub", () => {
         ["production", "SUPABASE_OAUTH_CLIENT_SECRET", "oauth"],
         ["production-apply", "CLOUDFLARE_API_TOKEN", "cf"],
         ["production-apply", "SUPABASE_OAUTH_CLIENT_SECRET", "oauth"],
-        ["production-apply", "AIRTABLE_APPLY_PAT", "pat-write"],
+        ["production-apply", "SUPABASE_ACCESS_TOKEN", "sbp"],
       ]);
       // The public one goes to the VARIABLE store in BOTH. That is the half
-      // the old rule made impossible, and the reason `production-airtable` had
-      // to be fed a hand-set repository variable.
+      // the old rule made impossible.
       expect(vi.mocked(setVariable).mock.calls).toEqual([
-        ["production", "AIRTABLE_BASE_ID", "appTESTTESTTEST01"],
-        ["production-apply", "AIRTABLE_BASE_ID", "appTESTTESTTEST01"],
+        ["production", "PROJECT_REF", "abcdefghijklmnop"],
+        ["production-apply", "PROJECT_REF", "abcdefghijklmnop"],
       ]);
     });
 
@@ -194,17 +191,17 @@ describe("pushToGithub", () => {
       await pushToGithub(
         "staging",
         new Map([
-          ["AIRTABLE_APPLY_PAT", "pat-write"],
+          ["SUPABASE_ACCESS_TOKEN", "sbp"],
           ["DISCORD_TOKEN", "tok"],
         ]),
-        new Map([["AIRTABLE_BASE_ID", "appTESTTESTTEST01"]]),
+        new Map([["PROJECT_REF", "abcdefghijklmnop"]]),
         true,
       );
       expect(vi.mocked(setSecret).mock.calls).toEqual([
         ["staging", "DISCORD_TOKEN", "tok"],
       ]);
       expect(vi.mocked(setVariable).mock.calls).toEqual([
-        ["staging", "AIRTABLE_BASE_ID", "appTESTTESTTEST01"],
+        ["staging", "PROJECT_REF", "abcdefghijklmnop"],
       ]);
 
       vi.mocked(setSecret).mockClear();
@@ -212,15 +209,15 @@ describe("pushToGithub", () => {
 
       await pushToGithub(
         "preflight",
-        new Map([["AIRTABLE_PLAN_PAT", "pat-read"]]),
-        new Map([["AIRTABLE_BASE_ID", "appTESTTESTTEST01"]]),
+        new Map([["DB_URL", "postgresql://migrations-only"]]),
+        new Map([["PROJECT_REF", "abcdefghijklmnop"]]),
         true,
       );
       expect(vi.mocked(setSecret).mock.calls).toEqual([
-        ["preflight", "AIRTABLE_PLAN_PAT", "pat-read"],
+        ["preflight", "DB_URL", "postgresql://migrations-only"],
       ]);
       expect(vi.mocked(setVariable).mock.calls).toEqual([
-        ["preflight", "AIRTABLE_BASE_ID", "appTESTTESTTEST01"],
+        ["preflight", "PROJECT_REF", "abcdefghijklmnop"],
       ]);
     });
   });

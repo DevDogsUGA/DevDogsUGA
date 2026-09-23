@@ -78,17 +78,12 @@ const SUMMARIES: Record<VaultTarget, string> = {
   // SUPABASE_JWT_SIGNING_KEY, SECRET_KEY and GH_APP_PRIVATE_KEY, into a project
   // whose GitHub environment `main` can reach.
   //
-  // The second half of the sentence below is real too: `AIRTABLE_PLAN_PAT` is
-  // declared in `packages/devtools/env.ts` with `narrowed: true`, so
-  // `keysRoutedTo("preflight")` carries it alongside `DB_URL` and
-  // `deploy airtable-plan` has a credential it can legitimately hold. No
-  // manifest used to declare it, so nothing routed it, and the workflow step
-  // that would have used it was a comment.
+  // `DB_URL` is the one key `narrowed: true` opts in today, so this project
+  // carries nothing else.
   preflight:
     "Credentials for the dry runs that precede a promotion to production. " +
     "Read-only by construction: a Postgres role that can see only the " +
-    "migrations table, an Airtable PAT with schema:read and nothing else, " +
-    "and the public base id naming which base that PAT may read.",
+    "migrations table and nothing else.",
   staging: "Everything the two Next apps consume, pointed at staging.",
   production:
     "The live values. Shared with the production-apply environment, which " +
@@ -170,11 +165,10 @@ export function assertVaultTarget(
 //
 // The reasoning moved with the keys, onto the declarations themselves:
 //
-//   * why `BWS_ACCESS_TOKEN` and `AIRTABLE_PAT` are refused storage anywhere
-//     (a key locked inside the box it opens): their `define()` docs and the
-//     surrounding comments in `packages/devtools/env.ts`;
+//   * why `BWS_ACCESS_TOKEN` is refused storage anywhere (a key locked inside
+//     the box it opens): its `define()` doc in `packages/devtools/env.ts`;
 //   * why apply-tier is a GITHUB routing rule and not a Bitwarden one (the
-//     production BWS project deliberately holds the apply credentials): the
+//     production BWS project deliberately holds the apply credential): the
 //     `EnvTier` doc in `packages/env/src/meta.ts`;
-//   * why the apply pair stays out of staging/preflight: `ignoredFor()` in
-//     `../env/selection.ts`.
+//   * why the apply credential stays out of staging/preflight: `ignoredFor()`
+//     in `../env/selection.ts`.

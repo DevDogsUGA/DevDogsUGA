@@ -420,7 +420,7 @@ describe("preflight", () => {
 
   it("carries the narrowed keys and nothing else", () => {
     const { active } = target("preflight");
-    expect([...active.keys()].sort()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
+    expect([...active.keys()].sort()).toEqual(["DB_URL"]);
   });
 
   it("carries none of the three credentials the finding named", () => {
@@ -506,14 +506,14 @@ describe("preflight", () => {
     // "environment"` key, so both deployed targets moved and preflight did
     // not.
     //
-    // Then both dropped by one: `AIRTABLE_SYNC_PAT` left the registry with
-    // the Airtable integration's teardown -- another ordinary `scope:
-    // "environment"` key, so both deployed targets moved and preflight did
-    // not. `AIRTABLE_BASE_ID` left the same teardown but moved nothing here:
-    // it was already `scope: "default"`, pushed nowhere.
-    expect(target("preflight").active.size).toBe(2);
+    // Then production dropped by two and preflight by one, staging untouched:
+    // `AIRTABLE_PLAN_PAT` (narrowed, plan-tier: preflight and production) and
+    // `AIRTABLE_APPLY_PAT` (apply-tier: production only) both left the
+    // registry with devtools' own Airtable commands and CI jobs, deleted
+    // whole.
+    expect(target("preflight").active.size).toBe(1);
     expect(target("staging").active.size).toBe(49);
-    expect(target("production").active.size).toBe(52);
+    expect(target("production").active.size).toBe(50);
   });
 
   it("says in the file itself why it is short, and that nothing is hand-set", () => {
@@ -522,27 +522,14 @@ describe("preflight", () => {
     // 43 keys back in.
     const text = renderInit("preflight", DATE);
     expect(text).toContain("PREFLIGHT IS DELIBERATELY TINY");
-    expect(text).toMatch(/Airtable PAT/);
-    // ⚠️ THE INSTRUCTION THAT HAD TO GO. Until 2026-08-17 this header said
-    // AIRTABLE_BASE_ID was "NOT here" and told the reader to set a REPOSITORY
-    // variable by hand, which is visible to every environment and wider than
-    // the routing it stood in for.
-    //
-    // The key is genuinely absent again now, and the distinction matters enough
-    // to keep both assertions: it is absent because the value is a committed
-    // constant, NOT because a human is expected to go and set it somewhere. The
-    // old instruction must never come back on the strength of "the key is
-    // missing from this file again".
-    expect(text).not.toContain("AIRTABLE_BASE_ID is NOT here");
-    expect(text).not.toMatch(/REPOSITORY variable/);
-    expect(text).not.toMatch(/^AIRTABLE_BASE_ID=/m);
-    expect(text).toMatch(/committed constant/);
+    expect(text).toMatch(/migrations table/);
     // POSITIVE CONTROL: the key that was always here still renders, so the
-    // line above is an absence rather than a generator that stopped emitting.
-    expect(text).toMatch(/^AIRTABLE_PLAN_PAT=""$/m);
+    // shortness is the narrowed set being small rather than a generator that
+    // stopped emitting.
+    expect(text).toMatch(/^DB_URL=""$/m);
     expect(text).not.toMatch(/^SUPABASE_JWT_SIGNING_KEY=/m);
-    // And the count in the prose agrees with the body, plural and all.
-    expect(text).toContain("The 2 keys a");
+    // And the count in the prose agrees with the body, singular and all.
+    expect(text).toContain("The 1 key a");
   });
 });
 

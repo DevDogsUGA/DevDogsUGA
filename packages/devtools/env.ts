@@ -1,6 +1,6 @@
 /**
  * The operator manifest: keys no app schema reads. They belong to the person
- * running devtools, pushing secrets, scaffolding Airtable, deploying.
+ * running devtools, pushing secrets, deploying.
  *
  * NOTHING IMPORTS THIS FILE at runtime. Like the other package-root manifests
  * it exists for the registry's consumers: the completeness test, the
@@ -11,14 +11,6 @@
  * classification is the whole point. It is the most sensitive value in the
  * repository, refused storage because storing it defeats the thing it
  * protects. See the long-form reasoning in `src/bws/environments.ts`.
- *
- * There were two until `AIRTABLE_PAT` was removed. It was the bootstrap
- * Airtable token, and it earned `never-store` by carrying `schema.bases:write`
- * on an operator's laptop. That is also why it stopped earning a declaration
- * at all: `deploy airtable-apply` does that write behind required reviewers,
- * and every other command it served needs only a read. Creating a base from
- * nothing still needs a person and a token, but that is a one-off with a
- * documented revoke rather than a key the registry carries.
  */
 import { declare, define } from "@devdogsuga/env";
 import { z } from "zod";
@@ -53,46 +45,6 @@ declare({
       scope: "environment",
       secrecy: "never-store",
     }),
-    // The narrowest of the three Airtable tokens, and the only one CI may
-    // hold outside the reviewer gate. §3.5's stage-1 dry run answers "what
-    // would this commit do to the base" from `main`, so whatever it
-    // authenticates with is reachable from the `main` trust tier. That rules
-    // out AIRTABLE_SYNC_PAT (it can rewrite every record) and
-    // AIRTABLE_APPLY_PAT (that is what the reviewer gate is for). A token
-    // that can read a schema and do nothing else is what is left.
-    //
-    // It also ruled out AIRTABLE_PAT, the write-capable bootstrap token,
-    // until that key was removed outright, so the argument now has one fewer
-    // candidate to reject rather than a different conclusion.
-    //
-    // ⚠️ `narrowed: true` here is the SECOND shape of that marker, not the
-    // DB_URL one. There is no wider credential under this name in any target.
-    // The scope split is between three separate declarations rather than
-    // three values of one key, so nobody has to remember to mint a weaker
-    // variant for preflight. See `EnvMeta.narrowed` for both shapes and for
-    // what marking a key wrongly costs.
-    //
-    // `tier: "plan"`, deliberately: it reaches `preflight` (where `main-plan`
-    // runs, via the `narrowed` opt-in) and `production` (where
-    // `production-plan` runs) and nothing else. The default tier used to send
-    // it to staging as well, where no job reads it: a read-only spare to
-    // rotate, not a privilege, but a spare with no purpose. `tier: "apply"`
-    // would be wrong in the other direction: production-apply ALONE, the one
-    // environment the plan never runs in.
-    AIRTABLE_PLAN_PAT: define(z.string().min(1).optional(), {
-      doc:
-        "Read-only Airtable token for the schema dry run: `schema.bases:read` " +
-        "on the officers' base and nothing else. Probed against the live " +
-        "base -- a records read and a schema write both answered 403 -- so a " +
-        "job holding it can report what a promotion would do to the base and " +
-        "cannot do it. This is the credential the plan step on `main` uses, " +
-        "which is why it must stay unable to read a single record.",
-      scope: "environment",
-      secrecy: "secret",
-      tier: "plan",
-      narrowed: true,
-      commented: true,
-    }),
     SUPABASE_ACCESS_TOKEN: define(z.string().min(1).optional(), {
       doc:
         "A Supabase personal access token, carrying full account privileges " +
@@ -100,16 +52,6 @@ declare({
         "needs it -- the one mutation with no dry run -- so in GitHub it " +
         "reaches the production-apply environment only, behind required " +
         "reviewers.",
-      scope: "environment",
-      secrecy: "secret",
-      tier: "apply",
-      commented: true,
-    }),
-    AIRTABLE_APPLY_PAT: define(z.string().min(1).optional(), {
-      doc:
-        "Write-capable Airtable token that can restructure the officers' " +
-        "base. Routed to the production-apply GitHub environment only, " +
-        "behind required reviewers.",
       scope: "environment",
       secrecy: "secret",
       tier: "apply",

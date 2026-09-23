@@ -24,10 +24,10 @@ beforeAll(async () => {
   await loadRegistry();
 });
 
-// Literals, because vitest collects the `it` blocks before `beforeAll` fills
+// A literal, because vitest collects the `it` blocks before `beforeAll` fills
 // the registry. The completeness test pins `applyOnlyKeys()` to exactly this
-// pair, and the first routeTo test re-asserts the tie here.
-const APPLY_KEYS = ["AIRTABLE_APPLY_PAT", "SUPABASE_ACCESS_TOKEN"] as const;
+// set, and the first routeTo test re-asserts the tie here.
+const APPLY_KEYS = ["SUPABASE_ACCESS_TOKEN"] as const;
 const APPLY_KEY = APPLY_KEYS[0];
 
 describe("githubTargets", () => {
@@ -104,27 +104,16 @@ describe("accepts", () => {
     expect(accepts("staging", "DISCORD_TOKEN")).toBe(true);
   });
 
-  it("refuses the plan-tier key in staging, where no job reads it", () => {
-    // Not a security gate like the apply exclusion, since a stray copy could
-    // not write anything. It is the same failure mode as §3.6's orphans: a
-    // credential nothing manages and nothing would ever mention. `staging`
-    // excludes it so a push routes it nowhere and `audit` names a stray.
-    expect(accepts("staging", "AIRTABLE_PLAN_PAT")).toBe(false);
-    // The two environments whose plan jobs read it still take it.
-    expect(accepts("production", "AIRTABLE_PLAN_PAT")).toBe(true);
-    expect(accepts("preflight", "AIRTABLE_PLAN_PAT")).toBe(true);
-  });
-
   it("gives production-apply a SUPERSET of production", () => {
-    // It used to take the apply pair and nothing else, which withheld
-    // plan-tier secrets and every public variable from the three jobs that run
+    // It used to take the apply set and nothing else, which withheld
+    // plan-tier secrets and every public variable from the jobs that run
     // there. Restricting the REVIEWED half buys nothing: same Bitwarden
     // project, required reviewers in front of it. The gate is the row above,
     // about the unreviewed half.
     expect(accepts("production-apply", APPLY_KEY)).toBe(true);
     expect(accepts("production-apply", "DISCORD_TOKEN")).toBe(true);
     expect(accepts("production-apply", "CLOUDFLARE_API_TOKEN")).toBe(true);
-    expect(accepts("production-apply", "AIRTABLE_BASE_ID")).toBe(true);
+    expect(accepts("production-apply", "PROJECT_REF")).toBe(true);
   });
 
   it("accepts anything in preflight, which holds no live credentials", () => {

@@ -382,13 +382,13 @@ function targetHeader(target: VaultTarget, count: number): string[] {
     "#",
     ...comment(
       target === "production"
-        ? "The apply-tier credentials ARE here — SUPABASE_ACCESS_TOKEN and " +
-            "AIRTABLE_APPLY_PAT reach the production-apply GitHub " +
-            "environment, and no other target carries them."
-        : "The apply-tier credentials are NOT here. They exist to reshape " +
+        ? "The apply-tier credential IS here — SUPABASE_ACCESS_TOKEN reaches " +
+            "the production-apply GitHub environment, and no other target " +
+            "carries it."
+        : "The apply-tier credential is NOT here. It exists to reshape " +
             `production, so a copy in ${target} would be a second ` +
             "write-capable token to rotate for no benefit — and `env push` " +
-            "skips them outside production anyway.",
+            "skips it outside production anyway.",
     ),
     "#",
     ...comment(
@@ -415,24 +415,13 @@ function targetHeader(target: VaultTarget, count: number): string[] {
           ...comment(
             "⚠️ PREFLIGHT IS DELIBERATELY TINY, and a short file here is the " +
               "correct output rather than a truncated one. Nothing boots from " +
-              "this target: it exists to feed CI's migration and schema DRY " +
-              "RUNS, which read and change nothing, so it carries only the " +
-              "keys whose declaration opts in with `narrowed` — each of which " +
-              "is narrow enough for a dry run and no wider: a Postgres role " +
-              "that sees only the migrations table, and an Airtable PAT with " +
-              "`schema.bases:read` on one base. Every other key is absent ON " +
-              "PURPOSE: this project's GitHub environment is reachable from " +
-              "`main`, and it used to list all 45 routable keys, the JWT " +
-              "signing key included.",
-          ),
-          "#",
-          ...comment(
-            "Nothing here is set by hand, and nothing here names the Airtable " +
-              "base. The base id was the third key in this file until it " +
-              "became a committed constant in `@devdogsuga/airtable`, beside " +
-              "the field ids of the same base — so the dry run reads which " +
-              "base to plan against out of the checkout rather than out of a " +
-              "store somebody has to keep in sync.",
+              "this target: it exists to feed CI's migration DRY RUN, which " +
+              "reads and changes nothing, so it carries only the keys whose " +
+              "declaration opts in with `narrowed` — today, a Postgres role " +
+              "that sees only the migrations table and nothing wider. Every " +
+              "other key is absent ON PURPOSE: this project's GitHub " +
+              "environment is reachable from `main`, and it used to list all " +
+              "45 routable keys, the JWT signing key included.",
           ),
         ]
       : []),

@@ -236,11 +236,11 @@ describe("env audit, the accepted wiring", () => {
     });
     vi.mocked(listBwsSecrets).mockResolvedValue([
       stored("s-1", "CRON_SECRET"),
-      stored("s-2", "AIRTABLE_APPLY_PAT"),
+      stored("s-2", "SUPABASE_ACCESS_TOKEN"),
     ]);
     vi.mocked(listGhSecrets).mockResolvedValue([
       { name: "CRON_SECRET", updatedAt: AT },
-      { name: "AIRTABLE_APPLY_PAT", updatedAt: AT },
+      { name: "SUPABASE_ACCESS_TOKEN", updatedAt: AT },
     ]);
   });
 
@@ -264,7 +264,7 @@ describe("env audit, the accepted wiring", () => {
     await runEnvAudit({ target: "production", yes: true });
 
     expect(printed()).toMatch(
-      /AIRTABLE_APPLY_PAT[^\n]*`production`[^\n]*not where it belongs/,
+      /SUPABASE_ACCESS_TOKEN[^\n]*`production`[^\n]*not where it belongs/,
     );
   });
 });

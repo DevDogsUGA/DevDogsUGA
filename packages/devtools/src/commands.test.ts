@@ -222,7 +222,6 @@ describe("coverage of what the CLI dispatches", () => {
     "grant-root",
     "setup",
     "oauth",
-    "airtable",
     "docs",
     "emails",
     "newsletter",
@@ -259,7 +258,6 @@ describe("coverage of what the CLI dispatches", () => {
       "example",
       "reset",
     ]);
-    expect(subcommandNames(["airtable"])).toEqual(["check", "verify", "apply"]);
     expect(subcommandNames(["docs"])).toEqual(["index"]);
     expect(subcommandNames(["cron"])).toEqual(["list", "run"]);
     expect(subcommandNames(["workflows"])).toEqual(["list", "run", "serve"]);

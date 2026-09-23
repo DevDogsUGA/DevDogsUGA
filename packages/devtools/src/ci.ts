@@ -36,8 +36,6 @@ import { DeployError, say } from "./deploy/report.js";
 import { renderWriteEnvReport, runDeployWriteEnv } from "./deploy/write-env.js";
 import { runDeploySecretsFile } from "./deploy/secrets-file.js";
 import { runDeployOrphans } from "./deploy/orphans.js";
-import { runDeployAirtablePlan } from "./deploy/airtable-plan.js";
-import { runDeployAirtableApply } from "./deploy/airtable-apply.js";
 import { runPreflight } from "./deploy/preflight.js";
 import { runDeployMigrate, runDeployPlan } from "./deploy/migrations.js";
 import { runRequirePlanner } from "./deploy/require-planner.js";
@@ -280,16 +278,6 @@ async function runDeployCommand(rest: string[]): Promise<void> {
 
     if (sub === "preflight") {
       await runPreflight();
-      return;
-    }
-
-    if (sub === "airtable-plan") {
-      await runDeployAirtablePlan();
-      return;
-    }
-
-    if (sub === "airtable-apply") {
-      await runDeployAirtableApply();
       return;
     }
 

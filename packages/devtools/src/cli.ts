@@ -67,12 +67,6 @@ import {
   reproducibleCommand,
 } from "./invocation.js";
 import { runSetup } from "./setup.js";
-import {
-  runAirtable,
-  runApply,
-  runCheck,
-  runVerify,
-} from "./airtable/commands.js";
 import { readCatalog, renderCatalog } from "./catalog.js";
 import {
   runEnvAudit,
@@ -492,63 +486,6 @@ async function runGrantRoot(
     ]);
     process.exitCode = 1;
   }
-}
-
-// ── Airtable ─────────────────────────────────────────────────────────────────
-
-/**
- * Runs one of the three base commands, asking which if it was not told.
- *
- * The picker is ordered least dangerous first, and the hints say what each one
- * touches: these run against a base officers use every day, so "which of these
- * is safe to run right now" has to be answerable from the menu alone.
- */
-async function runAirtableCommand(rest: string[]): Promise<void> {
-  const sub =
-    rest.find((arg) => !arg.startsWith("--")) ??
-    unwrap(
-      await select({
-        message: "What should I do with the Airtable base?",
-        options: [
-          {
-            value: "check",
-            label: "Check the registry against the committed snapshot",
-            hint: "no token, no network — what CI runs",
-          },
-          {
-            value: "verify",
-            label: "Diff the live base against the registry",
-            hint: "reads the base — start here",
-          },
-          {
-            value: "apply",
-            label: "Bring the base up to the registry, then write back",
-            hint: "writes the base AND two committed files",
-          },
-        ],
-      }),
-    );
-
-  if (sub === "check") {
-    await runAirtable(() => {
-      runCheck();
-    });
-    return;
-  }
-  if (sub === "verify") {
-    // Duplicate detection reads every record in every table, which is the
-    // expensive part of a verify and pointless on a base with no rows yet.
-    await runAirtable(() => runVerify(!rest.includes("--no-duplicates")));
-    return;
-  }
-  if (sub === "apply") {
-    await runAirtable(() => runApply(rest.includes("--dry-run")));
-    return;
-  }
-
-  log.error(`Unknown airtable subcommand: ${sub}`);
-  log.message(`Try ${subcommandList(["airtable"])}.`);
-  process.exitCode = 1;
 }
 
 /**
@@ -1008,11 +945,6 @@ async function dispatch(argv: string[]): Promise<string | null> {
   if (first === "oauth") {
     await runOAuthSetup(flagValue(rest, "--base-url"));
     return 'All done! You\'re ready to "Sign in with DevDogs".';
-  }
-
-  if (first === "airtable") {
-    await runAirtableCommand(rest);
-    return DONE;
   }
 
   if (first === "docs") {

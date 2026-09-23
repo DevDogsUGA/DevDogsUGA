@@ -5,7 +5,7 @@
  * command in the tree is reachable from it, and the argv a walk produces is one the CLI
  * accepts.** The menu this replaced could not make that claim. It held ten
  * hand-written entries beside a CLI with sixteen top-level commands, so `env`,
- * `planner` and `airtable check` had no way in.
+ * `planner` and `docs index` had no way in.
  *
  * `@clack/prompts` is mocked rather than driven: the point is which questions
  * get asked and what argv comes out, not how a terminal renders them.
@@ -209,22 +209,22 @@ describe("options become argv", () => {
 
   it("adds a flag when the confirm is answered yes", async () => {
     const argv = await walk([
-      groupOf("airtable")!,
-      findCommand(["airtable"])!,
-      findCommand(["airtable", "apply"])!,
+      groupOf("env")!,
+      findCommand(["env"])!,
+      findCommand(["env", "example"])!,
       true,
     ]);
-    expect(argv).toEqual(["airtable", "apply", "--dry-run"]);
+    expect(argv).toEqual(["env", "example", "--check"]);
   });
 
   it("adds nothing when it is answered no", async () => {
     const argv = await walk([
-      groupOf("airtable")!,
-      findCommand(["airtable"])!,
-      findCommand(["airtable", "apply"])!,
+      groupOf("env")!,
+      findCommand(["env"])!,
+      findCommand(["env", "example"])!,
       false,
     ]);
-    expect(argv).toEqual(["airtable", "apply"]);
+    expect(argv).toEqual(["env", "example"]);
   });
 
   it("emits --target remote for docs index's acknowledgment select", async () => {

@@ -242,7 +242,7 @@ describe("staleness", () => {
 
 describe("routing between the two production environments", () => {
   const route = (key: string) =>
-    key === "AIRTABLE_APPLY_PAT" ? "production-apply" : "production";
+    key === "SUPABASE_ACCESS_TOKEN" ? "production-apply" : "production";
 
   it("flags an apply-only credential sitting in the unreviewed environment", () => {
     // The reviewer gate failing open. `production` deploys on a push with
@@ -250,11 +250,11 @@ describe("routing between the two production environments", () => {
     // `production-apply` decorative -- and presence alone would call this fine,
     // because the name IS in GitHub.
     const findings = run({
-      local: new Map([["AIRTABLE_APPLY_PAT", "x"]]),
-      bws: bws({ AIRTABLE_APPLY_PAT: "x" }),
+      local: new Map([["SUPABASE_ACCESS_TOKEN", "x"]]),
+      bws: bws({ SUPABASE_ACCESS_TOKEN: "x" }),
       github: [
-        gh("AIRTABLE_APPLY_PAT", undefined, "production"),
-        gh("AIRTABLE_APPLY_PAT", undefined, "production-apply"),
+        gh("SUPABASE_ACCESS_TOKEN", undefined, "production"),
+        gh("SUPABASE_ACCESS_TOKEN", undefined, "production-apply"),
       ],
       route,
     });
@@ -269,12 +269,12 @@ describe("routing between the two production environments", () => {
     expect(
       run({
         local: new Map([
-          ["AIRTABLE_APPLY_PAT", "x"],
+          ["SUPABASE_ACCESS_TOKEN", "x"],
           ["DISCORD_TOKEN", "y"],
         ]),
-        bws: bws({ AIRTABLE_APPLY_PAT: "x", DISCORD_TOKEN: "y" }),
+        bws: bws({ SUPABASE_ACCESS_TOKEN: "x", DISCORD_TOKEN: "y" }),
         github: [
-          gh("AIRTABLE_APPLY_PAT", undefined, "production-apply"),
+          gh("SUPABASE_ACCESS_TOKEN", undefined, "production-apply"),
           gh("DISCORD_TOKEN", undefined, "production"),
         ],
         route,
@@ -287,9 +287,9 @@ describe("routing between the two production environments", () => {
     // in `production-apply` is CORRECT, and reporting it as absent from
     // `production` would make a healthy setup look broken.
     const findings = run({
-      local: new Map([["AIRTABLE_APPLY_PAT", "x"]]),
-      bws: bws({ AIRTABLE_APPLY_PAT: "x" }),
-      github: [gh("AIRTABLE_APPLY_PAT", undefined, "production-apply")],
+      local: new Map([["SUPABASE_ACCESS_TOKEN", "x"]]),
+      bws: bws({ SUPABASE_ACCESS_TOKEN: "x" }),
+      github: [gh("SUPABASE_ACCESS_TOKEN", undefined, "production-apply")],
       route,
     });
     expect(findings).toEqual([]);
@@ -299,8 +299,8 @@ describe("routing between the two production environments", () => {
     // Pushing staging with a production-only credential in the file. It has no
     // home in the staging environment, and that is ordinary rather than wrong.
     const findings = run({
-      local: new Map([["AIRTABLE_APPLY_PAT", "x"]]),
-      bws: bws({ AIRTABLE_APPLY_PAT: "x" }),
+      local: new Map([["SUPABASE_ACCESS_TOKEN", "x"]]),
+      bws: bws({ SUPABASE_ACCESS_TOKEN: "x" }),
       github: [],
       route: () => null,
     });
@@ -316,10 +316,10 @@ describe("routing between the two production environments", () => {
   // learns to skim the one finding that catches the reviewer gate failing open.
   describe("a second copy in the reviewed environment", () => {
     // What `runEnvAudit` passes: the routing's own `accepts()`, which takes
-    // everything in `production-apply` and refuses the apply pair in
+    // everything in `production-apply` and refuses the apply-tier key in
     // `production`.
     const accepted = (key: string, environment: string) =>
-      environment === "production-apply" || key !== "AIRTABLE_APPLY_PAT";
+      environment === "production-apply" || key !== "SUPABASE_ACCESS_TOKEN";
 
     it("is not a stray, because the push put it there", () => {
       expect(
@@ -342,11 +342,11 @@ describe("routing between the two production environments", () => {
       // inputs as the test above but for the key, so a pass here is about the
       // KEY rather than about the audit having gone quiet.
       const findings = run({
-        local: new Map([["AIRTABLE_APPLY_PAT", "x"]]),
-        bws: bws({ AIRTABLE_APPLY_PAT: "x" }),
+        local: new Map([["SUPABASE_ACCESS_TOKEN", "x"]]),
+        bws: bws({ SUPABASE_ACCESS_TOKEN: "x" }),
         github: [
-          gh("AIRTABLE_APPLY_PAT", undefined, "production"),
-          gh("AIRTABLE_APPLY_PAT", undefined, "production-apply"),
+          gh("SUPABASE_ACCESS_TOKEN", undefined, "production"),
+          gh("SUPABASE_ACCESS_TOKEN", undefined, "production-apply"),
         ],
         route,
         accepted,

@@ -749,54 +749,6 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
         ],
       },
       {
-        name: "airtable",
-        summary: "The officers' base: check it, or bring it up to date.",
-        subcommands: [
-          {
-            name: "check",
-            summary: "Diff the registry against the committed snapshot.",
-            hint: "no token, no network — what CI runs",
-            options: [JSON_FLAG],
-          },
-          {
-            name: "verify",
-            summary: "Diff the live base against the registry.",
-            hint: "reads the base — start here",
-            options: [
-              {
-                flag: "--no-duplicates",
-                summary: "Skip the duplicate scan, which reads every record.",
-                prompt: {
-                  kind: "confirm",
-                  // Yes adds the flag. Default no: the scan is the slow part,
-                  // but it is also the part that finds anything.
-                  message: "Skip the duplicate scan, which reads every record?",
-                  initial: false,
-                },
-              },
-              JSON_FLAG,
-            ],
-          },
-          {
-            name: "apply",
-            summary: "Create what the registry declares, then write back.",
-            hint: "writes the base AND two committed files",
-            options: [
-              {
-                flag: "--dry-run",
-                summary: "Report what it would create, and create nothing.",
-                prompt: {
-                  kind: "confirm",
-                  message:
-                    "Dry run — report what it would create, create nothing?",
-                  initial: true,
-                },
-              },
-            ],
-          },
-        ],
-      },
-      {
         name: "docs",
         summary: "The documentation search index.",
         subcommands: [
@@ -1221,7 +1173,7 @@ export const GROUPS: readonly CommandGroup[] = [
   },
   {
     title: "Configuration & integrations",
-    commands: commands("env", "bw", "airtable"),
+    commands: commands("env", "bw"),
   },
   {
     title: "Moderation",
@@ -1327,14 +1279,6 @@ export const CI_GROUPS: readonly CommandGroup[] = [
           {
             name: "migrate",
             summary: "Apply the migrations to DB_URL.",
-          },
-          {
-            name: "airtable-plan",
-            summary: "What a scaffold would create. Reads only.",
-          },
-          {
-            name: "airtable-apply",
-            summary: "Create it. production-apply only.",
           },
         ],
       },

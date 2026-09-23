@@ -25,9 +25,8 @@
  * holds buys no privilege: it is the same Bitwarden project, and
  * `production-apply` is the strictly MORE trusted of the two. Withholding
  * ordinary keys from it broke every job that runs there: the config push wanted
- * deploy-tier OAuth secrets, the Airtable apply wanted a public base id, the
- * orphan prune wanted a deploy-tier API token. So `production-apply` now
- * receives a SUPERSET of `production`.
+ * deploy-tier OAuth secrets, and the orphan prune wanted a deploy-tier API
+ * token. So `production-apply` now receives a SUPERSET of `production`.
  */
 import { applyOnlyKeys, planOnlyKeys } from "@devdogsuga/env";
 import { assertRegistryLoaded } from "../env/discovery.js";
@@ -144,14 +143,14 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
     guarded: true,
   },
   // A SUPERSET of `production`, deliberately: everything that environment
-  // receives, plus the apply-tier pair it may not have.
+  // receives, plus the apply-tier credential it may not have.
   //
   // Not a relaxation of the gate. This is the same Bitwarden project behind
   // required reviewers, the more trusted half of the split, so withholding a
   // key from it protects nothing and only starves the jobs that run here
-  // (`production-config`, `production-airtable`, `prune-orphans`, all of which
-  // needed a deploy-tier secret or a public variable and got neither). The gate
-  // is what `production` may NOT have, one row above.
+  // (`production-config`, `prune-orphans`, both of which needed a deploy-tier
+  // secret and got none). The gate is what `production` may NOT have, one row
+  // above.
   "production-apply": {
     bwsProject: "production",
     branch: "production",

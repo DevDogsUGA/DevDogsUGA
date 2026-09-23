@@ -36,11 +36,11 @@ const env = (o: Record<string, string>) => Object.entries(o);
 // completeness test pins both derived sets to exactly these keys, and the
 // first test below re-asserts the tie so a drifted literal fails loudly here
 // rather than silently testing the wrong key.
-// One member since `AIRTABLE_PAT` was removed. It stays an array rather
-// than collapsing to a single constant: `never-store` is a class, and the
-// loop below is what makes adding a second member automatically tested.
+// One member each. Both stay arrays rather than collapsing to single
+// constants: `never-store` and `apply` are classes, and the loops below are
+// what make adding a second member automatically tested.
 const NEVER_STORE = ["BWS_ACCESS_TOKEN"] as const;
-const APPLY_ONLY = ["AIRTABLE_APPLY_PAT", "SUPABASE_ACCESS_TOKEN"] as const;
+const APPLY_ONLY = ["SUPABASE_ACCESS_TOKEN"] as const;
 
 /**
  * The five public per-environment values that `supabase status` supplies
@@ -473,56 +473,16 @@ describe("preflight, the target no app boots from", () => {
   });
 
   it("routes exactly the keys that opted in", () => {
-    expect([...keysRoutedTo("preflight")].sort()).toEqual([
-      "AIRTABLE_PLAN_PAT",
-      "DB_URL",
-    ]);
-    // Tied to the registry, so "two keys" is the marker's doing rather than a
-    // filter that happened to leave two behind. They are the credentials §3.5
-    // stage 1 needs and the only two: a Postgres role that sees the
-    // migrations table, and a PAT that can read one base's schema.
+    expect([...keysRoutedTo("preflight")].sort()).toEqual(["DB_URL"]);
+    // Tied to the registry, so "one key" is the marker's doing rather than a
+    // filter that happened to leave one behind. It is the only credential
+    // §3.5 stage 1 needs: a Postgres role that sees the migrations table.
     //
-    // It was three until the base id stopped being routed at all: `BASE_ID` is
-    // committed in the registry beside the field ids of the same base, so the
-    // schema plan no longer needs to be TOLD which base the PAT may read. That
-    // is the third key leaving, not a marker being read differently. The two
-    // that remain are both credentials, which is the shape this set should
-    // have had all along.
-    expect(narrowedKeys()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
-  });
-
-  it("routes the plan PAT here and NOT the two write-capable Airtable ones", () => {
-    // The point of three declarations rather than one key with three values.
-    // `main` can reach this environment, so what it may hold is the whole
-    // question, and the answer has to hold for every Airtable token at once.
-    const preflight = keysRoutedTo("preflight");
-    expect(preflight.has("AIRTABLE_PLAN_PAT")).toBe(true);
-    // never-store: refused every remote store, so it is in no target's set.
-    expect(preflight.has("AIRTABLE_PAT")).toBe(false);
-    expect(keysRoutedTo("production").has("AIRTABLE_PAT")).toBe(false);
-    // apply-tier: production only, and behind required reviewers there.
-    expect(preflight.has("AIRTABLE_APPLY_PAT")).toBe(false);
-    expect(keysRoutedTo("production").has("AIRTABLE_APPLY_PAT")).toBe(true);
-    // POSITIVE CONTROL: the plan PAT reaches production too, which is where
-    // `production-plan` runs. "Absent from preflight" is not the only way for
-    // a routing assertion to pass.
-    expect(keysRoutedTo("production").has("AIRTABLE_PLAN_PAT")).toBe(true);
-  });
-
-  it("keeps the plan PAT out of staging, where no job reads it", () => {
-    // `tier: "plan"` exists for exactly this key: `main-plan` runs in
-    // preflight and `production-plan` in production, so a staging copy is a
-    // second read-only token to rotate for no benefit. Before the tier it
-    // rode along because the default routed everywhere an app boots from.
-    expect(keysRoutedTo("staging").has("AIRTABLE_PLAN_PAT")).toBe(false);
-    // POSITIVE CONTROL: the other narrowed key still routes to staging.
-    // `narrowed` alone must not become a staging exclusion, or DB_URL
-    // (narrowed shape one) would vanish from every deployed target.
-    //
-    // AIRTABLE_BASE_ID used to be the second control here. It is no longer
-    // routed anywhere, so DB_URL carries the control alone; if that ever
-    // stops being narrowed, this test needs a new one rather than none.
-    expect(keysRoutedTo("staging").has("DB_URL")).toBe(true);
+    // It was three until the plan-tier Airtable pair's teardown took the
+    // other two with it -- one dropped when the base id stopped being routed
+    // at all (`BASE_ID` became a committed constant), the other when the
+    // devtools Airtable integration it authenticated was deleted outright.
+    expect(narrowedKeys()).toEqual(["DB_URL"]);
   });
 
   for (const key of THE_FINDING) {
@@ -631,9 +591,15 @@ describe("preflight, the target no app boots from", () => {
     // "environment"` key, so both deployed targets moved and preflight did
     // not. `AIRTABLE_BASE_ID` left the same teardown but was already `scope:
     // "default"`, pushed nowhere, so its removal moved nothing here.
+    //
+    // Then production dropped by two and preflight by one, staging untouched:
+    // `AIRTABLE_PLAN_PAT` (`tier: "plan"`, `narrowed: true`, so it reached
+    // preflight and production) and `AIRTABLE_APPLY_PAT` (`tier: "apply"`,
+    // production only) both left the registry with devtools' own Airtable
+    // commands and CI jobs, deleted whole.
     expect(keysRoutedTo("staging").size).toBe(49);
-    expect(keysRoutedTo("production").size).toBe(52);
-    expect(keysRoutedTo("preflight").size).toBe(2);
+    expect(keysRoutedTo("production").size).toBe(50);
+    expect(keysRoutedTo("preflight").size).toBe(1);
   });
 });
 

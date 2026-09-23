@@ -8,9 +8,9 @@
  * interactive command" structural instead of aspirational. The menu it replaced held a
  * hand-written list of ten entries beside a CLI that had grown to sixteen
  * top-level commands and thirty-one subcommands, so `env`, `planner`,
- * `signing-key` and `airtable check` were reachable only by someone who
- * already knew their names. A contributor who does not know a command name is
- * the entire audience for this file.
+ * `signing-key` and `docs index` were reachable only by someone who already
+ * knew their names. A contributor who does not know a command name is the
+ * entire audience for this file.
  *
  * Walking `commands.ts` means an interactive command added there is in the
  * menu the same day, with its options. Commands marked `cli-only` and deploy

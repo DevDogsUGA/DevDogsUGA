@@ -6,7 +6,6 @@ import {
   mintedKeys,
   narrowedKeys,
   neverStoreKeys,
-  planOnlyKeys,
   storableKeys,
   variableKeys,
   variables,
@@ -167,15 +166,12 @@ describe("registry completeness", () => {
     }
   });
 
-  it("pins the apply-only set to exactly its two credentials", () => {
+  it("pins the apply-only set to exactly its one credential", () => {
     // Pinned, not derived-and-trusted: a new `tier: "apply"` declaration
     // re-routes a credential behind the production-apply reviewer gate. That is
     // a deliberate, reviewed event, so the reviewer of that change should have
     // to touch this list and say so out loud.
-    expect(applyOnlyKeys()).toEqual([
-      "AIRTABLE_APPLY_PAT",
-      "SUPABASE_ACCESS_TOKEN",
-    ]);
+    expect(applyOnlyKeys()).toEqual(["SUPABASE_ACCESS_TOKEN"]);
   });
 
   it("pins the minted set to exactly the sandbox proxy token", () => {
@@ -187,7 +183,7 @@ describe("registry completeness", () => {
     expect(mintedKeys()).toEqual(["SANDBOX_PROXY_TOKEN"]);
   });
 
-  it("pins the narrowed set to the dry run's two credentials", () => {
+  it("pins the narrowed set to the dry run's one credential", () => {
     // Pinned for the same reason as the two lists above, and with the sharpest
     // consequence of the three: `narrowed` is what lets a key into `preflight`,
     // whose GitHub environment is reachable from `main`. Adding it to a key
@@ -195,57 +191,11 @@ describe("registry completeness", () => {
     // dry run needs, a claim about the OUTSIDE world that no type can check, so
     // the reviewer of that change should have to touch this line.
     //
-    // Both are named here rather than counted, because each is a different
-    // SHAPE of the marker. `DB_URL` is one key name carrying a weaker
-    // credential in preflight than in the deployed targets.
-    // `AIRTABLE_PLAN_PAT` is a key that is only ever the narrow one; the wider
-    // Airtable tokens are separate declarations. See `EnvMeta.narrowed`.
-    //
-    // The third shape, a non-credential, no longer has a member. It was
-    // `AIRTABLE_BASE_ID`, a public identifier naming which base the plan PAT
-    // may read, and it is now a committed constant in packages/airtable rather
-    // than a routed value, so nothing has to opt it into preflight.
-    //
-    // ⚠️ That shape remains the one to be suspicious of if a fourth key ever
-    // claims it. The test is "would a preflight job fail without it", not "is
-    // it public". Most public keys are neither needed there nor safe to add by
-    // reflex, and the one that was here turned out not to need routing at all.
-    expect(narrowedKeys()).toEqual(["AIRTABLE_PLAN_PAT", "DB_URL"]);
-  });
-
-  it("keeps Airtable credentials in separate declarations", () => {
-    // The property that makes `AIRTABLE_PLAN_PAT`'s `narrowed` claim checkable
-    // at all. If the scopes were values of ONE key, "the plan token cannot
-    // write" would be a fact about whichever value a target happened to hold,
-    // and marking it narrowed would be the DB_URL claim, unverifiable here,
-    // rather than a property of the key.
-    //
-    // AIRTABLE_PAT left: it carried `schema.bases:write` on an operator's
-    // laptop, and `deploy airtable-apply` does that write behind required
-    // reviewers. Removing it took the last shared member out of the two
-    // credential preference rows, so a schema change has exactly one path.
-    // The platform's own runtime tokens (AIRTABLE_BASE_ID, AIRTABLE_SYNC_PAT)
-    // left with the Airtable integration itself, leaving only the CI pair.
-    //
-    // Their routing is the other half, and it is what the split buys:
-    const airtable = [...variables().keys()].filter((k) =>
-      k.startsWith("AIRTABLE_"),
-    );
-    expect(airtable.sort()).toEqual([
-      "AIRTABLE_APPLY_PAT",
-      "AIRTABLE_PLAN_PAT",
-    ]);
-
-    // No Airtable key is never-store any more; the one that was is gone.
-    expect(neverStoreKeys()).not.toContain("AIRTABLE_PAT");
-    // apply-tier: production-apply alone, behind required reviewers.
-    expect(applyOnlyKeys()).toContain("AIRTABLE_APPLY_PAT");
-    // narrowed AND plan-tier: reaches preflight (where the `main` dry run
-    // runs) and production (where `production-plan` runs), nothing else.
-    expect(narrowedKeys()).toContain("AIRTABLE_PLAN_PAT");
-    expect(planOnlyKeys()).toContain("AIRTABLE_PLAN_PAT");
-    expect(applyOnlyKeys()).not.toContain("AIRTABLE_PLAN_PAT");
-    expect(neverStoreKeys()).not.toContain("AIRTABLE_PLAN_PAT");
+    // `DB_URL` is the shared-name shape of the marker: one key name carrying a
+    // weaker credential in preflight than in the deployed targets. See
+    // `EnvMeta.narrowed` for the other two shapes the marker can take, neither
+    // of which any current declaration uses.
+    expect(narrowedKeys()).toEqual(["DB_URL"]);
   });
 
   it("keeps `narrowed` on keys that can actually route somewhere", () => {
