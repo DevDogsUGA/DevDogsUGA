@@ -25,7 +25,4 @@ export interface Refusal {
   message: string;
 }
 
-export type RefusalCode =
-  // Not a refusal: no rule rejected anything, the write itself failed. The
-  // backstop for a bad value no rule here has learned to name yet.
-  "row_write_failed" | "reflection_settings_invalid";
+export type RefusalCode = "reflection_settings_invalid";
