@@ -101,11 +101,12 @@ export const CRON_ROUTES: Record<
   // The config reconcile shares this slot rather than getting its own: it
   // replaced the meetings/workshops half of what this cron used to pull, so
   // the cadence that made sense for officer edits landing "within fifteen
-  // minutes" makes the same sense for a config edit auto-deploying. It is
-  // also a keep-alive as much as a poll -- the real trigger is the deploy
-  // pipeline's post-migrate call (see `server/config/reconcile.ts`'s route);
-  // this cron exists so a config change still lands even if that step is
-  // ever skipped.
+  // minutes" makes the same sense for a config edit auto-deploying. Ideally a
+  // deploy's post-migrate step would call the route directly so a promoted
+  // config lands the moment the deploy finishes; that wiring into
+  // `.github/workflows/deploy.yaml` is not done yet (see
+  // `server/config/reconcile.ts`'s route and the platform redesign
+  // followups), so for now this fifteen-minute slot is the only trigger.
   "*/15 * * * *": {
     label:
       "Airtable sync (officers, members) and config reconcile (meetings, workshops)",

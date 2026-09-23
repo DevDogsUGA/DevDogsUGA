@@ -11,10 +11,12 @@ import { reconcileFromConfig } from "~/server/config/reconcile";
  *
  * Reconciles `meetings` and `workshops` against `@devdogsuga/club-config`.
  * Fired on the shared fifteen-minute cron slot (see
- * `cloudflare/scheduled.ts`), and this is also the route the deploy
- * pipeline's post-migrate step calls (`pnpm devtools cron run`, which sends
- * authenticated GETs to every route-backed schedule) so a promoted config
- * lands the moment the deploy finishes rather than waiting on the next tick.
+ * `cloudflare/scheduled.ts`). `pnpm devtools cron run` can also target this
+ * route directly with an authenticated GET, which is how a deploy pipeline's
+ * post-migrate step would call it -- but no such step exists yet in
+ * `.github/workflows/deploy.yaml`, so a promoted config currently waits on
+ * the next fifteen-minute tick rather than landing the moment the deploy
+ * finishes. See the platform redesign followups.
  *
  * `getClubConfig()` parses and validates the committed data file; a failure
  * there means the file itself is broken (wrong shape, or its content fails
