@@ -43,9 +43,33 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          # Full history so `turbo --affected` can compute the merge base.
+          # Full history so the base-ref diff below (affected-package
+          # detection, done with a git-diff-backed pnpm `--filter
+          # '...[<ref>]'` selector) has both ends of the comparison to work
+          # with, whether that is a PR's base branch or the previous commit
+          # on a push.
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
+      # Turbo used to auto-detect this; pnpm's `[<since>]` filter needs the
+      # ref named explicitly. A pull request diffs against the branch it
+      # targets (its head may be several commits ahead of where it forked,
+      # so the base branch's current tip is the right comparison point); a
+      # push compares against the commit that `HEAD` pointed to before the
+      # push landed, falling back to the previous commit if that value is
+      # unset or unreachable (a repository's first push, or history pnpm
+      # cannot see for another reason).
+      - name: Determine base ref for affected-package detection
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            REF="${{ github.event.pull_request.base.sha }}"
+          else
+            REF="${{ github.event.before }}"
+            if [ -z "$REF" ] || [ "$REF" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$REF" 2>/dev/null; then
+              REF="HEAD~1"
+            fi
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
       # Both apps' GENERATED route types (the `VinextRouteTypes` namespace,
       # next-env.d.ts's `vinext/types/augmentations` reference) exist on
       # every laptop that has ever run `vinext dev`/`vinext build` and on no
@@ -57,18 +81,17 @@ jobs:
       # --noEmit`) creates them without a build or a database;
       # next.config.ts falls back to a placeholder URL under
       # SKIP_ENV_VALIDATION so loading it here needs no credentials.
-      # `pnpm --filter ... exec` bypasses turbo, so nothing has compiled the
-      # workspace packages the Next configs import (`~/env` reaches into
-      # @devdogsuga/env's dist/) — build the apps' dependencies first. The
-      # results land in turbo's cache, so the lint/typecheck/test step below
-      # doesn't repeat the work.
+      # `pnpm --filter ... exec` runs only in that one package, so nothing
+      # has compiled the workspace packages the Next configs import (`~/env`
+      # reaches into @devdogsuga/env's dist/) — build the apps' dependencies
+      # first, topologically, with pnpm's own `^...` (deps-of) selector.
       - name: Generate the vinext type stubs
         run: |
-          pnpm turbo run build --filter 'platform^...' --filter 'schedule-builder^...'
+          pnpm -r --if-present --filter 'platform^...' --filter 'schedule-builder^...' run build
           pnpm --filter platform exec vinext typegen
           pnpm --filter schedule-builder exec vinext typegen
       # Flutter isn't installed here — the study-group-finder app is validated
-      # in the `flutter` job below. Turbo runs the three tasks in parallel.
+      # in the `flutter` job below.
       #
       # `build` is NOT in this list, and its absence is the point. A Next
       # production build reads the environment whether or not the schema is
@@ -77,19 +100,55 @@ jobs:
       # any page renders. SKIP_ENV_VALIDATION moves that failure; it does not
       # remove the requirement. Building the apps needs a database, so it
       # happens in the `database` job, which has one.
+      #
+      # pnpm has no single "run these tasks only against packages changed
+      # since a ref, and their dependents, but build every dependency they
+      # could reach so type-aware lint/typecheck have every .d.ts on disk"
+      # command the way turbo's task graph did. `--filter './packages/**'
+      # --filter './docs'` is deliberately a directory selector, not
+      # `!<app-name>` exclusions: it builds every package UNDER apps' own
+      # dependencies without ever running an app's OWN `build` script, which
+      # is exactly what turbo's `^build` did too (typechecking `platform`
+      # ran `platform`'s `typecheck` script and its DEPENDENCIES' `build`
+      # scripts, never `platform`'s own `build`). That distinction matters
+      # here specifically: this job sets SKIP_ENV_VALIDATION but has no .env
+      # and no database, so `pnpm --filter platform run build`'s own
+      # `_images` step reaching for `with-env` would fail outright, and a
+      # broader "build everything, apps included" pre-step would too. It
+      # also sidesteps the workspace-root recursion a `!`-exclusion-based
+      # filter would otherwise risk: a directory selector never matches the
+      # workspace root the way `!study-group-finder` alone would, so there is
+      # no need to separately exclude `devdogs-monorepo`, whose own
+      # `build`/`lint`/`typecheck`/`test` scripts are all `pnpm devtools run
+      # <task>` — the exact command this step is replacing.
+      #
+      # This still costs more than turbo's per-task `^build` scoping would
+      # have on a small-diff PR — every package under `packages/` and `docs`
+      # builds regardless of which ones are actually affected, since pnpm has
+      # no narrower "only the dependencies an affected app would reach"
+      # selector — accepted here because turbo's remote cache was never
+      # enabled and `.turbo` was never persisted across CI runs, so turbo was
+      # already rebuilding all of it from nothing on every run; this only
+      # makes that cost explicit. `--if-present` skips the packages with no
+      # `build` script (`@devdogsuga/config`, `@devdogsuga/devtools`)
+      # instead of failing on them.
       - name: Lint + typecheck + test (affected)
-        run: >-
-          pnpm turbo run lint typecheck test
-          --affected --filter='!study-group-finder'
+        run: |
+          pnpm -r --if-present --filter './packages/**' --filter './docs' run build
+          status=0
+          pnpm -r --if-present --filter "...[${{ steps.base.outputs.ref }}]" --filter '!study-group-finder' --filter '!devdogs-monorepo' run lint || status=1
+          pnpm -r --if-present --filter "...[${{ steps.base.outputs.ref }}]" --filter '!study-group-finder' --filter '!devdogs-monorepo' run typecheck || status=1
+          pnpm -r --if-present --filter "...[${{ steps.base.outputs.ref }}]" --filter '!study-group-finder' --filter '!devdogs-monorepo' run test || status=1
+          exit $status
       # The publishability gate for meetings and workshops: parses
       # data/meetings.json against the Zod schema and runs the validator
       # (lengths, the RSVP-host allowlist, cancellation pairing, id
       # uniqueness and shape). This is the ONLY validation those two tables
       # get now -- `reconcileFromConfig` trusts a config that reaches it and
       # aborts rather than refusing a single row, so a bad file has to be
-      # caught here, not at runtime. Also covered by `turbo run test` above
-      # via the package's own vitest suite; this step exercises the CLI a
-      # config author actually runs.
+      # caught here, not at runtime. Also covered by the lint/typecheck/test
+      # step above via the package's own vitest suite; this step exercises
+      # the CLI a config author actually runs.
       - name: Club config passes its publishability checks
         run: pnpm --filter @devdogsuga/club-config check
       # .env.example is GENERATED from the env manifests; this regenerates it
@@ -109,12 +168,13 @@ jobs:
         run: pnpm --filter platform cf:typegen:check && pnpm --filter schedule-builder cf:typegen:check
       # REMOVED: "Typecheck the deploy scripts" (`tsc -p scripts/tsconfig.json`).
       #
-      # It existed because `scripts/` was not a workspace package, so `turbo run
-      # typecheck` could not see it — while the files in it were the ones that
-      # composed production credentials and wrote Worker secrets. All six are
-      # `devtools deploy` commands now, so they are typechecked, linted and
-      # TESTED by the `turbo run lint typecheck test` step above, along with
-      # everything else in that package. `scripts/` is gone with them; a step
+      # It existed because `scripts/` was not a workspace package, so the
+      # lint/typecheck/test step could not see it — while the files in it
+      # were the ones that composed production credentials and wrote Worker
+      # secrets. All six are `devtools deploy` commands now, so they are
+      # typechecked, linted and TESTED by the "Lint + typecheck + test
+      # (affected)" step above, along with everything else in that package.
+      # `scripts/` is gone with them; a step
       # pointed at an empty directory does not fail loudly, it fails as
       # TS18003 "no inputs were found", which reads like a broken config
       # rather than like a job with nothing to do.
@@ -171,19 +231,19 @@ jobs:
       # typechecks perfectly.
       # Vitest resolves @devdogsuga/drizzle and friends from their dist/,
       # which a fresh checkout doesn't have — the `pnpm --filter ... run`
-      # invocation bypasses turbo's ^build ordering, so build the app's
-      # dependencies first (cached for the build step below).
+      # invocation only runs in that one package, so build the app's
+      # dependencies first with pnpm's own deps-of selector.
       - name: Query validity + privilege surface
         run: |
-          pnpm turbo run build --filter 'platform^...'
+          pnpm -r --if-present --filter 'platform^...' run build
           pnpm --filter platform run test:db
       # Vitest resolves @devdogsuga/drizzle and friends from their dist/,
       # which a fresh checkout doesn't have — the `pnpm --filter ... run`
-      # invocation bypasses turbo's ^build ordering, so build the app's
-      # dependencies first (cached for the build step below).
+      # invocation only runs in that one package, so build the app's
+      # dependencies first with pnpm's own deps-of selector.
       - name: Query validity + privilege surface (schedule-builder)
         run: |
-          pnpm turbo run build --filter 'schedule-builder^...'
+          pnpm -r --if-present --filter 'schedule-builder^...' run build
           pnpm --filter schedule-builder run test:db
       # The Supabase half comes from .env.generated, so the build renders
       # against a real Postgres and a real PostgREST rather than a mock. The
@@ -205,18 +265,18 @@ jobs:
       # Both Next apps. study-group-finder is Flutter and is covered by its own
       # job.
       #
-      # Note this goes through turbo, which under strict env mode passes a task
-      # only the variables named in turbo.json's `build.env`. A variable missing
-      # there is REMOVED rather than merely unhashed, so it arrives undefined
-      # and fails validation -- while `next build` run directly in the app
-      # inherits the real environment and succeeds. The two disagree, and this
-      # step is the one that matters.
+      # `--filter '!devdogs-monorepo'` alongside `!study-group-finder`: an
+      # unqualified `!<name>` exclusion still matches the workspace root
+      # (unlike a bare, filter-less `-r`, or a dependency-direction selector
+      # like `^...`, both of which never do), and the root's own `build`
+      # script is `pnpm devtools run build` — precisely the picker this
+      # workflow bypasses everywhere else, so it must stay excluded here too.
       - name: Build both Next apps, with the env schema enforced
         env:
           SKIP_ENV_VALIDATION: ""
         run: >-
           pnpm exec with-env
-          pnpm turbo run build --filter='!study-group-finder'
+          pnpm -r --if-present --filter '!study-group-finder' --filter '!devdogs-monorepo' run build
 
   # Repo-wide formatting check — fast, no build needed.
   format:
@@ -237,13 +297,43 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
+      # Turbo's `--affected --filter=study-group-finder --dry-run=json`
+      # answered one question: does study-group-finder, or anything it
+      # depends on, appear in the changed set since the merge base? pnpm has
+      # no single flag for that, so this rebuilds it from two pieces: the
+      # same base-ref logic as the `validate` job's "Determine base ref" step
+      # (duplicated rather than shared — jobs don't share step outputs, and
+      # it's five lines), and `study-group-finder...` (pnpm's "package and
+      # its dependencies" selector) to list exactly the directories whose
+      # content decides this — the app itself, plus @devdogsuga/config,
+      # @devdogsuga/env and @devdogsuga/supabase's actual resolved graph,
+      # read from pnpm rather than hand-copied from a package.json that could
+      # drift. A plain `git diff --quiet` over those directories since the
+      # base ref is then exactly turbo's "changed or a dependency changed"
+      # check.
       - name: Is study-group-finder affected?
         id: affected
         run: |
-          if pnpm turbo run build --affected --filter=study-group-finder --dry-run=json | grep -q '"study-group-finder"'; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
           else
+            BASE="${{ github.event.before }}"
+            if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+              BASE="HEAD~1"
+            fi
+          fi
+          PATHS=$(pnpm -r --filter 'study-group-finder...' list --depth -1 --json 2>/dev/null \
+            | node -e '
+                let d = "";
+                process.stdin.on("data", (c) => (d += c));
+                process.stdin.on("end", () => {
+                  for (const p of JSON.parse(d)) console.log(p.path);
+                });
+              ')
+          if git diff --quiet "$BASE"...HEAD -- $PATHS; then
             echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
           fi
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         if: steps.affected.outputs.run == 'true'

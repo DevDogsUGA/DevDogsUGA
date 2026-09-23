@@ -35,7 +35,7 @@ if (subcommand === undefined) {
   const count = emitDocsModule(contentRoot, outDir);
 
   // The lint runs here too, and only its count is printed. This line is in
-  // front of everyone on every `pnpm dev` and every `turbo build`, which is the
+  // front of everyone on every `pnpm dev` and every `pnpm build`, which is the
   // only reason the rules get read at all; it stays to one line because that is
   // the whole of what this mode has ever printed, and the detail is one command
   // away. The exit code does not change: `check` is warn-only, and the bare

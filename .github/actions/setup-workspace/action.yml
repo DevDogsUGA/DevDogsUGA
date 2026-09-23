@@ -7,8 +7,9 @@ description: >-
 # (`uses: ./.github/actions/…`) only resolves AFTER the repository is on disk,
 # because the action's own files live in it. So the `actions/checkout` step
 # stays in each job — which is also where its `fetch-depth` belongs (`0` for
-# the jobs that run `turbo --affected` or need both ends of a push, the default
-# elsewhere). This action is the three steps that were byte-identical after it.
+# the jobs that diff against a base ref to find affected packages, or need
+# both ends of a push, the default elsewhere). This action is the three steps
+# that were byte-identical after it.
 #
 # The setup-node pin keeps its `# v4` trailing comment so Dependabot updates it
 # here the same way it does the `uses:` pins in the workflows.

@@ -184,14 +184,7 @@ minimumReleaseAgeExclude:
   - "@radix-ui/react-use-rect@1.1.4"
   - "@radix-ui/react-use-size@1.1.4"
   - "@radix-ui/react-visually-hidden@1.2.11"
-  - "@turbo/darwin-64@2.10.8"
-  - "@turbo/darwin-arm64@2.10.8"
-  - "@turbo/linux-64@2.10.8"
-  - "@turbo/linux-arm64@2.10.8"
-  - "@turbo/windows-64@2.10.8"
-  - "@turbo/windows-arm64@2.10.8"
   - radix-ui@1.6.7
-  - turbo@2.10.8
   - '@next/env@16.3.4'
   - '@next/eslint-plugin-next@16.3.4'
   - '@next/swc-darwin-arm64@16.3.4'
@@ -240,9 +233,10 @@ packages:
   - apps/*
   - packages/*
   # The documentation content itself. Being a package (rather than a bare
-  # folder) is what lets `turbo watch` see doc edits at package granularity and
-  # lets the platform pick up the parsed output through the existing `^build`
-  # dependency — no root task, no bespoke file watcher.
+  # folder) is what lets pnpm's `--filter` graph see it as a dependency of
+  # @devdogsuga/docs and lets the platform pick up the parsed output through
+  # the existing build-before-consumer ordering -- no root task, no bespoke
+  # file watcher.
   - docs
 
 # Run package.json scripts through pnpm's built-in JS shell (@yarnpkg/shell)

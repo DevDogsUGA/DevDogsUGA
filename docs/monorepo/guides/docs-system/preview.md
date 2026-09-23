@@ -10,19 +10,19 @@ There is no separate preview tool. Docs are compiled into the platform app, so *
 
 ## The loop
 
-Two terminals:
+One terminal, and a re-run after each save — there is no file watcher wired into `@devdogsuga/docs`'s build (the underlying `docs-build` compiler has no `--watch` mode, and nothing in this repo wraps one around it):
 
 ```bash
 pnpm dev                                          # the app
-turbo watch build --filter=@devdogsuga/docs       # re-parses docs/ on every save
+pnpm --filter @devdogsuga/docs run build          # re-parses docs/ after a save
 ```
 
-The watcher re-runs the docs package's build on every save, which rewrites the module the routes import; Turbopack picks up the changed module and hot-reloads the page. No restart.
+Re-running the docs package's build rewrites the module the routes import; the running dev server picks up the changed module and hot-reloads the page. No restart.
 
 Then open <http://localhost:3000/docs>.
 
 > [!TIP]
-> `pnpm dev` alone still works — you just have to restart it to pick up doc edits. Run the watcher in a second terminal when you are actually writing.
+> `pnpm dev` alone still works — you just have to re-run the build command above (or restart `pnpm dev`) to pick up doc edits. Re-run it in a second terminal when you are actually writing.
 
 ## Searching your local docs
 

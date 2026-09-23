@@ -18,7 +18,7 @@ Shared versions live in the `catalog:` block of `pnpm-workspace.yaml`.
 | Hosting         | [Cloudflare Workers](/docs/monorepo/stack/cloudflare), `@opennextjs/cloudflare` | 1.20.2, wrangler 4.133.0         |
 | Data            | [Supabase](/docs/monorepo/stack/supabase) — Postgres 17, `supabase-js`          | 2.112.3, CLI 2.115.0             |
 | Server SQL      | [Drizzle ORM and Kit](/docs/monorepo/stack/drizzle), on `postgres` 3.4.9        | 1.0.0-rc.4                       |
-| Build graph     | [Turborepo](/docs/monorepo/stack/turborepo) and pnpm workspaces                 | 2.10.11, pnpm 11.8.0             |
+| Build graph     | pnpm workspace filters (`--filter`, topological `-r`)                           | pnpm 11.8.0                      |
 | Mobile          | [Flutter](/docs/monorepo/stack/flutter), Dart SDK                               | ^3.5.0                           |
 | Language        | TypeScript, Node                                                                | 6.0.3, Node 24 (engines >=22.12) |
 | Validation      | Zod, `@t3-oss/env-nextjs`                                                       | 4.4.3, ^0.13.11                  |
@@ -31,7 +31,6 @@ Shared versions live in the `catalog:` block of `pnpm-workspace.yaml`.
 - **Cache Components is off on purpose**; `experimental.useCache` keeps `"use cache"` without partial prerendering — [Next.js](/docs/monorepo/stack/nextjs).
 - **SQL migrations are the source of truth, not Drizzle**, which only introspects or drafts — [Drizzle](/docs/monorepo/stack/drizzle).
 - **One database, one schema per app**, isolated by Row-Level Security — [Supabase](/docs/monorepo/stack/supabase).
-- **Turbo's strict env mode deletes** any variable missing from a task's `env` list — [Turborepo](/docs/monorepo/stack/turborepo).
 - **A later `@theme` block silently beats an earlier one** — [Tailwind](/docs/monorepo/stack/tailwind).
 - **Dart models come from supadart**, which decides PostgREST's default schema — [Flutter](/docs/monorepo/stack/flutter).
 

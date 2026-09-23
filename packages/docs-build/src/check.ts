@@ -16,8 +16,9 @@
  *
  * The counterweight is where the count gets printed. A warning behind a command
  * someone has to think to run is a warning nobody reads, so the bare
- * `docs-build`, which every `pnpm dev` and every `turbo build` already runs,
- * prints the number on its own summary line and points here for detail.
+ * `docs-build`, which every `pnpm dev` and every `@devdogsuga/docs` build
+ * already runs, prints the number on its own summary line and points here for
+ * detail.
  *
  * `reference/` is skipped whole. A generated page is an enumeration: as long as
  * the code it describes, its collapsibles emitted by `gen/emit.ts` to a fixed
@@ -32,7 +33,7 @@ import matter from "gray-matter";
 import { closesFence, opensFence } from "./fences.js";
 
 /** Package machinery that sits alongside the content and is never a page. */
-const NOT_A_PROJECT = new Set(["dist", "node_modules", ".turbo"]);
+const NOT_A_PROJECT = new Set(["dist", "node_modules"]);
 
 /** The path segment `docs-build gen` writes into, and this lint reads past. */
 const REFERENCE_SEGMENT = "reference";

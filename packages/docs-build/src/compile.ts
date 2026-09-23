@@ -4,7 +4,7 @@ import { parseDocFile, toTitleCase } from "./parse.js";
 import type { DocsPage, DocsProject } from "./types.js";
 
 /** Package machinery that sits alongside the content and is never a project. */
-const NOT_A_PROJECT = new Set(["dist", "node_modules", ".turbo"]);
+const NOT_A_PROJECT = new Set(["dist", "node_modules"]);
 
 /**
  * Where something that declares no `order` sits. The middle of the range, so a

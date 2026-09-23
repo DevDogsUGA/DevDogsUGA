@@ -1,6 +1,6 @@
 ---
 name: Flutter
-description: The one Dart app in the monorepo, how its Turborepo wrapper feeds Flutter the shared .env, and why supadart decides a Postgres setting for everyone else.
+description: The one Dart app in the monorepo, how its pnpm wrapper feeds Flutter the shared .env, and why supadart decides a Postgres setting for everyone else.
 order: 7
 ---
 
@@ -8,9 +8,9 @@ order: 7
 
 `apps/study-group-finder` is the repo's only Flutter app: Dart SDK `^3.5.0`, `supabase_flutter ^2.8.0`, owning the `study_group_finder` Postgres schema. It is still a placeholder — `lib/main.dart` renders `StudyGroupFinderApp` and tables are added as the app is built. Read this if you are working on that app, or if you are about to reorder `[api] schemas` in `supabase/config.toml` and wonder who cares. The Flutter SDK is needed for nothing else in the repo; [Flutter's docs](https://docs.flutter.dev) teach the framework.
 
-## The package.json is a Turborepo wrapper
+## The package.json is a pnpm task wrapper
 
-The app has a `package.json` that runs no JavaScript. It exists so turbo can see `dev`, `build`, `test`, `lint`, `typecheck` and `generate-types` for this app like any other. Three of them — `build`, `dev` and `generate-types` — shell out to Flutter through `with-env -c`:
+The app has a `package.json` that runs no JavaScript. It exists so `pnpm --filter study-group-finder run <task>` (and the `devtools run` picker in front of it) can see `dev`, `build`, `test`, `lint`, `typecheck` and `generate-types` for this app like any other. Three of them — `build`, `dev` and `generate-types` — shell out to Flutter through `with-env -c`:
 
 ```bash
 pnpm dev --filter study-group-finder   # local stack auto-detected, else remote

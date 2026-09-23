@@ -27,7 +27,6 @@ build/
 **/build/
 dist/
 **/dist/
-.turbo
 
 # misc
 .DS_Store

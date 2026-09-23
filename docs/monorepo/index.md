@@ -6,7 +6,7 @@ order: 0
 
 # Monorepo
 
-Every DevDogs project lives in one pnpm + Turborepo monorepo: four apps, eight shared packages, and one Supabase Postgres database they all talk to. Read this if you have just cloned the repo, or if you need to know which project owns what. If you already know which app you are working on, skip straight to that project's own docs at the bottom of this page.
+Every DevDogs project lives in one pnpm monorepo: four apps, eight shared packages, and one Supabase Postgres database they all talk to. Read this if you have just cloned the repo, or if you need to know which project owns what. If you already know which app you are working on, skip straight to that project's own docs at the bottom of this page.
 
 ## The four apps
 

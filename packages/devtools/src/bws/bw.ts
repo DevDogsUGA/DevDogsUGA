@@ -12,7 +12,7 @@
  * `pnpm --filter @devdogsuga/devtools exec bw`, the last script at the
  * workspace root whose whole job was to reach into this package.
  *
- * ⚠️ `cwd` is deliberately NOT overridden, unlike the turbo spawn in
+ * ⚠️ `cwd` is deliberately NOT overridden, unlike the pnpm spawn in
  * `run/pick.ts`. pnpm puts this package's `node_modules/.bin` on PATH as a
  * relative entry, so moving the working directory would make `bw` unresolvable
  * from the very place it is installed. Bitwarden does not care where it runs.

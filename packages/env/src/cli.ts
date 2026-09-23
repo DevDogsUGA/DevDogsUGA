@@ -162,7 +162,7 @@ const cwd = process.cwd();
 // file present) the sole tier — the ONE policy in `session.ts`, shared with
 // the devtools launcher.
 //
-// ⚠️ NO `prompt` IS PASSED, EVER. `with-env` fronts turbo-parallel tasks and
+// ⚠️ NO `prompt` IS PASSED, EVER. `with-env` fronts pnpm's parallel tasks and
 // dev servers, none of which has anyone at a keyboard to answer a picker —
 // `isTTY: false` plus an absent `prompt` means two-or-more tier files
 // present with neither `--tier` nor `DEPLOY_ENV` set is ALWAYS an explicit
@@ -178,7 +178,7 @@ const cwd = process.cwd();
 // choice, not an omission: bare development under `with-env` keeps the
 // probe deciding the overlay exactly as it always has, even on a machine
 // whose `.env` names a remote database. Refusing there would break every
-// wrapped dev-server and turbo task on such a machine overnight. The
+// wrapped dev-server and pnpm task on such a machine overnight. The
 // devtools launcher — the interactive front door, and the home of the
 // destructive db commands — is where that ambiguity gets asked about; its
 // answer reaches this wrapper as `DEV_DB` (resolved below) or an explicit

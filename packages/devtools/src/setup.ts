@@ -124,7 +124,7 @@ export async function runSetup(): Promise<void> {
   }
 
   // Boot what the contributor picked. study-group-finder still goes through
-  // the same `pnpm dev --filter` picker path (turbo runs its `flutter run`
+  // the same `pnpm dev --filter` picker path (pnpm runs its `flutter run`
   // task), so the shape is uniform; the SDK note is the only difference.
   const startSteps =
     chosenApps && chosenApps.length > 0

@@ -43,7 +43,7 @@ const DART_DOCS_PROJECT = "study-group-finder";
 const REFERENCE_SEGMENT = "reference";
 
 /** Package machinery that sits alongside the content and is never a project. */
-const NOT_A_PROJECT = new Set(["dist", "node_modules", ".turbo"]);
+const NOT_A_PROJECT = new Set(["dist", "node_modules"]);
 
 /**
  * The route pages come after a project's written index but before its symbol

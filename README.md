@@ -1,6 +1,6 @@
 # DevDogs Monorepo
 
-Every DevDogs project in one pnpm + Turborepo workspace: four apps, seven shared
+Every DevDogs project in one pnpm workspace: four apps, seven shared
 packages, and one Supabase Postgres database. Three of the apps own a Postgres
 schema each — `platform`, `schedule_builder`, `study_group_finder` — and
 Row-Level Security, not the schema boundary, is what isolates one app's data

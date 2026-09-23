@@ -80,7 +80,7 @@ jobs:
         run: >-
           pnpm --filter @devdogsuga/devtools run ci deploy write-env
       - name: Build the workspace packages this app depends on
-        run: pnpm turbo run build --filter='${{ matrix.app }}^...'
+        run: pnpm -r --filter '${{ matrix.app }}^...' run build
       # `vinext build`, with the env schema ENFORCED.
       - name: Build ${{ matrix.app }}
         env:

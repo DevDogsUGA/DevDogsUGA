@@ -19,9 +19,9 @@ pnpm dev --filter schedule-builder
 `dev` is `with-env next dev`, so the command reads the shared root `.env` (and
 `.env.generated`, when the local Supabase stack is running) before Next starts.
 The app serves on **port 3001** — `platform` takes 3000, so both can run at
-once. Going through turbo (`pnpm dev --filter …`) rather than
-`pnpm --filter schedule-builder dev` also builds the workspace packages the app
-imports first; see the note in [Contributing](/docs/monorepo/guides/contributing).
+once. Going through the `devtools run` picker (`pnpm dev --filter …`) rather
+than `pnpm --filter schedule-builder dev` also builds the workspace packages
+the app imports first; see the note in [Contributing](/docs/monorepo/guides/contributing).
 
 ## Environment
 

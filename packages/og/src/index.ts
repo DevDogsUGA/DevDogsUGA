@@ -23,7 +23,8 @@
  * with this package's own `jsx: react-jsx`, and no consumer has to agree.
  *
  * The cost is that editing a template means `pnpm --filter @devdogsuga/og build`
- * before the CLI sees it. Turbo's `^build` covers CI and every `pnpm build`.
+ * before the CLI sees it. Every dependents-first `pnpm -r ... run build` (CI,
+ * and every root `pnpm build`) already covers this.
  *
  * `@devdogsuga/og/event` is a SEPARATE entry point and deliberately so: it
  * holds the club's timezone and the meeting-to-card formatting, and importing

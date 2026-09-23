@@ -12,7 +12,7 @@ Everything under `docs/` is compiled into the platform site at build time, so a 
 
 `docs/` is a workspace package — `@devdogsuga/docs` — holding markdown and a `package.json` and nothing else. Its entire build script is `docs-build`, the CLI from `@devdogsuga/docs-build`, which treats its working directory as the content root, walks it for `*.md`, parses each file, and emits `dist/index.js` plus a hand-written `dist/index.d.ts`. Emitting the declarations by hand rather than running `tsc` is what keeps the content package free of a TypeScript toolchain.
 
-Being a package is what makes the rest work. The platform depends on it, so the `dependsOn: ["^build"]` already on `build`, `dev`, `typecheck`, `lint` and `test` in `turbo.json` produces the artifact before any of them run. There is no bespoke file watcher either: `turbo watch` sees markdown edits at package granularity because the markdown _is_ a package.
+Being a package is what makes the rest work. The platform depends on it, so pnpm's dependency-ordered recursive runs (and the deps-of `^...` spawn `devtools run` builds ahead of a task; see `packages/devtools/src/run/pick.ts`) produce the artifact before `build`, `dev`, `typecheck`, `lint` or `test` runs against anything that needs it. There is no bespoke file watcher; see [Local preview](/docs/monorepo/guides/docs-system/preview) for the manual re-run this now takes instead.
 
 The docs routes import that module and render from memory:
 
@@ -59,7 +59,7 @@ That output is wrapped in control-character sentinels rather than `<mark>` direc
 <details>
 <summary>Why can't the compiler live in the platform app?</summary>
 
-Platform is its only consumer, which makes it tempting. But `docs` would have to depend on `platform` to run the compiler, and `platform` already depends on `docs` for the parsed output — a cycle that turbo's `^build` ordering cannot resolve. A separate package is what breaks it.
+Platform is its only consumer, which makes it tempting. But `docs` would have to depend on `platform` to run the compiler, and `platform` already depends on `docs` for the parsed output — a cycle that dependency-ordered builds cannot resolve, with pnpm any more than with the tool this monorepo used to build with. A separate package is what breaks it.
 
 </details>
 

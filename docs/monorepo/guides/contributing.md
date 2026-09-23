@@ -55,10 +55,10 @@ Every case there asserts an allow **and** a deny. A test that only checks the al
 
 ### Phantom errors from a checkout that has never run `next dev`
 
-`typecheck`, `lint` and `test` all `dependsOn: ["^build"]` in `turbo.json` — the workspace packages an app imports, never Next itself. Next's own generated globals (`PageProps`/`LayoutProps`, the image module declarations, `next-env.d.ts`) come only from `next dev` or `next build`, so a fresh checkout, a worktree, or any laptop that has never run one fails `tsc --noEmit` / `eslint src` on names the framework provides, before it reaches anything you actually changed. Generate them once, the same way CI's "Generate the Next type stubs" step does, and the phantom errors disappear:
+`typecheck`, `lint` and `test` all build an app's workspace dependencies first — the packages an app imports, never Next itself — whether that's the `devtools run` picker's deps-of pre-step or CI's own `pnpm -r --filter '<app>^...' run build`. Next's own generated globals (`PageProps`/`LayoutProps`, the image module declarations, `next-env.d.ts`) come only from `next dev` or `next build`, so a fresh checkout, a worktree, or any laptop that has never run one fails `tsc --noEmit` / `eslint src` on names the framework provides, before it reaches anything you actually changed. Generate them once, the same way CI's "Generate the Next type stubs" step does, and the phantom errors disappear:
 
 ```bash
-pnpm turbo run build --filter '<app>^...'   # workspace deps the Next config imports (e.g. ~/env)
+pnpm -r --filter '<app>^...' run build      # workspace deps the Next config imports (e.g. ~/env)
 pnpm --filter <app> exec next typegen       # writes the stubs; no build, no database
 ```
 
@@ -82,7 +82,7 @@ pnpm exec with-env pnpm --filter <app> run build   # or `run cf:preview`
 ```bash
 git -C <worktree> reset --hard main
 pnpm install
-pnpm turbo run build --filter '<app>^...'   # workspace deps, not the app itself
+pnpm -r --filter '<app>^...' run build      # workspace deps, not the app itself
 cp <primary-worktree>/.env .env             # gitignored — doesn't come with the worktree
 pnpm exec with-env pnpm --filter <app> run build
 ```
@@ -108,7 +108,7 @@ pnpm exec with-env pnpm --filter <app> run build
 
 ### Which apps a root task runs against
 
-Every root turbo script — `dev`, `build`, `test`, `lint`, `lint:fix`, `typecheck` — asks which apps you mean before it runs:
+Every root package script — `dev`, `build`, `test`, `lint`, `lint:fix`, `typecheck` — asks which apps you mean before it runs:
 
 ```
 $ pnpm dev
@@ -122,22 +122,22 @@ $ pnpm dev
 
 Three ways past it, each skipping the question entirely:
 
-| Command                              | What it does                                   |
-| ------------------------------------ | ---------------------------------------------- |
-| `pnpm dev --filter schedule-builder` | any turbo filter — you have already said which |
-| `pnpm dev --all`                     | every package, the old behaviour               |
-| `CI=1 pnpm dev`                      | what CI does                                   |
+| Command                              | What it does                                      |
+| ------------------------------------ | ------------------------------------------------- |
+| `pnpm dev --filter schedule-builder` | any pnpm `--filter` — you have already said which |
+| `pnpm dev --all`                     | every package, the old behaviour                  |
+| `CI=1 pnpm dev`                      | what CI does                                      |
 
 > [!IMPORTANT]
-> `a` and `--all` are not the same thing, and the gap matters most for the tasks you are most likely to run before pushing. `a` selects every app in the list, which is `apps/*`. `--all` passes turbo no filter at all, which is every package in the workspace.
+> `a` and `--all` are not the same thing, and the gap matters most for the tasks you are most likely to run before pushing. `a` selects every app in the list, which is `apps/*`. `--all` passes no filter at all, which is every package in the workspace.
 >
-> For `build` the two nearly coincide, because filtering to an app pulls its dependencies in through `^build`. For `test`, `lint` and `typecheck` they do not: those tasks declare `dependsOn: ["^build"]`, not `^test`, so selecting all four apps runs **four** test suites while `pnpm test --all` runs **ten** — every suite in `packages/*` is skipped by the first. If you want the whole workspace checked, use `--all`.
+> For `build` the two nearly coincide, because filtering to an app pulls its dependencies in through the deps-of pre-step (pnpm's `^...` selector). For `test`, `lint` and `typecheck` they do not: those tasks only build a target's dependencies, not run each other, so selecting all four apps runs **four** test suites while `pnpm test --all` runs **ten** — every suite in `packages/*` is skipped by the first. If you want the whole workspace checked, use `--all`.
 
-**CI never sees a prompt**, and in fact never reaches the picker at all: every workflow calls `pnpm turbo run …` directly rather than going through a root alias. The guard is there regardless — `pnpm devtools run` passes straight through to turbo when `CI` is set, when stdin is not a TTY, or when a filter is already present, which covers workflows, piped output and editor task runners alike.
+**CI never sees a prompt**, and in fact never reaches the picker at all: every workflow calls `pnpm -r`/`pnpm --filter …` directly rather than going through a root alias. The guard is there regardless — `pnpm devtools run` passes straight through when `CI` is set, when stdin is not a TTY, or when a filter is already present, which covers workflows, piped output and editor task runners alike.
 
 Each root task is a thin alias for the same thing: `pnpm build` is `pnpm devtools run build`. The picker lives in `packages/devtools/src/run/pick.ts` with every other prompt in the repo.
 
-For docs authoring, run `turbo watch build --filter=@devdogsuga/docs` in a second terminal — it carries its own filter.
+For docs authoring, there is no watch mode — re-run `pnpm --filter @devdogsuga/docs run build` in a second terminal after each save; see [Local preview](/docs/monorepo/guides/docs-system/preview).
 
 ## What CI actually runs
 

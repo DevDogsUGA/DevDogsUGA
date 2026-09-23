@@ -4,8 +4,8 @@
  * Run it by hand (`pnpm --filter @devdogsuga/og generate`) after a brand asset,
  * a font, or the Phosphor version changes; the output is committed. It is not a
  * build step, and deliberately so — it reaches out to Google Fonts, and a
- * network dependency in `turbo build` would make CI fail for reasons that have
- * nothing to do with the commit under test.
+ * network dependency in the package's `build` script would make CI fail for
+ * reasons that have nothing to do with the commit under test.
  *
  * Everything it writes is *embedded*, base64 in a TypeScript module rather than
  * a file read at render time. The platform renders these templates inside a

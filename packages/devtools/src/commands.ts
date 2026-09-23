@@ -283,11 +283,11 @@ const VAULT_TARGET: CommandOption = {
  * Same reasoning as `VAULT_TARGET` above: the command owns the question, so the
  * tree declares the flag and stays quiet.
  */
-const TURBO_OPTIONS: readonly CommandOption[] = [
+const RUN_OPTIONS: readonly CommandOption[] = [
   {
     flag: "--filter",
     value: "<pkg>",
-    summary: "Limit to a package. Turbo's own flag; skips the question.",
+    summary: "Limit to a package. pnpm's own flag; skips the question.",
   },
   {
     flag: "--all",
@@ -365,43 +365,44 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
     commands: [
       {
         name: "run",
-        summary: "Run a Turborepo task, asking which apps first.",
+        summary: "Run a pnpm workspace task, asking which apps first.",
         hint: "build, dev, lint…",
         // The six with a root alias, which are the six a contributor types.
-        // NOT a mirror of `turbo.json`: `run` forwards whatever name it is
-        // given, so `docs:gen` and `test:coverage` work without being listed,
-        // and turbo's own `deploy` task stays out of a menu where it would sit
-        // one line from this CLI's unrelated `deploy` group.
+        // NOT an exhaustive list of every package script: `run` forwards
+        // whatever name it is given, so `test:coverage` works without being
+        // listed here, and this CLI's own unrelated `deploy` command group
+        // stays out of a menu where a same-named package script would sit
+        // one line away from it.
         subcommands: [
           {
             name: "build",
             summary: "Compile every package an app needs.",
-            options: TURBO_OPTIONS,
+            options: RUN_OPTIONS,
           },
           {
             name: "dev",
             summary: "Start the development servers.",
-            options: TURBO_OPTIONS,
+            options: RUN_OPTIONS,
           },
           {
             name: "typecheck",
             summary: "Run tsc across the workspace.",
-            options: TURBO_OPTIONS,
+            options: RUN_OPTIONS,
           },
           {
             name: "lint",
             summary: "Run ESLint across the workspace.",
-            options: TURBO_OPTIONS,
+            options: RUN_OPTIONS,
           },
           {
             name: "lint:fix",
             summary: "Run ESLint and write what it can fix.",
-            options: TURBO_OPTIONS,
+            options: RUN_OPTIONS,
           },
           {
             name: "test",
             summary: "Run the unit tests.",
-            options: TURBO_OPTIONS,
+            options: RUN_OPTIONS,
           },
         ],
       },

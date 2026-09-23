@@ -56,7 +56,8 @@ cd docs && node ../packages/docs-build/bin/docs-build.mjs check   # no PATH at a
 That `bin/` file is a committed one-line shim rather than a pointer straight at
 `dist/`. pnpm silently skips linking a bin whose target is missing, so on a
 fresh checkout the direct pointer left CI with a bare `command not found`; the
-shim always exists, and by the time anything runs it turbo has built `dist/`.
+shim always exists, and by the time anything runs it pnpm's dependency-ordered
+build has compiled `dist/`.
 
 What the rules mean for a page you are writing is
 [Writing docs](/docs/monorepo/guides/docs-system/writing); how a page reaches

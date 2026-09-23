@@ -78,5 +78,5 @@ There is none yet. `dogpack.dev` is reserved for an eventual web build, and
 both `STUDY_GROUP_FINDER_URL` and `STUDY_GROUP_FINDER_URL_CALLBACK` are already
 declared in `supabase/env.ts` and listed in `config.toml`'s auth redirect
 allowlist — optional, and left unset until something is deployed. Release
-Android and iOS artifacts are built by dedicated pipelines rather than by
-`turbo`.
+Android and iOS artifacts are built by dedicated pipelines rather than
+through this package's `pnpm` task wrapper.

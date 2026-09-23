@@ -22,13 +22,6 @@ name: Deploy
 # pushing to a protected branch needs a GitHub App in the bypass list —
 # complexity with no matching benefit when the branch would only ever mirror
 # `main`.
-#
-# ⚠️ No TURBO_TOKEN / TURBO_TEAM here either. Remote caching is entirely off
-# (`turbo.json` configures no `remoteCache`, verified 2026-08-11), and turning
-# it on requires — in the same change — either `remoteCache.signature` or
-# disjoint cache scopes for trusted and untrusted contexts. A PR that can WRITE
-# a cache a deploy later READS is a path from an unreviewed branch into a
-# production artifact. `ci.yaml` carries the same warning.
 
 on:
   push:

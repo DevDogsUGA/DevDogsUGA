@@ -45,7 +45,7 @@ project. Both commands also live together under **Workspace** in the menu.
 
 - `setup` — check prerequisites and initialize the workspace.
 - `oauth` — configure the local Supabase project for DevDogs OAuth.
-- `run` — run a Turborepo task after choosing the affected apps.
+- `run` — run a pnpm workspace task after choosing the affected apps.
 - `gen` — refresh committed generated source.
 - `docs` — maintain the documentation search index.
 

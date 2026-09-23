@@ -158,7 +158,7 @@ The list is registered in `apps/platform/src/components/DocsMarkdown.tsx`, which
 
 A docs lint that fails the build teaches exactly one lesson — how to get under the threshold — and most of the ways under a word budget are worse than the page that tripped it: detail deleted rather than moved, a paragraph folded into a `<details>` where nobody will look for it.
 
-So the check reports and stops there; nothing in it sets an exit code. The counterweight is where the count gets printed. A warning behind a command someone has to think to run is a warning nobody reads, so the bare `docs-build` — the one every `pnpm dev` and every `turbo build` already runs — prints the number on its own summary line and points at `docs-build check` for the detail.
+So the check reports and stops there; nothing in it sets an exit code. The counterweight is where the count gets printed. A warning behind a command someone has to think to run is a warning nobody reads, so the bare `docs-build` — the one every `pnpm dev` and every `@devdogsuga/docs` build already runs — prints the number on its own summary line and points at `docs-build check` for the detail.
 
 Generated pages under `reference/` are skipped whole. A generated page is an enumeration: it is as long as the code it describes, and no author chose any of it.
 

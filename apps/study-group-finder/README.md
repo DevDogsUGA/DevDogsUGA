@@ -54,9 +54,10 @@ default (every Supabase client sets its `db.schema` explicitly).
 required — supadart 401s on the publishable key when fetching the spec). The
 schema is currently empty, so this is a no-op until tables are added.
 
-## Turborepo
+## pnpm workspace
 
 `package.json` is a thin task wrapper (`build`/`dev`/`test`/`lint`/
-`typecheck`/`generate-types`) so `turbo` can orchestrate the Flutter toolchain; `build`
+`typecheck`/`generate-types`) so pnpm's workspace filters (`pnpm --filter
+study-group-finder run <task>`) can orchestrate the Flutter toolchain; `build`
 targets the web output for fast validation. Release Android/iOS artifacts are
-built in dedicated pipelines, not by turbo.
+built in dedicated pipelines, not through this wrapper.

@@ -54,7 +54,7 @@ pnpm dev --filter schedule-builder   # or whichever app you set up
 Nothing switches between the two by flag. `with-env` probes port 54321 on every run: a listening local stack layers `.env.generated` over `.env` and wins, a stopped one falls back to the linked project. Every run prints the files it actually loaded.
 
 > [!NOTE]
-> `pnpm dev --filter schedule-builder` and `pnpm --filter schedule-builder dev` are not the same command. The first goes through turbo, whose `dev` task depends on `^build`, so workspace packages — the compiled docs among them — are built first. The second bypasses turbo entirely. The same distinction holds for any app you filter to.
+> `pnpm dev --filter schedule-builder` and `pnpm --filter schedule-builder dev` are not the same command. The first goes through the `devtools run` picker, which builds the app's workspace dependencies — the compiled docs among them — first. The second calls pnpm directly and builds nothing first. The same distinction holds for any app you filter to.
 
 <details>
 <summary>What does <code>pnpm devtools db reset</code> seed?</summary>

@@ -6,7 +6,7 @@
  * that asks when nobody is listening hangs instead of failing, holding a CI job
  * open until the workflow's timeout kills it with no output saying why. The
  * production guard fails the same way: a script that slipped past the confirm
- * would spawn turbo against live credentials with nobody watching.
+ * would spawn pnpm against live credentials with nobody watching.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * `runTask` never returns for `--tier production` either — every path ends in
  * `passthrough`, which calls `process.exit` (see `pick.ts`'s own header) — so
  * these three modules are faked at the boundary rather than driven for real:
- * `node:child_process` so `passthrough` never actually spawns turbo,
+ * `node:child_process` so `passthrough` never actually spawns pnpm,
  * `@clack/prompts` so the confirm is scripted rather than typed, and
  * `@devdogsuga/env/load` because `runTask` reaches it only through a dynamic
  * `import()` gated on `--tier` (see the header on why it must stay dynamic) —
@@ -41,7 +41,8 @@ vi.mock("@devdogsuga/env/load", () => ({
   MissingEnvFileError: class MissingEnvFileError extends Error {},
 }));
 
-const { parseTierArg, runTask, shouldAsk } = await import("./pick.js");
+const { extractFilters, parseTierArg, runTask, shouldAsk } =
+  await import("./pick.js");
 const { spawnSync } = await import("node:child_process");
 const { cancel, confirm } = await import("@clack/prompts");
 const { loadEnvironment } = await import("@devdogsuga/env/load");
@@ -93,9 +94,10 @@ describe("shouldAsk", () => {
     expect(shouldAsk([])).toBe(false);
   });
 
-  // Turbo spells the same idea three ways, and each accepts both a separate
-  // value and an `=` form. Missing one would mean asking a caller to repeat a
-  // choice they had already made on the command line.
+  // pnpm's own flags spell the same idea two ways (`--filter` and `-F`),
+  // plus `--scope` for anyone still typing the turbo-era name; each accepts
+  // both a separate value and an `=` form. Missing one would mean asking a
+  // caller to repeat a choice they had already made on the command line.
   it.each([
     ["--filter", "platform"],
     ["-F", "platform"],
@@ -112,7 +114,7 @@ describe("shouldAsk", () => {
     tty(true);
     vi.stubEnv("CI", "");
     vi.stubEnv("DEVDOGS_PICK", "");
-    // `--force` is not `-F`, and turbo has flags that begin with these
+    // `--force` is not `-F`, and pnpm has flags that begin with these
     // letters. Prefix matching is only ever applied to the `=` form.
     expect(shouldAsk(["--force"])).toBe(true);
   });
@@ -164,6 +166,61 @@ describe("parseTierArg", () => {
   it("passes args through unchanged when --tier is absent", () => {
     expect(parseTierArg(["--filter", "platform", "--all"])).toEqual({
       rest: ["--filter", "platform", "--all"],
+    });
+  });
+});
+
+/**
+ * `extractFilters` is what turns a caller's raw `--filter`/`-F`/`--scope`
+ * arguments into the package patterns `passthroughApps` builds `pnpm`
+ * commands from. It has to handle the separate-value form (`--filter x`) and
+ * the `=` form (`--filter=x`) for all three flag spellings, and leave
+ * everything else in `rest` untouched and in order.
+ */
+describe("extractFilters", () => {
+  it("extracts a separate-value --filter", () => {
+    expect(extractFilters(["--filter", "platform", "--watch"])).toEqual({
+      filters: ["platform"],
+      rest: ["--watch"],
+    });
+  });
+
+  it("extracts an --filter=value form", () => {
+    expect(extractFilters(["--filter=platform", "--watch"])).toEqual({
+      filters: ["platform"],
+      rest: ["--watch"],
+    });
+  });
+
+  it("extracts -F and translates --scope the same way", () => {
+    expect(
+      extractFilters(["-F", "platform", "--scope=schedule-builder"]),
+    ).toEqual({
+      filters: ["platform", "schedule-builder"],
+      rest: [],
+    });
+  });
+
+  it("collects every filter when more than one is given", () => {
+    expect(
+      extractFilters(["--filter", "platform", "--filter", "sandbox"]),
+    ).toEqual({
+      filters: ["platform", "sandbox"],
+      rest: [],
+    });
+  });
+
+  it("leaves non-filter args alone, in order", () => {
+    expect(extractFilters(["--watch", "--foo", "bar"])).toEqual({
+      filters: [],
+      rest: ["--watch", "--foo", "bar"],
+    });
+  });
+
+  it("treats a --filter with no value as a plain arg rather than dropping it", () => {
+    expect(extractFilters(["--filter"])).toEqual({
+      filters: [],
+      rest: ["--filter"],
     });
   });
 });
@@ -222,19 +279,45 @@ describe("runTask --tier production guard", () => {
     expect(spawnSync).not.toHaveBeenCalled();
   });
 
-  it("loads production's env and threads it to the child once approved", async () => {
+  it("loads production's env and threads it to every spawned child once approved", async () => {
     tty(true);
     vi.mocked(confirm).mockResolvedValue(true);
     await expect(
       runTask(["dev", "--all", "--tier", "production"]),
     ).rejects.toThrow("exit:0");
 
-    expect(spawnSync).toHaveBeenCalledOnce();
-    const options = vi.mocked(spawnSync).mock.calls[0]![2] as unknown as {
-      env: NodeJS.ProcessEnv;
-    };
-    expect(options.env.DEPLOY_ENV).toBe("production");
-    expect(options.env.FOO).toBe("bar");
+    // `dev` is in `NEEDS_DEPS_BUILT`, so an `--all` (workspace-wide) run
+    // spawns twice: build every app's dependencies first (see
+    // `passthroughApps`'s doc comment on why that is `<app>^...` per real
+    // app, read from `apps/*`, rather than a bare `pnpm -r run build` —
+    // the latter would also run each app's OWN build script), then the
+    // `--parallel` dev task. Both children need the tier env, not just the
+    // one that would exist under the old single-spawn turbo passthrough.
+    expect(spawnSync).toHaveBeenCalledTimes(2);
+    const [, rawBuildArgs, buildOptions] = vi.mocked(spawnSync).mock.calls[0]!;
+    const buildArgs = rawBuildArgs as string[];
+    expect(buildArgs.slice(0, 2)).toEqual(["-r", "--if-present"]);
+    expect(buildArgs.slice(-2)).toEqual(["run", "build"]);
+    // The filters in between are `--filter '<app>^...'` for every real
+    // `apps/*` package, order-independent (`readdirSync` order is not
+    // guaranteed).
+    const middle = buildArgs.slice(2, -2);
+    const filterValues = middle.filter((_: string, i: number) => i % 2 === 1);
+    expect(new Set(filterValues)).toEqual(
+      new Set([
+        "platform^...",
+        "sandbox^...",
+        "schedule-builder^...",
+        "study-group-finder^...",
+      ]),
+    );
+    const [, devArgs, devOptions] = vi.mocked(spawnSync).mock.calls[1]!;
+    expect(devArgs).toEqual(["-r", "--if-present", "--parallel", "run", "dev"]);
+    for (const options of [buildOptions, devOptions]) {
+      const env = (options as unknown as { env: NodeJS.ProcessEnv }).env;
+      expect(env.DEPLOY_ENV).toBe("production");
+      expect(env.FOO).toBe("bar");
+    }
   });
 
   it("does not gate a non-production tier behind a terminal", async () => {
@@ -244,8 +327,8 @@ describe("runTask --tier production guard", () => {
     ).rejects.toThrow("exit:0");
 
     expect(confirm).not.toHaveBeenCalled();
-    expect(spawnSync).toHaveBeenCalledOnce();
-    const options = vi.mocked(spawnSync).mock.calls[0]![2] as unknown as {
+    expect(spawnSync).toHaveBeenCalledTimes(2);
+    const options = vi.mocked(spawnSync).mock.calls[1]![2] as unknown as {
       env: NodeJS.ProcessEnv;
     };
     expect(options.env.DEPLOY_ENV).toBe("staging");
@@ -272,7 +355,11 @@ describe("passthrough exit code", () => {
     });
   });
 
-  it("exits with turbo's own status", async () => {
+  // `build --all` is the one task/filter combination with just a single
+  // spawn (see `passthroughApps`'s doc comment on why a workspace-wide build
+  // skips the separate dependency pre-step), so `mockReturnValue` applying
+  // to "every call" and "the one call that happens" coincide here.
+  it("exits with the child's own status", async () => {
     vi.mocked(spawnSync).mockReturnValue({
       status: 3,
       signal: null,
@@ -281,9 +368,16 @@ describe("passthrough exit code", () => {
     vi.stubEnv("CI", "");
     vi.stubEnv("DEVDOGS_PICK", "");
     await expect(runTask(["build", "--all"])).rejects.toThrow("exit:3");
+    expect(spawnSync).toHaveBeenCalledOnce();
+    expect(vi.mocked(spawnSync).mock.calls[0]![1]).toEqual([
+      "-r",
+      "--if-present",
+      "run",
+      "build",
+    ]);
   });
 
-  it("falls back to exit code 1 when turbo reports neither a status nor a signal", async () => {
+  it("falls back to exit code 1 when the child reports neither a status nor a signal", async () => {
     vi.mocked(spawnSync).mockReturnValue({
       status: null,
       signal: null,
@@ -292,5 +386,149 @@ describe("passthrough exit code", () => {
     vi.stubEnv("CI", "");
     vi.stubEnv("DEVDOGS_PICK", "");
     await expect(runTask(["build", "--all"])).rejects.toThrow("exit:1");
+  });
+
+  it("stops at the dependency build and never runs the task when it fails", async () => {
+    // `typecheck` always gets a dependency pre-step, filtered or not, unlike
+    // `build`. The first (deps) spawn fails; the second (the actual
+    // typecheck) must never happen.
+    vi.mocked(spawnSync).mockReturnValueOnce({
+      status: 2,
+      signal: null,
+    } as unknown as ReturnType<typeof spawnSync>);
+    tty(true);
+    vi.stubEnv("CI", "");
+    vi.stubEnv("DEVDOGS_PICK", "");
+    await expect(runTask(["typecheck", "--all"])).rejects.toThrow("exit:2");
+    expect(spawnSync).toHaveBeenCalledOnce();
+    const args = vi.mocked(spawnSync).mock.calls[0]![1] as string[];
+    expect(args.slice(0, 2)).toEqual(["-r", "--if-present"]);
+    expect(args.slice(-2)).toEqual(["run", "build"]);
+  });
+});
+
+/**
+ * The actual `pnpm` command shapes `passthroughApps` builds — the part of
+ * this file that stands in for turbo's task graph. Covers: an explicit
+ * `--filter` builds that package's dependencies first with `^...` and then
+ * runs the task against just that package; a task outside
+ * `NEEDS_DEPS_BUILT` skips the dependency spawn entirely; and `dev` always
+ * gets `--parallel`.
+ */
+describe("passthroughApps command shapes", () => {
+  beforeEach(() => {
+    vi.mocked(spawnSync)
+      .mockClear()
+      .mockReturnValue({ status: 0, signal: null } as unknown as ReturnType<
+        typeof spawnSync
+      >);
+    tty(true);
+    vi.stubEnv("CI", "");
+    vi.stubEnv("DEVDOGS_PICK", "");
+    vi.spyOn(process, "exit").mockImplementation((code) => {
+      throw new Error(`exit:${code ?? 0}`);
+    });
+  });
+
+  it("builds a filtered package's dependencies with ^... before running its task", async () => {
+    await expect(
+      runTask(["typecheck", "--filter", "platform"]),
+    ).rejects.toThrow("exit:0");
+
+    expect(spawnSync).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(spawnSync).mock.calls[0]![1]).toEqual([
+      "-r",
+      "--if-present",
+      "--filter",
+      "platform^...",
+      "run",
+      "build",
+    ]);
+    expect(vi.mocked(spawnSync).mock.calls[1]![1]).toEqual([
+      "-r",
+      "--if-present",
+      "--filter",
+      "platform",
+      "run",
+      "typecheck",
+    ]);
+  });
+
+  it("translates --scope into a real --filter for the pnpm invocation", async () => {
+    await expect(
+      runTask(["build", "--scope", "schedule-builder"]),
+    ).rejects.toThrow("exit:0");
+
+    // `build` filtered still needs the dependency pre-step (see the earlier
+    // "build --all" test for why the workspace-wide case differs).
+    expect(spawnSync).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(spawnSync).mock.calls[0]![1]).toEqual([
+      "-r",
+      "--if-present",
+      "--filter",
+      "schedule-builder^...",
+      "run",
+      "build",
+    ]);
+    expect(vi.mocked(spawnSync).mock.calls[1]![1]).toEqual([
+      "-r",
+      "--if-present",
+      "--filter",
+      "schedule-builder",
+      "run",
+      "build",
+    ]);
+  });
+
+  it("skips the dependency spawn entirely for a task outside NEEDS_DEPS_BUILT", async () => {
+    await expect(
+      runTask(["generate-types", "--filter", "platform"]),
+    ).rejects.toThrow("exit:0");
+
+    expect(spawnSync).toHaveBeenCalledOnce();
+    expect(vi.mocked(spawnSync).mock.calls[0]![1]).toEqual([
+      "-r",
+      "--if-present",
+      "--filter",
+      "platform",
+      "run",
+      "generate-types",
+    ]);
+  });
+
+  it("passes --parallel for dev across multiple filtered apps", async () => {
+    await expect(
+      runTask(["dev", "--filter", "platform", "--filter", "schedule-builder"]),
+    ).rejects.toThrow("exit:0");
+
+    expect(spawnSync).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(spawnSync).mock.calls[1]![1]).toEqual([
+      "-r",
+      "--if-present",
+      "--parallel",
+      "--filter",
+      "platform",
+      "--filter",
+      "schedule-builder",
+      "run",
+      "dev",
+    ]);
+  });
+
+  it("forwards trailing non-filter args to the underlying task", async () => {
+    await expect(
+      runTask(["lint", "--filter", "platform", "--max-warnings", "0"]),
+    ).rejects.toThrow("exit:0");
+
+    expect(vi.mocked(spawnSync).mock.calls[1]![1]).toEqual([
+      "-r",
+      "--if-present",
+      "--filter",
+      "platform",
+      "run",
+      "lint",
+      "--max-warnings",
+      "0",
+    ]);
   });
 });

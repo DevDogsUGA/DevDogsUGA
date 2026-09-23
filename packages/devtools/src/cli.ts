@@ -937,7 +937,7 @@ async function dispatch(argv: string[]): Promise<string | null> {
   // `main()` before `intro()`. Both exit with their child's status, so
   // neither returns and `outro()` is never reached. That is right: by the
   // time a menu walk gets here the banner is already on screen, above the
-  // menu it introduced, rather than wedged between this CLI and turbo's
+  // menu it introduced, rather than wedged between this CLI and pnpm's
   // output.
   if (first === "run") return runTask(rest);
   if (first === "bw") return runBw(rest);
@@ -1127,11 +1127,11 @@ export async function main(argv: string[]): Promise<void> {
   const startPath = process.stdin.isTTY ? bareGroupStartPath(argv) : null;
 
   // Also before `intro()`, for the neighbouring reason: this one hands stdout
-  // to turbo, and through it to a Next dev server or a Flutter run that owns
+  // to pnpm, and through it to a Next dev server or a Flutter run that owns
   // the terminal until Ctrl-C. A banner above that output would be this CLI
   // announcing itself over somebody else's, and the `outro()` below would
   // print "Done." after a dev server was interrupted. `runTask` exits with
-  // turbo's own status and never comes back. `!startPath` excludes the one
+  // the child's own status and never comes back. `!startPath` excludes the one
   // case that is not this: a bare `run` at a terminal, which the block above
   // already resolved to its own subcommand screen rather than a task to run.
   if (!startPath && argv[0] === "run") {
