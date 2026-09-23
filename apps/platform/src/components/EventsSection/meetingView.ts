@@ -10,7 +10,7 @@ import {
  *
  * Shared rather than per-band because every band on the events page renders
  * the same facts at a different size: the marquee, the calendar dot, the
- * schedule row and the meeting dialog all say "this is a judging night". One
+ * schedule row and the meeting dialog all say "this is a workshop night". One
  * hue here and another there would read as two kinds of evening. Colour is
  * information, not decoration.
  *
@@ -18,8 +18,8 @@ import {
  * pages' light plates, so its chips are solid fills with black borders. The
  * /events page uses the console dialect, dark mauve with translucent tinted
  * chips, so every badge carries a `*Dark` variant beside the light one. The
- * HUE never changes between the two: a judging night is rose on both plates,
- * or the colour stops being information.
+ * HUE never changes between the two: a workshop night is emerald on both
+ * plates, or the colour stops being information.
  *
  * Nothing in this module reads the clock or the database, so it is safe to
  * import from a client component.
@@ -43,12 +43,11 @@ export interface SegmentBadge {
 }
 
 /**
- * `judging` is rose. `workshop` and `kickoff` share emerald, because a kickoff
- * IS the end of a workshop, the same night in the same room with the same
- * people, and the timeline draws them as one dot. Rose against emerald is what
- * makes the loop legible on Monday: the rose end of last week's bar beside the
- * emerald start of this week's. `open` is amber, the one warm colour, for the
- * one night with nothing scheduled.
+ * `workshop` is emerald, `open` is amber, the one warm colour, for the one
+ * night with nothing scheduled. Used to also carry `kickoff` (sharing
+ * emerald with `workshop`) and `judging` (rose), back when a competition was
+ * a week-long window a meeting opened and another judged -- see
+ * `EVENT_SEGMENT_VISUALS`'s own doc comment for why those two are gone.
  */
 export const segmentBadge: Record<MeetingSegment, SegmentBadge> =
   Object.fromEntries(

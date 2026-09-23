@@ -102,10 +102,9 @@ function utcDateKey(date: Date): string {
 /**
  * The badge a day's dot takes.
  *
- * One dot per meeting, not one per segment. A night that judges one
- * competition and teaches another would otherwise sprout two dots and read as
- * two meetings. The segment order ranks them, so the first is the one to colour
- * by.
+ * One dot per meeting, not one per segment, even though there is only ever
+ * one segment now (`workshop` or `open`) -- the shape is kept general in case
+ * a night ever grows a second one again.
  *
  * This used to be `segments[0] ?? "open"`, which was safe when the resolver
  * guaranteed a non-empty set. It no longer does: `open` is suppressed whenever
@@ -192,17 +191,8 @@ function MeetingDetail({
           </span>
         ))}
       </div>
-      {(meeting.judgedCompetitions.length > 0 ||
-        meeting.workshops.length > 0) && (
+      {meeting.workshops.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          {meeting.judgedCompetitions.map((judging) => (
-            <span
-              key={judging.competitionId}
-              className={`${CHIP_DARK_CLS} border-rose-400/30 bg-rose-500/10 text-rose-300`}
-            >
-              Judging: {workshopLabel(judging)}
-            </span>
-          ))}
           {meeting.workshops.map((workshop) => (
             <span
               key={workshop.workshopId}

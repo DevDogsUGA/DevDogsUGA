@@ -166,17 +166,13 @@ describe("scaffoldBase", () => {
     await scaffoldBase(client);
 
     const linkCalls = calls.filter(
-      (c) =>
-        c === "field:Workshops.Meeting" ||
-        c === "field:Workshops.Project" ||
-        c === "field:Competitions.Workshop",
+      (c) => c === "field:Workshops.Meeting" || c === "field:Workshops.Project",
     );
-    expect(linkCalls).toHaveLength(3);
+    expect(linkCalls).toHaveLength(2);
 
     for (const [linkCall, targetTable] of [
       ["field:Workshops.Meeting", "table:Meetings"],
       ["field:Workshops.Project", "table:Projects"],
-      ["field:Competitions.Workshop", "table:Workshops"],
     ] as const) {
       expect(calls.indexOf(targetTable)).toBeGreaterThanOrEqual(0);
       expect(calls.indexOf(targetTable)).toBeLessThan(calls.indexOf(linkCall));
@@ -367,10 +363,10 @@ describe("discoverIds", () => {
 
     const members = schema.find((t) => t.name === "Members")!;
     members.fields = members.fields.filter((f) => f.name !== "UGA email");
-    const withoutCompetitions = schema.filter((t) => t.name !== "Competitions");
+    const withoutWorkshops = schema.filter((t) => t.name !== "Workshops");
 
-    const found = discoverIds(withoutCompetitions);
-    expect(found.missing).toContain("Competitions");
+    const found = discoverIds(withoutWorkshops);
+    expect(found.missing).toContain("Workshops");
     expect(found.missing.some((m) => m.includes("ugaEmail"))).toBe(true);
   });
 });

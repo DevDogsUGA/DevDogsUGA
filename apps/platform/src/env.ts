@@ -275,6 +275,26 @@ const server = {
     example: "DevDogsUGA",
     commented: true,
   }),
+  // The private "Competitions" GitHub Project's GraphQL node id (a
+  // `PVT_...` string, not the project's number). Optional, like
+  // AIRTABLE_SYNC_PAT below: Sloan has to create the Project by hand and note
+  // its id, so the platform has to boot without one -- `server/github/
+  // competitions.ts` treats an unset value as "competitions ingestion is not
+  // configured yet" and no-ops every webhook delivery and reconcile pass
+  // rather than failing to start. A committed constant would work for
+  // GITHUB_ORG and GITHUB_COMPETITION_REPO because both name things this repo
+  // already controls; a Project's node id is assigned by GitHub the moment
+  // the Project is created and cannot be predicted ahead of that.
+  GITHUB_COMPETITIONS_PROJECT_ID: define(z.string().default(""), {
+    doc:
+      "The private \"Competitions\" GitHub Project's GraphQL node id " +
+      "(PVT_...). Empty means competition ingestion is a no-op -- the " +
+      "platform boots without it. Find it with `gh project view <number> " +
+      "--owner DevDogsUGA --format json --jq .id`.",
+    scope: "environment",
+    secrecy: "public",
+    commented: true,
+  }),
   // Airtable. Optional because the base is provisioned separately and the
   // platform has to boot without it: the sync refuses with a named error
   // rather than the app failing to start. The sync token moved HERE from

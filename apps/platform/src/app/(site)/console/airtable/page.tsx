@@ -12,10 +12,12 @@ import { requirePermission } from "~/server/auth/require";
 /**
  * /console/airtable
  *
- * Airtable is the CMS for meetings, workshops and competitions, and the sync
- * polls it every fifteen minutes. This page exists for the other case: an
- * officer who fixed a requirement count ten minutes before judging should not
- * have to wait, and neither should anyone working out why a refusal fired.
+ * Airtable is the CMS for meetings and workshops, and the sync polls it every
+ * fifteen minutes. Competitions no longer go through it -- they mirror a
+ * GitHub Projects board instead, see `server/github/competitions.ts`. This
+ * page exists for the other case: an officer who fixed a meeting detail ten
+ * minutes before the doors open should not have to wait, and neither should
+ * anyone working out why a refusal fired.
  *
  * The same trigger is also reachable from an Airtable button field on the
  * Meetings table, which puts the control where the edit was just made. Both go
@@ -47,17 +49,6 @@ export default async function AirtableConsolePage() {
               <li>
                 Change a workshop&apos;s meeting or project once anybody has
                 attended it — that would move credit people already earned.
-              </li>
-              <li>
-                Change a finalized competition&apos;s requirement count, because
-                every team&apos;s score is computed against that number.
-              </li>
-              <li>
-                Move{" "}
-                <code className="rounded-sm bg-white/10 px-1 py-0.5 font-mono text-xs text-mauve-200">
-                  Judging starts
-                </code>{" "}
-                once participation has frozen, in either direction.
               </li>
               <li>
                 Delete anything. A row deleted in Airtable is archived here, and

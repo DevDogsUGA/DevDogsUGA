@@ -1,7 +1,7 @@
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "~/server/db";
-import { competitions, memberStars } from "~/server/db/schema";
+import { memberStars } from "~/server/db/schema";
 
 export type StarActivityType = "meeting" | "competition";
 
@@ -34,17 +34,10 @@ export const getStarsForUser = cache(
             (select m.kind from platform.meetings m where m.id = ${memberStars.meetingId}),
             'Meeting'
           )
-          else coalesce(
-            (select c.title from platform.competitions c where c.id = ${memberStars.competitionId}),
-            (
-              select w.title
-              from platform.competitions c
-              join platform.workshops w on w.id = c."workshopId"
-              where c.id = ${memberStars.competitionId}
-            ),
-            (select c.slug from platform.competitions c where c.id = ${memberStars.competitionId}),
-            'Competition'
-          )
+          -- A competition's title is never null (see the migration's comment
+          -- on the column), so unlike the meeting branch above there is no
+          -- fallback chain to build here any more.
+          else (select c.title from platform.competitions c where c.id = ${memberStars.competitionId})
         end`,
       })
       .from(memberStars)
@@ -80,31 +73,3 @@ export function totalStars(cells: StarCell[]): StarTotals {
     wins: cells.filter((cell) => cell.won).length,
   };
 }
-
-/** Competition participation for the workshop page's roster. */
-export const getStarsForWorkshop = cache(
-  async (
-    workshopId: string,
-  ): Promise<
-    {
-      userId: string;
-      workshopStar: boolean;
-      competitionStar: boolean;
-      won: boolean;
-    }[]
-  > => {
-    const rows = await db
-      .select({ userId: memberStars.userId, won: memberStars.won })
-      .from(memberStars)
-      .innerJoin(competitions, eq(competitions.id, memberStars.competitionId))
-      .where(eq(competitions.workshopId, workshopId))
-      .orderBy(asc(memberStars.userId));
-
-    return rows.map((row) => ({
-      userId: row.userId!,
-      workshopStar: false,
-      competitionStar: true,
-      won: row.won!,
-    }));
-  },
-);

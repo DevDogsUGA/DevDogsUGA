@@ -240,69 +240,101 @@ export type Database = {
           },
         ];
       };
-      competitions: {
+      competitionEntries: {
         Row: {
-          airtableRecordId: string | null;
-          countsTowardProgress: boolean;
-          deletedAt: string | null;
-          elEligible: boolean;
+          closedAt: string | null;
+          competitionId: string;
           id: string;
-          judgingMeetingId: string | null;
-          judgingStartsAt: string | null;
-          seasonId: string | null;
-          slug: string;
-          title: string | null;
-          workshopId: string;
+          mergedAt: string | null;
+          openedAt: string;
+          prNodeId: string;
+          prNumber: number;
+          teamId: string;
+          url: string;
         };
         Insert: {
-          airtableRecordId?: string | null;
-          countsTowardProgress?: boolean;
-          deletedAt?: string | null;
-          elEligible?: boolean;
+          closedAt?: string | null;
+          competitionId: string;
           id?: string;
-          judgingMeetingId?: string | null;
-          judgingStartsAt?: string | null;
-          seasonId?: string | null;
-          slug: string;
-          title?: string | null;
-          workshopId: string;
+          mergedAt?: string | null;
+          openedAt: string;
+          prNodeId: string;
+          prNumber: number;
+          teamId: string;
+          url: string;
         };
         Update: {
-          airtableRecordId?: string | null;
-          countsTowardProgress?: boolean;
-          deletedAt?: string | null;
-          elEligible?: boolean;
+          closedAt?: string | null;
+          competitionId?: string;
           id?: string;
-          judgingMeetingId?: string | null;
-          judgingStartsAt?: string | null;
-          seasonId?: string | null;
-          slug?: string;
-          title?: string | null;
-          workshopId?: string;
+          mergedAt?: string | null;
+          openedAt?: string;
+          prNodeId?: string;
+          prNumber?: number;
+          teamId?: string;
+          url?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "competitions_judgingMeetingId_fkey";
-            columns: ["judgingMeetingId"];
+            foreignKeyName: "competitionEntries_competitionId_fkey";
+            columns: ["competitionId"];
             isOneToOne: false;
-            referencedRelation: "meetings";
+            referencedRelation: "competitions";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "competitions_seasonId_fkey";
-            columns: ["seasonId"];
+            foreignKeyName: "competitionEntries_teamId_fkey";
+            columns: ["teamId"];
             isOneToOne: false;
-            referencedRelation: "seasons";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "competitions_workshopId_fkey";
-            columns: ["workshopId"];
-            isOneToOne: true;
-            referencedRelation: "workshops";
+            referencedRelation: "teams";
             referencedColumns: ["id"];
           },
         ];
+      };
+      competitions: {
+        Row: {
+          brief: string | null;
+          closedAt: string | null;
+          githubSyncedAt: string;
+          id: string;
+          issueNodeId: string;
+          issueNumber: number;
+          kickedOffAt: string;
+          plannedEndAt: string | null;
+          repo: string;
+          slug: string;
+          title: string;
+          url: string;
+        };
+        Insert: {
+          brief?: string | null;
+          closedAt?: string | null;
+          githubSyncedAt?: string;
+          id?: string;
+          issueNodeId: string;
+          issueNumber: number;
+          kickedOffAt: string;
+          plannedEndAt?: string | null;
+          repo: string;
+          slug: string;
+          title: string;
+          url: string;
+        };
+        Update: {
+          brief?: string | null;
+          closedAt?: string | null;
+          githubSyncedAt?: string;
+          id?: string;
+          issueNodeId?: string;
+          issueNumber?: number;
+          kickedOffAt?: string;
+          plannedEndAt?: string | null;
+          repo?: string;
+          slug?: string;
+          title?: string;
+          url?: string;
+        };
+        Relationships: [];
       };
       contentTypes: {
         Row: {

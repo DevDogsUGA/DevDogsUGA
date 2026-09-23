@@ -3,7 +3,6 @@ import {
   projects as projectsSpec,
   buildPush,
   buildUpdate,
-  competitions as competitionsSpec,
   meetings as meetingsSpec,
   members as membersSpec,
   platformSettingsTable as settingsSpec,
@@ -13,7 +12,6 @@ import {
   type AirtableClient,
   type AirtableRecord,
   type AttendanceRow,
-  type CompetitionRow,
   type MeetingRow,
   type MemberRow,
   type PlatformSettingsRow,
@@ -24,7 +22,6 @@ import { eq, isNull, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import {
   attendance,
-  competitions,
   meetings,
   profiles,
   reflectionSettings,
@@ -45,10 +42,10 @@ import type { Refusal } from "./refusals";
  *
  *   * Members: the platform authors these, so a row with no Airtable record
  *     should create one. Upsert on `⚙️ Platform ID`.
- *   * Meetings, Workshops, Competitions: Airtable authors these. The platform
- *     only writes derived values onto rows that already exist, addressed by
- *     record id. Upserting them would create a duplicate record for every row
- *     whose Platform ID is still blank.
+ *   * Meetings, Workshops: Airtable authors these. The platform only writes
+ *     derived values onto rows that already exist, addressed by record id.
+ *     Upserting them would create a duplicate record for every row whose
+ *     Platform ID is still blank.
  */
 
 export interface PushCounts {
@@ -196,16 +193,15 @@ async function upsert<TRow>(
 /**
  * Derived counts written back onto officer-authored rows.
  *
- * Each of these is a number an officer plans against: how many people came,
- * how full a competition is. Each is a projection of attendance or membership
- * that Airtable has no way to compute for itself.
+ * Each of these is a number an officer plans against: how many people came to
+ * a meeting, how many workshops ran that night. Each is a projection of
+ * attendance that Airtable has no way to compute for itself.
  */
 export async function pushDerivedCounts(
   client: AirtableClient,
   listed: {
     meetings: AirtableRecord[];
     workshops: AirtableRecord[];
-    competitions: AirtableRecord[];
   },
 ): Promise<PushCounts> {
   const meetingRows = await db
@@ -235,29 +231,11 @@ export async function pushDerivedCounts(
     .from(workshops)
     .where(isNull(workshops.deletedAt));
 
-  const competitionRows = await db
-    .select({
-      id: competitions.id,
-      slug: competitions.slug,
-      workshopAirtableId: sql<string | null>`null`,
-      judgingStartsAt: sql<
-        string | null
-      >`${competitions.judgingStartsAt}::text`,
-      airtableRecordId: competitions.airtableRecordId,
-      // See the STUB note on `CompetitionRow.teamCount` in the registry: a
-      // team is no longer scoped to a competition, so this cannot be counted
-      // from team rows any more.
-      teamCount: sql<number>`0`,
-    })
-    .from(competitions)
-    .where(isNull(competitions.deletedAt));
-
   const total = noCounts();
 
   for (const [spec, rows, records] of [
     [meetingsSpec, meetingRows, listed.meetings],
     [workshopsSpec, workshopRows, listed.workshops],
-    [competitionsSpec, competitionRows, listed.competitions],
   ] as [TableSpec, { airtableRecordId: string | null }[], AirtableRecord[]][]) {
     const entries = rows
       .filter((r) => r.airtableRecordId !== null)
@@ -277,7 +255,6 @@ export async function pushDerivedCounts(
 // the registry's row shape by hand; these keep the two in step.
 type _MeetingRowCheck = MeetingRow;
 type _WorkshopRowCheck = WorkshopRow;
-type _CompetitionRowCheck = CompetitionRow;
 
 // ── Sync status write-back ───────────────────────────────────────────────────
 
@@ -300,7 +277,6 @@ export async function writeSyncStatus(
     projects: AirtableRecord[];
     meetings: AirtableRecord[];
     workshops: AirtableRecord[];
-    competitions: AirtableRecord[];
     platformSettings: AirtableRecord[];
   },
 ): Promise<number> {
@@ -318,7 +294,6 @@ export async function writeSyncStatus(
     [projectsSpec, listed.projects],
     [meetingsSpec, listed.meetings],
     [workshopsSpec, listed.workshops],
-    [competitionsSpec, listed.competitions],
     [settingsSpec, listed.platformSettings],
   ];
 

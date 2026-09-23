@@ -215,13 +215,24 @@ async function eligibleActivity(
     const row = rows[0];
     return row && { endsAt: new Date(row.endsAt) };
   }
-  // STUB: the platform redesign's teams-core step dropped
-  // "teams"."competitionId" and "teams"."competedAt", so "did this member
-  // compete in this competition" is no longer answerable from team
-  // membership -- see platform."memberStars"'s own stub for the same call.
-  // Until the competitions step rewires this to the competition-entry
-  // mirror, no member is eligible for a competition reflection, so
-  // `saveReflection` refuses with "You are not eligible for this
-  // reflection." rather than erroring.
-  return undefined;
+  // Competition participation, the same rule `reflections/load.ts` and
+  // `memberStars` use: held an active membership on the entering team at the
+  // moment the entry opened. `c."closedAt" is not null` is what makes this a
+  // reflection-eligible activity rather than merely a participated one -- a
+  // reflection only makes sense once the competition is actually over.
+  const rows = await tx.execute<{ endsAt: string }>(sql`
+    select c."closedAt" as "endsAt"
+    from platform."competitionEntries" ce
+    join platform.competitions c on c.id = ce."competitionId"
+    join platform."teamMembers" tm
+      on tm."teamId" = ce."teamId"
+      and tm."joinedAt" <= ce."openedAt"
+      and (tm."leftAt" is null or tm."leftAt" > ce."openedAt")
+    where tm."userId" = ${userId}::uuid and c.id = ${input.activityId}::uuid
+      and c."closedAt" is not null
+    for share of ce, c, tm
+    limit 1
+  `);
+  const row = rows[0];
+  return row && { endsAt: new Date(row.endsAt) };
 }

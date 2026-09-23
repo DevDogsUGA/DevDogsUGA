@@ -11,7 +11,6 @@ import CompetitionTimeline, {
 import CrtTv from "./CrtTv";
 import { CHIP_CLS, CHIP_DARK_CLS, segmentBadge } from "./meetingView";
 import bruceAlmighty from "~/assets/bruce-almighty.gif";
-import charlieConspiracy from "~/assets/charlie-conspiracy.gif";
 import informationGif from "~/assets/information.gif";
 import muybridgeHorse from "~/assets/muybridge-horse.gif";
 
@@ -19,11 +18,15 @@ import muybridgeHorse from "~/assets/muybridge-horse.gif";
  * The club's format, said once and drawn twice.
  *
  * The copy has to keep the model straight (see `docs/platform/guides/meetings-
- * and-teams`): a competition is a week bracketed by two Mondays, and every
- * Monday does both jobs, judging last week's and kicking off this week's. The
- * timeline strip draws that loop. The day cards around it carry the sentences,
- * and they sit on the strip's own eight columns, above and below it, so each
- * card is beside the day it is about with a pointer at its dot.
+ * and-teams`): Monday's workshop kicks a competition off, teams build all
+ * week with an open build session on Wednesday, and entries stay open --
+ * there is no fixed judging night -- until an officer merges the winning
+ * pull request, which closes the competition's GitHub issue. The timeline
+ * strip draws the fixed part of that (the weekly cadence) and lets the build
+ * week itself run off the edge rather than closing at a second dot, since
+ * nothing schedules when it ends. The day cards around it carry the
+ * sentences, and they sit on the strip's own columns, above and below it, so
+ * each card is beside the day it is about with a pointer at its dot.
  *
  * The television is the other drawing. It sits beside the heading, hovering a
  * card changes the channel to that card's GIF, and static plays whenever no
@@ -79,12 +82,16 @@ const BEATS: Beat[] = [
     body: (
       <>
         Every workshop is self-contained, and none assumes you were here last
-        week. Then, once you have the tools, we kick off the competition: split
-        up into teams and build the best implementation of that week&rsquo;s
-        feature.
+        week. Then, once you have the tools, we kick off the competition: an
+        officer converts that week&rsquo;s draft into a GitHub issue, and teams
+        split up and start building the best implementation of it.
       </>
     ),
-    segments: ["workshop", "kickoff"],
+    // Just `workshop` -- a kickoff no longer has a segment of its own. It is
+    // an officer converting a draft item on GitHub, not a structural fact
+    // about the meeting the way `workshop` still is; see
+    // `EVENT_SEGMENT_VISUALS`'s doc comment for the segment this dropped.
+    segments: ["workshop"],
     gif: informationGif,
     strip: "monday",
     place: { side: "above", col: 1, caret: "start" },
@@ -114,32 +121,19 @@ const BEATS: Beat[] = [
   },
   {
     day: "All week",
-    title: "Build It",
+    title: "Build It, Then Win It",
     body: (
       <>
-        Up to four per team, wherever and whenever. Open a pull request before
-        Monday.
+        Up to four per team, wherever and whenever. Open a pull request linking
+        the competition&rsquo;s issue to enter -- there is no fixed deadline.
+        Whenever your team is ready, officers and members judge live, the
+        winning pull request merges, and that closes the issue out.
       </>
     ),
     segments: [],
     gif: muybridgeHorse,
     strip: "week",
     place: { side: "above", col: 5, caret: null },
-  },
-  {
-    day: "Next Monday",
-    title: "Judging, then It All Starts Again",
-    body: (
-      <>
-        Teams demo in front of the club, officers and members vote on the best
-        implementation, and the winning pull request merges. Then, a new
-        workshop kicks off the next one.
-      </>
-    ),
-    segments: ["judging"],
-    gif: charlieConspiracy,
-    strip: "nextMonday",
-    place: { side: "below", col: 7, caret: "end" },
   },
 ];
 

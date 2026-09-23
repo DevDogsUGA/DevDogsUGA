@@ -7,8 +7,6 @@ import { streamReflectionRows } from "./reflections";
 const IDS = {
   member: "e2000000-0000-4000-a000-000000000001",
   meeting: "e2000000-0000-4000-a000-000000000002",
-  workshopMeeting: "e2000000-0000-4000-a000-000000000003",
-  workshop: "e2000000-0000-4000-a000-000000000004",
   competition: "e2000000-0000-4000-a000-000000000005",
   meetingReflection: "e2000000-0000-4000-a000-000000000006",
   competitionReflection: "e2000000-0000-4000-a000-000000000007",
@@ -37,12 +35,8 @@ async function cleanup() {
     sql`delete from platform.competitions where id = ${IDS.competition}::uuid`,
   );
   await db.execute(
-    sql`delete from platform.workshops where id = ${IDS.workshop}::uuid`,
+    sql`delete from platform.meetings where id = ${IDS.meeting}::uuid`,
   );
-  await db.execute(sql`
-    delete from platform.meetings
-    where id in (${IDS.meeting}::uuid, ${IDS.workshopMeeting}::uuid)
-  `);
   await db.execute(
     sql`delete from platform.profile where "userId" = ${IDS.member}::uuid`,
   );
@@ -62,24 +56,17 @@ beforeAll(async () => {
   `);
   await db.execute(sql`
     insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt")
-    values
-      (${IDS.meeting}::uuid, 'reflections-export-meeting',
+    values (${IDS.meeting}::uuid, 'reflections-export-meeting',
        'Reflections Export Meeting',
-       now() - interval '2 days', now() - interval '2 days' + interval '2 hours'),
-      (${IDS.workshopMeeting}::uuid, 'reflections-export-workshop-meeting', null,
-       now() - interval '3 days', now() - interval '3 days' + interval '2 hours')
+       now() - interval '2 days', now() - interval '2 days' + interval '2 hours')
   `);
   await db.execute(sql`
-    insert into platform.workshops (id, "meetingId", title, project)
-    values (${IDS.workshop}::uuid, ${IDS.workshopMeeting}::uuid,
-            'Export Comp Workshop', 'Export Comp Project')
-  `);
-  // Title left null so the export falls back to the workshop's title -- the
-  // same fallback chain the stars grid uses.
-  await db.execute(sql`
-    insert into platform.competitions (id, slug, "workshopId", title)
+    insert into platform.competitions
+      (id, slug, "issueNodeId", "issueNumber", repo, url, title, "kickedOffAt")
     values (${IDS.competition}::uuid, 'reflections-export-competition',
-            ${IDS.workshop}::uuid, null)
+            'EXPORT_ISSUE_1', 1, 'DevDogsUGA/DevDogsUGA',
+            'https://github.com/DevDogsUGA/DevDogsUGA/issues/1',
+            'Export Comp Competition', now() - interval '3 days')
   `);
   await db.execute(sql`
     insert into platform.reflections
@@ -131,9 +118,7 @@ describe("streamReflectionRows", () => {
     );
     expect(competitionRow).toMatchObject({
       activityId: IDS.competition,
-      // The competition's own title is null, so this falls through to the
-      // workshop that opened it.
-      activityTitle: "Export Comp Workshop",
+      activityTitle: "Export Comp Competition",
       content: "My competition reflection",
       revisionCount: 0,
     });

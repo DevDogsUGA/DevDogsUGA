@@ -55,26 +55,18 @@ async function reflectionPage(
         case when ${reflections.meetingId} is not null then 'meeting' else 'competition' end
       `,
       activityId: sql<string>`coalesce(${reflections.meetingId}, ${reflections.competitionId})`,
-      // Same coalesce chains as the stars grid's label: a night's own name,
-      // then its kind, then a placeholder for a meeting; a competition's own
-      // title, then the workshop that opened it, then its slug.
+      // Same coalesce chain as the stars grid's label for a meeting: a
+      // night's own name, then its kind, then a placeholder. A competition's
+      // title is never null (see the migration's comment on the column), so
+      // unlike the meeting branch there is no fallback chain to build for it
+      // any more.
       activityTitle: sql<string>`case
         when ${reflections.meetingId} is not null then coalesce(
           (select m."nameOverride" from platform.meetings m where m.id = ${reflections.meetingId}),
           (select m.kind from platform.meetings m where m.id = ${reflections.meetingId}),
           'Meeting'
         )
-        else coalesce(
-          (select c.title from platform.competitions c where c.id = ${reflections.competitionId}),
-          (
-            select w.title
-            from platform.competitions c
-            join platform.workshops w on w.id = c."workshopId"
-            where c.id = ${reflections.competitionId}
-          ),
-          (select c.slug from platform.competitions c where c.id = ${reflections.competitionId}),
-          'Competition'
-        )
+        else (select c.title from platform.competitions c where c.id = ${reflections.competitionId})
       end`,
       content: reflections.content,
       submittedAt: reflections.submittedAt,

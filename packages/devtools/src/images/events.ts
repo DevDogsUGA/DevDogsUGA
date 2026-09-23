@@ -73,11 +73,6 @@ interface WorkshopRow {
   projects: { displayName: string; sortOrder: number | null } | null;
 }
 
-interface CompetitionRow {
-  workshopId: string;
-  judgingStartsAt: string | null;
-}
-
 export function supabaseEvents(client: DevtoolsClient): EventReader {
   return {
     async syncState() {
@@ -107,7 +102,13 @@ export function supabaseEvents(client: DevtoolsClient): EventReader {
       // Cancelled nights are included deliberately: a cancellation is exactly
       // when somebody needs a fresh graphic, and the card has a layout for it.
       // Deleted ones are not.
-      const [meetings, workshops, competitions] = await Promise.all([
+      //
+      // No competitions query any more: a competition is a mirrored GitHub
+      // issue now (see apps/platform/src/server/github/competitions.ts), not
+      // something a meeting kicks off or judges, so there is no "kickoff" or
+      // "judging" segment left for a meeting poster to draw. Every workshop
+      // item is plain "workshop".
+      const [meetings, workshops] = await Promise.all([
         client
           .from("meetings")
           .select(
@@ -119,10 +120,6 @@ export function supabaseEvents(client: DevtoolsClient): EventReader {
           .from("workshops")
           .select("id, meetingId, title, projects(displayName, sortOrder)")
           .is("deletedAt", null),
-        client
-          .from("competitions")
-          .select("workshopId, judgingStartsAt")
-          .is("deletedAt", null),
       ]);
 
       if (meetings.error)
@@ -130,17 +127,9 @@ export function supabaseEvents(client: DevtoolsClient): EventReader {
       if (workshops.error) {
         throw new Error(`Could not read workshops: ${workshops.error.message}`);
       }
-      if (competitions.error) {
-        throw new Error(
-          `Could not read competitions: ${competitions.error.message}`,
-        );
-      }
 
       const workshopRows = (workshops.data ?? []) as unknown as WorkshopRow[];
-      const competitionRows = (competitions.data ?? []) as CompetitionRow[];
       const agendas = groupAgendas(workshopRows);
-      const workshopById = new Map(workshopRows.map((row) => [row.id, row]));
-      const kickoffIds = new Set(competitionRows.map((row) => row.workshopId));
 
       return ((meetings.data ?? []) as unknown as MeetingRow[]).map((row) => {
         const agenda = agendas.get(row.id) ?? [];
@@ -162,18 +151,8 @@ export function supabaseEvents(client: DevtoolsClient): EventReader {
           .filter((workshop) => workshop.meetingId === row.id)
           .map((workshop) => ({
             label: workshopLabel(workshop),
-            segment: kickoffIds.has(workshop.id) ? "kickoff" : "workshop",
+            segment: "workshop",
           }));
-
-        for (const competition of competitionRows) {
-          if (competition.judgingStartsAt === null) continue;
-          const judgingAt = new Date(competition.judgingStartsAt);
-          if (judgingAt < meeting.startsAt || judgingAt >= meeting.endsAt)
-            continue;
-          const workshop = workshopById.get(competition.workshopId);
-          if (!workshop) continue;
-          items.push({ label: workshopLabel(workshop), segment: "judging" });
-        }
 
         const detail = meetingCardDetail({
           meeting,
@@ -212,7 +191,7 @@ export function supabaseEvents(client: DevtoolsClient): EventReader {
   };
 }
 
-/** A readable path component for a workshop or judging card. */
+/** A readable path component for a workshop card. */
 function slugPart(label: string): string {
   return (
     label

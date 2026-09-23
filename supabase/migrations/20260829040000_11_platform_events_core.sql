@@ -1,51 +1,41 @@
--- Events core: meetings, workshops and competitions.
+-- Events core: meetings, workshops, seasons and competitions.
 --
 -- Nothing here is written by a client. Meetings and workshops are authored as
 -- config-as-code (`@devdogsuga/club-config`) and arrive through
--- `server/config/reconcile.ts`; competitions are still authored in Airtable
--- and arrive through the sync, pending the git-native competitions rework.
--- Both writers run server-side as the owning role and are not subject to RLS,
--- so every check constraint below is a BACKSTOP behind a validator rather than
--- the enforcement itself: `@devdogsuga/club-config`'s `validator.ts` for
--- meetings and workshops, `checkCompetition*` in
--- `apps/platform/src/server/airtable/refusals.ts` for competitions. The rule
--- that follows is the one thing to carry away from this file: a constraint
--- here must never be STRICTER than the validator upstream of it. A value the
--- validator publishes and the database rejects is not a caught error, it is a
--- constraint violation inside the reconcile, and for the config path that
--- aborts the WHOLE reconcile rather than one row -- see `reconcile.ts`'s
--- header for why partial application is refused outright. Widening a list
--- here means widening the validator's constant in the same change.
+-- `server/config/reconcile.ts`, which runs server-side as the owning role and
+-- is not subject to RLS. Every check constraint below is a BACKSTOP behind
+-- `@devdogsuga/club-config`'s `validator.ts` rather than the enforcement
+-- itself. The rule that follows is the one thing to carry away from this
+-- file: a constraint here must never be STRICTER than the validator upstream
+-- of it. A value the validator publishes and the database rejects is not a
+-- caught error, it is a constraint violation inside the reconcile, and for
+-- the config path that aborts the WHOLE reconcile rather than one row -- see
+-- `reconcile.ts`'s header for why partial application is refused outright.
+-- Widening a list here means widening the validator's constant in the same
+-- change.
 --
 -- ## The shape
 --
 --   meetings ──< workshops (one per project, running in parallel)
---                    │
---                    └──< competitions (one per workshop, week-long)
 --
--- A competition is NOT an event. A feature is announced after a workshop,
--- teams get most of a week to build it, and judging happens immediately
--- before the NEXT workshop. So a competition is a week-long asynchronous
--- window bracketed by two in-person moments belonging to different meetings,
--- and a meeting straddles two competitions. An earlier draft modelled all of
--- it as one `sessions` table with an (event, track, stage) discriminator,
--- which mixed things you ATTEND with things that merely have a DURATION and
--- so could not answer "was this member present?". Splitting the two removed
--- the discriminator entirely, which is why there is no `eventStage` enum.
+-- A competition is NOT an event, and is no longer a child of a workshop or a
+-- meeting at all -- see the competitions table's own header below for what it
+-- is now. An earlier draft modelled meetings, workshops and competitions as
+-- one `sessions` table with an (event, track, stage) discriminator, which
+-- mixed things you ATTEND with things that merely have a DURATION and so
+-- could not answer "was this member present?". Splitting the two removed the
+-- discriminator entirely, which is why there is no `eventStage` enum.
 --
--- The meeting is the only one of the four a member can be PRESENT at, which
--- is why attendance keys to it.
+-- The meeting is the only one of these a member can be PRESENT at, which is
+-- why attendance keys to it.
 --
 -- ## `configId` and `airtableRecordId`, side by side
 --
 -- `configId` is the identity `server/config/reconcile.ts` upserts and
 -- archives on, mirroring what `airtableRecordId` used to be for the same two
 -- tables: a stable id, authored once and never recomputed, that survives a
--- rename. `airtableRecordId` stays on both tables for now -- migrated rows
--- carry their old Airtable record id in `configId` too, so a competition's
--- Airtable-authored `workshop` link can still resolve without a pull of its
--- own (see `sync.ts`'s `pullCompetitions`) -- and is dropped in the Airtable
--- teardown migration once nothing reads it.
+-- rename. `airtableRecordId` stays on both tables for now, and is dropped in
+-- the Airtable teardown migration once nothing reads it.
 --
 -- ## Enums are not here
 --
@@ -58,9 +48,9 @@
 -- ============================================================
 --
 -- Semester boundaries are data, not date arithmetic hidden in application
--- code. Activities normally resolve their season from their start timestamp;
--- the nullable seasonId on an activity is an explicit Airtable-authored
--- override for exceptional calendars.
+-- code. A meeting normally resolves its season from its start timestamp; the
+-- nullable seasonId on it is an explicit Airtable-authored override for
+-- exceptional calendars.
 create table "platform"."seasons" (
   "id"       uuid not null default gen_random_uuid(),
   "name"     text not null,
@@ -332,58 +322,92 @@ comment on column "platform"."workshops"."configId" is
 -- Competitions
 -- ============================================================
 --
--- The week-long window opened by a workshop. One per workshop, hence the
--- unique on "workshopId" rather than a plain reference.
+-- A competition IS an issue mirror, not a schedule item. The source of truth
+-- is a draft item in the private "Competitions" GitHub Project: custom fields
+-- hold display metadata, the item body holds the markdown brief. Converting
+-- the draft into a real issue in `GITHUB_ORG/GITHUB_COMPETITION_REPO` is
+-- KICKOFF, and that conversion is what `server/github/competitions.ts` mirrors
+-- here -- see that module's header for the full ingestion story (the GraphQL
+-- read, the Project-shape drift check, the webhook and nightly-reconcile
+-- triggers). A row in this table only ever exists for a CONVERTED item; a
+-- still-draft item in the Project is not a competition yet and has no row.
+--
+-- Nothing here is meeting- or workshop-scoped any more. The platform
+-- redesign's competitions step deleted the whole "a competition is a
+-- week-long window bracketed by two meetings" apparatus --
+-- `workshopId`/`judgingMeetingId`/`judgingStartsAt` and everything they
+-- drove (roster-lock-at-judging, the star-freeze pass, judging-meeting
+-- straddle) -- because a competition is now an asynchronous GitHub issue with
+-- no fixed night. `plannedEndAt` is what is left of "when does this end":
+-- display-only, authored by an officer in the Project's date field, and
+-- never read by any lock or deadline logic. The only real dates are
+-- `kickedOffAt` (when the draft became an issue) and `closedAt` (when the
+-- issue closed, i.e. the competition is over).
 create table "platform"."competitions" (
-  "id"               uuid not null default gen_random_uuid(),
+  "id"             uuid not null default gen_random_uuid(),
+  -- GitHub's own identity for the issue, which is what a Project item's
+  -- `content` resolves to once it is converted. Unique because the mirror is
+  -- one row per issue; re-ingesting the same item (a redelivered webhook, a
+  -- nightly reconcile pass) upserts on this column rather than duplicating.
+  "issueNodeId"    text not null,
+  "issueNumber"    integer not null,
+  -- `owner/repo`, e.g. "DevDogsUGA/DevDogsUGA" -- the competition repo an
+  -- entry's PR and this issue both live in. Stored rather than assumed from
+  -- `GITHUB_COMPETITION_REPO` so a mirrored row still reads correctly if that
+  -- env var is ever repointed.
+  "repo"           text not null,
+  "url"            text not null,
   -- User-visible and has to be stable and unique across the repo: it is what
   -- names the competition everywhere outside this table (URLs, results
-  -- pages), the way `teams"."slug"` names a team.
-  "slug"             text not null,
-  "workshopId"       uuid not null,
-  -- Judging belongs to a LATER meeting than the workshop that opened the
-  -- competition. Both of these are nullable because officers author them in
-  -- Airtable one field at a time; null means "not yet scheduled", which the
-  -- officer surface should show rather than the database refuse. Deliberately
-  -- NOT constrained to be set together: an earlier draft required
-  -- ("judgingStartsAt" is null) = ("judgingMeetingId" is null) and made the
-  -- half-filled state unrepresentable, turning normal data entry into a write
-  -- error. Do not resurrect it.
-  "judgingMeetingId" uuid,
-  "judgingStartsAt"  timestamptz,
-  "airtableRecordId" text,
-  "deletedAt"        timestamptz,
-  "countsTowardProgress" boolean not null default false,
-  "elEligible"           boolean not null default false,
-  "seasonId"             uuid,
-  -- What the officers call this competition on its own pages, in their own
-  -- words. A competition had no name of its own before this column: every page
-  -- derived one from the opening workshop's free-text project recommendation,
-  -- which in turn fell back to the workshop's own title and finally to the
-  -- branch slug. Null keeps that chain in force, so a competition authored
-  -- before this column keeps rendering exactly as it did. The length check
-  -- mirrors `workshops_title_length` -- both are row/page headings, short by
-  -- design -- and the Airtable pull refuses a longer value rather than
-  -- truncating it, leaving the published title in place.
-  "title"            text,
+  -- pages), the way `teams"."slug"` names a team. Derived from the title and
+  -- the issue number at ingestion time -- see `slugForCompetition` in
+  -- `server/github/competitions.ts` -- rather than officer-authored, since
+  -- nothing here is a form field any more.
+  "slug"           text not null,
+  -- From the Project's "Title" field when an officer filled one in, falling
+  -- back to the issue's own title. Never null: a converted issue always has
+  -- a title, one way or the other.
+  "title"          text not null,
+  -- The issue body, markdown, rendered with the site's existing markdown
+  -- renderer. Null only for an issue with an empty body, which GitHub allows.
+  "brief"          text,
+  -- The Project's planned judging/end date field. DISPLAY-ONLY: nothing here
+  -- reads it to decide whether entries are still open or a deadline has
+  -- passed. That is `closedAt`'s job.
+  "plannedEndAt"   timestamptz,
+  "kickedOffAt"    timestamptz not null,
+  "closedAt"       timestamptz,
+  "githubSyncedAt" timestamptz not null default now(),
   constraint "competitions_pkey" primary key ("id"),
+  constraint "competitions_issueNodeId_key" unique ("issueNodeId"),
   constraint "competitions_slug_key" unique ("slug"),
-  constraint "competitions_workshopId_key" unique ("workshopId"),
-  constraint "competitions_airtableRecordId_key" unique ("airtableRecordId"),
-  constraint "competitions_title_length"
-    check ("title" is null or char_length("title") <= 80),
-  constraint "competitions_workshopId_fkey" foreign key ("workshopId")
-    references "platform"."workshops"("id") on update cascade on delete cascade,
-  constraint "competitions_judgingMeetingId_fkey" foreign key ("judgingMeetingId")
-    references "platform"."meetings"("id") on update cascade on delete set null,
-  constraint "competitions_seasonId_fkey" foreign key ("seasonId")
-    references "platform"."seasons"("id") on update cascade on delete set null
+  -- Generous relative to a workshop or meeting heading: this is a GitHub
+  -- issue title, typed in an issue form rather than a length-checked field on
+  -- this platform, and GitHub itself allows up to 256 characters. 160 is
+  -- comfortably under that while still keeping the results page's heading to
+  -- one line.
+  constraint "competitions_title_length" check (char_length("title") <= 160)
 );
 
 alter table "platform"."competitions" enable row level security;
 
 comment on column "platform"."competitions"."title" is
-  'What the officers call this competition on its own pages, in their own words. Null falls back to the opening workshop''s free-text project recommendation, then the workshop''s own title, then the branch slug, so a competition authored before this column keeps rendering exactly as it did.';
+  'From the Project''s "Title" field, falling back to the issue''s own title. Refreshed on every `edited` projects_v2_item webhook and by the nightly reconcile, so an officer retitling the issue or the field updates this column instead of orphaning it.';
+
+comment on column "platform"."competitions"."brief" is
+  'The issue body, markdown. This is the competition''s brief -- what officers write when they draft the item, before it is ever converted.';
+
+comment on column "platform"."competitions"."plannedEndAt" is
+  'The Project''s planned judging/end date field. Display-only: shown on the competition page as a heads-up, never read to gate entries or compute a deadline. `closedAt` is the real "is this over" signal.';
+
+comment on column "platform"."competitions"."kickedOffAt" is
+  'When the draft Project item was converted into this issue -- the moment `server/github/competitions.ts` calls kickoff. Not the issue''s own `createdAt`: a draft can sit in the Project for a while before conversion.';
+
+comment on column "platform"."competitions"."closedAt" is
+  'When the issue closed. Null means the competition is still open. This is the one clock the platform reads for "is this competition over" -- `plannedEndAt` never is.';
+
+comment on column "platform"."competitions"."githubSyncedAt" is
+  'Last time something confirmed this row against GitHub: an ingestion call from the webhook route, or the nightly `github-reconcile` cron paging the Project. Mirrors `teams."githubSyncedAt"''s freshness role.';
 
 -- ============================================================
 -- Live-row indexes
@@ -396,9 +420,14 @@ create index "meetings_live_idx" on "platform"."meetings" ("startsAt")
   where "deletedAt" is null;
 create index "workshops_live_idx" on "platform"."workshops" ("meetingId")
   where "deletedAt" is null;
-create index "competitions_live_idx" on "platform"."competitions" ("workshopId")
-  where "deletedAt" is null;
 create index "seasons_startsAt_idx" on "platform"."seasons" ("startsAt");
+
+-- Competitions has no `deletedAt` -- there is no soft-archive state for a
+-- mirror row, only "still tracking" (see `server/github/competitions.ts` on
+-- what a `deleted`/`archived` Project item does instead). `kickedOffAt` is
+-- what every listing orders by, newest first.
+create index "competitions_kickedOffAt_idx"
+  on "platform"."competitions" ("kickedOffAt" desc);
 
 -- The config-as-code identity. Partial and unique, rather than a plain unique
 -- constraint, for the same reason `airtableRecordId` never needed one: an
@@ -418,9 +447,10 @@ create unique index "workshops_configId_live_key" on "platform"."workshops" ("co
 -- The schedule is public information. The marketing site lists meetings and
 -- the workshops they run to logged-out visitors, so `anon` reads all three.
 --
--- Every write is denied to clients. The config reconcile and the competitions
--- sync both write as the owning role and are not subject to RLS at all, so
--- denying client writes costs nothing and is not belt-and-braces: one
+-- Every write is denied to clients. The config reconcile and the
+-- competitions ingestion (`server/github/competitions.ts`) both write as the
+-- owning role and are not subject to RLS at all, so denying client writes
+-- costs nothing and is not belt-and-braces: one
 -- publishable key reaches this schema from any browser, and these policies
 -- are the only thing between that key and the schedule. The schema-wide
 -- default privileges from the first migration grant ALL on these tables to

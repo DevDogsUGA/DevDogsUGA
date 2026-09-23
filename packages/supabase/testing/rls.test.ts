@@ -334,9 +334,16 @@ describe("platform meetings, teams and attendance", () => {
     await a
       .from("workshops")
       .insert({ id: workshopId, meetingId, project: "RLS Project" });
-    await a
-      .from("competitions")
-      .insert({ id: competitionId, slug: "rls-comp", workshopId });
+    await a.from("competitions").insert({
+      id: competitionId,
+      slug: "rls-comp",
+      issueNodeId: "RLS_ISSUE_NODE_ID",
+      issueNumber: 1,
+      repo: "DevDogsUGA/DevDogsUGA",
+      url: "https://github.com/DevDogsUGA/DevDogsUGA/issues/1",
+      title: "RLS Competition",
+      kickedOffAt: new Date(now).toISOString(),
+    });
     await a.from("teams").insert({
       id: teamId,
       slug: "rls-team",
@@ -403,6 +410,30 @@ describe("platform meetings, teams and attendance", () => {
       expect(error, `${table} should be anon-readable`).toBeNull();
       expect(data?.length ?? 0).toBeGreaterThan(0);
     }
+  });
+
+  // No fixture row: nothing populates competitionEntries until a later
+  // step's pull_request webhook handling exists. The mirror still has to be
+  // anon-readable (empty is a legitimate answer) and closed to client writes.
+  it("publishes competition entries to logged-out visitors, read-only", async () => {
+    const client = anon();
+    const { data, error } = await client
+      .from("competitionEntries")
+      .select("id");
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+
+    const { error: insert } = await member.client
+      .from("competitionEntries")
+      .insert({
+        competitionId,
+        teamId,
+        prNodeId: "PR_rogue",
+        prNumber: 1,
+        url: "https://github.com/DevDogsUGA/DevDogsUGA/pull/1",
+        openedAt: new Date().toISOString(),
+      });
+    expect(insert?.code).toBe("42501");
   });
 
   it("refuses client writes to the schedule", async () => {

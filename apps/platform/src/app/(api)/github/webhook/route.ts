@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import {
+  handleCompetitionIssueEvent,
+  handleProjectsV2ItemEvent,
+  type CompetitionIssueEventPayload,
+  type ProjectsV2ItemEventPayload,
+} from "~/server/github/competitionEvents";
+import {
   handleMembershipEvent,
   handleRefEvent,
   handleTeamEvent,

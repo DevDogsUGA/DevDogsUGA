@@ -21,19 +21,19 @@
 /**
  * What a meeting is, derived from its structure.
  *
- * There is no authored "meeting type" column, deliberately: a single night
- * judges last week's competition and teaches this week's workshop, so any
- * one-value field would pick a winner and lie about the other half. These are a
- * SET.
+ * A competition is no longer a child of a workshop or a meeting at all (see
+ * the competitions migration's header) -- a competition is now a mirrored
+ * GitHub issue with its own asynchronous lifecycle, so nothing about a
+ * meeting's STRUCTURE can answer "does this meeting kick off or judge a
+ * competition" any more. What is left is the one thing a meeting's rows can
+ * still say about themselves:
  *
- * | Segment    | Derived from                                           |
- * | ---------- | ------------------------------------------------------ |
- * | `judging`  | a competition whose judging starts inside this meeting  |
- * | `workshop` | one or more live `workshops` rows on this meeting       |
- * | `kickoff`  | one of those workshops opens a competition              |
- * | `open`     | none of the above, the structural fallback              |
+ * | Segment    | Derived from                                     |
+ * | ---------- | ------------------------------------------------- |
+ * | `workshop` | one or more live `workshops` rows on this meeting  |
+ * | `open`     | none of the above, the structural fallback         |
  */
-export type MeetingSegment = "judging" | "kickoff" | "workshop" | "open";
+export type MeetingSegment = "workshop" | "open";
 
 /**
  * The subset of a meeting the resolver reads.
@@ -44,8 +44,7 @@ export type MeetingSegment = "judging" | "kickoff" | "workshop" | "open";
  */
 export interface MeetingStructure {
   kind: string | null;
-  workshops: readonly { competitionSlug: string | null }[];
-  judgedCompetitions: readonly unknown[];
+  workshops: readonly unknown[];
 }
 
 export interface MeetingBilling {
@@ -66,68 +65,17 @@ export interface MeetingBilling {
 }
 
 /**
- * Whether a competition's judging falls inside a meeting.
- *
- * Half-open on the meeting's span, so a competition judged at the instant the
- * next meeting starts belongs to that one rather than to both.
- *
- * **Derived from `judgingStartsAt`, not `judgingMeetingId`.** The two are
- * deliberately not constrained against each other: an officer fills Airtable
- * fields one keystroke at a time and a sync landing between them must not write
- * a refusal, so the pair is routinely inconsistent for thirty seconds and
- * sometimes longer. `judgingStartsAt` is the authority and `judgingMeetingId`
- * is a label, and every other predicate here already reads the datetime, the
- * roster lock and the freeze pass included. The bug this avoids is a calendar
- * that disagrees with the lock about which night judging happens: the page
- * prints "judging tonight" while rosters are still open, or teams freeze on a
- * night the page called an ordinary workshop.
- *
- * Null means "not scheduled yet" and returns false for every meeting rather
- * than being attributed to the labelled one, so an unscheduled competition
- * never counts as judged somewhere.
- */
-export function isJudgedDuring(
-  meeting: { startsAt: Date; endsAt: Date },
-  judgingStartsAt: Date | null,
-): boolean {
-  if (judgingStartsAt === null) return false;
-  return (
-    judgingStartsAt >= meeting.startsAt && judgingStartsAt < meeting.endsAt
-  );
-}
-
-/**
  * What a meeting's structure says it is.
  *
  * ## The ordering
  *
- * `workshop` → `kickoff` → `judging` → `open`, and callers take the first as
- * the primary: the calendar's dot colour, the badge that fits on a narrow card.
- *
- * This used to run `judging` first, because judging is the only segment with a
- * **deadline** behind it. Mid-semester that made `judging` primary for *nearly
- * every meeting*, since a normal night straddles two competitions, and a dot
- * that is rose every Monday carries no information.
- *
- * The current order follows the audience. Judging matters to somebody already on
- * a team; the workshop is what somebody deciding whether to *turn up* is coming
- * for, and this is a public schedule read by newcomers and members alike. So
- * `workshop` leads. `kickoff` sits next to it on purpose: a kickoff *is* the end
- * of a workshop, same room, same hour, and the two share a hue, so rose between
- * two emerald chips would draw a boundary that is not there. `judging` is third,
- * still rendered, still rose, still carrying its deadline, just no longer
- * colouring the dot on a night that also taught something. `open` is last and
- * now rare; see the suppression below.
- *
- * A consequence the calendar legend depends on: **`kickoff` can never be
- * primary.** It is pushed only when some workshop opens a competition, which
- * means `workshops.length > 0`, which means `workshop` was already pushed ahead
- * of it. A legend built from primary badges therefore excludes `kickoff` on its
- * own, without the special case the hand-written `SEGMENT_LEGEND` needed.
- *
- * `judging` and `workshop` are not exclusive; neither are `workshop` and
- * `kickoff`. A kickoff is always also a workshop and both are returned, so a
- * caller filtering on `workshop` never misses a night that taught something.
+ * `workshop` → `open`, and callers take the first as the primary: the
+ * calendar's dot colour, the badge that fits on a narrow card. This used to
+ * be a four-segment ranking (`workshop` → `kickoff` → `judging` → `open`)
+ * back when a competition was a week-long window a meeting could kick off or
+ * judge; that whole apparatus is gone (see the competitions migration's
+ * header), so `workshop` and `open` are what is left, and they are already
+ * mutually exclusive -- `open` fires only when there is no workshop to report.
  */
 export function resolveMeetingSegments(
   meeting: MeetingStructure,
@@ -135,13 +83,6 @@ export function resolveMeetingSegments(
   const segments: MeetingSegment[] = [];
 
   if (meeting.workshops.length > 0) segments.push("workshop");
-  // A workshop with no competition is a supplementary session, not a missing
-  // row, so `workshop` without `kickoff` is a complete state, not one to paper
-  // over.
-  if (meeting.workshops.some((w) => w.competitionSlug !== null)) {
-    segments.push("kickoff");
-  }
-  if (meeting.judgedCompetitions.length > 0) segments.push("judging");
 
   // `open` is what structural SILENCE looks like, and `kind` is the officer's
   // word for a night the structure cannot describe: the same condition said the
@@ -149,9 +90,8 @@ export function resolveMeetingSegments(
   // otherwise render "Unscheduled · Build Session", the derived fallback
   // contradicting the person who told us what the night was.
   //
-  // This is why `segments` can come back empty, which it never could before. A
-  // caller rendering only these and not `meeting.kind` gives an authored night
-  // no chip at all.
+  // This is why `segments` can come back empty. A caller rendering only these
+  // and not `meeting.kind` gives an authored night no chip at all.
   if (segments.length === 0 && meeting.kind === null) segments.push("open");
 
   return { segments };

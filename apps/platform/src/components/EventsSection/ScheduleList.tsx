@@ -33,7 +33,6 @@ import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
 import { resolveMeetingSegments } from "~/lib/meetingSegments";
 import type {
   MeetingInRange,
-  MeetingRangeJudging,
   MeetingRangeWorkshop,
 } from "~/server/loaders/meetings";
 
@@ -611,15 +610,8 @@ function ScheduleRow({
           ))}
         </div>
 
-        {(meeting.judgedCompetitions.length > 0 ||
-          meeting.workshops.length > 0) && (
+        {meeting.workshops.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
-            {/* Judging first: it is the segment with a deadline behind it, and
-                the one whose competition opened weeks ago and is being closed
-                tonight. Same ordering the resolver bills the night in. */}
-            {meeting.judgedCompetitions.map((judging) => (
-              <JudgingChip key={judging.competitionId} judging={judging} />
-            ))}
             {meeting.workshops.map((workshop) => (
               <WorkshopChip key={workshop.workshopId} workshop={workshop} />
             ))}
@@ -630,54 +622,12 @@ function ScheduleRow({
   );
 }
 
-/** `relative` so the chip's own link paints above the row's stretched one;
- *  without it the row swallows every click meant for a competition. */
-const CHIP_LINK_CLS =
-  "relative z-10 underline decoration-2 underline-offset-2 hover:no-underline";
-
-function JudgingChip({ judging }: { judging: MeetingRangeJudging }) {
-  const badge = segmentBadge.judging;
-
-  return (
-    <Link
-      href="/teams"
-      className={`${badge.chipDark} ${CHIP_DARK_CLS} ${CHIP_LINK_CLS}`}
-    >
-      {/* Same absence as the event page's row, and the same refusal to dress
-          it up: with no project to name, the chip is just the word. */}
-      {`Judging: ${workshopLabel(judging)}`}
-    </Link>
-  );
-}
-
 function WorkshopChip({ workshop }: { workshop: MeetingRangeWorkshop }) {
-  // A null `competitionSlug` is a *supplementary* workshop: a session complete
-  // on its own and an ordinary thing for a Wednesday. So it gets a chip of the
-  // same size, weight and colour family as any other workshop. No faded state,
-  // no "no competition" caveat, no empty slot where a link would have been. The
-  // only difference is a span rather than an anchor, because there is nowhere to
-  // go. Dressing the absence up as a gap would tell members a complete session
-  // was broken.
-  const badge =
-    workshop.competitionSlug === null
-      ? segmentBadge.workshop
-      : segmentBadge.kickoff;
-  const chipCls = `${badge.chipDark} ${CHIP_DARK_CLS}`;
-
   // `workshopLabel`, not `project`: the title is what officers name a
   // session by, and `project` is null for one that teaches a skill rather
   // than a codebase, which rendered the career-fair-readiness night as an empty
   // chip. The fallback matches `/events/<slug>`, so the schedule and the
   // permalink cannot print two different words for one row.
-  const label = workshopLabel(workshop);
-
-  if (workshop.competitionSlug === null) {
-    return <span className={chipCls}>{label}</span>;
-  }
-
-  return (
-    <Link href="/teams" className={`${chipCls} ${CHIP_LINK_CLS}`}>
-      {label}
-    </Link>
-  );
+  const chipCls = `${segmentBadge.workshop.chipDark} ${CHIP_DARK_CLS}`;
+  return <span className={chipCls}>{workshopLabel(workshop)}</span>;
 }

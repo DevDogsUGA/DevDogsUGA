@@ -69,20 +69,12 @@ vi.mock("./credentials", () => credentials);
 
 vi.mock("./lease", () => lease);
 vi.mock("./push", () => writes);
-// Meetings, workshops and projects no longer have a pull: they are authored
-// in `@devdogsuga/club-config` and land through `server/config/reconcile.ts`
-// instead. Competitions stay Airtable-authored until the git-native
-// competitions rework, so it is the one pull left to mock here.
+// Meetings, workshops, projects and competitions no longer have a pull: the
+// first three are authored in `@devdogsuga/club-config` and land through
+// `server/config/reconcile.ts`; competitions are now a GitHub mirror (see
+// `server/github/competitions.ts`). The reflection-policy singleton is the
+// one pull left to mock here.
 vi.mock("./sync", () => ({
-  pullCompetitions: vi.fn(() =>
-    Promise.resolve({
-      upserted: 0,
-      archived: 0,
-      skipped: 0,
-      refusals: [],
-      idMap: new Map(),
-    }),
-  ),
   pullReflectionSettings: vi.fn(() =>
     Promise.resolve({
       upserted: 1,
@@ -193,7 +185,7 @@ describe("runAirtableSync schema precondition", () => {
     // leave `lastStatus` reading as a real pass, and a refusal that had already
     // pushed would be the silent-loss bug itself.
     const schema = matchingSchema();
-    schema.tables = schema.tables.filter((t) => t.name !== "Competitions");
+    schema.tables = schema.tables.filter((t) => t.name !== "Workshops");
 
     await runAirtableSync({ client: clientWith(schema) });
 
@@ -257,7 +249,7 @@ describe("runAirtableSync drift alerting", () => {
    */
   const drifted = () => {
     const schema = matchingSchema();
-    schema.tables = schema.tables.filter((t) => t.name !== "Competitions");
+    schema.tables = schema.tables.filter((t) => t.name !== "Workshops");
     return clientWith(schema);
   };
 
@@ -272,7 +264,7 @@ describe("runAirtableSync drift alerting", () => {
     expect(alerts.postAlert).toHaveBeenCalledOnce();
     expect(alerts.postAlert).toHaveBeenCalledWith(
       expect.stringMatching(/no longer matches the registry/),
-      expect.arrayContaining([expect.stringMatching(/Competitions/)]),
+      expect.arrayContaining([expect.stringMatching(/Workshops/)]),
       expect.stringMatching(/airtable verify/),
     );
   });

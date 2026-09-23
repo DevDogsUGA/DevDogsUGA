@@ -135,7 +135,7 @@ export function buildPush<TRow>(
  *     record SHOULD create one. That is `buildPush` +
  *     `upsertRecords`.
  *
- *   * Airtable authors Meetings, Workshops and Competitions. The platform only
+ *   * Airtable authors Meetings and Workshops. The platform only
  *     writes derived values back onto rows an officer already created. Sending
  *     those through an upsert keyed on `⚙️ Platform ID` would CREATE a second
  *     Airtable record for every row whose Platform ID is still blank, i.e.

@@ -1,24 +1,8 @@
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  gte,
-  inArray,
-  isNull,
-  lt,
-  lte,
-  sql,
-} from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "~/server/db";
-import {
-  attendance,
-  competitions,
-  meetings,
-  workshops,
-} from "~/server/db/schema";
+import { attendance, meetings, workshops } from "~/server/db/schema";
 
 /**
  * Reads for the meeting list, a workshop's detail page, and the calendar.
@@ -248,22 +232,13 @@ export interface MeetingWorkshop {
    *  codebase. Authored in config, not looked up -- there is no `projects`
    *  table any more. */
   project: string | null;
-  competitionSlug: string | null;
-  /**
-   * ⚠️ STUB, always 0. The platform redesign's teams-core step dropped
-   * `teams."competitionId"`, so "how many teams entered this competition" is
-   * not a question team rows can answer any more; the competitions step
-   * rewires this to the competition-entry mirror.
-   */
-  teamCount: number;
 }
 
 /**
  * The workshops that ran at one meeting.
  *
- * The competition join is a left join: a supplementary workshop has none and
- * is complete on its own, worth exactly one star, so an inner join would
- * silently drop it from the meeting it ran at.
+ * No competition join here or below any more -- a workshop no longer opens
+ * one; see the competitions migration's header for the current shape.
  *
  * Ordered by title rather than by a project's authored sort order -- that
  * column went with the `projects` table. Title is what officers actually
@@ -277,18 +252,8 @@ export const getMeetingWorkshops = cache(
         title: workshops.title,
         description: workshops.description,
         project: workshops.project,
-        competitionSlug: competitions.slug,
-        // See the STUB note on `MeetingWorkshop.teamCount`.
-        teamCount: sql<number>`0`,
       })
       .from(workshops)
-      .leftJoin(
-        competitions,
-        and(
-          eq(competitions.workshopId, workshops.id),
-          isNull(competitions.deletedAt),
-        ),
-      )
       .where(
         and(eq(workshops.meetingId, meetingId), isNull(workshops.deletedAt)),
       )
@@ -302,166 +267,17 @@ export interface MeetingRangeWorkshop {
   title: string | null;
   /** Free text; null for a workshop teaching a skill rather than a codebase. */
   project: string | null;
-  /**
-   * The competition this workshop opened, or null.
-   *
-   * Null is a *supplementary* workshop, complete on its own and worth exactly
-   * one star, rather than a competition that failed to load. That is why the
-   * join below is a LEFT one: an inner join would silently delete every
-   * supplementary session from the calendar, and the absence would look like a
-   * quiet week rather than a bug.
-   */
-  competitionSlug: string | null;
-}
-
-export interface MeetingRangeJudging {
-  competitionId: string;
-  competitionSlug: string;
-  /**
-   * A competition has no name of its own. It is called after the workshop that
-   * opened it, and after that workshop's project recommendation.
-   *
-   * Null when it has neither: `workshops.project` is nullable, and
-   * `judgingForMeetings` reads it straight off the workshop row, no join
-   * needed any more, so a project-less competition still reaches the
-   * calendar instead of being dropped off a night that has a deadline behind
-   * it.
-   *
-   * Read through `workshopLabel`, never directly; see `title` below.
-   */
-  project: string | null;
-  /**
-   * The officer's word for the workshop this competition came out of.
-   *
-   * ⚠️ Selected here because this row did not have it, and the omission
-   * printed one workshop under two different names on two nights of the same
-   * schedule: a workshop titled "Supabase" on project "Platform" was the chip
-   * **Supabase** on its kickoff night and **Judging: Platform** on its judging
-   * night. Worse, a titled workshop with no project, the case the whole
-   * nullable-`projectId` rework exists for, rendered as the bare word
-   * "Judging" with a perfectly good title sitting unread in the row.
-   *
-   * This is the same drift `workshopLabel` was introduced to remove. It was
-   * applied to the chip, the row and the star grid, and never here.
-   */
-  title: string | null;
-  /**
-   * The authored judging time. It falls inside this meeting's span, but it is
-   * generally NOT the meeting's `startsAt`: two competitions judged the same
-   * night begin at 18:00 and 18:40, and the schedule list prints both times.
-   */
-  judgingStartsAt: Date;
 }
 
 export interface MeetingInRange extends MeetingSummary {
   /** Ordered by the project sort order officers control, so the popover lists
    *  sessions in the order they are announced rather than alphabetically. */
   workshops: MeetingRangeWorkshop[];
-  /**
-   * Competitions whose judging happens at this meeting, opened at an EARLIER
-   * meeting, which is the whole point of the model. Empty is normal:
-   * the first meeting of a semester has nothing to judge yet, and a night that
-   * only teaches never will.
-   */
-  judgedCompetitions: MeetingRangeJudging[];
 }
-
-/**
- * The competitions judged at each of `ids`, bucketed by meeting.
- *
- * Extracted rather than inlined because two callers need it and there must
- * only ever be ONE spelling of "which night is this judged on". The predicate
- * is subtle enough that a second copy would drift: judging attaches by WHEN it
- * starts, not by `judgingMeetingId`. See `isJudgedDuring` below for why; this
- * join is the SQL spelling of that same predicate, and the two have to keep
- * agreeing, so neither should be changed without the other.
- *
- * The null case needs no clause of its own: `judgingStartsAt is null` fails
- * both comparisons, so an unscheduled competition joins to no meeting at all.
- * The required behaviour ("not yet", never "never") falls out of three-valued
- * logic.
- *
- * Not exported, and not `cache()`d: both callers are, and wrapping an
- * array-argument function would memoise on a reference that changes every
- * call anyway.
- */
-async function judgingForMeetings(
-  ids: string[],
-): Promise<Map<string, MeetingRangeJudging[]>> {
-  const rows = await db
-    .select({
-      meetingId: meetings.id,
-      competitionId: competitions.id,
-      competitionSlug: competitions.slug,
-      // Read straight off the workshop row now -- free text, nullable, no
-      // join required. A competition normally hangs off repo work and so
-      // names one, but nothing in the schema enforces that.
-      project: workshops.project,
-      // The officer's title for the opening workshop, so both nights of a
-      // competition print the same word. Already joined below for the
-      // `deletedAt` filter, so this costs no extra work.
-      title: workshops.title,
-      judgingStartsAt: competitions.judgingStartsAt,
-    })
-    .from(competitions)
-    .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
-    .innerJoin(
-      meetings,
-      and(
-        inArray(meetings.id, ids),
-        gte(competitions.judgingStartsAt, meetings.startsAt),
-        lt(competitions.judgingStartsAt, meetings.endsAt),
-      ),
-    )
-    .where(
-      and(
-        isNull(competitions.deletedAt),
-        // The workshop that OPENED the competition, at some earlier meeting.
-        // Archiving that workshop retracts the competition from the calendar,
-        // matching `getCompetitionBySlug`, which would 404 on the same row.
-        isNull(workshops.deletedAt),
-        isNull(meetings.deletedAt),
-      ),
-    )
-    // 18:00 before 18:40, so the schedule reads down the evening.
-    .orderBy(asc(competitions.judgingStartsAt));
-
-  const byMeeting = new Map<string, MeetingRangeJudging[]>();
-  for (const row of rows) {
-    const entry: MeetingRangeJudging = {
-      competitionId: row.competitionId,
-      competitionSlug: row.competitionSlug,
-      project: row.project,
-      title: row.title,
-      // Non-null by construction: the join only matches rows whose
-      // `judgingStartsAt` compared successfully against two timestamps, and
-      // null compares to neither. Drizzle types it from the column, which
-      // cannot know that.
-      judgingStartsAt: row.judgingStartsAt!,
-    };
-    const bucket = byMeeting.get(row.meetingId);
-    if (bucket) bucket.push(entry);
-    else byMeeting.set(row.meetingId, [entry]);
-  }
-  return byMeeting;
-}
-
-/**
- * The competitions judged at one meeting.
- *
- * Exists so a meeting's own page does not have to go through
- * `getMeetingsInRange` to answer a question about a single row. It briefly
- * did, by asking for a one-millisecond window around the meeting's start and
- * picking its id back out of the result, which worked and read like a bug.
- */
-export const getMeetingJudging = cache(
-  async (meetingId: string): Promise<MeetingRangeJudging[]> =>
-    (await judgingForMeetings([meetingId])).get(meetingId) ?? [],
-);
 
 /**
  * Every non-archived meeting starting in `[from, to)`, ascending, with the
- * workshops it runs and the competitions it judges.
+ * workshops it runs.
  *
  * Half-open on purpose. The calendar pages by month and asks for whole months
  * at a time, so the ranges it requests are adjacent; a closed upper bound would
@@ -478,31 +294,18 @@ export const getMeetingJudging = cache(
  * meeting that `getUpcomingMeetings` deliberately keeps alive by bounding on
  * `endsAt` is not a case here: it still belongs to the day it started on.
  *
- * ## Three queries, joined in memory, rather than one aggregate
+ * ## Two queries, joined in memory, rather than one
  *
- * A meeting has two independent one-to-many collections hanging off it, and
- * that is what decides the shape. Doing it in a single statement means one of:
- *
- * - **Joining both.** `meetings × workshops × judgedCompetitions` is a
- *   cartesian product. A night with three workshops judging two competitions
- *   returns six rows, and every scalar in `summaryColumns` is duplicated
- *   across them. It has to be de-duplicated in JavaScript anyway, so the
- *   "single query" saves a round trip and buys back a grouping pass plus the
- *   chance of getting the de-duplication subtly wrong.
- * - **Two correlated `json_agg` subqueries.** Correct, but Drizzle cannot type
- *   the aggregate, so both collections arrive as `unknown` and get cast by
- *   hand, which is exactly where the `noUncheckedIndexedAccess` guarantees
- *   this codebase relies on stop applying. The soft-delete filters would also
- *   move inside a JSON aggregate, where a missing `deletedAt is null` is
- *   invisible to anyone reading the file rather than sitting in the same
- *   recognisable position it occupies in every other query here.
- *
- * Three statements keyed on the window's meeting ids is a *constant* three
- * round trips no matter how wide the window is, which is what "no N+1" asks
- * for: the failure mode being avoided is a query per meeting, not a query per
- * collection. Each child query also keeps the same join and
- * filter shape as the single-meeting loader beside it (`getMeetingWorkshops`),
- * so the two cannot drift on which rows count as live.
+ * A meeting has a one-to-many collection of workshops hanging off it, so
+ * joining it into the `meetings` select would duplicate every scalar in
+ * `summaryColumns` across a night's workshops -- de-duplicated in JavaScript
+ * anyway, so the "single query" would only buy back a grouping pass. Two
+ * statements keyed on the window's meeting ids is a *constant* two round
+ * trips no matter how wide the window is, which is what "no N+1" asks for:
+ * the failure mode being avoided is a query per meeting, not a query per
+ * collection. The child query keeps the same join and filter shape as the
+ * single-meeting loader beside it (`getMeetingWorkshops`), so the two cannot
+ * drift on which rows count as live.
  *
  * A note on `cache`: React memoises on argument identity, and two `Date`
  * objects for the same instant are different arguments. Callers that want the
@@ -524,40 +327,23 @@ export const getMeetingsInRange = cache(
       .orderBy(asc(meetings.startsAt));
 
     // Not merely an optimisation. `inArray` with an empty list is a degenerate
-    // predicate, and skipping the two child statements keeps an empty month
-    // from touching the database three times to learn nothing.
+    // predicate, and skipping the child statement keeps an empty month from
+    // touching the database twice to learn nothing.
     if (rows.length === 0) return [];
     const ids = rows.map((row) => row.id);
 
-    const [workshopRows, judgingByMeeting] = await Promise.all([
-      db
-        .select({
-          meetingId: workshops.meetingId,
-          workshopId: workshops.id,
-          title: workshops.title,
-          project: workshops.project,
-          competitionSlug: competitions.slug,
-        })
-        .from(workshops)
-        // Left: a supplementary workshop has no competition, and an inner
-        // join would silently drop it from the meeting it ran at.
-        .leftJoin(
-          competitions,
-          and(
-            eq(competitions.workshopId, workshops.id),
-            isNull(competitions.deletedAt),
-          ),
-        )
-        .where(
-          and(inArray(workshops.meetingId, ids), isNull(workshops.deletedAt)),
-        )
-        .orderBy(
-          sql`${workshops.project} asc nulls last`,
-          asc(workshops.title),
-        ),
-
-      judgingForMeetings(ids),
-    ]);
+    const workshopRows = await db
+      .select({
+        meetingId: workshops.meetingId,
+        workshopId: workshops.id,
+        title: workshops.title,
+        project: workshops.project,
+      })
+      .from(workshops)
+      .where(
+        and(inArray(workshops.meetingId, ids), isNull(workshops.deletedAt)),
+      )
+      .orderBy(sql`${workshops.project} asc nulls last`, asc(workshops.title));
 
     const workshopsByMeeting = new Map<string, MeetingRangeWorkshop[]>();
     for (const row of workshopRows) {
@@ -566,7 +352,6 @@ export const getMeetingsInRange = cache(
         workshopId: row.workshopId,
         title: row.title,
         project: row.project,
-        competitionSlug: row.competitionSlug,
       };
       if (bucket) bucket.push(entry);
       else workshopsByMeeting.set(row.meetingId, [entry]);
@@ -575,79 +360,16 @@ export const getMeetingsInRange = cache(
     return rows.map((row) => ({
       ...row,
       workshops: workshopsByMeeting.get(row.id) ?? [],
-      judgedCompetitions: judgingByMeeting.get(row.id) ?? [],
     }));
   },
 );
 
 export {
-  isJudgedDuring,
   resolveMeetingSegments,
   type MeetingBilling,
   type MeetingSegment,
   type MeetingStructure,
 } from "~/lib/meetingSegments";
-
-export interface CompetitionHeader {
-  id: string;
-  slug: string;
-  /** A competition has no name of its own; it is called after its project. */
-  name: string;
-  /** The opening workshop's meeting. NOT when judging happens. */
-  openedOn: Date;
-  /**
-   * When judging begins, display-only. Separate from `openedOn` because
-   * presentations are their own occasion, held at a later meeting. Null means
-   * "not scheduled yet", never "never".
-   */
-  judgingStartsAt: Date | null;
-}
-
-/**
- * One competition, by slug.
- *
- * Exists so a page can tell "no such competition" from "nobody has entered
- * yet". `getEntrants` takes a slug and returns team rows, so an empty array
- * merges those two states into one, and they need opposite answers: a 404 and
- * an explanation.
- */
-export const getCompetitionBySlug = cache(
-  async (slug: string): Promise<CompetitionHeader | null> => {
-    const [row] = await db
-      .select({
-        id: competitions.id,
-        slug: competitions.slug,
-        // The competition's own title wins when the officers have written one.
-        // Below it the old chain still stands: a competition is called after
-        // the workshop's project recommendation, free text now rather than a
-        // join, then the workshop's own title, then the competition's slug as
-        // the last resort -- it is `not null`, unique, and already
-        // user-visible in git as the integration branch, so it is a real name
-        // rather than invented text.
-        name: sql<string>`coalesce(
-          ${competitions.title},
-          ${workshops.project},
-          ${workshops.title},
-          ${competitions.slug}
-        )`,
-        openedOn: meetings.startsAt,
-        judgingStartsAt: competitions.judgingStartsAt,
-      })
-      .from(competitions)
-      .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
-      .innerJoin(meetings, eq(meetings.id, workshops.meetingId))
-      .where(
-        and(
-          eq(competitions.slug, slug),
-          isNull(competitions.deletedAt),
-          isNull(workshops.deletedAt),
-          isNull(meetings.deletedAt),
-        ),
-      );
-
-    return row ?? null;
-  },
-);
 
 /**
  * Re-exported from `~/lib/meetingSegments`, which owns it.
@@ -680,48 +402,6 @@ export const getMeetingSlugs = cache(async (): Promise<string[]> => {
     .from(meetings)
     .where(isNull(meetings.deletedAt))
     .orderBy(desc(meetings.startsAt));
-
-  return rows.map((row) => row.slug);
-});
-
-/**
- * Competition slugs whose results page is worth crawling, for `sitemap.ts`.
- *
- * `/competitions/[slug]/results` is the only competition route not behind
- * `expectSession()`, so it is the only one a sitemap may name; the two under
- * `teams/` redirect an anonymous crawler to `/auth`.
- *
- * The join is not decoration. `getCompetitionBySlug`, which the results page
- * calls before anything else and 404s on, reaches the competition's name off
- * `workshops` directly (its title, or its free-text project recommendation)
- * and its `openedOn` through `workshops → meetings`, and requires both rows
- * to be live. A slug list that skipped them would put URLs in the sitemap
- * that answer 404, so this mirrors that query's filters exactly and selects
- * one column.
- *
- * `judgingStartsAt <= now` is the second filter, and it is about what the page
- * has to say rather than about whether it exists: a competition worth crawling
- * is one whose entry window has closed, so there is a field to show rather
- * than an empty page. Before judging the route renders "nobody has entered
- * yet", which is a real answer for somebody who followed a link and thin
- * content for a crawler. Null (never scheduled) is excluded by the
- * comparison, which is the intended reading.
- */
-export const getJudgedCompetitionSlugs = cache(async (): Promise<string[]> => {
-  const rows = await db
-    .select({ slug: competitions.slug })
-    .from(competitions)
-    .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
-    .innerJoin(meetings, eq(meetings.id, workshops.meetingId))
-    .where(
-      and(
-        isNull(competitions.deletedAt),
-        isNull(workshops.deletedAt),
-        isNull(meetings.deletedAt),
-        lte(competitions.judgingStartsAt, new Date()),
-      ),
-    )
-    .orderBy(desc(competitions.judgingStartsAt));
 
   return rows.map((row) => row.slug);
 });

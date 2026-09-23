@@ -59,26 +59,29 @@ export async function getReflectionActivities(
 
     union all
 
-    -- STUB, matching platform."memberStars"'s own stub (see the teams-core
-    -- migration's comment there): the platform redesign's teams-core step
-    -- dropped "teams"."competitionId" and "teams"."competedAt", so "which
-    -- competitions has this member competed in" is no longer answerable from
-    -- team membership. Kept shape-compatible (same columns, real tables
-    -- joined) so this UNION ALL still compiles, but "and false" guarantees
-    -- it returns nothing until the competitions step rewires this to the
-    -- competition-entry mirror.
+    -- Competition participation, the same rule platform."memberStars" uses
+    -- (see that view's migration comment): held an active membership on the
+    -- entering team at the moment the entry opened. "endsAt" is the
+    -- competition's "closedAt" -- a reflection only makes sense once the
+    -- competition is actually over, which is also why this filters on it
+    -- being set rather than falling back to the display-only "plannedEndAt".
+    -- "select distinct" collapses a member who qualified through more than
+    -- one entry (a team that reopened one) down to the one activity row
+    -- "memberStars" already treats as a single fact.
     select distinct 'competition'::text as "activityType", c.id as "activityId",
-      coalesce(w.title, c.slug, 'Competition') as label,
-      c."judgingStartsAt" as "endsAt", r.id as "reflectionId", r.content,
+      c.title as label,
+      c."closedAt" as "endsAt", r.id as "reflectionId", r.content,
       r."submittedAt"
-    from platform."teamMembers" tm
-    join platform.competitions c on true
-    join platform.workshops w on w.id = c."workshopId"
+    from platform."competitionEntries" ce
+    join platform.competitions c on c.id = ce."competitionId"
+    join platform."teamMembers" tm
+      on tm."teamId" = ce."teamId"
+      and tm."joinedAt" <= ce."openedAt"
+      and (tm."leftAt" is null or tm."leftAt" > ce."openedAt")
     left join platform.reflections r
       on r."userId" = tm."userId" and r."competitionId" = c.id
     where tm."userId" = ${userId}::uuid
-      and c."elEligible" and c."deletedAt" is null and w."deletedAt" is null
-      and false
+      and c."closedAt" is not null
     order by "endsAt" desc, "activityType", "activityId"
   `);
 

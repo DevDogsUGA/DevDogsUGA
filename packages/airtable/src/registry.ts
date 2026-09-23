@@ -110,21 +110,6 @@ export interface WorkshopRow {
   projectAirtableId: string | null;
 }
 
-export interface CompetitionRow {
-  id: string;
-  slug: string;
-  workshopAirtableId: string | null;
-  judgingStartsAt: string | null;
-  /**
-   * ⚠️ Always 0, pushed by `pushDerivedCounts` in
-   * `apps/platform/src/server/airtable/push.ts`. The platform redesign's
-   * teams-core step dropped `teams."competitionId"`, so this count is not
-   * computable from team rows any more; the competitions step rewires it to
-   * the competition-entry mirror.
-   */
-  teamCount: number;
-}
-
 export interface AttendanceRow {
   id: string;
   memberAirtableId: string;
@@ -198,9 +183,6 @@ export const WORKSHOP_TITLE_MAX_LENGTH = 80;
 /** Matches `workshops_description_length`. Two sentences in the dialog. */
 export const WORKSHOP_DESCRIPTION_MAX_LENGTH = 280;
 
-/** Matches `competitions_title_length`. A page heading, so short by design. */
-export const COMPETITION_TITLE_MAX_LENGTH = 80;
-
 /**
  * Trims and collapses a summary, or null when the officer has written nothing.
  *
@@ -222,10 +204,9 @@ export function normalizeMeetingSummary(value: AirtableValue): string | null {
  *
  * Short on purpose, because `Kind` is an OVERRIDE and not a label for every
  * night. A meeting that runs workshops already derives as a workshop night
- * from its own structure, and one that judges a competition derives as
- * judging; naming those here would create two sources for one fact. What is
- * left is the nights whose structure cannot describe them. Nothing in the
- * schema distinguishes a social from an empty calendar entry.
+ * from its own structure; naming that here would create two sources for one
+ * fact. What is left is the nights whose structure cannot describe them.
+ * Nothing in the schema distinguishes a social from an empty calendar entry.
  */
 export const MEETING_KIND_CHOICES = [
   "Build Session",
@@ -680,45 +661,6 @@ export const workshops = table("Workshops", "tblSYPbmIagwyTFq1", {
   syncStatus: field.longText("flddrtCx3b88sFsHl", "⚙️ Sync status").status(),
 });
 
-export const competitions = table("Competitions", "tbltrW1Xum127cNwy", {
-  platformId: field
-    .text("fld1w9dzXBszwMI0M", "⚙️ Platform ID")
-    .matchKey()
-    .push((c: CompetitionRow) => c.id),
-  slug: field
-    .text("flduPP0rsaJ7Sjl1J", "Branch slug")
-    .pull((v) => (typeof v === "string" ? v : null)),
-  // What the officers call this competition on its own pages, in their own
-  // words. A competition has no name in the schema otherwise: it borrows the
-  // opening workshop's title, which in turn borrows the project's. This is the
-  // officers naming the week directly. Null falls back to that same chain, so a
-  // competition authored before this field keeps rendering exactly as it did.
-  title: field.text("fldoDOJ4BLN85UK8g", "Title").pull((v) => {
-    const text = normalizeMeetingSummary(v);
-    if (text === null) return null;
-    return text.length > COMPETITION_TITLE_MAX_LENGTH ? null : text;
-  }),
-  workshop: field
-    .link("fldu9sZHLPg0TTGpX", "Workshop", "workshops")
-    .pull((v) => (Array.isArray(v) ? (v[0] ?? null) : null)),
-  judgingStartsAt: field
-    .dateTime("fld9p3FVXCuFWJF7b", "Judging starts")
-    .pull((v) => parseAirtableDateTime(v)),
-  countsTowardProgress: field
-    .checkbox("fldyTWr0jPHLMd3FO", "Counts toward progress")
-    .pull((v) => v === true),
-  elEligible: field
-    .checkbox("fldWcPMV3MWkjrH9t", "EL eligible")
-    .pull((v) => v === true),
-  // ⚠️ Always 0 for now: see `CompetitionRow.teamCount`'s doc. Kept as a
-  // pushed field (rather than removed) because officers still read it on the
-  // competition row; only its source stopped being computable this step.
-  teamCount: field
-    .number("fldss0bnDwAM2YXii", "⚙️ Teams")
-    .push((c: CompetitionRow) => c.teamCount),
-  syncStatus: field.longText("fldxx0qkfiSXGhWiD", "⚙️ Sync status").status(),
-});
-
 /**
  * A read-only projection of authoritative platform attendance.
  *
@@ -783,7 +725,6 @@ export const registry = {
   projects,
   meetings,
   workshops,
-  competitions,
   attendance: attendanceTable,
   platformSettings: platformSettingsTable,
 } as const;

@@ -61,7 +61,17 @@ export const EVENT_KIND_VISUALS = {
   },
 } as const;
 
-/** Structural agenda badges, shared by the calendar and per-item event art. */
+/**
+ * Structural agenda badges, shared by the calendar and per-item event art.
+ *
+ * Used to carry `kickoff` and `judging` too, back when a competition was a
+ * week-long window a meeting opened and another one judged. The platform
+ * redesign's competitions step made a competition a mirrored GitHub issue
+ * with an asynchronous lifecycle instead -- nothing about a MEETING's
+ * structure says "this kicks off" or "this judges" any more (see
+ * `apps/platform/src/lib/meetingSegments.ts`), so `workshop` and `open` are
+ * what is left.
+ */
 export const EVENT_SEGMENT_VISUALS = {
   workshop: {
     accent: "#00d492",
@@ -70,22 +80,6 @@ export const EVENT_SEGMENT_VISUALS = {
     chipDark: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
     dotDark: "bg-emerald-400",
     label: "Workshop",
-  },
-  kickoff: {
-    accent: "#00d492",
-    bg: "bg-emerald-400",
-    dot: "bg-emerald-500",
-    chipDark: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
-    dotDark: "bg-emerald-400",
-    label: "Kickoff",
-  },
-  judging: {
-    accent: "#ff637e",
-    bg: "bg-rose-400",
-    dot: "bg-rose-500",
-    chipDark: "border-rose-400/30 bg-rose-500/10 text-rose-300",
-    dotDark: "bg-rose-400",
-    label: "Judging",
   },
   open: {
     accent: "#ffb900",

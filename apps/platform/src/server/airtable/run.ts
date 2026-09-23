@@ -1,6 +1,5 @@
 import {
   attendanceTable as attendanceSpec,
-  competitions as competitionsSpec,
   meetings as meetingsSpec,
   members as membersSpec,
   platformSettingsTable as settingsSpec,
@@ -25,7 +24,7 @@ import {
   ensurePlatformSettings,
   writeSyncStatus,
 } from "./push";
-import { pullCompetitions, pullReflectionSettings } from "./sync";
+import { pullReflectionSettings } from "./sync";
 import type { Refusal } from "./refusals";
 
 /**
@@ -191,7 +190,6 @@ export async function runAirtableSync(
     projects: AirtableRecord[];
     meetings: AirtableRecord[];
     workshops: AirtableRecord[];
-    competitions: AirtableRecord[];
     attendance: AirtableRecord[];
     platformSettings: AirtableRecord[];
   } | null = null;
@@ -206,7 +204,6 @@ export async function runAirtableSync(
       projects: await client.listRecords(projectsSpec.id),
       meetings: await client.listRecords(meetingsSpec.id),
       workshops: await client.listRecords(workshopsSpec.id),
-      competitions: await client.listRecords(competitionsSpec.id),
       attendance: await client.listRecords(attendanceSpec.id),
       platformSettings: await client.listRecords(settingsSpec.id),
     };
@@ -228,11 +225,8 @@ export async function runAirtableSync(
     // Meetings, workshops and projects no longer pull from Airtable: they are
     // authored in `@devdogsuga/club-config` and land through
     // `server/config/reconcile.ts` instead, on its own trigger. Competitions
-    // stay Airtable-authored until the git-native competitions rework.
-    const competitionOutcome = await pullCompetitions(listed.competitions);
-    addPull(pulled, competitionOutcome);
-    refusals.push(...competitionOutcome.refusals);
-
+    // no longer pull from Airtable either -- they mirror a GitHub Projects
+    // board instead, see `server/github/competitions.ts`.
     const memberPush = await pushMembers(client, listed.members);
     add(pushed, memberPush);
     // Attendance links use Airtable record IDs. Re-list only when this pass
