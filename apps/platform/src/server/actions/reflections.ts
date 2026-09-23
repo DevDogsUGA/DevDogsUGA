@@ -201,7 +201,10 @@ async function eligibleActivity(
   input: z.infer<typeof inputSchema>,
 ): Promise<{ endsAt: Date } | undefined> {
   if (input.activityType === "meeting") {
-    const rows = await tx.execute<{ endsAt: Date }>(sql`
+    // Raw SQL values do not inherit a column's Date decoder (see the same
+    // note in reflections/load.ts), so `m."endsAt"` comes back as text and
+    // has to be converted explicitly before it reaches `reflectionDeadline`.
+    const rows = await tx.execute<{ endsAt: string }>(sql`
       select m."endsAt" from platform.attendance a
       join platform.meetings m on m.id = a."meetingId"
       where a."userId" = ${userId}::uuid and m.id = ${input.activityId}::uuid
@@ -209,18 +212,16 @@ async function eligibleActivity(
         and m."deletedAt" is null and m."cancelledAt" is null
       for share of a, m
     `);
-    return rows[0];
+    const row = rows[0];
+    return row && { endsAt: new Date(row.endsAt) };
   }
-  const rows = await tx.execute<{ endsAt: Date }>(sql`
-    select c."judgingStartsAt" as "endsAt"
-    from platform."teamMembers" tm
-    join platform.teams t on t.id = tm."teamId"
-    join platform.competitions c on c.id = t."competitionId"
-    join platform.workshops w on w.id = c."workshopId"
-    where tm."userId" = ${userId}::uuid and c.id = ${input.activityId}::uuid
-      and t."competedAt" is not null
-      and c."elEligible" and c."deletedAt" is null and w."deletedAt" is null
-    for share of tm, t, c, w
-  `);
-  return rows[0];
+  // STUB: the platform redesign's teams-core step dropped
+  // "teams"."competitionId" and "teams"."competedAt", so "did this member
+  // compete in this competition" is no longer answerable from team
+  // membership -- see platform."memberStars"'s own stub for the same call.
+  // Until the competitions step rewires this to the competition-entry
+  // mirror, no member is eligible for a competition reflection, so
+  // `saveReflection` refuses with "You are not eligible for this
+  // reflection." rather than erroring.
+  return undefined;
 }
