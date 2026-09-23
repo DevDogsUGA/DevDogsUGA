@@ -250,8 +250,8 @@ export default async function MeetingPage({
         </p>
       </div>
 
-      {/* Plain text from Airtable, rendered as text. Never as markup: it is
-          typed into a form field by an officer, not authored in this repo. */}
+      {/* Plain text authored in config, rendered as text. Never as markup: it
+          is typed by an officer, not authored as markup in this repo. */}
       {meeting.summary !== null && (
         <p className="text-sm/relaxed text-mauve-300">{meeting.summary}</p>
       )}

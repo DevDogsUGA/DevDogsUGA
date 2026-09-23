@@ -8,9 +8,9 @@ import { BUILDING_KEYS, type BuildingKey } from "./campusMapMeta";
  * in the dropdown with no footprint behind it is a highlight pointing at
  * nothing, and nobody would notice until a meeting was scheduled in it.
  *
- * `packages/airtable` keeps its own copy, because it sits upstream of this app
- * and importing downward would invert the dependency. `buildings.test.ts`
- * holds the two together.
+ * `@devdogsuga/club-config` keeps its own copy, because it sits upstream of
+ * this app and importing downward would invert the dependency.
+ * `buildings.test.ts` holds the two together.
  */
 
 /** Somewhere the map does not draw. The room text carries the detail. */
@@ -28,7 +28,7 @@ export const USUAL_ROOM = "124";
 
 export type MeetingBuilding = BuildingKey | typeof OTHER_BUILDING;
 
-/** Every value the Airtable dropdown offers, in the order it offers them. */
+/** Every value config can pick, in the order the picker offers them. */
 export const MEETING_BUILDING_CHOICES: readonly MeetingBuilding[] = [
   ...BUILDING_KEYS,
   OTHER_BUILDING,

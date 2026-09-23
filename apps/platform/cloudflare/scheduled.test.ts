@@ -15,7 +15,7 @@ import { CRON_ROUTES, scheduled } from "./scheduled";
  * over from `vercel.json` unchanged.
  *
  * The dispatcher swallows non-2xx responses, so the crons failed quietly: no
- * tally, no judging freeze, no Airtable sync, no GitHub reconcile.
+ * tally, no judging freeze, no config reconcile, no GitHub reconcile.
  * Typechecking cannot see it, because a path is just a string. Mapping the
  * string back to a file is the only check that would have.
  */

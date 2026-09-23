@@ -24,10 +24,9 @@ import {
  * member's email are different powers, and the officer who needs the first
  * rarely needs the second.
  *
- * Every download is audited. That is the protection the design noted was LOST
- * by exporting attendance from Airtable instead, where anybody with base access
- * can export a view silently. Keeping the one export that survived detectable
- * stops the loss from spreading to the file with the most PII in it.
+ * Every download is audited. An export nobody can trace is bulk extraction
+ * that looks identical to an authorized read, and this is the file with the
+ * most PII in it, so it is the one that most needs to stay detectable.
  */
 export async function GET(request: Request) {
   await connection();

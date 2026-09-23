@@ -16,8 +16,8 @@ import { alert } from "@devdogsuga/telemetry";
  *    positional string argument (`postAlert(title, lines, footer)`), the
  *    same shape the old Discord version had. `alert()`'s third parameter is
  *    an options object (`{ tags }`), not a string, so preserving the
- *    original signature here means `server/airtable/run.ts` only had to
- *    change its import path, not its call sites.
+ *    original signature here means every call site only had to change its
+ *    import path, not its call.
  * 2. `postAlert` is the name every call site and every doc page
  *    (docs/platform/guides/meetings-and-teams/airtable-sync.md,
  *    docs/platform/reference/server/airtable.md) already uses for "the

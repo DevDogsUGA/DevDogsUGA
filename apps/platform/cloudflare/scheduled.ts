@@ -81,28 +81,17 @@ export const CRON_ROUTES: Record<
       "/cron/academic-programs",
     ],
   },
-  // Airtable polls rather than subscribes. Webhooks exist but expire on a
-  // 7-day refresh cycle and deliver cursor-based payloads that have to be
-  // replayed in order, real complexity for a club calendar that changes a
-  // few times a week. At ~5 requests a pass this is ~13% of the monthly
-  // allowance, and the manual trigger covers the case where 15 minutes is too
-  // long to wait.
-  //
-  // The config reconcile shares this slot rather than getting its own: it
-  // replaced the meetings/workshops half of what this cron used to pull, so
-  // the cadence that made sense for officer edits landing "within fifteen
-  // minutes" makes the same sense for a config edit auto-deploying. Ideally a
-  // deploy's post-migrate step would call the route directly so a promoted
-  // config lands the moment the deploy finishes; that wiring into
-  // `.github/workflows/deploy.yaml` is not done yet (see
+  // Fifteen minutes is how quickly a config edit auto-deploying reaches the
+  // live schedule. Ideally a deploy's post-migrate step would call the route
+  // directly so a promoted config lands the moment the deploy finishes; that
+  // wiring into `.github/workflows/deploy.yaml` is not done yet (see
   // `server/config/reconcile.ts`'s route and the platform redesign
   // followups), so for now this fifteen-minute slot is the only trigger.
   "*/15 * * * *": {
-    label:
-      "Airtable sync (officers, members) and config reconcile (meetings, workshops)",
-    monitorSlug: "platform-cron-airtable-sync",
+    label: "Config reconcile (meetings, workshops)",
+    monitorSlug: "platform-cron-config-reconcile",
     monitor: { checkinMargin: 5, maxRuntime: 10 },
-    routes: ["/airtable/sync", "/cron/config-reconcile"],
+    routes: ["/cron/config-reconcile"],
   },
   "*/10 * * * *": {
     label: "Discord role sync",

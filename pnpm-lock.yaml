@@ -200,9 +200,6 @@ importers:
       '@date-fns/tz':
         specifier: ^1.5.0
         version: 1.5.0
-      '@devdogsuga/airtable':
-        specifier: workspace:*
-        version: link:../../packages/airtable
       '@devdogsuga/club-config':
         specifier: workspace:*
         version: link:../../packages/club-config

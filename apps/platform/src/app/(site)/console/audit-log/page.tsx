@@ -50,7 +50,7 @@ export default async function AuditLogPage({
     <PageShell
       accent="blue"
       title="Audit Log"
-      description="The append-only history of attendance, Airtable corrections, reflections, exports, and moderation actions."
+      description="The append-only history of attendance, reflections, exports, and moderation actions."
     >
       <Suspense fallback={<TableSkeleton />}>
         <AuditLogData page={page} filters={filters} />

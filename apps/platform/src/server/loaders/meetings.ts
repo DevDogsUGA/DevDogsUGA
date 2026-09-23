@@ -7,10 +7,11 @@ import { attendance, meetings, workshops } from "~/server/db/schema";
 /**
  * Reads for the meeting list, a workshop's detail page, and the calendar.
  *
- * Every query here filters `deletedAt is null`. Deletion in Airtable is a soft
- * archive, so attendance survives an officer deleting the wrong row. An
- * archived meeting is still fully present in the database, and only these
- * filters keep it off the site.
+ * Every query here filters `deletedAt is null`. Removing a meeting from
+ * config archives it rather than deleting the row, so attendance survives an
+ * officer dropping the wrong item from a config edit. An archived meeting is
+ * still fully present in the database, and only these filters keep it off
+ * the site.
  */
 
 export interface MeetingSummary {
@@ -45,10 +46,10 @@ export interface MeetingSummary {
    * covers somewhere it cannot, and null means nobody has picked one.
    *
    * Typed as free text rather than a union for the same reason `kind` is: it
-   * is an Airtable single-select, and while the parser and a check constraint
-   * both hold it to the list, a union here would make widening that list a
-   * type error in every consumer rather than a value one of them renders as
-   * itself. `isMappedBuilding` narrows it where the narrowing matters.
+   * is a closed list enforced by the config schema and a check constraint,
+   * not a type, and a union here would make widening that list a type error
+   * in every consumer rather than a value one of them renders as itself.
+   * `isMappedBuilding` narrows it where the narrowing matters.
    */
   building: string | null;
   /** The room or space inside {@link building}. Free text; never parsed. */

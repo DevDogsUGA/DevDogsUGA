@@ -166,14 +166,6 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
       "Download CSV snapshots of stars, attendance, and reflections.",
   },
   {
-    label: "Airtable Sync",
-    href: "/console/airtable",
-    icon: "ArrowSquareOutIcon",
-    permission: "canTriggerSync",
-    description:
-      "Run the Airtable sync by hand and see what the last pass refused.",
-  },
-  {
     label: "Permissions",
     href: "/console/permissions",
     icon: "LockIcon",

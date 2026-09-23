@@ -18,9 +18,8 @@ import type { RawProjectItemFields } from "./queries";
  * what this checkout's own `.env` happens to leave it as, and so
  * `GITHUB_ORG`/`GITHUB_COMPETITION_REPO` are fixed values this file's own
  * fixtures can target rather than whatever a real deployment's `.env`
- * names. `../alerts`' `postAlert` is mocked the same way
- * `server/airtable/run.test.ts` mocks it, so drift assertions do not depend
- * on Sentry being configured.
+ * names. `../alerts`'s `postAlert` is mocked too, so drift assertions do not
+ * depend on Sentry being configured.
  */
 
 const PROJECT_ID = "PVT_competitions_db_test";

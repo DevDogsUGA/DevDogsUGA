@@ -226,9 +226,9 @@ function monthIndex({ year, month }: ClubMonth): number {
  * became the defect: every meeting past the bound synced into Postgres and
  * appeared on no surface at all. Not on the calendar, not in the schedule
  * list, and not reachable by paging either, because the page derives its
- * paging bounds from this same span. From the officers' side of Airtable that
- * is indistinguishable from the sync ignoring the rows, which is exactly what
- * it was reported as.
+ * paging bounds from this same span. From the officers' side of authoring
+ * that is indistinguishable from the sync ignoring the rows, which is exactly
+ * what it was reported as.
  *
  * Two clamps, and they are different in kind. The floor is a promise to the
  * reader: an empty base still gets a calendar somebody can page forward

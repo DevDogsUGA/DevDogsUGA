@@ -35,7 +35,6 @@ export default function robots(): MetadataRoute.Robots {
         // a shared secret rather than a session, so a crawler reaching them
         // gets a 401 or a 503 at best.
         "/cron", // CRON_SECRET-guarded jobs
-        "/airtable", // the officers' sync trigger
         "/attendance", // check-in submissions (and public/attendance/*)
         "/auth", // sign-in entry point and OAuth callback
         "/discord", // Discord interaction webhook, signature-verified

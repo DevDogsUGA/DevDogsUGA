@@ -276,9 +276,9 @@ const server = {
     commented: true,
   }),
   // The private "Competitions" GitHub Project's GraphQL node id (a
-  // `PVT_...` string, not the project's number). Optional, like
-  // AIRTABLE_SYNC_PAT below: Sloan has to create the Project by hand and note
-  // its id, so the platform has to boot without one -- `server/github/
+  // `PVT_...` string, not the project's number). Optional: Sloan has to
+  // create the Project by hand and note its id, so the platform has to boot
+  // without one -- `server/github/
   // competitions.ts` treats an unset value as "competitions ingestion is not
   // configured yet" and no-ops every webhook delivery and reconcile pass
   // rather than failing to start. A committed constant would work for
@@ -299,53 +299,6 @@ const server = {
       "--owner DevDogsUGA --format json --jq .id`.",
     scope: "environment",
     secrecy: "public",
-    commented: true,
-  }),
-  // Airtable. Optional because the base is provisioned separately and the
-  // platform has to boot without it: the sync refuses with a named error
-  // rather than the app failing to start. The sync token moved HERE from
-  // Supabase Vault ("airtable_pat") on 2026-08-19, by decision: one storage
-  // mechanism, auditable by `env audit`, delivered like every other Worker
-  // secret. That traded away officer rotation without a deploy. Rotating it is
-  // now Bitwarden → `env push` → next deploy. See
-  // docs/platform/airtable-setup.md.
-  //
-  // The base ID is no longer routed. It is `BASE_ID` in
-  // packages/airtable/src/registry.ts, committed beside the tbl/fld ids that
-  // belong to the same base. A second base would need a second registry, so
-  // parameterising this one value never bought the portability it looked like
-  // it was buying. That deletes an entry from three Bitwarden projects, a
-  // variable from four GitHub environments, and the `narrowed` opt-in that
-  // existed only to carry it into `preflight`.
-  //
-  // ⚠️ Until 2026-08-17 this was left unmarked and set by hand as a
-  // repository-level GitHub variable instead, which every environment sees: a
-  // wider blast radius than the routing, arrived at by trying to be careful.
-  AIRTABLE_BASE_ID: define(z.string().default(""), {
-    doc:
-      "Override for the committed Airtable base id (BASE_ID in " +
-      "@devdogsuga/airtable). Empty in every ordinary deployment -- set it " +
-      "only to aim the tooling at a scratch base. Public rather than secret: " +
-      "it is in every Airtable dashboard URL and identifies without " +
-      "authorising, since every capability belongs to the token. Full " +
-      "setup: docs/platform/airtable-setup.md.",
-    scope: "default",
-    secrecy: "public",
-  }),
-  AIRTABLE_SYNC_PAT: define(z.string().default(""), {
-    doc:
-      "The runtime sync token: schema.bases:read, data.records:read and " +
-      "data.records:write on the one officers' base, and nothing else -- it " +
-      "can rewrite every dues record, which is why it is the only one of " +
-      "the three Airtable tokens that touches data at all. Empty means the " +
-      "sync refuses with a named error (the platform boots without it). " +
-      "Reaches the Worker like every other secret; rotating it is " +
-      "Bitwarden -> `env push` -> next deploy. NOT the CI pair (PLAN/APPLY, " +
-      "schema-only) -- though devtools reads this one for a local " +
-      "`verify --duplicates`, which needs a record read the plan token " +
-      "does not carry.",
-    scope: "environment",
-    secrecy: "secret",
     commented: true,
   }),
   // Derived (.env / .env.generated). `localStack: true` throughout: when the

@@ -18,7 +18,6 @@ import {
   getEntrants,
 } from "./teams";
 import { getStarsForUser } from "./stars";
-import { readSyncState } from "~/server/airtable/lease";
 import { streamStarRows } from "~/server/export/stars";
 
 const NIL = "00000000-0000-0000-0000-000000000000";
@@ -85,13 +84,6 @@ describe("every loader is valid SQL", () => {
     await getStarsForUser(NIL);
     expect(true).toBe(true);
   });
-  it("the airtable sync state the console renders", async () => {
-    // The console page is the only reader, and a page that throws on load is
-    // indistinguishable from the sync being broken.
-    await readSyncState();
-    expect(true).toBe(true);
-  });
-
   it("the stars export, including its filters", async () => {
     // The export is a generator, so nothing runs until it is drained. An
     // untouched `streamStarRows(...)` would prove nothing.

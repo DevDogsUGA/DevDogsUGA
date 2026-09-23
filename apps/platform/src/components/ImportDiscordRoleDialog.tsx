@@ -32,7 +32,6 @@ const PERMISSION_LABELS: Record<string, string> = {
   canManageVerification: "Manage verification",
   canManageAttendance: "Manage attendance",
   canExportStars: "Export stars",
-  canTriggerSync: "Trigger Airtable sync",
 };
 
 const PERMISSION_KEYS = Object.keys(

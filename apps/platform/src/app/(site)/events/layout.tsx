@@ -72,10 +72,10 @@ async function EventsBody() {
  *
  * `cacheLife` rather than a tag, because `revalidateTag` is inert here: the
  * Cloudflare adapter's `tagCache` is `"dummy"`. There is no push invalidation
- * to reach for, so freshness has to come from a TTL. The Airtable sync runs
- * every 15 minutes, so a five-minute revalidate means the page is never more
- * than one sync window behind, and `stale` lets a visitor have the previous
- * answer instantly while that happens.
+ * to reach for, so freshness has to come from a TTL. The config reconcile
+ * runs every 15 minutes, so a five-minute revalidate means the page is never
+ * more than one reconcile window behind, and `stale` lets a visitor have the
+ * previous answer instantly while that happens.
  *
  * Reading the clock is legal here because this IS a cache scope; the value is
  * resolved when the entry is built and handed down as data, so no component

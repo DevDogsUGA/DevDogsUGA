@@ -35,10 +35,9 @@ import {
  * that Project" -- an issue in the competition repo that never went through
  * this Project is simply never named here.
  *
- * Optional, like the Airtable integration used to be: `GH_COMPETITIONS_PROJECT_ID`
- * unset means every function below is a logged no-op, so the platform boots
- * (and every OTHER GitHub integration keeps working) before Sloan has created
- * the Project.
+ * Optional: `GH_COMPETITIONS_PROJECT_ID` unset means every function below is
+ * a logged no-op, so the platform boots (and every OTHER GitHub integration
+ * keeps working) before Sloan has created the Project.
  *
  * ## GraphQL, not REST
  *
@@ -232,9 +231,7 @@ function liveGithubClient(): CompetitionsGithubClient {
  * to 256 characters and the Project's free-text "Title" field enforces
  * nothing -- so an ordinary issue can genuinely exceed what this table's
  * heading is allowed to hold. Checked here, before the write that would
- * otherwise be the first and only place to learn that, the same way the
- * deleted Airtable `checkCompetitionValues` rule caught an over-length title
- * before it ever reached a Postgres `insert`.
+ * otherwise be the first and only place to learn that.
  */
 const COMPETITION_TITLE_MAX_LENGTH = 160;
 
@@ -304,10 +301,9 @@ async function applyItem(
 /**
  * Ingests one Project item by node id -- the webhook path.
  *
- * A no-op, successfully, when `GH_COMPETITIONS_PROJECT_ID` is unset: the
- * same "optional integration" contract Airtable used to have, so a checkout
- * with no Competitions Project yet still boots and its webhook route still
- * answers 200.
+ * A no-op, successfully, when `GH_COMPETITIONS_PROJECT_ID` is unset, so a
+ * checkout with no Competitions Project yet still boots and its webhook
+ * route still answers 200.
  */
 export async function ingestCompetitionItem(
   itemNodeId: string,

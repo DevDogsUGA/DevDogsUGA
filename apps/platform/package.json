@@ -26,7 +26,6 @@
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
-    "@devdogsuga/airtable": "workspace:*",
     "@devdogsuga/club-config": "workspace:*",
     "@devdogsuga/docs": "workspace:*",
     "@devdogsuga/drizzle": "workspace:*",

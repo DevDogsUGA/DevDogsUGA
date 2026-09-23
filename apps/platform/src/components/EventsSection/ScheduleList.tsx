@@ -466,9 +466,10 @@ function ScheduleRow({
   // answer than saying it is on right now.
   const happeningNow = now >= meeting.startsAt && now < meeting.endsAt;
 
-  // A cancelled night STAYS on the schedule, struck through. Deleting it in
-  // Airtable would remove it, and that is the failure this replaced: somebody
-  // with the date in their calendar sees nothing at all and walks over anyway.
+  // A cancelled night STAYS on the schedule, struck through. Removing it from
+  // config would archive it instead, and that is the failure this replaced:
+  // somebody with the date in their calendar sees nothing at all and walks
+  // over anyway.
   const cancelled = meeting.cancelledAt !== null;
 
   // Every row prints its room, but only one *not* in the usual room earns a chip

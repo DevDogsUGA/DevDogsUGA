@@ -26,9 +26,10 @@ import { getMeetingSlugs } from "~/server/loaders/meetings";
  * treats as an error for the whole file rather than for the entries it could
  * not fetch.
  *
- * Nothing carries `lastModified`. `meetings` and `competitions` sync from
- * Airtable and have no `updatedAt` column, docs pages carry no date through the
- * build, and a `<lastmod>` derived from something else (a meeting's `endsAt`,
+ * Nothing carries `lastModified`. `meetings` reconciles from config and
+ * `competitions` mirrors GitHub, and neither has an `updatedAt` column; docs
+ * pages carry no date through the build either, and a `<lastmod>` derived
+ * from something else (a meeting's `endsAt`,
  * the time the sitemap happened to render) is a claim about revision history
  * this app cannot make. Google reads `lastmod` only where it trusts it, so an
  * invented one is worse than none.
@@ -166,8 +167,8 @@ async function databaseRoutes(): Promise<MetadataRoute.Sitemap> {
 /**
  * An hour, rather than the default of "once, at build".
  *
- * Meetings reach this app through the Airtable sync, which runs every fifteen
- * minutes and is not tied to a deploy, so a sitemap frozen at build time stops
+ * Meetings reach this app through the config reconcile, which runs every
+ * fifteen minutes and is not tied to a deploy, so a sitemap frozen at build time stops
  * naming new meetings the moment an officer schedules one. A TTL is the only
  * mechanism available: `revalidateTag` is inert on the Cloudflare adapter,
  * whose `tagCache` is `"dummy"` (the same reason `events/layout.tsx` reaches

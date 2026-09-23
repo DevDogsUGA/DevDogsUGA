@@ -142,12 +142,10 @@ export function eventLd(meeting: EventLdInput) {
     url: `${BASE}/events/${encodeURIComponent(meeting.slug)}`,
     startDate: meeting.startsAt.toISOString(),
     endDate: meeting.endsAt.toISOString(),
-    // Read from the column rather than assumed. This used to be hardcoded to
-    // `EventScheduled` on the premise that a cancelled meeting was soft
-    // deleted in Airtable and 404ed before rendering. That stopped being true
-    // when cancellation became a column and the night kept its page, and a
-    // crawler was then told a cancelled meeting was going ahead, which is the
-    // one thing `eventStatus` exists to prevent.
+    // Read from the column rather than assumed: a cancelled meeting keeps its
+    // page rather than being soft deleted, so a crawler told the meeting was
+    // going ahead regardless would be wrong, which is the one thing
+    // `eventStatus` exists to prevent.
     eventStatus:
       meeting.cancelledAt === null
         ? "https://schema.org/EventScheduled"

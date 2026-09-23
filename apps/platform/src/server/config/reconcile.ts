@@ -7,14 +7,12 @@ import { postAlert } from "../alerts";
 
 /**
  * The reconcile-from-config: `@devdogsuga/club-config` in, `meetings` and
- * `workshops` up to date out. Replaces the meetings/workshops half of the old
- * Airtable pull (see `server/airtable/sync.ts`'s header for what that used
- * to be), and ports the same identity/upsert/soft-archive shape:
+ * `workshops` up to date out.
  *
  *   * **Identity is the authored `configId`, never the name or slug.** A
- *     config item's id survives a title rewrite the same way an Airtable
- *     record id used to survive a rename, so re-titling a meeting updates its
- *     row instead of orphaning the attendance already recorded against it.
+ *     config item's id survives a title rewrite, so re-titling a meeting
+ *     updates its row instead of orphaning the attendance already recorded
+ *     against it.
  *
  *   * **A missing config item is an archive, never a delete.** Attendance is
  *     a record of who was in a room on a Tuesday, and removing a meeting
@@ -22,25 +20,23 @@ import { postAlert } from "../alerts";
  *
  * ## Zero runtime refusals -- but one runtime validation
  *
- * Unlike the Airtable pull, this has no per-field refusal logic: publishing
- * a config file already ran it through `validateClubConfig` at CI, in
- * `check.ts`, before the commit that authored it could merge. There is
- * nothing left to refuse row by row at runtime.
+ * This has no per-field refusal logic: publishing a config file already ran
+ * it through `validateClubConfig` at CI, in `check.ts`, before the commit
+ * that authored it could merge. There is nothing left to refuse row by row
+ * at runtime.
  *
  * What runtime keeps is the ABORT. `validateClubConfig` runs again here,
  * against whatever the caller actually handed in, because "CI validated the
  * file that became this argument" is a fact about history that this function
  * cannot verify -- a future caller might construct a `ClubConfig` some other
- * way, or a bug might let an invalid file through CI. Airtable's model was
- * "skip the one bad row and say why, in words, on that row" because the row
- * was staring back at an officer who could fix it on the spot. Nothing here
- * has that audience: the only fix for a config CI already approved is a new
- * commit, so a partial reconcile would silently archive or leave stale
- * whatever this run refused to touch, with nobody watching the moment it
- * happened. Aborting the WHOLE reconcile and reporting to Sentry is the
- * conservative answer -- yesterday's schedule stays live until somebody
- * looks at the alert -- for the same reason `runAirtableSync` refuses to
- * write into a base that no longer matches its registry.
+ * way, or a bug might let an invalid file through CI. There is no per-row
+ * officer-facing surface for this reconcile to write a refusal onto the way
+ * an officer editing a form field has one: the only fix for a config CI
+ * already approved is a new commit, so a partial reconcile would silently
+ * archive or leave stale whatever this run refused to touch, with nobody
+ * watching the moment it happened. Aborting the WHOLE reconcile and
+ * reporting to Sentry is the conservative answer -- yesterday's schedule
+ * stays live until somebody looks at the alert.
  *
  * The empty-config guard is the sharpest case of that: a config with zero
  * meetings is almost certainly a bug upstream (a bad fetch, an empty file),
@@ -74,8 +70,8 @@ function emptyCounts(): ReconcileTableCounts {
 
 /**
  * Slugs a meeting may not take, because a static route already answers them.
- * Ported verbatim from the old Airtable pull -- see its note there for why
- * `directions` is reserved.
+ * `directions` is reserved because `/events/directions` is a static route,
+ * and a meeting slugged the same would be unreachable behind it.
  */
 const RESERVED_MEETING_SLUGS = ["directions"] as const;
 
@@ -175,11 +171,10 @@ export async function reconcileFromConfig(
       }
 
       // New meeting. The slug is derived once, on insert, and never
-      // recomputed -- see the identical note on the old Airtable pull this
-      // replaced: it is in URLs the moment the meeting is published, and
+      // recomputed: it is in URLs the moment the meeting is published, and
       // regenerating it on every retitle would break every link anyone
-      // shared. Derived from the DATE rather than the title for the same
-      // reason as before: the title is optional and most nights have none.
+      // shared. Derived from the DATE rather than the title because the
+      // title is optional and most nights have none.
       const slug = uniqueSlug(
         clubDateKey(new Date(meeting.startsAt)),
         usedSlugs,
@@ -265,11 +260,9 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
  * Soft-archives every live row whose `configId` is set but absent from
- * `presentConfigIds`. Ported from the Airtable pull's `archiveMissing`: the
- * archive is scoped to rows that HAVE a `configId`, so a row this reconcile
- * has never touched (there is none any more, but the guard costs nothing and
- * keeps this function honest on its own) cannot be swept up by a pass that
- * never claimed to own it.
+ * `presentConfigIds`. The archive is scoped to rows that HAVE a `configId`,
+ * so a row this reconcile does not own cannot be swept up by a pass that
+ * never claimed it.
  */
 async function archiveMissing(
   tx: Tx,
