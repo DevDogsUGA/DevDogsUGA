@@ -638,9 +638,17 @@ async function reconcileOneTeam(
     if (login) mirrored.set(login.toLowerCase(), member.userId);
   }
 
-  const newlyAdded: string[] = [];
+  // Every login GitHub still reports live, resolved to a platform userId --
+  // whether that row already existed in the mirror or gets inserted below --
+  // so the per-user cap check after this loop can walk every currently-active
+  // member, not only the ones this pass happened to insert.
+  const activeUserIds: string[] = [];
   for (const login of live) {
-    if (mirrored.has(login)) continue;
+    const existingUserId = mirrored.get(login);
+    if (existingUserId) {
+      activeUserIds.push(existingUserId);
+      continue;
+    }
     const userId = await userIdForGithubLogin(login);
     if (!userId) {
       report.unmatched += 1;
@@ -653,7 +661,7 @@ async function reconcileOneTeam(
       .insert(teamMembers)
       .values({ teamId: row.id, userId, role: "member" });
     report.added += 1;
-    newlyAdded.push(userId);
+    activeUserIds.push(userId);
   }
 
   for (const [login, userId] of mirrored) {
@@ -671,10 +679,13 @@ async function reconcileOneTeam(
     report.removed += 1;
   }
 
-  // Cap anomalies, checked only against what THIS pass just repaired in --
-  // a membership already flagged on a previous night stays flagged every
-  // night until somebody leaves, which is the point: this is a standing
-  // report of drift, not a one-time notice.
+  // Cap anomalies, both recomputed unconditionally every pass over the FULL
+  // active roster, not just what this pass happened to touch -- a membership
+  // already flagged on a previous night stays flagged every night until
+  // somebody leaves, which is the point: this is a standing report of drift,
+  // not a one-time notice. (A per-user check scoped to only this pass's
+  // insertions would stop reporting a hand-added member from the second
+  // night onward, once they were no longer new.)
   const [teamSize] = await database
     .select({ n: count() })
     .from(teamMembers)
@@ -685,7 +696,7 @@ async function reconcileOneTeam(
     );
   }
 
-  for (const userId of newlyAdded) {
+  for (const userId of activeUserIds) {
     const [userTeams] = await database
       .select({ n: count() })
       .from(teamMembers)

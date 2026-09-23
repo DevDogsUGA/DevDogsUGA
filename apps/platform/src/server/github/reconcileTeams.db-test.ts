@@ -3,7 +3,10 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "~/server/db";
 import { teamMembers, teams } from "~/server/db/schema";
-import { MAX_TEAM_SIZE } from "~/server/teams/limits";
+import {
+  MAX_CONCURRENT_TEAMS_PER_USER,
+  MAX_TEAM_SIZE,
+} from "~/server/teams/limits";
 import {
   githubTeamSlug,
   platformSlugFromGithubTeamSlug,
@@ -51,9 +54,20 @@ const IDS = {
   cUser3: "c9966666-6666-6666-6666-666666666610",
   cUser4: "c9966666-6666-6666-6666-666666666611",
   cUser5: "c9966666-6666-6666-6666-666666666612",
+  teamD: "c6666666-6666-6666-6666-666666666604",
+  teamE: "c6666666-6666-6666-6666-666666666605",
+  teamF: "c6666666-6666-6666-6666-666666666606",
+  capUser: "c9966666-6666-6666-6666-666666666613",
 };
 
-const ALL_TEAMS = [IDS.teamA, IDS.teamB, IDS.teamC];
+const ALL_TEAMS = [
+  IDS.teamA,
+  IDS.teamB,
+  IDS.teamC,
+  IDS.teamD,
+  IDS.teamE,
+  IDS.teamF,
+];
 const ALL_USERS = [
   IDS.aLead,
   IDS.aMirroredLive,
@@ -67,6 +81,7 @@ const ALL_USERS = [
   IDS.cUser3,
   IDS.cUser4,
   IDS.cUser5,
+  IDS.capUser,
 ];
 
 async function cleanup() {
@@ -114,13 +129,17 @@ beforeAll(async () => {
   await db.execute(identity(IDS.cUser3, "reconcile-c-3"));
   await db.execute(identity(IDS.cUser4, "reconcile-c-4"));
   await db.execute(identity(IDS.cUser5, "reconcile-c-5"));
+  await db.execute(identity(IDS.capUser, "reconcile-cap"));
 
   await db.execute(sql`
     insert into platform.teams (id, slug, name, "joinCode", "createdBy")
     values
       (${IDS.teamA}::uuid, 'reconcile-a', 'Reconcile A', 'AAA111', ${IDS.aLead}::uuid),
       (${IDS.teamB}::uuid, 'reconcile-b', 'Reconcile B', 'BBB222', ${IDS.bLead}::uuid),
-      (${IDS.teamC}::uuid, 'reconcile-c', 'Reconcile C', 'CCC333', ${IDS.cUser1}::uuid)
+      (${IDS.teamC}::uuid, 'reconcile-c', 'Reconcile C', 'CCC333', ${IDS.cUser1}::uuid),
+      (${IDS.teamD}::uuid, 'reconcile-d', 'Reconcile D', 'DDD444', ${IDS.capUser}::uuid),
+      (${IDS.teamE}::uuid, 'reconcile-e', 'Reconcile E', 'EEE555', ${IDS.capUser}::uuid),
+      (${IDS.teamF}::uuid, 'reconcile-f', 'Reconcile F', 'FFF666', ${IDS.capUser}::uuid)
   `);
 
   for (const [teamId, userId] of [
@@ -130,6 +149,12 @@ beforeAll(async () => {
     [IDS.teamB, IDS.bLead],
     [IDS.teamB, IDS.bMemberP],
     [IDS.teamB, IDS.bMemberQ],
+    // capUser starts mirrored active on two teams already -- exactly at
+    // MAX_CONCURRENT_TEAMS_PER_USER -- so the cap test below only has to put
+    // them on a THIRD team via GitHub to go over it, the same way a
+    // hand-added GitHub membership would in production.
+    [IDS.teamD, IDS.capUser],
+    [IDS.teamE, IDS.capUser],
   ] as const) {
     await db.execute(sql`
       insert into platform."teamMembers" ("teamId", "userId", role)
@@ -306,5 +331,42 @@ describe("reconcileTeams", () => {
     expect(after).toEqual(before);
     expect(report.added).toBe(0);
     expect(report.removed).toBe(0);
+  });
+
+  it("keeps reporting a member over the concurrent-team cap on every pass, not just the first", async () => {
+    // capUser is already mirrored active on teamD and teamE (seeded above);
+    // GitHub now also reports them on teamF, a third team, put there by hand
+    // outside the platform. teamD/teamE are left off `members` entirely so
+    // the fake client's pass-through reports back exactly what is already
+    // mirrored for them -- a zero diff -- and teamF is the only thing this
+    // pass actually changes.
+    const client = fakeClient({
+      members: { [githubTeamSlug("reconcile-f")]: ["reconcile-cap"] },
+    });
+
+    const first = await reconcileTeams(db, client);
+    expect(await activeMembers(IDS.teamF)).toEqual(new Set([IDS.capUser]));
+    expect(
+      first.anomalies.some(
+        (a) =>
+          a.includes("reconcile-f") &&
+          a.includes(IDS.capUser) &&
+          a.includes(`${MAX_CONCURRENT_TEAMS_PER_USER}`),
+      ),
+    ).toBe(true);
+
+    // Second pass: capUser is no longer newly added to teamF -- they were
+    // mirrored in by the pass above -- but they are still active on 3 teams,
+    // so the standing violation must be reported again, not silently dropped
+    // now that they are old news to the mirror.
+    const second = await reconcileTeams(db, client);
+    expect(
+      second.anomalies.some(
+        (a) =>
+          a.includes("reconcile-f") &&
+          a.includes(IDS.capUser) &&
+          a.includes(`${MAX_CONCURRENT_TEAMS_PER_USER}`),
+      ),
+    ).toBe(true);
   });
 });
