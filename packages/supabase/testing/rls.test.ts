@@ -314,7 +314,6 @@ describe("platform.profile durable identity", () => {
 });
 
 describe("platform meetings, teams and attendance", () => {
-  const projectId = "aaaaaaaa-0000-4000-a000-000000000001";
   const meetingId = "bbbbbbbb-0000-4000-a000-000000000001";
   const workshopId = "cccccccc-0000-4000-a000-000000000001";
   const competitionId = "dddddddd-0000-4000-a000-000000000001";
@@ -325,9 +324,6 @@ describe("platform meetings, teams and attendance", () => {
   beforeAll(async () => {
     const a = admin();
     const now = Date.now();
-    await a
-      .from("projects")
-      .insert({ id: projectId, slug: "rls-proj", displayName: "RLS Project" });
     await a.from("meetings").insert({
       id: meetingId,
       slug: "rls-meeting",
@@ -335,7 +331,9 @@ describe("platform meetings, teams and attendance", () => {
       startsAt: new Date(now).toISOString(),
       endsAt: new Date(now + 7_200_000).toISOString(),
     });
-    await a.from("workshops").insert({ id: workshopId, meetingId, projectId });
+    await a
+      .from("workshops")
+      .insert({ id: workshopId, meetingId, project: "RLS Project" });
     await a
       .from("competitions")
       .insert({ id: competitionId, slug: "rls-comp", workshopId });
@@ -387,17 +385,11 @@ describe("platform meetings, teams and attendance", () => {
     // evidence is removed explicitly before this test fixture's schedule.
     await admin().from("attendance").delete().eq("meetingId", meetingId);
     await admin().from("meetings").delete().eq("id", meetingId);
-    await admin().from("projects").delete().eq("id", projectId);
   });
 
   it("publishes the schedule to logged-out visitors", async () => {
     const client = anon();
-    for (const table of [
-      "projects",
-      "meetings",
-      "workshops",
-      "competitions",
-    ] as const) {
+    for (const table of ["meetings", "workshops", "competitions"] as const) {
       const { data, error } = await client.from(table).select("id");
       expect(error, `${table} should be anon-readable`).toBeNull();
       expect(data?.length ?? 0).toBeGreaterThan(0);
