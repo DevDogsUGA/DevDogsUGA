@@ -6,10 +6,10 @@ import {
   getUpcomingMeetings,
   getPastMeetings,
   getMeetingBySlug,
-  getCompetitionBySlug,
   getMeetingWorkshops,
   getMeetingsInRange,
 } from "./meetings";
+import { getCompetitionBySlug, getCompetitionSlugs } from "./competitions";
 import {
   getAllTeams,
   getTeamDetail,
@@ -17,7 +17,7 @@ import {
   getMyTeams,
   getEntrants,
 } from "./teams";
-import { getStarsForUser, getStarsForWorkshop } from "./stars";
+import { getStarsForUser } from "./stars";
 import { readSyncState } from "~/server/airtable/lease";
 import { streamStarRows } from "~/server/export/stars";
 
@@ -45,17 +45,21 @@ describe("every loader is valid SQL", () => {
     await getUpcomingMeetings();
     await getPastMeetings();
     await getMeetingBySlug("nope");
-    await getCompetitionBySlug("nope");
     await getMeetingWorkshops(NIL);
+    expect(true).toBe(true);
+  });
+
+  it("competitions", async () => {
+    await getCompetitionBySlug("nope");
+    await getCompetitionSlugs();
     expect(true).toBe(true);
   });
 
   it("the calendar's range query, on an empty window and a populated one", async () => {
     // Two calls, because the loader has two code paths and only one reaches
-    // the child statements. A window with no meetings returns before the
-    // workshop and judging queries run, so a far-future range on its own would
-    // never prove those parse. The judging join is the riskiest expression in
-    // the file: it joins ON two timestamp comparisons rather than on a key.
+    // the child statement. A window with no meetings returns before the
+    // workshop query runs, so a far-future range on its own would never prove
+    // it parses.
     const far = new Date("2999-01-01T00:00:00Z");
     await getMeetingsInRange(far, new Date("2999-04-01T00:00:00Z"));
 
@@ -79,7 +83,6 @@ describe("every loader is valid SQL", () => {
   });
   it("stars", async () => {
     await getStarsForUser(NIL);
-    await getStarsForWorkshop(NIL);
     expect(true).toBe(true);
   });
   it("the airtable sync state the console renders", async () => {
@@ -94,7 +97,7 @@ describe("every loader is valid SQL", () => {
     // untouched `streamStarRows(...)` would prove nothing.
     for await (const _ of streamStarRows({}, 10)) break;
     for await (const _ of streamStarRows(
-      { from: new Date("2020-01-01"), to: new Date(), project: "nope" },
+      { from: new Date("2020-01-01"), to: new Date() },
       10,
     ))
       break;

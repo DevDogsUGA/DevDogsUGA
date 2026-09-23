@@ -5,7 +5,7 @@ import Badge from "~/ui/badge";
 import { ConsoleCard } from "~/ui/card";
 import PageShell from "~/components/PageShell";
 import EmptyState from "~/components/participation/EmptyState";
-import { getCompetitionBySlug } from "~/server/loaders/meetings";
+import { getCompetitionBySlug } from "~/server/loaders/competitions";
 import { getEntrants } from "~/server/loaders/teams";
 
 /**
@@ -23,18 +23,14 @@ import { getEntrants } from "~/server/loaders/teams";
  */
 
 /**
- * The only competition route that is not behind `expectSession()`, so the only
- * one worth describing to anything but a browser tab. The two under `teams/`
- * redirect an anonymous visitor to `/auth` and carry `robots: { index: false }`
- * instead of this.
+ * One of two competition routes not behind `expectSession()` -- this one and
+ * `/competitions/[slug]` itself -- so this is worth describing to anything but
+ * a browser tab. The two under `teams/` redirect an anonymous visitor to
+ * `/auth` and carry `robots: { index: false }` instead of this.
  *
  * `getCompetitionBySlug` is called here as well as in the page body; React's
  * `cache()` wrapper on the loader is what stops that being a second query
  * within the same request.
- *
- * A competition has no name of its own, it is called after its project, so the
- * title is built rather than stored. The miss branch cannot name anything: an
- * unknown slug has no project behind it to name.
  */
 export async function generateMetadata({
   params,
@@ -52,8 +48,8 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${competition.name} results | DevDogs`,
-    description: `Who entered the DevDogs ${competition.name} competition, and who won it.`,
+    title: `${competition.title} results | DevDogs`,
+    description: `Who entered the DevDogs ${competition.title} competition, and who won it.`,
   };
 }
 
@@ -73,7 +69,7 @@ export default async function ResultsPage({
   return (
     <PageShell
       accent="amber"
-      title={`${competition.name} — results`}
+      title={`${competition.title} — results`}
       description="Scoring happens off-platform. What's recorded here is who entered, and who won."
     >
       {entrants.length === 0 ? (

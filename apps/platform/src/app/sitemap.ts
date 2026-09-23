@@ -3,10 +3,8 @@ import { env } from "~/env";
 import { docsHref } from "~/lib/docsSlug";
 import type { DocsTreeNode } from "~/lib/docsTree";
 import { getDocsProjects, getDocsTree } from "~/server/docs/queries";
-import {
-  getJudgedCompetitionSlugs,
-  getMeetingSlugs,
-} from "~/server/loaders/meetings";
+import { getCompetitionSlugs } from "~/server/loaders/competitions";
+import { getMeetingSlugs } from "~/server/loaders/meetings";
 
 /**
  * /sitemap.xml, every public URL this app serves.
@@ -17,7 +15,7 @@ import {
  *     every docs page, which `@devdogsuga/docs` compiles into the bundle at
  *     build time (see `server/docs/queries.ts`). An in-memory walk over a
  *     constant that cannot throw and cannot be slow.
- *   - Everything that needs a query: meetings and judged competitions.
+ *   - Everything that needs a query: meetings and competitions.
  *
  * The second half is wrapped so a database that is down, unreachable, or not
  * configured costs the sitemap those URLs and nothing else. That matters more
@@ -118,7 +116,7 @@ function docsRoutes(): MetadataRoute.Sitemap {
 async function databaseRoutes(): Promise<MetadataRoute.Sitemap> {
   const [meetings, competitions] = await Promise.allSettled([
     getMeetingSlugs(),
-    getJudgedCompetitionSlugs(),
+    getCompetitionSlugs(),
   ]);
 
   const routes: MetadataRoute.Sitemap = [];
@@ -139,10 +137,18 @@ async function databaseRoutes(): Promise<MetadataRoute.Sitemap> {
 
   if (competitions.status === "fulfilled") {
     for (const slug of competitions.value) {
+      const encoded = encodeURIComponent(slug);
+      routes.push({
+        // The competition's own page: title, brief and dates. Revisited while
+        // it is open, so `weekly` rather than the results page's `yearly`.
+        url: url(`/competitions/${encoded}`),
+        changeFrequency: "weekly",
+        priority: 0.5,
+      });
       routes.push({
         // Results are final once a winner is recorded; the page exists to be
         // linked back to rather than revisited.
-        url: url(`/competitions/${encodeURIComponent(slug)}/results`),
+        url: url(`/competitions/${encoded}/results`),
         changeFrequency: "yearly",
         priority: 0.5,
       });

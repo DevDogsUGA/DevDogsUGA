@@ -51,7 +51,12 @@ export interface RawFieldConfig {
 }
 
 export interface RawIssueContent {
-  __typename: "Issue" | string;
+  // Usually "Issue" -- the only case the fields below are trustworthy -- but
+  // a Project item's content can also be a draft or a PullRequest, so this
+  // has to accept any GraphQL __typename rather than the one literal.
+  // `content?.__typename !== "Issue"` in `parseProjectItem` is where that
+  // gets checked.
+  __typename: string;
   id: string;
   number: number;
   title: string;
@@ -70,14 +75,16 @@ export interface RawProjectItemFields {
 }
 
 export interface CompetitionProjectItemResult {
-  node: null | ({
-    id: string;
-    project: null | {
-      id: string;
-      titleField: RawFieldConfig | null;
-      plannedEndDateField: RawFieldConfig | null;
-    };
-  } & RawProjectItemFields);
+  node:
+    | null
+    | ({
+        id: string;
+        project: null | {
+          id: string;
+          titleField: RawFieldConfig | null;
+          plannedEndDateField: RawFieldConfig | null;
+        };
+      } & RawProjectItemFields);
 }
 
 export { default as CompetitionProjectItem } from "./CompetitionProjectItem.gql";

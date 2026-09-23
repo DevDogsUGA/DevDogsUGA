@@ -20,25 +20,29 @@ import { verifyGithubSignature } from "~/server/github/webhookSignature";
 /**
  * POST /github/webhook
  *
- * The live half of the team mirror: GitHub's own record of who is on a
- * team, which branches exist, and which GitHub team backs each, pushed here
- * the moment it changes rather than waited out until the nightly
- * `github-reconcile` cron notices. Four event types matter to team state:
+ * The live half of both mirrors this platform keeps against GitHub: the team
+ * mirror (`server/github/webhookEvents.ts`) and the competitions mirror
+ * (`server/github/competitionEvents.ts`), pushed here the moment either
+ * changes rather than waited out until the nightly `github-reconcile` cron
+ * notices. Six event types matter:
  *
  *   - `membership`: added/removed on a team's GitHub team.
  *   - `team`: the GitHub team deleted, or renamed.
  *   - `create` / `delete`: a `team/<slug>` branch appearing or vanishing.
+ *   - `projects_v2_item`: a Competitions Project draft converted (kickoff)
+ *     or a converted item's fields/content edited.
+ *   - `issues`: closed, reopened or edited, for an issue this platform
+ *     already mirrors as a competition.
  *
- * The actual mirror writes live in `server/github/webhookEvents.ts`, one
- * handler per event, each idempotent against redelivery -- GitHub retries
- * anything that does not answer 2xx, so this always returns 200 once the
- * signature checks out, whether or not the event turned out to name a team
- * this platform recognizes.
+ * Each handler is idempotent against redelivery -- GitHub retries anything
+ * that does not answer 2xx, so this always returns 200 once the signature
+ * checks out, whether or not the event turned out to name something this
+ * platform recognizes.
  *
- * `pull_request` is not handled here. Nothing about the team mirror needs
- * it -- PR-linked competition entry is the competitions step of the
- * platform redesign, not this one -- so it falls through to the default
- * case below, acknowledged and ignored, the same as `ping`.
+ * `pull_request` is not handled here. Nothing here needs it yet -- PR-linked
+ * competition ENTRY (as opposed to the competition mirror itself) is a later
+ * step of the platform redesign -- so it falls through to the default case
+ * below, acknowledged and ignored, the same as `ping`.
  */
 export async function POST(request: Request) {
   const rawBody = await request.text();
@@ -73,6 +77,18 @@ export async function POST(request: Request) {
       break;
     case "delete":
       await handleRefEvent(db, "delete", payload as RefEventPayload);
+      break;
+    case "projects_v2_item":
+      await handleProjectsV2ItemEvent(
+        db,
+        payload as ProjectsV2ItemEventPayload,
+      );
+      break;
+    case "issues":
+      await handleCompetitionIssueEvent(
+        db,
+        payload as CompetitionIssueEventPayload,
+      );
       break;
     case null:
     default:

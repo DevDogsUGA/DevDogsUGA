@@ -1,6 +1,6 @@
 import { ACCENT, PageCard } from "@devdogsuga/og";
 import { contentType, ogResponse, size } from "~/lib/ogImage";
-import { getCompetitionBySlug } from "~/server/loaders/meetings";
+import { getCompetitionBySlug } from "~/server/loaders/competitions";
 
 /**
  * A competition's results card.
@@ -35,7 +35,7 @@ export default async function Image({
   return ogResponse(
     PageCard({
       ...size,
-      title: `${competition.name} results`,
+      title: `${competition.title} results`,
       description: "Who entered, and who won.",
       eyebrow: "Results",
       accent: ACCENT.amber400,

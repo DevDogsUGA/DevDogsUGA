@@ -618,8 +618,15 @@ describe("preflight, the target no app boots from", () => {
     // webhook against the new team-branch model -- ordinary `scope:
     // "environment"`, so both deployed targets moved and preflight did not,
     // same as its own deletion above.
-    expect(keysRoutedTo("staging").size).toBe(49);
-    expect(keysRoutedTo("production").size).toBe(52);
+    //
+    // Then both moved up by one more: `GH_COMPETITIONS_PROJECT_ID` entered
+    // the registry when the platform redesign's competitions step wired
+    // ingestion to a GitHub Projects board -- another ordinary `scope:
+    // "environment"` key, `GH_` rather than `GITHUB_` because GitHub Actions
+    // reserves that prefix for its own automatic variables, so both deployed
+    // targets moved and preflight did not.
+    expect(keysRoutedTo("staging").size).toBe(50);
+    expect(keysRoutedTo("production").size).toBe(53);
     expect(keysRoutedTo("preflight").size).toBe(2);
   });
 });

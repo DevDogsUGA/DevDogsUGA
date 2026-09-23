@@ -500,7 +500,7 @@ describe("preflight", () => {
     // "environment"`, so both deployed targets moved and preflight did not,
     // same as its own deletion above.
     //
-    // Then both moved up by one more: `GITHUB_COMPETITIONS_PROJECT_ID`
+    // Then both moved up by one more: `GH_COMPETITIONS_PROJECT_ID`
     // entered the registry when the platform redesign's competitions step
     // wired ingestion to a GitHub Projects board -- another ordinary `scope:
     // "environment"` key, so both deployed targets moved and preflight did

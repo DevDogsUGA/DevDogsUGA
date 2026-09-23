@@ -2,6 +2,30 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 /**
+ * `.gql`/`.graphql` files as raw text, the same rule `next.config.ts`'s
+ * `turbopack.rules` gives the app itself (`raw-loader`). Vitest resolves
+ * modules through Vite, not Turbopack, so it never sees that rule; without
+ * an equivalent here, the first db-test to import anything reaching
+ * `server/github/queries/index.ts` (this step's competitions module does)
+ * fails to TRANSFORM the `.gql` files it re-exports, not to run an
+ * assertion.
+ *
+ * Untyped against Vite's own `Plugin` interface -- `vite` is a transitive
+ * dependency of `vitest`, not one this app resolves directly, and importing
+ * its types here would ask for a dependency this app does not otherwise
+ * need. `defineConfig`'s own `plugins` field accepts this shape structurally.
+ */
+function gqlAsRawText() {
+  return {
+    name: "gql-as-raw-text",
+    transform(code: string, id: string) {
+      if (!/\.(gql|graphql)$/.test(id)) return;
+      return { code: `export default ${JSON.stringify(code)};`, map: null };
+    },
+  };
+}
+
+/**
  * Query-validity checks against the local Supabase stack.
  *
  * Separate from the default config because these need a running database, and
@@ -9,6 +33,7 @@ import { defineConfig } from "vitest/config";
  * `pnpm test` stays hermetic; `pnpm test:db` is the one that proves the SQL.
  */
 export default defineConfig({
+  plugins: [gqlAsRawText()],
   resolve: {
     alias: { "~": fileURLToPath(new URL("./src", import.meta.url)) },
   },

@@ -284,10 +284,16 @@ const server = {
   // rather than failing to start. A committed constant would work for
   // GITHUB_ORG and GITHUB_COMPETITION_REPO because both name things this repo
   // already controls; a Project's node id is assigned by GitHub the moment
-  // the Project is created and cannot be predicted ahead of that.
-  GITHUB_COMPETITIONS_PROJECT_ID: define(z.string().default(""), {
+  // the Project is created and cannot be predicted ahead of that, so this is
+  // `scope: "environment"` -- routed to a real GitHub Actions secret/variable
+  // once Sloan sets it. `GH_`, not `GITHUB_`, for the same reason every other
+  // routed key naming something GitHub does is `GH_APP_ID`/`GH_WEBHOOK_SECRET`
+  // and not `GITHUB_APP_ID`: GitHub Actions reserves the `GITHUB_` prefix for
+  // its own automatic variables and refuses to let a workflow define a
+  // secret or variable that starts with it.
+  GH_COMPETITIONS_PROJECT_ID: define(z.string().default(""), {
     doc:
-      "The private \"Competitions\" GitHub Project's GraphQL node id " +
+      'The private "Competitions" GitHub Project\'s GraphQL node id ' +
       "(PVT_...). Empty means competition ingestion is a no-op -- the " +
       "platform boots without it. Find it with `gh project view <number> " +
       "--owner DevDogsUGA --format json --jq .id`.",
