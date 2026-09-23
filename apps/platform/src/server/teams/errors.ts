@@ -76,7 +76,7 @@ interface PostgresErrorShape {
  * never matches, and fails silently: the catch block falls through, the caller
  * re-throws, and a member who is already on a team gets a 500 instead of "you
  * are already on a team". None of it is visible in a type, and it only shows up
- * against a real database, which is why it survived until the ballot write path
+ * against a real database, which is why it survived until code exercising it
  * ran against one.
  *
  * The chain is walked rather than unwrapped once, because a nested transaction
