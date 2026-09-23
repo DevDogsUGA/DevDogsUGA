@@ -488,6 +488,13 @@ async function transferLeadImpl(
   const callerId = await expectSession();
 
   await db.transaction(async (tx) => {
+    // Same lock as leave/disband. Without it, a transfer racing a concurrent
+    // leaveTeam on the promoted member can interleave: both read an active
+    // membership, both report success, and the team ends up with the old
+    // lead demoted and the new one promoted-but-left -- no active lead, and
+    // no self-service action left that can create one.
+    await lockTeam(tx, teamId);
+
     await requireLead(tx, teamId, callerId);
 
     if (!(await isActiveMember(tx, teamId, newLeadId))) {
@@ -509,7 +516,11 @@ async function transferLeadImpl(
         ),
       );
 
-    await tx
+    // Defense in depth: the lock plus the isActiveMember check above should
+    // make this affect exactly one row, but if some other path this file
+    // does not yet know about ever races it, failing loudly here is better
+    // than silently leaving the team with no active lead.
+    const promoted = await tx
       .update(teamMembers)
       .set({ role: "lead" })
       .where(
@@ -518,7 +529,10 @@ async function transferLeadImpl(
           eq(teamMembers.userId, newLeadId),
           isNull(teamMembers.leftAt),
         ),
-      );
+      )
+      .returning({ id: teamMembers.id });
+
+    if (promoted.length === 0) throw new TeamActionError("not_a_member");
   });
 }
 

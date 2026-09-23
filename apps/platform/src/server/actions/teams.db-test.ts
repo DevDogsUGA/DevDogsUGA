@@ -43,7 +43,7 @@ vi.mock("~/server/auth", () => ({
   expectSession: () => Promise.resolve(session.userId),
 }));
 
-const { createTeam, disbandTeamAction, joinTeam, leaveTeam } =
+const { createTeam, disbandTeamAction, joinTeam, leaveTeam, transferLead } =
   await import("~/server/actions/teams");
 
 const IDS = {
@@ -55,12 +55,16 @@ const IDS = {
   capped: "c9111111-1111-1111-1111-111111111106",
   freshCreator: "c9111111-1111-1111-1111-111111111107",
   freshJoiner: "c9111111-1111-1111-1111-111111111108",
+  memberE: "c9111111-1111-1111-1111-111111111109",
+  memberF: "c9111111-1111-1111-1111-111111111110",
   seatedTeam: "c5111111-1111-1111-1111-111111111101",
   fullTeam: "c5111111-1111-1111-1111-111111111102",
   cappedTeamA: "c5111111-1111-1111-1111-111111111103",
   cappedTeamB: "c5111111-1111-1111-1111-111111111104",
   disbandTeam: "c5111111-1111-1111-1111-111111111105",
   historyTeam: "c5111111-1111-1111-1111-111111111106",
+  transferTeam: "c5111111-1111-1111-1111-111111111107",
+  raceTeam: "c5111111-1111-1111-1111-111111111108",
 };
 
 const USERS = [
@@ -72,6 +76,8 @@ const USERS = [
   IDS.capped,
   IDS.freshCreator,
   IDS.freshJoiner,
+  IDS.memberE,
+  IDS.memberF,
 ] as const;
 
 const TEAMS = [
@@ -81,6 +87,8 @@ const TEAMS = [
   IDS.cappedTeamB,
   IDS.disbandTeam,
   IDS.historyTeam,
+  IDS.transferTeam,
+  IDS.raceTeam,
 ] as const;
 
 async function cleanup() {
@@ -189,6 +197,37 @@ beforeAll(async () => {
       values (${IDS.historyTeam}::uuid, ${userId}::uuid, ${role})
     `);
   }
+
+  // A team for the basic transfer case: lead plus one other active member.
+  await db.execute(sql`
+    insert into platform.teams (id, slug, name, "joinCode", "createdBy")
+    values (${IDS.transferTeam}::uuid, 'actions-db-test-transfer', 'Transfer', 'STU901', ${IDS.lead}::uuid)
+  `);
+  for (const [role, userId] of [
+    ["lead", IDS.lead],
+    ["member", IDS.memberE],
+  ] as const) {
+    await db.execute(sql`
+      insert into platform."teamMembers" ("teamId", "userId", role)
+      values (${IDS.transferTeam}::uuid, ${userId}::uuid, ${role})
+    `);
+  }
+
+  // A separate team for the transfer/leave race, so it does not share state
+  // with the basic transfer case above.
+  await db.execute(sql`
+    insert into platform.teams (id, slug, name, "joinCode", "createdBy")
+    values (${IDS.raceTeam}::uuid, 'actions-db-test-race', 'Race', 'VWX234', ${IDS.lead}::uuid)
+  `);
+  for (const [role, userId] of [
+    ["lead", IDS.lead],
+    ["member", IDS.memberF],
+  ] as const) {
+    await db.execute(sql`
+      insert into platform."teamMembers" ("teamId", "userId", role)
+      values (${IDS.raceTeam}::uuid, ${userId}::uuid, ${role})
+    `);
+  }
 });
 
 afterAll(cleanup);
@@ -214,6 +253,14 @@ async function memberCount(teamId: string): Promise<number> {
   const rows = await db.execute<{ n: number }>(sql`
     select count(*)::int as n from platform."teamMembers"
     where "teamId" = ${teamId}::uuid and "leftAt" is null
+  `);
+  return rows[0]!.n;
+}
+
+async function activeLeadCount(teamId: string): Promise<number> {
+  const rows = await db.execute<{ n: number }>(sql`
+    select count(*)::int as n from platform."teamMembers"
+    where "teamId" = ${teamId}::uuid and "leftAt" is null and role = 'lead'
   `);
   return rows[0]!.n;
 }
@@ -343,6 +390,55 @@ describe("leaveTeam", () => {
 
     const row = await activeRow(IDS.fullTeam, IDS.memberA);
     expect(row?.leftAt).toBeNull();
+  });
+});
+
+describe("transferLead", () => {
+  it("demotes the caller and promotes the target", async () => {
+    session.userId = IDS.lead;
+
+    const result = await transferLead(IDS.transferTeam, IDS.memberE);
+    expect(result).toEqual({ ok: true, value: undefined });
+
+    const rows = await db.execute<{ userId: string; role: string }>(sql`
+      select "userId", role from platform."teamMembers"
+      where "teamId" = ${IDS.transferTeam}::uuid and "leftAt" is null
+    `);
+    const byUser = new Map(rows.map((r) => [r.userId, r.role]));
+    expect(byUser.get(IDS.lead)).toBe("member");
+    expect(byUser.get(IDS.memberE)).toBe("lead");
+  });
+
+  // Regression for a blocker found in review: `transferLeadImpl` used to skip
+  // `lockTeam`, the same advisory lock `leaveTeamImpl` and `disbandTeamImpl`
+  // take. Unlocked, a transfer promoting a member could interleave with that
+  // same member leaving: both read an active membership before either wrote,
+  // both reported success, and the team was left with the old lead demoted
+  // and the new one promoted-but-departed -- no active lead, and no
+  // self-service action left that could ever create one (every other action
+  // requires an active lead). Locking serializes the two, so whichever
+  // transaction commits first is the one the other sees: either the leave
+  // wins and the transfer then fails with `not_a_member` (target already
+  // gone), or the transfer wins and the leave then fails with
+  // `lead_must_transfer_first` (the promoted member cannot leave a team that
+  // now has another active member, the demoted former lead). Either way the
+  // team keeps exactly one active lead.
+  it("never leaves the team without an active lead when a transfer races the target leaving", async () => {
+    session.userId = IDS.lead;
+    const transferPromise = transferLead(IDS.raceTeam, IDS.memberF);
+
+    session.userId = IDS.memberF;
+    const leavePromise = leaveTeam(IDS.raceTeam);
+
+    const [transferResult, leaveResult] = await Promise.all([
+      transferPromise,
+      leavePromise,
+    ]);
+
+    // Both cannot succeed: that is exactly the race this locks against.
+    expect(transferResult.ok && leaveResult.ok).toBe(false);
+
+    expect(await activeLeadCount(IDS.raceTeam)).toBe(1);
   });
 });
 
