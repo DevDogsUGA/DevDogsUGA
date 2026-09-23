@@ -40,7 +40,7 @@ Two further reasons to keep them separate, both smaller. **Different lifecycles:
 
 Create it in the **organization**, not your personal account — a personal App is exactly the single point of failure this exists to remove. It installs on `DevDogsUGA` and nowhere else, and it is created by hand in GitHub's UI.
 
-The App holds exactly five permissions: `administration: write`, `contents: write`, `metadata: read`, `pull_requests: read`, and `members: write`. **`Organization administration` is deliberately not among them** — nothing calls it, and it reaches the org settings themselves, including the rulesets and base permissions this whole change exists to tighten. It is the one permission that would put the App back where the token was.
+The App holds `administration: write`, `contents: write`, `issues: read`, `metadata: read`, `pull_requests: read`, `members: write`, and `organization_projects: read`. **`Organization administration` is deliberately not among them** — nothing calls it, and it reaches the org settings themselves, including the rulesets and base permissions this whole change exists to tighten. It is the one permission that would put the App back where the token was.
 
 <details>
 <summary>Field by field: what to enter on the New GitHub App form</summary>
@@ -57,17 +57,17 @@ The App holds exactly five permissions: `administration: write`, `contents: writ
 
 **Post installation:** Setup URL blank, "Redirect on update" unchecked. A setup URL is for Apps needing per-installation configuration; this one is installed once, on one organization.
 
-**Webhook:** ⚠️ code-ready, **not yet enabled by Sloan**. The teams-core step removed the old `/github/webhook` (the per-competition entry state machine); the teams-mirror step reintroduced it against the new team-branch model -- see [Teams](/docs/platform/guides/meetings-and-teams/teams), "The live mirror". Nobody has done the dashboard half yet:
+**Webhook:** ⚠️ code-ready, **not yet enabled by Sloan**. The teams-core step removed the old `/github/webhook`; the teams-mirror step reintroduced it against the new team-branch model -- see [Teams](/docs/platform/guides/meetings-and-teams/teams), "The live mirror" -- and the competitions step added two more events. Nobody has done the dashboard half yet:
 
 - **Payload URL:** `{BASE_URL}/github/webhook`, production's URL only -- staging never receives webhooks, see "Why does staging get a second App" below.
 - **Content type:** `application/json`.
 - **Secret:** 32+ random characters, matching `env.ts`'s `GH_WEBHOOK_SECRET`. Push it (`pnpm devtools env push --target production`), then paste the SAME value into this field -- the route verifies `X-Hub-Signature-256` against it (`server/github/webhookSignature.ts`).
-- **Events, "Let me select individual events":** `Membership`, `Team`, `Branch or tag creation`, `Branch or tag deletion`. NOT `Pull request` -- PR-linked competition entry is a later step, and the route ignores that event on purpose until it lands.
+- **Events, "Let me select individual events":** `Membership`, `Team`, `Branch or tag creation`, `Branch or tag deletion`, `Projects v2 item`, `Issues`. NOT `Pull request` -- PR-linked competition entry is a later step. See [Competitions](/docs/platform/guides/meetings-and-teams/competitions) for what the two new events drive.
 - **Active:** checked.
 
-No new permission grant needed: every event above is covered by `Members` and `Contents`, already listed next.
+Every event above except `Projects v2 item`/`Issues` is covered by `Members` and `Contents`, already listed next; those two need the **Projects** organization permission added below.
 
-**Permissions.** Repository: Administration read and write (`repos.createRepoRuleset`, `getRepoRulesets`, `updateRepoRuleset`, `deleteRepoRuleset`, `teams.addOrUpdateRepoPermissionsInOrg`, `teams.deleteInOrg`); Contents read and write (`git.createRef`, `git.getRef`, cutting team branches, and the `create`/`delete` webhook events); Metadata read-only (mandatory). Organization: Members read and write (`teams.create`, `getByName`, `listMembersInOrg`, `removeMembershipForUserInOrg`, the org invitation/membership endpoints, and the `membership`/`team` webhook events). Account permissions: none. Pull requests read is still not granted -- PR-linked competition entry has not landed -- and stays expected alongside that later step, not this one.
+**Permissions.** Repository: Administration read and write (`repos.createRepoRuleset`, `getRepoRulesets`, `updateRepoRuleset`, `deleteRepoRuleset`, `teams.addOrUpdateRepoPermissionsInOrg`, `teams.deleteInOrg`); Contents read and write (`git.createRef`, `git.getRef`, cutting team branches, and the `create`/`delete` webhook events); Issues read-only; Metadata read-only (mandatory). Organization: Members read and write (`teams.create`, `getByName`, `listMembersInOrg`, `removeMembershipForUserInOrg`, the org invitation/membership endpoints, and the `membership`/`team` webhook events); **Projects read-only** (the Competitions Project's GraphQL reads). Account permissions: none. Pull requests read is still not granted -- PR-linked competition entry has not landed.
 
 **Where can this be installed:** only on this account.
 

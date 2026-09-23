@@ -65,7 +65,16 @@ a background task.
    no column left in Postgres to hold what an officer typed into it. Both are
    dropped from the registry, so `verify` lists them as extra rather than
    failing; the scaffolder cannot remove them either.
-6. **`pnpm devtools airtable verify`** must exit clean.
+6. **Delete the Competitions table by hand.** The platform redesign's
+   competitions step made a competition a GitHub issue mirror instead --
+   see [Competitions](/docs/platform/guides/meetings-and-teams/competitions)
+   -- and dropped its whole registry entry, both the officer-authored fields
+   (Branch slug, Workshop link, Title, Judging starts) and the
+   platform-written ones (`⚙️ Platform ID`, `⚙️ Teams`, `⚙️ Sync status`). A
+   base kept from before this step still has the table; there is nothing left
+   in `registry.ts` for `verify` to check it against, so it will not even
+   appear as an extra table, and nothing warns an officer off editing it.
+7. **`pnpm devtools airtable verify`** must exit clean.
 
 ### The projects themselves
 

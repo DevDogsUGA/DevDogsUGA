@@ -1,7 +1,7 @@
 ---
 name: Config-as-code (meetings & workshops)
 description: Where meetings and workshops come from now — a versioned data file instead of Airtable, validated at CI, reconciled into Postgres on a schedule and after deploy.
-order: 5
+order: 6
 ---
 
 # Config-as-code
@@ -15,8 +15,8 @@ check` blocks the merge if it does not parse or fails a publishability rule.
 There is no runtime refusal path any more — see
 [Airtable sync](/docs/platform/guides/meetings-and-teams/airtable-sync) for
 what that looked like when Airtable was the CMS for these two tables.
-Competitions are still Airtable-authored, for now; that guide is still the
-right one to read for them.
+Competitions moved off Airtable too, to a GitHub Projects mirror — see
+[Competitions](/docs/platform/guides/meetings-and-teams/competitions).
 
 ## Why this replaced the Airtable pull
 

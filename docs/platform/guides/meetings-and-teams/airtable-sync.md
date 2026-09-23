@@ -1,14 +1,15 @@
 ---
 name: Airtable Sync
-description: Where competitions and members come from — Airtable as the CMS for what is left, Postgres as the source of truth, how record ids keep identity through edits, and the refusals that protect credit people already earned.
-order: 6
+description: Where members still come from — Airtable as the CMS for the one table left, Postgres as the source of truth, and the refusals that protect credit people already earned.
+order: 7
 ---
 
 # Airtable Sync
 
-**Airtable is the CMS for competitions and members. Postgres is the source of truth.** Officers author competitions in a base; a pass every fifteen minutes projects them into Postgres, and everything the platform derives hangs off the Postgres rows. Meetings and workshops moved off this pull — read
-[Config-as-code](/docs/platform/guides/meetings-and-teams/club-config) for
-where those two come from now. This page covers what Airtable still owns.
+**Airtable is the CMS for members. Postgres is the source of truth.** Officers author dues in a base; a pass every fifteen minutes projects them into Postgres, and everything the platform derives hangs off the Postgres rows. Meetings and workshops moved off this pull to config-as-code, and competitions moved off it to a GitHub Projects mirror — read
+[Config-as-code](/docs/platform/guides/meetings-and-teams/club-config) and
+[Competitions](/docs/platform/guides/meetings-and-teams/competitions) for
+where those come from now. This page covers what Airtable still owns.
 Read it before adding a synced field or changing `server/airtable/`; for the
 exported functions, see the generated
 [`server/airtable`](/docs/platform/reference/server/airtable) reference, and
@@ -19,19 +20,18 @@ The split exists because `attendance."meetingId"` needs something that keeps its
 
 ## What lives where
 
-Four integration tables, and the direction is **per field, never per table**:
+Three integration tables, and the direction is **per field, never per table**:
 
-| Table                 | Officers author                                                                          | The platform writes                                         |
-| --------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| **Competitions**      | Branch slug, Workshop _(link, by the workshop's old Airtable record id)_, Judging starts | ⚙️ Platform ID, ⚙️ Teams, ⚙️ Sync status                    |
-| **Members**           | Dues paid                                                                                | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended |
-| **Attendance**        | —                                                                                        | authoritative meeting attendance projection                 |
-| **Platform Settings** | reflection word minimum and submission window                                            | ⚙️ Platform ID, ⚙️ Sync status                              |
+| Table                 | Officers author                               | The platform writes                                         |
+| --------------------- | --------------------------------------------- | ----------------------------------------------------------- |
+| **Members**           | Dues paid                                     | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended |
+| **Attendance**        | —                                             | authoritative meeting attendance projection                 |
+| **Platform Settings** | reflection word minimum and submission window | ⚙️ Platform ID, ⚙️ Sync status                              |
 
 One rule governs the right-hand column: **push only fields the platform owns exclusively, and never create a field both sides write.** Two writers have no conflict-resolution story, and last-writer-wins destroys work silently. The `⚙️` prefix warns officers off a field; the field editing permissions set by hand enforce it.
 
 > [!NOTE]
-> There used to be a fifth table here, **Teams**, push-only, mirroring each team's name, member count and PR entry state. The platform redesign's teams-core step made teams persistent and competition-independent, so a team no longer has the one `competitionId` this table's rows were keyed on, and `⚙️ Teams` (the count on the Competitions row above) is a stub reading 0 until the competitions step gives it a new source. The Teams table itself, and its registry entry (`pushTeams` in `server/airtable/push.ts`), were deleted; the Airtable table is left for an officer to remove from the base by hand, the same by-hand cleanup the scoring fields got.
+> There used to be a **Competitions** table here, officer-authored (branch slug, a Workshop link, Judging starts), platform-written (`⚙️ Platform ID`, `⚙️ Teams`, `⚙️ Sync status`). The platform redesign's competitions step deleted its pull (`pullCompetitions` in `server/airtable/sync.ts`) and its refusal rules (`checkCompetition`/`checkCompetitionValues` in `refusals.ts`) — a competition is a GitHub issue mirror now, see [Competitions](/docs/platform/guides/meetings-and-teams/competitions). Before it, there was a push-only **Teams** table, mirroring each team's name, member count and PR entry state, deleted by the teams-core step for the same reason a team stopped being scoped to one competition. Both tables are left in the base for an officer to remove by hand, the same by-hand cleanup the scoring fields got.
 
 The **Meetings**, **Workshops** and **Projects** tables still exist in the base — officers should not edit them any more, and nothing reads from them. They are deleted from the base itself, along with the rest of the Airtable integration, in the final teardown step once nothing else reads or writes Airtable.
 
@@ -45,22 +45,21 @@ export-only. See [Attendance](/docs/platform/guides/meetings-and-teams/attendanc
 
 Only officers have Airtable access, so the base is the officer console for anything it can hold — an admin screen not built is a screen not maintained. The line is not "officer-only work", it is **what Airtable can key a row to**.
 
-| Task                                            | Where                                                |
-| ----------------------------------------------- | ---------------------------------------------------- |
-| Create or edit a meeting or a workshop          | A pull request against `@devdogsuga/club-config`     |
-| Open a competition, by linking its workshop     | Airtable                                             |
-| Set `Judging starts`                            | Airtable                                             |
-| Record dues                                     | Airtable                                             |
-| Give a team a named award, including the winner | Platform — `awardTeam`                               |
-| Run a pass now                                  | Either — `requestAirtableSync`, or the base's button |
+| Task                                            | Where                                                                                                         |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Create or edit a meeting or a workshop          | A pull request against `@devdogsuga/club-config`                                                              |
+| Create a competition draft, kick it off         | GitHub (the Competitions Project) — see [Competitions](/docs/platform/guides/meetings-and-teams/competitions) |
+| Record dues                                     | Airtable                                                                                                      |
+| Give a team a named award, including the winner | Platform — `awardTeam`                                                                                        |
+| Run a pass now                                  | Either — `requestAirtableSync`, or the base's button                                                          |
 
-`awardTeam` needs a competition and a team identity that Airtable holds only as a mirror on the competition side (teams themselves are git-native now — see [Teams](/docs/platform/guides/meetings-and-teams/teams) — and are not in this base at all), and is a server action gated on the same permission as roster edits, except the sync trigger, which has its own. Scoring is off-platform, so there is no tally to write the `winner` award: an officer records it through `awardTeam`, the same action that gives any other named award.
+`awardTeam` needs a competition and a team identity, neither of which is in this base at all any more: a competition is a GitHub issue mirror and a team is a git branch mirror (see [Teams](/docs/platform/guides/meetings-and-teams/teams)). It is a server action gated on the same permission as roster edits, except the sync trigger, which has its own. Scoring is off-platform, so there is no tally to write the `winner` award: an officer records it through `awardTeam`, the same action that gives any other named award.
 
 </details>
 
 ## Identity survives editing
 
-Every synced row carries `airtableRecordId` — unique on `competitions`, partially unique on `attendance`. `meetings` and `workshops` carry the column too, but only for the migrated rows: each kept its old Airtable record id as its **`configId`**, so a competition's `Workshop` link (still an Airtable record id) resolves to the right platform row without a pull of its own — `pullCompetitions` looks it up by `configId`, not by a fresh `airtableRecordId` match. Record ids survive renames, field edits and view re-sorts, so retitling a competition updates a row rather than orphaning the teams pointing at it. Matching on name or slug would break the first time somebody fixed a typo, and break in the worst way: a second row that looks right while the earned credit stays on the first.
+Every synced row carries `airtableRecordId`, partially unique on `attendance`. `meetings` and `workshops` carry the column too, but only for the migrated rows: each kept its old Airtable record id as its **`configId`**. Record ids survive renames, field edits and view re-sorts, so fixing a member's typo'd name updates a row rather than orphaning whatever pointed at it. Matching on name would break the first time somebody fixed one, and break in the worst way: a second row that looks right while the earned credit stays on the first.
 
 ## One pass
 
@@ -70,31 +69,19 @@ The cron fires `*/15 * * * *` at `/airtable/sync`; `requestAirtableSync()` runs 
 2. **Claim the lease**, or return `already_running`; a manual run inside the cooldown returns `rate_limited`.
 3. **Ensure and pull Platform Settings**, retaining the previous policy when an
    officer enters an invalid value.
-4. **Pull Competitions**, resolving each `Workshop` link against `workshops.configId`.
-5. **Push** Members, Attendance, and derived counts.
-6. **Write refusals** into each record's `⚙️ Sync status`, release the lease,
+4. **Push** Members, Attendance, and derived counts.
+5. **Write refusals** into each record's `⚙️ Sync status`, release the lease,
    and advance `lastSyncedAt` only if the pass completed.
 
-A missing officer-authored competition is a **soft archive**: `deletedAt` is
-set, the row leaves the site, and attendance survives. Platform-authored
-Attendance rows are recreated by the next push if their Airtable projections
-are removed. Meetings and workshops archive the same
-way, but through the config reconcile now — see
-[Config-as-code](/docs/platform/guides/meetings-and-teams/club-config).
+Platform-authored Attendance rows are recreated by the next push if their
+Airtable projections are removed. Meetings and workshops archive through the
+config reconcile now, and competitions through GitHub closing the issue — see
+[Config-as-code](/docs/platform/guides/meetings-and-teams/club-config) and
+[Competitions](/docs/platform/guides/meetings-and-teams/competitions).
 
 ## The rules that protect credit
 
-A refusal is per **field**, not per record: fixing a title and moving `Judging starts` in one edit applies the one and complains about the other. The reason is written back where the edit was made, because otherwise a refused edit looks exactly like a sync that has not run yet.
-
-| Refused                                                      | Because                                                      |
-| ------------------------------------------------------------ | ------------------------------------------------------------ |
-| `Judging starts` at or before the opening workshop's meeting | It cannot precede the session that announces the competition |
-| A competition Title over 80 characters                       | It cannot go on a public page as written                     |
-
-> [!NOTE]
-> A third rule, `judging_moved_after_freeze`, still exists in `refusals.ts` and still has a code and a message, but it never fires: the fact it reads (`participationFrozen`, "has any team's entry been frozen") was computed from `teams."competedAt"`, which the platform redesign's teams-core step dropped along with the rest of the old per-competition team model. `Judging starts` can move freely, even after judging, until the competitions step reintroduces a freeze signal from the git-native competition-entry mirror.
-
-`Judging starts` protects **history** (or would, once the freeze signal the note above describes returns). The title length is a different kind — nothing is at risk, the value simply cannot be published — so the refused field is dropped from the write rather than blanked, and whatever was already up stays up until the replacement fits.
+A refusal is per **field**, not per record: the reason is written back where the edit was made, because otherwise a refused edit looks exactly like a sync that has not run yet. There is currently one integration table with an officer-authored field at all (Platform Settings' reflection policy, validated inline rather than through a named refusal) — the rules this section used to name, `judging_before_workshop`/`judging_moved_after_freeze`/`competition_title_too_long`, left with the Competitions table and `checkCompetition`/`checkCompetitionValues` above.
 
 If a write is rejected for a reason no rule here anticipates, that **one row** is skipped and says so in its own `⚙️ Sync status`; the rest of the pass runs normally. Refusals gathered before any failure are still written back — the status write happens outside the pass's error boundary, so a pass that dies partway still reports what it learned.
 
@@ -117,7 +104,7 @@ The manual cooldown — `MANUAL_COOLDOWN_SECONDS`, one run a minute whoever asks
 <details>
 <summary>Why poll every fifteen minutes instead of subscribing to webhooks?</summary>
 
-Airtable does offer webhooks, but they expire on a seven-day refresh cycle and deliver cursor-based payloads that have to be replayed in order — real complexity for a club calendar that changes a few times a week. Polling a base this small has no failure mode more exotic than "runs again in fifteen minutes", and the manual trigger covers the case where fifteen minutes is too long to wait: an officer fixing a Judging starts time ten minutes before it matters should not have to.
+Airtable does offer webhooks, but they expire on a seven-day refresh cycle and deliver cursor-based payloads that have to be replayed in order — real complexity for a club calendar that changes a few times a week. Polling a base this small has no failure mode more exotic than "runs again in fifteen minutes", and the manual trigger covers the case where fifteen minutes is too long to wait: an officer fixing dues ten minutes before someone needs them corrected should not have to wait.
 
 One pass is seven list calls plus a schema read, and the pushes on top of whatever changed. The repository's own estimates of what that costs disagree — `cloudflare/scheduled.ts` reckons about five requests a pass and roughly 13% of the monthly call allowance, `run.ts` says roughly seven — so read the percentage as an order of magnitude rather than a measurement.
 

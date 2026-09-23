@@ -63,7 +63,7 @@ Acceptance is validated when answered, never when created: in between, the team 
 
 Leaving sets `teamMembers."leftAt"` rather than deleting the row — GitHub-first, same as joining: `removeMember` runs first, and only on success does the mirror record the departure. "Active" means `"leftAt" is null`, and that predicate is what every roster read, cap count and lead check in this file filters on. A member who leaves and later rejoins gets a **second** row, a new stint, not a revived first one — `teamMembers_one_active_per_team_user` is a partial unique index over active rows specifically so a rejoin does not collide with the row the first stint left behind.
 
-The reason to keep the history at all: a later competition step derives competition stars from who was on a team at some past moment (collaborator on a team-branch that entered before the competition's issue closed), and that question needs the record of when someone was actually active, not just who is on the roster today.
+The reason to keep the history at all: `platform.memberStars`' competition branch derives competition stars from who was on a team at some past moment (collaborator on a team-branch that entered before the competition's issue closed), and that question needs the record of when someone was actually active, not just who is on the roster today. See [Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards).
 
 ## Disbanding
 

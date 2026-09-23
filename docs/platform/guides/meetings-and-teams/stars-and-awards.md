@@ -1,7 +1,7 @@
 ---
 name: Stars & Streaks
 description: How authoritative meeting attendance and competition participation become the member passport and weekly streaks.
-order: 4
+order: 5
 ---
 
 # Stars & streaks
@@ -14,20 +14,28 @@ so changes are visible on the next read without a backfill.
 
 - One star is earned for each meeting whose `Counts toward progress` flag is
   enabled and that the member attended.
-- One star is earned for each DevDogs competition with that flag enabled when
-  the member belongs to a participating team.
+- One star is earned for each DevDogs competition the member's team
+  participated in — every mirrored (converted) competition counts, no
+  separate flag: being a real, kicked-off GitHub issue IS counting, the same
+  way `platform.competitions` losing its own `countsTowardProgress` column
+  reads.
 - A competition win decorates its competition star; it is not another star.
 
+Participation is `platform.competitionEntries`: held an active membership on
+the entering team (`teamMembers."joinedAt"`/`"leftAt"`) at the moment that
+team's entry — a pull request linking the competition's issue — opened, and
+the entry opened before the issue closed (or it is still open). One row per
+entry pull request, and `memberStars` groups by (member, competition) so a
+team that reopens an entry after the first PR closed still earns its members
+exactly one star, not two.
+
 > [!NOTE]
-> The competition half is currently a STUB. The platform redesign's teams-core
-> step made teams persistent and competition-independent, dropping
-> `teams."competedAt"` and the column team participation used to freeze
-> against — so `memberStars`' competition branch compiles but returns nothing,
-> and every star this view currently produces is a meeting star. The
-> platform redesign's competitions step rewires this to the competition-entry
-> mirror: participation becomes "collaborator on a team-branch that entered
-> before the competition's issue closed", derived from git and GitHub rather
-> than frozen once by a cron pass.
+> `competitionEntries` is populated by a `pull_request` webhook handler that
+> is not wired up yet — the platform redesign's competitions step landed the
+> table, the RLS, and the `memberStars` view read against it, but nothing
+> writes to it until a later step recognizes an entry PR and a merged winner.
+> Until then the table (and every competition star) is honestly empty rather
+> than a second stub layer papering over it.
 
 ## Streaks
 
@@ -36,9 +44,11 @@ or every available star when the club scheduled only one eligible opportunity.
 Weeks with no eligible opportunities do not break a streak, and an unfinished
 current week receives grace until its opportunities have passed.
 
-Competitions are bucketed by the start of their opening meeting, not by the
-Monday on which judging closes. This prevents a competition closing during the
-next workshop from being credited to the wrong streak week.
+Competitions are bucketed by `kickedOffAt` — when the draft converted into an
+issue — not by whenever the entry window happens to close. A competition has
+no fixed night any more (see
+[Competitions](/docs/platform/guides/meetings-and-teams/competitions)), so
+kickoff is the one moment every competition star can anchor a streak week to.
 
 The Attendance page shows lifetime meeting/competition volume, current and
 longest streaks, this week's progress, and the full passport.
@@ -47,7 +57,6 @@ longest streaks, this week's progress, and the full passport.
 
 There is no officer override or correction subsystem for attendance or
 competition participation. A star is a fact derived straight from the
-attendance ledger (and, once the competitions step lands, the competition-entry
-mirror) — there is nothing to revoke and nowhere for an exception to live. A
-late check-in is handled by re-displaying the rotating code, not by a
-correction after the fact.
+attendance ledger and the competition-entry mirror — there is nothing to
+revoke and nowhere for an exception to live. A late check-in is handled by
+re-displaying the rotating code, not by a correction after the fact.

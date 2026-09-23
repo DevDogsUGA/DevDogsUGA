@@ -1,7 +1,7 @@
 ---
 name: Attendance
 description: Rotating meeting check-in, authoritative attendance records, and EL reflections.
-order: 3
+order: 4
 ---
 
 # Attendance
@@ -43,12 +43,17 @@ fields.
 ## EL reflections
 
 Meeting reflections require active attendance and `EL eligible` on the
-meeting. Competition reflections require membership on a team that competed
-and `EL eligible` on the DevDogs competition.
+meeting. Competition reflections require the member's team to have entered
+the competition -- an active membership at the moment the entry (a pull
+request linking the issue) opened, the same rule
+[Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards)
+uses for the competition star -- and the competition's issue to have closed;
+a still-open competition has nothing to reflect on yet.
 
 Members may save drafts below the word minimum. Submission requires the global
 minimum (initially 100 words) and must occur before the global window closes
-(initially seven exact days after meeting end or competition judging start).
+(initially seven exact days after meeting end or the competition's issue
+closing).
 Submitted reflections are member-locked; there is no officer exception.
 
 Every reflection mutation creates immutable revision evidence and an audit

@@ -1,59 +1,46 @@
 ---
 name: Meetings & Teams
-description: The shape of club participation — meetings, workshops, week-long competitions, and teams — and why a competition is a row of its own rather than a stage of a workshop.
+description: The shape of club participation — meetings, workshops, git-native competitions, and git-native teams — and why none of the three hang off each other any more.
 order: 1
 ---
 
 # Meetings & Teams
 
-DevDogs meets weekly. Each meeting runs one or more **workshops** in parallel, one per project. A workshop usually ends by announcing a feature, which opens a **competition**: teams then have most of a week to build it asynchronously, presenting and being judged at the _following_ meeting. Read this page before touching anything that reads `platform.meetings`, `workshops`, `competitions` or `teams`. If you only need a function signature, skip to the generated [`server/teams`](/docs/platform/reference/server/teams) reference instead.
+DevDogs meets weekly. Each meeting runs one or more **workshops** in parallel, one per project. A workshop usually ends by announcing a feature; an officer turns that into a **competition** by hand, on GitHub, and the platform mirrors it — there is no schedule relationship between a workshop and the competition it announces any more. Read this page before touching anything that reads `platform.meetings`, `workshops`, `competitions` or `teams`. If you only need a function signature, skip to the generated [`server/teams`](/docs/platform/reference/server/teams) reference instead.
 
-The detail the model has to get right: a competition is not a room with a start time. It is a week-long window bracketed by two in-person moments belonging to two _different_ meetings, so a meeting straddles two competitions — it judges the one that opened last week and opens the next one.
-
-```
-Meeting 1 (Sep 3)        Meeting 2 (Sep 10)       Meeting 3 (Sep 17)
-├─ workshop: SGF         ├─ judging: SGF comp     ├─ judging: Sched comp
-│    opens competition ──┤                        │
-│                        ├─ workshop: Scheduler ──┘
-└──── teams build, async ┘
-```
-
-**Not every workshop opens a competition.** A supplementary workshop is complete on its own, and it is simply a `workshops` row with no `competitions` row — a structural fact rather than an inferred absence, which is what makes the one-star rule fall out with no special case anywhere.
+**Not every workshop opens a competition.** A supplementary workshop is complete on its own, and announcing a competition off one is an officer's manual GitHub action rather than anything the schema tracks between the two rows.
 
 ## Four rows, each answering one question
 
-| Row            | Answers                                                         |
-| -------------- | --------------------------------------------------------------- |
-| `meetings`     | when and where the club gathered, and who showed up             |
-| `workshops`    | the teaching slot for one project recommendation at one meeting |
-| `competitions` | the week of async work a workshop opened, and who won it        |
-| `teams`        | a persistent project team -- see below                          |
+| Row            | Answers                                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------- |
+| `meetings`     | when and where the club gathered, and who showed up                                                     |
+| `workshops`    | the teaching slot for one project recommendation at one meeting                                         |
+| `competitions` | a mirror of a GitHub issue -- see [Competitions](/docs/platform/guides/meetings-and-teams/competitions) |
+| `teams`        | a persistent project team -- see [Teams](/docs/platform/guides/meetings-and-teams/teams)                |
 
 There is no `projects` table any more — a workshop's project is free text on the row (`workshops."project"`, e.g. "DogDays", nullable), not a foreign key. See [Config-as-code](/docs/platform/guides/meetings-and-teams/club-config) for why.
 
-Attendance attaches to the meeting with the workshop as a dimension, never to the competition — there is nothing to attend in a week of async work.
+Attendance attaches to the meeting with the workshop as a dimension, never to a competition — there is nothing in-person to attend about a GitHub issue.
 
-**Teams do not hang off a competition any more.** The platform redesign's teams-core step made a team a persistent, competition-independent git branch (`team/<slug>` off `main`); it can enter any number of competitions over its life, not exactly one week. See [Teams](/docs/platform/guides/meetings-and-teams/teams) for the current model.
+**Neither teams nor competitions hang off a meeting or a workshop any more.** A team is a persistent git branch (`team/<slug>` off `main`) that can enter any number of competitions over its life, and a competition is a GitHub issue with its own asynchronous lifecycle — kicked off whenever an officer converts a draft, closed whenever they close the issue, on no fixed night. See [Teams](/docs/platform/guides/meetings-and-teams/teams) and [Competitions](/docs/platform/guides/meetings-and-teams/competitions) for the current models.
 
-Three constraints carry most of the meaning:
-
-- **`competitions."workshopId"` is unique.** A workshop opens at most one competition, and the pair is a foreign key rather than an inference from two rows sharing a meeting.
-- **`competitions."judgingStartsAt"` is an authored datetime**, display-only for now: it no longer drives a roster lock or a star freeze -- see [Teams](/docs/platform/guides/meetings-and-teams/teams) for why. `judgingMeetingId` is a label column beside it, nullable and not written by the sync.
-- **`workshops` carries `unique (id, "meetingId")`** solely so attendance can declare a composite foreign key and have the database reject a row naming a workshop from another meeting.
+One constraint on `workshops` carries most of the remaining meaning: it declares `unique (id, "meetingId")` solely so attendance can declare a composite foreign key and have the database reject a row naming a workshop from another meeting.
 
 ## Where it lives
 
-The schema is `supabase/migrations/20260829040000_11_platform_events_core.sql` (meetings, workshops, competitions), amended in place for the config-as-code cutover: `meetings.countsTowardProgress` and `elEligible` merged into one `countsForCredit` flag, `meetings.configId`/`surveyUrl` and `workshops.configId` were added, `workshops.projectId` and the `projects` table were dropped in favor of `workshops."project"` as free text. `20260829050100_16_platform_team_awards.sql` has the `memberStars` view.
+The meetings/workshops schema is `supabase/migrations/20260829040000_11_platform_events_core.sql`, amended in place for the config-as-code cutover: `meetings.countsTowardProgress` and `elEligible` merged into one `countsForCredit` flag, `meetings.configId`/`surveyUrl` and `workshops.configId` were added, `workshops.projectId` and the `projects` table were dropped in favor of `workshops."project"` as free text. That same migration carries the competitions mirror now too -- see [Competitions](/docs/platform/guides/meetings-and-teams/competitions) for its shape. `20260829050100_16_platform_team_awards.sql` has `platform.competitionEntries` and the `memberStars` view.
 
-The code is `apps/platform/src/server/` under `teams/`, `airtable/`, `config/` and `loaders/`. Most scheduled passes are routes under `app/(api)/cron/`, including the config reconcile (`/cron/config-reconcile`) and the fifteen-minute Airtable pull (`/airtable/sync`, competitions and members only now). `cloudflare/scheduled.ts` is the one file that maps every cron expression to its route, so read it rather than guessing a path from a schedule.
+The code is `apps/platform/src/server/` under `teams/`, `github/`, `airtable/`, `config/` and `loaders/`. Most scheduled passes are routes under `app/(api)/cron/`: the config reconcile (`/cron/config-reconcile`), the nightly GitHub reconcile for teams and competitions (`/cron/github-reconcile`), and the fifteen-minute Airtable pull (`/airtable/sync`, members only now). `cloudflare/scheduled.ts` is the one file that maps every cron expression to its route, so read it rather than guessing a path from a schedule.
 
 ## Read next
 
 - [Teams](/docs/platform/guides/meetings-and-teams/teams) — forming one, joining one, the two caps, the lead, and disbanding.
+- [Competitions](/docs/platform/guides/meetings-and-teams/competitions) — the Competitions Project, kickoff, entries, and closing one out.
 - [Attendance](/docs/platform/guides/meetings-and-teams/attendance) — the ledger and check-in.
-- [Stars & awards](/docs/platform/guides/meetings-and-teams/stars-and-awards) — what participation adds up to.
+- [Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards) — what participation adds up to.
 - [Config-as-code](/docs/platform/guides/meetings-and-teams/club-config) — where meetings and workshops come from now.
-- [Airtable sync](/docs/platform/guides/meetings-and-teams/airtable-sync) — where competitions, members and teams still come from.
+- [Airtable sync](/docs/platform/guides/meetings-and-teams/airtable-sync) — where members still come from.
 
 Scoring is off-platform (officer scores and live voting, run outside the site). The only per-competition state the platform persists is who won — a `teamAwards` row with `category = 'winner'`, written by an officer through `awardTeam` — and the results page collapses to entrants plus that winner, if one has been recorded.
 
@@ -62,28 +49,21 @@ Scoring is off-platform (officer scores and live voting, run outside the site). 
 <details>
 <summary>Why was the earlier <code>(event, track, stage)</code> shape wrong?</summary>
 
-An earlier draft had one `sessions` table keyed `(event, track, stage)`, with `stage` being `workshop | hackathon`. It failed on three counts once the real timeline was described:
+An earlier draft had one `sessions` table keyed `(event, track, stage)`, with `stage` being `workshop | hackathon`. It failed once the real timeline was described:
 
 - `startsAt` and `endsAt` are meaningless on a competition row. There is nothing to check into.
 - The competition star was defined as attendance on the hackathon session, which could never fire — nobody attends a week of async work.
-- `unique (eventId, trackId, stage)` assumed both stages lived inside one event, but the workshop is at meeting _N_ and the judging at meeting _N+1_.
 
-The general shape of the error: **a table that mixes things you attend with things that merely have a duration.** Splitting them is what lets attendance key to something real, and it removed the discriminator entirely — there is no `eventStage` enum, which is the clearest sign the split was right.
+The general shape of the error: **a table that mixes things you attend with things that merely have a duration.** Splitting them is what lets attendance key to something real, and it removed the discriminator entirely — there is no `eventStage` enum, which is the clearest sign the split was right. `competitions` went on to lose its schedule relationship to `meetings`/`workshops` ENTIRELY once the platform redesign's competitions step made it a GitHub issue mirror — see the note below.
 
 </details>
 
 <details>
-<summary>Why does judging carry its own datetime instead of the meeting's?</summary>
+<summary>Why did a competition stop being a week-long window a meeting opened and another judged?</summary>
 
-Presentations are their own occasion. They happen at a meeting, but they are not the meeting, and the two start at different moments whenever anything else is on the agenda first.
+Through the platform redesign's competitions step, a competition WAS a week-long window: `competitions."workshopId"` (unique — a workshop opened at most one) pointed at the meeting that announced the feature, and an authored `judgingStartsAt`/`judgingMeetingId` pair pointed at the meeting judging happened at, usually the following week's. That datetime used to be the authority for a roster lock and a star freeze too — `isLocked`, `lockState.ts`, and a five-minute cron that stamped `teams."competedAt"` once judging began.
 
-- **Two competitions judged at one meeting can be judged at different times** — study group finder at 18:00, scheduler at 18:40. Deriving from the meeting would give both the same instant, which is wrong even for display.
-- **Judging need not be at a workshop meeting at all.** A dedicated presentations night is a `meetings` row with no workshops and a competition pointing at it.
-
-A null `judgingStartsAt` means "not scheduled yet", and everything downstream treats it as _not yet_ rather than _never_.
-
-> [!NOTE]
-> This datetime used to be the authority for a roster lock and a star freeze — `isLocked`, `lockState.ts`, and a five-minute `judgingPass.ts` cron that stamped `teams."competedAt"` once judging began. All of it was deleted by the platform redesign's teams-core step, because teams stopped being scoped to a competition at all: there is no "this team's roster" to lock or freeze against ONE competition's clock when the team can be active on several teams and enter any number of competitions. `judgingStartsAt` is display-only until the platform redesign's competitions step gives it a new job.
+All of it is gone. A team stopped being scoped to a competition earlier, in the teams-core step, which already made "this team's roster, locked against ONE competition's clock" unrepresentable — a team active on several competitions has no single clock to lock against. The competitions step finished the job: a competition is a GitHub issue now (see [Competitions](/docs/platform/guides/meetings-and-teams/competitions)), kicked off whenever an officer converts a draft and closed whenever they close the issue, neither pinned to a meeting. `plannedEndAt` is what is left of "when does this end" — display-only, authored on the GitHub Project's date field, never read by any lock or deadline logic — and `closedAt` (the issue's own close) is the one real clock: closing IS the only thing that ever ended a competition's entry window, roster lock or no roster lock.
 
 </details>
 
