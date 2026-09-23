@@ -29,13 +29,7 @@ import {
   pushTeams,
   writeSyncStatus,
 } from "./push";
-import {
-  pullCompetitions,
-  pullMeetings,
-  pullProjects,
-  pullWorkshops,
-  pullReflectionSettings,
-} from "./sync";
+import { pullCompetitions, pullReflectionSettings } from "./sync";
 import type { Refusal } from "./refusals";
 
 /**
@@ -239,35 +233,11 @@ export async function runAirtableSync(
     addPull(pulled, settingsOutcome);
     refusals.push(...settingsOutcome.refusals);
 
-    // Pull order is a dependency order, not a preference: workshops resolve
-    // both project and meeting links, and competitions resolve workshop links.
-    //
-    // Projects used to be PUSHED here instead, ahead of everything, with a
-    // re-list afterwards so a record created this pass could be linked to. All
-    // of that is gone: the table is officer-authored now, for the reason
-    // `pullProjects` gives, so it is simply the first pull rather than a push
-    // the rest of the pass had to wait on.
-    const projectOutcome = await pullProjects(listed.projects);
-    addPull(pulled, projectOutcome);
-    refusals.push(...projectOutcome.refusals);
-    const projectIds = projectOutcome.idMap;
-
-    const meetingOutcome = await pullMeetings(listed.meetings);
-    addPull(pulled, meetingOutcome);
-    refusals.push(...meetingOutcome.refusals);
-
-    const workshopOutcome = await pullWorkshops(
-      listed.workshops,
-      meetingOutcome.idMap,
-      projectIds,
-    );
-    addPull(pulled, workshopOutcome);
-    refusals.push(...workshopOutcome.refusals);
-
-    const competitionOutcome = await pullCompetitions(
-      listed.competitions,
-      workshopOutcome.idMap,
-    );
+    // Meetings, workshops and projects no longer pull from Airtable: they are
+    // authored in `@devdogsuga/club-config` and land through
+    // `server/config/reconcile.ts` instead, on its own trigger. Competitions
+    // stay Airtable-authored until the git-native competitions rework.
+    const competitionOutcome = await pullCompetitions(listed.competitions);
     addPull(pulled, competitionOutcome);
     refusals.push(...competitionOutcome.refusals);
 

@@ -29,7 +29,6 @@ import { isUniqueViolation } from "~/server/teams/errors";
  */
 
 const IDS = {
-  project: "a0000000-0000-0000-0000-0000000000a1",
   meeting: "a0000000-0000-0000-0000-0000000000b1",
   workshop: "a0000000-0000-0000-0000-0000000000c1",
   comp: "a0000000-0000-0000-0000-0000000000d1",
@@ -157,9 +156,6 @@ async function cleanup() {
     where "ownerUserId" = ${IDS.lead}::uuid or id = ${IDS.env}::uuid
   `);
   await db.execute(sql`
-    delete from platform.projects where id = ${IDS.project}::uuid
-  `);
-  await db.execute(sql`
     delete from auth.users where id in (${IDS.lead}::uuid, ${IDS.member}::uuid)
   `);
   await db.execute(sql`delete from vault.secrets where name like 'provtest-%'`);
@@ -178,17 +174,13 @@ beforeAll(async () => {
     `);
   }
   await db.execute(sql`
-    insert into platform.projects (id, slug, "displayName")
-    values (${IDS.project}::uuid, 'prov-test', 'Prov Test')
-  `);
-  await db.execute(sql`
     insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt")
     values (${IDS.meeting}::uuid, 'prov-meeting', 'Prov',
             now(), now() + interval '2 hours')
   `);
   await db.execute(sql`
-    insert into platform.workshops (id, "meetingId", "projectId")
-    values (${IDS.workshop}::uuid, ${IDS.meeting}::uuid, ${IDS.project}::uuid)
+    insert into platform.workshops (id, "meetingId", "project")
+    values (${IDS.workshop}::uuid, ${IDS.meeting}::uuid, 'Prov Test')
   `);
   await db.execute(sql`
     insert into platform.competitions (id, slug, "workshopId", "judgingStartsAt")

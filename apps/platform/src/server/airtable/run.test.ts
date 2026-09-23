@@ -75,35 +75,12 @@ vi.mock("./credentials", () => credentials);
 
 vi.mock("./lease", () => lease);
 vi.mock("./push", () => writes);
+// Meetings, workshops and projects no longer have a pull: they are authored
+// in `@devdogsuga/club-config` and land through `server/config/reconcile.ts`
+// instead. Competitions stay Airtable-authored until the git-native
+// competitions rework, so it is the one pull left to mock here.
 vi.mock("./sync", () => ({
-  pullMeetings: vi.fn(() =>
-    Promise.resolve({
-      upserted: 0,
-      archived: 0,
-      skipped: 0,
-      refusals: [],
-      idMap: new Map(),
-    }),
-  ),
-  pullWorkshops: vi.fn(() =>
-    Promise.resolve({
-      upserted: 0,
-      archived: 0,
-      skipped: 0,
-      refusals: [],
-      idMap: new Map(),
-    }),
-  ),
   pullCompetitions: vi.fn(() =>
-    Promise.resolve({
-      upserted: 0,
-      archived: 0,
-      skipped: 0,
-      refusals: [],
-      idMap: new Map(),
-    }),
-  ),
-  pullProjects: vi.fn(() =>
     Promise.resolve({
       upserted: 0,
       archived: 0,

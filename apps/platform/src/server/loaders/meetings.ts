@@ -18,7 +18,6 @@ import {
   attendance,
   competitions,
   meetings,
-  projects,
   teams,
   workshops,
 } from "~/server/db/schema";
@@ -97,21 +96,6 @@ export interface MeetingSummary {
   rsvpUrl: string | null;
   attendanceCount: number;
   workshopCount: number;
-}
-
-export interface WorkshopDetail {
-  workshopId: string;
-  meeting: MeetingSummary;
-  projectId: string;
-  projectSlug: string;
-  projectName: string;
-  competition: {
-    id: string;
-    slug: string;
-    judgingStartsAt: Date | null;
-    maxTeamSize: number | null;
-    teamCount: number;
-  } | null;
 }
 
 /**
@@ -252,105 +236,20 @@ export const getMeetingBySlug = cache(
   },
 );
 
-/**
- * A workshop and everything a member needs to decide whether to join a team.
- *
- * The competition is a left join because a workshop need not have one: a
- * supplementary session is a workshop with nothing to compete in, and a null
- * here is that case rather than a missing row.
- */
-export const getWorkshopDetail = cache(
-  async (
-    meetingSlug: string,
-    projectSlug: string,
-  ): Promise<WorkshopDetail | null> => {
-    const [row] = await db
-      .select({
-        workshopId: workshops.id,
-        projectId: projects.id,
-        projectSlug: projects.slug,
-        projectName: projects.displayName,
-        competitionId: competitions.id,
-        competitionSlug: competitions.slug,
-        judgingStartsAt: competitions.judgingStartsAt,
-        maxTeamSize: competitions.maxTeamSize,
-        teamCount: correlatedCount(
-          db
-            .select({ n: sql`count(*)::int` })
-            .from(teams)
-            .where(eq(teams.competitionId, competitions.id)),
-        ),
-        ...summaryColumns,
-      })
-      .from(workshops)
-      .innerJoin(meetings, eq(meetings.id, workshops.meetingId))
-      .innerJoin(projects, eq(projects.id, workshops.projectId))
-      .leftJoin(
-        competitions,
-        and(
-          eq(competitions.workshopId, workshops.id),
-          isNull(competitions.deletedAt),
-        ),
-      )
-      .where(
-        and(
-          isNull(workshops.deletedAt),
-          isNull(meetings.deletedAt),
-          eq(meetings.slug, meetingSlug),
-          eq(projects.slug, projectSlug),
-        ),
-      );
-
-    if (!row) return null;
-
-    return {
-      workshopId: row.workshopId,
-      projectId: row.projectId,
-      projectSlug: row.projectSlug,
-      projectName: row.projectName,
-      meeting: {
-        id: row.id,
-        slug: row.slug,
-        nameOverride: row.nameOverride,
-        cancelledAt: row.cancelledAt,
-        cancellationReason: row.cancellationReason,
-        building: row.building,
-        location: row.location,
-        startsAt: row.startsAt,
-        endsAt: row.endsAt,
-        kind: row.kind,
-        summary: row.summary,
-        rsvpUrl: row.rsvpUrl,
-        attendanceCount: row.attendanceCount,
-        workshopCount: row.workshopCount,
-      },
-      competition:
-        row.competitionId === null
-          ? null
-          : {
-              id: row.competitionId,
-              slug: row.competitionSlug!,
-              judgingStartsAt: row.judgingStartsAt,
-              maxTeamSize: row.maxTeamSize,
-              teamCount: row.teamCount,
-            },
-    };
-  },
-);
-
 export interface MeetingWorkshop {
   workshopId: string;
   /**
    * What the officers call this session: "Supabase", "Career Fair Readiness".
-   * Null falls back to {@link projectName}, so every workshop authored before
-   * the column existed renders exactly as it did.
+   * Null falls back to {@link MeetingWorkshop.project}, so every workshop
+   * authored before the column existed renders exactly as it did.
    */
   title: string | null;
   /** One or two sentences on what it teaches. Null renders nothing. */
   description: string | null;
-  /** Both null for a workshop that teaches a skill rather than a codebase. */
-  projectSlug: string | null;
-  projectName: string | null;
+  /** Free text; null for a workshop that teaches a skill rather than a
+   *  codebase. Authored in config, not looked up -- there is no `projects`
+   *  table any more. */
+  project: string | null;
   competitionSlug: string | null;
   teamCount: number;
 }
@@ -358,24 +257,13 @@ export interface MeetingWorkshop {
 /**
  * The workshops that ran at one meeting.
  *
- * BOTH joins are left joins, for the same reason twice over.
+ * The competition join is a left join: a supplementary workshop has none and
+ * is complete on its own, worth exactly one star, so an inner join would
+ * silently drop it from the meeting it ran at.
  *
- * The competition, because a supplementary workshop has none and is complete
- * on its own, worth exactly one star, so an inner join would silently drop it
- * from the meeting it ran at.
- *
- * The project, because `workshops.projectId` is nullable as of the events
- * rework: a career-readiness session teaches a skill and belongs to no
- * codebase, and inventing a project for it would put that session on the
- * Projects page as a body of work the club does not have. An inner join would
- * make the nullable column unreachable: the row would exist, no surface would
- * ever show it, and it would fail silently on exactly the night the feature
- * was added for.
- *
- * Ordered by the project sort order officers control, so the list on the page
- * matches the order the sessions are announced in rather than the alphabet.
- * `nullsLast` puts the project-less sessions after the ones that carry an
- * ordering officers chose, rather than wherever Postgres would default them.
+ * Ordered by title rather than by a project's authored sort order -- that
+ * column went with the `projects` table. Title is what officers actually
+ * name a session by, and it is the one thing every workshop always has.
  */
 export const getMeetingWorkshops = cache(
   async (meetingId: string): Promise<MeetingWorkshop[]> => {
@@ -384,8 +272,7 @@ export const getMeetingWorkshops = cache(
         workshopId: workshops.id,
         title: workshops.title,
         description: workshops.description,
-        projectSlug: projects.slug,
-        projectName: projects.displayName,
+        project: workshops.project,
         competitionSlug: competitions.slug,
         teamCount: correlatedCount(
           db
@@ -395,7 +282,6 @@ export const getMeetingWorkshops = cache(
         ),
       })
       .from(workshops)
-      .leftJoin(projects, eq(projects.id, workshops.projectId))
       .leftJoin(
         competitions,
         and(
@@ -406,11 +292,7 @@ export const getMeetingWorkshops = cache(
       .where(
         and(eq(workshops.meetingId, meetingId), isNull(workshops.deletedAt)),
       )
-      .orderBy(
-        sql`${projects.sortOrder} asc nulls last`,
-        sql`${projects.displayName} asc nulls last`,
-        asc(workshops.title),
-      );
+      .orderBy(sql`${workshops.project} asc nulls last`, asc(workshops.title));
   },
 );
 
@@ -418,13 +300,8 @@ export interface MeetingRangeWorkshop {
   workshopId: string;
   /** The officers' own word for the session. Null falls back to the project. */
   title: string | null;
-  /**
-   * Both null for a workshop teaching a skill rather than a codebase.
-   * `workshops.projectId` is nullable, and the join below is a left one so
-   * such a session reaches the calendar instead of vanishing from it.
-   */
-  projectSlug: string | null;
-  projectName: string | null;
+  /** Free text; null for a workshop teaching a skill rather than a codebase. */
+  project: string | null;
   /**
    * The competition this workshop opened, or null.
    *
@@ -442,17 +319,17 @@ export interface MeetingRangeJudging {
   competitionSlug: string;
   /**
    * A competition has no name of its own. It is called after the workshop that
-   * opened it, and after that workshop's project.
+   * opened it, and after that workshop's project recommendation.
    *
-   * Null when it has neither: `workshops.projectId` is nullable, and
-   * `judgingForMeetings` left-joins deliberately so that a project-less
-   * competition still reaches the calendar instead of being dropped off a
-   * night that has a deadline behind it.
+   * Null when it has neither: `workshops.project` is nullable, and
+   * `judgingForMeetings` reads it straight off the workshop row, no join
+   * needed any more, so a project-less competition still reaches the
+   * calendar instead of being dropped off a night that has a deadline behind
+   * it.
    *
    * Read through `workshopLabel`, never directly; see `title` below.
    */
-  projectName: string | null;
-  projectSlug: string | null;
+  project: string | null;
   /**
    * The officer's word for the workshop this competition came out of.
    *
@@ -516,8 +393,10 @@ async function judgingForMeetings(
       meetingId: meetings.id,
       competitionId: competitions.id,
       competitionSlug: competitions.slug,
-      projectSlug: projects.slug,
-      projectName: projects.displayName,
+      // Read straight off the workshop row now -- free text, nullable, no
+      // join required. A competition normally hangs off repo work and so
+      // names one, but nothing in the schema enforces that.
+      project: workshops.project,
       // The officer's title for the opening workshop, so both nights of a
       // competition print the same word. Already joined below for the
       // `deletedAt` filter, so this costs no extra work.
@@ -526,12 +405,6 @@ async function judgingForMeetings(
     })
     .from(competitions)
     .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
-    // Left, because `workshops.projectId` is nullable. A competition normally
-    // hangs off repo work and so has a project, but nothing in the schema
-    // enforces that, and an inner join would answer "this meeting judges
-    // nothing" for a competition it does judge, and the calendar then quietly
-    // drops a judging chip off a night that has a deadline behind it.
-    .leftJoin(projects, eq(projects.id, workshops.projectId))
     .innerJoin(
       meetings,
       and(
@@ -558,8 +431,7 @@ async function judgingForMeetings(
     const entry: MeetingRangeJudging = {
       competitionId: row.competitionId,
       competitionSlug: row.competitionSlug,
-      projectSlug: row.projectSlug,
-      projectName: row.projectName,
+      project: row.project,
       title: row.title,
       // Non-null by construction: the join only matches rows whose
       // `judgingStartsAt` compared successfully against two timestamps, and
@@ -663,15 +535,12 @@ export const getMeetingsInRange = cache(
           meetingId: workshops.meetingId,
           workshopId: workshops.id,
           title: workshops.title,
-          projectSlug: projects.slug,
-          projectName: projects.displayName,
+          project: workshops.project,
           competitionSlug: competitions.slug,
         })
         .from(workshops)
-        // Left: this feeds the calendar and the schedule chips, so an inner
-        // join would make a project-less workshop invisible on exactly the
-        // surfaces the nullable column was added to serve.
-        .leftJoin(projects, eq(projects.id, workshops.projectId))
+        // Left: a supplementary workshop has no competition, and an inner
+        // join would silently drop it from the meeting it ran at.
         .leftJoin(
           competitions,
           and(
@@ -682,7 +551,10 @@ export const getMeetingsInRange = cache(
         .where(
           and(inArray(workshops.meetingId, ids), isNull(workshops.deletedAt)),
         )
-        .orderBy(asc(projects.sortOrder), asc(projects.displayName)),
+        .orderBy(
+          sql`${workshops.project} asc nulls last`,
+          asc(workshops.title),
+        ),
 
       judgingForMeetings(ids),
     ]);
@@ -693,8 +565,7 @@ export const getMeetingsInRange = cache(
       const entry: MeetingRangeWorkshop = {
         workshopId: row.workshopId,
         title: row.title,
-        projectSlug: row.projectSlug,
-        projectName: row.projectName,
+        project: row.project,
         competitionSlug: row.competitionSlug,
       };
       if (bucket) bucket.push(entry);
@@ -757,13 +628,14 @@ export const getCompetitionBySlug = cache(
         slug: competitions.slug,
         // The competition's own title wins when the officers have written one.
         // Below it the old chain still stands: a competition is called after
-        // its project, but `projectId` is nullable now, so the workshop's own
-        // title is the next best name, and the competition's slug is the last
-        // resort -- it is `not null`, unique, and already user-visible in git as
-        // the integration branch, so it is a real name rather than invented text.
+        // the workshop's project recommendation, free text now rather than a
+        // join, then the workshop's own title, then the competition's slug as
+        // the last resort -- it is `not null`, unique, and already
+        // user-visible in git as the integration branch, so it is a real name
+        // rather than invented text.
         name: sql<string>`coalesce(
           ${competitions.title},
-          ${projects.displayName},
+          ${workshops.project},
           ${workshops.title},
           ${competitions.slug}
         )`,
@@ -776,7 +648,6 @@ export const getCompetitionBySlug = cache(
       })
       .from(competitions)
       .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
-      .leftJoin(projects, eq(projects.id, workshops.projectId))
       .innerJoin(meetings, eq(meetings.id, workshops.meetingId))
       .where(
         and(
@@ -833,12 +704,13 @@ export const getMeetingSlugs = cache(async (): Promise<string[]> => {
  * `expectSession()`, so it is the only one a sitemap may name; the two under
  * `teams/` redirect an anonymous crawler to `/auth`.
  *
- * The joins are not decoration. `getCompetitionBySlug`, which the results
- * page calls before anything else and 404s on, reaches the competition's
- * name through `workshops → projects` and its `openedOn` through
- * `workshops → meetings`, and requires all three rows to be live. A slug list
- * that skipped them would put URLs in the sitemap that answer 404, so this
- * mirrors that query's filters exactly and selects one column.
+ * The join is not decoration. `getCompetitionBySlug`, which the results page
+ * calls before anything else and 404s on, reaches the competition's name off
+ * `workshops` directly (its title, or its free-text project recommendation)
+ * and its `openedOn` through `workshops → meetings`, and requires both rows
+ * to be live. A slug list that skipped them would put URLs in the sitemap
+ * that answer 404, so this mirrors that query's filters exactly and selects
+ * one column.
  *
  * `judgingStartsAt <= now` is the second filter, and it is about what the page
  * has to say rather than about whether it exists: a competition worth crawling

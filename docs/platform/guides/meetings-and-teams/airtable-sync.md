@@ -1,32 +1,38 @@
 ---
 name: Airtable Sync
-description: Where meetings come from — Airtable as the CMS and Postgres as the source of truth, how record ids keep identity through edits, what one pass does, and the refusals that protect credit people already earned.
-order: 5
+description: Where competitions, members and teams come from — Airtable as the CMS for what is left, Postgres as the source of truth, how record ids keep identity through edits, and the refusals that protect credit people already earned.
+order: 6
 ---
 
 # Airtable Sync
 
-**Airtable is the CMS. Postgres is the source of truth.** Officers author meetings, workshops and competitions in a base; a pass every fifteen minutes projects them into Postgres, and everything the platform derives hangs off the Postgres rows. Read this before adding a synced field or changing `server/airtable/`; for the exported functions, see the generated [`server/airtable`](/docs/platform/reference/server/airtable) reference, and for scaffolding the base itself, the [Airtable guides](/docs/platform/guides/airtable).
+**Airtable is the CMS for competitions, members and teams. Postgres is the source of truth.** Officers author competitions in a base; a pass every fifteen minutes projects them into Postgres, and everything the platform derives hangs off the Postgres rows. Meetings and workshops moved off this pull — read
+[Config-as-code](/docs/platform/guides/meetings-and-teams/club-config) for
+where those two come from now. This page covers what Airtable still owns.
+Read it before adding a synced field or changing `server/airtable/`; for the
+exported functions, see the generated
+[`server/airtable`](/docs/platform/reference/server/airtable) reference, and
+for scaffolding the base itself, the
+[Airtable guides](/docs/platform/guides/airtable).
 
 The split exists because `attendance."meetingId"` needs something that keeps its identity through an edit. Airtable gives non-technical editors typed fields, linked records and forms; it cannot give referential integrity.
 
 ## What lives where
 
-Nine integration tables, and the direction is **per field, never per table**:
+Seven integration tables, and the direction is **per field, never per table**:
 
-| Table                 | Officers author                                                                        | The platform writes                                             |
-| --------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| **Meetings**          | custom name, times, location, summary, kind, RSVP, cancellation, progress and EL flags | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                   |
-| **Workshops**         | Meeting _(link)_, Project _(link, optional)_, title, description                       | ⚙️ Platform ID, ⚙️ Attendance, ⚙️ Sync status                   |
-| **Competitions**      | Branch slug, Workshop _(link)_, Judging starts, Max team size                          | ⚙️ Platform ID, ⚙️ Teams, ⚙️ Sync status                        |
-| **Teams**             | —                                                                                      | ⚙️ Platform ID, ⚙️ Name, ⚙️ Members, ⚙️ Submission, ⚙️ Competed |
-| **Members**           | Dues paid                                                                              | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended     |
-| **Projects**          | nothing — a platform-owned mirror                                                      | ⚙️ Platform ID, ⚙️ Slug, Name                                   |
-| **Attendance**        | —                                                                                      | authoritative meeting attendance projection                     |
-| **EL Reflections**    | —                                                                                      | current reflection evidence                                     |
-| **Platform Settings** | reflection word minimum and submission window                                          | ⚙️ Platform ID, ⚙️ Sync status                                  |
+| Table                 | Officers author                                                                                         | The platform writes                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| **Competitions**      | Branch slug, Workshop _(link, by the workshop's old Airtable record id)_, Judging starts, Max team size | ⚙️ Platform ID, ⚙️ Teams, ⚙️ Sync status                        |
+| **Teams**             | —                                                                                                       | ⚙️ Platform ID, ⚙️ Name, ⚙️ Members, ⚙️ Submission, ⚙️ Competed |
+| **Members**           | Dues paid                                                                                               | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended     |
+| **Attendance**        | —                                                                                                       | authoritative meeting attendance projection                     |
+| **EL Reflections**    | —                                                                                                       | current reflection evidence                                     |
+| **Platform Settings** | reflection word minimum and submission window                                                           | ⚙️ Platform ID, ⚙️ Sync status                                  |
 
 One rule governs the right-hand column: **push only fields the platform owns exclusively, and never create a field both sides write.** Two writers have no conflict-resolution story, and last-writer-wins destroys work silently. Teams is push-only now — scoring is off-platform, so there is no grade to pull back. The `⚙️` prefix warns officers off a field; the field editing permissions set by hand enforce it.
+
+The **Meetings**, **Workshops** and **Projects** tables still exist in the base — officers should not edit them any more, and nothing reads from them. They are deleted from the base itself, along with the rest of the Airtable integration, in the final teardown step once nothing else reads or writes Airtable.
 
 No integration table lets a form create rows anymore: Attendance and EL
 Reflections are read-only projections, with no officer override or correction
@@ -39,7 +45,7 @@ Only officers have Airtable access, so the base is the officer console for anyth
 
 | Task                                            | Where                                                |
 | ----------------------------------------------- | ---------------------------------------------------- |
-| Create or edit a meeting or a workshop          | Airtable                                             |
+| Create or edit a meeting or a workshop          | A pull request against `@devdogsuga/club-config`     |
 | Open a competition, by linking its workshop     | Airtable                                             |
 | Set `Judging starts`, the max team size         | Airtable                                             |
 | Record dues                                     | Airtable                                             |
@@ -54,7 +60,7 @@ Everything on the platform side needs a member or team identity that Airtable ho
 
 ## Identity survives editing
 
-Every synced row carries `airtableRecordId` — unique on `meetings`, `workshops` and `competitions`, partially unique on `attendance`. Record ids survive renames, field edits and view re-sorts, so retitling "Sprint 2" to "Fall Sprint 2" updates a row rather than orphaning the attendance pointing at it. Matching on name or slug would break the first time somebody fixed a typo, and break in the worst way: a second row that looks right while the earned credit stays on the first. A meeting slug is likewise derived once, on insert, because it is in URLs from publication onward.
+Every synced row carries `airtableRecordId` — unique on `competitions`, partially unique on `attendance`. `meetings` and `workshops` carry the column too, but only for the migrated rows: each kept its old Airtable record id as its **`configId`**, so a competition's `Workshop` link (still an Airtable record id) resolves to the right platform row without a pull of its own — `pullCompetitions` looks it up by `configId`, not by a fresh `airtableRecordId` match. Record ids survive renames, field edits and view re-sorts, so retitling a competition updates a row rather than orphaning the teams pointing at it. Matching on name or slug would break the first time somebody fixed a typo, and break in the worst way: a second row that looks right while the earned credit stays on the first.
 
 ## One pass
 
@@ -64,47 +70,35 @@ The cron fires `*/15 * * * *` at `/airtable/sync`; `requestAirtableSync()` runs 
 2. **Claim the lease**, or return `already_running`; a manual run inside the cooldown returns `rate_limited`.
 3. **Ensure and pull Platform Settings**, retaining the previous policy when an
    officer enters an invalid value.
-4. **Pull Projects, Meetings, Workshops, then Competitions** in dependency
-   order.
+4. **Pull Competitions**, resolving each `Workshop` link against `workshops.configId`.
 5. **Push** Members, Attendance, Teams, EL Reflections, and derived counts.
 6. **Write refusals** into each record's `⚙️ Sync status`, release the lease,
    and advance `lastSyncedAt` only if the pass completed.
 
-A missing officer-authored meeting, workshop, competition, or project is a
-**soft archive**: `deletedAt` is set, the row leaves the site, and attendance
-survives. Platform-authored Attendance and EL Reflections rows are recreated by
-the next push if their Airtable projections are removed.
+A missing officer-authored competition is a **soft archive**: `deletedAt` is
+set, the row leaves the site, and attendance survives. Platform-authored
+Attendance and EL Reflections rows are recreated by the next push if their
+Airtable projections are removed. Meetings and workshops archive the same
+way, but through the config reconcile now — see
+[Config-as-code](/docs/platform/guides/meetings-and-teams/club-config).
 
 ## The rules that protect credit
 
-A refusal is per **field**, not per record: fixing a project link and a max team size in one edit applies the second and complains about the first. The reason is written back where the edit was made, because otherwise a refused edit looks exactly like a sync that has not run yet.
+A refusal is per **field**, not per record: fixing a max team size and a title in one edit applies the second and complains about the first. The reason is written back where the edit was made, because otherwise a refused edit looks exactly like a sync that has not run yet.
 
-| Refused                                                                 | Because                                                                            |
-| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| A workshop's Meeting or Project, once it has attendance                 | It re-attributes credit people already earned                                      |
-| **Emptying** a workshop's Project, once it has attendance               | It takes the project off stars members have already earned                         |
-| `Judging starts` at or before the opening workshop's meeting            | Every roster would lock the moment the competition was created                     |
-| `Judging starts` moving once participation is frozen                    | Later reopens settled rosters; earlier locks people out of days they spent joining |
-| A Summary over 240 characters, or an RSVP link off the allowlisted host | It cannot go on a public page as written                                           |
-| A meeting Name over 80 characters                                       | It cannot go on a public page as written                                           |
-| A workshop Title over 80, or a Description over 280                     | It cannot go on a public page as written                                           |
-| `Max team size` below 1                                                 | The database rejects the value, and a rejected write used to stop the whole pass   |
-| A Cancellation reason over 160 characters                               | It cannot go on a public page as written                                           |
-| A Cancellation reason with `Cancelled` empty                            | The reason is only ever shown beside the date it explains                          |
+| Refused                                                      | Because                                                                            |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `Judging starts` at or before the opening workshop's meeting | Every roster would lock the moment the competition was created                     |
+| `Judging starts` moving once participation is frozen         | Later reopens settled rosters; earlier locks people out of days they spent joining |
+| A competition Title over 80 characters                       | It cannot go on a public page as written                                           |
+| `Max team size` below 1                                      | The database rejects the value, and a rejected write used to stop the whole pass   |
 
-The first four protect **history**. The rest are a different kind — nothing is at risk, the value simply cannot be published — so the refused field is dropped from the write rather than blanked, and whatever was already up stays up until the replacement fits.
-
-**One exception to "dropped rather than blanked":** a Cancellation reason with no `Cancelled` date is written as **null**, not withheld. `meetings_cancellationReason_needs_cancellation` allows a reason only beside the date it explains, so leaving the old value in place would be the constraint violation the refusal exists to prevent. Every other refused field keeps what was published.
-
-Both halves of the cancellation pair are judged independently: a reason that is both too long **and** unpaired produces two messages on the first pass, not one and then the other fifteen minutes later.
+The first two protect **history**. The rest are a different kind — nothing is at risk, the value simply cannot be published — so the refused field is dropped from the write rather than blanked, and whatever was already up stays up until the replacement fits.
 
 If a write is rejected for a reason no rule here anticipates, that **one row** is skipped and says so in its own `⚙️ Sync status`; the rest of the pass runs normally. Refusals gathered before any failure are still written back — the status write happens outside the pass's error boundary, so a pass that dies partway still reports what it learned.
 
-A workshop with **no** attendance is still fully editable, and a null incoming value is never a change: officers fill fields one at a time, and a pass landing between two keystrokes must not complain about a row that will be complete shortly.
-
-A meeting below the required shape — `startsAt`, `endsAt`, and the end after the start — is skipped rather than refused, and writes a **state** into `⚙️ Sync status` saying which field it is waiting on. A **name is not required**, and asking for one would report the ordinary case as a fault: most nights have none, because the heading is derived from the workshops and the judging, and the slug comes from the meeting's date rather than its name. That is not a complaint and is worded not to read as one; it exists because the silence was indistinguishable from a sync that had never run, which is precisely the question the column is there to answer. It clears itself on the pass after the row is whole.
-
-Workshops and competitions have the same silent branch and deliberately keep it: an unresolvable link there usually means the linked _meeting_ was incomplete, which now carries its own message — saying it twice would point the officer at the wrong row.
+The equivalent rules for meetings and workshops — summary/title/description lengths, the RSVP-host allowlist, cancellation reason↔date pairing — are not refusals any more. They moved to `@devdogsuga/club-config`'s validator, which runs at CI time instead of on a schedule; see
+[Config-as-code](/docs/platform/guides/meetings-and-teams/club-config).
 
 ## Why it's like this
 

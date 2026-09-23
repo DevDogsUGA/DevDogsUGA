@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, boolean, pgEnum, varchar, bigint, integer, text, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, bigint, uuid, boolean, varchar, integer, pgEnum, text, timestamp, date, smallint, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by devtools db introspect after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -320,6 +320,8 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	startsAt: timestamp({ withTimezone: true }).notNull(),
 	endsAt: timestamp({ withTimezone: true }).notNull(),
 	airtableRecordId: text(),
+	configId: text(),
+	surveyUrl: text(),
 	deletedAt: timestamp({ withTimezone: true }),
 	summary: text(),
 	kind: text(),
@@ -327,10 +329,10 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	building: text(),
 	cancelledAt: timestamp({ withTimezone: true }),
 	cancellationReason: text(),
-	countsTowardProgress: boolean().default(false).notNull(),
-	elEligible: boolean().default(false).notNull(),
+	countsForCredit: boolean().default(false).notNull(),
 	seasonId: uuid().references(() => seasonsInPlatform.id, { onDelete: "set null", onUpdate: "cascade" } ),
 }, (table) => [
+	uniqueIndex("meetings_configId_live_key").using("btree", table.configId.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	index("meetings_live_idx").using("btree", table.startsAt.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	unique("meetings_airtableRecordId_key").on(table.airtableRecordId),	unique("meetings_slug_key").on(table.slug),
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
@@ -460,26 +462,6 @@ export const profileLinksInPlatform = platform.table.withRLS("profileLinks", {
 
 	pgPolicy("crud_authenticated_policy_update", { for: "update", to: ["authenticated"], using: sql`((( SELECT auth.uid() AS uid) = "userId") AND (NOT platform.is_profile_frozen("userId")) AND (NOT platform.is_suspended(( SELECT auth.uid() AS uid))))`, withCheck: sql`((( SELECT auth.uid() AS uid) = "userId") AND (NOT platform.is_suspended(( SELECT auth.uid() AS uid))))` }),
 ]);
-
-export const projectsInPlatform = platform.table.withRLS("projects", {
-	id: uuid().defaultRandom().primaryKey(),
-	slug: text().notNull(),
-	displayName: text().notNull(),
-	appId: uuid().references(() => appsInPlatform.id, { onDelete: "set null", onUpdate: "cascade" } ),
-	sortOrder: doublePrecision().default(0).notNull(),
-	airtableRecordId: text(),
-	deletedAt: timestamp({ withTimezone: true }),
-}, (table) => [
-	index("projects_live_idx").using("btree", table.sortOrder.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
-	unique("projects_airtableRecordId_key").on(table.airtableRecordId),	unique("projects_slug_key").on(table.slug),
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-
-	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-check("projects_displayName_length", sql`(length("displayName") <= 80)`),]);
 
 export const proxyRequestLogInPlatform = platform.table.withRLS("proxyRequestLog", {
 	id: bigint({ mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
@@ -955,14 +937,16 @@ export const userSuspensionsInPlatform = platform.table.withRLS("userSuspensions
 export const workshopsInPlatform = platform.table.withRLS("workshops", {
 	id: uuid().defaultRandom().primaryKey(),
 	meetingId: uuid().notNull().references(() => meetingsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
-	projectId: uuid().references(() => projectsInPlatform.id, { onDelete: "restrict", onUpdate: "cascade" } ),
+	project: text(),
 	airtableRecordId: text(),
+	configId: text(),
 	deletedAt: timestamp({ withTimezone: true }),
 	title: text(),
 	description: text(),
 }, (table) => [
+	uniqueIndex("workshops_configId_live_key").using("btree", table.configId.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
 	index("workshops_live_idx").using("btree", table.meetingId.asc().nullsLast()).where(sql`("deletedAt" IS NULL)`),
-	unique("workshops_airtableRecordId_key").on(table.airtableRecordId),	unique("workshops_id_meetingId_key").on(table.id, table.meetingId),	unique("workshops_meetingId_projectId_key").on(table.meetingId, table.projectId),
+	unique("workshops_airtableRecordId_key").on(table.airtableRecordId),	unique("workshops_id_meetingId_key").on(table.id, table.meetingId),
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
 
 	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
@@ -979,7 +963,7 @@ export const memberStarsInPlatform = platform.view("memberStars", {	userId: uuid
 	startsAt: timestamp({ withTimezone: true }),
 	earnedAt: timestamp({ withTimezone: true }),
 	won: boolean(),
-}).with({"securityInvoker":true}).as(sql`SELECT a."userId", 'meeting'::text AS "activityType", m.id AS "activityId", m.id AS "meetingId", NULL::uuid AS "competitionId", m."startsAt", a."recordedAt" AS "earnedAt", false AS won FROM platform.attendance a JOIN platform.meetings m ON m.id = a."meetingId" WHERE m."countsTowardProgress" AND m."cancelledAt" IS NULL AND m."deletedAt" IS NULL UNION ALL SELECT tm."userId", 'competition'::text AS "activityType", c.id AS "activityId", NULL::uuid AS "meetingId", c.id AS "competitionId", opening_meeting."startsAt", COALESCE(t."competedAt", c."judgingStartsAt") AS "earnedAt", (EXISTS ( SELECT 1 FROM platform."teamAwards" aw WHERE aw."teamId" = t.id AND aw.category = 'winner'::text)) AS won FROM platform."teamMembers" tm JOIN platform.teams t ON t.id = tm."teamId" JOIN platform.competitions c ON c.id = t."competitionId" JOIN platform.workshops w ON w.id = c."workshopId" JOIN platform.meetings opening_meeting ON opening_meeting.id = w."meetingId" WHERE t."competedAt" IS NOT NULL AND c."countsTowardProgress" AND c."deletedAt" IS NULL AND w."deletedAt" IS NULL AND opening_meeting."deletedAt" IS NULL`);
+}).with({"securityInvoker":true}).as(sql`SELECT a."userId", 'meeting'::text AS "activityType", m.id AS "activityId", m.id AS "meetingId", NULL::uuid AS "competitionId", m."startsAt", a."recordedAt" AS "earnedAt", false AS won FROM platform.attendance a JOIN platform.meetings m ON m.id = a."meetingId" WHERE m."countsForCredit" AND m."cancelledAt" IS NULL AND m."deletedAt" IS NULL UNION ALL SELECT tm."userId", 'competition'::text AS "activityType", c.id AS "activityId", NULL::uuid AS "meetingId", c.id AS "competitionId", opening_meeting."startsAt", COALESCE(t."competedAt", c."judgingStartsAt") AS "earnedAt", (EXISTS ( SELECT 1 FROM platform."teamAwards" aw WHERE aw."teamId" = t.id AND aw.category = 'winner'::text)) AS won FROM platform."teamMembers" tm JOIN platform.teams t ON t.id = tm."teamId" JOIN platform.competitions c ON c.id = t."competitionId" JOIN platform.workshops w ON w.id = c."workshopId" JOIN platform.meetings opening_meeting ON opening_meeting.id = w."meetingId" WHERE t."competedAt" IS NOT NULL AND c."countsTowardProgress" AND c."deletedAt" IS NULL AND w."deletedAt" IS NULL AND opening_meeting."deletedAt" IS NULL`);
 
 export const profileWithVerificationInPlatform = platform.view("profileWithVerification", {	userId: uuid(),
 	hasPronouns: boolean(),
@@ -1043,7 +1027,6 @@ export { profileInPlatform as profile };
 export { profileAcademicProgramsInPlatform as profileAcademicPrograms };
 export { profileLinksInPlatform as profileLinks };
 export { profileWithVerificationInPlatform as profileWithVerification };
-export { projectsInPlatform as projects };
 export { proxyRequestLogInPlatform as proxyRequestLog };
 export { proxyScopeInPlatform as proxyScope };
 export { quarantineEffectInPlatform as quarantineEffect };

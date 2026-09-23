@@ -89,6 +89,17 @@ jobs:
       # about a second.
       - name: Registry agrees with the schema snapshot
         run: pnpm devtools airtable check
+      # The publishability gate for meetings and workshops: parses
+      # data/meetings.json against the Zod schema and runs the validator
+      # ported from the old Airtable refusal rules (lengths, the RSVP-host
+      # allowlist, cancellation pairing, id uniqueness and shape). This is the
+      # ONLY validation those two tables get now -- `reconcileFromConfig`
+      # trusts a config that reaches it and aborts rather than refusing a
+      # single row, so a bad file has to be caught here, not at runtime. Also
+      # covered by `turbo run test` above via the package's own vitest suite;
+      # this step exercises the CLI a config author actually runs.
+      - name: Club config passes its publishability checks
+        run: pnpm --filter @devdogsuga/club-config check
       # .env.example is GENERATED from the env manifests; this regenerates it
       # in memory and byte-compares -- the same pattern the database job uses
       # for database.types.ts. Credential-free by construction: the generator

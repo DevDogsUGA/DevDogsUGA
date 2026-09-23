@@ -97,11 +97,21 @@ export const CRON_ROUTES: Record<
   // few times a week. At ~5 requests a pass this is ~13% of the monthly
   // allowance, and the manual trigger covers the case where 15 minutes is too
   // long to wait.
+  //
+  // The config reconcile shares this slot rather than getting its own: it
+  // replaced the meetings/workshops half of what this cron used to pull, so
+  // the cadence that made sense for officer edits landing "within fifteen
+  // minutes" makes the same sense for a config edit auto-deploying. It is
+  // also a keep-alive as much as a poll -- the real trigger is the deploy
+  // pipeline's post-migrate call (see `server/config/reconcile.ts`'s route);
+  // this cron exists so a config change still lands even if that step is
+  // ever skipped.
   "*/15 * * * *": {
-    label: "Airtable sync: events, officers, and member records",
+    label:
+      "Airtable sync (officers, members) and config reconcile (meetings, workshops)",
     monitorSlug: "platform-cron-airtable-sync",
     monitor: { checkinMargin: 5, maxRuntime: 10 },
-    routes: ["/airtable/sync"],
+    routes: ["/airtable/sync", "/cron/config-reconcile"],
   },
   "*/10 * * * *": {
     label: "Discord role sync",

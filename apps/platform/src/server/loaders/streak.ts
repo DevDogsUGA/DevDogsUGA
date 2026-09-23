@@ -6,7 +6,7 @@ export async function getStreakForUser(userId: string): Promise<StreakSummary> {
   const [opportunities, earned] = await Promise.all([
     db.execute<{ startsAt: Date; [key: string]: unknown }>(sql`
       select m."startsAt" from platform.meetings m
-      where m."countsTowardProgress" and m."cancelledAt" is null
+      where m."countsForCredit" and m."cancelledAt" is null
         and m."deletedAt" is null
       union all
       select opening_meeting."startsAt"

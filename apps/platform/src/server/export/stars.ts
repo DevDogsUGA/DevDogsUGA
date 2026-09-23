@@ -28,8 +28,10 @@ export const STARS_COLUMNS = [
 export interface StarsFilters {
   from?: Date;
   to?: Date;
-  /** Limits competition rows to those opened by this project. */
-  projectSlug?: string;
+  /** Limits competition rows to those opened by a workshop recommending this
+   *  project, matched as free text -- there is no `projects` table to look a
+   *  slug up in any more. */
+  project?: string;
 }
 
 export interface StarRow {
@@ -87,14 +89,13 @@ async function starPage(
   const conditions = [];
   if (filters.from) conditions.push(gte(memberStars.startsAt, filters.from));
   if (filters.to) conditions.push(lte(memberStars.startsAt, filters.to));
-  if (filters.projectSlug) {
+  if (filters.project) {
     conditions.push(sql`exists (
       select 1
       from platform.competitions c
       join platform.workshops w on w.id = c."workshopId"
-      join platform.projects p on p.id = w."projectId"
       where c.id = ${memberStars.competitionId}
-        and p.slug = ${filters.projectSlug}
+        and w."project" = ${filters.project}
     )`);
   }
 
@@ -157,6 +158,6 @@ export function parseStarsFilters(url: URL): StarsFilters {
 
   if (from && !Number.isNaN(Date.parse(from))) filters.from = new Date(from);
   if (to && !Number.isNaN(Date.parse(to))) filters.to = new Date(to);
-  if (project) filters.projectSlug = project;
+  if (project) filters.project = project;
   return filters;
 }

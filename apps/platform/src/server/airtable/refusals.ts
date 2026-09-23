@@ -1,115 +1,32 @@
 import {
-  MEETING_CANCELLATION_REASON_MAX_LENGTH,
-  PROJECT_NAME_MAX_LENGTH,
   COMPETITION_TITLE_MAX_LENGTH,
-  MEETING_NAME_OVERRIDE_MAX_LENGTH,
-  MEETING_SUMMARY_MAX_LENGTH,
   normalizeMeetingSummary,
-  RSVP_URL_ALLOWED_HOSTS,
-  WORKSHOP_DESCRIPTION_MAX_LENGTH,
-  WORKSHOP_TITLE_MAX_LENGTH,
   type AirtableValue,
 } from "@devdogsuga/airtable";
 
 /**
- * The rules that make this a sync rather than a mirror.
+ * The rules that make this a sync rather than a mirror -- for competitions.
  *
- * Airtable is the CMS, so the default answer to "the officer changed this" is
- * "then change it here too". These are the exceptions: the edits the platform
- * refuses because applying them would rewrite something already earned or
- * already published.
+ * Meetings, workshops and projects lost this file's rules with the
+ * config-as-code cutover: they are authored in `@devdogsuga/club-config` now,
+ * validated by its CI check before anything reaches Postgres, so there is
+ * nothing left here to refuse for them. Competitions are still Airtable-
+ * authored until the git-native competitions rework, so their rules survive.
+ *
+ * Airtable is the CMS for what remains, so the default answer to "the
+ * officer changed this" is "then change it here too". These are the
+ * exceptions: the edits the platform refuses because applying them would
+ * rewrite something already earned or already published.
  *
  * Pure on purpose. Each rule takes the facts it needs and returns a reason,
  * with no database and no Airtable client anywhere near it, because these are
  * the rules that most need a test each and the least need a fixture base to
  * test against.
- *
- * ## Two classes of rule
- *
- * The workshop and competition rules mean **"this edit would destroy
- * something already earned"**: attendance credit attached to a workshop,
- * arithmetic already published under a competition. They are refusals about
- * HISTORY, and what they protect is a row that is already correct.
- *
- * `checkMeeting` is the other kind. It means **"this value cannot be
- * published"**: a summary that will not fit the card it is laid out in, an
- * RSVP link pointing somewhere the club is not. Nothing has been earned and
- * nothing is at risk; the value simply cannot go on a public page as written.
- *
- * Both write to `⚙️ Sync status`, and they should, because the officer's
- * question is the same in both cases: I edited this and the site did not
- * change, why. But the reasoning does not transfer. A rule of the first kind
- * asks what already exists; a rule of the second kind asks only what arrived.
- *
- * ## And one entry that is not a rule at all
- *
- * `meeting_incomplete` is a STATE, not a refusal: nothing was rejected, the
- * row simply does not have enough in it to become a meeting yet. It travels
- * with the refusals because it has the same destination and answers the same
- * officer question, and because the field is called `⚙️ Sync status` rather
- * than `⚙️ Sync errors`.
- *
- * ⚠️ It must stay worded as a state. The reason this row was silent for so
- * long is a good one: officers fill fields one at a time, and a pass landing
- * between two keystrokes must not COMPLAIN about a row that will be finished
- * in a minute. Saying where the row stands is not complaining; saying it did
- * something wrong would be. `.status()` clears on the next pass once the row
- * is whole, so a transient message costs nothing.
  */
-
-/**
- * What to put in `⚙️ Sync status` for a row that is not a meeting yet.
- *
- * Names what is actually missing rather than restating the rule, because the
- * officer reading it is looking at the row and wants to know the next
- * keystroke, not the schema. Phrased as a state rather than a complaint; see
- * the third class of entry in this file's header for why that is
- * load-bearing.
- *
- * The two halves differ on one fact worth being accurate about: whether
- * anything of this meeting is already published. A row that exists in Postgres
- * keeps serving its previous values, so "not on the site yet" would be false
- * there, and would send an officer looking for a page that is up.
- */
-export function describeIncompleteMeeting(
-  values: {
-    startsAt: string | null;
-    endsAt: string | null;
-  },
-  published: boolean,
-): string {
-  const missing: string[] = [];
-  // A name is no longer among these. Most nights have none by design, since
-  // the heading is derived from the workshops and the judging, so asking for
-  // one would report the ordinary case as a fault. The slug no longer needs it.
-  if (values.startsAt === null) missing.push("a start time");
-  if (values.endsAt === null) missing.push("an end time");
-
-  // Empty means every field arrived and the ORDER is what failed, which is the
-  // one case here that is a wrong value rather than an absent one.
-  const problem =
-    missing.length > 0
-      ? `still needs ${formatList(missing)}`
-      : "has an end time at or before its start time";
-
-  return published
-    ? `Not applied: this meeting ${problem}. What is on the site is the ` +
-        "previous version, and it stays up until the row is complete again."
-    : `Not on the site yet: this meeting ${problem}. Nothing is wrong with ` +
-        "what you have entered so far — it appears within fifteen minutes of " +
-        "being complete.";
-}
-
-/** "a name, a start time and an end time", the way an officer would write it. */
-function formatList(items: string[]): string {
-  if (items.length === 1) return items[0]!;
-  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]!}`;
-}
 
 /** What the sync refused, and why, in words an officer can act on. */
 export interface Refusal {
-  table:
-    "projects" | "meetings" | "workshops" | "competitions" | "platformSettings";
+  table: "competitions" | "platformSettings";
   airtableRecordId: string;
   /** Machine-readable, for the console and for tests. */
   code: RefusalCode;
@@ -118,35 +35,13 @@ export interface Refusal {
 }
 
 export type RefusalCode =
-  // Not a refusal. See the note on the third class above.
-  | "meeting_incomplete"
-  // Also not a refusal: no rule rejected anything, the write itself failed.
-  // The backstop for a bad value no rule here has learned to name yet. See
+  // Not a refusal: no rule rejected anything, the write itself failed. The
+  // backstop for a bad value no rule here has learned to name yet. See
   // `tryWrite` in `sync.ts`.
   | "row_write_failed"
-  // A state rather than a refusal, like `meeting_incomplete`.
-  | "project_incomplete"
   | "reflection_settings_invalid"
-  | "project_name_too_long"
-  | "meeting_summary_too_long"
-  | "meeting_cancellation_reason_too_long"
-  | "meeting_reason_without_cancellation"
-  | "meeting_rsvp_host"
-  | "meeting_name_too_long"
-  | "workshop_meeting_changed"
-  | "workshop_project_changed"
-  | "workshop_project_cleared"
-  | "workshop_title_too_long"
-  | "workshop_description_too_long"
-  // A state rather than a refusal, like `meeting_incomplete`: the row has a
-  // link the pull could not follow, so there is not enough of it to become a
-  // workshop yet. See `describeUnbuiltWorkshop`.
-  | "workshop_incomplete"
-  | "workshop_project_unknown"
   | "competition_max_team_size_invalid"
-  | "competition_requirement_count_invalid"
   | "competition_title_too_long"
-  | "requirement_count_after_finalize"
   | "judging_before_workshop"
   | "judging_moved_after_freeze";
 
@@ -166,547 +61,6 @@ export interface RuleResult {
 
 function empty(): RuleResult {
   return { refusals: [], rejectedFields: new Set() };
-}
-
-// ── Projects ─────────────────────────────────────────────────────────────────
-
-export interface ProjectFacts {
-  airtableRecordId: string;
-  /** Exactly what Airtable returned for `Name`, before any parsing. */
-  rawDisplayName: AirtableValue;
-  /** What the registry parser made of it. Null if it refused the value. */
-  displayName: string | null;
-}
-
-/**
- * The one value rule projects have, and it is new with the table's direction.
- *
- * Nothing guarded this column while the platform wrote it: a value the
- * platform authored could not surprise it, so `projects."displayName"` had no
- * length constraint at all. Officer-authored, it needs the same guard every
- * other written string here has — the name is printed as a chip on the
- * schedule and as a star's label, and `projects_displayName_length` is a check
- * constraint, so an 81st character would be a rejected INSERT in the middle of
- * the pull rather than a refused field.
- *
- * Refused rather than truncated, for the reason the meeting summary is: half a
- * project name under a workshop is worse than the previous name staying up
- * while somebody shortens the replacement.
- */
-export function checkProject(facts: ProjectFacts): RuleResult {
-  // The parser returns null for "empty" too, and an empty name is not a
-  // refusal — it is a row an officer has not finished. Only a value that
-  // ARRIVED and could not be published is ruled on here.
-  if (
-    facts.displayName === null &&
-    normalizeMeetingSummary(facts.rawDisplayName) !== null
-  ) {
-    return {
-      refusals: [
-        {
-          table: "projects",
-          airtableRecordId: facts.airtableRecordId,
-          code: "project_name_too_long",
-          message:
-            `Not applied: a project name has to be ${PROJECT_NAME_MAX_LENGTH} ` +
-            "characters or fewer. It is printed as a chip beside a workshop " +
-            "and as the label on a star, so it is a label rather than a " +
-            "description. The name already on the site is unchanged.",
-        },
-      ],
-      rejectedFields: new Set(["displayName"]),
-    };
-  }
-
-  return empty();
-}
-
-// ── Meetings ─────────────────────────────────────────────────────────────────
-
-export interface MeetingFacts {
-  airtableRecordId: string;
-  /**
-   * Exactly what Airtable returned for `Summary`, before any parsing.
-   *
-   * See the note on `checkMeeting` for why the raw cell is needed alongside
-   * the parsed value.
-   */
-  rawSummary: AirtableValue;
-  /** What the registry parser made of it. Null if it refused the value. */
-  summary: string | null;
-  /** Exactly what Airtable returned for `RSVP`, before any parsing. */
-  rawRsvpUrl: AirtableValue;
-  /** What the registry parser made of it. Null if it refused the value. */
-  rsvpUrl: string | null;
-  /**
-   * The Cancelled date, parsed. Null means the night is on.
-   *
-   * Present here only so the reason can be judged against it: the two columns
-   * are paired by a check constraint, so neither can be ruled on alone.
-   */
-  cancelledAt: string | null;
-  /** Exactly what Airtable returned for `Cancellation reason`, unparsed. */
-  rawCancellationReason: AirtableValue;
-  /** What the registry parser made of it. Null if it refused the value. */
-  cancellationReason: string | null;
-  /** Exactly what Airtable returned for `Name`, before any parsing. */
-  rawNameOverride: AirtableValue;
-  /** What the registry parser made of it. Null if it refused the value. */
-  nameOverride: string | null;
-}
-
-/**
- * The values a meeting cannot publish.
- *
- * ## Empty is not malformed
- *
- * This is the rule the whole thing turns on. A blank Summary and a blank RSVP
- * are the ORDINARY state of a meeting: most weeks have neither, the events
- * page derives an agenda instead, and an officer who never fills them in has
- * done nothing wrong. A blank field must therefore stay silent forever, not
- * only until somebody notices the noise. Otherwise every meeting in the base
- * carries a permanent complaint and `⚙️ Sync status` stops being a signal.
- *
- * Only a value that is PRESENT and WRONG produces a refusal.
- *
- * ## Which is why the raw cell is a parameter
- *
- * The parser cannot answer this on its own. It returns `null` for both
- * "nothing was written" and "something was written and I will not publish it",
- * and those two are the entire distinction this rule is made of. Collapsing
- * them would either silence every real refusal or complain about every empty
- * field, depending on which way you guessed.
- *
- * So the caller hands over both halves: the raw Airtable cell, which answers
- * "did the officer write anything", and the parsed value, which answers "was
- * it publishable". A refusal is exactly the pair (present, null). The verdict
- * stays with the parser rather than being re-derived here, so there is no
- * second definition of "acceptable" to drift out of step with the first.
- *
- * Note what is absent: there is no rule for `Kind`. It is a single select in
- * Airtable, so an out-of-list value is close to unrepresentable at the source,
- * and there is no wrong-but-plausible value for an officer to be told about:
- * they picked from a dropdown or they did not.
- */
-export function checkMeeting(facts: MeetingFacts): RuleResult {
-  const result = empty();
-
-  // Normalized here rather than trimmed, so the length quoted back at the
-  // officer is the length the rule actually measured. A message naming a
-  // different number than the rule applied is worse than no message.
-  const summaryText = normalizeMeetingSummary(facts.rawSummary);
-  if (summaryText !== null && facts.summary === null) {
-    result.rejectedFields.add("summary");
-    result.refusals.push({
-      table: "meetings",
-      airtableRecordId: facts.airtableRecordId,
-      code: "meeting_summary_too_long",
-      message:
-        `Summary is ${summaryText.length} characters; the card fits about ` +
-        `${MEETING_SUMMARY_MAX_LENGTH}. It has not been published — shorten ` +
-        "it and it will appear within fifteen minutes. It was not cut short " +
-        "for you on purpose: half a sentence under your name on the events " +
-        "page is worse than none.",
-    });
-  }
-
-  const rsvpText = presentText(facts.rawRsvpUrl);
-  if (rsvpText !== null && facts.rsvpUrl === null) {
-    result.rejectedFields.add("rsvpUrl");
-    result.refusals.push({
-      table: "meetings",
-      airtableRecordId: facts.airtableRecordId,
-      code: "meeting_rsvp_host",
-      message:
-        `RSVP is "${rsvpText}", which is not a link this can publish. It has ` +
-        "not been published — the events page links members straight to it, " +
-        "so it has to be an https:// address on " +
-        `${RSVP_ALLOWED_HOSTS_TEXT}. Paste the meeting's event page from the ` +
-        "Involvement Network and it will appear within fifteen minutes.",
-    });
-  }
-
-  // This guards a CHECK CONSTRAINT rather than a layout. That is a stronger
-  // reason than the two above: an unpublishable summary is a bad card, but a
-  // value the constraint rejects is an exception raised in the middle of the
-  // pull, and that unwinds past every table left in the pass.
-  const nameText = presentText(facts.rawNameOverride);
-  if (nameText !== null && facts.nameOverride === null) {
-    result.rejectedFields.add("nameOverride");
-    result.refusals.push({
-      table: "meetings",
-      airtableRecordId: facts.airtableRecordId,
-      code: "meeting_name_too_long",
-      message:
-        `Name is ${nameText.length} characters; a schedule row fits about ` +
-        `${MEETING_NAME_OVERRIDE_MAX_LENGTH}. It has not been published — ` +
-        "shorten it and it will appear within fifteen minutes. Most nights " +
-        "need no name at all: the heading is built from the workshops and " +
-        "the judging, so clearing this cell is also a fix.",
-    });
-  }
-
-  // The cancellation pair, which the rules above have no equivalent of:
-  // `meetings_cancellationReason_needs_cancellation` allows a reason only
-  // beside the date it explains, so neither column can be judged alone.
-  const reasonText = normalizeMeetingSummary(facts.rawCancellationReason);
-
-  if (reasonText !== null && facts.cancelledAt === null) {
-    // Deliberately NOT added to `rejectedFields`, unlike every other refusal
-    // here. The caller must write null rather than drop the key: withholding
-    // it leaves whatever the column already held, and a reason left behind by
-    // an un-cancellation is precisely the row the constraint rejects, so the
-    // next write would take down the pass this refusal exists to prevent.
-    result.refusals.push({
-      table: "meetings",
-      airtableRecordId: facts.airtableRecordId,
-      code: "meeting_reason_without_cancellation",
-      message:
-        "Cancellation reason is filled in but Cancelled is empty, so it has " +
-        "not been published — the reason is only ever shown beside the date " +
-        "it explains. Set Cancelled and both appear within fifteen minutes. " +
-        "If the meeting is back on, clear the reason as well.",
-    });
-  }
-
-  // A SEPARATE `if`, not the `else` this used to be. The two conditions are
-  // independent, one about `cancelledAt` and the other about the length of
-  // `cancellationReason`, and chaining them hid the length problem behind
-  // the pairing one. An officer who typed 220 characters before setting the
-  // date was told only "set Cancelled and both appear within fifteen
-  // minutes", which was untrue; they set the date, waited a pull, and then
-  // learned about a fault that was knowable on the first pass. Summary and
-  // rsvpUrl have always both fired, and this now matches them.
-  if (reasonText !== null && facts.cancellationReason === null) {
-    result.rejectedFields.add("cancellationReason");
-    result.refusals.push({
-      table: "meetings",
-      airtableRecordId: facts.airtableRecordId,
-      code: "meeting_cancellation_reason_too_long",
-      message:
-        `Cancellation reason is ${reasonText.length} characters; the notice ` +
-        `fits about ${MEETING_CANCELLATION_REASON_MAX_LENGTH}. It has not ` +
-        "been published — shorten it and it will appear within fifteen " +
-        "minutes. The night still shows as cancelled either way.",
-      // That last sentence used to end "; only the explanation is missing",
-      // which is false on the update path: a refused reason is DROPPED from
-      // the write, so a previously published explanation stays on the page.
-      // The officer would read "missing", look at the site, and see words.
-      // Claiming only what is certainly true is what the summary refusal does.
-    });
-  }
-
-  return result;
-}
-
-/** The allowlist as a phrase, so the message names what is actually accepted. */
-const RSVP_ALLOWED_HOSTS_TEXT = RSVP_URL_ALLOWED_HOSTS.join(" or ");
-
-/**
- * The cell's text if the officer wrote something, else null.
- *
- * "Wrote something" and not "wrote a string": Airtable omits an empty field
- * from a record's `fields` object entirely rather than returning null, so
- * `undefined` is the shape absence usually arrives in. A cell holding only
- * whitespace is absence too: nobody meant it, and refusing it would be a
- * complaint about a stray keystroke.
- *
- * Anything present and not a string is stringified rather than treated as
- * absent. A `url` field will never return one, but the failure modes are not
- * symmetric: a value wrongly called absent is silently dropped, while a value
- * wrongly called present is at worst a refusal an officer can read and ignore.
- */
-function presentText(raw: AirtableValue): string | null {
-  if (raw === null || raw === undefined) return null;
-  const text = describeAirtableValue(raw);
-  const trimmed = text.trim();
-  return trimmed === "" ? null : trimmed;
-}
-
-function describeAirtableValue(raw: AirtableValue): string {
-  if (raw === null || raw === undefined) return "empty";
-  if (typeof raw === "string") return raw;
-  if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
-  if (Array.isArray(raw)) return raw.join(", ");
-  return raw.email ?? raw.name ?? raw.id;
-}
-
-// ── Workshops ────────────────────────────────────────────────────────────────
-
-/**
- * What to put in `⚙️ Sync status` for a workshop the pull could not build.
- *
- * The insert path in `pullWorkshops` has two `continue`s, one for an
- * unresolved Meeting link and one for an unresolved Project link, and until
- * now BOTH were silent. A workshop typed into the base sat there pass after
- * pass with a clean status cell, no row in Postgres and nothing on the
- * schedule, and the only way to find out was to notice the absence. That is
- * the complaint "workshops aren't syncing alongside events" in its entirety:
- * not a broken pull, a working one that never said what it was waiting for.
- *
- * The two cases need different words because they resolve differently, and one
- * of them does not resolve on its own at all:
- *
- *   * **The Meeting link** is the ordinary half-filled row. The meeting is
- *     usually incomplete this pass and complete the next, so this is worded as
- *     a state for the reason `describeIncompleteMeeting` is, and carries
- *     `workshop_incomplete` rather than a refusal code.
- *
- *   * **The Project link** is the same kind of thing now, and used to be a
- *     different kind entirely. Projects were platform-authored and PUSHED, so
- *     a Projects row an officer typed into the link picker had no
- *     `⚙️ Platform ID`, never got one, and was permanently unresolvable behind
- *     a cell that looked filled in. That was the bug this whole function was
- *     first written to explain. Projects are pulled now, so an unresolved link
- *     means the project row simply has not synced yet — usually because it
- *     still needs a Name — and it resolves on its own like the meeting does.
- *     It keeps a code of its own only because the officer has to go and look
- *     at a different row.
- *
- * Returns null when the row is fine, so the caller can write nothing and let
- * `.status()` clear whatever was there.
- */
-export function describeUnbuiltWorkshop(facts: {
-  /** Whether the Meeting cell holds a link at all. */
-  hasMeetingLink: boolean;
-  /** Whether that link resolved to a meeting on the site. */
-  meetingResolved: boolean;
-  /** Whether the Project cell holds a link at all. */
-  hasProjectLink: boolean;
-  /** Whether that link resolved to a project the platform owns. */
-  projectResolved: boolean;
-}): { code: RefusalCode; message: string } | null {
-  // Meeting first, because it is the required one: a row missing both is
-  // missing the meeting, and saying so is the next keystroke.
-  if (!facts.hasMeetingLink) {
-    return {
-      code: "workshop_incomplete",
-      message:
-        "Not on the site yet: this workshop needs a Meeting. Nothing else " +
-        "about the row is wrong — it appears within fifteen minutes of the " +
-        "link being filled in.",
-    };
-  }
-
-  if (!facts.meetingResolved) {
-    return {
-      code: "workshop_incomplete",
-      message:
-        "Not on the site yet: the linked Meeting is not on the site itself, " +
-        "usually because it still needs a start or an end time. Check that " +
-        "row's own ⚙️ Sync status — this workshop follows within fifteen " +
-        "minutes of it being complete.",
-    };
-  }
-
-  if (facts.hasProjectLink && !facts.projectResolved) {
-    return {
-      code: "workshop_project_unknown",
-      message:
-        "Not on the site yet: the linked Project is not on the site itself, " +
-        "usually because it still needs a Name. Check that row's own " +
-        "⚙️ Sync status — this workshop follows within fifteen minutes of it " +
-        "being complete. Clear the cell instead if this session teaches a " +
-        "skill rather than a codebase; a workshop does not need a project.",
-    };
-  }
-
-  return null;
-}
-
-export interface WorkshopFacts {
-  airtableRecordId: string;
-  /** Attendance rows already pointing at this workshop. */
-  attendanceCount: number;
-  currentMeetingId: string;
-  /** Null when the workshop has no project yet: `workshops.projectId` is
-   *  nullable, and a session can be run and attended before anyone attaches
-   *  repo work to it. */
-  currentProjectId: string | null;
-}
-
-export interface WorkshopIncoming {
-  meetingId: string | null;
-  projectId: string | null;
-  /**
-   * True when the officer EMPTIED the Project cell, as opposed to a link that
-   * is present and merely failed to resolve this pass.
-   *
-   * Both arrive as `projectId: null`, and the difference is the whole of the
-   * rule below: emptying the cell is an edit with intent, and a link whose
-   * project row was skipped earlier in the same run is not an edit at all.
-   * The caller knows which because it holds the raw cell; this file cannot
-   * derive it, so it is passed rather than guessed.
-   */
-  projectCleared: boolean;
-}
-
-// ── Workshop values ──────────────────────────────────────────────────────────
-
-export interface WorkshopValueFacts {
-  airtableRecordId: string;
-  /** Exactly what Airtable returned for `Title`, before any parsing. */
-  rawTitle: AirtableValue;
-  /** What the registry parser made of it. Null if it refused the value. */
-  title: string | null;
-  /** Exactly what Airtable returned for `Description`, unparsed. */
-  rawDescription: AirtableValue;
-  /** What the registry parser made of it. Null if it refused the value. */
-  description: string | null;
-}
-
-/**
- * The values a workshop cannot publish.
- *
- * The second class of rule, on the workshops table; see this file's header.
- * `checkWorkshop` below asks what a workshop already HAS; this asks only what
- * arrived, which is why it runs on the insert path too and does not care
- * about attendance.
- *
- * It exists because `title` and `description` were written through
- * unconditionally while `workshops_title_length` and
- * `workshops_description_length` cap both at 80 and 280. The parser returns
- * null past those caps, and null CLEARS, so an officer lengthening a title
- * by one character silently erased the one that was there, with nothing in
- * `⚙️ Sync status` to say so and the schedule quietly falling back to the
- * project name. Summary and rsvpUrl have always been handled this way; these
- * two were the pair that never got it.
- */
-export function checkWorkshopValues(facts: WorkshopValueFacts): RuleResult {
-  const result = empty();
-
-  const titleText = normalizeMeetingSummary(facts.rawTitle);
-  if (titleText !== null && facts.title === null) {
-    result.rejectedFields.add("title");
-    result.refusals.push({
-      table: "workshops",
-      airtableRecordId: facts.airtableRecordId,
-      code: "workshop_title_too_long",
-      message:
-        `Title is ${titleText.length} characters; a schedule row fits about ` +
-        `${WORKSHOP_TITLE_MAX_LENGTH}. It has not been published — shorten ` +
-        "it and it will appear within fifteen minutes. The previous title " +
-        "is still on the site until then.",
-    });
-  }
-
-  const descriptionText = normalizeMeetingSummary(facts.rawDescription);
-  if (descriptionText !== null && facts.description === null) {
-    result.rejectedFields.add("description");
-    result.refusals.push({
-      table: "workshops",
-      airtableRecordId: facts.airtableRecordId,
-      code: "workshop_description_too_long",
-      message:
-        `Description is ${descriptionText.length} characters; the dialog ` +
-        `fits about ${WORKSHOP_DESCRIPTION_MAX_LENGTH}. It has not been ` +
-        "published — shorten it and it will appear within fifteen minutes. " +
-        "The previous description is still on the site until then.",
-    });
-  }
-
-  return result;
-}
-
-/**
- * A workshop with attendance rejects destructive edits.
- *
- * Changing its meeting or its project silently re-attributes credit people
- * have already earned: every attendance row hanging off this workshop would
- * start counting toward a different session, or toward a different project's
- * star, without anybody being told.
- *
- * This is not "the workshop is frozen": a workshop with no attendance yet is
- * still fully editable, which covers the ordinary case of an officer fixing a
- * link they got wrong when they created the row.
- *
- * A null incoming value is NOT a change. An officer fills Airtable fields one
- * at a time and a sync landing between two keystrokes must not refuse a row
- * that will be complete thirty seconds later. Same reasoning as leaving
- * `judgingStartsAt` and `judgingMeetingId` unconstrained against each other.
- */
-export function checkWorkshop(
-  facts: WorkshopFacts,
-  incoming: WorkshopIncoming,
-): RuleResult {
-  if (facts.attendanceCount === 0) return empty();
-
-  const result = empty();
-
-  if (
-    incoming.meetingId !== null &&
-    incoming.meetingId !== facts.currentMeetingId
-  ) {
-    result.rejectedFields.add("meetingId");
-    result.refusals.push({
-      table: "workshops",
-      airtableRecordId: facts.airtableRecordId,
-      code: "workshop_meeting_changed",
-      message:
-        `Refused: this workshop has ${facts.attendanceCount} attendance ` +
-        "record(s), so its Meeting cannot be changed — doing so would move " +
-        "credit people already earned onto a different meeting. Create a new " +
-        "workshop row instead.",
-    });
-  }
-
-  // A null *current* project is not a change either, for the mirror of the
-  // reason a null incoming one isn't: nothing has been credited to a project
-  // yet, so filling the field in for the first time takes nothing away from
-  // one. The refusal below promises "a different project", and where there is
-  // no current project there is none to differ from.
-  if (
-    incoming.projectId !== null &&
-    facts.currentProjectId !== null &&
-    incoming.projectId !== facts.currentProjectId
-  ) {
-    result.rejectedFields.add("projectId");
-    result.refusals.push({
-      table: "workshops",
-      airtableRecordId: facts.airtableRecordId,
-      code: "workshop_project_changed",
-      message:
-        `Refused: this workshop has ${facts.attendanceCount} attendance ` +
-        "record(s), so its Project cannot be changed — doing so would " +
-        "re-attribute those check-ins to a different project. Create a new " +
-        "workshop row instead.",
-    });
-  }
-
-  // Clearing the cell is the third edit, and it was the one that got through.
-  //
-  // The rule above only fires for a project that DIFFERS, and emptying the
-  // cell arrives as `projectId: null`, which it reads as "not a change" by
-  // design. So a cleared Project on a workshop with twenty check-ins was
-  // written straight through: `memberStars` groups on `w."projectId"`, and
-  // every one of those members lost the project off a star they had already
-  // earned, silently, with a clean `⚙️ Sync status`.
-  //
-  // Unlinking a session that turned out to teach a skill rather than a
-  // codebase is still a real edit; it is the reason `projectId` became
-  // nullable. It is real up until somebody has been credited for it, which is
-  // exactly where the other two rules draw the line too.
-  if (
-    incoming.projectCleared &&
-    incoming.projectId === null &&
-    facts.currentProjectId !== null
-  ) {
-    result.rejectedFields.add("projectId");
-    result.refusals.push({
-      table: "workshops",
-      airtableRecordId: facts.airtableRecordId,
-      code: "workshop_project_cleared",
-      message:
-        `Refused: this workshop has ${facts.attendanceCount} attendance ` +
-        "record(s), so its Project cannot be emptied — those check-ins are " +
-        "credited to that project, and clearing it would take the project " +
-        "off stars members have already earned. The Project is unchanged on " +
-        "the site. If this session really teaches a skill rather than a " +
-        "codebase, create a new workshop row for it.",
-    });
-  }
-
-  return result;
 }
 
 // ── Competitions ─────────────────────────────────────────────────────────────
@@ -748,9 +102,10 @@ export interface CompetitionValueFacts {
  * The number is never written as null: the caller already omits a null
  * number from the update rather than clearing the column, so nothing needs
  * adding to `rejectedFields` for it. The title is the exception, and works
- * like the workshop title — an over-length one adds itself to `rejectedFields`
- * so the caller keeps the published title rather than erasing it, exactly the
- * way one extra character must not blank a heading mid-edit.
+ * like the workshop title did -- an over-length one adds itself to
+ * `rejectedFields` so the caller keeps the published title rather than
+ * erasing it, exactly the way one extra character must not blank a heading
+ * mid-edit.
  */
 export function checkCompetitionValues(
   facts: CompetitionValueFacts,
@@ -786,6 +141,14 @@ export function checkCompetitionValues(
   }
 
   return result;
+}
+
+function describeAirtableValue(raw: AirtableValue): string {
+  if (raw === null || raw === undefined) return "empty";
+  if (typeof raw === "string") return raw;
+  if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
+  if (Array.isArray(raw)) return raw.join(", ");
+  return raw.email ?? raw.name ?? raw.id;
 }
 
 /** Protects the entry state machine. */

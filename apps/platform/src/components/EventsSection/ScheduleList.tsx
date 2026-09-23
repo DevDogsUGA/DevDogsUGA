@@ -664,8 +664,8 @@ function WorkshopChip({ workshop }: { workshop: MeetingRangeWorkshop }) {
       : segmentBadge.kickoff;
   const chipCls = `${badge.chipDark} ${CHIP_DARK_CLS}`;
 
-  // `workshopLabel`, not `projectName`: the title is what officers name a
-  // session by, and `projectName` is null for one that teaches a skill rather
+  // `workshopLabel`, not `project`: the title is what officers name a
+  // session by, and `project` is null for one that teaches a skill rather
   // than a codebase, which rendered the career-fair-readiness night as an empty
   // chip. The fallback matches `/events/<slug>`, so the schedule and the
   // permalink cannot print two different words for one row.

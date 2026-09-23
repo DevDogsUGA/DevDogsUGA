@@ -18,8 +18,6 @@ import { db } from "~/server/db";
  */
 
 const IDS = {
-  projectA: "c1111111-1111-1111-1111-111111111111",
-  projectB: "c1111111-1111-1111-1111-111111111112",
   meeting: "c2222222-2222-2222-2222-222222222222",
   workshopA: "c3333333-3333-3333-3333-333333333331",
   workshopB: "c3333333-3333-3333-3333-333333333332",
@@ -37,10 +35,6 @@ async function cleanup() {
   await db.execute(
     sql`delete from platform.meetings where id = ${IDS.meeting}::uuid`,
   );
-  await db.execute(sql`
-    delete from platform.projects
-    where id in (${IDS.projectA}::uuid, ${IDS.projectB}::uuid)
-  `);
   await db.execute(sql`
     delete from auth.users
     where id in (${IDS.lead}::uuid, ${IDS.applicant}::uuid, ${IDS.bystander}::uuid)
@@ -74,30 +68,21 @@ beforeAll(async () => {
     on conflict do nothing
   `);
 
-  // Two projects, not two workshops on one: `workshops_meetingId_projectId_key`
-  // allows a meeting to run a given project exactly once, because two sessions
-  // on the same project at the same meeting would make an attendance row
-  // ambiguous about which one it credits.
-  await db.execute(sql`
-    insert into platform.projects (id, slug, "displayName")
-    values (${IDS.projectA}::uuid, 'respond-test-a', 'Respond Test A'),
-           (${IDS.projectB}::uuid, 'respond-test-b', 'Respond Test B')
-  `);
   await db.execute(sql`
     insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt")
     values (${IDS.meeting}::uuid, 'respond-test-meeting', 'Respond Test',
             now() - interval '2 days', now() - interval '2 days' + interval '2 hours')
   `);
 
-  // Two competitions at the same meeting. The whole point is that they are
-  // scoped independently.
+  // Two competitions at the same meeting, each off its own workshop. The
+  // whole point is that they are scoped independently.
   for (const [workshop, comp, slug, project] of [
-    [IDS.workshopA, IDS.compA, "respond-comp-a", IDS.projectA],
-    [IDS.workshopB, IDS.compB, "respond-comp-b", IDS.projectB],
+    [IDS.workshopA, IDS.compA, "respond-comp-a", "Respond Test A"],
+    [IDS.workshopB, IDS.compB, "respond-comp-b", "Respond Test B"],
   ] as const) {
     await db.execute(sql`
-      insert into platform.workshops (id, "meetingId", "projectId")
-      values (${workshop}::uuid, ${IDS.meeting}::uuid, ${project}::uuid)
+      insert into platform.workshops (id, "meetingId", "project")
+      values (${workshop}::uuid, ${IDS.meeting}::uuid, ${project})
     `);
     await db.execute(sql`
       insert into platform.competitions (id, slug, "workshopId")

@@ -71,6 +71,12 @@ export default async function AttendancePage({
     getAttendanceMeetings(),
     expectSession().catch(() => null),
   ]);
+  // The survey link rides the meeting the check-in actually recorded, not
+  // whatever is selected in the form below -- `requestedMeeting` is that
+  // meeting's id whenever `status` came back from a check-in at all.
+  const checkedInMeeting = meetings.find((m) => m.id === requestedMeeting);
+  const surveyUrl =
+    receipt?.good && checkedInMeeting ? checkedInMeeting.surveyUrl : null;
   const [stars, reflectionData, streak] = userId
     ? await Promise.all([
         getStarsForUser(userId),
@@ -103,6 +109,16 @@ export default async function AttendancePage({
             <p className="mt-2 text-sm font-medium text-white">
               Recorded {formatEventDateTime(recordedAt)}
             </p>
+          )}
+          {surveyUrl && (
+            <a
+              href={surveyUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-block rounded-sm border-2 border-cyan-400 px-4 py-1.5 text-sm font-medium text-cyan-400 transition outline-none hover:bg-cyan-400 hover:text-black focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-950"
+            >
+              Continue to survey
+            </a>
           )}
         </section>
       )}

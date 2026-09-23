@@ -46,7 +46,7 @@ beforeAll(async () => {
   await db.execute(sql`
     insert into platform.meetings
       (id, slug, "nameOverride", "startsAt", "endsAt", "cancelledAt",
-       "countsTowardProgress")
+       "countsForCredit")
     values
       (${IDS.meeting}::uuid, 'attendance-test', 'Attendance Test',
        now() - interval '1 year', now() - interval '364 days', null, true),

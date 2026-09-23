@@ -205,7 +205,7 @@ async function eligibleActivity(
       select m."endsAt" from platform.attendance a
       join platform.meetings m on m.id = a."meetingId"
       where a."userId" = ${userId}::uuid and m.id = ${input.activityId}::uuid
-        and m."elEligible"
+        and m."countsForCredit"
         and m."deletedAt" is null and m."cancelledAt" is null
       for share of a, m
     `);

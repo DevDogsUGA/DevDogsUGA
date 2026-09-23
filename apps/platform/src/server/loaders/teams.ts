@@ -4,7 +4,6 @@ import { db } from "~/server/db";
 import {
   competitions,
   profiles,
-  projects,
   teamAwards,
   teamMembers,
   teamMembershipRequests,
@@ -269,12 +268,13 @@ export const getPendingForUser = cache(
         teamSlug: teams.slug,
         competitionSlug: competitions.slug,
         // The competition's own title first, then the old chain: it is called
-        // after its project, `projectId` is nullable, so fall back to the
-        // workshop's title and then to the competition's slug, which is
-        // `not null` and already user-visible in git as the integration branch.
+        // after the workshop's project recommendation (free text, no join
+        // needed any more), then the workshop's own title, then the
+        // competition's slug, which is `not null` and already user-visible
+        // in git as the integration branch.
         competitionName: sql<string>`coalesce(
           ${competitions.title},
-          ${projects.displayName},
+          ${workshops.project},
           ${workshops.title},
           ${competitions.slug}
         )`,
@@ -288,7 +288,6 @@ export const getPendingForUser = cache(
       .innerJoin(teams, eq(teams.id, teamMembershipRequests.teamId))
       .innerJoin(competitions, eq(competitions.id, teams.competitionId))
       .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
-      .leftJoin(projects, eq(projects.id, workshops.projectId))
       .leftJoin(profiles, eq(profiles.userId, teamMembershipRequests.userId))
       .where(
         and(

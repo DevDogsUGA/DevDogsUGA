@@ -6,7 +6,6 @@ import {
   getUpcomingMeetings,
   getPastMeetings,
   getMeetingBySlug,
-  getWorkshopDetail,
   getCompetitionBySlug,
   getMeetingWorkshops,
   getMeetingsInRange,
@@ -46,7 +45,6 @@ describe("every loader is valid SQL", () => {
     await getUpcomingMeetings();
     await getPastMeetings();
     await getMeetingBySlug("nope");
-    await getWorkshopDetail("nope", "nope");
     await getCompetitionBySlug("nope");
     await getMeetingWorkshops(NIL);
     expect(true).toBe(true);
@@ -96,7 +94,7 @@ describe("every loader is valid SQL", () => {
     // untouched `streamStarRows(...)` would prove nothing.
     for await (const _ of streamStarRows({}, 10)) break;
     for await (const _ of streamStarRows(
-      { from: new Date("2020-01-01"), to: new Date(), projectSlug: "nope" },
+      { from: new Date("2020-01-01"), to: new Date(), project: "nope" },
       10,
     ))
       break;
@@ -106,8 +104,6 @@ describe("every loader is valid SQL", () => {
 
 const COUNTS = {
   meeting: "11111111-2222-4000-8000-000000000001",
-  project: "11111111-2222-4000-8000-000000000002",
-  project2: "11111111-2222-4000-8000-000000000003",
   workshop: "11111111-2222-4000-8000-000000000004",
   workshop2: "11111111-2222-4000-8000-000000000005",
 } as const;
@@ -115,9 +111,6 @@ const COUNTS = {
 async function cleanupCounts() {
   await db.execute(
     sql`delete from platform.meetings where slug = 'counts-test-meeting'`,
-  );
-  await db.execute(
-    sql`delete from platform.projects where slug like 'counts-test-%'`,
   );
 }
 
@@ -143,17 +136,13 @@ describe("correlated counts on a meeting", () => {
   beforeAll(async () => {
     await cleanupCounts();
     await db.execute(sql`
-      insert into platform.projects (id, slug, "displayName")
-      values (${COUNTS.project}::uuid, 'counts-test-a', 'Counts Test A'),
-             (${COUNTS.project2}::uuid, 'counts-test-b', 'Counts Test B')`);
-    await db.execute(sql`
       insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt")
       values (${COUNTS.meeting}::uuid, 'counts-test-meeting', 'Counts Test',
               now() + interval '1 day', now() + interval '1 day 2 hours')`);
     await db.execute(sql`
-      insert into platform.workshops (id, "meetingId", "projectId")
-      values (${COUNTS.workshop}::uuid, ${COUNTS.meeting}::uuid, ${COUNTS.project}::uuid),
-             (${COUNTS.workshop2}::uuid, ${COUNTS.meeting}::uuid, ${COUNTS.project2}::uuid)`);
+      insert into platform.workshops (id, "meetingId", "project")
+      values (${COUNTS.workshop}::uuid, ${COUNTS.meeting}::uuid, 'Counts Test A'),
+             (${COUNTS.workshop2}::uuid, ${COUNTS.meeting}::uuid, 'Counts Test B')`);
   });
 
   afterAll(cleanupCounts);

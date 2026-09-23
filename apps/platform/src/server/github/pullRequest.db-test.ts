@@ -17,7 +17,6 @@ import { applyPullRequestEvent } from "./pullRequest";
  */
 
 const IDS = {
-  project: "a1111111-1111-1111-1111-111111111111",
   meeting: "a2222222-2222-2222-2222-222222222222",
   workshop: "a3333333-3333-3333-3333-333333333333",
   competition: "a4444444-4444-4444-4444-444444444444",
@@ -32,9 +31,6 @@ async function cleanup() {
   await db.execute(
     sql`delete from platform.meetings where id = ${IDS.meeting}::uuid`,
   );
-  await db.execute(
-    sql`delete from platform.projects where id = ${IDS.project}::uuid`,
-  );
   await db.execute(sql`delete from auth.users where id = ${IDS.lead}::uuid`);
 }
 
@@ -48,17 +44,13 @@ beforeAll(async () => {
     on conflict (id) do nothing
   `);
   await db.execute(sql`
-    insert into platform.projects (id, slug, "displayName")
-    values (${IDS.project}::uuid, 'pr-webhook-test', 'PR Webhook Test')
-  `);
-  await db.execute(sql`
     insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt")
     values (${IDS.meeting}::uuid, 'pr-webhook-test-meeting', 'PR Webhook Test',
             now() - interval '2 days', now() - interval '2 days' + interval '2 hours')
   `);
   await db.execute(sql`
-    insert into platform.workshops (id, "meetingId", "projectId")
-    values (${IDS.workshop}::uuid, ${IDS.meeting}::uuid, ${IDS.project}::uuid)
+    insert into platform.workshops (id, "meetingId", "project")
+    values (${IDS.workshop}::uuid, ${IDS.meeting}::uuid, 'PR Webhook Test')
   `);
   await db.execute(sql`
     insert into platform.competitions (id, slug, "workshopId")

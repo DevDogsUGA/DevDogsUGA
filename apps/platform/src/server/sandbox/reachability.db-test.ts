@@ -27,8 +27,6 @@ import {
  */
 
 const IDS = {
-  projectA: "f0000000-0000-0000-0000-0000000000a1",
-  projectB: "f0000000-0000-0000-0000-0000000000a2",
   meeting: "f0000000-0000-0000-0000-0000000000b0",
   workshopA: "f0000000-0000-0000-0000-0000000000c1",
   workshopB: "f0000000-0000-0000-0000-0000000000c2",
@@ -54,10 +52,6 @@ async function cleanup() {
   await db.execute(
     sql`delete from platform."sandboxEnvironments" where id = ${IDS.env}::uuid`,
   );
-  await db.execute(sql`
-    delete from platform.projects
-    where id in (${IDS.projectA}::uuid, ${IDS.projectB}::uuid)
-  `);
   await db.execute(sql`
     delete from auth.users
     where id in (${IDS.lead}::uuid, ${IDS.member}::uuid, ${IDS.outsider}::uuid)
@@ -92,11 +86,6 @@ beforeAll(async () => {
   }
 
   await db.execute(sql`
-    insert into platform.projects (id, slug, "displayName")
-    values (${IDS.projectA}::uuid, 'reach-a', 'Reach A'),
-           (${IDS.projectB}::uuid, 'reach-b', 'Reach B')
-  `);
-  await db.execute(sql`
     insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt")
     values (${IDS.meeting}::uuid, 'reach-meeting', 'Reach',
             now(), now() + interval '2 hours')
@@ -106,12 +95,12 @@ beforeAll(async () => {
   // one. That is why sharing an environment across competitions is the case
   // that needs testing.
   for (const [workshop, comp, slug, project] of [
-    [IDS.workshopA, IDS.compA, "reach-comp-a", IDS.projectA],
-    [IDS.workshopB, IDS.compB, "reach-comp-b", IDS.projectB],
+    [IDS.workshopA, IDS.compA, "reach-comp-a", "Reach A"],
+    [IDS.workshopB, IDS.compB, "reach-comp-b", "Reach B"],
   ] as const) {
     await db.execute(sql`
-      insert into platform.workshops (id, "meetingId", "projectId")
-      values (${workshop}::uuid, ${IDS.meeting}::uuid, ${project}::uuid)
+      insert into platform.workshops (id, "meetingId", "project")
+      values (${workshop}::uuid, ${IDS.meeting}::uuid, ${project})
     `);
     await db.execute(sql`
       insert into platform.competitions (id, slug, "workshopId")

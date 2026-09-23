@@ -96,7 +96,7 @@ select
   false as "won"
 from "platform"."attendance" a
 join "platform"."meetings" m on m."id" = a."meetingId"
-where m."countsTowardProgress"
+where m."countsForCredit"
   and m."cancelledAt" is null
   and m."deletedAt" is null
 

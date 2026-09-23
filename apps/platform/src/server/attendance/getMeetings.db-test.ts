@@ -31,7 +31,7 @@ beforeAll(async () => {
   await cleanup();
   await db.execute(sql`
     insert into platform.meetings
-      (id, slug, "startsAt", "endsAt", "countsTowardProgress") values
+      (id, slug, "startsAt", "endsAt", "countsForCredit") values
       (${IDS.endsFirst}::uuid, 'attendance-order-ends-first',
        '2026-09-11T18:00:00Z', '2026-09-11T21:00:00Z', true),
       (${IDS.startsFirst}::uuid, 'attendance-order-starts-first',

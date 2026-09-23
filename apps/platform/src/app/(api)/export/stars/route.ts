@@ -17,7 +17,8 @@ import {
  * GET /export/stars
  *
  * One row per `(member, workshop)`, across every semester. Query parameters:
- * `from`, `to` (ISO dates, on the meeting start) and `project` (a slug).
+ * `from`, `to` (ISO dates, on the meeting start) and `project` (free text,
+ * matched exactly against a workshop's project recommendation).
  *
  * Gated on `canExportStars`, kept deliberately separate from
  * `canManageAttendance`. Correcting one member's check-in and downloading every
@@ -82,13 +83,23 @@ function serialize(filters: StarsFilters): Record<string, string> {
   const out: Record<string, string> = {};
   if (filters.from) out.from = filters.from.toISOString();
   if (filters.to) out.to = filters.to.toISOString();
-  if (filters.projectSlug) out.project = filters.projectSlug;
+  if (filters.project) out.project = filters.project;
   return out;
 }
 
 function filename(filters: StarsFilters): string {
   const parts = ["stars"];
-  if (filters.projectSlug) parts.push(filters.projectSlug);
+  // Free text now, not a slug -- "DogDays & DogPack" would otherwise land in
+  // a Content-Disposition header unescaped. Slugified for the filename only;
+  // `serialize` above keeps the filter itself verbatim for the audit row.
+  if (filters.project) {
+    parts.push(
+      filters.project
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, ""),
+    );
+  }
   if (filters.from) parts.push(filters.from.toISOString().slice(0, 10));
   if (filters.to) parts.push(filters.to.toISOString().slice(0, 10));
   return `${parts.join("-")}.csv`;

@@ -51,7 +51,7 @@ export async function getReflectionActivities(
     left join platform.reflections r
       on r."userId" = a."userId" and r."meetingId" = m.id
     where a."userId" = ${userId}::uuid
-      and m."elEligible" and m."deletedAt" is null and m."cancelledAt" is null
+      and m."countsForCredit" and m."deletedAt" is null and m."cancelledAt" is null
 
     union all
 

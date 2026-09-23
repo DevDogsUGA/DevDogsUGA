@@ -24,9 +24,9 @@ export async function recordMemberAttendance(
     const meetingRows = await tx.execute<{
       id: string;
       cancelledAt: Date | null;
-      countsTowardProgress: boolean;
+      countsForCredit: boolean;
     }>(
-      sql`select "id", "cancelledAt", "countsTowardProgress"
+      sql`select "id", "cancelledAt", "countsForCredit"
           from platform.meetings
           where "id" = ${meetingId}::uuid and "deletedAt" is null
           for share`,
@@ -39,7 +39,7 @@ export async function recordMemberAttendance(
     // progress, so recording attendance for a non-counting meeting would leave
     // the member with a "recorded" receipt and no visible star. Refuse here
     // instead, keeping the confirmation honest.
-    if (!meeting.countsTowardProgress) {
+    if (!meeting.countsForCredit) {
       return { status: "not_counted" };
     }
 

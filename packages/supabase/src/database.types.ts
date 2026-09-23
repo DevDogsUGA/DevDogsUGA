@@ -591,9 +591,9 @@ export type Database = {
           building: string | null;
           cancellationReason: string | null;
           cancelledAt: string | null;
-          countsTowardProgress: boolean;
+          configId: string | null;
+          countsForCredit: boolean;
           deletedAt: string | null;
-          elEligible: boolean;
           endsAt: string;
           id: string;
           kind: string | null;
@@ -604,15 +604,16 @@ export type Database = {
           slug: string;
           startsAt: string;
           summary: string | null;
+          surveyUrl: string | null;
         };
         Insert: {
           airtableRecordId?: string | null;
           building?: string | null;
           cancellationReason?: string | null;
           cancelledAt?: string | null;
-          countsTowardProgress?: boolean;
+          configId?: string | null;
+          countsForCredit?: boolean;
           deletedAt?: string | null;
-          elEligible?: boolean;
           endsAt: string;
           id?: string;
           kind?: string | null;
@@ -623,15 +624,16 @@ export type Database = {
           slug: string;
           startsAt: string;
           summary?: string | null;
+          surveyUrl?: string | null;
         };
         Update: {
           airtableRecordId?: string | null;
           building?: string | null;
           cancellationReason?: string | null;
           cancelledAt?: string | null;
-          countsTowardProgress?: boolean;
+          configId?: string | null;
+          countsForCredit?: boolean;
           deletedAt?: string | null;
-          elEligible?: boolean;
           endsAt?: string;
           id?: string;
           kind?: string | null;
@@ -642,6 +644,7 @@ export type Database = {
           slug?: string;
           startsAt?: string;
           summary?: string | null;
+          surveyUrl?: string | null;
         };
         Relationships: [
           {
@@ -892,44 +895,6 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "profileWithVerification";
             referencedColumns: ["userId"];
-          },
-        ];
-      };
-      projects: {
-        Row: {
-          airtableRecordId: string | null;
-          appId: string | null;
-          deletedAt: string | null;
-          displayName: string;
-          id: string;
-          slug: string;
-          sortOrder: number;
-        };
-        Insert: {
-          airtableRecordId?: string | null;
-          appId?: string | null;
-          deletedAt?: string | null;
-          displayName: string;
-          id?: string;
-          slug: string;
-          sortOrder?: number;
-        };
-        Update: {
-          airtableRecordId?: string | null;
-          appId?: string | null;
-          deletedAt?: string | null;
-          displayName?: string;
-          id?: string;
-          slug?: string;
-          sortOrder?: number;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "projects_appId_fkey";
-            columns: ["appId"];
-            isOneToOne: false;
-            referencedRelation: "apps";
-            referencedColumns: ["id"];
           },
         ];
       };
@@ -1773,29 +1738,32 @@ export type Database = {
       workshops: {
         Row: {
           airtableRecordId: string | null;
+          configId: string | null;
           deletedAt: string | null;
           description: string | null;
           id: string;
           meetingId: string;
-          projectId: string | null;
+          project: string | null;
           title: string | null;
         };
         Insert: {
           airtableRecordId?: string | null;
+          configId?: string | null;
           deletedAt?: string | null;
           description?: string | null;
           id?: string;
           meetingId: string;
-          projectId?: string | null;
+          project?: string | null;
           title?: string | null;
         };
         Update: {
           airtableRecordId?: string | null;
+          configId?: string | null;
           deletedAt?: string | null;
           description?: string | null;
           id?: string;
           meetingId?: string;
-          projectId?: string | null;
+          project?: string | null;
           title?: string | null;
         };
         Relationships: [
@@ -1804,13 +1772,6 @@ export type Database = {
             columns: ["meetingId"];
             isOneToOne: false;
             referencedRelation: "meetings";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "workshops_projectId_fkey";
-            columns: ["projectId"];
-            isOneToOne: false;
-            referencedRelation: "projects";
             referencedColumns: ["id"];
           },
         ];

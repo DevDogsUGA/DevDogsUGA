@@ -396,7 +396,7 @@ function WorkshopRow({ workshop }: { workshop: MeetingWorkshop }) {
   return (
     <li className={ROW_CLS}>
       <span className="flex flex-col">
-        {/* `workshopLabel`, not `projectName`. Officers name these sessions by
+        {/* `workshopLabel`, not `project`. Officers name these sessions by
             topic ("Supabase", "Career Fair Readiness") and the schema named them
             by project, so the page printed "Platform" where the published
             schedule said "Next.js". A session with no project has only the

@@ -9,6 +9,9 @@ export type AttendanceMeeting = {
   startsAt: Date;
   endsAt: Date;
   ongoing: boolean;
+  /** Where to send a member after a successful check-in, or null when this
+   *  meeting has nothing to redirect to. */
+  surveyUrl: string | null;
 };
 
 /** Past and currently running meetings, with the specified default first. */
@@ -27,6 +30,7 @@ export async function getAttendanceMeetings(
       startsAt: meetings.startsAt,
       endsAt: meetings.endsAt,
       ongoing,
+      surveyUrl: meetings.surveyUrl,
     })
     .from(meetings)
     .where(
@@ -35,7 +39,7 @@ export async function getAttendanceMeetings(
         isNull(meetings.cancelledAt),
         // Only meetings that count toward the passport are checkable: the
         // record path refuses the rest, so offering them would dead-end.
-        eq(meetings.countsTowardProgress, true),
+        eq(meetings.countsForCredit, true),
         lte(meetings.startsAt, now),
       ),
     )

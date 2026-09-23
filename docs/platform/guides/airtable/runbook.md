@@ -8,6 +8,9 @@ order: 3
 
 Standing a base up from nothing, in order — several of these fail confusingly out of order. Follow it once per base; after that, adding a field is one `apply` — see [Base setup](/docs/platform/guides/airtable/base-setup). For what a field declaration means, start at the [registry](/docs/platform/guides/airtable). Every credential named here is routed by [Env](/docs/toolkit/guides/env).
 
+> [!WARNING]
+> Steps 7 and 8 below describe authoring Projects and Meetings in the base. That stopped being how those two are created: meetings and workshops are authored in `@devdogsuga/club-config` now, and the Projects table is gone from the schema entirely. See [Config-as-code](/docs/platform/guides/meetings-and-teams/club-config). A fresh base does not need either step — start a fresh `data/meetings.json` instead. Left here until the final Airtable teardown, since the Meetings and Workshops tables still exist in the base itself for now.
+
 ## The order
 
 1. **Create the workspace**, separate from other club Airtable use, so the sync's call budget is not shared with project management.
