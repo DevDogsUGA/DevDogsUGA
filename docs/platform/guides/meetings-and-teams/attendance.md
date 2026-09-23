@@ -52,5 +52,20 @@ minimum (initially 100 words) and must occur before the global window closes
 Submitted reflections are member-locked; there is no officer exception.
 
 Every reflection mutation creates immutable revision evidence and an audit
-event. Airtable receives the current reflection projection for officer review;
-the university, not DevDogs, determines whether that evidence earns credit.
+event. There is no officer review surface on the platform or in Airtable —
+reflections are export-only, and the university, not DevDogs, determines
+whether that evidence earns credit.
+
+## Exports
+
+Officers with `canExportStars` can download a CSV snapshot of stars,
+attendance, or reflections from `/console/exports`. Each route
+(`/export/stars`, `/export/attendance`, `/export/reflections`) is gated on the
+same permission, streams its rows rather than buffering the file, and writes
+an `exportAudit` row — and the general audit ledger event it triggers —
+_before_ streaming starts, so a download that fails partway is still on
+record. `/export/attendance` takes `from`/`to` (on the meeting's start) and
+`meetingId`; `/export/reflections` takes `from`/`to` (on when the reflection
+was created). One row per attendance record or per reflection — the reflection
+export carries only the current text and a revision count, not the revision
+history itself, which stays behind `canViewAuditLog`.

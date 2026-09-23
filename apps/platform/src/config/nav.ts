@@ -158,6 +158,14 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
       "Upload the UGA Involvement Network roster to verify member profiles and unlock community page visibility.",
   },
   {
+    label: "Exports",
+    href: "/console/exports",
+    icon: "DownloadSimpleIcon",
+    permission: "canExportStars",
+    description:
+      "Download CSV snapshots of stars, attendance, and reflections.",
+  },
+  {
     label: "Airtable Sync",
     href: "/console/airtable",
     icon: "ArrowSquareOutIcon",

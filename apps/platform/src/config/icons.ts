@@ -5,6 +5,7 @@ export {
   CalendarDotsIcon,
   ChatCircleIcon,
   DiscordLogoIcon,
+  DownloadSimpleIcon,
   EnvelopeSimpleIcon,
   FileTextIcon,
   GithubLogoIcon,
