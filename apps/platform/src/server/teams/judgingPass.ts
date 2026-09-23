@@ -29,9 +29,10 @@ export async function runJudgingPass(): Promise<JudgingPassReport> {
  *
  * Idempotent by the `competedAt is null` guard, which makes a five-minute
  * cadence safe. The window matters: a PR closed between judging starting and
- * this pass running costs that team its star. Five minutes is tight enough
- * that losing one takes deliberate effort, and the officer override covers
- * whoever manages it.
+ * this pass running costs that team its star, with no recourse — there is no
+ * officer override to recover it. Five minutes is tight enough that this is
+ * rare, and the design accepts that risk rather than reopening a correction
+ * path.
  */
 async function freezeParticipation(): Promise<number> {
   // False positive. The `.where()` is right there with five conditions; the

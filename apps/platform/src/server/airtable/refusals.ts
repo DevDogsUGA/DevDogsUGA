@@ -109,12 +109,7 @@ function formatList(items: string[]): string {
 /** What the sync refused, and why, in words an officer can act on. */
 export interface Refusal {
   table:
-    | "projects"
-    | "meetings"
-    | "workshops"
-    | "competitions"
-    | "attendance"
-    | "platformSettings";
+    "projects" | "meetings" | "workshops" | "competitions" | "platformSettings";
   airtableRecordId: string;
   /** Machine-readable, for the console and for tests. */
   code: RefusalCode;
@@ -153,12 +148,7 @@ export type RefusalCode =
   | "competition_title_too_long"
   | "requirement_count_after_finalize"
   | "judging_before_workshop"
-  | "judging_moved_after_freeze"
-  | "attendance_bad_myid"
-  | "attendance_unknown_meeting"
-  | "attendance_unknown_workshop"
-  | "attendance_workshop_meeting_mismatch"
-  | "attendance_meeting_already_recorded";
+  | "judging_moved_after_freeze";
 
 /**
  * A refusal is per FIELD, not per record.
@@ -868,145 +858,4 @@ function checkJudgingStartsAt(
   }
 
   return null;
-}
-
-// ── Attendance ───────────────────────────────────────────────────────────────
-
-export interface AttendanceFacts {
-  airtableRecordId: string;
-  /** What the form actually held, for quoting back at the officer. */
-  rawMyId: string | null;
-  /** The address `myIdToEmail` made of it, or null if it could not. */
-  email: string | null;
-  /** Whether the Meeting cell holds a link at all. */
-  hasMeetingLink: boolean;
-  /** Resolved from the Meeting link, or null if it did not resolve. */
-  linkedMeetingId: string | null;
-  /** Whether the Workshop cell holds a link at all. */
-  hasWorkshopLink: boolean;
-  /** Resolved from the Workshop link, or null if it did not resolve. */
-  workshopId: string | null;
-  /**
-   * The meeting that workshop belongs to, or null when there is no workshop.
-   *
-   * Not the row's meeting — that is `linkedMeetingId` above when the form
-   * named one. This is the second opinion the mismatch rule compares against.
-   */
-  workshopMeetingId: string | null;
-}
-
-/**
- * The ways an attendance response cannot be stored.
- *
- * All refusals rather than skips, and the distinction is worth stating because
- * the rest of the pull leans the other way. An officer half-filling a meeting
- * row will finish it in thirty seconds, so complaining is noise. A response
- * naming `jdoe@gmail.com`, or naming a workshop that is not in the base, will
- * still be wrong on the next pass and every pass after, and nobody finds out
- * unless somebody is told.
- *
- * ## Why the Meeting is asked for rather than derived
- *
- * It used to be derived from the Workshop, on the argument that a form
- * collecting both could disagree with itself. The events rework made that
- * untenable: an Interest Meeting, a Social and a judging night run no
- * workshops, so a response about one of them had nothing to link and was
- * dropped in silence by the completeness gate in `pullAttendance`.
- *
- * The disagreement the old design was avoiding is real, so it gets a rule
- * (`attendance_workshop_meeting_mismatch`) instead of being made
- * unrepresentable. That trade is the right way round: the cost of the rule is
- * a message in one officer's cell, and the cost of the old design was every
- * workshop-less night being unattendable.
- */
-export function checkAttendance(facts: AttendanceFacts): RuleResult {
-  // An address outside uga.edu can never be signed into. Sign-in is Google
-  // with hd=uga.edu, so creating that account would produce a row holding
-  // somebody's attendance that no human on earth can reach.
-  if (facts.email === null) {
-    return {
-      refusals: [
-        {
-          table: "attendance",
-          airtableRecordId: facts.airtableRecordId,
-          code: "attendance_bad_myid",
-          message:
-            `Refused: "${facts.rawMyId ?? ""}" is not a UGA MyID. Enter the ` +
-            "part before @uga.edu — sign-in is restricted to UGA Google " +
-            "accounts, so an address anywhere else could never be claimed by " +
-            "the person who attended.",
-        },
-      ],
-      rejectedFields: new Set(["myId"]),
-    };
-  }
-
-  // A link that is present and did not resolve, on either side. Both are
-  // permanent as far as this row is concerned: the linked row is not on the
-  // site, and nothing about THIS record will change that.
-  if (facts.hasMeetingLink && facts.linkedMeetingId === null) {
-    return {
-      refusals: [
-        {
-          table: "attendance",
-          airtableRecordId: facts.airtableRecordId,
-          code: "attendance_unknown_meeting",
-          message:
-            "Refused: the linked Meeting is not on the site. Check that " +
-            "row's own ⚙️ Sync status — a meeting still missing a start or " +
-            "an end time is not published yet, and attendance cannot hang " +
-            "off one.",
-        },
-      ],
-      rejectedFields: new Set(["meeting"]),
-    };
-  }
-
-  if (facts.hasWorkshopLink && facts.workshopId === null) {
-    return {
-      refusals: [
-        {
-          table: "attendance",
-          airtableRecordId: facts.airtableRecordId,
-          code: "attendance_unknown_workshop",
-          message:
-            "Refused: the linked Workshop is not one the platform knows " +
-            "about. Check that row's own ⚙️ Sync status — a workshop needs " +
-            "its Meeting filled in, and a Project the platform owns or none " +
-            "at all, before attendance can hang off it.",
-        },
-      ],
-      rejectedFields: new Set(["workshop"]),
-    };
-  }
-
-  // Both links resolved and they disagree. This is the case the old
-  // derive-from-the-workshop design existed to make unrepresentable, and the
-  // composite foreign key on `(workshopId, meetingId)` would reject the row
-  // anyway — as a failed INSERT rather than as an answer. Refused by name
-  // instead, because only the officer knows which of the two cells is the
-  // typo.
-  if (
-    facts.linkedMeetingId !== null &&
-    facts.workshopMeetingId !== null &&
-    facts.linkedMeetingId !== facts.workshopMeetingId
-  ) {
-    return {
-      refusals: [
-        {
-          table: "attendance",
-          airtableRecordId: facts.airtableRecordId,
-          code: "attendance_workshop_meeting_mismatch",
-          message:
-            "Refused: the linked Workshop belongs to a different Meeting " +
-            "than the one linked here. Attendance is one row per member per " +
-            "meeting with the workshop as a detail on it, so the two have to " +
-            "agree. Fix whichever cell is wrong.",
-        },
-      ],
-      rejectedFields: new Set(["meeting", "workshop"]),
-    };
-  }
-
-  return empty();
 }

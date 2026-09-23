@@ -8,7 +8,7 @@ order: 4
 
 Stars are a derived participation passport. Nothing increments a stored score:
 the `platform.memberStars` view reads current attendance and competition facts,
-so corrections are visible on the next read without a backfill.
+so changes are visible on the next read without a backfill.
 
 ## Stars
 
