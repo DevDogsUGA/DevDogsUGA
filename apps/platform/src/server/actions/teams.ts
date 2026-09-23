@@ -1,6 +1,7 @@
 "use server";
 
 import { and, count, eq, isNull, ne } from "drizzle-orm";
+import { postAlert } from "~/server/alerts";
 import { expectSession } from "~/server/auth";
 import { db } from "~/server/db";
 import { teamMembers, teamMembershipRequests, teams } from "~/server/db/schema";
@@ -174,14 +175,26 @@ async function createTeamImpl(name: string): Promise<CreatedTeam> {
         })
         .returning({ id: teams.id, slug: teams.slug });
     } catch (error) {
-      // Two teams landing on the same slugified name. Translated here because
-      // the untranslated 23505 reaches the member as "something went wrong on
-      // our side", which sends them to ask an officer about a problem they
-      // could have solved by picking another name. The GitHub team and branch
-      // above are now orphaned -- there is no mirror row to reconcile them
-      // against -- and are left for an officer to clean up by hand; this is
-      // the one gap GitHub-first ordering opens, traded for never promising a
-      // team the mirror does not also have.
+      // Two teams landing on the same slugified name, or any other reason
+      // this insert fails. Either way the GitHub team and its ruleset above
+      // are now orphaned -- there is no mirror row to reconcile them against
+      // -- so this tears them back down itself rather than leaving them for
+      // an officer to notice. Best-effort: a member already has a real error
+      // to see below, and a stuck GitHub team is a smaller problem than
+      // losing that error to one from cleanup, so a teardown failure is
+      // reported, not thrown.
+      const teardown = await disbandTeam(slug);
+      if (!teardown.ok) {
+        await postAlert("Orphaned GitHub team after a failed team create", [
+          `slug: ${slug}`,
+          teardown.detail ?? teardown.skipped ?? "unknown reason",
+        ]);
+      }
+
+      // Translated here because the untranslated 23505 reaches the member as
+      // "something went wrong on our side", which sends them to ask an
+      // officer about a problem they could have solved by picking another
+      // name.
       if (isUniqueViolation(error, "teams_slug_key")) {
         throw new TeamActionError("name_taken");
       }

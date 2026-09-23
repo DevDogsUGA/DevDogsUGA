@@ -57,6 +57,7 @@ const IDS = {
   freshJoiner: "c9111111-1111-1111-1111-111111111108",
   memberE: "c9111111-1111-1111-1111-111111111109",
   memberF: "c9111111-1111-1111-1111-111111111110",
+  raceCreator: "c9111111-1111-1111-1111-111111111111",
   seatedTeam: "c5111111-1111-1111-1111-111111111101",
   fullTeam: "c5111111-1111-1111-1111-111111111102",
   cappedTeamA: "c5111111-1111-1111-1111-111111111103",
@@ -78,6 +79,7 @@ const USERS = [
   IDS.freshJoiner,
   IDS.memberE,
   IDS.memberF,
+  IDS.raceCreator,
 ] as const;
 
 const TEAMS = [
@@ -299,6 +301,51 @@ describe("createTeam", () => {
       select 1 from platform.teams where slug = 'actions-db-test-should-not-exist'
     `);
     expect(rows).toHaveLength(0);
+  });
+
+  it("tears down what it just provisioned on GitHub when the slug races", async () => {
+    session.userId = IDS.raceCreator;
+    // A row already sitting on the slug this name slugifies to -- the same
+    // shape a genuine two-creator race leaves behind, without needing two
+    // concurrent calls to produce it.
+    await db.execute(sql`
+      insert into platform.teams (id, slug, name, "joinCode", "createdBy")
+      values (gen_random_uuid(), 'actions-db-test-raced', 'Raced',
+              'RAC234', ${IDS.lead}::uuid)
+    `);
+
+    const result = await createTeam("actions-db-test-raced");
+    expect(result).toEqual({ ok: false, code: "name_taken" });
+
+    expect(github.provisionTeam).toHaveBeenCalledWith("actions-db-test-raced");
+    expect(github.disbandTeam).toHaveBeenCalledWith("actions-db-test-raced");
+
+    const rows = await db.execute(sql`
+      select 1 from platform.teams
+      where slug = 'actions-db-test-raced' and "createdBy" = ${IDS.raceCreator}::uuid
+    `);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("reports rather than throws when the GitHub teardown itself fails", async () => {
+    session.userId = IDS.raceCreator;
+    await db.execute(sql`
+      insert into platform.teams (id, slug, name, "joinCode", "createdBy")
+      values (gen_random_uuid(), 'actions-db-test-raced-2', 'Raced 2',
+              'RAC235', ${IDS.lead}::uuid)
+    `);
+    github.disbandTeam.mockResolvedValueOnce({
+      ok: false,
+      skipped: "api_error",
+      detail: "boom",
+    });
+
+    const result = await createTeam("actions-db-test-raced-2");
+
+    // The teardown failure is swallowed: the member still sees the name
+    // conflict, not a cleanup error they can't act on.
+    expect(result).toEqual({ ok: false, code: "name_taken" });
+    expect(github.disbandTeam).toHaveBeenCalledWith("actions-db-test-raced-2");
   });
 });
 
