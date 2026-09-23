@@ -363,7 +363,7 @@ describe.each(DEPLOYED_VAULT_TARGETS)("%s", (name) => {
 describe.each(DEPLOYED_VAULT_TARGETS)("%s additive init", (name) => {
   it("appends a newly declared missing key without changing existing text", () => {
     const complete = renderInit(name, DATE);
-    const key = "AIRTABLE_SYNC_PAT";
+    const key = "GH_COMPETITIONS_PROJECT_ID";
     const incomplete = complete.replace(new RegExp(`^${key}=.*\\n`, "m"), "");
 
     const addition = renderInitAddition(name, DATE, incomplete);
@@ -387,7 +387,7 @@ describe.each(DEPLOYED_VAULT_TARGETS)("%s additive init", (name) => {
 
   it("treats a commented key as an existing decision", () => {
     const complete = renderInit(name, DATE);
-    const key = "AIRTABLE_SYNC_PAT";
+    const key = "GH_COMPETITIONS_PROJECT_ID";
     const commented = complete.replace(
       new RegExp(`^${key}=.*$`, "m"),
       `# ${key}=""`,
@@ -505,9 +505,15 @@ describe("preflight", () => {
     // wired ingestion to a GitHub Projects board -- another ordinary `scope:
     // "environment"` key, so both deployed targets moved and preflight did
     // not.
+    //
+    // Then both dropped by one: `AIRTABLE_SYNC_PAT` left the registry with
+    // the Airtable integration's teardown -- another ordinary `scope:
+    // "environment"` key, so both deployed targets moved and preflight did
+    // not. `AIRTABLE_BASE_ID` left the same teardown but moved nothing here:
+    // it was already `scope: "default"`, pushed nowhere.
     expect(target("preflight").active.size).toBe(2);
-    expect(target("staging").active.size).toBe(50);
-    expect(target("production").active.size).toBe(53);
+    expect(target("staging").active.size).toBe(49);
+    expect(target("production").active.size).toBe(52);
   });
 
   it("says in the file itself why it is short, and that nothing is hand-set", () => {

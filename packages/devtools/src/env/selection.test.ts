@@ -625,8 +625,14 @@ describe("preflight, the target no app boots from", () => {
     // "environment"` key, `GH_` rather than `GITHUB_` because GitHub Actions
     // reserves that prefix for its own automatic variables, so both deployed
     // targets moved and preflight did not.
-    expect(keysRoutedTo("staging").size).toBe(50);
-    expect(keysRoutedTo("production").size).toBe(53);
+    //
+    // Then both dropped by one: `AIRTABLE_SYNC_PAT` left the registry with
+    // the Airtable integration's teardown -- another ordinary `scope:
+    // "environment"` key, so both deployed targets moved and preflight did
+    // not. `AIRTABLE_BASE_ID` left the same teardown but was already `scope:
+    // "default"`, pushed nowhere, so its removal moved nothing here.
+    expect(keysRoutedTo("staging").size).toBe(49);
+    expect(keysRoutedTo("production").size).toBe(52);
     expect(keysRoutedTo("preflight").size).toBe(2);
   });
 });

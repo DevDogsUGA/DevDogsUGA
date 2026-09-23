@@ -220,14 +220,12 @@ describe("registry completeness", () => {
     // and marking it narrowed would be the DB_URL claim, unverifiable here,
     // rather than a property of the key.
     //
-    // AIRTABLE_SYNC_PAT joined 2026-08-19, when the runtime data token moved
-    // out of Supabase Vault into the platform manifest: the records read/write
-    // scope, still its own key for the same reason as the others.
-    //
-    // AIRTABLE_PAT then left: it carried `schema.bases:write` on an operator's
+    // AIRTABLE_PAT left: it carried `schema.bases:write` on an operator's
     // laptop, and `deploy airtable-apply` does that write behind required
     // reviewers. Removing it took the last shared member out of the two
     // credential preference rows, so a schema change has exactly one path.
+    // The platform's own runtime tokens (AIRTABLE_BASE_ID, AIRTABLE_SYNC_PAT)
+    // left with the Airtable integration itself, leaving only the CI pair.
     //
     // Their routing is the other half, and it is what the split buys:
     const airtable = [...variables().keys()].filter((k) =>
@@ -235,9 +233,7 @@ describe("registry completeness", () => {
     );
     expect(airtable.sort()).toEqual([
       "AIRTABLE_APPLY_PAT",
-      "AIRTABLE_BASE_ID",
       "AIRTABLE_PLAN_PAT",
-      "AIRTABLE_SYNC_PAT",
     ]);
 
     // No Airtable key is never-store any more; the one that was is gone.
