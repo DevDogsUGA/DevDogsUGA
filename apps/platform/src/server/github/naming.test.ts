@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   githubTeamSlug,
-  isTeamHead,
   normalizeRef,
   platformSlugFromGithubTeamSlug,
   teamBranch,
@@ -28,23 +27,6 @@ describe("github team slug", () => {
     // the API would have to be asked what slug it chose before anything could
     // address the team.
     expect(slug.toLowerCase().replace(/[^a-z0-9]+/g, "-")).toBe(slug);
-  });
-});
-
-describe("isTeamHead", () => {
-  it("matches a team's own head branch and not a sibling's", () => {
-    expect(isTeamHead("team/sicem", "sicem")).toBe(true);
-    expect(isTeamHead("team/marble", "sicem")).toBe(false);
-  });
-
-  it("is exact, not a prefix match", () => {
-    // `team/sicem` is a prefix of `team/sicem-2`, so a startsWith check would
-    // let one team's branch match another's naming.
-    expect(isTeamHead("team/sicem-2", "sicem")).toBe(false);
-  });
-
-  it("normalizes refs/heads/ off either form", () => {
-    expect(isTeamHead("refs/heads/team/sicem", "sicem")).toBe(true);
   });
 });
 

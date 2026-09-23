@@ -48,20 +48,6 @@ function slugSegment(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-/**
- * Whether a PR's head ref is this team's branch.
- *
- * Still no caller. The webhook-fed mirror step this was staged for turned out
- * not to need it -- `membership`/`team`/`create`/`delete` events carry a team
- * or a branch name directly, never a PR to match against one. A PR linking a
- * competition issue is how entry gets recognized, and that is the
- * competitions step, not this one. Left here, correct, for that step to pick
- * up rather than rederive.
- */
-export function isTeamHead(headRef: string, teamSlug: string): boolean {
-  return normalizeRef(headRef) === teamBranch(teamSlug);
-}
-
 /** GitHub sends `refs/heads/x` in some payloads and a bare `x` in others. */
 export function normalizeRef(ref: string): string {
   return ref.replace(/^refs\/heads\//, "");

@@ -8,6 +8,10 @@ import {
   type ProjectsV2ItemEventPayload,
 } from "~/server/github/competitionEvents";
 import {
+  handlePullRequestEvent,
+  type PullRequestEventPayload,
+} from "~/server/github/prEvent";
+import {
   handleMembershipEvent,
   handleRefEvent,
   handleTeamEvent,
@@ -20,11 +24,12 @@ import { verifyGithubSignature } from "~/server/github/webhookSignature";
 /**
  * POST /github/webhook
  *
- * The live half of both mirrors this platform keeps against GitHub: the team
- * mirror (`server/github/webhookEvents.ts`) and the competitions mirror
- * (`server/github/competitionEvents.ts`), pushed here the moment either
+ * The live half of the three mirrors this platform keeps against GitHub:
+ * the team mirror (`server/github/webhookEvents.ts`), the competitions
+ * mirror (`server/github/competitionEvents.ts`) and the competition-entries
+ * mirror (`server/github/prEvent.ts`), pushed here the moment any of them
  * changes rather than waited out until the nightly `github-reconcile` cron
- * notices. Six event types matter:
+ * notices. Seven event types matter:
  *
  *   - `membership`: added/removed on a team's GitHub team.
  *   - `team`: the GitHub team deleted, or renamed.
@@ -33,16 +38,13 @@ import { verifyGithubSignature } from "~/server/github/webhookSignature";
  *     or a converted item's fields/content edited.
  *   - `issues`: closed, reopened or edited, for an issue this platform
  *     already mirrors as a competition.
+ *   - `pull_request`: opened, edited, reopened or closed -- a team-branch PR
+ *     entering (or leaving, or winning) a competition.
  *
  * Each handler is idempotent against redelivery -- GitHub retries anything
  * that does not answer 2xx, so this always returns 200 once the signature
  * checks out, whether or not the event turned out to name something this
  * platform recognizes.
- *
- * `pull_request` is not handled here. Nothing here needs it yet -- PR-linked
- * competition ENTRY (as opposed to the competition mirror itself) is a later
- * step of the platform redesign -- so it falls through to the default case
- * below, acknowledged and ignored, the same as `ping`.
  */
 export async function POST(request: Request) {
   const rawBody = await request.text();
@@ -90,14 +92,17 @@ export async function POST(request: Request) {
         payload as CompetitionIssueEventPayload,
       );
       break;
+    case "pull_request":
+      await handlePullRequestEvent(db, payload as PullRequestEventPayload);
+      break;
     case null:
     default:
-      // `ping` (sent once, when the webhook is configured), `pull_request`,
-      // and anything else this App is subscribed to that the team mirror
-      // does not need -- `null` is a delivery with no `X-GitHub-Event`
-      // header at all, which should not happen from GitHub itself. Every
-      // case here is acknowledged rather than refused: an event this route
-      // does not recognize is not a delivery failure.
+      // `ping` (sent once, when the webhook is configured), and anything
+      // else this App is subscribed to that no mirror here needs -- `null`
+      // is a delivery with no `X-GitHub-Event` header at all, which should
+      // not happen from GitHub itself. Every case here is acknowledged
+      // rather than refused: an event this route does not recognize is not
+      // a delivery failure.
       break;
   }
 
