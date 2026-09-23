@@ -126,16 +126,6 @@ export interface AttendanceRow {
   recordedAt: string;
 }
 
-export interface ReflectionRow {
-  id: string;
-  memberAirtableId: string;
-  meetingAirtableId: string | null;
-  competitionAirtableId: string | null;
-  content: string;
-  state: "Draft" | "Submitted";
-  submittedAt: string | null;
-}
-
 export interface PlatformSettingsRow {
   id: "reflection-policy";
   minimumWordCount: number;
@@ -789,39 +779,6 @@ export const attendanceTable = table("Attendance", "tblVgyeo1q9vk0ddD", {
     .push((a: AttendanceRow) => a.recordedAt),
 });
 
-/** Platform-owned EL evidence. There is no officer correction command. */
-export const elReflectionsTable = table("EL Reflections", "tblU6bJTxyY14SyK1", {
-  platformId: field
-    .text("fldAAdfehG54Cwk6Z", "⚙️ Platform ID")
-    .matchKey()
-    .push((row: ReflectionRow) => row.id),
-  member: field
-    .link("fldjtuJGCQPLrsSBz", "⚙️ Member", "members")
-    .push((row: ReflectionRow) => [row.memberAirtableId]),
-  meeting: field
-    .link("fld3m7QttXHmISBb9", "⚙️ Meeting", "meetings")
-    .pushClearable((row: ReflectionRow) =>
-      row.meetingAirtableId ? [row.meetingAirtableId] : null,
-    ),
-  competition: field
-    .link("fld3PX7K6E6ftUln3", "⚙️ Competition", "competitions")
-    .pushClearable((row: ReflectionRow) =>
-      row.competitionAirtableId ? [row.competitionAirtableId] : null,
-    ),
-  content: field
-    .longText("fldPdvrIG9nKd1bF4", "⚙️ Reflection")
-    .push((row: ReflectionRow) => row.content),
-  state: field
-    .singleSelect("fldBtR3plntD3TRuF", "⚙️ State", [
-      "Draft",
-      "Submitted",
-    ] as const)
-    .push((row: ReflectionRow) => row.state),
-  submittedAt: field
-    .dateTime("fld6hVB5ZKxFs7BhH", "⚙️ Submitted at")
-    .pushClearable((row: ReflectionRow) => row.submittedAt),
-});
-
 /** Singleton officer-authored policy, globally applied to every reflection. */
 export const platformSettingsTable = table(
   "Platform Settings",
@@ -857,7 +814,6 @@ export const registry = {
   competitions,
   teams: teamsTable,
   attendance: attendanceTable,
-  elReflections: elReflectionsTable,
   platformSettings: platformSettingsTable,
 } as const;
 

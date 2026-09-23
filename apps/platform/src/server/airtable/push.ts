@@ -6,7 +6,6 @@ import {
   competitions as competitionsSpec,
   meetings as meetingsSpec,
   members as membersSpec,
-  elReflectionsTable as reflectionsSpec,
   platformSettingsTable as settingsSpec,
   mergeOn,
   statusField,
@@ -19,7 +18,6 @@ import {
   type MeetingRow,
   type MemberRow,
   type PlatformSettingsRow,
-  type ReflectionRow,
   type TableSpec,
   type TeamRow,
   type WorkshopRow,
@@ -31,7 +29,6 @@ import {
   competitions,
   meetings,
   profiles,
-  reflections,
   reflectionSettings,
   teamMembers,
   teams,
@@ -138,47 +135,6 @@ export async function pushAttendance(
   }
 
   return upsert<AttendanceRow>(client, attendanceSpec, rows, existing);
-}
-
-/** Mirrors reflection evidence for officer review and the eventual export. */
-export async function pushReflections(
-  client: AirtableClient,
-  existing: AirtableRecord[],
-  existingMembers: AirtableRecord[],
-): Promise<PushCounts> {
-  const memberIds = new Map<string, string>();
-  for (const record of existingMembers) {
-    const id = record.fields[membersSpec.fields.platformId.id];
-    if (typeof id === "string") memberIds.set(id, record.id);
-  }
-  const records = await db
-    .select({
-      id: reflections.id,
-      userId: reflections.userId,
-      meetingAirtableId: meetings.airtableRecordId,
-      competitionAirtableId: competitions.airtableRecordId,
-      content: reflections.content,
-      submittedAt: sql<string | null>`${reflections.submittedAt}::text`,
-    })
-    .from(reflections)
-    .leftJoin(meetings, eq(meetings.id, reflections.meetingId))
-    .leftJoin(competitions, eq(competitions.id, reflections.competitionId));
-  const rows: ReflectionRow[] = records.flatMap((record) => {
-    const memberAirtableId = memberIds.get(record.userId);
-    if (!memberAirtableId) return [];
-    return [
-      {
-        id: record.id,
-        memberAirtableId,
-        meetingAirtableId: record.meetingAirtableId,
-        competitionAirtableId: record.competitionAirtableId,
-        content: record.content,
-        state: record.submittedAt ? "Submitted" : "Draft",
-        submittedAt: record.submittedAt,
-      },
-    ];
-  });
-  return upsert<ReflectionRow>(client, reflectionsSpec, rows, existing);
 }
 
 /** Creates the singleton settings row with defaults; later edits are pulled. */

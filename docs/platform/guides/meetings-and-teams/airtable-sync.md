@@ -19,7 +19,7 @@ The split exists because `attendance."meetingId"` needs something that keeps its
 
 ## What lives where
 
-Six integration tables, and the direction is **per field, never per table**:
+Five integration tables, and the direction is **per field, never per table**:
 
 | Table                 | Officers author                                                                                         | The platform writes                                             |
 | --------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
@@ -27,16 +27,16 @@ Six integration tables, and the direction is **per field, never per table**:
 | **Teams**             | —                                                                                                       | ⚙️ Platform ID, ⚙️ Name, ⚙️ Members, ⚙️ Submission, ⚙️ Competed |
 | **Members**           | Dues paid                                                                                               | ⚙️ Platform ID, UGA email, Legal name, ⚙️ Meetings attended     |
 | **Attendance**        | —                                                                                                       | authoritative meeting attendance projection                     |
-| **EL Reflections**    | —                                                                                                       | current reflection evidence                                     |
 | **Platform Settings** | reflection word minimum and submission window                                                           | ⚙️ Platform ID, ⚙️ Sync status                                  |
 
 One rule governs the right-hand column: **push only fields the platform owns exclusively, and never create a field both sides write.** Two writers have no conflict-resolution story, and last-writer-wins destroys work silently. Teams is push-only now — scoring is off-platform, so there is no grade to pull back. The `⚙️` prefix warns officers off a field; the field editing permissions set by hand enforce it.
 
 The **Meetings**, **Workshops** and **Projects** tables still exist in the base — officers should not edit them any more, and nothing reads from them. They are deleted from the base itself, along with the rest of the Airtable integration, in the final teardown step once nothing else reads or writes Airtable.
 
-No integration table lets a form create rows anymore: Attendance and EL
-Reflections are read-only projections, with no officer override or correction
-subsystem behind them. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
+No integration table lets a form create rows anymore: Attendance is a
+read-only projection, with no officer override or correction subsystem behind
+it. Reflections never reach Airtable at all — they stay on the platform,
+export-only. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
 
 <details>
 <summary>Which surface does a given officer task belong to?</summary>
@@ -71,14 +71,14 @@ The cron fires `*/15 * * * *` at `/airtable/sync`; `requestAirtableSync()` runs 
 3. **Ensure and pull Platform Settings**, retaining the previous policy when an
    officer enters an invalid value.
 4. **Pull Competitions**, resolving each `Workshop` link against `workshops.configId`.
-5. **Push** Members, Attendance, Teams, EL Reflections, and derived counts.
+5. **Push** Members, Attendance, Teams, and derived counts.
 6. **Write refusals** into each record's `⚙️ Sync status`, release the lease,
    and advance `lastSyncedAt` only if the pass completed.
 
 A missing officer-authored competition is a **soft archive**: `deletedAt` is
 set, the row leaves the site, and attendance survives. Platform-authored
-Attendance and EL Reflections rows are recreated by the next push if their
-Airtable projections are removed. Meetings and workshops archive the same
+Attendance rows are recreated by the next push if their Airtable projections
+are removed. Meetings and workshops archive the same
 way, but through the config reconcile now — see
 [Config-as-code](/docs/platform/guides/meetings-and-teams/club-config).
 

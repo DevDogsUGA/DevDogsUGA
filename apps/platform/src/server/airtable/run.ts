@@ -3,7 +3,6 @@ import {
   competitions as competitionsSpec,
   meetings as meetingsSpec,
   members as membersSpec,
-  elReflectionsTable as reflectionsSpec,
   platformSettingsTable as settingsSpec,
   projects as projectsSpec,
   teamsTable as teamsSpec,
@@ -24,7 +23,6 @@ import {
   pushAttendance,
   pushDerivedCounts,
   pushMembers,
-  pushReflections,
   ensurePlatformSettings,
   pushTeams,
   writeSyncStatus,
@@ -198,7 +196,6 @@ export async function runAirtableSync(
     competitions: AirtableRecord[];
     teams: AirtableRecord[];
     attendance: AirtableRecord[];
-    reflections: AirtableRecord[];
     platformSettings: AirtableRecord[];
   } | null = null;
 
@@ -215,7 +212,6 @@ export async function runAirtableSync(
       competitions: await client.listRecords(competitionsSpec.id),
       teams: await client.listRecords(teamsSpec.id),
       attendance: await client.listRecords(attendanceSpec.id),
-      reflections: await client.listRecords(reflectionsSpec.id),
       platformSettings: await client.listRecords(settingsSpec.id),
     };
 
@@ -253,10 +249,6 @@ export async function runAirtableSync(
       await pushAttendance(client, listed.attendance, listed.members),
     );
     add(pushed, await pushTeams(client, listed.teams));
-    add(
-      pushed,
-      await pushReflections(client, listed.reflections, listed.members),
-    );
     add(pushed, await pushDerivedCounts(client, listed));
   } catch (error) {
     failure = error;

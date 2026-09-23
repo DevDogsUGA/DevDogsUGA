@@ -52,8 +52,9 @@ minimum (initially 100 words) and must occur before the global window closes
 Submitted reflections are member-locked; there is no officer exception.
 
 Every reflection mutation creates immutable revision evidence and an audit
-event. There is no officer review surface on the platform or in Airtable —
-reflections are export-only, and the university, not DevDogs, determines
+event. There is no officer review surface — Airtable never receives reflection
+content, and the platform has no review, approval, or status page for it.
+Reflections are export-only, and the university, not DevDogs, determines
 whether that evidence earns credit.
 
 ## Exports

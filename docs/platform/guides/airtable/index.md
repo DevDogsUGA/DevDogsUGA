@@ -6,7 +6,7 @@ order: 1
 
 # Airtable
 
-Airtable is the officers' console. One base holds nine integration tables, and a sync pass moves data both ways: officer-authored configuration is pulled into Postgres, while platform-owned attendance and reflection evidence is pushed back for officers to read. Read this before adding a field, changing what syncs, or debugging a pass. If you only need to know _what_ syncs and in which direction, that is [Airtable sync](/docs/platform/guides/meetings-and-teams/airtable-sync); for the package's exported functions, the generated [`@devdogsuga/airtable`](/docs/toolkit/reference/api/airtable) reference.
+Airtable is the officers' console. One base holds eight integration tables, and a sync pass moves data both ways: officer-authored configuration is pulled into Postgres, while platform-owned attendance is pushed back for officers to read. Reflections never make this trip — they stay on the platform, export-only. Read this before adding a field, changing what syncs, or debugging a pass. If you only need to know _what_ syncs and in which direction, that is [Airtable sync](/docs/platform/guides/meetings-and-teams/airtable-sync); for the package's exported functions, the generated [`@devdogsuga/airtable`](/docs/toolkit/reference/api/airtable) reference.
 
 ## The field registry
 
@@ -67,7 +67,7 @@ Pulling the table removes the failure rather than reporting it: the Project link
 
 ## No corrections
 
-Attendance and EL Reflections are platform-owned, read-only projections. There is no officer override or correction subsystem, and no form that writes back into Postgres — a late check-in is the rotating code shown again, not a request routed through Airtable. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
+Attendance is a platform-owned, read-only projection. There is no officer override or correction subsystem, and no form that writes back into Postgres — a late check-in is the rotating code shown again, not a request routed through Airtable. Reflections carry the same rule further: Airtable never sees them at all, so there is nothing there to correct. See [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
 
 ## Read next
 

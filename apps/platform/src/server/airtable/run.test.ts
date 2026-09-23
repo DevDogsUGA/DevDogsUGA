@@ -46,9 +46,6 @@ const writes = vi.hoisted(() => ({
   pushTeams: vi.fn(() =>
     Promise.resolve({ created: 0, updated: 0, unchanged: 0 }),
   ),
-  pushReflections: vi.fn(() =>
-    Promise.resolve({ created: 0, updated: 0, unchanged: 0 }),
-  ),
   ensurePlatformSettings: vi.fn(() =>
     Promise.resolve({ created: 0, updated: 0, unchanged: 1 }),
   ),
