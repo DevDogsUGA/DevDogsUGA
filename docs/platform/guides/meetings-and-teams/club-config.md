@@ -85,6 +85,18 @@ other cron route):
   `.github/workflows/deploy.yaml` is still open — see the platform redesign
   followups.
 
+## Local development
+
+`pnpm devtools db reset` does not seed meetings or workshops —
+`supabase/seed/*.sql` only ever held roles, moderation fixtures and officers,
+and the reconcile is a platform route rather than a devtools-side function,
+so the reset command cannot call it directly without duplicating the app's
+DB client and Sentry wiring. A fresh local database has zero meetings until
+you trigger the reconcile yourself: start the platform app
+(`pnpm --filter platform dev`) and run `pnpm devtools cron run --app platform
+--cron '*/15 * * * *' --yes` once. `db reset` prints this same reminder when
+it finishes against a local database.
+
 ## Migrated ids
 
 The data that seeded `data/meetings.json` came from the Airtable base this

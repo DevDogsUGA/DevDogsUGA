@@ -117,13 +117,38 @@ async function pushMigrations(connection: DbConnection): Promise<number> {
  * ⚠️ SAFETY-CRITICAL: drops and re-migrates `connection.dbUrl`. The caller
  * (`cli.ts`'s `runStack`) has already confirmed the session target —
  * including the hard production gate — before this ever runs.
+ *
+ * Meetings and workshops are NOT among the tables `supabase/seed/*.sql`
+ * populates -- they come from `@devdogsuga/club-config` via
+ * `reconcileFromConfig`, which needs a running Next server to reach (it is
+ * an authenticated platform route, not a devtools-side function this CLI can
+ * call directly without duplicating the app's DB client and Sentry wiring).
+ * A fresh local reset is deliberately left to say so rather than pretend
+ * those tables are seeded, matching the manual step `club-config.md`
+ * documents.
  */
-async function reset(connection: DbConnection): Promise<number> {
+async function reset(connection: DbConnection): Promise<{
+  code: number;
+  lines: string[];
+}> {
   const code = await supabase("db", "reset", "--db-url", connection.dbUrl);
-  if (code !== 0) return code;
+  if (code !== 0) return { code, lines: [] };
   const types = await generateTypes(connection.dbUrl);
-  if (types !== 0) return types;
-  return seedBuckets(bucketsShape(connection));
+  if (types !== 0) return { code: types, lines: [] };
+  const bucketsCode = await seedBuckets(bucketsShape(connection));
+  if (bucketsCode !== 0) return { code: bucketsCode, lines: [] };
+  return {
+    code: 0,
+    lines: isLocalConnection(connection)
+      ? [
+          "Meetings and workshops are not seeded by this reset -- they come " +
+            "from @devdogsuga/club-config. Start the platform app " +
+            "(`pnpm --filter platform dev`) and run `pnpm devtools cron run " +
+            "--app platform --cron '*/15 * * * *' --yes` once to reconcile " +
+            "them locally.",
+        ]
+      : [],
+  };
 }
 
 /**
@@ -244,5 +269,5 @@ export async function runStackCommand(
     return { code: await pushMigrations(connection), lines: [] };
   }
 
-  return { code: await reset(connection), lines: [] };
+  return reset(connection);
 }
