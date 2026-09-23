@@ -143,17 +143,13 @@ export interface ProjectIdentity extends ProjectFieldConfig {
 export interface CompetitionsGithubClient {
   /** One Project item by node id, or null if the node does not resolve to a
    *  `ProjectV2Item` at all (never existed, or the id is stale). */
-  projectItem(
-    itemNodeId: string,
-  ): Promise<{
+  projectItem(itemNodeId: string): Promise<{
     project: ProjectIdentity | null;
     item: RawProjectItemFields;
   } | null>;
   /** Every item currently in the configured Project, paginated internally.
    *  Returns null if the Project id itself does not resolve. */
-  projectItems(
-    projectId: string,
-  ): Promise<{
+  projectItems(projectId: string): Promise<{
     fields: ProjectFieldConfig;
     items: RawProjectItemFields[];
   } | null>;
@@ -229,6 +225,19 @@ function liveGithubClient(): CompetitionsGithubClient {
 
 // ── Applying one item ────────────────────────────────────────────────────────
 
+/**
+ * Mirrors the migration's `competitions_title_length` check constraint
+ * (`supabase/migrations/20260829040000_11_platform_events_core.sql`).
+ * `parseProjectItem` has no length opinion -- a GitHub issue title allows up
+ * to 256 characters and the Project's free-text "Title" field enforces
+ * nothing -- so an ordinary issue can genuinely exceed what this table's
+ * heading is allowed to hold. Checked here, before the write that would
+ * otherwise be the first and only place to learn that, the same way the
+ * deleted Airtable `checkCompetitionValues` rule caught an over-length title
+ * before it ever reached a Postgres `insert`.
+ */
+const COMPETITION_TITLE_MAX_LENGTH = 160;
+
 export interface ApplyReport {
   upserted: number;
   skipped: number;
@@ -248,6 +257,15 @@ function emptyReport(): ApplyReport {
  * part of. Never partially applies: a drifted shape means this item (and
  * every other one sharing the same Project read) is skipped outright, not
  * upserted with a best guess.
+ *
+ * Contained on purpose: this is called from inside `reconcileCompetitions`'s
+ * `for` loop and from the webhook route's single-item path, and this
+ * function must never throw either caller into losing the rest of its work
+ * over ONE bad item -- an over-length title (see `COMPETITION_TITLE_MAX_LENGTH`)
+ * or any other write failure the shape check did not anticipate reports to
+ * Sentry and is skipped, the same "report and move on" contract
+ * `reportDrift` gives the shape check, rather than aborting the batch or
+ * surfacing as an uncaught 500 that GitHub would just retry forever.
  */
 async function applyItem(
   database: typeof db,
@@ -260,8 +278,27 @@ async function applyItem(
     report.skipped += 1;
     return;
   }
-  await upsertCompetition(database, outcome.competition);
-  report.upserted += 1;
+
+  try {
+    if (outcome.competition.title.length > COMPETITION_TITLE_MAX_LENGTH) {
+      throw new Error(
+        `title is ${outcome.competition.title.length} characters, over the ` +
+          `${COMPETITION_TITLE_MAX_LENGTH}-character cap`,
+      );
+    }
+    await upsertCompetition(database, outcome.competition);
+    report.upserted += 1;
+  } catch (error) {
+    report.skipped += 1;
+    await postAlert(
+      "Competitions ingest failed to apply an item",
+      [
+        `${outcome.competition.repo}#${outcome.competition.issueNumber}: ` +
+          (error instanceof Error ? error.message : String(error)),
+      ],
+      "That item was skipped; every other item in this run still applied. Fix the issue (or its Project 'Title' field) and this will pick back up on the next webhook delivery or nightly reconcile.",
+    );
+  }
 }
 
 /**

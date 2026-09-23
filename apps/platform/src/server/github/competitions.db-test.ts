@@ -280,6 +280,36 @@ describe("ingestCompetitionItem", () => {
       expect.any(String),
     );
   });
+
+  it("skips and alerts, rather than throwing, on a title over the column's length cap", async () => {
+    // A real GitHub issue title (up to 256 characters) or Project "Title"
+    // field value can exceed the `competitions_title_length` check
+    // constraint's 160-character cap -- nothing upstream of that constraint
+    // enforces one. This has to be caught before the write, not surfaced as
+    // an unhandled webhook 500 GitHub would just retry forever.
+    alerts.postAlert.mockClear();
+    const client: CompetitionsGithubClient = {
+      projectItem: () =>
+        Promise.resolve({
+          project: GOOD_PROJECT,
+          item: issue("I_dbtest_long_title", 107, {
+            titleValue: { text: "T".repeat(200) },
+          }),
+        }),
+      projectItems: unreachableProjectItems,
+    };
+    const report = await ingestCompetitionItem("PVTI_8", db, client);
+    expect(report).toEqual({ upserted: 0, skipped: 1, drift: [] });
+    expect(await rowFor("I_dbtest_long_title")).toBeNull();
+    expect(alerts.postAlert).toHaveBeenCalledOnce();
+    expect(alerts.postAlert).toHaveBeenCalledWith(
+      "Competitions ingest failed to apply an item",
+      expect.arrayContaining([
+        expect.stringMatching(/107.*over the 160-character cap/),
+      ]),
+      expect.any(String),
+    );
+  });
 });
 
 describe("reconcileCompetitions", () => {
@@ -334,5 +364,30 @@ describe("reconcileCompetitions", () => {
     expect(report.upserted).toBe(0);
     expect(report.drift.length).toBeGreaterThan(0);
     expect(await rowFor("I_dbtest_page_drift")).toBeNull();
+  });
+
+  it("keeps applying later items on the page after one throws", async () => {
+    // Regression: applyItem() used to write straight to the database with no
+    // containment, so one bad row (here, an over-length title) would abort
+    // this `for` loop and silently skip every other competition on the page.
+    alerts.postAlert.mockClear();
+    const client: CompetitionsGithubClient = {
+      projectItem: unreachableProjectItem,
+      projectItems: () =>
+        Promise.resolve({
+          fields: GOOD_FIELDS,
+          items: [
+            issue("I_dbtest_page_bad_title", 204, {
+              titleValue: { text: "T".repeat(200) },
+            }),
+            issue("I_dbtest_page_after", 205),
+          ],
+        }),
+    };
+    const report = await reconcileCompetitions(db, client);
+    expect(report).toEqual({ upserted: 1, skipped: 1, drift: [] });
+    expect(await rowFor("I_dbtest_page_bad_title")).toBeNull();
+    expect(await rowFor("I_dbtest_page_after")).not.toBeNull();
+    expect(alerts.postAlert).toHaveBeenCalledOnce();
   });
 });
