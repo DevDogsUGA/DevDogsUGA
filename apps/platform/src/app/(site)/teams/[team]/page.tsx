@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import JoinByCodeForm from "~/components/teams/JoinByCodeForm";
 import RosterActions from "~/components/teams/RosterActions";
 import PageShell from "~/components/PageShell";
-import { formatEventDateTime } from "~/lib/eventTime";
+import { formatEventDateTime, formatRelative } from "~/lib/eventTime";
 import {
   disbandTeamAction,
   joinTeam,
@@ -12,8 +13,10 @@ import {
   transferLead,
 } from "~/server/actions/teams";
 import { requireSession } from "~/server/auth/require";
-import { getTeamDetail } from "~/server/loaders/teams";
+import { getPendingForUser, getTeamDetail } from "~/server/loaders/teams";
+import { isMirrorStale } from "~/server/teams/mirrorFreshness";
 import Badge from "~/ui/badge";
+import Callout from "~/ui/callout";
 import { ConsoleCard } from "~/ui/card";
 
 /**
@@ -50,6 +53,18 @@ export default async function TeamPage({
 
   const viewer = team.members.find((member) => member.userId === userId);
   const isMember = viewer !== undefined;
+  const isLead = viewer?.role === "lead";
+
+  // Only the lead sees what is waiting on THEM to answer -- a member has
+  // nothing to decide here, and a stranger has no reason to know a queue
+  // exists at all. `/teams/requests` is the full answer/decline surface;
+  // this is a pointer to it, not a second copy of it.
+  const pendingForLead = isLead
+    ? (await getPendingForUser(userId)).filter(
+        (request) => request.teamId === team.id,
+      )
+    : [];
+  const checkedAt = new Date();
 
   return (
     <PageShell
@@ -60,6 +75,38 @@ export default async function TeamPage({
       <ConsoleCard.Root id="roster">
         <ConsoleCard.Header title="Roster" />
         <ConsoleCard.Content>
+          <p className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-mauve-400">
+            <a
+              href={team.branchUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-mauve-200"
+            >
+              team/{team.slug} on GitHub
+            </a>
+            {isMirrorStale(team.githubSyncedAt, checkedAt) && (
+              <span>
+                {/* A muted note, not a warning callout -- the mirror lagging
+                    behind GitHub by a few days is drift the nightly reconcile
+                    is built to close on its own, not something a member needs
+                    to act on. */}
+                {team.githubSyncedAt === null
+                  ? "never confirmed against GitHub"
+                  : `last confirmed against GitHub ${formatRelative(team.githubSyncedAt)}`}
+              </span>
+            )}
+          </p>
+          {pendingForLead.length > 0 && (
+            <Callout tone="info" title="Waiting on you" className="mb-4">
+              {pendingForLead.length}{" "}
+              {pendingForLead.length === 1 ? "person is" : "people are"} waiting
+              on an invitation or join request for this team.{" "}
+              <Link href="/teams/requests" className="underline">
+                Answer them
+              </Link>
+              .
+            </Callout>
+          )}
           <ul className="flex flex-col gap-2">
             {team.members.map((member) => (
               <li

@@ -1,16 +1,24 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
 import PageShell from "~/components/PageShell";
 import StarGrid from "~/components/participation/StarGrid";
 import { StarTotalsRow } from "~/components/participation/StarBadges";
 import ReflectionCards from "~/components/ReflectionCards";
-import { formatEventDateTime, formatEventSpan } from "~/lib/eventTime";
+import {
+  formatEventDateTime,
+  formatEventSpan,
+  formatRelative,
+} from "~/lib/eventTime";
 import { meetingTitle } from "~/lib/meetingTitle";
 import { getAttendanceMeetings } from "~/server/attendance/getMeetings";
 import { expectSession } from "~/server/auth";
+import { getMyTeams } from "~/server/loaders/teams";
 import { getStarsForUser, totalStars } from "~/server/loaders/stars";
 import { getStreakForUser } from "~/server/loaders/streak";
 import { getReflectionActivities } from "~/server/reflections/load";
+import { isMirrorStale } from "~/server/teams/mirrorFreshness";
+import Badge from "~/ui/badge";
 
 export const metadata: Metadata = {
   title: "Attendance | DevDogs",
@@ -66,6 +74,10 @@ export default async function AttendancePage({
   const recordedAtParam =
     typeof params.recordedAt === "string" ? params.recordedAt : undefined;
   const recordedAt = recordedAtParam ? new Date(recordedAtParam) : null;
+  // One instant for the whole render, so every team card's staleness note
+  // (below, in "Your teams") is judged against the same "now" rather than
+  // each computing its own as the list renders.
+  const teamsCheckedAt = new Date();
   const receipt = status ? STATUS_COPY[status] : undefined;
   const [meetings, userId] = await Promise.all([
     getAttendanceMeetings(),
@@ -77,13 +89,14 @@ export default async function AttendancePage({
   const checkedInMeeting = meetings.find((m) => m.id === requestedMeeting);
   const surveyUrl =
     receipt?.good && checkedInMeeting ? checkedInMeeting.surveyUrl : null;
-  const [stars, reflectionData, streak] = userId
+  const [stars, reflectionData, streak, myTeams] = userId
     ? await Promise.all([
         getStarsForUser(userId),
         getReflectionActivities(userId),
         getStreakForUser(userId),
+        getMyTeams(userId),
       ])
-    : [null, null, null];
+    : [null, null, null, null];
   const selected = meetings.some((meeting) => meeting.id === requestedMeeting)
     ? requestedMeeting
     : meetings[0]?.id;
@@ -219,6 +232,59 @@ export default async function AttendancePage({
             </div>
           )}
           <StarGrid cells={stars} />
+        </section>
+      )}
+
+      {myTeams && myTeams.length > 0 && (
+        <section className="rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-6 shadow-lg shadow-black/30">
+          <h2 className="text-lg font-semibold text-white">Your teams</h2>
+          <p className="mt-1 text-sm text-mauve-400">
+            Live from GitHub -- membership is push access to the branch, not a
+            row in this database. See{" "}
+            <Link href="/teams" className="underline">
+              /teams
+            </Link>{" "}
+            to join another, invite someone, or leave.
+          </p>
+          <ul className="mt-4 flex flex-col gap-2">
+            {myTeams.map((team) => (
+              <li
+                key={team.teamId}
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm"
+              >
+                <span className="flex items-center gap-2">
+                  <Link
+                    href={`/teams/${team.teamSlug}`}
+                    className="font-semibold text-white underline underline-offset-4 hover:text-mauve-200"
+                  >
+                    {team.teamName}
+                  </Link>
+                  {team.role === "lead" && (
+                    <Badge variant="info" className="font-normal">
+                      Lead
+                    </Badge>
+                  )}
+                </span>
+                <span className="flex items-center gap-3 text-xs text-mauve-400">
+                  <a
+                    href={team.branchUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2 hover:text-mauve-200"
+                  >
+                    branch on GitHub
+                  </a>
+                  {isMirrorStale(team.githubSyncedAt, teamsCheckedAt) && (
+                    <span>
+                      {team.githubSyncedAt === null
+                        ? "never confirmed"
+                        : `confirmed ${formatRelative(team.githubSyncedAt)}`}
+                    </span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

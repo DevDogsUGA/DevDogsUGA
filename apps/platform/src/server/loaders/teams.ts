@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { cache } from "react";
+import { env } from "~/env";
 import { db } from "~/server/db";
 import {
   profiles,
@@ -7,6 +8,15 @@ import {
   teamMembershipRequests,
   teams,
 } from "~/server/db/schema";
+import { teamBranch } from "~/server/github/naming";
+
+/**
+ * The GitHub URL for a team's branch -- what the dashboard links "the team
+ * on GitHub" to, since the branch IS the team.
+ */
+function teamBranchUrl(teamSlug: string): string {
+  return `https://github.com/${env.GITHUB_ORG}/${env.GITHUB_COMPETITION_REPO}/tree/${teamBranch(teamSlug)}`;
+}
 
 /**
  * Reads for the team pages.
@@ -32,6 +42,12 @@ export interface TeamDetail {
   members: TeamMemberRow[];
   /** Only ever sent to an active member of this team. See `getTeamDetail`. */
   joinCode: string | null;
+  /** Where the team actually lives -- the branch, on GitHub. */
+  branchUrl: string;
+  /** Last time something confirmed this row against GitHub. Null only for a
+   *  row that predates the mirror's freshness column, which should not
+   *  exist outside a bug -- see the migration comment on `githubSyncedAt`. */
+  githubSyncedAt: Date | null;
 }
 
 /**
@@ -54,6 +70,7 @@ export const getTeamDetail = cache(
         name: teams.name,
         joinCode: teams.joinCode,
         acceptingRequests: teams.acceptingRequests,
+        githubSyncedAt: teams.githubSyncedAt,
       })
       .from(teams)
       .where(eq(teams.slug, teamSlug));
@@ -84,6 +101,8 @@ export const getTeamDetail = cache(
       acceptingRequests: row.acceptingRequests,
       members,
       joinCode: isMember ? row.joinCode : null,
+      branchUrl: teamBranchUrl(row.slug),
+      githubSyncedAt: row.githubSyncedAt,
     };
   },
 );
@@ -179,25 +198,34 @@ export interface MyTeam {
   teamSlug: string;
   teamName: string;
   role: "lead" | "member";
+  branchUrl: string;
+  githubSyncedAt: Date | null;
 }
 
 /**
  * Every team the viewer is ACTIVELY on -- up to
  * `MAX_CONCURRENT_TEAMS_PER_USER`, unlike the old one-per-competition
- * `getMyTeam`, which returned at most one.
+ * `getMyTeam`, which returned at most one. Backs both `/teams` and the
+ * attendance passport's teams section.
  */
 export const getMyTeams = cache(async (userId: string): Promise<MyTeam[]> => {
-  return db
+  const rows = await db
     .select({
       teamId: teams.id,
       teamSlug: teams.slug,
       teamName: teams.name,
       role: teamMembers.role,
+      githubSyncedAt: teams.githubSyncedAt,
     })
     .from(teamMembers)
     .innerJoin(teams, eq(teams.id, teamMembers.teamId))
     .where(and(eq(teamMembers.userId, userId), isNull(teamMembers.leftAt)))
     .orderBy(asc(teams.name));
+
+  return rows.map((row) => ({
+    ...row,
+    branchUrl: teamBranchUrl(row.teamSlug),
+  }));
 });
 
 export interface EntrantRow {
