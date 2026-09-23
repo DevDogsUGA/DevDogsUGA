@@ -71,6 +71,18 @@ Only the lead can disband a team, and it is GitHub-first in the other direction 
 
 Disbanding does **not** delete the branch or its pull-request history — that is the record of what the team did, and a member should still be able to point at it after the team that made it no longer exists.
 
+## The live mirror
+
+GitHub-first writes only cover change caused BY the platform. Two more paths keep the mirror honest against everything else: a change made directly on GitHub (a login added by hand, a branch or ruleset deleted from the UI), and a GitHub call that succeeded while its mirror write, for whatever reason, did not.
+
+**The webhook** (`POST /github/webhook`, `server/github/webhookEvents.ts`) is the near-real-time half. The App delivers four event types here: `membership` (added/removed on a team's GitHub team), `team` (deleted, or renamed), and `create`/`delete` (a `team/<slug>` branch appearing or vanishing) — see [The DevDogs GitHub App](/docs/platform/guides/identity/github-app) for exactly which events and permissions. Every handler reads only its payload, never calls GitHub back, and is idempotent against redelivery. A team or branch this platform never provisioned is ignored, not refused.
+
+**The nightly reconcile** (`reconcileTeams`, `server/github/teamSync.ts`, run by `/cron/github-reconcile`) is the backstop for what the webhook cannot reach: an undelivered event, or drift nobody's action or webhook ever saw. It reads GitHub's actual state for every mirrored team and repairs the mirror TOWARD it — a GitHub login with no active mirror row gets one, an active row with no matching login gets closed, a missing branch or ruleset gets recreated like `provisionTeam` always has. **It never removes anyone from GitHub.** A member or team over cap because someone was added directly on GitHub is reported to Sentry, not enforced — the caps live on the platform's own join path, not as a promise about what GitHub itself allows.
+
+Both take `db` as a parameter, and the reconcile pass takes its GitHub client the same way (`ReconcileGithubClient`, defaulting to a real Octokit implementation), so both are db-tested against a real database without touching the network.
+
+**`teams.githubSyncedAt`** is when the mirror was last confirmed against GitHub, set by every GitHub-touching action, webhook event and reconcile pass. The team dashboard and the attendance passport show a muted staleness note when it is old or null — see `server/teams/mirrorFreshness.ts`.
+
 ## Why it's like this
 
 <details>

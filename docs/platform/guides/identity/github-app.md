@@ -57,9 +57,17 @@ The App holds exactly five permissions: `administration: write`, `contents: writ
 
 **Post installation:** Setup URL blank, "Redirect on update" unchecked. A setup URL is for Apps needing per-installation configuration; this one is installed once, on one organization.
 
-**Webhook:** not configured. The platform redesign's teams-core step removed the one webhook route that used to exist here (`/github/webhook`, which drove the old per-competition entry state machine) along with the `submissionState` columns it wrote; a later step in the same redesign (webhook-fed mirror updates) reintroduces a webhook against the new team-branch model, and this section comes back with it.
+**Webhook:** ⚠️ code-ready, **not yet enabled by Sloan**. The teams-core step removed the old `/github/webhook` (the per-competition entry state machine); the teams-mirror step reintroduced it against the new team-branch model -- see [Teams](/docs/platform/guides/meetings-and-teams/teams), "The live mirror". Nobody has done the dashboard half yet:
 
-**Permissions.** Repository: Administration read and write (`repos.createRepoRuleset`, `getRepoRulesets`, `updateRepoRuleset`, `deleteRepoRuleset`, `teams.addOrUpdateRepoPermissionsInOrg`, `teams.deleteInOrg`); Contents read and write (`git.createRef`, `git.getRef`, cutting team branches); Metadata read-only (mandatory). Organization: Members read and write (`teams.create`, `getByName`, `listMembersInOrg`, `removeMembershipForUserInOrg`, and the org invitation and membership endpoints). Account permissions: none. Pull requests read is not currently granted -- nothing reads it with the webhook gone -- and is expected back alongside the webhook.
+- **Payload URL:** `{BASE_URL}/github/webhook`, production's URL only -- staging never receives webhooks, see "Why does staging get a second App" below.
+- **Content type:** `application/json`.
+- **Secret:** 32+ random characters, matching `env.ts`'s `GH_WEBHOOK_SECRET`. Push it (`pnpm devtools env push --target production`), then paste the SAME value into this field -- the route verifies `X-Hub-Signature-256` against it (`server/github/webhookSignature.ts`).
+- **Events, "Let me select individual events":** `Membership`, `Team`, `Branch or tag creation`, `Branch or tag deletion`. NOT `Pull request` -- PR-linked competition entry is a later step, and the route ignores that event on purpose until it lands.
+- **Active:** checked.
+
+No new permission grant needed: every event above is covered by `Members` and `Contents`, already listed next.
+
+**Permissions.** Repository: Administration read and write (`repos.createRepoRuleset`, `getRepoRulesets`, `updateRepoRuleset`, `deleteRepoRuleset`, `teams.addOrUpdateRepoPermissionsInOrg`, `teams.deleteInOrg`); Contents read and write (`git.createRef`, `git.getRef`, cutting team branches, and the `create`/`delete` webhook events); Metadata read-only (mandatory). Organization: Members read and write (`teams.create`, `getByName`, `listMembersInOrg`, `removeMembershipForUserInOrg`, the org invitation/membership endpoints, and the `membership`/`team` webhook events). Account permissions: none. Pull requests read is still not granted -- PR-linked competition entry has not landed -- and stays expected alongside that later step, not this one.
 
 **Where can this be installed:** only on this account.
 
@@ -90,7 +98,7 @@ Run this for **each** App — production first, then staging with the reduced pe
      --jq '.installations[] | {app: .app_slug, perms: .permissions}'
    ```
 
-   Expect exactly `administration: write`, `contents: write`, `metadata: read`, `pull_requests: read`, `members: write` on production. Anything else was a mis-tick, and this is the cheapest moment to find it.
+   Expect exactly `administration: write`, `contents: write`, `metadata: read`, `members: write` on production -- no `pull_requests` yet; see "Pull requests read" above for when that arrives. Anything else was a mis-tick, and this is the cheapest moment to find it.
 
 </details>
 
@@ -107,10 +115,12 @@ And staging is the **less** guarded environment: it deploys from `main` on every
 
 |              | `DevDogs Platform`                             | `DevDogs Platform (staging)` |
 | ------------ | ---------------------------------------------- | ---------------------------- |
-| Webhook      | not configured (see above)                     | not configured               |
+| Webhook      | configured (see above)                         | not configured               |
 | Repository   | Administration + Contents write, Metadata read | Metadata read                |
 | Organization | Members write                                  | _none_                       |
 | Private key  | `production`                                   | `staging`                    |
+
+Staging gets no webhook at all, not a webhook nobody set up: there is nothing in staging's own database for a `membership`/`team`/`create`/`delete` event to repair (`GH_WEBHOOK_SECRET` is still pushed to both targets, the same as every other `scope: "environment"` secret, but staging's route falls back to its dev-bypass check and never receives a real GitHub delivery to verify it against).
 
 Read-only degrades correctly rather than crashing: `provisionTeam` and its neighbours return `failed("api_error", …)` on a 403, so the console shows a clear failure instead of a 500. Nothing in staging calls GitHub unprompted either — `wrangler.jsonc` gives staging `"crons": []`, so `github-reconcile` runs on production alone.
 
