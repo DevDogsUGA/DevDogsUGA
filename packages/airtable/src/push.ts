@@ -131,8 +131,8 @@ export function buildPush<TRow>(
  *
  * Which one to use follows from who authors the table:
  *
- *   * The platform authors Members, Projects and Teams, so a row with no
- *     matching Airtable record SHOULD create one. That is `buildPush` +
+ *   * The platform authors Members, so a row with no matching Airtable
+ *     record SHOULD create one. That is `buildPush` +
  *     `upsertRecords`.
  *
  *   * Airtable authors Meetings, Workshops and Competitions. The platform only

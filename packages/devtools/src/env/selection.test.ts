@@ -606,8 +606,14 @@ describe("preflight, the target no app boots from", () => {
     // sandbox-environment integration, deleted -- ordinary `scope: "environment"`
     // keys, neither narrowed nor tiered, so both deployed targets moved and
     // preflight did not.
-    expect(keysRoutedTo("staging").size).toBe(49);
-    expect(keysRoutedTo("production").size).toBe(52);
+    //
+    // Then both dropped by one more: `GH_WEBHOOK_SECRET` left the registry with
+    // the PR-entry webhook it authenticated, deleted by the platform redesign's
+    // teams-core step along with the `submissionState` columns it wrote --
+    // another ordinary `scope: "environment"` key, so both deployed targets
+    // moved and preflight did not.
+    expect(keysRoutedTo("staging").size).toBe(48);
+    expect(keysRoutedTo("production").size).toBe(51);
     expect(keysRoutedTo("preflight").size).toBe(2);
   });
 });

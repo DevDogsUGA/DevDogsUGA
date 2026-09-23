@@ -21,43 +21,21 @@ import {
  * competitions rework (P3), so their rules and tests remain.
  */
 
-const maxTeamSizeParse = competitionsSpec.fields.maxTeamSize.parse;
 const competitionTitleParse = competitionsSpec.fields.title.parse;
 
-function competitionValueFacts(raw: { title?: string; maxTeamSize?: number }) {
+function competitionValueFacts(raw: { title?: string }) {
   return {
     airtableRecordId: "recCompetition",
     rawTitle: raw.title,
     title: competitionTitleParse(raw.title),
-    rawMaxTeamSize: raw.maxTeamSize,
-    maxTeamSize: maxTeamSizeParse(raw.maxTeamSize),
   };
 }
 
-describe("competition numbers", () => {
-  it("stays silent when neither is set", () => {
+describe("competition title", () => {
+  it("stays silent when it is not set", () => {
     expect(checkCompetitionValues(competitionValueFacts({})).refusals).toEqual(
       [],
     );
-  });
-
-  it("refuses a max team size of zero", () => {
-    // `competitions_maxTeamSize_positive`. Typing 0 is an ordinary slip and
-    // used to be an exception raised in the middle of the pull.
-    const facts = competitionValueFacts({ maxTeamSize: 0 });
-
-    expect(checkCompetitionValues(facts).refusals.map((r) => r.code)).toEqual([
-      "competition_max_team_size_invalid",
-    ]);
-    expect(facts.maxTeamSize).toBeNull();
-  });
-
-  it("refuses a fractional team size", () => {
-    const facts = competitionValueFacts({ maxTeamSize: 2.5 });
-
-    expect(checkCompetitionValues(facts).refusals.map((r) => r.code)).toEqual([
-      "competition_max_team_size_invalid",
-    ]);
   });
 
   it("refuses a title longer than a heading and keeps the published one", () => {

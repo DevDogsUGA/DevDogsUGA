@@ -115,6 +115,13 @@ export interface CompetitionRow {
   slug: string;
   workshopAirtableId: string | null;
   judgingStartsAt: string | null;
+  /**
+   * ⚠️ Always 0, pushed by `pushDerivedCounts` in
+   * `apps/platform/src/server/airtable/push.ts`. The platform redesign's
+   * teams-core step dropped `teams."competitionId"`, so this count is not
+   * computable from team rows any more; the competitions step rewires it to
+   * the competition-entry mirror.
+   */
   teamCount: number;
 }
 
@@ -130,15 +137,6 @@ export interface PlatformSettingsRow {
   id: "reflection-policy";
   minimumWordCount: number;
   submissionWindowDays: number;
-}
-
-export interface TeamRow {
-  id: string;
-  name: string;
-  competitionAirtableId: string | null;
-  memberCount: number;
-  submissionUrl: string | null;
-  competed: boolean;
 }
 
 // ── Officer-authored meeting copy ────────────────────────────────────────────
@@ -706,45 +704,19 @@ export const competitions = table("Competitions", "tbltrW1Xum127cNwy", {
   judgingStartsAt: field
     .dateTime("fld9p3FVXCuFWJF7b", "Judging starts")
     .pull((v) => parseAirtableDateTime(v)),
-  // Bounded here because it is a check constraint,
-  // `competitions_maxTeamSize_positive`. Typing 0 into Max team size is an
-  // ordinary slip and used to be a rejected insert mid-pull, which ends the
-  // pass for every table rather than refusing one cell.
-  //
-  // Non-integers are rejected too. Airtable's number field has a precision
-  // setting an officer can change, and 2.5 people is not a team size.
-  maxTeamSize: field
-    .number("fldGij8ChmqGklbwh", "Max team size")
-    .pull((v) =>
-      typeof v === "number" && Number.isInteger(v) && v > 0 ? v : null,
-    ),
   countsTowardProgress: field
     .checkbox("fldyTWr0jPHLMd3FO", "Counts toward progress")
     .pull((v) => v === true),
   elEligible: field
     .checkbox("fldWcPMV3MWkjrH9t", "EL eligible")
     .pull((v) => v === true),
+  // ⚠️ Always 0 for now: see `CompetitionRow.teamCount`'s doc. Kept as a
+  // pushed field (rather than removed) because officers still read it on the
+  // competition row; only its source stopped being computable this step.
   teamCount: field
     .number("fldss0bnDwAM2YXii", "⚙️ Teams")
     .push((c: CompetitionRow) => c.teamCount),
   syncStatus: field.longText("fldxx0qkfiSXGhWiD", "⚙️ Sync status").status(),
-});
-
-export const teamsTable = table("Teams", "tblfXjgqCZiJnnD4x", {
-  platformId: field
-    .text("fldZ7a84yBHOt1x3i", "⚙️ Platform ID")
-    .matchKey()
-    .push((t: TeamRow) => t.id),
-  name: field.text("fldkwm2qtSjZdbzPY", "⚙️ Name").push((t: TeamRow) => t.name),
-  memberCount: field
-    .number("fldu6uDYUQq0ga4qH", "⚙️ Members")
-    .push((t: TeamRow) => t.memberCount),
-  submissionUrl: field
-    .url("fldt81SN59PbB0Wa5", "⚙️ Submission")
-    .push((t: TeamRow) => t.submissionUrl),
-  competed: field
-    .checkbox("fldDuEeRPzyaRxqIo", "⚙️ Competed")
-    .push((t: TeamRow) => t.competed),
 });
 
 /**
@@ -812,7 +784,6 @@ export const registry = {
   meetings,
   workshops,
   competitions,
-  teams: teamsTable,
   attendance: attendanceTable,
   platformSettings: platformSettingsTable,
 } as const;

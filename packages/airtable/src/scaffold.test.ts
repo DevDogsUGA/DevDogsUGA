@@ -367,10 +367,10 @@ describe("discoverIds", () => {
 
     const members = schema.find((t) => t.name === "Members")!;
     members.fields = members.fields.filter((f) => f.name !== "UGA email");
-    const withoutTeams = schema.filter((t) => t.name !== "Teams");
+    const withoutCompetitions = schema.filter((t) => t.name !== "Competitions");
 
-    const found = discoverIds(withoutTeams);
-    expect(found.missing).toContain("Teams");
+    const found = discoverIds(withoutCompetitions);
+    expect(found.missing).toContain("Competitions");
     expect(found.missing.some((m) => m.includes("ugaEmail"))).toBe(true);
   });
 });

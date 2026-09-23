@@ -40,7 +40,6 @@ export type RefusalCode =
   // `tryWrite` in `sync.ts`.
   | "row_write_failed"
   | "reflection_settings_invalid"
-  | "competition_max_team_size_invalid"
   | "competition_title_too_long"
   | "judging_before_workshop"
   | "judging_moved_after_freeze";
@@ -67,7 +66,17 @@ function empty(): RuleResult {
 
 export interface CompetitionFacts {
   airtableRecordId: string;
-  /** True once `competedAt` has been stamped on any team. */
+  /**
+   * True once participation has frozen for this competition.
+   *
+   * ⚠️ Always `false` from `sync.ts` for now. The platform redesign's
+   * teams-core step dropped `teams."competedAt"`, the column this used to be
+   * computed from ("any team frozen means judging has happened"), because a
+   * team is no longer scoped to one competition. The competitions step
+   * reintroduces a freeze signal from the competition-entry mirror; until
+   * then this rule cannot refuse anything and `judgingStartsAt` may move
+   * freely even after judging.
+   */
   participationFrozen: boolean;
   currentJudgingStartsAt: Date | null;
   /** `startsAt` of the opening workshop's meeting. */
@@ -84,20 +93,10 @@ export interface CompetitionValueFacts {
   rawTitle: AirtableValue;
   /** What the registry parser made of it. Null past the length cap. */
   title: string | null;
-  /** Exactly what Airtable returned for `Max team size`, unparsed. */
-  rawMaxTeamSize: AirtableValue;
-  /** What the registry parser made of it. Null if it refused the value. */
-  maxTeamSize: number | null;
 }
 
 /**
- * The number a competition cannot store.
- *
- * `competitions_maxTeamSize_positive` is a check constraint, so a 0 typed
- * into Max team size used to be an exception raised inside the pull rather
- * than a refused cell. The parser now rejects it, and the only thing left is
- * saying so. Otherwise the number never applies and the officer has no way to
- * find out which of their edits did not take.
+ * The title a competition cannot store.
  *
  * The number is never written as null: the caller already omits a null
  * number from the update rather than clearing the column, so nothing needs
@@ -127,28 +126,7 @@ export function checkCompetitionValues(
     });
   }
 
-  if (facts.rawMaxTeamSize !== undefined && facts.maxTeamSize === null) {
-    result.refusals.push({
-      table: "competitions",
-      airtableRecordId: facts.airtableRecordId,
-      code: "competition_max_team_size_invalid",
-      message:
-        `Max team size is "${describeAirtableValue(facts.rawMaxTeamSize)}", which is not a ` +
-        "team size. It has to be a whole number of at least 1, and it has " +
-        "not been applied — the previous value is still in force. Leave the " +
-        "cell empty for no limit.",
-    });
-  }
-
   return result;
-}
-
-function describeAirtableValue(raw: AirtableValue): string {
-  if (raw === null || raw === undefined) return "empty";
-  if (typeof raw === "string") return raw;
-  if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
-  if (Array.isArray(raw)) return raw.join(", ");
-  return raw.email ?? raw.name ?? raw.id;
 }
 
 /** Protects the entry state machine. */

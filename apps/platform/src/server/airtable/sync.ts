@@ -9,7 +9,6 @@ import { db } from "~/server/db";
 import {
   competitions,
   meetings,
-  teams,
   reflectionSettings,
   workshops,
 } from "~/server/db/schema";
@@ -174,7 +173,6 @@ interface CompetitionValues {
   title: string | null;
   workshop: string | null;
   judgingStartsAt: string | null;
-  maxTeamSize: number | null;
   countsTowardProgress: boolean;
   elEligible: boolean;
 }
@@ -205,12 +203,12 @@ export async function pullCompetitions(
       airtableRecordId: competitions.airtableRecordId,
       judgingStartsAt: competitions.judgingStartsAt,
       workshopMeetingStartsAt: meetings.startsAt,
-      // Any frozen team means judging has happened for this competition.
-      participationFrozen: sql<boolean>`exists (
-        select 1 from ${teams}
-        where ${teams.competitionId} = ${competitions.id}
-          and ${teams.competedAt} is not null
-      )`,
+      // ⚠️ Always false. See the doc on `CompetitionFacts.participationFrozen`
+      // in `refusals.ts`: the platform redesign's teams-core step dropped
+      // the columns this used to be computed from, so `judgingStartsAt` can
+      // move freely for now, even after judging, until the competitions step
+      // reintroduces a freeze signal.
+      participationFrozen: sql<boolean>`false`,
     })
     .from(competitions)
     .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
@@ -222,10 +220,9 @@ export async function pullCompetitions(
       .map((c) => [c.airtableRecordId!, c]),
   );
 
-  // Max team size is check-constrained, so the raw cell is needed for the
-  // same reason the meetings pass needed it: the parser returns null for
-  // "empty" and for "not a number I can store", and only the second is worth
-  // a message.
+  // The raw title cell, for the same reason the meetings pass needed it: the
+  // parser returns null for "empty" and for "too long to publish", and only
+  // the second is worth a message.
   const rawByRecordId = new Map(records.map((r) => [r.id, r.fields]));
 
   for (const record of parsed) {
@@ -243,8 +240,6 @@ export async function pullCompetitions(
       airtableRecordId: record.airtableRecordId,
       rawTitle: raw[competitionsSpec.fields.title.id],
       title: v.title,
-      rawMaxTeamSize: raw[competitionsSpec.fields.maxTeamSize.id],
-      maxTeamSize: v.maxTeamSize,
     });
     out.refusals.push(...valueRules.refusals);
 
@@ -272,7 +267,6 @@ export async function pullCompetitions(
       };
       if (valueRules.rejectedFields.has("title")) delete values.title;
       if (v.slug !== null) values.slug = v.slug;
-      if (v.maxTeamSize !== null) values.maxTeamSize = v.maxTeamSize;
       if (
         judgingStartsAt !== null &&
         !rules.rejectedFields.has("judgingStartsAt")
@@ -331,7 +325,6 @@ export async function pullCompetitions(
             // rejects would throw, and the refusal already said why.
             title: valueRules.rejectedFields.has("title") ? null : v.title,
             judgingStartsAt,
-            maxTeamSize: v.maxTeamSize,
             countsTowardProgress: v.countsTowardProgress,
             elEligible: v.elEligible,
             airtableRecordId: record.airtableRecordId,

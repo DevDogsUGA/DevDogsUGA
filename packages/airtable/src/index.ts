@@ -79,7 +79,6 @@ export {
   meetings,
   workshops,
   competitions,
-  teamsTable,
   attendanceTable,
   platformSettingsTable,
   todo,
@@ -90,7 +89,6 @@ export {
   type MeetingRow,
   type MemberRow,
   type RegistryTable,
-  type TeamRow,
   type WorkshopRow,
 } from "./registry.js";
 

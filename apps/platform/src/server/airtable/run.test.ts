@@ -43,9 +43,6 @@ const writes = vi.hoisted(() => ({
   pushAttendance: vi.fn(() =>
     Promise.resolve({ created: 0, updated: 0, unchanged: 0 }),
   ),
-  pushTeams: vi.fn(() =>
-    Promise.resolve({ created: 0, updated: 0, unchanged: 0 }),
-  ),
   ensurePlatformSettings: vi.fn(() =>
     Promise.resolve({ created: 0, updated: 0, unchanged: 1 }),
   ),
@@ -196,7 +193,7 @@ describe("runAirtableSync schema precondition", () => {
     // leave `lastStatus` reading as a real pass, and a refusal that had already
     // pushed would be the silent-loss bug itself.
     const schema = matchingSchema();
-    schema.tables = schema.tables.filter((t) => t.name !== "Teams");
+    schema.tables = schema.tables.filter((t) => t.name !== "Competitions");
 
     await runAirtableSync({ client: clientWith(schema) });
 
@@ -260,7 +257,7 @@ describe("runAirtableSync drift alerting", () => {
    */
   const drifted = () => {
     const schema = matchingSchema();
-    schema.tables = schema.tables.filter((t) => t.name !== "Teams");
+    schema.tables = schema.tables.filter((t) => t.name !== "Competitions");
     return clientWith(schema);
   };
 
@@ -275,7 +272,7 @@ describe("runAirtableSync drift alerting", () => {
     expect(alerts.postAlert).toHaveBeenCalledOnce();
     expect(alerts.postAlert).toHaveBeenCalledWith(
       expect.stringMatching(/no longer matches the registry/),
-      expect.arrayContaining([expect.stringMatching(/Teams/)]),
+      expect.arrayContaining([expect.stringMatching(/Competitions/)]),
       expect.stringMatching(/airtable verify/),
     );
   });

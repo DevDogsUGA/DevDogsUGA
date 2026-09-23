@@ -9,7 +9,6 @@ import {
   platformSettingsTable as settingsSpec,
   mergeOn,
   statusField,
-  teamsTable as teamsSpec,
   workshops as workshopsSpec,
   type AirtableClient,
   type AirtableRecord,
@@ -19,7 +18,6 @@ import {
   type MemberRow,
   type PlatformSettingsRow,
   type TableSpec,
-  type TeamRow,
   type WorkshopRow,
 } from "@devdogsuga/airtable";
 import { eq, isNull, sql } from "drizzle-orm";
@@ -30,8 +28,6 @@ import {
   meetings,
   profiles,
   reflectionSettings,
-  teamMembers,
-  teams,
   workshops,
 } from "~/server/db/schema";
 import type { Refusal } from "./refusals";
@@ -47,8 +43,8 @@ import type { Refusal } from "./refusals";
  * Which write verb each table gets follows from who authors it, not from
  * convenience:
  *
- *   * Members, Projects, Teams: the platform authors these, so a row with no
- *     Airtable record should create one. Upsert on `⚙️ Platform ID`.
+ *   * Members: the platform authors these, so a row with no Airtable record
+ *     should create one. Upsert on `⚙️ Platform ID`.
  *   * Meetings, Workshops, Competitions: Airtable authors these. The platform
  *     only writes derived values onto rows that already exist, addressed by
  *     record id. Upserting them would create a duplicate record for every row
@@ -176,29 +172,6 @@ export async function ensurePlatformSettings(
   return { ...result, unchanged: 0 };
 }
 
-/** Teams, with their entry state. */
-export async function pushTeams(
-  client: AirtableClient,
-  existing: AirtableRecord[],
-): Promise<PushCounts> {
-  const rows = await db
-    .select({
-      id: teams.id,
-      name: teams.name,
-      competitionAirtableId: competitions.airtableRecordId,
-      submissionUrl: teams.submissionUrl,
-      competed: sql<boolean>`${teams.competedAt} is not null`,
-      memberCount: sql<number>`(
-        select count(*)::int from ${teamMembers}
-        where ${teamMembers.teamId} = ${teams.id}
-      )`,
-    })
-    .from(teams)
-    .innerJoin(competitions, eq(competitions.id, teams.competitionId));
-
-  return upsert<TeamRow>(client, teamsSpec, rows, existing);
-}
-
 async function upsert<TRow>(
   client: AirtableClient,
   spec: TableSpec,
@@ -271,10 +244,10 @@ export async function pushDerivedCounts(
         string | null
       >`${competitions.judgingStartsAt}::text`,
       airtableRecordId: competitions.airtableRecordId,
-      teamCount: sql<number>`(
-        select count(*)::int from ${teams}
-        where ${teams.competitionId} = ${competitions.id}
-      )`,
+      // See the STUB note on `CompetitionRow.teamCount` in the registry: a
+      // team is no longer scoped to a competition, so this cannot be counted
+      // from team rows any more.
+      teamCount: sql<number>`0`,
     })
     .from(competitions)
     .where(isNull(competitions.deletedAt));
