@@ -225,14 +225,10 @@ const server = {
   // webhook configured (the route only enforces the check when deployed),
   // deployed environments require at least 32 characters.
   //
-  // The name, and the `GH_` (not `GITHUB_`) prefix, are not new: the
-  // platform redesign's teams-core step deleted this same key along with
-  // the PR-entry webhook it used to authenticate, retargeting teams away
-  // from per-competition branches. This step reintroduces the webhook
-  // against the new team-branch model, and reuses the key GitHub Actions
-  // already forced onto the App credentials -- it refuses secret/variable
-  // names starting with `GITHUB_`, which `env/completeness.test.ts` asserts
-  // so this does not get relearned.
+  // The `GH_` (not `GITHUB_`) prefix reuses the shape GitHub Actions already
+  // forces onto the App credentials -- it refuses secret/variable names
+  // starting with `GITHUB_`, which `env/completeness.test.ts` asserts so
+  // this does not get relearned.
   GH_WEBHOOK_SECRET: define(
     switchEnvironment({
       local: z.string().default(""),

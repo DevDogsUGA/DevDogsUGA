@@ -5,17 +5,12 @@ import { usersInAuth } from "~/supabase/drizzle/schema";
 import { csvTimestamp } from "./csv";
 
 /**
- * The export follows the new one-row-per-star ledger. Attendance is a meeting
- * fact and participation is a competition fact; neither is attributed to a
- * workshop merely to fit the former shape.
+ * The export is a one-row-per-star ledger. Attendance is a meeting fact and
+ * participation is a competition fact; neither is attributed to a workshop.
  *
- * There used to be a `project` filter here, limiting competition rows to
- * those opened by a workshop recommending a given project. The platform
- * redesign's competitions step deleted the relationship it depended on -- a
- * competition is a standalone GitHub issue now, not opened by any workshop
- * -- so filtering "this project's competitions" is not a question this
- * export can answer any more. It was dropped rather than left to silently
- * return zero rows forever.
+ * There is no `project` filter here: a competition is a standalone GitHub
+ * issue, not opened by any workshop, so "this project's competitions" is not
+ * a question this export can answer.
  */
 export const STARS_COLUMNS = [
   "user_id",

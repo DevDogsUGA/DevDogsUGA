@@ -567,24 +567,24 @@ describe("preflight, the target no app boots from", () => {
     // keys, neither narrowed nor tiered, so both deployed targets moved and
     // preflight did not.
     //
-    // Then both dropped by one more: `GH_WEBHOOK_SECRET` left the registry with
-    // the PR-entry webhook it authenticated, deleted by the platform redesign's
-    // teams-core step along with the `submissionState` columns it wrote --
-    // another ordinary `scope: "environment"` key, so both deployed targets
-    // moved and preflight did not.
+    // Then both dropped by one more: `GH_WEBHOOK_SECRET` left the registry
+    // with the PR-entry webhook it authenticated, deleted along with the
+    // `submissionState` columns it wrote -- another ordinary
+    // `scope: "environment"` key, so both deployed targets moved and
+    // preflight did not.
     //
     // Then both moved back up by one: the SAME NAME, `GH_WEBHOOK_SECRET`,
-    // re-entered the registry when the teams-mirror step reintroduced the
-    // webhook against the new team-branch model -- ordinary `scope:
+    // re-entered the registry when the team-branch model reintroduced the
+    // webhook against the new team mirror -- ordinary `scope:
     // "environment"`, so both deployed targets moved and preflight did not,
     // same as its own deletion above.
     //
     // Then both moved up by one more: `GH_COMPETITIONS_PROJECT_ID` entered
-    // the registry when the platform redesign's competitions step wired
-    // ingestion to a GitHub Projects board -- another ordinary `scope:
-    // "environment"` key, `GH_` rather than `GITHUB_` because GitHub Actions
-    // reserves that prefix for its own automatic variables, so both deployed
-    // targets moved and preflight did not.
+    // the registry when competitions ingestion wired up against a GitHub
+    // Projects board -- another ordinary `scope: "environment"` key, `GH_`
+    // rather than `GITHUB_` because GitHub Actions reserves that prefix for
+    // its own automatic variables, so both deployed targets moved and
+    // preflight did not.
     //
     // Then both dropped by one: `AIRTABLE_SYNC_PAT` left the registry with
     // the Airtable integration's teardown -- another ordinary `scope:

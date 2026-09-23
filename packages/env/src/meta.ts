@@ -216,11 +216,10 @@ export type EnvMeta = {
    *
    * The distinction `secrecy` cannot express. `secrecy` answers "where may this
    * be stored", and every answer it has, `never-store` included, presumes there
-   * is a value somebody holds. A minted credential has no such value:
-   * `SANDBOX_PROXY_TOKEN` is a JWT the deploy signs from
-   * `SUPABASE_JWT_SIGNING_KEY` seconds before writing it to the Worker, and the
-   * previous one is replaced on every deploy. It is a genuine secret
-   * (`secrecy: "secret"`), it genuinely differs per deployment
+   * is a value somebody holds. A minted credential has no such value: a JWT
+   * a deploy signs from a separate signing secret seconds before writing it to
+   * a Worker, with the previous one replaced on every deploy, is a genuine
+   * secret (`secrecy: "secret"`), it genuinely differs per deployment
    * (`scope: "environment"`), and it is genuinely absent from `.env`, Bitwarden
    * and GitHub. None of that is a mistake.
    *

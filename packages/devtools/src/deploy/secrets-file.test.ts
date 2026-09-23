@@ -199,10 +199,9 @@ describe("file modes", () => {
 });
 
 describe("a minted key", () => {
-  // `minted: true` is what `SANDBOX_PROXY_TOKEN` used to carry: a secret
-  // signed at deploy time rather than stored, with no minter of its own once
-  // the sandbox integration it authenticated to was removed. This command has
-  // nothing left that can fill one in, so declaring one is always a hard
+  // `minted: true` marks a secret signed at deploy time rather than stored,
+  // like `SANDBOX_PROXY_TOKEN`, which has no minter of its own. This command
+  // has nothing that can fill one in, so declaring one is always a hard
   // failure rather than a silent omission.
   beforeEach(() => {
     declare({

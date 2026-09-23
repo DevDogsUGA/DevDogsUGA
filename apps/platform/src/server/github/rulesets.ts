@@ -102,7 +102,7 @@ export function teamRulesetName(teamSlug: string): string {
  *   * `non_fast_forward`: rebasing your own feature branch is ordinary work,
  *     and the team would bypass it anyway.
  *   * `pull_request`: there is no shared integration branch any team PRs into
- *     any more for a review gate to live on.
+ *     for a review gate to live on.
  *
  * An EXACT ref, not a pattern: `team/<slug>` is a prefix of `team/<slug>-2`,
  * so a `fnmatch` pattern would let one team's ruleset govern another team's

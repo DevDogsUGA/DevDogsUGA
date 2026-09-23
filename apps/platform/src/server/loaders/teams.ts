@@ -23,7 +23,7 @@ function teamBranchUrl(teamSlug: string): string {
 /**
  * Reads for the team pages.
  *
- * A team is no longer scoped to a competition, so nothing here takes a
+ * A team is not scoped to a competition, so nothing here takes a
  * competition slug. "Active" means `teamMembers."leftAt" is null` throughout
  * -- a departed member's row survives (see the teams-core migration) but is
  * not part of the roster any page renders.

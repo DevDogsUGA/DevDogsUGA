@@ -10,17 +10,13 @@
 -- platform.competitions) and the teams file. That is the whole reason
 -- entries are not folded into any of them.
 --
--- ## Competition participation, finally wired up
+-- ## Competition participation
 --
--- The platform redesign's teams-core step dropped "teams"."competitionId" and
--- "teams"."competedAt" -- a team is no longer scoped to one competition -- and
--- stubbed the competition branch of "memberStars" to always return zero rows
--- until a mirror existed to answer "which members participated in this
--- competition". "competitionEntries" IS that mirror: one row per entry pull
--- request, created by the `pull_request` webhook handling in
--- `server/github/prEvent.ts` (nothing in `server/github/competitions.ts`
--- writes to it, since an entry is a fact about a PR, not about the
--- competition issue).
+-- A team is not scoped to one competition. "competitionEntries" is the
+-- participation mirror: one row per entry pull request, created by the
+-- `pull_request` webhook handling in `server/github/prEvent.ts` (nothing in
+-- `server/github/competitions.ts` writes to it, since an entry is a fact
+-- about a PR, not about the competition issue).
 --
 -- Participation is "held an active membership on the entering team, at the
 -- moment the entry opened, and the entry opened before the competition's
@@ -29,21 +25,15 @@
 --
 -- ## Winning, without a `teamAwards` table
 --
--- An earlier draft of this migration paired `competitionEntries` with a
--- `teamAwards` table, `category = 'winner'` recorded by an officer through a
--- server action (`awardTeam`). The platform redesign's competitions-lifecycle
--- step deleted both: the design's lifecycle is "kickoff -> teams open PRs ->
--- an officer merges the winning PR -> issue closed", and a MERGE is already a
--- fact GitHub records and this table already mirrors
--- (`competitionEntries."mergedAt"`) -- a second, officer-authored table
--- recording the same outcome by hand was one more place for the truth to
--- live, and the two could disagree (an officer awarding 'winner' to a team
--- whose PR never actually merged, or forgetting to run the action after a
--- merge everyone could already see on GitHub). Winner is now simply
--- `competitionEntries."mergedAt" is not null` -- see the star view below.
--- `awardTeam` and every other award category went with it: nothing in the
--- app ever called `awardTeam` for anything but 'winner', so there was no
--- "other award" behaviour to preserve.
+-- The lifecycle is "kickoff -> teams open PRs -> an officer merges the
+-- winning PR -> issue closed", and a MERGE is already a fact GitHub records
+-- and this table already mirrors (`competitionEntries."mergedAt"`) -- a
+-- second, officer-authored table recording the same outcome by hand would be
+-- one more place for the truth to live, and the two could disagree (an
+-- officer awarding 'winner' to a team whose PR never actually merged, or
+-- forgetting to record a merge everyone could already see on GitHub). Winner
+-- is simply `competitionEntries."mergedAt" is not null` -- see the star view
+-- below.
 
 -- ============================================================
 -- Competition entries

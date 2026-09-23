@@ -40,11 +40,11 @@
  *
  * A `secrecy: "secret"` key `storableKeys()` excludes is "minted": signed at
  * deploy time rather than stored anywhere, which is what `SANDBOX_PROXY_TOKEN`
- * used to be before the sandbox integration it authenticated was removed. This
- * command has no minter of its own — there is nothing left in this repository
- * that produces one — so a declared minted key is always a hard failure here
- * rather than a silent omission: a Worker that expects a value substituted
- * fails loudly at the file it never got, not at whatever reads it.
+ * is declared as. This command has no minter of its own — there is nothing in
+ * this repository that produces one — so a declared minted key is always a
+ * hard failure here rather than a silent omission: a Worker that expects a
+ * value substituted fails loudly at the file it never got, not at whatever
+ * reads it.
  *
  * ## Interface
  *
@@ -150,12 +150,10 @@ export async function runDeploySecretsFile(
     throw new DeployError(
       `${app} declares minted secret(s) with nothing to mint them: ${minted.join(", ")}.`,
       [
-        "This command has no minter — the sandbox integration that",
-        "SANDBOX_PROXY_TOKEN authenticated to was removed, and nothing else",
-        "in this repository mints a secret. Drop the `minted: true`",
-        "declaration from the app's env.ts, or the Worker deploys without it",
-        "and keeps whatever the previous deploy left — --secrets-file",
-        "preserves omissions.",
+        "This command has no minter — nothing in this repository mints a",
+        "secret. Drop the `minted: true` declaration from the app's",
+        "env.ts, or the Worker deploys without it and keeps whatever the",
+        "previous deploy left — --secrets-file preserves omissions.",
       ],
     );
   }

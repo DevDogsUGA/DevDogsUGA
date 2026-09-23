@@ -85,8 +85,8 @@ export const CRON_ROUTES: Record<
   // live schedule. Ideally a deploy's post-migrate step would call the route
   // directly so a promoted config lands the moment the deploy finishes; that
   // wiring into `.github/workflows/deploy.yaml` is not done yet (see
-  // `server/config/reconcile.ts`'s route and the platform redesign
-  // followups), so for now this fifteen-minute slot is the only trigger.
+  // `server/config/reconcile.ts`'s route), so for now this fifteen-minute
+  // slot is the only trigger.
   "*/15 * * * *": {
     label: "Config reconcile (meetings, workshops)",
     monitorSlug: "platform-cron-config-reconcile",

@@ -33,9 +33,8 @@ import { referencedIssueNumbers, teamSlugForHead } from "./pullRequestParsing";
  * There is no separate "who won" table. `competitionEntries."mergedAt"` IS
  * the record: an officer merging the winning pull request is the only
  * action that names a winner, and the merge is a fact GitHub already reports
- * on this same payload. See the team-awards migration's header for why an
- * earlier, officer-authored `teamAwards` table was deleted rather than kept
- * alongside this.
+ * on this same payload. See the team-awards migration's header for why
+ * there is no separate officer-authored winner table alongside this.
  */
 
 // ── Applying a PR: writes the mirror ────────────────────────────────────────

@@ -148,11 +148,11 @@ describe("test identities", () => {
       .select("id");
     expect(memberRoles?.length).toBeGreaterThan(0);
 
-    // reportContentTypes is deliberately absent: content types are derived from
-    // each app's own schema now rather than stored as a per-client label list,
-    // so the table it used to deny access to no longer exists. contentTypes,
-    // which holds the overrides and declarations that replaced it, is in the
-    // same category and carries the same restrictive policy.
+    // reportContentTypes is deliberately absent: content types are derived
+    // from each app's own schema rather than stored as a per-client label
+    // list, and no such table exists. contentTypes, which holds the
+    // overrides and declarations, is in the same category and carries the
+    // same restrictive policy.
     for (const table of ["roles", "reportReasons", "contentTypes"]) {
       const { data } = await testAccount.client.from(table).select("*");
       expect(data, `${table} should be invisible to a test identity`).toEqual(

@@ -44,10 +44,8 @@ export interface SegmentBadge {
 
 /**
  * `workshop` is emerald, `open` is amber, the one warm colour, for the one
- * night with nothing scheduled. Used to also carry `kickoff` (sharing
- * emerald with `workshop`) and `judging` (rose), back when a competition was
- * a week-long window a meeting opened and another judged -- see
- * `EVENT_SEGMENT_VISUALS`'s own doc comment for why those two are gone.
+ * night with nothing scheduled. See `EVENT_SEGMENT_VISUALS`'s own doc
+ * comment for why there are only two segments.
  */
 export const segmentBadge: Record<MeetingSegment, SegmentBadge> =
   Object.fromEntries(

@@ -93,11 +93,9 @@ jobs:
       # for database.types.ts. Credential-free by construction: the generator
       # is registry-only (no Bitwarden token, no network, no Docker).
       #
-      # This used to be a root alias (`env:example:check`) that reached
-      # devtools through `cli:no-env`, because `with-env` refused to start
-      # without a `.env` this job deliberately does not have. The wrapper
-      # reports that absence and continues now, so it calls the one front
-      # door like everything else.
+      # `with-env` reports a missing `.env` and continues rather than
+      # refusing to start, so this job -- which deliberately does not have
+      # one -- calls the one front door like everything else.
       #
       # Unconditional rather than --affected: any manifest edit anywhere can
       # change the output, and it costs about a second.

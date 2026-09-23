@@ -5,16 +5,16 @@
 -- only consumers.
 --
 -- The one thing to know before editing: a team is not scoped to a
--- competition any more (see the platform redesign's teams-core step). GitHub
--- is the source of truth -- a team IS a branch, `team/<slug>`, and membership
--- IS push access to it, granted through a GitHub team and a branch ruleset
--- (server/github/teamSync.ts + rulesets.ts). What lives here is the mirror:
--- Postgres's copy of that state, plus `teamMembershipRequests`, the one thing
--- GitHub cannot hold (a pending invite or join request).
+-- competition. GitHub is the source of truth -- a team IS a branch,
+-- `team/<slug>`, and membership IS push access to it, granted through a
+-- GitHub team and a branch ruleset (server/github/teamSync.ts + rulesets.ts).
+-- What lives here is the mirror: Postgres's copy of that state, plus
+-- `teamMembershipRequests`, the one thing GitHub cannot hold (a pending
+-- invite or join request).
 --
 -- This file must run after events core, which creates platform.competitions
--- (no longer referenced by these tables, but "team_awards" in the next file
--- still points at both).
+-- (not referenced by these tables, but "team_awards" in the next file
+-- points at both).
 
 create type "platform"."teamRole" as enum ('lead', 'member');
 create type "platform"."membershipDirection" as enum ('invite', 'request');
@@ -27,13 +27,11 @@ create type "platform"."membershipRequestStatus" as enum
 --
 -- A team is a persistent project team, not a per-competition roster: it
 -- outlives any single competition it enters, and it exists independently of
--- one ever happening. There is no lock here for the same reason. The old
--- schema derived a roster lock from a live pull-request entry and a
--- competition's judging clock; neither concept survives the git-native
--- rework. The only ceilings left are membership caps (a contributor on at
--- most `MAX_CONCURRENT_TEAMS_PER_USER` teams, a team at most
--- `MAX_TEAM_SIZE` members -- both in server/teams/limits.ts), enforced in the
--- platform actions rather than in a stored column.
+-- one ever happening. There is no roster lock here for the same reason. The
+-- only ceilings are membership caps (a contributor on at most
+-- `MAX_CONCURRENT_TEAMS_PER_USER` teams, a team at most `MAX_TEAM_SIZE`
+-- members -- both in server/teams/limits.ts), enforced in the platform
+-- actions rather than in a stored column.
 create table "platform"."teams" (
   "id"              uuid not null default gen_random_uuid(),
   -- Globally unique, not per-competition: it names the branch,

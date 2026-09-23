@@ -4,11 +4,7 @@ import { kindBadge, segmentBadge } from "./meetingView";
 /**
  * One week of the club, drawn as an open-ended sprint rather than a loop.
  *
- * The model used to be a fixed loop -- a competition was a week-long window
- * between two Mondays, the first kicking it off and the second judging it, so
- * this diagram drew a chain of coloured bars meeting at rose "judging" dots.
- * The platform redesign's competitions step deleted that whole apparatus: a
- * competition is a mirrored GitHub issue now, kicked off whenever an officer
+ * A competition is a mirrored GitHub issue, kicked off whenever an officer
  * converts a draft in the Competitions Project and closed whenever they merge
  * a winning pull request, neither pinned to a particular Monday. So the strip
  * draws what is still true on a fixed cadence -- Monday's workshop kicks the

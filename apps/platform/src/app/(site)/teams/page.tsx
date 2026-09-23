@@ -24,11 +24,9 @@ export const metadata: Metadata = {
 /**
  * /teams: every team, and the two ways onto one.
  *
- * A team is a persistent project team now, not a per-competition roster --
- * see the platform redesign's teams-core step -- so this page replaces the
- * old `/competitions/[slug]/teams`. A member can be active on up to
- * `MAX_CONCURRENT_TEAMS_PER_USER` teams at once, so "your teams" is a list,
- * not a single card the way the old one-per-competition page rendered it.
+ * A team is a persistent project team, not a per-competition roster. A
+ * member can be active on up to `MAX_CONCURRENT_TEAMS_PER_USER` teams at
+ * once, so "your teams" is a list, not a single card.
  */
 export default async function TeamsPage() {
   const userId = await requireSession();

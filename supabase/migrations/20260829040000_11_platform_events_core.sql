@@ -18,13 +18,12 @@
 --
 --   meetings ──< workshops (one per project, running in parallel)
 --
--- A competition is NOT an event, and is no longer a child of a workshop or a
+-- A competition is NOT an event, and is not a child of a workshop or a
 -- meeting at all -- see the competitions table's own header below for what it
--- is now. An earlier draft modelled meetings, workshops and competitions as
--- one `sessions` table with an (event, track, stage) discriminator, which
--- mixed things you ATTEND with things that merely have a DURATION and so
--- could not answer "was this member present?". Splitting the two removed the
--- discriminator entirely, which is why there is no `eventStage` enum.
+-- is. A single `sessions` table with an (event, track, stage) discriminator
+-- would mix things you ATTEND with things that merely have a DURATION, and
+-- could not answer "was this member present?" -- so there is no such table,
+-- and no `eventStage` enum.
 --
 -- The meeting is the only one of these a member can be PRESENT at, which is
 -- why attendance keys to it.
@@ -119,11 +118,10 @@ create table "platform"."meetings" (
   "summary"            text,
   "kind"               text,
   "rsvpUrl"            text,
-  -- The building as a fact rather than a guess. `location` used to carry the
-  -- whole answer as free text ("DLW 124") and the events page had started
-  -- regexing it to decide whether to offer directions, failing closed so
-  -- "DLW124" quietly got no button. The closed list below is exactly the set
-  -- the campus map has footprints for.
+  -- The building as a fact rather than a guess. Free text ("DLW 124") would
+  -- leave the events page regexing it to decide whether to offer directions,
+  -- failing closed so "DLW124" quietly gets no button. The closed list below
+  -- is exactly the set the campus map has footprints for.
   "building"           text,
   "cancelledAt"        timestamptz,
   "cancellationReason" text,
@@ -263,10 +261,10 @@ comment on column "platform"."meetings"."surveyUrl" is
 create table "platform"."workshops" (
   "id"               uuid not null default gen_random_uuid(),
   "meetingId"        uuid not null,
-  -- Free text, and no foreign key -- the `projects` table this used to
-  -- reference is gone. A workshop recommends a body of work in words now
-  -- ("DogDays", "DogDays & DogPack"), the same way an officer would say it
-  -- out loud at the meeting, with nothing to keep in sync across a rename.
+  -- Free text, and no foreign key: a workshop recommends a body of work in
+  -- words ("DogDays", "DogDays & DogPack"), the same way an officer would
+  -- say it out loud at the meeting, with nothing to keep in sync across a
+  -- rename.
   -- Nullable so a workshop can still teach a skill rather than a codebase:
   -- "Workshop (Career Fair Readiness)" recommends nothing, and inventing a
   -- recommendation for it would be worse than leaving the field blank.
@@ -322,17 +320,12 @@ comment on column "platform"."workshops"."configId" is
 -- triggers). A row in this table only ever exists for a CONVERTED item; a
 -- still-draft item in the Project is not a competition yet and has no row.
 --
--- Nothing here is meeting- or workshop-scoped any more. The platform
--- redesign's competitions step deleted the whole "a competition is a
--- week-long window bracketed by two meetings" apparatus --
--- `workshopId`/`judgingMeetingId`/`judgingStartsAt` and everything they
--- drove (roster-lock-at-judging, the star-freeze pass, judging-meeting
--- straddle) -- because a competition is now an asynchronous GitHub issue with
--- no fixed night. `plannedEndAt` is what is left of "when does this end":
--- display-only, authored by an officer in the Project's date field, and
--- never read by any lock or deadline logic. The only real dates are
--- `kickedOffAt` (when the draft became an issue) and `closedAt` (when the
--- issue closed, i.e. the competition is over).
+-- Nothing here is meeting- or workshop-scoped: a competition is an
+-- asynchronous GitHub issue with no fixed night. `plannedEndAt` is the only
+-- trace of "when does this end": display-only, authored by an officer in the
+-- Project's date field, and never read by any lock or deadline logic. The
+-- only real dates are `kickedOffAt` (when the draft became an issue) and
+-- `closedAt` (when the issue closed, i.e. the competition is over).
 create table "platform"."competitions" (
   "id"             uuid not null default gen_random_uuid(),
   -- GitHub's own identity for the issue, which is what a Project item's

@@ -238,12 +238,12 @@ export interface MeetingWorkshop {
 /**
  * The workshops that ran at one meeting.
  *
- * No competition join here or below any more -- a workshop no longer opens
- * one; see the competitions migration's header for the current shape.
+ * No competition join here or below: a workshop does not open one; see the
+ * competitions migration's header for the current shape.
  *
- * Ordered by title rather than by a project's authored sort order -- that
- * column went with the `projects` table. Title is what officers actually
- * name a session by, and it is the one thing every workshop always has.
+ * Ordered by title rather than an authored sort order. Title is what
+ * officers actually name a session by, and it is the one thing every
+ * workshop always has.
  */
 export const getMeetingWorkshops = cache(
   async (meetingId: string): Promise<MeetingWorkshop[]> => {

@@ -10,10 +10,9 @@ export async function getStreakForUser(userId: string): Promise<StreakSummary> {
         and m."deletedAt" is null
       union all
       -- Every mirrored competition is a real, converted issue, so there is
-      -- no "counts toward progress" flag to check any more -- being real IS
-      -- counting. Kicked off, not judged or closed: the week the opportunity
-      -- to enter appeared is the week that should require a star, the same
-      -- role the opening workshop's meeting used to play.
+      -- no "counts toward progress" flag to check -- being real IS counting.
+      -- Kicked off, not judged or closed: the week the opportunity to enter
+      -- appears is the week that requires a star.
       select "kickedOffAt" as "startsAt" from platform.competitions
     `),
     db.execute<{ startsAt: Date; [key: string]: unknown }>(sql`

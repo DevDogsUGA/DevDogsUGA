@@ -38,11 +38,10 @@ export const metadata: Metadata = {
 /**
  * /teams/[team], one team.
  *
- * A persistent project team, not a per-competition roster -- see the
- * platform redesign's teams-core step. There is no roster lock to render any
- * more: the only ceilings are the size and concurrent-team caps, both
- * enforced when a join is attempted rather than displayed as a state of the
- * page.
+ * A persistent project team, not a per-competition roster. There is no
+ * roster lock to render: the only ceilings are the size and concurrent-team
+ * caps, both enforced when a join is attempted rather than displayed as a
+ * state of the page.
  */
 export default async function TeamPage({
   params,

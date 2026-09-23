@@ -1,14 +1,12 @@
 /**
  * The two membership caps, and the pure predicates that read them.
  *
- * Both are global constants now, not per-competition overrides: a team is no
- * longer scoped to a competition, so "this competition's cap" is not a
- * question that has an answer any more. There used to be a per-competition
- * `maxTeamSize` column for the one case that seemed to need a different cap,
- * but nothing ever set it and no surface existed to change it -- a
- * configuration point with no way to configure it is a constant kept
- * somewhere harder to read, so the platform redesign's teams-core step
- * dropped the column along with the concept.
+ * Both are global constants, not per-competition overrides: a team is not
+ * scoped to a competition, so "this competition's cap" is not a question
+ * that has an answer. A per-competition `maxTeamSize` column would be a
+ * configuration point with no way to configure it -- nothing would ever set
+ * it and no surface would exist to change it -- which is just a constant
+ * kept somewhere harder to read than code. The cap lives here instead.
  *
  * `requireCanJoin` is the only enforcement; these are read there. Extracted
  * here, and as pure functions rather than inline comparisons, so the boundary

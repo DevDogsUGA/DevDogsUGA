@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
  * Imported from `~/lib/meetingSegments`, NOT from the loader that re-exports
  * them. The rules are pure and live there so nothing needs a database to
  * exercise them. The loader's first import is `~/server/db`, which resolves
- * `~/env` at module load, so reaching them through it used to require stubbing
+ * `~/env` at module load, so reaching them through it would require stubbing
  * the database module out of the graph just to run arithmetic on dates.
  * Anything that genuinely touches `db` belongs in `queries.db-test.ts`.
  */
@@ -17,12 +17,9 @@ import {
  * The segment rules, without a database.
  *
  * These decide the calendar's dot colour, the badge on every meeting card, and
- * the copy on the schedule list. Competitions used to complicate this -- a
- * meeting could kick off or judge one, and a segment could be a competition
- * deadline as much as a fact about the meeting itself. The competitions step
- * of the platform redesign deleted that entirely: a competition is a mirrored
- * GitHub issue with no meeting of its own, so all that is left is whether a
- * meeting has workshops.
+ * the copy on the schedule list. A competition is a mirrored GitHub issue
+ * with no meeting of its own, so all that is left is whether a meeting has
+ * workshops.
  */
 
 function structure(
@@ -57,8 +54,8 @@ describe("resolveMeetingSegments", () => {
   it("keeps the derived set when an officer also named the night", () => {
     // A social that also runs a workshop is a real night, and the workshop
     // still has to reach the page. The caller renders the kind beside these.
-    // It is no longer returned here, because it was a pass-through of a field
-    // every call site already held.
+    // It is not returned here: that would be a pass-through of a field every
+    // call site already holds.
     const billing = resolveMeetingSegments(
       structure({ kind: "Social", workshops: [{}] }),
     );

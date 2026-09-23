@@ -420,8 +420,9 @@ function targetHeader(target: VaultTarget, count: number): string[] {
               "declaration opts in with `narrowed` — today, a Postgres role " +
               "that sees only the migrations table and nothing wider. Every " +
               "other key is absent ON PURPOSE: this project's GitHub " +
-              "environment is reachable from `main`, and it used to list all " +
-              "45 routable keys, the JWT signing key included.",
+              "environment is reachable from `main`, and listing every " +
+              "routable key there, the JWT signing key included, would " +
+              "defeat the point of a narrowed preflight role.",
           ),
         ]
       : []),

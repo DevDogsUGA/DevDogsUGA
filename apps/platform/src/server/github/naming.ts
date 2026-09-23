@@ -16,10 +16,10 @@
  *    ├── team/study-group-finder
  *    └── team/marble-run
  *
- * Off `main`, not off a per-competition integration branch: the platform
- * redesign's teams-core step made teams persistent, competition-independent
- * projects, so there is no longer a week-scoped branch to cut from. A team
- * exists once, for as long as it exists, and its branch does too.
+ * Off `main`, not off a per-competition integration branch: a team is a
+ * persistent, competition-independent project, so there is no week-scoped
+ * branch to cut from. A team exists once, for as long as it exists, and its
+ * branch does too.
  */
 export function teamBranch(teamSlug: string): string {
   return `team/${teamSlug}`;

@@ -21,12 +21,11 @@
 /**
  * What a meeting is, derived from its structure.
  *
- * A competition is no longer a child of a workshop or a meeting at all (see
- * the competitions migration's header) -- a competition is now a mirrored
- * GitHub issue with its own asynchronous lifecycle, so nothing about a
- * meeting's STRUCTURE can answer "does this meeting kick off or judge a
- * competition" any more. What is left is the one thing a meeting's rows can
- * still say about themselves:
+ * A competition is not a child of a workshop or a meeting -- it is a
+ * mirrored GitHub issue with its own asynchronous lifecycle (see the
+ * competitions migration's header), so nothing about a meeting's STRUCTURE
+ * can answer "does this meeting kick off or judge a competition". What is
+ * left is the one thing a meeting's rows can still say about themselves:
  *
  * | Segment    | Derived from                                     |
  * | ---------- | ------------------------------------------------- |
@@ -57,9 +56,8 @@ export interface MeetingBilling {
    * rendering chips must render `meeting.kind` alongside this or such a night
    * gets no chip at all.
    *
-   * This does NOT carry the officer's `kind`. It used to, as a field named
-   * `kindOverride` that returned `meeting.kind` unchanged, a pass-through of
-   * something every call site already had in scope.
+   * This does NOT carry the officer's `kind`: that would be a pass-through
+   * of something every call site already has in scope.
    */
   segments: MeetingSegment[];
 }
@@ -70,12 +68,9 @@ export interface MeetingBilling {
  * ## The ordering
  *
  * `workshop` → `open`, and callers take the first as the primary: the
- * calendar's dot colour, the badge that fits on a narrow card. This used to
- * be a four-segment ranking (`workshop` → `kickoff` → `judging` → `open`)
- * back when a competition was a week-long window a meeting could kick off or
- * judge; that whole apparatus is gone (see the competitions migration's
- * header), so `workshop` and `open` are what is left, and they are already
- * mutually exclusive -- `open` fires only when there is no workshop to report.
+ * calendar's dot colour, the badge that fits on a narrow card. The two are
+ * already mutually exclusive -- `open` fires only when there is no workshop
+ * to report.
  */
 export function resolveMeetingSegments(
   meeting: MeetingStructure,

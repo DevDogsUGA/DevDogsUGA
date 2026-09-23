@@ -54,11 +54,10 @@ jobs:
       # knowing about on its own; it is not a reason to leave the other on the
       # previous version.
       #
-      # A third, `sandbox`, used to deploy alongside these two. The team-
-      # sandbox integration it proxied for was removed, and with it every
-      # platform-side credential and endpoint that deploy fed it, so it is no
-      # longer part of this pipeline. `apps/sandbox` and its own build/deploy
-      # config are still in the repo, dormant; deploying it is a manual
+      # `sandbox` is not part of this pipeline: there is no team-sandbox
+      # integration for it to proxy, and so no platform-side credential or
+      # endpoint to feed it. `apps/sandbox` and its own build/deploy config
+      # are still in the repo, dormant; deploying it is a manual
       # `pnpm --filter sandbox exec wrangler deploy` away, not automatic.
       fail-fast: false
       matrix:

@@ -16,7 +16,7 @@ import { reconcileFromConfig } from "~/server/config/reconcile";
  * post-migrate step would call it -- but no such step exists yet in
  * `.github/workflows/deploy.yaml`, so a promoted config currently waits on
  * the next fifteen-minute tick rather than landing the moment the deploy
- * finishes. See the platform redesign followups.
+ * finishes.
  *
  * `getClubConfig()` parses and validates the committed data file; a failure
  * there means the file itself is broken (wrong shape, or its content fails

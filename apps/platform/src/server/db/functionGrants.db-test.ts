@@ -8,11 +8,11 @@ import { db } from "~/server/db";
  * establishes: PUBLIC holds no EXECUTE anywhere in `platform`, on functions that
  * exist today or are created later, while the three API roles keep theirs.
  *
- * These three checks used to live beside `resolve_sandbox_credential`, the
- * function whose narrow-role grant first exposed the gap this migration closes
- * (see its own comment for the story). The sandbox integration is gone, but the
+ * `resolve_sandbox_credential`'s narrow-role grant first exposed the gap
+ * this migration closes (see its own comment for the story), but the
  * posture it exposed is a property of the whole schema, not of that one
- * function, so the regression guards moved here rather than leaving with it.
+ * function, so these three checks guard the schema here rather than living
+ * beside it.
  */
 describe("platform schema function grants", () => {
   it("keeps PUBLIC off the schema's function surface", async () => {
