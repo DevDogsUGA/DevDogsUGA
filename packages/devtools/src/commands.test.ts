@@ -231,7 +231,7 @@ describe("coverage of what the CLI dispatches", () => {
     // The merged Supabase/Database group: one top-level command, `db`, whose
     // dispatch handles `start`, `connect`, `stop`, `restart`, `status`,
     // `migrate`, `reset`, `migration *`, `types`, `seed *`, `introspect`,
-    // `config *`, `planner *`, `signing-key *` and `exec` beneath it.
+    // `config *`, `planner *` and `exec` beneath it.
     "db",
     "gen",
     "cron",
@@ -280,7 +280,6 @@ describe("coverage of what the CLI dispatches", () => {
       "introspect",
       "config",
       "planner",
-      "signing-key",
       "exec",
     ]);
     expect(subcommandNames(["db", "migration"])).toEqual(["new", "generate"]);
@@ -291,11 +290,6 @@ describe("coverage of what the CLI dispatches", () => {
       "create",
       "reset-password",
       "drop",
-    ]);
-    expect(subcommandNames(["db", "signing-key"])).toEqual([
-      "status",
-      "generate",
-      "import",
     ]);
   });
 });
@@ -376,8 +370,8 @@ describe("scopes", () => {
 describe("subcommandList", () => {
   it("reads as a sentence", () => {
     expect(subcommandList(["docs"])).toBe("index");
-    expect(subcommandList(["db", "signing-key"])).toBe(
-      "status, generate or import",
+    expect(subcommandList(["db", "planner"])).toBe(
+      "status, create, reset-password or drop",
     );
   });
 
@@ -492,10 +486,10 @@ describe("style guide", () => {
    * `cli.ts` refuses the flag by name so old scripts fail loudly. This pin
    * keeps a future db subcommand from quietly reintroducing the vocabulary.
    * The `--target` flags that legitimately remain mean OTHER things: the env
-   * commands' vault target, the signing-key/planner tier words, and `docs
-   * index`'s delete acknowledgment (`DOCS_TARGET`) — all outside `db`'s
-   * endpoint scope, except signing-key/planner which name their own
-   * connection (`infra` scope) rather than the session's.
+   * commands' vault target, `planner`'s tier word, and `docs index`'s delete
+   * acknowledgment (`DOCS_TARGET`) — all outside `db`'s endpoint scope, except
+   * `planner` which names its own connection (`infra` scope) rather than the
+   * session's.
    */
   it("keeps --target out of db's endpoint-scope commands", () => {
     for (const { path, node } of everyNode()) {

@@ -1,5 +1,5 @@
 /**
- * `devtools deploy secrets-file --app <app> [--mint]`
+ * `devtools deploy secrets-file --app <app>`
  *
  * Composes the `--secrets-file` a `wrangler deploy` uploads with one Worker.
  *
@@ -9,14 +9,6 @@
  * one command in this group that has to bypass the wrapper. This one reads no
  * GitHub context of its own: one place in the pipeline touches `secrets` and
  * `vars`, and this is not it.
- *
- * ## ⚠️ stdout is a credential channel here
- *
- * The only thing this command writes to stdout is `::add-mask::<token>`, and
- * that line has to reach GitHub unaccompanied on a line of its own. The
- * omission notice, the key list and the failures all go to stderr through
- * `say()`. `cli.ts` prints no `intro()` banner for the `deploy` group for the
- * same reason; see `report.ts` for the measurement.
  *
  * ## Which keys, and why they are derived rather than listed
  *
@@ -28,12 +20,11 @@
  *
  * Two exclusions follow from that rule rather than being special cases:
  *
- *   * `:tooling` sources. `study-group-finder:tooling` declares `SECRET_KEY`
- *     for supadart, which runs on a laptop; `sandbox` should declare
- *     `SUPABASE_JWT_SIGNING_KEY` the same way, since only the mint command
- *     reads it. A key the deploy needs is not automatically a key the WORKER
- *     needs, and sending one anyway hands an internet-facing proxy a
- *     credential it never asks for.
+ *   * `:tooling` sources — declared for the deploy pipeline itself, not for
+ *     the Worker. `study-group-finder:tooling` declares `SECRET_KEY` for
+ *     supadart, which runs on a laptop. A key the deploy needs is not
+ *     automatically a key the WORKER needs, and sending one anyway hands an
+ *     internet-facing Worker a credential it never asks for.
  *   * `client: true` declarations, inlined into the browser bundle at build
  *     time and not Worker secrets at all (§A.6.3).
  *
@@ -45,31 +36,19 @@
  * sends everything the app declares, every time, and `devtools deploy orphans`
  * reports whatever the Worker is still holding that nothing declares any more.
  *
- * ## The minted credential
+ * ## Minted keys are refused, not filled
  *
- * `SANDBOX_PROXY_TOKEN` is signed at deploy time and has no stored copy
- * anywhere, so it cannot arrive through the env file. `--mint` calls the
- * sibling `deploy mint-token` command IN PROCESS, takes the token it would
- * have printed, and masks it in the log, because GitHub only masks secrets it
- * issued and a freshly signed JWT is not one of them. In process rather than as
- * a subprocess, which is what the predecessor script did: a stdout channel
- * whose content is a production credential can be corrupted by any
- * `console.log` anywhere in the minter's import graph.
- *
- * `--mint` is a BARE FLAG. It used to take the path of a script to run, which
- * meant a workflow edit could point the composer at any executable on the
- * runner and have its stdout written into a Worker secret. There is one minting
- * command in this repository and it is a sibling of this one, so no caller
- * names it.
- *
- * Which variable the token fills is derived, not passed in either: a
- * `secrecy: "secret"` key the app declares that `storableKeys()` excludes is
- * by definition one with no stored value, which is what "minted" means.
- * Exactly one is expected, and anything else is a hard failure.
+ * A `secrecy: "secret"` key `storableKeys()` excludes is "minted": signed at
+ * deploy time rather than stored anywhere, which is what `SANDBOX_PROXY_TOKEN`
+ * used to be before the sandbox integration it authenticated was removed. This
+ * command has no minter of its own — there is nothing left in this repository
+ * that produces one — so a declared minted key is always a hard failure here
+ * rather than a silent omission: a Worker that expects a value substituted
+ * fails loudly at the file it never got, not at whatever reads it.
  *
  * ## Interface
  *
- *   DEPLOY_ENV=production pnpm devtools deploy secrets-file --app sandbox --mint
+ *   DEPLOY_ENV=production pnpm devtools deploy secrets-file --app platform
  *
  * Writes `dir=` and `file=` to `$GITHUB_OUTPUT`. The caller removes `dir` in an
  * `if: always()` step. The runner is ephemeral, so this matters on a
@@ -80,23 +59,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { storableKeys, variables, type EnvEntry } from "@devdogsuga/env";
 import { assertRegistryLoaded } from "../env/discovery.js";
-import { runMintToken } from "./mint-token.js";
 import { DeployError, say, summary } from "./report.js";
 
 export interface SecretsFileOptions {
   /** `--app`: the workspace app whose manifest names the Worker's secrets. */
   app: string;
-  /** `--mint`: sign the app's minted credential and include it. */
-  mint: boolean;
   /** Defaults to the ambient environment; a parameter so tests need not mutate it. */
   env?: NodeJS.ProcessEnv;
-  /**
-   * Mints the deploy-time credential, returning it on its own.
-   *
-   * Injectable so the tests can exercise the masking, the ordering and the
-   * one-minted-key rule without signing anything.
-   */
-  mintToken?: () => string;
 }
 
 export interface SecretsFileResult {
@@ -108,42 +77,6 @@ export interface SecretsFileResult {
   keys: string[];
   /** Declared, optional, and absent from the environment. Reported, not fatal. */
   omitted: string[];
-}
-
-/**
- * The ONE line this command puts on stdout.
- *
- * `process.stdout.write` rather than `console.log` so that grepping this
- * directory for a stdout write finds exactly this call and nothing incidental.
- * A workflow command is recognised per line, so the newline is part of it.
- */
-function mask(token: string): void {
-  process.stdout.write(`::add-mask::${token}\n`);
-}
-
-/**
- * Mints the token IN PROCESS, capturing what the command would have printed.
- *
- * The predecessor of this file spawned `node scripts/mint-sandbox-token.mjs`
- * and took its stdout. That boundary existed only because the minter was a
- * separate file. A subprocess whose stdout IS a production credential can be
- * corrupted by any `console.log` anywhere in its import graph; see
- * `deploy/mint-token.ts`.
- *
- * `runMintToken` rather than `mintSandboxToken` directly, because the command
- * carries a guard the bare signer does not: it refuses a `DEPLOY_ENV` that is
- * not a deployed environment, and an unset one would sign a production
- * credential with the development key. Its sink is injectable for exactly this,
- * so the token is collected here and never reaches a real stream.
- */
-function mintInProcess(env: NodeJS.ProcessEnv): string {
-  let captured = "";
-  runMintToken(env, {
-    write: (chunk: string) => {
-      captured += chunk;
-    },
-  });
-  return captured.trim();
 }
 
 /**
@@ -163,9 +96,8 @@ export async function runDeploySecretsFile(
 ): Promise<SecretsFileResult> {
   assertRegistryLoaded();
 
-  const { app, mint } = options;
+  const { app } = options;
   const env = options.env ?? process.env;
-  const mintToken = options.mintToken ?? (() => mintInProcess(env));
 
   const storable = new Set(storableKeys());
   const send = new Map<string, string>();
@@ -214,49 +146,16 @@ export async function runDeploySecretsFile(
     ]);
   }
 
-  if (mint) {
-    if (minted.length !== 1) {
-      throw new DeployError(
-        `--mint expects exactly one minted key declared by ${app}, found ` +
-          `${minted.length}${minted.length > 0 ? `: ${minted.join(", ")}` : ""}.`,
-        [
-          'A minted key is one the registry marks `secrecy: "secret"` and',
-          "`storableKeys()` excludes, i.e. a secret with no stored copy.",
-          "Declare it in the app's env.ts with `minted: true`.",
-        ],
-      );
-    }
-
-    let token: string;
-    try {
-      token = mintToken();
-    } catch (cause) {
-      // A `MintError` is a `DeployError` and already names the thing to fix:
-      // an unset DEPLOY_ENV, a signing key of the wrong length. Re-wrapping it
-      // would bury the only message worth reading.
-      if (cause instanceof DeployError) throw cause;
-      throw new DeployError(
-        `Minting ${minted[0]!} failed: ${
-          cause instanceof Error ? cause.message : String(cause)
-        }`,
-      );
-    }
-
-    if (token === "") {
-      throw new DeployError(`Minting ${minted[0]!} produced an empty token.`);
-    }
-
-    // GitHub masks the secrets IT issued. This one was signed thirty seconds
-    // ago, so nothing knows to redact it until we say so. Before it is written
-    // anywhere, so no later failure can print it unmasked.
-    mask(token);
-    send.set(minted[0]!, token);
-  } else if (minted.length > 0) {
+  if (minted.length > 0) {
     throw new DeployError(
       `${app} declares minted secret(s) with nothing to mint them: ${minted.join(", ")}.`,
       [
-        "Pass --mint, or the Worker deploys without them and keeps whatever",
-        "the previous deploy left — --secrets-file preserves omissions.",
+        "This command has no minter — the sandbox integration that",
+        "SANDBOX_PROXY_TOKEN authenticated to was removed, and nothing else",
+        "in this repository mints a secret. Drop the `minted: true`",
+        "declaration from the app's env.ts, or the Worker deploys without it",
+        "and keeps whatever the previous deploy left — --secrets-file",
+        "preserves omissions.",
       ],
     );
   }
@@ -292,7 +191,7 @@ export async function runDeploySecretsFile(
 
   // Names go to the job summary as well as the log, because this list IS every
   // credential the Worker holds. Reading it should not require expanding a
-  // step: "why does the sandbox proxy hold that?" is exactly the question a
+  // step: "why does this Worker hold that?" is exactly the question a
   // per-deploy record makes answerable, and the answer lives in the app's
   // manifest rather than anywhere in this pipeline.
   summary(

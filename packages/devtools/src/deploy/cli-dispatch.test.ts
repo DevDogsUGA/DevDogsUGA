@@ -8,11 +8,9 @@
  * `intro("DevDogs devtools")`, and every `@clack/prompts` writer goes to
  * stdout, not stderr: `intro`, `outro`, `log.*`, `note`, the spinner
  * (measured on 2026-08-16 by running each with the streams captured apart).
- * That is fine for a contributor at a terminal and fatal here. `deploy
- * secrets-file` emits `::add-mask::<token>`, which GitHub recognises only on a
- * line of its own, and `deploy mint-token` emits a JWT its caller takes whole.
- * A banner on that stream is an unmasked production credential in a public
- * repository's job log.
+ * That is fine for a contributor at a terminal and fatal here: a deploy step's
+ * stdout can be a credential channel, and a banner on that stream would be an
+ * unmasked production value landing in a public repository's job log.
  *
  * Only a real process shows whether the banner happened, so these spawn one.
  *
@@ -217,24 +215,6 @@ describe("argument refusals", () => {
     ]);
     expect(stdout).toBe("");
     expect(stderr).toContain("--app <name> is required");
-    expect(code).toBe(1);
-  });
-
-  it("refuses the old `--mint <script>` form by name", async () => {
-    // Ignoring the path would silently keep working, and keep looking like a
-    // way to name any executable on the runner whose stdout becomes a Worker
-    // secret.
-    const { code, stdout, stderr } = await ci([
-      "deploy",
-      "secrets-file",
-      "--app",
-      "sandbox",
-      "--mint",
-      "scripts/mint-sandbox-token.mjs",
-    ]);
-    expect(stdout).toBe("");
-    expect(stderr).toContain("`--mint` no longer takes a script path");
-    expect(stderr).toContain("scripts/mint-sandbox-token.mjs");
     expect(code).toBe(1);
   });
 

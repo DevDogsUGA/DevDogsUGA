@@ -22,11 +22,6 @@
  * a stale `env push --env staging` in somebody's shell history must not read
  * `staging` as the subcommand. `cli.ts` rejects the flag by name instead,
  * which says what happened.
- *
- * `--mint` is deliberately NOT here. It takes no value any more: the command
- * it runs is a sibling of the one that calls it, not a path a caller supplies.
- * So `deploy secrets-file --app sandbox --mint` must leave the following
- * token, if any, visible as a positional for `cli.ts` to refuse.
  */
 export const VALUE_FLAGS = new Set([
   "--access-token",

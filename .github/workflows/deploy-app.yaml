@@ -50,25 +50,21 @@ jobs:
       # are masked in logs regardless of which step's `env:` names them.
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
     strategy:
-      # The three Workers are independent deploy targets. One failing is worth
-      # knowing about on its own; it is not a reason to leave the other two on
-      # the previous version.
+      # The two Workers are independent deploy targets. One failing is worth
+      # knowing about on its own; it is not a reason to leave the other on the
+      # previous version.
+      #
+      # A third, `sandbox`, used to deploy alongside these two. The team-
+      # sandbox integration it proxied for was removed, and with it every
+      # platform-side credential and endpoint that deploy fed it, so it is no
+      # longer part of this pipeline. `apps/sandbox` and its own build/deploy
+      # config are still in the repo, dormant; deploying it is a manual
+      # `pnpm --filter sandbox exec wrangler deploy` away, not automatic.
       fail-fast: false
       matrix:
         include:
           - app: platform
-            mint: ""
           - app: schedule-builder
-            mint: ""
-          # The sandbox proxy's credential is SIGNED at deploy time rather than
-          # stored, so it cannot arrive through the env file. `--mint` is a
-          # BARE FLAG now: it runs `devtools deploy mint-token`, a sibling of
-          # the command that calls it, and derives WHICH variable the token
-          # fills from the app's own manifest. It used to name a script to run
-          # and take the stdout of, which made a workflow edit enough to point
-          # the composer at any executable on the runner.
-          - app: sandbox
-            mint: --mint
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-workspace
@@ -86,10 +82,8 @@ jobs:
           pnpm --filter @devdogsuga/devtools run ci deploy write-env
       - name: Build the workspace packages this app depends on
         run: pnpm turbo run build --filter='${{ matrix.app }}^...'
-      # `next build` through OpenNext, with the env schema ENFORCED. sandbox is
-      # a plain Worker and wrangler bundles it during the deploy itself.
+      # `next build` through OpenNext, with the env schema ENFORCED.
       - name: Build ${{ matrix.app }}
-        if: matrix.app != 'sandbox'
         env:
           # SENTRY_RELEASE: read by `devtools`' `ci.ts` at deploy time (a step
           # below), not by this build — kept here too so a build run outside
@@ -106,21 +100,6 @@ jobs:
           # per-deploy git SHA doesn't fit `EnvScope`.
           NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
         run: pnpm --filter ${{ matrix.app }} run "cf:build:$DEPLOY_ENV"
-      # sandbox has no separate build step above — wrangler bundles it at
-      # deploy time (see `matrix.mint`'s neighbouring comment) — so a source
-      # map for it does not exist until something bundles it. `--dry-run`
-      # bundles without publishing or touching any Cloudflare credential, into
-      # a scratch directory the release step below reads. The REAL deploy a
-      # few steps down re-bundles from scratch; that duplication is the cost
-      # of getting a source map out of a Worker with no standalone build step,
-      # and it is cheaper than teaching the real deploy command `--no-bundle`
-      # against a dry-run's output (see the cheatsheet's plain-Worker source
-      # maps section for why that pairing is fragile).
-      - name: Bundle sandbox for source maps (dry run)
-        if: matrix.app == 'sandbox' && env.SENTRY_AUTH_TOKEN != ''
-        run: >-
-          pnpm --filter sandbox exec wrangler deploy -e $DEPLOY_ENV
-          --dry-run --outdir dist-sentry
       # ⚠️ GATING, PER AN EXPLICIT DECISION: SENTRY_AUTH_TOKEN absent means the
       # Sentry org is not onboarded yet, and that must be a visible skip, not
       # a silent one — hence the warning step below rather than folding the
@@ -147,34 +126,26 @@ jobs:
           # shallow depth, and this step's whole job here is the release
           # record and its source maps, not a changelog.
           set_commits: skip
-          sourcemaps: >-
-            ${{ matrix.app == 'sandbox' && 'apps/sandbox/dist-sentry' || format('apps/{0}/.open-next', matrix.app) }}
+          sourcemaps: apps/${{ matrix.app }}/.open-next
       # Written to a mkdtemp 0700 directory and removed below whatever happens.
       - name: Compose the Worker secrets file
         id: secrets
         # `run ci:env` — the quiet CI entry point that loads the env file — because
-        # the whole job of this step is to read the values write-env composed. Its
-        # stdout carries `::add-mask::` and nothing else; see the note above.
+        # the whole job of this step is to read the values write-env composed.
         run: >-
           pnpm --filter @devdogsuga/devtools run ci:env deploy secrets-file
-          --app ${{ matrix.app }} ${{ matrix.mint }}
-      # One step for all three Workers via devtools-ci deploy — the
-      # ${DEPLOY_SECRETS_FILE:+--secrets-file …} hook plus, for sandbox,
-      # `--var PLATFORM_REST_URL:$REST_URL`. That --var is a deploy-time value
-      # rather than a committed wrangler.jsonc entry: one committed value
-      # cannot be right for three environments, and the placeholder that
-      # shipped in all three is the measurement of how often it got edited by
-      # hand.
+          --app ${{ matrix.app }}
+      # One step for both Workers via devtools-ci deploy — the
+      # ${DEPLOY_SECRETS_FILE:+--secrets-file …} hook plus, for both,
+      # `--var SENTRY_RELEASE:…`.
       - name: Deploy ${{ matrix.app }}
         env:
           DEPLOY_SECRETS_FILE: ${{ steps.secrets.outputs.file }}
           # Read by `ci.ts`'s `runAppDeploy`, which forwards it to
-          # `wrangler deploy` as `--var SENTRY_RELEASE:…` for all three apps
-          # (same mechanism as `--var PLATFORM_REST_URL:…` above) — the ONLY
-          # way this reaches each Worker's runtime `env`, since none of them
-          # read it from `~/env`'s schema or a committed wrangler.jsonc var.
-          # `cloudflare/worker.ts` (platform, schedule-builder),
-          # `ScrapeWorkflow.ts`, and `apps/sandbox/src/index.ts` all pass this
+          # `wrangler deploy` as `--var SENTRY_RELEASE:…` — the ONLY way this
+          # reaches each Worker's runtime `env`, since neither reads it from
+          # `~/env`'s schema or a committed wrangler.jsonc var.
+          # `cloudflare/worker.ts` and `ScrapeWorkflow.ts` both pass this
           # through to `buildSentryOptions({ release })` so captured events
           # associate with the release this job's `action-release` step
           # created and uploaded source maps against.

@@ -329,20 +329,6 @@ const DB_URL: CommandOption = {
   },
 };
 
-const SIGNING_TARGET: CommandOption = {
-  flag: "--target",
-  value: "<t>",
-  summary: "staging or production. Required — two projects, two secrets.",
-  prompt: {
-    kind: "select",
-    message: "Which environment's signing key?",
-    choices: [
-      { value: "staging", hint: "the everyday one" },
-      { value: "production", hint: "⚠️  the live project" },
-    ],
-  },
-};
-
 // ── The tree ─────────────────────────────────────────────────────────────────
 
 const DECLARED_GROUPS: readonly CommandGroup[] = [
@@ -1087,31 +1073,6 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
               },
             ],
           },
-          {
-            name: "signing-key",
-            summary: "SUPABASE_JWT_SIGNING_KEY: mint, register, inspect.",
-            scope: "infra",
-            subcommands: [
-              {
-                name: "status",
-                summary: "List the project's signing keys.",
-                hint: "reads only — start here",
-                options: [SIGNING_TARGET, JSON_FLAG],
-              },
-              {
-                name: "generate",
-                summary: "Mint a 64-char HS256 secret into .env.<target>.",
-                hint: "confirmed overwrite = rotation",
-                options: [SIGNING_TARGET, YES],
-              },
-              {
-                name: "import",
-                summary:
-                  "Register that secret with the project as a standby key.",
-                options: [SIGNING_TARGET],
-              },
-            ],
-          },
           // ── unscoped — the escape hatch ─────────────────────────────────
           {
             name: "exec",
@@ -1328,10 +1289,6 @@ export const CI_GROUPS: readonly CommandGroup[] = [
                 value: "<app>",
                 summary: "Whose manifest declares the Worker's secrets.",
               },
-              {
-                flag: "--mint",
-                summary: "Mint the sandbox proxy JWT into it.",
-              },
             ],
           },
           {
@@ -1347,10 +1304,6 @@ export const CI_GROUPS: readonly CommandGroup[] = [
           {
             name: "preflight",
             summary: "Classify the project: paused (skip) vs broken (fail).",
-          },
-          {
-            name: "mint-token",
-            summary: "Sign a fresh sandbox proxy JWT to stdout.",
           },
           {
             name: "require-token",

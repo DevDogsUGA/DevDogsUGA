@@ -149,15 +149,19 @@ export interface AuditInput {
    *
    * The third category, and it sits between the other two rather than beside
    * them: unlike `ignore` it is a secret, and unlike `neverStore` there is one
-   * remote store it BELONGS in. `SANDBOX_PROXY_TOKEN` is a JWT the deploy mints
-   * and writes to the Worker, so being on Cloudflare and nowhere else is
-   * exactly right.
+   * remote store it BELONGS in. A key like this is signed at deploy time and
+   * written straight to the Worker, so being on Cloudflare and nowhere else is
+   * exactly right. `SANDBOX_PROXY_TOKEN` is still declared this way in
+   * `apps/sandbox/env.ts` — nothing mints it any more, since the deploy that
+   * did was removed with the sandbox integration it authenticated, but the
+   * declaration is what keeps this category from reading "on production-
+   * sandbox, not in Bitwarden" the day someone does fill it in by hand.
    *
-   * Without this set the Cloudflare pass below reads "on production-sandbox,
-   * not in Bitwarden" and reports the live proxy credential as an orphan,
-   * which the plan doc's §3.6 prune path then offers to delete. Marking it the
-   * other obvious way, as `never-store`, inverts the error into "must NEVER be
-   * a Worker secret" and is just as wrong in the opposite direction.
+   * Without this set the Cloudflare pass below reports a key like that as an
+   * orphan, which the plan doc's §3.6 prune path then offers to delete.
+   * Marking it the other obvious way, as `never-store`, inverts the error into
+   * "must NEVER be a Worker secret" and is just as wrong in the opposite
+   * direction.
    */
   minted?: ReadonlySet<string>;
   /**

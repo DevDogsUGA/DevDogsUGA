@@ -88,11 +88,6 @@ import {
   runPlannerResetPassword,
   runPlannerStatus,
 } from "./planner/commands.js";
-import {
-  runSigningKeyGenerate,
-  runSigningKeyImport,
-  runSigningKeyStatus,
-} from "./signing-key/commands.js";
 import { loadRegistry } from "./env/discovery.js";
 import { ENV_TARGETS, fileFor, isEnvTarget } from "@devdogsuga/env";
 import { setExplicitAccessToken } from "./bws/client.js";
@@ -752,40 +747,6 @@ async function runPlannerCommand(rest: string[]): Promise<void> {
   process.exitCode = 1;
 }
 
-/**
- * `db signing-key <generate|import|status> --target <staging|production>`
- *
- * Operator-side like `planner`, and for the same reasons: prompts, env-file
- * writes, and SUPABASE_ACCESS_TOKEN, the apply-tier credential no unattended
- * job outside production-apply may hold. The deploy pipeline only READS the
- * key (`deploy mint-token`); everything that creates or registers it is a
- * human's move. See `signing-key/commands.ts`.
- */
-async function runSigningKeyCommand(rest: string[]): Promise<void> {
-  const [sub] = positionals(rest);
-  const options = { target: flagValue(rest, "--target") ?? undefined };
-
-  if (sub === "generate") {
-    await runSigningKeyGenerate(options);
-    return;
-  }
-  if (sub === "import") {
-    await runSigningKeyImport(options);
-    return;
-  }
-  if (sub === "status") {
-    await runSigningKeyStatus(options);
-    return;
-  }
-
-  log.error(
-    sub
-      ? `devtools db signing-key: unknown subcommand "${sub}". Try ${subcommandList(["db", "signing-key"])}.`
-      : `devtools db signing-key: which of ${subcommandList(["db", "signing-key"])}?`,
-  );
-  process.exitCode = 1;
-}
-
 // ── Database ─────────────────────────────────────────────────────────────────
 
 /**
@@ -797,8 +758,8 @@ async function runSigningKeyCommand(rest: string[]): Promise<void> {
  * top-level command, so a bare `push` told the reader nothing about what it
  * touched. Nesting them under `db` is what lets `--help db` and the wizard
  * group them by `scope` (see `commands.ts`) instead of listing all of them
- * flat. `planner` and `signing-key` keep their own dispatchers unchanged;
- * this just routes to them one level deeper.
+ * flat. `planner` keeps its own dispatcher unchanged; this just routes to it
+ * one level deeper.
  */
 async function runDbCommand(rest: string[]): Promise<void> {
   if (refuseRetiredDbFlags(rest)) return;
@@ -956,11 +917,6 @@ async function runDbCommand(rest: string[]): Promise<void> {
 
   if (sub === "planner") {
     await runPlannerCommand(subRest);
-    return;
-  }
-
-  if (sub === "signing-key") {
-    await runSigningKeyCommand(subRest);
     return;
   }
 

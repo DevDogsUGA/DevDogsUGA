@@ -481,9 +481,15 @@ describe("preflight", () => {
     // Then both dropped by one more: `AIRTABLE_AUTOMATION_SECRET` left the
     // registry with the officer-changes automation endpoint it authenticated
     // -- the whole override/correction subsystem, deleted, not just this key.
+    //
+    // Then staging and production dropped by two more: `SUPABASE_OAUTH_CLIENT_ID`
+    // and `SUPABASE_OAUTH_CLIENT_SECRET` left the registry with the whole
+    // sandbox-environment integration, deleted -- ordinary `scope: "environment"`
+    // keys, neither narrowed nor tiered, so both deployed targets moved and
+    // preflight did not.
     expect(target("preflight").active.size).toBe(2);
-    expect(target("staging").active.size).toBe(51);
-    expect(target("production").active.size).toBe(54);
+    expect(target("staging").active.size).toBe(49);
+    expect(target("production").active.size).toBe(52);
   });
 
   it("says in the file itself why it is short, and that nothing is hand-set", () => {

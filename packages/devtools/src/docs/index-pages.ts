@@ -8,8 +8,8 @@
  * contributor, and `devtools-ci` by BOTH deploy scripts, ahead of every
  * staging and production release. A step the deploy depends on is not an
  * app's private tooling, and the rest of that class (`deploy write-env`,
- * `secrets-file`, `orphans`, `preflight`, `mint-token`, `require-token`) moved
- * into this package already, for the reasons `cli.ts` gives.
+ * `secrets-file`, `orphans`, `preflight`, `require-token`) moved into this
+ * package already, for the reasons `cli.ts` gives.
  *
  * The three that stayed behind in `apps/platform/scripts/` each have exactly
  * one caller and are about the platform's own generated sources:

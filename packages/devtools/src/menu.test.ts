@@ -5,7 +5,7 @@
  * command in the tree is reachable from it, and the argv a walk produces is one the CLI
  * accepts.** The menu this replaced could not make that claim. It held ten
  * hand-written entries beside a CLI with sixteen top-level commands, so `env`,
- * `planner`, `signing-key` and `airtable check` had no way in.
+ * `planner` and `airtable check` had no way in.
  *
  * `@clack/prompts` is mocked rather than driven: the point is which questions
  * get asked and what argv comes out, not how a terminal renders them.
@@ -239,19 +239,11 @@ describe("options become argv", () => {
 
   it("emits a select choice that is a value after its flag", async () => {
     const argv = await walk([
-      groupOf("db")!,
-      findCommand(["db"])!,
-      findCommand(["db", "signing-key"])!,
-      findCommand(["db", "signing-key", "status"])!,
-      "production",
+      groupOf("completions")!,
+      findCommand(["completions"])!,
+      "bash",
     ]);
-    expect(argv).toEqual([
-      "db",
-      "signing-key",
-      "status",
-      "--target",
-      "production",
-    ]);
+    expect(argv).toEqual(["completions", "--shell", "bash"]);
   });
 
   it("drops an optional text answered blank", async () => {

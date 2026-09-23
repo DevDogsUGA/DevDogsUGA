@@ -600,8 +600,14 @@ describe("preflight, the target no app boots from", () => {
     // Then both dropped by one more: `AIRTABLE_AUTOMATION_SECRET` left the
     // registry with the officer-changes automation endpoint it authenticated
     // -- the whole override/correction subsystem, deleted, not just this key.
-    expect(keysRoutedTo("staging").size).toBe(51);
-    expect(keysRoutedTo("production").size).toBe(54);
+    //
+    // Then staging and production dropped by two more: `SUPABASE_OAUTH_CLIENT_ID`
+    // and `SUPABASE_OAUTH_CLIENT_SECRET` left the registry with the whole
+    // sandbox-environment integration, deleted -- ordinary `scope: "environment"`
+    // keys, neither narrowed nor tiered, so both deployed targets moved and
+    // preflight did not.
+    expect(keysRoutedTo("staging").size).toBe(49);
+    expect(keysRoutedTo("production").size).toBe(52);
     expect(keysRoutedTo("preflight").size).toBe(2);
   });
 });

@@ -90,8 +90,9 @@ export async function runSetup(): Promise<void> {
     // APPENDS the sections for a new project without touching filled values.
     const sections = await resolveSections();
     if (sections) {
-      // Lead with the two projects most contributors join; platform and
-      // sandbox are shared auth infrastructure you depend on but rarely edit.
+      // Lead with the two projects most contributors join; platform is shared
+      // auth infrastructure you depend on but rarely edit, and sandbox is
+      // dormant, trailing last as the one almost nobody touches.
       const order = [
         "schedule-builder",
         "study-group-finder",

@@ -9,19 +9,15 @@
  * by running each of them with the two streams captured separately: stdout got
  * the whole box-drawn transcript and stderr got nothing.
  *
- * That is fine for a contributor at a terminal and wrong for this group. Two
- * of these commands have a stdout that something downstream PARSES:
- *
- *   * `deploy secrets-file` emits `::add-mask::<token>`, a GitHub workflow
- *     command recognised only on a line of its own on the step's stdout.
- *   * `deploy mint-token` emits a signed JWT and nothing else; its caller
- *     takes the whole of stdout as the credential.
- *
- * So `cli.ts` prints no banner for the `deploy` group, and everything in this
- * group reports through `say()`, which is stderr, instead of `log`/`note`. A
- * `console.log` anywhere under this directory is a bug: it would put a
- * decoration inside a Worker secret, or leave a freshly signed production
- * credential unmasked in a public repository's job log.
+ * That is fine for a contributor at a terminal and wrong for this group: a
+ * deploy command's stdout is a channel something downstream may PARSE or take
+ * whole, `::add-mask::` directives and minted credentials among the things
+ * that have lived there. So `cli.ts` prints no banner for the `deploy` group,
+ * and everything in this group reports through `say()`, which is stderr,
+ * instead of `log`/`note`. A `console.log` anywhere under this directory is a
+ * bug: the next command with a real stdout protocol would inherit a
+ * decoration it never asked for, silently, with no test catching it until
+ * that command exists.
  *
  * ## Failures
  *

@@ -11,11 +11,9 @@
  * ## Why a separate bin
  *
  * The contributor CLI (`devtools`) prompts interactively and wraps output in
- * clack's box-drawing. None of that belongs in a deploy job. Two step commands
- * — `secrets-file` and `mint-token` — emit a credential or a mask directive on
- * stdout, so any banner on that stream is either an unmasked secret in the job
- * log or a broken `::add-mask::` line. The separation is structural: this
- * entry point never imports clack. `with-env` reports its selected file on
+ * clack's box-drawing. None of that belongs in a deploy job. This entry point
+ * never imports clack, so a caller that pipes its stdout is never surprised by
+ * a banner landing on that stream. `with-env` reports its selected file on
  * stderr, leaving the command's stdout protocol intact.
  *
  * ## The deploy orchestrator
@@ -38,7 +36,6 @@ import { DeployError, say } from "./deploy/report.js";
 import { renderWriteEnvReport, runDeployWriteEnv } from "./deploy/write-env.js";
 import { runDeploySecretsFile } from "./deploy/secrets-file.js";
 import { runDeployOrphans } from "./deploy/orphans.js";
-import { runMintToken } from "./deploy/mint-token.js";
 import { runDeployAirtablePlan } from "./deploy/airtable-plan.js";
 import { runDeployAirtableApply } from "./deploy/airtable-apply.js";
 import { runPreflight } from "./deploy/preflight.js";
@@ -205,9 +202,6 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
       tier,
     ];
     if (secretsFile) deployArgs.push("--secrets-file", secretsFile);
-    if (process.env.REST_URL) {
-      deployArgs.push("--var", `PLATFORM_REST_URL:${process.env.REST_URL}`);
-    }
     if (process.env.SENTRY_RELEASE) {
       deployArgs.push("--var", `SENTRY_RELEASE:${process.env.SENTRY_RELEASE}`);
     }
@@ -289,11 +283,6 @@ async function runDeployCommand(rest: string[]): Promise<void> {
       return;
     }
 
-    if (sub === "mint-token") {
-      runMintToken();
-      return;
-    }
-
     if (sub === "airtable-plan") {
       await runDeployAirtablePlan();
       return;
@@ -327,16 +316,7 @@ async function runDeployCommand(rest: string[]): Promise<void> {
           `secrets — ${WORKER_APPS.join(", ")}.`,
         ]);
       }
-      const mintIndex = rest.indexOf("--mint");
-      const after = mintIndex === -1 ? undefined : rest[mintIndex + 1];
-      if (after !== undefined && !after.startsWith("--")) {
-        throw new DeployError("`--mint` no longer takes a script path.", [
-          `Drop the "${after}" after it. There is one minting command in this`,
-          "repository — `devtools-ci deploy mint-token` — and this runs it;",
-          "which variable it fills is derived from the app's manifest.",
-        ]);
-      }
-      await runDeploySecretsFile({ app, mint: mintIndex !== -1 });
+      await runDeploySecretsFile({ app });
       return;
     }
 

@@ -5,8 +5,8 @@
  *
  * Everything downstream of this command reads its configuration through
  * `with-env`, which reads a file on disk: `cf:build:*`, `cf:deploy:*`,
- * `deploy:*`, `deploy secrets-file`, `deploy mint-token`. CI has no such file,
- * so one step has to write it. This is that step, and it is the ONLY place in
+ * `deploy:*`, `deploy secrets-file`. CI has no such file, so one step has to
+ * write it. This is that step, and it is the ONLY place in
  * the pipeline that touches the `secrets` and `vars` contexts. After it runs, a
  * deploy job looks exactly like a devops laptop, and every later step can be
  * the same command a person would run by hand.
