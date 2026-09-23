@@ -238,10 +238,9 @@ export class UnknownEnvironmentError extends Error {
  * area for pushing credentials into the preflight vault project: someone runs
  * `env init --target preflight`, fills the file in, and pushes it. Nothing
  * boots from it. The preflight credentials are read-only by construction (a
- * Postgres role that sees only the migrations table, an Airtable PAT with
- * `schema:read`), so an app started against them would fail in a scattered,
- * feature-by-feature way rather than at startup. Refusing here is what keeps
- * that failure at the door.
+ * Postgres role that sees only the migrations table), so an app started
+ * against them would fail in a scattered, feature-by-feature way rather than
+ * at startup. Refusing here is what keeps that failure at the door.
  */
 export function resolveEnvironment(
   value: string | undefined = process.env.DEPLOY_ENV,

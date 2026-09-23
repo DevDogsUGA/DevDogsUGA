@@ -24,13 +24,13 @@ describe("alert", () => {
 
   it("captures a warning-level message with a title-derived fingerprint", () => {
     getClient.mockReturnValue({});
-    alert("Airtable sync failing", ["3 rows rejected"]);
+    alert("Config reconcile failing", ["3 rows rejected"]);
 
     expect(captureMessage).toHaveBeenCalledWith(
-      "Airtable sync failing\n• 3 rows rejected",
+      "Config reconcile failing\n• 3 rows rejected",
       expect.objectContaining({
         level: "warning",
-        fingerprint: ["alert", "Airtable sync failing"],
+        fingerprint: ["alert", "Config reconcile failing"],
         tags: expect.objectContaining({ alert: "true" }),
       }),
     );

@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 /**
- * The shape of the club's meetings and workshops, authored as data rather
- * than typed into Airtable.
+ * The shape of the club's meetings and workshops, authored as versioned data
+ * rather than edited through a UI.
  *
  * This is the STRUCTURAL half of "is this config good". A file that parses
  * against this schema has the right shape and types; whether its CONTENT can
@@ -11,25 +11,22 @@ import { z } from "zod";
  * a shape error and a publishability error are never confused for each
  * other in the CI output.
  *
- * Mirrors the columns `meetings` and `workshops` actually read today, ported
- * from `apps/platform/src/server/airtable/registry.ts`. Left out on purpose:
- * everything that existed only for the Airtable wire format --
- * `airtableRecordId`, `⚙️ Platform ID`, `⚙️ Sync status`, attendance counts.
- * Config has no such plumbing: identity is the authored `id` itself, and
- * there is nothing to write status back onto -- a bad file simply fails CI.
+ * Mirrors the columns `meetings` and `workshops` actually read today. Left
+ * out on purpose: everything that exists only for a synced wire format --
+ * a foreign record id, sync-status bookkeeping, attendance counts. Config has
+ * no such plumbing: identity is the authored `id` itself, and there is
+ * nothing to write status back onto -- a bad file simply fails CI.
  */
 
 // ── Shared constants ─────────────────────────────────────────────────────────
 //
-// Duplicated from the Airtable registry and the baseline migration's check
-// constraints rather than imported from `@devdogsuga/airtable`. That package
-// is Airtable's, and is deleted whole in the teardown step; this one has to
-// outlive it. The numbers must keep agreeing with the check constraints in
-// `supabase/migrations/20260829040000_11_platform_events_core.sql` --
-// the same "this file must never be STRICTER than that one" rule the
-// Airtable registry followed, now pointed the other way: config is upstream
-// of Postgres, so a config file this validator accepts must never be a row
-// Postgres rejects.
+// Duplicated from the baseline migration's check constraints rather than
+// imported from it, so this package can be validated with no database in
+// reach. The numbers must keep agreeing with the check constraints in
+// `supabase/migrations/20260829040000_11_platform_events_core.sql` -- this
+// file must never be STRICTER than that one: config is upstream of Postgres,
+// so a config file this validator accepts must never be a row Postgres
+// rejects.
 
 /** Roughly two sentences, what the events card is laid out for. */
 export const MEETING_SUMMARY_MAX_LENGTH = 240;
@@ -44,10 +41,9 @@ export const WORKSHOP_DESCRIPTION_MAX_LENGTH = 280;
 
 /**
  * Rendered as an href on a public page under the club's name, so the host is
- * allowlisted rather than just the scheme. Mirrors
- * `meetings_rsvpUrl_host` and `RSVP_URL_ALLOWED_HOSTS` in the Airtable
- * registry. Adding a host here means widening that check constraint in the
- * same change.
+ * allowlisted rather than just the scheme. Mirrors the DB's
+ * `meetings_rsvpUrl_host` check constraint. Adding a host here means
+ * widening that check constraint in the same change.
  */
 export const RSVP_URL_ALLOWED_HOSTS: readonly string[] = ["uga.campuslabs.com"];
 
@@ -126,11 +122,11 @@ const isoInstant = z
 /**
  * A workshop: one of several sessions running in parallel at a meeting.
  *
- * `project` is free text, deliberately. The old `workshops.projectId`
- * pointed at a `projects` table that only Airtable plumbing kept alive --
- * see the migration note on the dropped table. A workshop recommends a body
- * of work in words now ("DogDays", "DogDays & DogPack"), the same way an
- * officer would say it out loud, with nothing to keep in sync.
+ * `project` is free text, deliberately -- see the migration note on the
+ * dropped `workshops.projectId` column and the `projects` table it pointed
+ * at. A workshop recommends a body of work in words now ("DogDays", "DogDays
+ * & DogPack"), the same way an officer would say it out loud, with nothing to
+ * keep in sync.
  */
 export const workshopSchema = z.object({
   id: stableId,

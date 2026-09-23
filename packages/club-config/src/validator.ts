@@ -13,16 +13,14 @@ import {
 } from "./schema.js";
 
 /**
- * Publishability rules -- ported from the refusal logic that used to live in
- * `apps/platform/src/server/airtable/refusals.ts` (`checkMeeting`,
- * `checkWorkshopValues`, `checkProject`), with one change that follows
- * directly from moving authoring off Airtable: there is no such thing as a
+ * Publishability rules: lengths, the RSVP-host allowlist, cancellation
+ * reason/date pairing, id uniqueness and shape. There is no such thing as a
  * half-typed row here. A config file either parses and validates whole, or
  * CI fails the merge -- there is no "officer is still mid-edit" state to stay
- * silent about, because nothing reaches `main` until it is complete. So the
- * old distinction between a REFUSAL (a value that arrived and cannot be
- * published) and a STATE (a row that is merely unfinished) collapses: every
- * finding here is a hard error.
+ * silent about, because nothing reaches `main` until it is complete. So a
+ * REFUSAL (a value that arrived and cannot be published) and a STATE (a row
+ * that is merely unfinished) are not different things here: every finding
+ * below is a hard error.
  *
  * Deliberately pure: no filesystem, no network, no database. Takes an
  * already-parsed `ClubConfig` and returns every problem it can find, rather

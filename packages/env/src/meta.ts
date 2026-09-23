@@ -82,22 +82,21 @@ export type EnvSecrecy =
  * `plan` is for credentials only the §3.5 dry-run jobs read: `main-plan`
  * (which runs in the `preflight` environment) and `production-plan` (which
  * runs in `production`). Such a key has no reader in `staging`, and a copy
- * there is a second credential to rotate for no benefit, which is what
- * `AIRTABLE_PLAN_PAT` was until this tier existed. ⚠️ Reaching `preflight` is
- * still `narrowed`'s decision, not this one. The two fields answer different
- * questions: `narrowed` promises the preflight VALUE is narrow enough for a
- * dry run, the tier says which jobs READ the key. A plan-tier key that skipped
- * the `narrowed` opt-in would silently starve `main-plan`.
+ * there is a second credential to rotate for no benefit. ⚠️ Reaching
+ * `preflight` is still `narrowed`'s decision, not this one. The two fields
+ * answer different questions: `narrowed` promises the preflight VALUE is
+ * narrow enough for a dry run, the tier says which jobs READ the key. A
+ * plan-tier key that skipped the `narrowed` opt-in would silently starve
+ * `main-plan`.
  *
  * `apply` is for credentials that can reshape production and have no dry run.
- * A Supabase access token carries full account privileges, and
- * `AIRTABLE_APPLY_PAT` can restructure the officers' base. They belong behind
+ * A Supabase access token carries full account privileges; it belongs behind
  * required reviewers, not in the environment an ordinary deploy reads.
  *
  * ⚠️ A GitHub routing rule, not a Bitwarden one. The `production` Bitwarden
- * project does hold the apply pair: only a person can read it, one project per
- * environment stays the simplest thing to rotate, and holding them there is
- * what lets `env audit` compare them at all.
+ * project does hold the apply-tier credential: only a person can read it, one
+ * project per environment stays the simplest thing to rotate, and holding it
+ * there is what lets `env audit` compare it at all.
  */
 export type EnvTier = "deploy" | "plan" | "apply";
 
@@ -149,20 +148,21 @@ export type EnvMeta = {
    *     before every §3.5 stage-1 dry run. A fourth key of this shape should
    *     ship with the same kind of runtime check, because nothing else will
    *     catch it.
-   *   * **A key that is only ever the narrow one.** `AIRTABLE_PLAN_PAT` holds
-   *     a PAT with `schema.bases:read` on the officers' base and nothing else;
-   *     there is no wider credential under that name in any target, because
-   *     the wider Airtable tokens are separate declarations
-   *     (`AIRTABLE_PAT`, `AIRTABLE_APPLY_PAT`). The narrowness is a property
-   *     of the key rather than of one target's copy of it, so the claim is
-   *     checked when the token is minted and cannot drift per target.
-   *   * **A key that is not a credential at all.** `AIRTABLE_BASE_ID` is a
-   *     public identifier (`secrecy: "public"`, so it is a GitHub *variable*
-   *     that anyone who can read the repository's Actions config can read
-   *     anyway). It names WHICH base the dry run talks to and confers no access
-   *     to it; every capability in `deploy airtable-plan` comes from
-   *     `AIRTABLE_PLAN_PAT` beside it. The promise holds trivially rather than
-   *     by scoping: there is nothing under this name that could do more.
+   *   * **A key that is only ever the narrow one.** A credential minted with a
+   *     single, permanently narrow scope and declared under one name only —
+   *     there is no wider credential sharing that name in any target, so the
+   *     narrowness is a property of the key rather than of one target's copy
+   *     of it, and the claim is checked when the token is minted and cannot
+   *     drift per target. No declaration holds this shape today; the last one
+   *     to (a read-only Airtable PAT, scoped to `schema.bases:read` alone)
+   *     left with that integration.
+   *   * **A key that is not a credential at all.** A public identifier
+   *     (`secrecy: "public"`, so it is a GitHub *variable* that anyone who can
+   *     read the repository's Actions config can read anyway) that names
+   *     which resource a dry-run job talks to and confers no access to it —
+   *     every capability comes from a credential declared beside it. The
+   *     promise holds trivially rather than by scoping: there is nothing under
+   *     this name that could do more.
    *
    *     ⚠️ Added 2026-08-17, and it is the shape most easily over-applied.
    *     "Public" is not the test; "confers nothing" is. A public value that
@@ -192,9 +192,9 @@ export type EnvMeta = {
    *     hands that credential to `main`, which is the bug this field was added
    *     to close, reintroduced one field later;
    *   * narrow-key: marking a key that is narrow by habit rather than by
-   *     scope. `AIRTABLE_PLAN_PAT` qualifies because a token minted with
-   *     `schema.bases:read` alone cannot be talked into a write; a key that
-   *     merely *happens* to hold a limited token today does not;
+   *     scope. A key qualifies only when its token is minted with a scope
+   *     that cannot be talked into anything wider; a key that merely
+   *     *happens* to hold a limited token today does not;
    *   * non-credential: reading `secrecy: "public"` as the test and marking
    *     every public key. Most of them are not needed by a dry run at all, and
    *     `narrowed` is an opt-in to a TIER, not a secrecy restatement: the

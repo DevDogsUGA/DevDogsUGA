@@ -1,6 +1,6 @@
 /**
- * The Changelog's content: event data pulled from the Airtable "Meetings"
- * table (times converted to ET) and the dated sends themselves.
+ * The Changelog's content: event data authored in `@devdogsuga/club-config`'s
+ * meetings (times converted to ET) and the dated sends themselves.
  *
  * Issues are versioned with semver — a send is a release. Event copy lives
  * here rather than in the components so a copy pass before a send touches one
@@ -87,9 +87,9 @@ const EVENTS = {
     rsvp: "https://uga.campuslabs.com/engage/event/12664183",
     blurb: BUILD_BLURB,
   },
-  // The three workshop nights have no Description in Airtable yet — these
+  // The three workshop nights have no summary in club-config yet — these
   // blurbs are authored from their linked workshop topics; swap in the real
-  // copy once it lands in the Meetings table.
+  // copy once it lands in the meetings config.
   nextflutter: {
     chip: "Workshop",
     color: KIND.workshop,

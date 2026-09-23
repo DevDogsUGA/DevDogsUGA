@@ -59,7 +59,7 @@ describe("meetingSchema", () => {
     expect(meetingSchema.parse(meeting())).toMatchObject({ id: "cold-start" });
   });
 
-  it("accepts an Airtable-shaped record id", () => {
+  it("accepts a legacy migrated record id shape", () => {
     expect(meetingSchema.parse(meeting({ id: "rectaW4iGmfDA3uwQ" })).id).toBe(
       "rectaW4iGmfDA3uwQ",
     );

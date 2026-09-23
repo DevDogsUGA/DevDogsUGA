@@ -9,8 +9,7 @@ import { getClubConfig, ClubConfigError } from "./index.js";
  * the runtime reconcile (`server/config/reconcile.ts`) trusts what it parses
  * and refuses to partially apply a bad file rather than re-validating field
  * by field, so THIS is the only place an author gets a readable error. Wired
- * into `.github/workflows/ci.yaml` as a merge-blocking step, the same way
- * `pnpm devtools airtable check` blocks a drifted registry.
+ * into `.github/workflows/ci.yaml` as a merge-blocking step.
  */
 function main(): number {
   try {

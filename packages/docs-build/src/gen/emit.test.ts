@@ -342,7 +342,7 @@ describe("renderSymbol", () => {
         name: "normalize",
         kind: "function",
         importStyle: "named",
-        importPath: "packages/airtable/src/snapshot",
+        importPath: "packages/devtools/src/env/discovery",
         tags: ["internal"],
       }),
       options,

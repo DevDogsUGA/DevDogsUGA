@@ -144,10 +144,10 @@ export interface EventDetail {
  * Somewhere the campus map has no footprint for. The room text carries the
  * detail instead.
  *
- * One string literal, matching `OTHER_BUILDING` in the app's `buildings.ts` and
- * the `Building` single-select in `packages/airtable`'s registry. Those two
- * already keep separate copies of this vocabulary, with a test holding them
- * together, for the same dependency-direction reason that applies here.
+ * One string literal, matching `OTHER_BUILDING` in the app's `buildings.ts`
+ * and `MEETING_BUILDING_CHOICES` in `@devdogsuga/club-config`'s schema. Those
+ * two already keep separate copies of this vocabulary, with a test holding
+ * them together, for the same dependency-direction reason that applies here.
  */
 const OTHER_BUILDING = "Other";
 
