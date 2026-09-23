@@ -347,6 +347,16 @@ describe("platform meetings, teams and attendance", () => {
     await a
       .from("teamMembers")
       .insert({ teamId, userId: member.userId, role: "lead" });
+    // A departed stint: joined and left before this fixture ran, so it
+    // exercises the "leftAt is not null" branch of the roster policy rather
+    // than only ever the current-roster branch.
+    await a.from("teamMembers").insert({
+      teamId,
+      userId: moderator.userId,
+      role: "member",
+      joinedAt: new Date(now - 172_800_000).toISOString(),
+      leftAt: new Date(now - 86_400_000).toISOString(),
+    });
     await a.from("attendance").insert({
       meetingId,
       userId: member.userId,
@@ -472,6 +482,27 @@ describe("platform meetings, teams and attendance", () => {
       .select("userId");
     expect(error).toBeNull();
     expect(memberRows?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  // A departed stint is history, not roster: it names when someone joined and
+  // left, which the design note's "the team page shows who is on each team"
+  // does not extend to every signed-in account. Only the team's own current
+  // members can see it; `suspended` is on no team at all.
+  it("hides a departed member's stint from non-members but shows it to the team", async () => {
+    const { data: outsiderRows } = await suspended.client
+      .from("teamMembers")
+      .select("userId")
+      .eq("teamId", teamId)
+      .not("leftAt", "is", null);
+    expect(outsiderRows ?? []).toHaveLength(0);
+
+    const { data: insiderRows, error } = await member.client
+      .from("teamMembers")
+      .select("userId")
+      .eq("teamId", teamId)
+      .not("leftAt", "is", null);
+    expect(error).toBeNull();
+    expect(insiderRows?.some((r) => r.userId === moderator.userId)).toBe(true);
   });
 
   // Officers read other people's attendance through a server action holding

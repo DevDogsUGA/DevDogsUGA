@@ -657,13 +657,15 @@ export const teamMembersInPlatform = platform.table.withRLS("teamMembers", {
 	uniqueIndex("teamMembers_one_lead_per_team").using("btree", table.teamId.asc().nullsLast()).where(sql`((role = 'lead'::platform."teamRole") AND ("leftAt" IS NULL))`),
 	index("teamMembers_userId_active_idx").using("btree", table.userId.asc().nullsLast()).where(sql`("leftAt" IS NULL)`),
 
-	pgPolicy("authenticated_select", { for: "select", to: ["authenticated"], using: sql`true` }),
+	pgPolicy("authenticated_select", { for: "select", to: ["authenticated"], using: sql`("leftAt" IS NULL)` }),
 
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
 
 	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
 
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+
+	pgPolicy("team_member_select_history", { for: "select", to: ["authenticated"], using: sql`(("leftAt" IS NOT NULL) AND platform.is_active_team_member("teamId", ( SELECT auth.uid() AS uid)))` }),
 ]);
 
 export const teamMembershipRequestsInPlatform = platform.table.withRLS("teamMembershipRequests", {

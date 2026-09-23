@@ -1575,6 +1575,10 @@ export type Database = {
         Args: { app_slug: string; content_ref: string; content_type: string };
         Returns: Json;
       };
+      is_active_team_member: {
+        Args: { team_id: string; uid: string };
+        Returns: boolean;
+      };
       is_profile_frozen: { Args: { uid: string }; Returns: boolean };
       is_suspended: { Args: { uid: string }; Returns: boolean };
       is_test_identity: { Args: { uid: string }; Returns: boolean };

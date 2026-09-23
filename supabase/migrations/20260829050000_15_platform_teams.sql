@@ -201,11 +201,56 @@ grant select (
   "id", "slug", "name", "createdBy", "acceptingRequests"
 ) on "platform"."teams" to anon, authenticated;
 
+-- Whether `uid` is an ACTIVE member of `team_id`, for the history policy
+-- below. Security definer, and specifically NOT a plain subquery inlined into
+-- that policy: a subquery on `teamMembers` inside a policy ON `teamMembers` is
+-- self-referencing, and Postgres evaluates every one of the table's own
+-- policies -- including the one being defined -- against each row the
+-- subquery scans. That recurses into itself and fails with 42P17, "infinite
+-- recursion detected in policy for relation teamMembers"; measured against
+-- this exact policy locally. Security definer runs this function's body as
+-- its owner, which bypasses RLS entirely, so the lookup never re-triggers
+-- policy evaluation. `set search_path = ''` is mandatory alongside it, per
+-- `has_permission` above: nothing here may resolve through a caller-controlled
+-- schema.
+create or replace function "platform".is_active_team_member(team_id uuid, uid uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from "platform"."teamMembers"
+    where "teamId" = team_id and "userId" = uid and "leftAt" is null
+  );
+$$;
+
 -- Rosters are public to signed-in members: the team page shows who is on each
 -- team, and hiding that would make the club less legible for no gain. Not
 -- public to `anon`, because it is a membership list keyed to real accounts.
+--
+-- `"leftAt" is null` keeps this to the CURRENT roster. `teamMembers` now keeps
+-- history (a leave sets `leftAt` rather than deleting the row) so a later
+-- competition step can derive stars from who was on a team when it entered,
+-- but that history is not the design note's "who is on each team" -- it is
+-- every departed member's join/leave timeline, on every team, readable by
+-- any signed-in account. Past stints stay restricted to the team's own
+-- members below.
 create policy "authenticated_select" on "platform"."teamMembers"
-  as permissive for select to authenticated using (true);
+  as permissive for select to authenticated
+  using ("leftAt" is null);
+
+-- Past stints (`"leftAt" is not null`) are visible only to the team's own
+-- current members -- the same membership check `teamMembershipRequests` uses
+-- above, rewritten through `is_active_team_member` to dodge the recursion
+-- explained on it -- rather than to every signed-in account.
+create policy "team_member_select_history" on "platform"."teamMembers"
+  as permissive for select to authenticated
+  using (
+    "leftAt" is not null
+    and "platform".is_active_team_member("teamId", (select auth.uid()))
+  );
 create policy "no_client_insert" on "platform"."teamMembers"
   as restrictive for insert to anon, authenticated with check (false);
 create policy "no_client_update" on "platform"."teamMembers"
