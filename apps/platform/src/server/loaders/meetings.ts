@@ -13,12 +13,10 @@ import {
 import type { SQL } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "~/server/db";
-import { DEFAULT_MAX_TEAM_SIZE } from "~/server/teams/limits";
 import {
   attendance,
   competitions,
   meetings,
-  teams,
   workshops,
 } from "~/server/db/schema";
 
@@ -251,6 +249,12 @@ export interface MeetingWorkshop {
    *  table any more. */
   project: string | null;
   competitionSlug: string | null;
+  /**
+   * ⚠️ STUB, always 0. The platform redesign's teams-core step dropped
+   * `teams."competitionId"`, so "how many teams entered this competition" is
+   * not a question team rows can answer any more; the competitions step
+   * rewires this to the competition-entry mirror.
+   */
   teamCount: number;
 }
 
@@ -274,12 +278,8 @@ export const getMeetingWorkshops = cache(
         description: workshops.description,
         project: workshops.project,
         competitionSlug: competitions.slug,
-        teamCount: correlatedCount(
-          db
-            .select({ n: sql`count(*)::int` })
-            .from(teams)
-            .where(eq(teams.competitionId, competitions.id)),
-        ),
+        // See the STUB note on `MeetingWorkshop.teamCount`.
+        teamCount: sql<number>`0`,
       })
       .from(workshops)
       .leftJoin(
@@ -596,20 +596,11 @@ export interface CompetitionHeader {
   /** The opening workshop's meeting. NOT when judging happens. */
   openedOn: Date;
   /**
-   * When judging begins. The authority for every roster lock, and separate
-   * from `openedOn` because presentations are their own occasion, held at a
-   * later meeting. Null means "not scheduled yet", never "never".
+   * When judging begins, display-only. Separate from `openedOn` because
+   * presentations are their own occasion, held at a later meeting. Null means
+   * "not scheduled yet", never "never".
    */
   judgingStartsAt: Date | null;
-  /**
-   * The roster cap, already resolved against `DEFAULT_MAX_TEAM_SIZE`.
-   *
-   * Resolved here rather than returned nullable, because a nullable cap makes
-   * every caller reimplement the fallback. A page that renders "3 of" and a
-   * blank while the action rejects a fourth member is the drift this loader
-   * exists to prevent. `requireCanJoin` resolves it the same way.
-   */
-  maxTeamSize: number;
 }
 
 /**
@@ -641,10 +632,6 @@ export const getCompetitionBySlug = cache(
         )`,
         openedOn: meetings.startsAt,
         judgingStartsAt: competitions.judgingStartsAt,
-        maxTeamSize: sql<number>`coalesce(
-          ${competitions.maxTeamSize},
-          ${DEFAULT_MAX_TEAM_SIZE}
-        )`,
       })
       .from(competitions)
       .innerJoin(workshops, eq(workshops.id, competitions.workshopId))

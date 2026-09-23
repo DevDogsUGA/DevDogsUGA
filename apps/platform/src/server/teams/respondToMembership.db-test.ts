@@ -1,43 +1,55 @@
 // @vitest-environment node
 import { sql } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { db } from "~/server/db";
+import type { GithubResult } from "~/server/github/teamSync";
 
 /**
- * Accepting one invitation withdraws the rest, for that competition.
+ * Answering an invitation or a join request, against a real database.
  *
- * Applying to a few teams and joining whichever answers first is the intended
- * use, so the leftovers are not a mistake. But the one-team-per-competition
- * constraint would reject every one of them anyway, and leaving them pending
- * strands leads waiting on somebody who is no longer available.
- *
- * A database test rather than a unit test because the interesting part is the
- * scope of the UPDATE: it must catch the sibling in the same competition, must
- * NOT catch one in a different competition, and must not touch anybody else's
- * rows.
+ * GitHub is mocked -- see `actions/teams.db-test.ts`'s header for why. What
+ * belongs here rather than there is the direction-dependent authorization
+ * (an invitation is answered by its recipient, a request by the team's lead)
+ * and the fact that acceptance re-runs every `requireCanJoin` check rather
+ * than trusting the state the request was created in.
  */
 
+const github = vi.hoisted(() => ({
+  addMember: vi.fn((): Promise<GithubResult> => Promise.resolve({ ok: true })),
+}));
+vi.mock("~/server/github/teamSync", () => github);
+
+const session = vi.hoisted(() => ({ userId: "" }));
+vi.mock("~/server/auth", () => ({
+  expectSession: () => Promise.resolve(session.userId),
+}));
+
+const { respondToMembership } = await import("~/server/actions/teams");
+
 const IDS = {
-  meeting: "c2222222-2222-2222-2222-222222222222",
-  workshopA: "c3333333-3333-3333-3333-333333333331",
-  workshopB: "c3333333-3333-3333-3333-333333333332",
-  compA: "c4444444-4444-4444-4444-444444444441",
-  compB: "c4444444-4444-4444-4444-444444444442",
-  teamA1: "c5555555-5555-5555-5555-555555555551",
-  teamA2: "c5555555-5555-5555-5555-555555555552",
-  teamB1: "c5555555-5555-5555-5555-555555555553",
-  lead: "c9999999-9999-9999-9999-999999999991",
-  applicant: "c9999999-9999-9999-9999-999999999992",
-  bystander: "c9999999-9999-9999-9999-999999999993",
+  teamA: "c5555555-5555-5555-5555-555555555561",
+  teamB: "c5555555-5555-5555-5555-555555555562",
+  lead: "c9999999-9999-9999-9999-999999999961",
+  applicant: "c9999999-9999-9999-9999-999999999962",
+  bystander: "c9999999-9999-9999-9999-999999999963",
+  linkedBystander: "c9999999-9999-9999-9999-999999999964",
 };
 
 async function cleanup() {
   await db.execute(
-    sql`delete from platform.meetings where id = ${IDS.meeting}::uuid`,
+    sql`delete from platform.teams where id in (${IDS.teamA}::uuid, ${IDS.teamB}::uuid)`,
   );
   await db.execute(sql`
     delete from auth.users
-    where id in (${IDS.lead}::uuid, ${IDS.applicant}::uuid, ${IDS.bystander}::uuid)
+    where id in (${IDS.lead}::uuid, ${IDS.applicant}::uuid, ${IDS.bystander}::uuid, ${IDS.linkedBystander}::uuid)
   `);
 }
 
@@ -48,80 +60,67 @@ beforeAll(async () => {
     [IDS.lead, "respond-lead@uga.edu"],
     [IDS.applicant, "respond-applicant@uga.edu"],
     [IDS.bystander, "respond-bystander@uga.edu"],
+    [IDS.linkedBystander, "respond-linked-bystander@uga.edu"],
   ] as const) {
     await db.execute(sql`
       insert into auth.users (id, instance_id, aud, role, email)
       values (${id}::uuid, '00000000-0000-0000-0000-000000000000',
               'authenticated', 'authenticated', ${email})
-      on conflict (id) do nothing
     `);
   }
 
   // Joining provisions repository access, so `requireCanJoin` refuses a member
-  // with no linked GitHub identity: `github_not_linked`, the sixth check.
-  // Without the seeded identity this test would pass for the wrong reason,
-  // never reaching the withdrawal at all.
-  await db.execute(sql`
-    insert into auth.identities (id, user_id, provider, provider_id, identity_data)
-    values (gen_random_uuid(), ${IDS.applicant}::uuid, 'github', 'respond-applicant-gh',
-            '{"sub":"respond-applicant-gh","user_name":"applicant"}'::jsonb)
-    on conflict do nothing
-  `);
-
-  await db.execute(sql`
-    insert into platform.meetings (id, slug, "nameOverride", "startsAt", "endsAt")
-    values (${IDS.meeting}::uuid, 'respond-test-meeting', 'Respond Test',
-            now() - interval '2 days', now() - interval '2 days' + interval '2 hours')
-  `);
-
-  // Two competitions at the same meeting, each off its own workshop. The
-  // whole point is that they are scoped independently.
-  for (const [workshop, comp, slug, project] of [
-    [IDS.workshopA, IDS.compA, "respond-comp-a", "Respond Test A"],
-    [IDS.workshopB, IDS.compB, "respond-comp-b", "Respond Test B"],
+  // with no linked GitHub identity: `github_not_linked`, its first check.
+  // Without the seeded identity these would pass for the wrong reason, never
+  // reaching acceptance at all.
+  for (const [id, login] of [
+    [IDS.applicant, "applicant"],
+    [IDS.linkedBystander, "linked-bystander"],
   ] as const) {
     await db.execute(sql`
-      insert into platform.workshops (id, "meetingId", "project")
-      values (${workshop}::uuid, ${IDS.meeting}::uuid, ${project})
-    `);
-    await db.execute(sql`
-      insert into platform.competitions (id, slug, "workshopId")
-      values (${comp}::uuid, ${slug}, ${workshop}::uuid)
+      insert into auth.identities (id, user_id, provider, provider_id, identity_data)
+      values (gen_random_uuid(), ${id}::uuid, 'github', ${`respond-${login}-gh`},
+              ${JSON.stringify({ sub: `respond-${login}-gh`, user_name: login })}::jsonb)
     `);
   }
 
-  for (const [id, comp, slug] of [
-    [IDS.teamA1, IDS.compA, "team-a1"],
-    [IDS.teamA2, IDS.compA, "team-a2"],
-    [IDS.teamB1, IDS.compB, "team-b1"],
+  for (const [id, slug, code] of [
+    [IDS.teamA, "respond-team-a", "AAA111"],
+    [IDS.teamB, "respond-team-b", "BBB222"],
   ] as const) {
     await db.execute(sql`
-      insert into platform.teams (id, "competitionId", slug, name, "joinCode", "createdBy")
-      values (${id}::uuid, ${comp}::uuid, ${slug}, ${slug}, ${slug.toUpperCase()},
-              ${IDS.lead}::uuid)
+      insert into platform.teams (id, slug, name, "joinCode", "createdBy")
+      values (${id}::uuid, ${slug}, ${slug}, ${code}, ${IDS.lead}::uuid)
     `);
     await db.execute(sql`
-      insert into platform."teamMembers" ("teamId", "competitionId", "userId", role)
-      values (${id}::uuid, ${comp}::uuid, ${IDS.lead}::uuid, 'lead')
-      on conflict do nothing
+      insert into platform."teamMembers" ("teamId", "userId", role)
+      values (${id}::uuid, ${IDS.lead}::uuid, 'lead')
     `);
   }
 });
 
 afterAll(cleanup);
 
-vi.mock("~/server/auth", () => ({
-  expectSession: () => Promise.resolve("c9999999-9999-9999-9999-999999999992"),
-}));
+beforeEach(() => {
+  vi.clearAllMocks();
+  github.addMember.mockResolvedValue({ ok: true });
+});
 
-const { respondToMembership } = await import("~/server/actions/teams");
-
-async function invite(teamId: string, competitionId: string, userId: string) {
+async function invite(teamId: string, userId: string, createdBy: string) {
   const rows = await db.execute<{ id: string }>(sql`
     insert into platform."teamMembershipRequests"
-      ("teamId", "competitionId", "userId", direction, status, "createdBy")
-    values (${teamId}::uuid, ${competitionId}::uuid, ${userId}::uuid,
-            'invite', 'pending', ${IDS.lead}::uuid)
+      ("teamId", "userId", direction, status, "createdBy")
+    values (${teamId}::uuid, ${userId}::uuid, 'invite', 'pending', ${createdBy}::uuid)
+    returning id
+  `);
+  return rows[0]!.id;
+}
+
+async function request(teamId: string, userId: string) {
+  const rows = await db.execute<{ id: string }>(sql`
+    insert into platform."teamMembershipRequests"
+      ("teamId", "userId", direction, status, "createdBy")
+    values (${teamId}::uuid, ${userId}::uuid, 'request', 'pending', ${userId}::uuid)
     returning id
   `);
   return rows[0]!.id;
@@ -134,46 +133,101 @@ async function statusOf(id: string) {
   return rows[0]!.status;
 }
 
+async function isActiveMember(teamId: string, userId: string) {
+  const rows = await db.execute(sql`
+    select 1 from platform."teamMembers"
+    where "teamId" = ${teamId}::uuid and "userId" = ${userId}::uuid and "leftAt" is null
+  `);
+  return rows.length > 0;
+}
+
 describe("respondToMembership", () => {
-  it("accepts one invitation and withdraws the sibling", async () => {
-    const accepted = await invite(IDS.teamA1, IDS.compA, IDS.applicant);
-    const sibling = await invite(IDS.teamA2, IDS.compA, IDS.applicant);
-    // Same member, DIFFERENT competition. Nothing about accepting in
-    // competition A says anything about their options in B.
-    const otherComp = await invite(IDS.teamB1, IDS.compB, IDS.applicant);
-    // Somebody else's invitation to the very team that just filled a seat.
-    const other = await invite(IDS.teamA2, IDS.compA, IDS.bystander);
+  it("an invitation is answered by its recipient", async () => {
+    const id = await invite(IDS.teamA, IDS.applicant, IDS.lead);
 
-    const result = await respondToMembership(accepted, true);
+    session.userId = IDS.bystander;
+    expect(await respondToMembership(id, true)).toEqual({
+      ok: false,
+      code: "request_not_actionable",
+    });
+
+    session.userId = IDS.applicant;
+    const result = await respondToMembership(id, true);
     expect(result.ok).toBe(true);
-
-    expect(await statusOf(accepted)).toBe("accepted");
-    // Withdrawn, not declined: the member did not turn this down, their
-    // situation changed.
-    expect(await statusOf(sibling)).toBe("withdrawn");
-    expect(await statusOf(otherComp)).toBe("pending");
-    expect(await statusOf(other)).toBe("pending");
+    expect(github.addMember).toHaveBeenCalledWith(
+      "respond-team-a",
+      IDS.applicant,
+    );
+    expect(await statusOf(id)).toBe("accepted");
+    expect(await isActiveMember(IDS.teamA, IDS.applicant)).toBe(true);
   });
 
-  it("put the member on exactly one team", async () => {
-    const rows = await db.execute<{ n: number }>(sql`
-      select count(*)::int as n from platform."teamMembers"
-      where "userId" = ${IDS.applicant}::uuid
-        and "competitionId" = ${IDS.compA}::uuid
-    `);
-    expect(rows[0]!.n).toBe(1);
+  it("a join request is answered by the team's lead, not the requester", async () => {
+    const id = await request(IDS.teamB, IDS.applicant);
+
+    // The requester is not the one to answer their own request -- only the
+    // team's lead is -- and `requireLead` reports `not_a_member` rather than
+    // `request_not_actionable` for a caller who is not on the team at all.
+    session.userId = IDS.applicant;
+    expect(await respondToMembership(id, true)).toEqual({
+      ok: false,
+      code: "not_a_member",
+    });
+
+    session.userId = IDS.lead;
+    const result = await respondToMembership(id, true);
+    expect(result.ok).toBe(true);
+    expect(await isActiveMember(IDS.teamB, IDS.applicant)).toBe(true);
+  });
+
+  it("declining never calls GitHub and leaves the mirror untouched", async () => {
+    const id = await invite(IDS.teamA, IDS.bystander, IDS.lead);
+
+    session.userId = IDS.bystander;
+    const result = await respondToMembership(id, false);
+    expect(result.ok).toBe(true);
+    expect(github.addMember).not.toHaveBeenCalled();
+    expect(await statusOf(id)).toBe("declined");
+    expect(await isActiveMember(IDS.teamA, IDS.bystander)).toBe(false);
+  });
+
+  it("refuses at requireCanJoin's first check when GitHub was never linked", async () => {
+    const id = await invite(IDS.teamB, IDS.bystander, IDS.lead);
+    session.userId = IDS.bystander;
+
+    const result = await respondToMembership(id, true);
+    expect(result).toEqual({ ok: false, code: "github_not_linked" });
+    expect(github.addMember).not.toHaveBeenCalled();
+    expect(await statusOf(id)).toBe("pending");
+    expect(await isActiveMember(IDS.teamB, IDS.bystander)).toBe(false);
+  });
+
+  it("leaves the mirror and the request untouched when GitHub refuses the grant", async () => {
+    const id = await invite(IDS.teamA, IDS.linkedBystander, IDS.lead);
+    github.addMember.mockResolvedValueOnce({
+      ok: false,
+      skipped: "api_error",
+      detail: "boom",
+    });
+    session.userId = IDS.linkedBystander;
+
+    const result = await respondToMembership(id, true);
+    expect(result).toEqual({ ok: false, code: "github_unavailable" });
+    expect(await statusOf(id)).toBe("pending");
+    expect(await isActiveMember(IDS.teamA, IDS.linkedBystander)).toBe(false);
   });
 
   it("returns a code rather than throwing when the row is already answered", async () => {
-    const answered = await invite(IDS.teamA2, IDS.compA, IDS.applicant);
+    const id = await invite(IDS.teamA, IDS.applicant, IDS.lead);
     await db.execute(sql`
       update platform."teamMembershipRequests"
-      set status = 'declined' where id = ${answered}::uuid
+      set status = 'declined' where id = ${id}::uuid
     `);
 
+    session.userId = IDS.applicant;
     // The whole reason the actions return outcomes: a throw arrives at the
     // browser as an opaque digest in production, so the code has to be data.
-    expect(await respondToMembership(answered, true)).toEqual({
+    expect(await respondToMembership(id, true)).toEqual({
       ok: false,
       code: "request_not_actionable",
     });

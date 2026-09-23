@@ -1,16 +1,36 @@
 /**
- * The default competition roster cap.
+ * The two membership caps, and the pure predicates that read them.
  *
- * This was briefly a column on a singleton `platform."instance"` table, on the
- * reasoning that team size is a club decision rather than a constant. Nothing
- * ever wrote it: no console page exposed it, no script set it, and the one case
- * that genuinely needs a different cap, a competition run to different rules,
- * already has `competitions."maxTeamSize"` to override it per competition. A
- * configuration point with no way to configure it is a constant kept somewhere
- * harder to read, and it dragged a whole table along with it.
+ * Both are global constants now, not per-competition overrides: a team is no
+ * longer scoped to a competition, so "this competition's cap" is not a
+ * question that has an answer any more. There used to be a per-competition
+ * `maxTeamSize` column for the one case that seemed to need a different cap,
+ * but nothing ever set it and no surface existed to change it -- a
+ * configuration point with no way to configure it is a constant kept
+ * somewhere harder to read, so the platform redesign's teams-core step
+ * dropped the column along with the concept.
  *
- * Both consumers resolve the fallback from here, which matters more than where
- * the number lives: a page rendering a blank cap while the join action rejects
- * a fourth member is the drift this shared constant prevents.
+ * `requireCanJoin` is the only enforcement; these are read there. Extracted
+ * here, and as pure functions rather than inline comparisons, so the boundary
+ * condition (exactly at the cap) has one definition and one test, rather than
+ * being reimplemented at every call site with a `>=` that could as easily have
+ * been a `>`.
  */
-export const DEFAULT_MAX_TEAM_SIZE = 4;
+
+/** At most this many ACTIVE members on one team. */
+export const MAX_TEAM_SIZE = 4;
+
+/** At most this many teams one contributor is ACTIVELY on, concurrently. */
+export const MAX_CONCURRENT_TEAMS_PER_USER = 2;
+
+/** Whether a team with this many active members has room for one more. */
+export function hasRoomOnTeam(activeMemberCount: number): boolean {
+  return activeMemberCount < MAX_TEAM_SIZE;
+}
+
+/**
+ * Whether a member already on this many active teams may join one more.
+ */
+export function underConcurrentTeamCap(activeTeamCount: number): boolean {
+  return activeTeamCount < MAX_CONCURRENT_TEAMS_PER_USER;
+}

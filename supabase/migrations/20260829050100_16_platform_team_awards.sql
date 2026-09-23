@@ -7,6 +7,18 @@
 -- resolves its relations at create time, so this file has to run after both the
 -- attendance file and the teams file. That is the whole reason awards are not
 -- folded into either of them.
+--
+-- ⚠️ The competition branch below is a STUB. The platform redesign's
+-- teams-core step dropped "teams"."competitionId" and "teams"."competedAt" --
+-- a team is no longer scoped to one competition, so "which members
+-- participated in this competition" is no longer a question team membership
+-- can answer. The branch is kept shape-compatible (same columns, same types)
+-- so the view still compiles and every existing reader still gets a
+-- `UNION ALL` of two branches, but it is filtered to return zero rows. The
+-- platform redesign's competitions step rewires this to the competition-entry
+-- mirror (collaborator on a team-branch that entered before the competition's
+-- issue closed) once that mirror exists. Until then every star this view
+-- produces is a meeting star.
 
 -- ============================================================
 -- Team awards
@@ -32,12 +44,21 @@ create table "platform"."teamAwards" (
   "awardedAt"     timestamptz not null default now(),
 
   constraint "teamAwards_pkey" primary key ("id"),
-  -- Composite rather than a plain reference to teams("id"), so an award can
-  -- never name a team from a different competition.
-  constraint "teamAwards_teamId_competitionId_fkey"
-    foreign key ("teamId", "competitionId")
-    references "platform"."teams"("id", "competitionId")
-    on update cascade on delete cascade
+  -- Two plain FKs rather than the composite this used to be. The composite
+  -- pointed at "teams"("id", "competitionId") to guarantee an award could
+  -- never name a team from a different competition than the one it is
+  -- scoped to -- a guarantee that made sense when a team belonged to
+  -- exactly one competition. The platform redesign's teams-core step made
+  -- teams persistent and competition-independent (a team is a git branch
+  -- that can enter any number of competitions over its life), so
+  -- "teams"("id", "competitionId") no longer exists to point at, and the
+  -- guarantee itself no longer has a meaning: which competition an award is
+  -- for is exactly what this row is recording, not something derivable from
+  -- the team.
+  constraint "teamAwards_teamId_fkey" foreign key ("teamId")
+    references "platform"."teams"("id") on update cascade on delete cascade,
+  constraint "teamAwards_competitionId_fkey" foreign key ("competitionId")
+    references "platform"."competitions"("id") on update cascade on delete cascade
 );
 
 comment on column "platform"."teamAwards"."awardedBy" is
@@ -102,28 +123,20 @@ where m."countsForCredit"
 
 union all
 
+-- The stub described above: shape-compatible, always empty. `tm` and `c` are
+-- real tables so this compiles, but nothing joins them to each other or to
+-- team membership, and `where false` guarantees it returns nothing regardless.
 select
   tm."userId",
   'competition'::text as "activityType",
   c."id" as "activityId",
   null::uuid as "meetingId",
   c."id" as "competitionId",
-  opening_meeting."startsAt" as "startsAt",
-  coalesce(t."competedAt", c."judgingStartsAt") as "earnedAt",
-  exists (
-    select 1
-    from "platform"."teamAwards" aw
-    where aw."teamId" = t."id" and aw."category" = 'winner'
-  ) as "won"
+  c."judgingStartsAt" as "startsAt",
+  c."judgingStartsAt" as "earnedAt",
+  false as "won"
 from "platform"."teamMembers" tm
-join "platform"."teams" t on t."id" = tm."teamId"
-join "platform"."competitions" c on c."id" = t."competitionId"
-join "platform"."workshops" w on w."id" = c."workshopId"
-join "platform"."meetings" opening_meeting on opening_meeting."id" = w."meetingId"
-where t."competedAt" is not null
-  and c."countsTowardProgress"
-  and c."deletedAt" is null
-  and w."deletedAt" is null
-  and opening_meeting."deletedAt" is null;
+cross join "platform"."competitions" c
+where false;
 
 revoke all on "platform"."memberStars" from anon, authenticated;

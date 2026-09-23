@@ -1,24 +1,20 @@
-import { and, asc, desc, eq, isNotNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "~/server/db";
 import {
-  competitions,
   profiles,
-  teamAwards,
   teamMembers,
   teamMembershipRequests,
   teams,
-  workshops,
 } from "~/server/db/schema";
-import { lockReason, type LockReason } from "~/server/teams/lockState";
 
 /**
  * Reads for the team pages.
  *
- * The lock state is computed here rather than selected, through the same
- * `lockReason` the join checks use. One definition: a screen saying a roster is
- * open while the action rejects the join is the drift four copies of a
- * three-term boolean produce.
+ * A team is no longer scoped to a competition, so nothing here takes a
+ * competition slug. "Active" means `teamMembers."leftAt" is null` throughout
+ * -- a departed member's row survives (see the teams-core migration) but is
+ * not part of the roster any page renders.
  */
 
 export interface TeamMemberRow {
@@ -32,33 +28,22 @@ export interface TeamDetail {
   id: string;
   slug: string;
   name: string;
-  competitionId: string;
-  competitionSlug: string;
-  submissionState: "open" | "closed" | "merged" | null;
-  submissionUrl: string | null;
-  competedAt: Date | null;
   acceptingRequests: boolean;
-  maxTeamSize: number | null;
   members: TeamMemberRow[];
-  /** Null when the roster is open. */
-  lock: LockReason | null;
-  /** Only ever sent to a member of this team. See `getTeamDetail`. */
+  /** Only ever sent to an active member of this team. See `getTeamDetail`. */
   joinCode: string | null;
-  /** Whether `teamAwards` carries a `category = 'winner'` row for this team. */
-  won: boolean;
 }
 
 /**
- * A team, with its roster.
+ * A team, with its active roster.
  *
- * `joinCode` is returned ONLY to a member. It is the credential that lets
- * somebody join, so a team page rendered for a stranger must not carry it. The
- * column grants exclude it from the client-readable set for the same reason;
- * this is the server-side half.
+ * `joinCode` is returned ONLY to an active member. It is the credential that
+ * lets somebody join, so a team page rendered for a stranger must not carry
+ * it. The column grants exclude it from the client-readable set for the same
+ * reason; this is the server-side half.
  */
 export const getTeamDetail = cache(
   async (
-    competitionSlug: string,
     teamSlug: string,
     viewerId: string | null,
   ): Promise<TeamDetail | null> => {
@@ -68,21 +53,10 @@ export const getTeamDetail = cache(
         slug: teams.slug,
         name: teams.name,
         joinCode: teams.joinCode,
-        competitionId: teams.competitionId,
-        competitionSlug: competitions.slug,
-        submissionState: teams.submissionState,
-        submissionUrl: teams.submissionUrl,
-        competedAt: teams.competedAt,
-        lockedManuallyAt: teams.lockedManuallyAt,
         acceptingRequests: teams.acceptingRequests,
-        maxTeamSize: competitions.maxTeamSize,
-        judgingStartsAt: competitions.judgingStartsAt,
       })
       .from(teams)
-      .innerJoin(competitions, eq(competitions.id, teams.competitionId))
-      .where(
-        and(eq(teams.slug, teamSlug), eq(competitions.slug, competitionSlug)),
-      );
+      .where(eq(teams.slug, teamSlug));
 
     if (!row) return null;
 
@@ -95,17 +69,10 @@ export const getTeamDetail = cache(
       })
       .from(teamMembers)
       .leftJoin(profiles, eq(profiles.userId, teamMembers.userId))
-      .where(eq(teamMembers.teamId, row.id))
+      .where(and(eq(teamMembers.teamId, row.id), isNull(teamMembers.leftAt)))
       // Lead first, then join order, so the roster reads as "who runs this,
       // and who arrived when".
       .orderBy(desc(teamMembers.role), asc(teamMembers.joinedAt));
-
-    const [award] = await db
-      .select({ id: teamAwards.id })
-      .from(teamAwards)
-      .where(
-        and(eq(teamAwards.teamId, row.id), eq(teamAwards.category, "winner")),
-      );
 
     const isMember =
       viewerId !== null && members.some((m) => m.userId === viewerId);
@@ -114,21 +81,9 @@ export const getTeamDetail = cache(
       id: row.id,
       slug: row.slug,
       name: row.name,
-      competitionId: row.competitionId,
-      competitionSlug: row.competitionSlug,
-      submissionState: row.submissionState,
-      submissionUrl: row.submissionUrl,
-      competedAt: row.competedAt,
       acceptingRequests: row.acceptingRequests,
-      maxTeamSize: row.maxTeamSize,
-      members: members,
-      lock: lockReason({
-        submissionState: row.submissionState,
-        lockedManuallyAt: row.lockedManuallyAt,
-        judgingStartsAt: row.judgingStartsAt,
-      }),
+      members,
       joinCode: isMember ? row.joinCode : null,
-      won: award !== undefined,
     };
   },
 );
@@ -139,111 +94,33 @@ export interface TeamCard {
   name: string;
   memberCount: number;
   acceptingRequests: boolean;
-  lock: LockReason | null;
 }
 
-/** Every team in a competition, for the "find a team" list. */
-export const getTeamsForCompetition = cache(
-  async (competitionSlug: string): Promise<TeamCard[]> => {
-    const rows = await db
-      .select({
-        id: teams.id,
-        slug: teams.slug,
-        name: teams.name,
-        submissionState: teams.submissionState,
-        competedAt: teams.competedAt,
-        lockedManuallyAt: teams.lockedManuallyAt,
-        acceptingRequests: teams.acceptingRequests,
-        judgingStartsAt: competitions.judgingStartsAt,
-        memberCount: sql<number>`(
-          select count(*)::int from ${teamMembers}
-          where ${teamMembers.teamId} = ${teams.id}
-        )`,
-      })
-      .from(teams)
-      .innerJoin(competitions, eq(competitions.id, teams.competitionId))
-      .where(eq(competitions.slug, competitionSlug))
-      .orderBy(asc(teams.name));
+/** Every team, for the "find a team" list. */
+export const getAllTeams = cache(async (): Promise<TeamCard[]> => {
+  const rows = await db
+    .select({
+      id: teams.id,
+      slug: teams.slug,
+      name: teams.name,
+      acceptingRequests: teams.acceptingRequests,
+      memberCount: sql<number>`(
+        select count(*)::int from ${teamMembers}
+        where ${teamMembers.teamId} = ${teams.id} and ${teamMembers.leftAt} is null
+      )`,
+    })
+    .from(teams)
+    .orderBy(asc(teams.name));
 
-    return rows.map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      name: row.name,
-      memberCount: row.memberCount,
-      acceptingRequests: row.acceptingRequests,
-      lock: lockReason({
-        submissionState: row.submissionState,
-        lockedManuallyAt: row.lockedManuallyAt,
-        judgingStartsAt: row.judgingStartsAt,
-      }),
-    }));
-  },
-);
-
-export interface EntrantRow {
-  teamId: string;
-  teamSlug: string;
-  teamName: string;
-  memberCount: number;
-  won: boolean;
-}
-
-/**
- * A competition's entrants, winner first, for the results page.
- *
- * "Entered" is a team that has opened a PR at any point (`submissionState is
- * not null`) or was frozen at judging (`competedAt is not null`) -- the same
- * fact `memberStars` reads to award the competition star. All scoring is
- * off-platform now; the only per-competition state the platform persists is
- * who won, in `teamAwards`.
- */
-export const getEntrants = cache(
-  async (competitionSlug: string): Promise<EntrantRow[]> => {
-    const rows = await db
-      .select({
-        teamId: teams.id,
-        teamSlug: teams.slug,
-        teamName: teams.name,
-        memberCount: sql<number>`(
-          select count(*)::int from ${teamMembers}
-          where ${teamMembers.teamId} = ${teams.id}
-        )`,
-        won: sql<boolean>`exists (
-          select 1 from ${teamAwards}
-          where ${teamAwards.teamId} = ${teams.id}
-            and ${teamAwards.category} = 'winner'
-        )`,
-      })
-      .from(teams)
-      .innerJoin(competitions, eq(competitions.id, teams.competitionId))
-      .where(
-        and(
-          eq(competitions.slug, competitionSlug),
-          or(isNotNull(teams.submissionState), isNotNull(teams.competedAt)),
-        ),
-      )
-      // Winner first, then alphabetical: there is nothing else to rank by.
-      .orderBy(
-        sql`(exists (
-          select 1 from ${teamAwards}
-          where ${teamAwards.teamId} = ${teams.id}
-            and ${teamAwards.category} = 'winner'
-        )) desc`,
-        asc(teams.name),
-      );
-
-    return rows;
-  },
-);
+  return rows;
+});
 
 export interface PendingRequest {
   id: string;
   teamId: string;
   teamName: string;
-  /** So a row can link to the team without a second lookup per competition. */
+  /** So a row can link to the team without a second lookup. */
   teamSlug: string;
-  competitionSlug: string;
-  competitionName: string;
   userId: string;
   preferredName: string | null;
   direction: "invite" | "request";
@@ -255,8 +132,9 @@ export interface PendingRequest {
  * Everything awaiting the viewer's answer.
  *
  * Both halves of the shared table in one list: invitations addressed to them,
- * and join requests on teams they lead. They are one screen, "things you have
- * to decide about", and splitting them would make somebody check two places.
+ * and join requests on teams they lead (where "lead" means active lead). They
+ * are one screen, "things you have to decide about", and splitting them would
+ * make somebody check two places.
  */
 export const getPendingForUser = cache(
   async (userId: string): Promise<PendingRequest[]> => {
@@ -266,18 +144,6 @@ export const getPendingForUser = cache(
         teamId: teamMembershipRequests.teamId,
         teamName: teams.name,
         teamSlug: teams.slug,
-        competitionSlug: competitions.slug,
-        // The competition's own title first, then the old chain: it is called
-        // after the workshop's project recommendation (free text, no join
-        // needed any more), then the workshop's own title, then the
-        // competition's slug, which is `not null` and already user-visible
-        // in git as the integration branch.
-        competitionName: sql<string>`coalesce(
-          ${competitions.title},
-          ${workshops.project},
-          ${workshops.title},
-          ${competitions.slug}
-        )`,
         userId: teamMembershipRequests.userId,
         preferredName: profiles.preferredName,
         direction: teamMembershipRequests.direction,
@@ -286,8 +152,6 @@ export const getPendingForUser = cache(
       })
       .from(teamMembershipRequests)
       .innerJoin(teams, eq(teams.id, teamMembershipRequests.teamId))
-      .innerJoin(competitions, eq(competitions.id, teams.competitionId))
-      .innerJoin(workshops, eq(workshops.id, competitions.workshopId))
       .leftJoin(profiles, eq(profiles.userId, teamMembershipRequests.userId))
       .where(
         and(
@@ -301,6 +165,7 @@ export const getPendingForUser = cache(
                 where tm."teamId" = ${teamMembershipRequests.teamId}
                   and tm."userId" = ${userId}
                   and tm."role" = 'lead'
+                  and tm."leftAt" is null
               ))
           )`,
         ),
@@ -309,24 +174,53 @@ export const getPendingForUser = cache(
   },
 );
 
-/** The viewer's team in one competition, if they are on one. */
-export const getMyTeam = cache(
-  async (
-    competitionSlug: string,
-    userId: string,
-  ): Promise<{ teamSlug: string; role: "lead" | "member" } | null> => {
-    const [row] = await db
-      .select({ teamSlug: teams.slug, role: teamMembers.role })
-      .from(teamMembers)
-      .innerJoin(teams, eq(teams.id, teamMembers.teamId))
-      .innerJoin(competitions, eq(competitions.id, teams.competitionId))
-      .where(
-        and(
-          eq(teamMembers.userId, userId),
-          eq(competitions.slug, competitionSlug),
-        ),
-      );
+export interface MyTeam {
+  teamId: string;
+  teamSlug: string;
+  teamName: string;
+  role: "lead" | "member";
+}
 
-    return (row as { teamSlug: string; role: "lead" | "member" }) ?? null;
+/**
+ * Every team the viewer is ACTIVELY on -- up to
+ * `MAX_CONCURRENT_TEAMS_PER_USER`, unlike the old one-per-competition
+ * `getMyTeam`, which returned at most one.
+ */
+export const getMyTeams = cache(async (userId: string): Promise<MyTeam[]> => {
+  return db
+    .select({
+      teamId: teams.id,
+      teamSlug: teams.slug,
+      teamName: teams.name,
+      role: teamMembers.role,
+    })
+    .from(teamMembers)
+    .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+    .where(and(eq(teamMembers.userId, userId), isNull(teamMembers.leftAt)))
+    .orderBy(asc(teams.name));
+});
+
+export interface EntrantRow {
+  teamId: string;
+  teamSlug: string;
+  teamName: string;
+  memberCount: number;
+  won: boolean;
+}
+
+/**
+ * A competition's entrants, winner first, for the results page.
+ *
+ * ⚠️ STUB. The platform redesign's teams-core step dropped
+ * `teams."competitionId"`/`"submissionState"`/`"competedAt"`, so "which teams
+ * entered this competition" is no longer a question team rows can answer --
+ * that becomes the competitions step's job, reading the competition-entry
+ * mirror (a team-branch PR linking the competition's issue) instead. Kept
+ * with its old signature, returning nothing, so `results/page.tsx` keeps
+ * compiling and rendering "nobody has entered yet" rather than erroring.
+ */
+export const getEntrants = cache(
+  async (_competitionSlug: string): Promise<EntrantRow[]> => {
+    return [];
   },
 );

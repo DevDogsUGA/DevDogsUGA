@@ -11,10 +11,10 @@ import {
   getMeetingsInRange,
 } from "./meetings";
 import {
-  getTeamsForCompetition,
+  getAllTeams,
   getTeamDetail,
   getPendingForUser,
-  getMyTeam,
+  getMyTeams,
   getEntrants,
 } from "./teams";
 import { getStarsForUser, getStarsForWorkshop } from "./stars";
@@ -70,10 +70,10 @@ describe("every loader is valid SQL", () => {
     expect(true).toBe(true);
   });
   it("teams", async () => {
-    await getTeamsForCompetition("nope");
-    await getTeamDetail("nope", "nope", NIL);
+    await getAllTeams();
+    await getTeamDetail("nope", NIL);
     await getPendingForUser(NIL);
-    await getMyTeam("nope", NIL);
+    await getMyTeams(NIL);
     await getEntrants("nope");
     expect(true).toBe(true);
   });

@@ -110,17 +110,6 @@ export const CRON_ROUTES: Record<
     monitor: { checkinMargin: 5, maxRuntime: 10 },
     routes: ["/cron/sync-discord-roles"],
   },
-  "*/5 * * * *": {
-    label: "Competition: freeze judging window",
-    monitorSlug: "platform-cron-competition-tasks",
-    monitor: { checkinMargin: 3, maxRuntime: 5 },
-    routes: [
-      // Freezes `teams."competedAt"` once judging begins. Five minutes rather
-      // than ten because the window between judging starting and this running
-      // is the window in which closing a PR costs a team its star.
-      "/cron/judging-start",
-    ],
-  },
 };
 
 export async function scheduled(

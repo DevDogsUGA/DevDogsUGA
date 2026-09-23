@@ -1,21 +1,21 @@
 /**
  * Typed failures for the team actions.
  *
- * The join screens branch on these. "The competition is over", "close your PR
- * first", "link GitHub to join" and "that team is full" are four different
- * screens, and a string message cannot be switched on without matching prose
- * that translation or a copy edit will break.
+ * The join screens branch on these. "Link GitHub to join", "that team is
+ * full", and "you are already on two teams" are three different screens, and
+ * a string message cannot be switched on without matching prose that
+ * translation or a copy edit will break.
  */
 export type TeamActionCode =
-  /** Judging has begun, or the competition does not exist. */
-  | "competition_closed"
-  /** The team has a live entry, an officer lock, or judging has started. */
-  | "roster_locked"
   /** Joining provisions repository access, which needs a linked GitHub identity. */
   | "github_not_linked"
-  /** The team is at its effective cap. */
+  /** GitHub did not apply the change; the mirror was left untouched. */
+  | "github_unavailable"
+  /** The team is at `MAX_TEAM_SIZE` active members. */
   | "team_full"
-  /** One team per member per competition. */
+  /** The caller is already at `MAX_CONCURRENT_TEAMS_PER_USER` active teams. */
+  | "too_many_teams"
+  /** The caller is already an active member of this team. */
   | "already_on_team"
   /** The caller is not on the team the action targets. */
   | "not_a_member"
@@ -27,9 +27,9 @@ export type TeamActionCode =
   | "bad_join_code"
   /** The request is not pending, or is not the caller's to answer. */
   | "request_not_actionable"
-  /** Another team in this competition already uses that name. */
+  /** Another team already uses that name. */
   | "name_taken"
-  /** The team, request or competition named does not exist. */
+  /** The team or request named does not exist. */
   | "not_found";
 
 /**

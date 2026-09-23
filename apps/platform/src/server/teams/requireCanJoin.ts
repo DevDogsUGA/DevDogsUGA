@@ -1,78 +1,67 @@
-import { and, count, eq, sql } from "drizzle-orm";
+import { and, count, eq, isNull, sql } from "drizzle-orm";
 import type { db } from "~/server/db";
-import { competitions, teamMembers, teams } from "~/server/db/schema";
+import { teamMembers, teams } from "~/server/db/schema";
 import { identitiesInAuth } from "~/supabase/drizzle/schema";
 import { TeamActionError, isUniqueViolation } from "./errors";
-import { DEFAULT_MAX_TEAM_SIZE } from "./limits";
-import { isLocked } from "./lockState";
+import { hasRoomOnTeam, underConcurrentTeamCap } from "./limits";
 
 /** The transaction handle Drizzle hands to `db.transaction`. */
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
- * The join path a member takes, called from `joinTeam` and
+ * Transaction-scoped advisory locks, namespaced by what they key on.
+ *
+ * `hashtext` folds a uuid into the 32-bit key `pg_advisory_xact_lock`'s
+ * two-argument form takes; the first argument is the namespace tag, so a user
+ * id and a team id can never hash into the same lock by coincidence.
+ * Transaction-scoped, so each releases itself on commit or rollback rather
+ * than needing an explicit unlock on every exit path, including the ones that
+ * throw.
+ *
+ * Every caller that can race on the same team or the same user's cap takes
+ * these in the SAME fixed order -- user, then team -- so two concurrent joins,
+ * even onto the same team, can never each hold the lock the other one is
+ * waiting for.
+ */
+export async function lockUser(tx: Tx, userId: string): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(1, hashtext(${userId}))`);
+}
+
+export async function lockTeam(tx: Tx, teamId: string): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(2, hashtext(${teamId}))`);
+}
+
+/**
+ * The join path a member takes, called from `joinTeam` and every acceptance in
  * `respondToMembership`.
  *
- * Both run the same checks in the same order. Drift between copies is how
- * somebody ends up on two teams, so there is one copy and the two callers
- * share it.
+ * Every caller runs the same checks in the same order, under the same lock.
+ * Drift between copies is how somebody ends up over a cap, so there is one
+ * copy and every caller shares it.
  *
- * `reformTeam` is the deliberate exception: it re-creates a team for the next
- * competition with its lead already inside, so it calls `requireLead` and
- * `requireOpenCompetition` and then `insertMembership` directly. The lead it
- * inserts is therefore not checked here. The unique constraint, not check 4,
- * is what stops that row being a second team. Everyone else on the previous
- * roster is INVITED rather than inserted, and their answers come back through
- * `respondToMembership`, which does run these checks.
- *
- * It takes the TRANSACTION HANDLE, not the db. A check answered outside the
- * transaction that then acts on the answer is a TOCTOU window: the roster can
- * lock, or fill, between the check and the insert.
- *
- * The design note spells this `requireCanJoin(tx, competitionId, userId)`, but
- * two of the checks, the lock and the cap, are questions about a TEAM, not a
- * competition. Taking the team and deriving the competition from it also makes
- * a mismatched (team, competition) pair unrepresentable at the call site.
+ * It takes the TRANSACTION HANDLE, not the db, and it is the one place that
+ * takes the advisory locks. A check answered outside the transaction that then
+ * acts on the answer is a TOCTOU window: a cap can be exceeded, or a team can
+ * fill, between the check and the write. The caller is expected to make the
+ * GitHub grant and the mirror insert inside the SAME transaction, after this
+ * returns, so the lock covers the whole join rather than just the count.
  */
 export async function requireCanJoin(
   tx: Tx,
   { teamId, userId }: { teamId: string; userId: string },
-): Promise<{ competitionId: string }> {
-  // Serializes every concurrent join FOR THIS TEAM, and only this team. See
-  // the cap check below for why a lock rather than a constraint.
-  await tx.execute(
-    sql`select 1 from "platform"."teams" where "id" = ${teamId} for update`,
-  );
+): Promise<{ slug: string }> {
+  await lockUser(tx, userId);
+  await lockTeam(tx, teamId);
 
   const [row] = await tx
-    .select({
-      competitionId: teams.competitionId,
-      submissionState: teams.submissionState,
-      lockedManuallyAt: teams.lockedManuallyAt,
-      judgingStartsAt: competitions.judgingStartsAt,
-      maxTeamSize: competitions.maxTeamSize,
-    })
+    .select({ slug: teams.slug })
     .from(teams)
-    .innerJoin(competitions, eq(competitions.id, teams.competitionId))
     .where(eq(teams.id, teamId))
     .limit(1);
 
   if (!row) throw new TeamActionError("not_found");
 
-  // 1. The competition is still open.
-  //
-  // Judging beginning is what closes it, the same clock the lock predicate
-  // reads. The two stay separate because a closed competition and a locked
-  // roster need different sentences.
-  const judgingAt = row.judgingStartsAt;
-  if (judgingAt !== null && new Date(judgingAt).getTime() <= Date.now()) {
-    throw new TeamActionError("competition_closed");
-  }
-
-  // 2. The roster is open.
-  if (isLocked(row)) throw new TeamActionError("roster_locked");
-
-  // 3. A linked GitHub identity, because joining provisions repository access
+  // 1. A linked GitHub identity, because joining provisions repository access
   //    and there is nothing to grant it to otherwise.
   const [github] = await tx
     .select({ id: identitiesInAuth.id })
@@ -87,48 +76,54 @@ export async function requireCanJoin(
 
   if (!github) throw new TeamActionError("github_not_linked");
 
-  // 4. Room on the team.
-  //
-  // This check does not ENFORCE the cap; it produces a good error message.
-  // "At most four rows" is a count, not a uniqueness property, so no index
-  // expresses it and two concurrent joins would interleave between the select
-  // and the insert. The `for update` above is what enforces it: the second
-  // transaction blocks until the first commits, then reads the true count and
-  // fails here cleanly.
-  const cap = row.maxTeamSize ?? DEFAULT_MAX_TEAM_SIZE;
-  const [tally] = await tx
-    .select({ n: count() })
-    .from(teamMembers)
-    .where(eq(teamMembers.teamId, teamId));
-
-  if ((tally?.n ?? 0) >= cap) throw new TeamActionError("team_full");
-
-  // 5. Not already on a team for this competition.
-  //
-  // Also advisory. The row lock above does not help here at all: two
-  // transactions accepting invitations from DIFFERENT teams lock different
-  // rows and never contend. What saves it is the unique constraint, caught by
-  // the insert helper below. This check exists so the common case gets the
-  // right message without waiting for a constraint to fire.
+  // 2. Not already active on this exact team.
   const [existing] = await tx
     .select({ teamId: teamMembers.teamId })
     .from(teamMembers)
     .where(
       and(
+        eq(teamMembers.teamId, teamId),
         eq(teamMembers.userId, userId),
-        eq(teamMembers.competitionId, row.competitionId),
+        isNull(teamMembers.leftAt),
       ),
     )
     .limit(1);
 
   if (existing) throw new TeamActionError("already_on_team");
 
-  return { competitionId: row.competitionId };
+  // 3. Under the concurrent-team cap.
+  //
+  // This check does not ENFORCE the cap; it produces a good error message.
+  // "At most two active rows" is a count, not a uniqueness property, so no
+  // index expresses it and two concurrent joins would interleave between the
+  // select and the insert. The advisory lock above is what enforces it: the
+  // second transaction blocks until the first commits, then reads the true
+  // count and fails here cleanly.
+  const [activeTeams] = await tx
+    .select({ n: count() })
+    .from(teamMembers)
+    .where(and(eq(teamMembers.userId, userId), isNull(teamMembers.leftAt)));
+
+  if (!underConcurrentTeamCap(activeTeams?.n ?? 0)) {
+    throw new TeamActionError("too_many_teams");
+  }
+
+  // 4. Room on the team. Advisory too, for the same reason as the cap above.
+  const [teamSize] = await tx
+    .select({ n: count() })
+    .from(teamMembers)
+    .where(and(eq(teamMembers.teamId, teamId), isNull(teamMembers.leftAt)));
+
+  if (!hasRoomOnTeam(teamSize?.n ?? 0)) {
+    throw new TeamActionError("team_full");
+  }
+
+  return { slug: row.slug };
 }
 
 /**
  * Inserts the membership, translating the constraint that actually enforces
- * "one team per member per competition".
+ * "at most one active membership per (team, member)".
  *
  * Two races, two mechanisms: a counting race is caught by nothing and needs a
  * lock; a uniqueness race is caught by a constraint and needs translating.
@@ -138,22 +133,18 @@ export async function insertMembership(
   tx: Tx,
   {
     teamId,
-    competitionId,
     userId,
     role = "member",
   }: {
     teamId: string;
-    competitionId: string;
     userId: string;
     role?: "lead" | "member";
   },
 ): Promise<void> {
   try {
-    await tx
-      .insert(teamMembers)
-      .values({ teamId, competitionId, userId, role });
+    await tx.insert(teamMembers).values({ teamId, userId, role });
   } catch (error) {
-    if (isUniqueViolation(error, "teamMembers_userId_competitionId_key")) {
+    if (isUniqueViolation(error, "teamMembers_one_active_per_team_user")) {
       throw new TeamActionError("already_on_team");
     }
     if (isUniqueViolation(error, "teamMembers_one_lead_per_team")) {

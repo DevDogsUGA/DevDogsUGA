@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, boolean, varchar, integer, pgEnum, text, timestamp, date, smallint, doublePrecision, jsonb, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, varchar, pgEnum, integer, boolean, text, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by devtools db introspect after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -12,7 +12,6 @@ export const oauthRegistrationTypeInPlatform = platform.enum("oauthRegistrationT
 export const checkInMethodInPlatform = platform.enum("checkInMethod", ["qr", "manual_code"])
 export const auditEventSourceInPlatform = platform.enum("auditEventSource", ["platform", "qr", "manual_code", "system"])
 export const teamRoleInPlatform = platform.enum("teamRole", ["lead", "member"])
-export const submissionStateInPlatform = platform.enum("submissionState", ["open", "closed", "merged"])
 export const membershipDirectionInPlatform = platform.enum("membershipDirection", ["invite", "request"])
 export const membershipRequestStatusInPlatform = platform.enum("membershipRequestStatus", ["pending", "accepted", "declined", "withdrawn", "expired"])
 export const contentActionInPlatform = platform.enum("contentAction", ["quarantine", "no_action"])
@@ -140,7 +139,6 @@ export const competitionsInPlatform = platform.table.withRLS("competitions", {
 	workshopId: uuid().notNull().references(() => workshopsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	judgingMeetingId: uuid().references(() => meetingsInPlatform.id, { onDelete: "set null", onUpdate: "cascade" } ),
 	judgingStartsAt: timestamp({ withTimezone: true }),
-	maxTeamSize: smallint(),
 	airtableRecordId: text(),
 	deletedAt: timestamp({ withTimezone: true }),
 	countsTowardProgress: boolean().default(false).notNull(),
@@ -157,7 +155,7 @@ export const competitionsInPlatform = platform.table.withRLS("competitions", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-check("competitions_maxTeamSize_positive", sql`(("maxTeamSize" IS NULL) OR ("maxTeamSize" > 0))`),check("competitions_title_length", sql`((title IS NULL) OR (char_length(title) <= 80))`),]);
+check("competitions_title_length", sql`((title IS NULL) OR (char_length(title) <= 80))`),]);
 
 export const contentTypesInPlatform = platform.table.withRLS("contentTypes", {
 	id: uuid().defaultRandom().primaryKey(),
@@ -628,19 +626,14 @@ check("seasons_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),]);
 
 export const teamAwardsInPlatform = platform.table.withRLS("teamAwards", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid().notNull(),
-	competitionId: uuid().notNull(),
+	teamId: uuid().notNull().references(() => teamsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	competitionId: uuid().notNull().references(() => competitionsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	category: text().notNull(),
 	citation: text(),
 	mergedPrUrl: text(),
 	awardedBy: uuid(),
 	awardedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
 }, (table) => [
-	foreignKey({
-		columns: [table.teamId, table.competitionId],
-		foreignColumns: [teamsInPlatform.id, teamsInPlatform.competitionId],
-		name: "teamAwards_teamId_competitionId_fkey"
-	}).onUpdate("cascade").onDelete("cascade"),
 	uniqueIndex("teamAwards_one_winner_per_competition").using("btree", table.competitionId.asc().nullsLast()).where(sql`(category = 'winner'::text)`),
 
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
@@ -653,21 +646,17 @@ export const teamAwardsInPlatform = platform.table.withRLS("teamAwards", {
 ]);
 
 export const teamMembersInPlatform = platform.table.withRLS("teamMembers", {
-	teamId: uuid().notNull(),
-	competitionId: uuid().notNull(),
+	id: uuid().defaultRandom().primaryKey(),
+	teamId: uuid().notNull().references(() => teamsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	role: teamRoleInPlatform().default("member").notNull(),
 	joinedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	leftAt: timestamp({ withTimezone: true }),
 }, (table) => [
-	primaryKey({ columns: [table.teamId, table.userId], name: "teamMembers_pkey"}),
-	foreignKey({
-		columns: [table.teamId, table.competitionId],
-		foreignColumns: [teamsInPlatform.id, teamsInPlatform.competitionId],
-		name: "teamMembers_teamId_competitionId_fkey"
-	}).onUpdate("cascade").onDelete("cascade"),
-	uniqueIndex("teamMembers_one_lead_per_team").using("btree", table.teamId.asc().nullsLast()).where(sql`(role = 'lead'::platform."teamRole")`),
-	index("teamMembers_userId_teamId_idx").using("btree", table.userId.asc().nullsLast(), table.teamId.asc().nullsLast()),
-	unique("teamMembers_userId_competitionId_key").on(table.userId, table.competitionId),
+	uniqueIndex("teamMembers_one_active_per_team_user").using("btree", table.teamId.asc().nullsLast(), table.userId.asc().nullsLast()).where(sql`("leftAt" IS NULL)`),
+	uniqueIndex("teamMembers_one_lead_per_team").using("btree", table.teamId.asc().nullsLast()).where(sql`((role = 'lead'::platform."teamRole") AND ("leftAt" IS NULL))`),
+	index("teamMembers_userId_active_idx").using("btree", table.userId.asc().nullsLast()).where(sql`("leftAt" IS NULL)`),
+
 	pgPolicy("authenticated_select", { for: "select", to: ["authenticated"], using: sql`true` }),
 
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
@@ -679,8 +668,7 @@ export const teamMembersInPlatform = platform.table.withRLS("teamMembers", {
 
 export const teamMembershipRequestsInPlatform = platform.table.withRLS("teamMembershipRequests", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid().notNull(),
-	competitionId: uuid().notNull(),
+	teamId: uuid().notNull().references(() => teamsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	direction: membershipDirectionInPlatform().notNull(),
 	createdBy: uuid().notNull(),
@@ -692,11 +680,6 @@ export const teamMembershipRequestsInPlatform = platform.table.withRLS("teamMemb
 	respondedBy: uuid(),
 	expiresAt: timestamp({ withTimezone: true }),
 }, (table) => [
-	foreignKey({
-		columns: [table.teamId, table.competitionId],
-		foreignColumns: [teamsInPlatform.id, teamsInPlatform.competitionId],
-		name: "teamMembershipRequests_teamId_competitionId_fkey"
-	}).onUpdate("cascade").onDelete("cascade"),
 	uniqueIndex("teamMembershipRequests_one_pending_per_team_user").using("btree", table.teamId.asc().nullsLast(), table.userId.asc().nullsLast()).where(sql`(status = 'pending'::platform."membershipRequestStatus")`),
 	index("teamMembershipRequests_unnotified").using("btree", table.createdAt.asc().nullsLast()).where(sql`((status = 'pending'::platform."membershipRequestStatus") AND ("notifiedAt" IS NULL))`),
 
@@ -708,30 +691,18 @@ export const teamMembershipRequestsInPlatform = platform.table.withRLS("teamMemb
 
 	pgPolicy("own_or_team_select", { for: "select", to: ["authenticated"], using: sql`((( SELECT auth.uid() AS uid) = "userId") OR (EXISTS ( SELECT 1
    FROM platform."teamMembers" tm
-  WHERE ((tm."teamId" = "teamMembershipRequests"."teamId") AND (tm."userId" = ( SELECT auth.uid() AS uid))))))` }),
+  WHERE ((tm."teamId" = "teamMembershipRequests"."teamId") AND (tm."userId" = ( SELECT auth.uid() AS uid)) AND (tm."leftAt" IS NULL)))))` }),
 check("teamMembershipRequests_pending_unresponded", sql`((status <> 'pending'::platform."membershipRequestStatus") OR ("respondedAt" IS NULL))`),check("teamMembershipRequests_responded_together", sql`(("respondedAt" IS NULL) = ("respondedBy" IS NULL))`),]);
 
 export const teamsInPlatform = platform.table.withRLS("teams", {
 	id: uuid().defaultRandom().primaryKey(),
-	competitionId: uuid().notNull().references(() => competitionsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	slug: text().notNull(),
 	name: text().notNull(),
 	joinCode: text().notNull(),
 	createdBy: uuid().notNull(),
-	submissionUrl: text(),
-	submittedAt: timestamp({ withTimezone: true }),
-	submissionState: submissionStateInPlatform(),
-	competedAt: timestamp({ withTimezone: true }),
-	lockedManuallyAt: timestamp({ withTimezone: true }),
 	acceptingRequests: boolean().default(true).notNull(),
-	clonedFromTeamId: uuid(),
 }, (table) => [
-	foreignKey({
-		columns: [table.clonedFromTeamId],
-		foreignColumns: [table.id],
-		name: "teams_clonedFromTeamId_fkey"
-	}).onUpdate("cascade").onDelete("set null"),
-	unique("teams_competitionId_slug_key").on(table.competitionId, table.slug),	unique("teams_id_competitionId_key").on(table.id, table.competitionId),
+	unique("teams_slug_key").on(table.slug),
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
 
 	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
@@ -739,7 +710,7 @@ export const teamsInPlatform = platform.table.withRLS("teams", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-check("teams_competedAt_requires_submission", sql`(("competedAt" IS NULL) OR ("submissionUrl" IS NOT NULL))`),check("teams_submission_url_state_together", sql`(("submissionUrl" IS NULL) = ("submissionState" IS NULL))`),check("teams_submission_url_submittedAt_together", sql`(("submissionUrl" IS NULL) = ("submittedAt" IS NULL))`),]);
+]);
 
 export const userRolesInPlatform = platform.table.withRLS("userRoles", {
 	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" } ),
@@ -805,7 +776,7 @@ export const memberStarsInPlatform = platform.view("memberStars", {	userId: uuid
 	startsAt: timestamp({ withTimezone: true }),
 	earnedAt: timestamp({ withTimezone: true }),
 	won: boolean(),
-}).with({"securityInvoker":true}).as(sql`SELECT a."userId", 'meeting'::text AS "activityType", m.id AS "activityId", m.id AS "meetingId", NULL::uuid AS "competitionId", m."startsAt", a."recordedAt" AS "earnedAt", false AS won FROM platform.attendance a JOIN platform.meetings m ON m.id = a."meetingId" WHERE m."countsForCredit" AND m."cancelledAt" IS NULL AND m."deletedAt" IS NULL UNION ALL SELECT tm."userId", 'competition'::text AS "activityType", c.id AS "activityId", NULL::uuid AS "meetingId", c.id AS "competitionId", opening_meeting."startsAt", COALESCE(t."competedAt", c."judgingStartsAt") AS "earnedAt", (EXISTS ( SELECT 1 FROM platform."teamAwards" aw WHERE aw."teamId" = t.id AND aw.category = 'winner'::text)) AS won FROM platform."teamMembers" tm JOIN platform.teams t ON t.id = tm."teamId" JOIN platform.competitions c ON c.id = t."competitionId" JOIN platform.workshops w ON w.id = c."workshopId" JOIN platform.meetings opening_meeting ON opening_meeting.id = w."meetingId" WHERE t."competedAt" IS NOT NULL AND c."countsTowardProgress" AND c."deletedAt" IS NULL AND w."deletedAt" IS NULL AND opening_meeting."deletedAt" IS NULL`);
+}).with({"securityInvoker":true}).as(sql`SELECT a."userId", 'meeting'::text AS "activityType", m.id AS "activityId", m.id AS "meetingId", NULL::uuid AS "competitionId", m."startsAt", a."recordedAt" AS "earnedAt", false AS won FROM platform.attendance a JOIN platform.meetings m ON m.id = a."meetingId" WHERE m."countsForCredit" AND m."cancelledAt" IS NULL AND m."deletedAt" IS NULL UNION ALL SELECT tm."userId", 'competition'::text AS "activityType", c.id AS "activityId", NULL::uuid AS "meetingId", c.id AS "competitionId", c."judgingStartsAt" AS "startsAt", c."judgingStartsAt" AS "earnedAt", false AS won FROM platform."teamMembers" tm CROSS JOIN platform.competitions c WHERE false`);
 
 export const profileWithVerificationInPlatform = platform.view("profileWithVerification", {	userId: uuid(),
 	hasPronouns: boolean(),
@@ -878,7 +849,6 @@ export { roleTypeInPlatform as roleType };
 export { rolesInPlatform as roles };
 export { seasonsInPlatform as seasons };
 export { subjectActionInPlatform as subjectAction };
-export { submissionStateInPlatform as submissionState };
 export { teamAwardsInPlatform as teamAwards };
 export { teamMembersInPlatform as teamMembers };
 export { teamMembershipRequestsInPlatform as teamMembershipRequests };

@@ -190,6 +190,13 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
  */
 export const COMPETITION_ITEMS: NavItem[] = [
   {
+    label: "Teams",
+    href: "/teams",
+    icon: "UsersIcon",
+    description:
+      "Every team, and the two ways onto one: a join code, or a request to the lead.",
+  },
+  {
     label: "Team requests",
     href: "/teams/requests",
     icon: "UsersIcon",

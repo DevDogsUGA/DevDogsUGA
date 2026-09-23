@@ -249,7 +249,6 @@ export type Database = {
           id: string;
           judgingMeetingId: string | null;
           judgingStartsAt: string | null;
-          maxTeamSize: number | null;
           seasonId: string | null;
           slug: string;
           title: string | null;
@@ -263,7 +262,6 @@ export type Database = {
           id?: string;
           judgingMeetingId?: string | null;
           judgingStartsAt?: string | null;
-          maxTeamSize?: number | null;
           seasonId?: string | null;
           slug: string;
           title?: string | null;
@@ -277,7 +275,6 @@ export type Database = {
           id?: string;
           judgingMeetingId?: string | null;
           judgingStartsAt?: string | null;
-          maxTeamSize?: number | null;
           seasonId?: string | null;
           slug?: string;
           title?: string | null;
@@ -1229,49 +1226,58 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "teamAwards_teamId_competitionId_fkey";
-            columns: ["teamId", "competitionId"];
+            foreignKeyName: "teamAwards_competitionId_fkey";
+            columns: ["competitionId"];
+            isOneToOne: false;
+            referencedRelation: "competitions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "teamAwards_teamId_fkey";
+            columns: ["teamId"];
             isOneToOne: false;
             referencedRelation: "teams";
-            referencedColumns: ["id", "competitionId"];
+            referencedColumns: ["id"];
           },
         ];
       };
       teamMembers: {
         Row: {
-          competitionId: string;
+          id: string;
           joinedAt: string;
+          leftAt: string | null;
           role: Database["platform"]["Enums"]["teamRole"];
           teamId: string;
           userId: string;
         };
         Insert: {
-          competitionId: string;
+          id?: string;
           joinedAt?: string;
+          leftAt?: string | null;
           role?: Database["platform"]["Enums"]["teamRole"];
           teamId: string;
           userId: string;
         };
         Update: {
-          competitionId?: string;
+          id?: string;
           joinedAt?: string;
+          leftAt?: string | null;
           role?: Database["platform"]["Enums"]["teamRole"];
           teamId?: string;
           userId?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "teamMembers_teamId_competitionId_fkey";
-            columns: ["teamId", "competitionId"];
+            foreignKeyName: "teamMembers_teamId_fkey";
+            columns: ["teamId"];
             isOneToOne: false;
             referencedRelation: "teams";
-            referencedColumns: ["id", "competitionId"];
+            referencedColumns: ["id"];
           },
         ];
       };
       teamMembershipRequests: {
         Row: {
-          competitionId: string;
           createdAt: string;
           createdBy: string;
           direction: Database["platform"]["Enums"]["membershipDirection"];
@@ -1286,7 +1292,6 @@ export type Database = {
           userId: string;
         };
         Insert: {
-          competitionId: string;
           createdAt?: string;
           createdBy: string;
           direction: Database["platform"]["Enums"]["membershipDirection"];
@@ -1301,7 +1306,6 @@ export type Database = {
           userId: string;
         };
         Update: {
-          competitionId?: string;
           createdAt?: string;
           createdBy?: string;
           direction?: Database["platform"]["Enums"]["membershipDirection"];
@@ -1317,79 +1321,40 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "teamMembershipRequests_teamId_competitionId_fkey";
-            columns: ["teamId", "competitionId"];
+            foreignKeyName: "teamMembershipRequests_teamId_fkey";
+            columns: ["teamId"];
             isOneToOne: false;
             referencedRelation: "teams";
-            referencedColumns: ["id", "competitionId"];
+            referencedColumns: ["id"];
           },
         ];
       };
       teams: {
         Row: {
           acceptingRequests: boolean;
-          clonedFromTeamId: string | null;
-          competedAt: string | null;
-          competitionId: string;
           createdBy: string;
           id: string;
           joinCode: string;
-          lockedManuallyAt: string | null;
           name: string;
           slug: string;
-          submissionState:
-            Database["platform"]["Enums"]["submissionState"] | null;
-          submissionUrl: string | null;
-          submittedAt: string | null;
         };
         Insert: {
           acceptingRequests?: boolean;
-          clonedFromTeamId?: string | null;
-          competedAt?: string | null;
-          competitionId: string;
           createdBy: string;
           id?: string;
           joinCode: string;
-          lockedManuallyAt?: string | null;
           name: string;
           slug: string;
-          submissionState?:
-            Database["platform"]["Enums"]["submissionState"] | null;
-          submissionUrl?: string | null;
-          submittedAt?: string | null;
         };
         Update: {
           acceptingRequests?: boolean;
-          clonedFromTeamId?: string | null;
-          competedAt?: string | null;
-          competitionId?: string;
           createdBy?: string;
           id?: string;
           joinCode?: string;
-          lockedManuallyAt?: string | null;
           name?: string;
           slug?: string;
-          submissionState?:
-            Database["platform"]["Enums"]["submissionState"] | null;
-          submissionUrl?: string | null;
-          submittedAt?: string | null;
         };
-        Relationships: [
-          {
-            foreignKeyName: "teams_clonedFromTeamId_fkey";
-            columns: ["clonedFromTeamId"];
-            isOneToOne: false;
-            referencedRelation: "teams";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "teams_competitionId_fkey";
-            columns: ["competitionId"];
-            isOneToOne: false;
-            referencedRelation: "competitions";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       userRoles: {
         Row: {
@@ -1720,7 +1685,6 @@ export type Database = {
       reportStatus: "open" | "resolved" | "dismissed";
       roleType: "default" | "root" | "custom";
       subjectAction: "warn" | "suspend" | "ban" | "no_action";
-      submissionState: "open" | "closed" | "merged";
       teamRole: "lead" | "member";
     };
     CompositeTypes: {
@@ -3106,7 +3070,6 @@ export const Constants = {
       reportStatus: ["open", "resolved", "dismissed"],
       roleType: ["default", "root", "custom"],
       subjectAction: ["warn", "suspend", "ban", "no_action"],
-      submissionState: ["open", "closed", "merged"],
       teamRole: ["lead", "member"],
     },
   },

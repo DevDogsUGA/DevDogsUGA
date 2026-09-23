@@ -369,7 +369,7 @@ function JudgingRow({ judging }: { judging: MeetingRangeJudging }) {
         {formatEventTime(judging.judgingStartsAt)}
       </time>
       <Link
-        href={`/competitions/${judging.competitionSlug}/teams`}
+        href="/teams"
         className="text-sm font-semibold text-white underline decoration-2 underline-offset-2 hover:no-underline"
       >
         {/* Without a project there is no name to print, and the night still
@@ -408,7 +408,7 @@ function WorkshopRow({ workshop }: { workshop: MeetingWorkshop }) {
           </span>
         ) : (
           <Link
-            href={`/competitions/${workshop.competitionSlug}/teams`}
+            href="/teams"
             className="text-sm font-semibold text-white underline decoration-2 underline-offset-2 hover:no-underline"
           >
             {workshopLabel(workshop)}

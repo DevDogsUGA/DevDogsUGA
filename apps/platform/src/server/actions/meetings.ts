@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { expectSession } from "~/server/auth";
 import { db } from "~/server/db";
 import { teamAwards, teams } from "~/server/db/schema";
@@ -16,62 +16,24 @@ async function requireOfficer(): Promise<string> {
 }
 
 /**
- * Officer override for a team that presented without a PR.
+ * Records a competition's winner (or another award category).
  *
- * The webhook path writes `submissionState` directly from GitHub events and
- * contains no time logic at all, which is what keeps it simple enough to be
- * obviously right. This is the manual counterpart, and it writes the same
- * three columns together because they are constrained to be all-or-nothing.
+ * `competitionId` is a caller-supplied argument rather than something read
+ * off the team, because the platform redesign's teams-core step made teams
+ * competition-independent -- a team no longer names the one competition it
+ * belongs to, so which competition this award is FOR is exactly the thing
+ * this call is recording, not something derivable from `teamId` alone.
  */
-export async function setSubmission(
-  teamId: string,
-  prUrl: string | null,
-): Promise<void> {
-  await requireOfficer();
-
-  await db
-    .update(teams)
-    .set(
-      prUrl === null
-        ? { submissionUrl: null, submittedAt: null, submissionState: null }
-        : {
-            submissionUrl: prUrl,
-            submittedAt: sql`coalesce(${teams.submittedAt}, now())`,
-            submissionState: "open",
-          },
-    )
-    .where(eq(teams.id, teamId));
-}
-
-/**
- * Officer lock, and its release.
- *
- * Distinct from the entry and judging terms of the lock predicate: those are
- * facts about the world, this is somebody deciding. Clearing it cannot unlock
- * a roster that either of the other two terms still holds shut, which is why
- * the predicate is an OR rather than a stored flag.
- */
-export async function setManualLock(
-  teamId: string,
-  locked: boolean,
-): Promise<void> {
-  await requireOfficer();
-
-  await db
-    .update(teams)
-    .set({ lockedManuallyAt: locked ? new Date() : null })
-    .where(eq(teams.id, teamId));
-}
-
 export async function awardTeam(
   teamId: string,
+  competitionId: string,
   category: string,
   citation?: string,
 ): Promise<string> {
   const callerId = await requireOfficer();
 
   const [team] = await db
-    .select({ competitionId: teams.competitionId })
+    .select({ id: teams.id })
     .from(teams)
     .where(eq(teams.id, teamId))
     .limit(1);
@@ -83,7 +45,7 @@ export async function awardTeam(
       .insert(teamAwards)
       .values({
         teamId,
-        competitionId: team.competitionId,
+        competitionId,
         category,
         citation,
         awardedBy: callerId,

@@ -14,14 +14,9 @@ import type { TeamActionOutcome, TeamProblemCode } from "~/server/teams/errors";
  * of it here would be asking a question whose answer the member cannot change.
  */
 export default function CreateTeamForm({
-  competitionId,
   createTeam,
 }: {
-  competitionId: string;
-  createTeam: (
-    competitionId: string,
-    name: string,
-  ) => Promise<TeamActionOutcome<CreatedTeam>>;
+  createTeam: (name: string) => Promise<TeamActionOutcome<CreatedTeam>>;
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -36,15 +31,13 @@ export default function CreateTeamForm({
         event.preventDefault();
         setProblem(null);
         startTransition(async () => {
-          const result = await createTeam(competitionId, trimmed);
+          const result = await createTeam(trimmed);
           if (!result.ok) {
             setProblem(result.code);
             return;
           }
-          // Refresh rather than route to the new team: `createTeam` returns an
-          // id and these routes are keyed by slug, so there is no href to send
-          // them to. The refreshed page knows they are on a team and swaps
-          // this form for the card that links to it.
+          // Refresh rather than route to the new team: the page renders
+          // "your teams" from a fresh read, which is the whole confirmation.
           setName("");
           router.refresh();
         });

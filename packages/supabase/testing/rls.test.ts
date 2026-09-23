@@ -339,7 +339,6 @@ describe("platform meetings, teams and attendance", () => {
       .insert({ id: competitionId, slug: "rls-comp", workshopId });
     await a.from("teams").insert({
       id: teamId,
-      competitionId,
       slug: "rls-team",
       name: "RLS Team",
       joinCode: "SECRET-CODE",
@@ -347,7 +346,7 @@ describe("platform meetings, teams and attendance", () => {
     });
     await a
       .from("teamMembers")
-      .insert({ teamId, competitionId, userId: member.userId, role: "lead" });
+      .insert({ teamId, userId: member.userId, role: "lead" });
     await a.from("attendance").insert({
       meetingId,
       userId: member.userId,
@@ -455,7 +454,7 @@ describe("platform meetings, teams and attendance", () => {
     // The rest of the row still reads, or the meetings page breaks.
     const { data, error } = await anon()
       .from("teams")
-      .select("id, name, slug, competitionId")
+      .select("id, name, slug, createdBy")
       .eq("id", teamId)
       .single();
     expect(error).toBeNull();

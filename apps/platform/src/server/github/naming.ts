@@ -1,42 +1,27 @@
 /**
  * Branch and team names, derived in one place.
  *
- * Pure and separate because three things have to agree on them and run in
- * different places: provisioning creates the branch, the webhook matches an
- * incoming PR's base ref against it, and the nightly reconcile looks the team
- * up by slug. A mismatch is silent. The PR never registers as an entry, which
- * looks to the team like the platform ignoring their work.
+ * Pure and separate because more than one thing has to agree on them and run
+ * in different places: provisioning creates the branch, a future webhook
+ * matches an incoming PR's head against it, and the nightly reconcile looks
+ * the team up by slug. A mismatch is silent -- the wrong things quietly stop
+ * talking to each other.
  */
 
 /**
- * The judging target for a competition, cut from main and pointed at by team
- * branches.
+ * A team's branch, the whole of what "team" means on GitHub.
  *
  *   main
- *    └── comp/2026-fall/w02/study-group-finder   judging target, cut from main
- *         ├── team/2026-fall/w02/study-group-finder/sicem
- *         └── team/2026-fall/w02/study-group-finder/marble
+ *    ├── team/study-group-finder
+ *    └── team/marble-run
  *
- * The week segment matters. Competitions recur per project across a semester,
- * so a name without it would collide with itself every week.
- * `competitions.slug` carries the week and is unique by construction, which is
- * why the branch is named from the slug rather than from the project.
- *
- * The design sketch abbreviated the project to `sgf` in the team branch.
- * Abbreviating means a second naming rule that nothing derives and everything
- * has to agree on; the full slug costs a longer branch name and nothing else.
+ * Off `main`, not off a per-competition integration branch: the platform
+ * redesign's teams-core step made teams persistent, competition-independent
+ * projects, so there is no longer a week-scoped branch to cut from. A team
+ * exists once, for as long as it exists, and its branch does too.
  */
-export function integrationBranch(competitionSlug: string): string {
-  return `comp/${competitionSlug}`;
-}
-
-export function teamBranch(competitionSlug: string, teamSlug: string): string {
-  return `team/${competitionSlug}/${teamSlug}`;
-}
-
-/** Every team branch under one competition, for the ruleset and for cleanup. */
-export function teamBranchPattern(competitionSlug: string): string {
-  return `team/${competitionSlug}/*`;
+export function teamBranch(teamSlug: string): string {
+  return `team/${teamSlug}`;
 }
 
 /**
@@ -46,19 +31,13 @@ export function teamBranchPattern(competitionSlug: string): string {
  * non-alphanumerics with a single dash. The name is already in that form, so
  * nothing has to ask the API which slug it picked before referencing the team.
  */
-export function githubTeamName(
-  competitionSlug: string,
-  teamSlug: string,
-): string {
-  return `comp-${slugSegment(competitionSlug)}-${slugSegment(teamSlug)}`;
+export function githubTeamName(teamSlug: string): string {
+  return `team-${slugSegment(teamSlug)}`;
 }
 
 /** What GitHub will slugify the above into. Used to address the team by URL. */
-export function githubTeamSlug(
-  competitionSlug: string,
-  teamSlug: string,
-): string {
-  return githubTeamName(competitionSlug, teamSlug);
+export function githubTeamSlug(teamSlug: string): string {
+  return githubTeamName(teamSlug);
 }
 
 function slugSegment(value: string): string {
@@ -68,31 +47,9 @@ function slugSegment(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-/**
- * Whether a PR's base ref is this competition's integration branch.
- *
- * Two details, both silent when wrong:
- *
- *   * **Match on the BASE ref, not the head branch prefix.** A team PR opened
- *     against `main` by mistake, or against last week's integration branch,
- *     has a valid `team/...` head and must not register as an entry. Checking
- *     the head alone accepts both.
- *
- *   * **Exact, not prefix.** `comp/2026-fall/w02/study-group` is a prefix of
- *     `comp/2026-fall/w02/study-group-finder`, and a `startsWith` check would
- *     let one week's PR count for another.
- */
-export function isEntryBase(baseRef: string, competitionSlug: string): boolean {
-  return normalizeRef(baseRef) === integrationBranch(competitionSlug);
-}
-
 /** Whether a PR's head ref is this team's branch. */
-export function isTeamHead(
-  headRef: string,
-  competitionSlug: string,
-  teamSlug: string,
-): boolean {
-  return normalizeRef(headRef) === teamBranch(competitionSlug, teamSlug);
+export function isTeamHead(headRef: string, teamSlug: string): boolean {
+  return normalizeRef(headRef) === teamBranch(teamSlug);
 }
 
 /** GitHub sends `refs/heads/x` in some payloads and a bare `x` in others. */

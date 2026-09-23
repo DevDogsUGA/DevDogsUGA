@@ -7,18 +7,19 @@ import { env } from "~/env";
 // because nothing runs a production build between pushes.
 import { octokit } from "./client";
 import { db } from "~/server/db";
-import { competitions, teamMembers, teams } from "~/server/db/schema";
+import { teamMembers, teams } from "~/server/db/schema";
 import { identitiesInAuth } from "~/supabase/drizzle/schema";
-import { githubTeamSlug, integrationBranch, teamBranch } from "./naming";
-import {
-  archiveRulesetName,
-  archiveRulesetPayload,
-  teamRulesetName,
-  teamRulesetPayload,
-} from "./rulesets";
+import { githubTeamSlug, teamBranch } from "./naming";
+import { teamRulesetName, teamRulesetPayload } from "./rulesets";
 
 /**
- * Repository access for competition teams.
+ * Repository access for teams.
+ *
+ * A team IS a branch, `team/<slug>` off `main`; membership IS push access to
+ * it, granted through a GitHub team and the ruleset in `rulesets.ts`.
+ * Postgres's `teams`/`teamMembers` are a MIRROR of this, not the source of
+ * truth -- see `server/actions/teams.ts`, which writes GitHub first and the
+ * mirror second.
  *
  * **Every function here fires on the platform event itself, never on a
  * schedule.** A member who joins on Tuesday can push on Tuesday; routing that
@@ -31,6 +32,12 @@ import {
  * you cannot automate collaborator grants on a student's personal fork.
  * Adding teammates to `someone/DevDogs-Website` needs that student's
  * personal-account admin, which the org's token has no reach into.
+ *
+ * Keyed by SLUG, not by the mirror's `teamId`, throughout this file. Every
+ * GitHub name derives from the slug alone (see `naming.ts`), so a function
+ * that only talks to GitHub has no need of the mirror's id, and callers that
+ * already have the slug (the actions layer, mid-transaction, before a row
+ * exists to look up) are not forced through a database round-trip to get one.
  */
 
 const org = () => env.GITHUB_ORG;
@@ -82,26 +89,6 @@ export async function githubLoginFor(userId: string): Promise<string | null> {
 
 // ── Provisioning ─────────────────────────────────────────────────────────────
 
-interface TeamContext {
-  teamId: string;
-  teamSlug: string;
-  competitionSlug: string;
-}
-
-async function contextFor(teamId: string): Promise<TeamContext | null> {
-  const [row] = await db
-    .select({
-      teamId: teams.id,
-      teamSlug: teams.slug,
-      competitionSlug: competitions.slug,
-    })
-    .from(teams)
-    .innerJoin(competitions, eq(competitions.id, teams.competitionId))
-    .where(eq(teams.id, teamId));
-
-  return row ?? null;
-}
-
 /**
  * Creates the GitHub team, grants it push, and cuts its branch.
  *
@@ -114,11 +101,8 @@ async function contextFor(teamId: string): Promise<TeamContext | null> {
  * re-running after a partial failure is the recovery path, and it is what the
  * reconcile pass does.
  */
-export async function provisionTeam(teamId: string): Promise<GithubResult> {
-  const ctx = await contextFor(teamId);
-  if (!ctx) return failed("not_found", `No team ${teamId}`);
-
-  const slug = githubTeamSlug(ctx.competitionSlug, ctx.teamSlug);
+export async function provisionTeam(teamSlug: string): Promise<GithubResult> {
+  const slug = githubTeamSlug(teamSlug);
   const api = octokit();
 
   // The numeric id, not the slug. The ruleset's bypass actor needs it, since
@@ -135,7 +119,7 @@ export async function provisionTeam(teamId: string): Promise<GithubResult> {
       // exists to understand why they have access, and a secret team is
       // invisible to its own members in the org UI.
       privacy: "closed",
-      description: `Competition team for ${ctx.competitionSlug}`,
+      description: `DevDogs team: ${teamSlug}`,
     });
     githubTeamId = data.id;
   } catch (error) {
@@ -165,13 +149,13 @@ export async function provisionTeam(teamId: string): Promise<GithubResult> {
     return failed("api_error", describe(error));
   }
 
-  const branch = await cutTeamBranch(ctx);
+  const branch = await cutTeamBranch(teamSlug);
   if (!branch.ok) return branch;
 
   // AFTER the branch exists. The ruleset's `update` rule governs pushes to an
   // existing ref; creating it first would restrict a ref that is not there yet
   // and leave the branch cut under a rule nobody had reviewed.
-  return ensureTeamRuleset(ctx, githubTeamId);
+  return ensureTeamRuleset(teamSlug, githubTeamId);
 }
 
 /**
@@ -179,8 +163,8 @@ export async function provisionTeam(teamId: string): Promise<GithubResult> {
  *
  * Without this, provisioning is actively harmful: the team grant above is
  * repository-wide because GitHub team permissions have no branch dimension, so
- * every team can push to every other team's branch and to the integration
- * branch judging reads. This is the only thing that narrows it.
+ * every team can push to every other team's branch. This is the only thing
+ * that narrows it.
  *
  * Idempotent by name, because rulesets are addressed by a numeric id nothing
  * here stores and `createRepoRuleset` does NOT reject a duplicate name. A
@@ -188,15 +172,11 @@ export async function provisionTeam(teamId: string): Promise<GithubResult> {
  * both enforcing, and removing either would look like it fixed the problem.
  */
 async function ensureTeamRuleset(
-  ctx: TeamContext,
+  teamSlug: string,
   githubTeamId: number,
 ): Promise<GithubResult> {
   const api = octokit();
-  const payload = teamRulesetPayload(
-    ctx.competitionSlug,
-    ctx.teamSlug,
-    githubTeamId,
-  );
+  const payload = teamRulesetPayload(teamSlug, githubTeamId);
 
   let existingId: number | undefined;
   try {
@@ -236,33 +216,27 @@ async function ensureTeamRuleset(
 }
 
 /**
- * Cuts the team branch from the competition's integration branch.
+ * Cuts the team branch from `main`.
  *
- * From the integration branch and not from `main`: the team's first diff
- * should be against what they will PR into, or their PR opens showing every
- * commit the integration branch carries that `main` does not.
+ * From `main`, not from a shared integration branch: teams are persistent and
+ * competition-independent now, so there is no per-week branch to fork from.
+ * The team's first diff is against the same `main` its eventual pull request
+ * targets.
  */
-async function cutTeamBranch(ctx: TeamContext): Promise<GithubResult> {
+async function cutTeamBranch(teamSlug: string): Promise<GithubResult> {
   const api = octokit();
-  const base = integrationBranch(ctx.competitionSlug);
-  const branch = teamBranch(ctx.competitionSlug, ctx.teamSlug);
+  const branch = teamBranch(teamSlug);
 
   let sha: string;
   try {
     const { data } = await api.rest.git.getRef({
       owner: org(),
       repo: repo(),
-      ref: `heads/${base}`,
+      ref: "heads/main",
     });
     sha = data.object.sha;
   } catch (error) {
-    // The integration branch is created when the competition is set up, so its
-    // absence is a competition-level problem, not a team-level one. Worth
-    // naming exactly, because the fix is somewhere else entirely.
-    return failed(
-      "not_found",
-      `Integration branch ${base} does not exist: ${describe(error)}`,
-    );
+    return failed("api_error", describe(error));
   }
 
   try {
@@ -279,39 +253,6 @@ async function cutTeamBranch(ctx: TeamContext): Promise<GithubResult> {
   return { ok: true };
 }
 
-/**
- * Cuts the integration branch for a competition, from `main`.
- *
- * Separate from team provisioning and called when the competition is created,
- * because every team's branch is cut from this one. A competition whose
- * integration branch does not exist cannot provision any team at all.
- */
-export async function provisionCompetitionBranch(
-  competitionSlug: string,
-): Promise<GithubResult> {
-  const api = octokit();
-
-  try {
-    const { data: main } = await api.rest.git.getRef({
-      owner: org(),
-      repo: repo(),
-      ref: "heads/main",
-    });
-
-    await api.rest.git.createRef({
-      owner: org(),
-      repo: repo(),
-      ref: `refs/heads/${integrationBranch(competitionSlug)}`,
-      sha: main.object.sha,
-    });
-  } catch (error) {
-    if (isAlreadyExists(error)) return { ok: true };
-    return failed("api_error", describe(error));
-  }
-
-  return { ok: true };
-}
-
 // ── Membership ───────────────────────────────────────────────────────────────
 
 /**
@@ -319,17 +260,14 @@ export async function provisionCompetitionBranch(
  *
  * A member without a linked GitHub identity cannot be added, so the join path
  * refuses rather than succeeding into a half-provisioned state where somebody
- * is on the roster and cannot push. See `github_not_linked` in the team errors.
- * This returns `not_linked` for the case where the link disappeared between
- * joining and the reconcile.
+ * is on the roster and cannot push. See `github_not_linked` in the team
+ * errors. This returns `not_linked` for the case where the link disappeared
+ * between joining and the reconcile.
  */
 export async function addMember(
-  teamId: string,
+  teamSlug: string,
   userId: string,
 ): Promise<GithubResult> {
-  const ctx = await contextFor(teamId);
-  if (!ctx) return failed("not_found", `No team ${teamId}`);
-
   const login = await githubLoginFor(userId);
   if (!login)
     return failed("not_linked", `User ${userId} has no GitHub identity`);
@@ -337,7 +275,7 @@ export async function addMember(
   try {
     await octokit().rest.teams.addOrUpdateMembershipForUserInOrg({
       org: org(),
-      team_slug: githubTeamSlug(ctx.competitionSlug, ctx.teamSlug),
+      team_slug: githubTeamSlug(teamSlug),
       username: login,
       role: "member",
     });
@@ -349,12 +287,9 @@ export async function addMember(
 }
 
 export async function removeMember(
-  teamId: string,
+  teamSlug: string,
   userId: string,
 ): Promise<GithubResult> {
-  const ctx = await contextFor(teamId);
-  if (!ctx) return failed("not_found", `No team ${teamId}`);
-
   const login = await githubLoginFor(userId);
   // Nothing to remove: a member with no linked identity was never added.
   if (!login) return { ok: true };
@@ -362,7 +297,7 @@ export async function removeMember(
   try {
     await octokit().rest.teams.removeMembershipForUserInOrg({
       org: org(),
-      team_slug: githubTeamSlug(ctx.competitionSlug, ctx.teamSlug),
+      team_slug: githubTeamSlug(teamSlug),
       username: login,
     });
   } catch (error) {
@@ -374,107 +309,53 @@ export async function removeMember(
 }
 
 /**
- * Freezes a finished competition's team branches, and reclaims its rulesets.
+ * Tears a disbanded team's GitHub presence down: the ruleset, then the team.
  *
- * Replace, then delete. Never delete. Deleting a per-team ruleset does not
- * freeze that branch, it OPENS it: every competition team holds repository-wide
- * `push`, so a team branch governed by no ruleset is one any member of any team
- * can rewrite. The archive ruleset goes up FIRST, with an empty bypass list, and
- * the per-team ones come down only once it is in place.
+ * Not the branch. The branch, and any pull request opened from it, is the
+ * record of what the team did, and a member should still be able to point at
+ * it after the team that made it no longer exists.
  *
- * Takes the ruleset count for the competition from N to 1, which keeps the
- * 75-per-repository ceiling reachable across years rather than across a single
- * semester.
- *
- * ⚠️ NOT WIRED TO ANYTHING YET, like `downgradeTeam` below. Both are the
- * archive path and nothing calls either; competitions are never marked finished
- * in a way that reaches GitHub. Written now because it is the safe counterpart
- * to `ensureTeamRuleset`: the moment somebody DOES build that flow, the obvious
- * implementation is "delete the rulesets", which is the one thing that must not
- * happen.
+ * Order is deliberate and is the opposite of provisioning's "grant, then
+ * restrict": here it is "revoke, then unrestrict". Deleting the GitHub team
+ * first means a crash between the two steps leaves the branch governed by a
+ * ruleset whose bypass actor no longer resolves to anybody -- nobody can push,
+ * which is safe. Deleting the ruleset first would leave the branch open to
+ * every OTHER team's repository-wide `push` grant while this team's members
+ * (whose GitHub team still exists) can also still push to it, which is not.
  */
-export async function archiveCompetitionRulesets(
-  competitionSlug: string,
-): Promise<GithubResult> {
+export async function disbandTeam(teamSlug: string): Promise<GithubResult> {
   const api = octokit();
-  const payload = archiveRulesetPayload(competitionSlug);
 
-  let rulesets: { id: number; name: string }[];
+  try {
+    await api.rest.teams.deleteInOrg({
+      org: org(),
+      team_slug: githubTeamSlug(teamSlug),
+    });
+  } catch (error) {
+    if (!isNotFound(error)) return failed("api_error", describe(error));
+  }
+
+  let rulesetId: number | undefined;
   try {
     const { data } = await api.rest.repos.getRepoRulesets({
       owner: org(),
       repo: repo(),
     });
-    rulesets = data.map((r) => ({ id: r.id, name: r.name }));
+    rulesetId = data.find((r) => r.name === teamRulesetName(teamSlug))?.id;
   } catch (error) {
     return failed("api_error", describe(error));
   }
 
-  const existing = rulesets.find(
-    (r) => r.name === archiveRulesetName(competitionSlug),
-  );
-  try {
-    if (existing) {
-      await api.rest.repos.updateRepoRuleset({
-        owner: org(),
-        repo: repo(),
-        ruleset_id: existing.id,
-        ...payload,
-      });
-    } else {
-      await api.rest.repos.createRepoRuleset({
-        owner: org(),
-        repo: repo(),
-        ...payload,
-      });
-    }
-  } catch (error) {
-    return failed("api_error", describe(error));
-  }
-
-  // Only now. Matching on the name prefix the per-team rulesets are built from,
-  // which is why `teamRulesetName` has to stay derivable from the slugs.
-  const prefix = `${teamRulesetName(competitionSlug, "")}`;
-  const stale = rulesets.filter((r) => r.name.startsWith(prefix));
-
-  for (const ruleset of stale) {
+  if (rulesetId !== undefined) {
     try {
       await api.rest.repos.deleteRepoRuleset({
         owner: org(),
         repo: repo(),
-        ruleset_id: ruleset.id,
+        ruleset_id: rulesetId,
       });
     } catch (error) {
       if (!isNotFound(error)) return failed("api_error", describe(error));
     }
-  }
-
-  return { ok: true };
-}
-
-/**
- * Drops the team to read-only once its competition is over.
- *
- * Not a deletion. The branch, the PR and the history are the record of what the
- * team did, and a member should still be able to point at it a semester later.
- * What they lose is the ability to keep pushing to a competition that has been
- * judged.
- */
-export async function downgradeTeam(teamId: string): Promise<GithubResult> {
-  const ctx = await contextFor(teamId);
-  if (!ctx) return failed("not_found", `No team ${teamId}`);
-
-  try {
-    await octokit().rest.teams.addOrUpdateRepoPermissionsInOrg({
-      org: org(),
-      team_slug: githubTeamSlug(ctx.competitionSlug, ctx.teamSlug),
-      owner: org(),
-      repo: repo(),
-      permission: "pull",
-    });
-  } catch (error) {
-    if (isNotFound(error)) return { ok: true };
-    return failed("api_error", describe(error));
   }
 
   return { ok: true };
@@ -498,10 +379,6 @@ export interface ReconcileReport {
  * moment it happened; this catches the ones where the API call failed and
  * nobody found out, which is invisible until a member tries to push and
  * cannot.
- *
- * Scoped to teams whose competition has not been archived. Reconciling a
- * finished competition would re-add members to a team that was deliberately
- * downgraded, every night, forever.
  */
 export async function reconcileTeams(): Promise<ReconcileReport> {
   const report: ReconcileReport = {
@@ -513,21 +390,13 @@ export async function reconcileTeams(): Promise<ReconcileReport> {
     errors: [],
   };
 
-  const rows = await db
-    .select({
-      teamId: teams.id,
-      teamSlug: teams.slug,
-      competitionSlug: competitions.slug,
-    })
-    .from(teams)
-    .innerJoin(competitions, eq(competitions.id, teams.competitionId))
-    .where(and(isNull(competitions.deletedAt), isNull(teams.competedAt)));
+  const rows = await db.select({ id: teams.id, slug: teams.slug }).from(teams);
 
   const api = octokit();
 
   for (const row of rows) {
     report.teamsChecked += 1;
-    const slug = githubTeamSlug(row.competitionSlug, row.teamSlug);
+    const slug = githubTeamSlug(row.slug);
 
     let live: Set<string>;
     try {
@@ -542,7 +411,7 @@ export async function reconcileTeams(): Promise<ReconcileReport> {
         // The team itself never got created. Provisioning is idempotent, so
         // this is the same call the join path makes, and re-running it is the
         // whole recovery path.
-        const result = await provisionTeam(row.teamId);
+        const result = await provisionTeam(row.slug);
         if (result.ok) report.provisioned += 1;
         else report.errors.push(`${slug}: ${result.detail ?? result.skipped}`);
         continue;
@@ -554,7 +423,7 @@ export async function reconcileTeams(): Promise<ReconcileReport> {
     const roster = await db
       .select({ userId: teamMembers.userId })
       .from(teamMembers)
-      .where(eq(teamMembers.teamId, row.teamId));
+      .where(and(eq(teamMembers.teamId, row.id), isNull(teamMembers.leftAt)));
 
     const expected = new Set<string>();
     for (const member of roster) {
@@ -566,7 +435,7 @@ export async function reconcileTeams(): Promise<ReconcileReport> {
       expected.add(login.toLowerCase());
 
       if (!live.has(login.toLowerCase())) {
-        const result = await addMember(row.teamId, member.userId);
+        const result = await addMember(row.slug, member.userId);
         if (result.ok) report.added += 1;
         else
           report.errors.push(

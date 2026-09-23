@@ -50,8 +50,8 @@
 -- ## Enums are not here
 --
 -- `checkInMethod` is declared with attendance, its only consumer. `teamRole`,
--- `submissionState`, `membershipDirection` and `membershipRequestStatus` are
--- declared with teams. No table in this file uses any of them.
+-- `membershipDirection` and `membershipRequestStatus` are declared with
+-- teams. No table in this file uses any of them.
 
 -- ============================================================
 -- Seasons
@@ -336,8 +336,9 @@ comment on column "platform"."workshops"."configId" is
 -- unique on "workshopId" rather than a plain reference.
 create table "platform"."competitions" (
   "id"               uuid not null default gen_random_uuid(),
-  -- Names the integration branch teams open their PRs against, so it is
-  -- user-visible in git and has to be stable and unique across the repo.
+  -- User-visible and has to be stable and unique across the repo: it is what
+  -- names the competition everywhere outside this table (URLs, results
+  -- pages), the way `teams"."slug"` names a team.
   "slug"             text not null,
   "workshopId"       uuid not null,
   -- Judging belongs to a LATER meeting than the workshop that opened the
@@ -350,13 +351,6 @@ create table "platform"."competitions" (
   -- error. Do not resurrect it.
   "judgingMeetingId" uuid,
   "judgingStartsAt"  timestamptz,
-  -- Null falls back to DEFAULT_MAX_TEAM_SIZE in server/teams/limits.ts. This
-  -- was briefly a column on a singleton platform."instance" table, on the
-  -- reasoning that team size is a club decision rather than a constant, but
-  -- nothing ever wrote it and no surface existed to change it. A
-  -- configuration point with no way to configure it is a constant kept
-  -- somewhere harder to read.
-  "maxTeamSize"      smallint,
   "airtableRecordId" text,
   "deletedAt"        timestamptz,
   "countsTowardProgress" boolean not null default false,
@@ -376,8 +370,6 @@ create table "platform"."competitions" (
   constraint "competitions_slug_key" unique ("slug"),
   constraint "competitions_workshopId_key" unique ("workshopId"),
   constraint "competitions_airtableRecordId_key" unique ("airtableRecordId"),
-  constraint "competitions_maxTeamSize_positive"
-    check ("maxTeamSize" is null or "maxTeamSize" > 0),
   constraint "competitions_title_length"
     check ("title" is null or char_length("title") <= 80),
   constraint "competitions_workshopId_fkey" foreign key ("workshopId")

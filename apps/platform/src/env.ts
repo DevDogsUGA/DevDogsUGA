@@ -216,10 +216,9 @@ const server = {
         "-----BEGIN RSA PRIVATE KEY-----\\nPLACEHOLDER-NOT-A-REAL-KEY-see-docs-platform-env-md\\n-----END RSA PRIVATE KEY-----\\n",
     },
   ),
-  // The repository competition branches live in. Defaulted rather than
-  // required: every existing deployment predates competitions, and a new
-  // required variable would stop them booting over a feature they do not use
-  // yet.
+  // The repository team branches live in. Defaulted rather than required:
+  // every existing deployment predates teams, and a new required variable
+  // would stop them booting over a feature they do not use yet.
   //
   // The old default, "DevDogs-Website", stopped being a real repository name
   // when this repo was renamed to "DevDogsUGA". Reads survived on GitHub's
@@ -227,38 +226,23 @@ const server = {
   // addOrUpdateRepoPermissionsInOrg, are not guaranteed to follow one.
   //
   // This IS the deploy repo, deliberately: the `production` branch, not a
-  // second repository, is the deploy boundary. The cost is that a competition
-  // team granted push here can reach every other team's branch, because a
-  // GitHub team grant is repository-wide with no branch dimension.
-  //
-  // The isolation therefore has to come from branch rulesets, one per team,
-  // restricting pushes to that team's prefix. Until those exist the isolation
-  // is nominal. See the per-team ruleset step in the security plan; the
-  // 75-rulesets-per-repository ceiling is the real limit on team count.
+  // second repository, is the deploy boundary. The cost is that a team
+  // granted push here can reach every other team's branch, because a GitHub
+  // team grant is repository-wide with no branch dimension. The isolation
+  // comes from the branch ruleset `server/github/rulesets.ts` creates per
+  // team, restricting pushes on that team's own branch to that team; the
+  // 75-rulesets-per-repository ceiling is the real limit on how many teams
+  // can exist concurrently.
   GITHUB_COMPETITION_REPO: define(z.string().default("DevDogsUGA"), {
     doc:
-      "The repository competition branches are cut in -- this one, " +
-      "deliberately: the production branch, not a second repo, is the " +
-      "deploy boundary. The schema default is right; set it only if that " +
-      "ever stops being true.",
+      "The repository team branches are cut in -- this one, deliberately: " +
+      "the production branch, not a second repo, is the deploy boundary. " +
+      "The schema default is right; set it only if that ever stops being " +
+      "true.",
     scope: "default",
     secrecy: "public",
     example: "DevDogsUGA",
     commented: true,
-  }),
-  // Verifies `X-Hub-Signature-256` on the PR webhook. Empty means the webhook
-  // route refuses every request; see the route for why that beats accepting
-  // unsigned payloads.
-  GH_WEBHOOK_SECRET: define(z.string().default(""), {
-    doc:
-      "Verifies X-Hub-Signature-256 on the pull-request webhook, and it is " +
-      "the same value pasted into the App's webhook-secret field. Empty " +
-      "makes the route refuse every request (503) -- the right local " +
-      "default, because an unsigned endpoint that writes submissionState " +
-      "would let anyone mark a team as merged. Full setup: " +
-      "docs/platform/github-app.md.",
-    scope: "environment",
-    secrecy: "secret",
   }),
   // Airtable. Optional because the base is provisioned separately and the
   // platform has to boot without it: the sync refuses with a named error

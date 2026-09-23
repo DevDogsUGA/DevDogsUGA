@@ -23,7 +23,7 @@ export interface JoinTarget {
  *
  * The team PICKER is here for a duller reason. `joinTeam` takes a team id and
  * a code, and nothing resolves a code on its own to the team it belongs to, so
- * on the competition-wide list the member has to say which team they are
+ * on the browse-all-teams page the member has to say which team they are
  * joining as well as prove it. Where the page already knows the team (a team's
  * own page) it passes one target and the picker collapses to a label.
  */

@@ -640,7 +640,7 @@ function JudgingChip({ judging }: { judging: MeetingRangeJudging }) {
 
   return (
     <Link
-      href={`/competitions/${judging.competitionSlug}/teams`}
+      href="/teams"
       className={`${badge.chipDark} ${CHIP_DARK_CLS} ${CHIP_LINK_CLS}`}
     >
       {/* Same absence as the event page's row, and the same refusal to dress
@@ -676,10 +676,7 @@ function WorkshopChip({ workshop }: { workshop: MeetingRangeWorkshop }) {
   }
 
   return (
-    <Link
-      href={`/competitions/${workshop.competitionSlug}/teams`}
-      className={`${chipCls} ${CHIP_LINK_CLS}`}
-    >
+    <Link href="/teams" className={`${chipCls} ${CHIP_LINK_CLS}`}>
       {label}
     </Link>
   );
