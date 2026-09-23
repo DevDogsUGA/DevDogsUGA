@@ -6,17 +6,18 @@ import { reconcileTeams } from "~/server/github/teamSync";
 /**
  * GET /cron/github-reconcile
  *
- * Repairs GitHub team membership against `teamMembers`. Nightly.
+ * Repairs `teams`/`teamMembers` against GitHub. Nightly.
  *
- * A backstop, not the mechanism. Every membership change already fires on the
- * platform event that caused it, so a member who joins on Tuesday can push on
- * Tuesday instead of waiting for a schedule. This exists because GitHub's API
- * can fail, and a membership change that silently did not apply is invisible
- * until somebody cannot push.
+ * A backstop, not the mechanism: membership writes go GitHub-first at the
+ * moment they happen, and the webhook route
+ * (`server/github/webhookEvents.ts`) mirrors most GitHub-side changes in
+ * near-real time. This exists for what neither reaches -- a failed or
+ * undelivered webhook, or a change made directly on GitHub the platform was
+ * never told about -- and it repairs the mirror TOWARD GitHub, never the
+ * other way; see `reconcileTeams`'s own doc comment for why.
  *
- * Nightly rather than more often for the same reason: if this pass is doing
- * meaningful work regularly, something upstream is broken and the cadence is
- * hiding it.
+ * Nightly rather than more often: if this pass is doing meaningful work
+ * regularly, something upstream is broken and the cadence is hiding it.
  */
 export async function GET(request: Request) {
   await connection();

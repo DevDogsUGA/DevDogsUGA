@@ -2,10 +2,11 @@
  * Branch and team names, derived in one place.
  *
  * Pure and separate because more than one thing has to agree on them and run
- * in different places: provisioning creates the branch, a future webhook
- * matches an incoming PR's head against it, and the nightly reconcile looks
- * the team up by slug. A mismatch is silent -- the wrong things quietly stop
- * talking to each other.
+ * in different places: provisioning creates the branch, the webhook route
+ * (`server/github/webhookEvents.ts`) matches an incoming event's team or
+ * branch name back to a slug, and the nightly reconcile looks the team up by
+ * slug. A mismatch is silent -- the wrong things quietly stop talking to each
+ * other.
  */
 
 /**
@@ -50,10 +51,12 @@ function slugSegment(value: string): string {
 /**
  * Whether a PR's head ref is this team's branch.
  *
- * No caller yet: the webhook-fed mirror step (next, not this one) is what
- * matches an incoming PR against a team. Pre-staged here rather than in that
- * step because it belongs next to `teamBranch`, the thing it compares
- * against, and that step needs it correct on day one, not rederived.
+ * Still no caller. The webhook-fed mirror step this was staged for turned out
+ * not to need it -- `membership`/`team`/`create`/`delete` events carry a team
+ * or a branch name directly, never a PR to match against one. A PR linking a
+ * competition issue is how entry gets recognized, and that is the
+ * competitions step, not this one. Left here, correct, for that step to pick
+ * up rather than rederive.
  */
 export function isTeamHead(headRef: string, teamSlug: string): boolean {
   return normalizeRef(headRef) === teamBranch(teamSlug);
@@ -62,4 +65,39 @@ export function isTeamHead(headRef: string, teamSlug: string): boolean {
 /** GitHub sends `refs/heads/x` in some payloads and a bare `x` in others. */
 export function normalizeRef(ref: string): string {
   return ref.replace(/^refs\/heads\//, "");
+}
+
+/**
+ * The platform slug a `team/<slug>` branch ref names, or null if this ref is
+ * not a team branch at all.
+ *
+ * The exact inverse of `teamBranch`, for the `create`/`delete` ref webhook
+ * events: both send a bare ref (`"team/sicem"`), never `refs/heads/...`, but
+ * `normalizeRef` is run first anyway rather than assumed, because nothing
+ * about a webhook payload's shape is a contract this file controls.
+ */
+export function teamSlugFromBranch(ref: string): string | null {
+  const normalized = normalizeRef(ref);
+  return normalized.startsWith("team/")
+    ? normalized.slice("team/".length)
+    : null;
+}
+
+/**
+ * The platform slug a GitHub team slug (`"team-<slug>"`) names, or null if it
+ * is not one of ours.
+ *
+ * The exact inverse of `githubTeamSlug`, for the `membership`/`team` webhook
+ * events, both of which carry the GitHub team's own slug rather than the
+ * platform slug that produced it. Unambiguous because `githubTeamSlug` only
+ * ever prepends the fixed literal `"team-"` -- stripping it back off, once,
+ * is not lossy the way re-deriving through `slugSegment` in the other
+ * direction would be.
+ */
+export function platformSlugFromGithubTeamSlug(
+  githubSlug: string,
+): string | null {
+  return githubSlug.startsWith("team-")
+    ? githubSlug.slice("team-".length)
+    : null;
 }

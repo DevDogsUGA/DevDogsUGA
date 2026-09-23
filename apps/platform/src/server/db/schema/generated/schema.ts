@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, varchar, pgEnum, integer, boolean, text, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, varchar, uuid, pgEnum, boolean, integer, text, timestamp, smallint, date, doublePrecision, jsonb, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by devtools db introspect after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -703,6 +703,7 @@ export const teamsInPlatform = platform.table.withRLS("teams", {
 	joinCode: text().notNull(),
 	createdBy: uuid().notNull(),
 	acceptingRequests: boolean().default(true).notNull(),
+	githubSyncedAt: timestamp({ withTimezone: true }),
 }, (table) => [
 	unique("teams_slug_key").on(table.slug),
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),

@@ -493,9 +493,15 @@ describe("preflight", () => {
     // teams-core step along with the `submissionState` columns it wrote --
     // another ordinary `scope: "environment"` key, so both deployed targets
     // moved and preflight did not.
+    //
+    // Then both moved back up by one: the SAME NAME, `GH_WEBHOOK_SECRET`,
+    // re-entered the registry when the teams-mirror step reintroduced the
+    // webhook against the new team-branch model -- ordinary `scope:
+    // "environment"`, so both deployed targets moved and preflight did not,
+    // same as its own deletion above.
     expect(target("preflight").active.size).toBe(2);
-    expect(target("staging").active.size).toBe(48);
-    expect(target("production").active.size).toBe(51);
+    expect(target("staging").active.size).toBe(49);
+    expect(target("production").active.size).toBe(52);
   });
 
   it("says in the file itself why it is short, and that nothing is hand-set", () => {

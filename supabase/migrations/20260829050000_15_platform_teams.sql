@@ -47,6 +47,16 @@ create table "platform"."teams" (
   -- delete a team's identity along with one member's account.
   "createdBy"       uuid not null,
   "acceptingRequests" boolean not null default true,
+  -- Freshness of the mirror, not of the team. Set to `now()` every time
+  -- something confirms the roster/branch/ruleset here actually match
+  -- GitHub right now: a successful GitHub call inside a team action, a
+  -- webhook event for this team, or a nightly reconcile pass touching it.
+  -- Null only for a team whose mirror has never been confirmed against
+  -- GitHub, which should not happen outside a bug -- `createTeam` sets it
+  -- at insert, having just provisioned GitHub moments before. The dashboard
+  -- reads how old this is to show mirror staleness rather than presenting a
+  -- roster that might have drifted since the last webhook delivery.
+  "githubSyncedAt"  timestamptz,
 
   constraint "teams_pkey" primary key ("id"),
   constraint "teams_slug_key" unique ("slug")

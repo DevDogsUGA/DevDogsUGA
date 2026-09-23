@@ -1333,6 +1333,7 @@ export type Database = {
         Row: {
           acceptingRequests: boolean;
           createdBy: string;
+          githubSyncedAt: string | null;
           id: string;
           joinCode: string;
           name: string;
@@ -1341,6 +1342,7 @@ export type Database = {
         Insert: {
           acceptingRequests?: boolean;
           createdBy: string;
+          githubSyncedAt?: string | null;
           id?: string;
           joinCode: string;
           name: string;
@@ -1349,6 +1351,7 @@ export type Database = {
         Update: {
           acceptingRequests?: boolean;
           createdBy?: string;
+          githubSyncedAt?: string | null;
           id?: string;
           joinCode?: string;
           name?: string;

@@ -216,6 +216,37 @@ const server = {
         "-----BEGIN RSA PRIVATE KEY-----\\nPLACEHOLDER-NOT-A-REAL-KEY-see-docs-platform-env-md\\n-----END RSA PRIVATE KEY-----\\n",
     },
   ),
+  // Shared secret configured on the App's webhook (`/github/webhook`),
+  // which is how the team mirror stays live rather than waiting out the
+  // nightly reconcile: GitHub signs every delivery with it, and the route
+  // verifies `X-Hub-Signature-256` before trusting a membership, team or
+  // branch event -- see server/github/webhookSignature.ts. Same shape as
+  // CRON_SECRET: an empty local default lets `next dev` boot with no
+  // webhook configured (the route only enforces the check when deployed),
+  // deployed environments require at least 32 characters.
+  //
+  // The name, and the `GH_` (not `GITHUB_`) prefix, are not new: the
+  // platform redesign's teams-core step deleted this same key along with
+  // the PR-entry webhook it used to authenticate, retargeting teams away
+  // from per-competition branches. This step reintroduces the webhook
+  // against the new team-branch model, and reuses the key GitHub Actions
+  // already forced onto the App credentials -- it refuses secret/variable
+  // names starting with `GITHUB_`, which `env/completeness.test.ts` asserts
+  // so this does not get relearned.
+  GH_WEBHOOK_SECRET: define(
+    switchEnvironment({
+      local: z.string().default(""),
+      deployed: z.string().min(32),
+    }),
+    {
+      doc:
+        "Shared secret configured on the DevDogs GitHub App's webhook. " +
+        "Verifies X-Hub-Signature-256 on every delivery to /github/webhook " +
+        "before any team-mirror event is trusted.",
+      scope: "environment",
+      secrecy: "secret",
+    },
+  ),
   // The repository team branches live in. Defaulted rather than required:
   // every existing deployment predates teams, and a new required variable
   // would stop them booting over a feature they do not use yet.

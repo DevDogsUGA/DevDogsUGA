@@ -612,8 +612,14 @@ describe("preflight, the target no app boots from", () => {
     // teams-core step along with the `submissionState` columns it wrote --
     // another ordinary `scope: "environment"` key, so both deployed targets
     // moved and preflight did not.
-    expect(keysRoutedTo("staging").size).toBe(48);
-    expect(keysRoutedTo("production").size).toBe(51);
+    //
+    // Then both moved back up by one: the SAME NAME, `GH_WEBHOOK_SECRET`,
+    // re-entered the registry when the teams-mirror step reintroduced the
+    // webhook against the new team-branch model -- ordinary `scope:
+    // "environment"`, so both deployed targets moved and preflight did not,
+    // same as its own deletion above.
+    expect(keysRoutedTo("staging").size).toBe(49);
+    expect(keysRoutedTo("production").size).toBe(52);
     expect(keysRoutedTo("preflight").size).toBe(2);
   });
 });

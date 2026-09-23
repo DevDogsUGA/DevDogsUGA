@@ -167,6 +167,10 @@ async function createTeamImpl(name: string): Promise<CreatedTeam> {
           name,
           joinCode: generateJoinCode(),
           createdBy: userId,
+          // Just confirmed, above: the team, its branch, its ruleset and the
+          // creator's grant all exist on GitHub as of this instant, so the
+          // mirror starts fresh rather than null.
+          githubSyncedAt: new Date(),
         })
         .returning({ id: teams.id, slug: teams.slug });
     } catch (error) {
@@ -222,6 +226,7 @@ async function joinTeamImpl(teamId: string, joinCode: string): Promise<void> {
     if (!granted.ok) throw githubProblem(granted);
 
     await insertMembership(tx, { teamId, userId });
+    await touchGithubSynced(tx, teamId);
   });
 }
 
@@ -391,6 +396,7 @@ async function respondToMembershipImpl(
       teamId: request.teamId,
       userId: request.userId,
     });
+    await touchGithubSynced(tx, request.teamId);
 
     await tx
       .update(teamMembershipRequests)
@@ -468,7 +474,24 @@ async function leaveTeamImpl(teamId: string): Promise<void> {
           isNull(teamMembers.leftAt),
         ),
       );
+    await touchGithubSynced(tx, teamId);
   });
+}
+
+/**
+ * Marks a team's mirror as freshly confirmed against GitHub.
+ *
+ * Called from inside the same transaction as the GitHub call it follows, not
+ * as a separate pass over `teams` -- the transaction is already open and
+ * already knows the GitHub grant just succeeded, so recording that is one
+ * more statement under the same commit rather than a second round-trip
+ * dependent on this one having landed.
+ */
+async function touchGithubSynced(tx: Tx, teamId: string): Promise<void> {
+  await tx
+    .update(teams)
+    .set({ githubSyncedAt: new Date() })
+    .where(eq(teams.id, teamId));
 }
 
 async function teamSlugOf(tx: Tx, teamId: string): Promise<string> {

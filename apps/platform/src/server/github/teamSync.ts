@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, count, eq, isNull, sql } from "drizzle-orm";
 import { env } from "~/env";
 // Extensionless like every other import in this app: tsc under bundler
 // resolution tolerates a `.js` suffix on a `.ts` source, but Turbopack's
@@ -9,6 +9,8 @@ import { octokit } from "./client";
 import { db } from "~/server/db";
 import { teamMembers, teams } from "~/server/db/schema";
 import { identitiesInAuth } from "~/supabase/drizzle/schema";
+import { postAlert } from "../alerts";
+import { MAX_CONCURRENT_TEAMS_PER_USER, MAX_TEAM_SIZE } from "../teams/limits";
 import { githubTeamSlug, teamBranch } from "./naming";
 import { teamRulesetName, teamRulesetPayload } from "./rulesets";
 
@@ -85,6 +87,42 @@ export async function githubLoginFor(userId: string): Promise<string | null> {
     if (typeof value === "string" && value.length > 0) return value;
   }
   return null;
+}
+
+/**
+ * The reverse of `githubLoginFor`: the platform account, if any, linked to a
+ * GitHub login.
+ *
+ * The webhook route and the nightly reconcile are the callers. A
+ * `membership` event, and a GitHub team's member list, both carry a GitHub
+ * login -- GitHub has no notion of this platform's user ids -- so mapping
+ * either back onto a mirror row starts here. Matched case-insensitively
+ * against the same three keys `githubLoginFor` reads, because GitHub logins
+ * are themselves case-insensitive and `identity_data` was captured once, at
+ * whatever casing that sign-in happened to return.
+ *
+ * A login this returns null for is not necessarily a stranger to the club --
+ * it can be a member who linked some other way, or never linked GitHub at
+ * all. The caller's job either way is to skip the mirror write it cannot
+ * attribute and report it, not to treat this as an error.
+ */
+export async function userIdForGithubLogin(
+  login: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ userId: identitiesInAuth.userId })
+    .from(identitiesInAuth)
+    .where(
+      and(
+        eq(identitiesInAuth.provider, "github"),
+        sql`lower(${identitiesInAuth.identityData} ->> 'user_name') = lower(${login})
+          or lower(${identitiesInAuth.identityData} ->> 'preferred_username') = lower(${login})
+          or lower(${identitiesInAuth.identityData} ->> 'login') = lower(${login})`,
+      ),
+    )
+    .limit(1);
+
+  return row?.userId ?? null;
 }
 
 // ── Provisioning ─────────────────────────────────────────────────────────────
@@ -363,103 +401,306 @@ export async function disbandTeam(teamSlug: string): Promise<GithubResult> {
 
 // ── Reconcile ────────────────────────────────────────────────────────────────
 
-export interface ReconcileReport {
-  teamsChecked: number;
-  added: number;
-  removed: number;
-  provisioned: number;
-  unlinked: number;
-  errors: string[];
+/**
+ * What the nightly reconcile needs to read from GitHub, and the one GitHub
+ * write it may make.
+ *
+ * A narrow interface, not `octokit()` passed straight through: the only
+ * thing a db-test can convincingly fake is a small, closed set of methods
+ * with meanings this file defines, not an actual Octokit instance and its
+ * hundreds of endpoints. `liveGithubClient` is the sole production
+ * implementation and the only thing in this section that touches the
+ * network -- everything below it is plain logic over whatever `teamMembers`
+ * / `branchExists` / `rulesetExists` report, which is what makes it
+ * testable against a real database with a fake client instead of either
+ * hitting the network or mocking this whole module the way the actions
+ * layer's tests do.
+ */
+export interface ReconcileGithubClient {
+  /**
+   * Lowercased logins of a GitHub team's current members, or null if the
+   * GitHub team itself does not exist (a 404 on the members list).
+   */
+  teamMembers(githubTeamSlug: string): Promise<string[] | null>;
+  /** Whether a branch currently exists. */
+  branchExists(branch: string): Promise<boolean>;
+  /** Whether a team's ruleset currently exists, by the name `rulesets.ts` gives it. */
+  rulesetExists(teamSlug: string): Promise<boolean>;
+  /** Re-provisions the team/branch/ruleset trio. Idempotent -- see `provisionTeam`. */
+  provisionTeam(teamSlug: string): Promise<GithubResult>;
 }
 
-/**
- * Repairs GitHub team membership against `teamMembers`. Nightly.
- *
- * A backstop, not the mechanism. Every membership change already fired at the
- * moment it happened; this catches the ones where the API call failed and
- * nobody found out, which is invisible until a member tries to push and
- * cannot.
- */
-export async function reconcileTeams(): Promise<ReconcileReport> {
-  const report: ReconcileReport = {
+function liveGithubClient(): ReconcileGithubClient {
+  const api = octokit();
+  return {
+    async teamMembers(slug) {
+      try {
+        const members = await api.paginate(api.rest.teams.listMembersInOrg, {
+          org: org(),
+          team_slug: slug,
+          per_page: 100,
+        });
+        return members.map((member) => member.login.toLowerCase());
+      } catch (error) {
+        if (isNotFound(error)) return null;
+        throw error;
+      }
+    },
+    async branchExists(branch) {
+      try {
+        await api.rest.git.getRef({
+          owner: org(),
+          repo: repo(),
+          ref: `heads/${branch}`,
+        });
+        return true;
+      } catch (error) {
+        if (isNotFound(error)) return false;
+        throw error;
+      }
+    },
+    async rulesetExists(teamSlug) {
+      const { data } = await api.rest.repos.getRepoRulesets({
+        owner: org(),
+        repo: repo(),
+      });
+      return data.some((ruleset) => ruleset.name === teamRulesetName(teamSlug));
+    },
+    provisionTeam,
+  };
+}
+
+export interface ReconcileReport {
+  teamsChecked: number;
+  /** Mirror rows opened because GitHub already granted access the mirror did not know about. */
+  added: number;
+  /** Mirror rows closed because GitHub no longer grants access the mirror still claimed. */
+  removed: number;
+  /** Branch and/or ruleset (and, rarely, the GitHub team itself) recreated for a team whose GitHub side had gone missing. */
+  provisioned: number;
+  /** GitHub team members with no linked platform identity -- reported, never repaired. */
+  unmatched: number;
+  /** Everything reported to Sentry this run: unmatched logins, cap overruns, API failures. */
+  anomalies: string[];
+}
+
+function emptyReport(): ReconcileReport {
+  return {
     teamsChecked: 0,
     added: 0,
     removed: 0,
     provisioned: 0,
-    unlinked: 0,
-    errors: [],
+    unmatched: 0,
+    anomalies: [],
   };
+}
 
-  const rows = await db.select({ id: teams.id, slug: teams.slug }).from(teams);
+/**
+ * Repairs the mirror against GitHub. Nightly.
+ *
+ * A backstop, not the mechanism: every membership change already writes
+ * GitHub first and the mirror second, at the moment it happens (see
+ * `server/actions/teams.ts`), and the webhook route
+ * (`server/github/webhookEvents.ts`) closes most of the remaining gap
+ * between "GitHub changed" and "the mirror knows" in near-real time. This
+ * exists for what neither of those reaches: a webhook delivery GitHub never
+ * made (an App outage, the route down at the wrong moment), or a change made
+ * directly on GitHub the platform was never told about at all -- someone
+ * added to a GitHub team by hand, a branch or ruleset deleted from the
+ * GitHub UI.
+ *
+ * **GitHub wins.** Unlike the pre-mirror version of this pass, which pushed
+ * `teamMembers` onto GitHub, this reads GitHub's state and writes it INTO
+ * the mirror -- GitHub is the source of truth for who can actually push, and
+ * the mirror is not permitted to claim access it does not confer. A GitHub
+ * login on the team with no active mirror row gets one; an active mirror row
+ * with no matching GitHub login gets closed, `leftAt = now()`, the same as
+ * an ordinary leave. Nobody is EVER kicked off GitHub by this pass -- a
+ * member over `MAX_CONCURRENT_TEAMS_PER_USER`, or a team over
+ * `MAX_TEAM_SIZE`, because someone was added directly on GitHub is a fact
+ * this pass mirrors and reports to Sentry, not a violation it enforces. The
+ * caps are enforced going forward, in `requireCanJoin`, on the platform's
+ * own join path; they were never a promise about what GitHub itself would
+ * allow.
+ *
+ * Both `db` and the GitHub client are injected, defaulting to the real
+ * ones, so a db-test can run this against a real database with a fake
+ * client instead of either hitting the network or mocking the module.
+ */
+export async function reconcileTeams(
+  database: typeof db = db,
+  github: ReconcileGithubClient = liveGithubClient(),
+): Promise<ReconcileReport> {
+  const report = emptyReport();
 
-  const api = octokit();
+  const rows = await database
+    .select({ id: teams.id, slug: teams.slug })
+    .from(teams);
 
   for (const row of rows) {
     report.teamsChecked += 1;
-    const slug = githubTeamSlug(row.slug);
-
-    let live: Set<string>;
     try {
-      const members = await api.paginate(api.rest.teams.listMembersInOrg, {
-        org: org(),
-        team_slug: slug,
-        per_page: 100,
-      });
-      live = new Set(members.map((m) => m.login.toLowerCase()));
+      await reconcileOneTeam(database, github, row, report);
     } catch (error) {
-      if (isNotFound(error)) {
-        // The team itself never got created. Provisioning is idempotent, so
-        // this is the same call the join path makes, and re-running it is the
-        // whole recovery path.
-        const result = await provisionTeam(row.slug);
-        if (result.ok) report.provisioned += 1;
-        else report.errors.push(`${slug}: ${result.detail ?? result.skipped}`);
-        continue;
-      }
-      report.errors.push(`${slug}: ${describe(error)}`);
-      continue;
-    }
-
-    const roster = await db
-      .select({ userId: teamMembers.userId })
-      .from(teamMembers)
-      .where(and(eq(teamMembers.teamId, row.id), isNull(teamMembers.leftAt)));
-
-    const expected = new Set<string>();
-    for (const member of roster) {
-      const login = await githubLoginFor(member.userId);
-      if (!login) {
-        report.unlinked += 1;
-        continue;
-      }
-      expected.add(login.toLowerCase());
-
-      if (!live.has(login.toLowerCase())) {
-        const result = await addMember(row.slug, member.userId);
-        if (result.ok) report.added += 1;
-        else
-          report.errors.push(
-            `${slug}/${login}: ${result.detail ?? result.skipped}`,
-          );
-      }
-    }
-
-    for (const login of live) {
-      if (expected.has(login)) continue;
-      try {
-        await api.rest.teams.removeMembershipForUserInOrg({
-          org: org(),
-          team_slug: slug,
-          username: login,
-        });
-        report.removed += 1;
-      } catch (error) {
-        report.errors.push(`${slug}/${login}: ${describe(error)}`);
-      }
+      // A team can be disbanded by an ordinary platform action WHILE this
+      // pass is mid-flight on it -- there is no lock over the whole nightly
+      // run, and there should not be one, since holding every team locked
+      // for the duration of a run touching the whole club would make an
+      // unrelated member's disband wait on it. Whatever failed here (most
+      // often the row vanishing between this team's read and its later
+      // write, or a GitHub call failing outright) is this ONE team's
+      // problem, not every other team's: caught, reported, and the loop
+      // moves on rather than a mid-run failure losing every team after it.
+      report.anomalies.push(
+        `${row.slug}: reconcile failed (${describe(error)})`,
+      );
     }
   }
 
+  if (report.anomalies.length > 0) {
+    await postAlert("Nightly team reconcile found drift", report.anomalies);
+  }
+
   return report;
+}
+
+/**
+ * One team's share of `reconcileTeams`. Throws on any failure -- reading
+ * GitHub, or a database write racing a concurrent disband -- and leaves
+ * catching it to the caller, which is what turns "this team's reconcile
+ * failed" into "one more anomaly" instead of "the whole nightly pass
+ * aborted here and every team after this one in `rows` was never checked".
+ */
+async function reconcileOneTeam(
+  database: typeof db,
+  github: ReconcileGithubClient,
+  row: { id: string; slug: string },
+  report: ReconcileReport,
+): Promise<void> {
+  const slug = row.slug;
+
+  const members = await github.teamMembers(githubTeamSlug(slug));
+  const branchOk = await github.branchExists(teamBranch(slug));
+  const rulesetOk = await github.rulesetExists(slug);
+
+  if (members === null || !branchOk || !rulesetOk) {
+    const missing = [
+      members === null && "GitHub team",
+      !branchOk && "branch",
+      !rulesetOk && "ruleset",
+    ].filter((piece): piece is string => piece !== false);
+    report.anomalies.push(`${slug}: recreating missing ${missing.join("/")}`);
+
+    const result = await github.provisionTeam(slug);
+    if (result.ok) report.provisioned += 1;
+    else
+      report.anomalies.push(
+        `${slug}: reprovisioning failed (${result.detail ?? result.skipped})`,
+      );
+  }
+
+  if (members === null) {
+    // The GitHub team itself was gone, so nobody the mirror currently marks
+    // active actually has push access any more -- reprovisioning above made
+    // a new, empty GitHub team, it did not restore the old membership,
+    // because there is no record left on GitHub of who that was. Closing
+    // every active row here is the mirror catching up to a roster GitHub
+    // had already emptied, not a second way to remove someone. Re-inviting
+    // goes through the platform's own join path, which grants GitHub
+    // first, same as always.
+    const closed = await database
+      .update(teamMembers)
+      .set({ leftAt: new Date() })
+      .where(and(eq(teamMembers.teamId, row.id), isNull(teamMembers.leftAt)))
+      .returning({ id: teamMembers.id });
+    report.removed += closed.length;
+
+    await database
+      .update(teams)
+      .set({ githubSyncedAt: new Date() })
+      .where(eq(teams.id, row.id));
+    return;
+  }
+
+  const live = new Set(members);
+
+  // What the mirror currently believes, as login -> userId, so the two sets
+  // can be diffed by login (what GitHub actually speaks) while still
+  // knowing which platform account each row belongs to.
+  const roster = await database
+    .select({ userId: teamMembers.userId })
+    .from(teamMembers)
+    .where(and(eq(teamMembers.teamId, row.id), isNull(teamMembers.leftAt)));
+
+  const mirrored = new Map<string, string>();
+  for (const member of roster) {
+    const login = await githubLoginFor(member.userId);
+    if (login) mirrored.set(login.toLowerCase(), member.userId);
+  }
+
+  const newlyAdded: string[] = [];
+  for (const login of live) {
+    if (mirrored.has(login)) continue;
+    const userId = await userIdForGithubLogin(login);
+    if (!userId) {
+      report.unmatched += 1;
+      report.anomalies.push(
+        `${slug}: GitHub member "${login}" has no linked platform identity`,
+      );
+      continue;
+    }
+    await database
+      .insert(teamMembers)
+      .values({ teamId: row.id, userId, role: "member" });
+    report.added += 1;
+    newlyAdded.push(userId);
+  }
+
+  for (const [login, userId] of mirrored) {
+    if (live.has(login)) continue;
+    await database
+      .update(teamMembers)
+      .set({ leftAt: new Date() })
+      .where(
+        and(
+          eq(teamMembers.teamId, row.id),
+          eq(teamMembers.userId, userId),
+          isNull(teamMembers.leftAt),
+        ),
+      );
+    report.removed += 1;
+  }
+
+  // Cap anomalies, checked only against what THIS pass just repaired in --
+  // a membership already flagged on a previous night stays flagged every
+  // night until somebody leaves, which is the point: this is a standing
+  // report of drift, not a one-time notice.
+  const [teamSize] = await database
+    .select({ n: count() })
+    .from(teamMembers)
+    .where(and(eq(teamMembers.teamId, row.id), isNull(teamMembers.leftAt)));
+  if ((teamSize?.n ?? 0) > MAX_TEAM_SIZE) {
+    report.anomalies.push(
+      `${slug}: ${teamSize?.n} active members, over the ${MAX_TEAM_SIZE}-member cap`,
+    );
+  }
+
+  for (const userId of newlyAdded) {
+    const [userTeams] = await database
+      .select({ n: count() })
+      .from(teamMembers)
+      .where(and(eq(teamMembers.userId, userId), isNull(teamMembers.leftAt)));
+    if ((userTeams?.n ?? 0) > MAX_CONCURRENT_TEAMS_PER_USER) {
+      report.anomalies.push(
+        `${slug}: member ${userId} is active on ${userTeams?.n} teams, over the ${MAX_CONCURRENT_TEAMS_PER_USER}-team cap`,
+      );
+    }
+  }
+
+  await database
+    .update(teams)
+    .set({ githubSyncedAt: new Date() })
+    .where(eq(teams.id, row.id));
 }
 
 // ── Error shapes ─────────────────────────────────────────────────────────────
