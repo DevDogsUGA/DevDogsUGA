@@ -81,7 +81,11 @@ async function reflectionPage(
     .leftJoin(profiles, eq(profiles.userId, reflections.userId))
     .leftJoin(usersInAuth, eq(usersInAuth.id, reflections.userId))
     .where(conditions.length === 0 ? undefined : and(...conditions))
-    .orderBy(asc(reflections.createdAt), asc(reflections.userId))
+    .orderBy(
+      asc(reflections.createdAt),
+      asc(reflections.userId),
+      asc(reflections.id),
+    )
     .limit(limit)
     .offset(offset);
 
