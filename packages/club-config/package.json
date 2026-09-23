@@ -1,0 +1,35 @@
+{
+  "name": "@devdogsuga/club-config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Config-as-code for the club's meetings and workshops: the Zod schema, the publishability validator, and the authored data itself",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "devdogs-source": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "data"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "tsx src/check.ts"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
