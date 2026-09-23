@@ -364,13 +364,13 @@ create table "platform"."competitions" (
   "seasonId"             uuid,
   -- What the officers call this competition on its own pages, in their own
   -- words. A competition had no name of its own before this column: every page
-  -- derived one from the opening workshop's title, which in turn fell back to
-  -- the linked project's display name and finally to the branch slug. Null
-  -- keeps that chain in force, so a competition authored before this column
-  -- keeps rendering exactly as it did. The length check mirrors
-  -- `workshops_title_length` -- both are row/page headings, short by design --
-  -- and the Airtable pull refuses a longer value rather than truncating it,
-  -- leaving the published title in place.
+  -- derived one from the opening workshop's free-text project recommendation,
+  -- which in turn fell back to the workshop's own title and finally to the
+  -- branch slug. Null keeps that chain in force, so a competition authored
+  -- before this column keeps rendering exactly as it did. The length check
+  -- mirrors `workshops_title_length` -- both are row/page headings, short by
+  -- design -- and the Airtable pull refuses a longer value rather than
+  -- truncating it, leaving the published title in place.
   "title"            text,
   constraint "competitions_pkey" primary key ("id"),
   constraint "competitions_slug_key" unique ("slug"),
@@ -391,7 +391,7 @@ create table "platform"."competitions" (
 alter table "platform"."competitions" enable row level security;
 
 comment on column "platform"."competitions"."title" is
-  'What the officers call this competition on its own pages, in their own words. Null falls back to the opening workshop''s title, then the project''s display name, then the branch slug, so a competition authored before this column keeps rendering exactly as it did.';
+  'What the officers call this competition on its own pages, in their own words. Null falls back to the opening workshop''s free-text project recommendation, then the workshop''s own title, then the branch slug, so a competition authored before this column keeps rendering exactly as it did.';
 
 -- ============================================================
 -- Live-row indexes

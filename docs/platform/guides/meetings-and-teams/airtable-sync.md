@@ -19,7 +19,7 @@ The split exists because `attendance."meetingId"` needs something that keeps its
 
 ## What lives where
 
-Seven integration tables, and the direction is **per field, never per table**:
+Six integration tables, and the direction is **per field, never per table**:
 
 | Table                 | Officers author                                                                                         | The platform writes                                             |
 | --------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |

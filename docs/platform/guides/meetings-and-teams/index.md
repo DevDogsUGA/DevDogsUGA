@@ -1,6 +1,6 @@
 ---
 name: Meetings & Teams
-description: The shape of club participation — meetings, workshops, week-long competitions, projects, and teams — and why a competition is a row of its own rather than a stage of a workshop.
+description: The shape of club participation — meetings, workshops, week-long competitions, and teams — and why a competition is a row of its own rather than a stage of a workshop.
 order: 1
 ---
 
