@@ -1225,54 +1225,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      teamAwards: {
-        Row: {
-          awardedAt: string;
-          awardedBy: string | null;
-          category: string;
-          citation: string | null;
-          competitionId: string;
-          id: string;
-          mergedPrUrl: string | null;
-          teamId: string;
-        };
-        Insert: {
-          awardedAt?: string;
-          awardedBy?: string | null;
-          category: string;
-          citation?: string | null;
-          competitionId: string;
-          id?: string;
-          mergedPrUrl?: string | null;
-          teamId: string;
-        };
-        Update: {
-          awardedAt?: string;
-          awardedBy?: string | null;
-          category?: string;
-          citation?: string | null;
-          competitionId?: string;
-          id?: string;
-          mergedPrUrl?: string | null;
-          teamId?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "teamAwards_competitionId_fkey";
-            columns: ["competitionId"];
-            isOneToOne: false;
-            referencedRelation: "competitions";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "teamAwards_teamId_fkey";
-            columns: ["teamId"];
-            isOneToOne: false;
-            referencedRelation: "teams";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       teamMembers: {
         Row: {
           id: string;

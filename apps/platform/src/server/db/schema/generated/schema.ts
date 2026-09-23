@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, boolean, varchar, integer, pgEnum, text, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, varchar, pgEnum, integer, boolean, text, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by devtools db introspect after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -648,27 +648,6 @@ export const seasonsInPlatform = platform.table.withRLS("seasons", {
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 check("seasons_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),]);
 
-export const teamAwardsInPlatform = platform.table.withRLS("teamAwards", {
-	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid().notNull().references(() => teamsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
-	competitionId: uuid().notNull().references(() => competitionsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
-	category: text().notNull(),
-	citation: text(),
-	mergedPrUrl: text(),
-	awardedBy: uuid(),
-	awardedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-}, (table) => [
-	uniqueIndex("teamAwards_one_winner_per_competition").using("btree", table.competitionId.asc().nullsLast()).where(sql`(category = 'winner'::text)`),
-
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-
-	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-]);
-
 export const teamMembersInPlatform = platform.table.withRLS("teamMembers", {
 	id: uuid().defaultRandom().primaryKey(),
 	teamId: uuid().notNull().references(() => teamsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
@@ -803,7 +782,7 @@ export const memberStarsInPlatform = platform.view("memberStars", {	userId: uuid
 	startsAt: timestamp({ withTimezone: true }),
 	earnedAt: timestamp({ withTimezone: true }),
 	won: boolean(),
-}).with({"securityInvoker":true}).as(sql`SELECT a."userId", 'meeting'::text AS "activityType", m.id AS "activityId", m.id AS "meetingId", NULL::uuid AS "competitionId", m."startsAt", a."recordedAt" AS "earnedAt", false AS won FROM platform.attendance a JOIN platform.meetings m ON m.id = a."meetingId" WHERE m."countsForCredit" AND m."cancelledAt" IS NULL AND m."deletedAt" IS NULL UNION ALL SELECT tm."userId", 'competition'::text AS "activityType", c.id AS "activityId", NULL::uuid AS "meetingId", c.id AS "competitionId", min(ce."openedAt") AS "startsAt", min(ce."openedAt") AS "earnedAt", bool_or((EXISTS ( SELECT 1 FROM platform."teamAwards" ta WHERE ta."competitionId" = c.id AND ta."teamId" = ce."teamId" AND ta.category = 'winner'::text))) AS won FROM platform."competitionEntries" ce JOIN platform.competitions c ON c.id = ce."competitionId" JOIN platform."teamMembers" tm ON tm."teamId" = ce."teamId" AND tm."joinedAt" <= ce."openedAt" AND (tm."leftAt" IS NULL OR tm."leftAt" > ce."openedAt") WHERE c."closedAt" IS NULL OR ce."openedAt" < c."closedAt" GROUP BY tm."userId", c.id`);
+}).with({"securityInvoker":true}).as(sql`SELECT a."userId", 'meeting'::text AS "activityType", m.id AS "activityId", m.id AS "meetingId", NULL::uuid AS "competitionId", m."startsAt", a."recordedAt" AS "earnedAt", false AS won FROM platform.attendance a JOIN platform.meetings m ON m.id = a."meetingId" WHERE m."countsForCredit" AND m."cancelledAt" IS NULL AND m."deletedAt" IS NULL UNION ALL SELECT tm."userId", 'competition'::text AS "activityType", c.id AS "activityId", NULL::uuid AS "meetingId", c.id AS "competitionId", min(ce."openedAt") AS "startsAt", min(ce."openedAt") AS "earnedAt", bool_or(ce."mergedAt" IS NOT NULL) AS won FROM platform."competitionEntries" ce JOIN platform.competitions c ON c.id = ce."competitionId" JOIN platform."teamMembers" tm ON tm."teamId" = ce."teamId" AND tm."joinedAt" <= ce."openedAt" AND (tm."leftAt" IS NULL OR tm."leftAt" > ce."openedAt") WHERE c."closedAt" IS NULL OR ce."openedAt" < c."closedAt" GROUP BY tm."userId", c.id`);
 
 export const profileWithVerificationInPlatform = platform.view("profileWithVerification", {	userId: uuid(),
 	hasPronouns: boolean(),
@@ -877,7 +856,6 @@ export { roleTypeInPlatform as roleType };
 export { rolesInPlatform as roles };
 export { seasonsInPlatform as seasons };
 export { subjectActionInPlatform as subjectAction };
-export { teamAwardsInPlatform as teamAwards };
 export { teamMembersInPlatform as teamMembers };
 export { teamMembershipRequestsInPlatform as teamMembershipRequests };
 export { teamRoleInPlatform as teamRole };
