@@ -1,6 +1,11 @@
 import {
   ID_PATTERN,
+  MEETING_CANCELLATION_REASON_MAX_LENGTH,
+  MEETING_SUMMARY_MAX_LENGTH,
+  MEETING_TITLE_MAX_LENGTH,
   RSVP_URL_ALLOWED_HOSTS,
+  WORKSHOP_DESCRIPTION_MAX_LENGTH,
+  WORKSHOP_TITLE_MAX_LENGTH,
   type ClubConfig,
   type Meeting,
   type Workshop,
@@ -121,33 +126,36 @@ function checkMeeting(meeting: Meeting, issues: ValidationIssue[]): void {
   // because this validator's contract is "call it on any parsed ClubConfig",
   // and a future caller that relaxes the schema without reading this file
   // must not silently lose the check.
-  if (meeting.title !== null && meeting.title.length > MEETING_TITLE_MAX) {
+  if (
+    meeting.title !== null &&
+    meeting.title.length > MEETING_TITLE_MAX_LENGTH
+  ) {
     issues.push({
       id: meeting.id,
       code: "meeting_title_too_long",
-      message: `Title is ${meeting.title.length} characters; a schedule row fits about ${MEETING_TITLE_MAX}.`,
+      message: `Title is ${meeting.title.length} characters; a schedule row fits about ${MEETING_TITLE_MAX_LENGTH}.`,
     });
   }
 
   if (
     meeting.summary !== null &&
-    meeting.summary.length > MEETING_SUMMARY_MAX
+    meeting.summary.length > MEETING_SUMMARY_MAX_LENGTH
   ) {
     issues.push({
       id: meeting.id,
       code: "meeting_summary_too_long",
-      message: `Summary is ${meeting.summary.length} characters; the card fits about ${MEETING_SUMMARY_MAX}.`,
+      message: `Summary is ${meeting.summary.length} characters; the card fits about ${MEETING_SUMMARY_MAX_LENGTH}.`,
     });
   }
 
   if (
     meeting.cancellationReason !== null &&
-    meeting.cancellationReason.length > MEETING_CANCELLATION_MAX
+    meeting.cancellationReason.length > MEETING_CANCELLATION_REASON_MAX_LENGTH
   ) {
     issues.push({
       id: meeting.id,
       code: "meeting_cancellation_reason_too_long",
-      message: `Cancellation reason is ${meeting.cancellationReason.length} characters; the notice fits about ${MEETING_CANCELLATION_MAX}.`,
+      message: `Cancellation reason is ${meeting.cancellationReason.length} characters; the notice fits about ${MEETING_CANCELLATION_REASON_MAX_LENGTH}.`,
     });
   }
 
@@ -180,10 +188,6 @@ function checkMeeting(meeting: Meeting, issues: ValidationIssue[]): void {
   }
 }
 
-const MEETING_TITLE_MAX = 80;
-const MEETING_SUMMARY_MAX = 240;
-const MEETING_CANCELLATION_MAX = 160;
-
 function safeHostname(url: string): string | null {
   try {
     return new URL(url).hostname.toLowerCase();
@@ -194,26 +198,23 @@ function safeHostname(url: string): string | null {
 
 // ── Workshops ────────────────────────────────────────────────────────────────
 
-const WORKSHOP_TITLE_MAX = 80;
-const WORKSHOP_DESCRIPTION_MAX = 280;
-
 function checkWorkshop(workshop: Workshop, issues: ValidationIssue[]): void {
-  if (workshop.title.length > WORKSHOP_TITLE_MAX) {
+  if (workshop.title.length > WORKSHOP_TITLE_MAX_LENGTH) {
     issues.push({
       id: workshop.id,
       code: "workshop_title_too_long",
-      message: `Title is ${workshop.title.length} characters; a schedule row fits about ${WORKSHOP_TITLE_MAX}.`,
+      message: `Title is ${workshop.title.length} characters; a schedule row fits about ${WORKSHOP_TITLE_MAX_LENGTH}.`,
     });
   }
 
   if (
     workshop.description !== null &&
-    workshop.description.length > WORKSHOP_DESCRIPTION_MAX
+    workshop.description.length > WORKSHOP_DESCRIPTION_MAX_LENGTH
   ) {
     issues.push({
       id: workshop.id,
       code: "workshop_description_too_long",
-      message: `Description is ${workshop.description.length} characters; the dialog fits about ${WORKSHOP_DESCRIPTION_MAX}.`,
+      message: `Description is ${workshop.description.length} characters; the dialog fits about ${WORKSHOP_DESCRIPTION_MAX_LENGTH}.`,
     });
   }
 }
