@@ -93,8 +93,6 @@
         // value.
         "GH_WEBHOOK_SECRET",
         "GITHUB_COMPETITION_REPO",
-        "AIRTABLE_BASE_ID",
-        "AIRTABLE_SYNC_PAT",
         "SUPABASE_OAUTH_CLIENT_ID",
         "SUPABASE_OAUTH_CLIENT_SECRET",
         "DISCORD_CLIENT_ID",

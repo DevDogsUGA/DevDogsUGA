@@ -77,27 +77,15 @@ jobs:
         run: >-
           pnpm turbo run lint typecheck test
           --affected --filter='!study-group-finder'
-      # Reads the committed snapshot and touches no network, so it needs no
-      # credential -- which is why it can live here at all. It answers "does
-      # registry.ts still agree with the base as last observed", not "is the
-      # live base still correct"; the latter needs a token and belongs in the
-      # deployed worker's cron.
-      #
-      # Unconditional rather than --affected: the registry is edited by hand
-      # after `airtable apply` writes the ids into it, and a hand-edited id is
-      # exactly the mistake with no other detection. It costs no network and
-      # about a second.
-      - name: Registry agrees with the schema snapshot
-        run: pnpm devtools airtable check
       # The publishability gate for meetings and workshops: parses
       # data/meetings.json against the Zod schema and runs the validator
-      # ported from the old Airtable refusal rules (lengths, the RSVP-host
-      # allowlist, cancellation pairing, id uniqueness and shape). This is the
-      # ONLY validation those two tables get now -- `reconcileFromConfig`
-      # trusts a config that reaches it and aborts rather than refusing a
-      # single row, so a bad file has to be caught here, not at runtime. Also
-      # covered by `turbo run test` above via the package's own vitest suite;
-      # this step exercises the CLI a config author actually runs.
+      # (lengths, the RSVP-host allowlist, cancellation pairing, id
+      # uniqueness and shape). This is the ONLY validation those two tables
+      # get now -- `reconcileFromConfig` trusts a config that reaches it and
+      # aborts rather than refusing a single row, so a bad file has to be
+      # caught here, not at runtime. Also covered by `turbo run test` above
+      # via the package's own vitest suite; this step exercises the CLI a
+      # config author actually runs.
       - name: Club config passes its publishability checks
         run: pnpm --filter @devdogsuga/club-config check
       # .env.example is GENERATED from the env manifests; this regenerates it
@@ -105,15 +93,14 @@ jobs:
       # for database.types.ts. Credential-free by construction: the generator
       # is registry-only (no Bitwarden token, no network, no Docker).
       #
-      # This and the check above used to be root aliases (`env:example:check`,
-      # `airtable:snapshot:check`) that reached devtools through `cli:no-env`,
-      # because `with-env` refused to start without a `.env` this job
-      # deliberately does not have. The wrapper reports that absence and
-      # continues now, so both call the one front door like everything else.
+      # This used to be a root alias (`env:example:check`) that reached
+      # devtools through `cli:no-env`, because `with-env` refused to start
+      # without a `.env` this job deliberately does not have. The wrapper
+      # reports that absence and continues now, so it calls the one front
+      # door like everything else.
       #
-      # Unconditional rather than --affected, like the snapshot check above:
-      # any manifest edit anywhere can change the output, and it costs about
-      # a second.
+      # Unconditional rather than --affected: any manifest edit anywhere can
+      # change the output, and it costs about a second.
       - name: .env.example agrees with the env manifests
         run: pnpm devtools env example --check
       - name: Cloudflare binding types match the Worker configuration
@@ -138,9 +125,10 @@ jobs:
   #
   # Unconditional rather than --affected, deliberately. Migrations and RLS are
   # the highest-consequence things in this repository, the whole job is a few
-  # minutes, and a security check that skips itself on a heuristic is exactly the
-  # failure mode described at the bottom of this file: the Airtable job passed
-  # for months by never running.
+  # minutes, and a security check that skips itself on a heuristic is exactly
+  # the failure mode this repository has already been bitten by: a job
+  # guarded on `secrets.X != ''` that passed green for months without ever
+  # running, because the secret it needed was never set.
   database:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -270,14 +258,6 @@ jobs:
 
 # Removed from this workflow, and not yet replaced:
 #
-#   * Airtable base verification. It needed AIRTABLE_PAT, which cannot live in a
-#     PR-triggered workflow. It moves to a Cloudflare cron in the deployed
-#     worker, which already holds the credential and — verifying with the same
-#     token and scopes as the code that writes — catches a scope loss that a
-#     separate CI token would not. Note the job never actually ran: the secret
-#     was never set, so its `env.AIRTABLE_PAT != ''` guard skipped it every
-#     time. Nothing regresses here; the gap is now recorded rather than silent.
-#
 #   * Turbo remote cache (TURBO_TOKEN / TURBO_TEAM). A token here is readable by
 #     any PR author, and a PR that can WRITE the cache a deploy later READS is a
 #     path from an unreviewed branch into a production artifact. If remote
@@ -288,16 +268,11 @@ jobs:
 #     so the condition passed by construction — protection in appearance only.
 #     With no secrets in this file there is nothing left for it to protect.
 #
-# Both of the gaps recorded here have since been closed, credential-free:
+# The gap recorded here has since been closed, credential-free:
 #
 #   * The local Supabase stack, as the `database` job above. A fresh runner
 #     volume makes `supabase start` itself the from-scratch migration check, so
 #     no separate `db reset` is needed.
-#   * The Airtable registry, diffed against a committed schema snapshot in
-#     `validate`. Note this is NOT the live-base verification that was removed:
-#     it answers "does registry.ts still agree with the base as last observed",
-#     which needs no token. "Is the live base still correct" needs one, and
-#     still belongs in the deployed worker's cron.
 #
 # The test steps of the `database` job run under the workflow-wide
 # SKIP_ENV_VALIDATION, so they do not prove the env schema -- .env.generated

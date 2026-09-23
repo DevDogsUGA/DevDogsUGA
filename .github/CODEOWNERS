@@ -41,9 +41,6 @@
 # Provisions repository access for competition teams.
 /apps/platform/src/server/github/**  @DevDogsUGA/devops
 
-# A hand-edited field id writes to nothing and reports success.
-/packages/airtable/src/registry.ts   @DevDogsUGA/devops
-
 # Carries site_url and the OAuth providers. No dry run exists for `config
 # push`, so this committed diff is the only preview anyone gets.
 /supabase/config.toml                @DevDogsUGA/devops

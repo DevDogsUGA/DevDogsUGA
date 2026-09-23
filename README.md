@@ -1,6 +1,6 @@
 # DevDogs Monorepo
 
-Every DevDogs project in one pnpm + Turborepo workspace: four apps, eight shared
+Every DevDogs project in one pnpm + Turborepo workspace: four apps, seven shared
 packages, and one Supabase Postgres database. Three of the apps own a Postgres
 schema each — `platform`, `schedule_builder`, `study_group_finder` — and
 Row-Level Security, not the schema boundary, is what isolates one app's data
@@ -20,7 +20,6 @@ packages/
   devtools/            @devdogsuga/devtools — the `pnpm devtools` contributor CLI
   env/                 @devdogsuga/env — the env-variable registry, and the `with-env` bin
   docs-build/          @devdogsuga/docs-build — compiles docs/ into the site's page data
-  airtable/            @devdogsuga/airtable — the officer-facing Airtable registry
   drizzle/             @devdogsuga/drizzle — the shared Drizzle client factory
   email/               @devdogsuga/email — transactional email templates
   config/              @devdogsuga/config — shared tsconfig/eslint/vitest presets
