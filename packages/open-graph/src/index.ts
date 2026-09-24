@@ -33,9 +33,8 @@
  * brand tokens (`brand.ts`, `event.ts`, `fonts.ts`, `oklch.ts`,
  * `generated/{assets,fonts}.ts`) and re-export them here; since the
  * Backstage cutover they all come from `@devdogsuga/brand` instead — see
- * that package for the palette, contact copy, fonts and artwork. Only
- * `GDG_MARK` stays local (`./generated/assets.js`), because brand doesn't
- * re-export it yet — see `scripts/generate.ts`'s header.
+ * that package for the palette, contact copy, fonts and artwork, including
+ * `GDG_MARK`.
  */
 export {
   BLOCK_SHADOW,

@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig/next.json",
+  "extends": "@devdogsuga/config/tsconfig/next.json",
   "compilerOptions": {
     /* Path aliases stay local: TypeScript resolves them against the config
        file that declares them, so a hoisted "~/*" would point at the preset. */

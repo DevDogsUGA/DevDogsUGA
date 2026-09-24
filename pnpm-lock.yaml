@@ -1352,11 +1352,11 @@ packages:
     resolution: {integrity: sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg==}
 
   '@devdogsuga/brand@file:../Backstage/.packs/devdogsuga-brand.tgz':
-    resolution: {integrity: sha512-k4rssGObTRAvzfKFfgMVRrRlYfqDmQ7XKcjgFLbyV98LwJ6qknfyOkycjmB0KIHKL/L99fm0ysYBqK3DJMdvyg==, tarball: file:../Backstage/.packs/devdogsuga-brand.tgz}
+    resolution: {integrity: sha512-4CxtjKvWthe9mJM+UP8zKK4AT7EpaLHdrMBtUc0y1OUsBkIqZdtgo80OndQTbRUgvfAbE73iZs1fgVagj81how==, tarball: file:../Backstage/.packs/devdogsuga-brand.tgz}
     version: 0.1.0
 
   '@devdogsuga/config@file:../Backstage/.packs/devdogsuga-config.tgz':
-    resolution: {integrity: sha512-kXCQ8r2gK4Q6xJnluOFVVGIYtGExfSBaGgV44aw36g9PxUe3PJSzzri26EFiie1IKohotldcw4OgQP5c2QLBNw==, tarball: file:../Backstage/.packs/devdogsuga-config.tgz}
+    resolution: {integrity: sha512-EaIufzn4OBTb/ndLg+8FzwxDZmgrW4yyV0+qveN1F+yqw4N02G0KtHABJw0uHk5dfe9gxDdiMsWUSZxM/n3otg==, tarball: file:../Backstage/.packs/devdogsuga-config.tgz}
     version: 0.1.0
     peerDependencies:
       eslint: ^9.39.0

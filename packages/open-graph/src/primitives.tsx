@@ -1,8 +1,13 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { ICON_PATHS, type IconName } from "./generated/icons.js";
-import { GDG_MARK } from "./generated/assets.js";
-import { type Asset, MAUVE, THEME, WORDMARK_METRICS } from "@devdogsuga/brand";
+import {
+  type Asset,
+  GDG_MARK,
+  MAUVE,
+  THEME,
+  WORDMARK_METRICS,
+} from "@devdogsuga/brand";
 
 /**
  * Satori is not a browser, and three of its limits shape everything below.

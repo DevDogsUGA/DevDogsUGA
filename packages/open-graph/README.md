@@ -62,14 +62,16 @@ Two outputs, in two places, since the Backstage cutover split brand tokens
 out of this package:
 
 - `generated-for-brand/{assets,fonts}.ts` — the embedded fonts (fetched from
-  Google Fonts, the same families `next/font` serves the site) and the brand
-  marks (split out of `public/brand/devdogs-logo-dark.svg` and base64'd).
-  This package does not ship or consume this output itself; copy it by hand
-  into `Backstage/packages/brand/src/generated/{assets,fonts}.ts` and commit
-  it there. Gitignored here on purpose — see `scripts/generate.ts`'s header.
-- `src/generated/{assets,icons}.ts` — the Phosphor icon paths this package's
-  own templates draw, plus one leftover brand asset (`GDG_MARK`) that
-  `@devdogsuga/brand`'s index doesn't re-export yet. Committed as before.
+  Google Fonts, the same families `next/font` serves the site) and every
+  brand mark, including `GDG_MARK` (split out of
+  `public/brand/devdogs-logo-dark.svg` and Google's own bracket mark, then
+  base64'd). This package does not ship or consume this output itself; copy
+  it by hand into `Backstage/packages/brand/src/generated/{assets,fonts}.ts`
+  and commit it there. Gitignored here on purpose — see
+  `scripts/generate.ts`'s header.
+- `src/generated/icons.ts` — the Phosphor icon paths this package's own
+  templates draw. Committed as before; purely open-graph-specific, since
+  `@devdogsuga/brand` has no opinion on icons.
 
 Run it after a brand asset, a font, or the Phosphor version changes; the
 `generated-for-brand/` output is not a build step here or in Backstage — it
