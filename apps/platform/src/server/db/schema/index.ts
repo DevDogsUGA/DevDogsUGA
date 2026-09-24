@@ -1,11 +1,4 @@
-import {
-  uuid,
-  boolean,
-  doublePrecision,
-  text,
-  timestamp,
-  index,
-} from "drizzle-orm/pg-core";
+import { uuid, boolean, doublePrecision } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { platform } from "./generated/schema";
 
@@ -15,39 +8,6 @@ export { profile as profiles } from "./generated/schema";
 
 export const MEMBER_ROLE_ID = "00000000-0000-0000-0000-000000000001";
 export const ROOT_ROLE_ID = "00000000-0000-0000-0000-000000000002";
-
-/**
- * Hand-declared, like `resolvedUserPermissions` above: introduced by
- * migration 31 (`20260924080000_31_platform_rate_limits.sql`), which has not
- * been applied+introspected against a live database yet, so
- * `devtools db introspect` has not had a chance to regenerate
- * `./generated/schema.ts` with it. Once that migration lands and introspect
- * runs, this block should be deleted in favor of whatever it generates
- * there -- kept here in the meantime so `~/server/rateLimit.ts` has
- * something to import. See the migration file for the schema's reasoning
- * (why a table rather than the attendance rate-limit binding, why RLS with
- * no permissive policy).
- */
-export const rateLimitHitsInPlatform = platform.table.withRLS(
-  "rateLimitHits",
-  {
-    id: uuid().defaultRandom().primaryKey(),
-    scope: text().notNull(),
-    subjectId: uuid().notNull(),
-    createdAt: timestamp({ withTimezone: true })
-      .default(sql`now()`)
-      .notNull(),
-  },
-  (table) => [
-    index("rateLimitHits_scope_subject_createdAt_idx").using(
-      "btree",
-      table.scope.asc().nullsLast(),
-      table.subjectId.asc().nullsLast(),
-      table.createdAt.desc().nullsLast(),
-    ),
-  ],
-);
-export { rateLimitHitsInPlatform as rateLimitHits };
 
 // Lives in the `platform` schema so refreshMaterializedView targets
 // platform."resolvedUserPermissions". The SELECT body below is only for

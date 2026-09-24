@@ -809,6 +809,27 @@ export type Database = {
           },
         ];
       };
+      rateLimitHits: {
+        Row: {
+          createdAt: string;
+          id: string;
+          scope: string;
+          subjectId: string;
+        };
+        Insert: {
+          createdAt?: string;
+          id?: string;
+          scope: string;
+          subjectId: string;
+        };
+        Update: {
+          createdAt?: string;
+          id?: string;
+          scope?: string;
+          subjectId?: string;
+        };
+        Relationships: [];
+      };
       reflectionRevisions: {
         Row: {
           changeReason: string | null;

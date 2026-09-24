@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, varchar, pgEnum, integer, boolean, text, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, varchar, integer, pgEnum, boolean, text, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by devtools db introspect after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -423,6 +423,21 @@ export const profileLinksInPlatform = platform.table.withRLS("profileLinks", {
 	pgPolicy("crud_authenticated_policy_update", { for: "update", to: ["authenticated"], using: sql`((( SELECT auth.uid() AS uid) = "userId") AND (NOT platform.is_profile_frozen("userId")) AND (NOT platform.is_suspended(( SELECT auth.uid() AS uid))))`, withCheck: sql`((( SELECT auth.uid() AS uid) = "userId") AND (NOT platform.is_suspended(( SELECT auth.uid() AS uid))))` }),
 ]);
 
+export const rateLimitHitsInPlatform = platform.table.withRLS("rateLimitHits", {
+	id: uuid().defaultRandom().primaryKey(),
+	scope: text().notNull(),
+	subjectId: uuid().notNull(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	index("rateLimitHits_scope_subject_createdAt_idx").using("btree", table.scope.asc().nullsLast(), table.subjectId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+]);
+
 export const reflectionRevisionsInPlatform = platform.table.withRLS("reflectionRevisions", {
 	id: uuid().defaultRandom().primaryKey(),
 	reflectionId: uuid().notNull().references(() => reflectionsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
@@ -814,6 +829,7 @@ export { profileAcademicProgramsInPlatform as profileAcademicPrograms };
 export { profileLinksInPlatform as profileLinks };
 export { profileWithVerificationInPlatform as profileWithVerification };
 export { quarantineEffectInPlatform as quarantineEffect };
+export { rateLimitHitsInPlatform as rateLimitHits };
 export { reflectionRevisionsInPlatform as reflectionRevisions };
 export { reflectionSettingsInPlatform as reflectionSettings };
 export { reflectionsInPlatform as reflections };
