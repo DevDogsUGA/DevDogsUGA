@@ -1,0 +1,24 @@
+{
+  "name": "@devdogsuga/repo-checks",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Structural assertions about THIS repo's own layout — workers.json vs. wrangler.jsonc/deploy-app.yaml, cron contract conformance, env registry completeness, and black-box devtools/devtools-ci process contracts. Re-homed here in the Backstage devtools cutover (stage B) from packages/devtools/MOVED-TESTS.md; see that history for what each test asserted before the move.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:live": "vitest run --config vitest.live.config.ts"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "^0.1.0",
+    "@devdogsuga/devtools": "0.1.0",
+    "@devdogsuga/env": "^0.1.0",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
+  }
+}
