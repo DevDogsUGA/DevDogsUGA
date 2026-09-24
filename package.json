@@ -10,6 +10,7 @@
     "lint": "pnpm devtools run lint",
     "lint:fix": "pnpm devtools run lint:fix",
     "test": "pnpm devtools run test",
+    "devtools-ci-bare": "node ./scripts/devtools-ci-bare.mjs",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore"
   },
@@ -18,7 +19,7 @@
   },
   "devDependencies": {
     "@devdogsuga/config": "^0.1.0",
-    "@devdogsuga/devtools": "workspace:*",
+    "@devdogsuga/devtools": "0.1.0",
     "@devdogsuga/env": "^0.1.0",
     "@types/node": "catalog:",
     "prettier": "3.9.6",

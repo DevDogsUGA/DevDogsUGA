@@ -6,9 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@clack/prompts':
-      specifier: ^1.7.0
-      version: 1.7.0
     '@radix-ui/react-accordion':
       specifier: ^1.2.20
       version: 1.2.20
@@ -153,6 +150,7 @@ overrides:
   '@devdogsuga/brand': file:../Backstage/.packs/devdogsuga-brand.tgz
   '@devdogsuga/config': file:../Backstage/.packs/devdogsuga-config.tgz
   '@devdogsuga/db': file:../Backstage/.packs/devdogsuga-db.tgz
+  '@devdogsuga/devtools': file:../Backstage/.packs/devdogsuga-devtools.tgz
   '@devdogsuga/docs-compiler': file:../Backstage/.packs/devdogsuga-docs-compiler.tgz
   '@devdogsuga/env': file:../Backstage/.packs/devdogsuga-env.tgz
   '@devdogsuga/events': file:../Backstage/.packs/devdogsuga-events.tgz
@@ -167,8 +165,8 @@ importers:
         specifier: file:../Backstage/.packs/devdogsuga-config.tgz
         version: file:../Backstage/.packs/devdogsuga-config.tgz(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
       '@devdogsuga/devtools':
-        specifier: workspace:*
-        version: link:packages/devtools
+        specifier: file:../Backstage/.packs/devdogsuga-devtools.tgz
+        version: file:../Backstage/.packs/devdogsuga-devtools.tgz(@devdogsuga/env@file:../Backstage/.packs/devdogsuga-env.tgz(typanion@3.14.0)(typescript@6.0.3))(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
       '@devdogsuga/env':
         specifier: file:../Backstage/.packs/devdogsuga-env.tgz
         version: file:../Backstage/.packs/devdogsuga-env.tgz(typanion@3.14.0)(typescript@6.0.3)
@@ -798,94 +796,6 @@ importers:
         specifier: file:../../Backstage/.packs/devdogsuga-docs-compiler.tgz
         version: file:../Backstage/.packs/devdogsuga-docs-compiler.tgz
 
-  packages/devtools:
-    dependencies:
-      '@bitwarden/cli':
-        specifier: 2026.7.0
-        version: 2026.7.0
-      '@bitwarden/sdk-napi':
-        specifier: 1.0.0
-        version: 1.0.0
-      '@clack/prompts':
-        specifier: 'catalog:'
-        version: 1.7.0
-      '@devdogsuga/brand':
-        specifier: file:../../../Backstage/.packs/devdogsuga-brand.tgz
-        version: file:../Backstage/.packs/devdogsuga-brand.tgz
-      '@devdogsuga/db':
-        specifier: file:../../../Backstage/.packs/devdogsuga-db.tgz
-        version: file:../Backstage/.packs/devdogsuga-db.tgz(@opentelemetry/api@1.9.1)(drizzle-orm@1.0.0-rc.4(@cloudflare/workers-types@5.20260820.1)(@opentelemetry/api@1.9.1)(postgres@3.4.9)(zod@4.4.3))(postgres@3.4.9)
-      '@devdogsuga/docs':
-        specifier: workspace:*
-        version: link:../../docs
-      '@devdogsuga/email':
-        specifier: workspace:*
-        version: link:../email
-      '@devdogsuga/env':
-        specifier: file:../../../Backstage/.packs/devdogsuga-env.tgz
-        version: file:../Backstage/.packs/devdogsuga-env.tgz(typanion@3.14.0)(typescript@6.0.3)
-      '@devdogsuga/newsletter':
-        specifier: file:../../../Backstage/.packs/devdogsuga-newsletter.tgz
-        version: file:../Backstage/.packs/devdogsuga-newsletter.tgz
-      '@devdogsuga/open-graph':
-        specifier: workspace:*
-        version: link:../open-graph
-      '@devdogsuga/telemetry':
-        specifier: file:../../../Backstage/.packs/devdogsuga-telemetry.tgz
-        version: file:../Backstage/.packs/devdogsuga-telemetry.tgz
-      '@resvg/resvg-js':
-        specifier: ^2.6.2
-        version: 2.6.2
-      '@sentry/node':
-        specifier: ^10.75.1
-        version: 10.75.1(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))
-      '@supabase/supabase-js':
-        specifier: 'catalog:'
-        version: 2.112.3(@opentelemetry/api@1.9.1)
-      dotenv:
-        specifier: ^17.4.2
-        version: 17.4.2
-      postgres:
-        specifier: 'catalog:'
-        version: 3.4.9
-      prettier:
-        specifier: 3.9.6
-        version: 3.9.6
-      satori:
-        specifier: ^0.33.4
-        version: 0.33.4
-      sharp:
-        specifier: 0.35.3
-        version: 0.35.3(@types/node@26.2.0)
-      zod:
-        specifier: 'catalog:'
-        version: 4.4.3
-    devDependencies:
-      '@devdogsuga/config':
-        specifier: file:../../../Backstage/.packs/devdogsuga-config.tgz
-        version: file:../Backstage/.packs/devdogsuga-config.tgz(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
-      '@types/node':
-        specifier: 'catalog:'
-        version: 26.2.0
-      '@types/react':
-        specifier: 'catalog:'
-        version: 19.2.18
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 4.1.11(vitest@4.1.11)
-      react:
-        specifier: 'catalog:'
-        version: 19.2.8
-      tsx:
-        specifier: 'catalog:'
-        version: 4.23.12
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
-
   packages/email:
     devDependencies:
       '@devdogsuga/config':
@@ -964,6 +874,36 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
+
+  packages/repo-checks:
+    devDependencies:
+      '@devdogsuga/config':
+        specifier: file:../../../Backstage/.packs/devdogsuga-config.tgz
+        version: file:../Backstage/.packs/devdogsuga-config.tgz(@testing-library/dom@10.4.1)(@typescript-eslint/parser@8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))(vitest@4.1.11)
+      '@devdogsuga/devtools':
+        specifier: file:../../../Backstage/.packs/devdogsuga-devtools.tgz
+        version: file:../Backstage/.packs/devdogsuga-devtools.tgz(@devdogsuga/env@file:../Backstage/.packs/devdogsuga-env.tgz(typanion@3.14.0)(typescript@6.0.3))(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)
+      '@devdogsuga/env':
+        specifier: file:../../../Backstage/.packs/devdogsuga-env.tgz
+        version: file:../Backstage/.packs/devdogsuga-env.tgz(typanion@3.14.0)(typescript@6.0.3)
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.2.0
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.11(vitest@4.1.11)
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.12
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.0(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
 
   packages/supabase:
     devDependencies:
@@ -1350,11 +1290,27 @@ packages:
       eslint: ^9.39.0
 
   '@devdogsuga/db@file:../Backstage/.packs/devdogsuga-db.tgz':
-    resolution: {integrity: sha512-lyvoD9NbL+1qJt2cHE7IpJQlutaU2SgNThhPaDj5/QG2XnEvTRaTNUOw8FcdwjoUjDMOe0iMwGXEudH7ESefVw==, tarball: file:../Backstage/.packs/devdogsuga-db.tgz}
+    resolution: {integrity: sha512-+m0RzlFv00uDn6wPbFAwKamK5Xl7WFi+f2S9U8actMxoAq/yUtObvV7ryGurzJB1KZv7YKVWJcYT3ibq7Tsx2Q==, tarball: file:../Backstage/.packs/devdogsuga-db.tgz}
     version: 0.1.0
     peerDependencies:
       drizzle-orm: 1.0.0-rc.4
       postgres: ^3.4.9
+
+  '@devdogsuga/devtools@file:../Backstage/.packs/devdogsuga-devtools.tgz':
+    resolution: {integrity: sha512-D/5W3XJiB3rtb6tssOJfTuzToG41uJtwo9bt4evnVMS9+LhxV2FxDdjD0drIADidHATxO1Jti/wVRCuLpEjNog==, tarball: file:../Backstage/.packs/devdogsuga-devtools.tgz}
+    version: 0.1.0
+    hasBin: true
+    peerDependencies:
+      '@devdogsuga/brand': '*'
+      '@devdogsuga/db': '*'
+      '@devdogsuga/env': '*'
+    peerDependenciesMeta:
+      '@devdogsuga/brand':
+        optional: true
+      '@devdogsuga/db':
+        optional: true
+      '@devdogsuga/env':
+        optional: true
 
   '@devdogsuga/docs-compiler@file:../Backstage/.packs/devdogsuga-docs-compiler.tgz':
     resolution: {integrity: sha512-5B+AUM1e17tqG/CwRglc3qbJycKtpyu2RyHn+Mpzc/K6lSysXSHk+nl4tSj1/EIxZoDKIyB0EOhlS3Ejxqu4Ow==, tarball: file:../Backstage/.packs/devdogsuga-docs-compiler.tgz}
@@ -1375,7 +1331,7 @@ packages:
     version: 0.1.0
 
   '@devdogsuga/telemetry@file:../Backstage/.packs/devdogsuga-telemetry.tgz':
-    resolution: {integrity: sha512-QPLsKGzeuozYLsaVQ18UYZhDGCI2OoOtyK/oSriwZEH3P1WU/lfEkZjtVNJL4TLETqtJGzbCXWBGnMhFyWoq0Q==, tarball: file:../Backstage/.packs/devdogsuga-telemetry.tgz}
+    resolution: {integrity: sha512-DsLs0atwLCxHPmNL32MY4Q1QfLf1yvJDJY99DA79XinXrD3gkUpekEG41g5FbQeU3X1LdNpWgSKanb/Sq2dXNw==, tarball: file:../Backstage/.packs/devdogsuga-telemetry.tgz}
     version: 0.1.0
 
   '@discordjs/builders@1.14.1':
@@ -9737,6 +9693,36 @@ snapshots:
       server-only: 0.0.1
     transitivePeerDependencies:
       - '@opentelemetry/api'
+
+  '@devdogsuga/devtools@file:../Backstage/.packs/devdogsuga-devtools.tgz(@devdogsuga/env@file:../Backstage/.packs/devdogsuga-env.tgz(typanion@3.14.0)(typescript@6.0.3))(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@types/node@26.2.0)':
+    dependencies:
+      '@bitwarden/cli': 2026.7.0
+      '@bitwarden/sdk-napi': 1.0.0
+      '@clack/prompts': 1.7.0
+      '@devdogsuga/telemetry': file:../Backstage/.packs/devdogsuga-telemetry.tgz
+      '@resvg/resvg-js': 2.6.2
+      '@sentry/node': 10.75.1(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))
+      '@supabase/supabase-js': 2.112.3(@opentelemetry/api@1.9.1)
+      dotenv: 17.4.2
+      postgres: 3.4.9
+      satori: 0.33.4
+      sharp: 0.35.3(@types/node@26.2.0)
+      tsx: 4.23.12
+      typescript: 6.0.3
+      zod: 4.4.3
+    optionalDependencies:
+      '@devdogsuga/env': file:../Backstage/.packs/devdogsuga-env.tgz(typanion@3.14.0)(typescript@6.0.3)
+    transitivePeerDependencies:
+      - '@opentelemetry/api'
+      - '@opentelemetry/core'
+      - '@opentelemetry/exporter-trace-otlp-http'
+      - '@types/node'
+      - bufferutil
+      - canvas
+      - encoding
+      - kerberos
+      - supports-color
+      - utf-8-validate
 
   '@devdogsuga/docs-compiler@file:../Backstage/.packs/devdogsuga-docs-compiler.tgz':
     dependencies:

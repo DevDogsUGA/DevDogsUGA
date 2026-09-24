@@ -37,6 +37,25 @@ overrides:
   "@devdogsuga/brand": file:../Backstage/.packs/devdogsuga-brand.tgz
   "@devdogsuga/config": file:../Backstage/.packs/devdogsuga-config.tgz
   "@devdogsuga/db": file:../Backstage/.packs/devdogsuga-db.tgz
+  # devtools (Wave 2, stage B) joins the bridge the same way the other seven
+  # already do: root package.json pins an EXACT version (never a range — a
+  # range can't resolve from the registry today anyway, and CI wants a
+  # reviewed bump, not a silent one), and this override redirects that exact
+  # version at the tarball `pnpm --dir ../Backstage pack:local` refreshes.
+  # The root `devtools` script stays `pnpm devtools run …`, unchanged — pnpm's
+  # bare `pnpm <name>` exec-fallback resolves the installed `.bin/devtools`
+  # shim this dependency provides, so nothing about the script itself had to
+  # change, only what it resolves to.
+  #
+  # AFTER THE FIRST REAL PUBLISH: switch the root package.json script to
+  # `"devtools": "pnpm dlx @devdogsuga/devtools"` (always-latest,
+  # self-refreshing via its own preflight — see Backstage's
+  # packages/devtools/src/repo/preflight.ts) and delete this override entry.
+  # Leave the exact-pinned `@devdogsuga/devtools` devDependency in place even
+  # then: it is CI's pinned copy (`devtools-minimums.json` at the repo root
+  # documents who bumps it and when), deliberately never `@latest`, so a bad
+  # publish reaches deploys only through a reviewed version-bump PR.
+  "@devdogsuga/devtools": file:../Backstage/.packs/devdogsuga-devtools.tgz
   "@devdogsuga/docs-compiler": file:../Backstage/.packs/devdogsuga-docs-compiler.tgz
   "@devdogsuga/env": file:../Backstage/.packs/devdogsuga-env.tgz
   "@devdogsuga/events": file:../Backstage/.packs/devdogsuga-events.tgz
@@ -95,11 +114,12 @@ catalog:
   # All @sentry/* JS packages ship in lockstep off the sentry-javascript
   # monorepo; pin every one used in this workspace to the same release
   # (apps/platform and apps/schedule-builder depend on this family directly;
-  # apps/sandbox and packages/devtools pin their own @sentry/* literally
-  # rather than via catalog:; @devdogsuga/telemetry, which used to be the
-  # third catalog: consumer of @sentry/core here, now pins its own copy in
-  # Backstage — see minimumReleaseAgeExclude below, which still holds the
-  # whole family, including @sentry/core, since it is still installed
+  # apps/sandbox pins its own @sentry/* literally rather than via catalog:;
+  # @devdogsuga/telemetry, which used to be the third catalog: consumer of
+  # @sentry/core here, now pins its own copy in Backstage, same as
+  # @devdogsuga/devtools does for its own @sentry/node dependency since the
+  # devtools cutover — see minimumReleaseAgeExclude below, which still holds
+  # the whole family, including @sentry/core, since it is still installed
   # transitively at this version).
   "@sentry/cloudflare": ^10.75.1
   "@sentry/nextjs": ^10.75.1
@@ -115,7 +135,10 @@ catalog:
   # eslint-config-next) is not compatible with eslint 10.
   # typescript is held at 6.x on purpose: typescript-eslint peer-requires
   # ">=4.8.4 <6.1.0", so TS 7 breaks linting in every package.
-  "@clack/prompts": ^1.7.0
+  # "@clack/prompts" used to be here — devtools' own interactive-prompt
+  # library. Dropped in the devtools cutover: devtools is a Backstage
+  # dependency now and pins its own copy there; nothing left in this
+  # workspace imports it.
   eslint: ^9.39.5
   # supabase tracks the `latest` dist-tag so every install pulls the newest
   # CLI — the local dev/migration tool has no lockstep with the runtime SDKs

@@ -33,6 +33,11 @@
 /.github/**                          @DevDogsUGA/devops
 /pnpm-workspace.yaml                 @DevDogsUGA/devops
 /pnpm-lock.yaml                      @DevDogsUGA/devops
+# Every contributor's `devtools` self-refreshes off this file's `minimum`
+# within one cache TTL (10 minutes) of a merge — see Backstage's
+# packages/devtools/src/repo/preflight.ts. A hotfix bump belongs to whoever
+# can vouch that the named version is actually fixed.
+/devtools-minimums.json              @DevDogsUGA/devops
 /supabase/migrations/**              @DevDogsUGA/devops
 /apps/*/wrangler.jsonc               @DevDogsUGA/devops
 /apps/*/src/env.ts                   @DevDogsUGA/devops

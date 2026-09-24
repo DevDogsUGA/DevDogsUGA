@@ -4,10 +4,15 @@
  * NOTHING IMPORTS THIS FILE, and the Worker never will. `src/index.ts` reads
  * its configuration from the `Env` argument workerd hands `fetch()`, not from
  * `process.env`, so there is no `createEnv` here and no boot that this file
- * could fail. Like `packages/devtools/env.ts` and `apps/study-group-finder/
- * env.ts` it exists for the registry's consumers: the completeness test, the
- * `.env.example` generator, `env push` routing, and `env audit`. The
- * sibling `tsconfig.json` names it explicitly, which is what keeps the metadata
+ * could fail. Like `apps/study-group-finder/env.ts` it exists for the
+ * registry's consumers: the completeness test, the `.env.example` generator,
+ * `env push` routing, and `env audit`. (Devtools' own operator-tooling
+ * manifest used to be a third example of this same pattern — `packages/
+ * devtools/env.ts` — but that package moved to Backstage in the devtools
+ * cutover and its env vars are no longer part of THIS repo's registry at
+ * all; they're the CLI's own concern now, configured on a contributor's
+ * machine, not routed through `.env.example`/`env push` here.) The sibling
+ * `tsconfig.json` names it explicitly, which is what keeps the metadata
  * typechecked.
  *
  * ## Why this manifest exists despite no boot reading it
