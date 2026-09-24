@@ -23,7 +23,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/config": "^0.1.0",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",
     "@types/node": "catalog:",

@@ -26,7 +26,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/config": "^0.1.0",
     "@types/node": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",

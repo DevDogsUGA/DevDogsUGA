@@ -23,6 +23,24 @@ allowBuilds:
 # 7.28 into this tree.
 overrides:
   undici: ^7.28.0
+  # --- Backstage local-pack bridge (interim) ---
+  # None of the @devdogsuga/* Backstage packages has been published to npm
+  # yet (see Backstage/CUTOVER.md, section A) — consumers here declare the
+  # real eventual npm range ("^0.1.0") in their package.json, but pnpm can't
+  # resolve that from the registry today, so every one is pinned to the
+  # tarball `Backstage/scripts/pack-local.mjs` writes to `../Backstage/.packs/`
+  # (run `pnpm pack:local` in Backstage to refresh them). This includes
+  # `@devdogsuga/brand`, which nothing in this repo depends on directly but
+  # which `@devdogsuga/newsletter` pulls in transitively. Once the first npm
+  # publish of each package exists, swap to it by deleting this block,
+  # running `pnpm install`, and committing.
+  "@devdogsuga/brand": file:../Backstage/.packs/devdogsuga-brand.tgz
+  "@devdogsuga/config": file:../Backstage/.packs/devdogsuga-config.tgz
+  "@devdogsuga/docs-compiler": file:../Backstage/.packs/devdogsuga-docs-compiler.tgz
+  "@devdogsuga/env": file:../Backstage/.packs/devdogsuga-env.tgz
+  "@devdogsuga/events": file:../Backstage/.packs/devdogsuga-events.tgz
+  "@devdogsuga/newsletter": file:../Backstage/.packs/devdogsuga-newsletter.tgz
+  "@devdogsuga/telemetry": file:../Backstage/.packs/devdogsuga-telemetry.tgz
 # Single source of truth for every dependency used by more than one workspace
 # package. Packages reference these with "catalog:" instead of a literal range,
 # so a shared version can only ever be bumped here. Deps used by exactly one
@@ -68,7 +86,6 @@ catalog:
   "@tanstack/react-query-devtools": ^5.101.4
 
   # --- App libraries ---
-  "@t3-oss/env-nextjs": ^0.13.11
   date-fns: ^4.4.0
   motion: ^12.43.0
   papaparse: ^5.6.0

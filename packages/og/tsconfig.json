@@ -3,7 +3,7 @@
   // image edits appear immediately; templates import React explicitly because
   // that loader may select the classic JSX runtime. `scripts` is checked
   // separately (tsconfig.typecheck.json) and never reaches `dist`.
-  "extends": "../config/tsconfig/lib.json",
+  "extends": "../../tsconfig/lib.json",
   "compilerOptions": {
     "lib": ["ES2025"],
     // The templates are JSX but nothing here ever mounts: Satori consumes the

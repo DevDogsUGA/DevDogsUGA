@@ -34,8 +34,8 @@
     "@supabase/supabase-js": "catalog:"
   },
   "devDependencies": {
-    "@devdogsuga/config": "workspace:*",
-    "@devdogsuga/env": "workspace:*",
+    "@devdogsuga/config": "^0.1.0",
+    "@devdogsuga/env": "^0.1.0",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "postgres": "catalog:",

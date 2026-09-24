@@ -15,14 +15,14 @@
  * filename (`tsconfig.json`, `wrangler.jsonc`, `supadart.yaml`), and a pointer
  * would be the only one of its kind.
  *
- * Two special cases, both deliberate:
+ * One special case: `supabase/env.ts` sits at the repo root, OUTSIDE the
+ * workspace globs. Its variables belong to `config.toml` and the Supabase
+ * CLI, not to any package, so it lives next to the config that reads them.
  *
- *   * `supabase/env.ts` sits at the repo root, OUTSIDE the workspace globs. Its
- *     variables belong to `config.toml` and the Supabase CLI, not to any
- *     package, so it lives next to the config that reads them.
- *   * `packages/env` is excluded. It exports `define()`/`declare()`, declares
- *     nothing itself, and importing its `src/env*.ts` internals as a manifest
- *     would be a category error.
+ * `@devdogsuga/env` itself (the package that exports `define()`/`declare()`)
+ * no longer needs a special-case exclusion here: since the Backstage
+ * cutover it is an installed npm dependency, not a workspace package under
+ * `packages/`, so this scan never sees it at all.
  *
  * Most workspace packages declare nothing, so "no env.ts found" means
  * not-a-manifest rather than an error.
@@ -143,11 +143,9 @@ function workspaceDirs(): string[] {
     for (const entry of readdirSync(join(PROJECT_ROOT, parent), {
       withFileTypes: true,
     })) {
-      // node_modules and dotfiles are not packages; packages/env exports the
-      // helpers and declares nothing (see the header).
+      // node_modules and dotfiles are not packages.
       if (!entry.isDirectory()) continue;
       if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
-      if (parent === "packages" && entry.name === "env") continue;
       names.push(entry.name);
     }
     // Sorted, because readdir order is whatever the filesystem feels like and

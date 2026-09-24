@@ -39,7 +39,7 @@
     "unist-util-visit": "^5.1.0"
   },
   "devDependencies": {
-    "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/config": "^0.1.0",
     "@types/mdast": "^4.0.4",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",

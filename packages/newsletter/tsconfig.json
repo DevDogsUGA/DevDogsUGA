@@ -4,7 +4,7 @@
   // them to strings, and neither loader should have to agree on a JSX setting.
   // There is deliberately no `devdogs-source` export condition — see the og
   // index for the failure that rule comes from.
-  "extends": "../config/tsconfig/lib.json",
+  "extends": "../../tsconfig/lib.json",
   "compilerOptions": {
     "lib": ["ES2025"],
     // `react-jsx` keeps React out of every component's import list; the

@@ -1,0 +1,45 @@
+{
+  // Shared preset for the workspace's emitting Node libraries (docs-compiler
+  // consumers, devtools). Inherits the repo-wide target/strictness from
+  // tsconfig.base.json and layers on the two things those packages need
+  // that the Next apps don't: Node resolution and real emit.
+  //
+  // KEPT HERE, NOT CONSUMED FROM @devdogsuga/config, as an interim measure:
+  // Backstage's package.json ships this same file at
+  // `packages/config/tsconfig/lib.json` (in `files`) but its `exports` map
+  // only lists `./eslint` and `./vitest/*` — there is no `./tsconfig/*`
+  // entry, so `"extends": "@devdogsuga/config/tsconfig/lib.json"` fails to
+  // resolve (TS6053) under Node's package-exports resolution. Even a literal
+  // relative path into node_modules doesn't help: the published file itself
+  // still says `"extends": "../../../tsconfig.base.json"`, a path that
+  // assumed a fixed depth inside the Backstage repo tree and points nowhere
+  // once installed as a dependency (that base config isn't published either).
+  // Reported upstream rather than worked around with a path into
+  // ../Backstage; this local copy should be deleted once Backstage exposes
+  // `./tsconfig/*` and ships a self-contained base for it.
+  //
+  // Consumers extend this by relative path rather than by package specifier
+  // for a second, orthogonal reason: tsc resolves package specifiers in
+  // `extends`, but vitest's oxc transform does not, and it reads these
+  // configs too ("Failed to load tsconfig ... Tsconfig not found").
+  //
+  // outDir/rootDir/include/exclude are deliberately NOT here — TypeScript
+  // resolves relative paths against the config file that declares them, so a
+  // path set here would point inside this tsconfig/ folder. Each package
+  // keeps its own; everything else is inherited.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["ES2025"],
+    "noEmit": false,
+    "declaration": true,
+    // Off, unlike the base config. docs-preview, feedback-client and
+    // reports-client have no `"type": "module"`, so nodenext classifies their
+    // ESM-looking sources as CommonJS and tsc transpiles them down on emit.
+    // verbatimModuleSyntax forbids exactly that, so enabling it here would
+    // require migrating those three to ESM first — a change to their published
+    // module format, not a tsconfig cleanup.
+    "verbatimModuleSyntax": false
+  }
+}

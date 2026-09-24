@@ -32,7 +32,7 @@
     "react": "catalog:"
   },
   "devDependencies": {
-    "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/config": "^0.1.0",
     "@phosphor-icons/react": "^2.1.10",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

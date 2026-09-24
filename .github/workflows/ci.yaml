@@ -139,8 +139,7 @@ jobs:
       # enabled and `.turbo` was never persisted across CI runs, so turbo was
       # already rebuilding all of it from nothing on every run; this only
       # makes that cost explicit. `--if-present` skips the packages with no
-      # `build` script (`@devdogsuga/config`, `@devdogsuga/devtools`)
-      # instead of failing on them.
+      # `build` script (`@devdogsuga/devtools`) instead of failing on them.
       - name: Lint + typecheck + test (affected)
         run: |
           pnpm -r --if-present --filter './packages/**' --filter './docs' run build
@@ -149,17 +148,22 @@ jobs:
           pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run typecheck || status=1
           pnpm -r --if-present ${{ steps.base.outputs.since }} --filter '!study-group-finder' --filter '!devdogs-monorepo' run test || status=1
           exit $status
-      # The publishability gate for meetings and workshops: parses
+      # REMOVED: "Events config passes its publishability checks"
+      # (`pnpm --filter @devdogsuga/events check`), the CLI that parses
       # data/meetings.json against the Zod schema and runs the validator
       # (lengths, the RSVP-host allowlist, cancellation pairing, id
-      # uniqueness and shape). This is the ONLY validation those two tables
-      # get now -- `reconcileFromConfig` trusts a config that reaches it and
-      # aborts rather than refusing a single row, so a bad file has to be
-      # caught here, not at runtime. Also covered by the lint/typecheck/test
-      # step above via the package's own vitest suite; this step exercises
-      # the CLI a config author actually runs.
-      - name: Events config passes its publishability checks
-        run: pnpm --filter @devdogsuga/events check
+      # uniqueness and shape).
+      #
+      # `@devdogsuga/events` is an installed npm dependency now, not a
+      # workspace package, so `pnpm --filter` can no longer see it here to
+      # run its `check` script. More to the point, the meetings/workshops
+      # config-as-code — both the schema/validator source AND the authored
+      # data/meetings.json this step was gating — moved to Backstage with the
+      # package; DevDogsUGA no longer has anything to author or check here.
+      # Backstage's own CI runs this same gate on every change to that
+      # package. If a future `@devdogsuga/events` release ships a config
+      # that fails its own validator, that is a bug in the published
+      # package, not something a check in this repo can catch earlier.
       # .env.example is GENERATED from the env manifests; this regenerates it
       # in memory and byte-compares -- the same pattern the database job uses
       # for database.types.ts. Credential-free by construction: the generator

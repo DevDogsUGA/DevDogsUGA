@@ -21,10 +21,10 @@
     "@clack/prompts": "catalog:",
     "@devdogsuga/docs": "workspace:*",
     "@devdogsuga/email": "workspace:*",
-    "@devdogsuga/env": "workspace:*",
+    "@devdogsuga/env": "^0.1.0",
     "@devdogsuga/newsletter": "workspace:*",
     "@devdogsuga/og": "workspace:*",
-    "@devdogsuga/telemetry": "workspace:*",
+    "@devdogsuga/telemetry": "^0.1.0",
     "@resvg/resvg-js": "^2.6.2",
     "@sentry/node": "^10.75.1",
     "@supabase/supabase-js": "catalog:",
@@ -36,8 +36,8 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@devdogsuga/config": "workspace:*",
-    "@devdogsuga/env": "workspace:*",
+    "@devdogsuga/config": "^0.1.0",
+    "@devdogsuga/env": "^0.1.0",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
