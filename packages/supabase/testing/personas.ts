@@ -13,7 +13,8 @@
  *
  * Requires the local stack: `pnpm devtools link`.
  */
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@devdogsuga/db/server";
+import { createServerClient } from "@devdogsuga/db/client";
 import postgres from "postgres";
 
 export const LOCAL_API_URL = process.env.API_URL ?? "http://127.0.0.1:54321";
@@ -29,7 +30,39 @@ export const ROOT_ROLE_ID = "00000000-0000-0000-0000-000000000002";
  * client rather than parameterising this, which keeps one concrete client type
  * instead of a generic that varies per call site.
  */
-const SCHEMA = "platform";
+const SCHEMA = "platform" as const;
+
+/**
+ * A cookie jar backing `createServerClient` (`@devdogsuga/db/client`) in
+ * place of a browser's `document.cookie`. `@supabase/ssr`'s server client
+ * persists the session by round-tripping it through this adapter rather than
+ * `window.localStorage`, so it needs something implementing the shape even
+ * under Node -- an in-memory `Map` is enough for a client whose whole
+ * lifetime is one persona's test run.
+ */
+function memoryCookieJar() {
+  const cookies = new Map<string, string>();
+  return {
+    getAll: () => Array.from(cookies, ([name, value]) => ({ name, value })),
+    setAll: (cookiesToSet: { name: string; value: string }[]) => {
+      for (const { name, value } of cookiesToSet) cookies.set(name, value);
+    },
+  };
+}
+
+/**
+ * Both factories below are called with `<any, typeof SCHEMA>` on purpose,
+ * not the repo's generated `Database` type: this suite asserts the
+ * DATABASE's half of the RLS/enum/constraint guarantees, not TypeScript's.
+ * Typing these against the catalog would let a case that only compiles
+ * because a query happens to shape-match the generated types stand in for
+ * one that actually reaches Postgres and gets rejected (or not) by a real
+ * policy -- the opposite of what a runtime persona suite is for. The
+ * compile-time half is covered separately, at the real call sites (each
+ * app's `~/supabase/*` wrappers, `callRpc` in
+ * apps/platform/src/components/moderation, and friends).
+ */
+type Untyped = any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /** Service-role client: bypasses RLS. Fixture setup only, never an assertion. */
 export function admin() {
@@ -38,9 +71,10 @@ export function admin() {
       "SECRET_KEY is required (run via `with-env`, with the local stack up)",
     );
   }
-  return createClient(LOCAL_API_URL, SECRET_KEY, {
-    db: { schema: SCHEMA },
-    auth: { autoRefreshToken: false, persistSession: false },
+  return createAdminClient<Untyped, typeof SCHEMA>({
+    url: LOCAL_API_URL,
+    key: SECRET_KEY,
+    schema: SCHEMA,
   });
 }
 
@@ -51,9 +85,11 @@ export function anon() {
       "PUBLISHABLE_KEY is required (run via `with-env`, with the local stack up)",
     );
   }
-  return createClient(LOCAL_API_URL, PUBLISHABLE_KEY, {
-    db: { schema: SCHEMA },
-    auth: { autoRefreshToken: false, persistSession: false },
+  return createServerClient<Untyped, typeof SCHEMA>({
+    url: LOCAL_API_URL,
+    key: PUBLISHABLE_KEY,
+    schema: SCHEMA,
+    cookies: memoryCookieJar(),
   });
 }
 

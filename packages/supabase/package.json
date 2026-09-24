@@ -29,13 +29,11 @@
     "test:rls": "with-env vitest run --config vitest.rls.config.ts",
     "test:coverage": "vitest run --coverage"
   },
-  "dependencies": {
-    "@supabase/ssr": "catalog:",
-    "@supabase/supabase-js": "catalog:"
-  },
   "devDependencies": {
     "@devdogsuga/config": "^0.1.0",
+    "@devdogsuga/db": "^0.1.0",
     "@devdogsuga/env": "^0.1.0",
+    "@supabase/supabase-js": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "postgres": "catalog:",
