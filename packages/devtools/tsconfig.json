@@ -6,7 +6,7 @@
     "lib": ["ES2025"],
     "types": ["node"],
     "noEmit": true,
-    // The image templates in @devdogsuga/og are JSX, and `images` renders them
+    // The image templates in @devdogsuga/open-graph are JSX, and `images` renders them
     // here. `react-jsx` rather than `react` so the sources need no React import
     // of their own — Satori reads the plain {type, props} objects the automatic
     // runtime produces, and never mounts them.

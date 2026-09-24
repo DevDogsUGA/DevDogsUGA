@@ -1,7 +1,7 @@
 /**
  * `pnpm devtools images [graphic…] [--format …] [--out …]`
  *
- * Renders the club's pictures from the templates in `@devdogsuga/og`. Two axes,
+ * Renders the club's pictures from the templates in `@devdogsuga/open-graph`. Two axes,
  * asked for separately: WHICH picture (`event/2026-09-08`, `page/events`,
  * `app/dogdays`) and at WHAT SIZE (`gdgc-square`, `og`, `icon-512`). That split
  * is the point of the command — an event poster for the GDG on Campus platform
@@ -21,7 +21,7 @@ import { homedir } from "node:os";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { log, note } from "@clack/prompts";
-import { FORMATS, type Format } from "@devdogsuga/og";
+import { FORMATS, type Format } from "@devdogsuga/open-graph";
 import { positionals } from "../args.js";
 import { adminClient, type Instance } from "../instance.js";
 import { errorMessage, explain } from "../ui.js";

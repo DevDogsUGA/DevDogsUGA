@@ -2,7 +2,7 @@ import {
   EVENT_SEGMENT_VISUALS,
   meetingCardDetail,
   meetingLocation,
-} from "@devdogsuga/og/event";
+} from "@devdogsuga/brand/event";
 import type { DevtoolsClient } from "../instance.js";
 import type { EventGraphicSource } from "./graphics.js";
 

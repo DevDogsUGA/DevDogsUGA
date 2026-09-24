@@ -1,4 +1,4 @@
-import { PAGE_CARDS, PageCard } from "@devdogsuga/og";
+import { PAGE_CARDS, PageCard } from "@devdogsuga/open-graph";
 import { contentType, ogResponse, size } from "~/lib/ogImage";
 
 /**
@@ -14,7 +14,7 @@ import { contentType, ogResponse, size } from "~/lib/ogImage";
  * param, or a row.
  *
  * The public pages each override it with their own; see `pages.ts` in
- * `@devdogsuga/og` for which ones, and why that list is the sitemap's.
+ * `@devdogsuga/open-graph` for which ones, and why that list is the sitemap's.
  */
 export const alt = "DevDogs — learn by doing";
 export { contentType, size };

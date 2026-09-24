@@ -1,4 +1,4 @@
-import { MARK, Mark } from "@devdogsuga/og";
+import { MARK, Mark } from "@devdogsuga/open-graph";
 import { imageResponse } from "~/lib/ogImage";
 
 /**

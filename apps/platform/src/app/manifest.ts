@@ -43,7 +43,7 @@ export default function manifest(): MetadataRoute.Manifest {
      * second rendering of the logo to point at, and that making one was a
      * design task. That task is done: `pnpm devtools images icons` renders the
      * mark at every size a platform asks for, from one template in
-     * `@devdogsuga/og`. So the two Chrome wants are declared here, and the app
+     * `@devdogsuga/open-graph`. So the two Chrome wants are declared here, and the app
      * is installable.
      *
      * `purpose` stays `any` and does NOT claim `maskable`. A maskable icon has

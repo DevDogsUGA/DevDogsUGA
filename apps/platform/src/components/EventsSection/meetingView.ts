@@ -2,7 +2,7 @@ import type { MeetingSegment } from "~/server/loaders/meetings";
 import {
   EVENT_KIND_VISUALS,
   EVENT_SEGMENT_VISUALS,
-} from "@devdogsuga/og/event";
+} from "@devdogsuga/brand/event";
 
 /**
  * How a meeting is *shown*. The one place the page decides what a segment

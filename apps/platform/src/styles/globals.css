@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@source "../../../../packages/og/src";
+@source "../../../../packages/open-graph/src";
 @import "../components/moderation/styles.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";

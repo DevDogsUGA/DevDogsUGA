@@ -22,7 +22,7 @@
  */
 import { Resvg } from "@resvg/resvg-js";
 import satori, { type Font } from "satori";
-import { loadFonts } from "@devdogsuga/og";
+import { loadFonts } from "@devdogsuga/open-graph";
 import type { ReactElement } from "react";
 
 let fonts: Font[] | undefined;

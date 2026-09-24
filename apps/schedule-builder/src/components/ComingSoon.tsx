@@ -1,4 +1,4 @@
-import { DogDaysMark } from "@devdogsuga/og";
+import { DogDaysMark } from "@devdogsuga/open-graph";
 import Link from "next/link";
 import { Navbar } from "~/components/Navbar";
 

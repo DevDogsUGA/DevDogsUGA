@@ -15,7 +15,7 @@ export async function runGen(argv: readonly string[]): Promise<number> {
   if (sub === "hypno") return runGenHypno();
 
   if (sub === "og-assets") {
-    return run(["--filter", "@devdogsuga/og", "run", "generate"]);
+    return run(["--filter", "@devdogsuga/open-graph", "run", "generate"]);
   }
 
   if (sub === "email-templates") {

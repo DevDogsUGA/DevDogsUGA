@@ -5,7 +5,7 @@ import {
   path,
   select,
 } from "@clack/prompts";
-import { FORMATS, type Format } from "@devdogsuga/og";
+import { FORMATS, type Format } from "@devdogsuga/open-graph";
 import { unwrap } from "../ui.js";
 import type { Graphic } from "./graphics.js";
 import { formatsFor } from "./select.js";

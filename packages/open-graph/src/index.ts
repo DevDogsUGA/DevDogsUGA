@@ -22,13 +22,20 @@
  * render failed with `React is not defined`. `dist` is compiled once, here,
  * with this package's own `jsx: react-jsx`, and no consumer has to agree.
  *
- * The cost is that editing a template means `pnpm --filter @devdogsuga/og build`
- * before the CLI sees it. Every dependents-first `pnpm -r ... run build` (CI,
- * and every root `pnpm build`) already covers this.
+ * The cost is that editing a template means `pnpm --filter @devdogsuga/open-graph
+ * build` before the CLI sees it. Every dependents-first `pnpm -r ... run build`
+ * (CI, and every root `pnpm build`) already covers this.
  *
- * `@devdogsuga/og/event` is a SEPARATE entry point and deliberately so: it
- * holds the club's timezone and the meeting-to-card formatting, and importing
- * it must not drag this module's few hundred kilobytes of embedded fonts along.
+ * `@devdogsuga/brand/event` is a SEPARATE entry point on `@devdogsuga/brand`
+ * and deliberately so: it holds the club's timezone and the meeting-to-card
+ * formatting, and importing it must not drag that package's few hundred
+ * kilobytes of embedded fonts along. This package used to define its own
+ * brand tokens (`brand.ts`, `event.ts`, `fonts.ts`, `oklch.ts`,
+ * `generated/{assets,fonts}.ts`) and re-export them here; since the
+ * Backstage cutover they all come from `@devdogsuga/brand` instead — see
+ * that package for the palette, contact copy, fonts and artwork. Only
+ * `GDG_MARK` stays local (`./generated/assets.js`), because brand doesn't
+ * re-export it yet — see `scripts/generate.ts`'s header.
  */
 export {
   BLOCK_SHADOW,
@@ -38,7 +45,15 @@ export {
   THEME,
   WHITE,
   WORDMARK_METRICS,
-} from "./brand.js";
+  loadFonts,
+  type LoadedFont,
+  type Asset,
+  GDGC_UGA,
+  GDGC_UGA_LIGHT,
+  MARK,
+  WORDMARK_ON_DARK,
+  WORDMARK_ON_LIGHT,
+} from "@devdogsuga/brand";
 export {
   CARD_FORMATS,
   cardLayout,
@@ -53,15 +68,6 @@ export {
   OG_SIZE,
   OPAQUE_FORMATS,
 } from "./formats.js";
-export { loadFonts, type LoadedFont } from "./fonts.js";
-export {
-  type Asset,
-  GDGC_UGA,
-  GDGC_UGA_LIGHT,
-  MARK,
-  WORDMARK_ON_DARK,
-  WORDMARK_ON_LIGHT,
-} from "./generated/assets.js";
 export { type IconName } from "./generated/icons.js";
 export {
   Icon,
@@ -96,7 +102,7 @@ export { PAGE_CARDS, type PageCardCopy } from "./pages.js";
  * Re-exported for convenience, and safe to take from here: these are types and
  * one pure function, so a consumer that only wants `EventDetail` pays nothing.
  * A consumer that must NOT pull in the fonts — anything a browser bundles —
- * should import `@devdogsuga/og/event` directly.
+ * should import `@devdogsuga/brand/event` directly.
  */
 export {
   type CardableMeeting,
@@ -107,4 +113,4 @@ export {
   meetingCardDetail,
   meetingLocation,
   type MeetingCardInput,
-} from "./event.js";
+} from "@devdogsuga/brand/event";

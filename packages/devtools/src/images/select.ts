@@ -1,4 +1,4 @@
-import { FORMATS, type Format } from "@devdogsuga/og";
+import { FORMATS, type Format } from "@devdogsuga/open-graph";
 import type { Graphic } from "./graphics.js";
 
 /**

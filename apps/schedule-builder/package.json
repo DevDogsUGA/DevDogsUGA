@@ -28,7 +28,7 @@
   "dependencies": {
     "@devdogsuga/drizzle": "workspace:*",
     "@devdogsuga/env": "^0.1.0",
-    "@devdogsuga/og": "workspace:*",
+    "@devdogsuga/open-graph": "^0.1.0",
     "@devdogsuga/security-headers": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
     "@devdogsuga/telemetry": "^0.1.0",

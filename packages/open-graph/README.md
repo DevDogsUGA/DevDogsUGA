@@ -1,4 +1,4 @@
-# @devdogsuga/og
+# @devdogsuga/open-graph
 
 The club's image templates, rendered two ways from one set of files.
 
@@ -31,7 +31,7 @@ so a card is never one picture stretched across three shapes.
 `formats.ts` holds the renditions; the CLI holds which graphic supports which.
 
 ```tsx
-import { EventCard, FORMATS, loadFonts } from "@devdogsuga/og";
+import { EventCard, FORMATS, loadFonts } from "@devdogsuga/open-graph";
 
 const format = FORMATS["gdgc-square"];
 
@@ -45,30 +45,39 @@ new ImageResponse(
 );
 ```
 
-`loadFonts()` returns the faces embedded in this package. They are base64 in a
-module rather than files on disk, because the platform renders inside a
-Cloudflare Worker: there is no filesystem to read a `.ttf` out of, and fetching
-one would put a second network round trip — and a second way to come back blank
-— inside every link unfurl.
+`loadFonts()` is re-exported here from `@devdogsuga/brand`; the faces it
+returns are embedded there as base64 in a module rather than files on disk,
+because the platform renders inside a Cloudflare Worker: there is no
+filesystem to read a `.ttf` out of, and fetching one would put a second
+network round trip — and a second way to come back blank — inside every link
+unfurl.
 
 ## Regenerating
 
 ```bash
-pnpm --filter @devdogsuga/og generate
+pnpm --filter @devdogsuga/open-graph generate
 ```
 
-Rewrites `src/generated/`: the fonts (fetched from Google Fonts, the same
-families `next/font` serves the site), the brand marks (split out of
-`public/brand/devdogs-logo-dark.svg` and base64'd), and the Phosphor icon paths
-(taken from the same package the app draws its UI with). Run it after a brand
-asset, a font, or the Phosphor version changes; the output is committed. It is
-not a build step — it reaches out to the network, and CI should not.
+Two outputs, in two places, since the Backstage cutover split brand tokens
+out of this package:
 
-`src/brand.ts` is not generated. It transcribes Tailwind's mauve ramp and the
-project accents in the `oklch()` notation Tailwind writes them in, converting to
-hex on the way past because Satori cannot read `oklch()` — and treats what it
-cannot read as transparent, silently. `palette.test.ts` reads the real
-stylesheet and asserts the transcription still matches.
+- `generated-for-brand/{assets,fonts}.ts` — the embedded fonts (fetched from
+  Google Fonts, the same families `next/font` serves the site) and the brand
+  marks (split out of `public/brand/devdogs-logo-dark.svg` and base64'd).
+  This package does not ship or consume this output itself; copy it by hand
+  into `Backstage/packages/brand/src/generated/{assets,fonts}.ts` and commit
+  it there. Gitignored here on purpose — see `scripts/generate.ts`'s header.
+- `src/generated/{assets,icons}.ts` — the Phosphor icon paths this package's
+  own templates draw, plus one leftover brand asset (`GDG_MARK`) that
+  `@devdogsuga/brand`'s index doesn't re-export yet. Committed as before.
+
+Run it after a brand asset, a font, or the Phosphor version changes; the
+`generated-for-brand/` output is not a build step here or in Backstage — it
+reaches out to the network, and CI should not.
+
+The palette, contact copy, and the `oklch()`-to-hex conversion Satori needs
+now live in `@devdogsuga/brand` (`src/oklch.ts`, `src/brand.ts`, and that
+package's own `palette.test.ts`), not here.
 
 ## Seeing them
 
@@ -78,7 +87,7 @@ pnpm devtools images '*' --no-output      # what exists, and what each is for
 pnpm devtools images 'page/*' --all-formats --out ./preview
 ```
 
-`@devdogsuga/og/event` is the other entry point: the club's timezone and the
+`@devdogsuga/brand/event` is the other entry point: the club's timezone and the
 meeting-to-card formatting, shared by the platform's live event cards and the
 CLI's exported ones. It imports nothing, so `lib/meetingTitle.ts` can take
 `EVENT_TZ` from it without a bundler ever considering the fonts above.

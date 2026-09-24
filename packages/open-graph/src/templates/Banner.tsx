@@ -1,10 +1,13 @@
 import * as React from "react";
-import { ACCENT, CONTACT, MAUVE, THEME } from "../brand.js";
 import {
+  ACCENT,
+  CONTACT,
   MARK,
+  MAUVE,
+  THEME,
   WORDMARK_ON_DARK,
   WORDMARK_ON_LIGHT,
-} from "../generated/assets.js";
+} from "@devdogsuga/brand";
 import {
   GdgcCobrand,
   IconRow,

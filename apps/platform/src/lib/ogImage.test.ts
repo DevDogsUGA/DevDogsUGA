@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PAGE_CARDS } from "@devdogsuga/og";
+import { PAGE_CARDS } from "@devdogsuga/open-graph";
 
 /**
  * "Every page gets a link card, except the access-gated ones."

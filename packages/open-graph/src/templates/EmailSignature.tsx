@@ -1,11 +1,13 @@
 import * as React from "react";
-import { CONTACT, MAUVE, THEME } from "../brand.js";
 import { EMAIL_SIGNATURE_ASPECT } from "../formats.js";
 import {
+  CONTACT,
   MARK,
+  MAUVE,
+  THEME,
   WORDMARK_ON_DARK,
   WORDMARK_ON_LIGHT,
-} from "../generated/assets.js";
+} from "@devdogsuga/brand";
 import { Mark, Wordmark } from "../primitives.js";
 
 /**

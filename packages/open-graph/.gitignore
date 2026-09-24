@@ -1,0 +1,7 @@
+dist
+*.tsbuildinfo
+# Staging output for `pnpm generate` — copied by hand into
+# Backstage/packages/brand/src/generated/, which is the committed copy.
+# Not committed here: it would be a second, easy-to-forget source of truth
+# for data this package no longer ships. See scripts/generate.ts.
+generated-for-brand

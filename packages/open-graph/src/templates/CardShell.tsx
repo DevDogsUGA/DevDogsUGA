@@ -1,8 +1,14 @@
 import * as React from "react";
 import type { ReactNode } from "react";
-import { ACCENT, CONTACT, MAUVE, THEME } from "../brand.js";
 import { CARD_REFERENCE_WIDTH, cardLayout, OG_SIZE } from "../formats.js";
-import { MARK, WORDMARK_ON_DARK } from "../generated/assets.js";
+import {
+  ACCENT,
+  CONTACT,
+  MARK,
+  MAUVE,
+  THEME,
+  WORDMARK_ON_DARK,
+} from "@devdogsuga/brand";
 import { GdgcCobrand, Icon, Mark, Wordmark } from "../primitives.js";
 import { rgba } from "./wash.js";
 

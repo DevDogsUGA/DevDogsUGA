@@ -1,9 +1,9 @@
 import { ImageResponse } from "next/og";
-import { loadFonts } from "@devdogsuga/og";
+import { loadFonts } from "@devdogsuga/open-graph";
 import type { ReactElement } from "react";
 
 /**
- * Turning one of `@devdogsuga/og`'s elements into the PNG Next will serve.
+ * Turning one of `@devdogsuga/open-graph`'s elements into the PNG Next will serve.
  *
  * ## Why `next/og` and not `@vercel/og`
  *
@@ -22,7 +22,7 @@ import type { ReactElement } from "react";
  * The platform carries its own copy of this at `src/lib/ogImage.tsx`. Two
  * files rather than a shared one because the reasoning is Next's and the apps
  * do not otherwise share app-level plumbing; the artwork is what lives in
- * `@devdogsuga/og`.
+ * `@devdogsuga/open-graph`.
  */
 export function imageResponse(
   element: ReactElement,

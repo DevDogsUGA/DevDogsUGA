@@ -1,4 +1,4 @@
-import { ACCENT, PageCard } from "@devdogsuga/og";
+import { ACCENT, PageCard } from "@devdogsuga/open-graph";
 import { contentType, ogResponse, size } from "~/lib/ogImage";
 import { getCompetitionBySlug } from "~/server/loaders/competitions";
 import { getEntrants } from "~/server/loaders/teams";

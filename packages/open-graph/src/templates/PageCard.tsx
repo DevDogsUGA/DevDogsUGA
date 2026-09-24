@@ -1,5 +1,5 @@
 import * as React from "react";
-import { MAUVE, THEME } from "../brand.js";
+import { MAUVE, THEME } from "@devdogsuga/brand";
 import { CardShell, cardContext, type CardContext } from "./CardShell.js";
 
 /**

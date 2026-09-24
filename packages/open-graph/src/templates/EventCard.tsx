@@ -1,6 +1,6 @@
 import * as React from "react";
-import { ACCENT, MAUVE, THEME } from "../brand.js";
-import { eventKindVisual, type EventDetail } from "../event.js";
+import { ACCENT, MAUVE, THEME } from "@devdogsuga/brand";
+import { eventKindVisual, type EventDetail } from "@devdogsuga/brand/event";
 import { Icon } from "../primitives.js";
 import { CardShell, cardContext, type CardContext } from "./CardShell.js";
 
@@ -13,7 +13,7 @@ import { CardShell, cardContext, type CardContext } from "./CardShell.js";
  * differ is the content: the same night, the same fields, the same rules about
  * what a cancellation withdraws.
  *
- * Every field arrives pre-formatted from `@devdogsuga/og/event`. This card does
+ * Every field arrives pre-formatted from `@devdogsuga/brand/event`. This card does
  * no date maths and holds no timezone.
  */
 export interface EventCardProps extends EventDetail {

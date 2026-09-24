@@ -2,7 +2,7 @@
  * DogDays: a wall calendar with a bone pinned to it, in currentColor.
  *
  * Copied from platform's `ProjectsSection/project-icons.tsx` (the geometry
- * also lives in `@devdogsuga/og`'s `DogDaysMark`, but that variant takes a
+ * also lives in `@devdogsuga/open-graph`'s `DogDaysMark`, but that variant takes a
  * fixed pixel size and color; this one flows with text). Drawn against Alan
  * Sans' metrics: the viewBox is cropped to the ink with the mark's bottom on
  * the box's bottom edge, so rendered `inline-block h-[0.799em] w-auto

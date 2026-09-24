@@ -1,4 +1,4 @@
-import { ACCENT } from "./brand.js";
+import { ACCENT } from "@devdogsuga/brand";
 
 /**
  * The Open Graph copy for every page that has a fixed one.

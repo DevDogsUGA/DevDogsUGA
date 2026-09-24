@@ -139,7 +139,7 @@ apps/study-group-finder/tool/*.docs.json
 
 # The rest of what `pnpm devtools images` renders. Nothing here is a source
 # file: every one is a deterministic render of the SVGs in public/brand and the
-# templates in @devdogsuga/og, so committing them stored a second copy of
+# templates in @devdogsuga/open-graph, so committing them stored a second copy of
 # artwork the repo already had, and one that went stale silently.
 #
 # Two kinds live here now. The email signatures and platform-192 are DEPLOYED

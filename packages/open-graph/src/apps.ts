@@ -1,4 +1,4 @@
-import { ACCENT } from "./brand.js";
+import { ACCENT } from "@devdogsuga/brand";
 
 export type AppKey = "platform" | "dogdays" | "dogpack";
 

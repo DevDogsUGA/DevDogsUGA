@@ -1,6 +1,6 @@
 import { pageOgImage, contentType, size } from "~/lib/ogImage";
 
-/** The link card for `/events/directions`. Copy and colour live in `@devdogsuga/og`. */
+/** The link card for `/events/directions`. Copy and colour live in `@devdogsuga/open-graph`. */
 const card = pageOgImage("/events/directions");
 
 export const alt = card.alt;

@@ -37,5 +37,5 @@ locally; CI runs `cf:build:*` / `cf:deploy:*` from
 `dogdays.dev` (production) and `staging.dogdays.dev` (staging), as custom
 domains in `wrangler.jsonc` — keep `SCHEDULE_BUILDER_URL` in step, since
 nothing cross-checks them. In-app branding is DogDays throughout, drawing the
-mark and app copy from `@devdogsuga/og`, with its own light/dark zinc-and-red
+mark and app copy from `@devdogsuga/open-graph`, with its own light/dark zinc-and-red
 design (system `prefers-color-scheme`; not the platform's design language).

@@ -1,4 +1,4 @@
-import { ACCENT, PageCard } from "@devdogsuga/og";
+import { ACCENT, PageCard } from "@devdogsuga/open-graph";
 import { ogResponse, size } from "~/lib/ogImage";
 import { toTitleCase } from "~/lib/toTitleCase";
 import { getDocsFolder, getDocsPage } from "~/server/docs/queries";
