@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "The monorepo's documentation content. Markdown only — the compiler lives in @devdogsuga/docs-build.",
+  "description": "The monorepo's documentation content. Markdown only — the compiler lives in @devdogsuga/docs-compiler.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -11,9 +11,9 @@
     }
   },
   "scripts": {
-    "build": "docs-build gen && docs-build"
+    "build": "docs-compiler gen && docs-compiler"
   },
   "dependencies": {
-    "@devdogsuga/docs-build": "workspace:*"
+    "@devdogsuga/docs-compiler": "^0.1.0"
   }
 }
