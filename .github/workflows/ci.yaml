@@ -192,7 +192,7 @@ jobs:
       # TS18003 "no inputs were found", which reads like a broken config
       # rather than like a job with nothing to do.
 
-  # Everything that needs a real Postgres: 139 tests CI has never run.
+  # Everything that needs a real Postgres: 189 tests CI has never run.
   #
   # Credential-free like the rest of this file, and not by exception — the local
   # stack's keys ARE the well-known constants Supabase publishes in its own
@@ -233,16 +233,16 @@ jobs:
         run: |
           pnpm devtools db types
           git diff --exit-code -- packages/supabase/src/database.types.ts
-      # 54 tests. All app schemas share one PostgREST endpoint and one anon key,
+      # 59 tests. All app schemas share one PostgREST endpoint and one anon key,
       # so RLS -- not the schema boundary -- is what isolates one app's data from
       # another's. This is the only thing that checks it.
       - name: Row-Level Security
         run: pnpm --filter @devdogsuga/supabase run test:rls
-      # 85 tests, including the privilege-surface guards in
+      # 124 tests, including the privilege-surface guards in
       # resolveCredential.db-test.ts. Those assert the shape of the GRANTS, which
       # nothing else can see: a function reachable by every role in the cluster
       # typechecks perfectly.
-      # Vitest resolves @devdogsuga/drizzle and friends from their dist/,
+      # Vitest resolves @devdogsuga/db (/server) and friends from their dist/,
       # which a fresh checkout doesn't have — the `pnpm --filter ... run`
       # invocation only runs in that one package, so build the app's
       # dependencies first with pnpm's own deps-of selector.
@@ -250,7 +250,7 @@ jobs:
         run: |
           pnpm -r --if-present --filter 'platform^...' run build
           pnpm --filter platform run test:db
-      # Vitest resolves @devdogsuga/drizzle and friends from their dist/,
+      # Vitest resolves @devdogsuga/db (/server) and friends from their dist/,
       # which a fresh checkout doesn't have — the `pnpm --filter ... run`
       # invocation only runs in that one package, so build the app's
       # dependencies first with pnpm's own deps-of selector.

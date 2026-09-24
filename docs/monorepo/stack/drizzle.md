@@ -26,7 +26,7 @@ A `db:generate` draft is never the migration. Someone moves it into `supabase/mi
 
 ## The connection settings are not optional
 
-`@devdogsuga/drizzle` exports one `createDb(url, relations)` factory so these can only be configured one way:
+`@devdogsuga/db`'s `/server` subpath exports one `createDb(url, relations)` factory (merged with the Supabase client factories in the Backstage cutover) so these can only be configured one way:
 
 - **`prepare: false`** — the apps connect through Supabase's transaction-mode pooler, which hands a different backend to each transaction and so cannot keep a named prepared statement alive between them.
 - **Connections are cached on `globalThis`, keyed by URL.** An unkeyed slot would let a second caller inherit the first caller's connection, including its database. Caching defaults on outside production, where the module graph is built once anyway.

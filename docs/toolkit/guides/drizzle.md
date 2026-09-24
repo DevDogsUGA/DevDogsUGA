@@ -6,11 +6,13 @@ order: 5
 
 # drizzle
 
-`@devdogsuga/drizzle` exports one function. `createDb(url, relations)` builds
-the postgres-js connection and wraps it in Drizzle:
+`@devdogsuga/db`'s `/server` subpath exports one relevant function here —
+merged with the Supabase client factories in the Backstage cutover.
+`createDb(url, relations)` builds the postgres-js connection and wraps it in
+Drizzle:
 
 ```ts
-import { createDb } from "@devdogsuga/drizzle";
+import { createDb } from "@devdogsuga/db/server";
 import { env } from "~/env";
 import { relations } from "./relations";
 
@@ -32,11 +34,14 @@ module reloads reuse one pool instead of opening a new one per edit. The cache
 is on by default outside production, where the module graph is built once and it
 would only keep a reference alive; pass `{ cache: false }` to opt out anywhere.
 
-`drizzle-orm` and `postgres` are peer dependencies — this package brings neither
-version with it, so an app pins them.
+`drizzle-orm` and `postgres` are peer dependencies — `@devdogsuga/db` brings
+neither version with it, so an app pins them.
 
 Drizzle does not own the schema here; SQL migrations do, and no script in the
 repo runs `drizzle-kit push`. That, the `db:pull` and `db:generate` scripts and
 the `DB_URL` you want are all in [Drizzle](/docs/monorepo/stack/drizzle). The
-full surface is the generated
-[`@devdogsuga/drizzle`](/docs/toolkit/reference/api/drizzle) reference.
+full surface is documented in
+[`@devdogsuga/db`](https://github.com/DevDogsUGA/Backstage/tree/main/packages/db)
+— it ships from Backstage now, so there is no local `reference/api` page for
+it here (the same as `config`, `env` and the rest of the Backstage-sourced
+packages).

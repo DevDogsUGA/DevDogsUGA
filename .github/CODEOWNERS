@@ -33,7 +33,6 @@
 /.github/**                          @DevDogsUGA/devops
 /pnpm-workspace.yaml                 @DevDogsUGA/devops
 /pnpm-lock.yaml                      @DevDogsUGA/devops
-/packages/with-env/**                @DevDogsUGA/devops
 /supabase/migrations/**              @DevDogsUGA/devops
 /apps/*/wrangler.jsonc               @DevDogsUGA/devops
 /apps/*/src/env.ts                   @DevDogsUGA/devops

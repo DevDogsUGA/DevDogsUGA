@@ -14,7 +14,7 @@ Supabase is the database, auth and storage layer for every app in the repo: Post
 
 Schema isolation is **organizational, not a security boundary**. Every schema is reachable through the same PostgREST endpoint with the same publishable key, so Row-Level Security is what actually protects data. The only credential that bypasses RLS is the service role (`SECRET_KEY`).
 
-Client factories live in `@devdogsuga/supabase` and take the app's schema as an argument, which becomes the client's default for `.from()`. Set it explicitly; never rely on the endpoint's default profile.
+Client factories live in `@devdogsuga/db` (`/client` for browser/SSR, `/server` for the admin client) and take the app's schema as an argument, which becomes the client's default for `.from()`. Set it explicitly; never rely on the endpoint's default profile. Each app binds its own generated `Database` type once, in its `~/supabase/{client,server,admin}.ts` wrappers — see `packages/supabase`, which now ships only that generated type, the app → schema map, and the RLS persona suite.
 
 > [!WARNING]
 > `[api] schemas` lists `study_group_finder` **first on purpose** — being first makes it PostgREST's default REST profile, which is the only schema supadart can generate Dart models from. Do not reorder that list.
