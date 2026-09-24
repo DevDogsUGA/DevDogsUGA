@@ -24,6 +24,10 @@ export const TEAM_PROBLEM_MESSAGES: Record<TeamProblemCode, string> = {
     "Joining a team provisions your access to the team's repository branch, so your GitHub account has to be linked first.",
   github_unavailable:
     "GitHub did not apply this. Nothing was saved — try again in a moment.",
+  github_2fa_required:
+    "Team membership grants push access to the org's repository, so your GitHub account needs two-factor authentication turned on first.",
+  github_2fa_unverifiable:
+    "We could not confirm your GitHub account has two-factor authentication on. Nothing was saved — try again in a moment.",
   team_full: "That team is already at its member limit.",
   too_many_teams:
     "You are already active on as many teams as one contributor can be on at once.",
@@ -64,6 +68,20 @@ export function TeamProblem({ code }: { code: TeamProblemCode }) {
             Link GitHub on your account
           </Link>
           .
+        </>
+      )}
+      {code === "github_2fa_required" && (
+        <>
+          {" "}
+          <a
+            href="https://docs.github.com/en/authentication/securing-your-account-with-two-factor-authentication-2fa/configuring-two-factor-authentication"
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
+            Set up two-factor authentication on GitHub
+          </a>
+          , then try again.
         </>
       )}
     </Callout>

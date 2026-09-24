@@ -11,6 +11,13 @@ export type TeamActionCode =
   | "github_not_linked"
   /** GitHub did not apply the change; the mirror was left untouched. */
   | "github_unavailable"
+  /** The linked GitHub account has 2FA off. Membership grants push access to
+   *  the org repo, so this is refused rather than granted with a weaker
+   *  account sitting on the roster. */
+  | "github_2fa_required"
+  /** GitHub could not be asked whether 2FA is on, so this fails closed rather
+   *  than guessing. See `server/github/twoFactor.ts`. */
+  | "github_2fa_unverifiable"
   /** The team is at `MAX_TEAM_SIZE` active members. */
   | "team_full"
   /** The caller is already at `MAX_CONCURRENT_TEAMS_PER_USER` active teams. */
