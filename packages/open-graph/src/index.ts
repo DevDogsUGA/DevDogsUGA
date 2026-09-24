@@ -14,17 +14,27 @@
  * differently — see `formats.ts` for the renditions and `CardShell` for the
  * three shapes.
  *
- * Consumed BUILT, unlike `@devdogsuga/env` — there is no `devdogs-source`
- * export condition here on purpose. These are `.tsx`, and the source condition
- * hands raw TypeScript to whichever loader the importer is using; tsx picks its
- * JSX setting from a single tsconfig near the CWD, so `devtools` (whose CWD is
- * its own package) compiled these templates with the classic runtime and every
- * render failed with `React is not defined`. `dist` is compiled once, here,
- * with this package's own `jsx: react-jsx`, and no consumer has to agree.
+ * `apps/platform` always consumes this BUILT — Next bundles `dist` for the
+ * Worker like any other dependency. `@devdogsuga/devtools` is the one
+ * exception: it resolves this package's `"."` export through the
+ * `devdogs-source` condition (declared in this package's `package.json`,
+ * picked by hand in Backstage's `packages/devtools/src/repo/resolve.ts` —
+ * `require.resolve`/tsx's `register({ conditions })` can't do condition-based
+ * resolution here), so a template edit renders immediately with no build step
+ * in between.
  *
- * The cost is that editing a template means `pnpm --filter @devdogsuga/open-graph
- * build` before the CLI sees it. Every dependents-first `pnpm -r ... run build`
- * (CI, and every root `pnpm build`) already covers this.
+ * This used to be impossible: these are `.tsx`, and the old in-repo devtools
+ * (pre-Backstage-cutover) ran as a single `tsx --conditions=devdogs-source`
+ * process, which picks its JSX setting from one tsconfig near the CWD —
+ * `devtools`'s own, not this package's — so it compiled these templates with
+ * the classic runtime and every render failed with `React is not defined`.
+ * The cutover's devtools loads repo TypeScript through tsx's `register()` API
+ * instead (`packages/devtools/src/repo/tsx-loader.ts`), which resolves each
+ * loaded file's own nearest tsconfig, so it correctly picks up this package's
+ * `jsx: react-jsx` — verified by rendering through `pnpm devtools images`
+ * straight from `src`, no `dist` involved. Templates still import React
+ * explicitly (see `tsconfig.json`) as a defensive measure in case that ever
+ * stops being true for some other loader.
  *
  * `@devdogsuga/brand/event` is a SEPARATE entry point on `@devdogsuga/brand`
  * and deliberately so: it holds the club's timezone and the meeting-to-card
