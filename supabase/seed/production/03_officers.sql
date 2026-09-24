@@ -114,6 +114,60 @@
 -- left. If an officer signs in under an address on neither list, GoTrue mints a NEW user and the profile seeded here is stranded --
 -- the card keeps the seeded content while the real account has none. Adding an
 -- address here before a reset is cheap; merging two users afterwards is not.
+--
+-- ============================================================
+-- Matching precedence, and refusing to guess
+-- ============================================================
+--
+-- A fresh `db reset` starts from an empty `auth.users`, so every officer
+-- matches at most one row and there is nothing to decide. `devtools db seed
+-- production` does not get that luxury: it replays this file against a
+-- staging or production target that may already carry a signed-up account
+-- AND the placeholder container a previous replay created, or two different
+-- real accounts each matching a different one of an officer's emails. Picking
+-- the wrong one silently attaches a card to a stranger, or leaves an officer's
+-- real account without the profile this file means to fill in.
+--
+-- So every officer's candidate matches -- every `auth.users` row whose email,
+-- lowercased, equals their primary address or any altEmail, lowercased -- are
+-- ranked instead of taken in whatever order Postgres happens to return them:
+--
+--   1. A row `platform.profile` already links to this officer beats a row it
+--      does not. Once a replay has resolved an officer to a row and written
+--      their profile onto it, later replays keep using that SAME row even if
+--      a new candidate starts matching too -- e.g. the officer separately
+--      signs up for real, under an altEmail, after a container already holds
+--      their submitted content. Switching winners between replays would
+--      `insert` a second profile for the new row (the upsert below is keyed
+--      on "userId") rather than update the one already there, leaving two
+--      rows for one officer. This is the rule that makes replaying an
+--      already-resolved officer a true no-op, and it is checked first
+--      because nothing below should ever override it.
+--   2. Among rows tied on that (normally: an officer's first ever
+--      resolution, where nothing has a profile yet), any row that is NOT
+--      this seed's own placeholder container beats the container. The
+--      container's id is always the officer's literal "seededId", so it is
+--      identifiable without guessing at anything about the row itself; a
+--      real account beats the placeholder that was only ever a stand-in for
+--      it.
+--   3. Among rows still tied, a match on the primary address beats a match
+--      on an altEmail. The primary address is unique in `auth.users`, so at
+--      most one row can ever win on this step.
+--
+-- Two distinct rows can still tie after all three rules -- two different
+-- accounts, each linked or matched exactly as well as the other, with
+-- nothing left to rank them by. That is exactly the case this file refuses
+-- to guess at: it names the officer and the addresses that matched (never
+-- the other side -- the matched rows' own data stays out of the error) and
+-- RAISES, aborting the whole transaction rather than attaching either
+-- account to the wrong profile. Whoever sees the error merges the accounts or
+-- corrects the seeded email/altEmails and replays.
+--
+-- The whole file runs in one transaction. A RAISE EXCEPTION partway through
+-- -- ambiguous match or otherwise -- rolls back every insert this replay made,
+-- rather than leaving some officers updated and others not.
+
+begin;
 
 create temporary table "officer_submissions" (
   "slug" text primary key,
@@ -292,6 +346,11 @@ insert into "officer_submissions" (
 -- email_change_token_new and email_change into non-nullable Go strings, and
 -- those columns have no database default, so a row without them exists but
 -- fails every sign-in with an error naming neither the column nor the user.
+--
+-- Create the placeholder container only where NOTHING matches yet -- primary
+-- or altEmail, case-insensitively. That is what guarantees the ranking below
+-- always has at least one candidate: an officer with no existing account gets
+-- exactly one (the container just inserted), with nothing to rank.
 insert into "auth"."users" (
   "id", "instance_id", "aud", "role", "email",
   "raw_app_meta_data", "raw_user_meta_data",
@@ -307,16 +366,124 @@ select
 from "officer_submissions" s
 where not exists (
   select 1 from "auth"."users" u
-  where lower(u."email") = s."email"
-     or lower(u."email") = any (s."altEmails")
+  where lower(u."email") = lower(s."email")
+     or lower(u."email") = any (
+          select lower("e") from unnest(s."altEmails") as "e"
+        )
 )
 on conflict ("id") do nothing;
 
+-- Every `auth.users` row that matches an officer, tagged with the three
+-- facts the ranking below needs: whether `platform.profile` already links
+-- this row to an officer (a previous replay resolved it here), whether it is
+-- this seed's own container (identifiable by its literal "seededId", nothing
+-- guessed), and whether it matched the primary address rather than an
+-- altEmail.
+create temporary table "officer_matches" as
+select
+  s."slug",
+  u."id" as "userId",
+  exists (
+    select 1 from "platform"."profile" p where p."userId" = u."id"
+  ) as "hasProfile",
+  (u."id" = s."seededId") as "isContainer",
+  (lower(u."email") = lower(s."email")) as "isPrimary"
+from "officer_submissions" s
+join "auth"."users" u
+  on lower(u."email") = lower(s."email")
+  or lower(u."email") = any (
+       select lower("e") from unnest(s."altEmails") as "e"
+     );
+
+-- The row(s) ranked best per officer. "score" is lexicographic, not
+-- additive, and checked in this order:
+--
+--   1. A row `platform.profile` already links to an officer (weight 0) beats
+--      any row it does not (weight 4) -- once a replay has resolved an
+--      officer to a row and written their profile there, later replays keep
+--      using that SAME row even if a new candidate starts matching too. This
+--      is what keeps the seed idempotent: switching winners between replays
+--      would `insert` a second profile for the new userId (the upsert below
+--      is keyed on "userId") rather than update the one already there,
+--      leaving two rows for one officer.
+--   2. Among rows tied on that (normally: nothing has a profile yet, an
+--      officer's first ever resolution), not-a-container (weight 0) beats
+--      the container (weight 2) -- a real account, however it was matched,
+--      beats the seed's own placeholder.
+--   3. Among rows still tied, a primary-address match (weight 0) beats an
+--      altEmail match (weight 1).
+--
+-- The weights (4, 2, 1) are chosen so no combination of lower-tier weights
+-- can ever equal or exceed one instance of a higher tier's weight, which is
+-- what makes this a strict hierarchy rather than a sum that can tie across
+-- tiers. Lower "score" wins. Exactly one row per slug here is the normal,
+-- unambiguous case; more than one is two distinct accounts tied with nothing
+-- left to rank them by.
+create temporary table "officer_winners" as
+select "slug", "userId"
+from (
+  select
+    "slug", "userId",
+    (case when "hasProfile" then 0 else 4 end)
+      + (case when "isContainer" then 2 else 0 end)
+      + (case when "isPrimary" then 0 else 1 end) as "score",
+    min(
+      (case when "hasProfile" then 0 else 4 end)
+        + (case when "isContainer" then 2 else 0 end)
+        + (case when "isPrimary" then 0 else 1 end)
+    ) over (partition by "slug") as "bestScore"
+  from "officer_matches"
+) "scored"
+where "score" = "bestScore";
+
+-- Refuse to guess: if any officer's best-ranked rows are still more than one
+-- distinct account, name that officer and the addresses that matched --
+-- never anything about the accounts themselves -- and abort. The transaction
+-- wrapping this whole file rolls every prior write in this replay back too.
+do $$
+declare
+  "conflictReport" text;
+begin
+  select string_agg(
+    format(
+      '%s (checked %s%s)',
+      "s"."slug",
+      "s"."email",
+      case
+        when array_length("s"."altEmails", 1) > 0
+          then ', alt emails: ' || array_to_string("s"."altEmails", ', ')
+        else ''
+      end
+    ),
+    '; '
+    order by "s"."slug"
+  )
+  into "conflictReport"
+  from (
+    select "slug"
+    from "officer_winners"
+    group by "slug"
+    having count(distinct "userId") > 1
+  ) "ambiguous"
+  join "officer_submissions" "s" on "s"."slug" = "ambiguous"."slug";
+
+  if "conflictReport" is not null then
+    raise exception
+      'supabase/seed/production/03_officers.sql: ambiguous account match for %. '
+      'Each of these officers'' primary/altEmail addresses matches more than '
+      'one distinct auth.users row, and this seed refuses to guess which one '
+      'is theirs. Merge the duplicate accounts or correct the seeded email/'
+      'altEmails, then replay.', "conflictReport";
+  end if;
+end $$;
+
 update "officer_submissions" s
-set "userId" = u."id"
-from "auth"."users" u
-where lower(u."email") = s."email"
-   or lower(u."email") = any (s."altEmails");
+set "userId" = w."userId"
+from "officer_winners" w
+where w."slug" = s."slug";
+
+drop table "officer_winners";
+drop table "officer_matches";
 
 -- ============================================================
 -- Profiles
@@ -593,3 +760,5 @@ select u."id", r."id"
 from "auth"."users" u, "platform"."roles" r
 where lower(u."email") = 'jsf51288@uga.edu' and r."title" = 'DevOps Director'
 on conflict do nothing;
+
+commit;
