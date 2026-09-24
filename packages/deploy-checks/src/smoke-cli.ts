@@ -11,19 +11,22 @@
  * Covers, per TASK-300:
  *   - every listed public route answers 200
  *   - the one known protected route redirects an anonymous request
- *   - config-reconcile succeeded (platform only; already gated earlier in
- *     the pipeline by reconcile-cli.ts in deploy.yaml's migrate jobs -- this
- *     re-checks the LIVE route after the new code is deployed, which is a
- *     different moment than the post-migrate check)
  *   - Sentry's release for this deploy is visible, and each app's Crons
  *     monitors have a check-in on record -- both skipped with a notice, not
  *     failed, when SENTRY_AUTH_TOKEN is absent (Sentry not onboarded yet)
+ *
+ * Deliberately does NOT re-check config-reconcile: deploy-app.yaml runs a
+ * dedicated "Reconcile meetings/workshops from @devdogsuga/events" step
+ * (platform matrix entry only) right before this one, and that step is the
+ * sole authoritative reconcile trigger for a deploy -- see its own comment
+ * for why calling the route a second time from here (or from deploy.yaml's
+ * migrate jobs, where an earlier revision of this step lived) is wrong, not
+ * merely redundant.
  */
 import {
   allPassed,
   checkProtectedRedirect,
   checkPublicRoute,
-  checkReconcile,
   formatResults,
   type CheckResult,
 } from "./checks.js";
@@ -65,21 +68,6 @@ async function main(): Promise<number> {
       config.protectedRedirectPrefix,
     ),
   );
-
-  if (app === "platform") {
-    const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret) {
-      results.push({
-        name: "config-reconcile",
-        status: "fail",
-        detail: "CRON_SECRET is not set.",
-      });
-    } else {
-      results.push(
-        await checkReconcile(`${origin}/cron/config-reconcile`, cronSecret),
-      );
-    }
-  }
 
   const sentryConfig = resolveSentryConfig({
     SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,

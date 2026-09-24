@@ -158,18 +158,47 @@ jobs:
           # created and uploaded source maps against.
           SENTRY_RELEASE: ${{ github.sha }}
         run: pnpm exec devtools-ci deploy ${{ matrix.app }} --tier $DEPLOY_ENV
-      # Read-only smoke test against the Worker version just deployed:
-      # every listed public route answers 200, the one known protected route
-      # redirects an anonymous request, config-reconcile still succeeds
-      # (platform only — see deploy.yaml's migrate-time reconcile step for
-      # the OTHER, earlier place this is checked), and — only when
-      # SENTRY_AUTH_TOKEN is configured — this deploy's Sentry release is
-      # visible and each app's Crons monitors have a check-in on record.
+      # Reconciles `meetings`/`workshops` against @devdogsuga/events, the
+      # moment this deploy's own code is live rather than waiting on the
+      # next fifteen-minute cron slot (see
+      # apps/platform/src/app/(api)/cron/config-reconcile/route.ts's own doc
+      # comment). Deliberately placed HERE, after THIS matrix entry's own
+      # deploy, and not at migrate time in deploy.yaml: the config
+      # `@devdogsuga/events` bundles into the Worker is baked in at build
+      # time, so calling this route at migrate time would reconcile against
+      # whatever config the PREVIOUS release shipped with, not this one's —
+      # and on production specifically, the currently-deployed Worker (still
+      # pre-redesign, ahead of this pipeline's first promote) has no
+      # `/cron/config-reconcile` route at all, so a migrate-time call there
+      # 404s and would block that promote forever.
+      #
+      # `devtools cron run` was NOT used here even though it already wraps
+      # an authenticated GET at this route: it only checks the HTTP status,
+      # and this route answers 200 even when the reconcile itself failed
+      # (`{ success: false, reason: … }`) — a real failure would pass
+      # silently. @devdogsuga/deploy-checks' reconcile-cli reads the body.
+      #
+      # `matrix.app == 'platform'` only: the config being reconciled
+      # (meetings, workshops) is platform's alone, and schedule-builder
+      # serves no such route.
+      - name: Reconcile meetings/workshops from @devdogsuga/events
+        if: matrix.app == 'platform'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          pnpm --filter @devdogsuga/deploy-checks run reconcile
+          -- --tier $DEPLOY_ENV
+      # Read-only smoke test against the Worker version just deployed: every
+      # listed public route answers 200, the one known protected route
+      # redirects an anonymous request, and — only when SENTRY_AUTH_TOKEN is
+      # configured — this deploy's Sentry release is visible and each app's
+      # Crons monitors have a check-in on record. Does NOT re-check
+      # config-reconcile: the step immediately above is now the one and
+      # only place that runs, so this would otherwise trigger it twice.
       # Fails the job (and so this deploy) on any non-skipped failure. No
       # state-changing request of any kind.
       - name: Smoke test ${{ matrix.app }} (${{ env.DEPLOY_ENV }})
         env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ matrix.app }}
         run: >-

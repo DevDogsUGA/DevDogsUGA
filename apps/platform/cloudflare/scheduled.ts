@@ -82,12 +82,13 @@ export const CRON_ROUTES: Record<
       "/cron/academic-programs",
     ],
   },
-  // Fifteen minutes is how quickly a config edit auto-deploying reaches the
-  // live schedule. Ideally a deploy's post-migrate step would call the route
-  // directly so a promoted config lands the moment the deploy finishes; that
-  // wiring into `.github/workflows/deploy.yaml` is not done yet (see
-  // `server/config/reconcile.ts`'s route), so for now this fifteen-minute
-  // slot is the only trigger.
+  // Fifteen minutes is the WORST case now: `.github/workflows/deploy-app.yaml`
+  // also calls this route directly, right after each platform deploy, so a
+  // promoted config normally lands the moment that deploy finishes (see
+  // `server/config/reconcile.ts`'s route for why that step runs post-deploy
+  // rather than post-migrate). This slot stays as the fallback for a config
+  // edit that lands with no accompanying deploy, and as the floor if the
+  // deploy-time call itself fails partway.
   "*/15 * * * *": {
     label: "Config reconcile (meetings, workshops)",
     monitorSlug: "platform-cron-config-reconcile",

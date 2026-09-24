@@ -194,23 +194,6 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: pnpm exec devtools-ci-bare deploy migrate
-      # Reconciles `meetings`/`workshops` against @devdogsuga/events on
-      # staging's currently-deployed platform Worker, the moment migrations
-      # land rather than waiting on the next fifteen-minute cron slot (see
-      # apps/platform/src/app/(api)/cron/config-reconcile/route.ts's own doc
-      # comment, which named this exact gap). `devtools cron run` was NOT
-      # used here even though it already wraps an authenticated GET at this
-      # route: it only checks the HTTP status, and this route answers 200
-      # even when the reconcile itself failed
-      # (`{ success: false, reason: … }`) — a real failure would pass
-      # silently. @devdogsuga/deploy-checks' reconcile-cli reads the body.
-      #
-      # A narrow credential (CRON_SECRET only, no composed env file), same
-      # tier discipline as the migrate step above it.
-      - name: Reconcile meetings/workshops from @devdogsuga/events
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: pnpm --filter @devdogsuga/deploy-checks run reconcile -- --tier staging
 
   # The per-tier deploy recipe lives in the reusable `deploy-app.yaml`; this
   # caller is the gating in front of it. `secrets: inherit` is load-bearing —
@@ -350,12 +333,6 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: pnpm exec devtools-ci-bare deploy migrate
-      # See staging-migrate's identical step for why this exists and why it
-      # is not `devtools cron run`.
-      - name: Reconcile meetings/workshops from @devdogsuga/events
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: pnpm --filter @devdogsuga/deploy-checks run reconcile -- --tier production
 
   # The one mutation with no dry run gets its own approval step, which is what
   # `production-apply` is: the same Bitwarden project as `production`, split

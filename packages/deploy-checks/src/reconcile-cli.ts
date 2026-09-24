@@ -2,14 +2,18 @@
 /**
  * `pnpm --filter @devdogsuga/deploy-checks run reconcile -- --tier <staging|production>`
  *
- * Called from `.github/workflows/deploy.yaml`'s `staging-migrate` and
- * `production-migrate` jobs, immediately after `deploy migrate` applies that
- * tier's migrations -- the "deploy pipeline's post-migrate step" the
- * `config-reconcile` route's own doc comment already anticipated (see
- * apps/platform/src/app/(api)/cron/config-reconcile/route.ts). Exits
- * non-zero on a failed reconcile, which fails the job and so blocks that
- * tier's deploy -- `staging-deploy`/`production-deploy` both `needs:` the
- * migrate job that runs this.
+ * Called from `.github/workflows/deploy-app.yaml`'s per-app deploy job, on
+ * the `platform` matrix entry only, right after `Deploy platform` and
+ * before the smoke test -- the "deploy pipeline" call the `config-reconcile`
+ * route's own doc comment anticipated (see
+ * apps/platform/src/app/(api)/cron/config-reconcile/route.ts), but placed
+ * after THIS deploy rather than at migrate time. `@devdogsuga/events`'
+ * config is bundled into the Worker at build time, so a migrate-time call
+ * would reconcile against the PREVIOUS release's config, not this deploy's;
+ * on production specifically, the currently-deployed Worker predates this
+ * route entirely, so a migrate-time call there would 404 and block the
+ * first promote of this pipeline forever. Exits non-zero on a failed
+ * reconcile, which fails the deploy step running it.
  *
  * Only platform serves this route; the config being reconciled (meetings,
  * workshops) is platform's alone.
