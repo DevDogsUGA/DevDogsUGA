@@ -22,7 +22,7 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/config": "^0.1.0",
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
