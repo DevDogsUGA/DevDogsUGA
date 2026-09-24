@@ -26,11 +26,28 @@ const cloudflareModulesStub: Plugin = {
 export default defineConfig({
   plugins: [cloudflareModulesStub],
   resolve: {
-    alias: { "~": fileURLToPath(new URL("./src", import.meta.url)) },
+    alias: {
+      "~": fileURLToPath(new URL("./src", import.meta.url)),
+      // `~/server/db` imports `@devdogsuga/db/server`, whose first line is
+      // `import "server-only"` -- a guard `server-only`'s own package throws
+      // on unconditionally, relying on Next's webpack config to alias it to
+      // a no-op in a server-side bundle graph. The alias alone is not
+      // enough: Vitest externalizes `@devdogsuga/db` itself (a real
+      // node_modules package) to Node's native `import()` by default, and
+      // that native import resolves its OWN nested `import "server-only"`
+      // before Vite's resolver -- alias included -- ever sees it. The
+      // `server.deps.inline` entry below stops that externalization so
+      // `@devdogsuga/db`'s imports go through Vite's resolver, where this
+      // alias then applies.
+      "server-only": fileURLToPath(
+        new URL("./vitest/server-only-stub.ts", import.meta.url),
+      ),
+    },
   },
   test: {
     include: ["src/**/*.db-test.ts"],
     environment: "node",
+    server: { deps: { inline: [/@devdogsuga\/db/] } },
     // `passWithNoTests` stays even though schema.db-test.ts and
     // reconcileTerm.db-test.ts exist now: a future db-test-free stretch
     // should not break CI on an empty suite either.

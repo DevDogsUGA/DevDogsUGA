@@ -26,7 +26,7 @@
     "cf:build:production": "DEPLOY_ENV=production NEXT_PUBLIC_DEPLOY_ENV=production CLOUDFLARE_ENV=production with-env vinext build"
   },
   "dependencies": {
-    "@devdogsuga/drizzle": "workspace:*",
+    "@devdogsuga/db": "^0.1.0",
     "@devdogsuga/env": "^0.1.0",
     "@devdogsuga/open-graph": "workspace:*",
     "@devdogsuga/security-headers": "workspace:*",

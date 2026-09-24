@@ -1,4 +1,5 @@
-import { createServerClient } from "@devdogsuga/supabase";
+import { createServerClient } from "@devdogsuga/db/client";
+import type { Database } from "@devdogsuga/supabase";
 import { type NextRequest, NextResponse } from "next/server";
 import { env } from "~/env";
 import { APP_SCHEMA } from "./schema";
@@ -6,7 +7,7 @@ import { APP_SCHEMA } from "./schema";
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient({
+  const supabase = createServerClient<Database, typeof APP_SCHEMA>({
     url: env.NEXT_PUBLIC_SUPABASE_URL,
     key: env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     schema: APP_SCHEMA,

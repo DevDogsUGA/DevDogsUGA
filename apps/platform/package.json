@@ -27,7 +27,7 @@
     "@date-fns/tz": "^1.5.0",
     "@devdogsuga/events": "^0.1.0",
     "@devdogsuga/docs": "workspace:*",
-    "@devdogsuga/drizzle": "workspace:*",
+    "@devdogsuga/db": "^0.1.0",
     "@devdogsuga/email": "workspace:*",
     "@devdogsuga/env": "^0.1.0",
     "@devdogsuga/newsletter": "^0.1.0",
