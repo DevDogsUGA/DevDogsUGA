@@ -81,7 +81,7 @@ export async function reconcileFromConfig(
 ): Promise<ReconcileResult> {
   const issues = validateClubConfig(config);
   if (issues.length > 0) {
-    const reason = `config failed runtime validation (${issues.length} issue${issues.length === 1 ? "" : "s"})`;
+    const reason = `@devdogsuga/events failed runtime validation (${issues.length} issue${issues.length === 1 ? "" : "s"})`;
     await postAlert(
       "Config reconcile aborted: invalid config",
       issues.map((issue) => `[${issue.id}] ${issue.code}: ${issue.message}`),
@@ -94,7 +94,7 @@ export async function reconcileFromConfig(
   }
 
   if (config.meetings.length === 0) {
-    const reason = "events has zero meetings";
+    const reason = "@devdogsuga/events has zero meetings";
     await postAlert(
       "Config reconcile aborted: zero meetings",
       [
