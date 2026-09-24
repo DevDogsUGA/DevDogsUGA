@@ -158,6 +158,23 @@ jobs:
           # created and uploaded source maps against.
           SENTRY_RELEASE: ${{ github.sha }}
         run: pnpm exec devtools-ci deploy ${{ matrix.app }} --tier $DEPLOY_ENV
+      # Read-only smoke test against the Worker version just deployed:
+      # every listed public route answers 200, the one known protected route
+      # redirects an anonymous request, config-reconcile still succeeds
+      # (platform only — see deploy.yaml's migrate-time reconcile step for
+      # the OTHER, earlier place this is checked), and — only when
+      # SENTRY_AUTH_TOKEN is configured — this deploy's Sentry release is
+      # visible and each app's Crons monitors have a check-in on record.
+      # Fails the job (and so this deploy) on any non-skipped failure. No
+      # state-changing request of any kind.
+      - name: Smoke test ${{ matrix.app }} (${{ env.DEPLOY_ENV }})
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ matrix.app }}
+        run: >-
+          pnpm --filter @devdogsuga/deploy-checks run smoke-test
+          -- --tier $DEPLOY_ENV --app ${{ matrix.app }}
       # The `finally` half of the mkdtemp. A hosted runner is discarded whole,
       # so this is for the self-hosted case and for a job that fails between
       # composing the file and using it.
