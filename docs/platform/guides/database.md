@@ -60,7 +60,9 @@ Row-Level Security is the whole isolation boundary between app schemas — every
 
 ## Seeds
 
-`supabase/seed/*.sql` runs on `pnpm devtools db reset` and only there — `config.toml`'s `[db.seed]` block points at those files, and `db push` applies migrations without them. `01_roles.sql` owns the complete role and permission catalogue without assigning Root; `02_moderation.sql` creates three sign-in-able personas and one open report; and `03_officers.sql` creates officer profiles and assignments. [Quickstart](/docs/monorepo/guides/quickstart) lists the personas and their password.
+`supabase/seed/` is split into `production/` and `development/`. `pnpm devtools db reset` runs both — `config.toml`'s `[db.seed]` block lists `seed/production/*.sql` before `seed/development/*.sql` — and `db push` applies migrations without either. `production/01_roles.sql` owns the complete role and permission catalogue without assigning Root; `production/03_officers.sql` creates officer profiles and assignments; `development/02_moderation.sql` creates three sign-in-able personas and one open report. [Quickstart](/docs/monorepo/guides/quickstart) lists the personas and their password.
+
+A staging or production target never runs `db reset` — that erases everything else on it — so it only ever gets `seed/production/`, applied on its own by the Backstage devtools' `db seed production` command.
 
 Seeds are the right home for anything that must never exist in production, precisely because the reset they ride on is never pointed there. Migrations are the wrong home for the same reason.
 

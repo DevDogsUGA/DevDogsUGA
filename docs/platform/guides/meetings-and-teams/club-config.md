@@ -87,8 +87,9 @@ other cron route):
 
 ## Local development
 
-`supabase/seed/*.sql` only ever held roles, moderation fixtures and
-officers — meetings and workshops are not part of it, because they come from
+`supabase/seed/production/` and `supabase/seed/development/` only ever hold
+roles, officers, and moderation fixtures — meetings and workshops are not
+part of either, because they come from
 `@devdogsuga/club-config` via the reconcile, and the reconcile is a platform
 route rather than a devtools-side function (it needs the app's Drizzle
 client, relations and Sentry wiring, none of which belong in devtools). So on

@@ -87,7 +87,7 @@ Excluding costs nothing anyway: `src/supabase/drizzle` exists so the console can
 
 An app that seeds its own sign-in-able accounts inserts into `auth.users` from SQL: the local Docker stack is HTTP and cannot host OAuth. A naive row looks correct — it exists, `encrypted_password` holds a valid bcrypt hash, `email_confirmed_at` is set — and sign-in still fails with `"Database error querying schema"`, which names neither a column nor a user.
 
-GoTrue scans several `auth.users` columns into **non-nullable Go strings**, so a `NULL` is a scan error, not an empty value. Four have no database default, and `supabase/seed/02_moderation.sql` sets them to `''` explicitly:
+GoTrue scans several `auth.users` columns into **non-nullable Go strings**, so a `NULL` is a scan error, not an empty value. Four have no database default, and `supabase/seed/development/02_moderation.sql` sets them to `''` explicitly:
 
 - `confirmation_token`
 - `recovery_token`

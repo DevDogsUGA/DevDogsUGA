@@ -59,11 +59,11 @@ Nothing switches between the two by flag. `with-env` probes port 54321 on every 
 <details>
 <summary>What does <code>pnpm devtools db reset</code> seed?</summary>
 
-Three files under `supabase/seed/`, and only on a reset — seeds never run on `pnpm devtools db migrate`.
+Three files under `supabase/seed/`, split into `production/` and `development/`, and only on a reset — seeds never run on `pnpm devtools db migrate`. A local reset runs both directories; a staging or production target only ever gets `production/`, applied on its own by the Backstage devtools' `db seed production` command.
 
-**`01_roles.sql`** defines Member, Root, and the organization’s officer roles and permission grants. It never assigns Root, so `pnpm devtools grant-root --user <email>` remains an explicit act by someone who controls the database.
+**`production/01_roles.sql`** defines Member, Root, and the organization’s officer roles and permission grants. It never assigns Root, so `pnpm devtools grant-root --user <email>` remains an explicit act by someone who controls the database.
 
-**`02_moderation.sql`** creates three personas and one open report against a real `platform."profile"` row. All three sign in with the password `password`:
+**`development/02_moderation.sql`** creates three personas and one open report against a real `platform."profile"` row. All three sign in with the password `password`:
 
 - `member@devdogs.test`
 - `author@devdogs.test`
@@ -71,7 +71,7 @@ Three files under `supabase/seed/`, and only on a reset — seeds never run on `
 
 Nobody holds Root, deliberately. Take it explicitly on an instance you control with `pnpm devtools grant-root`; signing in as `member@devdogs.test` remains the way to see what an ordinary member sees.
 
-**`03_officers.sql`** creates the current officer profiles and assigns the organizational roles from `01_roles.sql`.
+**`production/03_officers.sql`** creates the current officer profiles and assigns the organizational roles from `01_roles.sql`.
 
 </details>
 

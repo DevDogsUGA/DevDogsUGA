@@ -1,9 +1,17 @@
 -- Personas, and a worked example of a report against real content.
 --
+-- Lives in `seed/development/`, not `seed/production/`: `config.toml`'s
+-- `[db.seed]` runs both directories on a LOCAL `supabase db reset`, which is
+-- pointed at a local stack or a contributor's own throwaway project. A
+-- staging or production target only ever gets `seed/production/`, applied by
+-- `devtools db seed production` (Backstage `packages/devtools`) rather than
+-- a reset — this file is not among the SQL that command runs, and must stay
+-- that way, because the personas below sign in with a password every reader
+-- of this file knows.
+--
 -- Without these a fresh instance has nothing to moderate: no member exists, so
 -- there is nothing to report, and the console's moderation queue opens empty and
--- unexplained. Seeds only ever run on `supabase db reset`, which is pointed at a
--- local stack or a contributor's own throwaway project, never production.
+-- unexplained.
 --
 -- ⚠️ THE CONTENT HERE IS REAL. An earlier version of this file seeded a
 -- `sandbox` schema of fake posts and comments -- an entire fixture app,

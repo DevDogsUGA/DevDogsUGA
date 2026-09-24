@@ -8,22 +8,27 @@
 -- `03_officers.sql` says what it holds in a way a timestamped migration
 -- cannot.
 --
--- Seeds run on `supabase db reset` only, never on `db push` -- config.toml
--- says so where it opens the development-only gate, and 02_moderation.sql
--- leans on it. The board's plan is to reset before pushing to production,
--- which is what makes this the delivery path rather than a local fixture.
+-- Lives in `seed/production/`, alongside `01_roles.sql` and not the
+-- development-only `seed/development/02_moderation.sql`: this is content
+-- every tier needs, so it is part of the set `devtools db seed production`
+-- (Backstage `packages/devtools`) applies directly to a staging or
+-- production target, without a `db reset` -- which, on a hosted database,
+-- would erase everything else on it. `supabase db reset` still runs it too,
+-- on a LOCAL reset, because `config.toml`'s `[db.seed]` lists
+-- `seed/production/*.sql` first and `seed/development/*.sql` second.
 --
--- A reset erases the database. That is fine now, before launch, and it stops
--- being fine the moment production carries attendance, awards or teams that
--- cannot be dropped. After that point an edit here reaches contributors and nothing
--- else, and the officers' own content is maintained where they already
--- maintain it -- `roleDescription` and links from /account, titles and role
--- assignments from the console -- with a one-off migration for anything that
--- has to be corrected centrally.
+-- A reset erases the database. That is fine on a fresh local stack, and it
+-- stops being fine the moment production carries attendance, awards or teams
+-- that cannot be dropped. That is exactly why `devtools db seed production`
+-- exists as its own command rather than "reset production": it writes these
+-- gap-fills without touching anything else. The officers' own content is
+-- maintained where they already maintain it -- `roleDescription` and links
+-- from /account, titles and role assignments from the console -- with a
+-- one-off migration for anything that has to be corrected centrally.
 --
--- Seeds run after migrations on a reset, so the columns below always exist by
--- the time this runs. Filename order puts it after 01_roles.sql, which is
--- what guarantees the Member and Root definitions are already there.
+-- Seeds run after migrations, so the columns below always exist by the time
+-- this runs. Filename order puts it after 01_roles.sql, which is what
+-- guarantees the Member and Root definitions are already there.
 --
 -- ============================================================
 -- Filling gaps, never overwriting
