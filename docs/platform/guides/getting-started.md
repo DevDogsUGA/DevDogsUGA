@@ -16,8 +16,8 @@ This is the path from "I want to enter" to an open pull request, for a member en
 
 Go to [`/account`](https://devdogsuga.org/account) → **Connected Accounts** → **GitHub**, and sign in with GitHub when prompted. Linking does two things at once: it adds you to the `DevDogsUGA` GitHub organization, and it is what every team action below checks for. Joining or creating a team without it fails with a pointer back to this same page.
 
-> [!NOTE]
-> GitHub organization membership requiring two-factor authentication is the intended state, not the current one — team creation, joining and invite acceptance do not check for it yet. Enable it anyway, under GitHub's own **Settings → Password and authentication**, before it becomes a hard gate.
+> [!IMPORTANT]
+> Turn on two-factor authentication for your GitHub account (GitHub → **Settings → Password and authentication**) before you do anything on a team. A team grants push access to the `DevDogsUGA` repository, so creating, joining, requesting to join, or accepting an invite is refused while GitHub reports 2FA as off, with a link to GitHub's setup guide.
 
 See [Identity](/docs/platform/guides/identity) for how linking works and what it is not — it does not replace UGA sign-in, and it is a different credential from the DevDogs GitHub App that administers the organization.
 
@@ -28,8 +28,7 @@ A team is a persistent group, not something scoped to one competition — see [T
 - **Start one.** Type a name and submit — you become its lead. This provisions the team's GitHub team, its `team/<slug>` branch off `main`, and the push grant narrowed to that branch, all before anything is shown to you.
 - **Join with a code.** A lead gives out a six-character join code (no `O`, `I`, `0`, or `1` — it is meant to be read aloud). Enter it on `/teams` or on the team's own page.
 - **Ask to join.** A team that is not handing out its code may still accept requests. Send one from the team's page, with an optional message; the lead answers it at [`/teams/requests`](https://devdogsuga.org/teams/requests).
-
-A join code or a request are the two ways onto a team today. Inviting someone directly by email or GitHub username is planned — the server side (`inviteToTeam`) already exists — but there is no form wired up to it yet.
+- **Accept an invite.** A lead can invite you from the team's page by your exact UGA email or GitHub username. You get an email, and the invite waits for you at [`/teams/requests`](https://devdogsuga.org/teams/requests). An invite only finds you once you have signed in and linked GitHub.
 
 You can be active on up to four teams at once (a team caps out at four members), so joining a couple and going with whichever answers first is a reasonable way to look for one.
 
@@ -60,7 +59,7 @@ You cannot push anywhere but your own team's branch: the ruleset that comes with
 
 Open a pull request from `team/<slug>` into `main` that links the competition's issue — `Closes #123`, `owner/repo#123`, or GitHub's own "Development" issue-linking sidebar all work. The platform picks up the link within moments over a webhook and lists your team as an entrant; see [Competitions](/docs/platform/guides/meetings-and-teams/competitions) for what happens after that (scoring is off-platform, and the merge itself is the only "who won" the platform records).
 
-CI runs lint, typecheck, tests and a build on every pull request with no credentials in scope, so a fork's worth of secrets is never something to worry about here — there simply are none in that job. Every pull request needs a review from `@DevDogsUGA/reviewers` before it can merge.
+CI runs lint, typecheck, tests and a build on every pull request. That job holds no credentials, so nothing in it depends on secrets. Every pull request needs a review from `@DevDogsUGA/reviewers` before it can merge.
 
 ## Read next
 
