@@ -93,9 +93,13 @@ catalog:
   # --- Observability ---
   # All @sentry/* JS packages ship in lockstep off the sentry-javascript
   # monorepo; pin every one used in this workspace to the same release
-  # (@devdogsuga/telemetry, apps/platform, apps/schedule-builder,
-  # apps/sandbox, and packages/devtools all depend on this family).
-  "@sentry/core": ^10.75.1
+  # (apps/platform and apps/schedule-builder depend on this family directly;
+  # apps/sandbox and packages/devtools pin their own @sentry/* literally
+  # rather than via catalog:; @devdogsuga/telemetry, which used to be the
+  # third catalog: consumer of @sentry/core here, now pins its own copy in
+  # Backstage — see minimumReleaseAgeExclude below, which still holds the
+  # whole family, including @sentry/core, since it is still installed
+  # transitively at this version).
   "@sentry/cloudflare": ^10.75.1
   "@sentry/nextjs": ^10.75.1
 
