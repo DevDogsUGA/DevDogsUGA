@@ -1,0 +1,11 @@
+{
+  // Typechecks `scripts/` only. This package's own `dist/index.{js,d.ts}` is
+  // hand-written by `docs-compiler`'s `emitDocsModule` (Backstage), not by
+  // `tsc` — there is nothing here for a `build` compilation step to emit.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["scripts", "vitest.config.ts"]
+}
