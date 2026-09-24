@@ -74,11 +74,14 @@ jobs:
         env:
           DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
           DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        # ⚠️ run ci — this step CREATES the file `with-env` would insist on
-        # reading, so routing it through the wrapper would fail on
-        # MissingEnvFileError for its own output.
+        # ⚠️ devtools-ci-bare — this step CREATES the file tier resolution
+        # would insist on reading, so routing it through `devtools-ci` would
+        # fail on MissingEnvFileError for its own output. See deploy.yaml's
+        # header for why `devtools-ci-bare` (not a bare `run ci` package
+        # script — that entry point doesn't ship once devtools is installed
+        # rather than a workspace package) exists at all.
         run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy write-env
+          pnpm run devtools-ci-bare deploy write-env
       - name: Build the workspace packages this app depends on
         run: pnpm -r --filter '${{ matrix.app }}^...' run build
       # `vinext build`, with the env schema ENFORCED.
@@ -134,10 +137,11 @@ jobs:
       # Written to a mkdtemp 0700 directory and removed below whatever happens.
       - name: Compose the Worker secrets file
         id: secrets
-        # `run ci:env` — the quiet CI entry point that loads the env file — because
-        # the whole job of this step is to read the values write-env composed.
+        # `pnpm exec devtools-ci` — the quiet CI entry point that loads the env
+        # file — because the whole job of this step is to read the values
+        # write-env composed.
         run: >-
-          pnpm --filter @devdogsuga/devtools run ci:env deploy secrets-file
+          pnpm exec devtools-ci deploy secrets-file
           --app ${{ matrix.app }}
       # One step for both Workers via devtools-ci deploy — the
       # ${DEPLOY_SECRETS_FILE:+--secrets-file …} hook plus, for both,
@@ -154,7 +158,7 @@ jobs:
           # associate with the release this job's `action-release` step
           # created and uploaded source maps against.
           SENTRY_RELEASE: ${{ github.sha }}
-        run: pnpm --filter @devdogsuga/devtools run ci:env deploy ${{ matrix.app }} --tier $DEPLOY_ENV
+        run: pnpm exec devtools-ci deploy ${{ matrix.app }} --tier $DEPLOY_ENV
       # The `finally` half of the mkdtemp. A hosted runner is discarded whole,
       # so this is for the self-hosted case and for a job that fails between
       # composing the file and using it.

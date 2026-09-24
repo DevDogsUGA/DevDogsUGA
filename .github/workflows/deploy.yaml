@@ -62,41 +62,64 @@ env:
 #
 # ── the two devtools entry points, and why every step names one ──────────────
 #
-# Every step below runs a `devtools-ci deploy <step>` command. They used to be
-# loose files in `scripts/` that reached into devtools' own sources through a
-# relative path; they are commands now, with the same help, refusals and named
-# errors as the rest of the CLI. Which entry point a step uses is NOT a style
-# choice:
+# Every step below runs a `devtools-ci deploy <step>` command against
+# `@devdogsuga/devtools`, now consumed as a published-style dependency (the
+# `.packs/` tarball bridge until the first real npm publish — see this repo's
+# root `pnpm-workspace.yaml` `overrides:` and Backstage's `CUTOVER.md`), not a
+# workspace package. Which entry point a step uses is still NOT a style
+# choice, but the shapes changed in the Backstage cutover (Wave 2, stage B):
 #
-#   run ci   `tsx src/ci.ts` — the CI bin; no env file, no wrapper.
-#   run cli  `node bin/devtools.mjs` — resolves the tier and loads its env first.
+#   pnpm run devtools-ci-bare   `scripts/devtools-ci-bare.mjs` — no tier
+#                                resolution, no env file. Interim stand-in
+#                                for the old bare `run ci` package script
+#                                (`node dist/ci.js`, unwrapped): the
+#                                published package ships only two `bin`s
+#                                (`devtools`, `devtools-ci`), and
+#                                `devtools-ci` unconditionally resolves a tier
+#                                and loads its env file before dispatching —
+#                                confirmed empirically against the installed
+#                                0.1.0 tarball, no flag skips it. That is a
+#                                gap in the published package, not a design
+#                                choice made here; see this script's own
+#                                header and the stage B report for the exact
+#                                write-up. Delete this workaround once
+#                                devtools ships a real no-env-resolution
+#                                entry point and route these steps through it
+#                                instead.
+#   pnpm exec devtools-ci       the installed `devtools-ci` bin — resolves the
+#                                tier and loads its env file FIRST
+#                                (`bin/devtools-ci.mjs` -> `src/launch-ci.ts`)
+#                                before dispatching into `ci.ts`.
 #
 # ⚠️ `deploy write-env` is the step that CREATES .env.$DEPLOY_ENV, so routing
-# it through `with-env` is a bootstrap cycle: it would die on
-# MissingEnvFileError for the file it was about to write. It uses `run ci`.
+# it through tier resolution is a bootstrap cycle: it would die on
+# MissingEnvFileError for the file it was about to write. It uses
+# `devtools-ci-bare`.
 #
-# `deploy orphans`, `deploy preflight` and `deploy require-token` use `run ci`
-# for a different reason — they run in jobs that hold one narrow credential and
-# compose no env file at all, so the wrapped entry point would exit reporting a
-# missing FILE rather than the missing TOKEN or the paused project, which is
-# the one thing those jobs exist to say. This is NOT about the two nested
-# cases: inside `with-env -c '…'` the wrapper would be value-neutral anyway,
-# because dotenvx leaves an already-set value alone. It is about the BARE runs
-# in the orphan-audit and prune jobs, and the same entry point is used in both
-# places so there is one answer rather than two.
+# `deploy orphans`, `deploy preflight`, `deploy require-token`,
+# `deploy require-planner`, `deploy plan` and `deploy migrate` use
+# `devtools-ci-bare` for a different reason — they run in jobs that hold one
+# narrow credential and compose no env file at all, so a tier-resolving entry
+# point would exit reporting a missing FILE rather than the missing TOKEN or
+# the paused project, which is the one thing those jobs exist to say. This is
+# NOT about the two nested cases: inside `with-env -c '…'` a resolving wrapper
+# would be value-neutral anyway, because dotenvx leaves an already-set value
+# alone. It is about the BARE runs in the orphan-audit and prune jobs, and the
+# same entry point is used in both places so there is one answer rather than
+# two.
 #
-# Everything downstream of write-env uses `run ci:env`: the quiet CI entry
-# point that resolves the tier and loads the env file write-env composed
-# (`bin/devtools-ci.mjs` -> `src/launch-ci.ts`) before `ci.ts` runs. Reading
-# those values is the entire point, while keeping clack banners away from
-# credential-bearing stdout.
+# Everything downstream of write-env uses `pnpm exec devtools-ci`: the quiet
+# CI entry point that resolves the tier and loads the env file write-env
+# composed before `ci.ts` runs. Reading those values is the entire point,
+# while keeping clack banners away from credential-bearing stdout.
 #
 # ⚠️ NOTHING here may run a deploy command through a wrapper that writes to
 # stdout. A deploy command's stdout is a channel something downstream may
 # PARSE — a GitHub workflow command recognised only on a line of its own, or a
 # credential its caller takes whole, either of which a decorative banner would
-# corrupt. pnpm's own `$ <command>` banner goes to stderr — measured — which is
-# why `pnpm --filter … run` is safe here; `intro()` does not, which is why
+# corrupt. Measured empirically for both entry points used here: `pnpm exec
+# <bin>` prints nothing of its own to stdout, and `pnpm run <script>`'s own
+# `$ <command>` banner goes to stderr — `intro()` does not, which is why
 # ci.ts suppresses it for this group.
 
 jobs:
@@ -139,7 +162,7 @@ jobs:
           PROJECT_REF: ${{ vars.PROJECT_REF }}
           PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
         run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy preflight
+          pnpm run devtools-ci-bare deploy preflight
 
   # Staging had no migrate job at all, which meant staging ran whatever schema
   # it happened to be left with. A migration that added a function some
@@ -171,7 +194,7 @@ jobs:
       - name: Apply migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: pnpm --filter @devdogsuga/devtools run ci deploy migrate
+        run: pnpm run devtools-ci-bare deploy migrate
 
   # The per-tier deploy recipe lives in the reusable `deploy-app.yaml`; this
   # caller is the gating in front of it. `secrets: inherit` is load-bearing —
@@ -218,7 +241,7 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy require-planner
+          pnpm run devtools-ci-bare deploy require-planner
       # ⚠️ `set -o pipefail` is load-bearing, not boilerplate. `supabase db
       # push` exits 1 on a connection failure, and a pipeline without it reports
       # the exit code of `tee` — so a dry run that never connected reads as a
@@ -233,7 +256,7 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy plan
+          pnpm run devtools-ci-bare deploy plan
           --label 'Migration plan — production (from `main`)'
 
   # ── production ──────────────────────────────────────────────────────────────
@@ -259,7 +282,7 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy plan
+          pnpm run devtools-ci-bare deploy plan
           --label 'Migration plan — production'
       # `supabase config` has exactly one subcommand — `push`. No pull, no diff,
       # no --dry-run. So config.toml is the highest blast radius (site_url and
@@ -310,12 +333,12 @@ jobs:
       - name: Apply migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: pnpm --filter @devdogsuga/devtools run ci deploy migrate
+        run: pnpm run devtools-ci-bare deploy migrate
 
   # The one mutation with no dry run gets its own approval step, which is what
   # `production-apply` is: the same Bitwarden project as `production`, split
   # across two GitHub environments, with required reviewers on this half. That
-  # split IS the gate — see packages/devtools/src/gh/environments.ts.
+  # split IS the gate — see Backstage's packages/devtools/src/gh/environments.ts.
   #
   # Skipped when config.toml did not change, so the approval is asked for when
   # there is something to approve rather than on every promotion.
@@ -352,7 +375,7 @@ jobs:
         # run ci for the same bootstrap reason as the other write-env
         # steps: this composes .env.production, which nothing has written yet.
         run: >-
-          pnpm --filter @devdogsuga/devtools run ci deploy write-env
+          pnpm run devtools-ci-bare deploy write-env
           --source supabase
       # SUPABASE_ACCESS_TOKEN is passed here rather than composed: it belongs to
       # the operator manifest, not to supabase's, and `with-env` leaves a value
@@ -408,8 +431,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          pnpm --filter @devdogsuga/devtools run ci deploy require-token
-          pnpm --filter @devdogsuga/devtools run ci deploy orphans
+          pnpm run devtools-ci-bare deploy require-token
+          pnpm run devtools-ci-bare deploy orphans
 
   # Deleting them is a separate, deliberate, human-triggered run — never
   # chained to a deploy. Each deletion PUBLISHES A NEW VERSION of the code
@@ -441,5 +464,5 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          pnpm --filter @devdogsuga/devtools run ci deploy require-token
-          pnpm --filter @devdogsuga/devtools run ci deploy orphans --prune
+          pnpm run devtools-ci-bare deploy require-token
+          pnpm run devtools-ci-bare deploy orphans --prune

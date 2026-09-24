@@ -139,7 +139,8 @@ jobs:
       # enabled and `.turbo` was never persisted across CI runs, so turbo was
       # already rebuilding all of it from nothing on every run; this only
       # makes that cost explicit. `--if-present` skips the packages with no
-      # `build` script (`@devdogsuga/devtools`) instead of failing on them.
+      # `build` script (`@devdogsuga/repo-checks`, test-only, nothing else in
+      # the workspace imports it) instead of failing on them.
       - name: Lint + typecheck + test (affected)
         run: |
           pnpm -r --if-present --filter './packages/**' --filter './docs' run build
@@ -238,6 +239,15 @@ jobs:
       # another's. This is the only thing that checks it.
       - name: Row-Level Security
         run: pnpm --filter @devdogsuga/supabase run test:rls
+      # Black-box devtools/devtools-ci process contracts (cron contract
+      # conformance, deploy-cli stdout purity, real email-template
+      # generation) — the "live" lane devtools' own MOVED-TESTS.md left for
+      # stage B to re-home. Needs the `.env`/`.env.generated` this job
+      # already composed above (every `devtools` command resolves a session
+      # tier before dispatch), same reason the RLS suite lives here rather
+      # than in the default `pnpm test` lane.
+      - name: devtools / devtools-ci process contracts
+        run: pnpm --filter @devdogsuga/repo-checks run test:live
       # 124 tests, including the privilege-surface guards in
       # resolveCredential.db-test.ts. Those assert the shape of the GRANTS, which
       # nothing else can see: a function reachable by every role in the cluster
