@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Badge from "~/ui/badge";
 import PageShell from "~/components/PageShell";
+import ReflectionSettingsCard from "~/components/ReflectionSettingsCard";
 import { formatEventSpan } from "~/lib/eventTime";
 import { meetingTitle } from "~/lib/meetingTitle";
 import { canUserManageAttendance } from "~/server/actions/permissions";
 import { getOfficerAttendanceMeetings } from "~/server/attendance/getOfficerMeeting";
 import { requirePermission } from "~/server/auth/require";
+import { getReflectionSettings } from "~/server/reflections/settings";
 
 export const metadata: Metadata = {
   title: "Attendance Displays | DevDogs",
@@ -15,7 +17,10 @@ export const metadata: Metadata = {
 
 export default async function AttendanceDisplaysPage() {
   await requirePermission(canUserManageAttendance);
-  const meetings = await getOfficerAttendanceMeetings();
+  const [meetings, reflectionSettings] = await Promise.all([
+    getOfficerAttendanceMeetings(),
+    getReflectionSettings(),
+  ]);
   const now = new Date();
 
   return (
@@ -24,6 +29,7 @@ export default async function AttendanceDisplaysPage() {
       title="Attendance displays"
       description="Open the live QR and rotating numeric code for any meeting. Displays remain available for past and future meetings."
     >
+      <ReflectionSettingsCard settings={reflectionSettings} />
       <div className="overflow-hidden rounded-xl border-2 border-mauve-800 bg-mauve-950 shadow-lg shadow-black/30">
         {meetings.length === 0 ? (
           <p className="p-6 text-sm text-mauve-300">No meetings found.</p>
