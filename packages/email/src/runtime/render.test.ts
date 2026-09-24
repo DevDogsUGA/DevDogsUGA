@@ -13,7 +13,6 @@ import { render, templateNames } from "./index.js";
 const invite = {
   inviteeName: "Sam Rivera",
   teamName: "Bulldog Builders",
-  competitionName: "Spring Sprint",
   leadName: "Alex Chen",
   acceptUrl: "https://devdogsuga.org/teams/abc/invite",
 };
@@ -22,7 +21,7 @@ describe("render", () => {
   it("produces subject, html and text", () => {
     const email = render("TeamInvite", invite);
 
-    expect(email.subject).toBe("Bulldog Builders invited you to compete");
+    expect(email.subject).toBe("Bulldog Builders invited you to join");
     expect(email.html).toContain("Sam Rivera");
     expect(email.text).toContain("Sam Rivera");
   });
@@ -34,6 +33,7 @@ describe("render", () => {
       const email = render(name, {
         ...invite,
         applicantName: "Sam Rivera",
+        competitionName: "Spring Sprint",
         reviewUrl: "https://devdogsuga.org/teams/abc/requests",
       } as never);
       expect(email.text.trim().length).toBeGreaterThan(40);
@@ -48,6 +48,7 @@ describe("render", () => {
       const email = render(name, {
         ...invite,
         applicantName: "Sam Rivera",
+        competitionName: "Spring Sprint",
         reviewUrl: "https://devdogsuga.org/teams/abc/requests",
       } as never);
 

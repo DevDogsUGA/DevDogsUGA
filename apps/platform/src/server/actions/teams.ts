@@ -1,10 +1,17 @@
 "use server";
 
 import { and, count, eq, isNull, ne } from "drizzle-orm";
+import { env } from "~/env";
 import { postAlert } from "~/server/alerts";
 import { expectSession } from "~/server/auth";
 import { db } from "~/server/db";
-import { teamMembers, teamMembershipRequests, teams } from "~/server/db/schema";
+import {
+  profiles,
+  teamMembers,
+  teamMembershipRequests,
+  teams,
+} from "~/server/db/schema";
+import { sendTemplate } from "~/server/email/send";
 import {
   TeamActionError,
   isUniqueViolation,
@@ -15,6 +22,7 @@ import {
   disbandTeam,
   provisionTeam,
   removeMember,
+  userIdForGithubLogin,
 } from "~/server/github/teamSync";
 import {
   insertMembership,
@@ -23,7 +31,9 @@ import {
   requireCanJoin,
   type Tx,
 } from "~/server/teams/requireCanJoin";
+import { requireTwoFactor } from "~/server/teams/requireTwoFactor";
 import { underConcurrentTeamCap } from "~/server/teams/limits";
+import { usersInAuth } from "~/supabase/drizzle/schema";
 
 /**
  * Team membership actions.
@@ -135,6 +145,10 @@ export interface CreatedTeam {
 
 async function createTeamImpl(name: string): Promise<CreatedTeam> {
   const userId = await expectSession();
+  // The creator becomes the lead the moment this returns, which is push
+  // access to the org repo -- see `requireTwoFactor`'s doc on why this is
+  // checked before anything else, not deferred to the GitHub grant below.
+  await requireTwoFactor(userId);
   const slug = slugify(name);
 
   return db.transaction(async (tx) => {
@@ -219,6 +233,7 @@ async function createTeamImpl(name: string): Promise<CreatedTeam> {
 
 async function joinTeamImpl(teamId: string, joinCode: string): Promise<void> {
   const userId = await expectSession();
+  await requireTwoFactor(userId);
 
   await db.transaction(async (tx) => {
     const { slug } = await requireCanJoin(tx, { teamId, userId });
@@ -257,6 +272,7 @@ async function requestToJoinImpl(
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
   const message = rawMessage?.trim() || undefined;
   const userId = await expectSession();
+  await requireTwoFactor(userId);
 
   return db.transaction(async (tx) => {
     const [team] = await tx
@@ -286,13 +302,56 @@ async function requestToJoinImpl(
   });
 }
 
+/**
+ * The account an exact email or GitHub username names, or null.
+ *
+ * There is no member directory to search: a lead types the one thing they
+ * already know about the person they want -- the email they use, or the
+ * GitHub username on their profile -- and this either matches it exactly or
+ * it does not. An `@` decides which of the two it is; UGA emails and GitHub
+ * logins never collide on that character.
+ *
+ * Deliberately two different tables. `usersInAuth.email` is the account's
+ * sign-in address; a GitHub username only ever appears on the linked
+ * identity's `identity_data` (`githubLoginFor`'s counterpart,
+ * `userIdForGithubLogin`, in `teamSync.ts`), because this platform does not
+ * duplicate it anywhere of its own.
+ */
+async function resolveInvitee(identifier: string): Promise<string | null> {
+  const trimmed = identifier.trim();
+  if (trimmed.length === 0) return null;
+
+  if (trimmed.includes("@")) {
+    const [row] = await db
+      .select({ id: usersInAuth.id })
+      .from(usersInAuth)
+      .where(eq(usersInAuth.email, trimmed.toLowerCase()))
+      .limit(1);
+    return row?.id ?? null;
+  }
+
+  return userIdForGithubLogin(trimmed);
+}
+
 async function inviteToTeamImpl(
   teamId: string,
-  inviteeId: string,
+  identifier: string,
 ): Promise<string> {
   const callerId = await expectSession();
 
-  return db.transaction(async (tx) => {
+  // Resolved before the transaction: a database read with no lock to hold,
+  // and the "no match" refusal below should not wait on `requireLead`
+  // failing first -- a lead who mistypes the identifier learns that
+  // regardless of whether they lead this team.
+  const inviteeId = await resolveInvitee(identifier);
+  if (inviteeId === null) {
+    throw new TeamActionError(
+      "invitee_not_found",
+      "Nobody on the platform matches that email or GitHub username exactly. Have them sign up and link GitHub, then invite them again.",
+    );
+  }
+
+  const requestId = await db.transaction(async (tx) => {
     await requireLead(tx, teamId, callerId);
 
     if (await isActiveMember(tx, teamId, inviteeId)) {
@@ -305,6 +364,69 @@ async function inviteToTeamImpl(
       direction: "invite",
       createdBy: callerId,
     });
+  });
+
+  // Best-effort: the invitation is real the moment the row above committed,
+  // and `/teams/requests` shows it there regardless. The email is a
+  // notification of that fact, not a second source of truth, so a failure
+  // here (no EMAIL binding locally, a bounce, GitHub's app down) is logged
+  // and swallowed rather than unwinding an invite that already exists.
+  await notifyInvitee(teamId, inviteeId, callerId).catch((error: unknown) => {
+    console.error("[teams] failed to send teamInvite email:", error);
+  });
+
+  return requestId;
+}
+
+/**
+ * Sends the `teamInvite` email. Reads outside any transaction -- by the time
+ * this runs the invite already committed, so there is nothing left to hold a
+ * lock over.
+ *
+ * Silently does nothing for an invitee with no discoverable email: this can
+ * only happen for a GitHub-only login whose Supabase account genuinely has
+ * none on file, which `resolveInvitee`'s email branch never would have
+ * matched anyway. `/teams/requests` is still where the invitation lives
+ * either way -- see this file's header on email being the notification, not
+ * the record.
+ */
+async function notifyInvitee(
+  teamId: string,
+  inviteeId: string,
+  leadId: string,
+): Promise<void> {
+  const [invitee, lead, team] = await Promise.all([
+    db
+      .select({
+        email: usersInAuth.email,
+        preferredName: profiles.preferredName,
+      })
+      .from(usersInAuth)
+      .leftJoin(profiles, eq(profiles.userId, usersInAuth.id))
+      .where(eq(usersInAuth.id, inviteeId))
+      .limit(1)
+      .then((rows) => rows[0]),
+    db
+      .select({ preferredName: profiles.preferredName })
+      .from(profiles)
+      .where(eq(profiles.userId, leadId))
+      .limit(1)
+      .then((rows) => rows[0]),
+    db
+      .select({ name: teams.name })
+      .from(teams)
+      .where(eq(teams.id, teamId))
+      .limit(1)
+      .then((rows) => rows[0]),
+  ]);
+
+  if (!invitee?.email || !team) return;
+
+  await sendTemplate(invitee.email, "TeamInvite", {
+    inviteeName: invitee.preferredName ?? "there",
+    teamName: team.name,
+    leadName: lead?.preferredName ?? "A team lead",
+    acceptUrl: new URL("/teams/requests", env.BASE_URL).toString(),
   });
 }
 
@@ -392,6 +514,12 @@ async function respondToMembershipImpl(
         .where(eq(teamMembershipRequests.id, requestId));
       return;
     }
+
+    // The person GAINING access here is `request.userId`, not the caller --
+    // for an invite direction those are the same account (checked above),
+    // but for a join request the caller is the lead approving somebody
+    // else's push access, and it is that somebody else's 2FA that matters.
+    await requireTwoFactor(request.userId);
 
     // Re-validated here rather than trusted from creation time: the cap, the
     // roster and the GitHub link can all have changed since this request was
@@ -648,11 +776,16 @@ export async function requestToJoin(
   return attempt(() => requestToJoinImpl(teamId, message));
 }
 
+/**
+ * `identifier` is an exact email or GitHub username, not an account id --
+ * there is no member directory or search to pick one from. See
+ * `resolveInvitee`.
+ */
 export async function inviteToTeam(
   teamId: string,
-  inviteeId: string,
+  identifier: string,
 ): Promise<TeamActionOutcome<string>> {
-  return attempt(() => inviteToTeamImpl(teamId, inviteeId));
+  return attempt(() => inviteToTeamImpl(teamId, identifier));
 }
 
 export async function respondToMembership(

@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import InviteForm from "~/components/teams/InviteForm";
 import JoinByCodeForm from "~/components/teams/JoinByCodeForm";
 import RosterActions from "~/components/teams/RosterActions";
 import PageShell from "~/components/PageShell";
 import { formatEventDateTime, formatRelative } from "~/lib/eventTime";
 import {
   disbandTeamAction,
+  inviteToTeam,
   joinTeam,
   leaveTeam,
   requestToJoin,
@@ -212,19 +214,24 @@ export default async function TeamPage({
       )}
 
       {isMember ? (
-        <RosterActions
-          teamId={team.id}
-          isLead={viewer.role === "lead"}
-          otherMembers={team.members
-            .filter((member) => member.userId !== userId)
-            .map((member) => ({
-              userId: member.userId,
-              label: member.preferredName ?? "Member",
-            }))}
-          leaveTeam={leaveTeam}
-          transferLead={transferLead}
-          disbandTeam={disbandTeamAction}
-        />
+        <>
+          {isLead && (
+            <InviteForm teamId={team.id} inviteToTeam={inviteToTeam} />
+          )}
+          <RosterActions
+            teamId={team.id}
+            isLead={viewer.role === "lead"}
+            otherMembers={team.members
+              .filter((member) => member.userId !== userId)
+              .map((member) => ({
+                userId: member.userId,
+                label: member.preferredName ?? "Member",
+              }))}
+            leaveTeam={leaveTeam}
+            transferLead={transferLead}
+            disbandTeam={disbandTeamAction}
+          />
+        </>
       ) : (
         <JoinPanel team={team} />
       )}

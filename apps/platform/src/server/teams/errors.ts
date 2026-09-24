@@ -36,6 +36,8 @@ export type TeamActionCode =
   | "request_not_actionable"
   /** Another team already uses that name. */
   | "name_taken"
+  /** No account matches the exact email or GitHub username an invite named. */
+  | "invitee_not_found"
   /** The team or request named does not exist. */
   | "not_found";
 
