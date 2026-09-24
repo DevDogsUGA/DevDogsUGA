@@ -19,6 +19,7 @@
     "@bitwarden/cli": "2026.7.0",
     "@bitwarden/sdk-napi": "1.0.0",
     "@clack/prompts": "catalog:",
+    "@devdogsuga/db": "^0.1.0",
     "@devdogsuga/docs": "workspace:*",
     "@devdogsuga/email": "workspace:*",
     "@devdogsuga/env": "^0.1.0",

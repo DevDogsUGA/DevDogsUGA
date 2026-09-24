@@ -5,8 +5,8 @@
  * every invocation goes through `pnpm exec supabase`. The cwd is always
  * PROJECT_ROOT, where `supabase/config.toml` lives.
  */
+import { generateDatabaseTypes } from "@devdogsuga/db/typegen";
 import { execFile, spawn as nodeSpawn } from "node:child_process";
-import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { PROJECT_ROOT } from "../environment.js";
@@ -88,10 +88,6 @@ export const supabase = (...args: string[]) =>
 export const supabaseCapture = (...args: string[]) =>
   capture(["exec", "supabase", ...args]);
 
-/** `pnpm exec prettier --write <repo-relative path>`. */
-export const prettierWrite = (path: string) =>
-  run(["exec", "prettier", "--write", path]);
-
 /** Build the supabase package (compiles database.types.ts into dist/). */
 export const buildSupabase = () =>
   run(["--filter", "@devdogsuga/supabase", "build"]);
@@ -99,21 +95,24 @@ export const buildSupabase = () =>
 /**
  * Generate and write Database types from the session's database.
  *
- * Always `--db-url` — the session's own connection string, never the
- * supabase CLI's `--local`/`--linked` modes, whose defaults can disagree
- * with what this process entered. See `db/connection.ts`'s header.
+ * Delegates to `@devdogsuga/db/typegen`'s `generateDatabaseTypes`, which runs
+ * `pnpm exec supabase gen types --db-url <dbUrl>` (always `--db-url` — the
+ * session's own connection string, never the supabase CLI's
+ * `--local`/`--linked` modes, whose defaults can disagree with what this
+ * process entered; see `db/connection.ts`'s header) and formats the result
+ * with `pnpm exec prettier --write`, both run against `PROJECT_ROOT` so the
+ * workspace-pinned CLI versions are what actually run.
  */
 export async function generateTypes(dbUrl: string): Promise<number> {
-  let out: string;
   try {
-    out = await supabaseCapture("gen", "types", "--db-url", dbUrl);
+    await generateDatabaseTypes({
+      dbUrl,
+      outFile: TYPES_FILE,
+      cwd: PROJECT_ROOT,
+    });
   } catch {
     return 1;
   }
-  await writeFile(TYPES_FILE, out);
-  const relPath = join("packages", "supabase", "src", "database.types.ts");
-  const fmt = await prettierWrite(relPath);
-  if (fmt !== 0) return fmt;
   return buildSupabase();
 }
 
