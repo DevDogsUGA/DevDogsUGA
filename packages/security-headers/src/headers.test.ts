@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSecurityHeaders } from "./headers.js";
+import { applySecurityHeaders, buildSecurityHeaders } from "./headers.js";
 
 const base = {
   supabaseUrl: "https://api.devdogsuga.org",
@@ -71,5 +71,35 @@ describe("buildSecurityHeaders", () => {
     const b = buildSecurityHeaders({ ...base, environment: "production" });
     expect(a).not.toBe(b);
     expect(a).toEqual(b);
+  });
+});
+
+describe("applySecurityHeaders", () => {
+  it("sets every built header onto the given Headers instance and returns it", () => {
+    const headers = new Headers();
+    const result = applySecurityHeaders(headers, {
+      ...base,
+      environment: "production",
+    });
+
+    expect(result).toBe(headers);
+    expect(headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(headers.get("X-Frame-Options")).toBe("DENY");
+    expect(headers.get("Strict-Transport-Security")).toBe(
+      "max-age=31536000; includeSubDomains",
+    );
+    expect(headers.get("Content-Security-Policy-Report-Only")).toBeTruthy();
+  });
+
+  it("overwrites a pre-existing same-name header rather than duplicating it", () => {
+    const headers = new Headers({ "X-Frame-Options": "SAMEORIGIN" });
+    applySecurityHeaders(headers, { ...base, environment: "development" });
+    expect(headers.get("X-Frame-Options")).toBe("DENY");
+  });
+
+  it("leaves unrelated headers already on the instance untouched", () => {
+    const headers = new Headers({ "Set-Cookie": "sb-session=abc" });
+    applySecurityHeaders(headers, { ...base, environment: "development" });
+    expect(headers.get("Set-Cookie")).toBe("sb-session=abc");
   });
 });

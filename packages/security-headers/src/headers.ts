@@ -98,4 +98,53 @@ export function buildSecurityHeaders(
   return headers;
 }
 
+/**
+ * Sets every header from {@link buildSecurityHeaders} directly onto a `Headers`
+ * instance (mutates in place, returns it for chaining) -- the shape
+ * `NextResponse.headers` (and the Fetch API's `Headers`) exposes.
+ *
+ * Callers wire this into `middleware.ts`, the mechanism this workspace
+ * settled on as authoritative (see the package README's "Why middleware, not
+ * just `headers()`" section): `next.config.ts` `headers()` is applied at a
+ * response-composition stage that a to-be-filed vinext issue drops for the
+ * app's `/` route specifically (reproduced against a real `vinext build` +
+ * `wrangler dev` serve, every other route unaffected) -- almost certainly
+ * because `/` is the one route with no `Set-Cookie` on its response, which
+ * routes it through vinext's CDN/cache-adapter response-stage reconciliation
+ * instead of the plain per-request merge every cookied route gets.
+ * Middleware-set headers go through a separate, earlier merge
+ * (`applyMiddlewareContextToResponse` in vinext's `app-rsc-handler.js`) that
+ * is NOT subject to that reconciliation, so they survive on `/` too.
+ *
+ * `next.config.ts` `headers()` stays wired as a second, harmless layer: vinext
+ * explicitly skips re-setting a header middleware already set (see
+ * `applyConfigHeadersToResponse`'s `middlewareHeaders?.has(name)` check in
+ * `config-headers.js`), so there is no duplication or conflict -- it only
+ * fills in routes middleware's matcher excludes (`_next/static`,
+ * `_next/image`, favicons, image extensions).
+ *
+ * ```ts
+ * import { applySecurityHeaders } from "@devdogsuga/security-headers";
+ *
+ * export async function middleware(request: NextRequest) {
+ *   const response = await updateSession(request);
+ *   applySecurityHeaders(response.headers, {
+ *     environment: env.DEPLOY_ENV,
+ *     supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
+ *     sentryDsn: env.NEXT_PUBLIC_SENTRY_DSN,
+ *   });
+ *   return response;
+ * }
+ * ```
+ */
+export function applySecurityHeaders(
+  headers: Headers,
+  input: SecurityHeadersInput,
+): Headers {
+  for (const { key, value } of buildSecurityHeaders(input)) {
+    headers.set(key, value);
+  }
+  return headers;
+}
+
 export { buildContentSecurityPolicy, type CspInput } from "./csp.js";

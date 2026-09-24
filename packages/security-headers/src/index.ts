@@ -1,5 +1,6 @@
 export {
   buildSecurityHeaders,
+  applySecurityHeaders,
   type SecurityHeadersInput,
   type HeaderEntry,
   type Environment,
