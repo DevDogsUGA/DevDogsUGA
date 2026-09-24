@@ -24,7 +24,7 @@
     "@devdogsuga/env": "^0.1.0",
     "@devdogsuga/newsletter": "^0.1.0",
     "@devdogsuga/brand": "^0.1.0",
-    "@devdogsuga/open-graph": "^0.1.0",
+    "@devdogsuga/open-graph": "workspace:*",
     "@devdogsuga/telemetry": "^0.1.0",
     "@resvg/resvg-js": "^2.6.2",
     "@sentry/node": "^10.75.1",

@@ -32,7 +32,7 @@
     "@devdogsuga/env": "^0.1.0",
     "@devdogsuga/newsletter": "^0.1.0",
     "@devdogsuga/brand": "^0.1.0",
-    "@devdogsuga/open-graph": "^0.1.0",
+    "@devdogsuga/open-graph": "workspace:*",
     "@devdogsuga/security-headers": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
     "@devdogsuga/telemetry": "^0.1.0",
