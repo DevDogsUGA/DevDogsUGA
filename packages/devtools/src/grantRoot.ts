@@ -84,7 +84,7 @@ export async function grantRoot(
     throw new Error(`Could not read platform."roles": ${roleErr.message}`);
   if (!role) {
     throw new Error(
-      "The Root role definition is missing. It comes from supabase/seed/01_roles.sql, " +
+      "The Root role definition is missing. It comes from supabase/seed/production/01_roles.sql, " +
         "which runs on `pnpm devtools db reset` — seeds do not run on `db migrate`.",
     );
   }

@@ -48,14 +48,14 @@ export interface Instance {
   secretKey: string;
 }
 
-/** The seeded personas, from `supabase/seed/02_moderation.sql`. */
+/** The seeded personas, from `supabase/seed/development/02_moderation.sql`. */
 export const PERSONAS = {
   member: "member@devdogs.test",
   author: "author@devdogs.test",
   moderator: "moderator@devdogs.test",
 } as const;
 
-/** The built-in Root role, from `supabase/seed/01_roles.sql`. */
+/** The built-in Root role, from `supabase/seed/production/01_roles.sql`. */
 export const ROOT_ROLE_ID = "00000000-0000-0000-0000-000000000002";
 
 export const PERSONA_PASSWORD = "password";

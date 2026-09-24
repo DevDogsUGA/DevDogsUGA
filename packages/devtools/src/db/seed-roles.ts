@@ -9,7 +9,9 @@ import { join } from "node:path";
 import { PROJECT_ROOT } from "../environment.js";
 import { supabase } from "./run.js";
 
-const SEED_FILES = [join(PROJECT_ROOT, "supabase", "seed", "01_roles.sql")];
+const SEED_FILES = [
+  join(PROJECT_ROOT, "supabase", "seed", "production", "01_roles.sql"),
+];
 
 /**
  * Always `--db-url` — the session's own connection string, never the
