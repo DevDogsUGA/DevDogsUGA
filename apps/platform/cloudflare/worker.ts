@@ -43,9 +43,8 @@ import type { env as platformEnv } from "~/env";
  * SHA, minted fresh by CI every run rather than a value Bitwarden holds, so
  * it does not fit `EnvScope`'s "environment"/"default"/"developer" options.
  * `deploy.yaml`'s `Deploy` step passes it to `wrangler deploy` as a `--var`
- * (see `devtools`' `ci.ts`), the same mechanism the sandbox app uses for
- * `PLATFORM_REST_URL`, so it lands here as an ordinary (optional -- absent
- * outside CI) binding rather than a secret.
+ * (see `devtools`' `ci.ts`), so it lands here as an ordinary (optional --
+ * absent outside CI) binding rather than a secret.
  *
  * `@sentry/cloudflare`'s `withSentry` infers ONE `Env` type parameter shared
  * by both the options callback below and the `fetch`/`scheduled` handler

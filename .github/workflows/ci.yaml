@@ -359,12 +359,6 @@ jobs:
 
 # Removed from this workflow, and not yet replaced:
 #
-#   * Turbo remote cache (TURBO_TOKEN / TURBO_TEAM). A token here is readable by
-#     any PR author, and a PR that can WRITE the cache a deploy later READS is a
-#     path from an unreviewed branch into a production artifact. If remote
-#     caching returns, it needs signature verification or disjoint scopes for
-#     trusted and untrusted contexts. These secrets were never set either.
-#
 #   * The `author_association` gates. Every contributor will be a COLLABORATOR,
 #     so the condition passed by construction — protection in appearance only.
 #     With no secrets in this file there is nothing left for it to protect.
