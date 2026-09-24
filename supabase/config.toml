@@ -101,6 +101,20 @@ additional_redirect_urls = [
 ]
 enable_manual_linking = true
 
+# Password sign-up is off: OAuth (Discord/GitHub/Google/LinkedIn) is the only
+# supported way to create an account. Deliberately NOT `[auth.email]
+# enable_signup = false` — gotrue has one flag per provider
+# (`EmailProviderConfiguration.Enabled`), and it gates password SIGN-IN too
+# (`internal/api/token.go`'s password grant checks the same flag
+# `internal/api/signup.go` does), which would lock every seeded persona in
+# supabase/seed/development/02_moderation.sql out of the only sign-in path
+# the local Docker stack has (plain HTTP, so it cannot host OAuth). Password
+# signup is refused instead by `require_uga_signup_email` (the
+# before-user-created hook below), extended to reject the `email` provider
+# outright — see 20260924070955_30_auth_disable_email_signup.sql for why
+# that is the one boundary that can tell "POSTed /auth/v1/signup with a
+# password" apart from "an OAuth provider vouched for this identity" without
+# also touching sign-in.
 [auth.hook.before_user_created]
 enabled = true
 uri = "pg-functions://postgres/platform/require_uga_signup_email"
