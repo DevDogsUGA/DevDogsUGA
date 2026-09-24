@@ -77,11 +77,10 @@ jobs:
         # ⚠️ devtools-ci-bare — this step CREATES the file tier resolution
         # would insist on reading, so routing it through `devtools-ci` would
         # fail on MissingEnvFileError for its own output. See deploy.yaml's
-        # header for why `devtools-ci-bare` (not a bare `run ci` package
-        # script — that entry point doesn't ship once devtools is installed
-        # rather than a workspace package) exists at all.
+        # header for the full explanation of `devtools-ci` vs
+        # `devtools-ci-bare` (`@devdogsuga/devtools`'s own third bin).
         run: >-
-          pnpm run devtools-ci-bare deploy write-env
+          pnpm exec devtools-ci-bare deploy write-env
       - name: Build the workspace packages this app depends on
         run: pnpm -r --filter '${{ matrix.app }}^...' run build
       # `vinext build`, with the env schema ENFORCED.

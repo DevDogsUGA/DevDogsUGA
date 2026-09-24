@@ -1297,7 +1297,7 @@ packages:
       postgres: ^3.4.9
 
   '@devdogsuga/devtools@file:../Backstage/.packs/devdogsuga-devtools.tgz':
-    resolution: {integrity: sha512-D/5W3XJiB3rtb6tssOJfTuzToG41uJtwo9bt4evnVMS9+LhxV2FxDdjD0drIADidHATxO1Jti/wVRCuLpEjNog==, tarball: file:../Backstage/.packs/devdogsuga-devtools.tgz}
+    resolution: {integrity: sha512-e6CaZtd4eD1KAo8yC6r6ybC4GwIl+LNx7ym2UFGkjAHMlGWvf92iw6NXA3CAsfuvXKWoQK0vxesMRR9D04arfA==, tarball: file:../Backstage/.packs/devdogsuga-devtools.tgz}
     version: 0.1.0
     hasBin: true
     peerDependencies:

@@ -26,9 +26,36 @@
  * one caller is a `*.test.ts` file).
  */
 import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { PROJECT_ROOT } from "./project-root.js";
+
+const require = createRequire(import.meta.url);
+
+/**
+ * devtools' own operator manifest (`BWS_ACCESS_TOKEN`, `CLOUDFLARE_API_TOKEN`
+ * et al.) — the same gap Backstage's `env/discovery.ts` closed with its own
+ * `ownManifestPath()`, mirrored here: devtools is not one of THIS repo's
+ * workspace packages any more (it's an installed dependency via the
+ * `.packs/` tarball bridge — see this repo's root `pnpm-workspace.yaml`
+ * `overrides:`), so the scan below would never see it, and every consumer of
+ * this registry (this file's own completeness assertions, plus anything else
+ * that reads `applyOnlyKeys()`/`neverStoreKeys()` from it) would silently
+ * miss those keys. `@devdogsuga/devtools` ships its `env.ts` at the package
+ * root (`"files": ["bin", "dist", "env.ts"]`) specifically so this resolves.
+ */
+function ownDevtoolsManifestPath(): string | undefined {
+  try {
+    const packageJson = require.resolve("@devdogsuga/devtools/package.json");
+    const manifest = join(dirname(packageJson), "env.ts");
+    return existsSync(manifest) ? manifest : undefined;
+  } catch {
+    // Not installed (e.g. a partial workspace checkout) — same
+    // "not a manifest" treatment as any other absent env.ts.
+    return undefined;
+  }
+}
 
 function manifestIn(dir: string): string | undefined {
   const nested = join(dir, "src", "env.ts");
@@ -65,6 +92,8 @@ function manifestPaths(): string[] {
   }
   const supabaseManifest = manifestIn(join(PROJECT_ROOT, "supabase"));
   if (supabaseManifest) paths.push(supabaseManifest);
+  const devtoolsManifest = ownDevtoolsManifestPath();
+  if (devtoolsManifest) paths.push(devtoolsManifest);
   return paths;
 }
 

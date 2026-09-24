@@ -10,7 +10,6 @@
     "lint": "pnpm devtools run lint",
     "lint:fix": "pnpm devtools run lint:fix",
     "test": "pnpm devtools run test",
-    "devtools-ci-bare": "node ./scripts/devtools-ci-bare.mjs",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore"
   },

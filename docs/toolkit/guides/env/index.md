@@ -85,8 +85,11 @@ touch the credentials behind the reviewers.
 
 `SUPABASE_ACCESS_TOKEN` carries full account privileges across both Supabase
 organizations; `supabase config push` needs it, and that is the one mutation
-with no dry run. `AIRTABLE_APPLY_PAT` can restructure the officers' base. Both
-are declared `tier: "apply"` in `packages/devtools/env.ts`.
+with no dry run. It is declared `tier: "apply"` in `@devdogsuga/devtools`'s
+own `env.ts` (devtools ships its own operator manifest now, consumed as a
+package rather than a workspace member of this repo — see
+`packages/repo-checks/src/env-registry.ts`), not in anything under
+`apps/*`/`packages/*` here.
 
 Both still live in the `production` Bitwarden project. That is a GitHub routing
 rule, not a Bitwarden one: only a person reads that project, one project per

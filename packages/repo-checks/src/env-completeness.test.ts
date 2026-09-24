@@ -176,22 +176,22 @@ describe("registry completeness", () => {
     }
   });
 
-  it("pins the apply-only set to exactly what THIS repo's registry declares", () => {
+  it("pins the apply-only set to exactly its one credential", () => {
     // Pinned, not derived-and-trusted: a new `tier: "apply"` declaration
     // re-routes a credential behind the production-apply reviewer gate. That is
     // a deliberate, reviewed event, so the reviewer of that change should have
     // to touch this list and say so out loud.
     //
-    // Empty, not `["SUPABASE_ACCESS_TOKEN"]`: that credential was declared by
-    // devtools' own operator-tooling manifest (`packages/devtools/env.ts`),
-    // which moved to Backstage in the devtools cutover and is no longer part
-    // of THIS repo's `@devdogsuga/env` registry at all — it's the CLI's own
-    // concern now (the `production-config` job in deploy.yaml still passes
-    // `SUPABASE_ACCESS_TOKEN` straight from `secrets.SUPABASE_ACCESS_TOKEN`
-    // into the step's `env:`, unrelated to this registry). If a future
-    // DevDogsUGA-side manifest declares an apply-tier key, update this list —
-    // that is exactly the reviewed event this test exists to force.
-    expect(applyOnlyKeys()).toEqual([]);
+    // `SUPABASE_ACCESS_TOKEN` is declared by devtools' own operator-tooling
+    // manifest (`@devdogsuga/devtools`'s `env.ts`), not by anything under
+    // `apps/*`/`packages/*` in THIS repo — but `env-registry.ts`'s
+    // `loadRegistry()` includes it unconditionally (the same gap Backstage's
+    // `env/discovery.ts` closed with `ownManifestPath()`), so it is a real
+    // member of this process's registry and belongs in this pin. If a
+    // DevDogsUGA-side manifest ever declares a SECOND apply-tier key, update
+    // this list — that is exactly the reviewed event this test exists to
+    // force.
+    expect(applyOnlyKeys()).toEqual(["SUPABASE_ACCESS_TOKEN"]);
   });
 
   it("pins the minted set to exactly the sandbox proxy token", () => {
@@ -385,15 +385,14 @@ describe("registry completeness", () => {
           "would publish it in plaintext as a GitHub variable.",
       ).toBe(false);
     }
-    // Empty, not `["BWS_ACCESS_TOKEN"]`: that was devtools' own Bitwarden
-    // access token, declared by `packages/devtools/env.ts` — moved to
-    // Backstage in the devtools cutover, no longer part of THIS repo's
-    // registry. An empty `neverStoreKeys()` is legitimately this repo's
-    // current state, not the fail-open discovery bug the original comment
-    // here warned about — that floor now lives in "populated at all" above
-    // (`variables().size >= 50`), which still fails loudly on a real
-    // discovery break. If a DevDogsUGA-side manifest ever declares a
-    // never-store key, pin it here by name, same as before.
+    // Non-vacuous: an empty `neverStoreKeys()` would pass this trivially, and
+    // an empty one is exactly the fail-open state discovery guards against.
+    // `BWS_ACCESS_TOKEN` is devtools' own operator credential
+    // (`@devdogsuga/devtools`'s `env.ts`, not an `apps/*`/`packages/*`
+    // manifest in this repo) — real in this registry because
+    // `env-registry.ts`'s `loadRegistry()` includes it unconditionally, same
+    // as the apply-only pin above.
+    expect(neverStoreKeys()).toEqual(["BWS_ACCESS_TOKEN"]);
   });
 
   it("declares every uncommented key in .env.example", async () => {

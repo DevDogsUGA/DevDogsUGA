@@ -32,11 +32,12 @@ describe("devtools-ci deploy: stdout purity", () => {
   it(
     "prints nothing decorative to stdout, even for its own usage output",
     async () => {
-      // No --tier / DEPLOY_ENV resolves: this deliberately exercises the
-      // tier-resolution refusal path (see scripts/devtools-ci-bare.mjs's
+      // No --tier / DEPLOY_ENV resolves: this deliberately exercises
+      // "devtools-ci"'s tier-resolution refusal path (see deploy.yaml's
       // header for why "devtools-ci" always resolves a tier before
-      // dispatching), which is itself one of the messages that must stay off
-      // stdout.
+      // dispatching, and why "devtools-ci-bare" — the sibling bin exercised
+      // below — exists for the steps that must not), which is itself one of
+      // the messages that must stay off stdout.
       const result = await pnpmExec("devtools-ci", ["deploy"]);
 
       expect(result.stdout, "devtools-ci deploy stdout").toBe("");
@@ -63,6 +64,32 @@ describe("devtools-ci deploy: stdout purity", () => {
       expect(result.stdout, "devtools-ci deploy not-a-real-step stdout").toBe(
         "",
       );
+    },
+    SUBPROCESS_TIMEOUT,
+  );
+
+  it(
+    "devtools-ci-bare resolves no tier and loads no env file — --help works cold",
+    async () => {
+      // The published package's third bin (`@devdogsuga/devtools`'s
+      // `bin/devtools-ci-bare.mjs` -> `dist/ci.js`'s `main()` directly, no
+      // wrapper). Deploy steps that CREATE the env file (`write-env`) or
+      // hold one narrow credential and compose no env file at all
+      // (`preflight`, `migrate`, `plan`, `require-planner`, `require-token`,
+      // `orphans`) run through this bin instead of `devtools-ci` — see
+      // deploy.yaml's header. `--help` must succeed with no `--tier`, no
+      // `DEPLOY_ENV`, and no `.env*` file present at all.
+      const result = await pnpmExec("devtools-ci-bare", ["--help"]);
+
+      // `ci.ts`'s `--help` branch writes to stdout deliberately (see its own
+      // `main()`) — this is the command's own protocol output, not a
+      // decorative clack banner, so it belongs on stdout. The property under
+      // test is narrower: that it printed SOMETHING and exited zero without
+      // ever needing a tier or an env file.
+      expect(result.stdout, "devtools-ci-bare --help stdout").toContain(
+        "deploy",
+      );
+      expect(result.code, "devtools-ci-bare --help exit code").toBe(0);
     },
     SUBPROCESS_TIMEOUT,
   );

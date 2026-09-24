@@ -69,23 +69,22 @@ env:
 # workspace package. Which entry point a step uses is still NOT a style
 # choice, but the shapes changed in the Backstage cutover (Wave 2, stage B):
 #
-#   pnpm run devtools-ci-bare   `scripts/devtools-ci-bare.mjs` — no tier
-#                                resolution, no env file. Interim stand-in
-#                                for the old bare `run ci` package script
-#                                (`node dist/ci.js`, unwrapped): the
-#                                published package ships only two `bin`s
-#                                (`devtools`, `devtools-ci`), and
-#                                `devtools-ci` unconditionally resolves a tier
-#                                and loads its env file before dispatching —
-#                                confirmed empirically against the installed
-#                                0.1.0 tarball, no flag skips it. That is a
-#                                gap in the published package, not a design
-#                                choice made here; see this script's own
-#                                header and the stage B report for the exact
-#                                write-up. Delete this workaround once
-#                                devtools ships a real no-env-resolution
-#                                entry point and route these steps through it
-#                                instead.
+#   pnpm exec devtools-ci-bare   the installed `devtools-ci-bare` bin
+#                                (`@devdogsuga/devtools`'s own third bin,
+#                                `bin/devtools-ci-bare.mjs` -> `dist/ci.js`'s
+#                                `main()` directly) — no tier resolution, no
+#                                env file. The real, published counterpart of
+#                                the old in-repo bare `run ci` package script
+#                                (`node dist/ci.js`, unwrapped). Until
+#                                Backstage's Wave 2 gaps pass, the published
+#                                package shipped only two `bin`s (`devtools`,
+#                                `devtools-ci`), and `devtools-ci`
+#                                unconditionally resolves a tier and loads its
+#                                env file before dispatching — so this repo
+#                                carried an interim `scripts/
+#                                devtools-ci-bare.mjs` workaround that
+#                                imported `dist/ci.js` directly. Deleted now
+#                                that devtools ships the real bin.
 #   pnpm exec devtools-ci       the installed `devtools-ci` bin — resolves the
 #                                tier and loads its env file FIRST
 #                                (`bin/devtools-ci.mjs` -> `src/launch-ci.ts`)
@@ -162,7 +161,7 @@ jobs:
           PROJECT_REF: ${{ vars.PROJECT_REF }}
           PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
         run: >-
-          pnpm run devtools-ci-bare deploy preflight
+          pnpm exec devtools-ci-bare deploy preflight
 
   # Staging had no migrate job at all, which meant staging ran whatever schema
   # it happened to be left with. A migration that added a function some
@@ -194,7 +193,7 @@ jobs:
       - name: Apply migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: pnpm run devtools-ci-bare deploy migrate
+        run: pnpm exec devtools-ci-bare deploy migrate
 
   # The per-tier deploy recipe lives in the reusable `deploy-app.yaml`; this
   # caller is the gating in front of it. `secrets: inherit` is load-bearing —
@@ -241,7 +240,7 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
-          pnpm run devtools-ci-bare deploy require-planner
+          pnpm exec devtools-ci-bare deploy require-planner
       # ⚠️ `set -o pipefail` is load-bearing, not boilerplate. `supabase db
       # push` exits 1 on a connection failure, and a pipeline without it reports
       # the exit code of `tee` — so a dry run that never connected reads as a
@@ -256,7 +255,7 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
-          pnpm run devtools-ci-bare deploy plan
+          pnpm exec devtools-ci-bare deploy plan
           --label 'Migration plan — production (from `main`)'
 
   # ── production ──────────────────────────────────────────────────────────────
@@ -282,7 +281,7 @@ jobs:
         env:
           DB_URL: ${{ secrets.DB_URL }}
         run: >-
-          pnpm run devtools-ci-bare deploy plan
+          pnpm exec devtools-ci-bare deploy plan
           --label 'Migration plan — production'
       # `supabase config` has exactly one subcommand — `push`. No pull, no diff,
       # no --dry-run. So config.toml is the highest blast radius (site_url and
@@ -333,7 +332,7 @@ jobs:
       - name: Apply migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
-        run: pnpm run devtools-ci-bare deploy migrate
+        run: pnpm exec devtools-ci-bare deploy migrate
 
   # The one mutation with no dry run gets its own approval step, which is what
   # `production-apply` is: the same Bitwarden project as `production`, split
@@ -375,7 +374,7 @@ jobs:
         # run ci for the same bootstrap reason as the other write-env
         # steps: this composes .env.production, which nothing has written yet.
         run: >-
-          pnpm run devtools-ci-bare deploy write-env
+          pnpm exec devtools-ci-bare deploy write-env
           --source supabase
       # SUPABASE_ACCESS_TOKEN is passed here rather than composed: it belongs to
       # the operator manifest, not to supabase's, and `with-env` leaves a value
@@ -431,8 +430,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          pnpm run devtools-ci-bare deploy require-token
-          pnpm run devtools-ci-bare deploy orphans
+          pnpm exec devtools-ci-bare deploy require-token
+          pnpm exec devtools-ci-bare deploy orphans
 
   # Deleting them is a separate, deliberate, human-triggered run — never
   # chained to a deploy. Each deletion PUBLISHES A NEW VERSION of the code
@@ -464,5 +463,5 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          pnpm run devtools-ci-bare deploy require-token
-          pnpm run devtools-ci-bare deploy orphans --prune
+          pnpm exec devtools-ci-bare deploy require-token
+          pnpm exec devtools-ci-bare deploy orphans --prune
