@@ -30,7 +30,7 @@ A team is a persistent group, not something scoped to one competition — see [T
 - **Ask to join.** A team that is not handing out its code may still accept requests. Send one from the team's page, with an optional message; the lead answers it at [`/teams/requests`](https://devdogsuga.org/teams/requests).
 - **Accept an invite.** A lead can invite you from the team's page by your exact UGA email or GitHub username. You get an email, and the invite waits for you at [`/teams/requests`](https://devdogsuga.org/teams/requests). An invite only finds you once you have signed in and linked GitHub.
 
-You can be active on up to four teams at once (a team caps out at four members), so joining a couple and going with whichever answers first is a reasonable way to look for one.
+You can be active on up to two teams at once, and a team caps out at four members. A pending request reserves nothing, so asking a couple of teams and going with whichever answers first is a reasonable way to find one.
 
 ## 4. Clone the repo and install
 
