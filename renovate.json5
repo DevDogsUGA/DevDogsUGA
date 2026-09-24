@@ -1,0 +1,31 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  // Scoped to `@devdogsuga/*` only: the first rule turns every dependency
+  // off, the second turns the Backstage packages back on. A top-level
+  // `"enabled": false` would disable Renovate for the whole repository, not
+  // just its dependencies (https://docs.renovatebot.com/key-concepts/scoping/).
+  // Managing anything else is a deliberate second change.
+  extends: ["config:recommended"],
+  labels: ["dependencies", "backstage"],
+  packageRules: [
+    {
+      matchPackageNames: ["*"],
+      enabled: false,
+    },
+    {
+      description: "Every `@devdogsuga/*` package this repo consumes is published from the sibling Backstage repo (see pnpm-workspace.yaml's header comment and CUTOVER.md there). One publish there can touch several of these at once, so they land here as one PR, not one each — including the root `@devdogsuga/devtools` devDependency CI pins exactly, since a devtools release is exactly the kind of publish this exists to catch quickly.",
+      matchPackageNames: ["/^@devdogsuga\\//"],
+      enabled: true,
+      groupName: "Backstage @devdogsuga packages",
+      groupSlug: "devdogsuga-backstage",
+      // No release-age gate: these are this org's own packages, built and
+      // tested in Backstage's CI before publish, so a delay only slows the fix.
+      minimumReleaseAge: null,
+      // `bump` rewrites an exact pin to the new exact version (CI's
+      // `@devdogsuga/devtools` stays exact) and raises a `^` floor even for an
+      // in-range release, so every publish reaches this repo as a PR.
+      // `replace` would skip in-range releases entirely.
+      rangeStrategy: "bump",
+    },
+  ],
+}
