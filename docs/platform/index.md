@@ -12,6 +12,7 @@ order: 10
 
 | Guide                                                        | What it covers                                                                    |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| [Getting Started](/docs/platform/guides/getting-started)     | Signing in, linking GitHub, forming a team, and entering a competition            |
 | [Meetings & Teams](/docs/platform/guides/meetings-and-teams) | Meetings, workshops, competitions, teams, attendance, stars, and awards           |
 | [Airtable](/docs/platform/guides/airtable)                   | The officer base, the field registry, and what syncs in which direction           |
 | [Reporting](/docs/platform/guides/reporting)                 | The `platform` RPC contract every app calls to report content                     |
