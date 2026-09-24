@@ -29,31 +29,38 @@
  *
  * 2. **Rules AGGREGATE across rulesets, and bypass does not.** Two rulesets
  *    matching the same ref both apply, and bypassing one does not bypass the
- *    other. A broad `team/**` ruleset carrying `update` (or `deletion`)
- *    alongside the per-team ones would leave every team blocked by the broad
- *    one while bypassing only its own. The branches would be readable but
- *    unpushable, and the cause would not appear in either ruleset read on
- *    its own. **Never run an `update`/`deletion`-bearing `team/**` ruleset
- *    alongside the per-team ones.**
+ *    other. A broad `team/**` ruleset carrying `update` alongside the
+ *    per-team ones would leave every team blocked by the broad one while
+ *    bypassing only its own. The branches would be readable but unpushable,
+ *    and the cause would not appear in either ruleset read on its own.
+ *    **Never run an `update`-bearing `team/**` ruleset alongside the
+ *    per-team ones.**
  *
- *    A `team/**` ruleset carrying ONLY `creation` is the one exception, and
- *    it does run alongside the per-team ones today (`devtools github
+ *    A `team/**` ruleset carrying `creation`, `deletion` and
+ *    `non_fast_forward` — deliberately NOT `update` — is the one exception,
+ *    and it does run alongside the per-team ones today (`devtools github
  *    rulesets` in Backstage's `packages/devtools/src/gh/rulesets/desired.ts`
- *    creates it). No per-team ruleset this file builds has ever granted
- *    `creation` — see `teamRulesetPayload`'s "Deliberately NOT included"
- *    note below — so the two rulesets aggregate over DISJOINT rule types on
- *    the same ref pattern and there is nothing for them to disagree about.
- *    What the `team/**` creation ruleset closes is a hole this file never
- *    covered: every team member holds the repository-wide `push` grant from
- *    `provisionTeam`, so before a team is provisioned, any member can
- *    front-run the platform's own `cutTeamBranch` and create `team/<slug>`
- *    themselves. Restricting `creation` on `team/**` to the platform's own
- *    GitHub App closes that without touching `update` or `deletion` at all.
+ *    creates it). `update` is the one rule type a per-team ruleset itself
+ *    carries and bypasses its own team for; leaving it out of the fixed
+ *    ruleset is what keeps the two from aggregating into the exact failure
+ *    above. The other three rule types are added there DELIBERATELY,
+ *    because they aggregate the other direction: a team is a bypass actor on
+ *    its OWN per-team ruleset, not on the fixed `team/**` one, so a team can
+ *    no longer create, delete or force-push its own branch on its own say-so
+ *    — TASK-324's access-control checklist requires exactly that refusal.
+ *    (See `teamRulesetPayload`'s doc below for what this changed about that
+ *    ruleset's own reasoning on `deletion` and `non_fast_forward`.) The
+ *    front-running hole this also closes predates TASK-324: every team
+ *    member holds the repository-wide `push` grant from `provisionTeam`, so
+ *    before a team is provisioned, any member can front-run the platform's
+ *    own `cutTeamBranch` and create `team/<slug>` themselves — restricting
+ *    `creation` on `team/**` to the platform's own GitHub App (plus devops)
+ *    closes that.
  *
  * 3. **75 rulesets per repository.** Fixed cost is 5, not 4: `main`,
- *    `production`, `~ALL`, the tag ruleset, and the `team/**` creation-only
- *    ruleset from constraint 2 above, leaving 70 for teams. A team's ruleset
- *    is created when the team is and deleted when it is disbanded (see
+ *    `production`, `~ALL`, the tag ruleset, and the fixed `team/**` ruleset
+ *    from constraint 2 above, leaving 70 for teams. A team's ruleset is
+ *    created when the team is and deleted when it is disbanded (see
  *    `teamSync.ts`'s `disbandTeam`), so the count tracks how many teams
  *    concurrently EXIST rather than accumulating forever the way one per
  *    competition-week did.
@@ -106,10 +113,16 @@ export function teamRulesetName(teamSlug: string): string {
  * else.
  *
  * `deletion` stops another team removing this branch. It does NOT stop the team
- * removing its own, because bypass is ruleset-scoped (constraint 1). That is
- * the right trade: the alternative is a second ruleset per team, at twice the
- * cost against a 75-ruleset ceiling, to stop a team deleting work that is only
- * theirs.
+ * removing its own, because bypass is ruleset-scoped (constraint 1) — THIS
+ * ruleset alone would let a team delete its own work. That used to be an
+ * accepted trade (a second ruleset per team, at twice the cost against a
+ * 75-ruleset ceiling, just to stop a team deleting something only theirs,
+ * was judged not worth it). TASK-324's access-control checklist closed it
+ * anyway, one level up: the fixed `team/**` ruleset (constraint 2 above) now
+ * carries its OWN `deletion` rule, bypassed by the App and devops but NOT by
+ * any team, so the aggregate result is that a team can no longer delete its
+ * own branch even though this ruleset alone would let it. Nothing changes
+ * here — the fixed ruleset is what closed it, not this one.
  *
  * Deliberately NOT included:
  *
@@ -118,10 +131,15 @@ export function teamRulesetName(teamSlug: string): string {
  *     existing ref and would block re-provisioning after a branch was deleted.
  *     The front-running gap this leaves (any member can create `team/<slug>`
  *     themselves before the platform does) is closed one level up, by the
- *     fixed `team/**` creation-only ruleset in constraint 2 above — never by
- *     adding `creation` here.
- *   * `non_fast_forward`: rebasing your own feature branch is ordinary work,
- *     and the team would bypass it anyway.
+ *     fixed `team/**` ruleset in constraint 2 above — never by adding
+ *     `creation` here.
+ *   * `non_fast_forward`: rebasing your own feature branch used to be
+ *     ordinary work this ruleset let a team bypass on its own branch. As of
+ *     TASK-324, the fixed `team/**` ruleset (constraint 2) now carries its
+ *     own `non_fast_forward` rule too, bypassed by the App and devops but
+ *     not by any team, so a team can no longer force-push its own branch
+ *     either — closed the same way `deletion` was, one level up, not by
+ *     adding the rule here.
  *   * `pull_request`: there is no shared integration branch any team PRs into
  *     for a review gate to live on.
  *
