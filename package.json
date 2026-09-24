@@ -17,6 +17,7 @@
     "node": ">=22.12"
   },
   "devDependencies": {
+    "@devdogsuga/config": "^0.1.0",
     "@devdogsuga/devtools": "workspace:*",
     "@devdogsuga/env": "^0.1.0",
     "@types/node": "catalog:",
