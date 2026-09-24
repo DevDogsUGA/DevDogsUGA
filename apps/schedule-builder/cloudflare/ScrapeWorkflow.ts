@@ -339,7 +339,7 @@ function scrapeWorkflowSentryOptions(env: WorkflowSentryEnv) {
  * `instrumentWorkflowWithSentry` altogether, still satisfies the no-DSN
  * no-op contract: `@sentry/core`'s `Client` constructor makes no transport
  * and does no network I/O when `options.dsn` is falsy (see
- * `packages/telemetry`'s README), and its one console line behind that path
+ * Backstage's `packages/telemetry` README), and its one console line behind that path
  * is gated on `debug`, which is never set here.
  */
 export const ScrapeWorkflow = Sentry.instrumentWorkflowWithSentry(

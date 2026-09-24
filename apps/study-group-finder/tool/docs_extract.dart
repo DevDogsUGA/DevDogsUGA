@@ -2,7 +2,7 @@
 // TypeScript, which it reads in-process with the TS compiler API; there is no
 // equivalent for Dart from Node, so this script runs under the Flutter SDK's
 // own analyzer and hands the result across as JSON. The shape it writes is a
-// contract with `packages/docs-build/src/gen/dart.ts`. Change one and the other
+// contract with Backstage's `packages/docs-compiler/src/gen/dart.ts`. Change one and the other
 // stops parsing, so `version` is bumped whenever a field's meaning moves.
 //
 //   dart run tool/docs_extract.dart [--lib <dir>] [--out <file>]

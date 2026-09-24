@@ -3,7 +3,7 @@
  *
  * ⚠️ DERIVED, NOT DECLARED. The vault targets and each one's project name come
  * from the one target table in `@devdogsuga/env`
- * (`packages/env/src/targets.ts`); only the prose summaries are added here.
+ * (Backstage's `packages/env/src/targets.ts`); only the prose summaries are added here.
  * This file used to declare its own `preflight | staging | production` enum
  * beside that package's `development | staging | production` one, both behind
  * a flag spelled `--env`, and the two agreeing on the words `staging` and
@@ -169,6 +169,6 @@ export function assertVaultTarget(
 //     the box it opens): its `define()` doc in `packages/devtools/env.ts`;
 //   * why apply-tier is a GITHUB routing rule and not a Bitwarden one (the
 //     production BWS project deliberately holds the apply credential): the
-//     `EnvTier` doc in `packages/env/src/meta.ts`;
+//     `EnvTier` doc in Backstage's `packages/env/src/meta.ts`;
 //   * why the apply credential stays out of staging/preflight: `ignoredFor()`
 //     in `../env/selection.ts`.

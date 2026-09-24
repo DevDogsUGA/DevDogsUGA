@@ -58,7 +58,7 @@ export default async function ChangelogIssue({
         </p>
         <div className="mx-auto w-fit max-w-full overflow-x-auto">
           {/* The email paints its backgrounds by class (never inline — see
-              packages/newsletter/src/darkmode.ts), so the page embeds the
+              Backstage's packages/newsletter/src/darkmode.ts), so the page embeds the
               same base paint layer the mailed document does. */}
           <style dangerouslySetInnerHTML={{ __html: paintCss() }} />
           <ChangelogEmail issue={issue} ctx={webRenderContext()} />

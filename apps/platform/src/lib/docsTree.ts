@@ -30,7 +30,7 @@ export type DocsTreeNode = DocsTreePage | DocsTreeFolder;
 
 /**
  * Where a page or folder that declares no `order` sits. The same number
- * `@devdogsuga/docs-build`'s compiler defaults projects to, and deliberately
+ * `@devdogsuga/docs-compiler`'s compiler defaults projects to, and deliberately
  * mid-range: a page can be promoted above the pages that never think about
  * ordering as well as demoted below them. This module is handed plain rows
  * rather than that package's types and has no dependency on it, so the constant

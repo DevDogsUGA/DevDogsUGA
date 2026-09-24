@@ -7,7 +7,7 @@
  *
  * Deliberately plain JavaScript, not TypeScript: this file's whole purpose is
  * to resolve `tsx` and hand off to it, so it has to run before `tsx` itself
- * is available. It mirrors `packages/env/src/cli.ts`'s `dotenvxCli()`
+ * is available. It mirrors Backstage's `packages/env/src/cli.ts`'s `dotenvxCli()`
  * technique — resolving a dependency's CLI entry through THIS package's own
  * `node_modules` via `createRequire`, rather than trusting `tsx` to be on
  * `PATH` or spawning its `.bin` shim directly (which Node refuses for a
@@ -62,7 +62,7 @@ const child = spawn(
 );
 
 // Forwarding a child's exit exactly as `with-env` does (see
-// `packages/env/bin/with-env.mjs`), so this bootstrap is transparent: a
+// Backstage's `packages/env/bin/with-env.mjs`), so this bootstrap is transparent: a
 // signal that killed the child kills this process the same way, and an
 // ordinary exit code passes straight through.
 child.on("error", (err) => {
