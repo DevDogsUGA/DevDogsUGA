@@ -22,7 +22,7 @@
     "@devdogsuga/docs": "workspace:*",
     "@devdogsuga/email": "workspace:*",
     "@devdogsuga/env": "^0.1.0",
-    "@devdogsuga/newsletter": "workspace:*",
+    "@devdogsuga/newsletter": "^0.1.0",
     "@devdogsuga/og": "workspace:*",
     "@devdogsuga/telemetry": "^0.1.0",
     "@resvg/resvg-js": "^2.6.2",
