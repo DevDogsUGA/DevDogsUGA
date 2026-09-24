@@ -3,9 +3,26 @@
  * Docker builds need.
  */
 import type { NextConfig } from "next";
+import { buildSecurityHeaders } from "@devdogsuga/security-headers";
 import { env } from "~/env";
 
 const config = {
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        // Same `??` fallback as `images.remotePatterns` below: CI's
+        // credential-free validate job loads this config under
+        // `SKIP_ENV_VALIDATION`, where `env.NEXT_PUBLIC_SUPABASE_URL` is
+        // `undefined` rather than a real URL. A real build never takes it.
+        headers: buildSecurityHeaders({
+          environment: env.DEPLOY_ENV,
+          supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321",
+          sentryDsn: env.NEXT_PUBLIC_SENTRY_DSN,
+        }),
+      },
+    ];
+  },
   async redirects() {
     return [
       {

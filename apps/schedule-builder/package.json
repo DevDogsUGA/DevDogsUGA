@@ -29,6 +29,7 @@
     "@devdogsuga/drizzle": "workspace:*",
     "@devdogsuga/env": "workspace:*",
     "@devdogsuga/og": "workspace:*",
+    "@devdogsuga/security-headers": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
     "@devdogsuga/telemetry": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",

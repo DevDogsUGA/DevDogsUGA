@@ -32,6 +32,7 @@
     "@devdogsuga/env": "workspace:*",
     "@devdogsuga/newsletter": "workspace:*",
     "@devdogsuga/og": "workspace:*",
+    "@devdogsuga/security-headers": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
     "@devdogsuga/telemetry": "workspace:*",
     "@discordjs/builders": "^1.14.1",
