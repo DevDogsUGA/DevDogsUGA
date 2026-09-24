@@ -245,3 +245,8 @@ packages:
 # Windows and POSIX, so no script needs an `sh -c` wrapper. Note it also globs
 # unquoted [...] patterns; keep such arguments quoted.
 shellEmulator: true
+
+patchedDependencies:
+  react-dom@19.2.8: patches/react-dom@19.2.8.patch
+  react-server-dom-webpack@19.3.0: patches/react-server-dom-webpack@19.3.0.patch
+  react@19.2.8: patches/react@19.2.8.patch

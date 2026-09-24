@@ -1,0 +1,76 @@
+diff --git a/cjs/react-dom-client.development.js b/cjs/react-dom-client.development.js
+index b9bb0b5bd00886f4ba53a0f3608d04dcc7567320..7942caeed10541a98dcc39170955e6d635b140fb 100644
+--- a/cjs/react-dom-client.development.js
++++ b/cjs/react-dom-client.development.js
+@@ -12,6 +12,24 @@
+  Modernizr 3.0.0pre (Custom Build) | MIT
+ */
+ "use strict";
++
++// DevDogsUGA TASK-294: Cloudflare workerd implements console.createTask()
++// as a stub that THROWS ERR_METHOD_NOT_IMPLEMENTED instead of being absent,
++// breaking this file's `console.createTask ? ... : ...` feature-detect --
++// and a synchronous probe isn't reliable either (workerd lets the probe
++// succeed outside a request's I/O context, then throws the same call once
++// it runs inside real request handling). Hard-disable specifically when
++// running on Cloudflare Workers (per Cloudflare's documented runtime
++// check), leaving every other runtime's real support intact. File
++// upstream against cloudflare/workerd if this comment outlives the gap.
++function workerdSupportsConsoleCreateTask() {
++  if (
++    typeof navigator !== "undefined" &&
++    navigator.userAgent === "Cloudflare-Workers"
++  )
++    return false;
++  return !!console.createTask;
++}
+ "production" !== process.env.NODE_ENV &&
+   (function () {
+     function findHook(fiber, id) {
+@@ -25625,7 +25643,7 @@
+         _currentRenderer2: null
+       },
+       now = Scheduler.unstable_now,
+-      createTask = console.createTask
++      createTask = workerdSupportsConsoleCreateTask()
+         ? console.createTask
+         : function () {
+             return null;
+diff --git a/cjs/react-dom-profiling.development.js b/cjs/react-dom-profiling.development.js
+index dfabf7b22ffe706608e5a34331a020ce0ffc3e5a..a8ffe445f9e16ddf2b5e6fc51e624d6f237cc1e1 100644
+--- a/cjs/react-dom-profiling.development.js
++++ b/cjs/react-dom-profiling.development.js
+@@ -12,6 +12,24 @@
+  Modernizr 3.0.0pre (Custom Build) | MIT
+ */
+ "use strict";
++
++// DevDogsUGA TASK-294: Cloudflare workerd implements console.createTask()
++// as a stub that THROWS ERR_METHOD_NOT_IMPLEMENTED instead of being absent,
++// breaking this file's `console.createTask ? ... : ...` feature-detect --
++// and a synchronous probe isn't reliable either (workerd lets the probe
++// succeed outside a request's I/O context, then throws the same call once
++// it runs inside real request handling). Hard-disable specifically when
++// running on Cloudflare Workers (per Cloudflare's documented runtime
++// check), leaving every other runtime's real support intact. File
++// upstream against cloudflare/workerd if this comment outlives the gap.
++function workerdSupportsConsoleCreateTask() {
++  if (
++    typeof navigator !== "undefined" &&
++    navigator.userAgent === "Cloudflare-Workers"
++  )
++    return false;
++  return !!console.createTask;
++}
+ "production" !== process.env.NODE_ENV &&
+   (function () {
+     function findHook(fiber, id) {
+@@ -25677,7 +25695,7 @@
+         _currentRenderer2: null
+       },
+       now = Scheduler.unstable_now,
+-      createTask = console.createTask
++      createTask = workerdSupportsConsoleCreateTask()
+         ? console.createTask
+         : function () {
+             return null;

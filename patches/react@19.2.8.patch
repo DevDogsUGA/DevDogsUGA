@@ -1,0 +1,246 @@
+diff --git a/cjs/react-jsx-dev-runtime.development.js b/cjs/react-jsx-dev-runtime.development.js
+index 95f9877479619f679efc598f53d53b2327fe59f1..1c07d85bae1ea3c5a20340f270341fa601c04ea7 100644
+--- a/cjs/react-jsx-dev-runtime.development.js
++++ b/cjs/react-jsx-dev-runtime.development.js
+@@ -9,6 +9,22 @@
+  */
+ 
+ "use strict";
++
++// DevDogsUGA TASK-294: Cloudflare workerd implements console.createTask()
++// as a stub that THROWS ERR_METHOD_NOT_IMPLEMENTED instead of being absent,
++// breaking every `console.createTask ? ... : ...` / `!!console.createTask`
++// feature-detect in this file. A synchronous probe isn't reliable either:
++// workerd lets the probe succeed outside a request's I/O context, then
++// throws the same call once it runs inside real request handling. Hard-
++// disable specifically when running on Cloudflare Workers (per
++// Cloudflare's documented runtime check), leaving every other runtime's
++// real support (including a future fixed workerd) intact. File upstream
++// against cloudflare/workerd if this comment outlives the gap.
++var __devdogsWorkerdConsoleCreateTask =
++  typeof navigator !== "undefined" &&
++  navigator.userAgent === "Cloudflare-Workers"
++    ? void 0
++    : console.createTask;
+ "production" !== process.env.NODE_ENV &&
+   (function () {
+     function getComponentNameFromType(type) {
+@@ -302,8 +318,8 @@
+         React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE,
+       hasOwnProperty = Object.prototype.hasOwnProperty,
+       isArrayImpl = Array.isArray,
+-      createTask = console.createTask
+-        ? console.createTask
++      createTask = __devdogsWorkerdConsoleCreateTask
++        ? __devdogsWorkerdConsoleCreateTask
+         : function () {
+             return null;
+           };
+diff --git a/cjs/react-jsx-dev-runtime.react-server.development.js b/cjs/react-jsx-dev-runtime.react-server.development.js
+index b79b7589bf06d6c27eef27c9aca282e01804746d..fb5a03f17ad249f03ccbc4cde3c6d3ca9d1debb2 100644
+--- a/cjs/react-jsx-dev-runtime.react-server.development.js
++++ b/cjs/react-jsx-dev-runtime.react-server.development.js
+@@ -9,6 +9,22 @@
+  */
+ 
+ "use strict";
++
++// DevDogsUGA TASK-294: Cloudflare workerd implements console.createTask()
++// as a stub that THROWS ERR_METHOD_NOT_IMPLEMENTED instead of being absent,
++// breaking every `console.createTask ? ... : ...` / `!!console.createTask`
++// feature-detect in this file. A synchronous probe isn't reliable either:
++// workerd lets the probe succeed outside a request's I/O context, then
++// throws the same call once it runs inside real request handling. Hard-
++// disable specifically when running on Cloudflare Workers (per
++// Cloudflare's documented runtime check), leaving every other runtime's
++// real support (including a future fixed workerd) intact. File upstream
++// against cloudflare/workerd if this comment outlives the gap.
++var __devdogsWorkerdConsoleCreateTask =
++  typeof navigator !== "undefined" &&
++  navigator.userAgent === "Cloudflare-Workers"
++    ? void 0
++    : console.createTask;
+ "production" !== process.env.NODE_ENV &&
+   (function () {
+     function getComponentNameFromType(type) {
+@@ -306,8 +322,8 @@
+       );
+     var hasOwnProperty = Object.prototype.hasOwnProperty,
+       isArrayImpl = Array.isArray,
+-      createTask = console.createTask
+-        ? console.createTask
++      createTask = __devdogsWorkerdConsoleCreateTask
++        ? __devdogsWorkerdConsoleCreateTask
+         : function () {
+             return null;
+           };
+diff --git a/cjs/react-jsx-runtime.development.js b/cjs/react-jsx-runtime.development.js
+index 35331a3c5c9aba0cf631c68fe8f3ca8d58f52d54..1adb8a951910f34df9da6ea26039e5353f3c60af 100644
+--- a/cjs/react-jsx-runtime.development.js
++++ b/cjs/react-jsx-runtime.development.js
+@@ -9,6 +9,22 @@
+  */
+ 
+ "use strict";
++
++// DevDogsUGA TASK-294: Cloudflare workerd implements console.createTask()
++// as a stub that THROWS ERR_METHOD_NOT_IMPLEMENTED instead of being absent,
++// breaking every `console.createTask ? ... : ...` / `!!console.createTask`
++// feature-detect in this file. A synchronous probe isn't reliable either:
++// workerd lets the probe succeed outside a request's I/O context, then
++// throws the same call once it runs inside real request handling. Hard-
++// disable specifically when running on Cloudflare Workers (per
++// Cloudflare's documented runtime check), leaving every other runtime's
++// real support (including a future fixed workerd) intact. File upstream
++// against cloudflare/workerd if this comment outlives the gap.
++var __devdogsWorkerdConsoleCreateTask =
++  typeof navigator !== "undefined" &&
++  navigator.userAgent === "Cloudflare-Workers"
++    ? void 0
++    : console.createTask;
+ "production" !== process.env.NODE_ENV &&
+   (function () {
+     function getComponentNameFromType(type) {
+@@ -302,8 +318,8 @@
+         React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE,
+       hasOwnProperty = Object.prototype.hasOwnProperty,
+       isArrayImpl = Array.isArray,
+-      createTask = console.createTask
+-        ? console.createTask
++      createTask = __devdogsWorkerdConsoleCreateTask
++        ? __devdogsWorkerdConsoleCreateTask
+         : function () {
+             return null;
+           };
+diff --git a/cjs/react-jsx-runtime.react-server.development.js b/cjs/react-jsx-runtime.react-server.development.js
+index 59ee4be6d69e5911a68694780de9f4be2024784c..c06cd9fc5f7f3b625533887f57ec06ac430b5efd 100644
+--- a/cjs/react-jsx-runtime.react-server.development.js
++++ b/cjs/react-jsx-runtime.react-server.development.js
+@@ -9,6 +9,22 @@
+  */
+ 
+ "use strict";
++
++// DevDogsUGA TASK-294: Cloudflare workerd implements console.createTask()
++// as a stub that THROWS ERR_METHOD_NOT_IMPLEMENTED instead of being absent,
++// breaking every `console.createTask ? ... : ...` / `!!console.createTask`
++// feature-detect in this file. A synchronous probe isn't reliable either:
++// workerd lets the probe succeed outside a request's I/O context, then
++// throws the same call once it runs inside real request handling. Hard-
++// disable specifically when running on Cloudflare Workers (per
++// Cloudflare's documented runtime check), leaving every other runtime's
++// real support (including a future fixed workerd) intact. File upstream
++// against cloudflare/workerd if this comment outlives the gap.
++var __devdogsWorkerdConsoleCreateTask =
++  typeof navigator !== "undefined" &&
++  navigator.userAgent === "Cloudflare-Workers"
++    ? void 0
++    : console.createTask;
+ "production" !== process.env.NODE_ENV &&
+   (function () {
+     function getComponentNameFromType(type) {
+@@ -306,8 +322,8 @@
+       );
+     var hasOwnProperty = Object.prototype.hasOwnProperty,
+       isArrayImpl = Array.isArray,
+-      createTask = console.createTask
+-        ? console.createTask
++      createTask = __devdogsWorkerdConsoleCreateTask
++        ? __devdogsWorkerdConsoleCreateTask
+         : function () {
+             return null;
+           };
+diff --git a/cjs/react.development.js b/cjs/react.development.js
+index 941f5f8db8ec826bcb2e13f96f2cb8b524ad3823..d099416b04a0d5b996fc30c437679ef0538440aa 100644
+--- a/cjs/react.development.js
++++ b/cjs/react.development.js
+@@ -9,6 +9,22 @@
+  */
+ 
+ "use strict";
++
++// DevDogsUGA TASK-294: Cloudflare workerd implements console.createTask()
++// as a stub that THROWS ERR_METHOD_NOT_IMPLEMENTED instead of being absent,
++// breaking every `console.createTask ? ... : ...` / `!!console.createTask`
++// feature-detect in this file. A synchronous probe isn't reliable either:
++// workerd lets the probe succeed outside a request's I/O context, then
++// throws the same call once it runs inside real request handling. Hard-
++// disable specifically when running on Cloudflare Workers (per
++// Cloudflare's documented runtime check), leaving every other runtime's
++// real support (including a future fixed workerd) intact. File upstream
++// against cloudflare/workerd if this comment outlives the gap.
++var __devdogsWorkerdConsoleCreateTask =
++  typeof navigator !== "undefined" &&
++  navigator.userAgent === "Cloudflare-Workers"
++    ? void 0
++    : console.createTask;
+ "production" !== process.env.NODE_ENV &&
+   (function () {
+     function defineDeprecationWarning(methodName, info) {
+@@ -692,8 +708,8 @@
+         recentlyCreatedOwnerStacks: 0
+       },
+       hasOwnProperty = Object.prototype.hasOwnProperty,
+-      createTask = console.createTask
+-        ? console.createTask
++      createTask = __devdogsWorkerdConsoleCreateTask
++        ? __devdogsWorkerdConsoleCreateTask
+         : function () {
+             return null;
+           };
+@@ -1115,7 +1131,7 @@
+           value: null,
+           owner: null,
+           debugStack: Error("react-stack-top-frame"),
+-          debugTask: console.createTask ? console.createTask("lazy()") : null
++          debugTask: __devdogsWorkerdConsoleCreateTask ? __devdogsWorkerdConsoleCreateTask("lazy()") : null
+         };
+       ctor._ioInfo = ioInfo;
+       lazyType._debugInfo = [{ awaited: ioInfo }];
+diff --git a/cjs/react.react-server.development.js b/cjs/react.react-server.development.js
+index 8978eb434c75635e27700ed6ded1c4eff592eb19..674c9c0528e0e81e741f8f011dd4ab76728986b4 100644
+--- a/cjs/react.react-server.development.js
++++ b/cjs/react.react-server.development.js
+@@ -9,6 +9,22 @@
+  */
+ 
+ "use strict";
++
++// DevDogsUGA TASK-294: Cloudflare workerd implements console.createTask()
++// as a stub that THROWS ERR_METHOD_NOT_IMPLEMENTED instead of being absent,
++// breaking every `console.createTask ? ... : ...` / `!!console.createTask`
++// feature-detect in this file. A synchronous probe isn't reliable either:
++// workerd lets the probe succeed outside a request's I/O context, then
++// throws the same call once it runs inside real request handling. Hard-
++// disable specifically when running on Cloudflare Workers (per
++// Cloudflare's documented runtime check), leaving every other runtime's
++// real support (including a future fixed workerd) intact. File upstream
++// against cloudflare/workerd if this comment outlives the gap.
++var __devdogsWorkerdConsoleCreateTask =
++  typeof navigator !== "undefined" &&
++  navigator.userAgent === "Cloudflare-Workers"
++    ? void 0
++    : console.createTask;
+ "production" !== process.env.NODE_ENV &&
+   (function () {
+     function noop() {}
+@@ -512,8 +528,8 @@
+       REACT_CLIENT_REFERENCE = Symbol.for("react.client.reference"),
+       hasOwnProperty = Object.prototype.hasOwnProperty,
+       assign = Object.assign,
+-      createTask = console.createTask
+-        ? console.createTask
++      createTask = __devdogsWorkerdConsoleCreateTask
++        ? __devdogsWorkerdConsoleCreateTask
+         : function () {
+             return null;
+           },
+@@ -795,7 +811,7 @@
+           value: null,
+           owner: null,
+           debugStack: Error("react-stack-top-frame"),
+-          debugTask: console.createTask ? console.createTask("lazy()") : null
++          debugTask: __devdogsWorkerdConsoleCreateTask ? __devdogsWorkerdConsoleCreateTask("lazy()") : null
+         };
+       ctor._ioInfo = ioInfo;
+       lazyType._debugInfo = [{ awaited: ioInfo }];
