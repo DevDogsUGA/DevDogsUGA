@@ -69,9 +69,9 @@ export default function JoinByCodeForm({
         role="status"
         className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm text-emerald-200"
       >
-        Your request is with {selected.name}&rsquo;s lead. They get an email,
-        and you will get one back when they answer — nothing is reserved for you
-        in the meantime, so it is fine to ask a second team as well.
+        Your request is with {selected.name}&rsquo;s lead, who answers it from
+        their team requests page. Nothing is reserved for you in the meantime,
+        so it is fine to ask a second team as well.
       </p>
     );
   }
