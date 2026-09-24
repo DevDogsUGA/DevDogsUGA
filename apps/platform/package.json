@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
-    "@devdogsuga/club-config": "workspace:*",
+    "@devdogsuga/events": "workspace:*",
     "@devdogsuga/docs": "workspace:*",
     "@devdogsuga/drizzle": "workspace:*",
     "@devdogsuga/email": "workspace:*",

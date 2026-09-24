@@ -1,4 +1,4 @@
-import { validateClubConfig, type ClubConfig } from "@devdogsuga/club-config";
+import { validateClubConfig, type ClubConfig } from "@devdogsuga/events";
 import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { clubDateKey } from "~/lib/eventTime";
 import type { db } from "~/server/db";
@@ -6,7 +6,7 @@ import { meetings, workshops } from "~/server/db/schema";
 import { postAlert } from "../alerts";
 
 /**
- * The reconcile-from-config: `@devdogsuga/club-config` in, `meetings` and
+ * The reconcile-from-config: `@devdogsuga/events` in, `meetings` and
  * `workshops` up to date out.
  *
  *   * **Identity is the authored `configId`, never the name or slug.** A
@@ -81,11 +81,11 @@ export async function reconcileFromConfig(
 ): Promise<ReconcileResult> {
   const issues = validateClubConfig(config);
   if (issues.length > 0) {
-    const reason = `club-config failed runtime validation (${issues.length} issue${issues.length === 1 ? "" : "s"})`;
+    const reason = `config failed runtime validation (${issues.length} issue${issues.length === 1 ? "" : "s"})`;
     await postAlert(
       "Config reconcile aborted: invalid config",
       issues.map((issue) => `[${issue.id}] ${issue.code}: ${issue.message}`),
-      "This is the SAME validator `@devdogsuga/club-config`'s CI check runs, " +
+      "This is the SAME validator `@devdogsuga/events`'s CI check runs, " +
         "so a config that reaches here failing it means CI was bypassed or " +
         "the config was built some other way. Nothing was written -- " +
         "meetings and workshops are unchanged.",
@@ -94,7 +94,7 @@ export async function reconcileFromConfig(
   }
 
   if (config.meetings.length === 0) {
-    const reason = "club-config has zero meetings";
+    const reason = "events has zero meetings";
     await postAlert(
       "Config reconcile aborted: zero meetings",
       [

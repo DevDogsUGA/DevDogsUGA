@@ -11,7 +11,7 @@ import type { EventGraphicSource } from "./graphics.js";
  *
  * Every other graphic is a function of committed files. An event poster is a
  * function of meetings reconciled into the database from
- * `@devdogsuga/club-config`, so `devtools images event/*` needs a running
+ * `@devdogsuga/events`, so `devtools images event/*` needs a running
  * database that has that config loaded into it — and there is nothing about
  * typing a command that makes that obvious. Making it obvious is most of what
  * this file is for: the reads are small, and {@link EventReader} is the seam

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import type { ClubConfig, Meeting } from "@devdogsuga/club-config";
+import type { ClubConfig, Meeting } from "@devdogsuga/events";
 import { db } from "~/server/db";
 import { reconcileFromConfig } from "./reconcile";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MEETING_BUILDING_CHOICES as FROM_CLUB_CONFIG } from "@devdogsuga/club-config";
+import { MEETING_BUILDING_CHOICES as FROM_CLUB_CONFIG } from "@devdogsuga/events";
 import { HIGHLIGHT_PATHS, HIGHLIGHT_PINS } from "./campusMapData";
 import { BUILDING_CENTERS, BUILDING_KEYS, VIEW } from "./campusMapMeta";
 import {
@@ -22,7 +22,7 @@ import {
  * up in a build, and both are found by a member standing in the wrong place.
  */
 describe("the building list", () => {
-  it("matches the copy in @devdogsuga/club-config", () => {
+  it("matches the copy in @devdogsuga/events", () => {
     // Order as well as membership: this is the order officers see in the
     // picker, and `BUILDING_KEYS` is what fixes it.
     expect([...MEETING_BUILDING_CHOICES]).toEqual([...FROM_CLUB_CONFIG]);

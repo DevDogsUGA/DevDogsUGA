@@ -142,7 +142,7 @@ export interface EventDetail {
  * detail instead.
  *
  * One string literal, matching `OTHER_BUILDING` in the app's `buildings.ts`
- * and `MEETING_BUILDING_CHOICES` in `@devdogsuga/club-config`'s schema. Those
+ * and `MEETING_BUILDING_CHOICES` in `@devdogsuga/events`'s schema. Those
  * two already keep separate copies of this vocabulary, with a test holding
  * them together, for the same dependency-direction reason that applies here.
  */

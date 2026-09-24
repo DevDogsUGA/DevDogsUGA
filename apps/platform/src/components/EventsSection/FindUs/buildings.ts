@@ -8,7 +8,7 @@ import { BUILDING_KEYS, type BuildingKey } from "./campusMapMeta";
  * in the dropdown with no footprint behind it is a highlight pointing at
  * nothing, and nobody would notice until a meeting was scheduled in it.
  *
- * `@devdogsuga/club-config` keeps its own copy, because it sits upstream of
+ * `@devdogsuga/events` keeps its own copy, because it sits upstream of
  * this app and importing downward would invert the dependency.
  * `buildings.test.ts` holds the two together.
  */

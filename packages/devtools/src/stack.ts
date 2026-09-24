@@ -120,7 +120,7 @@ async function pushMigrations(connection: DbConnection): Promise<number> {
  * including the hard production gate — before this ever runs.
  *
  * Meetings and workshops are NOT among the tables `supabase/seed/*.sql`
- * populates -- they come from `@devdogsuga/club-config` via
+ * populates -- they come from `@devdogsuga/events` via
  * `reconcileFromConfig`, an authenticated platform route rather than a
  * devtools-side function this CLI can call directly (it needs the app's
  * Drizzle client, relations and Sentry wiring, none of which belong in this
@@ -185,7 +185,7 @@ export async function reconcileConfigAfterReset(
   if (!(await reachable(baseUrl))) {
     return [
       `Meetings and workshops are not seeded yet -- nothing is listening at ${baseUrl} ` +
-        `to reconcile @devdogsuga/club-config into them. ${manualStep}`,
+        `to reconcile @devdogsuga/events into them. ${manualStep}`,
     ];
   }
 
@@ -215,7 +215,7 @@ export async function reconcileConfigAfterReset(
     ];
   }
 
-  return ["Meetings and workshops reconciled from @devdogsuga/club-config."];
+  return ["Meetings and workshops reconciled from @devdogsuga/events."];
 }
 
 /**

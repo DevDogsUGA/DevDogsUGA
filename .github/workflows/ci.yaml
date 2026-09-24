@@ -158,8 +158,8 @@ jobs:
       # caught here, not at runtime. Also covered by the lint/typecheck/test
       # step above via the package's own vitest suite; this step exercises
       # the CLI a config author actually runs.
-      - name: Club config passes its publishability checks
-        run: pnpm --filter @devdogsuga/club-config check
+      - name: Events config passes its publishability checks
+        run: pnpm --filter @devdogsuga/events check
       # .env.example is GENERATED from the env manifests; this regenerates it
       # in memory and byte-compares -- the same pattern the database job uses
       # for database.types.ts. Credential-free by construction: the generator

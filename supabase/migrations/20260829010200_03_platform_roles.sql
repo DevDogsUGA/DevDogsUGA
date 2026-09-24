@@ -94,7 +94,7 @@ alter table "platform"."credentials" enable row level security;
 -- and a stray reference there is a silent staleness bug rather than an error.
 --
 -- There is deliberately no "canManageMeetings" either. Meetings and workshops
--- are authored as config-as-code (`@devdogsuga/club-config`) and competitions
+-- are authored as config-as-code (`@devdogsuga/events`) and competitions
 -- are mirrored from a GitHub Project; access to those authoring surfaces IS
 -- the permission. A second one in Postgres would create a system that could
 -- disagree with GitHub about who is an officer, and GitHub would win, because

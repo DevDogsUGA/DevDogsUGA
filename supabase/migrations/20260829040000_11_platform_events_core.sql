@@ -1,10 +1,10 @@
 -- Events core: meetings, workshops, seasons and competitions.
 --
 -- Nothing here is written by a client. Meetings and workshops are authored as
--- config-as-code (`@devdogsuga/club-config`) and arrive through
+-- config-as-code (`@devdogsuga/events`) and arrive through
 -- `server/config/reconcile.ts`, which runs server-side as the owning role and
 -- is not subject to RLS. Every check constraint below is a BACKSTOP behind
--- `@devdogsuga/club-config`'s `validator.ts` rather than the enforcement
+-- `@devdogsuga/events`'s `validator.ts` rather than the enforcement
 -- itself. The rule that follows is the one thing to carry away from this
 -- file: a constraint here must never be STRICTER than the validator upstream
 -- of it. A value the validator publishes and the database rejects is not a
@@ -105,7 +105,7 @@ create table "platform"."meetings" (
   "location"           text,
   "startsAt"           timestamptz not null,
   "endsAt"             timestamptz not null,
-  -- The config-as-code identity: `@devdogsuga/club-config`'s authored `id`
+  -- The config-as-code identity: `@devdogsuga/events`'s authored `id`
   -- for this meeting. Unique only among LIVE rows (see the partial index
   -- below), so a config item that is retired and later reused -- unlikely,
   -- but the id namespace is the author's to manage, not this schema's -- does
@@ -174,7 +174,7 @@ create table "platform"."meetings" (
   -- `apps/platform/scripts/generate-campus-map.ts`, which is where the
   -- canonical list lives. Adding a building is three things that move
   -- together and a deploy rather than a click: this list,
-  -- MEETING_BUILDING_CHOICES in `@devdogsuga/club-config`'s schema, and the
+  -- MEETING_BUILDING_CHOICES in `@devdogsuga/events`'s schema, and the
   -- HIGHLIGHTS table in that script, re-run, since a building with no
   -- footprint is a pin over nothing.
   constraint "meetings_building_choices" check (
@@ -242,7 +242,7 @@ comment on column "platform"."meetings"."cancellationReason" is
   'Why, in a few words -- "no sprint this week", "campus closed". Null even when "cancelledAt" is set, because the fact and the explanation arrive in separate keystrokes and the page can state the fact without it.';
 
 comment on column "platform"."meetings"."configId" is
-  'The stable id `@devdogsuga/club-config` authors for this meeting. `server/config/reconcile.ts` upserts and archives on this column; unique only among live rows, via a partial index below, so an archived id can be reused. Null for a row nothing in config has ever named.';
+  'The stable id `@devdogsuga/events` authors for this meeting. `server/config/reconcile.ts` upserts and archives on this column; unique only among live rows, via a partial index below, so an archived id can be reused. Null for a row nothing in config has ever named.';
 
 comment on column "platform"."meetings"."surveyUrl" is
   'Where to send a member after a successful check-in at this meeting. Null is the ordinary case -- most nights have nothing to redirect to.';
@@ -304,7 +304,7 @@ comment on column "platform"."workshops"."project" is
   'The long-running body of work this workshop recommends, as free text -- "DogDays", "DogDays & DogPack" -- or null when it teaches a skill rather than a codebase. Authored in config; there is no projects table to look this up in any more.';
 
 comment on column "platform"."workshops"."configId" is
-  'The stable id `@devdogsuga/club-config` authors for this workshop, within its meeting''s agenda. `server/config/reconcile.ts` upserts and archives on this column; unique only among live rows.';
+  'The stable id `@devdogsuga/events` authors for this workshop, within its meeting''s agenda. `server/config/reconcile.ts` upserts and archives on this column; unique only among live rows.';
 
 -- ============================================================
 -- Competitions

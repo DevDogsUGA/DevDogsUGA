@@ -339,7 +339,7 @@ function resolvePatterns(patterns: string[], registry: Graphic[]): Graphic[] {
   if (askedForEvents && !haveEvents) {
     throw new Error(
       "This database has no meetings, so there are no event images to render. " +
-        "Reconcile it from `@devdogsuga/club-config`, or point at a database that has been.",
+        "Reconcile it from `@devdogsuga/events`, or point at a database that has been.",
     );
   }
 

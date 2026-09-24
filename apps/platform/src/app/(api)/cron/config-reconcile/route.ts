@@ -1,4 +1,4 @@
-import { getClubConfig } from "@devdogsuga/club-config";
+import { getClubConfig } from "@devdogsuga/events";
 import { unauthorized } from "next/navigation";
 import { NextResponse, connection } from "next/server";
 import { env } from "~/env";
@@ -9,7 +9,7 @@ import { reconcileFromConfig } from "~/server/config/reconcile";
 /**
  * GET /cron/config-reconcile
  *
- * Reconciles `meetings` and `workshops` against `@devdogsuga/club-config`.
+ * Reconciles `meetings` and `workshops` against `@devdogsuga/events`.
  * Fired on the shared fifteen-minute cron slot (see
  * `cloudflare/scheduled.ts`). `pnpm devtools cron run` can also target this
  * route directly with an authenticated GET, which is how a deploy pipeline's
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
       "Config reconcile aborted: committed config does not parse",
       [e instanceof Error ? e.message : String(e)],
       "`getClubConfig()` threw before reconcile ever ran. Run " +
-        "`pnpm --filter @devdogsuga/club-config check` to see the same " +
+        "`pnpm --filter @devdogsuga/events check` to see the same " +
         "failure locally.",
     );
     return NextResponse.json({ success: false, reason: "invalid_config_file" });

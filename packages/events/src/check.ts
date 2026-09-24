@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getClubConfig, ClubConfigError } from "./index.js";
 
 /**
- * `pnpm --filter @devdogsuga/club-config check` -- the CI gate.
+ * `pnpm --filter @devdogsuga/events check` -- the CI gate.
  *
  * Config is validated exactly once, here, before it ever reaches a deploy:
  * the runtime reconcile (`server/config/reconcile.ts`) trusts what it parses
@@ -20,7 +20,7 @@ function main(): number {
       0,
     );
     process.stdout.write(
-      `club-config: ok (${meetingCount} meetings, ${workshopCount} workshops)\n`,
+      `events: ok (${meetingCount} meetings, ${workshopCount} workshops)\n`,
     );
     return 0;
   } catch (error) {
@@ -30,7 +30,7 @@ function main(): number {
     }
     if (error instanceof z.ZodError) {
       process.stderr.write(
-        "club-config: data/meetings.json does not match the schema:\n",
+        "events: data/meetings.json does not match the schema:\n",
       );
       for (const issue of error.issues) {
         process.stderr.write(`  ${issue.path.join(".")}: ${issue.message}\n`);

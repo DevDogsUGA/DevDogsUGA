@@ -43,13 +43,13 @@ describe("reconcileConfigAfterReset", () => {
     // No CRON_SECRET, matching the route's own local-request exemption.
     expect(init).toBeUndefined();
     expect(lines).toEqual([
-      "Meetings and workshops reconciled from @devdogsuga/club-config.",
+      "Meetings and workshops reconciled from @devdogsuga/events.",
     ]);
   });
 
   it("reports an aborted reconcile without pretending it succeeded", async () => {
     const fetchSpy = vi.fn(async () =>
-      jsonResponse({ success: false, reason: "club-config has zero meetings" }),
+      jsonResponse({ success: false, reason: "events has zero meetings" }),
     );
     const lines = await reconcileConfigAfterReset({
       reachable: vi.fn(async () => true),
@@ -57,7 +57,7 @@ describe("reconcileConfigAfterReset", () => {
     });
 
     expect(lines.join(" ")).toContain("aborted");
-    expect(lines.join(" ")).toContain("club-config has zero meetings");
+    expect(lines.join(" ")).toContain("events has zero meetings");
   });
 
   it("reports a non-2xx response instead of throwing", async () => {

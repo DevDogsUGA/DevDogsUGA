@@ -26,7 +26,7 @@ const DATA_FILE = join(
 export class ClubConfigError extends Error {
   constructor(public readonly issues: ValidationIssue[]) {
     super(
-      `${issues.length} club-config ${issues.length === 1 ? "issue" : "issues"} found:\n` +
+      `${issues.length} events ${issues.length === 1 ? "issue" : "issues"} found:\n` +
         issues
           .map((issue) => `  [${issue.id}] ${issue.code}: ${issue.message}`)
           .join("\n"),
