@@ -1,6 +1,6 @@
 "use server";
 
-import { and, count, eq, isNull, ne } from "drizzle-orm";
+import { and, count, eq, isNull, ne, sql } from "drizzle-orm";
 import { env } from "~/env";
 import { postAlert } from "~/server/alerts";
 import { expectSession } from "~/server/auth";
@@ -33,6 +33,7 @@ import {
 } from "~/server/teams/requireCanJoin";
 import { requireTwoFactor } from "~/server/teams/requireTwoFactor";
 import { underConcurrentTeamCap } from "~/server/teams/limits";
+import { consumeRateLimit } from "~/server/rateLimit";
 import { usersInAuth } from "~/supabase/drizzle/schema";
 
 /**
@@ -58,6 +59,60 @@ import { usersInAuth } from "~/supabase/drizzle/schema";
  * Drizzle connects as the owning role, so RLS does not apply to anything here.
  * The authorization checks at the top of each action are the whole boundary.
  */
+
+/**
+ * Rate-limit budgets for the actions below, via `~/server/rateLimit.ts`.
+ *
+ * Every budget here is per-CALLER, on a 10-minute window, EXCEPT invites,
+ * which get two separate budgets: 20/hour per inviting lead, and 50/day per
+ * team. Reasoning:
+ *
+ * - `create`/`join`/`request`/`respond`/`leave`/`disband`: each of these is,
+ *   at most, one legitimate action per person per sitting -- a member does
+ *   not create ten teams or leave and rejoin ten times in ten minutes on
+ *   purpose. 10/10min is generous headroom for retrying a taken slug or a
+ *   mistyped join code while still bounding how many `provisionTeam`,
+ *   `addMember`, `removeMember` or `disbandTeam` calls (all GitHub API
+ *   calls, all against the org's rate limits too) one account can trigger
+ *   in a burst.
+ * - `invite`: structurally different, because a lead inviting a whole
+ *   roster is a NORMAL burst that the 10/10min shape would falsely flag.
+ *   The per-lead budget (20/hour) instead bounds how fast one account can
+ *   fan out `teamInvite` emails -- the actual abuse surface, spam, not
+ *   GitHub call volume, since an invite's `addMember` only happens later,
+ *   on acceptance. The per-team budget (50/day) exists independently
+ *   because a compromised OR careless lead account is not the only way a
+ *   team's invite volume can run away -- transferring the lead role mid-day
+ *   should not reset how many invites the TEAM has sent, so this counts
+ *   against the team's id, not the (rotating) lead's.
+ */
+const PER_ACCOUNT_ACTION_LIMIT = 10;
+const PER_ACCOUNT_ACTION_WINDOW_SECONDS = 10 * 60;
+const INVITES_PER_LEAD_LIMIT = 20;
+const INVITES_PER_LEAD_WINDOW_SECONDS = 60 * 60;
+const INVITES_PER_TEAM_LIMIT = 50;
+const INVITES_PER_TEAM_WINDOW_SECONDS = 24 * 60 * 60;
+
+/**
+ * Consumes one hit of a budget, translating a refusal into the error every
+ * caller below already knows how to surface. Called BEFORE the GitHub call
+ * or email send each action guards, per `consumeRateLimit`'s own contract:
+ * a throttled attempt should cost nothing beyond the one row it writes.
+ */
+async function guardRateLimit(
+  scope: string,
+  subjectId: string,
+  limit: number,
+  windowSeconds: number,
+): Promise<void> {
+  const allowed = await consumeRateLimit({
+    scope,
+    subjectId,
+    limit,
+    windowSeconds,
+  });
+  if (!allowed) throw new TeamActionError("rate_limited");
+}
 
 const JOIN_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -145,6 +200,14 @@ export interface CreatedTeam {
 
 async function createTeamImpl(name: string): Promise<CreatedTeam> {
   const userId = await expectSession();
+  // Checked before `requireTwoFactor` -- itself a GitHub call -- and
+  // everything below it. See the budgets' doc comment above.
+  await guardRateLimit(
+    "team:create",
+    userId,
+    PER_ACCOUNT_ACTION_LIMIT,
+    PER_ACCOUNT_ACTION_WINDOW_SECONDS,
+  );
   // The creator becomes the lead the moment this returns, which is push
   // access to the org repo -- see `requireTwoFactor`'s doc on why this is
   // checked before anything else, not deferred to the GitHub grant below.
@@ -233,6 +296,12 @@ async function createTeamImpl(name: string): Promise<CreatedTeam> {
 
 async function joinTeamImpl(teamId: string, joinCode: string): Promise<void> {
   const userId = await expectSession();
+  await guardRateLimit(
+    "team:join",
+    userId,
+    PER_ACCOUNT_ACTION_LIMIT,
+    PER_ACCOUNT_ACTION_WINDOW_SECONDS,
+  );
   await requireTwoFactor(userId);
 
   await db.transaction(async (tx) => {
@@ -272,6 +341,17 @@ async function requestToJoinImpl(
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
   const message = rawMessage?.trim() || undefined;
   const userId = await expectSession();
+  // `requestToJoinImpl` itself never calls GitHub -- the grant happens on
+  // acceptance, in `respondToMembershipImpl` -- but `requireTwoFactor` right
+  // below does, and a flood of requests is its own abuse surface (every one
+  // is a review a lead has to work through). Same per-account budget as
+  // create/join.
+  await guardRateLimit(
+    "team:request",
+    userId,
+    PER_ACCOUNT_ACTION_LIMIT,
+    PER_ACCOUNT_ACTION_WINDOW_SECONDS,
+  );
   await requireTwoFactor(userId);
 
   return db.transaction(async (tx) => {
@@ -322,10 +402,21 @@ async function resolveInvitee(identifier: string): Promise<string | null> {
   if (trimmed.length === 0) return null;
 
   if (trimmed.includes("@")) {
+    // Case-insensitive on BOTH sides: `usersInAuth.email` is whatever case
+    // the identity provider handed Supabase, not normalized at signup, so
+    // comparing it as-is against a lowercased `trimmed` only matched an
+    // invitee whose stored email happened to already be lowercase. Still
+    // index-friendly: `auth.users` already carries
+    // `users_instance_id_email_idx`, a btree on
+    // `(instance_id, lower(email))` (Supabase's own index, in
+    // `supabase/drizzle/schema.ts`). This query filters only on the second
+    // column, but with one `instance_id` in a self-hosted project that
+    // column is near-constant, so Postgres still walks the index rather than
+    // falling back to a sequential scan over `auth.users`.
     const [row] = await db
       .select({ id: usersInAuth.id })
       .from(usersInAuth)
-      .where(eq(usersInAuth.email, trimmed.toLowerCase()))
+      .where(sql`lower(${usersInAuth.email}) = lower(${trimmed})`)
       .limit(1);
     return row?.id ?? null;
   }
@@ -338,6 +429,22 @@ async function inviteToTeamImpl(
   identifier: string,
 ): Promise<string> {
   const callerId = await expectSession();
+
+  // Both budgets checked before `resolveInvitee` (a database read) and the
+  // transaction below -- see the budgets' doc comment for why invites get
+  // two separate counters rather than the one every other action uses.
+  await guardRateLimit(
+    "team:invite:user",
+    callerId,
+    INVITES_PER_LEAD_LIMIT,
+    INVITES_PER_LEAD_WINDOW_SECONDS,
+  );
+  await guardRateLimit(
+    "team:invite:team",
+    teamId,
+    INVITES_PER_TEAM_LIMIT,
+    INVITES_PER_TEAM_WINDOW_SECONDS,
+  );
 
   // Resolved before the transaction: a database read with no lock to hold,
   // and the "no match" refusal below should not wait on `requireLead`
@@ -472,6 +579,20 @@ async function respondToMembershipImpl(
 ): Promise<void> {
   const callerId = await expectSession();
 
+  // Only `accept` reaches `requireTwoFactor`/`addMember` below -- decline is
+  // a pure status update with no GitHub call, so it is not worth spending a
+  // hit of the caller's budget on. Guarded here, before the transaction,
+  // since `accept` is already known from the argument and nothing inside
+  // the transaction changes that answer.
+  if (accept) {
+    await guardRateLimit(
+      "team:respond",
+      callerId,
+      PER_ACCOUNT_ACTION_LIMIT,
+      PER_ACCOUNT_ACTION_WINDOW_SECONDS,
+    );
+  }
+
   await db.transaction(async (tx) => {
     const [request] = await tx
       .select({
@@ -559,6 +680,14 @@ async function respondToMembershipImpl(
 
 async function leaveTeamImpl(teamId: string): Promise<void> {
   const userId = await expectSession();
+  // `removeMember` below is a GitHub call, same budget as the other
+  // single-actor actions.
+  await guardRateLimit(
+    "team:leave",
+    userId,
+    PER_ACCOUNT_ACTION_LIMIT,
+    PER_ACCOUNT_ACTION_WINDOW_SECONDS,
+  );
 
   await db.transaction(async (tx) => {
     await lockTeam(tx, teamId);
@@ -702,6 +831,14 @@ async function transferLeadImpl(
 
 async function disbandTeamImpl(teamId: string): Promise<void> {
   const userId = await expectSession();
+  // `disbandTeam` below is a GitHub call, same budget as the other
+  // single-actor actions.
+  await guardRateLimit(
+    "team:disband",
+    userId,
+    PER_ACCOUNT_ACTION_LIMIT,
+    PER_ACCOUNT_ACTION_WINDOW_SECONDS,
+  );
 
   await db.transaction(async (tx) => {
     await lockTeam(tx, teamId);

@@ -44,6 +44,8 @@ export const TEAM_PROBLEM_MESSAGES: Record<TeamProblemCode, string> = {
   invitee_not_found:
     "Nobody on the platform matches that email or GitHub username exactly. Have them sign up on the platform and link GitHub, then invite them again.",
   not_found: "That team or request no longer exists.",
+  rate_limited:
+    "That's too many attempts in a short time. Wait a bit and try again.",
   unknown:
     "Something went wrong on our side and nothing was saved. Try again in a moment.",
 };

@@ -39,7 +39,13 @@ export type TeamActionCode =
   /** No account matches the exact email or GitHub username an invite named. */
   | "invitee_not_found"
   /** The team or request named does not exist. */
-  | "not_found";
+  | "not_found"
+  /**
+   * The caller (or, for invites, the team) hit its budget for this action
+   * within the tracked window. See `server/rateLimit.ts` and the budgets
+   * chosen per call site in `server/actions/teams.ts`.
+   */
+  | "rate_limited";
 
 /**
  * Everything a caller can be told, including the one thing the domain does not
