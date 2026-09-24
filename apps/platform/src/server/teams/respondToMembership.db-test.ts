@@ -24,6 +24,9 @@ import type { GithubResult } from "~/server/github/teamSync";
 
 const github = vi.hoisted(() => ({
   addMember: vi.fn((): Promise<GithubResult> => Promise.resolve({ ok: true })),
+  // No linked GitHub login, so `requireTwoFactor` is a no-op here; the 2FA
+  // gate has its own unit tests (`requireTwoFactor.test.ts`).
+  githubLoginFor: vi.fn((): Promise<string | null> => Promise.resolve(null)),
 }));
 vi.mock("~/server/github/teamSync", () => github);
 

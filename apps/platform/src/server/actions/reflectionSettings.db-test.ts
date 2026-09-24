@@ -77,9 +77,14 @@ afterAll(async () => {
     .update(reflectionSettings)
     .set({ ...original, updatedAt: new Date() })
     .where(eq(reflectionSettings.id, true));
-  await db.execute(sql`
-    delete from platform."auditEvents" where "actorUserId" = ${IDS.officer}::uuid
-  `);
+  // Audit events are append-only; a trigger refuses the delete unless
+  // triggers are off, the way `reflections.db-test.ts` cleans up.
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`set local session_replication_role = replica`);
+    await tx.execute(sql`
+      delete from platform."auditEvents" where "actorUserId" = ${IDS.officer}::uuid
+    `);
+  });
   await db.execute(sql`delete from auth.users where id = ${IDS.officer}::uuid`);
 });
 
