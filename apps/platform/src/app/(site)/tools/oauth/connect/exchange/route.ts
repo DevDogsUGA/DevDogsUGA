@@ -7,6 +7,7 @@ import { oauthConnectCodes } from "~/server/db/schema";
 import {
   challengeFromVerifier,
   hashConnectCode,
+  sweepExpiredConnectCodes,
 } from "~/server/oauth/connectCodes";
 import { consumeRateLimit } from "~/server/rateLimit";
 
@@ -150,6 +151,13 @@ export async function POST(request: NextRequest) {
     .delete(oauthConnectCodes)
     .where(eq(oauthConnectCodes.codeHash, codeHash))
     .returning();
+
+  // Opportunistic cleanup, the exchange route's half -- see
+  // `sweepExpiredConnectCodes`'s doc comment. Runs regardless of whether
+  // THIS request's own code was found, so a burst of exchange attempts
+  // (valid or not) is still enough traffic to keep the table from
+  // accumulating abandoned rows.
+  await sweepExpiredConnectCodes();
 
   if (!claimed) {
     return jsonNoStore(

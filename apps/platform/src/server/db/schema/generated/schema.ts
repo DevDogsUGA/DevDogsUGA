@@ -316,6 +316,7 @@ export const oauthConnectCodesInPlatform = platform.table.withRLS("oauthConnectC
 	expiresAt: timestamp({ withTimezone: true }).default(sql`(now() + '00:02:00'::interval)`).notNull(),
 }, (table) => [
 	uniqueIndex("oauthConnectCodes_codeHash_key").using("btree", table.codeHash.asc().nullsLast()),
+	index("oauthConnectCodes_expiresAt_idx").using("btree", table.expiresAt.asc().nullsLast()),
 
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
 

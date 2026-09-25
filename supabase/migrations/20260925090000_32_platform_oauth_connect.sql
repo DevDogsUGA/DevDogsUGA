@@ -83,6 +83,14 @@ create table "platform"."oauthConnectCodes" (
 create unique index "oauthConnectCodes_codeHash_key"
   on "platform"."oauthConnectCodes" ("codeHash");
 
+-- Backs the expired-row sweep `approveConnect` and the exchange route both
+-- run (`where "expiresAt" < now()`) -- an abandoned code (nobody ever
+-- approved, or approved and never ran the exchange) would otherwise sit
+-- here holding a plaintext client secret forever, since nothing else ever
+-- deletes an unconsumed row.
+create index "oauthConnectCodes_expiresAt_idx"
+  on "platform"."oauthConnectCodes" ("expiresAt");
+
 alter table "platform"."oauthConnectCodes"
   add constraint "oauthConnectCodes_clientId_oauth_clients_id_fkey"
   foreign key ("clientId") references auth."oauth_clients" ("id")

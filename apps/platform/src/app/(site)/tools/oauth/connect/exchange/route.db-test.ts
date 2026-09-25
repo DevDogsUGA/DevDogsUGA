@@ -5,7 +5,10 @@ import { NextRequest } from "next/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "~/server/db";
 import { oauthConnectCodes, oauthRegistrations } from "~/server/db/schema";
-import { challengeFromVerifier } from "~/server/oauth/connectCodes";
+import {
+  challengeFromVerifier,
+  sweepExpiredConnectCodes,
+} from "~/server/oauth/connectCodes";
 import { supabaseAdmin } from "~/supabase/admin";
 import { POST } from "./route";
 
@@ -197,5 +200,54 @@ describe("POST /tools/oauth/connect/exchange", () => {
     const response = await postExchange({ code: freshCode() });
     expect(response.status).toBe(400);
     expect(await errorBody(response)).toBe("invalid_request");
+  });
+
+  it("sweeps an unrelated expired, unexchanged code as a side effect", async () => {
+    // Approved and abandoned: never exchanged, so nothing else ever deletes
+    // this row. Its OWN codeHash is never looked up in this test -- the
+    // sweep has to find it by `expiresAt` alone, the same way it would for a
+    // code nobody ever comes back for in production.
+    const abandonedCode = await insertCode({
+      codeChallenge: freshVerifier().challenge,
+      expiresAt: new Date(Date.now() - 60_000),
+    });
+
+    // Any exchange attempt runs the sweep, including one for a completely
+    // different, still-valid code.
+    const { verifier, challenge } = freshVerifier();
+    const unrelatedCode = await insertCode({ codeChallenge: challenge });
+    const response = await postExchange({
+      code: unrelatedCode,
+      code_verifier: verifier,
+    });
+    expect(response.status).toBe(200);
+
+    const remaining = await db.query.oauthConnectCodes.findFirst({
+      where: { codeHash: hashCode(abandonedCode) },
+    });
+    expect(remaining).toBeUndefined();
+  });
+});
+
+describe("sweepExpiredConnectCodes", () => {
+  it("deletes only rows past their expiresAt", async () => {
+    const expired = await insertCode({
+      codeChallenge: freshVerifier().challenge,
+      expiresAt: new Date(Date.now() - 60_000),
+    });
+    const notExpired = await insertCode({
+      codeChallenge: freshVerifier().challenge,
+    });
+
+    await sweepExpiredConnectCodes();
+
+    const expiredRow = await db.query.oauthConnectCodes.findFirst({
+      where: { codeHash: hashCode(expired) },
+    });
+    const liveRow = await db.query.oauthConnectCodes.findFirst({
+      where: { codeHash: hashCode(notExpired) },
+    });
+    expect(expiredRow).toBeUndefined();
+    expect(liveRow).toBeDefined();
   });
 });

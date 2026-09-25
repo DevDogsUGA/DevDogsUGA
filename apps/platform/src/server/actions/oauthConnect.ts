@@ -6,7 +6,10 @@ import { zfd } from "zod-form-data";
 import { authenticate, expectUserWith } from "~/server/auth";
 import { db } from "~/server/db";
 import { oauthConnectCodes, oauthRegistrations } from "~/server/db/schema";
-import { generateConnectCode } from "~/server/oauth/connectCodes";
+import {
+  generateConnectCode,
+  sweepExpiredConnectCodes,
+} from "~/server/oauth/connectCodes";
 import { parseConnectParams } from "~/server/oauth/connectParams";
 import { supabaseAdmin } from "~/supabase/admin";
 
@@ -95,6 +98,11 @@ export async function approveConnect(formData: FormData): Promise<void> {
   await db
     .insert(oauthRegistrations)
     .values({ userId: user.id, clientId: data.client_id, label });
+
+  // Opportunistic cleanup: any code that got approved and then abandoned
+  // (never exchanged) before this request would otherwise hold a plaintext
+  // client secret forever. See `sweepExpiredConnectCodes`'s doc comment.
+  await sweepExpiredConnectCodes();
 
   const { code, codeHash } = generateConnectCode();
   await db.insert(oauthConnectCodes).values({
