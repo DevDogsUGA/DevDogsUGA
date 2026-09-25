@@ -80,3 +80,54 @@ export function derivationOf(meta: EnvMeta): string | null {
 
   return envReferences(example).length > 0 ? example : null;
 }
+
+/**
+ * Expands `$NAME` / `${NAME}` references in `value`, order-independently.
+ *
+ * A name is resolved first against `raw` — a COMPLETE map of other
+ * not-yet-expanded values, typically every key an env file itself declares —
+ * recursing into it when the name is there, and only falling back to
+ * `resolved` (already-known, fully-expanded values — the rest of the loaded
+ * environment) when it is not. Because `raw` is a full map rather than a
+ * running accumulator, a name defined LATER in a file than the value
+ * referencing it still resolves: this is the fix for dotenvx's own
+ * expansion, which is a single left-to-right pass over the file and silently
+ * expands a forward reference to `""`, exactly as an undefined one would.
+ *
+ * A name found in NEITHER map falls back to `""`, matching dotenvx's own
+ * behaviour for a genuinely unresolved reference. That is deliberately left
+ * alone rather than "fixed": a key declared ahead of its own deployment
+ * (`STUDY_GROUP_FINDER_URL` and its `_CALLBACK`, see `write-env.ts`) depends
+ * on an unresolved reference staying silent, not becoming a thrown error.
+ *
+ * Throws when a chain of `raw` references loops back on itself, naming the
+ * whole chain — expanding a value that never terminates is a fault in the
+ * source file, not something to paper over with another guess. Mirrors
+ * `packages/devtools/src/deploy/write-env.ts`'s `expand()`, which resolves
+ * the identical formula syntax against a differently-sourced map (GitHub
+ * secrets/variables instead of a loaded file) for the same reason: CI
+ * composes the file order-independently already, and a local `with-env` load
+ * must not depend on which line happened to come first.
+ */
+export function expandReferences(
+  key: string,
+  value: string,
+  raw: ReadonlyMap<string, string>,
+  resolved: Readonly<Record<string, string | undefined>>,
+  seen: readonly string[] = [],
+): string {
+  return value.replace(REFERENCE, (_match, braced: string, bare: string) => {
+    const name = braced ?? bare;
+    if (seen.includes(name)) {
+      throw new Error(
+        `${key} derives from ${name}, which derives back from it ` +
+          `(chain: ${[...seen, name].join(" -> ")}).`,
+      );
+    }
+    const rawValue = raw.get(name);
+    if (rawValue !== undefined) {
+      return expandReferences(name, rawValue, raw, resolved, [...seen, name]);
+    }
+    return resolved[name] ?? "";
+  });
+}

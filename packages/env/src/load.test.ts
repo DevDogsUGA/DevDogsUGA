@@ -10,6 +10,7 @@ import {
   loadEnvironment,
   LocalStackOfflineError,
   MissingEnvFileError,
+  parseRawAssignments,
   selectEnvFiles,
   type SelectionContext,
 } from "./load.js";
@@ -524,6 +525,155 @@ describe("loadEnvironment file precedence, through real dotenvx", () => {
         realCtx(dir, { DB_URL: "from-shell" }),
       );
       expect(loaded.env.DB_URL).toBe("from-shell");
+    });
+  });
+});
+
+/**
+ * The forward-reference fix, through the REAL dotenvx and a real file on
+ * disk (like the block above): `.env.staging` declares
+ * `API_URL="https://$PROJECT_REF.supabase.co"` well before `PROJECT_REF`
+ * itself, because it is written key-by-key in whatever order Bitwarden
+ * happens to list secrets, not in dependency order (see
+ * `packages/devtools/src/env/commands.ts`'s `runEnvPull`). dotenvx's own
+ * expansion is a single left-to-right pass, so it silently rendered that as
+ * `https://.supabase.co` — see `applyEnvFiles`'s default implementation in
+ * `load.ts` for the fix and the full story.
+ */
+describe("loadEnvironment resolves $NAME references order-independently", () => {
+  async function withEnvFile<T>(
+    contents: string,
+    run: (dir: string) => Promise<T>,
+  ): Promise<T> {
+    const dir = mkdtempSync(join(tmpdir(), "load-expand-"));
+    try {
+      writeFileSync(join(dir, ".env"), contents);
+      return await run(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  function realCtx(dir: string, baseEnv: NodeJS.ProcessEnv = {}) {
+    return {
+      root: dir,
+      exists: (file: string) => existsSync(join(dir, file)),
+      probeLocalStack: () => false,
+      baseEnv,
+    };
+  }
+
+  it("resolves a forward reference — the exact .env.staging bug", async () => {
+    await withEnvFile(
+      'API_URL="https://$PROJECT_REF.supabase.co"\n' +
+        'PROJECT_REF="fqpbnmwyopohbhzkpoiu"\n',
+      async (dir) => {
+        const loaded = await loadEnvironment(undefined, {}, realCtx(dir));
+        expect(loaded.env.API_URL).toBe(
+          "https://fqpbnmwyopohbhzkpoiu.supabase.co",
+        );
+        expect(loaded.env.PROJECT_REF).toBe("fqpbnmwyopohbhzkpoiu");
+      },
+    );
+  });
+
+  it("resolves a chained forward reference (NEXT_PUBLIC_SUPABASE_URL -> API_URL -> PROJECT_REF)", async () => {
+    await withEnvFile(
+      'API_URL="https://$PROJECT_REF.supabase.co"\n' +
+        'NEXT_PUBLIC_SUPABASE_URL="$API_URL"\n' +
+        'PROJECT_REF="fqpbnmwyopohbhzkpoiu"\n',
+      async (dir) => {
+        const loaded = await loadEnvironment(undefined, {}, realCtx(dir));
+        const expected = "https://fqpbnmwyopohbhzkpoiu.supabase.co";
+        expect(loaded.env.API_URL).toBe(expected);
+        expect(loaded.env.NEXT_PUBLIC_SUPABASE_URL).toBe(expected);
+      },
+    );
+  });
+
+  it("still resolves a BACKWARD reference (the case dotenvx already got right)", async () => {
+    await withEnvFile(
+      'PROJECT_REF="fqpbnmwyopohbhzkpoiu"\n' +
+        'API_URL="https://$PROJECT_REF.supabase.co"\n',
+      async (dir) => {
+        const loaded = await loadEnvironment(undefined, {}, realCtx(dir));
+        expect(loaded.env.API_URL).toBe(
+          "https://fqpbnmwyopohbhzkpoiu.supabase.co",
+        );
+      },
+    );
+  });
+
+  it("throws naming the chain on a genuine cycle instead of looping forever", async () => {
+    await withEnvFile('A="$B"\nB="$A"\n', async (dir) => {
+      await expect(
+        loadEnvironment(undefined, {}, realCtx(dir)),
+      ).rejects.toThrow(/derives back from it/);
+    });
+  });
+
+  it("keeps today's behaviour for an undefined reference: empty, not an error", async () => {
+    await withEnvFile(
+      'BASE_URL="$STUDY_GROUP_FINDER_URL/callback"\n',
+      async (dir) => {
+        const loaded = await loadEnvironment(undefined, {}, realCtx(dir));
+        expect(loaded.env.BASE_URL).toBe("/callback");
+      },
+    );
+  });
+
+  it("lets a shell value still beat the file for a derivation key (precedence unchanged)", async () => {
+    await withEnvFile(
+      'PROJECT_REF="from-file"\nAPI_URL="https://$PROJECT_REF.supabase.co"\n',
+      async (dir) => {
+        const loaded = await loadEnvironment(
+          undefined,
+          { override: false },
+          realCtx(dir, { API_URL: "https://from-shell.supabase.co" }),
+        );
+        // The shell's API_URL wins outright — dotenvx's existing precedence,
+        // untouched by this fix.
+        expect(loaded.env.API_URL).toBe("https://from-shell.supabase.co");
+      },
+    );
+  });
+});
+
+describe("parseRawAssignments", () => {
+  it("reads double-quoted, single-quoted and bare values", () => {
+    const parsed = parseRawAssignments(
+      'API_URL="https://$PROJECT_REF.supabase.co"\n' +
+        "PASSWORD='p$$w0rd'\n" +
+        "PORT=3000\n",
+    );
+    expect(parsed.get("API_URL")).toEqual({
+      raw: "https://$PROJECT_REF.supabase.co",
+      literal: false,
+    });
+    expect(parsed.get("PASSWORD")).toEqual({ raw: "p$$w0rd", literal: true });
+    expect(parsed.get("PORT")).toEqual({ raw: "3000", literal: false });
+  });
+
+  it("tolerates a trailing `# [target pushed date]` stamp after the quote", () => {
+    const parsed = parseRawAssignments(
+      'PROJECT_REF="fqpbnmwyopohbhzkpoiu" # [staging pushed 2026-09-18]\n',
+    );
+    expect(parsed.get("PROJECT_REF")).toEqual({
+      raw: "fqpbnmwyopohbhzkpoiu",
+      literal: false,
+    });
+  });
+
+  it("skips comments, blank lines and an unterminated quote (a multiline value)", () => {
+    const parsed = parseRawAssignments(
+      '# a comment\n\nGH_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n' +
+        "more lines the parser never sees\n" +
+        'API_URL="https://$PROJECT_REF.supabase.co"\n',
+    );
+    expect(parsed.has("GH_APP_PRIVATE_KEY")).toBe(false);
+    expect(parsed.get("API_URL")).toEqual({
+      raw: "https://$PROJECT_REF.supabase.co",
+      literal: false,
     });
   });
 });

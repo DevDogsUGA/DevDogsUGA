@@ -15,6 +15,7 @@
  * it dynamically imports `node:fs`/`node:path`/`node:url` and
  * `@dotenvx/dotenvx`, none of which exist at the edge.
  */
+import { envReferences, expandReferences } from "./derivation.js";
 import { fileFor, resolveEnvironment } from "./targets.js";
 import type { DeployEnvironment } from "./targets.js";
 
@@ -100,6 +101,73 @@ export function applyWranglerLocalDatabaseAlias(
   ) {
     environment[HYPERDRIVE_LOCAL_CONNECTION_ENV] = environment.DB_URL;
   }
+}
+
+/**
+ * A minimal, single-line-only `.env` assignment reader, used ONLY to recover
+ * a key's UNEXPANDED value so a `$NAME` reference inside it can be resolved
+ * order-independently — see `expandReferences` in `derivation.ts`, and the
+ * `applyEnvFiles` default below, which is the actual bug fix. It is not a
+ * general-purpose parser: dotenvx's own parser (used for everything else —
+ * quoting edge cases, encryption, multiline private keys) stays the source of
+ * truth for every key this cannot confidently read, which it signals by
+ * leaving that key out of the returned map entirely rather than guessing.
+ *
+ * A key is included only when its whole value fits on one physical line with
+ * matched quoting:
+ *
+ *   * `'...'` — single-quoted. dotenvx never expands these (`quote()` in
+ *     `packages/devtools/src/deploy/write-env.ts` relies on exactly this), so
+ *     `literal: true` tells the caller not to recurse into it looking for a
+ *     reference — a literal `$` in a single-quoted password is not one.
+ *   * `"..."` — double-quoted, expandable.
+ *   * a bare unquoted value, read to the end of the line (minus a trailing
+ *     ` #comment`), also expandable.
+ *
+ * An unterminated quote — the start of a multiline value like the GitHub
+ * App private key — is left out entirely, and so is an `encrypted:` blob or
+ * anything else that does not match one of the three shapes above.
+ */
+export function parseRawAssignments(
+  text: string,
+): Map<string, { raw: string; literal: boolean }> {
+  const out = new Map<string, { raw: string; literal: boolean }>();
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed === "" || trimmed.startsWith("#")) continue;
+
+    const assignment = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=(.*)$/.exec(
+      trimmed,
+    );
+    if (!assignment) continue;
+    const key = assignment[1]!;
+    const rest = assignment[2]!;
+
+    // Trailing ` # [staging pushed 2026-09-18]`-style stamps (see
+    // `packages/devtools/src/env/document.ts`) ride after the closing quote,
+    // so the quote regexes below tolerate one rather than requiring the value
+    // to run to the end of the line.
+    const doubleQuoted = /^"((?:[^"\\]|\\.)*)"\s*(?:#.*)?$/.exec(rest);
+    if (doubleQuoted) {
+      out.set(key, { raw: doubleQuoted[1]!, literal: false });
+      continue;
+    }
+
+    const singleQuoted = /^'([^']*)'\s*(?:#.*)?$/.exec(rest);
+    if (singleQuoted) {
+      out.set(key, { raw: singleQuoted[1]!, literal: true });
+      continue;
+    }
+
+    if (rest.startsWith('"') || rest.startsWith("'")) continue; // unterminated: a multiline value, leave to dotenvx.
+
+    const hash = rest.search(/\s#/);
+    out.set(key, {
+      raw: (hash === -1 ? rest : rest.slice(0, hash)).trim(),
+      literal: false,
+    });
+  }
+  return out;
 }
 
 /**
@@ -475,6 +543,53 @@ export async function loadEnvironment(
       context?.applyEnvFiles ??
       (async (paths, target, overrideExisting) => {
         const { default: dx } = await import("@dotenvx/dotenvx");
+        const { readFileSync } = await import("node:fs");
+
+        // Raw, UNEXPANDED per-key values across the selected files, read
+        // straight off disk before dotenvx's own expansion runs, so a
+        // reference to a name defined LATER in the same file — or in a later
+        // file — can still be seen. First-file-wins, mirroring the list's own
+        // precedence (see the reversal below for why that is not simply
+        // "first in `paths`"). Only non-literal (not single-quoted) entries
+        // go in: those are the only ones dotenvx ever expands, so they are
+        // the only ones that can be wrong.
+        //
+        // ⚠️ This is the actual fix. dotenvx expands `$NAME` in a single
+        // left-to-right pass over the file, filling an unresolved name
+        // (forward reference, or one not defined anywhere) with `""` — so
+        // `API_URL="https://$PROJECT_REF.supabase.co"` on one line and
+        // `PROJECT_REF="…"` on a LATER line silently produced
+        // `https://.supabase.co`. Resolving against a complete map instead of
+        // a running accumulator makes that order-independent, the same fix
+        // `packages/devtools/src/deploy/write-env.ts`'s `expand()` already
+        // applies when CI composes `.env.staging`/`.env.production` — this is
+        // that same idea, for the file a person's own `with-env` reads.
+        const raw = new Map<string, string>();
+        for (const path of paths) {
+          let text: string;
+          try {
+            text = readFileSync(path, "utf8");
+          } catch {
+            continue; // a selected file vanished mid-run; dotenvx below reports it properly.
+          }
+          for (const [key, entry] of parseRawAssignments(text)) {
+            if (!raw.has(key) && !entry.literal) raw.set(key, entry.raw);
+          }
+        }
+
+        // Which of those keys `target` already held BEFORE this call, when
+        // that is supposed to win (`!overrideExisting`, with-env's own
+        // "a shell var beats the file"). dotenvx leaves such a key alone
+        // entirely — see `loadEnvironment`'s `override` doc — so the
+        // correction pass below must skip it too, or it would make the file
+        // win a precedence fight dotenvx itself just lost on purpose.
+        const shellWins = new Set<string>();
+        if (!overrideExisting) {
+          for (const key of raw.keys()) {
+            if (target[key] !== undefined) shellWins.add(key);
+          }
+        }
+
         dx.config({
           // ⚠️ dotenvx's `overload` is LAST-file-wins, but our file list is
           // FIRST-file-wins: `selectEnvFiles` puts `.env.generated` (the
@@ -488,6 +603,19 @@ export async function loadEnvironment(
           quiet: true,
           overload: overrideExisting,
         });
+
+        // Recompute exactly the keys whose OWN raw value contains a `$NAME`
+        // reference — a real derivation, not just any double-quoted or bare
+        // value — and only for a key this file group actually won. Everything
+        // else keeps dotenvx's own result untouched: it already handles
+        // quoting, encryption and multiline values correctly, and this
+        // module's own line reader is deliberately too simple to trust for
+        // anything beyond "does this value contain a reference".
+        for (const [key, value] of raw) {
+          if (shellWins.has(key)) continue;
+          if (envReferences(value).length === 0) continue;
+          target[key] = expandReferences(key, value, raw, target);
+        }
       });
     await applyEnvFiles(
       selection.files.map((file) => join(root, file)),

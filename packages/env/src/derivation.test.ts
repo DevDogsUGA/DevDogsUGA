@@ -12,7 +12,7 @@
  * into a blank page.
  */
 import { describe, expect, it } from "vitest";
-import { derivationOf, envReferences } from "./derivation.js";
+import { derivationOf, envReferences, expandReferences } from "./derivation.js";
 import type { EnvMeta } from "./meta.js";
 
 const meta = (example: string, over: Partial<EnvMeta> = {}): EnvMeta => ({
@@ -108,5 +108,68 @@ describe("derivationOf", () => {
     expect(derivationOf(meta("$GITHUB_ORG", { scope: "default" }))).toBe(
       "$GITHUB_ORG",
     );
+  });
+});
+
+describe("expandReferences", () => {
+  it("resolves a reference against `raw`, order-independently", () => {
+    // The bug this exists to fix: `raw` is a complete map, not a running
+    // accumulator built left-to-right, so a name defined LATER in the caller's
+    // own file (or iteration order) still resolves.
+    const raw = new Map([
+      ["API_URL", "https://$PROJECT_REF.supabase.co"],
+      ["PROJECT_REF", "fqpbnmwyopohbhzkpoiu"],
+    ]);
+    expect(expandReferences("API_URL", raw.get("API_URL")!, raw, {})).toBe(
+      "https://fqpbnmwyopohbhzkpoiu.supabase.co",
+    );
+  });
+
+  it("resolves a chained reference (NEXT_PUBLIC_SUPABASE_URL -> API_URL -> PROJECT_REF)", () => {
+    const raw = new Map([
+      ["NEXT_PUBLIC_SUPABASE_URL", "$API_URL"],
+      ["API_URL", "https://$PROJECT_REF.supabase.co"],
+      ["PROJECT_REF", "fqpbnmwyopohbhzkpoiu"],
+    ]);
+    expect(
+      expandReferences(
+        "NEXT_PUBLIC_SUPABASE_URL",
+        raw.get("NEXT_PUBLIC_SUPABASE_URL")!,
+        raw,
+        {},
+      ),
+    ).toBe("https://fqpbnmwyopohbhzkpoiu.supabase.co");
+  });
+
+  it("throws naming the whole chain on a cycle", () => {
+    const raw = new Map([
+      ["A", "$B"],
+      ["B", "$C"],
+      ["C", "$A"],
+    ]);
+    expect(() => expandReferences("A", raw.get("A")!, raw, {})).toThrow(
+      /derives back from it \(chain: B -> C -> A -> B\)/,
+    );
+  });
+
+  it("falls back to `resolved`, and to empty for a name in neither map — unchanged from today", () => {
+    const raw = new Map([["BASE_URL", "$ORIGIN/callback"]]);
+    expect(
+      expandReferences("BASE_URL", raw.get("BASE_URL")!, raw, {
+        ORIGIN: "https://devdogsuga.org",
+      }),
+    ).toBe("https://devdogsuga.org/callback");
+
+    // STUDY_GROUP_FINDER_URL is declared ahead of its own deployment (see
+    // write-env.ts's MissingSourceError) — an unresolved reference has always
+    // meant "", not a thrown error, and this preserves that.
+    expect(
+      expandReferences(
+        "STUDY_GROUP_FINDER_CALLBACK",
+        "$STUDY_GROUP_FINDER_URL/callback",
+        raw,
+        {},
+      ),
+    ).toBe("/callback");
   });
 });
