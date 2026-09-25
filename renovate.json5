@@ -28,4 +28,29 @@
       rangeStrategy: "bump",
     },
   ],
+  // `devtools-minimums.json`'s `latest` field is a second, hand-maintained
+  // copy of the same version this package rule's `@devdogsuga/devtools` bump
+  // already carries in package.json — see that file's `$comment` and
+  // packages/repo-checks/src/devtools-minimums.test.ts, which fails CI if the
+  // two ever disagree. A regex custom manager teaches Renovate to read and
+  // write that copy too, so one publish still reaches this repo as ONE PR
+  // that keeps both in sync, instead of a second hand-edit after every
+  // release.
+  //
+  // Deliberately NOT touching `minimum` in the same file: that field is a
+  // manual hotfix lever (see the manifest's own `$comment`), and this
+  // manager's `matchStrings` regex is anchored to the `"latest"` key only so
+  // Renovate never rewrites it.
+  customManagers: [
+    {
+      customType: "regex",
+      // Current Renovate syntax (`fileMatch` is deprecated) — matches only
+      // this one file, not every JSON file in the repo.
+      managerFilePatterns: ["/^devtools-minimums\\.json$/"],
+      matchStrings: ['"latest":\\s*"(?<currentValue>[^"]+)"'],
+      depNameTemplate: "@devdogsuga/devtools",
+      datasourceTemplate: "npm",
+      versioningTemplate: "npm",
+    },
+  ],
 }
