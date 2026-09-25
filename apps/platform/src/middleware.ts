@@ -40,6 +40,16 @@ export async function middleware(request: NextRequest) {
   // to ask it for that same value from application code, so it travels
   // twice, once in each shape its two consumers need.
   request.headers.set("x-nonce", nonce);
+  // Same idea, for the current URL: a layout (unlike a page) receives no
+  // `searchParams`, and there is no public API to ask Next for the request
+  // it is rendering inside of. `(site)/tools/layout.tsx` reads this to build
+  // a `callbackPath` that survives a sign-in redirect with the query string
+  // intact (e.g. `/tools/oauth/connect?redirect_uri=...`), rather than
+  // dropping straight to a bare `/auth`.
+  request.headers.set(
+    "x-request-path",
+    request.nextUrl.pathname + request.nextUrl.search,
+  );
 
   const response = await updateSession(request);
   // Authoritative header application -- see @devdogsuga/security-headers'

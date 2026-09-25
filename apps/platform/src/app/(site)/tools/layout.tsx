@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { expectUserWith } from "~/server/auth";
 
@@ -22,7 +23,18 @@ export default async function ToolsLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   await expectUserWith({
     profile: true,
-  }).catch(() => redirect("/auth"));
+  }).catch(async () => {
+    // `x-request-path` is `middleware.ts`'s carrier for the URL a layout
+    // otherwise has no way to ask Next for -- see its comment there. Falls
+    // back to a bare `/auth` if the request somehow reached this layout
+    // without going through the middleware (e.g. a direct RSC fetch).
+    const requestPath = (await headers()).get("x-request-path");
+    redirect(
+      requestPath
+        ? `/auth?callbackPath=${encodeURIComponent(requestPath)}`
+        : "/auth",
+    );
+  });
 
   return (
     <div className="flex min-w-0 flex-1 flex-col bg-mauve-900">{children}</div>
