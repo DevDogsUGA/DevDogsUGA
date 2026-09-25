@@ -11,14 +11,12 @@ export const EMAIL_FIXTURES = {
     leadName: "Jordan",
     applicantName: "Avery",
     teamName: "Byte Bulldogs",
-    competitionName: "UGAHacks",
-    reviewUrl: "https://devdogsuga.org/teams/byte-bulldogs/requests",
+    reviewUrl: "https://devdogsuga.org/teams/requests",
   },
   TeamInvite: {
     inviteeName: "Avery",
     teamName: "Byte Bulldogs",
-    competitionName: "UGAHacks",
     leadName: "Jordan",
-    acceptUrl: "https://devdogsuga.org/invitations/example",
+    acceptUrl: "https://devdogsuga.org/teams/requests",
   },
 } satisfies { [K in keyof Templates]: Templates[K] };

@@ -27,6 +27,7 @@ const disbandTeam = vi.fn();
 const userIdForGithubLogin = vi.fn();
 const underConcurrentTeamCap = vi.fn();
 const sendTemplate = vi.fn();
+const sendEach = vi.fn();
 const postAlert = vi.fn();
 const dbSelect = vi.fn();
 const dbTransaction = vi.fn();
@@ -48,7 +49,7 @@ vi.mock("~/server/github/teamSync", () => ({
   userIdForGithubLogin,
 }));
 vi.mock("~/server/teams/limits", () => ({ underConcurrentTeamCap }));
-vi.mock("~/server/email/send", () => ({ sendTemplate }));
+vi.mock("~/server/email/send", () => ({ sendTemplate, sendEach }));
 vi.mock("~/server/alerts", () => ({ postAlert }));
 vi.mock("~/server/db/schema", () => ({
   teams: {},

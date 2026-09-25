@@ -11,7 +11,7 @@ import {
   teamMembershipRequests,
   teams,
 } from "~/server/db/schema";
-import { sendTemplate } from "~/server/email/send";
+import { sendEach, sendTemplate } from "~/server/email/send";
 import {
   TeamActionError,
   isUniqueViolation,
@@ -354,7 +354,7 @@ async function requestToJoinImpl(
   );
   await requireTwoFactor(userId);
 
-  return db.transaction(async (tx) => {
+  const requestId = await db.transaction(async (tx) => {
     const [team] = await tx
       .select({ id: teams.id })
       .from(teams)
@@ -380,6 +380,92 @@ async function requestToJoinImpl(
       message,
     });
   });
+
+  // Best-effort, same as `notifyInvitee` below: the request is real the
+  // moment the row above committed, and `/teams/requests` shows it there to
+  // the lead regardless. The email is a notification of that fact, not a
+  // second source of truth, so a failure here is logged and swallowed
+  // rather than unwinding a request that already exists.
+  await notifyLeadsOfRequest(teamId, requestId).catch((error: unknown) => {
+    console.error("[teams] failed to send joinRequest email:", error);
+  });
+
+  return requestId;
+}
+
+/**
+ * Sends the `joinRequest` email to every current lead of the team. Reads
+ * outside any transaction -- by the time this runs the request already
+ * committed, so there is nothing left to hold a lock over.
+ *
+ * `teamMembers_one_lead_per_team` allows at most one active lead per team
+ * today, but this queries by role rather than assuming that stays true, the
+ * same way `notifyInvitee` does not hardcode a single recipient shape.
+ */
+async function notifyLeadsOfRequest(
+  teamId: string,
+  requestId: string,
+): Promise<void> {
+  const [request, leads, team] = await Promise.all([
+    db
+      .select({ userId: teamMembershipRequests.userId })
+      .from(teamMembershipRequests)
+      .where(eq(teamMembershipRequests.id, requestId))
+      .limit(1)
+      .then((rows) => rows[0]),
+    db
+      .select({
+        email: usersInAuth.email,
+        preferredName: profiles.preferredName,
+      })
+      .from(teamMembers)
+      .innerJoin(usersInAuth, eq(usersInAuth.id, teamMembers.userId))
+      .leftJoin(profiles, eq(profiles.userId, teamMembers.userId))
+      .where(
+        and(
+          eq(teamMembers.teamId, teamId),
+          eq(teamMembers.role, "lead"),
+          isNull(teamMembers.leftAt),
+        ),
+      ),
+    db
+      .select({ name: teams.name })
+      .from(teams)
+      .where(eq(teams.id, teamId))
+      .limit(1)
+      .then((rows) => rows[0]),
+  ]);
+
+  if (!request || !team) return;
+
+  const [applicant] = await db
+    .select({ preferredName: profiles.preferredName })
+    .from(profiles)
+    .where(eq(profiles.userId, request.userId))
+    .limit(1);
+
+  const reviewUrl = new URL("/teams/requests", env.BASE_URL).toString();
+
+  // `sendEach`, not `sendTemplate` per lead in a `Promise.all`: more than one
+  // active lead is not possible today (`teamMembers_one_lead_per_team`), but
+  // when it is, this is the fan-out primitive `send.ts` already exists for --
+  // one call per recipient, never one call with several.
+  await sendEach(
+    leads
+      .filter((lead): lead is typeof lead & { email: string } =>
+        Boolean(lead.email),
+      )
+      .map((lead) => ({
+        to: lead.email,
+        props: {
+          leadName: lead.preferredName ?? "there",
+          applicantName: applicant?.preferredName ?? "Someone",
+          teamName: team.name,
+          reviewUrl,
+        },
+      })),
+    "JoinRequest",
+  );
 }
 
 /**
