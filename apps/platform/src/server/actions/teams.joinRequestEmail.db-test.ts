@@ -43,7 +43,10 @@ vi.mock("~/server/auth", () => ({
 
 const email = vi.hoisted(() => ({
   sendTemplate: vi.fn(() => Promise.resolve({ ok: true as const })),
-  sendEach: vi.fn(() => Promise.resolve(new Map())),
+  // Typed parameters so `mock.calls[0]` is a tuple the tests can narrow.
+  sendEach: vi.fn((_recipients: unknown[], _name: string) =>
+    Promise.resolve(new Map()),
+  ),
 }));
 vi.mock("~/server/email/send", () => email);
 
