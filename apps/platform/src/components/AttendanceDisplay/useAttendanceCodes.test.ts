@@ -27,7 +27,11 @@ describe("useAttendanceCodes", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     renderHook(() =>
-      useAttendanceCodes({ meetingId: MEETING_ID, canceled: false, enabled: false }),
+      useAttendanceCodes({
+        meetingId: MEETING_ID,
+        canceled: false,
+        enabled: false,
+      }),
     );
 
     // The hook's own initial fetch is scheduled with a `setTimeout(..., 0)`,

@@ -61,7 +61,12 @@ export default function AttendanceDisplay({
   useEffect(() => {
     if (!confirmed) return;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey)
+      if (
+        event.defaultPrevented ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey
+      )
         return;
       if (ADVANCE_KEYS.has(event.key)) {
         event.preventDefault();
@@ -169,7 +174,7 @@ export default function AttendanceDisplay({
       className={
         present
           ? "relative isolate flex h-dvh w-full flex-col overflow-hidden bg-mauve-950"
-          : "fullscreen:rounded-none fullscreen:border-0 relative isolate flex h-[36rem] flex-col overflow-hidden rounded-2xl border-2 border-cyan-400/50 bg-mauve-950 shadow-2xl shadow-cyan-950/40 fullscreen:h-screen"
+          : "fullscreen:rounded-none fullscreen:border-0 fullscreen:h-screen relative isolate flex h-[36rem] flex-col overflow-hidden rounded-2xl border-2 border-cyan-400/50 bg-mauve-950 shadow-2xl shadow-cyan-950/40"
       }
     >
       {/* Both panels are absolutely stacked over the same box, so switching
@@ -225,7 +230,7 @@ export default function AttendanceDisplay({
             <div className="big:mt-[clamp(1.5rem,4vh,4rem)] big:w-full big:max-w-[100rem] big:grid-cols-[minmax(20rem,1fr)_minmax(24rem,0.9fr)] big:gap-[clamp(2rem,5vw,6rem)] big:self-center mt-6 grid items-center gap-8 md:grid-cols-[minmax(18rem,1fr)_minmax(18rem,0.8fr)]">
               <div
                 aria-label="QR code for meeting attendance"
-                className="big:max-w-[min(62vh,50rem)] big:max-h-none big:p-4 mx-auto aspect-square w-full max-w-xl max-h-[24rem] overflow-hidden rounded-2xl bg-white p-3 [&>svg]:size-full"
+                className="big:max-w-[min(62vh,50rem)] big:max-h-none big:p-4 mx-auto aspect-square max-h-[24rem] w-full max-w-xl overflow-hidden rounded-2xl bg-white p-3 [&>svg]:size-full"
                 dangerouslySetInnerHTML={{ __html: qr }}
               />
               <div className="flex flex-col items-center text-center md:items-start md:text-left">

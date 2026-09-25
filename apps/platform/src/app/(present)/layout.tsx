@@ -19,8 +19,6 @@ export default function PresentLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="h-dvh w-full overflow-hidden bg-mauve-950">
-      {children}
-    </div>
+    <div className="h-dvh w-full overflow-hidden bg-mauve-950">{children}</div>
   );
 }

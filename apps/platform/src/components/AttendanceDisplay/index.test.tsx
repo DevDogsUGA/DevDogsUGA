@@ -1,4 +1,10 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AttendanceDisplay from "./index";
 import type { TitleCardMeeting } from "./TitleCard";
@@ -115,7 +121,9 @@ describe("AttendanceDisplay", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: `Show the check-in code for ${MEETING.title}` }),
+      screen.getByRole("button", {
+        name: `Show the check-in code for ${MEETING.title}`,
+      }),
     );
 
     await act(async () => {
@@ -135,9 +143,7 @@ describe("AttendanceDisplay", () => {
       />,
     );
 
-    expect(
-      screen.getByText("This meeting is canceled"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("This meeting is canceled")).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: MEETING.title }),
     ).not.toBeInTheDocument();
