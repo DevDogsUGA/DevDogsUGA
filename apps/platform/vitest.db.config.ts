@@ -30,6 +30,7 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.db-test.ts"],
+    setupFiles: ["./vitest.db.setup.ts"],
     environment: "node",
     // See vitest.config.ts: Vite's own BASE_URL collides with the app's.
     env: { BASE_URL: process.env.BASE_URL ?? "http://localhost:3000" },

@@ -176,7 +176,9 @@ describe("applyPullRequest", () => {
       db,
       pr({
         body: "Closes #102",
-        createdAt: "2026-09-22T12:00:00Z", // after closedCompetition's closedAt
+        // After closedCompetition's closedAt (`now() - 2 days`); relative,
+        // because a fixed date stops being "after" once the clock passes it.
+        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
       }),
     );
     expect(await entryFor("PR_dbtest_1")).toBeNull();
