@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, varchar, integer, pgEnum, boolean, text, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, pgEnum, boolean, varchar, integer, text, timestamp, date, smallint, doublePrecision, jsonb, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by devtools db introspect after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -304,12 +304,33 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 check("meetings_building_choices", sql`((building IS NULL) OR (building = ANY (ARRAY['DLW'::text, 'Driftmier'::text, 'Plant Sciences'::text, 'Boyd'::text, 'MLC'::text, 'Science Learning Center'::text, 'Science Library'::text, 'Poultry Science'::text, 'Main Library'::text, 'Tate'::text, 'Other'::text])))`),check("meetings_cancellationReason_length", sql`(("cancellationReason" IS NULL) OR (char_length("cancellationReason") <= 160))`),check("meetings_cancellationReason_needs_cancellation", sql`(("cancellationReason" IS NULL) OR ("cancelledAt" IS NOT NULL))`),check("meetings_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),check("meetings_kind_choices", sql`((kind IS NULL) OR (kind = ANY (ARRAY['Build Session'::text, 'Study Session'::text, 'Interest Meeting'::text, 'Social'::text])))`),check("meetings_nameOverride_length", sql`(("nameOverride" IS NULL) OR (char_length("nameOverride") <= 80))`),check("meetings_rsvpUrl_host", sql`(("rsvpUrl" IS NULL) OR ("rsvpUrl" ~ '^https://uga\.campuslabs\.com(/[A-Za-z0-9/_?=&.%#:~-]*)?$'::text))`),check("meetings_summary_length", sql`((summary IS NULL) OR (char_length(summary) <= 240))`),]);
 
+export const oauthConnectCodesInPlatform = platform.table.withRLS("oauthConnectCodes", {
+	id: uuid().defaultRandom().primaryKey(),
+	codeHash: text().notNull(),
+	codeChallenge: text().notNull(),
+	clientId: uuid().notNull().references(() => oauthClients.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	clientSecret: text().notNull(),
+	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	redirectUri: text().notNull(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	expiresAt: timestamp({ withTimezone: true }).default(sql`(now() + '00:02:00'::interval)`).notNull(),
+}, (table) => [
+	uniqueIndex("oauthConnectCodes_codeHash_key").using("btree", table.codeHash.asc().nullsLast()),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+]);
+
 export const oauthRegistrationsInPlatform = platform.table.withRLS("oauthRegistrations", {
 	clientId: uuid().primaryKey().references(() => oauthClients.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	userId: uuid().notNull().references(() => users.id, { onDelete: "restrict", onUpdate: "cascade" } ),
 	type: oauthRegistrationTypeInPlatform().default("development").notNull(),
+	label: text().default("Default Client").notNull(),
 }, (table) => [
-	unique("oauthRegistrations_userId_key").on(table.userId),
+
 	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
 
 	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
@@ -820,6 +841,7 @@ export { meetingsInPlatform as meetings };
 export { memberStarsInPlatform as memberStars };
 export { membershipDirectionInPlatform as membershipDirection };
 export { membershipRequestStatusInPlatform as membershipRequestStatus };
+export { oauthConnectCodesInPlatform as oauthConnectCodes };
 export { oauthRegistrationTypeInPlatform as oauthRegistrationType };
 export { oauthRegistrationsInPlatform as oauthRegistrations };
 export { oauthTestAccountsInPlatform as oauthTestAccounts };

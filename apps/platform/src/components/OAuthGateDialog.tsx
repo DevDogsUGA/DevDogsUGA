@@ -14,25 +14,27 @@ import {
 } from "~/ui/dialog";
 
 interface Props {
-  clientId: string | null;
+  hasAnyClient: boolean;
   hasGithub: boolean;
 }
 
-export default function OAuthGateDialog({
-  clientId: initialClientId,
-  hasGithub,
-}: Props) {
-  const [{ clientId }, dispatch, isPending] = useActionState(oauthAction, {
-    clientId: initialClientId,
+export default function OAuthGateDialog({ hasAnyClient, hasGithub }: Props) {
+  const [{ clientSecret }, dispatch, isPending] = useActionState(oauthAction, {
+    clientId: null,
     clientSecret: null,
-    redirectUris: [],
   });
 
   // Portal into the layout's scroll container so the overlay covers every
   // section on the page without also covering the sidebar.
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const open = clientId === null;
+  // `hasAnyClient` is this render's server-loaded truth; `clientSecret` is
+  // this component's own optimistic signal that its own "create-client"
+  // dispatch just succeeded (a fresh secret only ever comes back from
+  // creating or resetting a client, and this dialog only ever dispatches
+  // "create-client"). Either closes the gate without waiting on a
+  // `router.refresh()` round trip.
+  const open = !hasAnyClient && clientSecret === null;
 
   useEffect(() => {
     // Read the portal container from the layout DOM once, after mount.
@@ -98,7 +100,8 @@ export default function OAuthGateDialog({
 
             {hasGithub ? (
               <form action={dispatch}>
-                <input type="hidden" name="intent" value="toggle-client" />
+                <input type="hidden" name="intent" value="create-client" />
+                <input type="hidden" name="label" value="Default Client" />
                 <FormButton
                   theme="cyan"
                   type="submit"

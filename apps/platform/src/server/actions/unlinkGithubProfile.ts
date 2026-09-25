@@ -9,19 +9,25 @@ import { supabaseAdmin } from "../../supabase/admin";
 
 export default async function unlinkGithubProfile() {
   const user = await expectUserWith({
-    profile: { with: { oauthRegistration: true } },
+    profile: { with: { oauthRegistrations: { columns: { clientId: true } } } },
   }).catch(() => authenticate("google", "/account"));
 
-  const clientId = user.profile.oauthRegistration?.clientId;
+  // A GitHub identity gates EVERY OAuth client a member holds (see
+  // OAuthGateDialog), so unlinking takes all of them, not just one.
+  const clientIds = user.profile.oauthRegistrations.map((r) => r.clientId);
   await unlinkProfile();
 
-  if (clientId) {
+  if (clientIds.length > 0) {
     try {
       await db.transaction(async (tx) => {
         await tx
           .delete(oauthRegistrations)
           .where(eq(oauthRegistrations.userId, user.id));
-        await supabaseAdmin.auth.admin.oauth.deleteClient(clientId);
+        await Promise.all(
+          clientIds.map((clientId) =>
+            supabaseAdmin.auth.admin.oauth.deleteClient(clientId),
+          ),
+        );
       });
     } catch (cause) {
       console.error(

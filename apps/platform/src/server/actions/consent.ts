@@ -71,7 +71,7 @@ export async function approveTestAccountAuthorization(
           },
         },
       },
-      oauthRegistration: {
+      oauthRegistrations: {
         where: {
           authorizations: { authorizationId },
         },
@@ -83,7 +83,7 @@ export async function approveTestAccountAuthorization(
       ),
     );
 
-    if (!user.oauthRegistration) {
+    if (!user.oauthRegistrations[0]) {
       return "You do not own this OAuth client.";
     }
 

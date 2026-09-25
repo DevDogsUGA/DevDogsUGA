@@ -68,7 +68,7 @@ export default async function ConsentPage({ searchParams }: Props) {
         },
       },
     },
-    oauthRegistration: {
+    oauthRegistrations: {
       where: {
         authorizations: { authorizationId },
       },
