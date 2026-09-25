@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import { QueryBuilder } from "drizzle-orm/pg-core";
 import { cache } from "react";
 import { db } from "~/server/db";
 import { attendance, meetings, workshops } from "~/server/db/schema";
@@ -106,6 +107,14 @@ function correlatedCount(subquery: { getSQL(): SQL }): SQL<number> {
   return sql<number>`(${subquery})`;
 }
 
+// A db-less builder for the correlated subqueries below. `db` resolves a
+// per-request client on first property access (see `~/server/db`), and in a
+// deployed Worker that opens a Hyperdrive-backed pool -- which workerd
+// refuses at module scope ("Disallowed operation called within global
+// scope"), taking down every route on the first request. These subqueries
+// are only SQL fragments, so they never needed a connection.
+const qb = new QueryBuilder();
+
 const summaryColumns = {
   id: meetings.id,
   slug: meetings.slug,
@@ -120,13 +129,13 @@ const summaryColumns = {
   summary: meetings.summary,
   rsvpUrl: meetings.rsvpUrl,
   attendanceCount: correlatedCount(
-    db
+    qb
       .select({ n: sql`count(*)::int` })
       .from(attendance)
       .where(eq(attendance.meetingId, meetings.id)),
   ),
   workshopCount: correlatedCount(
-    db
+    qb
       .select({ n: sql`count(*)::int` })
       .from(workshops)
       .where(
