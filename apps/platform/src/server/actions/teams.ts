@@ -386,7 +386,7 @@ async function requestToJoinImpl(
   // the lead regardless. The email is a notification of that fact, not a
   // second source of truth, so a failure here is logged and swallowed
   // rather than unwinding a request that already exists.
-  await notifyLeadsOfRequest(teamId, requestId).catch((error: unknown) => {
+  await notifyLeadsOfRequest(teamId, userId).catch((error: unknown) => {
     console.error("[teams] failed to send joinRequest email:", error);
   });
 
@@ -404,15 +404,9 @@ async function requestToJoinImpl(
  */
 async function notifyLeadsOfRequest(
   teamId: string,
-  requestId: string,
+  applicantId: string,
 ): Promise<void> {
-  const [request, leads, team] = await Promise.all([
-    db
-      .select({ userId: teamMembershipRequests.userId })
-      .from(teamMembershipRequests)
-      .where(eq(teamMembershipRequests.id, requestId))
-      .limit(1)
-      .then((rows) => rows[0]),
+  const [leads, team, applicant] = await Promise.all([
     db
       .select({
         email: usersInAuth.email,
@@ -434,15 +428,15 @@ async function notifyLeadsOfRequest(
       .where(eq(teams.id, teamId))
       .limit(1)
       .then((rows) => rows[0]),
+    db
+      .select({ preferredName: profiles.preferredName })
+      .from(profiles)
+      .where(eq(profiles.userId, applicantId))
+      .limit(1)
+      .then((rows) => rows[0]),
   ]);
 
-  if (!request || !team) return;
-
-  const [applicant] = await db
-    .select({ preferredName: profiles.preferredName })
-    .from(profiles)
-    .where(eq(profiles.userId, request.userId))
-    .limit(1);
+  if (!team) return;
 
   const reviewUrl = new URL("/teams/requests", env.BASE_URL).toString();
 
