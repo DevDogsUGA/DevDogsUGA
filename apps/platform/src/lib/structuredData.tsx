@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { SOCIAL_LINKS, SWITCHER_LINKS } from "~/config/nav";
 import { env } from "~/env";
 
@@ -185,11 +186,22 @@ function serialize(data: unknown): string {
   return JSON.stringify(data).replace(/</g, "\\u003c");
 }
 
-/** Renders one JSON-LD block. Server components only; `env` is read above. */
-export default function JsonLd({ data }: { data: unknown }) {
+/**
+ * Renders one JSON-LD block. Server components only; `env` is read above.
+ *
+ * `type="application/ld+json"` doesn't exempt it from `script-src`: a
+ * strict-CSP browser gates every `<script>` element on the nonce/hash
+ * allowlist regardless of its `type`, JSON-LD included, so this reads and
+ * stamps the same per-request nonce as every other inline script in this app
+ * (`~/app/layout.tsx`'s `headers().get("x-nonce")`) or the payload is simply
+ * never parsed once the policy goes enforcing.
+ */
+export default async function JsonLd({ data }: { data: unknown }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <script
       type="application/ld+json"
+      nonce={nonce}
       dangerouslySetInnerHTML={{ __html: serialize(data) }}
     />
   );

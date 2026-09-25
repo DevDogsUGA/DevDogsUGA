@@ -4,6 +4,7 @@ import { applySecurityHeaders, buildSecurityHeaders } from "./headers.js";
 const base = {
   supabaseUrl: "https://api.devdogsuga.org",
   sentryDsn: undefined,
+  nonce: "test-nonce-value",
 } as const;
 
 function get(headers: { key: string; value: string }[], key: string) {
@@ -54,16 +55,18 @@ describe("buildSecurityHeaders", () => {
     expect(get(headers, "Content-Security-Policy")).toBeUndefined();
   });
 
-  it("threads the Supabase/Sentry env inputs through into the CSP", () => {
+  it("threads the Supabase/Sentry/nonce inputs through into the CSP", () => {
     const headers = buildSecurityHeaders({
       environment: "production",
       supabaseUrl: "https://api.devdogsuga.org",
       sentryDsn: "https://key@o1.ingest.sentry.io/1",
+      nonce: "abc123",
     });
     const csp = get(headers, "Content-Security-Policy-Report-Only")!;
 
     expect(csp).toContain("https://api.devdogsuga.org");
     expect(csp).toContain("https://o1.ingest.sentry.io");
+    expect(csp).toContain("'nonce-abc123'");
   });
 
   it("returns a fresh array each call (no shared mutable state between apps)", () => {

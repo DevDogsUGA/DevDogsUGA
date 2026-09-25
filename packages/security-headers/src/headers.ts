@@ -39,11 +39,20 @@ export interface HeaderEntry {
  *         environment: env.DEPLOY_ENV,
  *         supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
  *         sentryDsn: env.NEXT_PUBLIC_SENTRY_DSN,
+ *         nonce: "unused-static-fallback",
  *       }),
  *     },
  *   ];
  * }
  * ```
+ *
+ * `nonce` is required, but the static `headers()` fallback above can never
+ * mint a real per-request one (see `applySecurityHeaders`'s doc comment for
+ * why `headers()` is a fallback for non-middleware routes only, not the
+ * authoritative path). Those routes are exactly the ones with no inline
+ * script to nonce (`_next/static`, `_next/image`, favicons, image
+ * extensions), so the placeholder value above never gates anything real --
+ * it exists only so this call type-checks.
  */
 export function buildSecurityHeaders(
   input: SecurityHeadersInput,

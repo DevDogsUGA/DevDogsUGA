@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import * as Sentry from "@sentry/nextjs";
+import { THEME_INIT_SCRIPT } from "~/config/theme-init-script";
 
 /**
  * The last boundary: the root layout itself failed (it does an uncached
@@ -42,14 +43,17 @@ export default function GlobalError({
       <head>
         <title>DogDays is having a moment</title>
         {/* Same stored-choice/system-preference toggle as the root layout's
-            inline script, reimplemented here in plain CSS variables since
-            there is no Tailwind `dark:` variant to key off in this
-            document. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(()=>{try{var t=localStorage.getItem("theme");var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)}catch(e){}})()`,
-          }}
-        />
+            inline script (`THEME_INIT_SCRIPT`, byte-identical on purpose),
+            reimplemented here in plain CSS variables since there is no
+            Tailwind `dark:` variant to key off in this document.
+            No `nonce` attribute: this is a `"use client"` component (the App
+            Router's required shape for `global-error.tsx`), so it has no
+            `headers()` access to the per-request nonce every other inline
+            script in this app carries. It earns CSP trust instead through
+            `THEME_INIT_SCRIPT_HASH`, a content hash of this exact literal --
+            see that constant's doc comment and
+            `@devdogsuga/security-headers`'s `CspInput.extraScriptSources`. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <style
           dangerouslySetInnerHTML={{
             __html: `
