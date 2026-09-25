@@ -1357,7 +1357,7 @@ packages:
       postgres: ^3.4.9
 
   '@devdogsuga/devtools@file:../Backstage/.packs/devdogsuga-devtools.tgz':
-    resolution: {integrity: sha512-fHNMWOdKTSSRZKbbEaRvdF1yX+rjtjmC13ZAecSpCN28nC89FBAE1BjD2kRN+gFvxGgoPRLkOHSFN7OhuPnsFw==, tarball: file:../Backstage/.packs/devdogsuga-devtools.tgz}
+    resolution: {integrity: sha512-I5oGbi7qREVO51IwrNnCSt+CPk7s+oaCqrljA+Ad/op72FPCCoO6cBGeYQTlfTY2A2JmE8Vk3XcLGPI47U5Puw==, tarball: file:../Backstage/.packs/devdogsuga-devtools.tgz}
     version: 0.1.0
     hasBin: true
     peerDependencies:
@@ -1378,7 +1378,7 @@ packages:
     hasBin: true
 
   '@devdogsuga/env@file:../Backstage/.packs/devdogsuga-env.tgz':
-    resolution: {integrity: sha512-as+AKiascqeQTdXTr6TPQTqW7dg9/lxVMGoq/shEHhmBm84JK3BZ7kUsNrRsiwZePpE2bEbjyXpieg48XNXLCA==, tarball: file:../Backstage/.packs/devdogsuga-env.tgz}
+    resolution: {integrity: sha512-0xSZTvBfPV00QT7Vmbqcby7U1s9nApP9xgVSOJ1RiJgCl4QhFcEMi9WUYDGIq+gy6GzgVLQC/njE48YTtS23Pg==, tarball: file:../Backstage/.packs/devdogsuga-env.tgz}
     version: 0.1.0
     hasBin: true
 
