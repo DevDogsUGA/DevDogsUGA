@@ -34,6 +34,15 @@ export default async function OfficerAttendancePage({
         meetingId={meeting.id}
         title={title}
         canceled={meeting.cancelledAt !== null}
+        meeting={{
+          title,
+          kind: meeting.kind,
+          summary: meeting.summary,
+          building: meeting.building,
+          location: meeting.location,
+          startsAt: meeting.startsAt,
+          endsAt: meeting.endsAt,
+        }}
       />
     </PageShell>
   );

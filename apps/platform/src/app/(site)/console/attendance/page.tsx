@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import Badge from "~/ui/badge";
+import OpenDisplayLink from "~/components/AttendanceDisplay/OpenDisplayLink";
 import PageShell from "~/components/PageShell";
 import ReflectionSettingsCard from "~/components/ReflectionSettingsCard";
 import { formatEventSpan } from "~/lib/eventTime";
@@ -30,6 +30,10 @@ export default async function AttendanceDisplaysPage() {
       description="Open the live QR and rotating numeric code for any meeting. Displays remain available for past and future meetings."
     >
       <ReflectionSettingsCard settings={reflectionSettings} />
+      <p className="text-sm text-mauve-400">
+        Opening a display launches a separate window, sized for dragging to a
+        projector, instead of navigating away from this list.
+      </p>
       <div className="overflow-hidden rounded-xl border-2 border-mauve-800 bg-mauve-950 shadow-lg shadow-black/30">
         {meetings.length === 0 ? (
           <p className="p-6 text-sm text-mauve-300">No meetings found.</p>
@@ -39,7 +43,7 @@ export default async function AttendanceDisplaysPage() {
               const ongoing = meeting.startsAt <= now && meeting.endsAt >= now;
               return (
                 <li key={meeting.id}>
-                  <Link
+                  <OpenDisplayLink
                     href={`/console/attendance/${meeting.id}`}
                     className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 transition hover:bg-white/5 focus-visible:bg-white/5 focus-visible:outline-none"
                   >
@@ -60,7 +64,7 @@ export default async function AttendanceDisplaysPage() {
                         Open display →
                       </span>
                     )}
-                  </Link>
+                  </OpenDisplayLink>
                 </li>
               );
             })}
