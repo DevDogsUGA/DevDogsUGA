@@ -1,12 +1,10 @@
+import type { ReactNode } from "react";
 import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import SectionBackground, {
   type BlobDef,
   type EdgeType,
 } from "~/ui/section-background";
 import LinkButton from "~/ui/link-button";
-import { getMeetingsInRange } from "~/server/loaders/meetings";
-import type { MeetingInRange } from "~/server/loaders/meetings";
-import NextMeetingStrip from "./NextMeetingStrip";
 import HowItWorks from "./HowItWorks";
 
 export const EVENTS_BLOBS: BlobDef[] = [
@@ -29,6 +27,18 @@ const FOOTER_LINK_CLS =
 interface Props {
   topEdge: EdgeType;
   bottomEdge: EdgeType;
+  /**
+   * The short stack of upcoming nights, pre-rendered by the caller.
+   *
+   * Passed in rather than fetched here: this component renders inside
+   * `HomeSections`'s `"use cache"` scope (see `page.tsx`), and the stack
+   * needs today's schedule, not whatever was on it when the cache entry was
+   * last populated. `page.tsx` builds this element from `UpcomingMeetings`
+   * before entering the cached tree, so its database read stays on the
+   * request that's actually being served. See `UpcomingMeetings`'s doc
+   * comment for what went wrong when the fetch lived here instead.
+   */
+  upcomingMeetings: ReactNode;
 }
 
 /**
@@ -52,7 +62,11 @@ interface Props {
  * and every meeting on `/events` says its own; the homepage only has to prove
  * there is one.
  */
-export default async function EventsSection({ topEdge, bottomEdge }: Props) {
+export default function EventsSection({
+  topEdge,
+  bottomEdge,
+  upcomingMeetings,
+}: Props) {
   return (
     <div className="mx-4 overflow-clip rounded-xl md:mx-6">
       <section
@@ -92,7 +106,7 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
                 </p>
               </div>
             </div>
-            <UpcomingStack meetings={await nextMeetings(UPCOMING_COUNT)} />
+            {upcomingMeetings}
             <LinkButton href="/events" className={FOOTER_LINK_CLS}>
               All events <ArrowRightIcon weight="bold" />
             </LinkButton>
@@ -126,91 +140,5 @@ export default async function EventsSection({ topEdge, bottomEdge }: Props) {
         </div>
       </section>
     </div>
-  );
-}
-
-/** How many nights the homepage names. Three is a glance; the schedule is
- *  for the rest. */
-const UPCOMING_COUNT = 3;
-
-/**
- * The next few meetings as a short stack: the soonest at full size, each one
- * after it scaled down a step about its top edge, so the list recedes into the
- * page and the eye lands on the first. Scale, not opacity: the third night is
- * still a real date somebody may be planning around, so it stays legible, only
- * smaller. The eyebrow changes with rank so three cards do not all claim to be
- * the next meeting.
- *
- * Empty is the ordinary summer state, and the strip already draws it. One
- * strip, with null, rather than an empty list.
- */
-const STACK_STEP = ["", "scale-[0.95]", "scale-[0.9]"] as const;
-const STACK_EYEBROW = ["Next meeting", "Then", "After that"] as const;
-
-function UpcomingStack({ meetings }: { meetings: MeetingInRange[] }) {
-  const now = new Date();
-  if (meetings.length === 0)
-    return <NextMeetingStrip meeting={null} now={now} />;
-
-  return (
-    <ol className="flex w-full max-w-2xl flex-col items-center gap-3">
-      {meetings.map((meeting, i) => (
-        <li
-          key={meeting.id}
-          className={`w-full origin-top ${STACK_STEP[i] ?? STACK_STEP[STACK_STEP.length - 1]}`}
-        >
-          <NextMeetingStrip
-            meeting={meeting}
-            now={now}
-            eyebrow={
-              STACK_EYEBROW[i] ?? STACK_EYEBROW[STACK_EYEBROW.length - 1]
-            }
-          />
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-/**
- * The soonest meetings that have not ended, up to `count`, soonest first.
- *
- * Catches its own failure and degrades to an empty list rather than throwing.
- * The homepage is the club's front door and has no error boundary of its own,
- * so a connection blip must cost the visitor a date, not the whole page. The
- * stack already renders empty properly, because an empty summer is the ordinary
- * case for months at a time.
- *
- * Bounded on `endsAt` like every other "upcoming" read here: a meeting already
- * in progress is still the one worth naming.
- */
-async function nextMeetings(count: number): Promise<MeetingInRange[]> {
-  const now = new Date();
-  const horizon = new Date(now);
-  horizon.setUTCMonth(horizon.getUTCMonth() + 3);
-
-  try {
-    const meetings = await getMeetingsInRange(startOfDay(now), horizon);
-    // Cancelled nights are skipped rather than shown struck through, and the
-    // homepage has to say so itself: this reads `getMeetingsInRange`, which
-    // deliberately keeps them because it feeds a SCHEDULE. This stack answers a
-    // different question, where should I go, and naming a cancelled meeting as
-    // the next one is worse than the vanishing the column was added to fix.
-    return meetings
-      .filter((m) => m.endsAt >= now && m.cancelledAt === null)
-      .slice(0, count);
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Midnight UTC on `at`'s day, so a meeting happening *right now* is inside the
- * window. Starting the range at the current instant would exclude the very
- * meeting this function exists to find, an hour into it.
- */
-function startOfDay(at: Date): Date {
-  return new Date(
-    Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()),
   );
 }
