@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AttendanceDisplay from "~/components/AttendanceDisplay";
+import { toTitleCardMeeting } from "~/components/AttendanceDisplay/TitleCard";
 import PageShell from "~/components/PageShell";
 import { formatEventSpan } from "~/lib/eventTime";
 import { meetingTitle } from "~/lib/meetingTitle";
@@ -34,15 +35,7 @@ export default async function OfficerAttendancePage({
         meetingId={meeting.id}
         title={title}
         canceled={meeting.cancelledAt !== null}
-        meeting={{
-          title,
-          kind: meeting.kind,
-          summary: meeting.summary,
-          building: meeting.building,
-          location: meeting.location,
-          startsAt: meeting.startsAt,
-          endsAt: meeting.endsAt,
-        }}
+        meeting={toTitleCardMeeting(meeting, title)}
       />
     </PageShell>
   );

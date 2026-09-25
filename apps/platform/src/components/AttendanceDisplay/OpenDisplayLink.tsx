@@ -18,7 +18,13 @@ const DISPLAY_WINDOW_FEATURES = "popup,width=1280,height=800";
  * A plain `<a>` under the hood (not a button), so middle-click / "open in
  * new tab" / "copy link" still work exactly as they would for any other
  * link -- `onClick` only intercepts the ordinary left click, which is the
- * one case that would otherwise replace the console tab.
+ * one case that would otherwise replace the console tab. `href` stays the
+ * plain officer page (`/console/attendance/[meetingId]`), the one with site
+ * chrome around it, for those cases and for "copy link". Only the
+ * intercepted click's popup gets `/present` appended, since that's the one
+ * case where the new window has no site chrome for the display to be a card
+ * inside of and should just *be* the slide -- see the `(present)` route's
+ * layout doc comment.
  */
 export default function OpenDisplayLink({
   href,
@@ -40,7 +46,12 @@ export default function OpenDisplayLink({
     )
       return;
     event.preventDefault();
-    window.open(href, `devdogs-attendance-${href}`, DISPLAY_WINDOW_FEATURES);
+    const presentHref = `${href}/present`;
+    window.open(
+      presentHref,
+      `devdogs-attendance-${href}`,
+      DISPLAY_WINDOW_FEATURES,
+    );
   }
 
   return (

@@ -39,6 +39,34 @@ export interface TitleCardMeeting {
 }
 
 /**
+ * Builds a {@link TitleCardMeeting} from a `getOfficerAttendanceMeeting` row
+ * plus its already-computed display title -- the one mapping shared by the
+ * boxed officer page and the full-viewport `(present)` route, so the two
+ * can't drift on which fields the card is allowed to draw from.
+ */
+export function toTitleCardMeeting(
+  meeting: {
+    kind: string | null;
+    summary: string | null;
+    building: string | null;
+    location: string | null;
+    startsAt: Date;
+    endsAt: Date;
+  },
+  title: string,
+): TitleCardMeeting {
+  return {
+    title,
+    kind: meeting.kind,
+    summary: meeting.summary,
+    building: meeting.building,
+    location: meeting.location,
+    startsAt: meeting.startsAt,
+    endsAt: meeting.endsAt,
+  };
+}
+
+/**
  * The opening slide of an attendance display: an event title card in the
  * style of a meeting's opening deck slide (see `apps/slides`'s `title`
  * layout and `LAYOUTS.md`'s chrome section), so this display can stand in
@@ -78,7 +106,7 @@ export default function TitleCard({
       />
 
       <span
-        className={`fullscreen:top-[clamp(1.25rem,3vw,2.5rem)] fullscreen:right-[clamp(1.25rem,3vw,2.5rem)] absolute top-4 right-4 inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-bold tracking-widest uppercase ${CHIP_CLASS[accent]}`}
+        className={`big:top-[clamp(1.25rem,3vw,2.5rem)] big:right-[clamp(1.25rem,3vw,2.5rem)] absolute top-4 right-4 inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-bold tracking-widest uppercase ${CHIP_CLASS[accent]}`}
       >
         {chip}
       </span>

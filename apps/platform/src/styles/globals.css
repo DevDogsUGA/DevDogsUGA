@@ -7,6 +7,16 @@
 @custom-variant dark (&:is(.dark *));
 /* Matches the element that called requestFullscreen() and everything inside it. */
 @custom-variant fullscreen (&:is(:fullscreen, :fullscreen *));
+/* Same shape, but also matches anything tagged `data-present-mode` (or
+   nested inside one) -- for styling that should look like a projector slide
+   whether or not the OS-level Fullscreen API is actually engaged. A popup
+   opened via `OpenDisplayLink` fills its own window (`AttendanceDisplay`'s
+   `present` prop) and should already read like a slide; `fullscreen:` alone
+   stays reserved for "the Fullscreen API is literally active right now"
+   (hiding the redundant "Full screen" button, dropping the last windowed
+   chrome), which is not true of a present-mode popup until an officer
+   clicks it. */
+@custom-variant big (&:is(:fullscreen, :fullscreen *, [data-present-mode], [data-present-mode] *));
 @plugin "@tailwindcss/typography";
 
 /* Opt-in only. The default strategy also emits a base layer that restyles every
