@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import * as z from "zod";
 import { zfd } from "zod-form-data";
-import { authenticate, expectUserWith } from "~/server/auth";
+import { authenticate, expectSession, expectUserWith } from "~/server/auth";
 import { db } from "~/server/db";
 import { oauthDeviceCodes } from "~/server/db/schema";
 import {
@@ -13,6 +13,7 @@ import {
   normalizeUserCode,
 } from "~/server/oauth/deviceCodes";
 import { createOauthClientAndRegister } from "~/server/oauth/registerClient";
+import { supabaseAdmin } from "~/supabase/admin";
 
 /**
  * The consent step of the `devtools oauth` device-code handoff. Both
@@ -35,9 +36,15 @@ export async function denyDevice(formData: FormData): Promise<void> {
   const normalized = normalizeUserCode(userCode);
   if (!normalized) throw new Error("Invalid code.");
 
+  // Signed in to deny as well as to approve: otherwise anyone holding (or
+  // guessing) a code could cancel someone else's pending request.
+  const userId = await expectSession().catch(() =>
+    authenticate("google", devicePath(normalized)),
+  );
+
   await db
     .update(oauthDeviceCodes)
-    .set({ status: "denied" })
+    .set({ status: "denied", userId })
     .where(
       and(
         eq(oauthDeviceCodes.userCodeHash, hashUserCode(normalized)),
@@ -78,10 +85,22 @@ export async function approveDevice(formData: FormData): Promise<void> {
     userId: user.id,
   });
 
-  await db
+  // Claim only a still-pending row: a double-clicked Approve (or an Approve
+  // racing a Deny) must not overwrite the first outcome. The loser deletes
+  // the client it just minted; its `oauthRegistrations` row cascades.
+  const [claimed] = await db
     .update(oauthDeviceCodes)
     .set({ status: "approved", userId: user.id, clientId, clientSecret })
-    .where(eq(oauthDeviceCodes.id, row.id));
+    .where(
+      and(
+        eq(oauthDeviceCodes.id, row.id),
+        eq(oauthDeviceCodes.status, "pending"),
+      ),
+    )
+    .returning({ id: oauthDeviceCodes.id });
+  if (!claimed) {
+    await supabaseAdmin.auth.admin.oauth.deleteClient(clientId);
+  }
 
   redirect(devicePath(normalized));
 }

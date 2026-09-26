@@ -44,9 +44,8 @@ create table "platform"."oauthDeviceCodes" (
   -- human has caught up with the poller.
   "status" "platform"."oauthDeviceCodeStatus" not null default 'pending',
 
-  -- Set once a member reaches the verification page for this code (even
-  -- before they approve or deny) -- who was looking at it, for audit/debug.
-  -- Null until then.
+  -- The member who approved or denied this code, for audit/debug. Null
+  -- while it is still pending.
   "userId" uuid,
 
   -- Set together on approval: the client `createOauthClientAndRegister`
