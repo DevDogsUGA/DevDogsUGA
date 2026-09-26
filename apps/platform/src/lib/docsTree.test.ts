@@ -90,7 +90,7 @@ describe("the top level", () => {
     // before `order` existed: adding `order` did not quietly reshuffle them.
     const tree = buildDocsTree([
       page("contributing", "Contributing"),
-      page("elections", "Elections"),
+      page("deploying", "Deploying"),
       page("documentation-system/writing-docs", "Writing Docs"),
       page("reference/routes", "Routes", 2),
       page("reference/supabase", "Supabase", 224),
@@ -98,7 +98,7 @@ describe("the top level", () => {
 
     expect(labels(asSidebar(tree))).toEqual([
       "Contributing",
-      "Elections",
+      "Deploying",
       "Documentation System/",
       "Reference/",
     ]);
@@ -127,14 +127,14 @@ describe("pages within a folder", () => {
     const tree = buildDocsTree([
       page("caching", "Caching"),
       page("index", "Platform"),
-      page("airtable-setup", "Airtable Setup"),
+      page("appendix", "Appendix"),
       page("getting-started", "Getting Started", 1),
     ]);
 
     expect(labels(tree)).toEqual([
       "Platform",
       "Getting Started",
-      "Airtable Setup",
+      "Appendix",
       "Caching",
     ]);
   });
@@ -320,18 +320,18 @@ describe("where a folder below the top level goes", () => {
     // subfolder under them starts again at 201. There is no one run here for a
     // folder to sit inside. Taking the LARGEST declared number sorted these
     // three by how many pages they happen to hold: Devtools last on 209
-    // because it has nine, Docs Build first on 201 because it has one. The
+    // because it has nine, Docs Compiler first on 201 because it has one. The
     // smallest ties all three at 201, and the title tiebreak settles it the way
     // it did before folders were placed by their contents at all.
     const tree = buildDocsTree([
-      page("reference/api/airtable", "@devdogsuga/airtable", 200),
+      page("reference/api/open-graph", "@devdogsuga/open-graph", 200),
       page("reference/api/devtools", "@devdogsuga/devtools", 200),
-      page("reference/api/docs-build", "@devdogsuga/docs-build", 200),
-      page("reference/api/drizzle", "@devdogsuga/drizzle", 200),
+      page("reference/api/docs-compiler", "@devdogsuga/docs-compiler", 200),
+      page("reference/api/db", "@devdogsuga/db", 200),
       page("reference/api/email", "@devdogsuga/email", 200),
       page("reference/api/env", "@devdogsuga/env", 200),
       page("reference/api/supabase", "@devdogsuga/supabase", 200),
-      page("reference/api/devtools/airtable", "devtools/airtable", 201),
+      page("reference/api/devtools/github", "devtools/github", 201),
       page("reference/api/devtools/bws", "devtools/bws", 202),
       page("reference/api/devtools/deploy", "devtools/deploy", 203),
       page("reference/api/devtools/docs", "devtools/docs", 204),
@@ -340,21 +340,21 @@ describe("where a folder below the top level goes", () => {
       page("reference/api/devtools/oauth", "devtools/oauth", 207),
       page("reference/api/devtools/planner", "devtools/planner", 208),
       page("reference/api/devtools/signing-key", "devtools/signing-key", 209),
-      page("reference/api/docs-build/gen", "docs-build/gen", 201),
+      page("reference/api/docs-compiler/gen", "docs-compiler/gen", 201),
       page("reference/api/email/runtime", "email/runtime", 201),
       page("reference/api/email/templates", "email/templates", 202),
     ]);
 
     expect(labels(findFolder(tree, "reference/api")!.children)).toEqual([
-      "@devdogsuga/airtable",
+      "@devdogsuga/db",
       "@devdogsuga/devtools",
-      "@devdogsuga/docs-build",
-      "@devdogsuga/drizzle",
+      "@devdogsuga/docs-compiler",
       "@devdogsuga/email",
       "@devdogsuga/env",
+      "@devdogsuga/open-graph",
       "@devdogsuga/supabase",
       "Devtools/",
-      "Docs Build/",
+      "Docs Compiler/",
       "Email/",
     ]);
   });
@@ -368,7 +368,7 @@ describe("firstPagePath", () => {
     // rather than the alphabetically first API page. The sidebar's partition
     // never enters into it. `firstPagePath` reads the array.
     const tree = buildDocsTree([
-      page("reference/api/airtable", "@devdogsuga/airtable", 200),
+      page("reference/api/open-graph", "@devdogsuga/open-graph", 200),
       page("reference/api/supabase", "@devdogsuga/supabase", 200),
       page("reference/components/index", "Components", 100),
     ]);
