@@ -5,13 +5,13 @@ import * as z from "zod";
 import { zfd } from "zod-form-data";
 import { authenticate, expectUserWith } from "~/server/auth";
 import { db } from "~/server/db";
-import { oauthConnectCodes, oauthRegistrations } from "~/server/db/schema";
+import { oauthConnectCodes } from "~/server/db/schema";
 import {
   generateConnectCode,
   sweepExpiredConnectCodes,
 } from "~/server/oauth/connectCodes";
 import { parseConnectParams } from "~/server/oauth/connectParams";
-import { supabaseAdmin } from "~/supabase/admin";
+import { createOauthClientAndRegister } from "~/server/oauth/registerClient";
 
 /**
  * The consent step of the `devtools oauth` connect handoff. The five hidden
@@ -86,18 +86,11 @@ export async function approveConnect(formData: FormData): Promise<void> {
     );
   }
 
-  const { data, error } = await supabaseAdmin.auth.admin.oauth.createClient({
-    client_name: label,
-    redirect_uris: [callbackUri],
-    scope: "openid email profile",
+  const { clientId, clientSecret } = await createOauthClientAndRegister({
+    label,
+    callbackUri,
+    userId: user.id,
   });
-  if (error ?? !data?.client_secret) {
-    throw new Error("Failed to create OAuth client");
-  }
-
-  await db
-    .insert(oauthRegistrations)
-    .values({ userId: user.id, clientId: data.client_id, label });
 
   // Opportunistic cleanup: any code that got approved and then abandoned
   // (never exchanged) before this request would otherwise hold a plaintext
@@ -108,8 +101,8 @@ export async function approveConnect(formData: FormData): Promise<void> {
   await db.insert(oauthConnectCodes).values({
     codeHash,
     codeChallenge,
-    clientId: data.client_id,
-    clientSecret: data.client_secret,
+    clientId,
+    clientSecret,
     userId: user.id,
     redirectUri,
   });

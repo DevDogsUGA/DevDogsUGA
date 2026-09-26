@@ -1,7 +1,6 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { NextResponse, type NextRequest } from "next/server";
-import { env } from "~/env";
+import type { NextRequest } from "next/server";
 import { db } from "~/server/db";
 import { oauthConnectCodes } from "~/server/db/schema";
 import {
@@ -9,6 +8,9 @@ import {
   hashConnectCode,
   sweepExpiredConnectCodes,
 } from "~/server/oauth/connectCodes";
+import { resolveIssuer } from "~/server/oauth/issuer";
+import { ipRateLimitSubject } from "~/server/oauth/ipRateLimitSubject";
+import { jsonNoStore } from "~/server/oauth/jsonNoStore";
 import { consumeRateLimit } from "~/server/rateLimit";
 
 /**
@@ -30,57 +32,6 @@ import { consumeRateLimit } from "~/server/rateLimit";
 const RATE_LIMIT_SCOPE = "oauth:connect:exchange";
 const RATE_LIMIT_MAX_ATTEMPTS = 10;
 const RATE_LIMIT_WINDOW_SECONDS = 60;
-
-function jsonNoStore(body: unknown, init?: ResponseInit): NextResponse {
-  const response = NextResponse.json(body, init);
-  response.headers.set("Cache-Control", "no-store");
-  return response;
-}
-
-/**
- * `consumeRateLimit`'s `subjectId` is cast to `::uuid` everywhere else it is
- * called (a real user or team id). This endpoint has no identity to key on
- * until AFTER it has looked up (and deleted) the code, which is exactly the
- * step being rate-limited -- so it folds the caller's IP into the same
- * column shape instead of adding a second limiter mechanism.
- */
-function ipRateLimitSubject(request: NextRequest): string {
-  const forwarded = request.headers
-    .get("x-forwarded-for")
-    ?.split(",")[0]
-    ?.trim();
-  const ip = request.headers.get("cf-connecting-ip") ?? forwarded ?? "unknown";
-  const digest = createHash("sha256").update(ip).digest("hex");
-  return [
-    digest.slice(0, 8),
-    digest.slice(8, 12),
-    digest.slice(12, 16),
-    digest.slice(16, 20),
-    digest.slice(20, 32),
-  ].join("-");
-}
-
-let cachedIssuer: string | null = null;
-
-/** The platform Supabase's own OIDC issuer, fetched (and cached) on demand. */
-async function resolveIssuer(): Promise<string> {
-  if (cachedIssuer) return cachedIssuer;
-
-  const response = await fetch(
-    `${env.API_URL}/auth/v1/.well-known/openid-configuration`,
-  );
-  if (!response.ok) {
-    throw new Error(`Failed to fetch OpenID configuration: ${response.status}`);
-  }
-
-  const config = (await response.json()) as { issuer?: unknown };
-  if (typeof config.issuer !== "string" || config.issuer.length === 0) {
-    throw new Error("OpenID configuration is missing an issuer");
-  }
-
-  cachedIssuer = config.issuer;
-  return cachedIssuer;
-}
 
 function safeEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a);

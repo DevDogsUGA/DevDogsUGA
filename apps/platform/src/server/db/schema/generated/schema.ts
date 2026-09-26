@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, pgEnum, boolean, varchar, integer, text, timestamp, date, smallint, doublePrecision, jsonb, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, varchar, pgEnum, integer, boolean, text, timestamp, smallint, date, doublePrecision, jsonb, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by devtools db introspect after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -21,6 +21,7 @@ export const reportStatusInPlatform = platform.enum("reportStatus", ["open", "re
 export const reportReasonInPlatform = platform.enum("reportReason", ["harassment", "hate_speech", "spam", "sexual_content", "violence", "impersonation", "off_topic", "other"])
 export const contentVisibilityInPlatform = platform.enum("contentVisibility", ["public", "restricted"])
 export const quarantineEffectInPlatform = platform.enum("quarantineEffect", ["hide", "freeze"])
+export const oauthDeviceCodeStatusInPlatform = platform.enum("oauthDeviceCodeStatus", ["pending", "approved", "denied"])
 
 
 export const academicProgramsInPlatform = platform.table.withRLS("academicPrograms", {
@@ -317,6 +318,32 @@ export const oauthConnectCodesInPlatform = platform.table.withRLS("oauthConnectC
 }, (table) => [
 	uniqueIndex("oauthConnectCodes_codeHash_key").using("btree", table.codeHash.asc().nullsLast()),
 	index("oauthConnectCodes_expiresAt_idx").using("btree", table.expiresAt.asc().nullsLast()),
+
+	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
+
+	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
+
+	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
+]);
+
+export const oauthDeviceCodesInPlatform = platform.table.withRLS("oauthDeviceCodes", {
+	id: uuid().defaultRandom().primaryKey(),
+	deviceCodeHash: text().notNull(),
+	userCodeHash: text().notNull(),
+	label: text().notNull(),
+	callbackUri: text().notNull(),
+	status: oauthDeviceCodeStatusInPlatform().default("pending").notNull(),
+	userId: uuid().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	clientId: uuid().references(() => oauthClients.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	clientSecret: text(),
+	interval: integer().default(5).notNull(),
+	lastPolledAt: timestamp({ withTimezone: true }),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	expiresAt: timestamp({ withTimezone: true }).default(sql`(now() + '00:10:00'::interval)`).notNull(),
+}, (table) => [
+	uniqueIndex("oauthDeviceCodes_deviceCodeHash_key").using("btree", table.deviceCodeHash.asc().nullsLast()),
+	index("oauthDeviceCodes_expiresAt_idx").using("btree", table.expiresAt.asc().nullsLast()),
+	uniqueIndex("oauthDeviceCodes_userCodeHash_key").using("btree", table.userCodeHash.asc().nullsLast()),
 
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
 
@@ -843,6 +870,8 @@ export { memberStarsInPlatform as memberStars };
 export { membershipDirectionInPlatform as membershipDirection };
 export { membershipRequestStatusInPlatform as membershipRequestStatus };
 export { oauthConnectCodesInPlatform as oauthConnectCodes };
+export { oauthDeviceCodeStatusInPlatform as oauthDeviceCodeStatus };
+export { oauthDeviceCodesInPlatform as oauthDeviceCodes };
 export { oauthRegistrationTypeInPlatform as oauthRegistrationType };
 export { oauthRegistrationsInPlatform as oauthRegistrations };
 export { oauthTestAccountsInPlatform as oauthTestAccounts };

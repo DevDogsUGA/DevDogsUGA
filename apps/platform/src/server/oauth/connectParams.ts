@@ -1,4 +1,4 @@
-const MAX_LABEL_LENGTH = 100;
+import { parseRegistrationParams } from "./registrationParams";
 
 export interface ConnectParams {
   redirectUri: string;
@@ -31,16 +31,6 @@ function isLoopbackRedirectUri(value: string): boolean {
   );
 }
 
-function isAbsoluteHttpUrl(value: string): boolean {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    return false;
-  }
-  return url.protocol === "http:" || url.protocol === "https:";
-}
-
 /**
  * Validates the query string `/tools/oauth/connect` receives from
  * `devtools oauth` (and re-validates the hidden fields the consent form
@@ -56,8 +46,6 @@ export function parseConnectParams(
   const codeChallenge = raw.code_challenge ?? "";
   const codeChallengeMethod = raw.code_challenge_method ?? "";
   const state = raw.state ?? "";
-  const label = (raw.label ?? "").trim();
-  const callbackUri = raw.callback_uri ?? "";
 
   if (!isLoopbackRedirectUri(redirectUri)) {
     return {
@@ -82,22 +70,20 @@ export function parseConnectParams(
     return { ok: false, error: "state is required." };
   }
 
-  if (label.length === 0 || label.length > MAX_LABEL_LENGTH) {
-    return {
-      ok: false,
-      error: `label must be between 1 and ${MAX_LABEL_LENGTH} characters.`,
-    };
-  }
-
-  if (!isAbsoluteHttpUrl(callbackUri)) {
-    return {
-      ok: false,
-      error: "callback_uri must be an absolute http:// or https:// URL.",
-    };
-  }
+  const registration = parseRegistrationParams({
+    label: raw.label ?? "",
+    callbackUri: raw.callback_uri ?? "",
+  });
+  if (!registration.ok) return registration;
 
   return {
     ok: true,
-    params: { redirectUri, codeChallenge, state, label, callbackUri },
+    params: {
+      redirectUri,
+      codeChallenge,
+      state,
+      label: registration.params.label,
+      callbackUri: registration.params.callbackUri,
+    },
   };
 }
