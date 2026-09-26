@@ -6,8 +6,8 @@ order: 5
 
 # Images
 
-`pnpm devtools images` renders the templates from `@devdogsuga/og`. Run it
-without arguments for searchable graphic, format, and output pickers.
+`pnpm devtools images` renders the templates from `@devdogsuga/open-graph`.
+Run it without arguments for searchable graphic, format, and output pickers.
 
 Graphics use `group/name` selectors:
 
@@ -33,6 +33,7 @@ Event exports go to the gitignored `.images/` directory instead. `--dry-run`
 prints destinations and writes nothing.
 
 Event graphics are backed by meeting rows rather than committed files. They
-need the local Supabase stack and a recent Airtable sync. A wildcard export
-warns and continues with static graphics when events are unavailable; a
-specific `event/*` request fails because it has nothing useful to render.
+need the local Supabase stack and meetings reconciled from `@devdogsuga/events`
+(see [Events](/docs/platform/guides/meetings-and-teams/events)). A wildcard
+export warns and continues with static graphics when events are unavailable;
+a specific `event/*` request fails because it has nothing useful to render.

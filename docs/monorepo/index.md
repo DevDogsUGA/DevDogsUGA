@@ -6,7 +6,7 @@ order: 0
 
 # Monorepo
 
-Every DevDogs project lives in one pnpm monorepo: four apps, eight shared packages, and one Supabase Postgres database they all talk to. Read this if you have just cloned the repo, or if you need to know which project owns what. If you already know which app you are working on, skip straight to that project's own docs at the bottom of this page.
+Every DevDogs project lives in one pnpm monorepo: four apps, a handful of local shared packages, and one Supabase Postgres database they all talk to. Read this if you have just cloned the repo, or if you need to know which project owns what. If you already know which app you are working on, skip straight to that project's own docs at the bottom of this page.
 
 ## The four apps
 
@@ -21,7 +21,7 @@ Most contributors join one of the first two — **Schedule Builder** (Next.js) o
 
 Schema-per-app is an organizational boundary, not a security one. Every schema is reachable through the same PostgREST endpoint and the same publishable key, so Row-Level Security is what actually isolates one app's data from another's.
 
-`packages/` holds what they share: the Supabase client factories, the env registry behind `with-env`, the `pnpm devtools` CLI, the docs compiler, Drizzle helpers, email templates, the Airtable registry, and the shared tsconfig/eslint/vitest presets.
+`packages/` holds the locally-owned shared code: the Supabase client, types and RLS test harness (`@devdogsuga/supabase`), email templates (`@devdogsuga/email`), open-graph image rendering (`@devdogsuga/open-graph`), and the deploy-time and repo-structure checks (`@devdogsuga/deploy-checks`, `@devdogsuga/repo-checks`). The rest of the shared stack — the env registry behind `with-env`, the `pnpm devtools` CLI, the docs compiler, the Drizzle client factory, the shared tsconfig/eslint/vitest presets, and the meetings/workshops config — ships as published `@devdogsuga/*` packages from the sibling Backstage repository instead of living here; see [Toolkit](/docs/toolkit).
 
 The SQL is not in `packages/`. All three schemas are built by one migration history at the repo root — `supabase/migrations/` — with `supabase/config.toml` and `supabase/seed/` beside it.
 

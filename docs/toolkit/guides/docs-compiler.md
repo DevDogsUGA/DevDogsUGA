@@ -1,27 +1,31 @@
 ---
-name: docs-build
+name: docs-compiler
 description: Three modes behind one binary — compile a folder of markdown, lint the hand-written pages, or regenerate the API reference from source.
 order: 9
 ---
 
-# docs-build
+# docs-compiler
 
-`@devdogsuga/docs-build` is the compiler behind `docs/`. It is why that package
-holds markdown and a manifest and no code at all: its `build` script is this
-binary, run bare.
+`@devdogsuga/docs-compiler` is the compiler behind `docs/`. It is why that
+package holds markdown and a manifest and no code at all: its `build` script
+runs this binary. It ships as a published package from the sibling **Backstage**
+repository — like `@devdogsuga/devtools` and `@devdogsuga/events` — so a fix to
+the compiler itself is a Backstage change, not one here.
 
 Three modes, one binary:
 
 ```
-docs-build                    # compile the markdown in this folder into dist/
-docs-build check              # lint the hand-written pages here
-docs-build gen [--dry-run]    # regenerate the API reference from source
+docs-compiler                    # compile the markdown in this folder into dist/
+docs-compiler check              # lint the hand-written pages here
+docs-compiler gen [--dry-run]    # regenerate the API reference from source
 ```
 
 Those are the CLI's modes, not lines to paste. The bin is linked into
 `docs/node_modules/.bin` and nowhere else, so typing the bare name gets you
-`command not found` — see [Running it](#running-it) below for the two forms
-that work.
+`command not found` — see [Running it](#running-it) below for the forms that
+work. Its own log lines still print the bracketed tag `[docs-build]`, a
+holdover from the package's name before the Backstage carve-out; the binary
+and the package are `docs-compiler`, only that one string did not get renamed.
 
 **Bare** takes no arguments and never will. The working directory is the content
 root; the output is `dist/index.js` plus `dist/index.d.ts`, a typed data module
@@ -46,21 +50,24 @@ file warns and carries on.
 
 ## Running it
 
-Both forms run from the content root, and both work:
+This repo wraps both modes behind a caching layer — `docs/scripts/cached-build.ts`,
+run as `docs`' own `build` script (`tsx scripts/cached-build.ts`) — which
+fingerprints every markdown file, manifest, and TypeScript/Dart source the
+compiler would read, skips both `gen` and the bare compile when nothing
+changed, and otherwise runs them in order:
 
 ```bash
-cd docs && pnpm exec docs-build check                  # resolves the linked bin
-cd docs && node ../packages/docs-build/bin/docs-build.mjs check   # no PATH at all
+pnpm --filter @devdogsuga/docs build          # cached: `docs-compiler gen && docs-compiler`
+pnpm --filter @devdogsuga/docs build --force  # bypass the cache
 ```
 
-That `bin/` file is a committed one-line shim rather than a pointer straight at
-`dist/`. pnpm silently skips linking a bin whose target is missing, so on a
-fresh checkout the direct pointer left CI with a bare `command not found`; the
-shim always exists, and by the time anything runs it pnpm's dependency-ordered
-build has compiled `dist/`.
+To run the compiler directly instead, from `docs/`:
+
+```bash
+cd docs && pnpm exec docs-compiler check                  # resolves the linked bin
+cd docs && node ./node_modules/.bin/docs-compiler check   # no PATH at all
+```
 
 What the rules mean for a page you are writing is
 [Writing docs](/docs/monorepo/guides/docs-system/writing); how a page reaches
-the site is [the docs system](/docs/monorepo/guides/docs-system). Every export
-is in the generated
-[`@devdogsuga/docs-build`](/docs/toolkit/reference/api/docs-build) reference.
+the site is [the docs system](/docs/monorepo/guides/docs-system).

@@ -8,8 +8,8 @@ export type NavIcon = keyof typeof icons;
 
 /**
  * DevDogs on the UGA Involvement Network, the roster that decides official
- * membership (see `docs/platform/airtable-setup.md`). `/join` redirects here,
- * so keep the two in sync by importing this rather than retyping the URL.
+ * membership. `/join` redirects here, so keep the two in sync by importing
+ * this rather than retyping the URL.
  */
 export const INVOLVEMENT_NETWORK_URL =
   "https://uga.campuslabs.com/engage/organization/devdogs";

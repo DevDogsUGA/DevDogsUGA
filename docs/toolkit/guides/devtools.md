@@ -8,6 +8,11 @@ order: 3
 
 `pnpm devtools` is the front door for repository tasks, local and hosted
 infrastructure, generated content, configuration, and platform checks.
+`@devdogsuga/devtools` ships as a published package from the sibling
+**Backstage** repository — a root devDependency pinned to an exact version,
+installed like any other npm package, not a workspace member of this repo.
+CI runs the separate `devtools-ci`/`devtools-ci-bare` binaries from the same
+package.
 
 Run it without arguments to open the interactive menu. The menu reads the same
 command registry as `--help` and shell completions, but leaves out commands that
@@ -75,7 +80,12 @@ examples.
 
 - `env` — synchronize target env files with Bitwarden, GitHub, and Cloudflare.
 - `bw` — pass arguments through to the bundled Bitwarden CLI.
-- `airtable` — check, verify, or apply the officers' base schema.
+
+### GitHub
+
+- `github` — reconcile branch protection rulesets and repository settings
+  (secret scanning, push protection, Dependabot, SHA pinning, allowed
+  actions) against what the repo declares.
 
 ### Moderation
 

@@ -10,7 +10,7 @@ There is no separate preview tool. Docs are compiled into the platform app, so *
 
 ## The loop
 
-One terminal, and a re-run after each save — there is no file watcher wired into `@devdogsuga/docs`'s build (the underlying `docs-build` compiler has no `--watch` mode, and nothing in this repo wraps one around it):
+One terminal, and a re-run after each save — there is no file watcher wired into `@devdogsuga/docs`'s build (the underlying `docs-compiler` compiler has no `--watch` mode, and nothing in this repo wraps one around it):
 
 ```bash
 pnpm dev                                          # the app
@@ -48,6 +48,6 @@ Because the dev server uses the same parser and the same renderer as production,
 - Code blocks are highlighted — an unregistered language falls back to plain text silently.
 - Links between docs pages use site paths (`/docs/monorepo/guides/docs-system/writing`), not file paths.
 - The table of contents on the right lists the headings you intended, and no heading you buried in a `<details>`.
-- `pnpm dev` printed no budget warnings for your page. `pnpm --filter @devdogsuga/docs exec docs-build check` prints the detail behind that count.
+- `pnpm dev` printed no budget warnings for your page. `pnpm --filter @devdogsuga/docs exec docs-compiler check` prints the detail behind that count.
 
 Per-branch documentation URLs do not exist. To share docs changes before merge, use a preview deployment of the branch — it serves the whole site, docs included, built from that branch.

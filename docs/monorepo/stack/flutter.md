@@ -32,6 +32,6 @@ supadart cannot select a schema: it reads whatever PostgREST serves as its defau
 <details>
 <summary>Why is <code>analyzer</code> pinned to 13.x, and what uses it?</summary>
 
-`analyzer ^13.0.0` is a dev dependency used only by `tool/docs_extract.dart`, which reads this app's declarations so `docs-build gen` can emit a Dart reference — the Node-side generator has no way to analyze Dart. It is held at 13.x because the Flutter SDK pins `meta 1.18.0`, which analyzer 14.x will not resolve against. That extractor is also why the docs highlighter registers the `dart` grammar: without it, every generated signature would fall back to plain text and lose its highlighting silently.
+`analyzer ^13.0.0` is a dev dependency used only by `tool/docs_extract.dart`, which reads this app's declarations so `docs-compiler gen` can emit a Dart reference — the Node-side generator has no way to analyze Dart. It is held at 13.x because the Flutter SDK pins `meta 1.18.0`, which analyzer 14.x will not resolve against. That extractor is also why the docs highlighter registers the `dart` grammar: without it, every generated signature would fall back to plain text and lose its highlighting silently.
 
 </details>

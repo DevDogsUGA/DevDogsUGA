@@ -19,10 +19,11 @@ import { alert } from "@devdogsuga/telemetry";
  *    original signature here means every call site only had to change its
  *    import path, not its call.
  * 2. `postAlert` is the name every call site and every doc page
- *    (docs/platform/guides/meetings-and-teams/airtable-sync.md,
- *    docs/platform/reference/server/airtable.md) already uses for "the
- *    thing that posts an operational alert." Renaming it everywhere would
- *    be churn with no benefit -- the sink changed, not the concept.
+ *    (docs/platform/guides/meetings-and-teams/events.md,
+ *    docs/platform/guides/meetings-and-teams/competitions.md) already uses
+ *    for "the thing that posts an operational alert." Renaming it
+ *    everywhere would be churn with no benefit -- the sink changed, not the
+ *    concept.
  *
  * Same contracts as before: NEVER THROWS (this is called from inside passes
  * whose actual job is something else), and callers still own transition-only

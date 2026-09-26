@@ -20,9 +20,9 @@ actually make, and a link to the generated API.
 | Boot, migrate or reset a database    | [**Database commands**](/docs/toolkit/guides/database) — `devtools db …`, over Supabase on this machine or the linked project, plus `stop` and `restart` for the one on this machine                                                    |
 | Talk to Postgres from an app         | [**`@devdogsuga/db`**](/docs/toolkit/guides/drizzle) — `/server`'s shared postgres-js + Drizzle client factory (ships from Backstage)                                                                                                   |
 | Reach Supabase, or write an RLS test | [**`@devdogsuga/db`** + `@devdogsuga/supabase`](/docs/toolkit/guides/supabase) — the three client factories (`@devdogsuga/db`), the generated `Database` types, the app → schema map, and the RLS test harness (`@devdogsuga/supabase`) |
-| Push or pull officer data            | [**`@devdogsuga/airtable`**](/docs/toolkit/guides/airtable) — the field registry, sync engine, and base verifier                                                                                                                        |
+| Author a meeting or a workshop       | [**`@devdogsuga/events`**](/docs/platform/guides/meetings-and-teams/events) — a pull request against Backstage's `packages/events/data/meetings.json`, validated by that repo's own CI                                                  |
 | Send an email                        | [**`@devdogsuga/email`**](/docs/toolkit/guides/email) — react-email sources compiled to typed, React-free HTML                                                                                                                          |
-| Change how docs are built            | [**`@devdogsuga/docs-build`**](/docs/toolkit/guides/docs-build) — compiles markdown, and generates the reference section                                                                                                                |
+| Change how docs are built            | [**`@devdogsuga/docs-compiler`**](/docs/toolkit/guides/docs-compiler) — compiles markdown, and generates the reference section                                                                                                          |
 
 ## Reference
 

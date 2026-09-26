@@ -54,7 +54,7 @@ Counted in **visible words** — words outside every `<details>`:
 | Concept        | 900    |
 | Anything, ever | 1500   |
 
-Only the last row is machine-enforced, along with a 400-word cap per collapsible. Past 1500 the page splits — folding half of it into a fold it did not need is not the fix. The lint runs on every build, so `pnpm dev` prints the warning count; `pnpm --filter @devdogsuga/docs exec docs-build check` prints the detail.
+Only the last row is machine-enforced, along with a 400-word cap per collapsible. Past 1500 the page splits — folding half of it into a fold it did not need is not the fix. The lint runs on every build, so `pnpm dev` prints the warning count; `pnpm --filter @devdogsuga/docs exec docs-compiler check` prints the detail.
 
 Project state does not belong here: open questions, phase plans, spike results and rolling status live in notes, not `docs/`.
 
@@ -83,7 +83,7 @@ The body, with a blank line above it and below it.
 - **Blank lines are mechanical.** One after `</summary>`, one before `</details>` — without them CommonMark keeps the whole block as raw HTML and the body renders unparsed.
 - **No markdown headings inside.** `parseDocFile` collects every heading into the page's TOC, so a heading in a fold is a TOC entry pointing at content the reader cannot see.
 - **`<summary>` is raw HTML.** Write `<code>pnpm dev</code>`, not backticks.
-- **The summary line is a question or an explicit label** — "Why not STV?", "Every Airtable token scope". Never "More" or "Details".
+- **The summary line is a question or an explicit label** — "Why not a Postgres advisory lock?", "Every registered language". Never "More" or "Details".
 
 Three collapsibles per `##` section at most, each under 400 words. Rationale goes inline, or under a closing `## Why it's like this` section, which may hold five.
 
@@ -158,7 +158,7 @@ The list is registered in `apps/platform/src/components/DocsMarkdown.tsx`, which
 
 A docs lint that fails the build teaches exactly one lesson — how to get under the threshold — and most of the ways under a word budget are worse than the page that tripped it: detail deleted rather than moved, a paragraph folded into a `<details>` where nobody will look for it.
 
-So the check reports and stops there; nothing in it sets an exit code. The counterweight is where the count gets printed. A warning behind a command someone has to think to run is a warning nobody reads, so the bare `docs-build` — the one every `pnpm dev` and every `@devdogsuga/docs` build already runs — prints the number on its own summary line and points at `docs-build check` for the detail.
+So the check reports and stops there; nothing in it sets an exit code. The counterweight is where the count gets printed. A warning behind a command someone has to think to run is a warning nobody reads, so the bare `docs-compiler` — the one every `pnpm dev` and every `@devdogsuga/docs` build already runs — prints the number on its own summary line and points at `docs-compiler check` for the detail.
 
 Generated pages under `reference/` are skipped whole. A generated page is an enumeration: it is as long as the code it describes, and no author chose any of it.
 

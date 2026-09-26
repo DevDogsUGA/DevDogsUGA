@@ -45,6 +45,6 @@ The plain `sandbox` Worker needs no such step.
 
 Two bindings have rules of their own. `WORKER_SELF_REFERENCE` must name the same environment's own worker, because that is how the memory queue re-invokes the Worker to revalidate. `send_email` pins `allowed_sender_addresses` to `noreply@mail.devdogsuga.org`; without that list, any code path holding the binding can send as any address on the domain.
 
-Staging's `triggers.crons` is empty on purpose rather than merely omitted: staging shares the production Airtable base and the club's real Discord guild, so a staging cron is not a rehearsal — it would contend for the sync lease and assign real roles to real members twice. Cron routes are exercised by hand with the staging `CRON_SECRET`.
+Staging's `triggers.crons` is empty on purpose rather than merely omitted: staging shares the club's real Discord guild, so a staging cron is not a rehearsal — it would assign real roles to real members twice. Cron routes are exercised by hand with the staging `CRON_SECRET`.
 
 </details>

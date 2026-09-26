@@ -10,9 +10,9 @@ Everything under `docs/` is compiled into the platform site at build time, so a 
 
 ## From markdown to page
 
-`docs/` is a workspace package — `@devdogsuga/docs` — holding markdown and a `package.json` and nothing else. Its entire build script is `docs-build`, the CLI from `@devdogsuga/docs-build`, which treats its working directory as the content root, walks it for `*.md`, parses each file, and emits `dist/index.js` plus a hand-written `dist/index.d.ts`. Emitting the declarations by hand rather than running `tsc` is what keeps the content package free of a TypeScript toolchain.
+`docs/` is a workspace package — `@devdogsuga/docs` — holding markdown and a `package.json` and nothing else. Its build script (`tsx scripts/cached-build.ts`, a caching wrapper — see that file's own header) runs `docs-compiler`, the CLI from `@devdogsuga/docs-compiler`, a package published from the sibling Backstage repository. `docs-compiler` treats its working directory as the content root, walks it for `*.md`, parses each file, and emits `dist/index.js` plus a hand-written `dist/index.d.ts`. Emitting the declarations by hand rather than running `tsc` is what keeps the content package free of a TypeScript toolchain.
 
-Being a package is what makes the rest work. The platform depends on it, so pnpm's dependency-ordered recursive runs (and the deps-of `^...` spawn `devtools run` builds ahead of a task; see `packages/devtools/src/run/pick.ts`) produce the artifact before `build`, `dev`, `typecheck`, `lint` or `test` runs against anything that needs it. There is no bespoke file watcher; see [Local preview](/docs/monorepo/guides/docs-system/preview) for the manual re-run this now takes instead.
+Being a package is what makes the rest work. The platform depends on it, so pnpm's dependency-ordered recursive runs (and the deps-of `^...` spawn `devtools run` builds ahead of a task; see Backstage's `packages/devtools/src/run/pick.ts`) produce the artifact before `build`, `dev`, `typecheck`, `lint` or `test` runs against anything that needs it. There is no bespoke file watcher; see [Local preview](/docs/monorepo/guides/docs-system/preview) for the manual re-run this now takes instead.
 
 The docs routes import that module and render from memory:
 
@@ -27,7 +27,7 @@ The docs routes import that module and render from memory:
 <details>
 <summary>What <code>parseDocFile</code> extracts from each file</summary>
 
-`packages/docs-build/src/parse.ts` is a `unified` + `remark-parse` pass producing, per file: `title`, `description`, `order`, the raw `frontmatter`, `headings` (id, title, depth), `content` (markdown with front matter stripped), and `plainText` (the document flattened, for search).
+Backstage's `packages/docs-compiler/src/parse.ts` is a `unified` + `remark-parse` pass producing, per file: `title`, `description`, `order`, the raw `frontmatter`, `headings` (id, title, depth), `content` (markdown with front matter stripped), and `plainText` (the document flattened, for search).
 
 Heading ids are slugged with `github-slugger` — the same slugger `rehype-slug` uses at render time, so an anchor written against a heading resolves to the id the page actually ships.
 

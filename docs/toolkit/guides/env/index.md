@@ -32,7 +32,7 @@ is what to run. A contributor filling in their own `.env` wants
 ## One `--target`, one row
 
 Every per-target fact is read from a single table,
-`packages/env/src/targets.ts`:
+Backstage's `packages/env/src/targets.ts`:
 
 | `--target`    | File              | Bitwarden project | Valid `DEPLOY_ENV`? |
 | ------------- | ----------------- | ----------------- | ------------------- |
@@ -66,7 +66,7 @@ Two rows are asymmetric, both deliberately:
 | `production-apply` | `production`      | everything, apply-tier too    | `production` |
 
 Which keys a project holds is the **tier's** decision, named after the jobs that
-read each key (`EnvTier` in `packages/env/src/meta.ts`). `deploy` is the default
+read each key (`EnvTier` in Backstage's `packages/env/src/meta.ts`). `deploy` is the default
 and reaches staging and production; `plan` reaches the two dry-run jobs in
 preflight and production, and nothing in staging; `apply` reaches
 `production-apply` alone.

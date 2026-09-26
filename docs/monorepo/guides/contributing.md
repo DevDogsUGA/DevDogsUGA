@@ -135,7 +135,7 @@ Three ways past it, each skipping the question entirely:
 
 **CI never sees a prompt**, and in fact never reaches the picker at all: every workflow calls `pnpm -r`/`pnpm --filter …` directly rather than going through a root alias. The guard is there regardless — `pnpm devtools run` passes straight through when `CI` is set, when stdin is not a TTY, or when a filter is already present, which covers workflows, piped output and editor task runners alike.
 
-Each root task is a thin alias for the same thing: `pnpm build` is `pnpm devtools run build`. The picker lives in `packages/devtools/src/run/pick.ts` with every other prompt in the repo.
+Each root task is a thin alias for the same thing: `pnpm build` is `pnpm devtools run build`. The picker lives in Backstage's `packages/devtools/src/run/pick.ts` with every other prompt in the repo.
 
 For docs authoring, there is no watch mode — re-run `pnpm --filter @devdogsuga/docs run build` in a second terminal after each save; see [Local preview](/docs/monorepo/guides/docs-system/preview).
 
@@ -143,7 +143,7 @@ For docs authoring, there is no watch mode — re-run `pnpm --filter @devdogsuga
 
 `.github/workflows/ci.yaml` runs on every pull request and holds no secrets at all — on `pull_request` GitHub runs the workflow definition _from the pull request_, so any credential in scope would be readable by whoever opened it. Four jobs:
 
-- **validate** — `lint`, `typecheck` and `test` across the affected packages, plus two unconditional comparisons that need no credential: the Airtable registry against its committed schema snapshot (`pnpm devtools airtable check`), and `.env.example` against the env manifests (`pnpm devtools env example --check`).
+- **validate** — `lint`, `typecheck` and `test` across the affected packages, plus two unconditional comparisons that need no credential: `.env.example` against the env manifests (`pnpm devtools env example --check`), and the generated Cloudflare binding types against each Worker's configuration.
 - **database** — starts the real local Supabase stack on an empty volume, which makes it the "every migration applies from scratch" check too. Then: the committed `database.types.ts` still matches the migrations, the RLS suite, the platform query and privilege-surface suite, and a production build of both Next apps with env validation **enforced**.
 - **format** — `pnpm format:check` over the whole repo.
 - **flutter** — `flutter analyze` and `flutter test`, only when `study-group-finder` is affected.
