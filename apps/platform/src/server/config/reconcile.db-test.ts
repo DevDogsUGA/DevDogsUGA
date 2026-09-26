@@ -46,7 +46,7 @@ function meeting(overrides: Partial<Meeting> & { id: string }): Meeting {
  * handful of `reconcile-test-` fixtures -- but `archiveMissing` (see
  * `reconcile.ts`) is global: it archives EVERY live row with a `configId`,
  * not just the ones this file wrote. A local database a developer reconciled
- * by hand (see `club-config.md`'s "Local development" section) can have real
+ * by hand (see `events.md`'s "Local development" section) can have real
  * config-derived meetings live at the same time this suite runs, and a
  * fixture-only config would archive every one of them.
  *

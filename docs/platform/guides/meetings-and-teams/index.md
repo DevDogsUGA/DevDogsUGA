@@ -19,7 +19,7 @@ DevDogs meets weekly. Each meeting runs one or more **workshops** in parallel, o
 | `competitions` | a mirror of a GitHub issue -- see [Competitions](/docs/platform/guides/meetings-and-teams/competitions) |
 | `teams`        | a persistent project team -- see [Teams](/docs/platform/guides/meetings-and-teams/teams)                |
 
-There is no `projects` table any more — a workshop's project is free text on the row (`workshops."project"`, e.g. "DogDays", nullable), not a foreign key. See [Config-as-code](/docs/platform/guides/meetings-and-teams/club-config) for why.
+There is no `projects` table any more — a workshop's project is free text on the row (`workshops."project"`, e.g. "DogDays", nullable), not a foreign key. See [Events](/docs/platform/guides/meetings-and-teams/events) for why.
 
 Attendance attaches to the meeting with the workshop as a dimension, never to a competition — there is nothing in-person to attend about a GitHub issue.
 
@@ -31,7 +31,7 @@ One constraint on `workshops` carries most of the remaining meaning: it declares
 
 The meetings/workshops schema is `supabase/migrations/20260829040000_11_platform_events_core.sql`, amended in place for the config-as-code cutover: `meetings.countsTowardProgress` and `elEligible` merged into one `countsForCredit` flag, `meetings.configId`/`surveyUrl` and `workshops.configId` were added, `workshops.projectId` and the `projects` table were dropped in favor of `workshops."project"` as free text. That same migration carries the competitions mirror now too -- see [Competitions](/docs/platform/guides/meetings-and-teams/competitions) for its shape. `20260829050100_16_platform_team_awards.sql` has `platform.competitionEntries` and the `memberStars` view.
 
-The code is `apps/platform/src/server/` under `teams/`, `github/`, `airtable/`, `config/` and `loaders/`. Most scheduled passes are routes under `app/(api)/cron/`: the config reconcile (`/cron/config-reconcile`), the nightly GitHub reconcile for teams and competitions (`/cron/github-reconcile`), and the fifteen-minute Airtable pull (`/airtable/sync`, members only now). `cloudflare/scheduled.ts` is the one file that maps every cron expression to its route, so read it rather than guessing a path from a schedule.
+The code is `apps/platform/src/server/` under `teams/`, `github/`, `config/` and `loaders/`. Scheduled passes are routes under `app/(api)/cron/`: the config reconcile (`/cron/config-reconcile`) and the nightly GitHub reconcile for teams and competitions (`/cron/github-reconcile`). `cloudflare/scheduled.ts` is the one file that maps every cron expression to its route, so read it rather than guessing a path from a schedule.
 
 ## Read next
 
@@ -39,8 +39,7 @@ The code is `apps/platform/src/server/` under `teams/`, `github/`, `airtable/`, 
 - [Competitions](/docs/platform/guides/meetings-and-teams/competitions) — the Competitions Project, kickoff, entries, and closing one out.
 - [Attendance](/docs/platform/guides/meetings-and-teams/attendance) — the ledger and check-in.
 - [Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards) — what participation adds up to.
-- [Config-as-code](/docs/platform/guides/meetings-and-teams/club-config) — where meetings and workshops come from now.
-- [Airtable sync](/docs/platform/guides/meetings-and-teams/airtable-sync) — where members still come from.
+- [Events](/docs/platform/guides/meetings-and-teams/events) — where meetings and workshops come from.
 
 Scoring is off-platform (officer scores and live voting, run outside the site). The only per-competition state the platform persists is who won, and it is not a separate record at all — `platform.competitionEntries."mergedAt"` IS the answer, set the moment an officer merges the winning pull request — and the results page collapses to entrants plus that winner, if one has merged.
 
