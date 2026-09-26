@@ -6,8 +6,9 @@ order: 4
 
 # Attendance
 
-The DevDogs Platform is authoritative for attendance. Airtable receives a
-read-only projection for officer reporting; it never edits attendance rows.
+The DevDogs Platform is authoritative for attendance. There is no downstream
+CMS receiving a projection of it any more — officers read it straight from the
+console, or a CSV export (see [Exports](#exports) below).
 
 ## Member check-in
 
@@ -36,14 +37,12 @@ unique, so retries and duplicate scans return the existing receipt.
 there is no revocation and nothing an officer records on a member's behalf.
 Client roles may read their own records and cannot write them.
 
-The Airtable Attendance table is a read-only projection of these rows. Its
-linked member and meeting, method, and timestamp are all platform-owned
-fields.
-
 ## EL reflections
 
-Meeting reflections require active attendance and `EL eligible` on the
-meeting. Competition reflections require the member's team to have entered
+Meeting reflections require active attendance and `countsForCredit` on the
+meeting — the single flag that governs both star credit and EL eligibility;
+see [Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards).
+Competition reflections require the member's team to have entered
 the competition -- an active membership at the moment the entry (a pull
 request linking the issue) opened, the same rule
 [Stars & streaks](/docs/platform/guides/meetings-and-teams/stars-and-awards)
@@ -57,10 +56,10 @@ closing).
 Submitted reflections are member-locked; there is no officer exception.
 
 Every reflection mutation creates immutable revision evidence and an audit
-event. There is no officer review surface — Airtable never receives reflection
-content, and the platform has no review, approval, or status page for it.
-Reflections are export-only, and the university, not DevDogs, determines
-whether that evidence earns credit.
+event. There is no officer review surface — the platform has no review,
+approval, or status page for reflection content, and nothing outside the
+platform ever receives it. Reflections are export-only, and the university,
+not DevDogs, determines whether that evidence earns credit.
 
 ## Exports
 

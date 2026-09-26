@@ -12,13 +12,13 @@ so changes are visible on the next read without a backfill.
 
 ## Stars
 
-- One star is earned for each meeting whose `Counts toward progress` flag is
-  enabled and that the member attended.
+- One star is earned for each meeting whose `countsForCredit` flag is
+  enabled and that the member attended — the same flag EL reflection
+  eligibility reads; see
+  [Attendance](/docs/platform/guides/meetings-and-teams/attendance).
 - One star is earned for each DevDogs competition the member's team
   participated in — every mirrored (converted) competition counts, no
-  separate flag: being a real, kicked-off GitHub issue IS counting, the same
-  way `platform.competitions` losing its own `countsTowardProgress` column
-  reads.
+  separate flag: being a real, kicked-off GitHub issue IS counting.
 - A competition win decorates its competition star; it is not another star.
 
 Participation is `platform.competitionEntries`: held an active membership on

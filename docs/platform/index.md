@@ -14,7 +14,6 @@ order: 10
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
 | [Getting Started](/docs/platform/guides/getting-started)     | Signing in, linking GitHub, forming a team, and entering a competition            |
 | [Meetings & Teams](/docs/platform/guides/meetings-and-teams) | Meetings, workshops, competitions, teams, attendance, stars, and awards           |
-| [Airtable](/docs/platform/guides/airtable)                   | The officer base, the field registry, and what syncs in which direction           |
 | [Reporting](/docs/platform/guides/reporting)                 | The `platform` RPC contract every app calls to report content                     |
 | [Moderation](/docs/platform/guides/moderation)               | How a table becomes reportable and quarantinable, and the traps that hides        |
 | [Identity](/docs/platform/guides/identity)                   | Sign in with DevDogs, and the GitHub App the platform authenticates as            |
@@ -23,4 +22,4 @@ order: 10
 
 ## Reference
 
-[Platform reference](/docs/platform/reference) enumerates the app itself: every route and API route, the server actions, the components and hooks, and the Supabase surface. Those pages are generated from the source tree by `docs-build gen` and overwritten on every build, so a correction belongs in the doc comment it was read from, not in the page.
+[Platform reference](/docs/platform/reference) enumerates the app itself: every route and API route, the server actions, the components and hooks, and the Supabase surface. Those pages are generated from the source tree by `docs-compiler gen` and overwritten on every build, so a correction belongs in the doc comment it was read from, not in the page.
