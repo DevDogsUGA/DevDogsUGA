@@ -262,19 +262,19 @@ const server = {
 };
 
 const client = {
-  // Browser-side counterpart of SCHEDULE_BUILDER_SENTRY_DSN -- the "schedule-builder" Sentry
-  // project's public DSN is the same value in both places (a DSN is safe in
-  // a browser bundle; it can only submit events, never read them), so this
-  // is not derived from SCHEDULE_BUILDER_SENTRY_DSN by code, it is set alongside it. Optional
-  // for the same reason: no DSN means `instrumentation-client.ts` skips
-  // `Sentry.init()` entirely.
+  // Derived, like the Supabase pair: the "schedule-builder" Sentry project has one
+  // DSN, and a DSN is safe in a browser bundle (it can only submit events,
+  // never read them), so `.env` assigns this from $SCHEDULE_BUILDER_SENTRY_DSN rather
+  // than asking for the same value twice. Optional for the same reason: no
+  // DSN means `instrumentation-client.ts` skips `Sentry.init()` entirely.
   NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN: define(z.string().url().optional(), {
     doc:
-      "Browser-side Sentry DSN for this app's Sentry project. Optional -- " +
-      "empty skips client-side Sentry.init() entirely, same contract as " +
-      "SCHEDULE_BUILDER_SENTRY_DSN.",
+      "Browser-side copy of SCHEDULE_BUILDER_SENTRY_DSN. Derived -- .env assigns " +
+      "it from $SCHEDULE_BUILDER_SENTRY_DSN -- so it is never set by hand. Empty " +
+      "skips client-side Sentry.init() entirely.",
     scope: "environment",
     secrecy: "public",
+    example: "$SCHEDULE_BUILDER_SENTRY_DSN",
   }),
   // The browser has no access to the server-only DEPLOY_ENV (@t3-oss's proxy
   // would throw), and Sentry's `environment` tag needs to distinguish

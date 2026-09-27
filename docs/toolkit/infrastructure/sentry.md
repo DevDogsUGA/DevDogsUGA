@@ -34,9 +34,9 @@ A DSN only lets someone send events to a project, so none of these is a secret.
 | `NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN` | `apps/schedule-builder/src/env.ts` |
 | `SANDBOX_SENTRY_DSN`                      | `apps/sandbox/env.ts`              |
 
-Each name carries its app because a deploy environment holds one value per name: a shared `SENTRY_DSN` would send every app's events to one project. The `NEXT_PUBLIC_` variable holds the same DSN as its server-side partner; it is inlined into the browser bundle at build time.
+Each name carries its app because a deploy environment holds one value per name: a shared `SENTRY_DSN` would send every app's events to one project. Each `NEXT_PUBLIC_` variable is derived from its server-side partner (`NEXT_PUBLIC_PLATFORM_SENTRY_DSN="$PLATFORM_SENTRY_DSN"`), so you never set it by hand. It is inlined into the browser bundle at build time.
 
-They travel like any other per-environment variable. Fill them in `.env.staging` and `.env.production`, then run `pnpm devtools env push --target <target>`, which stores them in Bitwarden and copies them to the GitHub environment's variables. The next deploy hands the server-side ones to the Worker and builds the browser ones into the bundle. [Secrets and environments](/docs/toolkit/infrastructure/secrets) covers the files.
+They travel like any other per-environment variable. Fill in the three server-side DSNs in `.env.staging` and `.env.production`, then run `pnpm devtools env push --target <target>`, which stores them in Bitwarden and copies them to the GitHub environment's variables. The next deploy hands the server-side ones to the Worker, expands the two derived ones, and builds those into the bundle. [Secrets and environments](/docs/toolkit/infrastructure/secrets) covers the files.
 
 Sandbox is not in the deploy pipeline. It deploys by hand with `wrangler deploy`, so its DSN only reaches the Worker if you set it there too, and its events carry no release.
 
