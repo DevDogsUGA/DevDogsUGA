@@ -209,8 +209,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(typanion@3.14.0)(typescript@6.0.3)
       '@devdogsuga/events':
-        specifier: ^0.1.1
-        version: 0.1.1
+        specifier: ^0.1.2
+        version: 0.1.2
       '@devdogsuga/newsletter':
         specifier: ^0.1.1
         version: 0.1.1
@@ -1351,8 +1351,8 @@ packages:
     resolution: {integrity: sha512-Fr232Hig4t6+OaUkFFi43eTOdWmknMZnWzYtTmlciSdLzwlSp6dByfNey4+yOEOvvyIlabc4yia8BRCB7hq8xA==}
     hasBin: true
 
-  '@devdogsuga/events@0.1.1':
-    resolution: {integrity: sha512-ofK5LjqZzkBNKdw606A0sE/ZL3kgaMg/yIcWQyvYGBkAAqAj7tFHMowKkCxlAi7W3v+TlG83qCK77z2ywfBuaA==}
+  '@devdogsuga/events@0.1.2':
+    resolution: {integrity: sha512-Z4J5Gbk07GbNZGpAA1cSfHxOHfwu9glvfGwOkKoG19/uLkFk0Ws4ZzRC4G+H775B4a9Fh8gC6IpyhK5x4WQv/Q==}
 
   '@devdogsuga/newsletter@0.1.1':
     resolution: {integrity: sha512-JG4P/JbObBIv/QzVPLCSyjw8zi725ttf2FLn6gSoLtfF9lsUT94ZdBcpEm5+L0SeiIANCekXXp0I5GXuBJ9gbQ==}
@@ -9778,7 +9778,7 @@ snapshots:
       - typescript
       - valibot
 
-  '@devdogsuga/events@0.1.1':
+  '@devdogsuga/events@0.1.2':
     dependencies:
       zod: 4.4.3
 
