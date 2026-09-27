@@ -39,8 +39,10 @@ would only keep a reference alive; pass `{ cache: false }` to opt out anywhere.
 neither version with it, so an app pins them.
 
 Drizzle does not own the schema here; SQL migrations do, and no script in the
-repo runs `drizzle-kit push`. That, the `db:pull` and `db:generate` scripts and
-the `DB_URL` you want are all in [Database (Drizzle)](/docs/platform/guides/stack/db). The
+repo runs `drizzle-kit push`. `pnpm devtools db introspect --app <slug>`
+pulls the live database back into Drizzle instead — that, the two
+`drizzle-kit` configs it runs, and the `DB_URL` you want are all in
+[Database (Drizzle)](/docs/platform/guides/stack/db). The
 full surface is documented in
 [`@devdogsuga/db`](https://github.com/DevDogsUGA/Backstage/tree/main/packages/db)
 — it ships from Backstage now, so there is no local `reference/api` page for

@@ -16,12 +16,12 @@ pnpm dev --filter schedule-builder   # local stack auto-detected, else remote
 ```
 
 Schema changes follow the shared workflow in
-[Database](../../docs/platform/guides/database.md), with one twist: this app
-drafts its migrations from the Drizzle schema — `db:generate` (drizzle-kit,
-via `drizzle-migrations.config.ts`) writes draft SQL to `drizzle-generated/`,
-which is then carried into a real migration in
-`supabase/migrations/` (the source of truth). `db:pull` regenerates the
-Drizzle schema from the live DB.
+[Database](../../docs/platform/guides/database.md): write SQL under
+`supabase/migrations/` by hand (`pnpm devtools db migration new --app
+schedule-builder`), replay it, then run `pnpm devtools db introspect --app
+schedule-builder` to regenerate the Drizzle schema from the live DB. See
+[Database](../../docs/schedule-builder/guides/database.md) for what's
+specific to this app's schema.
 
 ## Course data
 
