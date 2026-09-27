@@ -2,6 +2,7 @@
 name: Lifecycle
 description: The removed team-sandbox provisioning model, kept for context.
 order: 1
+section: guides
 ---
 
 # Lifecycle

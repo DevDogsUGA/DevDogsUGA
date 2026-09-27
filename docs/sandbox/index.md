@@ -31,8 +31,6 @@ own `src/index.ts` answers a missing binding: a refusal, not a crash.
   from, and how a member used to reach one. They are history now, not a guide
   to anything you can run.
 
-## Reference
-
-[Reference](./reference/src) is generated from the Worker's source on every
-build. It still reflects the Worker's own code, which this removal did not
-touch.
+There is no generated reference for this app any more — only shared packages
+under [Toolkit](/docs/toolkit) get one. Read the Worker's own source in
+`apps/sandbox/src` directly if you need it.

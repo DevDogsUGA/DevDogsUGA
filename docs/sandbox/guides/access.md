@@ -2,6 +2,7 @@
 name: Access
 description: The removed member-credential model, kept for context.
 order: 3
+section: guides
 ---
 
 # Access
