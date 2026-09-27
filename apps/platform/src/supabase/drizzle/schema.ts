@@ -879,7 +879,7 @@ export const pgStatStatementsInfoInExtensions = extensions.view("pg_stat_stateme
 
 export const availableTermsInScheduleBuilder = scheduleBuilder.view("availableTerms", {	academicPeriod: integer(),
 	description: varchar(),
-}).as(sql`SELECT terms."academicPeriod", terms.description FROM schedule_builder.terms JOIN schedule_builder.offerings ON offerings."academicPeriod" = terms."academicPeriod" GROUP BY terms."academicPeriod", terms.description ORDER BY terms."academicPeriod" DESC`);
+}).as(sql`SELECT terms."academicPeriod", terms.description FROM schedule_builder.terms JOIN schedule_builder.offerings ON offerings."academicPeriod" = terms."academicPeriod" WHERE offerings.cancelled = false GROUP BY terms."academicPeriod", terms.description ORDER BY terms."academicPeriod" DESC`);
 
 export const decryptedSecretsInVault = vault.view("decrypted_secrets", {	id: uuid(),
 	name: text(),

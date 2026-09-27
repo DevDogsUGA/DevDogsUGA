@@ -287,7 +287,7 @@ export const userSavedPlans = scheduleBuilder.table(
 
 /**
  * One row per academic period, but only for periods that have at least one
- * offering.
+ * non-cancelled offering.
  */
 export const availableTerms = scheduleBuilder.view("availableTerms").as((qb) =>
   qb
@@ -297,6 +297,7 @@ export const availableTerms = scheduleBuilder.view("availableTerms").as((qb) =>
     })
     .from(terms)
     .innerJoin(offerings, eq(offerings.academicPeriod, terms.academicPeriod))
+    .where(eq(offerings.cancelled, false))
     .groupBy(terms.academicPeriod, terms.description)
     .orderBy(desc(terms.academicPeriod)),
 );
